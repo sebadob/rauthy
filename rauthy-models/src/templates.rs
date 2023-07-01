@@ -2,6 +2,7 @@ use crate::entity::colors::Colors;
 use crate::entity::password::PasswordPolicy;
 use askama_actix::Template;
 use rauthy_common::constants::{OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION};
+use rauthy_common::utils::get_rand;
 
 #[derive(Debug, Clone)]
 pub enum FrontendAction {
@@ -39,10 +40,13 @@ pub struct IndexHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
+    pub nonce: &'a str,
 }
 
 impl IndexHtml<'_> {
-    pub fn build(colors: &Colors) -> String {
+    pub fn build(colors: &Colors) -> (String, String) {
+        let nonce = nonce();
+
         let res = IndexHtml {
             csrf_token: "",
             data: &OPEN_USER_REG.to_string(),
@@ -59,15 +63,112 @@ impl IndexHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            nonce: &nonce,
             ..Default::default()
         };
 
-        res.render().unwrap()
+        (res.render().unwrap(), nonce)
     }
 }
 
 #[derive(Default, Template)]
-#[template(path = "html/authorize.html")]
+#[template(path = "html/account.html")]
+pub struct AccountHtml<'a> {
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: &'a str,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+}
+
+impl AccountHtml<'_> {
+    pub fn build(colors: &Colors) -> (String, String) {
+        let nonce = nonce();
+
+        let res = AccountHtml {
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/admin.html")]
+pub struct AdminHtml<'a> {
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: &'a str,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+}
+
+impl AdminHtml<'_> {
+    pub fn build(colors: &Colors) -> (String, String) {
+        let nonce = nonce();
+
+        let res = AdminHtml {
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/oidc/authorize.html")]
 pub struct AuthorizeHtml<'a> {
     pub csrf_token: &'a str,
     pub data: &'a str,
@@ -85,6 +186,7 @@ pub struct AuthorizeHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
+    pub nonce: &'a str,
 }
 
 impl AuthorizeHtml<'_> {
@@ -93,8 +195,9 @@ impl AuthorizeHtml<'_> {
         csrf_token: &str,
         action: FrontendAction,
         colors: &Colors,
-    ) -> String {
-        // pub fn build(client_name: &Option<String>, csrf_token: &str, set_refresh: bool) -> String {
+    ) -> (String, String) {
+        let nonce = nonce();
+
         let mut res = AuthorizeHtml {
             csrf_token,
             action: &action.to_string(),
@@ -111,18 +214,67 @@ impl AuthorizeHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            nonce: &nonce,
             ..Default::default()
         };
         if client_name.is_some() {
             res.data = client_name.as_ref().unwrap();
         }
 
-        res.render().unwrap()
+        (res.render().unwrap(), nonce)
     }
 }
 
 #[derive(Default, Template)]
-#[template(path = "html/logout.html")]
+#[template(path = "html/oidc/callback.html")]
+pub struct CallbackHtml<'a> {
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: &'a str,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+}
+
+impl CallbackHtml<'_> {
+    pub fn build(colors: &Colors) -> (String, String) {
+        let nonce = nonce();
+
+        let res = CallbackHtml {
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/oidc/logout.html")]
 pub struct LogoutHtml<'a> {
     pub csrf_token: &'a str,
     pub data: &'a str,
@@ -140,10 +292,13 @@ pub struct LogoutHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
+    pub nonce: &'a str,
 }
 
 impl LogoutHtml<'_> {
-    pub fn build(csrf_token: &str, set_logout: bool, colors: &Colors) -> String {
+    pub fn build(csrf_token: &str, set_logout: bool, colors: &Colors) -> (String, String) {
+        let nonce = nonce();
+
         let res = LogoutHtml {
             csrf_token,
             action: set_logout,
@@ -160,15 +315,16 @@ impl LogoutHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            nonce: &nonce,
             ..Default::default()
         };
 
-        res.render().unwrap()
+        (res.render().unwrap(), nonce)
     }
 }
 
 #[derive(Default, Template)]
-#[template(path = "html/reset.html")]
+#[template(path = "html/users/{id}/reset/reset.html")]
 pub struct PwdResetHtml<'a> {
     pub csrf_token: &'a str,
     pub data: &'a str,
@@ -186,6 +342,7 @@ pub struct PwdResetHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
+    pub nonce: &'a str,
 }
 
 impl PwdResetHtml<'_> {
@@ -196,7 +353,9 @@ impl PwdResetHtml<'_> {
         password_rules: &PasswordPolicy,
         email: Option<&String>,
         colors: &Colors,
-    ) -> String {
+    ) -> (String, String) {
+        let nonce = nonce();
+
         let mail = if let Some(e) = email { e } else { "undefined" };
         let data = format!(
             "{},{},{},{},{},{},{},{}",
@@ -226,15 +385,16 @@ impl PwdResetHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            nonce: &nonce,
             ..Default::default()
         };
 
-        res.render().unwrap()
+        (res.render().unwrap(), nonce)
     }
 }
 
 #[derive(Default, Template)]
-#[template(path = "html/register.html")]
+#[template(path = "html/users/register.html")]
 pub struct UserRegisterHtml<'a> {
     pub csrf_token: &'a str,
     pub data: &'a str,
@@ -252,11 +412,14 @@ pub struct UserRegisterHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
+    pub nonce: &'a str,
 }
 
 impl UserRegisterHtml<'_> {
-    pub fn build(colors: &Colors) -> String {
-        UserRegisterHtml {
+    pub fn build(colors: &Colors) -> (String, String) {
+        let nonce = nonce();
+
+        let body = UserRegisterHtml {
             data: USER_REG_DOMAIN_RESTRICTION
                 .as_ref()
                 .map(|s| s.as_str())
@@ -274,9 +437,16 @@ impl UserRegisterHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            nonce: &nonce,
             ..Default::default()
         }
         .render()
-        .expect("rendering register.html")
+        .expect("rendering register.html");
+
+        (body, nonce)
     }
+}
+
+fn nonce() -> String {
+    get_rand(16)
 }

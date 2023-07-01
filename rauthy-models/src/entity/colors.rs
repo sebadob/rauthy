@@ -70,6 +70,10 @@ impl ColorEntity {
         Ok(colors)
     }
 
+    pub async fn find_rauthy(data: &web::Data<AppState>) -> Result<Colors, ErrorResponse> {
+        Self::find(data, "rauthy").await
+    }
+
     pub async fn update(
         data: &web::Data<AppState>,
         client_id: &str,

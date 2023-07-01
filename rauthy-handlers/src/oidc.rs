@@ -1,4 +1,4 @@
-use crate::map_auth_step;
+use crate::{build_csp_header, map_auth_step};
 use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::{header, StatusCode};
 use actix_web::{cookie, get, post, web, HttpRequest, HttpResponse};
@@ -17,7 +17,7 @@ use rauthy_models::request::{
     TokenRequest, TokenValidationRequest,
 };
 use rauthy_models::response::{JWKSCerts, JWKSPublicKeyCerts, SessionInfoResponse};
-use rauthy_models::templates::{AuthorizeHtml, FrontendAction};
+use rauthy_models::templates::{AuthorizeHtml, CallbackHtml, FrontendAction};
 use rauthy_models::JwtCommonClaims;
 use rauthy_service::auth;
 use std::ops::Add;
@@ -58,7 +58,7 @@ pub async fn get_authorize(
     let colors = ColorEntity::find(&data, &req_data.client_id).await?;
 
     if session.is_some() && session.as_ref().unwrap().state == SessionState::Auth {
-        let file = AuthorizeHtml::build(
+        let (body, nonce) = AuthorizeHtml::build(
             &client.name,
             &session.as_ref().unwrap().csrf_token,
             FrontendAction::Refresh,
@@ -70,9 +70,13 @@ pub async fn get_authorize(
             return Ok(HttpResponse::Ok()
                 .insert_header(o)
                 .insert_header(HEADER_HTML)
-                .body(file));
+                .insert_header(build_csp_header(&nonce))
+                .body(body));
         }
-        return Ok(HttpResponse::Ok().append_header(HEADER_HTML).body(file));
+        return Ok(HttpResponse::Ok()
+            .append_header(HEADER_HTML)
+            .append_header(build_csp_header(&nonce))
+            .body(body));
     }
 
     let session = Session::new(None, *SESSION_LIFETIME);
@@ -95,7 +99,7 @@ pub async fn get_authorize(
     //     action = FrontendAction::MfaLogin(mfa_cookie.value().to_string())
     // }
 
-    let file = AuthorizeHtml::build(&client.name, &session.csrf_token, action, &colors);
+    let (body, nonce) = AuthorizeHtml::build(&client.name, &session.csrf_token, action, &colors);
 
     let cookie = session.client_cookie();
     if let Some(o) = origin_header {
@@ -104,12 +108,14 @@ pub async fn get_authorize(
             .cookie(cookie)
             .insert_header(o)
             .insert_header(HEADER_HTML)
-            .body(file));
+            .insert_header(build_csp_header(&nonce))
+            .body(body));
     }
     Ok(HttpResponse::build(StatusCode::OK)
         .cookie(cookie)
         .insert_header(HEADER_HTML)
-        .body(file))
+        .insert_header(build_csp_header(&nonce))
+        .body(body))
 }
 
 /// POST login credentials to proceed with the authorization_code flow
@@ -152,6 +158,18 @@ pub async fn post_authorize(
         .map(|auth_step| map_auth_step(&data, auth_step, &req))?;
 
     auth::handle_login_delay(start, &data.caches.ha_cache_config, res, true).await
+}
+
+#[get("/oidc/callback")]
+#[has_permissions("all")]
+pub async fn get_callback_html(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+    let colors = ColorEntity::find_rauthy(&data).await?;
+    let (body, nonce) = CallbackHtml::build(&colors);
+
+    Ok(HttpResponse::Ok()
+        .insert_header(HEADER_HTML)
+        .insert_header(build_csp_header(&nonce))
+        .body(body))
 }
 
 // TODO clean up?
@@ -252,12 +270,31 @@ pub async fn get_logout(
     data: web::Data<AppState>,
     req_data: web::Query<LogoutRequest>,
     session_req: web::ReqData<Option<Session>>,
-) -> Result<HttpResponse, ErrorResponse> {
-    let session = Session::extract_from_req(session_req)?;
-    let file = auth::logout(req_data.into_inner(), session, &data).await?;
-    return Ok(HttpResponse::build(StatusCode::OK)
+) -> HttpResponse {
+    // If we get any logout errors, maybe because there is no session anymore or whatever happens,
+    // just redirect to rauthy's root page, since the user is not logged in anyway anymore.
+    let session = match Session::extract_from_req(session_req) {
+        Ok(s) => s,
+        Err(_) => {
+            return HttpResponse::build(StatusCode::from_u16(302).unwrap())
+                .insert_header(("location", "/auth/v1/"))
+                .finish()
+        }
+    };
+
+    let (body, nonce) = match auth::logout(req_data.into_inner(), session, &data).await {
+        Ok(t) => t,
+        Err(_) => {
+            return HttpResponse::build(StatusCode::from_u16(302).unwrap())
+                .insert_header(("location", "/auth/v1/"))
+                .finish()
+        }
+    };
+
+    return HttpResponse::build(StatusCode::OK)
         .append_header(HEADER_HTML)
-        .body(file));
+        .append_header(build_csp_header(&nonce))
+        .body(body);
 }
 
 /// Send the logout confirmation

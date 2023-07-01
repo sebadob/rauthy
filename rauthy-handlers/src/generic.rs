@@ -1,3 +1,4 @@
+use crate::build_csp_header;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
@@ -5,7 +6,7 @@ use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_role
 use rauthy_common::constants::{CACHE_NAME_LOGIN_DELAY, HEADER_HTML, IDX_LOGIN_TIME};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
-use rauthy_models::entity::colors::Colors;
+use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::password::{PasswordHashTimes, PasswordPolicy};
 use rauthy_models::entity::pow::Pow;
 use rauthy_models::entity::principal::Principal;
@@ -17,16 +18,45 @@ use rauthy_models::response::{
     Argon2ParamsResponse, EncKeysResponse, HealthResponse, LoginTimeResponse,
     PasswordPolicyResponse,
 };
-use rauthy_models::templates::IndexHtml;
+use rauthy_models::templates::{AccountHtml, AdminHtml, IndexHtml};
 use rauthy_service::encryption;
 use redhac::{cache_get, cache_get_from, cache_get_value};
 
-#[get("/index.html")]
+#[get("/")]
+// #[get("/index.html")]
 #[has_permissions("all")]
-pub async fn get_index() -> HttpResponse {
-    HttpResponse::Ok()
+pub async fn get_index(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+    let colors = ColorEntity::find_rauthy(&data).await?;
+    let (body, nonce) = IndexHtml::build(&colors);
+
+    Ok(HttpResponse::Ok()
         .insert_header(HEADER_HTML)
-        .body(IndexHtml::build(&Colors::default()))
+        .insert_header(build_csp_header(&nonce))
+        .body(body))
+}
+
+#[get("/account")]
+#[has_permissions("all")]
+pub async fn get_account_html(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+    let colors = ColorEntity::find_rauthy(&data).await?;
+    let (body, nonce) = AccountHtml::build(&colors);
+
+    Ok(HttpResponse::Ok()
+        .insert_header(HEADER_HTML)
+        .insert_header(build_csp_header(&nonce))
+        .body(body))
+}
+
+#[get("/admin")]
+#[has_permissions("all")]
+pub async fn get_admin_html(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+    let colors = ColorEntity::find_rauthy(&data).await?;
+    let (body, nonce) = AdminHtml::build(&colors);
+
+    Ok(HttpResponse::Ok()
+        .insert_header(HEADER_HTML)
+        .insert_header(build_csp_header(&nonce))
+        .body(body))
 }
 
 /// Check if the given JWT Token is valid
@@ -376,7 +406,7 @@ pub async fn redirect() -> impl Responder {
     HttpResponse::MovedPermanently()
         .insert_header((
             header::LOCATION,
-            HeaderValue::from_str("/auth/v1/index.html").unwrap(),
+            HeaderValue::from_str("/auth/v1/").unwrap(),
         ))
         .finish()
 }
@@ -385,7 +415,7 @@ pub async fn redirect() -> impl Responder {
 #[has_permissions("all")]
 pub async fn redirect_v1() -> HttpResponse {
     HttpResponse::MovedPermanently()
-        .insert_header(("location", "/auth/v1/index.html"))
+        .insert_header(("location", "/auth/v1/"))
         .finish()
 }
 

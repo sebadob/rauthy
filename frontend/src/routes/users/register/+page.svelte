@@ -13,7 +13,7 @@
     let err = '';
     let success = false;
 
-    let formValues = {};
+    let formValues = { email: '', givenName: '', familyName: '' };
     let formErrors = {};
 
     const schema = yup.object().shape({

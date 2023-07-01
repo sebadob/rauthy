@@ -45,7 +45,8 @@
                 Please navigate to your <b>account</b> and activate MFA.<br>
                 Afterwards, you need to do a logout and log back in.
             </div>
-            <Button on:click={() => window.location.href = '/auth/v1/account.html'}>ACCOUNT</Button>
+            <Button on:click={() => window.location.href = '/auth/v1/account'}>ACCOUNT</Button>
+<!--            <Button on:click={() => window.location.href = '/auth/v1/account.html'}>ACCOUNT</Button>-->
         </div>
     {:else if !isAdmin}
         <div class="noAdmin">

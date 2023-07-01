@@ -29,7 +29,7 @@ in another terminal:
 
 ### CURRENT WORK
 
-- create github repo
+- migrate to Svelte 4 in the frontend to get rid of the `unsafe-inline` CSP
 
 ### Stage 1 - essentials
 
@@ -37,7 +37,6 @@ in another terminal:
 
 ### Stage 2 - features - do before v1.0.0
 
-- migrate to Svelte 4 in the frontend to get rid of the `unsafe-inline` CSP
 - add more documentation
 - check why DB migration returned an error inside OCI Pods only (and nowhere else)
 - cleanup

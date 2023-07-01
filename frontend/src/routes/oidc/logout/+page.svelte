@@ -44,13 +44,11 @@
     }
 
     async function handleRes(res) {
+        purgeStorage();
         if (res.ok) {
-            purgeStorage();
             window.location.href = postLogoutUri;
         } else {
-            const body = await res.json();
-            err = body.message;
-            isLoading = false;
+            await handleCancel();
         }
     }
 
@@ -60,10 +58,6 @@
     <title>Logout</title>
 </svelte:head>
 
-{#if isLoading}
-    <Loading/>
-{/if}
-
 <div class="container">
     <h1>Logout</h1>
 
@@ -72,7 +66,7 @@
     </div>
 
     <div class="btn">
-        <Button on:click={handleLogout} level={2}>LOGOUT</Button>
+        <Button on:click={handleLogout} level={2} bind:isLoading>LOGOUT</Button>
         <Button on:click={handleCancel} level={4}>CANCEL</Button>
     </div>
 

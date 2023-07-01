@@ -266,9 +266,8 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         // unsafe-inline is currently needed, since svelte does currently need this
                         // for the initial static hydration script. An issue is open about this and
                         // this will most probably solved soon.
-                        // 'unsafe-inline' will be removed before v1.0.0 in the ui
-                        // "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
-                        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
+                        "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
+                        // "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
                     ))
                     .add(("cache-control", "no-store"))
                     .add(("pragma", "no-cache")),
@@ -279,12 +278,14 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                     .service(generic::redirect_v1)
                     .service(
                     web::scope("/v1")
-                        .service(generic::redirect)
                         .service(generic::get_index)
+                        .service(generic::get_account_html)
+                        .service(generic::get_admin_html)
                         .service(generic::get_auth_check)
                         .service(generic::get_auth_check_admin)
                         .service(oidc::get_authorize)
                         .service(oidc::post_authorize)
+                        .service(oidc::get_callback_html)
                         .service(oidc::post_authorize_refresh)
                         .service(oidc::get_certs)
                         .service(oidc::get_cert_by_kid)
@@ -366,8 +367,10 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         .service(generic::get_ready)
                         .service(generic::whoami)
                         .service(
-                            actix_files::Files::new("/", "static/v1")
-                                .index_file("static/v1/index.html"),
+                            actix_files::Files::new("/_app/", "static/v1/_app")
+                        )
+                        .service(
+                            actix_files::Files::new("/assets/", "static/v1/assets")
                         )
                     )
             )

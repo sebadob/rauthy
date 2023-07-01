@@ -15,11 +15,13 @@
     });
 
     function redirectToAdmin() {
-        window.location.href = '/auth/v1/admin.html';
+        window.location.href = '/auth/v1/admin';
+        // window.location.href = '/auth/v1/admin.html';
     }
 
     function redirectToAccount() {
-        window.location.href = '/auth/v1/account.html';
+        window.location.href = '/auth/v1/account';
+        // window.location.href = '/auth/v1/account.html';
     }
 
     function redirectToReg() {

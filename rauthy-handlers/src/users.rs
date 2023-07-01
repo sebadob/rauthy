@@ -1,3 +1,4 @@
+use crate::build_csp_header;
 use actix_web::http::StatusCode;
 use actix_web::{cookie, delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
@@ -9,7 +10,7 @@ use rauthy_common::constants::{
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
-use rauthy_models::entity::colors::Colors;
+use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::mfa_app::{MfaApp, MfaAppReg};
 use rauthy_models::entity::mfa_auth_code::MfaAuthCode;
 use rauthy_models::entity::principal::Principal;
@@ -233,7 +234,7 @@ pub async fn delete_cust_attr(
 )]
 #[get("/users/register")]
 #[has_permissions("all")]
-pub async fn get_users_register() -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_users_register(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
     if !*OPEN_USER_REG {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
@@ -241,8 +242,12 @@ pub async fn get_users_register() -> Result<HttpResponse, ErrorResponse> {
         ));
     }
 
-    let body = UserRegisterHtml::build(&Colors::default());
-    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
+    let colors = ColorEntity::find_rauthy(&data).await?;
+    let (body, nonce) = UserRegisterHtml::build(&colors);
+    Ok(HttpResponse::Ok()
+        .insert_header(HEADER_HTML)
+        .insert_header(build_csp_header(&nonce))
+        .body(body))
 }
 
 /// Creates a new user with almost all values set to default
@@ -405,10 +410,11 @@ pub async fn get_user_password_reset(
     let path_inner = path.into_inner();
     password_reset::handle_get_pwd_reset(&data, req, path_inner.0, path_inner.1)
         .await
-        .map(|(html, cookie)| {
+        .map(|(html, nonce, cookie)| {
             HttpResponse::Ok()
                 .cookie(cookie)
                 .insert_header(HEADER_HTML)
+                .insert_header(build_csp_header(&nonce))
                 .body(html)
         })
 }

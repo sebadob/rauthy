@@ -8,10 +8,10 @@ export const ID_TOKEN = 'id_token';
 export const AUTH_ENDPOINT = '/auth/v1/oidc/authorize';
 export const CLIENT_ID = 'rauthy';
 export const LOGOUT_URL = '/auth/v1/oidc/logout';
-export const REDIRECT_URI = '/auth/v1/oidc/callback.html';
-export const REDIRECT_URI_SUCCESS = '/auth/v1/admin.html';
-export const REDIRECT_URI_SUCCESS_ACC = '/auth/v1/account.html';
-export const POST_LOGOUT_REDIRECT_URI = '/auth/v1/index.html';
+export const REDIRECT_URI = '/auth/v1/oidc/callback';
+export const REDIRECT_URI_SUCCESS = '/auth/v1/admin';
+export const REDIRECT_URI_SUCCESS_ACC = '/auth/v1/account';
+export const POST_LOGOUT_REDIRECT_URI = '/auth/v1/';
 
 export const REGEX_LOWERCASE = /^[a-z0-9-_/]{2,128}$/gm;
 export const REGEX_NAME = /^[\w\sÀ-ÿ\-]{0,32}$/gm;

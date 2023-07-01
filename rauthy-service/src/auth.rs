@@ -18,7 +18,7 @@ use rauthy_common::utils::{base64_url_encode, encrypt, get_client_ip, get_rand};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
-use rauthy_models::entity::colors::Colors;
+use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::jwk::{Jwk, JwkKeyPair, JwkKeyPairType};
 use rauthy_models::entity::mfa_auth_code::MfaAuthCode;
 use rauthy_models::entity::principal::Principal;
@@ -1044,25 +1044,16 @@ pub async fn logout(
     logout_request: LogoutRequest,
     session: Session,
     data: &web::Data<AppState>,
-) -> Result<String, ErrorResponse> {
+) -> Result<(String, String), ErrorResponse> {
+    let colors = ColorEntity::find_rauthy(data).await?;
+
     if logout_request.id_token_hint.is_none() {
-        return Ok(LogoutHtml::build(
-            &session.csrf_token,
-            false,
-            &Colors::default(),
-        ));
+        return Ok(LogoutHtml::build(&session.csrf_token, false, &colors));
     }
 
     // check if the provided token hint is a valid
     let token_raw = logout_request.id_token_hint.unwrap();
     let claims = validate_token::<JwtIdClaims>(data, &token_raw).await?;
-    // let (is_valid, payload) = validate_token(db.clone(), &token_raw, &data).await?;
-    // if !is_valid {
-    //     return Err(ErrorResponse::new(
-    //         ErrorResponseType::BadRequest,
-    //         String::from("Given token is invalid"),
-    //     ));
-    // }
 
     // check if it is an ID token
     if JwtType::Id != claims.custom.typ {
@@ -1104,11 +1095,7 @@ pub async fn logout(
         // redirect uri is valid at this point
     }
 
-    Ok(LogoutHtml::build(
-        &session.csrf_token,
-        true,
-        &Colors::default(),
-    ))
+    Ok(LogoutHtml::build(&session.csrf_token, true, &colors))
 }
 
 /// The permission extractor for the `GrantsMiddleware`

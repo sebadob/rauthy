@@ -4,7 +4,7 @@ use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::get_rand;
 use rauthy_models::app_state::AppState;
-use rauthy_models::entity::colors::Colors;
+use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::magic_links::MagicLinkPassword;
 use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::users::User;
@@ -19,7 +19,7 @@ pub async fn handle_get_pwd_reset<'a>(
     req: HttpRequest,
     user_id: String,
     reset_id: String,
-) -> Result<(String, cookie::Cookie<'a>), ErrorResponse> {
+) -> Result<(String, String, cookie::Cookie<'a>), ErrorResponse> {
     let mut ml = MagicLinkPassword::find(data, &reset_id).await?;
     ml.validate(&user_id, &req)?;
 
@@ -33,7 +33,8 @@ pub async fn handle_get_pwd_reset<'a>(
 
     // get the html and insert values
     let rules = PasswordPolicy::find(data).await?;
-    let html = PwdResetHtml::build(&ml.csrf_token, &rules, email, &Colors::default());
+    let colors = ColorEntity::find_rauthy(data).await?;
+    let (html, nonce) = PwdResetHtml::build(&ml.csrf_token, &rules, email, &colors);
 
     // generate a cookie value and save it to the magic link
     let cookie_val = get_rand(48);
@@ -54,7 +55,7 @@ pub async fn handle_get_pwd_reset<'a>(
         .path("/auth")
         .finish();
 
-    Ok((html, cookie))
+    Ok((html, nonce, cookie))
 }
 
 #[tracing::instrument(level = "debug", skip_all, fields(email = req_data.email))]
