@@ -80,7 +80,7 @@
     </div>
 
     {#if show}
-        <div class="body" bind:this={bodyElement} transition:slide={{ duration: 200 }}>
+        <div class="body" bind:this={bodyElement} transition:slide|global={{ duration: 200 }}>
             <slot name="body"></slot>
         </div>
     {/if}

@@ -40,7 +40,7 @@
 
 </script>
 
-<div transition:fade="{{ duration: 200 }}">
+<div transition:fade|global="{{ duration: 200 }}">
     <Input
             bind:width
             {name}

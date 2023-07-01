@@ -42,6 +42,7 @@
 </script>
 
 <div
+        role="none"
         on:mouseover={handleHover}
         on:focus={handleHover}
         on:mouseout={handleHide}
@@ -53,7 +54,7 @@
         <div
                 class="tooltip"
                 style="top: {`${$coords.y}px`}; left: {`${$coords.x}px`}"
-                transition:fade={{ delay: 400, duration: 200 }}
+                transition:fade|global={{ delay: 400, duration: 200 }}
         >
             {#if text}
                 {text}

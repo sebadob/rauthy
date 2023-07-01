@@ -22,22 +22,22 @@
         <TabBar labels={tabBarItems} bind:selected width={170}/>
 
         {#if selected === 'PASSWORD POLICY'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <PasswordPolicy/>
             </div>
 
         {:else if selected === 'JWKS'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <JWKs/>
             </div>
 
         {:else if selected === 'ARGON2 PARAMETERS'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <Argon2Params/>
             </div>
 
         {:else if selected === 'ENCRYOPTION KEYS'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <EncKeys/>
             </div>
         {/if}

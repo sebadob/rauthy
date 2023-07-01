@@ -54,32 +54,36 @@
 >
     {#if isExpanded}
         <div
+                role="button"
+                tabindex="0"
                 class="close"
                 style:left="calc({$width}px - 22px)"
-                in:fade={{ delay: 500, duration: 200 }}
-                out:fade={{ duration: 100 }}
+                in:fade|global={{ delay: 500, duration: 200 }}
+                out:fade|global={{ duration: 100 }}
                 on:click={toggle}
                 on:keypress={toggle}
         >
             <IconClose/>
         </div>
 
-        <div class="logo" in:fade={{ delay: 250, duration: 100 }} out:fade={{ duration: 20 }}>
+        <div class="logo" in:fade|global={{ delay: 250, duration: 100 }} out:fade|global={{ duration: 20 }}>
             <slot name="logo"></slot>
         </div>
     {:else}
         <div
+                role="button"
+                tabindex="0"
                 class="burger"
                 style:left="3px"
-                in:fade={{ delay: 500, duration: 200 }}
-                out:fade={{ duration: 100 }}
+                in:fade|global={{ delay: 500, duration: 200 }}
+                out:fade|global={{ duration: 100 }}
                 on:click={toggle}
                 on:keypress={toggle}
         >
             <IconBurger width={24}/>
         </div>
         <div style:height="10px"></div>
-        <div class="logo" in:fade={{ delay: 250, duration: 100 }} out:fade={{ duration: 20 }}>
+        <div class="logo" in:fade|global={{ delay: 250, duration: 100 }} out:fade|global={{ duration: 20 }}>
             <slot name="logo"></slot>
         </div>
     {/if}

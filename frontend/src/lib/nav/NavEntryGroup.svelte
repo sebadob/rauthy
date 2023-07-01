@@ -54,7 +54,7 @@
 {#if isNavExpanded}
     <div
             class="container noselect font-label"
-            in:fade={{ delay: 100, duration: 100 }}
+            in:fade|global={{ delay: 100, duration: 100 }}
     >
         <div
                 class="labelContainer"
@@ -77,7 +77,7 @@
         {#if isExpanded}
             <div
                     class="entries"
-                    transition:slide={{ duration: 150 }}
+                    transition:slide|global={{ duration: 150 }}
             >
                 <slot name="body"></slot>
             </div>
@@ -90,12 +90,12 @@
             on:keypress={toggle}
             on:mouseenter={toggleHover}
             on:mouseleave={toggleHover}
-            in:fade={{ delay: 200, duration: 100 }}
+            in:fade|global={{ delay: 200, duration: 100 }}
     >
         {#if hover}
             <div
                     class="collapsedInnerWrapper"
-                    transition:scale={{ duration: 150 }}
+                    transition:scale|global={{ duration: 150 }}
             >
                 <div
                         class="collapsedInner"

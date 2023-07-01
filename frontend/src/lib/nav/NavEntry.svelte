@@ -44,13 +44,15 @@
 
 {#if isExpanded}
     <div
+            role="menuitem"
+            tabindex="0"
             class="entry noselect font-label"
             class:selected={selected === label}
             on:click={select}
             on:keypress={select}
             on:mouseenter={() => hover = true}
             on:mouseleave={() => hover = false}
-            transition:fade={{ duration: 100 }}
+            transition:fade|global={{ duration: 100 }}
     >
         <slot></slot>
         <span class="label">
@@ -59,13 +61,15 @@
     </div>
 {:else}
     <div
+            role="menuitem"
+            tabindex="0"
             class="entryCollapsed noselect font-label"
             class:selectedCollapsed={selected === label}
             on:click={select}
             on:keypress={select}
             on:mouseenter={() => hover = true}
             on:mouseleave={() => hover = false}
-            in:fade={{ delay: 200, duration: 100 }}
+            in:fade|global={{ delay: 200, duration: 100 }}
     >
         {#if slotCollapsed}
             <slot></slot>

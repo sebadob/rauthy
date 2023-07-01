@@ -6,8 +6,8 @@
 
 <div
         class="content"
-        in:fade={{delay: tDur * 2, duration: tDur}}
-        out:fade={{duration: tDur}}
+        in:fade|global={{delay: tDur * 2, duration: tDur}}
+        out:fade|global={{duration: tDur}}
 >
     <slot></slot>
 </div>

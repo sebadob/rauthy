@@ -47,12 +47,12 @@
         <TabBar labels={tabBarItems} bind:selected/>
 
         {#if selected === 'CONFIG'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <GroupConfig bind:group bind:onSave/>
             </div>
 
         {:else if selected === 'DELETE'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <GroupDelete bind:group onSave={onDelete}/>
             </div>
         {/if}

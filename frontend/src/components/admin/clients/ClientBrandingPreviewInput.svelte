@@ -73,7 +73,7 @@
         class="err font-label"
         style:width={width}
         style:color={colors.err}
-        transition:slide={{ duration: 250 }}
+        transition:slide|global={{ duration: 250 }}
     >
       {error}
     </div>

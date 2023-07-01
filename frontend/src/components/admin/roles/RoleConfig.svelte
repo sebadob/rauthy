@@ -90,6 +90,7 @@
             autocomplete="off"
             placeholder="Role Name"
             on:input={validateForm}
+            disabled={role.name === 'rauthy_admin'}
     >
         ROLE NAME
     </Input>

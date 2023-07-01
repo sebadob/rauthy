@@ -23,17 +23,17 @@
         class:global={!local}
         class:local
         class:background
-        transition:fade="{{ duration: 100 }}"
+        transition:fade|global="{{ duration: 100 }}"
 >
     <div
             class="inner"
             style="margin-top: {`${offset}px`}"
-            transition:fade|local="{{ duration: 100 }}"
+            transition:fade="{{ duration: 100 }}"
     >
         {#if show1}
             <div
                     class="circle"
-                    transition:scale="{{ delay: 600, duration: 1000 }}"
+                    transition:scale|global="{{ delay: 600, duration: 1000 }}"
                     on:introend="{() => show1 = false}"
                     on:outroend="{() => show1 = true}"
             ></div>
@@ -42,7 +42,7 @@
         {#if show2}
             <div
                     class="circle"
-                    transition:scale="{{ delay: 600, duration: 1000 }}"
+                    transition:scale|global="{{ delay: 600, duration: 1000 }}"
                     on:introend="{() => show2 = false}"
                     on:outroend="{() => show2 = true}"
             ></div>
@@ -51,7 +51,7 @@
         {#if show3}
             <div
                     class="circle"
-                    transition:scale="{{ delay: 600, duration: 1000 }}"
+                    transition:scale|global="{{ delay: 600, duration: 1000 }}"
                     on:introend="{() => show3 = false}"
                     on:outroend="{() => show3 = true}"
             ></div>

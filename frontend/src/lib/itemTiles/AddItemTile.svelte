@@ -35,7 +35,7 @@
         <div
                 class="itemsContainer"
                 style="min-width: {mindWidth}px; max-height: {maxHeight}px"
-                transition:slide={{ duration: 200 }}
+                transition:slide|global={{ duration: 200 }}
         >
             {#if items.length > searchThreshold}
                 <div class="search">

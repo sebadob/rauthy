@@ -53,23 +53,23 @@
         <TabBar labels={tabBarItems} bind:selected/>
 
         {#if selected === 'INFO'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <UserInfo bind:user bind:onSave/>
             </div>
         {:else if selected === 'ATTRIBUTES'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <UserAttr bind:user bind:onSave/>
             </div>
         {:else if selected === 'PASSWORD'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <UserPassword bind:user bind:onSave/>
             </div>
         {:else if selected === 'LOGOUT'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <UserForceLogout bind:user/>
             </div>
         {:else if selected === 'DELETE'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <UserDelete bind:user onSave={onDelete}/>
             </div>
         {/if}

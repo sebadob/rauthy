@@ -30,18 +30,18 @@
         class:global
         class:local={!global}
         class:background
-        transition:fade="{{ duration: 100 }}"
+        transition:fade|global="{{ duration: 100 }}"
 >
     {#if run}
         <div
                 style="margin-top: {offset}px; display: flex;"
-                transition:fade|local="{{ duration: 100 }}"
+                transition:fade="{{ duration: 100 }}"
         >
             {#if show1}
                 <div
                         class="circle"
                         style:background={color}
-                        transition:scale="{{ delay: 600, duration: 1000 }}"
+                        transition:scale|global="{{ delay: 600, duration: 1000 }}"
                         on:introend="{() => show1 = false}"
                         on:outroend="{() => show1 = true}"
                 ></div>
@@ -51,7 +51,7 @@
                 <div
                         class="circle"
                         style:background={color}
-                        transition:scale="{{ delay: 600, duration: 1000 }}"
+                        transition:scale|global="{{ delay: 600, duration: 1000 }}"
                         on:introend="{() => show2 = false}"
                         on:outroend="{() => show2 = true}"
                 ></div>
@@ -61,7 +61,7 @@
                 <div
                         class="circle"
                         style:background={color}
-                        transition:scale="{{ delay: 600, duration: 1000 }}"
+                        transition:scale|global="{{ delay: 600, duration: 1000 }}"
                         on:introend="{() => show3 = false}"
                         on:outroend="{() => show3 = true}"
                 ></div>

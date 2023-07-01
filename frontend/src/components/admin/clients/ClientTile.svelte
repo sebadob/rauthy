@@ -53,22 +53,22 @@
         <TabBar labels={tabBarItems} bind:selected/>
 
         {#if selected === 'CONFIG'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <ClientConfig bind:client bind:onSave/>
             </div>
 
         {:else if selected === 'SECRET'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <ClientSecret bind:client/>
             </div>
 
         {:else if selected === 'BRANDING'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <ClientBranding bind:client/>
             </div>
 
         {:else if selected === 'DELETE'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <ClientDelete bind:client onSave={onDelete}/>
             </div>
 

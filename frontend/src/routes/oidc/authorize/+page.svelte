@@ -264,8 +264,10 @@
 
             {#if showResetRequest}
                 <div
+                        role="button"
+                        tabindex="0"
                         class="forgotten"
-                        transition:scale
+                        transition:scale|global
                         on:click={handleShowReset}
                         on:keypress={handleShowReset}
                 >

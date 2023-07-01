@@ -135,7 +135,7 @@
         </Input>
 
         {#if editPwd}
-            <div in:blur={{ duration: 350 }}>
+            <div in:blur|global={{ duration: 350 }}>
                 <AccModPwd
                         bind:formValues={pwdFormValues}
                         bind:isValid={isPwdValid}
@@ -155,11 +155,11 @@
 
         <div class="bottom">
             {#if success}
-                <div class="success" transition:fade>
+                <div class="success" transition:fade|global>
                     Update successful
                 </div>
             {:else if err}
-                <div class="err" transition:fade>
+                <div class="err" transition:fade|global>
                     {err}
                 </div>
             {/if}

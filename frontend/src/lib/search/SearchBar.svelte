@@ -84,7 +84,13 @@
     </div>
 
     <div class="backWrap">
-        <div class="back" on:click={del} on:keypress={del}>
+        <div
+                role="button"
+                tabindex="0"
+                class="back"
+                on:click={del}
+                on:keypress={del}
+        >
             <IconBackspace/>
         </div>
     </div>

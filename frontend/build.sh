@@ -2,6 +2,8 @@
 
 npm run build
 
+mkdir ../templates/html
+mkdir -p ../static/v1
 rm -rf ../static/v1/*
 rm -rf ../templates/html/*
 

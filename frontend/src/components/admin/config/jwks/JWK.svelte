@@ -43,7 +43,7 @@
     </div>
 
     {#if isHover}
-        <div class="details" transition:fade>
+        <div class="details" transition:fade|global>
             <div class="detailsInner">
         <textarea
                 name={jwk.kid}

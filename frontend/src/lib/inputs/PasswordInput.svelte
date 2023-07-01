@@ -76,12 +76,24 @@
 
     <div class="rel">
         {#if showCopy}
-            <div class="btn clip" on:click={copy} on:keypress={copy}>
+            <div
+                    role="button"
+                    tabindex="0"
+                    class="btn clip"
+                    on:click={copy}
+                    on:keypress={copy}
+            >
                 <IconClipboard/>
             </div>
         {/if}
 
-        <div class="btn show" on:click={toggle} on:keypress={toggle}>
+        <div
+                role="button"
+                tabindex="0"
+                class="btn show"
+                on:click={toggle}
+                on:keypress={toggle}
+        >
             {#if type === 'password'}
                 <IconEyeSlash width={22}/>
             {:else}
@@ -95,7 +107,7 @@
             <div
                     class="err font-label"
                     style:width={width}
-                    transition:slide={{ duration: 250 }}
+                    transition:slide|global={{ duration: 250 }}
             >
                 {error}
             </div>

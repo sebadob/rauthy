@@ -267,8 +267,8 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         // for the initial static hydration script. An issue is open about this and
                         // this will most probably solved soon.
                         // 'unsafe-inline' will be removed before v1.0.0 in the ui
+                        // "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
                         "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
-                        // "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; frame-ancestors 'self'; object-src 'none';",
                     ))
                     .add(("cache-control", "no-store"))
                     .add(("pragma", "no-cache")),

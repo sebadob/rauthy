@@ -28,7 +28,7 @@
 <div class="wrapper" style:align-items={center ? 'center' : 'flex-start'}>
     {#if show}
         <div
-                transition:fade={{ duration: 100 }}
+                transition:fade|global={{ duration: 100 }}
                 class="inner"
                 style:align-items={center ? 'center' : 'flex-start'}
                 style:flex-direction={flexDir}
