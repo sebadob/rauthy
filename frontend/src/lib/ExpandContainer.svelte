@@ -61,6 +61,8 @@
 >
     <div class="containerHeader">
         <div
+                role="button"
+                tabindex="0"
                 class="expand"
                 on:mouseenter={() => isHover = true}
                 on:mouseleave={() => isHover = false}

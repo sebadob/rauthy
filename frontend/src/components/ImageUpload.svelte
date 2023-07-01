@@ -21,6 +21,8 @@
 
 <div class="container">
     <div
+            role="button"
+            tabindex="0"
             class="btn"
             on:click={() => inputRef.click()}
             on:keypress={() => inputRef.click()}
@@ -28,6 +30,8 @@
         <IconUpload width={22}/>
     </div>
     <div
+            role="button"
+            tabindex="0"
             class="text noselect font-label"
             on:click={() => inputRef.click()}
             on:keypress={() => inputRef.click()}

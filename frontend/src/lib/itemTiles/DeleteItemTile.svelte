@@ -8,7 +8,13 @@
 
 <div class="label font-label">
     {label}
-    <div class="icon" on:click={() => onDelete(label)} on:keypress={() => onDelete(label)}>
+    <div
+            role="button"
+            tabindex="0"
+            class="icon"
+            on:click={() => onDelete(label)}
+            on:keypress={() => onDelete(label)}
+    >
         <IconStop width="14"/>
     </div>
 </div>

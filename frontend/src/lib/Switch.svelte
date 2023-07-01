@@ -17,6 +17,9 @@
 </script>
 
 <div
+        role="switch"
+        aria-checked={selected}
+        tabindex="0"
         class="outer"
         class:selectedOuter={selected}
         on:click={handleClick}

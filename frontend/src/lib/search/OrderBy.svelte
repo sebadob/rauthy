@@ -74,7 +74,13 @@
     {/if}
 
     {#if options.length > 0}
-        <div class="icon" on:click={switchDirection} on:keypress={switchDirection}>
+        <div
+                role="button"
+                tabindex="0"
+                class="icon"
+                on:click={switchDirection}
+                on:keypress={switchDirection}
+        >
             {#if direction === 1}
                 <IconBarsArrowUp/>
             {:else}

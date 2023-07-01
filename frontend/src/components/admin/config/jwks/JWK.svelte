@@ -30,6 +30,7 @@
 </script>
 
 <div
+        role="none"
         class="cert"
         on:mouseenter={() => isHover = true}
         on:mouseleave={() => isHover = false}

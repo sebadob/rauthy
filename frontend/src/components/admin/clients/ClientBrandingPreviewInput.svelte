@@ -58,7 +58,12 @@
 
   {#if password}
     <div class="rel">
-      <div class="btn show" on:click={toggle} on:keypress={toggle}>
+      <div
+              role="none"
+              class="btn show"
+              on:click={toggle}
+              on:keypress={toggle}
+      >
         {#if type === 'password'}
           <IconEyeSlash width={22} color={colors.err} />
         {:else}

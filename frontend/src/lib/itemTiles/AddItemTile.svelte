@@ -27,7 +27,13 @@
 </script>
 
 <div class="wrapper">
-    <div class="icon" on:click={() => show = !show} on:keypress={() => show = !show}>
+    <div
+            role="button"
+            tabindex="0"
+            class="icon"
+            on:click={() => show = !show}
+            on:keypress={() => show = !show}
+    >
         <IconPlus/>
     </div>
 
@@ -48,7 +54,13 @@
                     style="width: {mindWidth}; max-height: {items.length > searchThreshold ? maxHeight - 29 : maxHeight}px"
             >
                 {#each resItems as item}
-                    <div class="item" on:click={() => handleSelect(item)} on:keypress={() => handleSelect(item)}>
+                    <div
+                            role="button"
+                            tabindex="0"
+                            class="item"
+                            on:click={() => handleSelect(item)}
+                            on:keypress={() => handleSelect(item)}
+                    >
                         {item}
                     </div>
                 {/each}
