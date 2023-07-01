@@ -112,8 +112,8 @@ This means it **will never implement**:
 
 ## Getting Started
 
-Rauthy hosts its own documentation for each version. It is not fully complete yet, but a lot of things are already
-written down. The 'Rauthy Book' is not hosted in the public so far. You need to spin up a docker instance:
+Either just take a look at the [Rauthy Book](https://sebadob.github.io/rauthy/), or start directly by taking a look at
+the application yourself with docker on your localhost:
 
 ```
 docker run -it --rm -p 8080:8080 sdobedev/rauthy@sha256:d004b55429a4747c8e1594668c2bd2fa8e8930e2fab1173d0da5eec40bdd652b
@@ -123,7 +123,7 @@ docker run -it --rm -p 8080:8080 sdobedev/rauthy@sha256:d004b55429a4747c8e159466
 Please keep in mind, that t the time of writing, the docker image is hosted in the free tier and will be rate limited 
 if there are too many pulls.
 
-## Next Steps
+## Next Steps for the project
 
 - migrate to Svelte 4 in the frontend to get rid of the `unsafe-inline` CSP
 - add more documentation
