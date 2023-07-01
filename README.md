@@ -116,7 +116,7 @@ Either just take a look at the [Rauthy Book](https://sebadob.github.io/rauthy/),
 the application yourself with docker on your localhost:
 
 ```
-docker run -it --rm -p 8080:8080 sdobedev/rauthy@sha256:d004b55429a4747c8e1594668c2bd2fa8e8930e2fab1173d0da5eec40bdd652b
+docker run -it --rm -p 8080:8080 sdobedev/rauthy@sha256:4d0a3977f4fda68e848b45899d3b8a1b63c09c80dca0cc737be7338876194c40
 ```
 
 **NOTE:**  
