@@ -1,0 +1,591 @@
+use crate::common::{
+    check_status, get_auth_headers, get_backend_url, CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME,
+};
+use josekit::jwk;
+use pretty_assertions::assert_eq;
+use rauthy_common::constants::CSRF_HEADER;
+use rauthy_common::utils::{base64_url_encode, get_rand};
+use rauthy_models::entity::jwk::JWKS;
+use rauthy_models::request::{
+    LoginRequest, TokenRequest, TokenValidationRequest, UpdateClientRequest,
+};
+use rauthy_service::token_set::TokenSet;
+use reqwest::header::{HeaderMap, HeaderValue};
+use reqwest::{header, Response};
+use ring::digest;
+use std::error::Error;
+use std::ops::Sub;
+use std::thread::JoinHandle;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tokio::time;
+
+mod common;
+
+// This is a very long running test - run it manually as a single test
+// TODO maybe moving it into its own module would work, so it does not block the others
+#[tokio::test]
+#[ignore]
+async fn test_certs() -> Result<(), Box<dyn Error>> {
+    let backend_url = get_backend_url();
+    eprintln!("backend_url: {}", backend_url);
+    let auth_headers = get_auth_headers().await?;
+
+    // get current certs
+    let url = format!("{}/oidc/certs", backend_url);
+    let res = reqwest::get(&url).await?;
+    assert_eq!(res.status(), 200);
+    let certs = res.json::<JWKS>().await?;
+    assert_eq!(certs.keys.len(), 4);
+
+    // for _ in 1..1000 {
+    //     aw!(reqwest::get(&url)).unwrap();
+    // }
+    // rotate JWKs
+    let url_rotate = format!("{}/oidc/rotateJwk", backend_url);
+    let res = reqwest::Client::new()
+        .post(&url_rotate)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // get all certs and check for the new ones
+    let res = reqwest::get(&url).await?;
+    assert_eq!(res.status(), 200);
+    let new_certs = res.json::<JWKS>().await?;
+    assert_eq!(new_certs.keys.len(), 8);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
+    let backend_url = get_backend_url();
+
+    // ############################################################################
+    // ########################## flow with plain pkce ############################
+    // ############################################################################
+    println!("\nStarting authorization code flow with plain pkce");
+
+    // Step 1: GET /authorize for the CSRF token and simulate UI login
+    let challenge_plain = "oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys";
+    let redirect_uri = "http://localhost:3000/oidc/callback";
+    let query = format!(
+        "client_id=init_client&redirect_uri={}&response_type=code",
+        redirect_uri
+    );
+    let query_pkce = format!("{}&code_challenge={}", query, challenge_plain);
+    let url_auth = format!("{}/oidc/authorize?{}", backend_url, query_pkce);
+    let mut res = reqwest::get(&url_auth).await?;
+    res = check_status(res, 200).await?;
+    let headers = cookie_csrf_headers_from_res(res).await?;
+
+    // Step 2: POST /authorize with CSRF token cookie
+    let nonce = get_rand(32);
+    let mut req_login = LoginRequest {
+        email: USERNAME.to_string(),
+        password: Some("IAmSoWrong1337".to_string()),
+        client_id: CLIENT_ID.to_string(),
+        redirect_uri: redirect_uri.to_owned(),
+        scopes: None,
+        state: None,
+        nonce: Some(nonce.to_owned()),
+        code_challenge: Some(challenge_plain.to_owned()),
+        code_challenge_method: None,
+    };
+    let res = reqwest::Client::new()
+        .post(&url_auth)
+        .headers(headers.clone())
+        .json(&req_login)
+        .send()
+        .await?;
+    // should be 401 - wrong password
+    check_status(res, 401).await?;
+
+    req_login.password = Some(PASSWORD.to_string());
+    let mut res = reqwest::Client::new()
+        .post(&url_auth)
+        .headers(headers.clone())
+        .json(&req_login)
+        .send()
+        .await?;
+    res = check_status(res, 202).await?;
+
+    // Step 3: extract values from callback location header
+    let (code, _) = code_state_from_headers(res)?;
+    println!("Extracted code: {:?}", code);
+
+    // Step 4: POST /token with extracted values + CSRF cookie
+    let mut req_token = TokenRequest {
+        grant_type: "authorization_code".to_string(),
+        code: Some(code.to_string()),
+        redirect_uri: None,
+        client_id: CLIENT_ID.to_string(),
+        client_secret: Some(CLIENT_SECRET.to_string()),
+        code_verifier: None,
+        username: None,
+        password: None,
+        refresh_token: None,
+    };
+    let url_token = format!("{}/oidc/token", backend_url);
+    let res = reqwest::Client::new()
+        .post(&url_token)
+        .form(&req_token)
+        .send()
+        .await?;
+    // should be 400 - no code verifier given
+    check_status(res, 400).await?;
+
+    req_token.code_verifier = Some("IAmSoWrong1337".to_string());
+    let res = reqwest::Client::new()
+        .post(&url_token)
+        .form(&req_token)
+        .send()
+        .await?;
+    // should be 401 - wrong code verifier given
+    check_status(res, 401).await?;
+
+    req_token.code_verifier = Some(challenge_plain.to_string());
+    let mut res = reqwest::Client::new()
+        .post(&url_token)
+        .form(&req_token)
+        .send()
+        .await?;
+    res = check_status(res, 200).await?;
+    let ts = res.json::<TokenSet>().await?;
+    assert!(ts.access_token.len() > 0);
+    assert!(ts.id_token.is_some());
+    assert!(ts.refresh_token.is_some());
+    assert_eq!(ts.expires_in, 60);
+
+    // verify 'nonce' existing in id token
+    let id_token = ts.id_token.unwrap();
+    // decode header to get the kid
+    let header = josekit::jwt::decode_header(id_token.clone())?;
+    let kid = header
+        .claim("kid")
+        .map(|v| v.to_string().replace('\"', ""))
+        .unwrap();
+
+    // retrieve jwk for kid
+    let kid_url = format!("{}/oidc/certs/{}", backend_url, kid);
+    let res = reqwest::get(&kid_url).await?;
+    assert_eq!(res.status(), 200);
+    let jwk = res.json::<jwk::Jwk>().await?;
+
+    // check signature and get the payload
+    let verifier = josekit::jws::RS512.verifier_from_jwk(&jwk).unwrap();
+    let (payload, _) = josekit::jwt::decode_with_verifier(&id_token, &verifier)?;
+
+    // finally, check the 'nonce'
+    let nonce_claim = payload
+        .claim("nonce")
+        .map(|v| v.to_string().replace('\"', ""))
+        .expect("'nonce' is not set in id token");
+    assert_eq!(nonce_claim, nonce);
+
+    // ############################################################################
+    // ########################## flow with S256 pkce #############################
+    // ############################################################################
+    println!("\nStarting authorization code flow with S256 pkce");
+
+    let mut res = reqwest::get(&url_auth).await?;
+    res = check_status(res, 200).await?;
+    let headers = cookie_csrf_headers_from_res(res).await?;
+
+    let hash = digest::digest(&digest::SHA256, challenge_plain.as_bytes());
+    let challenge_s256 = base64_url_encode(hash.as_ref());
+    req_login.code_challenge_method = Some("S256".to_string());
+    req_login.code_challenge = Some(challenge_s256);
+    let mut res = reqwest::Client::new()
+        .post(&url_auth)
+        .headers(headers)
+        .json(&req_login)
+        .send()
+        .await?;
+    res = check_status(res, 202).await?;
+    let (code, state) = code_state_from_headers(res)?;
+    assert!(state.is_none());
+
+    let res = reqwest::Client::new()
+        .post(&url_token)
+        .form(&req_token)
+        .send()
+        .await?;
+    // should be 401 - trying to use already used authorization code
+    check_status(res, 401).await?;
+
+    req_token.code = Some(code);
+    let mut res = reqwest::Client::new()
+        .post(&url_token)
+        .form(&req_token)
+        .send()
+        .await?;
+    res = check_status(res, 200).await?;
+
+    let ts = res.json::<TokenSet>().await?;
+    assert!(ts.access_token.len() > 0);
+    assert!(ts.id_token.is_some());
+    assert!(ts.refresh_token.is_some());
+    assert_eq!(ts.expires_in, 60);
+
+    // ############################################################################
+    // ########################## flow without pkce ###############################
+    // ############################################################################
+    println!("\nStarting authorization code flow without pkce");
+
+    let url_auth = format!("{}/oidc/authorize?{}", backend_url, query);
+    let res = reqwest::get(&url_auth).await?;
+    // should be 400 - code_challenge is missing
+    check_status(res, 400).await?;
+
+    // disable pkce for the init client
+    let mut update_client = UpdateClientRequest {
+        id: CLIENT_ID.to_string(),
+        name: Some("Init Client".to_string()),
+        confidential: true,
+        redirect_uris: vec!["http://localhost:3000/oidc/callback".to_string()],
+        post_logout_redirect_uris: Some(vec!["http://localhost:8080".to_string()]),
+        allowed_origins: Some(vec!["http://localhost:8080/*".to_string()]),
+        enabled: true,
+        flows_enabled: vec![
+            "authorization_code".to_string(),
+            "password".to_string(),
+            "client_credentials".to_string(),
+            "refresh_token".to_string(),
+        ],
+        access_token_alg: "RS384".to_string(),
+        id_token_alg: "EdDSA".to_string(),
+        refresh_token: true,
+        auth_code_lifetime: 120,
+        access_token_lifetime: 60,
+        scopes: vec![
+            "openid".to_string(),
+            "email".to_string(),
+            "profile".to_string(),
+            "groups".to_string(),
+        ],
+        default_scopes: vec!["openid".to_string(), "email".to_string()],
+        challenges: None,
+    };
+    let url_client = format!("{}/clients/{}", backend_url, CLIENT_ID);
+    let auth_headers = get_auth_headers().await?;
+    let res = reqwest::Client::new()
+        .put(&url_client)
+        .headers(auth_headers.clone())
+        .json(&update_client)
+        .send()
+        .await?;
+    check_status(res, 200).await?;
+
+    let url_auth = format!("{}/oidc/authorize?{}", backend_url, query);
+    let mut res = reqwest::get(&url_auth).await?;
+    res = check_status(res, 200).await?;
+    let headers = cookie_csrf_headers_from_res(res).await?;
+
+    let state = "SomeStateThatShouldBeReturned";
+    req_login.code_challenge_method = None;
+    req_login.code_challenge = None;
+    req_login.state = Some(state.to_string());
+    let mut res = reqwest::Client::new()
+        .post(&url_auth)
+        .headers(headers)
+        .json(&req_login)
+        .send()
+        .await?;
+    res = check_status(res, 202).await?;
+    let (code, state_check) = code_state_from_headers(res)?;
+    assert_eq!(state, state_check.unwrap());
+
+    req_token.code = Some(code);
+    let mut res = reqwest::Client::new()
+        .post(&url_token)
+        .form(&req_token)
+        .send()
+        .await?;
+    res = check_status(res, 200).await?;
+
+    let ts = res.json::<TokenSet>().await?;
+    assert!(ts.access_token.len() > 0);
+    assert!(ts.id_token.is_some());
+    assert!(ts.refresh_token.is_some());
+    assert_eq!(ts.expires_in, 60);
+
+    // now clean up and change back the pkce for the client
+    update_client.challenges = Some(vec!["S256".to_string(), "plain".to_string()]);
+    let res = reqwest::Client::new()
+        .put(&url_client)
+        .headers(auth_headers.clone())
+        .json(&update_client)
+        .send()
+        .await?;
+    check_status(res, 200).await?;
+
+    Ok(())
+}
+
+async fn cookie_csrf_headers_from_res(res: Response) -> Result<HeaderMap, Box<dyn Error>> {
+    let cookie = res.headers().get(header::SET_COOKIE).unwrap();
+    let (session_cookie, _) = cookie.to_str()?.split_once(';').unwrap();
+    println!("Extracted session cookie: {:?}", session_cookie);
+    let mut headers = HeaderMap::new();
+    headers.append(header::COOKIE, HeaderValue::from_str(&session_cookie)?);
+
+    let content = res.text().await?;
+    let csrf_find = "name=\"rauthy-csrf-token\" id=\"";
+    let (_, content_split) = content.split_once(csrf_find).unwrap();
+    let (csrf_token, _) = content_split.split_once('"').unwrap();
+    println!("Extracted CSRF Token: {}", csrf_token);
+    headers.append(CSRF_HEADER, HeaderValue::from_str(csrf_token)?);
+
+    Ok(headers)
+}
+
+fn code_state_from_headers(res: Response) -> Result<(String, Option<String>), Box<dyn Error>> {
+    let loc_header = res
+        .headers()
+        .get(header::LOCATION)
+        .unwrap()
+        .to_str()
+        .unwrap();
+    println!("Location Header: {}", loc_header);
+
+    let code: String;
+    let mut state = None;
+    let (_, code_str) = loc_header.split_once("code=").unwrap();
+    if let Some((c, state_str)) = code_str.split_once('&') {
+        code = c.to_string();
+        let (_, s) = state_str.split_once("state=").unwrap();
+        state = Some(s.to_string());
+    } else {
+        code = code_str.to_string();
+    }
+
+    Ok((code, state))
+}
+
+#[tokio::test]
+async fn test_client_credentials_flow() -> Result<(), Box<dyn Error>> {
+    let backend_url = get_backend_url();
+
+    let mut body = TokenRequest {
+        grant_type: "client_credentials".to_string(),
+        code: None,
+        redirect_uri: None,
+        client_id: CLIENT_ID.to_string(),
+        client_secret: None,
+        code_verifier: None,
+        username: None,
+        password: None,
+        refresh_token: None,
+    };
+    let url = format!("{}/oidc/token", backend_url);
+    let client = reqwest::Client::new();
+    let res = client.post(&url).form(&body).send().await?;
+    // should be 401 because of missing client secret
+    check_status(res, 400).await?;
+
+    body.client_secret = Some(CLIENT_SECRET.to_string());
+    let mut res = client.post(&url).form(&body).send().await?;
+    res = check_status(res, 200).await?;
+
+    let ts = res.json::<TokenSet>().await?;
+    assert!(ts.access_token.len() > 0);
+    assert_eq!(ts.token_type.as_ref().unwrap(), "Bearer");
+    assert_eq!(ts.expires_in, 60);
+    // important: no id token for client_credentials and not refresh token
+    assert!(ts.id_token.is_none());
+    assert!(ts.refresh_token.is_none());
+
+    let req = TokenValidationRequest {
+        token: ts.access_token,
+    };
+    validate_token(req).await?;
+
+    Ok(())
+}
+
+// This test is a bit messy currently with some code reception and so one - WIP
+#[tokio::test]
+#[ignore]
+async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
+    let backend_url = get_backend_url();
+
+    let fail_count = 10;
+    let success_count = 10;
+
+    // ############################################################################
+    // ########################## flow with plain pkce ############################
+    // ############################################################################
+    println!("Starting authorization code flow with plain pkce");
+
+    // Step 1: GET /authorize for the CSRF token and simulate UI login
+    let challenge_plain = "oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys";
+    let redirect_uri = "http://localhost:3000/oidc/callback";
+    let query = format!(
+        "client_id=init_client&redirect_uri={}&response_type=code",
+        redirect_uri
+    );
+    let query_pkce = format!("{}&code_challenge={}", query, challenge_plain);
+    let url_auth = format!("{}/oidc/authorize?{}", backend_url, query_pkce);
+    let mut res = reqwest::get(&url_auth).await?;
+    res = check_status(res, 200).await?;
+    let headers = cookie_csrf_headers_from_res(res).await?;
+
+    // Step 2: POST /authorize with CSRF token cookie
+    let mut req_login = LoginRequest {
+        email: USERNAME.to_string(),
+        password: Some("IAmSoWrong1337".to_string()),
+        client_id: CLIENT_ID.to_string(),
+        redirect_uri: redirect_uri.to_owned(),
+        scopes: None,
+        state: None,
+        nonce: None,
+        code_challenge: Some(challenge_plain.to_owned()),
+        code_challenge_method: None,
+    };
+
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let mut handles: Vec<JoinHandle<()>> = vec![];
+
+    for _ in 0..fail_count {
+        let url = url_auth.clone();
+        let h = headers.clone();
+        let req = req_login.clone();
+        let handle = std::thread::spawn(move || {
+            aw!(reqwest::Client::new()
+                .post(&url)
+                .headers(h)
+                .json(&req)
+                .send())
+            .unwrap();
+        });
+        handles.push(handle);
+        // std::thread::sleep(Duration::from_millis(100));
+    }
+
+    req_login.password = Some(PASSWORD.to_string());
+    for _ in 0..success_count {
+        let url = url_auth.clone();
+        let h = headers.clone();
+        let req = req_login.clone();
+        let handle = std::thread::spawn(move || {
+            aw!(reqwest::Client::new()
+                .post(&url)
+                .headers(h)
+                .json(&req)
+                .send())
+            .unwrap();
+        });
+        handles.push(handle);
+        // std::thread::sleep(Duration::from_millis(100));
+    }
+
+    assert_eq!(handles.len(), fail_count + success_count);
+    for h in handles {
+        h.join().unwrap();
+    }
+    let end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let total = end.sub(start).as_millis();
+    println!("Total time taken: {}", total);
+
+    assert_eq!(1, 2);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_password_flow() -> Result<(), Box<dyn Error>> {
+    let url = format!("{}/oidc/token", get_backend_url());
+    let mut body = TokenRequest {
+        grant_type: "password".to_string(),
+        code: None,
+        redirect_uri: None,
+        client_id: CLIENT_ID.to_string(),
+        client_secret: None,
+        code_verifier: None,
+        username: Some(USERNAME.to_string()),
+        password: None,
+        refresh_token: None,
+    };
+    let client = reqwest::Client::new();
+    let res = client.post(&url).form(&body).send().await?;
+    // should be 400 - no password
+    check_status(res, 400).await?;
+
+    body.password = Some("IAmSoWrong1337".to_string());
+    let res = client.post(&url).form(&body).send().await?;
+    // should be 400 - missing client secret
+    check_status(res, 400).await?;
+
+    body.client_secret = Some("NoNoNoSecret1337".to_string());
+    let res = client.post(&url).form(&body).send().await?;
+    // should be 400 - wrong password
+    check_status(res, 401).await?;
+
+    body.password = Some(PASSWORD.to_string());
+    let res = client.post(&url).form(&body).send().await?;
+    // should be 401 - wrong client secret
+    check_status(res, 401).await?;
+
+    body.client_secret = Some(CLIENT_SECRET.to_string());
+    let mut res = client.post(&url).form(&body).send().await?;
+    // all should be good now
+    res = check_status(res, 200).await?;
+
+    let ts = res.json::<TokenSet>().await?;
+    assert!(ts.access_token.len() > 0);
+    assert!(ts.id_token.is_some());
+    assert!(ts.id_token.as_ref().unwrap().len() > 0);
+    assert!(ts.refresh_token.is_some());
+    assert!(ts.refresh_token.as_ref().unwrap().len() > 0);
+    // test token is valid for only 60 seconds to make the refresh token valid immediately
+    assert_eq!(ts.expires_in, 60);
+
+    // validate against the backend
+    let req = TokenValidationRequest {
+        token: ts.access_token.to_owned(),
+    };
+    validate_token(req).await?;
+
+    // refresh it
+    time::sleep(Duration::from_secs(1)).await;
+    let req = TokenRequest {
+        grant_type: "refresh_token".to_string(),
+        code: None,
+        redirect_uri: None,
+        client_id: CLIENT_ID.to_string(),
+        client_secret: Some(CLIENT_SECRET.to_string()),
+        code_verifier: None,
+        username: None,
+        password: None,
+        refresh_token: Some(ts.refresh_token.clone().unwrap()),
+    };
+    let url = format!("{}/oidc/token", get_backend_url());
+    let res = reqwest::Client::new().post(&url).form(&req).send().await?;
+    assert_eq!(res.status(), 200);
+    let new_ts = res.json::<TokenSet>().await?;
+    assert!(new_ts.access_token.len() > 0);
+    assert!(new_ts.id_token.is_some());
+    assert!(new_ts.id_token.as_ref().unwrap().len() > 0);
+    assert!(new_ts.refresh_token.is_some());
+    assert!(new_ts.refresh_token.as_ref().unwrap().len() > 0);
+    assert_eq!(new_ts.expires_in, 60);
+
+    assert_ne!(ts.refresh_token, new_ts.refresh_token);
+    assert_ne!(ts.access_token, new_ts.access_token);
+    assert_ne!(ts.id_token, new_ts.id_token);
+
+    Ok(())
+}
+
+async fn validate_token(req: TokenValidationRequest) -> Result<(), Box<dyn Error>> {
+    let url_valid = format!("{}/oidc/token/validate", get_backend_url());
+    let res = reqwest::Client::new()
+        .post(&url_valid)
+        .json(&req)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 202);
+    Ok(())
+}

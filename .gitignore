@@ -1,0 +1,10 @@
+/target
+.idea
+.env
+data
+frontend/.next
+frontend/node_modules
+frontend/out
+tls/*.pem
+tls/ca
+tls/intermediate

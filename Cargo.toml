@@ -1,0 +1,13 @@
+[workspace]
+members = [
+    "rauthy-common",
+    "rauthy-handlers",
+    "rauthy-main",
+    "rauthy-models",
+    "rauthy-service",
+]
+
+[profile.release]
+codegen-units = 1
+lto = true
+panic = "abort"

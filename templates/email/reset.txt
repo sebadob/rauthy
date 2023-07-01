@@ -1,0 +1,8 @@
+Password reset request for {{ pub_url }}
+
+Click the link below to get forwarded to the password request form.
+
+This link is only valid for a short period of time for security reasons.
+Link expires: {{ exp }}
+
+{{ link }}

@@ -1,0 +1,37 @@
+{
+	"name": "frontend",
+	"version": "0.0.1",
+	"private": true,
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
+		"test": "playwright test",
+		"lint": "prettier --plugin-search-dir . --check . && eslint .",
+		"format": "prettier --plugin-search-dir . --write ."
+	},
+	"devDependencies": {
+		"@playwright/test": "^1.25.0",
+		"@sveltejs/adapter-auto": "^2.0.0",
+		"@sveltejs/adapter-static": "^2.0.1",
+		"@sveltejs/kit": "^1.14.0",
+		"argon2-browser": "^1.18.0",
+		"base64-arraybuffer": "^1.0.2",
+		"eslint": "^8.16.0",
+		"eslint-config-prettier": "^8.3.0",
+		"eslint-plugin-svelte3": "^4.0.0",
+		"jwt-decode": "^3.1.2",
+		"oauth-pkce": "^0.0.6",
+		"prettier": "^2.6.2",
+		"prettier-plugin-svelte": "^2.7.0",
+		"sjcl": "^1.0.8",
+		"svelte": "^3.44.0",
+		"svelte-check": "^3.1.4",
+		"typescript": "^5.0.2",
+		"vite": "^4.0.0",
+		"yup": "^1.0.2"
+	},
+	"type": "module"
+}

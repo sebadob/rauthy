@@ -1,0 +1,545 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Reference Config - Rauthy Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../mdbook-admonish.css">
+
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = null;
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">4.</strong> 2FA / MFA</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/config.html" class="active"><strong aria-hidden="true">10.</strong> Reference Config</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Rauthy Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="reference-config"><a class="header" href="#reference-config">Reference Config</a></h1>
+<p>This shows a full example config with (hopefully) every value nicely described.</p>
+<div id="admonition-caution" class="admonition warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="#admonition-caution"></a></p>
+</div>
+<div>
+<p>When you go into production, make sure that you provide the included secrets / sensistive information in this
+file in an appropriate way. With docker, you can leave them inside this file, but when deploying with Kubernetes,
+extract these values, create Kubernetes Secrets and provide them as environment variables.</p>
+</div>
+</div>
+<pre><code>#####################################
+############## ACCESS ###############
+#####################################
+
+# If the User Registration endpoint should be accessible by anyone. If not, an admin must create each new user.
+# (default: false)
+#OPEN_USER_REG=true
+
+# Can be used when 'OPEN_USER_REG=true' to restrict the domains for a registration. For instance, set it to
+# 'USER_REG_DOMAIN_RESTRICTION=gmail.com' to allow only registrations with 'user@gmail.com'.
+# default: ''
+#USER_REG_DOMAIN_RESTRICTION=some-domain.com
+
+#####################################
+############# BACKUPS ###############
+#####################################
+
+# Cron job for automatic data store backups (default: &quot;0 0 4 * * * *&quot;)
+# sec min hour day_of_month month day_of_week year
+#BACKUP_TASK=&quot;0 0 4 * * * *&quot;
+
+# The name for the data store backups. The current timestamp will always be appended automatically. (default: rauthy-backup-)
+#BACKUP_NAME=&quot;rauthy-backup-&quot;
+
+# All backups older than the specified hours will be cleaned up automatically (default: 720)
+#BACKUP_RETENTION_LOCAL=720
+
+#####################################
+############## CACHE ################
+#####################################
+
+# If the cache should start in HA mode or standalone
+# accepts 'true|false', defaults to 'false'
+#HA_MODE=false
+
+# The connection strings (with hostnames) of the HA instances as a CSV
+# Format: 'scheme://hostname:port'
+#HA_HOSTS=&quot;https://rauthy-0.rauthy:8080, https://rauthy-1.rauthy:8080 ,https://rauthy-2.rauthy:8080&quot;
+
+# Overwrite the hostname which is used to identify each cache member.
+# Useful in scenarios, where for instance all members are on the same host with different ports or for testing.
+#HOSTNAME_OVERWRITE=&quot;rauthy-0.rauthy:8080&quot;
+
+## Define buffer sizes for channels between the components
+# Buffer for client requests on the incoming stream - server side (default: 128)
+# Make sense to have the CACHE_BUF_SERVER set to: `(number of total HA cache hosts - 1) * CACHE_BUF_CLIENT`
+# In a non-HA deployment, set the same size for both
+#CACHE_BUF_SERVER=128
+# Buffer for client requests to remote servers for all cache operations (default: 128)
+#CACHE_BUF_CLIENT=128
+
+# Secret token, which is used to authenticate the cache members
+#CACHE_AUTH_TOKEN=SomeSuperSecretAndVerySafeToken1337
+
+## Connections Timeouts
+
+# The Server sends out keepalive pings with configured timeouts
+# The keepalive ping interval in seconds (default: 5)
+#CACHE_KEEPALIVE_INTERVAL=5
+# The keepalive ping timeout in seconds (default: 5)
+#CACHE_KEEPALIVE_TIMEOUT=5
+
+# The timeout for the leader election. If a newly saved leader request has not reached quorum after the timeout, the
+# leader will be reset and a new request will be sent out.
+# CAUTION: This should not be lower than CACHE_RECONNECT_TIMEOUT_UPPER, since cold starts and elections will be
+# problematic in that case.
+# value in seconds, default: 15
+#CACHE_ELECTION_TIMEOUT=15
+
+# These 2 values define the reconnect timeout for the HA Cache Clients.
+# The values are in ms and a random between these 2 will be chosen each time to avoid conflicts and race conditions
+# (default: 7500)
+#CACHE_RECONNECT_TIMEOUT_LOWER=7500
+# (default: 10000)
+#CACHE_RECONNECT_TIMEOUT_UPPER=10000
+
+#####################################
+############ DATABASE ###############
+#####################################
+
+# The database driver will be chosen at runtime depending on the given DATABASE_URL format. Examples:
+# Sqlite: 'sqlite:data/rauthy.db' or 'sqlite::memory:'
+# Postgres: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
+#
+# NOTE: The password in this case should be alphanumeric. Special characters could cause problems in the connection
+# string.
+#
+# CAUTION: To make the automatic migrations work with Postgres15, when you do not want to just use the `postgres` user,
+# You need to have a user with the same name as the DB / schema. For instance, the following would work without
+# granting extra access to the `public` schema which is disabled by default since PG15:
+# database: rauthy
+# user: rauthy
+# schema: rauthy with owner rauthy
+#
+#DATABASE_URL=sqlite::memory:
+#DATABASE_URL=sqlite:data/rauthy.db
+#DATABASE_URL=postgresql://rauthy:123SuperSafe@localhost:5432/rauthy
+
+# Max DB connections - irrelevant for SQLite (default: 5)
+#DATABASE_MAX_CONN=5
+
+# If specified, the current Database, set with DATABASE_URL, will be DELETED and OVERWRITTEN with a migration from the
+# given database with this variable. Can be used to migrate between different databases.
+# !!! USE WITH CARE !!!
+#MIGRATE_DB_FROM=sqlite:data/rauthy.db
+
+# Disables the housekeeping schedulers (default: false)
+#SCHED_DISABLE=true
+
+#####################################
+############# E-MAIL ################
+#####################################
+
+SMTP_USERNAME=
+#SMTP_PASSWORD=
+SMTP_URL=
+# Format: &quot;Rauthy &lt;rauthy@localhost.de&gt;&quot;
+SMTP_FROM=
+
+#####################################
+###### Encryption / Hashing #########
+#####################################
+
+# Format: &quot;key_id/enc_key another_key_id/another_enc_key&quot; - the enc_key itself must be exactly 32 characters long and
+# and should not contain special characters.
+# The ID must match '[a-zA-Z0-9]{2,20}'
+#ENC_KEYS=&quot;bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA&quot;
+ENC_KEY_ACTIVE=bVCyTsGaggVy5yqQ
+
+# M_COST should never be below 32768 in production
+ARGON2_M_COST=32768
+# T_COST should never be below 1 in production
+ARGON2_T_COST=3
+# P_COST should never be below 2 in production
+ARGON2_P_COST=2
+
+# Limits the maximum amount of parallel password hashes at the exact same time to never exceed system memory while
+# still allowing a good amount of memory for the argon2id algorithm (default: 2)
+# CAUTION: You must make sure, that you have at least (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + 30 MB of memory
+# available.
+MAX_HASH_THREADS=1
+
+# The time in ms when to log a warning, if a request waited longer than this time.
+# This is an indicator, that you have more concurrent logins than allowed and may need config adjustments,
+# if this happens more often. (default: 500)
+#HASH_AWAIT_WARN_TIME=500
+
+#####################################
+####### LIFETIMES / TIMEOUTS ########
+#####################################
+
+# Set the grace time in seconds for how long in seconds the refresh token should still be valid after usage.
+# Keep this value small, but do not set it to 0 with an HA deployment to not get issues with small HA cache latencies.
+#
+# If you have an external client, which does concurrent requests, from which the request interceptor wants to refresh
+# the token, you may have multiple hits on the endpoint and all of them should be valid.
+#
+# Caching is done on the endpoint itself, but grace time of 0 will only be good for a single instance of rauthy.
+# default: 5
+#REFRESH_TOKEN_GRACE_TIME=5
+
+# Lifetime for offline tokens in hours (default: 720)
+#OFFLINE_TOKEN_LIFETIME=720
+
+# Session lifetime in seconds - the session can not be extended beyond this time and a new login will be forced.
+# This is the session for the authorization code flow. (default: 14400)
+#SESSION_LIFETIME=14400
+
+# If 'true', a 2FA / MFA check will be done with each automatic token generation, even with an active session, which
+# kind of makes the session useless with Webauthn enabled, but provides maximum amount of security.
+# If 'false', the user will not get a MFA prompt with an active session at the authorization endpoint.
+# (default: false)
+#SESSION_RENEW_MFA=false
+
+# Session timeout in seconds
+# When a new token / login is requested before this timeout hits the limit, the user will be authenticated without
+# prompting for the credentials again.
+# This is the value which can extend the session, until it hits its maximum lifetime set with SESSION_LIFETIME.
+#SESSION_TIMEOUT=5400
+
+# ML: magic link
+# LT: lifetime
+# Lifetime in minutes for reset password magic links (default: 30)
+#ML_LT_PWD_RESET=30
+
+# Lifetime in minutes for the first password magic link, for setting the initial password. (default: 86400)
+#ML_LT_PWD_FIRST=86400
+
+#####################################
+############# LOGGING ###############
+#####################################
+
+# This is the log level for stdout logs
+# Accepts: error, info, debug, trace (default: info)
+#LOG_LEVEL=info
+
+# This is a special config which allows the configuration of customized access logs.
+# These logs will be logged with each request in addition to the normal LOG_LEVEL logs.
+# The following values are valid:
+# - Debug
+#   CAUTION: The Debug setting logs every information available to the middleware which includes SENSITIVE HEADERS
+#   DO NOT use the Debug level in a working production environment!
+# - Verbose
+#   Verbose logging without headers - generates huge outputs
+# - Basic
+#   Logs access to all endpoints apart from the Frontend ones which all js, css, ...
+# - Modifying
+#   Logs only requests to modifying endpoints and skips all GET
+# - Off
+# (default: Modifying)
+LOG_LEVEL_ACCESS=Basic
+
+#####################################
+################ MFA ################
+#####################################
+
+# If 'true', MFA for an account must be enabled to access the rauthy admin UI (default: true)
+ADMIN_FORCE_MFA=false
+
+# If set to true, you can access rauthy's admin API only with a valid session + CSRF token.
+# If you need some external access via JWT tokens, since sessions are managed with cookies, set this to false.
+# default: true
+ADMIN_ACCESS_SESSION_ONLY=true
+
+#####################################
+############## POW  #################
+#####################################
+
+## Proof of Work (PoW) configuration for Client Endpoints like User Registration
+# The iteration count for the PoW calculation (default: 1000000)
+#POW_IT=1000000
+
+# The expiration duration in seconds when a saved PoW should be cleaned up (default: 300)
+#POW_EXP=300
+
+#####################################
+############# SERVER ################
+#####################################
+
+# The server address to listen on. Can bind to a specific IP. (default: 0.0.0.0)
+#LISTEN_ADDRESS=0.0.0.0
+
+# The listen ports for HTTP / HTTPS, depending on the activated 'LISTEN_SCHEME'
+# default: 8080
+#LISTEN_PORT_HTTP=8080
+# default: 8443
+#LISTEN_PORT_HTTPS=8443
+
+# The scheme to use locally, valid values: http | https | http_https (default: http_https)
+LISTEN_SCHEME=http
+
+# The Public URL of the whole deployment
+# The LISTEN_SCHEME + PUB_URL must match the HTTP ORIGIN HEADER later on, which is especially important when running
+# rauthy behind a reverse proxy. In case of a non-standard port (80/443), you need to add the port to the PUB_URL
+PUB_URL=localhost:8080
+
+# default value: number of available physical cores
+#HTTP_WORKERS=1
+
+# When rauthy is running behind a reverse proxy, set to true (default: false)
+PROXY_MODE=false
+
+#####################################
+############### TLS #################
+#####################################
+
+## Rauthy TLS
+
+# Overwrite the path to the TLS certificate file in PEM format for rauthy (default: tls/tls.crt)
+#TLS_CERT=tls/tls.crt
+# Overwrite the path to the TLS private key file in PEM format for rauthy.
+# If the path / filename ends with '.der', rauthy will parse it as DER, otherwise as PEM.
+# (default: tls/tls.key)
+#TLS_KEY=tls/tls.key
+
+## CACHE TLS
+
+# Enable / disable TLS for the cache communication (default: true)
+CACHE_TLS=true
+# The path to the server TLS certificate PEM file (default: tls/redhac.local.cert.pem)
+CACHE_TLS_SERVER_CERT=tls/redhac.local.cert.pem
+# The path to the server TLS key PEM file (default: tls/redhac.local.key.pem)
+CACHE_TLS_SERVER_KEY=tls/redhac.local.key.pem
+# If not empty, the PEM file from the specified location will be added as the CA certificate chain for validating
+# the servers TLS certificate (default: tls/ca-chain.cert.pem)
+CACHE_TLS_CA_SERVER=tls/ca-chain.cert.pem
+
+# The path to the client mTLS certificate PEM file (default: tls/redhac.local.cert.pem)
+CACHE_TLS_CLIENT_CERT=tls/redhac.local.cert.pem
+# The path to the client mTLS key PEM file (default: tls/redhac.local.key.pem)
+CACHE_TLS_CLIENT_KEY=tls/redhac.local.key.pem
+# If not empty, the PEM file from the specified location will be added as the CA certificate chain for validating
+# the clients mTLS certificate (default: tls/ca-chain.cert.pem)
+CACHE_TLS_CA_CLIENT=tls/ca-chain.cert.pem
+
+# The domain / CN the client should validate the certificate against. This domain MUST be inside the
+# 'X509v3 Subject Alternative Name' when you take a look at the servers certificate with the openssl tool.
+# default: redhac.local
+CACHE_TLS_CLIENT_VALIDATE_DOMAIN=redhac.local
+
+# Can be used, if you need to overwrite the SNI when the client connects to the server, for instance if you are behind
+# a loadbalancer which combines multiple certificates. (default: &quot;&quot;)
+#CACHE_TLS_SNI_OVERWRITE=
+
+#####################################
+############# WEBAUTHN ##############
+#####################################
+
+# The 'Relaying Party (RP) ID' - effective domain name (default: localhost)
+# CAUTION: When this changes, already registered devices will stop working and users cannot log in anymore!
+RP_ID=localhost
+
+# Url containing the effective domain name (default: http://localhost:8080)
+# CAUTION: Must include the port number!
+RP_ORIGIN=http://localhost:8080
+
+# Non critical RP Name
+# Has no security properties and may be changed without issues (default: Rauthy Webauthn)
+RP_NAME='Rauthy Webauthn'
+
+# The Cache lifetime in seconds for Webauthn requests. Within this time, a webauthn request must have been validated.
+# (default: 60)
+#WEBAUTHN_REQ_EXP=60
+
+# The Cache lifetime for additional Webauthn Data like auth codes and so on. Should not be lower than WEBAUTHN_REQ_EXP.
+# The value is in seconds (default: 90)
+#WEBAUTHN_DATA_EXP=90
+
+# With webauthn enabled for a user, he needs to enter username / password on a new system. If these credentials are
+# verified, rauthy will set an additional cookie, which will determine how long the user can then use only (safe)
+# MFA passwordless webauthn login with yubikeys, apple touch id, windows hello, ... until he needs to verify his
+# credentials again.
+# Passwordless login is generally much safer than logging in with a password. But sometimes it is possible, that the
+# Webauthn devices do not force the user to include a second factor, which in that case would be a single factor login
+# again. That is why we should ask for the original password in addition once in a while to set the cookie.
+# The value is in hours (default: 2160)
+#WEBAUTHN_RENEW_EXP=2160
+
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../config/tls.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../config/tls.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

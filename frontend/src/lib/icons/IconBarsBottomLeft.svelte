@@ -1,0 +1,22 @@
+<script>
+	export let color;
+  export let opacity = 0.9;
+  export let width = 24;
+</script>
+
+<svg
+  fill="none"
+  viewBox="0 0 24 24"
+  stroke="currentColor"
+  stroke-width={2}
+  width={width}
+  color={color}
+  opacity={opacity}
+>
+  <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
+  />
+</svg>
+
