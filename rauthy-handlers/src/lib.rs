@@ -21,6 +21,7 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::webauthn::WebauthnCookie;
 use rauthy_models::response::WebauthnLoginResponse;
 use rauthy_models::AuthStep;
+use rust_embed::RustEmbed;
 use tracing::error;
 
 pub mod clients;
@@ -33,6 +34,10 @@ pub mod roles;
 pub mod scopes;
 pub mod sessions;
 pub mod users;
+
+#[derive(RustEmbed)]
+#[folder = "../static/v1/"]
+struct Assets;
 
 // TODO provide app state to create encrypted MFA cookies
 pub fn map_auth_step(
@@ -111,15 +116,15 @@ fn add_req_mfa_cookie(
 
 pub fn build_csp_header(nonce: &str) -> (&str, String) {
     // Note: The unsafe-inline for the style-src currently has an open issue on the svelte repo.
-    // As soon as this is fixed, we can get rid of it.
+    // As soon as this is fixed, we can get rid of it.y
     // let value = format!(
-    //     "default-src 'self'; script-src 'self' 'nonce-{}'; style-src 'self' 'nonce-{}'; \
+    //     "default-src 'self'; script-src 'strict-dynamic' 'nonce-{}'; style-src 'strict-dynamic' 'nonce-{}'; \
     //     frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
-    //     nonce, nonce
+    //     nonce, nonce,
     // );
     let value = format!(
-        "default-src 'self'; script-src 'self' 'nonce-{}'; style-src 'self' 'unsafe-inline'; \
-        frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
+        "default-src 'self'; script-src 'strict-dynamic' 'nonce-{}'; style-src 'self' 'unsafe-inline'; \
+        frame-ancestors 'none'; object-src 'none'; img-src 'self' data:;",
         nonce,
     );
     ("content-security-policy", value)

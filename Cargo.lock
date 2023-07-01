@@ -2939,12 +2939,14 @@ dependencies = [
  "actix-web-validator",
  "futures",
  "lazy_static",
+ "mime_guess",
  "num_cpus",
  "pretty_assertions",
  "rauthy-common",
  "rauthy-models",
  "rauthy-service",
  "redhac",
+ "rust-embed",
  "time",
  "tokio",
  "tokio-test",
@@ -3217,8 +3219,10 @@ version = "6.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a36224c3276f8c4ebc8c20f158eca7ca4359c8db89991c4925132aaaf6702661"
 dependencies = [
+ "actix-web",
  "rust-embed-impl",
  "rust-embed-utils",
+ "tokio",
  "walkdir",
 ]
 

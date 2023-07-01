@@ -249,7 +249,6 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
             ))
             .wrap(RauthySessionMiddleware)
             .wrap(RauthyLoggingMiddleware)
-            .wrap(middleware::Compress::default())
             .wrap(
                 middleware::DefaultHeaders::new()
                     .add(("x-frame-options", "SAMEORIGIN"))
@@ -366,12 +365,14 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         .service(generic::get_health)
                         .service(generic::get_ready)
                         .service(generic::whoami)
-                        .service(
-                            actix_files::Files::new("/_app/", "static/v1/_app")
-                        )
-                        .service(
-                            actix_files::Files::new("/assets/", "static/v1/assets")
-                        )
+                        // .service(generic::get_static_app)
+                        .service(generic::get_static_assets)
+                        // .service(
+                        //     actix_files::Files::new("/_app/", "static/v1/_app")
+                        // )
+                        // .service(
+                        //     actix_files::Files::new("/assets/", "static/v1/assets")
+                        // )
                     )
             )
             .service(swagger.clone())

@@ -1,6 +1,6 @@
-use crate::build_csp_header;
+use crate::{build_csp_header, Assets};
 use actix_web::http::header;
-use actix_web::http::header::HeaderValue;
+use actix_web::http::header::{Encoding, HeaderValue, Preference, QualityItem};
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
 use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
 use rauthy_common::constants::{CACHE_NAME_LOGIN_DELAY, HEADER_HTML, IDX_LOGIN_TIME};
@@ -21,9 +21,9 @@ use rauthy_models::response::{
 use rauthy_models::templates::{AccountHtml, AdminHtml, IndexHtml};
 use rauthy_service::encryption;
 use redhac::{cache_get, cache_get_from, cache_get_value};
+use std::borrow::Cow;
 
 #[get("/")]
-// #[get("/index.html")]
 #[has_permissions("all")]
 pub async fn get_index(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
@@ -33,6 +33,34 @@ pub async fn get_index(data: web::Data<AppState>) -> Result<HttpResponse, ErrorR
         .insert_header(HEADER_HTML)
         .insert_header(build_csp_header(&nonce))
         .body(body))
+}
+
+#[get("/{_:.*}")]
+#[has_permissions("all")]
+pub async fn get_static_assets(
+    path: web::Path<String>,
+    accept_encoding: web::Header<header::AcceptEncoding>,
+) -> HttpResponse {
+    let path = path.into_inner();
+    let accept_encoding = accept_encoding.into_inner();
+
+    let mime = mime_guess::from_path(&path);
+    let (p, encoding) = if accept_encoding.contains(&"br".parse().unwrap()) {
+        (Cow::from(format!("{}.br", path)), "br")
+    } else if accept_encoding.contains(&"gzip".parse().unwrap()) {
+        (Cow::from(format!("{}.gz", path)), "gzip")
+    } else {
+        (Cow::from(path), "none")
+    };
+
+    match Assets::get(p.as_ref()) {
+        Some(content) => HttpResponse::Ok()
+            .insert_header(("cache-control", "max-age=2592000"))
+            .insert_header(("content-encoding", encoding))
+            .content_type(mime.first_or_octet_stream().as_ref())
+            .body(content.data.into_owned()),
+        None => HttpResponse::NotFound().body("404 Not Found"),
+    }
 }
 
 #[get("/account")]

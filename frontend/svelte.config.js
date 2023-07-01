@@ -10,10 +10,8 @@ const config = {
 		adapter: adapter({
 			fallback: null,
 			pages: '../templates/html',
-			// pages: 'build',
 			assets: '../static/v1',
-			// assets: 'build',
-			precompress: false,
+			precompress: true,
 			strict: true,
 		})
 	},

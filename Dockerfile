@@ -58,7 +58,7 @@ COPY --chown=10001:10001 /out/rauthy .
 COPY --chown=10001:10001 --from=builderBackend /work/data ./data
 
 COPY --chown=10001:10001 tls/ ./tls/
-COPY --chown=10001:10001 static/ ./static/
+#COPY --chown=10001:10001 static/ ./static/
 #COPY migrations/ ./migrations/
 COPY --chown=10001:10001 rauthy.deploy.cfg ./rauthy.cfg
 
