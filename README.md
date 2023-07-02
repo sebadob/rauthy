@@ -125,7 +125,7 @@ if there are too many pulls.
 
 ## Next Steps for the project
 
-- migrate to Svelte 4 in the frontend to get rid of the `unsafe-inline` CSP
+- adjust some cache modifications to achieve higher conflict safety in HA situations
 - add more documentation
 - cleanup code
 - benchmarks and performance tuning
