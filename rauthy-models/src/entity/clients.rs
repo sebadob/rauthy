@@ -15,7 +15,10 @@ use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{cache_entry_client, get_client_ip, get_rand};
 use rauthy_common::utils::{decrypt, encrypt};
 use rauthy_common::DbType;
-use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
+use redhac::{
+    cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, cache_put, cache_remove,
+    AckLevel,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
 use std::str::FromStr;
@@ -110,11 +113,12 @@ impl Client {
 
         let mut clients = Client::find_all(data).await?;
         clients.push(client.clone());
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_CLIENTS.to_string(),
             &data.caches.ha_cache_config,
             &clients,
+            AckLevel::Leader,
         )
         .await?;
 
@@ -123,7 +127,6 @@ impl Client {
 
     /// Deletes a client
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        // DATA_STORE.del(Cf::Clients, self.id.clone()).await?;
         sqlx::query("delete from clients where id = $1")
             .bind(&self.id)
             .execute(&data.db)
@@ -135,17 +138,19 @@ impl Client {
             .filter(|c| c.id != self.id)
             .collect::<Vec<Self>>();
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_CLIENTS.to_string(),
             &data.caches.ha_cache_config,
             &clients,
+            AckLevel::Quorum,
         )
         .await?;
-        cache_del(
+        cache_remove(
             CACHE_NAME_12HR.to_string(),
             Client::get_cache_entry(&self.id),
             &data.caches.ha_cache_config,
+            AckLevel::Leader,
         )
         .await?;
 
@@ -171,11 +176,12 @@ impl Client {
             .fetch_one(&data.db)
             .await?;
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             Client::get_cache_entry(&client.id),
             &data.caches.ha_cache_config,
             &client,
+            AckLevel::Leader,
         )
         .await?;
 
@@ -200,11 +206,12 @@ impl Client {
             .fetch_all(&data.db)
             .await?;
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_CLIENTS.to_string(),
             &data.caches.ha_cache_config,
             &clients,
+            AckLevel::Leader,
         )
         .await?;
 
@@ -353,11 +360,12 @@ impl Client {
         if !found_self {
             clients.push(self.clone());
         }
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_CLIENTS.to_string(),
             &data.caches.ha_cache_config,
             &clients,
+            AckLevel::Quorum,
         )
         .await?;
 

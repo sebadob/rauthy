@@ -1,6 +1,6 @@
 use crate::{build_csp_header, Assets};
 use actix_web::http::header;
-use actix_web::http::header::{Encoding, HeaderValue, Preference, QualityItem};
+use actix_web::http::header::HeaderValue;
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
 use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
 use rauthy_common::constants::{CACHE_NAME_LOGIN_DELAY, HEADER_HTML, IDX_LOGIN_TIME};

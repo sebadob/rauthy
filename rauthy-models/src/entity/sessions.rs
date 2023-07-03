@@ -9,7 +9,7 @@ use rauthy_common::constants::{
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::get_rand;
 use rauthy_common::DbType;
-use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
+use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::any::AnyRow;
 use sqlx::{FromRow, Row};
@@ -84,13 +84,12 @@ impl Session {
             .execute(&data.db)
             .await?;
 
-        // DATA_STORE.del(Cf::Sessions, self.id.clone()).await?;
-
         let idx = format!("{}{}", IDX_SESSION, &self.id);
-        cache_del(
+        cache_remove(
             CACHE_NAME_SESSIONS.to_string(),
             idx,
             &data.caches.ha_cache_config,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -120,11 +119,12 @@ impl Session {
             .await?;
 
         let idx = format!("{}{}", IDX_SESSION, session.id);
-        cache_put(
+        cache_insert(
             CACHE_NAME_SESSIONS.to_string(),
             idx,
             &data.caches.ha_cache_config,
             &session,
+            AckLevel::Leader,
         )
         .await?;
 
@@ -158,10 +158,11 @@ impl Session {
 
         for id in removed {
             let idx = format!("{}{}", IDX_SESSION, &id);
-            cache_del(
+            cache_remove(
                 CACHE_NAME_SESSIONS.to_string(),
                 idx,
                 &data.caches.ha_cache_config,
+                AckLevel::Quorum,
             )
             .await?;
         }
@@ -192,10 +193,11 @@ impl Session {
 
         for id in removed {
             let idx = format!("{}{}", IDX_SESSION, &id);
-            cache_del(
+            cache_remove(
                 CACHE_NAME_SESSIONS.to_string(),
                 idx,
                 &data.caches.ha_cache_config,
+                AckLevel::Quorum,
             )
             .await?;
         }
@@ -232,11 +234,12 @@ impl Session {
         .await?;
 
         let idx = format!("{}{}", IDX_SESSION, &self.id);
-        cache_put(
+        cache_insert(
             CACHE_NAME_SESSIONS.to_string(),
             idx,
             &data.caches.ha_cache_config,
             &self,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -333,10 +336,11 @@ impl Session {
             .execute(&data.db)
             .await?;
 
-        cache_del(
+        cache_remove(
             CACHE_NAME_12HR.to_string(),
             idx,
             &data.caches.ha_cache_config,
+            AckLevel::Quorum,
         )
         .await?;
 

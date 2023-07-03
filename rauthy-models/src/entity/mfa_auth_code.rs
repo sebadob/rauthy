@@ -2,7 +2,7 @@ use crate::app_state::AppState;
 use actix_web::web;
 use rauthy_common::constants::CACHE_NAME_MFA_APP_REQ;
 use rauthy_common::error_response::ErrorResponse;
-use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
+use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,10 +41,11 @@ impl MfaAuthCode {
 
     /// Deletes an MFA Authorization Code from the cache
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_del(
+        cache_remove(
             CACHE_NAME_MFA_APP_REQ.to_string(),
             self.email.clone(),
             &data.caches.ha_cache_config,
+            AckLevel::Quorum,
         )
         .await
         .map_err(ErrorResponse::from)
@@ -52,11 +53,12 @@ impl MfaAuthCode {
 
     /// Saves an MFA Authorization Code in the cache
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_put(
+        cache_insert(
             CACHE_NAME_MFA_APP_REQ.to_string(),
             self.email.clone(),
             &data.caches.ha_cache_config,
             self,
+            AckLevel::Quorum,
         )
         .await?;
         Ok(())

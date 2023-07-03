@@ -8,7 +8,7 @@ use rauthy_common::constants::{
     ARGON2ID_M_COST_MIN, ARGON2ID_T_COST_MIN, CACHE_NAME_12HR, IDX_PASSWORD_RULES,
 };
 use rauthy_common::error_response::ErrorResponse;
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
+use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
 use std::cmp::max;
@@ -140,11 +140,12 @@ impl PasswordPolicy {
         let bytes: Vec<u8> = res.get("data");
         let policy = bincode::deserialize::<Self>(&bytes)?;
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_PASSWORD_RULES.to_string(),
             &data.caches.ha_cache_config,
             &policy,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -159,11 +160,12 @@ impl PasswordPolicy {
             .execute(&data.db)
             .await?;
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_PASSWORD_RULES.to_string(),
             &data.caches.ha_cache_config,
             &self,
+            AckLevel::Quorum,
         )
         .await?;
 

@@ -144,7 +144,7 @@ pub async fn migrate_init_prod(
 
     {plain}
 
-    Please change it immediately: {issuer}/account.html
+    Please change it immediately: {issuer}/account
     You will never see this message again!
         "#
         );

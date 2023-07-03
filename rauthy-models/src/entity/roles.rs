@@ -5,7 +5,7 @@ use actix_web::web;
 use rauthy_common::constants::{CACHE_NAME_12HR, IDX_ROLES, IDX_USERS};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::new_store_id;
-use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
+use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
@@ -44,11 +44,12 @@ impl Role {
             .await?;
 
         roles.push(new_role.clone());
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_ROLES.to_string(),
             &data.caches.ha_cache_config,
             &roles,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -82,10 +83,11 @@ impl Role {
 
         // no need to evict the cache if no users are updated
         if !users.is_empty() {
-            cache_del(
+            cache_remove(
                 CACHE_NAME_12HR.to_string(),
                 IDX_USERS.to_string(),
                 &data.caches.ha_cache_config,
+                AckLevel::Quorum,
             )
             .await?;
         }
@@ -109,11 +111,12 @@ impl Role {
             .into_iter()
             .filter(|r| r.id != role.id)
             .collect::<Vec<Role>>();
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_ROLES.to_string(),
             &data.caches.ha_cache_config,
             &roles,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -148,11 +151,12 @@ impl Role {
             .fetch_all(&data.db)
             .await?;
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_ROLES.to_string(),
             &data.caches.ha_cache_config,
             &res,
+            AckLevel::Leader,
         )
         .await?;
         Ok(res)
@@ -179,10 +183,11 @@ impl Role {
 
         // no need to evict the cache if no users are updated
         if !users.is_empty() {
-            cache_del(
+            cache_remove(
                 CACHE_NAME_12HR.to_string(),
                 IDX_USERS.to_string(),
                 &data.caches.ha_cache_config,
+                AckLevel::Leader,
             )
             .await?;
         }
@@ -212,11 +217,12 @@ impl Role {
                 r
             })
             .collect::<Vec<Role>>();
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_ROLES.to_string(),
             &data.caches.ha_cache_config,
             &roles,
+            AckLevel::Quorum,
         )
         .await?;
 

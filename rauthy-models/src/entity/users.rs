@@ -18,7 +18,7 @@ use rauthy_common::constants::{CACHE_NAME_12HR, IDX_USERS};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
 use rauthy_common::utils::{get_client_ip, new_store_id};
-use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
+use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::ops::Add;
@@ -74,11 +74,12 @@ impl User {
 
         let mut users = User::find_all(data).await?;
         users.push(new_user.clone());
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_USERS.to_string(),
             &data.caches.ha_cache_config,
             &users,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -121,27 +122,30 @@ impl User {
             .filter(|u| u.id != self.id)
             .collect::<Vec<Self>>();
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_USERS.to_string(),
             &data.caches.ha_cache_config,
             &users,
+            AckLevel::Quorum,
         )
         .await?;
 
         let idx = format!("{}_{}", IDX_USERS, &self.id);
-        cache_del(
+        cache_remove(
             CACHE_NAME_12HR.to_string(),
             idx,
             &data.caches.ha_cache_config,
+            AckLevel::Quorum,
         )
         .await?;
 
         let idx = format!("{}_{}", IDX_USERS, &self.email);
-        cache_del(
+        cache_remove(
             CACHE_NAME_12HR.to_string(),
             idx,
             &data.caches.ha_cache_config,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -196,11 +200,12 @@ impl User {
             .fetch_one(&data.db)
             .await?;
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             idx,
             &data.caches.ha_cache_config,
             &user,
+            AckLevel::Leader,
         )
         .await?;
         Ok(user)
@@ -229,11 +234,12 @@ impl User {
             .fetch_one(&data.db)
             .await?;
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             idx,
             &data.caches.ha_cache_config,
             &user,
+            AckLevel::Leader,
         )
         .await?;
         Ok(user)
@@ -257,11 +263,12 @@ impl User {
             .fetch_all(&data.db)
             .await?;
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_USERS.to_string(),
             &data.caches.ha_cache_config,
             &res,
+            AckLevel::Leader,
         )
         .await?;
         Ok(res)
@@ -324,29 +331,32 @@ impl User {
             })
             .collect::<Vec<Self>>();
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_USERS.to_string(),
             &data.caches.ha_cache_config,
             &users,
+            AckLevel::Quorum,
         )
         .await?;
 
         let idx = format!("{}_{}", IDX_USERS, &self.id);
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             idx,
             &data.caches.ha_cache_config,
             &self,
+            AckLevel::Quorum,
         )
         .await?;
 
         let idx = format!("{}_{}", IDX_USERS, &self.email);
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             idx,
             &data.caches.ha_cache_config,
             &self,
+            AckLevel::Quorum,
         )
         .await?;
 

@@ -15,7 +15,7 @@ use rauthy_common::constants::{
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{base64_decode, decrypt, new_store_id};
 use rauthy_common::utils::{base64_encode, encrypt, get_rand};
-use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
+use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::collections::HashMap;
@@ -76,10 +76,11 @@ impl PasskeyEntity {
         }
 
         let idx = format!("{}{}", IDX_WEBAUTHN, id);
-        cache_del(
+        cache_remove(
             CACHE_NAME_WEBAUTHN.to_string(),
             idx,
             &data.caches.ha_cache_config,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -105,11 +106,12 @@ impl PasskeyEntity {
             .await?;
 
         let idx = format!("{}{}", IDX_WEBAUTHN, pk.id);
-        cache_put(
+        cache_insert(
             CACHE_NAME_WEBAUTHN.to_string(),
             idx,
             &data.caches.ha_cache_config,
             &pk,
+            AckLevel::Leader,
         )
         .await?;
 
@@ -124,11 +126,12 @@ impl PasskeyEntity {
             .await?;
 
         let idx = format!("{}{}", IDX_WEBAUTHN, self.id);
-        cache_put(
+        cache_insert(
             CACHE_NAME_WEBAUTHN.to_string(),
             idx,
             &data.caches.ha_cache_config,
             &self,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -229,10 +232,11 @@ pub struct WebauthnData {
 /// CURD
 impl WebauthnData {
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_del(
+        cache_remove(
             CACHE_NAME_WEBAUTHN_DATA.to_string(),
             self.code.clone(),
             &data.caches.ha_cache_config,
+            AckLevel::Quorum,
         )
         .await?;
         Ok(())
@@ -259,11 +263,12 @@ impl WebauthnData {
     }
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_put(
+        cache_insert(
             CACHE_NAME_WEBAUTHN_DATA.to_string(),
             self.code.clone(),
             &data.caches.ha_cache_config,
             &self,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -329,10 +334,11 @@ pub struct WebauthnLoginReq {
 /// CRUD
 impl WebauthnLoginReq {
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_del(
+        cache_remove(
             CACHE_NAME_WEBAUTHN_DATA.to_string(),
             self.code.clone(),
             &data.caches.ha_cache_config,
+            AckLevel::Quorum,
         )
         .await?;
         Ok(())
@@ -359,11 +365,12 @@ impl WebauthnLoginReq {
     }
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_put(
+        cache_insert(
             CACHE_NAME_WEBAUTHN_DATA.to_string(),
             self.code.clone(),
             &data.caches.ha_cache_config,
             &self,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -387,10 +394,11 @@ impl WebauthnServiceReq {
     }
 
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_del(
+        cache_remove(
             CACHE_NAME_WEBAUTHN_DATA.to_string(),
             self.code.clone(),
             &data.caches.ha_cache_config,
+            AckLevel::Quorum,
         )
         .await?;
         Ok(())
@@ -417,11 +425,12 @@ impl WebauthnServiceReq {
     }
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_put(
+        cache_insert(
             CACHE_NAME_WEBAUTHN_DATA.to_string(),
             self.code.clone(),
             &data.caches.ha_cache_config,
             &self,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -558,11 +567,12 @@ pub async fn reg_start(
 
             // persist the reg_state
             let idx = format!("reg_{:?}_{}", req.slot, user.id);
-            cache_put(
+            cache_insert(
                 CACHE_NAME_WEBAUTHN.to_string(),
                 idx,
                 &data.caches.ha_cache_config,
                 &reg_data,
+                AckLevel::Quorum,
             )
             .await?;
 
@@ -602,10 +612,11 @@ pub async fn reg_finish(
             "Webauthn Registration Request not found".to_string(),
         ));
     }
-    cache_del(
+    cache_remove(
         CACHE_NAME_WEBAUTHN.to_string(),
         idx,
         &data.caches.ha_cache_config,
+        AckLevel::Quorum,
     )
     .await?;
     let reg_data = res.unwrap();

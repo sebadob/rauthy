@@ -6,7 +6,7 @@ use actix_web::web;
 use rauthy_common::constants::{CACHE_NAME_12HR, DB_TYPE, IDX_USER_ATTR_CONFIG};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::DbType;
-use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
+use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::FromRow;
@@ -55,11 +55,12 @@ impl UserAttrConfigEntity {
             desc: new_attr.desc.clone(),
         };
         attrs.push(slf.clone());
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_USER_ATTR_CONFIG.to_string(),
             &data.caches.ha_cache_config,
             &attrs,
+            AckLevel::Leader,
         )
         .await?;
 
@@ -121,10 +122,11 @@ impl UserAttrConfigEntity {
             }
         }
 
-        cache_del(
+        cache_remove(
             CACHE_NAME_12HR.to_string(),
             name.clone(),
             &data.caches.ha_cache_config,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -144,11 +146,12 @@ impl UserAttrConfigEntity {
             .into_iter()
             .filter(|a| a.name != name)
             .collect::<Vec<Self>>();
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_USER_ATTR_CONFIG.to_string(),
             &data.caches.ha_cache_config,
             &attrs,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -173,11 +176,12 @@ impl UserAttrConfigEntity {
             .fetch_one(&data.db)
             .await?;
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             name,
             &data.caches.ha_cache_config,
             &attr,
+            AckLevel::Leader,
         )
         .await?;
         Ok(attr)
@@ -200,11 +204,12 @@ impl UserAttrConfigEntity {
             .fetch_all(&data.db)
             .await?;
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_USER_ATTR_CONFIG.to_string(),
             &data.caches.ha_cache_config,
             &res,
+            AckLevel::Leader,
         )
         .await?;
         Ok(res)
@@ -311,20 +316,22 @@ impl UserAttrConfigEntity {
             })
             .collect::<Vec<Self>>();
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_USER_ATTR_CONFIG.to_string(),
             &data.caches.ha_cache_config,
             &attrs,
+            AckLevel::Quorum,
         )
         .await?;
 
         if let Some(idxs) = cache_idxs {
             for idx in idxs {
-                cache_del(
+                cache_remove(
                     CACHE_NAME_12HR.to_string(),
                     idx,
                     &data.caches.ha_cache_config,
+                    AckLevel::Quorum,
                 )
                 .await?;
             }
@@ -381,10 +388,11 @@ impl UserAttrValueEntity {
             .collect::<Vec<String>>();
 
         for idx in cache_idxs {
-            cache_del(
+            cache_remove(
                 CACHE_NAME_12HR.to_string(),
                 idx,
                 &data.caches.ha_cache_config,
+                AckLevel::Quorum,
             )
             .await?;
         }
@@ -419,11 +427,12 @@ impl UserAttrValueEntity {
             .fetch_all(&data.db)
             .await?;
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             idx,
             &data.caches.ha_cache_config,
             &res,
+            AckLevel::Leader,
         )
         .await?;
 
@@ -479,11 +488,12 @@ impl UserAttrValueEntity {
             .await?;
 
         let idx = Self::cache_idx(user_id);
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             idx,
             &data.caches.ha_cache_config,
             &res,
+            AckLevel::Quorum,
         )
         .await?;
 

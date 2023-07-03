@@ -5,7 +5,7 @@ use actix_web::web;
 use rauthy_common::constants::{CACHE_NAME_12HR, IDX_GROUPS, IDX_USERS};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::new_store_id;
-use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
+use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
@@ -45,11 +45,12 @@ impl Group {
             .await?;
 
         groups.push(new_group.clone());
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_GROUPS.to_string(),
             &data.caches.ha_cache_config,
             &groups,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -74,10 +75,11 @@ impl Group {
 
         // no need to evict the cache if no users are updated
         if !users.is_empty() {
-            cache_del(
+            cache_remove(
                 CACHE_NAME_12HR.to_string(),
                 IDX_USERS.to_string(),
                 &data.caches.ha_cache_config,
+                AckLevel::Quorum,
             )
             .await?;
         }
@@ -96,18 +98,17 @@ impl Group {
 
         txn.commit().await?;
 
-        // DATA_STORE.del(Cf::Groups, group.id.clone()).await?;
-
         let groups = Group::find_all(data)
             .await?
             .into_iter()
             .filter(|g| g.id != group.id)
             .collect::<Vec<Group>>();
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_GROUPS.to_string(),
             &data.caches.ha_cache_config,
             &groups,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -142,11 +143,12 @@ impl Group {
             .fetch_all(&data.db)
             .await?;
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_GROUPS.to_string(),
             &data.caches.ha_cache_config,
             &res,
+            AckLevel::Leader,
         )
         .await?;
         Ok(res)
@@ -173,10 +175,11 @@ impl Group {
 
         // no need to evict the cache if no users are updated
         if !users.is_empty() {
-            cache_del(
+            cache_remove(
                 CACHE_NAME_12HR.to_string(),
                 IDX_USERS.to_string(),
                 &data.caches.ha_cache_config,
+                AckLevel::Quorum,
             )
             .await?;
         }
@@ -211,11 +214,12 @@ impl Group {
                 g
             })
             .collect::<Vec<Group>>();
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_GROUPS.to_string(),
             &data.caches.ha_cache_config,
             &groups,
+            AckLevel::Quorum,
         )
         .await?;
 

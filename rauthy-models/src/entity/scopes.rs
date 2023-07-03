@@ -6,7 +6,7 @@ use actix_web::web;
 use rauthy_common::constants::{CACHE_NAME_12HR, IDX_CLIENTS, IDX_SCOPES};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::new_store_id;
-use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
+use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::collections::HashSet;
@@ -70,11 +70,12 @@ impl Scope {
             .await?;
 
         scopes.push(new_scope.clone());
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_SCOPES.to_string(),
             &data.caches.ha_cache_config,
             &scopes,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -105,10 +106,11 @@ impl Scope {
 
         // no need to evict the cache if no clients are updated
         if !clients.is_empty() {
-            cache_del(
+            cache_remove(
                 CACHE_NAME_12HR.to_string(),
                 IDX_CLIENTS.to_string(),
                 &data.caches.ha_cache_config,
+                AckLevel::Quorum,
             )
             .await?;
         }
@@ -125,18 +127,18 @@ impl Scope {
             .await?;
 
         txn.commit().await?;
-        // DATA_STORE.del(Cf::Scopes, scope.id.clone()).await?;
 
         let scopes = Scope::find_all(data)
             .await?
             .into_iter()
             .filter(|s| s.id != scope.id)
             .collect::<Vec<Scope>>();
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_SCOPES.to_string(),
             &data.caches.ha_cache_config,
             &scopes,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -170,11 +172,12 @@ impl Scope {
             .fetch_all(&data.db)
             .await?;
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_SCOPES.to_string(),
             &data.caches.ha_cache_config,
             &res,
+            AckLevel::Leader,
         )
         .await?;
         Ok(res)
@@ -185,7 +188,6 @@ impl Scope {
         data: &web::Data<AppState>,
         id: &str,
         scope_req: ScopeRequest,
-        // txn: Option<&mut sqlx::Transaction<'_, sqlx::Any>>,
     ) -> Result<Self, ErrorResponse> {
         let scope = Scope::find(data, id).await?;
         if scope.name == "openid" {
@@ -204,13 +206,6 @@ impl Scope {
             ));
         }
 
-        // let mut txn_local = None;
-        // let mut txn_direct = if let Some(txn) = txn {
-        //     txn
-        // } else {
-        //     txn_local = Some(data.db.begin().await?);
-        //     txn_local.as_mut().unwrap()
-        // };
         let mut txn = data.db.begin().await?;
 
         // if the name has changed, we need to update all connected clients
@@ -231,10 +226,11 @@ impl Scope {
 
             // no need to evict the cache if no clients are updated
             if !clients.is_empty() {
-                cache_del(
+                cache_remove(
                     CACHE_NAME_12HR.to_string(),
                     IDX_CLIENTS.to_string(),
                     &data.caches.ha_cache_config,
+                    AckLevel::Leader,
                 )
                 .await?;
             }
@@ -281,11 +277,12 @@ impl Scope {
             })
             .collect::<Vec<Scope>>();
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_SCOPES.to_string(),
             &data.caches.ha_cache_config,
             &scopes,
+            AckLevel::Quorum,
         )
         .await?;
 
@@ -321,11 +318,12 @@ impl Scope {
             })
             .collect::<Vec<Scope>>();
 
-        cache_put(
+        cache_insert(
             CACHE_NAME_12HR.to_string(),
             IDX_SCOPES.to_string(),
             &data.caches.ha_cache_config,
             &scopes,
+            AckLevel::Quorum,
         )
         .await?;
 
