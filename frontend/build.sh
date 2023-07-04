@@ -36,3 +36,7 @@ for folder in "${pages[@]}"; do
       sed -i 's/<script>/<script nonce="{{ nonce }}">/g' "$html"
     done;
 done
+
+# Since we cleanup the whole static folder, copy over the book again at the end
+mkdir ../static/v1/book
+cp -r ../docs/* ../static/v1/book
