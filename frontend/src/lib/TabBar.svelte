@@ -43,5 +43,6 @@
         margin: 5px 10px 10px 10px;
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
     }
 </style>
