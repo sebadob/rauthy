@@ -1,6 +1,6 @@
 [package]
 name = "rauthy-handlers"
-version = "0.12.1"
+version = "0.13.0"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "AGPLv3"
@@ -19,8 +19,8 @@ num_cpus = "1"
 rauthy-common = { path = "../rauthy-common" }
 rauthy-models = { path = "../rauthy-models" }
 rauthy-service = { path = "../rauthy-service" }
-redhac = "0.5"
-#redhac = { path = "../../git/projects/redhac" }
+#redhac = "0.5"
+redhac = { git = "https://github.com/sebadob/redhac" }
 rust-embed = { version = "6.8", features = ["actix-web", "tokio"] }
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
 tracing = { version = "0.1", features = ["attributes"] }

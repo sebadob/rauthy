@@ -1,6 +1,6 @@
 [package]
 name = "rauthy"
-version = "0.12.1"
+version = "0.13.0"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "AGPLv3"
@@ -19,8 +19,8 @@ rauthy-common = { path = "../rauthy-common" }
 rauthy-handlers = { path = "../rauthy-handlers" }
 rauthy-models = { path = "../rauthy-models" }
 rauthy-service = { path = "../rauthy-service" }
-redhac = "0.5"
-#redhac = { path = "../../git/projects/redhac" }
+#redhac = "0.5"
+redhac = { git = "https://github.com/sebadob/redhac" }
 # actix web currently depends on 0.20
 rustls = "0.20"
 rustls-pemfile = "1"
