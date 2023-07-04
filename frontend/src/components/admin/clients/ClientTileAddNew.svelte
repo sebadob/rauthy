@@ -16,6 +16,7 @@
 
     let client = {
         id: '',
+        name: '',
         confidential: true,
         redirect_uris: [],
     }
@@ -25,10 +26,6 @@
     let success = false;
     let timer;
 
-    let formValues = {
-        id: '',
-        name: '',
-    };
     let formErrors = {};
 
     const schema = yup.object().shape({
@@ -48,7 +45,6 @@
         timer = setTimeout(() => {
             onSave();
             success = false;
-            formValues = {};
             expandContainer = false;
         }, 1500);
     }
@@ -71,8 +67,6 @@
         if (!data.name) {
             data.name = undefined;
         }
-
-        // console.log(data);
 
         let res = await postClient(data);
         if (res.ok) {

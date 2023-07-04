@@ -23,7 +23,7 @@
     ];
     let orderOptions = [
         {
-            label: 'EMAIL',
+            label: 'E-Mail',
             callback: (a, b) => a.email.localeCompare(b.email),
         },
         {

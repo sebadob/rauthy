@@ -13,7 +13,7 @@
 
     let searchOptions = [
         {
-            label: 'NAME',
+            label: 'Name',
             callback: (item, search) => item.name.toLowerCase().includes(search.toLowerCase()),
         },
         {
@@ -23,7 +23,7 @@
     ];
     let orderOptions = [
         {
-            label: 'NAME',
+            label: 'Name',
             callback: (a, b) => a.name.localeCompare(b.name),
         },
         {

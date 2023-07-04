@@ -42,10 +42,10 @@
 <svelte:window bind:innerWidth/>
 
 <main>
-    <Nav bind:selected bind:isExpanded widthExpanded={160} widthCollapsed={60}>
+    <Nav bind:selected bind:isExpanded widthExpanded={140} widthCollapsed={60}>
         <div slot="logo">
             <div
-                    style:width={isExpanded ? '140px' : '55px'}
+                    style:width={isExpanded ? '120px' : '55px'}
                     style:margin-top={isExpanded ? '32px' : '40px'}
                     style:margin-bottom={isExpanded ? '13px' : '22px'}
             >
