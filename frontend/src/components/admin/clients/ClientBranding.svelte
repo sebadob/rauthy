@@ -155,7 +155,6 @@
 
     <div class="inner">
         {#if formValues}
-<!--            <div class="colors">-->
                 <div class="col1 colors">
                     <div class="row">
                         <Input
@@ -169,7 +168,7 @@
                         </Input>
                         <div class="colInputWrap">
                             <input type="color" class="colInput" bind:value={formValues.act1} />
-                            <div class="colorBlock" style:background={colors?.act1}></div>
+                            <div class="colorBlock" style:background={formValues.act1}></div>
                         </div>
                     </div>
 
@@ -185,7 +184,7 @@
                         </Input>
                         <div class="colInputWrap">
                             <input type="color" class="colInput" bind:value={formValues.act1a} />
-                            <div class="colorBlock" style:background={colors?.act1a}></div>
+                            <div class="colorBlock" style:background={formValues.act1a}></div>
                         </div>
                     </div>
 
@@ -201,7 +200,7 @@
                         </Input>
                         <div class="colInputWrap">
                             <input type="color" class="colInput" bind:value={formValues.act2} />
-                            <div class="colorBlock" style:background={colors?.act2}></div>
+                            <div class="colorBlock" style:background={formValues.act2}></div>
                         </div>
                     </div>
 
@@ -217,7 +216,7 @@
                         </Input>
                         <div class="colInputWrap">
                             <input type="color" class="colInput" bind:value={formValues.act2a} />
-                            <div class="colorBlock" style:background={colors?.act2a}></div>
+                            <div class="colorBlock" style:background={formValues.act2a}></div>
                         </div>
                     </div>
 
@@ -233,7 +232,7 @@
                         </Input>
                         <div class="colInputWrap">
                             <input type="color" class="colInput" bind:value={formValues.acnt} />
-                            <div class="colorBlock" style:background={colors?.acnt}></div>
+                            <div class="colorBlock" style:background={formValues.acnt}></div>
                         </div>
                     </div>
 
@@ -249,7 +248,7 @@
                         </Input>
                         <div class="colInputWrap">
                             <input type="color" class="colInput" bind:value={formValues.acnta} />
-                            <div class="colorBlock" style:background={colors?.acnta}></div>
+                            <div class="colorBlock" style:background={formValues.acnta}></div>
                         </div>
                     </div>
 
@@ -265,7 +264,7 @@
                         </Input>
                         <div class="colInputWrap">
                             <input type="color" class="colInput" bind:value={formValues.ok} />
-                            <div class="colorBlock" style:background={colors?.ok}></div>
+                            <div class="colorBlock" style:background={formValues.ok}></div>
                         </div>
                     </div>
 
@@ -281,7 +280,7 @@
                         </Input>
                         <div class="colInputWrap">
                             <input type="color" class="colInput" bind:value={formValues.err} />
-                            <div class="colorBlock" style:background={colors?.err}></div>
+                            <div class="colorBlock" style:background={formValues.err}></div>
                         </div>
                     </div>
                 </div>
@@ -299,7 +298,7 @@
                         </Input>
                         <div class="colInputWrap">
                             <input type="color" class="colInput" bind:value={formValues.glow} />
-                            <div class="colorBlock" style:background={colors?.glow}></div>
+                            <div class="colorBlock" style:background={formValues.glow}></div>
                         </div>
                     </div>
 
@@ -315,7 +314,7 @@
                         </Input>
                         <div class="colInputWrap">
                             <input type="color" class="colInput" bind:value={formValues.gmid} />
-                            <div class="colorBlock" style:background={colors?.gmid}></div>
+                            <div class="colorBlock" style:background={formValues.gmid}></div>
                         </div>
                     </div>
 
@@ -331,7 +330,7 @@
                         </Input>
                         <div class="colInputWrap">
                             <input type="color" class="colInput" bind:value={formValues.ghigh} />
-                            <div class="colorBlock" style:background={colors?.ghigh}></div>
+                            <div class="colorBlock" style:background={formValues.ghigh}></div>
                         </div>
                     </div>
 
@@ -347,7 +346,7 @@
                         </Input>
                         <div class="colInputWrap">
                             <input type="color" class="colInput" bind:value={formValues.text} />
-                            <div class="colorBlock" style:background={colors?.text}></div>
+                            <div class="colorBlock" style:background={formValues.text}></div>
                         </div>
                     </div>
 
@@ -363,7 +362,7 @@
                         </Input>
                         <div class="colInputWrap">
                             <input type="color" class="colInput" bind:value={formValues.bg} />
-                            <div class="colorBlock" style:background={colors?.bg}></div>
+                            <div class="colorBlock" style:background={formValues.bg}></div>
                         </div>
                     </div>
 
@@ -374,7 +373,6 @@
                         {/if}
                     </div>
                 </div>
-<!--            </div>-->
         {/if}
 
         {#if colors}

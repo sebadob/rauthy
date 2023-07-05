@@ -10,7 +10,7 @@
 	export let value = '';
 	export let width = '250px';
 
-	let type = password ? 'password' : 'text';
+	let type = password ? 'new-password' : 'text';
 	let isHover = false;
 	let isFocus = false;
 

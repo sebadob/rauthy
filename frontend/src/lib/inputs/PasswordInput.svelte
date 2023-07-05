@@ -15,7 +15,7 @@
     export let maxWidth = 'inherit';
     export let autocomplete = 'current-password';
 
-    let type = 'password';
+    export let type = 'password';
 
     const dispatch = createEventDispatcher();
 

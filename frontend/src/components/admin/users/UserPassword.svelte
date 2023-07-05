@@ -162,6 +162,7 @@
     {/if}
 
     <PasswordInput
+            type="new-password"
             bind:value={formValues.new}
             on:blur={isFormValid}
             bind:width={pwdWith}
@@ -171,6 +172,7 @@
         New Password
     </PasswordInput>
     <PasswordInput
+            type="new-password"
             bind:value={formValues.verify}
             on:blur={isFormValid}
             bind:width={pwdWith}
