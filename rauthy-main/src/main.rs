@@ -265,7 +265,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         // unsafe-inline is currently needed, since svelte does currently need this
                         // for the initial static hydration script. An issue is open about this and
                         // this will most probably solved soon.
-                        "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
+                        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
                         // "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
                     ))
                     .add(("cache-control", "no-store"))
@@ -365,7 +365,6 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         .service(generic::get_health)
                         .service(generic::get_ready)
                         .service(generic::whoami)
-                        // .service(generic::get_static_app)
                         .service(generic::get_static_assets)
                         // .service(
                         //     actix_files::Files::new("/_app/", "static/v1/_app")
