@@ -7,7 +7,7 @@
 
         <p>
             For general documentation about Rauthy itself, you should take a look at the
-            <a href="/auth/v1/book/index.html" target="_blank">Rauthy Book</a>
+            <a href="https://sebadob.github.io/rauthy/" target="_blank">Rauthy Book</a>
         </p>
 
         <p>

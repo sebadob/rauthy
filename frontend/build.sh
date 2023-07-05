@@ -38,5 +38,5 @@ for folder in "${pages[@]}"; do
 done
 
 # Since we cleanup the whole static folder, copy over the book again at the end
-mkdir ../static/v1/book
-cp -r ../docs/* ../static/v1/book
+#mkdir ../static/v1/book
+#cp -r ../docs/* ../static/v1/book
