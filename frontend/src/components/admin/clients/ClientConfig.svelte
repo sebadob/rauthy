@@ -84,19 +84,18 @@
             return;
         }
 
-        // const isAuthCodeEnabled = clientFlows.filter(f => f.label === 'authorization_code').map(f => f.value)[0];
+        client.flows_enabled = clientFlows.filter(f => f.value).map(f => f.label);
+
         if (client.flows_enabled.includes('authorization_code') && client.redirect_uris.length === 0) {
             err = "With 'authorization_code' flow enabled, you need to specify at least one redirect URI";
             return;
         }
 
-        // const isCredsEnabled = clientFlows.filter(f => f.label === 'client_credentials').map(f => f.value)[0];
         if (client.flows_enabled.includes('client_credentials') && !client.confidential) {
             err = "'client_credentials' flow needs a 'confidential' client";
             return;
         }
 
-        // client.flows_enabled = clientFlows.filter(f => f.value).map(f => f.label);
         if (client.flows_enabled.length === 0) {
             err = 'At least one flow must be enabled';
             return;
