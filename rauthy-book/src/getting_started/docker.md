@@ -6,13 +6,14 @@ For getting a first look at rauthy, you can start it with docker (or any other c
 The image contains a basic default config which is sufficient for local testing. 
 
 ```
-docker run -i --rm \
+docker run --rm \
     -p 8080:8080 \
     --name rauthy \
     sdobedev/rauthy
 ```
 
-This will start the container in interactive mode with an in-memory SQLite database.
+This will start the container in interactive mode with an in-memory SQLite database. Just take a look at the log at the
+logs to see the URL and first password.
 
 If you want to test a bit more in depth, you can change to an on-disk database easily:
 

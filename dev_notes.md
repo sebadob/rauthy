@@ -29,8 +29,6 @@ in another terminal:
 
 ### CURRENT WORK
 
-- migrate to Svelte 4 in the frontend to get rid of the `unsafe-inline` CSP
-
 ### Stage 1 - essentials
 
 [x] finished
@@ -38,8 +36,8 @@ in another terminal:
 ### Stage 2 - features - do before v1.0.0
 
 - add more documentation
-- check why DB migration returned an error inside OCI Pods only (and nowhere else)
 - cleanup
+- check why DB migration returned an error inside OCI Pods only (and nowhere else)
 - possible improvement: test if it makes a difference and maybe initialize argon2 hasher only once
 - benchmarks and performance tuning
 

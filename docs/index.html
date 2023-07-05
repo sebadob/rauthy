@@ -202,8 +202,8 @@ come in the future.</p>
 <p><strong>Client Branding</strong><br />
 You have a simple way to create some kind of branding or stylized look for the Login page for each client.<br />
 The whole color theme can be changed and each client can have its own custom logo.<br />
-If you need more than that, you would need to clone the project, manually edit the frontend files and then build the 
-project from source.</p>
+Additionally, if you modify the branding for the default <code>rauthy</code> client, it will not only change the look for the Login
+page, but also for the Account and Admin page.</p>
 <p><strong>Already in production</strong><br />
 Rauthy is already being used in production, and it works with all typical OIDC clients (so far). It was just not an 
 open source project for quite some time.<br />
@@ -214,12 +214,11 @@ Keycloak was a rough inspiration in certain places and if something is working w
 implemented (see below), while others might come or are even planned already.</p>
 <p>Currently missing features:</p>
 <p><strong>UI translation</strong><br />
-The Admin UI will never be translated, but a basic translation for the Login and Account page may come.</p>
+The Admin UI will most probably never be translated, but a basic translation for the Login and Account page may come.</p>
 <p><strong>Rauthy Name Override</strong><br />
 The idea of this feature is, that one may be able to override the <em>Rauthy</em> name in different places like E-Mail
 notifications or the Admin UI. This would make it possible to not confuse external users, when they expect some
-other deployment name. The currently existing client branding feature can be modified for the <em>rauthy</em> client itself
-already, but is only affecting the Login page for now. This might change as well, so it would affect every component.</p>
+other deployment name.</p>
 <p><strong>Rauthy Authenticator MFA App</strong><br />
 Even though things like OTP codes will never be implemented, it is not set in stone yet that there will never be Rauthy's
 own Authenticator App, which then basically acts as a Webauthn Software Authenticator. There are already existing 
@@ -237,17 +236,15 @@ The Foundation is there, it just is the case that some specific queries need to 
 to match the new SQL dialect.</p>
 <h2 id="what-it-will-never-be"><a class="header" href="#what-it-will-never-be">What it will never be</a></h2>
 <p>Rauthy does not try to just replicate already existing, great software.<br />
-For instance, if you need way more flexibility regarding federated users, fully customizable login flows and things
+For instance, if you need way more flexibility regarding federated users, fully customizable login flows or things
 like SAML or LDAP, then you might want to take a look at solutions like Keycloak.</p>
 <p>Rauthy wants to do just a few things, but these things good, fast, efficient and secure.<br />
-This means it <strong>will never implement</strong>:</p>
+This means it <strong>will never implement</strong> (if not contributed from someone):</p>
 <ul>
 <li>Insecure OIDC flows like the <em>Implicit Flow</em></li>
 <li>SAML 2.0 / LDAP</li>
 <li>Other (older, more insecure or just annoying) 2FA mechanisms than the existing ones</li>
-<li>No fully customizable themes in addition to the existing branding.<br />
-If you want to manipulate even the HTML / CSS, you need to customize directly inside the code and build from source.</li>
-<li>A translated Admin UI</li>
+<li>No fully customizable themes in addition to the existing branding.</li>
 </ul>
 
                     </main>

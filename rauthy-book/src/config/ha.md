@@ -42,7 +42,7 @@ In the `HA_HOSTS`, add every cache member. For instance, if you want to use 3 re
 and are deployed as a StatefulSet with the name `rauthy` again:
 
 ```
-HA_HOSTS="http://rauthy-0:8000, http://rauthy-1:8000 ,http://rauthy-2:8000"
+HA_HOSTS="http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000"
 ```
 
 The way it works:
@@ -66,8 +66,9 @@ fresh from the DB or other cache members than working with possibly invalid valu
 authn / authz situation.
 
 ```admonish hint
-If you are in an environment where the described mechanism with extracting the hostname would not work, you can set
-the `HOSTNAME_OVERWRITE` for each instance to match one of the `HA_HOSTS` entries.
+If you are in an environment where the described mechanism with extracting the hostname would not work, for instance
+you want a HA deployment with just different docker hosts, you can set the `HOSTNAME_OVERWRITE` for each instance to
+match one of the `HA_HOSTS` entries.
 ```
 
 ### `CACHE_AUTH_TOKEN`

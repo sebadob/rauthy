@@ -52,8 +52,8 @@ come in the future.
 **Client Branding**  
 You have a simple way to create some kind of branding or stylized look for the Login page for each client.  
 The whole color theme can be changed and each client can have its own custom logo.  
-If you need more than that, you would need to clone the project, manually edit the frontend files and then build the 
-project from source.
+Additionally, if you modify the branding for the default `rauthy` client, it will not only change the look for the Login
+page, but also for the Account and Admin page.
 
 **Already in production**  
 Rauthy is already being used in production, and it works with all typical OIDC clients (so far). It was just not an 
@@ -69,13 +69,12 @@ implemented (see below), while others might come or are even planned already.
 Currently missing features:
 
 **UI translation**  
-The Admin UI will never be translated, but a basic translation for the Login and Account page may come.
+The Admin UI will most probably never be translated, but a basic translation for the Login and Account page may come.
 
 **Rauthy Name Override**  
 The idea of this feature is, that one may be able to override the *Rauthy* name in different places like E-Mail
 notifications or the Admin UI. This would make it possible to not confuse external users, when they expect some
-other deployment name. The currently existing client branding feature can be modified for the *rauthy* client itself
-already, but is only affecting the Login page for now. This might change as well, so it would affect every component.
+other deployment name.
 
 **Rauthy Authenticator MFA App**  
 Even though things like OTP codes will never be implemented, it is not set in stone yet that there will never be Rauthy's
@@ -99,15 +98,13 @@ to match the new SQL dialect.
 ## What it will never be
 
 Rauthy does not try to just replicate already existing, great software.  
-For instance, if you need way more flexibility regarding federated users, fully customizable login flows and things
+For instance, if you need way more flexibility regarding federated users, fully customizable login flows or things
 like SAML or LDAP, then you might want to take a look at solutions like Keycloak.
 
 Rauthy wants to do just a few things, but these things good, fast, efficient and secure.  
-This means it **will never implement**:
+This means it **will never implement** (if not contributed from someone):
 
 - Insecure OIDC flows like the *Implicit Flow*
 - SAML 2.0 / LDAP
 - Other (older, more insecure or just annoying) 2FA mechanisms than the existing ones
 - No fully customizable themes in addition to the existing branding.  
-If you want to manipulate even the HTML / CSS, you need to customize directly inside the code and build from source.
-- A translated Admin UI

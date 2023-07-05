@@ -149,12 +149,13 @@
 <h2 id="testing--local-evaluation"><a class="header" href="#testing--local-evaluation">Testing / Local Evaluation</a></h2>
 <p>For getting a first look at rauthy, you can start it with docker (or any other container runtime) on your localhost.
 The image contains a basic default config which is sufficient for local testing. </p>
-<pre><code>docker run -i --rm \
+<pre><code>docker run --rm \
     -p 8080:8080 \
     --name rauthy \
     sdobedev/rauthy
 </code></pre>
-<p>This will start the container in interactive mode with an in-memory SQLite database.</p>
+<p>This will start the container in interactive mode with an in-memory SQLite database. Just take a look at the log at the
+logs to see the URL and first password.</p>
 <p>If you want to test a bit more in depth, you can change to an on-disk database easily:</p>
 <pre><code>docker run -d \
     -e DATABASE_URL=sqlite:data/rauthy.db \

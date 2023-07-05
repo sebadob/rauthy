@@ -253,7 +253,13 @@ spec:
   selector:
     app: rauthy
   ports:
-    # Assuming that this example file will run behind a Kubernetes ingress and does use HTTP internally.
+    # If you use the HA feature later on, the port over which the cache layer does
+    # communicate.
+    - name: cache
+      port: 8000
+      targetPort: 8000
+    # Assuming that this example file will run behind a Kubernetes ingress and does
+    # use HTTP internally.
     - name: http
       port: 8080
       targetPort: 8080
@@ -285,16 +291,37 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: registry.netitservices.com/sd/rauthy:0.12.0-beta1
+          # This example uses the version tag (to be able to document correctly before
+          # the release). In production I would highly recommend to actually use SHA 
+          # hashes to prevent someone from overwriting the image tag on your possibly
+          # own container registry with malicious content.
+          #
+          # Take a look at https://hub.docker.com/r/sdobedev/rauthy to see all tags
+          # and if you go into the details for # a tag, you find the SHA hash like in
+          # this example:
+          # https://hub.docker.com/layers/sdobedev/rauthy/0.12.0/images/sha256-4d0a3977f4fda68e848b45899d3b8a1b63c09c80dca0cc737be7338876194c40?context=explore
+          # directly under the image name on the top -&gt; DIGEST: sha256:....
+          # Then adopt the image name to something like:
+          # sdobedev/rauthy@sha256:4d0a3977f4fda68e848b45899d3b8a1b63c09c80dca0cc737be7338876194c40
+          #
+          # Because of a chicken and egg problem, I cannot document the correct sha
+          # hash for the latest version at this
+          # point. The latest image with the correct hash will always be shown for the 
+          # [Github Releases](https://github.com/sebadob/rauthy/releases)
+          image: sdobedev/rauthy:0.13.0
           imagePullPolicy: IfNotPresent
           securityContext:
+            # User ID 10001 is actually built into the container at the creation for
+            # better security
             runAsUser: 10001
             runAsGroup: 10001
             allowPrivilegeEscalation: false
           ports:
-            # You may need to adjust this, if you decide to start in https only mode or use another port
+            - containerPort: 8000
+            # You may need to adjust this, if you decide to start in https only mode
+            # or use another port
             - containerPort: 8080
-            #- containerPort: 8443
+            - containerPort: 8443
           env:
             - name: DATABASE_URL
               valueFrom:
@@ -319,12 +346,10 @@ spec:
               subPath: rauthy.cfg
               name: rauthy-config
               readOnly: true
-            #- mountPath: /app/tls/
-            #  name: rauthy-tls
-            #  readOnly: true
           readinessProbe:
             httpGet:
-              # You may need to adjust this, if you decide to start in https only mode or use another port
+              # You may need to adjust this, if you decide to start in https only
+              # mode or use another port
               scheme: HTTP
               port: 8080
               #scheme: HTTPS
@@ -334,7 +359,8 @@ spec:
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              # You may need to adjust this, if you decide to start in https only mode or use another port
+              # You may need to adjust this, if you decide to start in https only
+              # mode or use another port
               scheme: HTTP
               port: 8080
               #scheme: HTTPS
@@ -344,28 +370,32 @@ spec:
             periodSeconds: 30
           resources:
             requests:
-              # Tune the memory requests value carefully. Make sure, that the pods request at least:
+              # Tune the memory requests value carefully. Make sure, that the
+              # pods request at least:
               # `ARGON2_M_COST` / 1024 * `MAX_HASH_THREADS` Mi
-              # With SQLite: for small deployments, add additional ~20-30Mi for &quot;the rest&quot;,
-              # for larger ones ~50-70 Mi should be enough.
+              # With SQLite: for small deployments, add additional ~20-30Mi for
+              # &quot;the rest&quot;, for larger ones ~50-70 Mi should be enough.
               memory: 64Mi
-              # The CPU needs to be adjusted during runtime. This heavily depends on your use case.
+              # The CPU needs to be adjusted during runtime. This heavily
+              # depends on your use case.
               cpu: 100m
             limits:
-              # You can limit memory, but you don't really need to, since it should never exceed the expected amount.
+              # Be careful with the memory limit. You must make sure, that the
+              # (very costly) password hashing has enough memory available. If not,
+              # the application will crash. You do not really need a memory limit,
+              # since Rust is not a garbage collected language. Better take a close
+              # look at what the container actually needs during
+              # prime time and set the requested resources above properly.
               #memory:
-              # A CPU limit makes sense in case of DDoS attacks or something like this, if you do not have external
-              # rate limiting or other mechanisms. Otherwise, `MAX_HASH_THREADS` is the main mechanism to limit resources.
+              # A CPU limit may make sense in case of DDoS attacks or something
+              # like this, if you do not have external rate limiting or other
+              # mechanisms. Otherwise, `MAX_HASH_THREADS` is the main mechanism 
+              # to limit resources.
               cpu: 1000m
       volumes:
         - name: rauthy-config
           configMap:
             name: rauthy-config
-        #- name: rauthy-tls
-        #  secret:
-        #    secretName: rauthy-tls
-      #imagePullSecrets:
-      #  - name: provideSecretIfUsingPrivateRegistry
   volumeClaimTemplates:
     - metadata:
         name: rauthy-data

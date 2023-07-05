@@ -175,7 +175,7 @@ StatefulSet is used for the deployment.</p>
 <p>The way a cache node finds its members is by the <code>HA_HOSTS</code> and its own <code>HOSTNAME</code>.<br />
 In the <code>HA_HOSTS</code>, add every cache member. For instance, if you want to use 3 replicas in HA mode which are running
 and are deployed as a StatefulSet with the name <code>rauthy</code> again:</p>
-<pre><code>HA_HOSTS=&quot;http://rauthy-0:8000, http://rauthy-1:8000 ,http://rauthy-2:8000&quot;
+<pre><code>HA_HOSTS=&quot;http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000&quot;
 </code></pre>
 <p>The way it works:</p>
 <ol>
@@ -203,8 +203,9 @@ authn / authz situation.</li>
 <p><a class="admonition-anchor-link" href="#admonition-hint"></a></p>
 </div>
 <div>
-<p>If you are in an environment where the described mechanism with extracting the hostname would not work, you can set
-the <code>HOSTNAME_OVERWRITE</code> for each instance to match one of the <code>HA_HOSTS</code> entries.</p>
+<p>If you are in an environment where the described mechanism with extracting the hostname would not work, for instance
+you want a HA deployment with just different docker hosts, you can set the <code>HOSTNAME_OVERWRITE</code> for each instance to
+match one of the <code>HA_HOSTS</code> entries.</p>
 </div>
 </div>
 <h3 id="cache_auth_token"><a class="header" href="#cache_auth_token"><code>CACHE_AUTH_TOKEN</code></a></h3>
