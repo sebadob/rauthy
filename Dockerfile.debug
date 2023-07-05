@@ -14,7 +14,9 @@ COPY Cargo.* ./
 
 RUN mkdir data
 
-FROM scratch
+FROM alpine:3.18.2
+#FROM gcr.io/distroless/cc:debug
+#FROM gcr.io/distroless/cc
 
 USER 10001:10001
 
