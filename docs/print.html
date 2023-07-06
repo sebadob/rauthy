@@ -505,8 +505,8 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          # This example uses the version tag (to be able to document correctly before
-          # the release). In production I would highly recommend to actually use SHA 
+          # This example uses the version tag.
+          # In production, I would highly recommend to actually use SHA 
           # hashes to prevent someone from overwriting the image tag on your possibly
           # own container registry with malicious content.
           #
@@ -522,7 +522,7 @@ spec:
           # hash for the latest version at this
           # point. The latest image with the correct hash will always be shown for the 
           # [Github Releases](https://github.com/sebadob/rauthy/releases)
-          image: sdobedev/rauthy:0.13.0
+          image: sdobedev/rauthy:0.13.1
           imagePullPolicy: IfNotPresent
           securityContext:
             # User ID 10001 is actually built into the container at the creation for

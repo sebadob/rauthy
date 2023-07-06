@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.13.1
+
+This is just a small bugfix release.
+
+- UI Bugfix: Client flow updates were not applied via UI
+[6fe8fbc](https://github.com/sebadob/rauthy/commit/6fe8fbc1440498ea126a5aee5bed9dfe34e367d4)
+
 ## v0.13.0
 
 - Improved container security: Rauthy is based off a Scratch container image by default now. This improved the security
