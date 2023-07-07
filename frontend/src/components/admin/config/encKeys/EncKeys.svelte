@@ -103,7 +103,7 @@
     </div>
 
     <div class="btn">
-        <Button on:click={migrate} bind:isLoading>Migrate</Button>
+        <Button on:click={migrate} bind:isLoading>MIGRATE</Button>
     </div>
 
     {#if err}

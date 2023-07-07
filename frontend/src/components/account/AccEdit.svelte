@@ -11,7 +11,7 @@
 
     export let user = {};
 
-    const btnWidth = 170;
+    const btnWidth = "10rem";
     const inputWidth = '300px';
 
     let editPwd = false;

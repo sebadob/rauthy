@@ -105,7 +105,7 @@
         margin: 12px 5px 5px 5px;
         padding: 5px 10px;
         border-radius: 7px;
-        font-size: 1.05em;
+        font-size: 1.05rem;
         outline: none;
     }
 
@@ -117,7 +117,7 @@
         margin-top: -6px;
         margin-left: 5px;
         padding: 0 10px;
-        font-size: .85em;
+        font-size: .85rem;
     }
 
     .labelInner {
@@ -126,7 +126,7 @@
         left: 11px;
         border-radius: 5px;
         padding: 0 5px;
-        font-size: .8em;
+        font-size: .8rem;
     }
 
     .rel {

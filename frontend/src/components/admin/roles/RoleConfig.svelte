@@ -95,7 +95,7 @@
         ROLE NAME
     </Input>
 
-    <Button on:click={onSubmit} level={1}>SAVE</Button>
+    <Button on:click={onSubmit} level={1} width="4rem">SAVE</Button>
 
     {#if success}
         <div class="success">
@@ -129,7 +129,7 @@
 
     .label {
         margin: 5px 5px 0 5px;
-        font-size: .9em;
+        font-size: .9rem;
     }
 
     .success {

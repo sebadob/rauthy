@@ -4,7 +4,7 @@
     import {fade} from "svelte/transition";
 
     export let level = 2;
-    export let width = 100;
+    export let width = 'inherit';
     export let selected;
     export let isLoading = false;
 
@@ -57,7 +57,7 @@
 
 <button
         class={cls}
-        style:width="{`${width}px`}"
+        style:width={width}
         style:box-shadow="{selected ? 'inset 0 0 3px 2px var(--col-glow)' : ''}"
         style:cursor="{isLoading ? 'default' : 'pointer'}"
         on:click={handleCLick}

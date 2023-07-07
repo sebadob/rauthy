@@ -96,6 +96,6 @@
 
     .preview {
         margin: 0 5px;
-        font-size: .85em;
+        font-size: .85rem;
     }
 </style>

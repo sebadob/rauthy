@@ -383,10 +383,10 @@
     </div>
 
     <div class="btns">
-        <Button on:click={onSubmit} bind:isLoading level={1}>
+        <Button on:click={onSubmit} bind:isLoading level={1} width="4rem">
             SAVE
         </Button>
-        <Button on:click={onReset} bind:isLoading level={3}>
+        <Button on:click={onReset} bind:isLoading level={3} width="4rem">
             RESET
         </Button>
 
@@ -416,18 +416,16 @@
 
     .colorBlock, .colInput {
         position: absolute;
-        top: 13px;
-        right: 8px;
-        width: 30px;
-        height: 31px;
+        top: -.825rem;
+        right: .45rem;
+        width: 1.9rem;
+        aspect-ratio: 1;
         border-radius: 0 5px 5px 0;
     }
 
     .colorBlock {
         z-index: 1;
         pointer-events: none;
-        /* TODO: find a nice way to cover the 1px shift between firefox and chrome */
-        /*mix-blend-mode: multiply;*/
     }
 
     .colInput {
@@ -441,6 +439,7 @@
 
     .colInputWrap {
         position: relative;
+        margin: auto;
     }
 
     .colors {
@@ -493,6 +492,5 @@
 
     .upload {
         margin: .9rem .3rem;
-        /*margin: 15px 5px;*/
     }
 </style>

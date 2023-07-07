@@ -81,7 +81,7 @@
                     firstDirReverse
             />
             <div class="button">
-                <Button width={200} on:click={invalidateSessions} level={3}>
+                <Button on:click={invalidateSessions} level={3}>
                     Invalidate All Sessions
                 </Button>
             </div>

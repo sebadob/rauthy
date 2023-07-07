@@ -108,7 +108,7 @@
     }
 
     .labelCollapsed {
-        font-size: .8em;
+        font-size: .8rem;
     }
 
     .selected, .selectedCollapsed {

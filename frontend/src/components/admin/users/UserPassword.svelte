@@ -10,7 +10,7 @@
     export let user = {};
     export let onSave;
 
-    const btnWidth = 160;
+    const btnWidth = "inherit";
 
     let isLoading = false;
     let errEmail = '';

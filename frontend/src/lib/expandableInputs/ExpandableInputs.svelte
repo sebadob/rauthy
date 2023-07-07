@@ -114,7 +114,7 @@
         margin-top: -10px;
         margin-left: 5px;
         padding: 0 10px;
-        font-size: .85em;
+        font-size: .85rem;
         color: var(--col-err);
     }
 </style>

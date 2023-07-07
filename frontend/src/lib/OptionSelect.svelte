@@ -16,7 +16,7 @@
     select {
         padding: 3px;
         color: var(--col-text);
-        font-size: 1em;
+        font-size: 1rem;
         cursor: pointer;
         border-radius: 3px;
         border: none;

@@ -41,16 +41,16 @@
             let userAttrs = await fetchUserAttr();
             if (userAttrs) {
                 let uaMap = new Map();
-                if (userAttrs.values.length > 0) {
-                    for (let ua of userAttrs.values) {
-                        uaMap.set(ua.key, ua.value);
-                    }
+                for (let ua of userAttrs.values) {
+                    uaMap.set(ua.key, ua.value || '');
+                }
 
-                    for (let a of all) {
-                        let uaValue = uaMap.get(a.name);
-                        if (uaValue) {
-                            a.value = uaValue;
-                        }
+                for (let a of all) {
+                    let uaValue = uaMap.get(a.name);
+                    if (uaValue) {
+                        a.value = uaValue;
+                    } else {
+                        a.value = '';
                     }
                 }
 
@@ -108,7 +108,7 @@
         </Input>
     {/each}
 
-    <Button on:click={onSubmit} isLoading={isLoading} level={1}>SAVE</Button>
+    <Button on:click={onSubmit} isLoading={isLoading} level={1} width="4rem">SAVE</Button>
 
     {#if success}
         <div class="success">

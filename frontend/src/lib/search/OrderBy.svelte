@@ -111,7 +111,7 @@
         padding: 4px;
         color: var(--col-text);
         background: var(--col-bg);
-        font-size: 1.05em;
+        font-size: 1.05rem;
         border-radius: 5px;
         cursor: pointer;
         border: 1px solid var(--col-glow);

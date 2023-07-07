@@ -8,7 +8,7 @@
     import Button from "$lib/Button.svelte";
 
     export let formValues = {};
-    export let btnWidth = 170;
+    export let btnWidth = "4rem";
     export let inputWidth;
 
     let accepted = false;
