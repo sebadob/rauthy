@@ -1,17 +1,9 @@
-FROM rust:1.70-alpine3.18 AS builderBackend
+FROM alpine3.18 AS builderBackend
 
 WORKDIR /work
 
-COPY migrations/ ./migrations/
-COPY rauthy-common/ ./rauthy-common/
-COPY rauthy-handlers/ ./rauthy-handlers/
-COPY rauthy-main/ ./rauthy-main/
-COPY rauthy-models/ ./rauthy-models/
-COPY rauthy-service/ ./rauthy-service/
-COPY static ./static/
-COPY templates ./templates/
-COPY Cargo.* ./
-
+# Just a workaroudn to get an empty dir and be able to copy it over to scratch with
+# the correct access rights
 RUN mkdir data
 
 FROM scratch
@@ -20,7 +12,6 @@ USER 10001:10001
 
 WORKDIR /app
 
-#COPY --chown=10001:10001 --from=builderBackend /work/target/release/rauthy .
 COPY --chown=10001:10001 /out/rauthy .
 COPY --chown=10001:10001 --from=builderBackend /work/data ./data
 
