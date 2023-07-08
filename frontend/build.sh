@@ -3,8 +3,15 @@
 rm -rf ../static/v1/*
 rm -rf ../templates/html/*
 
-mkdir ../templates/html
-mkdir -p ../static/v1
+folders=(
+"../templates/html"
+"../static/v1"
+)
+for folder in "${folders[@]}"; do
+  if [ ! -d "$folder" ]; then
+      mkdir -p "$directory"
+  fi
+done
 
 npm run build
 
@@ -14,7 +21,6 @@ pages=(
 "../templates/html/users/*.html"
 "../templates/html/users/{id}/reset/*.html"
 )
-
 for folder in "${pages[@]}"; do
     for html in $folder; do
       # for pre-rendering colors
@@ -36,7 +42,3 @@ for folder in "${pages[@]}"; do
       sed -i 's/<script>/<script nonce="{{ nonce }}">/g' "$html"
     done;
 done
-
-# Since we cleanup the whole static folder, copy over the book again at the end
-#mkdir ../static/v1/book
-#cp -r ../docs/* ../static/v1/book
