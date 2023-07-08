@@ -97,7 +97,7 @@ build-docs:
 
 
 # builds the whole application in release mode
-build: build-docs build-ui test
+build: build-docs build-ui
     cargo clippy -- -D warnings
     cargo build --release --target x86_64-unknown-linux-musl
     cp target/x86_64-unknown-linux-musl/release/rauthy out/
@@ -120,8 +120,8 @@ set-version new_version:
     done
 
 
-# sets a new git tag if clippy is fine and pushes it
-release: build
+# makes sure everything is fine
+is-clean: test build
     #!/usr/bin/env bash
     set -euxo pipefail
 
@@ -131,10 +131,24 @@ release: build
     # make sure everything has been committed
     git diff --exit-code
 
+    echo all good
+
+
+# sets a new git tag if clippy is fine and pushes it
+release:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
     git tag "v$TAG"
-    #git push origin "v$TAG"
+    git push origin "v$TAG"
 
 
 # publishes the application images
 publish:
-    # TODO
+    docker build --no-cache -t sdobedev/rauthy:$TAG .
+    docker push sdobedev/rauthy:$TAG
+    docker build --no-cache -f Dockerfile.debug -t sdobedev/rauthy:$TAG-debug .
+    docker push sdobedev/rauthy:$TAG-debug
+
+    docker tag sdobedev/rauthy:$TAG sdobedev/rauthy:latest
+    docker push sdobedev/rauthy:latest
