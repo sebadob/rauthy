@@ -36,9 +36,7 @@
 
     onMount(() => {
         formValues.name = attr.name;
-        if (attr.desc) {
-            formValues.desc = attr.desc;
-        }
+        formValues.desc = attr.desc;
     })
 
     function handleKeyPress(event) {
@@ -105,7 +103,7 @@
         DESCRIPTION
     </Input>
 
-    <Button on:click={onSubmit} level={1}>SAVE</Button>
+    <Button on:click={onSubmit} level={1} width="4rem">SAVE</Button>
 
     {#if success}
         <div class="success">

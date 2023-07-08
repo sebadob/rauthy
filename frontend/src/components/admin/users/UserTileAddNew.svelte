@@ -152,7 +152,7 @@
 
     .header {
         display: flex;
-        font-size: .9em;
+        font-size: .9rem;
         margin-left: 10px;
     }
 
@@ -163,7 +163,7 @@
 
     .label {
         margin: 10px 3px 5px 3px;
-        font-size: .85em;
+        font-size: .9rem;
     }
 
     .tiles {

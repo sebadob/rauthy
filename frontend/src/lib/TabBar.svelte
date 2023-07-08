@@ -5,7 +5,7 @@
     export let level = 3;
     export let selected;
     export let center = false;
-    export let width = 120;
+    export let width = "inherit";
 
     let toggle = [];
 

@@ -84,6 +84,7 @@
             return;
         }
 
+        client.access_token_lifetime = Number.parseInt(client.access_token_lifetime);
         client.flows_enabled = clientFlows.filter(f => f.value).map(f => f.label);
 
         if (client.flows_enabled.includes('authorization_code') && client.redirect_uris.length === 0) {
@@ -113,6 +114,8 @@
         if (data.allowed_origins.length > 0 && !data.allowed_origins[0]) {
             data.allowed_origins = [];
         }
+
+        console.log(data);
 
         let res = await putClient(data);
         if (res.ok) {
@@ -387,14 +390,15 @@
         {#if client.id === 'rauthy'}
             <div class="separator"></div>
             <b>CAUTION:</b>
-            <br>
-            <code>rauthy</code> is the default client which is needed for logging into this Admin UI.<br>
-            Be VERY careful when you change values here, since you could end up locking yourself out of the UI.
+            <p>
+                <code>rauthy</code> is the default client which is needed for logging into this Admin UI.<br>
+                Be VERY careful when you change values here, since you could end up locking yourself out of the UI.
+            </p>
         {/if}
     </div>
 
     <!-- Save Button-->
-    <Button on:click={onSubmit} level={1}>SAVE</Button>
+    <Button on:click={onSubmit} level={1} width="4rem">SAVE</Button>
 
     {#if success}
         <div class="success">
@@ -443,7 +447,7 @@
 
     .label {
         margin-top: 5px;
-        font-size: .9em;
+        font-size: .9rem;
     }
 
     .separator {

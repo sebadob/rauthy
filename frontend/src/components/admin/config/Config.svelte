@@ -19,7 +19,7 @@
 
 <div class="content">
     <div class="container">
-        <TabBar labels={tabBarItems} bind:selected width={170}/>
+        <TabBar labels={tabBarItems} bind:selected />
 
         {#if selected === 'PASSWORD POLICY'}
             <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>

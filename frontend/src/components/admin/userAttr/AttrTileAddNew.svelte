@@ -118,7 +118,7 @@
 
     .header {
         display: flex;
-        font-size: .9em;
+        font-size: .9rem;
         margin-left: 10px;
     }
 

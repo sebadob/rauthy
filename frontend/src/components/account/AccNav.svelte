@@ -24,6 +24,7 @@
     {#each labels as label, i}
         <Button
                 level={3}
+                width="6rem"
                 bind:selected={toggle[i]}
                 on:click={() => selected = label}
                 on:keypress={() => selected = label}

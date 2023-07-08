@@ -89,7 +89,7 @@
             GROUP NAME
         </Input>
 
-        <Button on:click={onSubmit} level={1}>SAVE</Button>
+        <Button on:click={onSubmit} level={1} width="4rem">SAVE</Button>
 
         {#if success}
             <div class="success">
@@ -120,7 +120,7 @@
 
     .header {
         display: flex;
-        font-size: .9em;
+        font-size: .9rem;
         margin-left: 10px;
     }
 

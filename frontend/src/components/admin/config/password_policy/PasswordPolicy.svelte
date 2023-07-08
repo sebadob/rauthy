@@ -277,7 +277,7 @@
         </div>
 
         <!-- Save Button -->
-        <Button on:click={onSubmit} bind:isLoading level={1}>SAVE</Button>
+        <Button on:click={onSubmit} bind:isLoading level={1} width="4rem">SAVE</Button>
 
         {#if success}
             <div class="success">

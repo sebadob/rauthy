@@ -125,7 +125,7 @@
         border: 1px solid var(--col-glow);
         border-radius: 7px;
         color: var(--col-text);
-        font-size: 1.05em;
+        font-size: 1.05rem;
         outline: none;
         box-shadow: 1px 1px 2px var(--col-gmid);
     }
@@ -153,7 +153,7 @@
         padding: 4px;
         color: var(--col-text);
         background: var(--col-bg);
-        font-size: 1.05em;
+        font-size: 1.05rem;
         border-radius: 5px;
         cursor: pointer;
         border: 1px solid var(--col-glow);

@@ -72,7 +72,7 @@
         border: 1px solid var(--col-glow);
         border-radius: 7px;
         color: var(--col-text);
-        font-size: 1.05em;
+        font-size: 1.05rem;
         outline: none;
         box-shadow: 1px 1px 2px var(--col-gmid);
     }
@@ -86,11 +86,9 @@
     }
 
     input:hover {
-        /*background: var(--col-bg);*/
     }
 
     input:focus {
-        /*background: var(--col-bg);*/
         border: 1px solid var(--col-acnt);
     }
 
@@ -99,10 +97,10 @@
     }
 
     .err {
-        margin-top: -6px;
+        margin-top: -.4rem;
         margin-left: 5px;
         padding: 0 10px;
-        font-size: .85em;
+        font-size: .85rem;
         color: var(--col-err);
     }
 
@@ -112,7 +110,7 @@
         left: 11px;
         border-radius: 5px;
         padding: 0 5px;
-        font-size: .8em;
+        font-size: .8rem;
     }
 
     .container {

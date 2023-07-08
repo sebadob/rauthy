@@ -29,7 +29,7 @@
     <div class="label">
         Are you sure, you want to delete this user?
     </div>
-    <Button on:click={onSubmit} bind:isLoading level={1}>
+    <Button on:click={onSubmit} bind:isLoading level={1} width="5rem">
         DELETE
     </Button>
 
