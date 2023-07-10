@@ -10,7 +10,7 @@ use jwt_simple::claims;
 use jwt_simple::prelude::*;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME,
-    MFA_REQ_LIFETIME, MFA_REQ_LT_DUR, SESSION_RENEW_MFA, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
+    MFA_REQ_LIFETIME, SESSION_RENEW_MFA, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::HashPassword;
@@ -20,23 +20,18 @@ use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::jwk::{Jwk, JwkKeyPair, JwkKeyPairType};
-use rauthy_models::entity::mfa_auth_code::MfaAuthCode;
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::scopes::Scope;
 use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
-use rauthy_models::mfa::listen_ws::{WsListenMsg, WsListenRouteReq};
-use rauthy_models::mfa::put_mfa_login_req;
 use rauthy_models::request::{LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest};
-use rauthy_models::response::{
-    MfaLoginRequest, MfaLoginRequestAwait, MfaLoginRequestState, TokenInfo, Userinfo,
-};
+use rauthy_models::response::{TokenInfo, Userinfo};
 use rauthy_models::templates::LogoutHtml;
 use rauthy_models::{
-    sign_jwt, validate_jwt, AuthStep, AuthStepAwaitMfa, AuthStepAwaitWebauthn, AuthStepLoggedIn,
-    JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtRefreshClaims, JwtType,
+    sign_jwt, validate_jwt, AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn, JwtAccessClaims,
+    JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtRefreshClaims, JwtType,
 };
 use redhac::cache_del;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
@@ -69,8 +64,6 @@ pub async fn authorize(
             )
         })?;
     user.check_enabled()?;
-
-    // TODO add a 'check mfa force'
 
     let mfa_cookie =
         if let Ok(c) = WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA), &data.enc_keys) {
@@ -203,75 +196,6 @@ pub async fn authorize(
         login_req.save(data).await?;
 
         Ok(AuthStep::AwaitWebauthn(step))
-    }
-    // If the user has a registered MfaApp, save the new values and return a MFA Response
-    else if let Some(mfa_app_id) = user.mfa_app {
-        // TODO
-        // let mfa_app = get_mfa_app(mfa_app_id, data, )
-        // need to save the value as String, since HeaderName and HeaderValue are no serializable
-        let origin = if let Some(h) = header_origin {
-            Some(String::from(h.1.to_str().unwrap()))
-        } else {
-            None
-        };
-
-        // build the header before moving session.csrf_token into mfa_auth_code
-        let header_csrf = Session::get_csrf_header(&session.csrf_token);
-
-        // tracks the state of the mfa req verification and contains all information for the user
-        // in case of a success
-        let mfa_auth_code = MfaAuthCode {
-            app_id: mfa_app_id.clone(),
-            email: user.email,
-            code_challenge: get_rand(48),
-            code_listen: get_rand(48),
-            exp: OffsetDateTime::now_utc()
-                .add(*MFA_REQ_LT_DUR)
-                .unix_timestamp(),
-            header_loc: loc,
-            header_origin: origin,
-            header_session_csrf: session.csrf_token,
-            req_id: get_rand(12),
-        };
-        mfa_auth_code.save(data).await?;
-
-        // save mfa login req in the cache in case the app is not connected yet
-        let mfa_login_req = MfaLoginRequest {
-            challenge: mfa_auth_code.code_challenge.clone(),
-            email: mfa_auth_code.email,
-            exp: mfa_auth_code.exp,
-            mfa_app_id: mfa_app_id.clone(),
-            req_id: mfa_auth_code.req_id.clone(),
-            state: MfaLoginRequestState::Open,
-        };
-        put_mfa_login_req(data, &mfa_login_req).await?;
-
-        // if the app is connected, send out the req directly
-        // TODO this works only as a SI but not HA -> find a better way or get rid of it completely
-        let msg = WsListenRouteReq::Req {
-            app_id: mfa_app_id,
-            msg: WsListenMsg::new(
-                mfa_auth_code.code_challenge,
-                mfa_auth_code.exp,
-                mfa_auth_code.req_id.clone(),
-            ),
-        };
-        data.caches.tx_ws_listen.send(msg).await.map_err(|err| {
-            error!("Error sending over 'tx_ws_listen' channel: {}", err);
-            ErrorResponse::new(
-                ErrorResponseType::Internal,
-                String::from("Error sending msg over 'tx_ws_listen' channel"),
-            )
-        })?;
-
-        Ok(AuthStep::AwaitMfa(AuthStepAwaitMfa {
-            await_mfa_response: MfaLoginRequestAwait {
-                code: mfa_auth_code.code_listen,
-                exp: mfa_auth_code.exp,
-                req_id: mfa_login_req.req_id,
-            },
-            header_csrf,
-        }))
     } else {
         Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
             header_loc: (header::LOCATION, HeaderValue::from_str(&loc).unwrap()),
@@ -564,14 +488,6 @@ pub async fn build_refresh_token(
     Ok(token)
 }
 
-// pub fn encrypt(plain: &[u8], key: &[u8], nonce: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
-//     let k = chacha20poly1305::Key::from_slice(key);
-//     let cipher = chacha20poly1305::ChaCha20Poly1305::new(k);
-//     let nonce = chacha20poly1305::Nonce::from_slice(nonce);
-//     let ciphertext = cipher.encrypt(nonce, plain)?;
-//     Ok(ciphertext)
-// }
-
 fn get_token_from_header(headers: &HeaderMap) -> Result<String, ErrorResponse> {
     let bearer = headers.get("Authorization").ok_or_else(|| {
         ErrorResponse::new(
@@ -669,10 +585,6 @@ pub async fn get_token_info(
     let claims = claims_res.unwrap();
     // scope does not exist for ID tokens, for all others unwrap is safe
     let scope = claims.custom.scope;
-    // let scope = payload
-    //     .claim("scope")
-    //     .unwrap_or(&serde_json::Value::String(String::from("")))
-    //     .to_owned();
     let client_id = claims.custom.azp;
     let username = claims.subject;
     let exp = claims.expires_at.unwrap().as_secs();
@@ -1530,115 +1442,7 @@ pub async fn validate_token<T: serde::Serialize + for<'de> ::serde::Deserialize<
     validate_jwt!(T, kp, token, options)
 
     // TODO check roles if we add more users / roles
-
-    // // check issuer
-    // if payload
-    //     .claim("iss")
-    //     .map(|v| v.to_string().replace('\"', ""))
-    //     .ok_or_else(|| {
-    //         ErrorResponse::new(
-    //             ErrorResponseType::Unauthorized,
-    //             String::from("Missing correct issuer in JWT claims"),
-    //         )
-    //     })?
-    //     .ne(&issuer)
-    // {
-    //     return Ok((false, payload));
-    // }
-    //
-    // Ok((true, payload))
-    // Ok(claims)
 }
-
-// /// Validates a given JWT Token
-// pub async fn validate_token(
-//     db: web::Data<DbPool>,
-//     jwt: &str,
-//     state: &web::Data<AppState>,
-//     // TODO dynamic aud: Option<&str>
-// ) -> Result<(bool, jwt::JwtPayload), ErrorResponse> {
-//     // decode header to get the kid
-//     let header = jwt::decode_header(jwt)?.to_owned();
-//     let kid = header
-//         .claim("kid")
-//         .map(|v| v.to_string().replace('\"', ""))
-//         .ok_or_else(|| {
-//             ErrorResponse::new(
-//                 ErrorResponseType::BadRequest,
-//                 String::from("Missing kid in JWT Header"),
-//             )
-//         })?;
-//
-//     // retrieve jwk for kid
-//     let jwk = find_jwk(db, state, kid, false).await?;
-//
-//     // check signature
-//     let payload = decode_verify_token(jwt, &jwk)?;
-//
-//     // check expiry timestamp
-//     let exp_at = payload
-//         .claim("exp")
-//         .map(|v| chrono::NaiveDateTime::from_timestamp(v.as_i64().unwrap_or(0), 0))
-//         .ok_or(|| {
-//             ErrorResponse::new(
-//                 ErrorResponseType::Unauthorized,
-//                 String::from("Missing correct exp claim"),
-//             )
-//         })
-//         .map_err(|_| {
-//             ErrorResponse::new(
-//                 ErrorResponseType::BadRequest,
-//                 String::from("'exp' token claim is missing"),
-//             )
-//         })?;
-//     if chrono::Local::now().timestamp_nanos() > exp_at.timestamp_nanos() {
-//         return Ok((false, payload));
-//     }
-//
-//     // check issuer
-//     if payload
-//         .claim("iss")
-//         .map(|v| v.to_string().replace('\"', ""))
-//         .ok_or_else(|| {
-//             ErrorResponse::new(
-//                 ErrorResponseType::Unauthorized,
-//                 String::from("Missing correct issuer in JWT claims"),
-//             )
-//         })?
-//         .ne(&state.issuer)
-//     {
-//         return Ok((false, payload));
-//     }
-//
-//     Ok((true, payload))
-// }
-
-// // TODO
-// /// Decodes and verifies a given JWT Token which is in base64 format
-// fn decode_verify_token(jwt: &str, jwk: &Jwk) -> Result<JwtPayload, ErrorResponse> {
-//     // EC keys
-//     if jwk.key_type().eq("EC") {
-//         let verifier = match jwk.curve().unwrap() {
-//             "P-256" => jws::ES256.verifier_from_jwk(jwk),
-//             "P-384" => jws::ES384.verifier_from_jwk(jwk),
-//             _ => jws::ES512.verifier_from_jwk(jwk),
-//         }?;
-//         let (payload, _) = jwt::decode_with_verifier(&jwt, &verifier)?;
-//         return Ok(payload);
-//     }
-//
-//     // RSA keys
-//     let n_len = jwk.parameter("n").unwrap().as_str().unwrap().len();
-//     let verifier = match n_len {
-//         // RS256 -> 342 bytes; RS384 -> 512 bytes; RS512 -> 683 bytes
-//         n if (n < 400) => jws::RS256.verifier_from_jwk(jwk),
-//         n if (n < 550) => jws::RS384.verifier_from_jwk(jwk),
-//         _ => jws::RS512.verifier_from_jwk(jwk),
-//     }?;
-//     let (payload, _) = jwt::decode_with_verifier(&jwt, &verifier)
-//         .map_err(|e| ErrorResponse::new(ErrorResponseType::Unauthorized, format!("{:?}", e)))?;
-//     Ok(payload)
-// }
 
 #[cfg(test)]
 mod tests {}

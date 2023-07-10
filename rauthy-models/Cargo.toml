@@ -1,6 +1,6 @@
 [package]
 name = "rauthy-models"
-version = "0.13.1"
+version = "0.13.2"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "AGPLv3"

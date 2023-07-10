@@ -57,11 +57,6 @@ pub fn map_auth_step(
             Ok(resp)
         }
 
-        // TODO clean up after websocket mfa app has been removed
-        AuthStep::AwaitMfa(res) => Ok(HttpResponse::Ok()
-            .insert_header(res.header_csrf)
-            .json(res.await_mfa_response)),
-
         AuthStep::AwaitWebauthn(res) => {
             let body = WebauthnLoginResponse {
                 code: res.code,

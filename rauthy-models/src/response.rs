@@ -1,6 +1,5 @@
 use crate::entity::clients::Client;
 use crate::entity::jwk::{JWKSPublicKey, JWKS};
-use crate::entity::mfa_app::MfaAppReg;
 use crate::entity::password::PasswordPolicy;
 use crate::entity::scopes::Scope;
 use crate::entity::sessions::SessionState;
@@ -144,62 +143,6 @@ pub struct LoginTimeResponse {
     pub num_cpus: usize,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct MfaAckResponse<'a> {
-    pub req_id: &'a str,
-    pub loc: &'a str,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct MfaAppRegResponse {
-    pub app_id: String,
-    pub code: String,
-    pub email: String,
-    pub exp: i64,
-}
-
-impl From<MfaAppReg> for MfaAppRegResponse {
-    fn from(m: MfaAppReg) -> Self {
-        Self {
-            app_id: m.app_id,
-            code: m.code,
-            email: m.email,
-            exp: m.exp.timestamp(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, ToSchema)]
-pub struct MfaAppInitResponse {
-    pub challenge: String,
-    pub verifier: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct MfaLoginRequest {
-    pub challenge: String,
-    pub email: String,
-    pub exp: i64,
-    pub mfa_app_id: String,
-    pub req_id: String,
-    pub state: MfaLoginRequestState,
-}
-
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub enum MfaLoginRequestState {
-    Open,
-    Accepted,
-    Rejected,
-    Sent,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct MfaLoginRequestAwait {
-    pub code: String,
-    pub exp: i64,
-    pub req_id: String,
-}
-
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PasswordPolicyResponse {
     pub length_min: i32,
@@ -261,33 +204,6 @@ impl From<Scope> for ScopeResponse {
     }
 }
 
-// #[derive(Debug, Serialize, Deserialize, ToSchema)]
-// pub struct ScopeResponse<'a> {
-//     pub id: &'a str,
-//     pub name: &'a str,
-//     #[serde(skip_serializing_if = "Option::is_none")]
-//     pub attr_include_access: Option<Vec<&'a str>>,
-//     #[serde(skip_serializing_if = "Option::is_none")]
-//     pub attr_include_id: Option<Vec<&'a str>>,
-// }
-//
-// impl From<&Scope> for ScopeResponse<'_> {
-//     fn from(value: &Scope) -> Self {
-//         Self {
-//             id: &value.id,
-//             name: &value.name,
-//             attr_include_access: value
-//                 .attr_include_access
-//                 .as_ref()
-//                 .map(|a| a.split(',').collect()),
-//             attr_include_id: value
-//                 .attr_include_id
-//                 .as_ref()
-//                 .map(|a| a.split(',').collect()),
-//         }
-//     }
-// }
-
 // TODO benchmark, which of these 2 implementations is faster in the end
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SessionResponse<'a> {
@@ -299,29 +215,6 @@ pub struct SessionResponse<'a> {
     pub exp: i64,
     pub last_seen: i64,
 }
-// #[derive(Debug, Serialize)]
-// pub struct SessionResponse {
-//     pub id: String,
-//     #[serde(skip_serializing_if = "Option::is_none")]
-//     pub user_id: Option<String>,
-//     pub is_mfa: bool,
-//     pub state: SessionState,
-//     pub exp: chrono::NaiveDateTime,
-//     pub last_seen: chrono::NaiveDateTime,
-// }
-//
-// impl From<Session> for SessionResponse {
-//     fn from(value: Session) -> Self {
-//         Self {
-//             id: value.id,
-//             user_id: value.user_id,
-//             is_mfa: value.is_mfa,
-//             state: value.state,
-//             exp: value.exp,
-//             last_seen: value.last_seen,
-//         }
-//     }
-// }
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SessionInfoResponse {

@@ -1,39 +1,30 @@
 use crate::build_csp_header;
 use actix_web::http::StatusCode;
 use actix_web::{cookie, delete, get, post, put, web, HttpRequest, HttpResponse};
-use actix_web_actors::ws;
 use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
-use actix_web_lab::sse;
 use rauthy_common::constants::{
-    APP_ID_HEADER, COOKIE_MFA, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE,
-    USER_REG_DOMAIN_RESTRICTION,
+    COOKIE_MFA, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE, USER_REG_DOMAIN_RESTRICTION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::colors::ColorEntity;
-use rauthy_models::entity::mfa_app::{MfaApp, MfaAppReg};
-use rauthy_models::entity::mfa_auth_code::MfaAuthCode;
 use rauthy_models::entity::principal::Principal;
-use rauthy_models::entity::sessions::{get_header_value, Session, SessionState};
+use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
-use rauthy_models::mfa::app_reg_ws::RegWebSocket;
-use rauthy_models::mfa::listen_ws::{MfaListenWs, WsListenRouteReq, WsListenTx};
 use rauthy_models::request::{
-    MfaPurpose, NewMfaAppRequest, NewUserRegistrationRequest, NewUserRequest, PasswordResetRequest,
+    MfaPurpose, NewUserRegistrationRequest, NewUserRequest, PasswordResetRequest,
     RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest, UserAttrConfigRequest,
     UserAttrValuesUpdateRequest, WebauthnAuthFinishRequest, WebauthnAuthStartRequest,
     WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_models::response::{
-    MfaAppRegResponse, UserAttrConfigResponse, UserAttrValueResponse, UserAttrValuesResponse,
-    UserResponse,
+    UserAttrConfigResponse, UserAttrValueResponse, UserAttrValuesResponse, UserResponse,
 };
 use rauthy_models::templates::UserRegisterHtml;
 use rauthy_service::password_reset;
-use time::OffsetDateTime;
-use tracing::{debug, error, info, warn};
+use tracing::{error, warn};
 
 /// Returns all existing users
 ///
@@ -811,225 +802,6 @@ pub async fn get_user_by_email(
     User::find_by_email(&data, path.into_inner())
         .await
         .map(|user| HttpResponse::Ok().json(UserResponse::from(user)))
-}
-
-/// Connect to an SSE stream and wait for a MFA Request ACK from the App
-///
-/// **Permissions**
-/// - Custom: with random code from `AwaitMfa`
-///
-/// **Returns**
-/// - SSE Stream
-#[utoipa::path(
-    get,
-    path = "/users/email/{email}/mfa/await/{req_id}/{code}",
-    tag = "mfa",
-    responses(
-        (status = 200, description = "Ok"),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-        (status = 403, description = "Forbidden", body = ErrorResponse),
-    ),
-)]
-#[get("/users/email/{email}/mfa/await/{req_id}/{code}")]
-#[has_permissions("all")]
-pub async fn await_mfa_app(
-    data: web::Data<AppState>,
-    path: web::Path<(String, String, String)>,
-) -> Result<sse::Sse<sse::ChannelStream>, ErrorResponse> {
-    let (tx, rx) = sse::channel(1);
-    let (email, req_id, code) = path.into_inner();
-
-    let auth_code_opt = MfaAuthCode::find(&data, email).await?;
-    if auth_code_opt.is_none() {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "No existing active MFA request".to_string(),
-        ));
-    }
-    let auth_code = auth_code_opt.unwrap();
-
-    if auth_code.req_id != req_id {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "Bad req_id".to_string(),
-        ));
-    }
-    if auth_code.code_listen != code {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Unauthorized,
-            "Bad credentials".to_string(),
-        ));
-    }
-
-    if auth_code.exp < OffsetDateTime::now_utc().unix_timestamp() {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            format!("The MFA Request has expired on {}", auth_code.exp),
-        ));
-    }
-
-    data.caches
-        .tx_ws_listen
-        .send(WsListenRouteReq::SseTx {
-            app_id: auth_code.app_id,
-            tx: WsListenTx {
-                req_id: auth_code.req_id,
-                tx,
-                loc: auth_code.header_loc,
-            },
-        })
-        .await
-        .map_err(|_| {
-            ErrorResponse::new(
-                ErrorResponseType::Internal,
-                "Error caching sse::Sender channel".to_string(),
-            )
-        })?;
-
-    Ok(rx)
-}
-
-/// Opens a WebSocket to listen to incoming MFA authentication requests
-///
-/// CAUTION: This may be removed in a future version - not clear yet.
-///
-/// **Permissions**
-/// - Custom: Registered MFA Apps only
-///
-/// **Returns**
-/// - active WebSocket connection listening for MFA requests
-#[utoipa::path(
-    get,
-    path = "/users/email/{email}/mfa/listen",
-    tag = "mfa",
-    responses(
-        (status = 200, description = "Ok"),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-        (status = 403, description = "Forbidden", body = ErrorResponse),
-    ),
-)]
-#[get("/users/email/{email}/mfa/listen")]
-#[has_permissions("all")]
-pub async fn listen_mfa_app(
-    data: web::Data<AppState>,
-    path: web::Path<String>,
-    req: HttpRequest,
-    stream: web::Payload,
-) -> Result<HttpResponse, ErrorResponse> {
-    let app_id = get_header_value(&req, APP_ID_HEADER)?
-        .to_str()
-        .map_err(|_| {
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                String::from("Bad app_id format"),
-            )
-        })?;
-    let email = path.into_inner();
-    debug!(
-        "before getting the mfa app in ws listen - app_id: {} - email: {}",
-        app_id, email,
-    );
-    let mfa_app = MfaApp::find(&data, app_id.to_string(), email).await?;
-    debug!("got mfa app: {:?}", mfa_app);
-
-    // start the WebSocket
-    ws::start(MfaListenWs::new(data, mfa_app), &req, stream).map_err(|e| {
-        let err = format!("Error with WebSocket: {:?}", e);
-        error!("{}", err);
-        ErrorResponse::new(ErrorResponseType::Internal, err)
-    })
-}
-
-/// Creates a request to register a new MFA app
-///
-/// CAUTION: This may be removed in a future version - not clear yet.
-///
-/// **Permissions**
-/// - authenticated
-/// - for own email only
-///
-/// **Returns**
-/// - active WebSocket connection listening for MFA requests
-#[utoipa::path(
-    get,
-    path = "/users/email/{email}/mfa/new",
-    tag = "deprecated",
-    request_body = NewMfaAppRequest,
-    responses(
-        (status = 200, description = "Ok", body = MfaAppRegResponse),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-        (status = 403, description = "Forbidden", body = ErrorResponse),
-    ),
-)]
-#[post("/users/email/{email}/mfa/new")]
-#[has_permissions("token-auth")]
-pub async fn add_new_mfa_app(
-    data: web::Data<AppState>,
-    req_data: actix_web_validator::Json<NewMfaAppRequest>,
-    path: web::Path<String>,
-    principal: web::ReqData<Option<Principal>>,
-) -> Result<HttpResponse, ErrorResponse> {
-    let email = path.into_inner();
-
-    // validate that Principal matches the path email
-    let principal = Principal::get_from_req(principal.into_inner())?;
-    principal.validate_email(&email, &data).await?;
-
-    MfaAppReg::create(&data, email, req_data.into_inner())
-        .await
-        .map(|res| HttpResponse::Ok().json(MfaAppRegResponse::from(res)))
-}
-
-/// Starts the registration process for a new Authenticator app via WebSocket
-///
-/// CAUTION: This may be removed in a future version - not clear yet.
-///
-/// **Permissions**
-/// - pre-registered app_id from `add_new_mfa_app`
-///
-/// **Returns**
-/// - *HTTP 200 Ok* with `RegWebSocket`
-///
-/// Usually, I would prefer POST here, since this request modifies the backend, but React Native
-/// seems to have problems with this in combination with a WebSocket
-#[utoipa::path(
-    get,
-    path = "/users/email/{email}/mfa/register",
-    tag = "deprecated",
-    responses(
-        (status = 200, description = "Ok"),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-        (status = 403, description = "Forbidden", body = ErrorResponse),
-    ),
-)]
-#[get("/users/email/{email}/mfa/register")]
-#[has_permissions("all")]
-pub async fn mfa_register_ws(
-    data: web::Data<AppState>,
-    path: web::Path<String>,
-    req: HttpRequest,
-    stream: web::Payload,
-) -> Result<HttpResponse, ErrorResponse> {
-    let email = path.into_inner();
-
-    // get app_id and mfa_req
-    let app_id = get_header_value(&req, APP_ID_HEADER)?
-        .to_str()
-        .map_err(|_| {
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                String::from("Bad app_id format"),
-            )
-        })?;
-    info!("New MFA App Register for App ID: {}", app_id);
-    let mfa_req = MfaAppReg::find(&data, app_id.to_string()).await?;
-
-    // start the WebSocket
-    ws::start(RegWebSocket::new(data, email, mfa_req), &req, stream).map_err(|e| {
-        let err = format!("Error with WebSocket: {:?}", e);
-        error!("{}", err);
-        ErrorResponse::new(ErrorResponseType::Internal, err)
-    })
 }
 
 /// Modifies a user

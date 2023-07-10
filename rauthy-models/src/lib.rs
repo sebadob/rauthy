@@ -15,7 +15,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::entity::sessions::Session;
-use crate::response::MfaLoginRequestAwait;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -26,7 +25,6 @@ use std::str::FromStr;
 pub mod app_state;
 pub mod email;
 pub mod entity;
-pub mod mfa;
 pub mod migration;
 pub mod request;
 pub mod response;
@@ -34,7 +32,6 @@ pub mod templates;
 
 pub enum AuthStep {
     LoggedIn(AuthStepLoggedIn),
-    AwaitMfa(AuthStepAwaitMfa),
     AwaitWebauthn(AuthStepAwaitWebauthn),
 }
 
@@ -42,12 +39,6 @@ pub struct AuthStepLoggedIn {
     pub header_loc: (HeaderName, HeaderValue),
     pub header_csrf: (HeaderName, HeaderValue),
     pub header_origin: Option<(HeaderName, HeaderValue)>,
-}
-
-// TODO either handle longer cookie or get rid of it completely
-pub struct AuthStepAwaitMfa {
-    pub await_mfa_response: MfaLoginRequestAwait,
-    pub header_csrf: (HeaderName, HeaderValue),
 }
 
 pub struct AuthStepAwaitWebauthn {

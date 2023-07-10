@@ -1,6 +1,4 @@
 use crate::email::EMail;
-use crate::mfa::app_reg_ws::WsRegRouteReq;
-use crate::mfa::listen_ws::WsListenRouteReq;
 use crate::migration::db_migrate;
 use crate::migration::db_migrate::migrate_init_prod;
 use crate::migration::db_migrate_dev::migrate_dev_data;
@@ -44,17 +42,12 @@ pub struct AppState {
     pub ml_lt_pwd_first: u32,
     pub ml_lt_pwd_reset: u32,
     pub tx_email: mpsc::Sender<EMail>,
-    pub tx_ws_brd: mpsc::Sender<WsRegRouteReq>,
     pub caches: Caches,
     pub webauthn: Arc<Webauthn>,
 }
 
 impl AppState {
-    pub async fn new(
-        tx_email: mpsc::Sender<EMail>,
-        tx_ws_brd: mpsc::Sender<WsRegRouteReq>,
-        caches: Caches,
-    ) -> anyhow::Result<Self> {
+    pub async fn new(tx_email: mpsc::Sender<EMail>, caches: Caches) -> anyhow::Result<Self> {
         dotenvy::dotenv().ok();
         debug!("New AppState on {:?}", std::thread::current().id());
 
@@ -186,7 +179,6 @@ impl AppState {
             ml_lt_pwd_first,
             ml_lt_pwd_reset,
             tx_email,
-            tx_ws_brd,
             caches,
             webauthn,
         })
@@ -404,9 +396,6 @@ pub struct Argon2Params {
 #[derive(Debug, Clone)]
 pub struct Caches {
     pub ha_cache_config: redhac::CacheConfig,
-    // pub tx_i64: mpsc::Sender<CacheReq<i64>>,
-    // pub tx_html: mpsc::Sender<CacheReq<String>>,
-    pub tx_ws_listen: mpsc::Sender<WsListenRouteReq>,
 }
 
 /// The struct for the `.well-known` endpoint for automatic OIDC discovery

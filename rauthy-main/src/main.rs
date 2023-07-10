@@ -19,9 +19,9 @@ use crate::logging::setup_logging;
 use actix_web::{middleware, web, App, HttpServer};
 use actix_web_grants::GrantsMiddleware;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_LOGIN_DELAY, CACHE_NAME_MFA_APP_REQ,
-    CACHE_NAME_POW, CACHE_NAME_SESSIONS, CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA,
-    MFA_REQ_LIFETIME, POW_EXP, RAUTHY_VERSION, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
+    CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW,
+    CACHE_NAME_SESSIONS, CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, MFA_REQ_LIFETIME, POW_EXP,
+    RAUTHY_VERSION, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::password_hasher;
 use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
@@ -30,9 +30,6 @@ use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{clients, generic, groups, oidc, roles, scopes, sessions, users};
 use rauthy_models::app_state::{AppState, Caches};
 use rauthy_models::email::EMail;
-use rauthy_models::mfa::app_reg_ws::WsRegRouteReq;
-use rauthy_models::mfa::listen_ws::WsListenRouteReq;
-use rauthy_models::mfa::{app_reg_ws, listen_ws};
 use rauthy_models::{email, ListenScheme};
 use rauthy_service::auth;
 use std::error::Error;
@@ -119,13 +116,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Some(64),
     );
 
-    // mfa auth codes and app requests
-    cache_config.spawn_cache(
-        CACHE_NAME_MFA_APP_REQ.to_string(),
-        redhac::TimedCache::with_lifespan(*MFA_REQ_LIFETIME),
-        Some(32),
-    );
-
     // PoWs
     cache_config.spawn_cache(
         CACHE_NAME_POW.to_string(),
@@ -152,13 +142,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Some(16),
     );
 
-    // TODO remove? WS Brd testing only?
-    let (tx_ws_brd, rx_ws_brd) = mpsc::channel::<WsRegRouteReq>(8);
-    tokio::spawn(app_reg_ws::ws_reg_router(rx_ws_brd));
-
-    let (tx_ws_listen, rx_ws_listen) = mpsc::channel::<WsListenRouteReq>(32);
-    tokio::spawn(listen_ws::ws_listen_router(rx_ws_listen));
-
     // The ha cache must be started after all entries have been added to the cache map
     let (tx_notify, rx_notify) = mpsc::channel(64);
     redhac::start_cluster(tx_health_state, &mut cache_config, Some(tx_notify), None).await?;
@@ -170,9 +153,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // build the application state
     let caches = Caches {
         ha_cache_config: cache_config.clone(),
-        tx_ws_listen,
+        // tx_ws_listen,
     };
-    let app_state = web::Data::new(AppState::new(tx_email, tx_ws_brd, caches).await?);
+    let app_state = web::Data::new(AppState::new(tx_email, caches).await?);
 
     // spawn password hash limiter
     tokio::spawn(password_hasher::run());
@@ -266,7 +249,6 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         // for the initial static hydration script. An issue is open about this and
                         // this will most probably solved soon.
                         "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
-                        // "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
                     ))
                     .add(("cache-control", "no-store"))
                     .add(("pragma", "no-cache")),
@@ -325,10 +307,6 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         .service(users::put_user_password_reset)
                         .service(users::get_user_by_email)
                         .service(users::post_users)
-                        .service(users::add_new_mfa_app)
-                        .service(users::await_mfa_app)
-                        .service(users::mfa_register_ws)
-                        .service(users::listen_mfa_app)
                         .service(users::put_user_by_id)
                         .service(users::put_user_self)
                         .service(users::delete_user_by_id)
@@ -366,12 +344,6 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         .service(generic::get_ready)
                         .service(generic::whoami)
                         .service(generic::get_static_assets)
-                        // .service(
-                        //     actix_files::Files::new("/_app/", "static/v1/_app")
-                        // )
-                        // .service(
-                        //     actix_files::Files::new("/assets/", "static/v1/assets")
-                        // )
                     )
             )
             .service(swagger.clone())

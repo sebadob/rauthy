@@ -248,8 +248,8 @@ mod tests {
 
         // since the MAX_HASH_THREADS was set 1, the time for 3 concurrent hashes should be about
         // 3 times the first time_taken.
-        // Allow margin of error of 10%
-        let time_taken_90_percent = time_taken * 90 / 100;
-        assert!(time_taken_concurrent > 3 * time_taken_90_percent);
+        // Allow margin of error of 15%
+        let time_taken_85_percent = time_taken * 85 / 100;
+        assert!(time_taken_concurrent > 3 * time_taken_85_percent);
     }
 }

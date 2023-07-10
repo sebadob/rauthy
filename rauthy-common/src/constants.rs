@@ -23,7 +23,6 @@ pub const CACHE_NAME_12HR: &str = "12hr";
 pub const CACHE_NAME_AUTH_CODES: &str = "auth-codes";
 pub const CACHE_NAME_LOGIN_DELAY: &str = "login-dly";
 pub const CACHE_NAME_SESSIONS: &str = "sessions";
-pub const CACHE_NAME_MFA_APP_REQ: &str = "mfa-app-requests";
 pub const CACHE_NAME_POW: &str = "pow";
 pub const CACHE_NAME_WEBAUTHN: &str = "webauthn";
 pub const CACHE_NAME_WEBAUTHN_DATA: &str = "webauthn-data";
@@ -159,10 +158,6 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("14400"))
         .parse::<u32>()
         .expect("SESSION_LIFETIME cannot be parsed to u32 - bad format");
-    // pub static ref SESSION_LIFETIME_MFA: u32 = env::var("SESSION_LIFETIME_MFA")
-    //     .unwrap_or_else(|_| String::from("3240000"))
-    //     .parse::<u32>()
-    //     .expect("SESSION_LIFETIME_MFA cannot be parsed to u32 - bad format");
     pub static ref SESSION_RENEW_MFA: bool = env::var("SESSION_RENEW_MFA")
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
