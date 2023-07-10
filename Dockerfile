@@ -1,4 +1,4 @@
-FROM alpine3.18 AS builderBackend
+FROM alpine:3.18.2 AS builderBackend
 
 WORKDIR /work
 

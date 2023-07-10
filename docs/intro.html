@@ -191,6 +191,12 @@ Raspberry Pi. It makes extensive use of caching to be as fast as possible in cas
 away or just a bit slower, because it is maybe running on an SBC from an SD card. Most things are even cached 
 for several hours (config options will come in the future) and special care has been taken into account in case of cache
 eviction and invalidation.<br />
+A Rauthy deployment with the embedded SQLite, filled caches and a small set of clients and users configured typically
+only uses <strong>between 15 and 20 MB of memory</strong>! This is pretty awesome when comparing it to other existing solutions
+out there. If a password from a login is hashed, the memory consumption will of course go up way higher than this
+depending on your configured Argon2ID parameters, which you got fully under control. If you use it with an external
+Postgres, the memory consumption of Rauthy itself will even be a bit lower, since it does not need to care about SQLite.
+<br />
 For achieving this speed and efficiency, some additional design tradeoffs werde made. For instance, some things you
 configure statically via config file and not dynamically via UI, while most of them are configured once and then never
 touched again.</p>
@@ -222,9 +228,7 @@ other deployment name.</p>
 <p><strong>Rauthy Authenticator MFA App</strong><br />
 Even though things like OTP codes will never be implemented, it is not set in stone yet that there will never be Rauthy's
 own Authenticator App, which then basically acts as a Webauthn Software Authenticator. There are already existing 
-solutions out there to serve this purpose.<br />
-In the current version, deprecated artifacts of a first approach for its own Authenticator App do exist, but they will
-be cleaned up in the near future.</p>
+solutions out there to serve this purpose.</p>
 <p><strong>Customizable E-Mail templates</strong><br />
 It is unsure, if this feature will come.</p>
 <p><strong>OIDC Client</strong><br />

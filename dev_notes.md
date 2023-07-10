@@ -40,6 +40,7 @@ in another terminal:
 - check why DB migration returned an error inside OCI Pods only (and nowhere else)
 - possible improvement: test if it makes a difference and maybe initialize argon2 hasher only once
 - benchmarks and performance tuning
+- double check against https://openid.net/specs/openid-connect-core-1_0.html that everything is implemented correctly one more time
 
 ### Stage 3 - Possible nice to haves
 
@@ -48,11 +49,9 @@ in another terminal:
 - auto-encrypted backups + backups to remote locations (ssh, nfs, s3, ...) -> postponed - should be applied to sqlite only
 since postgres has pg_backrest and a lot of well established tooling anyway
 - when a user changes his email address, set email to not verified again and send a validation email
-- double check against https://openid.net/specs/openid-connect-core-1_0.html that everything is implemented correctly one more time
 - add all default claims for users https://openid.net/specs/openid-connect-core-1_0.html#ScopeClaims
 - oidc-client (google, github, ...)
 - 'rauthy-migrate' project to help migrating to rauthy?
-- add mysql?
 - add tracing-actix-web + opentelemetry
 - observe the svelte issue about the necessary 'unsafe-inline' CSP --> update: should be fixed with svelte 4
 - NATS events stream or maybe internal one?
