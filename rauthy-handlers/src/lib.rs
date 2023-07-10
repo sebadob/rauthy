@@ -111,9 +111,11 @@ fn add_req_mfa_cookie(
 
 pub fn build_csp_header(nonce: &str) -> (&str, String) {
     // Note: The unsafe-inline for the style-src currently has an open issue on the svelte repo.
-    // As soon as this is fixed, we can get rid of it.y
+    // As soon as this is fixed, we can get rid of it:
+    // https://github.com/sveltejs/svelte/issues/6662
+
     // let value = format!(
-    //     "default-src 'self'; script-src 'strict-dynamic' 'nonce-{}'; style-src 'strict-dynamic' 'nonce-{}'; \
+    //     "default-src 'self'; script-src 'strict-dynamic' 'nonce-{}'; style-src 'self' 'nonce-{}'; \
     //     frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
     //     nonce, nonce,
     // );

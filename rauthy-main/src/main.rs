@@ -245,10 +245,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                     .add(("x-robots-tag", "none"))
                     .add((
                         "content-security-policy",
-                        // unsafe-inline is currently needed, since svelte does currently need this
-                        // for the initial static hydration script. An issue is open about this and
-                        // this will most probably solved soon.
-                        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
+                        "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
                     ))
                     .add(("cache-control", "no-store"))
                     .add(("pragma", "no-cache")),
