@@ -25,21 +25,73 @@
     import IconBookOpen from "../icons/IconBookOpen.svelte";
 
     export let sessionInfo = {};
+    export let selected = 'Users';
 
+    let title = 'Rauthy Admin';
     let isExpanded;
-    let selected = 'Users';
     let innerWidth;
 
     $: if (innerWidth) {
         isExpanded = innerWidth > 1050;
     }
 
-    $: if (selected === 'Logout') {
-        redirectToLogout();
+    $: if (selected) {
+        switch (selected) {
+            case 'Users': {
+                window.history.pushState({}, '', '/auth/v1/admin/users');
+                title = 'Users';
+                break;
+            }
+            case 'Attributes': {
+                window.history.pushState({}, '', '/auth/v1/admin/attributes');
+                title = 'Attributes';
+                break;
+            }
+            case 'Clients': {
+                window.history.pushState({}, '', '/auth/v1/admin/clients');
+                title = 'Clients';
+                break;
+            }
+            case 'Roles': {
+                window.history.pushState({}, '', '/auth/v1/admin/roles');
+                title = 'Roles';
+                break;
+            }
+            case 'Groups': {
+                window.history.pushState({}, '', '/auth/v1/admin/groups');
+                title = 'Groups';
+                break;
+            }
+            case 'Scopes': {
+                window.history.pushState({}, '', '/auth/v1/admin/scopes');
+                title = 'Scopes';
+                break;
+            }
+            case 'Sessions': {
+                window.history.pushState({}, '', '/auth/v1/admin/sessions');
+                title = 'Sessions';
+                break;
+            }
+            case 'Config': {
+                window.history.pushState({}, '', '/auth/v1/admin/config');
+                title = 'Config';
+                break;
+            }
+            case 'Docs': {
+                window.history.pushState({}, '', '/auth/v1/admin/docs');
+                title = 'Docs';
+                break;
+            }
+            case 'Logout': redirectToLogout(); break;
+        }
     }
 </script>
 
 <svelte:window bind:innerWidth/>
+
+<svelte:head>
+    <title>{title}</title>
+</svelte:head>
 
 <main>
     <Nav bind:selected bind:isExpanded widthExpanded={140} widthCollapsed={60}>

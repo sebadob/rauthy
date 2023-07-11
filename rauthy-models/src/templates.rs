@@ -168,6 +168,438 @@ impl AdminHtml<'_> {
 }
 
 #[derive(Default, Template)]
+#[template(path = "html/admin/attributes.html")]
+pub struct AdminAttributesHtml<'a> {
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: &'a str,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+}
+
+impl AdminAttributesHtml<'_> {
+    pub fn build(colors: &Colors) -> (String, String) {
+        let nonce = nonce();
+
+        let res = AdminAttributesHtml {
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/admin/clients.html")]
+pub struct AdminClientsHtml<'a> {
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: &'a str,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+}
+
+impl AdminClientsHtml<'_> {
+    pub fn build(colors: &Colors) -> (String, String) {
+        let nonce = nonce();
+
+        let res = AdminClientsHtml {
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/admin/config.html")]
+pub struct AdminConfigHtml<'a> {
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: &'a str,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+}
+
+impl AdminConfigHtml<'_> {
+    pub fn build(colors: &Colors) -> (String, String) {
+        let nonce = nonce();
+
+        let res = AdminConfigHtml {
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/admin/docs.html")]
+pub struct AdminDocsHtml<'a> {
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: &'a str,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+}
+
+impl AdminDocsHtml<'_> {
+    pub fn build(colors: &Colors) -> (String, String) {
+        let nonce = nonce();
+
+        let res = AdminDocsHtml {
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/admin/groups.html")]
+pub struct AdminGroupsHtml<'a> {
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: &'a str,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+}
+
+impl AdminGroupsHtml<'_> {
+    pub fn build(colors: &Colors) -> (String, String) {
+        let nonce = nonce();
+
+        let res = AdminGroupsHtml {
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/admin/roles.html")]
+pub struct AdminRolesHtml<'a> {
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: &'a str,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+}
+
+impl AdminRolesHtml<'_> {
+    pub fn build(colors: &Colors) -> (String, String) {
+        let nonce = nonce();
+
+        let res = AdminRolesHtml {
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/admin/scopes.html")]
+pub struct AdminScopesHtml<'a> {
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: &'a str,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+}
+
+impl AdminScopesHtml<'_> {
+    pub fn build(colors: &Colors) -> (String, String) {
+        let nonce = nonce();
+
+        let res = AdminScopesHtml {
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/admin/sessions.html")]
+pub struct AdminSessionsHtml<'a> {
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: &'a str,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+}
+
+impl AdminSessionsHtml<'_> {
+    pub fn build(colors: &Colors) -> (String, String) {
+        let nonce = nonce();
+
+        let res = AdminSessionsHtml {
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/admin/users.html")]
+pub struct AdminUsersHtml<'a> {
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: &'a str,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+}
+
+impl AdminUsersHtml<'_> {
+    pub fn build(colors: &Colors) -> (String, String) {
+        let nonce = nonce();
+
+        let res = AdminUsersHtml {
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
+    }
+}
+
+#[derive(Default, Template)]
 #[template(path = "html/oidc/authorize.html")]
 pub struct AuthorizeHtml<'a> {
     pub csrf_token: &'a str,
