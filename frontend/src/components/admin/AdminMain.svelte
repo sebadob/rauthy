@@ -23,6 +23,7 @@
     import RauthyLogo from "../icons/RauthyLogo.svelte";
     import Documentation from "./documentation/Documentation.svelte";
     import IconBookOpen from "../icons/IconBookOpen.svelte";
+    import {onMount} from "svelte";
 
     export let sessionInfo = {};
     export let selected = 'Users';
@@ -38,53 +39,66 @@
     $: if (selected) {
         switch (selected) {
             case 'Users': {
-                window.history.pushState({}, '', '/auth/v1/admin/users');
+                window.history.pushState('Users', '', '/auth/v1/admin/users');
                 title = 'Users';
                 break;
             }
             case 'Attributes': {
-                window.history.pushState({}, '', '/auth/v1/admin/attributes');
+                window.history.pushState('Attributes', '', '/auth/v1/admin/attributes');
                 title = 'Attributes';
                 break;
             }
             case 'Clients': {
-                window.history.pushState({}, '', '/auth/v1/admin/clients');
+                window.history.pushState('Clients', '', '/auth/v1/admin/clients');
                 title = 'Clients';
                 break;
             }
             case 'Roles': {
-                window.history.pushState({}, '', '/auth/v1/admin/roles');
+                window.history.pushState('Roles', '', '/auth/v1/admin/roles');
                 title = 'Roles';
                 break;
             }
             case 'Groups': {
-                window.history.pushState({}, '', '/auth/v1/admin/groups');
+                window.history.pushState('Groups', '', '/auth/v1/admin/groups');
                 title = 'Groups';
                 break;
             }
             case 'Scopes': {
-                window.history.pushState({}, '', '/auth/v1/admin/scopes');
+                window.history.pushState('Scopes', '', '/auth/v1/admin/scopes');
                 title = 'Scopes';
                 break;
             }
             case 'Sessions': {
-                window.history.pushState({}, '', '/auth/v1/admin/sessions');
+                window.history.pushState('Sessions', '', '/auth/v1/admin/sessions');
                 title = 'Sessions';
                 break;
             }
             case 'Config': {
-                window.history.pushState({}, '', '/auth/v1/admin/config');
+                window.history.pushState('Config', '', '/auth/v1/admin/config');
                 title = 'Config';
                 break;
             }
             case 'Docs': {
-                window.history.pushState({}, '', '/auth/v1/admin/docs');
+                window.history.pushState('Docs', '', '/auth/v1/admin/docs');
                 title = 'Docs';
                 break;
             }
-            case 'Logout': redirectToLogout(); break;
+            case 'Logout':
+                redirectToLogout();
+                break;
         }
     }
+
+    onMount(() => {
+        window.addEventListener('popstate', (event) => {
+            selected = event.state;
+        });
+
+        return () => window.removeEventListener('popstate');
+    });
+
+
+
 </script>
 
 <svelte:window bind:innerWidth/>

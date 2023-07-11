@@ -35,6 +35,10 @@
         }, 200);
     }
 
+    $: if (selected) {
+        navSelected.set(selected);
+    }
+
     onMount(() => {
         navWidthExpanded.set(widthExpanded);
         navWidthCollapsed.set(widthCollapsed);
