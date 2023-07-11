@@ -61,6 +61,7 @@ build-ui:
     # set correct values in html outputs for pre-rendering
     PAGES=(
     "templates/html/*.html"
+    "templates/html/admin/*.html"
     "templates/html/oidc/*.html"
     "templates/html/users/*.html"
     "templates/html/users/{id}/reset/*.html"
