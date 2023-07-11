@@ -90,7 +90,7 @@
 
     <UserTileAddNew onSave={onSave}/>
 
-    {#each resUsers as user, i}
+    {#each resUsers as user, i (user.id)}
         <UserTile idx={i} bind:user onSave={onSave}/>
     {/each}
 </div>
