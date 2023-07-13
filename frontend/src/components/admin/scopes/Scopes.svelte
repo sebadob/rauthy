@@ -88,6 +88,6 @@
 
 <style>
     #scopes div:nth-of-type(2n + 1) {
-        background: var(--col-ghigh);
+        background: linear-gradient(90deg, var(--col-ghigh) 35rem, var(--col-bg) 50rem);
     }
 </style>
