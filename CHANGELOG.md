@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.13.3
+
+- UI: small visual bugfixes and improvements in different places
+[459bdbd](https://github.com/sebadob/rauthy/commit/459bdbd55ca60bdb0076908131c569a4dc653086)
+[57a5600](https://github.com/sebadob/rauthy/commit/57a56000f6ffecf46bd1d202a3bea5a2ded4985f)
+- UI: All navigation routes can be reached via their own link now. This means a refresh of
+the page does not return to the default anymore
+[4999995](https://github.com/sebadob/rauthy/commit/49999950ac1ade24e433e911df84c99256a7f4d0)
+[7f0ac0b](https://github.com/sebadob/rauthy/commit/7f0ac0b0d1cf1e2c53881c4a4e010ce43cc2ec11)
+[cadaa40](https://github.com/sebadob/rauthy/commit/cadaa407efa9b70b5159e6ec42b5151f8ef79997)
+- UI: added an index to the users table to prevent a rendering bug after changes
+[e35ffbe](https://github.com/sebadob/rauthy/commit/e35ffbe9cb4e14785c61249d141895c1a7fb4921)
+
 ## v0.13.2
 
 - General code and project cleanup
