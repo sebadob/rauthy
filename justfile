@@ -135,7 +135,7 @@ is-clean: test build
     echo all good
 
 
-# sets a new git tag if clippy is fine and pushes it
+# sets a new git tag and pushes it
 release:
     #!/usr/bin/env bash
     set -euxo pipefail
