@@ -90,7 +90,17 @@
 
     <UserTileAddNew onSave={onSave}/>
 
-    {#each resUsers as user, i (user.id)}
-        <UserTile idx={i} bind:user onSave={onSave}/>
-    {/each}
+    <div id="users">
+        {#each resUsers as user (user.id)}
+            <div>
+                <UserTile bind:user onSave={onSave}/>
+            </div>
+        {/each}
+    </div>
 </div>
+
+<style>
+    #users div:nth-of-type(2n + 1) {
+        background: var(--col-ghigh);
+    }
+</style>

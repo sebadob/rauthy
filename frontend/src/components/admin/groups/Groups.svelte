@@ -62,9 +62,19 @@
 
     <GroupTileAddNew onSave={onSave}/>
 
-    {#each resGroups as group, i (group.id)}
-        <GroupTile idx={i} bind:group onSave={onSave}/>
-    {/each}
+    <div id="groups">
+        {#each resGroups as group (group.id)}
+            <div>
+                <GroupTile bind:group onSave={onSave}/>
+            </div>
+        {/each}
+    </div>
 
     <div style="height: 20px"></div>
 </div>
+
+<style>
+    #groups div:nth-of-type(2n + 1) {
+        background: var(--col-ghigh);
+    }
+</style>

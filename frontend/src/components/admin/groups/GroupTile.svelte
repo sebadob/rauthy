@@ -6,7 +6,6 @@
     import GroupConfig from "./GroupConfig.svelte";
     import GroupDelete from "./GroupDelete.svelte";
 
-    export let idx = 0;
     export let group = {};
     export let onSave;
 
@@ -28,7 +27,7 @@
 
 </script>
 
-<ExpandContainer bind:idx bind:show={expandContainer}>
+<ExpandContainer bind:show={expandContainer}>
     <div class="header" slot="header">
         <Tooltip text="Group ID">
             <div class="data font-mono">

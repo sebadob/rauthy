@@ -54,9 +54,19 @@
 
     <UserAttrTileAddNew onSave={onSave}/>
 
-    {#each resAttr as attr, i (attr.name)}
-        <UserAttrTile idx={i} bind:attr onSave={onSave}/>
-    {/each}
+    <div id="attrs">
+        {#each resAttr as attr (attr.name)}
+            <div>
+                <UserAttrTile bind:attr onSave={onSave}/>
+            </div>
+        {/each}
+    </div>
 
     <div style="height: 20px"></div>
 </div>
+
+<style>
+    #attrs div:nth-of-type(2n + 1) {
+        background: var(--col-ghigh);
+    }
+</style>

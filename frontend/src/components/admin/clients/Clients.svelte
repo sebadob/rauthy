@@ -68,9 +68,19 @@
 
     <ClientTileAddNew onSave={onSave}/>
 
-    {#each resClients as client, i (client.id)}
-        <ClientTile idx={i} bind:client onSave={onSave}/>
-    {/each}
+    <div id="clients">
+        {#each resClients as client (client.id)}
+            <div>
+                <ClientTile bind:client onSave={onSave}/>
+            </div>
+        {/each}
+    </div>
 
     <div style="height: 20px"></div>
 </div>
+
+<style>
+    #clients div:nth-of-type(2n + 1) {
+        background: var(--col-ghigh);
+    }
+</style>

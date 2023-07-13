@@ -6,7 +6,6 @@
     import ScopeConfig from "./ScopeConfig.svelte";
     import ScopeDelete from "./ScopeDelete.svelte";
 
-    export let idx = 0;
     export let attrs;
     export let scope = {};
     export let onSave;
@@ -29,7 +28,7 @@
 
 </script>
 
-<ExpandContainer bind:idx bind:show={expandContainer}>
+<ExpandContainer bind:show={expandContainer}>
     <div class="header" slot="header">
         <Tooltip text="Scope ID">
             <div class="data font-mono">

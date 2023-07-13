@@ -6,7 +6,6 @@
     import UserAttrConfig from "./AttrConfig.svelte";
     import UserAttrDelete from "./AttrDelete.svelte";
 
-    export let idx = 0;
     export let attr = {};
     export let onSave;
 
@@ -28,7 +27,7 @@
 
 </script>
 
-<ExpandContainer bind:idx bind:show={expandContainer}>
+<ExpandContainer bind:show={expandContainer}>
     <div class="header" slot="header">
         <Tooltip text="Custom Attribute Name">
             <div class="data">

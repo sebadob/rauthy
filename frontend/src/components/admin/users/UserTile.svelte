@@ -9,7 +9,6 @@
     import UserForceLogout from "./UserForceLogout.svelte";
     import UserAttr from "./UserAttr.svelte";
 
-    export let idx = 0;
     export let user = {};
     export let onSave;
 
@@ -34,7 +33,7 @@
 
 </script>
 
-<ExpandContainer bind:idx bind:show={expandContainer}>
+<ExpandContainer bind:show={expandContainer}>
     <div class="header" slot="header">
         <Tooltip text="User ID">
             <div class="data font-mono">

@@ -10,7 +10,6 @@
     let isHover = false;
     let element;
     let bodyElement;
-    let background = idx % 2 === 0 ? 'var(--col-ghigh)' : 'var(--col-bg)';
     let borderLeft = idx % 2 === 0 ? '2px solid var(--col-acnt)' : '2px solid var(--col-acnta)';
 
     const rotate = spring(0, {
@@ -55,7 +54,6 @@
 
 <div
         class="container"
-        style:background
         style:border-left={show ? borderLeft : 'none'}
         bind:this={element}
 >

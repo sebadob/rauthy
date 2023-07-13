@@ -8,7 +8,6 @@
     import ClientDelete from "./ClientDelete.svelte";
     import ClientBranding from "./ClientBranding.svelte";
 
-    export let idx = 0;
     export let client = {};
     export let onSave;
 
@@ -32,7 +31,7 @@
 
 </script>
 
-<ExpandContainer bind:idx bind:show={expandContainer}>
+<ExpandContainer bind:show={expandContainer}>
     <div class="header" slot="header">
         <Tooltip text="Client ID">
             <div class="data font-mono">

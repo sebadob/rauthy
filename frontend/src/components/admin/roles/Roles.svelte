@@ -62,9 +62,19 @@
 
     <RoleTileAddNew onSave={onSave}/>
 
-    {#each resRoles as role, i (role.id)}
-        <RoleTile idx={i} bind:role onSave={onSave}/>
-    {/each}
+    <div id="roles">
+        {#each resRoles as role (role.id)}
+            <div>
+                <RoleTile bind:role onSave={onSave}/>
+            </div>
+        {/each}
+    </div>
 
     <div style="height: 20px"></div>
 </div>
+
+<style>
+    #roles div:nth-of-type(2n + 1) {
+        background: var(--col-ghigh);
+    }
+</style>

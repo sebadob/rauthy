@@ -75,9 +75,19 @@
 
     <ScopeTileAddNew onSave={onSave}/>
 
-    {#each resScopes as scope, i (scope.id)}
-        <ScopeTile idx={i} bind:attrs bind:scope onSave={onSave}/>
-    {/each}
+    <div id="scopes">
+        {#each resScopes as scope (scope.id)}
+            <div>
+                <ScopeTile bind:attrs bind:scope onSave={onSave}/>
+            </div>
+        {/each}
+    </div>
 
     <div style="height: 20px"></div>
 </div>
+
+<style>
+    #scopes div:nth-of-type(2n + 1) {
+        background: var(--col-ghigh);
+    }
+</style>

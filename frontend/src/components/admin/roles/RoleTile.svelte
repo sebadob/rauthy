@@ -6,7 +6,6 @@
     import RoleConfig from "./RoleConfig.svelte";
     import RoleDelete from "./RoleDelete.svelte";
 
-    export let idx = 0;
     export let role = {};
     export let onSave;
 
@@ -28,7 +27,7 @@
 
 </script>
 
-<ExpandContainer bind:idx bind:show={expandContainer}>
+<ExpandContainer bind:show={expandContainer}>
     <div class="header" slot="header">
         <Tooltip text="Role ID">
             <div class="data font-mono">
