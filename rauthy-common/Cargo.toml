@@ -1,6 +1,6 @@
 [package]
 name = "rauthy-common"
-version = "0.13.2"
+version = "0.13.3"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "AGPLv3"
