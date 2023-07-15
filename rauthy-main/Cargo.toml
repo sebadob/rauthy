@@ -24,6 +24,11 @@ redhac = "0.6"
 rustls = "0.20"
 rustls-pemfile = "1"
 serde_json = "1"
+# We are currently stuck on 0.6 until the `Any` driver is fixed in 0.7.
+# There was a panic with existing databases in 0.7 for which I opened an issuere here, which got fixed:
+# https://github.com/launchbadge/sqlx/issues/2592
+# However, since 0.7 it is not possible to insert custom connect options into an `Any` connection.
+# They are thinking about a solution and we can migrate as soon as this got fixed.
 sqlx = { version = "0.6", features = ["any", "macros", "migrate", "offline", "postgres", "runtime-tokio-rustls", "sqlite", "tls", "uuid"] }
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
 tracing = { version = "0.1", features = ["attributes"] }
