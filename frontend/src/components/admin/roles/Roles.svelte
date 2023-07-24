@@ -4,10 +4,12 @@
     import RoleTile from "./RoleTile.svelte";
     import RoleTileAddNew from "./RoleTileAddNew.svelte";
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
+    import Pagination from "$lib/Pagination.svelte";
 
     let err = '';
     let roles = [];
     let resRoles = [];
+    let resItemsPaginated = [];
 
     let searchOptions = [
         {
@@ -63,12 +65,17 @@
     <RoleTileAddNew onSave={onSave}/>
 
     <div id="roles">
-        {#each resRoles as role (role.id)}
+        {#each resItemsPaginated as role (role.id)}
             <div>
                 <RoleTile bind:role onSave={onSave}/>
             </div>
         {/each}
     </div>
+
+    <Pagination
+            bind:items={resRoles}
+            bind:resItems={resItemsPaginated}
+    />
 
     <div style="height: 20px"></div>
 </div>

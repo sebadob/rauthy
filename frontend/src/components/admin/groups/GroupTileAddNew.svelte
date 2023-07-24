@@ -12,9 +12,7 @@
     export let onSave;
     let expandContainer;
 
-    let group = {
-        group: '',
-    }
+    let group = { group: '' };
 
     let err = '';
     let isLoading = false;
@@ -30,7 +28,7 @@
         timer = setTimeout(() => {
             onSave();
             success = false;
-            group = {};
+            group = { group: '' };
             expandContainer = false;
         }, 1500);
     }

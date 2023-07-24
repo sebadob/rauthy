@@ -5,11 +5,13 @@
     import ClientTile from "./ClientTile.svelte";
     import ClientTileAddNew from "./ClientTileAddNew.svelte";
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
+    import Pagination from "$lib/Pagination.svelte";
 
     let msg = '';
 
     let clients = [];
     let resClients = [];
+    let resClientsPaginated = [];
 
     let searchOptions = [
         {
@@ -75,6 +77,11 @@
             </div>
         {/each}
     </div>
+
+    <Pagination
+            bind:items={resClients}
+            bind:resItems={resClientsPaginated}
+    />
 
     <div style="height: 20px"></div>
 </div>

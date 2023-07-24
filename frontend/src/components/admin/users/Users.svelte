@@ -5,11 +5,13 @@
     import {globalGroups, globalGroupsNames, globalRoles, globalRolesNames,} from "../../../stores/admin.js";
     import UserTileAddNew from "./UserTileAddNew.svelte";
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
+    import Pagination from "$lib/Pagination.svelte";
 
     let msg = '';
 
     let users = [];
     let resUsers = [];
+    let resUsersPaginated = [];
 
     let searchOptions = [
         {
@@ -97,6 +99,11 @@
             </div>
         {/each}
     </div>
+
+    <Pagination
+            bind:items={resUsers}
+            bind:resItems={resUsersPaginated}
+    />
 </div>
 
 <style>
