@@ -12,9 +12,7 @@
     export let onSave;
     let expandContainer;
 
-    let role = {
-        role: '',
-    }
+    let role = { role: '' };
 
     let err = '';
     let isLoading = false;
@@ -29,7 +27,7 @@
     $: if (success) {
         timer = setTimeout(() => {
             success = false;
-            role = {};
+            role = { role: '' };
             expandContainer = false;
             onSave();
         }, 1500);

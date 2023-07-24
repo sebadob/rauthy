@@ -4,11 +4,13 @@
     import ScopeTileAddNew from "./ScopeTileAddNew.svelte";
     import ScopeTile from "./ScopeTile.svelte";
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
+    import Pagination from "$lib/Pagination.svelte";
 
     let attrs = [];
     let err = '';
     let scopes = [];
     let resScopes = [];
+    let resScopesPaginated = [];
     let refresh;
 
     let searchOptions = [
@@ -82,6 +84,11 @@
             </div>
         {/each}
     </div>
+
+    <Pagination
+            bind:items={resScopes}
+            bind:resItems={resScopesPaginated}
+    />
 
     <div style="height: 20px"></div>
 </div>

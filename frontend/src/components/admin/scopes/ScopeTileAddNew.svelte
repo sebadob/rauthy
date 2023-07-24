@@ -12,9 +12,7 @@
     export let onSave;
     let expandContainer;
 
-    let scope = {
-        scope: '',
-    }
+    let scope = { scope: '' };
 
     let err = '';
     let isLoading = false;
@@ -30,7 +28,7 @@
         timer = setTimeout(() => {
             onSave();
             success = false;
-            scope = {};
+            scope = { scope: '' };
             expandContainer = false;
         }, 1500);
     }

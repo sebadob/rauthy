@@ -4,10 +4,12 @@
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
     import UserAttrTileAddNew from "./AttrTileAddNew.svelte";
     import UserAttrTile from "./AttrTile.svelte";
+    import Pagination from "$lib/Pagination.svelte";
 
     let msg = '';
     let attr = [];
     let resAttr = [];
+    let resAttrPaginated = [];
 
     let searchOptions = [
         {
@@ -61,6 +63,11 @@
             </div>
         {/each}
     </div>
+
+    <Pagination
+            bind:items={resAttr}
+            bind:resItems={resAttrPaginated}
+    />
 
     <div style="height: 20px"></div>
 </div>

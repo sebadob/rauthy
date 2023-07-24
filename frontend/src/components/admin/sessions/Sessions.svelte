@@ -6,6 +6,7 @@
     import Loading from "$lib/Loading.svelte";
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
     import Button from "$lib/Button.svelte";
+    import Pagination from "$lib/Pagination.svelte";
 
     let err = '';
     let sessions = [];
