@@ -11,6 +11,7 @@ use rauthy_models::entity::password::{PasswordHashTimes, PasswordPolicy};
 use rauthy_models::entity::pow::Pow;
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::Session;
+use rauthy_models::language::Language;
 use rauthy_models::request::{
     EncKeyMigrateRequest, PasswordHashTimesRequest, PasswordPolicyRequest,
 };
@@ -69,9 +70,16 @@ pub async fn get_static_assets(
 
 #[get("/account")]
 #[has_permissions("all")]
-pub async fn get_account_html(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_account_html(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
     let (body, nonce) = AccountHtml::build(&colors);
+
+    // TODO use for testing i18n
+    let lang = Language::try_from(&req).unwrap_or_default();
+    tracing::info!("lang: {:?}", lang);
 
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_HTML)

@@ -11,6 +11,7 @@ pub const APPLICATION_JSON: &str = "application/json";
 pub const TOKEN_BEARER: &str = "Bearer";
 pub const COOKIE_SESSION: &str = "rauthy-session";
 pub const COOKIE_MFA: &str = "rauthy-mfa";
+pub const COOKIE_LOCALE: &str = "locale";
 pub const PWD_RESET_COOKIE: &str = "rauthy-pwd-reset";
 pub const APP_ID_HEADER: &str = "mfa-app-id";
 pub const CSRF_HEADER: &str = "csrf-token";

@@ -12,6 +12,7 @@ use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::WebauthnCookie;
+use rauthy_models::language::Language;
 use rauthy_models::request::{
     AuthRequest, LoginRefreshRequest, LoginRequest, LogoutRequest, RefreshTokenRequest,
     TokenRequest, TokenValidationRequest,
@@ -54,6 +55,10 @@ pub async fn get_authorize(
         &req_data.code_challenge_method,
     )
     .await?;
+
+    // TODO use for testing i18n
+    let lang = Language::try_from(&req).unwrap_or_default();
+    tracing::info!("lang: {:?}", lang);
 
     let colors = ColorEntity::find(&data, &req_data.client_id).await?;
 
