@@ -48,7 +48,7 @@ impl PasskeyEntity {
         sqlx::query("insert into webauthn (id, passkey) values ($1, $2)")
             .bind(&entity.id)
             .bind(&entity.passkey)
-            .execute(txn)
+            .execute(&mut **txn)
             .await?;
 
         Ok(entity)
@@ -70,7 +70,7 @@ impl PasskeyEntity {
         let q = sqlx::query("delete from webauthn where id = $1").bind(id);
 
         if let Some(txn) = txn {
-            q.execute(txn).await?;
+            q.execute(&mut **txn).await?;
         } else {
             q.execute(&data.db).await?;
         }

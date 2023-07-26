@@ -93,7 +93,7 @@ impl Group {
 
         sqlx::query("delete from groups where id = $1")
             .bind(&group.id)
-            .execute(&mut txn)
+            .execute(&mut *txn)
             .await?;
 
         txn.commit().await?;
@@ -199,7 +199,7 @@ impl Group {
         sqlx::query("update groups set name = $1 where id = $2")
             .bind(&new_group.name)
             .bind(&new_group.id)
-            .execute(&mut txn)
+            .execute(&mut *txn)
             .await?;
 
         txn.commit().await?;

@@ -123,7 +123,7 @@ impl Scope {
 
         sqlx::query("delete from scopes where id = $1")
             .bind(id)
-            .execute(&mut txn)
+            .execute(&mut *txn)
             .await?;
 
         txn.commit().await?;
@@ -261,7 +261,7 @@ impl Scope {
             .bind(&new_scope.attr_include_access)
             .bind(&new_scope.attr_include_id)
             .bind(&new_scope.id)
-            .execute(&mut txn)
+            .execute(&mut *txn)
             .await?;
 
         txn.commit().await?;
@@ -303,7 +303,7 @@ impl Scope {
         .bind(&attr_include_access)
         .bind(&attr_include_id)
         .bind(id)
-        .execute(txn)
+        .execute(&mut **txn)
         .await?;
 
         let scopes = Scope::find_all(data)

@@ -134,7 +134,7 @@ impl UserAttrConfigEntity {
 
         sqlx::query("delete from user_attr_config where name  = $1")
             .bind(&name)
-            .execute(&mut txn)
+            .execute(&mut *txn)
             .await?;
 
         txn.commit().await?;
@@ -256,7 +256,7 @@ impl UserAttrConfigEntity {
         .bind(&slf.name)
         .bind(&slf.desc)
         .bind(&name)
-        .execute(&mut txn)
+        .execute(&mut *txn)
         .await?;
 
         if is_name_update {
@@ -399,7 +399,7 @@ impl UserAttrValueEntity {
 
         sqlx::query("delete from user_attr_values where key = $1")
             .bind(key)
-            .execute(txn)
+            .execute(&mut **txn)
             .await?;
 
         Ok(())

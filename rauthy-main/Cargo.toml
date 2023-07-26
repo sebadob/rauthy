@@ -29,7 +29,7 @@ serde_json = "1"
 # https://github.com/launchbadge/sqlx/issues/2592
 # However, since 0.7 it is not possible to insert custom connect options into an `Any` connection.
 # They are thinking about a solution and we can migrate as soon as this got fixed.
-sqlx = { version = "0.6", features = ["any", "macros", "migrate", "offline", "postgres", "runtime-tokio-rustls", "sqlite", "tls", "uuid"] }
+sqlx = { version = "0.7", features = ["any", "macros", "migrate", "postgres", "runtime-tokio", "sqlite", "tls-rustls", "uuid"] }
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
 tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "tracing"] }

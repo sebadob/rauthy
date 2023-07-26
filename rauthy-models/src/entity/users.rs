@@ -309,7 +309,7 @@ impl User {
             .bind(&self.id);
 
         if let Some(txn) = txn {
-            q.execute(txn).await?;
+            q.execute(&mut **txn).await?;
         } else {
             q.execute(&data.db).await?;
         }

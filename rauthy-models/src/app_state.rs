@@ -9,9 +9,8 @@ use rauthy_common::constants::{DATABASE_URL, DB_TYPE, DEV_MODE, PROXY_MODE};
 use rauthy_common::DbType;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use sqlx::any::AnyPoolOptions;
-use sqlx::postgres::PgConnectOptions;
-use sqlx::sqlite::{SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqliteSynchronous};
+use sqlx::any::{AnyConnectOptions, AnyPoolOptions};
+use sqlx::{query, ConnectOptions};
 use std::collections::HashMap;
 use std::env;
 use std::str::FromStr;
@@ -19,6 +18,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time::sleep;
+use tracing::log::LevelFilter;
 use tracing::{debug, error, info, warn};
 use utoipa::ToSchema;
 use webauthn_rs::prelude::Url;
@@ -230,6 +230,8 @@ impl AppState {
             .parse::<u32>()
             .expect("Error parsing DATABASE_MAX_CONN to u32");
 
+        sqlx::any::install_default_drivers();
+
         let pool = match *DB_TYPE {
             DbType::Sqlite => {
                 let pool = Self::connect_sqlite(&DATABASE_URL, db_max_conn, false).await?;
@@ -329,19 +331,30 @@ again"#
             panic!("{msg}");
         }
 
-        let opts = SqliteConnectOptions::from_str(addr)?
-            .create_if_missing(true)
-            .busy_timeout(Duration::from_millis(100))
-            .foreign_keys(true)
-            .auto_vacuum(SqliteAutoVacuum::Incremental)
-            .synchronous(SqliteSynchronous::Normal)
-            .journal_mode(SqliteJournalMode::Wal);
+        // let opts = SqliteConnectOptions::from_str(addr)?
+        //     .create_if_missing(true)
+        //     .busy_timeout(Duration::from_millis(100))
+        //     .foreign_keys(true)
+        //     .auto_vacuum(SqliteAutoVacuum::Incremental)
+        //     .synchronous(SqliteSynchronous::Normal)
+        //     .journal_mode(SqliteJournalMode::Wal);
+
+        // PRAGMA busy_timeout = 100;
+        // PRAGMA foreign_keys = true;
+        // PRAGMA schema.auto_vacuum = 2;
+        // PRAGMA schema.synchronous = 1;
+        // PRAGMA journal_mode = WAL;
+
+        // let url = format!("{}", addr);
+
+        let opts = AnyConnectOptions::from_str(addr)?
+            .log_slow_statements(LevelFilter::Debug, Duration::from_secs(3));
 
         let pool = match AnyPoolOptions::new()
             .min_connections(1)
             .max_connections(max_conn)
             .acquire_timeout(Duration::from_secs(10))
-            .connect_with(opts.clone().into())
+            .connect_with(opts.clone())
             .await
         {
             Ok(pool) => pool,
@@ -357,10 +370,23 @@ again"#
                     .min_connections(1)
                     .max_connections(max_conn)
                     .acquire_timeout(Duration::from_secs(10))
-                    .connect_with(opts.into())
+                    .connect_with(opts)
                     .await?
             }
         };
+
+        // set connection options
+        query(
+            r#"
+        PRAGMA busy_timeout = 100;
+        PRAGMA foreign_keys = true;
+        PRAGMA auto_vacuum = 2;
+        PRAGMA synchronous = 1;
+        PRAGMA journal_mode = WAL;
+        "#,
+        )
+        .execute(&pool)
+        .await?;
 
         info!("Database Connection Pool created successfully");
 
@@ -368,12 +394,14 @@ again"#
     }
 
     pub async fn connect_postgres(addr: &str, max_conn: u32) -> anyhow::Result<sqlx::AnyPool> {
-        let opts = PgConnectOptions::from_str(addr)?;
+        // let opts = PgConnectOptions::from_str(addr)?;
+        let opts = AnyConnectOptions::from_str(addr)?
+            .log_slow_statements(LevelFilter::Debug, Duration::from_secs(3));
         let pool = AnyPoolOptions::new()
             .min_connections(2)
             .max_connections(max_conn)
             .acquire_timeout(Duration::from_secs(10))
-            .connect_with(opts.into())
+            .connect_with(opts)
             .await
             .context("failed to connect to postgres")?;
 

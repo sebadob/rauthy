@@ -100,7 +100,7 @@ impl Role {
 
         sqlx::query("delete from roles where id = $1")
             .bind(id)
-            .execute(&mut txn)
+            .execute(&mut *txn)
             .await?;
 
         txn.commit().await?;
@@ -202,7 +202,7 @@ impl Role {
         sqlx::query("update roles set name = $1 where id = $2")
             .bind(&new_role.name)
             .bind(&new_role.id)
-            .execute(&mut txn)
+            .execute(&mut *txn)
             .await?;
 
         txn.commit().await?;
