@@ -2,9 +2,23 @@ set shell := ["bash", "-uc"]
 
 export TAG := `cat rauthy-main/Cargo.toml | grep '^version =' | cut -d " " -f3 | xargs`
 
-# runs the application
-run:
-    cargo run --target x86_64-unknown-linux-musl
+
+migrate-sqlite:
+    DATABASE_URL="sqlite:data/rauthy.db" sqlx migrate run --source migrations/sqlite
+
+
+migrate-postgres:
+    DATABASE_URL="postgresql://rauthy:123SuperSafe@localhost:5432/rauthy" sqlx migrate run --source migrations/postgres
+
+
+# runs the application with sqlite feature
+run-sqlite:
+    DATABASE_URL="sqlite:data/rauthy.db" cargo run --target x86_64-unknown-linux-musl --features sqlite
+
+
+# runs the application with postgres feature
+run-postgres:
+    DATABASE_URL="postgresql://rauthy:123SuperSafe@localhost:5432/rauthy" cargo run --target x86_64-unknown-linux-musl --features postgres
 
 
 # runs the UI in development mode
@@ -18,17 +32,32 @@ version:
     echo $TAG
 
 
-# runs the full set of tests
-test:
+# runs the full set of tests with in-memory sqlite
+test-sqlite:
     #!/usr/bin/env bash
 
-    cargo build
-    cargo run test &
+    DATABASE_URL="sqlite::memory:" cargo build --features sqlite
+    DATABASE_URL="sqlite::memory:" cargo run --features sqlite test &
     sleep 1
     PID=$(echo "$!")
     echo "PID: $PID"
 
-    cargo test
+    cargo test --features sqlite
+    kill "$PID"
+    echo All tests successful
+
+
+# runs the full set of tests with postgres
+test-postgres:
+    #!/usr/bin/env bash
+
+    DATABASE_URL="postgresql://rauthy:123SuperSafe@localhost:5432/rauthy" cargo build --features postgres
+    DATABASE_URL="postgresql://rauthy:123SuperSafe@localhost:5432/rauthy" cargo run --features postgres test &
+    sleep 1
+    PID=$(echo "$!")
+    echo "PID: $PID"
+
+    cargo test --features postgres
     kill "$PID"
     echo All tests successful
 
@@ -97,20 +126,34 @@ build-docs:
     mdbook build -d ../docs
 
 
+## builds the whole application in release mode
+#build: build-docs build-ui
+#    cargo clippy -- -D warnings
+#    cargo build --release --target x86_64-unknown-linux-musl
+#    cp target/x86_64-unknown-linux-musl/release/rauthy out/
+
 # builds the whole application in release mode
-build: build-docs build-ui
-    cargo clippy -- -D warnings
-    cargo build --release --target x86_64-unknown-linux-musl
+build-sqlite: build-docs build-ui
+    DATABASE_URL="sqlite::memory:" cargo clippy -- -D warnings
+    DATABASE_URL="sqlite::memory:" cargo build --release --target x86_64-unknown-linux-musl
+    cp target/x86_64-unknown-linux-musl/release/rauthy out/
+
+
+# builds the whole application in release mode
+build-postgres: build-docs build-ui
+    DATABASE_URL="postgresql://rauthy:123SuperSafe@localhost:5432/rauthy" cargo clippy -- -D warnings
+    DATABASE_URL="postgresql://rauthy:123SuperSafe@localhost:5432/rauthy"  cargo build --release --target x86_64-unknown-linux-musl
     cp target/x86_64-unknown-linux-musl/release/rauthy out/
 
 
 # makes sure everything is fine
-is-clean: test build
+is-clean: build-sqlite test-sqlite build-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
     # exit early if clippy emits warnings
-    cargo clippy -- -D warnings
+    DATABASE_URL="sqlite::memory:" cargo clippy -- -D warnings
+    DATABASE_URL="postgresql://rauthy:123SuperSafe@localhost:5432/rauthy" cargo clippy -- -D warnings
 
     # make sure everything has been committed
     git diff --exit-code
