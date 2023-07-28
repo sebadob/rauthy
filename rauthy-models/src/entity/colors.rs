@@ -1,9 +1,8 @@
 use crate::app_state::AppState;
 use crate::request::ColorsRequest;
 use actix_web::web;
-use rauthy_common::constants::{CACHE_NAME_12HR, DB_TYPE};
+use rauthy_common::constants::CACHE_NAME_12HR;
 use rauthy_common::error_response::ErrorResponse;
-use rauthy_common::DbType;
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -18,8 +17,7 @@ pub struct ColorEntity {
 // CRUD
 impl ColorEntity {
     pub async fn delete(data: &web::Data<AppState>, client_id: &str) -> Result<(), ErrorResponse> {
-        sqlx::query("delete from colors where client_id = $1")
-            .bind(client_id)
+        sqlx::query!("delete from colors where client_id = $1", client_id,)
             .execute(&data.db)
             .await?;
 
@@ -50,8 +48,7 @@ impl ColorEntity {
             return Ok(colors);
         }
 
-        let res = sqlx::query_as::<_, Self>("select * from colors where client_id = $1")
-            .bind(client_id)
+        let res = sqlx::query_as!(Self, "select * from colors where client_id = $1", client_id)
             .fetch_optional(&data.db)
             .await?;
         let colors = match res {
@@ -80,20 +77,23 @@ impl ColorEntity {
         req: ColorsRequest,
     ) -> Result<(), ErrorResponse> {
         let cols = Colors::from(req);
+        let col_bytes = cols.as_bytes();
 
-        match *DB_TYPE {
-            DbType::Sqlite => {
-                sqlx::query("insert or replace into colors (client_id, data) values ($1, $2)")
-            }
-            DbType::Postgres => sqlx::query(
-                r#"insert into colors (client_id, data) values ($1, $2)
+        #[cfg(feature = "sqlite")]
+        let q = sqlx::query!(
+            "insert or replace into colors (client_id, data) values ($1, $2)",
+            client_id,
+            col_bytes,
+        );
+        #[cfg(feature = "postgres")]
+        let q = sqlx::query!(
+            r#"insert into colors (client_id, data) values ($1, $2)
                 on conflict(client_id) do update set data = $2"#,
-            ),
-        }
-        .bind(client_id)
-        .bind(cols.as_bytes())
-        .execute(&data.db)
-        .await?;
+            client_id,
+            col_bytes,
+        );
+
+        q.execute(&data.db).await?;
 
         cache_put(
             CACHE_NAME_12HR.to_string(),

@@ -111,11 +111,11 @@ enum PasswordHashMessage {
     Compare(ComparePasswords),
 }
 
-/// This is a simple limiter for concurrent password hashes.
-/// The "problem" with argon2id is, that it uses more memory, the safer you want your hashes to be.
-/// To limit the theoretical concurrent hashes while still setting a fairly high memory for the
-/// operation, this simple function makes sure that at no point in time, any more than the configured
-/// amount of max concurrent hashes do happen to not exceed system memory.
+// This is a simple limiter for concurrent password hashes.
+// The "problem" with argon2id is, that it uses more memory, the safer you want your hashes to be.
+// To limit the theoretical concurrent hashes while still setting a fairly high memory for the
+// operation, this simple function makes sure that at no point in time, any more than the configured
+// amount of max concurrent hashes do happen to not exceed system memory.
 pub async fn run() {
     while let Ok(msg) = HASH_CHANNELS.1.recv_async().await {
         let res = match msg {

@@ -18,7 +18,7 @@ pub struct Pow {
     pub exp: i64,
 }
 
-/// CRUD
+// CRUD
 impl Pow {
     pub async fn create(data: &web::Data<AppState>) -> Result<Self, ErrorResponse> {
         let pow = Self::default();

@@ -55,45 +55,25 @@ lazy_static! {
         .parse::<bool>()
         .expect("DEV_MODE cannot be parsed to bool - bad format");
 
-    /// # Regex: `^(RS256|RS384|RS512|EdDSA)$`
     pub static ref RE_ALG: Regex = Regex::new(r"^(RS256|RS384|RS512|EdDSA)$").unwrap();
-    /// # Regex: `^[a-zA-Z0-9-_/]{2,128}$`
     pub static ref RE_ATTR: Regex = Regex::new(r"^[a-zA-Z0-9-_/]{2,32}$").unwrap();
-    /// # Regex: `^[a-zA-Z0-9-_/]{0,128}$`
     pub static ref RE_ATTR_DESC: Regex = Regex::new(r"^[a-zA-Z0-9-_/\s]{0,128}$").unwrap();
-    /// # Regex: `^[a-zA-Z0-9]+$`
     pub static ref RE_ALNUM: Regex = Regex::new(r"^[a-zA-Z0-9]+$").unwrap();
-    /// # Regex: `^[a-zA-Z0-9]{24}$`
     pub static ref RE_ALNUM_24: Regex = Regex::new(r"^[a-zA-Z0-9]{24}$").unwrap();
-    /// # Regex: `^[a-zA-Z0-9]{48}$`
     pub static ref RE_ALNUM_48: Regex = Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap();
-    /// # Regex: `^[a-zA-Z0-9]{64}$`
     pub static ref RE_ALNUM_64: Regex = Regex::new(r"^[a-zA-Z0-9]{64}$").unwrap();
-    /// # Regex: `^[a-zA-Z0-9\s]+$`
     pub static ref RE_ALNUM_SPACE: Regex = Regex::new(r"^[a-zA-Z0-9\s]+$").unwrap();
-    /// # Regex: `^[a-zA-Z0-9{12}]$`
     pub static ref RE_APP_ID: Regex = Regex::new(r"^[a-zA-Z0-9]{12}$").unwrap();
-    /// # Regex: `^[a-zA-Z0-9+/=]{4}$`
     pub static ref RE_BASE64: Regex = Regex::new(r"^[a-zA-Z0-9+/=]{4}$").unwrap();
-    /// # Regex: `^(plain|S256)$`
     pub static ref RE_CHALLENGE: Regex = Regex::new(r"^(plain|S256)$").unwrap();
-    /// # Regex: `^[a-zA-Z0-9À-ÿ-\s]{2,128}$`
     pub static ref RE_CLIENT_NAME: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-\s]{2,128}$").unwrap();
-    /// # Regex: `^[a-zA-Z0-9-\._~]{43,128}$`
     pub static ref RE_CODE_CHALLENGE: Regex = Regex::new(r"^[a-zA-Z0-9-\._~]{43,128}$").unwrap();
-    /// # Regex: `^[a-zA-Z0-9-\._~+/=]+$`
     pub static ref RE_CODE_VERIFIER: Regex = Regex::new(r"^[a-zA-Z0-9-\._~+/=]+$").unwrap();
-    /// # Regex: `^(authorization_code|client_credentials|password|refresh_token)$`
     pub static ref RE_FLOWS: Regex = Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap();
-    /// # Regex: `^[a-z0-9-_/]{2,128}$`
     pub static ref RE_LOWERCASE: Regex = Regex::new(r"^[a-z0-9-_/]{2,128}$").unwrap();
-    /// # Regex: `^[a-z0-9-_/,]{2,32}$`
     pub static ref RE_GROUPS: Regex = Regex::new(r"^[a-z0-9-_/,]{2,32}$").unwrap();
-    /// # Regex: `^[a-zA-Z0-9{48}]$`
     pub static ref RE_MFA_CODE: Regex = Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap();
-    /// # Regex: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+$`
     pub static ref RE_URI: Regex = Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+$").unwrap();
-    /// # Regex: `^[a-zA-Z0-9À-ÿ-\s]{2,128}$`
     pub static ref RE_USER_NAME: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-\s]{2,32}$").unwrap();
 
     pub static ref PROXY_MODE: bool = env::var("PROXY_MODE")
@@ -137,7 +117,7 @@ lazy_static! {
         time::Duration::seconds(*POW_EXP as i64)
     };
 
-    /// Offline Token lifetime in seconds
+    // Offline Token lifetime in seconds
     pub static ref OFFLINE_TOKEN_LT: i64 = {
         let lt = env::var("OFFLINE_TOKEN_LIFETIME")
             .unwrap_or_else(|_| String::from("720"))

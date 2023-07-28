@@ -29,12 +29,15 @@ in another terminal:
 
 ### CURRENT WORK
 
+- refactor code and migrate away from sqlx `Any` driver
+
 ### Stage 1 - essentials
 
 [x] finished
 
 ### Stage 2 - features - do before v1.0.0
 
+- more clear error messages for "/auth_check_admin"
 - add more documentation
 - cleanup
 - check why DB migration returned an error inside OCI Pods only (and nowhere else)
@@ -57,3 +60,6 @@ since postgres has pg_backrest and a lot of well established tooling anyway
 - NATS events stream or maybe internal one?
 - store MFA App secrets encrypted?
 - PoW verification can potentially be performance optimized with 1 less allocation per iteration
+
+#[cfg(feature = "postgres")]
+#[cfg(feature = "sqlite")]

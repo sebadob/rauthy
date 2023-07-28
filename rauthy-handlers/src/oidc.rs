@@ -254,11 +254,11 @@ pub async fn get_cert_by_kid(
     Ok(HttpResponse::Ok().json(JWKSPublicKeyCerts::from(pub_key)))
 }
 
-/// Logout HTML page
-///
-/// Returns an HTML page which can be used for logging the user out. Invalidates the session and deletes
-/// all possibly existing refresh tokens from the database. Does an automatic logout if the
-/// `id_token_hint` is given.
+// Logout HTML page
+//
+// Returns an HTML page which can be used for logging the user out. Invalidates the session and deletes
+// all possibly existing refresh tokens from the database. Does an automatic logout if the
+// `id_token_hint` is given.
 #[utoipa::path(
     get,
     path = "/oidc/logout",

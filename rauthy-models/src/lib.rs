@@ -74,7 +74,7 @@ impl Display for ListenScheme {
     }
 }
 
-/// This is used for the token info endpoint
+// This is used for the token info endpoint
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JwtCommonClaims {
     pub typ: JwtType,

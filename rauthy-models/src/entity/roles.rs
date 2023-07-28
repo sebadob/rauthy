@@ -16,9 +16,9 @@ pub struct Role {
     pub name: String,
 }
 
-/// CRUD
+// CRUD
 impl Role {
-    /// Inserts a new role into the database
+    // Inserts a new role into the database
     pub async fn create(
         data: &web::Data<AppState>,
         role_req: NewRoleRequest,
@@ -37,11 +37,13 @@ impl Role {
             id: new_store_id(),
             name: role_req.role,
         };
-        sqlx::query("insert into roles (id, name) values ($1, $2)")
-            .bind(&new_role.id)
-            .bind(&new_role.name)
-            .execute(&data.db)
-            .await?;
+        sqlx::query!(
+            "insert into roles (id, name) values ($1, $2)",
+            new_role.id,
+            new_role.name,
+        )
+        .execute(&data.db)
+        .await?;
 
         roles.push(new_role.clone());
         cache_insert(
@@ -56,7 +58,7 @@ impl Role {
         Ok(new_role)
     }
 
-    /// Deletes a role
+    // Deletes a role
     pub async fn delete(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
         let role = Role::find(data, id).await?;
 
@@ -98,9 +100,8 @@ impl Role {
             user.save(data, None, Some(&mut txn)).await?;
         }
 
-        sqlx::query("delete from roles where id = $1")
-            .bind(id)
-            .execute(&mut txn)
+        sqlx::query!("delete from roles where id = $1", id)
+            .execute(&mut *txn)
             .await?;
 
         txn.commit().await?;
@@ -123,17 +124,16 @@ impl Role {
         Ok(())
     }
 
-    /// Returns a single role by id
+    // Returns a single role by id
     pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
-        let res = sqlx::query_as::<_, Self>("select * from roles where id = $1")
-            .bind(id)
+        let res = sqlx::query_as!(Self, "select * from roles where id = $1", id)
             .fetch_one(&data.db)
             .await?;
 
         Ok(res)
     }
 
-    /// Returns all existing roles
+    // Returns all existing roles
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
         let roles = cache_get!(
             Vec<Role>,
@@ -147,7 +147,7 @@ impl Role {
             return Ok(roles.unwrap());
         }
 
-        let res = sqlx::query_as::<_, Self>("select * from roles")
+        let res = sqlx::query_as!(Self, "select * from roles")
             .fetch_all(&data.db)
             .await?;
 
@@ -162,7 +162,7 @@ impl Role {
         Ok(res)
     }
 
-    /// Updates a role
+    // Updates a role
     pub async fn update(
         data: &web::Data<AppState>,
         id: String,
@@ -199,11 +199,13 @@ impl Role {
         }
 
         let new_role = Role { id, name: new_name };
-        sqlx::query("update roles set name = $1 where id = $2")
-            .bind(&new_role.name)
-            .bind(&new_role.id)
-            .execute(&mut txn)
-            .await?;
+        sqlx::query!(
+            "update roles set name = $1 where id = $2",
+            new_role.name,
+            new_role.id,
+        )
+        .execute(&mut *txn)
+        .await?;
 
         txn.commit().await?;
 

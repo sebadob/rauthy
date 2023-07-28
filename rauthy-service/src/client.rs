@@ -5,11 +5,11 @@ use rauthy_models::entity::clients::Client;
 use rauthy_models::request::UpdateClientRequest;
 use rauthy_models::response::ClientSecretResponse;
 
-/// Updates a client.<br>
-/// A client secret will be automatically generated if the
-/// [UpdateClientRequest](crate::models::request::UpdateClientRequest) is set to be confidential
-/// while the currently existing client does not have it. It will be skipped, if it was
-/// `confidential` already.
+// Updates a client.<br>
+// A client secret will be automatically generated if the
+// [UpdateClientRequest](crate::models::request::UpdateClientRequest) is set to be confidential
+// while the currently existing client does not have it. It will be skipped, if it was
+// `confidential` already.
 pub async fn update_client(
     data: &web::Data<AppState>,
     id: String,

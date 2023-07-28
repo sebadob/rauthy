@@ -4,14 +4,14 @@ use actix_web::cookie::{time, SameSite};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{cookie, web, HttpRequest};
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_SESSIONS, COOKIE_SESSION, CSRF_HEADER, DB_TYPE, IDX_SESSION,
+    CACHE_NAME_12HR, CACHE_NAME_SESSIONS, COOKIE_SESSION, CSRF_HEADER, IDX_SESSION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::get_rand;
-use rauthy_common::DbType;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
-use sqlx::any::AnyRow;
+use sqlx::postgres::PgRow;
+use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Row};
 use std::ops::Add;
 use std::str::FromStr;
@@ -42,8 +42,21 @@ pub enum SessionState {
     Unknown,
 }
 
-impl FromRow<'_, AnyRow> for SessionState {
-    fn from_row(row: &'_ AnyRow) -> Result<Self, sqlx::error::Error> {
+impl From<String> for SessionState {
+    fn from(value: String) -> Self {
+        Self::from_str(value.as_str()).unwrap()
+    }
+}
+
+impl FromRow<'_, SqliteRow> for SessionState {
+    fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::error::Error> {
+        let s = row.try_get("state").unwrap();
+        Ok(Self::from_str(s).expect("Corrupted 'state' in 'sessions'"))
+    }
+}
+
+impl FromRow<'_, PgRow> for SessionState {
+    fn from_row(row: &'_ PgRow) -> Result<Self, sqlx::error::Error> {
         let s = row.try_get("state").unwrap();
         Ok(Self::from_str(s).expect("Corrupted 'state' in 'sessions'"))
     }
@@ -76,11 +89,10 @@ impl SessionState {
     }
 }
 
-/// CRUD
+// CRUD
 impl Session {
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        sqlx::query("delete from sessions where id = $1")
-            .bind(&self.id)
+        sqlx::query!("delete from sessions where id = $1", self.id)
             .execute(&data.db)
             .await?;
 
@@ -98,7 +110,7 @@ impl Session {
 
     // TODO add 'delete_by_user'
 
-    /// Returns a session by id
+    // Returns a session by id
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
         // TODO set remote lookup to true here to be able to switch to in-memory sessions store only?
         let session = cache_get!(
@@ -113,8 +125,7 @@ impl Session {
             return Ok(session.unwrap());
         }
 
-        let session = sqlx::query_as::<_, Self>("select * from sessions where id = $1")
-            .bind(&id)
+        let session = sqlx::query_as!(Self, "select * from sessions where id = $1", id)
             .fetch_one(&data.db)
             .await?;
 
@@ -134,7 +145,7 @@ impl Session {
     // TODO should we even cache this, since this is only used rarely in the frontend?
     /// Returns all sessions and an empty Vec if not a single session exists
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        let sessions = sqlx::query_as::<_, Self>("select * from sessions")
+        let sessions = sqlx::query_as!(Self, "select * from sessions")
             .fetch_all(&data.db)
             .await?;
         Ok(sessions)
@@ -207,31 +218,43 @@ impl Session {
 
     /// Saves a Session
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        match *DB_TYPE {
-            DbType::Sqlite => sqlx::query(
-                r#"insert or replace into
-                sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen)
-                values ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
-            ),
-            DbType::Postgres => sqlx::query(
-                r#"insert into
-                sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen)
-                values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                on conflict(id) do update set user_id = $3, roles = $4, groups = $5, is_mfa = $6,
-                state = $7, exp = $8, last_seen = $9"#,
-            ),
-        }
-        .bind(&self.id)
-        .bind(&self.csrf_token)
-        .bind(&self.user_id)
-        .bind(&self.roles)
-        .bind(&self.groups)
-        .bind(self.is_mfa)
-        .bind(self.state.as_str())
-        .bind(self.exp)
-        .bind(self.last_seen)
-        .execute(&data.db)
-        .await?;
+        let state_str = self.state.as_str();
+
+        #[cfg(feature = "sqlite")]
+        let q = sqlx::query!(
+            r#"insert or replace into
+            sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
+            self.id,
+            self.csrf_token,
+            self.user_id,
+            self.roles,
+            self.groups,
+            self.is_mfa,
+            state_str,
+            self.exp,
+            self.last_seen,
+        );
+
+        #[cfg(feature = "postgres")]
+        let q = sqlx::query!(
+            r#"insert into
+            sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            on conflict(id) do update set user_id = $3, roles = $4, groups = $5, is_mfa = $6,
+            state = $7, exp = $8, last_seen = $9"#,
+            self.id,
+            self.csrf_token,
+            self.user_id,
+            self.roles,
+            self.groups,
+            self.is_mfa,
+            state_str,
+            self.exp,
+            self.last_seen,
+        );
+
+        q.execute(&data.db).await?;
 
         let idx = format!("{}{}", IDX_SESSION, &self.id);
         cache_insert(

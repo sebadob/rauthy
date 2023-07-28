@@ -16,9 +16,9 @@ pub struct Group {
     pub name: String,
 }
 
-/// CRUD
+// CRUD
 impl Group {
-    /// Inserts a new group into the database
+    // Inserts a new group into the database
     pub async fn create(
         data: &web::Data<AppState>,
         group_req: NewGroupRequest,
@@ -38,11 +38,13 @@ impl Group {
             name: group_req.group,
         };
 
-        sqlx::query("insert into groups (id, name) values ($1, $2)")
-            .bind(&new_group.id)
-            .bind(&new_group.name)
-            .execute(&data.db)
-            .await?;
+        sqlx::query!(
+            "insert into groups (id, name) values ($1, $2)",
+            new_group.id,
+            new_group.name,
+        )
+        .execute(&data.db)
+        .await?;
 
         groups.push(new_group.clone());
         cache_insert(
@@ -57,7 +59,7 @@ impl Group {
         Ok(new_group)
     }
 
-    /// Deletes a group
+    // Deletes a group
     pub async fn delete(data: &web::Data<AppState>, id: String) -> Result<(), ErrorResponse> {
         let group = Group::find(data, id).await?;
 
@@ -91,9 +93,8 @@ impl Group {
             user.save(data, None, Some(&mut txn)).await?;
         }
 
-        sqlx::query("delete from groups where id = $1")
-            .bind(&group.id)
-            .execute(&mut txn)
+        sqlx::query!("delete from groups where id = $1", group.id)
+            .execute(&mut *txn)
             .await?;
 
         txn.commit().await?;
@@ -115,17 +116,16 @@ impl Group {
         Ok(())
     }
 
-    /// Returns a single group by id
+    // Returns a single group by id
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
-        let res = sqlx::query_as("select * from groups where id = $1")
-            .bind(&id)
+        let res = sqlx::query_as!(Self, "select * from groups where id = $1", id,)
             .fetch_one(&data.db)
             .await?;
 
         Ok(res)
     }
 
-    /// Returns all existing groups
+    // Returns all existing groups
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
         let groups = cache_get!(
             Vec<Group>,
@@ -139,7 +139,7 @@ impl Group {
             return Ok(groups.unwrap());
         }
 
-        let res = sqlx::query_as("select * from groups")
+        let res = sqlx::query_as!(Self, "select * from groups")
             .fetch_all(&data.db)
             .await?;
 
@@ -154,7 +154,7 @@ impl Group {
         Ok(res)
     }
 
-    /// Updates a group
+    // Updates a group
     pub async fn update(
         data: &web::Data<AppState>,
         id: String,
@@ -196,11 +196,13 @@ impl Group {
             name: new_name,
         };
 
-        sqlx::query("update groups set name = $1 where id = $2")
-            .bind(&new_group.name)
-            .bind(&new_group.id)
-            .execute(&mut txn)
-            .await?;
+        sqlx::query!(
+            "update groups set name = $1 where id = $2",
+            new_group.name,
+            new_group.id,
+        )
+        .execute(&mut *txn)
+        .await?;
 
         txn.commit().await?;
 
@@ -228,8 +230,8 @@ impl Group {
 }
 
 impl Group {
-    /// Sanitizes any bad data from an API request for adding / modifying groups and silently
-    /// dismissed all bad data.
+    // Sanitizes any bad data from an API request for adding / modifying groups and silently
+    // dismissed all bad data.
     pub async fn sanitize(
         data: &web::Data<AppState>,
         groups_opt: Option<Vec<String>>,

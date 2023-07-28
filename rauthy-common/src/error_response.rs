@@ -31,10 +31,10 @@ pub enum ErrorResponseType {
     Unauthorized,
 }
 
-/// This is the default `ErrorResponse` that could be the answer on almost every API endpoint in
-/// case something is wrong.<br>
-/// Except for input validations, every error will have this format and every possible error in the
-/// backend will be converted to this.
+// This is the default `ErrorResponse` that could be the answer on almost every API endpoint in
+// case something is wrong.<br>
+// Except for input validations, every error will have this format and every possible error in the
+// backend will be converted to this.
 #[derive(Debug, Clone, Display, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 #[display(fmt = "error: {} message: {}", error, message)]
 pub struct ErrorResponse {

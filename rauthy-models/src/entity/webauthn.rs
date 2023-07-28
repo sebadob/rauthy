@@ -1,4 +1,4 @@
-use crate::app_state::AppState;
+use crate::app_state::{AppState, DbTxn};
 use crate::entity::users::User;
 use crate::request::{
     MfaPurpose, WebauthnAuthFinishRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
@@ -31,12 +31,9 @@ pub struct PasskeyEntity {
     pub passkey: String,
 }
 
-/// CRUD
+// CRUD
 impl PasskeyEntity {
-    pub async fn create(
-        pk: Passkey,
-        txn: &mut sqlx::Transaction<'_, sqlx::Any>,
-    ) -> Result<Self, ErrorResponse> {
+    pub async fn create(pk: Passkey, txn: &mut DbTxn<'_>) -> Result<Self, ErrorResponse> {
         // json, because bincode does not support deserialize from any, which would be the case here
         let passkey = serde_json::to_string(&pk).unwrap();
 
@@ -45,11 +42,13 @@ impl PasskeyEntity {
             passkey,
         };
 
-        sqlx::query("insert into webauthn (id, passkey) values ($1, $2)")
-            .bind(&entity.id)
-            .bind(&entity.passkey)
-            .execute(txn)
-            .await?;
+        sqlx::query!(
+            "insert into webauthn (id, passkey) values ($1, $2)",
+            entity.id,
+            entity.passkey,
+        )
+        .execute(&mut **txn)
+        .await?;
 
         Ok(entity)
     }
@@ -57,7 +56,7 @@ impl PasskeyEntity {
     pub async fn delete(
         &self,
         data: &web::Data<AppState>,
-        txn: Option<&mut sqlx::Transaction<'_, sqlx::Any>>,
+        txn: Option<&mut DbTxn<'_>>,
     ) -> Result<(), ErrorResponse> {
         PasskeyEntity::delete_by_id(data, &self.id, txn).await
     }
@@ -65,12 +64,12 @@ impl PasskeyEntity {
     pub async fn delete_by_id(
         data: &web::Data<AppState>,
         id: &str,
-        txn: Option<&mut sqlx::Transaction<'_, sqlx::Any>>,
+        txn: Option<&mut DbTxn<'_>>,
     ) -> Result<(), ErrorResponse> {
-        let q = sqlx::query("delete from webauthn where id = $1").bind(id);
+        let q = sqlx::query!("delete from webauthn where id = $1", id);
 
         if let Some(txn) = txn {
-            q.execute(txn).await?;
+            q.execute(&mut **txn).await?;
         } else {
             q.execute(&data.db).await?;
         }
@@ -100,8 +99,7 @@ impl PasskeyEntity {
             return Ok(pk.unwrap());
         }
 
-        let pk = sqlx::query_as::<_, Self>("select * from webauthn where id = $1")
-            .bind(&id)
+        let pk = sqlx::query_as!(Self, "select * from webauthn where id = $1", id)
             .fetch_one(&data.db)
             .await?;
 
@@ -119,11 +117,13 @@ impl PasskeyEntity {
     }
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        sqlx::query("update webauthn set passkey = $1 where id = $2")
-            .bind(&self.passkey)
-            .bind(&self.id)
-            .execute(&data.db)
-            .await?;
+        sqlx::query!(
+            "update webauthn set passkey = $1 where id = $2",
+            self.passkey,
+            self.id,
+        )
+        .execute(&data.db)
+        .await?;
 
         let idx = format!("{}{}", IDX_WEBAUTHN, self.id);
         cache_insert(
@@ -229,7 +229,7 @@ pub struct WebauthnData {
     pub data: WebauthnAdditionalData,
 }
 
-/// CURD
+// CURD
 impl WebauthnData {
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         cache_remove(
@@ -276,7 +276,7 @@ impl WebauthnData {
     }
 }
 
-/// This is the data, that will be passed to the client as response to a successful MFA auth
+// This is the data, that will be passed to the client as response to a successful MFA auth
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum WebauthnAdditionalData {
     Login(WebauthnLoginReq),
@@ -331,7 +331,7 @@ pub struct WebauthnLoginReq {
     pub header_origin: Option<String>,
 }
 
-/// CRUD
+// CRUD
 impl WebauthnLoginReq {
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         cache_remove(
@@ -384,7 +384,7 @@ pub struct WebauthnServiceReq {
     pub user_id: String,
 }
 
-/// CRUD
+// CRUD
 impl WebauthnServiceReq {
     pub fn new(user_id: String) -> Self {
         Self {
@@ -652,22 +652,3 @@ pub async fn reg_finish(
 
     Ok(())
 }
-
-// pub fn mfa_cookie_build(email: &str) -> cookie::Cookie {
-//     let exp = OffsetDateTime::now_utc().add(::time::Duration::hours(*WEBAUTHN_RENEW_EXP));
-//     let cookie_exp = cookie::Expiration::from(exp);
-//     cookie::Cookie::build(COOKIE_MFA, email)
-//         .http_only(true)
-//         .secure(true)
-//         .same_site(cookie::SameSite::Lax)
-//         .expires(cookie_exp)
-//         .path("/auth")
-//         .finish()
-// }
-//
-// /// Validates the correct user_id for the cookie value
-// #[inline]
-// pub fn mfa_cookie_validate_user(cookie: &cookie::Cookie, email: &str) -> bool {
-//     debug!("mfa cookie value: {}", cookie.value());
-//     cookie.value() == email
-// }

@@ -1,12 +1,12 @@
+use crate::app_state::DbPool;
 use crate::entity::jwk::Jwk;
 use crate::entity::magic_links::MagicLinkPassword;
 use rauthy_common::error_response::ErrorResponse;
-use sqlx::{Any, Pool};
 use std::ops::Add;
 use time::OffsetDateTime;
 use tracing::warn;
 
-pub async fn migrate_dev_data(db: &Pool<Any>) -> Result<(), ErrorResponse> {
+pub async fn migrate_dev_data(db: &DbPool) -> Result<(), ErrorResponse> {
     warn!("Migrating DEV DATA - DO NOT USE IN PRODUCTION!");
 
     let needs_migration = match sqlx::query_as::<_, Jwk>("select * from jwks")

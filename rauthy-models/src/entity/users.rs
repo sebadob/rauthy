@@ -1,4 +1,4 @@
-use crate::app_state::{AppState, Argon2Params};
+use crate::app_state::{AppState, Argon2Params, DbTxn};
 use crate::email::send_pwd_reset;
 use crate::entity::groups::Group;
 use crate::entity::magic_links::MagicLinkPassword;
@@ -46,24 +46,24 @@ pub struct User {
     pub sec_key_2: Option<String>,
 }
 
-/// CRUD
+// CRUD
 impl User {
-    /// Inserts a user into the database
+    // Inserts a user into the database
     pub async fn create(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
-        sqlx::query(
+        sqlx::query!(
             r#"insert into users
             (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at)
             values ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
+            new_user.id,
+            new_user.email,
+            new_user.given_name,
+            new_user.family_name,
+            new_user.roles,
+            new_user.groups,
+            new_user.enabled,
+            new_user.email_verified,
+            new_user.created_at,
         )
-        .bind(&new_user.id)
-        .bind(&new_user.email)
-        .bind(&new_user.given_name)
-        .bind(&new_user.family_name)
-        .bind(&new_user.roles)
-        .bind(&new_user.groups)
-        .bind(new_user.enabled)
-        .bind(new_user.email_verified)
-        .bind(new_user.created_at)
         .execute(&data.db)
         .await?;
 
@@ -86,7 +86,7 @@ impl User {
         Ok(new_user)
     }
 
-    /// Inserts a user into the database
+    // Inserts a user into the database
     pub async fn create_from_new(
         data: &web::Data<AppState>,
         new_user_req: NewUserRequest,
@@ -95,7 +95,7 @@ impl User {
         User::create(data, new_user).await
     }
 
-    /// Inserts a user from the open registration endpoint into the database
+    // Inserts a user from the open registration endpoint into the database
     pub async fn create_from_reg(
         data: &web::Data<AppState>,
         req_data: NewUserRegistrationRequest,
@@ -109,10 +109,9 @@ impl User {
         Ok(())
     }
 
-    /// Deletes a user
+    // Deletes a user
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        sqlx::query("delete from users where id = $1")
-            .bind(&self.id)
+        sqlx::query!("delete from users where id = $1", self.id)
             .execute(&data.db)
             .await?;
 
@@ -157,7 +156,7 @@ impl User {
         Ok(())
     }
 
-    /// Checks if a user exists in the database without fetching data
+    // Checks if a user exists in the database without fetching data
     pub async fn exists(data: &web::Data<AppState>, id: String) -> Result<(), ErrorResponse> {
         let idx = format!("{}_{}", IDX_USERS, id);
         let user_opt = cache_get!(
@@ -172,15 +171,14 @@ impl User {
             return Ok(());
         }
 
-        sqlx::query("select id from users where id = $1")
-            .bind(&id)
+        sqlx::query!("select id from users where id = $1", id)
             .fetch_one(&data.db)
             .await?;
 
         Ok(())
     }
 
-    /// Returns a user by its id
+    // Returns a user by its id
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
         let idx = format!("{}_{}", IDX_USERS, id);
         let user_opt = cache_get!(
@@ -195,6 +193,7 @@ impl User {
             return Ok(user_opt.unwrap());
         }
 
+        // cannot be compile-time-checked because of 8byte integer on sqlite by default
         let user = sqlx::query_as::<_, Self>("select * from users where id = $1")
             .bind(&id)
             .fetch_one(&data.db)
@@ -211,7 +210,7 @@ impl User {
         Ok(user)
     }
 
-    /// Returns a user by its email
+    // Returns a user by its email
     pub async fn find_by_email(
         data: &web::Data<AppState>,
         email: String,
@@ -245,7 +244,7 @@ impl User {
         Ok(user)
     }
 
-    /// Returns all existing users
+    // Returns all existing users
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
         let users = cache_get!(
             Vec<User>,
@@ -274,12 +273,12 @@ impl User {
         Ok(res)
     }
 
-    /// Saves a user
+    // Saves a user
     pub async fn save(
         &self,
         data: &web::Data<AppState>,
         old_email: Option<String>,
-        txn: Option<&mut sqlx::Transaction<'_, sqlx::Any>>,
+        txn: Option<&mut DbTxn<'_>>,
     ) -> Result<(), ErrorResponse> {
         if old_email.is_some() {
             User::is_email_free(data, self.email.clone()).await?;
@@ -309,7 +308,7 @@ impl User {
             .bind(&self.id);
 
         if let Some(txn) = txn {
-            q.execute(txn).await?;
+            q.execute(&mut **txn).await?;
         } else {
             q.execute(&data.db).await?;
         }
@@ -363,7 +362,7 @@ impl User {
         Ok(())
     }
 
-    /// Updates a user
+    // Updates a user
     pub async fn update(
         data: &web::Data<AppState>,
         id: String,
@@ -375,7 +374,6 @@ impl User {
             Some(user) => user,
         };
         let old_email = if user.email != upd_user.email {
-            // User::is_email_free(data, upd_user.email.clone()).await?;
             Some(user.email.clone())
         } else {
             None
@@ -403,8 +401,8 @@ impl User {
         Ok(user)
     }
 
-    /// Updates a user from himself. This is needed for the account page to make each user able to
-    /// update its own data.
+    // Updates a user from himself. This is needed for the account page to make each user able to
+    // update its own data.
     pub async fn update_self_req(
         data: &web::Data<AppState>,
         id: String,

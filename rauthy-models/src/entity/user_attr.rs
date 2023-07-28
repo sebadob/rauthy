@@ -1,11 +1,10 @@
-use crate::app_state::AppState;
+use crate::app_state::{AppState, DbTxn};
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
 use crate::request::{UserAttrConfigRequest, UserAttrValuesUpdateRequest};
 use actix_web::web;
-use rauthy_common::constants::{CACHE_NAME_12HR, DB_TYPE, IDX_USER_ATTR_CONFIG};
+use rauthy_common::constants::{CACHE_NAME_12HR, IDX_USER_ATTR_CONFIG};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::DbType;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -13,17 +12,17 @@ use sqlx::FromRow;
 use std::collections::HashSet;
 use utoipa::ToSchema;
 
-/// Additional custom attributes for users. These can be set for every user and then mapped to a
-/// scope, to include them in JWT tokens.
+// Additional custom attributes for users. These can be set for every user and then mapped to a
+// scope, to include them in JWT tokens.
 #[derive(Clone, Debug, FromRow, Serialize, Deserialize, ToSchema)]
 pub struct UserAttrConfigEntity {
-    /// Unique name
+    // Unique name
     pub name: String,
-    /// Description for the attribute
+    // Description for the attribute
     pub desc: Option<String>,
 }
 
-/// CRUD
+// CRUD
 impl UserAttrConfigEntity {
     pub async fn create(
         data: &web::Data<AppState>,
@@ -36,18 +35,21 @@ impl UserAttrConfigEntity {
             ));
         }
 
-        match *DB_TYPE {
-            DbType::Sqlite => {
-                sqlx::query("insert into user_attr_config (name, desc) values ($1, $2)")
-            }
-            DbType::Postgres => {
-                sqlx::query("insert into user_attr_config (name, \"desc\") values ($1, $2)")
-            }
-        }
-        .bind(&new_attr.name)
-        .bind(&new_attr.desc)
-        .execute(&data.db)
-        .await?;
+        #[cfg(feature = "sqlite")]
+        let q = sqlx::query!(
+            "insert into user_attr_config (name, desc) values ($1, $2)",
+            new_attr.name,
+            new_attr.desc,
+        );
+
+        #[cfg(feature = "postgres")]
+        let q = sqlx::query!(
+            "insert into user_attr_config (name, \"desc\") values ($1, $2)",
+            new_attr.name,
+            new_attr.desc,
+        );
+
+        q.execute(&data.db).await?;
 
         let mut attrs = UserAttrConfigEntity::find_all(data).await?;
         let slf = Self {
@@ -132,14 +134,11 @@ impl UserAttrConfigEntity {
 
         UserAttrValueEntity::delete_all_by_key(data, &name, &mut txn).await?;
 
-        sqlx::query("delete from user_attr_config where name  = $1")
-            .bind(&name)
-            .execute(&mut txn)
+        sqlx::query!("delete from user_attr_config where name  = $1", name)
+            .execute(&mut *txn)
             .await?;
 
         txn.commit().await?;
-
-        // DATA_STORE.del(Cf::UserAttrConfig, name.clone()).await?;
 
         let attrs = Self::find_all(data)
             .await?
@@ -171,8 +170,7 @@ impl UserAttrConfigEntity {
             return Ok(attr_opt.unwrap());
         }
 
-        let attr = sqlx::query_as::<_, Self>("select * from user_attr_config where name = $1")
-            .bind(&name)
+        let attr = sqlx::query_as!(Self, "select * from user_attr_config where name = $1", name)
             .fetch_one(&data.db)
             .await?;
 
@@ -200,7 +198,7 @@ impl UserAttrConfigEntity {
             return Ok(attrs.unwrap());
         }
 
-        let res = sqlx::query_as::<_, Self>("select * from user_attr_config")
+        let res = sqlx::query_as!(Self, "select * from user_attr_config")
             .fetch_all(&data.db)
             .await?;
 
@@ -245,19 +243,23 @@ impl UserAttrConfigEntity {
 
         let mut txn = data.db.begin().await?;
 
-        match *DB_TYPE {
-            DbType::Sqlite => {
-                sqlx::query("update user_attr_config set name  = $1, desc = $2 where name = $3")
-            }
-            DbType::Postgres => {
-                sqlx::query("update user_attr_config set name  = $1, \"desc\" = $2 where name = $3")
-            }
-        }
-        .bind(&slf.name)
-        .bind(&slf.desc)
-        .bind(&name)
-        .execute(&mut txn)
-        .await?;
+        #[cfg(feature = "sqlite")]
+        let q = sqlx::query!(
+            "update user_attr_config set name  = $1, desc = $2 where name = $3",
+            slf.name,
+            slf.desc,
+            name,
+        );
+
+        #[cfg(feature = "postgres")]
+        let q = sqlx::query!(
+            "update user_attr_config set name  = $1, \"desc\" = $2 where name = $3",
+            slf.name,
+            slf.desc,
+            name,
+        );
+
+        q.execute(&mut *txn).await?;
 
         if is_name_update {
             // update all possible scope mappings
@@ -377,15 +379,15 @@ impl UserAttrValueEntity {
     pub async fn delete_all_by_key(
         data: &web::Data<AppState>,
         key: &str,
-        txn: &mut sqlx::Transaction<'_, sqlx::Any>,
+        txn: &mut DbTxn<'_>,
     ) -> Result<(), ErrorResponse> {
-        let cache_idxs = sqlx::query_as::<_, Self>("select * from user_attr_values where key = $1")
-            .bind(key)
-            .fetch_all(&data.db)
-            .await?
-            .into_iter()
-            .map(|a| Self::cache_idx(&a.user_id))
-            .collect::<Vec<String>>();
+        let cache_idxs =
+            sqlx::query_as!(Self, "select * from user_attr_values where key = $1", key)
+                .fetch_all(&data.db)
+                .await?
+                .into_iter()
+                .map(|a| Self::cache_idx(&a.user_id))
+                .collect::<Vec<String>>();
 
         for idx in cache_idxs {
             cache_remove(
@@ -397,9 +399,8 @@ impl UserAttrValueEntity {
             .await?;
         }
 
-        sqlx::query("delete from user_attr_values where key = $1")
-            .bind(key)
-            .execute(txn)
+        sqlx::query!("delete from user_attr_values where key = $1", key)
+            .execute(&mut **txn)
             .await?;
 
         Ok(())
@@ -422,10 +423,13 @@ impl UserAttrValueEntity {
             return Ok(attrs.unwrap());
         }
 
-        let res = sqlx::query_as::<_, Self>("select * from user_attr_values where user_id = $1")
-            .bind(user_id)
-            .fetch_all(&data.db)
-            .await?;
+        let res = sqlx::query_as!(
+            Self,
+            "select * from user_attr_values where user_id = $1",
+            user_id
+        )
+        .fetch_all(&data.db)
+        .await?;
 
         cache_insert(
             CACHE_NAME_12HR.to_string(),
@@ -456,36 +460,47 @@ impl UserAttrValueEntity {
             };
 
             if del || value.value == Value::Null {
-                sqlx::query("delete from user_attr_values where user_id = $1 and key = $2")
-                    .bind(user_id)
-                    .bind(&value.key)
-                    .execute(&data.db)
-                    .await?;
-            } else {
-                match *DB_TYPE {
-                    DbType::Sqlite => sqlx::query(
-                        r#"insert or replace into user_attr_values (user_id, key, value)
-                        values ($1, $2, $3)"#,
-                    ),
-                    DbType::Postgres => sqlx::query(
-                        r#"insert into user_attr_values (user_id, key, value)
-                        values ($1, $2, $3)
-                        on conflict(user_id, key) do update set value = $3"#,
-                    ),
-                }
-                .bind(user_id)
-                .bind(&value.key)
-                .bind(serde_json::to_vec(&value.value).unwrap())
+                sqlx::query!(
+                    "delete from user_attr_values where user_id = $1 and key = $2",
+                    user_id,
+                    value.key,
+                )
                 .execute(&data.db)
                 .await?;
+            } else {
+                let v = serde_json::to_vec(&value.value).unwrap();
+
+                #[cfg(feature = "sqlite")]
+                let q = sqlx::query!(
+                    r#"insert or replace into user_attr_values (user_id, key, value)
+                    values ($1, $2, $3)"#,
+                    user_id,
+                    value.key,
+                    v,
+                );
+
+                #[cfg(feature = "postgres")]
+                let q = sqlx::query!(
+                    r#"insert into user_attr_values (user_id, key, value)
+                    values ($1, $2, $3)
+                    on conflict(user_id, key) do update set value = $3"#,
+                    user_id,
+                    value.key,
+                    v,
+                );
+
+                q.execute(&data.db).await?;
             }
         }
 
         // 2nd query again to have more compatibility
-        let res = sqlx::query_as::<_, Self>("select * from user_attr_values where user_id = $1")
-            .bind(user_id)
-            .fetch_all(&data.db)
-            .await?;
+        let res = sqlx::query_as!(
+            Self,
+            "select * from user_attr_values where user_id = $1",
+            user_id
+        )
+        .fetch_all(&data.db)
+        .await?;
 
         let idx = Self::cache_idx(user_id);
         cache_insert(
