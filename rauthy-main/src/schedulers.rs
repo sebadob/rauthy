@@ -2,7 +2,7 @@ use ::time::OffsetDateTime;
 use actix_web::web;
 use rauthy_common::constants::{CACHE_NAME_12HR, DB_TYPE, IDX_JWK_KID, OFFLINE_TOKEN_LT};
 use rauthy_common::DbType;
-use rauthy_models::app_state::AppState;
+use rauthy_models::app_state::{AppState, DbPool};
 use rauthy_models::email::send_pwd_reset_info;
 use rauthy_models::entity::jwk::Jwk;
 use rauthy_models::entity::users::User;
@@ -36,7 +36,7 @@ pub async fn scheduler_main(data: web::Data<AppState>) {
 
 // TODO -> adapt to RDBMS
 /// Creates a backup of the data store
-pub async fn db_backup(db: sqlx::Pool<sqlx::Any>) {
+pub async fn db_backup(db: DbPool) {
     if *DB_TYPE == DbType::Postgres {
         debug!("Using Postgres as the main database - automatic backups disabled");
         return;
@@ -98,7 +98,7 @@ pub async fn db_backup(db: sqlx::Pool<sqlx::Any>) {
 /// Cleans up old / expired magic links and deletes users, that have never used their
 /// 'set first ever password' magic link to keep the database clean in case of an open user registration.
 /// Runs every 6 hours.
-pub async fn magic_link_cleanup(db: sqlx::Pool<sqlx::Any>) {
+pub async fn magic_link_cleanup(db: DbPool) {
     let mut interval = time::interval(Duration::from_secs(3600 * 6));
 
     loop {
@@ -191,7 +191,7 @@ pub async fn password_expiry_checker(data: web::Data<AppState>) {
 }
 
 /// Cleans up old / expired / already used Refresh Tokens
-pub async fn refresh_tokens_cleanup(db: sqlx::Pool<sqlx::Any>) {
+pub async fn refresh_tokens_cleanup(db: DbPool) {
     let mut interval = time::interval(Duration::from_secs(3600 * 3));
 
     loop {
@@ -213,7 +213,7 @@ pub async fn refresh_tokens_cleanup(db: sqlx::Pool<sqlx::Any>) {
 }
 
 /// Cleans up old / expired Sessions
-pub async fn sessions_cleanup(db: sqlx::Pool<sqlx::Any>) {
+pub async fn sessions_cleanup(db: DbPool) {
     let mut interval = time::interval(Duration::from_secs(3595 * 2));
 
     loop {

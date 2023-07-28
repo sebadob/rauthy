@@ -11,7 +11,6 @@ use rauthy_common::utils::get_rand;
 use rauthy_common::DbType;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
-use sqlx::any::AnyRow;
 use sqlx::postgres::PgRow;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Row};

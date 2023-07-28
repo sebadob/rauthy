@@ -1,3 +1,4 @@
+use crate::app_state::DbPool;
 use rauthy_common::constants::{DATABASE_URL, RAUTHY_VERSION};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use std::env;
@@ -9,7 +10,7 @@ use tracing::{debug, error, info, warn};
 pub mod db_migrate;
 pub mod db_migrate_dev;
 
-pub async fn backup_db(db: &sqlx::Pool<sqlx::Any>) -> Result<(), ErrorResponse> {
+pub async fn backup_db(db: &DbPool) -> Result<(), ErrorResponse> {
     let start = Instant::now();
     info!("Starting database backup");
 

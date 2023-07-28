@@ -7,7 +7,6 @@ use rauthy_common::utils::base64_url_encode;
 use rauthy_common::utils::decrypt;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
-use sqlx::any::AnyRow;
 use sqlx::postgres::PgRow;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Error, FromRow, Row};

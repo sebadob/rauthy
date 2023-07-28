@@ -29,12 +29,15 @@ in another terminal:
 
 ### CURRENT WORK
 
+- refactor code and migrate away from sqlx `Any` driver
+
 ### Stage 1 - essentials
 
 [x] finished
 
 ### Stage 2 - features - do before v1.0.0
 
+- more clear error messages for "/auth_check_admin"
 - add more documentation
 - cleanup
 - check why DB migration returned an error inside OCI Pods only (and nowhere else)
