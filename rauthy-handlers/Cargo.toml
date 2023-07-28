@@ -1,12 +1,13 @@
 [package]
 name = "rauthy-handlers"
-version = "0.13.3"
-edition = "2021"
-authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
-license = "AGPLv3"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
 
 [dependencies]
 actix = "0.13"
+actix-multipart = "0.6.0"
 actix-web = { version = "4", features = ["rustls"] }
 actix-web-actors = "4"
 actix-web-lab = "0.19"
@@ -27,7 +28,6 @@ tokio = { version = "1", features = ["full"] }
 utoipa = { version = "3", features = ["actix_extras", "chrono", "openapi_extensions"] }
 utoipa-swagger-ui = { version = "3", features = ["actix-web"] }
 validator = { version = "0.16", features = ["derive"] }
-actix-multipart = "0.6.0"
 
 [dev-dependencies]
 pretty_assertions = "1"

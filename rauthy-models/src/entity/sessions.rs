@@ -12,6 +12,8 @@ use rauthy_common::DbType;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::any::AnyRow;
+use sqlx::postgres::PgRow;
+use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Row};
 use std::ops::Add;
 use std::str::FromStr;
@@ -42,8 +44,22 @@ pub enum SessionState {
     Unknown,
 }
 
-impl FromRow<'_, AnyRow> for SessionState {
-    fn from_row(row: &'_ AnyRow) -> Result<Self, sqlx::error::Error> {
+// impl FromRow<'_, AnyRow> for SessionState {
+//     fn from_row(row: &'_ AnyRow) -> Result<Self, sqlx::error::Error> {
+//         let s = row.try_get("state").unwrap();
+//         Ok(Self::from_str(s).expect("Corrupted 'state' in 'sessions'"))
+//     }
+// }
+
+impl FromRow<'_, SqliteRow> for SessionState {
+    fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::error::Error> {
+        let s = row.try_get("state").unwrap();
+        Ok(Self::from_str(s).expect("Corrupted 'state' in 'sessions'"))
+    }
+}
+
+impl FromRow<'_, PgRow> for SessionState {
+    fn from_row(row: &'_ PgRow) -> Result<Self, sqlx::error::Error> {
         let s = row.try_get("state").unwrap();
         Ok(Self::from_str(s).expect("Corrupted 'state' in 'sessions'"))
     }

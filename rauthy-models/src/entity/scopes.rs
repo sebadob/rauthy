@@ -1,4 +1,4 @@
-use crate::app_state::AppState;
+use crate::app_state::{AppState, DbTxn};
 use crate::entity::clients::Client;
 use crate::entity::user_attr::UserAttrConfigEntity;
 use crate::request::ScopeRequest;
@@ -295,7 +295,7 @@ impl Scope {
         id: &str,
         attr_include_access: Option<String>,
         attr_include_id: Option<String>,
-        txn: &mut sqlx::Transaction<'_, sqlx::Any>,
+        txn: &mut DbTxn<'_>,
     ) -> Result<(), ErrorResponse> {
         sqlx::query(
             "update scopes set attr_include_access = $1, attr_include_id = $2 where id = $3",

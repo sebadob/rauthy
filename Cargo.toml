@@ -7,7 +7,17 @@ members = [
     "rauthy-service",
 ]
 
+[workspace.package]
+version = "0.13.3"
+edition = "2021"
+authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
+license = "AGPLv3"
+
 [profile.release]
 codegen-units = 1
 lto = true
 panic = "abort"
+
+[workspace.dependencies]
+#sqlx = { version = "0.7", features = ["any", "macros", "migrate", "postgres", "runtime-tokio", "sqlite", "tls-rustls", "uuid"] }
+sqlx = { version = "0.7", features = ["macros", "migrate", "postgres", "runtime-tokio", "sqlite", "tls-rustls", "uuid"] }

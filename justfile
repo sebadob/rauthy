@@ -104,23 +104,6 @@ build: build-docs build-ui
     cp target/x86_64-unknown-linux-musl/release/rauthy out/
 
 
-# sets the version in all Cargo.toml's to the new version
-set-version new_version:
-    #!/usr/bin/env bash
-    set -euxo pipefail
-
-    TOMLS=(
-    "rauthy-common/Cargo.toml"
-    "rauthy-handlers/Cargo.toml"
-    "rauthy-main/Cargo.toml"
-    "rauthy-models/Cargo.toml"
-    "rauthy-service/Cargo.toml"
-    )
-    for toml in "${TOMLS[@]}"; do
-        sed -i 's/^version = .*/version = "{{new_version}}"/g' "$toml"
-    done
-
-
 # makes sure everything is fine
 is-clean: test build
     #!/usr/bin/env bash

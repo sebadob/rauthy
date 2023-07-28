@@ -1,4 +1,4 @@
-use crate::app_state::AppState;
+use crate::app_state::{AppState, DbTxn};
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
 use crate::request::{UserAttrConfigRequest, UserAttrValuesUpdateRequest};
@@ -377,7 +377,7 @@ impl UserAttrValueEntity {
     pub async fn delete_all_by_key(
         data: &web::Data<AppState>,
         key: &str,
-        txn: &mut sqlx::Transaction<'_, sqlx::Any>,
+        txn: &mut DbTxn<'_>,
     ) -> Result<(), ErrorResponse> {
         let cache_idxs = sqlx::query_as::<_, Self>("select * from user_attr_values where key = $1")
             .bind(key)

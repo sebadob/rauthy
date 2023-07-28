@@ -1,4 +1,4 @@
-use crate::app_state::AppState;
+use crate::app_state::{AppState, DbTxn};
 use crate::entity::users::User;
 use crate::request::{
     MfaPurpose, WebauthnAuthFinishRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
@@ -33,10 +33,7 @@ pub struct PasskeyEntity {
 
 /// CRUD
 impl PasskeyEntity {
-    pub async fn create(
-        pk: Passkey,
-        txn: &mut sqlx::Transaction<'_, sqlx::Any>,
-    ) -> Result<Self, ErrorResponse> {
+    pub async fn create(pk: Passkey, txn: &mut DbTxn<'_>) -> Result<Self, ErrorResponse> {
         // json, because bincode does not support deserialize from any, which would be the case here
         let passkey = serde_json::to_string(&pk).unwrap();
 
@@ -57,7 +54,7 @@ impl PasskeyEntity {
     pub async fn delete(
         &self,
         data: &web::Data<AppState>,
-        txn: Option<&mut sqlx::Transaction<'_, sqlx::Any>>,
+        txn: Option<&mut DbTxn<'_>>,
     ) -> Result<(), ErrorResponse> {
         PasskeyEntity::delete_by_id(data, &self.id, txn).await
     }
@@ -65,7 +62,7 @@ impl PasskeyEntity {
     pub async fn delete_by_id(
         data: &web::Data<AppState>,
         id: &str,
-        txn: Option<&mut sqlx::Transaction<'_, sqlx::Any>>,
+        txn: Option<&mut DbTxn<'_>>,
     ) -> Result<(), ErrorResponse> {
         let q = sqlx::query("delete from webauthn where id = $1").bind(id);
 

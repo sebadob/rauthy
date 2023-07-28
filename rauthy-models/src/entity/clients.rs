@@ -1,4 +1,4 @@
-use crate::app_state::AppState;
+use crate::app_state::{AppState, DbTxn};
 use crate::entity::jwk::JwkKeyPairType;
 use crate::entity::scopes::Scope;
 use crate::request::NewClientRequest;
@@ -304,7 +304,7 @@ impl Client {
     pub async fn save(
         &self,
         data: &web::Data<AppState>,
-        txn: Option<&mut sqlx::Transaction<'_, sqlx::Any>>,
+        txn: Option<&mut DbTxn<'_>>,
     ) -> Result<(), ErrorResponse> {
         let q = sqlx::query(
             r#"update clients set name = $1, enabled = $2, confidential = $3, secret = $4,

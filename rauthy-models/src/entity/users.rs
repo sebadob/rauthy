@@ -1,4 +1,4 @@
-use crate::app_state::{AppState, Argon2Params};
+use crate::app_state::{AppState, Argon2Params, DbTxn};
 use crate::email::send_pwd_reset;
 use crate::entity::groups::Group;
 use crate::entity::magic_links::MagicLinkPassword;
@@ -279,7 +279,7 @@ impl User {
         &self,
         data: &web::Data<AppState>,
         old_email: Option<String>,
-        txn: Option<&mut sqlx::Transaction<'_, sqlx::Any>>,
+        txn: Option<&mut DbTxn<'_>>,
     ) -> Result<(), ErrorResponse> {
         if old_email.is_some() {
             User::is_email_free(data, self.email.clone()).await?;

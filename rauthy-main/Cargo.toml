@@ -1,9 +1,16 @@
 [package]
 name = "rauthy"
-version = "0.13.3"
-edition = "2021"
-authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
-license = "AGPLv3"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[features]
+postgres = []
+sqlite = []
+
+[package.metadata.cargo-all-features]
+skip_feature_sets = [["postgres", "sqlite"]]
 
 [dependencies]
 actix-web = { version = "4", features = ["rustls"] }
@@ -29,7 +36,8 @@ serde_json = "1"
 # https://github.com/launchbadge/sqlx/issues/2592
 # However, since 0.7 it is not possible to insert custom connect options into an `Any` connection.
 # They are thinking about a solution and we can migrate as soon as this got fixed.
-sqlx = { version = "0.7", features = ["any", "macros", "migrate", "postgres", "runtime-tokio", "sqlite", "tls-rustls", "uuid"] }
+sqlx = { workspace = true }
+#sqlx = { version = "0.7", features = ["any", "macros", "migrate", "postgres", "runtime-tokio", "sqlite", "tls-rustls", "uuid"] }
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
 tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "tracing"] }

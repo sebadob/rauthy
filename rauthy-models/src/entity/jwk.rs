@@ -1,4 +1,4 @@
-use crate::app_state::AppState;
+use crate::app_state::{AppState, DbPool};
 use actix_web::web;
 use jwt_simple::algorithms;
 use rauthy_common::constants::{CACHE_NAME_12HR, IDX_JWKS, IDX_JWK_KID, IDX_JWK_LATEST};
@@ -8,6 +8,8 @@ use rauthy_common::utils::decrypt;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
 use sqlx::any::AnyRow;
+use sqlx::postgres::PgRow;
+use sqlx::sqlite::SqliteRow;
 use sqlx::{Error, FromRow, Row};
 use std::str::FromStr;
 
@@ -104,7 +106,7 @@ pub struct Jwk {
 
 /// CRUD
 impl Jwk {
-    pub async fn save(&self, db: &sqlx::AnyPool) -> Result<(), ErrorResponse> {
+    pub async fn save(&self, db: &DbPool) -> Result<(), ErrorResponse> {
         sqlx::query(
             r#"insert into jwks (kid, created_at, signature, enc_key_id, jwk)
             values ($1, $2, $3, $4, $5)"#,
@@ -406,13 +408,29 @@ pub enum JwkKeyPairType {
     EdDSA,
 }
 
-impl FromRow<'_, AnyRow> for JwkKeyPairType {
-    fn from_row(row: &'_ AnyRow) -> Result<Self, Error> {
+impl FromRow<'_, SqliteRow> for JwkKeyPairType {
+    fn from_row(row: &'_ SqliteRow) -> Result<Self, Error> {
         let sig = row.try_get("signature").unwrap();
         let slf = JwkKeyPairType::from_str(sig).expect("corrupted signature in database");
         Ok(slf)
     }
 }
+
+impl FromRow<'_, PgRow> for JwkKeyPairType {
+    fn from_row(row: &'_ PgRow) -> Result<Self, Error> {
+        let sig = row.try_get("signature").unwrap();
+        let slf = JwkKeyPairType::from_str(sig).expect("corrupted signature in database");
+        Ok(slf)
+    }
+}
+
+// impl FromRow<'_, AnyRow> for JwkKeyPairType {
+//     fn from_row(row: &'_ AnyRow) -> Result<Self, Error> {
+//         let sig = row.try_get("signature").unwrap();
+//         let slf = JwkKeyPairType::from_str(sig).expect("corrupted signature in database");
+//         Ok(slf)
+//     }
+// }
 
 impl JwkKeyPairType {
     pub fn as_str(&self) -> &str {

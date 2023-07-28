@@ -10,7 +10,8 @@ use rauthy_common::DbType;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use sqlx::any::{AnyConnectOptions, AnyPoolOptions};
-use sqlx::{query, ConnectOptions};
+use sqlx::pool::PoolOptions;
+use sqlx::{query, ConnectOptions, PgPool};
 use std::collections::HashMap;
 use std::env;
 use std::str::FromStr;
@@ -24,10 +25,20 @@ use utoipa::ToSchema;
 use webauthn_rs::prelude::Url;
 use webauthn_rs::Webauthn;
 
+#[cfg(feature = "postgres")]
+pub type DbPool = sqlx::PgPool;
+#[cfg(feature = "sqlite")]
+pub type DbPool = sqlx::SqlitePool;
+
+#[cfg(feature = "postgres")]
+pub type DbTxn<'a> = sqlx::Transaction<'a, sqlx::Postgres>;
+#[cfg(feature = "sqlite")]
+pub type DbTxn<'a> = sqlx::Transaction<'a, sqlx::Sqlite>;
+
 #[derive(Debug, Clone)]
 pub struct AppState {
-    // pub db: DbPool,
-    pub db: sqlx::AnyPool,
+    pub db: DbPool,
+    // pub db: sqlx::AnyPool,
     pub public_url: String,
     pub argon2_params: Argon2Params,
     pub enc_keys: HashMap<String, Vec<u8>>,
@@ -155,6 +166,9 @@ impl AppState {
             .rp_name(&rp_name);
         let webauthn = Arc::new(builder.build().expect("Invalid configuration"));
 
+        // #[cfg(feature = "postgres")]
+        // #[cfg(feature = "sqlite")]
+
         let db = Self::new_db_pool(
             &enc_key_active,
             enc_keys.get(&enc_key_active).unwrap(),
@@ -224,7 +238,7 @@ impl AppState {
         enc_key: &[u8],
         argon2_params: &Params,
         issuer: &str,
-    ) -> anyhow::Result<sqlx::AnyPool> {
+    ) -> anyhow::Result<DbPool> {
         let db_max_conn = env::var("DATABASE_MAX_CONN")
             .unwrap_or_else(|_| String::from("5"))
             .parse::<u32>()
@@ -232,30 +246,56 @@ impl AppState {
 
         sqlx::any::install_default_drivers();
 
-        let pool = match *DB_TYPE {
-            DbType::Sqlite => {
-                let pool = Self::connect_sqlite(&DATABASE_URL, db_max_conn, false).await?;
-                if DATABASE_URL.ends_with(":memory:") {
-                    info!("Using in-memory SQLite");
-                } else {
-                    info!("Using on-disk SQLite");
-                }
+        #[cfg(feature = "postgres")]
+        let pool = {
+            let pool = Self::connect_postgres(&DATABASE_URL, db_max_conn).await?;
+            info!("Using Postgres");
 
-                debug!("Migrating data from ../migrations/sqlite");
-                sqlx::migrate!("../migrations/sqlite").run(&pool).await?;
+            debug!("Migrating data from ../migrations/postgres");
+            sqlx::migrate!("../migrations/postgres").run(&pool).await?;
 
-                pool
-            }
-            DbType::Postgres => {
-                let pool = Self::connect_postgres(&DATABASE_URL, db_max_conn).await?;
-                info!("Using Postgres");
-
-                debug!("Migrating data from ../migrations/postgres");
-                sqlx::migrate!("../migrations/postgres").run(&pool).await?;
-
-                pool
-            }
+            pool
         };
+
+        #[cfg(feature = "sqlite")]
+        let pool = {
+            let pool = Self::connect_sqlite(&DATABASE_URL, db_max_conn, false).await?;
+            if DATABASE_URL.ends_with(":memory:") {
+                info!("Using in-memory SQLite");
+            } else {
+                info!("Using on-disk SQLite");
+            }
+
+            debug!("Migrating data from ../migrations/sqlite");
+            sqlx::migrate!("../migrations/sqlite").run(&pool).await?;
+
+            pool
+        };
+
+        // let pool = match *DB_TYPE {
+        //     DbType::Sqlite => {
+        //         let pool = Self::connect_sqlite(&DATABASE_URL, db_max_conn, false).await?;
+        //         if DATABASE_URL.ends_with(":memory:") {
+        //             info!("Using in-memory SQLite");
+        //         } else {
+        //             info!("Using on-disk SQLite");
+        //         }
+        //
+        //         debug!("Migrating data from ../migrations/sqlite");
+        //         sqlx::migrate!("../migrations/sqlite").run(&pool).await?;
+        //
+        //         pool
+        //     }
+        //     DbType::Postgres => {
+        //         let pool = Self::connect_postgres(&DATABASE_URL, db_max_conn).await?;
+        //         info!("Using Postgres");
+        //
+        //         debug!("Migrating data from ../migrations/postgres");
+        //         sqlx::migrate!("../migrations/postgres").run(&pool).await?;
+        //
+        //         pool
+        //     }
+        // };
 
         if !*DEV_MODE {
             migrate_init_prod(
@@ -280,15 +320,15 @@ After the migration has been done, you remove the 'MIGRATE_DB_FROM' and can acti
 again"#
                 );
             } else {
-                let pool_from = if from.starts_with("sqlite:") {
-                    Self::connect_sqlite(&from, 1, true).await?
-                } else if from.starts_with("postgresql://") {
-                    Self::connect_postgres(&from, 1).await?
-                } else {
-                    panic!(
-                        "You provided an unknown database type, please check the MIGRATE_DB_FROM"
-                    );
-                };
+                // let pool_from = if from.starts_with("sqlite:") {
+                //     Self::connect_postgres(&from, 1).await?
+                // } else if from.starts_with("postgresql://") {
+                //     Self::connect_sqlite(&from, 1, true).await?
+                // } else {
+                //     panic!(
+                //         "You provided an unknown database type, please check the MIGRATE_DB_FROM"
+                //     );
+                // };
 
                 warn!(
                     r#"
@@ -304,9 +344,25 @@ again"#
 
                 sleep(Duration::from_secs(10)).await;
 
-                if let Err(err) = db_migrate::migrate(&pool_from, &pool).await {
-                    error!("Error during db migration: {:?}", err);
-                }
+                if from.starts_with("sqlite:") {
+                    let pool_from = Self::connect_sqlite(&from, 1, true).await?;
+                    if let Err(err) = db_migrate::migrate_from_sqlite(pool_from, &pool).await {
+                        error!("Error during db migration: {:?}", err);
+                    }
+                } else if from.starts_with("postgresql://") {
+                    let pool_from = Self::connect_postgres(&from, 1).await?;
+                    if let Err(err) = db_migrate::migrate_from_postgres(pool_from, &pool).await {
+                        error!("Error during db migration: {:?}", err);
+                    }
+                } else {
+                    panic!(
+                        "You provided an unknown database type, please check the MIGRATE_DB_FROM"
+                    );
+                };
+
+                // if let Err(err) = db_migrate::migrate(&pool_from, &pool).await {
+                //     error!("Error during db migration: {:?}", err);
+                // }
             }
         } else if *DEV_MODE {
             migrate_dev_data(&pool).await.expect("Migrating DEV DATA");
@@ -323,7 +379,7 @@ again"#
         addr: &str,
         max_conn: u32,
         migration_only: bool,
-    ) -> anyhow::Result<sqlx::AnyPool> {
+    ) -> anyhow::Result<sqlx::SqlitePool> {
         // HA_MODE must not be enabled while using SQLite
         if !migration_only && is_ha_mode() {
             let msg = "HA_MODE must not be enabled while using SQLite";
@@ -331,13 +387,21 @@ again"#
             panic!("{msg}");
         }
 
-        // let opts = SqliteConnectOptions::from_str(addr)?
-        //     .create_if_missing(true)
-        //     .busy_timeout(Duration::from_millis(100))
-        //     .foreign_keys(true)
-        //     .auto_vacuum(SqliteAutoVacuum::Incremental)
-        //     .synchronous(SqliteSynchronous::Normal)
-        //     .journal_mode(SqliteJournalMode::Wal);
+        let opts = sqlx::sqlite::SqliteConnectOptions::from_str(addr)?
+            .create_if_missing(true)
+            .busy_timeout(Duration::from_millis(100))
+            .foreign_keys(true)
+            .auto_vacuum(sqlx::sqlite::SqliteAutoVacuum::Incremental)
+            .synchronous(sqlx::sqlite::SqliteSynchronous::Normal)
+            .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal);
+
+        let pool = PoolOptions::new()
+            .min_connections(2)
+            .max_connections(max_conn)
+            .acquire_timeout(Duration::from_secs(10))
+            .connect_with(opts)
+            .await
+            .context("failed to connect to sqlite")?;
 
         // PRAGMA busy_timeout = 100;
         // PRAGMA foreign_keys = true;
@@ -347,57 +411,57 @@ again"#
 
         // let url = format!("{}", addr);
 
-        let opts = AnyConnectOptions::from_str(addr)?
-            .log_slow_statements(LevelFilter::Debug, Duration::from_secs(3));
-
-        let pool = match AnyPoolOptions::new()
-            .min_connections(1)
-            .max_connections(max_conn)
-            .acquire_timeout(Duration::from_secs(10))
-            .connect_with(opts.clone())
-            .await
-        {
-            Ok(pool) => pool,
-            Err(err) => {
-                debug!("Database connection error - SQLite race condition: {}", err);
-
-                // we sometimes get a race condition here with sqlite, when it is opened / created
-                // with all the additional options from above -> TODO investigate + possibly open issue about it
-                tokio::time::sleep(Duration::from_millis(100)).await;
-
-                // try again
-                AnyPoolOptions::new()
-                    .min_connections(1)
-                    .max_connections(max_conn)
-                    .acquire_timeout(Duration::from_secs(10))
-                    .connect_with(opts)
-                    .await?
-            }
-        };
-
-        // set connection options
-        query(
-            r#"
-        PRAGMA busy_timeout = 100;
-        PRAGMA foreign_keys = true;
-        PRAGMA auto_vacuum = 2;
-        PRAGMA synchronous = 1;
-        PRAGMA journal_mode = WAL;
-        "#,
-        )
-        .execute(&pool)
-        .await?;
+        // let opts = AnyConnectOptions::from_str(addr)?
+        //     .log_slow_statements(LevelFilter::Debug, Duration::from_secs(3));
+        //
+        // let pool = match AnyPoolOptions::new()
+        //     .min_connections(1)
+        //     .max_connections(max_conn)
+        //     .acquire_timeout(Duration::from_secs(10))
+        //     .connect_with(opts.clone())
+        //     .await
+        // {
+        //     Ok(pool) => pool,
+        //     Err(err) => {
+        //         debug!("Database connection error - SQLite race condition: {}", err);
+        //
+        //         // we sometimes get a race condition here with sqlite, when it is opened / created
+        //         // with all the additional options from above -> TODO investigate + possibly open issue about it
+        //         tokio::time::sleep(Duration::from_millis(100)).await;
+        //
+        //         // try again
+        //         AnyPoolOptions::new()
+        //             .min_connections(1)
+        //             .max_connections(max_conn)
+        //             .acquire_timeout(Duration::from_secs(10))
+        //             .connect_with(opts)
+        //             .await?
+        //     }
+        // };
+        //
+        // // set connection options
+        // query(
+        //     r#"
+        // PRAGMA busy_timeout = 100;
+        // PRAGMA foreign_keys = true;
+        // PRAGMA auto_vacuum = 2;
+        // PRAGMA synchronous = 1;
+        // PRAGMA journal_mode = WAL;
+        // "#,
+        // )
+        // .execute(&pool)
+        // .await?;
 
         info!("Database Connection Pool created successfully");
 
         Ok(pool)
     }
 
-    pub async fn connect_postgres(addr: &str, max_conn: u32) -> anyhow::Result<sqlx::AnyPool> {
-        // let opts = PgConnectOptions::from_str(addr)?;
-        let opts = AnyConnectOptions::from_str(addr)?
+    pub async fn connect_postgres(addr: &str, max_conn: u32) -> anyhow::Result<sqlx::PgPool> {
+        let opts = sqlx::postgres::PgConnectOptions::from_str(addr)?
+            // let opts = AnyConnectOptions::from_str(addr)?
             .log_slow_statements(LevelFilter::Debug, Duration::from_secs(3));
-        let pool = AnyPoolOptions::new()
+        let pool = PoolOptions::new()
             .min_connections(2)
             .max_connections(max_conn)
             .acquire_timeout(Duration::from_secs(10))
