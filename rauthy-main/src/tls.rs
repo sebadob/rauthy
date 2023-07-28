@@ -4,7 +4,7 @@ use std::{env, iter};
 use tokio::fs;
 use tracing::error;
 
-/// Loads TLS key and cert file from disk and returns a `rustls::ServerConfig`
+// Loads TLS key and cert file from disk and returns a `rustls::ServerConfig`
 pub async fn load_tls() -> rustls::ServerConfig {
     let path_key = env::var("TLS_KEY").unwrap_or_else(|_| "tls/tls.key".to_string());
     let path_cert = env::var("TLS_CERT").unwrap_or_else(|_| "tls/tls.crt".to_string());

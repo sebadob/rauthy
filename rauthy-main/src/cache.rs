@@ -3,7 +3,7 @@
 // use tokio::sync::mpsc;
 // use tokio::sync::oneshot;
 //
-// /// The struct which is sent over the channel to the cache thread when data is requested.
+// // The struct which is sent over the channel to the cache thread when data is requested.
 // pub struct CacheReq<T> {
 //     // TODO can this be optimized and borrowed?
 //     pub entry: String,
@@ -18,7 +18,7 @@
 //     Del,
 // }
 //
-// /// GET a value out of the cache
+// // GET a value out of the cache
 // pub async fn cache_get_local<T>(entry: &str, tx: &mpsc::Sender<CacheReq<T>>) -> Option<T>
 // where
 //     T: Clone,
@@ -44,7 +44,7 @@
 //     res.unwrap()
 // }
 //
-// /// PUT a value into the cache
+// // PUT a value into the cache
 // pub async fn cache_put_local<T>(entry: &str, value: &T, tx: &mpsc::Sender<CacheReq<T>>)
 // where
 //     T: Clone,
@@ -61,7 +61,7 @@
 //     }
 // }
 //
-// /// DELETE a value from the cache
+// // DELETE a value from the cache
 // pub async fn cache_del_local<T>(entry: &str, tx: &mpsc::Sender<CacheReq<T>>)
 // where
 //     T: Clone,

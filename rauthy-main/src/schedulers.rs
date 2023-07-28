@@ -35,7 +35,7 @@ pub async fn scheduler_main(data: web::Data<AppState>) {
 }
 
 // TODO -> adapt to RDBMS
-/// Creates a backup of the data store
+// Creates a backup of the data store
 pub async fn db_backup(db: DbPool) {
     if *DB_TYPE == DbType::Postgres {
         debug!("Using Postgres as the main database - automatic backups disabled");
@@ -68,8 +68,8 @@ pub async fn db_backup(db: DbPool) {
     }
 }
 
-// /// Cleans up old / expired / already used Authorization Codes
-// /// Cleanup inside the cache is done automatically with a max entry lifetime of 300 seconds
+// // Cleans up old / expired / already used Authorization Codes
+// // Cleanup inside the cache is done automatically with a max entry lifetime of 300 seconds
 // pub async fn auth_codes_cleanup(data: web::Data<AppState>) {
 //     let mut interval = time::interval(Duration::from_secs(60 * 17));
 //
@@ -95,9 +95,9 @@ pub async fn db_backup(db: DbPool) {
 //     }
 // }
 
-/// Cleans up old / expired magic links and deletes users, that have never used their
-/// 'set first ever password' magic link to keep the database clean in case of an open user registration.
-/// Runs every 6 hours.
+// Cleans up old / expired magic links and deletes users, that have never used their
+// 'set first ever password' magic link to keep the database clean in case of an open user registration.
+// Runs every 6 hours.
 pub async fn magic_link_cleanup(db: DbPool) {
     let mut interval = time::interval(Duration::from_secs(3600 * 6));
 
@@ -148,9 +148,9 @@ pub async fn magic_link_cleanup(db: DbPool) {
     }
 }
 
-/// Checks soon expiring passwords and notifies the user accordingly.
-/// Runs once every night at 04:30.
-/// TODO modify somehow to prevent multiple E-Mails in a HA deployment
+// Checks soon expiring passwords and notifies the user accordingly.
+// Runs once every night at 04:30.
+// TODO modify somehow to prevent multiple E-Mails in a HA deployment
 pub async fn password_expiry_checker(data: web::Data<AppState>) {
     // sec min hour day_of_month month day_of_week year
     let schedule = cron::Schedule::from_str("0 30 4 * * * *").unwrap();
@@ -190,7 +190,7 @@ pub async fn password_expiry_checker(data: web::Data<AppState>) {
     }
 }
 
-/// Cleans up old / expired / already used Refresh Tokens
+// Cleans up old / expired / already used Refresh Tokens
 pub async fn refresh_tokens_cleanup(db: DbPool) {
     let mut interval = time::interval(Duration::from_secs(3600 * 3));
 
@@ -212,7 +212,7 @@ pub async fn refresh_tokens_cleanup(db: DbPool) {
     }
 }
 
-/// Cleans up old / expired Sessions
+// Cleans up old / expired Sessions
 pub async fn sessions_cleanup(db: DbPool) {
     let mut interval = time::interval(Duration::from_secs(3595 * 2));
 
@@ -237,7 +237,7 @@ pub async fn sessions_cleanup(db: DbPool) {
     }
 }
 
-/// Cleans up old / expired JWKSs
+// Cleans up old / expired JWKSs
 pub async fn jwks_cleanup(data: web::Data<AppState>) {
     let mut interval = time::interval(Duration::from_secs(3600 * 24));
 
@@ -309,7 +309,7 @@ pub async fn jwks_cleanup(data: web::Data<AppState>) {
     }
 }
 
-/// sleeps until the next scheduled event
+// sleeps until the next scheduled event
 async fn sleep_schedule_next(schedule: &cron::Schedule) {
     // this 10 sec sleep is done to prevent an overlap with the calculation in some cases
     time::sleep(Duration::from_secs(10)).await;

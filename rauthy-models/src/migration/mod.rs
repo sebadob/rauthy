@@ -114,7 +114,7 @@ pub async fn backup_db(db: &DbPool) -> Result<(), ErrorResponse> {
     Ok(())
 }
 
-/// Important: This must be executed BEFORE the rauthy store has been opened in `main`
+// Important: This must be executed BEFORE the rauthy store has been opened in `main`
 pub async fn restore_local_backup() -> Result<(), ErrorResponse> {
     error!("Backup restores are not yet adopted for the new database drivers - exiting");
 

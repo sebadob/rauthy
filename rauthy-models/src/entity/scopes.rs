@@ -1,31 +1,34 @@
+use std::collections::HashSet;
+
+use actix_web::web;
+use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
+use tracing::debug;
+use utoipa::ToSchema;
+
+use rauthy_common::constants::{CACHE_NAME_12HR, IDX_CLIENTS, IDX_SCOPES};
+use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::new_store_id;
+
 use crate::app_state::{AppState, DbTxn};
 use crate::entity::clients::Client;
 use crate::entity::user_attr::UserAttrConfigEntity;
 use crate::request::ScopeRequest;
-use actix_web::web;
-use rauthy_common::constants::{CACHE_NAME_12HR, IDX_CLIENTS, IDX_SCOPES};
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::new_store_id;
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
-use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
-use std::collections::HashSet;
-use tracing::debug;
-use utoipa::ToSchema;
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema)]
 pub struct Scope {
     pub id: String,
     pub name: String,
-    /// Custom user attributes as CSV to include in the access token
+    // Custom user attributes as CSV to include in the access token
     pub attr_include_access: Option<String>,
-    /// Custom user attributes as CSV to include in the id token
+    // Custom user attributes as CSV to include in the id token
     pub attr_include_id: Option<String>,
 }
 
-/// CRUD
+// CRUD
 impl Scope {
-    /// Inserts a new scope into the database
+    // Inserts a new scope into the database
     pub async fn create(
         data: &web::Data<AppState>,
         scope_req: ScopeRequest,
@@ -61,12 +64,12 @@ impl Scope {
             attr_include_access,
             attr_include_id,
         };
-        sqlx::query("insert into scopes (id, name, attr_include_access, attr_include_id) values ($1, $2, $3, $4)")
-            .bind(&new_scope.id)
-            .bind(&new_scope.name)
-            .bind(&new_scope.attr_include_access)
-            .bind(&new_scope.attr_include_id)
-            .execute(&data.db)
+        sqlx::query!("insert into scopes (id, name, attr_include_access, attr_include_id) values ($1, $2, $3, $4)",
+            new_scope.id,
+            new_scope.name,
+            new_scope.attr_include_access,
+            new_scope.attr_include_id,
+            ).execute(&data.db)
             .await?;
 
         scopes.push(new_scope.clone());
@@ -82,7 +85,7 @@ impl Scope {
         Ok(new_scope)
     }
 
-    /// Deletes a scope
+    // Deletes a scope
     pub async fn delete(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
         let scope = Scope::find(data, id).await?;
         if scope.name == "openid" {
@@ -121,8 +124,7 @@ impl Scope {
             client.save(data, Some(&mut txn)).await?;
         }
 
-        sqlx::query("delete from scopes where id = $1")
-            .bind(id)
+        sqlx::query!("delete from scopes where id = $1", id)
             .execute(&mut *txn)
             .await?;
 
@@ -145,16 +147,15 @@ impl Scope {
         Ok(())
     }
 
-    /// Returns a single scope by id
+    // Returns a single scope by id
     pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
-        let res = sqlx::query_as::<_, Self>("select * from scopes where id = $1")
-            .bind(id)
+        let res = sqlx::query_as!(Self, "select * from scopes where id = $1", id)
             .fetch_one(&data.db)
             .await?;
         Ok(res)
     }
 
-    /// Returns all existing scopes
+    // Returns all existing scopes
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
         let scopes = cache_get!(
             Vec<Scope>,
@@ -168,7 +169,7 @@ impl Scope {
             return Ok(scopes.unwrap());
         }
 
-        let res = sqlx::query_as::<_, Self>("select * from scopes")
+        let res = sqlx::query_as!(Self, "select * from scopes")
             .fetch_all(&data.db)
             .await?;
 
@@ -183,7 +184,7 @@ impl Scope {
         Ok(res)
     }
 
-    /// Updates a scope
+    // Updates a scope
     pub async fn update(
         data: &web::Data<AppState>,
         id: &str,
@@ -256,11 +257,13 @@ impl Scope {
             attr_include_id,
         };
 
-        sqlx::query("update scopes set name = $1, attr_include_access = $2, attr_include_id = $3 where id = $4")
-            .bind(&new_scope.name)
-            .bind(&new_scope.attr_include_access)
-            .bind(&new_scope.attr_include_id)
-            .bind(&new_scope.id)
+        sqlx::query!(
+            "update scopes set name = $1, attr_include_access = $2, attr_include_id = $3 where id = $4",
+            new_scope.name,
+            new_scope.attr_include_access,
+            new_scope.attr_include_id,
+            new_scope.id,
+        )
             .execute(&mut *txn)
             .await?;
 
@@ -289,7 +292,7 @@ impl Scope {
         Ok(new_scope)
     }
 
-    /// Updates a scope
+    // Updates a scope
     pub async fn update_mapping_only(
         data: &web::Data<AppState>,
         id: &str,
@@ -297,12 +300,12 @@ impl Scope {
         attr_include_id: Option<String>,
         txn: &mut DbTxn<'_>,
     ) -> Result<(), ErrorResponse> {
-        sqlx::query(
+        sqlx::query!(
             "update scopes set attr_include_access = $1, attr_include_id = $2 where id = $3",
+            attr_include_access,
+            attr_include_id,
+            id,
         )
-        .bind(&attr_include_access)
-        .bind(&attr_include_id)
-        .bind(id)
         .execute(&mut **txn)
         .await?;
 
@@ -347,8 +350,8 @@ impl Scope {
         Some(res)
     }
 
-    /// Accepts a string of scopes seperated by \s and returns a `Vec<&str>` containing all
-    /// non-custom scopes.
+    // Accepts a string of scopes seperated by \s and returns a `Vec<&str>` containing all
+    // non-custom scopes.
     /// Note: `groups` is not a default scope, but it will be handled like one for performance
     /// and efficiency reasons.
     pub fn extract_custom(scopes: &str) -> HashSet<&str> {
@@ -371,9 +374,10 @@ impl Scope {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use pretty_assertions::assert_eq;
     use serde_json::Value;
-    use std::collections::HashMap;
 
     #[tokio::test]
     async fn test_generic_json() {

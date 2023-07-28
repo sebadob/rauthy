@@ -21,10 +21,10 @@ pub struct PasswordHashTimes {
 }
 
 impl PasswordHashTimes {
-    /// Computes the best settings for the argon2id hash algorithm depending on the given options.
-    /// If only `target_time` is given, it will use default values for `m_cost` and `p_cost`.
-    ///
-    /// `target_time`: The time in ms it should take approximately to compute an argon2id hash
+    // Computes the best settings for the argon2id hash algorithm depending on the given options.
+    // If only `target_time` is given, it will use default values for `m_cost` and `p_cost`.
+    //
+    // `target_time`: The time in ms it should take approximately to compute an argon2id hash
     pub async fn compute(req_data: PasswordHashTimesRequest) -> Result<Self, ErrorResponse> {
         let target = req_data.target_time;
         let m_cost = req_data.m_cost.unwrap_or(ARGON2ID_M_COST_MIN);
@@ -75,7 +75,7 @@ impl PasswordHashTimes {
         Ok(Self { results })
     }
 
-    /// Generates a new Argon2id hash from the given cleartext password and returns the hash.
+    // Generates a new Argon2id hash from the given cleartext password and returns the hash.
     pub async fn new_password_hash(
         plain: &str,
         params: &argon2::Params,
@@ -119,7 +119,7 @@ pub struct PasswordPolicy {
     pub not_recently_used: Option<i32>,
 }
 
-/// CRUD
+// CRUD
 impl PasswordPolicy {
     pub async fn find(data: &web::Data<AppState>) -> Result<Self, ErrorResponse> {
         let policy = cache_get!(
@@ -155,10 +155,12 @@ impl PasswordPolicy {
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         let slf = bincode::serialize(&self).unwrap();
 
-        sqlx::query("update config set data = $1 where id = 'password_policy'")
-            .bind(slf)
-            .execute(&data.db)
-            .await?;
+        sqlx::query!(
+            "update config set data = $1 where id = 'password_policy'",
+            slf
+        )
+        .execute(&data.db)
+        .await?;
 
         cache_insert(
             CACHE_NAME_12HR.to_string(),
@@ -199,29 +201,36 @@ impl RecentPasswordsEntity {
         user_id: &str,
         passwords: &String,
     ) -> Result<(), ErrorResponse> {
-        sqlx::query("insert into recent_passwords (user_id, passwords) values ($1, $2)")
-            .bind(user_id)
-            .bind(passwords)
-            .execute(&data.db)
-            .await?;
+        sqlx::query!(
+            "insert into recent_passwords (user_id, passwords) values ($1, $2)",
+            user_id,
+            passwords,
+        )
+        .execute(&data.db)
+        .await?;
 
         Ok(())
     }
 
     pub async fn find(data: &web::Data<AppState>, user_id: &str) -> Result<Self, ErrorResponse> {
-        let res = sqlx::query_as::<_, Self>("select * from recent_passwords where user_id = $1")
-            .bind(user_id)
-            .fetch_one(&data.db)
-            .await?;
+        let res = sqlx::query_as!(
+            Self,
+            "select * from recent_passwords where user_id = $1",
+            user_id,
+        )
+        .fetch_one(&data.db)
+        .await?;
         Ok(res)
     }
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        sqlx::query("update recent_passwords set passwords = $1 where user_id = $2")
-            .bind(&self.passwords)
-            .bind(&self.user_id)
-            .execute(&data.db)
-            .await?;
+        sqlx::query!(
+            "update recent_passwords set passwords = $1 where user_id = $2",
+            self.passwords,
+            self.user_id,
+        )
+        .execute(&data.db)
+        .await?;
         Ok(())
     }
 }

@@ -1,6 +1,6 @@
 use std::env;
 
-/// Sets up the logging / tracing depending on the env var `LOG_LEVEL`
+// Sets up the logging / tracing depending on the env var `LOG_LEVEL`
 pub fn setup_logging() -> tracing::Level {
     use tracing::Level;
 

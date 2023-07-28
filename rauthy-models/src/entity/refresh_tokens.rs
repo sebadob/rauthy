@@ -1,8 +1,6 @@
 use crate::app_state::AppState;
 use actix_web::web;
-use rauthy_common::constants::DB_TYPE;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::DbType;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use time::OffsetDateTime;
@@ -18,7 +16,7 @@ pub struct RefreshToken {
     pub is_mfa: bool,
 }
 
-/// CRUD
+// CRUD
 impl RefreshToken {
     pub async fn create(
         data: &web::Data<AppState>,
@@ -43,15 +41,14 @@ impl RefreshToken {
     }
 
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        sqlx::query("delete from refresh_tokens where id = $1")
-            .bind(&self.id)
+        sqlx::query!("delete from refresh_tokens where id = $1", self.id)
             .execute(&data.db)
             .await?;
         Ok(())
     }
 
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        let res = sqlx::query_as::<_, Self>("select * from refresh_tokens")
+        let res = sqlx::query_as!(Self, "select * from refresh_tokens")
             .fetch_all(&data.db)
             .await?;
         Ok(res)
@@ -91,8 +88,7 @@ impl RefreshToken {
     }
 
     pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
-        match sqlx::query_as::<_, Self>("select * from refresh_tokens where id = $1")
-            .bind(id)
+        match sqlx::query_as!(Self, "select * from refresh_tokens where id = $1", id)
             .fetch_one(&data.db)
             .await
         {
@@ -105,25 +101,31 @@ impl RefreshToken {
     }
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        match *DB_TYPE {
-            DbType::Sqlite => sqlx::query(
-                r#"insert or replace into refresh_tokens (id, user_id, nbf, exp, scope, is_mfa)
+        #[cfg(feature = "sqlite")]
+        let q = sqlx::query!(
+            r#"insert or replace into refresh_tokens (id, user_id, nbf, exp, scope, is_mfa)
                 values ($1, $2, $3, $4, $5, $6)"#,
-            ),
-            DbType::Postgres => sqlx::query(
-                r#"insert into refresh_tokens (id, user_id, nbf, exp, scope)
-                values ($1, $2, $3, $4, $5)
+            self.id,
+            self.user_id,
+            self.nbf,
+            self.exp,
+            self.scope,
+            self.is_mfa,
+        );
+        #[cfg(feature = "postgres")]
+        let q = sqlx::query!(
+            r#"insert into refresh_tokens (id, user_id, nbf, exp, scope, is_mfa)
+                values ($1, $2, $3, $4, $5, $6)
                 on conflict(id) do update set user_id = $2, nbf = $3, exp = $4, scope = $5"#,
-            ),
-        }
-        .bind(&self.id)
-        .bind(&self.user_id)
-        .bind(self.nbf)
-        .bind(self.exp)
-        .bind(&self.scope)
-        .bind(self.is_mfa)
-        .execute(&data.db)
-        .await?;
+            self.id,
+            self.user_id,
+            self.nbf,
+            self.exp,
+            self.scope,
+            self.is_mfa,
+        );
+
+        q.execute(&data.db).await?;
 
         Ok(())
     }
@@ -134,8 +136,7 @@ impl RefreshToken {
         data: &web::Data<AppState>,
         id: &str,
     ) -> Result<(), ErrorResponse> {
-        sqlx::query("delete from refresh_tokens where user_id = $1")
-            .bind(id)
+        sqlx::query!("delete from refresh_tokens where user_id = $1", id)
             .execute(&data.db)
             .await?;
 

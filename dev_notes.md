@@ -60,3 +60,6 @@ since postgres has pg_backrest and a lot of well established tooling anyway
 - NATS events stream or maybe internal one?
 - store MFA App secrets encrypted?
 - PoW verification can potentially be performance optimized with 1 less allocation per iteration
+
+#[cfg(feature = "postgres")]
+#[cfg(feature = "sqlite")]

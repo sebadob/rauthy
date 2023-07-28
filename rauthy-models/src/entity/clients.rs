@@ -8,13 +8,10 @@ use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest};
 use futures_util::StreamExt;
-use rauthy_common::constants::{
-    CACHE_NAME_12HR, DB_TYPE, IDX_CLIENTS, IDX_CLIENT_LOGO, PROXY_MODE,
-};
+use rauthy_common::constants::{CACHE_NAME_12HR, IDX_CLIENTS, IDX_CLIENT_LOGO, PROXY_MODE};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{cache_entry_client, get_client_ip, get_rand};
 use rauthy_common::utils::{decrypt, encrypt};
-use rauthy_common::DbType;
 use redhac::{
     cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, cache_put, cache_remove,
     AckLevel,
@@ -43,17 +40,17 @@ pub struct Client {
     pub name: Option<String>,
     pub enabled: bool,
     pub confidential: bool,
-    /// The client secrets is saved as encrypted bytes and can only be decrypted inside this
-    /// application itself with the `ENC_KEYS` and `ENC_KEY_ACTIVE` environment variables.
+    // The client secrets is saved as encrypted bytes and can only be decrypted inside this
+    // application itself with the `ENC_KEYS` and `ENC_KEY_ACTIVE` environment variables.
     pub secret: Option<Vec<u8>>,
     pub secret_kid: Option<String>,
     pub redirect_uris: String,                     // TODO migrate to vec
     pub post_logout_redirect_uris: Option<String>, // TODO migrate to vec
     pub allowed_origins: Option<String>,           // TODO migrate to vec
     pub flows_enabled: String,                     // TODO migrate to vec
-    /// Currently supported Algorithms: RS 256, 384, 512 and ES 256, 384, 512
+    // Currently supported Algorithms: RS 256, 384, 512 and ES 256, 384, 512
     pub access_token_alg: String,
-    /// Currently supported Algorithms: RS 256, 384, 512 and ES 256, 384, 512
+    // Currently supported Algorithms: RS 256, 384, 512 and ES 256, 384, 512
     pub id_token_alg: String,
     pub refresh_token: bool,
     pub auth_code_lifetime: i32,
@@ -63,7 +60,7 @@ pub struct Client {
     pub challenge: Option<String>, // TODO migrate to vec
 }
 
-/// CRUD
+// CRUD
 impl Client {
     pub fn get_cache_entry(id: &str) -> String {
         format!("client_{}", id)
@@ -79,30 +76,31 @@ impl Client {
         }
         let client = Client::from(client_req);
 
-        let rows =  sqlx::query(
+        let rows =  sqlx::query!(
             r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
             redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg,
             id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
             challenge)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#)
-            .bind(&client.id)
-            .bind(&client.name)
-            .bind(client.enabled)
-            .bind(client.confidential)
-            .bind(&client.secret)
-            .bind(&client.secret_kid)
-            .bind(&client.redirect_uris)
-            .bind(&client.post_logout_redirect_uris)
-            .bind(&client.allowed_origins)
-            .bind(&client.flows_enabled)
-            .bind(&client.access_token_alg)
-            .bind(&client.id_token_alg)
-            .bind(client.refresh_token)
-            .bind(client.auth_code_lifetime)
-            .bind(client.access_token_lifetime)
-            .bind(&client.scopes)
-            .bind(&client.default_scopes)
-            .bind(&client.challenge)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#,
+            client.id,
+            client.name,
+            client.enabled,
+            client.confidential,
+            client.secret,
+            client.secret_kid,
+            client.redirect_uris,
+            client.post_logout_redirect_uris,
+            client.allowed_origins,
+            client.flows_enabled,
+            client.access_token_alg,
+            client.id_token_alg,
+            client.refresh_token,
+            client.auth_code_lifetime,
+            client.access_token_lifetime,
+            client.scopes,
+            client.default_scopes,
+            client.challenge,
+        )
             .execute(&data.db)
             .await?
             .rows_affected();
@@ -125,10 +123,9 @@ impl Client {
         Ok(client)
     }
 
-    /// Deletes a client
+    // Deletes a client
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        sqlx::query("delete from clients where id = $1")
-            .bind(&self.id)
+        sqlx::query!("delete from clients where id = $1", self.id,)
             .execute(&data.db)
             .await?;
 
@@ -157,7 +154,7 @@ impl Client {
         Ok(())
     }
 
-    /// Returns a client by id without its secret.
+    // Returns a client by id without its secret.
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
         let client = cache_get!(
             Client,
@@ -188,7 +185,7 @@ impl Client {
         Ok(client)
     }
 
-    /// Returns all existing clients with the secrets.
+    // Returns all existing clients with the secrets.
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
         let clients = cache_get!(
             Vec<Client>,
@@ -258,19 +255,21 @@ impl Client {
         id: &str,
         logo: String,
     ) -> Result<(), ErrorResponse> {
-        match *DB_TYPE {
-            DbType::Sqlite => {
-                sqlx::query("insert or replace into logos (client_id, data) values ($1, $2)")
-            }
-            DbType::Postgres => sqlx::query(
-                r#"insert into logos (client_id, data) values ($1, $2)
+        #[cfg(feature = "sqlite")]
+        let q = sqlx::query!(
+            "insert or replace into logos (client_id, data) values ($1, $2)",
+            id,
+            logo
+        );
+        #[cfg(feature = "postgres")]
+        let q = sqlx::query!(
+            r#"insert into logos (client_id, data) values ($1, $2)
                 on conflict(client_id) do update set data = $2"#,
-            ),
-        }
-        .bind(id)
-        .bind(&logo)
-        .execute(&data.db)
-        .await?;
+            id,
+            logo
+        );
+
+        q.execute(&data.db).await?;
 
         let idx = format!("{}{}", IDX_CLIENT_LOGO, id);
         cache_put(
@@ -293,8 +292,7 @@ impl Client {
         )
         .await?;
 
-        sqlx::query("delete from logos where client_id = $1")
-            .bind(id)
+        sqlx::query!("delete from logos where client_id = $1", id)
             .execute(&data.db)
             .await?;
 
@@ -306,30 +304,31 @@ impl Client {
         data: &web::Data<AppState>,
         txn: Option<&mut DbTxn<'_>>,
     ) -> Result<(), ErrorResponse> {
-        let q = sqlx::query(
+        let q = sqlx::query!(
             r#"update clients set name = $1, enabled = $2, confidential = $3, secret = $4,
             secret_kid = $5, redirect_uris = $6, post_logout_redirect_uris = $7, allowed_origins = $8,
             flows_enabled = $9, access_token_alg = $10, id_token_alg = $11, refresh_token = $12,
             auth_code_lifetime = $13, access_token_lifetime = $14, scopes = $15, default_scopes = $16,
-            challenge = $17 where id = $18"#)
-            .bind(&self.name)
-            .bind(self.enabled)
-            .bind(self.confidential)
-            .bind(&self.secret)
-            .bind(&self.secret_kid)
-            .bind(&self.redirect_uris)
-            .bind(&self.post_logout_redirect_uris)
-            .bind(&self.allowed_origins)
-            .bind(&self.flows_enabled)
-            .bind(&self.access_token_alg)
-            .bind(&self.id_token_alg)
-            .bind(self.refresh_token)
-            .bind(self.auth_code_lifetime)
-            .bind(self.access_token_lifetime)
-            .bind(&self.scopes)
-            .bind(&self.default_scopes)
-            .bind(&self.challenge)
-            .bind(&self.id);
+            challenge = $17 where id = $18"#,
+            self.name,
+            self.enabled,
+            self.confidential,
+            self.secret,
+            self.secret_kid,
+            self.redirect_uris,
+            self.post_logout_redirect_uris,
+            self.allowed_origins,
+            self.flows_enabled,
+            self.access_token_alg,
+            self.id_token_alg,
+            self.refresh_token,
+            self.auth_code_lifetime,
+            self.access_token_lifetime,
+            self.scopes,
+            self.default_scopes,
+            self.challenge,
+            self.id
+        );
 
         if let Some(txn) = txn {
             q.execute(&mut **txn).await?;
@@ -424,7 +423,7 @@ impl Client {
         }
     }
 
-    /// Generates a new random 64 character long client secret and returns the cleartext and
+    // Generates a new random 64 character long client secret and returns the cleartext and
     /// encrypted version
     /// # Panics
     /// The decryption depends on correctly set up `ENC_KEYS` and `ENC_KEY_ACTIVE` environment
@@ -631,10 +630,10 @@ impl Client {
         Ok(())
     }
 
-    /// Validates the `Origin` HTTP Header from an incoming request and compares it to the
-    /// `allowed_origins`. If the Origin is an external one and allowed by the config, it returns
-    /// the correct `ACCESS_CONTROL_ALLOW_ORIGIN` header which can then be inserted into the
-    /// HttpResponse.
+    // Validates the `Origin` HTTP Header from an incoming request and compares it to the
+    // `allowed_origins`. If the Origin is an external one and allowed by the config, it returns
+    // the correct `ACCESS_CONTROL_ALLOW_ORIGIN` header which can then be inserted into the
+    // HttpResponse.
     pub fn validate_origin(
         &self,
         r: &HttpRequest,

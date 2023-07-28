@@ -4,7 +4,6 @@
 
     export let items = [];
     export let resItems = [];
-    export let countPageLinks = 15;
 
     const options = [2, 3, 4, 7, 10, 15, 20, 30, 50, 100];
     const iconSize = 16;

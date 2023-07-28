@@ -17,7 +17,7 @@ pub struct MagicLinkPassword {
     pub used: bool,
 }
 
-/// CRUD
+// CRUD
 impl MagicLinkPassword {
     pub async fn create(
         data: &web::Data<AppState>,
@@ -35,15 +35,15 @@ impl MagicLinkPassword {
             used: false,
         };
 
-        sqlx::query(
+        sqlx::query!(
             r#"insert into magic_links (id, user_id, csrf_token, exp, used)
             values ($1, $2, $3, $4, $5)"#,
+            link.id,
+            link.user_id,
+            link.csrf_token,
+            link.exp,
+            false,
         )
-        .bind(&link.id)
-        .bind(&link.user_id)
-        .bind(&link.csrf_token)
-        .bind(link.exp)
-        .bind(false)
         .execute(&data.db)
         .await?;
 
@@ -51,8 +51,7 @@ impl MagicLinkPassword {
     }
 
     pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
-        let res = sqlx::query_as("select * from magic_links where id = $1")
-            .bind(id)
+        let res = sqlx::query_as!(Self, "select * from magic_links where id = $1", id)
             .fetch_one(&data.db)
             .await?;
 
@@ -63,22 +62,27 @@ impl MagicLinkPassword {
         data: &web::Data<AppState>,
         user_id: String,
     ) -> Result<MagicLinkPassword, ErrorResponse> {
-        let res = sqlx::query_as("select * from magic_links where user_id = $1")
-            .bind(user_id)
-            .fetch_one(&data.db)
-            .await?;
+        let res = sqlx::query_as!(
+            Self,
+            "select * from magic_links where user_id = $1",
+            user_id
+        )
+        .fetch_one(&data.db)
+        .await?;
 
         Ok(res)
     }
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        sqlx::query("update magic_links set cookie = $1, exp = $2, used = $3 where id = $4")
-            .bind(&self.cookie)
-            .bind(self.exp)
-            .bind(self.used)
-            .bind(&self.id)
-            .execute(&data.db)
-            .await?;
+        sqlx::query!(
+            "update magic_links set cookie = $1, exp = $2, used = $3 where id = $4",
+            self.cookie,
+            self.exp,
+            self.used,
+            self.id,
+        )
+        .execute(&data.db)
+        .await?;
 
         Ok(())
     }

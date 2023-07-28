@@ -5,6 +5,10 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[lib]
+# needed to make tests work with the `sqlite` feature which seems to enable some broken doctest in the webauthn-rs crate
+doctest = false
+
 [features]
 postgres = []
 sqlite = []

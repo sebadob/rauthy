@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::ops::Add;
 use time::OffsetDateTime;
 
-/// Struct for the codes from the 'authorization_code' flow
+// Struct for the codes from the 'authorization_code' flow
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AuthCode {
     pub id: String,
@@ -22,9 +22,9 @@ pub struct AuthCode {
     pub scopes: Vec<String>,
 }
 
-/// CRUD
+// CRUD
 impl AuthCode {
-    /// Deletes an Authorization Code from the cache
+    // Deletes an Authorization Code from the cache
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         cache_del(
             CACHE_NAME_AUTH_CODES.to_string(),
@@ -35,7 +35,7 @@ impl AuthCode {
         .map_err(ErrorResponse::from)
     }
 
-    /// Returns an Authorization code from the cache
+    // Returns an Authorization code from the cache
     pub async fn find(
         data: &web::Data<AppState>,
         id: String,
@@ -51,7 +51,7 @@ impl AuthCode {
         .map_err(ErrorResponse::from)
     }
 
-    /// Saves an Authorization Code
+    // Saves an Authorization Code
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         cache_put(
             CACHE_NAME_AUTH_CODES.to_string(),

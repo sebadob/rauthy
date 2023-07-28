@@ -10,7 +10,7 @@ use tracing::error;
 const B64_URL_SAFE: engine::GeneralPurpose = general_purpose::URL_SAFE_NO_PAD;
 const B64_STD: engine::GeneralPurpose = general_purpose::STANDARD;
 
-/// Decrypts a `&Vec<u8>` which was [encrypted](encrypt) before with the same key.
+// Decrypts a `&Vec<u8>` which was [encrypted](encrypt) before with the same key.
 pub fn decrypt(ciphertext: &[u8], key: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
     use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
 
@@ -40,12 +40,12 @@ pub fn encrypt(plain: &[u8], key: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
     Ok(res)
 }
 
-/// Returns the cache key for a given client
+// Returns the cache key for a given client
 pub fn cache_entry_client(id: &str) -> String {
     format!("client_{}", id)
 }
 
-/// Converts a given Json array / list into a Vec<String>
+// Converts a given Json array / list into a Vec<String>
 pub fn json_arr_to_vec(arr: &str) -> Vec<String> {
     arr.chars()
         .skip(1)
@@ -65,7 +65,7 @@ pub fn get_client_ip(req: &HttpRequest) -> String {
         .to_string()
 }
 
-/// Returns an alphanumeric random String with the requested length
+// Returns an alphanumeric random String with the requested length
 pub fn get_rand(count: usize) -> String {
     rand::thread_rng()
         .sample_iter(&Alphanumeric)
@@ -87,7 +87,7 @@ pub fn base64_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
     })
 }
 
-/// Returns the given input as a base64 URL Encoded String
+// Returns the given input as a base64 URL Encoded String
 pub fn base64_url_encode(input: &[u8]) -> String {
     let b64 = B64_STD.encode(input);
     b64.chars()
@@ -104,9 +104,9 @@ pub fn new_store_id() -> String {
     get_rand(24)
 }
 
-/// Extracts the claims from a given token into a HashMap.
-/// Returns an empty HashMap if no values could be extracted at all.
-/// CAUTION: Does not validate the token!
+// Extracts the claims from a given token into a HashMap.
+// Returns an empty HashMap if no values could be extracted at all.
+// CAUTION: Does not validate the token!
 pub fn extract_token_claims_unverified<T>(token: &str) -> Result<T, ErrorResponse>
 where
     T: for<'a> serde::Deserialize<'a>,

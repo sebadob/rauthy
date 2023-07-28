@@ -103,18 +103,19 @@ pub struct Jwk {
     pub jwk: Vec<u8>,
 }
 
-/// CRUD
+// CRUD
 impl Jwk {
     pub async fn save(&self, db: &DbPool) -> Result<(), ErrorResponse> {
-        sqlx::query(
+        let sig_str = self.signature.as_str();
+        sqlx::query!(
             r#"insert into jwks (kid, created_at, signature, enc_key_id, jwk)
             values ($1, $2, $3, $4, $5)"#,
+            self.kid,
+            self.created_at,
+            sig_str,
+            self.enc_key_id,
+            self.jwk,
         )
-        .bind(&self.kid)
-        .bind(self.created_at)
-        .bind(self.signature.as_str())
-        .bind(&self.enc_key_id)
-        .bind(&self.jwk)
         .execute(db)
         .await?;
         Ok(())
@@ -145,7 +146,7 @@ pub struct JWKS {
     pub keys: Vec<JWKSPublicKey>,
 }
 
-/// CRUD
+// CRUD
 impl JWKS {
     pub async fn find_pk(data: &web::Data<AppState>) -> Result<Self, ErrorResponse> {
         if let Some(jwks) = cache_get!(
@@ -160,7 +161,7 @@ impl JWKS {
             return Ok(jwks);
         }
 
-        let res = sqlx::query_as::<_, Jwk>("select * from jwks")
+        let res = sqlx::query_as!(Jwk, "select * from jwks")
             .fetch_all(&data.db)
             .await?;
 
@@ -258,7 +259,7 @@ pub struct JwkKeyPair {
 }
 
 impl JwkKeyPair {
-    /// Decrypts a Json Web Key which is in an [encrypted](encrypt) format from inside the database
+    // Decrypts a Json Web Key which is in an [encrypted](encrypt) format from inside the database
     pub fn decrypt(
         data: &web::Data<AppState>,
         jwk_entity: &Jwk,
@@ -297,7 +298,7 @@ impl JwkKeyPair {
         Ok(res)
     }
 
-    /// Returns a JWK by a given Key Identifier (kid)
+    // Returns a JWK by a given Key Identifier (kid)
     pub async fn find(data: &web::Data<AppState>, kid: String) -> Result<Self, ErrorResponse> {
         let idx = format!("{}{}", IDX_JWK_KID, kid);
         let jwk_opt = cache_get!(
@@ -312,8 +313,7 @@ impl JwkKeyPair {
             return Ok(jwk_opt.unwrap());
         }
 
-        let jwk = sqlx::query_as("select * from jwks where kid = $1")
-            .bind(&kid)
+        let jwk = sqlx::query_as!(Jwk, "select * from jwks where kid = $1", kid,)
             .fetch_one(&data.db)
             .await?;
 
@@ -330,8 +330,8 @@ impl JwkKeyPair {
         Ok(kp)
     }
 
-    /// Returns the latest JWK (especially important after a [JWK Rotation](crate::handlers::rotate_jwk)
-    /// by a given algorithm.
+    // Returns the latest JWK (especially important after a [JWK Rotation](crate::handlers::rotate_jwk)
+    // by a given algorithm.
     pub async fn find_latest(
         data: &web::Data<AppState>,
         alg: &str,
@@ -350,7 +350,7 @@ impl JwkKeyPair {
             return Ok(jwk_opt.unwrap());
         }
 
-        let mut jwks = sqlx::query_as::<_, Jwk>("select * from jwks")
+        let mut jwks = sqlx::query_as!(Jwk, "select * from jwks")
             .fetch_all(&data.db)
             .await?
             .into_iter()
@@ -407,6 +407,18 @@ pub enum JwkKeyPairType {
     EdDSA,
 }
 
+impl From<String> for JwkKeyPairType {
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "RS256" => JwkKeyPairType::RS256,
+            "RS384" => JwkKeyPairType::RS384,
+            "RS512" => JwkKeyPairType::RS512,
+            "EdDSA" => JwkKeyPairType::EdDSA,
+            _ => unreachable!(),
+        }
+    }
+}
+
 impl FromRow<'_, SqliteRow> for JwkKeyPairType {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, Error> {
         let sig = row.try_get("signature").unwrap();
@@ -422,14 +434,6 @@ impl FromRow<'_, PgRow> for JwkKeyPairType {
         Ok(slf)
     }
 }
-
-// impl FromRow<'_, AnyRow> for JwkKeyPairType {
-//     fn from_row(row: &'_ AnyRow) -> Result<Self, Error> {
-//         let sig = row.try_get("signature").unwrap();
-//         let slf = JwkKeyPairType::from_str(sig).expect("corrupted signature in database");
-//         Ok(slf)
-//     }
-// }
 
 impl JwkKeyPairType {
     pub fn as_str(&self) -> &str {

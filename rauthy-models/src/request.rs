@@ -12,7 +12,7 @@ use validator::{Validate, ValidationError};
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct AuthCodeRequest {
-    /// Validation: `^[a-z0-9-_/]{2,128}$`
+    // Validation: `^[a-z0-9-_/]{2,128}$`
     #[validate(regex(path = "RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
     pub grant_type: String,
     /// Validation: `[a-zA-Z0-9]`

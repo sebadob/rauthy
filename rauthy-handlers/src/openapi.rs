@@ -1,6 +1,6 @@
 use crate::{clients, generic, groups, oidc, roles, scopes, sessions, users};
 use actix_web::web;
-use rauthy_common::constants::RAUTHY_VERSION;
+use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::{AppState, WellKnown};
 use rauthy_models::ListenScheme;
@@ -212,11 +212,17 @@ impl ApiDoc {
         // contact.email = Some("".to_string());
         // doc.info.contact = Some(contact);
 
-        let scheme = if app_state.listen_scheme == ListenScheme::Http {
+        let scheme = if !*PROXY_MODE && app_state.listen_scheme == ListenScheme::Http {
             "http://"
         } else {
             "https://"
         };
+
+        // let scheme = if app_state.listen_scheme == ListenScheme::Http {
+        //     "http://"
+        // } else {
+        //     "https://"
+        // };
         let pub_url = &app_state.public_url;
         let url = format!("{}{}/auth/v1", scheme, pub_url);
         doc.servers = Some(vec![Server::new(url)]);
