@@ -146,23 +146,6 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
-<div id="admonition-hint" class="admonition tip">
-<div class="admonition-title">
-<p>Hint</p>
-<p><a class="admonition-anchor-link" href="#admonition-hint"></a></p>
-</div>
-<div>
-<p>Rauthy <code>v0.14</code> and beyond uses differnt container images for the different target databases.<br />
-Until and including <code>v0.13</code>, rauthy used the <code>Any</code> driver from <a href="https://crates.io/crates/sqlx">sqlx</a>. However, this
-driver has quite a few problems since sqlx 0.7, and I decided to migrate away from it, because the future of it seems
-too uncertain to me.</p>
-</div>
-</div>
-<ul>
-<li>The &quot;normal&quot; container images can be used for Postgres</li>
-<li>The <code>*-lite</code> images use an embedded SQLite</li>
-<li>The <code>DB_MIGRATE_FROM</code> (explained later) can be used with any combination of image / database</li>
-</ul>
 <p>At the time of writing, you can run Rauthy either with <a href="./docker.html">Docker</a> or inside <a href="./k8s.html">Kubernetes</a>.</p>
 
                     </main>
