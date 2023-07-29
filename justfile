@@ -142,12 +142,6 @@ build-docs:
     mdbook build -d ../docs
 
 
-## builds the whole application in release mode
-#build: build-docs build-ui
-#    cargo clippy -- -D warnings
-#    cargo build --release --target x86_64-unknown-linux-musl
-#    cp target/x86_64-unknown-linux-musl/release/rauthy out/
-
 # builds the whole application in release mode
 build-sqlite: build-docs build-ui
     cargo clippy -- -D warnings

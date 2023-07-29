@@ -252,6 +252,23 @@ This means it <strong>will never implement</strong> (if not contributed from som
 <li>No fully customizable themes in addition to the existing branding.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
+<div id="admonition-hint" class="admonition tip">
+<div class="admonition-title">
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="getting_started/main.html#admonition-hint"></a></p>
+</div>
+<div>
+<p>Rauthy <code>v0.14</code> and beyond uses differnt container images for the different target databases.<br />
+Until and including <code>v0.13</code>, rauthy used the <code>Any</code> driver from <a href="https://crates.io/crates/sqlx">sqlx</a>. However, this
+driver has quite a few problems since sqlx 0.7, and I decided to migrate away from it, because the future of it seems
+too uncertain to me.</p>
+</div>
+</div>
+<ul>
+<li>The &quot;normal&quot; container images can be used for Postgres</li>
+<li>The <code>*-lite</code> images use an embedded SQLite</li>
+<li>The <code>DB_MIGRATE_FROM</code> (explained later) can be used with any combination of image / database</li>
+</ul>
 <p>At the time of writing, you can run Rauthy either with <a href="getting_started/./docker.html">Docker</a> or inside <a href="getting_started/./k8s.html">Kubernetes</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="docker"><a class="header" href="#docker">Docker</a></h1>
 <h2 id="testing--local-evaluation"><a class="header" href="#testing--local-evaluation">Testing / Local Evaluation</a></h2>
@@ -945,6 +962,16 @@ The way it works is the following:</p>
 the next restart of the application. Remove the config variable immediately after the migration has finished.</p>
 </div>
 </div>
+<div id="admonition-info" class="admonition info">
+<div class="admonition-title">
+<p>Info</p>
+<p><a class="admonition-anchor-link" href="config/db_migration.html#admonition-info"></a></p>
+</div>
+<div>
+<p><strong>v0.14 and beyond:</strong> if you want to migrate to a different database, for instance from SQLite to Postgres, you need to
+switch to the correct rauthy image as well. Rauthy v0.14 and beyond has different container images for the databases.</p>
+</div>
+</div>
 <div id="admonition-hint" class="admonition tip">
 <div class="admonition-title">
 <p>Hint</p>
@@ -953,17 +980,6 @@ the next restart of the application. Remove the config variable immediately afte
 <div>
 <p>The easiest to do is to just set <code>MIGRATE_DB_FROM</code> as an environmant variable, which is easier and quicker to remove 
 again afterwards.</p>
-</div>
-</div>
-<div id="admonition-info" class="admonition info">
-<div class="admonition-title">
-<p>Info</p>
-<p><a class="admonition-anchor-link" href="config/db_migration.html#admonition-info"></a></p>
-</div>
-<div>
-<p>In some cases and specific environments, this feature is currently a bit bugged. The problems are hard or almost
-impossible to reproduce. If you encounter a problem using this, please let me know as much details about it as
-possible.</p>
 </div>
 </div>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="backups"><a class="header" href="#backups">Backups</a></h1>

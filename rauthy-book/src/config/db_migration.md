@@ -24,13 +24,12 @@ If you do not remove the `MIGRATE_DB_FROM` after the migration has been done, it
 the next restart of the application. Remove the config variable immediately after the migration has finished.
 ```
 
+```admonish info
+**v0.14 and beyond:** if you want to migrate to a different database, for instance from SQLite to Postgres, you need to
+switch to the correct rauthy image as well. Rauthy v0.14 and beyond has different container images for the databases.
+```
+
 ```admonish hint
 The easiest to do is to just set `MIGRATE_DB_FROM` as an environmant variable, which is easier and quicker to remove 
 again afterwards. 
-```
-
-```admonish info
-In some cases and specific environments, this feature is currently a bit bugged. The problems are hard or almost
-impossible to reproduce. If you encounter a problem using this, please let me know as much details about it as
-possible.
 ```

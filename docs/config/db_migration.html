@@ -171,6 +171,16 @@ The way it works is the following:</p>
 the next restart of the application. Remove the config variable immediately after the migration has finished.</p>
 </div>
 </div>
+<div id="admonition-info" class="admonition info">
+<div class="admonition-title">
+<p>Info</p>
+<p><a class="admonition-anchor-link" href="#admonition-info"></a></p>
+</div>
+<div>
+<p><strong>v0.14 and beyond:</strong> if you want to migrate to a different database, for instance from SQLite to Postgres, you need to
+switch to the correct rauthy image as well. Rauthy v0.14 and beyond has different container images for the databases.</p>
+</div>
+</div>
 <div id="admonition-hint" class="admonition tip">
 <div class="admonition-title">
 <p>Hint</p>
@@ -179,17 +189,6 @@ the next restart of the application. Remove the config variable immediately afte
 <div>
 <p>The easiest to do is to just set <code>MIGRATE_DB_FROM</code> as an environmant variable, which is easier and quicker to remove 
 again afterwards.</p>
-</div>
-</div>
-<div id="admonition-info" class="admonition info">
-<div class="admonition-title">
-<p>Info</p>
-<p><a class="admonition-anchor-link" href="#admonition-info"></a></p>
-</div>
-<div>
-<p>In some cases and specific environments, this feature is currently a bit bugged. The problems are hard or almost
-impossible to reproduce. If you encounter a problem using this, please let me know as much details about it as
-possible.</p>
 </div>
 </div>
 
