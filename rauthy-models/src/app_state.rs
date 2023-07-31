@@ -5,7 +5,8 @@ use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::ListenScheme;
 use anyhow::Context;
 use argon2::Params;
-use rauthy_common::constants::{DATABASE_URL, DEV_MODE, PROXY_MODE};
+use rauthy_common::constants::{DATABASE_URL, DB_TYPE, DEV_MODE, PROXY_MODE};
+use rauthy_common::DbType;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use sqlx::pool::PoolOptions;
@@ -246,6 +247,15 @@ impl AppState {
 
         #[cfg(feature = "postgres")]
         let pool = {
+            if *DB_TYPE == DbType::Sqlite {
+                let msg = r#"
+    You are trying to connect to a SQLite instance with the 'Postgres'
+    version of Rauthy. You need to either change to a SQLite database or use the '*-lite'
+    container image of Rauthy."#;
+                error!("{msg}");
+                panic!("{msg}");
+            }
+
             let pool = Self::connect_postgres(&DATABASE_URL, db_max_conn).await?;
             info!("Using Postgres");
 
@@ -257,6 +267,15 @@ impl AppState {
 
         #[cfg(feature = "sqlite")]
         let pool = {
+            if *DB_TYPE == DbType::Postgres {
+                let msg = r#"
+    You are trying to connect to a Postgres instance with the 'SQLite'
+    version of Rauthy. You need to either change to a Postgres database or use the default
+    Postgres container image of Rauthy."#;
+                error!("{msg}");
+                panic!("{msg}");
+            }
+
             let pool = Self::connect_sqlite(&DATABASE_URL, db_max_conn, false).await?;
             if DATABASE_URL.ends_with(":memory:") {
                 info!("Using in-memory SQLite");
