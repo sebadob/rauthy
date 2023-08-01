@@ -2,34 +2,36 @@ set shell := ["bash", "-uc"]
 
 export TAG := `cat rauthy-main/Cargo.toml | grep '^version =' | cut -d " " -f3 | xargs`
 
+db_url_sqlite := "sqlite:data/rauthy.db"
+db_url_postgres := "postgresql://rauthy:123SuperSafe@localhost:5432/rauthy"
 
 clippy-sqlite:
     clear
-    DATABASE_URL="sqlite:data/rauthy.db" cargo clippy --features sqlite
+    DATABASE_URL={{db_url_sqlite}} cargo clippy --features sqlite
 
 
 clippy-postgres:
     clear
-    DATABASE_URL="postgresql://rauthy:123SuperSafe@localhost:5432/rauthy" cargo clippy --features postgres
+    DATABASE_URL={{db_url_postgres}} cargo clippy --features postgres
 
 
 migrate-sqlite:
-    DATABASE_URL="sqlite:data/rauthy.db" sqlx database create
-    DATABASE_URL="sqlite:data/rauthy.db" sqlx migrate run --source migrations/sqlite
+    DATABASE_URL={{db_url_sqlite}} sqlx database create
+    DATABASE_URL={{db_url_sqlite}} sqlx migrate run --source migrations/sqlite
 
 
 migrate-postgres:
-    DATABASE_URL="postgresql://rauthy:123SuperSafe@localhost:5432/rauthy" sqlx migrate run --source migrations/postgres
+    DATABASE_URL={{db_url_postgres}} sqlx migrate run --source migrations/postgres
 
 
 # runs the application with sqlite feature
 run-sqlite:
-    DATABASE_URL="sqlite:data/rauthy.db" cargo run --target x86_64-unknown-linux-musl --features sqlite
+    DATABASE_URL={{db_url_sqlite}} cargo run --target x86_64-unknown-linux-musl --features sqlite
 
 
 # runs the application with postgres feature
 run-postgres:
-    DATABASE_URL="postgresql://rauthy:123SuperSafe@localhost:5432/rauthy" cargo run --target x86_64-unknown-linux-musl --features postgres
+    ATABASE_URL={{db_url_postgres}} cargo run --target x86_64-unknown-linux-musl --features postgres
 
 
 # runs the UI in development mode
@@ -48,13 +50,13 @@ test-sqlite:
     #!/usr/bin/env bash
     clear
 
-    DATABASE_URL="sqlite:data/rauthy.db" cargo build --features sqlite
-    DATABASE_URL="sqlite:data/rauthy.db" cargo run --features sqlite test &
+    DATABASE_URL={{db_url_sqlite}} cargo build --features sqlite
+    DATABASE_URL={{db_url_sqlite}} cargo run --features sqlite test &
     sleep 1
     PID=$(echo "$!")
     echo "PID: $PID"
 
-    DATABASE_URL="sqlite:data/rauthy.db" cargo test --features sqlite
+    DATABASE_URL={{db_url_sqlite}} cargo test --features sqlite
     kill "$PID"
     echo All tests successful
 
@@ -67,13 +69,13 @@ test-postgres:
     #!/usr/bin/env bash
     clear
 
-    DATABASE_URL="postgresql://rauthy:123SuperSafe@localhost:5432/rauthy" cargo build --features postgres
-    DATABASE_URL="postgresql://rauthy:123SuperSafe@localhost:5432/rauthy" cargo run --features postgres test &
+    DATABASE_URL={{db_url_postgres}} cargo build --features postgres
+    DATABASE_URL={{db_url_postgres}} cargo run --features postgres test &
     sleep 1
     PID=$(echo "$!")
     echo "PID: $PID"
 
-    DATABASE_URL="postgresql://rauthy:123SuperSafe@localhost:5432/rauthy" cargo test --features postgres
+    DATABASE_URL={{db_url_postgres}} cargo test --features postgres
     kill "$PID"
     echo All tests successful
 
@@ -149,19 +151,23 @@ build-docs:
 #    cp target/x86_64-unknown-linux-musl/release/rauthy out/
 
 # builds the whole application in release mode
-build-sqlite: build-docs build-ui
-    cargo clippy -- -D warnings
-    cargo build --release --target x86_64-unknown-linux-musl
-    cp target/x86_64-unknown-linux-musl/release/rauthy out/
+build-sqlite: build-docs build-ui migrate-sqlite
+    DATABASE_URL={{db_url_sqlite}} cargo clippy --features sqlite -- -D warnings
+    DATABASE_URL={{db_url_sqlite}} cargo build \
+        --release \
+        --target x86_64-unknown-linux-musl \
+        --features sqlite
+    cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-lite
 
 
 # builds the whole application in release mode
-build-postgres: build-docs build-ui
-    export DATABASE_URL := "postgresql://rauthy:123SuperSafe@localhost:5432/rauthy"
-
-    cargo clippy -- -D warnings
-    cargo build --release --target x86_64-unknown-linux-musl
-    cp target/x86_64-unknown-linux-musl/release/rauthy out/
+build-postgres: build-docs build-ui migrate-postgres
+    DATABASE_URL={{db_url_postgres}} cargo clippy --features postgres -- -D warnings
+    DATABASE_URL={{db_url_postgres}} cargo build \
+        --release \
+        --target x86_64-unknown-linux-musl \
+        --features postgres
+    cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy
 
 
 # makes sure everything is fine
