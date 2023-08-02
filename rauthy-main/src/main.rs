@@ -270,6 +270,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         .service(generic::get_admin_users_html)
                         .service(generic::get_auth_check)
                         .service(generic::get_auth_check_admin)
+                        .service(generic::post_i18n)
                         .service(oidc::get_authorize)
                         .service(oidc::post_authorize)
                         .service(oidc::get_callback_html)

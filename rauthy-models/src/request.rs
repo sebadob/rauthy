@@ -114,6 +114,18 @@ fn default_scope() -> String {
     String::from("openid")
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct I18nRequest {
+    pub content: I18nContent,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum I18nContent {
+    // Account,
+    Authorize,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
 pub struct LoginRequest {
     /// Validation: `email`

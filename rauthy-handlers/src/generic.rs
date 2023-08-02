@@ -1,9 +1,12 @@
 use crate::{build_csp_header, Assets};
 use actix_web::http::header;
-use actix_web::http::header::HeaderValue;
+use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
+use actix_web::web::Json;
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
 use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
-use rauthy_common::constants::{CACHE_NAME_LOGIN_DELAY, HEADER_HTML, IDX_LOGIN_TIME};
+use rauthy_common::constants::{
+    APPLICATION_JSON, CACHE_NAME_LOGIN_DELAY, HEADER_HTML, IDX_LOGIN_TIME,
+};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::colors::ColorEntity;
@@ -11,9 +14,11 @@ use rauthy_models::entity::password::{PasswordHashTimes, PasswordPolicy};
 use rauthy_models::entity::pow::Pow;
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::Session;
+use rauthy_models::i18n::authorize::I18nAuthorize;
+use rauthy_models::i18n::SsrJson;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
-    EncKeyMigrateRequest, PasswordHashTimesRequest, PasswordPolicyRequest,
+    EncKeyMigrateRequest, I18nContent, I18nRequest, PasswordHashTimesRequest, PasswordPolicyRequest,
 };
 use rauthy_models::response::{
     Argon2ParamsResponse, EncKeysResponse, HealthResponse, LoginTimeResponse,
@@ -66,6 +71,25 @@ pub async fn get_static_assets(
             .body(content.data.into_owned()),
         None => HttpResponse::NotFound().body("404 Not Found"),
     }
+}
+
+#[post("/i18n")]
+#[has_permissions("all")]
+pub async fn post_i18n(
+    req: HttpRequest,
+    req_data: Json<I18nRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    let lang = Language::try_from(&req).unwrap_or_default();
+    tracing::info!("lang: {:?} req: {:?}", lang, req_data);
+
+    let body = match req_data.content {
+        I18nContent::Authorize => I18nAuthorize::build(&lang).as_json(),
+        // I18nContent::NotFound => "{}".to_string(),
+    };
+
+    Ok(HttpResponse::Ok()
+        .insert_header((CONTENT_TYPE, APPLICATION_JSON))
+        .body(body))
 }
 
 #[get("/account")]

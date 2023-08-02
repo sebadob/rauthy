@@ -25,6 +25,7 @@ use std::str::FromStr;
 pub mod app_state;
 pub mod email;
 pub mod entity;
+pub mod i18n;
 pub mod language;
 pub mod migration;
 pub mod request;

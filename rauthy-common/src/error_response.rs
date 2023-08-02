@@ -64,7 +64,8 @@ impl ResponseError for ErrorResponse {
     fn status_code(&self) -> StatusCode {
         match self.error {
             ErrorResponseType::BadRequest => StatusCode::BAD_REQUEST,
-            ErrorResponseType::Forbidden | ErrorResponseType::MfaRequired => StatusCode::FORBIDDEN,
+            ErrorResponseType::Forbidden => StatusCode::FORBIDDEN,
+            ErrorResponseType::MfaRequired => StatusCode::NOT_ACCEPTABLE,
             ErrorResponseType::NotFound => StatusCode::NOT_FOUND,
             ErrorResponseType::Disabled
             | ErrorResponseType::CSRFTokenError
