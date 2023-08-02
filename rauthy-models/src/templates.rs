@@ -1,5 +1,8 @@
 use crate::entity::colors::Colors;
 use crate::entity::password::PasswordPolicy;
+use crate::i18n::authorize::I18nAuthorize;
+use crate::i18n::SsrJson;
+use crate::language::Language;
 use askama_actix::Template;
 use rauthy_common::constants::{OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION};
 use rauthy_common::utils::get_rand;
@@ -41,6 +44,7 @@ pub struct IndexHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl IndexHtml<'_> {
@@ -91,6 +95,7 @@ pub struct AccountHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl AccountHtml<'_> {
@@ -139,6 +144,7 @@ pub struct AdminHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl AdminHtml<'_> {
@@ -187,6 +193,7 @@ pub struct AdminAttributesHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl AdminAttributesHtml<'_> {
@@ -235,6 +242,7 @@ pub struct AdminClientsHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl AdminClientsHtml<'_> {
@@ -283,6 +291,7 @@ pub struct AdminConfigHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl AdminConfigHtml<'_> {
@@ -331,6 +340,7 @@ pub struct AdminDocsHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl AdminDocsHtml<'_> {
@@ -379,6 +389,7 @@ pub struct AdminGroupsHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl AdminGroupsHtml<'_> {
@@ -427,6 +438,7 @@ pub struct AdminRolesHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl AdminRolesHtml<'_> {
@@ -475,6 +487,7 @@ pub struct AdminScopesHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl AdminScopesHtml<'_> {
@@ -523,6 +536,7 @@ pub struct AdminSessionsHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl AdminSessionsHtml<'_> {
@@ -571,6 +585,7 @@ pub struct AdminUsersHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl AdminUsersHtml<'_> {
@@ -619,6 +634,7 @@ pub struct AuthorizeHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl AuthorizeHtml<'_> {
@@ -627,6 +643,7 @@ impl AuthorizeHtml<'_> {
         csrf_token: &str,
         action: FrontendAction,
         colors: &Colors,
+        lang: &Language,
     ) -> (String, String) {
         let nonce = nonce();
 
@@ -647,6 +664,7 @@ impl AuthorizeHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             nonce: &nonce,
+            i18n: I18nAuthorize::build(lang).as_json(),
             ..Default::default()
         };
         if client_name.is_some() {
@@ -677,6 +695,7 @@ pub struct CallbackHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl CallbackHtml<'_> {
@@ -725,6 +744,7 @@ pub struct LogoutHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl LogoutHtml<'_> {
@@ -775,6 +795,7 @@ pub struct PwdResetHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl PwdResetHtml<'_> {
@@ -845,6 +866,7 @@ pub struct UserRegisterHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub nonce: &'a str,
+    pub i18n: String,
 }
 
 impl UserRegisterHtml<'_> {

@@ -10,6 +10,9 @@
     import Input from "$lib/inputs/Input.svelte";
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import BrowserCheck from "../../../components/BrowserCheck.svelte";
+    import WithI18n from "$lib/WithI18n.svelte";
+
+    let t = {};
 
     let clientId;
     let clientLogo;
@@ -44,9 +47,18 @@
     let formValues = {email: '', password: ''};
     let formErrors = {};
 
-    const schema = yup.object().shape({
-        email: yup.string().required('E-Mail is required').email("Bad E-Mail format"),
-    });
+    // const schema = yup.object().shape({
+    //     email: yup.string().required('E-Mail is required').email("Bad E-Mail format"),
+    // });
+    let schema = {};
+
+    $: if (t) {
+        schema = yup.object().shape({
+            email: yup.string().required(t.emailRequired).email(t.emailBadFormat),
+        });
+    }
+
+    $: console.log(t);
 
     $: if (refresh && clientId?.length > 0 && redirectUri?.length > 0) {
         isLoading = true
@@ -144,7 +156,7 @@
         // Validate the password manually, since it can be null in case of an active mfa cookie session
         if (formValues.email !== existingMfaUser) {
             if (!formValues.password) {
-                formErrors.password = 'Password is required';
+                formErrors.password = t.passwordRequired;
                 return;
             }
             req.password = formValues.password;
@@ -163,7 +175,7 @@
             isLoading = false;
             webauthnData = await res.json();
         } else {
-            err = 'Invalid credentials';
+            err = t.invalidCredentials;
             isLoading = false;
             showResetRequest = true;
         }
@@ -217,87 +229,90 @@
 </svelte:head>
 
 <BrowserCheck>
-    <div class="container">
-        <div class="head">
-            <div class="logo">
-                {#if clientLogo}
-                    <img class="logo" src="{clientLogo}" alt="Client Logo"/>
-                {/if}
+    <WithI18n bind:t content="authorize">
+        <div class="container">
+            <div class="head">
+                <div class="logo">
+                    {#if clientLogo}
+                        <img class="logo" src="{clientLogo}" alt="Client Logo"/>
+                    {/if}
+                </div>
             </div>
-        </div>
 
-        <div class="name">
-            <h2>{clientName}</h2>
-        </div>
+            <div class="name">
+                <h2>{clientName}</h2>
+            </div>
 
-        {#if mfaRequest}
-            <MfaAppRequest bind:req={mfaRequest}/>
-        {/if}
+            <!-- TODO: clean this up after backend cleanup -->
+            {#if mfaRequest}
+                <MfaAppRequest bind:req={mfaRequest}/>
+            {/if}
 
-        {#if webauthnData}
-            <WebauthnRequest bind:data={webauthnData} onSuccess={onWebauthnSuccess} onError={onWebauthnError}/>
-        {/if}
+            {#if webauthnData}
+                <WebauthnRequest bind:t bind:data={webauthnData} onSuccess={onWebauthnSuccess} onError={onWebauthnError}/>
+            {/if}
 
-        <Input
-                type="email"
-                name="rauthyEmail"
-                bind:value={formValues.email}
-                bind:error={formErrors.email}
-                autocomplete="email"
-                placeholder="E-Mail"
-                on:enter={onSubmit}
-        >
-            E-MAIL
-        </Input>
-
-        {#if existingMfaUser !== formValues.email && !showReset}
-            <PasswordInput
-                    name="rauthyPassword"
-                    bind:value={formValues.password}
-                    bind:error={formErrors.password}
-                    autocomplete="current-password"
-                    placeholder="Password"
+            <Input
+                    type="email"
+                    name="rauthyEmail"
+                    bind:value={formValues.email}
+                    bind:error={formErrors.email}
+                    autocomplete="email"
+                    placeholder={t.email}
                     on:enter={onSubmit}
             >
-                PASSWORD
-            </PasswordInput>
+                {t.email?.toUpperCase()}
+            </Input>
 
-            {#if showResetRequest}
-                <div
-                        role="button"
-                        tabindex="0"
-                        class="forgotten"
-                        transition:scale|global
-                        on:click={handleShowReset}
-                        on:keypress={handleShowReset}
+            {#if existingMfaUser !== formValues.email && !showReset}
+                <PasswordInput
+                        name="rauthyPassword"
+                        bind:value={formValues.password}
+                        bind:error={formErrors.password}
+                        autocomplete="current-password"
+                        placeholder={t.password}
+                        on:enter={onSubmit}
                 >
-                    Password forgotten?
+                    {t.password?.toUpperCase()}
+                </PasswordInput>
+
+                {#if showResetRequest}
+                    <div
+                            role="button"
+                            tabindex="0"
+                            class="forgotten"
+                            transition:scale|global
+                            on:click={handleShowReset}
+                            on:keypress={handleShowReset}
+                    >
+                        {t.passwordForgotten}
+                    </div>
+                {/if}
+            {/if}
+
+            {#if showReset}
+                <div class="btn">
+                    <Button on:click={requestReset}>{t.passwordRequest?.toUpperCase()}</Button>
+                </div>
+            {:else}
+                <div class="btn">
+                    <Button on:click={onSubmit} bind:isLoading>{t.login?.toUpperCase()}</Button>
                 </div>
             {/if}
-        {/if}
 
-        {#if showReset}
-            <div class="btn">
-                <Button on:click={requestReset}>REQUEST</Button>
-            </div>
-        {:else}
-            <div class="btn">
-                <Button on:click={onSubmit} bind:isLoading>LOGIN</Button>
-            </div>
-        {/if}
+            {#if err}
+                <div class="errMsg errMsgApi">
+                    {err}
+                </div>
+            {/if}
 
-        {#if err}
-            <div class="errMsg errMsgApi">
-                {err}
-            </div>
-        {/if}
-
-        {#if emailSuccess}
-            <div class="success">
-                If your E-Mail exists, a request has been sent
-            </div>
-        {/if}
-    </div>
+            {#if emailSuccess}
+                <div class="success">
+                    {t.emailSentMsg}
+                </div>
+            {/if}
+        </div>
+    </WithI18n>
 </BrowserCheck>
 
 <style>

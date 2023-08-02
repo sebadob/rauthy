@@ -22,8 +22,10 @@
             if (resAdmin.ok) {
                 sessionInfo = body;
                 isAdmin = true;
-            } else {
+            } else if (res.status === 406 ) {
                 mfaReqErr = true;
+                sessionInfo = {};
+            } else {
                 sessionInfo = {};
             }
         } else {
@@ -48,7 +50,6 @@
                 Afterwards, you need to do a logout and log back in.
             </div>
             <Button on:click={() => window.location.href = '/auth/v1/account'}>ACCOUNT</Button>
-            <!--            <Button on:click={() => window.location.href = '/auth/v1/account.html'}>ACCOUNT</Button>-->
         </div>
     {:else if !isAdmin}
         <div class="noAdmin">

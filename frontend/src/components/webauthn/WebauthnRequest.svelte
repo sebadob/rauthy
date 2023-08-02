@@ -4,6 +4,7 @@
     import Loading from "$lib/Loading.svelte";
     import {webauthnAuth} from "../../utils/webauthn.js";
 
+    export let t;
     export let data;
     export let purpose = 'Login';
     export let onError = () => {
@@ -61,13 +62,14 @@
 
             <div class="contentRow">
                 <div class="contentHeader">
-                    Please login with your MFA device
+                    {t.provideMfa}
                 </div>
             </div>
 
             <div class="contentRow">
                 <div class="contentHeader">
-                    Request expires:
+                    {t.requestRxpires}
+                    :
                 </div>
                 <div>
                     <progress value={$progress} max={data.exp}></progress>
@@ -77,7 +79,7 @@
             <div class="contentRow">
                 {#if success}
                     <div class="good">
-                        Acknowledged
+                        {t.mfaAck}
                     </div>
                 {:else if err}
                     <div class="err">

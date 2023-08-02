@@ -68,6 +68,7 @@ pub async fn get_authorize(
             &session.as_ref().unwrap().csrf_token,
             FrontendAction::Refresh,
             &colors,
+            &lang,
         );
 
         // TODO make this prettier - append header conditionally easier?
@@ -104,7 +105,8 @@ pub async fn get_authorize(
     //     action = FrontendAction::MfaLogin(mfa_cookie.value().to_string())
     // }
 
-    let (body, nonce) = AuthorizeHtml::build(&client.name, &session.csrf_token, action, &colors);
+    let (body, nonce) =
+        AuthorizeHtml::build(&client.name, &session.csrf_token, action, &colors, &lang);
 
     let cookie = session.client_cookie();
     if let Some(o) = origin_header {
