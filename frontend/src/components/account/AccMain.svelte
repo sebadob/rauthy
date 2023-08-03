@@ -12,21 +12,19 @@
     export let user = {};
 
     let op = tweened(1.0, {
-        duration: 250,
+        duration: 100,
     })
 
     let content = t.info;
     let selected = t.info;
 
-    console.log(t);
-
     $: if (selected) {
         animate();
     }
 
-    // $: if (selected.toLowerCase() === t.logout) {
-    //     redirectToLogout();
-    // }
+    $: if (selected === t.navLogout) {
+        redirectToLogout();
+    }
 
     function animate() {
         op.set(0)
