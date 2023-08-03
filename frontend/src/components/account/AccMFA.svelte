@@ -44,9 +44,7 @@
 
             // the navigator credentials engine needs some values as array buffers
             challenge.publicKey.challenge = base64UrlSafeToArrBuf(challenge.publicKey.challenge);
-            // challenge.publicKey.user.displayName = base64UrlSafeToArrBuf(challenge.publicKey.user.displayName);
             challenge.publicKey.user.id = base64UrlSafeToArrBuf(challenge.publicKey.user.id);
-            // challenge.publicKey.user.name = base64UrlSafeToArrBuf(challenge.publicKey.user.name);
 
             // prompt for the user security key and get its public key
             let challengePk = await navigator.credentials.create(challenge);
