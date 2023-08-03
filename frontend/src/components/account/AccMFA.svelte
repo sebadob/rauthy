@@ -11,6 +11,7 @@
     } from "../../utils/dataFetching.js";
     import Tooltip from "$lib/Tooltip.svelte";
 
+    export let t;
     export let sessionInfo;
     export let user = {};
 
@@ -73,7 +74,7 @@
             }
         } else {
             err = true;
-            msg = 'Error starting the Registration process';
+            msg = t.mfa.errorReg;
         }
     }
 
@@ -97,7 +98,7 @@
                 challengePk = await navigator.credentials.get(challenge);
             } catch (e) {
                 err = true;
-                msg = 'Invalid Key used';
+                msg = t.mfa.invalidKeyUsed;
                 return;
             }
 
@@ -119,13 +120,13 @@
             // send the data to the backend
             res = await webauthnAuthFinish(user.id, data);
             if (res.status === 202) {
-                msg = 'Test successful';
+                msg = t.mfa.testSuccess;
             } else {
                 console.error(res);
             }
         } else {
             err = true;
-            msg = 'Error starting the Test';
+            msg = t.mfa.testError;
         }
     }
 
@@ -143,25 +144,20 @@
 
 <div class="container">
     <p>
-        If you plan on using your MFA key with multiple Browsers like Firefox and a Chrome based Browsers, you
-        should do the registration with Firefox only.
+        {t.mfa.p1}
         <br><br>
-        Firefox does sometimes not ask for an additional PIN, if the device supports this method for compatibility
-        reasons. Chrome bases variants on the other hand do always try to use an additional PIN confirmation, if it
-        exists.
+        {t.mfa.p2}
         <br><br>
-        If a device, that supports a PIN, was registered with a Chrome based browser, it will not work in Firefox at the
-        time
-        of writing. If it was registered with Firefox though, it will work with Chrome too.
+        {t.mfa.p3}
         <br><br>
-        You can register two Keys for your account.
+        {t.mfa.p4}
     </p>
 
     <div class="keyContainer">
         {#if user.sec_key_1}
             <div>
                 <div class="key">
-                    Security Key 1:
+                    {t.mfa.securityKey} 1:
                 </div>
                 <div class="id">
                     {user.sec_key_1}
@@ -169,14 +165,14 @@
             </div>
 
             <div class="btn">
-                <Button on:click={() => handleDeleteSlot(1)} level={3}>DELETE</Button>
+                <Button on:click={() => handleDeleteSlot(1)} level={3}>{t.mfa.delete.toUpperCase()}</Button>
             </div>
         {:else}
             <div>
-                No Security key registered on this slot
+                {t.mfa.noKey}
             </div>
             <div class="btn">
-                <Button on:click={() => handleRegStart(1)}>REGISTER</Button>
+                <Button on:click={() => handleRegStart(1)}>{t.mfa.register.toUpperCase()}</Button>
             </div>
         {/if}
     </div>
@@ -187,7 +183,7 @@
         {#if user.sec_key_2}
             <div>
                 <div class="key">
-                    Security Key 2:
+                    {t.mfa.securityKey} 2:
                 </div>
                 <div class="id">
                     {user.sec_key_2}
@@ -195,24 +191,22 @@
             </div>
 
             <div class="btn">
-                <Button on:click={() => handleDeleteSlot(2)} level={3}>DELETE</Button>
+                <Button on:click={() => handleDeleteSlot(2)} level={3}>{t.mfa.delete.toUpperCase()}</Button>
             </div>
         {:else}
             <div>
-                No Security key registered on this slot
+                {t.mfa.noKey}
             </div>
             <div class="btn">
-                <Button on:click={() => handleRegStart(2)}>REGISTER</Button>
+                <Button on:click={() => handleRegStart(2)}>{t.mfa.register.toUpperCase()}</Button>
             </div>
         {/if}
     </div>
 
     {#if user.sec_key_1 || user.sec_key_2}
-        <Tooltip text="Test the registered security keys.<br>This makes sense after a new registration.">
-            <div class="button">
-                <Button on:click={handleTestStart} level={1}>TEST</Button>
-            </div>
-        </Tooltip>
+        <div class="button">
+            <Button on:click={handleTestStart} level={1}>{t.mfa.test.toUpperCase()}</Button>
+        </div>
     {/if}
 
     <div class:msg={!err} class:err>

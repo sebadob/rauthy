@@ -1,4 +1,5 @@
 <script>
+    export let t;
     export let policy = {};
     export let password = '';
     export let accepted = false;
@@ -79,51 +80,51 @@
 {#if policy}
     <div class="policyContainer">
       <span style="margin-left: 20px">
-        <b>Password Policy:</b>
+        <b>{t.passwordPolicy.passwordPolicy}</b>
       </span>
 
         <ul>
             <li class="li" class:policyErr={!!errPolicy[0]}>
-                {'Min length: '}
+                {t.passwordPolicy.lengthMin}
                 {policy.length_min}
             </li>
 
             <li class="li" class:policyErr={!!errPolicy[1]}>
-                {'Max length: '}
+                {t.passwordPolicy.lengthMax}
                 {policy?.length_max}
             </li>
 
             {#if -1 !== policy.include_lower_case}
                 <li class="li" class:policyErr={!!errPolicy[2]}>
-                    {'Min lowercase letters: '}
+                    {t.passwordPolicy.lowercaseMin}
                     {policy?.include_lower_case}
                 </li>
             {/if}
 
             {#if -1 !== policy.include_upper_case}
                 <li class="li" class:policyErr={!!errPolicy[3]}>
-                    {'Min uppercase letters: '}
+                    {t.passwordPolicy.uppercaseMin}
                     {policy?.include_upper_case}
                 </li>
             {/if}
 
             {#if -1 !== policy.include_digits}
                 <li class="li" class:policyErr={!!errPolicy[4]}>
-                    {'Min digits: '}
+                    {t.passwordPolicy.digitsMin}
                     {policy?.include_digits}
                 </li>
             {/if}
 
             {#if -1 !== policy.include_special}
                 <li class="li" class:policyErr={!!errPolicy[5]}>
-                    {'Min special characters: '}
+                    {t.passwordPolicy.specialMin}
                     {policy?.include_special}
                 </li>
             {/if}
 
             {#if -1 !== policy.not_recently_used}
                 <li class="li">
-                    {'Not one of last recent passwords: '}
+                    {t.passwordPolicy.notRecent}
                     {policy?.not_recently_used}
                 </li>
             {/if}

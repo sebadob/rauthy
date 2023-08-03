@@ -6,6 +6,8 @@
     import {tweened} from "svelte/motion";
     import AccMFA from "./AccMFA.svelte";
 
+    export let t;
+
     export let sessionInfo = {};
     export let user = {};
 
@@ -13,16 +15,18 @@
         duration: 250,
     })
 
-    let content = 'INFO';
-    let selected = 'INFO';
+    let content = t.info;
+    let selected = t.info;
+
+    console.log(t);
 
     $: if (selected) {
         animate();
     }
 
-    $: if (selected === 'LOGOUT') {
-        redirectToLogout();
-    }
+    // $: if (selected.toLowerCase() === t.logout) {
+    //     redirectToLogout();
+    // }
 
     function animate() {
         op.set(0)
@@ -32,20 +36,20 @@
 </script>
 
 <div class="header">
-    <h2>User Account</h2>
+    <h2>{t.user} {t.account}</h2>
 </div>
 
 <div class="container">
-    <AccNav bind:selected/>
+    <AccNav bind:t bind:selected/>
 
     <div class="inner">
         <div style="opacity: {$op}">
-            {#if content === 'INFO'}
-                <AccInfo bind:user/>
-            {:else if content === 'EDIT'}
-                <AccEdit bind:user/>
-            {:else if content === 'MFA'}
-                <AccMFA bind:sessionInfo bind:user/>
+            {#if content === t.navInfo}
+                <AccInfo bind:t bind:user/>
+            {:else if content === t.navEdit}
+                <AccEdit bind:t bind:user/>
+            {:else if content === t.navMfa}
+                <AccMFA bind:t bind:sessionInfo bind:user/>
             {/if}
         </div>
     </div>

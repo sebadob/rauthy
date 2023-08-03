@@ -14,6 +14,7 @@ use rauthy_models::entity::password::{PasswordHashTimes, PasswordPolicy};
 use rauthy_models::entity::pow::Pow;
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::Session;
+use rauthy_models::i18n::account::I18nAccount;
 use rauthy_models::i18n::authorize::I18nAuthorize;
 use rauthy_models::i18n::SsrJson;
 use rauthy_models::language::Language;
@@ -80,11 +81,11 @@ pub async fn post_i18n(
     req_data: Json<I18nRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let lang = Language::try_from(&req).unwrap_or_default();
-    tracing::info!("lang: {:?} req: {:?}", lang, req_data);
+    tracing::debug!("post_i18n lang: {:?} req: {:?}", lang, req_data);
 
     let body = match req_data.content {
         I18nContent::Authorize => I18nAuthorize::build(&lang).as_json(),
-        // I18nContent::NotFound => "{}".to_string(),
+        I18nContent::Account => I18nAccount::build(&lang).as_json(),
     };
 
     Ok(HttpResponse::Ok()
@@ -99,11 +100,8 @@ pub async fn get_account_html(
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let (body, nonce) = AccountHtml::build(&colors);
-
-    // TODO use for testing i18n
     let lang = Language::try_from(&req).unwrap_or_default();
-    tracing::info!("lang: {:?}", lang);
+    let (body, nonce) = AccountHtml::build(&colors, &lang);
 
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_HTML)
