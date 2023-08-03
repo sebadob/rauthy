@@ -9,7 +9,6 @@
         webauthnRegFinish,
         webauthnRegStart
     } from "../../utils/dataFetching.js";
-    import Tooltip from "$lib/Tooltip.svelte";
 
     export let t;
     export let sessionInfo;
