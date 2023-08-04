@@ -5,6 +5,9 @@
     import AccMain from "../../components/account/AccMain.svelte";
     import {redirectToLogin} from "../../utils/helpers.js";
     import BrowserCheck from "../../components/BrowserCheck.svelte";
+    import WithI18n from "$lib/WithI18n.svelte";
+
+    let t;
 
     let sessionInfo;
     let user;
@@ -33,9 +36,11 @@
 </svelte:head>
 
 <BrowserCheck>
-    {#if !isReady}
-        <Loading/>
-    {:else}
-        <AccMain bind:sessionInfo bind:user/>
-    {/if}
+    <WithI18n bind:t content="account">
+        {#if !isReady}
+            <Loading/>
+        {:else}
+            <AccMain bind:t bind:sessionInfo bind:user/>
+        {/if}
+    </WithI18n>
 </BrowserCheck>

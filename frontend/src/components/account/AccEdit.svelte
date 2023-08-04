@@ -9,9 +9,10 @@
     import {putUserSelf} from "../../utils/dataFetching.js";
     import Input from "$lib/inputs/Input.svelte";
 
+    export let t;
     export let user = {};
 
-    const btnWidth = "10rem";
+    const btnWidth = "11rem";
     const inputWidth = '300px';
 
     let editPwd = false;
@@ -36,13 +37,15 @@
     let formErrors = {};
 
     const schema = yup.object().shape({
-        email: yup.string().required('E-Mail is required').email("Bad E-Mail format"),
+        email: yup.string()
+            .required(t.validEmail)
+            .email(t.validEmail),
         givenName: yup.string()
-            .required('Given Name is required')
-            .matches(REGEX_NAME, "Your given name with 2 - 32  non-special characters"),
+            .required(t.validGivenName)
+            .matches(REGEX_NAME, t.validGivenName),
         familyName: yup.string()
-            .required('Family Name is required')
-            .matches(REGEX_NAME, "Your family name with 2 - 32  non-special characters"),
+            .required(t.validFamilyName)
+            .matches(REGEX_NAME, t.validFamilyName),
     });
 
     function handleKeyPress(event) {
@@ -53,8 +56,9 @@
 
     async function onSubmit() {
         const valid = await validateForm();
-        if (!valid) {
-            err = 'Invalid input';
+        const validPwd = await isPwdValid();
+        if (!valid || !validPwd) {
+            err = t.invalidInput;
             return;
         }
 
@@ -107,36 +111,37 @@
                 bind:value={formValues.email}
                 bind:error={formErrors.email}
                 autocomplete="family-name"
-                placeholder="E-Mail"
+                placeholder={t.email}
                 on:input={validateForm}
                 width={inputWidth}
         >
-            E-MAIL
+            {t.email.toUpperCase()}
         </Input>
         <Input
                 bind:value={formValues.givenName}
                 bind:error={formErrors.givenName}
                 autocomplete="given-name"
-                placeholder="Given Name"
+                placeholder={t.givenName}
                 on:input={validateForm}
                 width={inputWidth}
         >
-            GIVEN NAME
+            {t.givenName.toUpperCase()}
         </Input>
         <Input
                 bind:value={formValues.familyName}
                 bind:error={formErrors.familyName}
-                autocomplete="email"
-                placeholder="Family Name"
+                autocomplete="family-name"
+                placeholder={t.familyName}
                 on:input={validateForm}
                 width={inputWidth}
         >
-            FAMILY NAME
+            {t.familyName.toUpperCase()}
         </Input>
 
         {#if editPwd}
             <div in:blur|global={{ duration: 350 }}>
                 <AccModPwd
+                        bind:t
                         bind:formValues={pwdFormValues}
                         bind:isValid={isPwdValid}
                         btnWidth={btnWidth}
@@ -145,12 +150,14 @@
             </div>
         {/if}
 
-        <Button width={btnWidth} bind:selected={editPwd}>
-            CHANGE PASSWORD
-        </Button>
+        {#if !editPwd}
+            <Button width={btnWidth} bind:selected={editPwd}>
+                {t.changePassword.toUpperCase()}
+            </Button>
+        {/if}
 
         <Button width={btnWidth} on:click={onSubmit} level={1}>
-            SAVE
+            {t.save.toUpperCase()}
         </Button>
 
         <div class="bottom">

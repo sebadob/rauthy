@@ -1,9 +1,10 @@
 <script>
     import Button from "$lib/Button.svelte";
 
-    export let selected = 'INFO';
+    export let t;
+    export let selected = t.navInfo;
 
-    let labels = ['INFO', 'EDIT', 'MFA', 'LOGOUT'];
+    let labels = [t.navInfo, t.navEdit, t.navMfa, t.navLogout];
     let toggle = [];
 
     $: if (selected) {

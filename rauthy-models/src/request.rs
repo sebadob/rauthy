@@ -122,7 +122,7 @@ pub struct I18nRequest {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum I18nContent {
-    // Account,
+    Account,
     Authorize,
 }
 

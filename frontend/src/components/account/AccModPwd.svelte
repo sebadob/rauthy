@@ -7,6 +7,7 @@
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import Button from "$lib/Button.svelte";
 
+    export let t;
     export let formValues = {};
     export let btnWidth = "4rem";
     export let inputWidth;
@@ -18,11 +19,11 @@
     let showCopy;
 
     const schema = yup.object().shape({
-        current: yup.string().required('Current password is required'),
+        current: yup.string().required(t.passwordCurrReq),
         new: yup.string()
-            .required('New password is required'),
+            .required(t.passwordNewReq),
         verify: yup.string()
-            .required('Password verification is required'),
+            .required(t.passwordNoMatch),
     });
 
     $: showCopy = formValues.new?.length > 6 && formValues.new === formValues.verify;
@@ -49,12 +50,12 @@
         }
 
         if (!accepted) {
-            err = 'You must follow the password policy';
+            err = t.passwordPolicyFollow;
             return false;
         }
 
         if (formValues.new !== formValues.verify) {
-            err = 'New passwords do not match';
+            err = t.passwordNoMatch;
             return false;
         }
 
@@ -74,43 +75,43 @@
 
 {#if policy}
     <div class="container">
-        <PasswordPolicy bind:accepted bind:policy bind:password={formValues.new}/>
+        <PasswordPolicy bind:t bind:accepted bind:policy bind:password={formValues.new}/>
 
         <PasswordInput
                 bind:value={formValues.current}
                 bind:error={formErrors.current}
                 autocomplete="current-password"
-                placeholder="Current Password"
+                placeholder={t.passwordCurr}
                 on:input={isValid}
                 width={inputWidth}
         >
-            CURRENT PASSWORD
+            {t.passwordCurr.toUpperCase()}
         </PasswordInput>
         <PasswordInput
                 bind:value={formValues.new}
                 bind:error={formErrors.new}
                 autocomplete="new-password"
-                placeholder="New Password"
+                placeholder={t.passwordNew}
                 on:input={isValid}
                 bind:showCopy
                 width={inputWidth}
         >
-            NEW PASSWORD
+            {t.passwordNew.toUpperCase()}
         </PasswordInput>
         <PasswordInput
                 bind:value={formValues.verify}
                 bind:error={formErrors.verify}
                 autocomplete="new-password"
-                placeholder="New Password"
+                placeholder={t.passwordConfirm}
                 on:input={isValid}
                 bind:showCopy
                 width={inputWidth}
         >
-            CONFIRM PASSWORD
+            {t.passwordConfirm.toUpperCase()}
         </PasswordInput>
 
         <Button on:click={generate} level={3} width={btnWidth}>
-            GENERATE RANDOM
+            {t.generateRandom.toUpperCase()}
         </Button>
 
         <div class="err">

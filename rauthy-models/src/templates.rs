@@ -1,5 +1,6 @@
 use crate::entity::colors::Colors;
 use crate::entity::password::PasswordPolicy;
+use crate::i18n::account::I18nAccount;
 use crate::i18n::authorize::I18nAuthorize;
 use crate::i18n::SsrJson;
 use crate::language::Language;
@@ -99,7 +100,7 @@ pub struct AccountHtml<'a> {
 }
 
 impl AccountHtml<'_> {
-    pub fn build(colors: &Colors) -> (String, String) {
+    pub fn build(colors: &Colors, lang: &Language) -> (String, String) {
         let nonce = nonce();
 
         let res = AccountHtml {
@@ -117,9 +118,9 @@ impl AccountHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             nonce: &nonce,
+            i18n: I18nAccount::build(lang).as_json(),
             ..Default::default()
         };
-
         (res.render().unwrap(), nonce)
     }
 }
