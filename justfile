@@ -36,6 +36,7 @@ run-postgres:
 
 # runs the UI in development mode
 run-ui:
+    #!/usr/bin/env bash
     cd frontend
     npm run dev
 
@@ -115,6 +116,8 @@ build-ui:
     )
     for folder in "${PAGES[@]}"; do
         for html in $folder; do
+          # set correct document language
+          sed -i 's/lang="en"/lang="{{{{ lang }}"/g' "$html"
           # for pre-rendering colors
           sed -i 's/#6b3d99;/{{{{ col_act1 }};/g' "$html"
           sed -i 's/#714d99;/{{{{ col_act1a }};/g' "$html"

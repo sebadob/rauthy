@@ -64,8 +64,9 @@ impl TryFrom<&HttpRequest> for Language {
     type Error = ErrorResponse;
 
     fn try_from(value: &HttpRequest) -> Result<Self, Self::Error> {
-        if let Some(cookie) = value.headers().get(COOKIE_LOCALE) {
-            return Ok(Language::from(cookie));
+        if let Some(cookie) = value.cookie(COOKIE_LOCALE) {
+            debug!("locale cookie {:?}", cookie);
+            return Ok(Language::from(cookie.value()));
         }
 
         if let Some(accept_lang) = value.headers().get(ACCEPT_LANGUAGE) {

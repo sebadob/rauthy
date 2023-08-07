@@ -28,6 +28,7 @@ impl ToString for FrontendAction {
 #[derive(Default, Template)]
 #[template(path = "html/index.html")]
 pub struct IndexHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: bool,
@@ -53,6 +54,7 @@ impl IndexHtml<'_> {
         let nonce = nonce();
 
         let res = IndexHtml {
+            lang: "en",
             csrf_token: "",
             data: &OPEN_USER_REG.to_string(),
             col_act1: &colors.act1,
@@ -79,6 +81,7 @@ impl IndexHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/account.html")]
 pub struct AccountHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -104,6 +107,7 @@ impl AccountHtml<'_> {
         let nonce = nonce();
 
         let res = AccountHtml {
+            lang: lang.as_str(),
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -128,6 +132,7 @@ impl AccountHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin.html")]
 pub struct AdminHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -153,6 +158,7 @@ impl AdminHtml<'_> {
         let nonce = nonce();
 
         let res = AdminHtml {
+            lang: "en",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -177,6 +183,7 @@ impl AdminHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/attributes.html")]
 pub struct AdminAttributesHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -202,6 +209,7 @@ impl AdminAttributesHtml<'_> {
         let nonce = nonce();
 
         let res = AdminAttributesHtml {
+            lang: "en",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -226,6 +234,7 @@ impl AdminAttributesHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/clients.html")]
 pub struct AdminClientsHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -251,6 +260,7 @@ impl AdminClientsHtml<'_> {
         let nonce = nonce();
 
         let res = AdminClientsHtml {
+            lang: "en",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -275,6 +285,7 @@ impl AdminClientsHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/config.html")]
 pub struct AdminConfigHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -300,6 +311,7 @@ impl AdminConfigHtml<'_> {
         let nonce = nonce();
 
         let res = AdminConfigHtml {
+            lang: "en",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -324,6 +336,7 @@ impl AdminConfigHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/docs.html")]
 pub struct AdminDocsHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -349,6 +362,7 @@ impl AdminDocsHtml<'_> {
         let nonce = nonce();
 
         let res = AdminDocsHtml {
+            lang: "en",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -373,6 +387,7 @@ impl AdminDocsHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/groups.html")]
 pub struct AdminGroupsHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -398,6 +413,7 @@ impl AdminGroupsHtml<'_> {
         let nonce = nonce();
 
         let res = AdminGroupsHtml {
+            lang: "en",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -422,6 +438,7 @@ impl AdminGroupsHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/roles.html")]
 pub struct AdminRolesHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -447,6 +464,7 @@ impl AdminRolesHtml<'_> {
         let nonce = nonce();
 
         let res = AdminRolesHtml {
+            lang: "en",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -471,6 +489,7 @@ impl AdminRolesHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/scopes.html")]
 pub struct AdminScopesHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -496,6 +515,7 @@ impl AdminScopesHtml<'_> {
         let nonce = nonce();
 
         let res = AdminScopesHtml {
+            lang: "en",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -520,6 +540,7 @@ impl AdminScopesHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/sessions.html")]
 pub struct AdminSessionsHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -545,6 +566,7 @@ impl AdminSessionsHtml<'_> {
         let nonce = nonce();
 
         let res = AdminSessionsHtml {
+            lang: "en",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -569,6 +591,7 @@ impl AdminSessionsHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/users.html")]
 pub struct AdminUsersHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -594,6 +617,7 @@ impl AdminUsersHtml<'_> {
         let nonce = nonce();
 
         let res = AdminUsersHtml {
+            lang: "en",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -618,6 +642,7 @@ impl AdminUsersHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/oidc/authorize.html")]
 pub struct AuthorizeHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -649,6 +674,7 @@ impl AuthorizeHtml<'_> {
         let nonce = nonce();
 
         let mut res = AuthorizeHtml {
+            lang: lang.as_str(),
             csrf_token,
             action: &action.to_string(),
             col_act1: &colors.act1,
@@ -679,6 +705,7 @@ impl AuthorizeHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/oidc/callback.html")]
 pub struct CallbackHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -704,6 +731,7 @@ impl CallbackHtml<'_> {
         let nonce = nonce();
 
         let res = CallbackHtml {
+            lang: "en",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -728,6 +756,7 @@ impl CallbackHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/oidc/logout.html")]
 pub struct LogoutHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: bool,
@@ -753,6 +782,7 @@ impl LogoutHtml<'_> {
         let nonce = nonce();
 
         let res = LogoutHtml {
+            lang: "en",
             csrf_token,
             action: set_logout,
             col_act1: &colors.act1,
@@ -779,6 +809,7 @@ impl LogoutHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/users/{id}/reset/reset.html")]
 pub struct PwdResetHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: bool,
@@ -824,6 +855,7 @@ impl PwdResetHtml<'_> {
         );
 
         let res = PwdResetHtml {
+            lang: "en",
             csrf_token,
             data: &data,
             col_act1: &colors.act1,
@@ -850,6 +882,7 @@ impl PwdResetHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/users/register.html")]
 pub struct UserRegisterHtml<'a> {
+    pub lang: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: bool,
@@ -875,6 +908,7 @@ impl UserRegisterHtml<'_> {
         let nonce = nonce();
 
         let body = UserRegisterHtml {
+            lang: "en",
             data: USER_REG_DOMAIN_RESTRICTION
                 .as_ref()
                 .map(|s| s.as_str())
@@ -903,5 +937,5 @@ impl UserRegisterHtml<'_> {
 }
 
 fn nonce() -> String {
-    get_rand(16)
+    get_rand(24)
 }
