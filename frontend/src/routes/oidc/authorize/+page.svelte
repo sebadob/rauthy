@@ -11,6 +11,7 @@
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import BrowserCheck from "../../../components/BrowserCheck.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
+    import LangSelector from "$lib/LangSelector.svelte";
 
     let t = {};
 
@@ -57,8 +58,6 @@
             email: yup.string().required(t.emailRequired).email(t.emailBadFormat),
         });
     }
-
-    $: console.log(t);
 
     $: if (refresh && clientId?.length > 0 && redirectUri?.length > 0) {
         isLoading = true
@@ -312,6 +311,8 @@
                 </div>
             {/if}
         </div>
+
+        <LangSelector absolute />
     </WithI18n>
 </BrowserCheck>
 

@@ -5,6 +5,7 @@
     import AccEdit from "./AccEdit.svelte";
     import {tweened} from "svelte/motion";
     import AccMFA from "./AccMFA.svelte";
+    import LangSelector from "$lib/LangSelector.svelte";
 
     export let t;
 
@@ -51,6 +52,8 @@
             {/if}
         </div>
     </div>
+
+    <LangSelector absolute />
 </div>
 
 <style>

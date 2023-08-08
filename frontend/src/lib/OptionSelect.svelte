@@ -1,7 +1,7 @@
 <script>
     export let value;
     export let options = [];
-    export let width = '120px';
+    export let width = 'inherit';
 </script>
 
 <select bind:value style:width>
@@ -21,7 +21,7 @@
         border-radius: 3px;
         border: none;
         outline: none;
-        background: white;
+        background: transparent;
     }
 
     select:hover {
