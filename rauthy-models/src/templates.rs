@@ -2,6 +2,9 @@ use crate::entity::colors::Colors;
 use crate::entity::password::PasswordPolicy;
 use crate::i18n::account::I18nAccount;
 use crate::i18n::authorize::I18nAuthorize;
+use crate::i18n::index::I18nIndex;
+use crate::i18n::logout::I18nLogout;
+use crate::i18n::register::I18nRegister;
 use crate::i18n::SsrJson;
 use crate::language::Language;
 use askama_actix::Template;
@@ -50,11 +53,11 @@ pub struct IndexHtml<'a> {
 }
 
 impl IndexHtml<'_> {
-    pub fn build(colors: &Colors) -> (String, String) {
+    pub fn build(colors: &Colors, lang: &Language) -> (String, String) {
         let nonce = nonce();
 
         let res = IndexHtml {
-            lang: "en",
+            lang: lang.as_str(),
             csrf_token: "",
             data: &OPEN_USER_REG.to_string(),
             col_act1: &colors.act1,
@@ -71,6 +74,7 @@ impl IndexHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             nonce: &nonce,
+            i18n: I18nIndex::build(lang).as_json(),
             ..Default::default()
         };
 
@@ -778,11 +782,16 @@ pub struct LogoutHtml<'a> {
 }
 
 impl LogoutHtml<'_> {
-    pub fn build(csrf_token: &str, set_logout: bool, colors: &Colors) -> (String, String) {
+    pub fn build(
+        csrf_token: &str,
+        set_logout: bool,
+        colors: &Colors,
+        lang: &Language,
+    ) -> (String, String) {
         let nonce = nonce();
 
         let res = LogoutHtml {
-            lang: "en",
+            lang: lang.as_str(),
             csrf_token,
             action: set_logout,
             col_act1: &colors.act1,
@@ -799,6 +808,7 @@ impl LogoutHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             nonce: &nonce,
+            i18n: I18nLogout::build(lang).as_json(),
             ..Default::default()
         };
 
@@ -904,11 +914,11 @@ pub struct UserRegisterHtml<'a> {
 }
 
 impl UserRegisterHtml<'_> {
-    pub fn build(colors: &Colors) -> (String, String) {
+    pub fn build(colors: &Colors, lang: &Language) -> (String, String) {
         let nonce = nonce();
 
         let body = UserRegisterHtml {
-            lang: "en",
+            lang: lang.as_str(),
             data: USER_REG_DOMAIN_RESTRICTION
                 .as_ref()
                 .map(|s| s.as_str())
@@ -927,6 +937,7 @@ impl UserRegisterHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             nonce: &nonce,
+            i18n: I18nRegister::build(lang).as_json(),
             ..Default::default()
         }
         .render()

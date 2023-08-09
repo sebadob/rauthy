@@ -56,10 +56,7 @@ pub async fn get_authorize(
     )
     .await?;
 
-    // TODO use for testing i18n
     let lang = Language::try_from(&req).unwrap_or_default();
-    tracing::info!("lang: {:?}", lang);
-
     let colors = ColorEntity::find(&data, &req_data.client_id).await?;
 
     if session.is_some() && session.as_ref().unwrap().state == SessionState::Auth {
@@ -275,6 +272,7 @@ pub async fn get_cert_by_kid(
 #[has_permissions("all")]
 pub async fn get_logout(
     data: web::Data<AppState>,
+    req: HttpRequest,
     req_data: web::Query<LogoutRequest>,
     session_req: web::ReqData<Option<Session>>,
 ) -> HttpResponse {
@@ -289,7 +287,8 @@ pub async fn get_logout(
         }
     };
 
-    let (body, nonce) = match auth::logout(req_data.into_inner(), session, &data).await {
+    let lang = Language::try_from(&req).unwrap_or_default();
+    let (body, nonce) = match auth::logout(req_data.into_inner(), session, &data, &lang).await {
         Ok(t) => t,
         Err(_) => {
             return HttpResponse::build(StatusCode::from_u16(302).unwrap())

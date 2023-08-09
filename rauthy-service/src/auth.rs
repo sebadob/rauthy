@@ -26,6 +26,7 @@ use rauthy_models::entity::scopes::Scope;
 use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
+use rauthy_models::language::Language;
 use rauthy_models::request::{LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest};
 use rauthy_models::response::{TokenInfo, Userinfo};
 use rauthy_models::templates::LogoutHtml;
@@ -956,11 +957,12 @@ pub async fn logout(
     logout_request: LogoutRequest,
     session: Session,
     data: &web::Data<AppState>,
+    lang: &Language,
 ) -> Result<(String, String), ErrorResponse> {
     let colors = ColorEntity::find_rauthy(data).await?;
 
     if logout_request.id_token_hint.is_none() {
-        return Ok(LogoutHtml::build(&session.csrf_token, false, &colors));
+        return Ok(LogoutHtml::build(&session.csrf_token, false, &colors, lang));
     }
 
     // check if the provided token hint is a valid
@@ -1007,7 +1009,7 @@ pub async fn logout(
         // redirect uri is valid at this point
     }
 
-    Ok(LogoutHtml::build(&session.csrf_token, true, &colors))
+    Ok(LogoutHtml::build(&session.csrf_token, true, &colors, lang))
 }
 
 /// The permission extractor for the `GrantsMiddleware`

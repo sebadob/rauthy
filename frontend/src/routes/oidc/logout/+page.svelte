@@ -4,7 +4,9 @@
     import {logout} from "../../../utils/dataFetching.js";
     import Button from "$lib/Button.svelte";
     import Loading from "$lib/Loading.svelte";
+    import WithI18n from "$lib/WithI18n.svelte";
 
+    let t;
     let err = '';
     let postLogoutUri = '';
     let isLoading = false;
@@ -55,27 +57,29 @@
 </script>
 
 <svelte:head>
-    <title>Logout</title>
+    <title>{t?.logout || 'Logout'}</title>
 </svelte:head>
 
-<div class="container">
-    <h1>Logout</h1>
+<WithI18n bind:t content="logout">
+    <div class="container">
+        <h1>{t.logout}</h1>
 
-    <div>
-        Do you really want to logout and end your session?
-    </div>
+        <p>
+            {t.confirmMsg}
+        </p>
 
-    <div class="btn">
-        <Button on:click={handleLogout} level={2} bind:isLoading>LOGOUT</Button>
-        <Button on:click={handleCancel} level={4}>CANCEL</Button>
-    </div>
-
-    {#if err}
-        <div class:err>
-            {err}
+        <div class="btn">
+            <Button on:click={handleLogout} level={2} bind:isLoading>{t.logout.toUpperCase()}</Button>
+            <Button on:click={handleCancel} level={4}>{t.cancel.toUpperCase()}</Button>
         </div>
-    {/if}
-</div>
+
+        {#if err}
+            <div class:err>
+                {err}
+            </div>
+        {/if}
+    </div>
+</WithI18n>
 
 <style>
     .btn {
