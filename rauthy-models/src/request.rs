@@ -124,6 +124,9 @@ pub struct I18nRequest {
 pub enum I18nContent {
     Account,
     Authorize,
+    Index,
+    Logout,
+    Register,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]

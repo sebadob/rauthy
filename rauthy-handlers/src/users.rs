@@ -13,6 +13,7 @@ use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
+use rauthy_models::language::Language;
 use rauthy_models::request::{
     MfaPurpose, NewUserRegistrationRequest, NewUserRequest, PasswordResetRequest,
     RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest, UserAttrConfigRequest,
@@ -225,7 +226,10 @@ pub async fn delete_cust_attr(
 )]
 #[get("/users/register")]
 #[has_permissions("all")]
-pub async fn get_users_register(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_users_register(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
     if !*OPEN_USER_REG {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
@@ -233,8 +237,9 @@ pub async fn get_users_register(data: web::Data<AppState>) -> Result<HttpRespons
         ));
     }
 
+    let lang = Language::try_from(&req).unwrap_or_default();
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let (body, nonce) = UserRegisterHtml::build(&colors);
+    let (body, nonce) = UserRegisterHtml::build(&colors, &lang);
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_HTML)
         .insert_header(build_csp_header(&nonce))

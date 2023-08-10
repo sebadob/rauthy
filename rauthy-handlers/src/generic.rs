@@ -16,6 +16,9 @@ use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::i18n::account::I18nAccount;
 use rauthy_models::i18n::authorize::I18nAuthorize;
+use rauthy_models::i18n::index::I18nIndex;
+use rauthy_models::i18n::logout::I18nLogout;
+use rauthy_models::i18n::register::I18nRegister;
 use rauthy_models::i18n::SsrJson;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
@@ -33,12 +36,17 @@ use rauthy_models::templates::{
 use rauthy_service::encryption;
 use redhac::{cache_get, cache_get_from, cache_get_value};
 use std::borrow::Cow;
+use tracing::debug;
 
 #[get("/")]
 #[has_permissions("all")]
-pub async fn get_index(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_index(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let (body, nonce) = IndexHtml::build(&colors);
+    let lang = Language::try_from(&req).unwrap_or_default();
+    let (body, nonce) = IndexHtml::build(&colors, &lang);
 
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_HTML)
@@ -81,11 +89,14 @@ pub async fn post_i18n(
     req_data: Json<I18nRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let lang = Language::try_from(&req).unwrap_or_default();
-    tracing::debug!("post_i18n lang: {:?} req: {:?}", lang, req_data);
+    debug!("post_i18n lang: {:?} req: {:?}", lang, req_data);
 
     let body = match req_data.content {
         I18nContent::Authorize => I18nAuthorize::build(&lang).as_json(),
         I18nContent::Account => I18nAccount::build(&lang).as_json(),
+        I18nContent::Index => I18nIndex::build(&lang).as_json(),
+        I18nContent::Logout => I18nLogout::build(&lang).as_json(),
+        I18nContent::Register => I18nRegister::build(&lang).as_json(),
     };
 
     Ok(HttpResponse::Ok()

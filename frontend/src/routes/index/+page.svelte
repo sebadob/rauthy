@@ -2,9 +2,12 @@
     import {onMount} from "svelte";
     import Button from "$lib/Button.svelte";
     import BrowserCheck from "../../components/BrowserCheck.svelte";
+    import WithI18n from "$lib/WithI18n.svelte";
+    import LangSelector from "$lib/LangSelector.svelte";
 
     const btnWidth = "9rem";
 
+    let t;
     let renderReg = false;
 
     onMount(() => {
@@ -32,13 +35,16 @@
 </svelte:head>
 
 <BrowserCheck>
-    <div class="btn">
-        {#if renderReg}
-            <Button on:click={redirectToReg} width={btnWidth}>REGISTER</Button>
-        {/if}
-        <Button on:click={redirectToAccount} width={btnWidth}>ACCOUNT LOGIN</Button>
-        <Button on:click={redirectToAdmin} width={btnWidth}>ADMIN LOGIN</Button>
-    </div>
+    <WithI18n bind:t content="index">
+        <div class="btn">
+            {#if renderReg}
+                <Button on:click={redirectToReg} width={btnWidth}>{t.register.toUpperCase()}</Button>
+            {/if}
+            <Button on:click={redirectToAccount} width={btnWidth}>{t.accountLogin.toUpperCase()}</Button>
+            <Button on:click={redirectToAdmin} width={btnWidth}>{t.adminLogin.toUpperCase()}</Button>
+        </div>
+        <LangSelector absolute />
+    </WithI18n>
 </BrowserCheck>
 
 <style>

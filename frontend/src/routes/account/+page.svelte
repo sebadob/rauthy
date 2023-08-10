@@ -8,7 +8,6 @@
     import WithI18n from "$lib/WithI18n.svelte";
 
     let t;
-
     let sessionInfo;
     let user;
     let isReady = false;
@@ -32,7 +31,7 @@
 </script>
 
 <svelte:head>
-    <title>Account {user?.email}</title>
+    <title>{t?.account || 'Account'} {user?.email}</title>
 </svelte:head>
 
 <BrowserCheck>
