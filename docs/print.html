@@ -220,8 +220,6 @@ Keycloak was a rough inspiration in certain places and if something is working w
 <p>Since Rauthy is currently pre v1.0, it might be missing some nice to have features. Some of them will never be
 implemented (see below), while others might come or are even planned already.</p>
 <p>Currently missing features:</p>
-<p><strong>UI translation</strong><br />
-The Admin UI will most probably never be translated, but a basic translation for the Login and Account page may come.</p>
 <p><strong>Rauthy Name Override</strong><br />
 The idea of this feature is, that one may be able to override the <em>Rauthy</em> name in different places like E-Mail
 notifications or the Admin UI. This would make it possible to not confuse external users, when they expect some
@@ -235,22 +233,6 @@ It is unsure, if this feature will come.</p>
 <p><strong>OIDC Client</strong><br />
 Rauthy will most probably have the option to be an OIDC Client itself as well. With this feature, you would be able
 to do things like &quot;Login with Github&quot; to Rauthy and then use Rauthy for the extended management and features.</p>
-<p><strong>MySQL Support</strong><br />
-At the time of writing it is not clear yet, if MySQL / MariaDB databases will be added.<br />
-The Foundation is there, it just is the case that some specific queries need to be rewritten / added in a few places
-to match the new SQL dialect.</p>
-<h2 id="what-it-will-never-be"><a class="header" href="#what-it-will-never-be">What it will never be</a></h2>
-<p>Rauthy does not try to just replicate already existing, great software.<br />
-For instance, if you need way more flexibility regarding federated users, fully customizable login flows or things
-like SAML or LDAP, then you might want to take a look at solutions like Keycloak.</p>
-<p>Rauthy wants to do just a few things, but these things good, fast, efficient and secure.<br />
-This means it <strong>will never implement</strong> (if not contributed from someone):</p>
-<ul>
-<li>Insecure OIDC flows like the <em>Implicit Flow</em></li>
-<li>SAML 2.0 / LDAP</li>
-<li>Other (older, more insecure or just annoying) 2FA mechanisms than the existing ones</li>
-<li>No fully customizable themes in addition to the existing branding.</li>
-</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
 <div id="admonition-hint" class="admonition tip">
 <div class="admonition-title">
