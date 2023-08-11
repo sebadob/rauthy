@@ -74,9 +74,6 @@ implemented (see below), while others might come or are even planned already.
 
 Currently missing features:
 
-**UI translation**  
-The Admin UI will most probably never be translated, but a basic translation for the Login and Account page may come.
-
 **Rauthy Name Override**  
 The idea of this feature is, that one may be able to override the *Rauthy* name in different places like E-Mail
 notifications or the Admin UI. This would make it possible to not confuse external users, when they expect some
@@ -93,22 +90,3 @@ It is unsure, if this feature will come.
 **OIDC Client**  
 Rauthy will most probably have the option to be an OIDC Client itself as well. With this feature, you would be able
 to do things like "Login with Github" to Rauthy and then use Rauthy for the extended management and features.
-
-**MySQL Support**  
-At the time of writing it is not clear yet, if MySQL / MariaDB databases will be added.  
-The Foundation is there, it just is the case that some specific queries need to be rewritten / added in a few places
-to match the new SQL dialect.
-
-## What it will never be
-
-Rauthy does not try to just replicate already existing, great software.  
-For instance, if you need way more flexibility regarding federated users, fully customizable login flows or things
-like SAML or LDAP, then you might want to take a look at solutions like Keycloak.
-
-Rauthy wants to do just a few things, but these things good, fast, efficient and secure.  
-This means it **will never implement** (if not contributed from someone):
-
-- Insecure OIDC flows like the *Implicit Flow*
-- SAML 2.0 / LDAP
-- Other (older, more insecure or just annoying) 2FA mechanisms than the existing ones
-- No fully customizable themes in addition to the existing branding.  
