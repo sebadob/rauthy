@@ -8,11 +8,13 @@ RUN mkdir data
 
 FROM scratch
 
+ARG BINARY
+
 USER 10001:10001
 
 WORKDIR /app
 
-COPY --chown=10001:10001 /out/rauthy .
+COPY --chown=10001:10001 /out/"$BINARY" ./rauthy
 COPY --chown=10001:10001 --from=builderBackend /work/data ./data
 
 COPY --chown=10001:10001 tls/ ./tls/

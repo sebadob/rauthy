@@ -1,8 +1,9 @@
 set shell := ["bash", "-uc"]
 
-export TAG := `cat rauthy-main/Cargo.toml | grep '^version =' | cut -d " " -f3 | xargs`
+export TAG := `cat Cargo.toml | grep '^version =' | cut -d " " -f3 | xargs`
 
 db_url_sqlite := "sqlite:data/rauthy.db"
+db_url_sqlite_mem := "sqlite::memory"
 db_url_postgres := "postgresql://rauthy:123SuperSafe@localhost:5432/rauthy"
 
 clippy-sqlite:
@@ -16,6 +17,7 @@ clippy-postgres:
 
 
 migrate-sqlite:
+    rm data/rauthy.db*
     DATABASE_URL={{db_url_sqlite}} sqlx database create
     DATABASE_URL={{db_url_sqlite}} sqlx migrate run --source migrations/sqlite
 
@@ -43,11 +45,12 @@ run-ui:
 
 # prints out the currently set version
 version:
-    echo $TAG
+    #!/usr/bin/env bash
+    echo "v$TAG"
 
 
 # runs the full set of tests with in-memory sqlite
-test-sqlite:
+test-sqlite: migrate-sqlite
     #!/usr/bin/env bash
     clear
 
@@ -62,11 +65,8 @@ test-sqlite:
     echo All tests successful
 
 
-#DATABASE_URL="sqlite:data/rauthy.db" cargo test --features sqlite -p rauthy-models --doc
-#DATABASE_URL="postgresql://rauthy:123SuperSafe@localhost:5432/rauthy" cargo test --features postgres -p rauthy-models --doc
-
 # runs the full set of tests with postgres
-test-postgres:
+test-postgres: migrate-postgres
     #!/usr/bin/env bash
     clear
 
@@ -147,14 +147,11 @@ build-docs:
     mdbook build -d ../docs
 
 
-## builds the whole application in release mode
-#build: build-docs build-ui
-#    cargo clippy -- -D warnings
-#    cargo build --release --target x86_64-unknown-linux-musl
-#    cp target/x86_64-unknown-linux-musl/release/rauthy out/
-
 # builds the whole application in release mode
-build-sqlite: build-docs build-ui migrate-sqlite
+build-sqlite: build-docs build-ui test-sqlite
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
     DATABASE_URL={{db_url_sqlite}} cargo clippy --features sqlite -- -D warnings
     DATABASE_URL={{db_url_sqlite}} cargo build \
         --release \
@@ -164,7 +161,10 @@ build-sqlite: build-docs build-ui migrate-sqlite
 
 
 # builds the whole application in release mode
-build-postgres: build-docs build-ui migrate-postgres
+build-postgres: build-docs build-ui test-postgres
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
     DATABASE_URL={{db_url_postgres}} cargo clippy --features postgres -- -D warnings
     DATABASE_URL={{db_url_postgres}} cargo build \
         --release \
@@ -198,11 +198,20 @@ release:
 
 
 # publishes the application images
-publish:
-    docker build --no-cache -t sdobedev/rauthy:$TAG .
+publish: build-sqlite build-postgres
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    docker build --no-cache -t sdobedev/rauthy:$TAG --build-arg=rauthy .
     docker push sdobedev/rauthy:$TAG
-    docker build --no-cache -f Dockerfile.debug -t sdobedev/rauthy:$TAG-debug .
+    docker build --no-cache -f Dockerfile.debug -t sdobedev/rauthy:$TAG-debug --build-arg=rauthy .
     docker push sdobedev/rauthy:$TAG-debug
 
+    docker build --no-cache -t sdobedev/rauthy:$TAG-lite --build-arg=rauthy-lite .
+    docker push sdobedev/rauthy:$TAG-lite
+    docker build --no-cache -f Dockerfile.debug -t sdobedev/rauthy:$TAG-lite-debug --build-arg=rauthy-lite .
+    docker push sdobedev/rauthy:$TAG-lite-debug
+
+    # the `latest` image will always point to the postgres version, which is used more often
     docker tag sdobedev/rauthy:$TAG sdobedev/rauthy:latest
     docker push sdobedev/rauthy:latest
