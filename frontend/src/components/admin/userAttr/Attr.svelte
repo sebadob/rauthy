@@ -57,7 +57,7 @@
     <UserAttrTileAddNew onSave={onSave}/>
 
     <div id="attrs">
-        {#each resAttr as attr (attr.name)}
+        {#each resAttrPaginated as attr (attr.name)}
             <div>
                 <UserAttrTile bind:attr onSave={onSave}/>
             </div>
