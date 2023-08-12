@@ -65,7 +65,7 @@
     <GroupTileAddNew onSave={onSave}/>
 
     <div id="groups">
-        {#each resGroups as group (group.id)}
+        {#each resClientsPaginated as group (group.id)}
             <div>
                 <GroupTile bind:group onSave={onSave}/>
             </div>

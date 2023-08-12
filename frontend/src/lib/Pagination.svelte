@@ -5,7 +5,7 @@
     export let items = [];
     export let resItems = [];
 
-    const options = [2, 3, 4, 7, 10, 15, 20, 30, 50, 100];
+    const options = [5, 7, 10, 15, 20, 30, 50, 100];
     const iconSize = 16;
 
     let itemsArr = [];

@@ -71,7 +71,7 @@
     <ClientTileAddNew onSave={onSave}/>
 
     <div id="clients">
-        {#each resClients as client (client.id)}
+        {#each resClientsPaginated as client (client.id)}
             <div>
                 <ClientTile bind:client onSave={onSave}/>
             </div>

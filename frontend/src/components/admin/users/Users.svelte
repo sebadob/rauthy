@@ -93,7 +93,7 @@
     <UserTileAddNew onSave={onSave}/>
 
     <div id="users">
-        {#each resUsers as user (user.id)}
+        {#each resUsersPaginated as user (user.id)}
             <div>
                 <UserTile bind:user onSave={onSave}/>
             </div>

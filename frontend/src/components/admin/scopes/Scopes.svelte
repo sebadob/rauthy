@@ -78,7 +78,7 @@
     <ScopeTileAddNew onSave={onSave}/>
 
     <div id="scopes">
-        {#each resScopes as scope (scope.id)}
+        {#each resScopesPaginated as scope (scope.id)}
             <div>
                 <ScopeTile bind:attrs bind:scope onSave={onSave}/>
             </div>
