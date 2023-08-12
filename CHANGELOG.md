@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.14.1
+
+Bugfix release for the Dockerfiles and Pagination in some places
+
+- Split the Dockerfiles into separate files because the `ARG` introduced access rights problems
+[25e3918](https://github.com/sebadob/rauthy/commit/25e39189f95d21e84e24f6d21670709a7ee1effd)
+- Small bugfix for the pagination component in some places
+[317dbad](https://github.com/sebadob/rauthy/commit/317dbadb0391b78aca0cdadc65dff79d9bf74717)
+
 ## v0.14.0
 
 This release is mostly about UI / UX improvements and some smaller bugfixes.

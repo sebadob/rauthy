@@ -9,7 +9,7 @@
     let err = '';
     let groups = [];
     let resGroups = [];
-    let resClientsPaginated = [];
+    let resGroupsPaginated = [];
 
     let searchOptions = [
         {
@@ -65,7 +65,7 @@
     <GroupTileAddNew onSave={onSave}/>
 
     <div id="groups">
-        {#each resClientsPaginated as group (group.id)}
+        {#each resGroupsPaginated as group (group.id)}
             <div>
                 <GroupTile bind:group onSave={onSave}/>
             </div>
@@ -74,7 +74,7 @@
 
     <Pagination
             bind:items={resGroups}
-            bind:resItems={resClientsPaginated}
+            bind:resItems={resGroupsPaginated}
     />
 
     <div style="height: 20px"></div>
