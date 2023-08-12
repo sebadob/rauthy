@@ -13,3 +13,7 @@ too uncertain to me.
 
 At the time of writing, you can run Rauthy either with [Docker](./docker.md) or inside [Kubernetes](./k8s.md).  
 
+```admonish caution
+All the examples in this documentation are using the `*-lite` images and therefore SQLite. If you want to use Postgres
+in production, you need to use the "default" container images.
+```
