@@ -386,6 +386,7 @@ pub async fn build_id_token(
     };
 
     let mut custom_claims = JwtIdClaims {
+        sub: user.id.clone(),
         azp: client.id.clone(),
         typ: JwtType::Id,
         amr: vec![amr],
