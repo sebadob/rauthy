@@ -1,4 +1,4 @@
-FROM alpine:3.18.2 AS builderBackend
+FROM alpine:3.18.3 AS builderBackend
 
 WORKDIR /work
 
@@ -6,18 +6,17 @@ WORKDIR /work
 # the correct access rights
 RUN mkdir data
 
-FROM alpine:3.18.3
-
-ARG BINARY
+FROM scratch
+#FROM alpine:3.18.3
 
 USER 10001:10001
 
 WORKDIR /app
 
-COPY --chown=10001:10001 /out/"$BINARY" ./rauthy
+COPY --chown=10001:10001 /out/rauthy-lite ./rauthy-lite
 COPY --chown=10001:10001 --from=builderBackend /work/data ./data
 
 COPY --chown=10001:10001 tls/ ./tls/
 COPY --chown=10001:10001 rauthy.deploy.cfg ./rauthy.cfg
 
-CMD ["/app/rauthy"]
+CMD ["/app/rauthy-lite"]

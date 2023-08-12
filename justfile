@@ -198,18 +198,19 @@ release:
 
 
 # publishes the application images
-publish: build-sqlite build-postgres
+#publish: build-sqlite build-postgres
+publish:
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    docker build --no-cache -t sdobedev/rauthy:$TAG --build-arg=rauthy .
+    docker build --no-cache -t sdobedev/rauthy:$TAG -f Dockerfile.postgres .
     docker push sdobedev/rauthy:$TAG
-    docker build --no-cache -f Dockerfile.debug -t sdobedev/rauthy:$TAG-debug --build-arg=rauthy .
+    docker build --no-cache -f Dockerfile.debug -t sdobedev/rauthy:$TAG-debug -f Dockerfile.postgres.debug .
     docker push sdobedev/rauthy:$TAG-debug
 
-    docker build --no-cache -t sdobedev/rauthy:$TAG-lite --build-arg=rauthy-lite .
+    docker build --no-cache -t sdobedev/rauthy:$TAG-lite -f Dockerfile.sqlite .
     docker push sdobedev/rauthy:$TAG-lite
-    docker build --no-cache -f Dockerfile.debug -t sdobedev/rauthy:$TAG-lite-debug --build-arg=rauthy-lite .
+    docker build --no-cache -f Dockerfile.debug -t sdobedev/rauthy:$TAG-lite-debug -f Dockerfile.sqlite.debug .
     docker push sdobedev/rauthy:$TAG-lite-debug
 
     # the `latest` image will always point to the postgres version, which is used more often
