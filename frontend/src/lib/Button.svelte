@@ -79,6 +79,7 @@
     .l1, .l2, .l3, .l4 {
         height: 30px;
         margin: 5px;
+        padding: 0 10px;
         font-weight: bold;
         border: 1px solid var(--col-gmid);
         border-radius: 3px;

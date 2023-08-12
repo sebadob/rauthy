@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.14.0
+
+This release is mostly about UI / UX improvements and some smaller bugfixes.
+
+- UI: Client side pagination added
+[60a499a](https://github.com/sebadob/rauthy/commit/60a499aee0ff071937a03a78759e447f0d477c90)
+- Browsers' native language detection
+[884f599](https://github.com/sebadob/rauthy/commit/884f5995b71b8faf6ebcacf4331fdda6ccd78d57)
+- `sqlx` v0.7 migration
+[7c7a380](https://github.com/sebadob/rauthy/commit/7c7a380bdac520df7c29d0d0f4b3b7d3d48be943)
+- Docker container image split
+[adb3971](https://github.com/sebadob/rauthy/commit/adb397139627a4e3b3f72682457bdfd24b6ce9f4)
+- Target database validation before startup
+[a68c652](https://github.com/sebadob/rauthy/commit/a68c6527a68b970221f3c48982cabc418aa81d39)
+- UI: I18n (english and german currently) for: Index, Login, Logout, Account, User Registration
+[99e454e](https://github.com/sebadob/rauthy/commit/99e454ee459ac041c6975df99d481f0145cf7fa4)
+[dd2e9ae](https://github.com/sebadob/rauthy/commit/dd2e9ae579444359dc04db76bc1e13d3d0753fe6)
+[7b401f6](https://github.com/sebadob/rauthy/commit/7b401f6f0639c053b0e9475121f9ec814f80ef65)
+- UI: Custom component to overwrite the browsers' native language
+[4208fdb](https://github.com/sebadob/rauthy/commit/4208fdb9904044f9c5b9ddfb5eb2c42c1264481a)
+- Some Readme and Docs updates
+[e2ebef9](https://github.com/sebadob/rauthy/commit/e2ebef9c72d0f212ac5a4b39241b6d5d486bd8b0)
+[d0a71d6](https://github.com/sebadob/rauthy/commit/d0a71d641c3c829b33191cc2c0ff04e5f7d27017)
+- The `sub` claim was added to the ID token and will contain the Users UID
+[6b0a8b0](https://github.com/sebadob/rauthy/commit/6b0a8b0679484c5515a068911810159a5a39e07d)
+
 ## v0.13.3
 
 - UI: small visual bugfixes and improvements in different places
