@@ -197,9 +197,8 @@ release:
     git push origin "v$TAG"
 
 
-# publishes the application images
-#publish: build-sqlite build-postgres
-publish:
+# publishes the application images - full pipeline incl clippy and testing
+publish: build-sqlite build-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 

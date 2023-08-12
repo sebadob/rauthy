@@ -9,7 +9,7 @@
     let err = '';
     let roles = [];
     let resRoles = [];
-    let resItemsPaginated = [];
+    let resRolesPaginated = [];
 
     let searchOptions = [
         {
@@ -65,7 +65,7 @@
     <RoleTileAddNew onSave={onSave}/>
 
     <div id="roles">
-        {#each resItemsPaginated as role (role.id)}
+        {#each resRolesPaginated as role (role.id)}
             <div>
                 <RoleTile bind:role onSave={onSave}/>
             </div>
@@ -74,7 +74,7 @@
 
     <Pagination
             bind:items={resRoles}
-            bind:resItems={resItemsPaginated}
+            bind:resItems={resRolesPaginated}
     />
 
     <div style="height: 20px"></div>
