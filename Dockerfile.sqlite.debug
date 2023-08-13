@@ -6,8 +6,7 @@ WORKDIR /work
 # the correct access rights
 RUN mkdir data
 
-FROM scratch
-#FROM alpine:3.18.3
+FROM alpine:3.18.3
 
 USER 10001:10001
 

@@ -40,7 +40,7 @@ run-postgres:
 run-ui:
     #!/usr/bin/env bash
     cd frontend
-    npm run dev
+    npm run dev -- --host
 
 
 # prints out the currently set version
@@ -193,12 +193,16 @@ release:
     #!/usr/bin/env bash
     set -euxo pipefail
 
+    # make sure git is clean
+    git diff --quiet || exit 1
+
     git tag "v$TAG"
     git push origin "v$TAG"
 
 
 # publishes the application images - full pipeline incl clippy and testing
-publish: build-sqlite build-postgres
+#publish: build-sqlite build-postgres
+publish:
     #!/usr/bin/env bash
     set -euxo pipefail
 

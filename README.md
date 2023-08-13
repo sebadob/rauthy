@@ -95,7 +95,7 @@ Either just take a look at the [Rauthy Book](https://sebadob.github.io/rauthy/),
 the application yourself with docker on your localhost:
 
 ```
-docker run --rm -p 8080:8080 sdobedev/rauthy:0.14.1-lite
+docker run --rm -p 8080:8080 sdobedev/rauthy:0.14.2-lite
 ```
 
 **NOTE:**  
