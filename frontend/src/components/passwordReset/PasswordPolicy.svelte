@@ -1,5 +1,16 @@
 <script>
-    export let t;
+    export let t = {
+        passwordPolicy: {
+            passwordPolicy: "Password Policy",
+            lengthMin: "Length min",
+            lengthMax: "Length max",
+            lowercaseMin: "Lowercase letters min",
+            uppercaseMin: "Uppercase letters min",
+            digitsMin: "Digits min",
+            specialMin: "Special characters min",
+            notRecent: "Not one of last recent passwords",
+        }
+    };
     export let policy = {};
     export let password = '';
     export let accepted = false;
