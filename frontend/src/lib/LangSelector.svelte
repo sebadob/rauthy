@@ -41,7 +41,7 @@
 <style>
     .absolute {
         position: absolute;
+        top: calc(100dvh - 1.5rem);
         left: 0;
-        bottom: 0;
     }
 </style>

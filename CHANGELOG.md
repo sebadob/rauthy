@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.14.2
+
+- Fix for the new LangSelector component on mobile view
+- Add default translations (english) for the PasswordPolicy component for cases when it is used
+in a non-translated context
+[2f8a627](https://github.com/sebadob/rauthy/commit/2f8a6270f97df075d52507c0aa4e6850e5ef8edc)
+
 ## v0.14.1
 
 Bugfix release for the Dockerfiles and Pagination in some places
