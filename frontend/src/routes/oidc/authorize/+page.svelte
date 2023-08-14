@@ -48,11 +48,7 @@
     let formValues = {email: '', password: ''};
     let formErrors = {};
 
-    // const schema = yup.object().shape({
-    //     email: yup.string().required('E-Mail is required').email("Bad E-Mail format"),
-    // });
     let schema = {};
-
     $: if (t) {
         schema = yup.object().shape({
             email: yup.string().required(t.emailRequired).email(t.emailBadFormat),
@@ -248,7 +244,12 @@
             {/if}
 
             {#if webauthnData}
-                <WebauthnRequest bind:t bind:data={webauthnData} onSuccess={onWebauthnSuccess} onError={onWebauthnError}/>
+                <WebauthnRequest
+                        bind:t
+                        bind:data={webauthnData}
+                        onSuccess={onWebauthnSuccess}
+                        onError={onWebauthnError}
+                />
             {/if}
 
             <Input

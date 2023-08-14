@@ -10,6 +10,7 @@ pub struct I18nAuthorize<'a> {
     email_required: &'a str,
     email_sent_msg: &'a str,
     invalid_credentials: &'a str,
+    invalid_key_used: &'a str,
     login: &'a str,
     mfa_ack: &'a str,
     password: &'a str,
@@ -41,6 +42,7 @@ impl I18nAuthorize<'_> {
             email_required: "E-Mail is required",
             email_sent_msg: "If your E-Mail exists, a request has been sent",
             invalid_credentials: "Invalid credentials",
+            invalid_key_used: "Invalid Key",
             login: "Login",
             mfa_ack: "Acknowledged",
             password: "Password",
@@ -59,6 +61,7 @@ impl I18nAuthorize<'_> {
             email_required: "E-Mail ist notwendig",
             email_sent_msg: "Sollte Ihre Adresse registriert sein, wurde eine Nachricht versandt",
             invalid_credentials: "Ungültige Zugangsdaten",
+            invalid_key_used: "Ungültiger Sicherheitsschlüssel",
             login: "Login",
             mfa_ack: "Bestätigt",
             password: "Password",
@@ -66,7 +69,7 @@ impl I18nAuthorize<'_> {
             password_request: "Anfordern",
             password_required: "Password ist notwendig",
             provide_mfa: "Bitte stellen Sie Ihr MFA Gerät zur Verfügung",
-            request_expires: "Anfrage abgelaufen",
+            request_expires: "Anfrage läuft ab",
         }
     }
 }

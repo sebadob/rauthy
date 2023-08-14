@@ -9,6 +9,7 @@
         webauthnRegFinish,
         webauthnRegStart
     } from "../../utils/dataFetching.js";
+    import {sleepAwait} from "$lib/utils/helpers.js";
 
     export let t;
     export let sessionInfo;
@@ -146,8 +147,6 @@
         {t.mfa.p2}
         <br><br>
         {t.mfa.p3}
-        <br><br>
-        {t.mfa.p4}
     </p>
 
     <div class="keyContainer">

@@ -141,7 +141,6 @@ pub struct I18nAccountMfa<'a> {
     p_1: &'a str,
     p_2: &'a str,
     p_3: &'a str,
-    p_4: &'a str,
 
     delete: &'a str,
     error_reg: &'a str,
@@ -170,15 +169,12 @@ impl SsrJson for I18nAccountMfa<'_> {
 impl I18nAccountMfa<'_> {
     fn build_en() -> Self {
         Self {
-            p_1: "If you plan on using your MFA key with multiple Browsers like Firefox and a \
-            Chrome based Browsers, you should do the registration with Firefox only.",
-            p_2: "Firefox does sometimes not ask for an additional PIN, if the device supports this \
-            method for compatibility reasons. Chrome bases variants on the other hand do always try \
-            to use an additional PIN confirmation, if it exists. ",
-            p_3: "If a device, that supports a PIN, was registered with a Chrome based browser, it \
-            will not work in Firefox at the time of writing. If it was registered with Firefox \
-            though, it will work with Chrome too. ",
-            p_4: "You can register two Keys for your account.",
+            p_1: "If you plan on using your MFA key with multiple systems like Windows and \
+            Android, you should do the registration with Android.",
+            p_2: "Android is the platform with the least supported features for the passwordless \
+            technology. Keys you register with Android work elsewhere too. However, this does not \
+            apply the other way around.",
+            p_3: "You can register two Keys for your account.",
 
             delete: "Delete",
             error_reg: "Error starting the Registration process",
@@ -194,15 +190,12 @@ impl I18nAccountMfa<'_> {
 
     fn build_de() -> Self {
         Self {
-            p_1: "Wenn Sie mehrere Browser parallel nutzen möchten, wie z.B. Chrome und Firefox, \
-            sollten Sie die Registrierung mit Firefox durchführen.",
-            p_2: "Unter bestimmten Bedingungen (z.B. Mac OS) verlangt Firefox (und Andere) derzeit \
-            aus Kompatibilitätsgründen nicht die Sicherheits-PIN von Geräten, die diese Technologie \
-            unterstützen, während Chrome-basierte Browser diese immer auf jedem System abfragen.",
-            p_3: "Sollten Sie ein Gerät haben, was diese Technologie unterstützt, so wird es unter \
-            Umständen nicht im Firefox (Mac OS) funktionieren, sollte die Registrierung mit Chrome \
-            durchgeführt worden sein. Andersherum funktioniert es allerdings in jedem Fall.",
-            p_4: "Sie können pro Account zwei Schlüssel registrieren.",
+            p_1: "Wenn Sie mehrere Systeme parallel nutzen möchten, wie z.B. Windows und Android, \
+            sollten Sie die Registrierung mit Android durchführen.",
+            p_2: "Android ist diejenige Plattform, die derzeit die wenigsten Features der \
+            passwortlosen Technologie unterstützt. Schlüssel, die dort registriert werden, \
+            funktionieren auf anderen Geräten gleichermaßen. Dies gilt jedoch nicht andersherum.",
+            p_3: "Sie können pro Account zwei Schlüssel registrieren.",
 
             delete: "Löschen",
             error_reg: "Fehler beim Starten der Registrierung",

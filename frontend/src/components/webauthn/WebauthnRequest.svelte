@@ -3,8 +3,14 @@
     import {tweened} from "svelte/motion";
     import Loading from "$lib/Loading.svelte";
     import {webauthnAuth} from "../../utils/webauthn.js";
+    import {promiseTimeout} from "../../utils/helpers.js";
 
-    export let t;
+    export let t = {
+        invalidKeyUsed: 'Invalid Key',
+        mfaAck: 'Acknowledged',
+        provideMfa: 'Please login with your MFA device',
+        requestExpires: 'Request expires',
+    };
     export let data;
     export let purpose = 'Login';
     export let onError = () => {
@@ -33,12 +39,24 @@
         let p;
         if (purpose === 'Login') {
             p = {purpose: {Login: data.code}};
-            // p = { Login: data.code };
         } else {
             p = {purpose: 'PasswordReset'};
-            // p = { PasswordReset: undefined };
         }
-        let res = await webauthnAuth(data.user_id, p);
+
+        let res = {};
+        try {
+            res = await promiseTimeout(
+                webauthnAuth(data.user_id, p, t.invalidKeyUsed),
+                // we need to cancel 1 sec before the expiry to not get into a browser exception,
+                // because we would not be able to "go back" again
+                data.exp * 1000 - 1000
+            );
+        } catch (err) {
+            console.error(err);
+            res.err = true;
+            res.msg = 'Timeout';
+            onError();
+        }
 
         err = res.err;
         success = !res.err;
@@ -68,7 +86,7 @@
 
             <div class="contentRow">
                 <div class="contentHeader">
-                    {t.requestRxpires}
+                    {t.requestExpires}
                     :
                 </div>
                 <div>
@@ -153,7 +171,7 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        background: rgba(0, 0, 0, .95);
+        background: rgba(0, 0, 0, .85);
         z-index: 20;
     }
 </style>
