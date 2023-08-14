@@ -200,9 +200,20 @@ release:
     git push origin "v$TAG"
 
 
+# publishes nightly application images with unreleased changes and debug images
+publish-nightly: build-sqlite build-postgres
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    docker build --no-cache -f Dockerfile.debug -t sdobedev/rauthy:nightly -f Dockerfile.postgres.debug .
+    docker push sdobedev/rauthy:nightly
+
+    docker build --no-cache -f Dockerfile.debug -t sdobedev/rauthy:nightly-lite -f Dockerfile.sqlite.debug .
+    docker push sdobedev/rauthy:nightly-lite
+
+
 # publishes the application images - full pipeline incl clippy and testing
-#publish: build-sqlite build-postgres
-publish:
+publish: build-sqlite build-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
