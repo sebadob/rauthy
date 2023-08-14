@@ -5,6 +5,7 @@ pub mod authorize;
 pub mod index;
 pub mod logout;
 pub mod password_policy;
+pub mod password_reset;
 pub mod register;
 
 pub trait SsrJson {

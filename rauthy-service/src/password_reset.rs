@@ -9,6 +9,7 @@ use rauthy_models::entity::magic_links::MagicLinkPassword;
 use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::WebauthnServiceReq;
+use rauthy_models::language::Language;
 use rauthy_models::request::PasswordResetRequest;
 use rauthy_models::templates::PwdResetHtml;
 use time::OffsetDateTime;
@@ -34,7 +35,8 @@ pub async fn handle_get_pwd_reset<'a>(
     // get the html and insert values
     let rules = PasswordPolicy::find(data).await?;
     let colors = ColorEntity::find_rauthy(data).await?;
-    let (html, nonce) = PwdResetHtml::build(&ml.csrf_token, &rules, email, &colors);
+    let lang = Language::try_from(&req).unwrap_or_default();
+    let (html, nonce) = PwdResetHtml::build(&ml.csrf_token, &rules, email, &colors, &lang);
 
     // generate a cookie value and save it to the magic link
     let cookie_val = get_rand(48);
@@ -43,15 +45,11 @@ pub async fn handle_get_pwd_reset<'a>(
 
     let age_secs = ml.exp - OffsetDateTime::now_utc().unix_timestamp();
     let max_age = cookie::time::Duration::seconds(age_secs);
-    // let exp = cookie::Expiration::from(cookie::time::OffsetDateTime::from(
-    //     SystemTime::now().add(std::time::Duration::from_secs(ml.exp.timestamp() as u64)),
-    // ));
     let cookie = cookie::Cookie::build(PWD_RESET_COOKIE, ml.cookie.unwrap())
         .secure(true)
         .http_only(true)
         .same_site(SameSite::Lax)
         .max_age(max_age)
-        // .expires(exp)
         .path("/auth")
         .finish();
 

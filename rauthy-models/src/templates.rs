@@ -4,6 +4,7 @@ use crate::i18n::account::I18nAccount;
 use crate::i18n::authorize::I18nAuthorize;
 use crate::i18n::index::I18nIndex;
 use crate::i18n::logout::I18nLogout;
+use crate::i18n::password_reset::I18nPasswordReset;
 use crate::i18n::register::I18nRegister;
 use crate::i18n::SsrJson;
 use crate::language::Language;
@@ -848,6 +849,7 @@ impl PwdResetHtml<'_> {
         password_rules: &PasswordPolicy,
         email: Option<&String>,
         colors: &Colors,
+        lang: &Language,
     ) -> (String, String) {
         let nonce = nonce();
 
@@ -865,7 +867,7 @@ impl PwdResetHtml<'_> {
         );
 
         let res = PwdResetHtml {
-            lang: "en",
+            lang: lang.as_str(),
             csrf_token,
             data: &data,
             col_act1: &colors.act1,
@@ -882,6 +884,7 @@ impl PwdResetHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             nonce: &nonce,
+            i18n: I18nPasswordReset::build(lang).as_json(),
             ..Default::default()
         };
 

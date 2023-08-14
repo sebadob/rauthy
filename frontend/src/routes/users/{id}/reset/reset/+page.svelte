@@ -10,10 +10,13 @@
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import WebauthnRequest from "../../../../../components/webauthn/WebauthnRequest.svelte";
     import BrowserCheck from "../../../../../components/BrowserCheck.svelte";
+    import WithI18n from "$lib/WithI18n.svelte";
+    import LangSelector from "$lib/LangSelector.svelte";
 
     const btnWidth = 150;
     const inputWidth = '320px';
 
+    let t;
     let csrf = '';
     let policy;
     let isReady = false;
@@ -34,11 +37,14 @@
     };
     let formErrors = {};
 
-    const schema = yup.object().shape({
-        email: yup.string().required('E-Mail is required').email("Bad E-Mail format"),
-        password: yup.string().required('Password is required'),
-        passwordConfirm: yup.string().required('Confirm Password is required')
-    });
+    let schema;
+    $: if (t) {
+        schema = yup.object().shape({
+            email: yup.string().required(t.required).email(t.badFormat),
+            password: yup.string().required(t.required),
+            passwordConfirm: yup.string().required(t.required)
+        });
+    }
 
     $: if (formValues.password?.length > 0 && formValues.password === formValues.passwordConfirm) {
         showCopy = true;
@@ -83,7 +89,10 @@
     function generate() {
         const len = policy.length_min > 24 ? policy.length_min : 24;
         let pwd = generatePassword(
-            len, policy.include_lower_case, policy.include_upper_case, policy.include_digits, policy.include_special
+            len, policy.include_lower_case,
+            policy.include_upper_case,
+            policy.include_digits,
+            policy.include_special,
         );
         formValues.password = pwd;
         formValues.passwordConfirm = pwd;
@@ -104,7 +113,7 @@
 
         // do passwords match?
         if (formValues.password !== formValues.passwordConfirm) {
-            err = 'Passwords do not match';
+            err = t.passwordNoMatch;
             return;
         } else {
             err = '';
@@ -177,70 +186,75 @@
         <Loading/>
     {/if}
 
-    {#if webauthnData}
-        <WebauthnRequest
-                bind:data={webauthnData}
-                purpose="PasswordReset"
-                onSuccess={onWebauthnSuccess}
-                onError={onWebauthnError}
-        />
-    {/if}
-
-    <div class="container">
-        <h1>Password Reset</h1>
-
-        <PasswordPolicy bind:accepted bind:policy bind:password={formValues.password}/>
-
-        <Input
-                type="email"
-                bind:value={formValues.email}
-                bind:error={formErrors.email}
-                autocomplete="email"
-                disabled={isMfa}
-                placeholder="E-Mail"
-                width={inputWidth}
-        >
-            E-MAIL
-        </Input>
-        <PasswordInput
-                bind:value={formValues.password}
-                bind:error={formErrors.password}
-                autocomplete="new-password"
-                placeholder="Password"
-                width={inputWidth}
-                bind:showCopy
-        >
-            PASSWORD
-        </PasswordInput>
-        <PasswordInput
-                bind:value={formValues.passwordConfirm}
-                bind:error={formErrors.passwordConfirm}
-                autocomplete="new-password"
-                placeholder="Confirm Password"
-                width={inputWidth}
-                bind:showCopy
-        >
-            PASSWORD CONFIRM
-        </PasswordInput>
-
-        <Button on:click={generate} width={btnWidth} level={3}>
-            GENERATE
-        </Button>
-        <Button on:click={onSubmit} width={btnWidth} bind:isLoading level={2}>
-            RESET
-        </Button>
-
-        {#if success}
-            <div class="success">
-                The password has been updated successfully.<br>
-                You can close this window now.
-            </div>
-        {:else if err}
-            <div class="err">
-                {err}
-            </div>
+    <WithI18n bind:t content="password_reset">
+        {#if webauthnData}
+            <WebauthnRequest
+                    bind:data={webauthnData}
+                    purpose="PasswordReset"
+                    onSuccess={onWebauthnSuccess}
+                    onError={onWebauthnError}
+            />
         {/if}
-    </div>
+
+        <div class="container">
+            <h1>Password Reset</h1>
+
+            <PasswordPolicy bind:t bind:accepted bind:policy bind:password={formValues.password}/>
+
+            <Input
+                    type="email"
+                    bind:value={formValues.email}
+                    bind:error={formErrors.email}
+                    autocomplete="email"
+                    disabled={isMfa}
+                    placeholder={t.email}
+                    width={inputWidth}
+            >
+                {t.email.toUpperCase()}
+            </Input>
+            <PasswordInput
+                    bind:value={formValues.password}
+                    bind:error={formErrors.password}
+                    autocomplete="new-password"
+                    placeholder={t.password}
+                    width={inputWidth}
+                    bind:showCopy
+            >
+                {t.password.toUpperCase()}
+            </PasswordInput>
+            <PasswordInput
+                    bind:value={formValues.passwordConfirm}
+                    bind:error={formErrors.passwordConfirm}
+                    autocomplete="new-password"
+                    placeholder={t.passwordConfirm}
+                    width={inputWidth}
+                    bind:showCopy
+            >
+                {t.passwordConfirm.toUpperCase()}
+            </PasswordInput>
+
+            <Button on:click={generate} width={btnWidth} level={3}>
+                {t.generate.toUpperCase()}
+            </Button>
+            <Button on:click={onSubmit} width={btnWidth} bind:isLoading level={2}>
+                {t.save.toUpperCase()}
+            </Button>
+
+            {#if success}
+                <div class="success">
+                    {t.success_1}
+                    <br>
+                    {t.success_2}
+                </div>
+            {:else if err}
+                <div class="err">
+                    {err}
+                </div>
+            {/if}
+        </div>
+
+        <LangSelector absolute />
+    </WithI18n>
 </BrowserCheck>
 
 <style>
