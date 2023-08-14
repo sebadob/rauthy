@@ -1,7 +1,7 @@
 import { webauthnAuthFinish, webauthnAuthStart } from "./dataFetching.js";
-import { arrBufToBase64UrlSafe, base64UrlSafeToArrBuf } from "./helpers.js";
+import {arrBufToBase64UrlSafe, base64UrlSafeToArrBuf} from "./helpers.js";
 
-export async function webauthnAuth(uid, data) {
+export async function webauthnAuth(uid, data, errorMsg) {
 	let res = await webauthnAuthStart(uid, data);
 	if (res.status === 200) {
 		let resp = await res.json();
@@ -18,9 +18,10 @@ export async function webauthnAuth(uid, data) {
 		try {
 			challengePk = await navigator.credentials.get(challenge);
 		} catch (e) {
+			console.error(e);
 			return {
 				err: true,
-				msg: 'Invalid Key used'
+				msg: errorMsg || 'Invalid Key',
 			};
 		}
 

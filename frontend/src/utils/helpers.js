@@ -246,5 +246,16 @@ export const getQueryParams = () => {
 	});
 }
 
+// races a promise against a given timeout and throws an exception if exceeded
+export const promiseTimeout = (prom, time) => {
+	let timer;
+	return Promise.race([
+		prom,
+		new Promise(
+			(_r, rej) => timer = setTimeout(rej, time, 'timeout')
+		)
+	]).finally(() => clearTimeout(timer));
+}
+
 // async sleep in ms
 export const sleepAwait = async (ms) => await new Promise(x => setTimeout(x, ms));

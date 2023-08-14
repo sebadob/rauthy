@@ -18,7 +18,6 @@
 
     function readLang() {
         let l = document.documentElement.lang.toUpperCase();
-        console.log('lang from document: ' + l);
         lang = l;
         langSelected = l;
     }
