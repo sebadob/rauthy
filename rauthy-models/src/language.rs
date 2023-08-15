@@ -22,25 +22,17 @@ impl Language {
             Language::De => "de",
         }
     }
-
-    // pub fn set_cookie_str(&self) -> (&'static str, HeaderValue) {
-    //     (
-    //         "Set-Cookie",
-    //         HeaderValue::from_str(&format!(
-    //             "{}={};Path=/;Max-Age={};SameSite=Lax",
-    //             // "{}={};Path=/;Max-Age={};SameSite=Lax;Secure=true",
-    //             LOCALE_COOKIE,
-    //             self.as_str(),
-    //             15552000
-    //         ))
-    //             .unwrap(),
-    //     )
-    // }
 }
 
 impl Default for Language {
     fn default() -> Self {
         Self::En
+    }
+}
+
+impl ToString for Language {
+    fn to_string(&self) -> String {
+        self.as_str().to_string()
     }
 }
 
