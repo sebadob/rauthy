@@ -33,7 +33,7 @@ run-sqlite:
 
 # runs the application with postgres feature
 run-postgres:
-    ATABASE_URL={{db_url_postgres}} cargo run --target x86_64-unknown-linux-musl --features postgres
+    DATABASE_URL={{db_url_postgres}} cargo run --target x86_64-unknown-linux-musl --features postgres
 
 
 # runs the UI in development mode
