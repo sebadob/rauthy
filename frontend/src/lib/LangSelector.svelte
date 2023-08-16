@@ -1,6 +1,7 @@
 <script>
     import {onMount} from "svelte";
     import OptionSelect from "$lib/OptionSelect.svelte";
+    import {LANGUAGES} from "../utils/constants.js";
 
     export let absolute = false;
 
@@ -33,7 +34,7 @@
 <div class:absolute>
     <OptionSelect
             bind:value={langSelected}
-            options={['DE', 'EN']}
+            options={LANGUAGES}
     />
 </div>
 

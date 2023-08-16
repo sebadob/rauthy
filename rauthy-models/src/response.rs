@@ -5,6 +5,7 @@ use crate::entity::scopes::Scope;
 use crate::entity::sessions::SessionState;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::users::User;
+use crate::language::Language;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use tracing::debug;
@@ -298,6 +299,7 @@ pub struct UserResponse {
     pub email: String,
     pub given_name: String,
     pub family_name: String,
+    pub language: Language,
     pub roles: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub groups: Option<Vec<String>>,
@@ -337,6 +339,7 @@ impl From<User> for UserResponse {
             email: u.email,
             given_name: u.given_name,
             family_name: u.family_name,
+            language: u.language,
             roles,
             groups,
             enabled: u.enabled,

@@ -1,6 +1,7 @@
 use crate::common::{check_status, get_auth_headers, get_backend_url};
 use pretty_assertions::assert_eq;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_models::language::Language;
 use rauthy_models::request::{NewUserRequest, PasswordPolicyRequest, UpdateUserRequest};
 use rauthy_models::response::{PasswordPolicyResponse, UserResponse};
 use std::error::Error;
@@ -101,6 +102,7 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         email: user.email,
         given_name: user.given_name,
         family_name: user.family_name,
+        language: Some(Language::De),
         password: Some("sosafe".to_string()),
         roles: user.roles,
         groups: None,

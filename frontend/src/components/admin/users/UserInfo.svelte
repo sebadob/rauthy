@@ -4,12 +4,13 @@
     import Switch from "$lib/Switch.svelte";
     import {globalGroupsNames, globalRolesNames} from "../../../stores/admin.js";
     import Button from "$lib/Button.svelte";
-    import {REGEX_NAME} from "../../../utils/constants.js";
+    import {LANGUAGES, REGEX_NAME} from "../../../utils/constants.js";
     import {putUser} from "../../../utils/dataFetchingAdmin.js";
     import {onMount} from "svelte";
     import CheckIcon from "$lib/CheckIcon.svelte";
     import Input from "$lib/inputs/Input.svelte";
     import ItemTiles from "$lib/itemTiles/ItemTiles.svelte";
+    import OptionSelect from "$lib/OptionSelect.svelte";
 
     export let user = {};
     export let onSave;
@@ -18,6 +19,7 @@
     let err = '';
     let success = false;
     let timer;
+    let language = user.language.toUpperCase();
 
     let allRoles = [];
     globalRolesNames.subscribe(rls => {
@@ -65,6 +67,7 @@
             email: user.email,
             given_name: user.given_name,
             family_name: user.family_name,
+            language: language.toLowerCase(),
             roles: user.roles,
             groups: user.groups,
             enabled: user.enabled,
@@ -159,6 +162,16 @@
     >
         FAMILY NAME
     </Input>
+
+    <!-- Language-->
+    <div class="unit language">
+        <div class="label">
+            LANGUAGE
+        </div>
+        <div style="margin-top: .085rem">
+            <OptionSelect bind:value={language} options={LANGUAGES} />
+        </div>
+    </div>
 
     <!-- Roles-->
     <div class="unit" style:margin-top="-3px">
@@ -266,6 +279,11 @@
     .label {
         margin: 5px 5px 0 5px;
         font-size: .9rem;
+    }
+
+    .language {
+        display: flex;
+        gap: .33rem;
     }
 
     .success {

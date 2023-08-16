@@ -45,13 +45,14 @@ pub struct User {
     pub mfa_app: Option<String>,
     pub sec_key_1: Option<String>,
     pub sec_key_2: Option<String>,
-    pub language: String,
+    pub language: Language,
 }
 
 // CRUD
 impl User {
     // Inserts a user into the database
     pub async fn create(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
+        let lang = new_user.language.as_str();
         sqlx::query!(
             r#"insert into users
             (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
@@ -66,7 +67,7 @@ impl User {
             new_user.enabled,
             new_user.email_verified,
             new_user.created_at,
-            new_user.language,
+            lang,
         )
         .execute(&data.db)
         .await?;
@@ -288,6 +289,7 @@ impl User {
             User::is_email_free(data, self.email.clone()).await?;
         }
 
+        let lang = self.language.as_str();
         let q = sqlx::query(r#"update users set
             email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6,
             enabled = $7, email_verified = $8, password_expires = $9, created_at = $10, last_login = $11,
@@ -309,7 +311,7 @@ impl User {
             .bind(&self.mfa_app)
             .bind(&self.sec_key_1)
             .bind(&self.sec_key_2)
-            .bind(&self.language)
+            .bind(lang)
             .bind(&self.id);
 
         if let Some(txn) = txn {
@@ -388,9 +390,12 @@ impl User {
         user.given_name = upd_user.given_name;
         user.family_name = upd_user.family_name;
 
-        if upd_user.password.is_some() {
-            let new_pwd = upd_user.password.unwrap();
-            user.apply_password_rules(data, &new_pwd).await?;
+        if let Some(lang) = upd_user.language {
+            user.language = lang;
+        }
+
+        if let Some(password) = upd_user.password {
+            user.apply_password_rules(data, &password).await?;
         }
 
         // sanitize roles
@@ -440,6 +445,7 @@ impl User {
             email: upd_user.email,
             given_name: upd_user.given_name,
             family_name: upd_user.family_name,
+            language: upd_user.language,
             password,
             roles: user.get_roles(),
             groups,
@@ -962,7 +968,7 @@ impl Default for User {
             mfa_app: None,
             sec_key_1: None,
             sec_key_2: None,
-            language: Language::En.to_string(),
+            language: Language::En,
         }
     }
 }
@@ -993,7 +999,7 @@ mod tests {
             mfa_app: None,
             sec_key_1: None,
             sec_key_2: None,
-            language: Language::En.to_string(),
+            language: Language::En,
         };
         let session = Session::new(Some(&user), 1);
 
@@ -1049,7 +1055,7 @@ mod tests {
             mfa_app: None,
             sec_key_1: None,
             sec_key_2: None,
-            language: Language::En.to_string(),
+            language: Language::En,
         };
 
         // enabled
