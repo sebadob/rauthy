@@ -3,9 +3,15 @@ use actix_web::HttpRequest;
 use rauthy_common::constants::COOKIE_LOCALE;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
+use sqlx::Type;
 use tracing::debug;
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+// Note: Updating this enum will require an update on the LANGUAGES constant for the frontend too
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Type, ToSchema)]
+#[sqlx(type_name = "varchar")]
+#[sqlx(rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum Language {
     En,
     De,
@@ -39,6 +45,12 @@ impl ToString for Language {
 impl From<&HeaderValue> for Language {
     fn from(value: &HeaderValue) -> Self {
         Language::from(value.to_str().unwrap_or_default())
+    }
+}
+
+impl From<String> for Language {
+    fn from(value: String) -> Self {
+        Self::from(value.as_str())
     }
 }
 
