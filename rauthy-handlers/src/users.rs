@@ -265,6 +265,7 @@ pub async fn get_users_register(
 #[has_permissions("all")]
 pub async fn post_users_register(
     data: web::Data<AppState>,
+    req: HttpRequest,
     req_data: actix_web_validator::Json<NewUserRegistrationRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     if !*OPEN_USER_REG {
@@ -285,7 +286,8 @@ pub async fn post_users_register(
         }
     }
 
-    User::create_from_reg(&data, req_data.into_inner()).await?;
+    let lang = Language::try_from(&req).unwrap_or_default();
+    User::create_from_reg(&data, req_data.into_inner(), lang).await?;
     Ok(HttpResponse::NoContent().finish())
 }
 

@@ -104,13 +104,16 @@ impl User {
     pub async fn create_from_reg(
         data: &web::Data<AppState>,
         req_data: NewUserRegistrationRequest,
+        lang: Language,
     ) -> Result<(), ErrorResponse> {
         let pow = Pow::find(data, &req_data.pow.challenge).await?;
         pow.validate(&req_data.pow.verifier).await?;
         pow.delete(data).await?;
 
-        let new_user = User::from_reg_req(req_data);
+        let mut new_user = User::from_reg_req(req_data);
+        new_user.language = lang;
         User::create(data, new_user).await?;
+
         Ok(())
     }
 
@@ -719,6 +722,7 @@ impl User {
             email: new_user.email,
             given_name: new_user.given_name,
             family_name: new_user.family_name,
+            language: new_user.language,
             roles,
             groups,
             ..Default::default()

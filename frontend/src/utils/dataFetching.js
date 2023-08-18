@@ -148,6 +148,13 @@ export async function putUserSelf(id, data) {
 	});
 }
 
+export async function postUpdateUserLanguage() {
+	return await fetch('/auth/v1/update_language', {
+		method: 'POST',
+		headers: getCsrfHeaders(),
+	});
+}
+
 export async function webauthnRegStart(id, data) {
 	return await fetch(`/auth/v1/users/${id}/webauthn/register/start`, {
 		method: 'POST',

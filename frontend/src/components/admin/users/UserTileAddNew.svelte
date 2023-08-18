@@ -1,13 +1,14 @@
 <script>
     import ExpandContainer from "$lib/ExpandContainer.svelte";
     import * as yup from "yup";
-    import {REGEX_NAME} from "../../../utils/constants.js";
+    import {LANGUAGES, REGEX_NAME} from "../../../utils/constants.js";
     import {globalGroupsNames, globalRolesNames} from "../../../stores/admin.js";
     import {extractFormErrors} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
     import {postUser} from "../../../utils/dataFetchingAdmin.js";
     import ItemTiles from "$lib/itemTiles/ItemTiles.svelte";
     import Input from "$lib/inputs/Input.svelte";
+    import OptionSelect from "$lib/OptionSelect.svelte";
 
     export let idx = -1;
     export let onSave;
@@ -16,6 +17,7 @@
     let isLoading = false;
     let expandContainer;
 
+    let language = 'EN';
     let formValues = {
         email: '',
         family_name: '',
@@ -48,6 +50,9 @@
         }
         err = '';
         isLoading = true;
+
+        let data = formValues;
+        data.language = language.toLowerCase();
 
         let res = await postUser(formValues);
         if (res.ok) {
@@ -109,6 +114,16 @@
         >
             FAMILY NAME
         </Input>
+
+        <div class="language">
+            <div class="label">
+                LANGUAGE
+            </div>
+            <div style="margin-top: .4rem">
+                <OptionSelect bind:value={language} options={LANGUAGES} />
+            </div>
+        </div>
+
         <div class="tiles">
             <div class="label font-label">
                 ROLES
@@ -164,6 +179,12 @@
     .label {
         margin: 10px 3px 5px 3px;
         font-size: .9rem;
+    }
+
+    .language {
+        margin: 7px 5px;
+        display: flex;
+        gap: .33rem;
     }
 
     .tiles {

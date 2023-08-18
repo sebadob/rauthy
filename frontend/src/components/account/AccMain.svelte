@@ -53,7 +53,7 @@
         </div>
     </div>
 
-    <LangSelector absolute />
+    <LangSelector absolute updateBackend />
 </div>
 
 <style>

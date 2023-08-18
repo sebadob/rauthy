@@ -39,6 +39,7 @@
 
     let schema;
     $: if (t) {
+        console.log(t);
         schema = yup.object().shape({
             email: yup.string().required(t.required).email(t.badFormat),
             password: yup.string().required(t.required),
@@ -186,7 +187,7 @@
         <Loading/>
     {/if}
 
-    <WithI18n bind:t content="password_reset">
+    <WithI18n bind:t content="passwordReset">
         {#if webauthnData}
             <WebauthnRequest
                     bind:data={webauthnData}
@@ -242,9 +243,9 @@
 
             {#if success}
                 <div class="success">
-                    {t.success_1}
+                    {t.success1}
                     <br>
-                    {t.success_2}
+                    {t.success2}
                 </div>
             {:else if err}
                 <div class="err">
