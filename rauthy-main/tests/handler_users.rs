@@ -1,5 +1,6 @@
 use crate::common::{get_auth_headers, get_backend_url};
 use pretty_assertions::assert_eq;
+use rauthy_models::language::Language;
 use rauthy_models::request::NewUserRequest;
 use rauthy_models::response::UserResponse;
 use std::error::Error;
@@ -27,6 +28,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
         given_name: "Alfred".to_string(),
         family_name: "Batman".to_string(),
         email: "alfred@batcave.io".to_string(),
+        language: Language::En,
         roles: vec![
             "admin".to_string(),
             "user".to_string(),

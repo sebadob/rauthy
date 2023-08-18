@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.14.3
+
+- UI: UX Improvements to Webauthn Login when the user lets the request time out
+[7683133](https://github.com/sebadob/rauthy/commit/76831338e88a36cc3166039493318c38cc7a1e49)
+- UI: i18n for password reset page
+[27e620e](https://github.com/sebadob/rauthy/commit/27e620edb34d803259a000d837513920905d2332)
+- Keep track of users chosen language in the database
+[7517693](https://github.com/sebadob/rauthy/commit/7517693ddec4f5e0215fcced9dde6322e665ff10)
+- Make user language editable in the admin ui
+[77886a9](https://github.com/sebadob/rauthy/commit/77886a958655b721e96c092df739627d0d5d9172)
+[1061fc2](https://github.com/sebadob/rauthy/commit/1061fc212bb684b153ae99f1439ea312091e32cd)
+- Update the users language in different places:
+    - Language switch in the Account page
+    - Fetch users chosen language from User Registration
+    - Selector from Registration in Admin UI
+[5ade849](https://github.com/sebadob/rauthy/commit/5ade849dd5a0b139c73a61b8fefde03eff3036bf)
+
 ## v0.14.2
 
 - Fix for the new LangSelector component on mobile view

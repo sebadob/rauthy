@@ -85,6 +85,7 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         given_name: "IT Test".to_string(),
         family_name: "Testy".to_string(),
         email: "alfred@batcave.io".to_string(),
+        language: Language::En,
         roles: vec!["user".to_string()],
         groups: None,
     };
