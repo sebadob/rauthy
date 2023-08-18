@@ -2,8 +2,11 @@
     import {onMount} from "svelte";
     import OptionSelect from "$lib/OptionSelect.svelte";
     import {LANGUAGES} from "../utils/constants.js";
+    import {postUpdateUserLanguage} from "../utils/dataFetching.js";
 
     export let absolute = false;
+    // if set to true, a request to the backend will be done for the currently logged in user
+    export let updateBackend = false;
 
     const attrs = ';Path=/;SameSite=Lax;Max-Age=157680000';
     let lang;
@@ -23,10 +26,19 @@
         langSelected = l;
     }
 
-    function switchLang(l) {
-        let ll = l.toLowerCase();
-        console.log('switching language to: ' + ll);
-        document.cookie = 'locale=' + ll + attrs;
+    async function switchLang(l) {
+        document.cookie = 'locale=' + l.toLowerCase() + attrs;
+
+        if (updateBackend) {
+            let res = await postUpdateUserLanguage();
+            if (!res.ok) {
+                let body = await res.json();
+                console.error(body);
+                return;
+            }
+
+        }
+
         window.location.reload();
     }
 </script>
