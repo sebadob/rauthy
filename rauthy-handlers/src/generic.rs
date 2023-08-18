@@ -19,6 +19,7 @@ use rauthy_models::i18n::account::I18nAccount;
 use rauthy_models::i18n::authorize::I18nAuthorize;
 use rauthy_models::i18n::index::I18nIndex;
 use rauthy_models::i18n::logout::I18nLogout;
+use rauthy_models::i18n::password_reset::I18nPasswordReset;
 use rauthy_models::i18n::register::I18nRegister;
 use rauthy_models::i18n::SsrJson;
 use rauthy_models::language::Language;
@@ -94,6 +95,7 @@ pub async fn post_i18n(
         I18nContent::Account => I18nAccount::build(&lang).as_json(),
         I18nContent::Index => I18nIndex::build(&lang).as_json(),
         I18nContent::Logout => I18nLogout::build(&lang).as_json(),
+        I18nContent::PasswordReset => I18nPasswordReset::build(&lang).as_json(),
         I18nContent::Register => I18nRegister::build(&lang).as_json(),
     };
 

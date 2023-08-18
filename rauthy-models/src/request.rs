@@ -127,6 +127,7 @@ pub enum I18nContent {
     Authorize,
     Index,
     Logout,
+    PasswordReset,
     Register,
 }
 
@@ -322,6 +323,7 @@ pub struct NewUserRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,32}`
     #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,32}"))]
     pub given_name: String,
+    pub language: Language,
     /// Validation: `Vec<^[a-z0-9-_/,]{2,128}$>`
     #[validate(custom(function = "validate_vec_groups"))]
     pub groups: Option<Vec<String>>,
