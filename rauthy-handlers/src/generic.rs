@@ -14,6 +14,7 @@ use rauthy_models::entity::password::{PasswordHashTimes, PasswordPolicy};
 use rauthy_models::entity::pow::Pow;
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::Session;
+use rauthy_models::entity::users::User;
 use rauthy_models::i18n::account::I18nAccount;
 use rauthy_models::i18n::authorize::I18nAuthorize;
 use rauthy_models::i18n::index::I18nIndex;
@@ -36,7 +37,6 @@ use rauthy_models::templates::{
 use rauthy_service::encryption;
 use redhac::{cache_get, cache_get_from, cache_get_value};
 use std::borrow::Cow;
-use tracing::debug;
 
 #[get("/")]
 #[has_permissions("all")]
@@ -89,8 +89,6 @@ pub async fn post_i18n(
     req_data: Json<I18nRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let lang = Language::try_from(&req).unwrap_or_default();
-    debug!("post_i18n lang: {:?} req: {:?}", lang, req_data);
-
     let body = match req_data.content {
         I18nContent::Authorize => I18nAuthorize::build(&lang).as_json(),
         I18nContent::Account => I18nAccount::build(&lang).as_json(),
@@ -540,6 +538,30 @@ pub async fn ping() -> impl Responder {
 pub async fn get_pow(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
     let pow = Pow::create(&data).await?;
     Ok(HttpResponse::Ok().json(pow))
+}
+
+/// Updates the language for the logged in principal depending on the `locale` cookie
+#[utoipa::path(
+    post,
+    path = "/update_language",
+    tag = "generic",
+    responses(
+        (status = 200, description = "Valid Token / Session"),
+        (status = 401, description = "Unauthorized"),
+    ),
+)]
+#[post("/update_language")]
+#[has_any_permission("token-auth", "session-auth")]
+pub async fn post_update_language(
+    data: web::Data<AppState>,
+    principal: web::ReqData<Option<Principal>>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    let principal = Principal::get_from_req(principal.into_inner())?;
+    let mut user = User::find(&data, principal.user_id).await?;
+    user.language = Language::try_from(&req).unwrap_or_default();
+    user.update_language(&data).await?;
+    Ok(HttpResponse::Ok().finish())
 }
 
 /// Backend health state
