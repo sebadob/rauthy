@@ -411,6 +411,17 @@ impl User {
         Ok(user)
     }
 
+    pub async fn update_language(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        let lang = self.language.as_str();
+        sqlx::query(r#"update users set language = $1 where id = $2"#)
+            .bind(lang)
+            .bind(&self.id)
+            .execute(&data.db)
+            .await?;
+
+        Ok(())
+    }
+
     // Updates a user from himself. This is needed for the account page to make each user able to
     // update its own data.
     pub async fn update_self_req(
