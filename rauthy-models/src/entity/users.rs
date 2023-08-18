@@ -722,6 +722,7 @@ impl User {
             email: new_user.email,
             given_name: new_user.given_name,
             family_name: new_user.family_name,
+            language: new_user.language,
             roles,
             groups,
             ..Default::default()
