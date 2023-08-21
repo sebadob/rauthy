@@ -74,18 +74,10 @@ implemented (see below), while others might come or are even planned already.
 
 Currently missing features:
 
-**Rauthy Name Override**  
-The idea of this feature is, that one may be able to override the *Rauthy* name in different places like E-Mail
-notifications or the Admin UI. This would make it possible to not confuse external users, when they expect some
-other deployment name.
-
 **Rauthy Authenticator MFA App**  
 Even though things like OTP codes will never be implemented, it is not set in stone yet that there will never be Rauthy's
 own Authenticator App, which then basically acts as a Webauthn Software Authenticator. There are already existing 
 solutions out there to serve this purpose.  
-
-**Customizable E-Mail templates**  
-It is unsure, if this feature will come.
 
 **OIDC Client**  
 Rauthy will most probably have the option to be an OIDC Client itself as well. With this feature, you would be able
