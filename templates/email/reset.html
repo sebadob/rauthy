@@ -64,14 +64,14 @@
 </style>
 <body class="wrapper">
 <div class="container">
-    <h3 class="header">Password reset request for {{ pub_url }}</h3>
+    <h3 class="header">{{ header }} {{ pub_url }}</h3>
     <div style="text-align: left">
-        <div style="margin-bottom: .35em;">Click the button below to get forwarded to the password request form.</div>
-        <div>This link is only valid for a short period of time for security reasons.</div>
-        <div>Link expires: <b>{{ exp }}</b></div>
+        <div style="margin-bottom: .35em;">{{ click_link }}</div>
+        <div>{{ validity }}</div>
+        <div>{{ expires }} <b>{{ exp }}</b></div>
     </div>
     <div class="submitButtonWrapper">
-        <a href="{{ link }}" class="submitButton">Reset Password</a>
+        <a href="{{ link }}" class="submitButton">{{ button_text }}</a>
     </div>
     <br/>
 </div>
