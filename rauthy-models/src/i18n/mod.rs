@@ -2,6 +2,8 @@ use crate::language::Language;
 
 pub mod account;
 pub mod authorize;
+pub mod email_reset;
+pub mod email_reset_info;
 pub mod index;
 pub mod logout;
 pub mod password_policy;

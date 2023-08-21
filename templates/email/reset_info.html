@@ -48,15 +48,14 @@
 </style>
 <body class="wrapper">
   <div class="container">
-    <h3 class="header">Your password for {{ pub_url }}<br>is about to expire: {{ exp }}</h3>
+    <h3 class="header">{{ expires_1 }} {{ pub_url }}<br>{{ expires_2 }} {{ exp }}</h3>
     <div style="text-align: left">
       <div style="margin-bottom: .35em;">
-        Click the button below to get forwarded to the user login,<br>
-        where you can set a new password.
+        {{ update }}
       </div>
     </div>
     <div class="submitButtonWrapper">
-      <a href="{{ link }}" class="submitButton">Update Password</a>
+      <a href="{{ link }}" class="submitButton">{{ button_text }}</a>
     </div>
     <br />
   </div>

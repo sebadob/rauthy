@@ -1,4 +1,4 @@
-Your password for {{pub_url}} is about to expire: {{exp}}
+{{ expires_1 }} {{ pub_url }} {{ expires_2 }} {{ exp }}
 
-You can update it here:
-{{link}}
+{{ update }}
+{{ link }}

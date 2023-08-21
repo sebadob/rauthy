@@ -1,6 +1,9 @@
 use crate::app_state::AppState;
 use crate::entity::magic_links::MagicLinkPassword;
 use crate::entity::users::User;
+use crate::i18n::email_reset::I18nEmailReset;
+use crate::i18n::email_reset_info::I18nEmailResetInfo;
+use crate::i18n::SsrJson;
 use actix_web::web;
 use askama_actix::Template;
 use lettre::message::{MultiPart, SinglePart};
@@ -26,6 +29,12 @@ pub struct EMailResetHtml<'a> {
     pub pub_url: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
+    // i18n
+    pub header: &'a str,
+    pub click_link: &'a str,
+    pub validity: &'a str,
+    pub expires: &'a str,
+    pub button_text: &'a str,
 }
 
 #[derive(Default, Template)]
@@ -34,6 +43,11 @@ pub struct EmailResetTxt<'a> {
     pub pub_url: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
+    // i18n
+    pub header: &'a str,
+    pub click_link: &'a str,
+    pub validity: &'a str,
+    pub expires: &'a str,
 }
 
 #[derive(Default, Template)]
@@ -42,6 +56,11 @@ pub struct EMailResetInfoHtml<'a> {
     pub pub_url: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
+    // i18n
+    pub expires_1: &'a str,
+    pub expires_2: &'a str,
+    pub update: &'a str,
+    pub button_text: &'a str,
 }
 
 #[derive(Default, Template)]
@@ -50,6 +69,10 @@ pub struct EmailResetInfoTxt<'a> {
     pub pub_url: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
+    // i18n
+    pub expires_1: &'a str,
+    pub expires_2: &'a str,
+    pub update: &'a str,
 }
 
 pub async fn send_pwd_reset(
@@ -65,23 +88,33 @@ pub async fn send_pwd_reset(
         .unwrap()
         .to_string();
 
+    let i18n = I18nEmailReset::build(&user.language);
     let text = EmailResetTxt {
         pub_url: &data.public_url,
         link: &link,
         exp: &exp,
+        header: i18n.header,
+        click_link: i18n.click_link,
+        validity: i18n.validity,
+        expires: i18n.expires,
     };
 
     let html = EMailResetHtml {
         pub_url: &data.public_url,
         link: &link,
         exp: &exp,
+        header: i18n.header,
+        click_link: i18n.click_link,
+        validity: i18n.validity,
+        expires: i18n.expires,
+        button_text: i18n.button_text,
     };
 
     let req = EMail {
         address: user.email.to_string(),
         subject: format!(
-            "Password Reset Request - {} {}",
-            user.given_name, user.family_name
+            "{} - {} {}",
+            i18n.subject, user.given_name, user.family_name
         ),
         text: text.render().expect("Template rendering: EmailResetTxt"),
         html: Some(html.render().expect("Template rendering: EmailResetHtml")),
@@ -106,21 +139,29 @@ pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
         .expect("Corrupt user password expiry timestamp");
     let link = format!("{}/auth/v1/account.html", data.public_url);
 
+    let i18n = I18nEmailResetInfo::build(&user.language);
     let text = EmailResetInfoTxt {
         pub_url: &data.public_url,
         link: &link,
         exp: &exp.to_string(),
+        expires_1: i18n.expires_1,
+        expires_2: i18n.expires_2,
+        update: i18n.update,
     };
 
     let html = EMailResetInfoHtml {
         pub_url: &data.public_url,
         link: &link,
         exp: &exp.to_string(),
+        expires_1: i18n.expires_1,
+        expires_2: i18n.expires_2,
+        update: i18n.update,
+        button_text: i18n.button_text,
     };
 
     let req = EMail {
         address: user.email.to_string(),
-        subject: "Password is about to expire".to_string(),
+        subject: i18n.subject.to_string(),
         text: text
             .render()
             .expect("Template rendering: EmailResetInfoTxt"),
