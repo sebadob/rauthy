@@ -3,6 +3,7 @@
 
     export let t;
     export let selected = t.navInfo;
+    export let showWide = false;
 
     let labels = [t.navInfo, t.navEdit, t.navMfa, t.navLogout];
     let toggle = [];
@@ -21,11 +22,11 @@
 
 </script>
 
-<div class="container noselect">
+<div class={showWide ? 'containerWide noselect' : 'container noselect'}>
     {#each labels as label, i}
         <Button
                 level={3}
-                width="6rem"
+                width={showWide ? 'inherit' : '6rem'}
                 bind:selected={toggle[i]}
                 on:click={() => selected = label}
                 on:keypress={() => selected = label}
@@ -43,6 +44,13 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
+        align-items: center;
+    }
+
+    .containerWide {
+        margin-left: 5px;
+        display: flex;
+        flex-direction: row;
         align-items: center;
     }
 </style>

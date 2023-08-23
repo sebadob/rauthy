@@ -12,6 +12,9 @@
     export let sessionInfo = {};
     export let user = {};
 
+    let innerWidth;
+    $: viewModePhone = innerWidth < 500;
+
     let op = tweened(1.0, {
         duration: 100,
     })
@@ -34,32 +37,67 @@
     }
 </script>
 
-<div class="header">
-    <h2>{t.user} {t.account}</h2>
-</div>
+<svelte:window bind:innerWidth/>
 
-<div class="container">
-    <AccNav bind:t bind:selected/>
+{#if viewModePhone}
+    <div class="wrapper">
+        <div class="headerPhone">
+            <h2>{t.user} {t.account}</h2>
+        </div>
 
-    <div class="inner">
-        <div style="opacity: {$op}">
-            {#if content === t.navInfo}
-                <AccInfo bind:t bind:user/>
-            {:else if content === t.navEdit}
-                <AccEdit bind:t bind:user/>
-            {:else if content === t.navMfa}
-                <AccMFA bind:t bind:sessionInfo bind:user/>
-            {/if}
+        <div class="containerPhone">
+            <AccNav bind:t bind:selected showWide />
+
+            <div class="innerPhone">
+                <div style="opacity: {$op}">
+                    {#if content === t.navInfo}
+                        <AccInfo bind:t bind:user viewModePhone />
+                    {:else if content === t.navEdit}
+                        <AccEdit bind:t bind:user viewModePhone />
+                    {:else if content === t.navMfa}
+                        <AccMFA bind:t bind:sessionInfo bind:user/>
+                    {/if}
+                </div>
+            </div>
         </div>
     </div>
+{:else}
+    <div class="header">
+        <h2>{t.user} {t.account}</h2>
+    </div>
 
-    <LangSelector absolute updateBackend />
-</div>
+    <div class="container">
+        <AccNav bind:t bind:selected/>
+
+        <div class="inner borderLeft">
+            <div style="opacity: {$op}">
+                {#if content === t.navInfo}
+                    <AccInfo bind:t bind:user />
+                {:else if content === t.navEdit}
+                    <AccEdit bind:t bind:user />
+                {:else if content === t.navMfa}
+                    <AccMFA bind:t bind:sessionInfo bind:user/>
+                {/if}
+            </div>
+        </div>
+    </div>
+{/if}
+
+<LangSelector absolute updateBackend/>
 
 <style>
+    .borderLeft {
+        padding-left: 20px;
+        border-left: 1px solid var(--col-acnt);
+    }
+
     .container {
         display: flex;
-        min-height: 320px;
+    }
+
+    .containerPhone {
+        display: flex;
+        flex-direction: column;
     }
 
     .header {
@@ -68,9 +106,19 @@
         margin-bottom: 30px;
     }
 
+    .headerPhone {
+        margin-left: 10px;
+    }
+
     .inner {
         width: 380px;
-        padding-left: 20px;
-        border-left: 1px solid var(--col-acnt);
+    }
+
+    .innerPhone {
+        width: 100vw;
+    }
+
+    .wrapper {
+        height: 100dvh;
     }
 </style>

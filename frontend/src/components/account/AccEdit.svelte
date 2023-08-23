@@ -11,9 +11,10 @@
 
     export let t;
     export let user = {};
+    export let viewModePhone = false;
+    $: inputWidth = viewModePhone ? 'calc(100vw - 1.5rem)' : '300px';
 
     const btnWidth = "12rem";
-    const inputWidth = '300px';
 
     let editPwd = false;
     let pwdFormValues = {};
