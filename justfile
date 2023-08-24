@@ -227,6 +227,14 @@ publish: build-sqlite build-postgres
     docker build --no-cache -f Dockerfile.debug -t sdobedev/rauthy:$TAG-lite-debug -f Dockerfile.sqlite.debug .
     docker push sdobedev/rauthy:$TAG-lite-debug
 
+    # push both default images to ghcr as well
+    docker tag sdobedev/rauthy:$TAG ghcr.io/sdobedev/rauthy:$TAG
+    docker push ghcr.io/sdobedev/rauthy:$TAG
+    docker tag sdobedev/rauthy:$TAG ghcr.io/sdobedev/rauthy:$TAG-lite
+    docker push ghcr.io/sdobedev/rauthy:$TAG-lite
+
     # the `latest` image will always point to the postgres version, which is used more often
     docker tag sdobedev/rauthy:$TAG sdobedev/rauthy:latest
     docker push sdobedev/rauthy:latest
+    docker tag sdobedev/rauthy:$TAG ghcr.io/sdobedev/rauthy:latest
+    docker push ghcr.io/sdobedev/rauthy:latest
