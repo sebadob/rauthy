@@ -2,7 +2,7 @@ FROM alpine:3.18.3 AS builderBackend
 
 WORKDIR /work
 
-# Just a workaroudn to get an empty dir and be able to copy it over to scratch with
+# Just a workaround to get an empty dir and be able to copy it over to scratch with
 # the correct access rights
 RUN mkdir data
 
