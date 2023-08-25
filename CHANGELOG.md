@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.14.4
+
+This release mostly finishes the translation / i18n part of rauthy for now and adds some other
+smaller improvements.  
+Container Images will be published with ghcr.io as well from now on. Since I am on the free plan
+here, storage is limited and too old versions will be deleted at some point in the future.
+However, I will keep pushing all of them to docker hub as well, where you then should be able
+to find older versions too. ghcr.io is just preferred, because it is not so hardly rate limited
+than the docker hub free tier is.
+
+- Added translations for E-Mails
+[11544ac](https://github.com/sebadob/rauthy/commit/11544ac46fcddeb53a511b8ad702b1ad2868148e)
+- Made all UI parts work on mobile (except for the Admin UI itself)
+[a4f31f2](https://github.com/sebadob/rauthy/commit/a4f31f22396b5767c5a2c20e0253171910296447)
+[4ee3540](https://github.com/sebadob/rauthy/commit/4ee3540d9b32e6f0e2fbd5cf5eabcd7736179da8)
+- Images will be published on Github Container Registry as well from now on
+[cc15ea9](https://github.com/sebadob/rauthy/commit/cc15ea9cb5d7c0bd6d3cad1fea908e656f488e50)
+- All dependencies have been updates in various places. This just keeps everything up to date
+and fixed some potential security issues in third party libraries
+
 ## v0.14.3
 
 - UI: UX Improvements to Webauthn Login when the user lets the request time out

@@ -35,7 +35,6 @@ in another terminal:
 
 ### Stage 2 - features - do before v1.0.0
 
-- translate landing + logout + registration page
 - cleanup
 - benchmarks and performance tuning
 - double check against https://openid.net/specs/openid-connect-core-1_0.html that everything is implemented correctly one more time
