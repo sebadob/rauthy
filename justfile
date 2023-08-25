@@ -213,7 +213,8 @@ publish-nightly: build-sqlite build-postgres
 
 
 # publishes the application images - full pipeline incl clippy and testing
-publish: build-sqlite build-postgres
+#publish: build-sqlite build-postgres
+publish:
     #!/usr/bin/env bash
     set -euxo pipefail
 
@@ -228,13 +229,13 @@ publish: build-sqlite build-postgres
     docker push sdobedev/rauthy:$TAG-lite-debug
 
     # push both default images to ghcr as well
-    docker tag sdobedev/rauthy:$TAG ghcr.io/sdobedev/rauthy:$TAG
-    docker push ghcr.io/sdobedev/rauthy:$TAG
-    docker tag sdobedev/rauthy:$TAG ghcr.io/sdobedev/rauthy:$TAG-lite
-    docker push ghcr.io/sdobedev/rauthy:$TAG-lite
+    docker tag sdobedev/rauthy:$TAG ghcr.io/sebadob/rauthy:$TAG
+    docker push ghcr.io/sebadob/rauthy:$TAG
+    docker tag sdobedev/rauthy:$TAG ghcr.io/sebadob/rauthy:$TAG-lite
+    docker push ghcr.io/sebadob/rauthy:$TAG-lite
 
     # the `latest` image will always point to the postgres version, which is used more often
     docker tag sdobedev/rauthy:$TAG sdobedev/rauthy:latest
     docker push sdobedev/rauthy:latest
-    docker tag sdobedev/rauthy:$TAG ghcr.io/sdobedev/rauthy:latest
-    docker push ghcr.io/sdobedev/rauthy:latest
+    docker tag sdobedev/rauthy:$TAG ghcr.io/sebadob/rauthy:latest
+    docker push ghcr.io/sebadob/rauthy:latest
