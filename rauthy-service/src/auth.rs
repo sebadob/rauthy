@@ -386,7 +386,6 @@ pub async fn build_id_token(
     };
 
     let mut custom_claims = JwtIdClaims {
-        sub: user.id.clone(),
         azp: client.id.clone(),
         typ: JwtType::Id,
         amr: vec![amr],
@@ -438,9 +437,9 @@ pub async fn build_id_token(
         custom_claims,
         coarsetime::Duration::from_secs(lifetime as u64),
     )
-    .with_subject(user.email.clone())
+    .with_subject(user.id.clone())
     .with_issuer(data.issuer.clone())
-    .with_audience(client.id.to_string()); // TODO switch to JSON array?
+    .with_audience(client.id.to_string());
 
     if let Some(nonce) = nonce {
         claims = claims.with_nonce(nonce);

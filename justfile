@@ -205,11 +205,11 @@ publish-nightly: build-sqlite build-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    docker build --no-cache -f Dockerfile.debug -t sdobedev/rauthy:nightly -f Dockerfile.postgres.debug .
-    docker push sdobedev/rauthy:nightly
+    docker build --no-cache -f Dockerfile.debug -t ghcr.io/sebadob/rauthy:nightly -f Dockerfile.postgres.debug .
+    docker push ghcr.io/sebadob/rauthy:nightly
 
-    docker build --no-cache -f Dockerfile.debug -t sdobedev/rauthy:nightly-lite -f Dockerfile.sqlite.debug .
-    docker push sdobedev/rauthy:nightly-lite
+    docker build --no-cache -f Dockerfile.debug -t ghcr.io/sebadob/rauthy:nightly-lite -f Dockerfile.sqlite.debug .
+    docker push ghcr.io/sebadob/rauthy:nightly-lite
 
 
 # publishes the application images - full pipeline incl clippy and testing

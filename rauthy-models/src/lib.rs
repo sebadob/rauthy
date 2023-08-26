@@ -105,7 +105,6 @@ pub struct JwtAccessClaims {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JwtIdClaims {
-    pub sub: String,
     pub azp: String,
     pub typ: JwtType,
     pub amr: Vec<String>,
