@@ -157,7 +157,7 @@
             </Button>
         {/if}
 
-        <Button width={btnWidth} on:click={onSubmit} level={1}>
+        <Button width={btnWidth} on:click={onSubmit} level={1} bind:isLoading>
             {t.save.toUpperCase()}
         </Button>
 
