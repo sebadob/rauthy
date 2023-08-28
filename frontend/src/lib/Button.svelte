@@ -69,7 +69,7 @@
             <Loading local background={false} color={loadCol}/>
         </div>
     {:else if showText}
-        <div in:fade|global class="txt">
+        <div in:fade class="txt">
             <slot></slot>
         </div>
     {/if}
