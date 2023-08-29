@@ -13,14 +13,14 @@ sqlite = []
 skip_feature_sets = [["postgres", "sqlite"]]
 
 [dependencies]
-actix-web = { version = "4", features = ["rustls"] }
+actix-web = { version = "4.4", features = ["rustls"] }
 actix-service = "2"
 actix-files = "0.6"
 actix-web-grants = "3.0"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 cron = "0.12"
 dotenvy = "0.15"
-flume = "0.10"
+flume = "0.11"
 num_cpus = "1"
 rauthy-common = { path = "../rauthy-common" }
 rauthy-handlers = { path = "../rauthy-handlers" }
@@ -28,7 +28,7 @@ rauthy-models = { path = "../rauthy-models" }
 rauthy-service = { path = "../rauthy-service" }
 redhac = "0.6"
 # actix web currently depends on 0.20
-rustls = "0.20"
+rustls = "0.21"
 rustls-pemfile = "1"
 serde_json = "1"
 sqlx = { workspace = true }
