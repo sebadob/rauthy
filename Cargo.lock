@@ -224,9 +224,9 @@ dependencies = [
 
 [[package]]
 name = "actix-tls"
-version = "3.1.0"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a70bd48b6604191a700372f60bdc997db560eff5e4d41a7f00664390b5228b38"
+checksum = "72616e7fbec0aa99c6f3164677fa48ff5a60036d0799c98cab894a44f3e0efc3"
 dependencies = [
  "actix-rt",
  "actix-service",
@@ -234,11 +234,15 @@ dependencies = [
  "futures-core",
  "impl-more",
  "pin-project-lite",
+ "rustls 0.21.7",
+ "rustls-webpki 0.101.4",
  "tokio",
  "tokio-rustls 0.23.4",
+ "tokio-rustls 0.24.1",
  "tokio-util",
  "tracing",
  "webpki-roots 0.22.6",
+ "webpki-roots 0.25.2",
 ]
 
 [[package]]
@@ -312,9 +316,9 @@ dependencies = [
 
 [[package]]
 name = "actix-web-codegen"
-version = "4.2.1"
+version = "4.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cc9afd177d10afc1e7842eaf6b8b24a38f4d22088b197a2b9395b102c4413eb"
+checksum = "eb1f50ebbb30eca122b188319a4398b3f7bb4a8cdf50ecfb73bfc6a3c3ce54f5"
 dependencies = [
  "actix-router",
  "proc-macro2",
@@ -452,9 +456,9 @@ dependencies = [
 
 [[package]]
 name = "aho-corasick"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6748e8def348ed4d14996fa801f4122cd763fff530258cdc03f64b25f89d3a5a"
+checksum = "0c378d78423fdad8089616f827526ee33c19f2fddbd5de1629152c9593ba4783"
 dependencies = [
  "memchr",
 ]
@@ -930,15 +934,15 @@ dependencies = [
 
 [[package]]
 name = "chrono"
-version = "0.4.26"
+version = "0.4.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec837a71355b28f6556dbd569b37b3f363091c0bd4b2e735674521b4c5fd9bc5"
+checksum = "f56b4c72906975ca04becb8a30e102dfecddd0c06181e3e95ddc444be28881f8"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
  "num-traits",
  "serde",
- "winapi",
+ "windows-targets",
 ]
 
 [[package]]
@@ -2273,9 +2277,9 @@ checksum = "8c408dc227d302f1496c84d9dc68c00fec6f56f9228a18f3023f976f3ca7c945"
 
 [[package]]
 name = "memchr"
-version = "2.6.0"
+version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76fc44e2588d5b436dbc3c6cf62aef290f90dab6235744a93dfe1cc18f451e2c"
+checksum = "f478948fd84d9f8e86967bf432640e46adfb5a4bd4f14ef7e864ab38220534ae"
 
 [[package]]
 name = "mime"
@@ -2906,6 +2910,7 @@ version = "0.14.4"
 dependencies = [
  "actix-files",
  "actix-service",
+ "actix-tls",
  "actix-web",
  "actix-web-grants",
  "chrono",
