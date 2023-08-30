@@ -9,7 +9,7 @@ The image contains a basic default config which is sufficient for local testing.
 docker run --rm \
     -p 8080:8080 \
     --name rauthy \
-    sdobedev/rauthy:0.14.5-lite
+    ghcr.io/sebadob/rauthy:0.14.5-lite
 ```
 
 This will start the container in interactive mode with an in-memory SQLite database. Just take a look at the log at the
@@ -22,7 +22,7 @@ docker run -d \
     -e DATABASE_URL=sqlite:data/rauthy.db \
     -p 8080:8080 \
     --name rauthy \
-    sdobedev/rauthy:0.14.5-lite
+    ghcr.io/sebadob/rauthy:0.14.5-lite
 ```
 
 ```admonish note
@@ -108,7 +108,7 @@ docker run -d \
     -v $(pwd)/rauthy/data:/app/data \
     -p 8080:8080 \
     --name rauthy \
-    sdobedev/rauthy:0.14.2-lite
+    ghcr.io/sebadob/rauthy:0.14.2-lite
 ```
 
 **6. Restrict DB files access even more**  
