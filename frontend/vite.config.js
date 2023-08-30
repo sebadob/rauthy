@@ -12,7 +12,7 @@ const config = {
 			'/auth/v1/oidc/authorize': 'http://127.0.0.1:8080',
 			'/auth/v1/oidc/callback': 'http://127.0.0.1:8080',
 			'/auth/v1/oidc/certs': 'http://127.0.0.1:8080',
-			// '/auth/v1/oidc/logout': 'http://127.0.0.1:8080',
+			'/auth/v1/oidc/logout': 'http://127.0.0.1:8080',
 			'/auth/v1/oidc/rotateJwk': 'http://127.0.0.1:8080',
 			'/auth/v1/oidc/sessioninfo': 'http://127.0.0.1:8080',
 			'/auth/v1/oidc/token': 'http://127.0.0.1:8080',

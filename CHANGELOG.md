@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.14.5
+
+This is the last v0.14 release.  
+The next v0.15 will be an "in-between-release" which will do some migration preparations for Webauthn
+/ FIDO 2 updates and features coming in the near future.
+
+- Removed duplicate `sub` claims from JWT ID Tokens
+[a35db33](https://github.com/sebadob/rauthy/commit/a35db330ff7c6ee680a7d834f08a3db077e08073)
+- Small UI improvements:
+    - Show loading indicator when doing a password change
+    - The Loading animation was changes from JS to a CSS animation
+[abd0a06](https://github.com/sebadob/rauthy/commit/abd0a06280de4fedef9028f142b6e844bf132d80)
+- Upgrades to actix-web 4.4 + rustls 0.21 (and all other minor upgrades)
+[070a453](https://github.com/sebadob/rauthy/commit/070a453aaa584ff8d024284de91477626fe5ea6c)
+
 ## v0.14.4
 
 This release mostly finishes the translation / i18n part of rauthy for now and adds some other

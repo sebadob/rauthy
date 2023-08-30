@@ -263,7 +263,7 @@ The image contains a basic default config which is sufficient for local testing.
 <pre><code>docker run --rm \
     -p 8080:8080 \
     --name rauthy \
-    sdobedev/rauthy:0.14.4-lite
+    ghcr.io/sebadob/rauthy:0.14.5-lite
 </code></pre>
 <p>This will start the container in interactive mode with an in-memory SQLite database. Just take a look at the log at the
 logs to see the URL and first password.</p>
@@ -272,7 +272,7 @@ logs to see the URL and first password.</p>
     -e DATABASE_URL=sqlite:data/rauthy.db \
     -p 8080:8080 \
     --name rauthy \
-    sdobedev/rauthy:0.14.4-lite
+    ghcr.io/sebadob/rauthy:0.14.5-lite
 </code></pre>
 <div id="admonition-note" class="admonition note">
 <div class="admonition-title">
@@ -357,7 +357,7 @@ Make sure to adjust the volume mount for the sqlite directory in step 5, if it d
     -v $(pwd)/rauthy/data:/app/data \
     -p 8080:8080 \
     --name rauthy \
-    sdobedev/rauthy:0.14.2-lite
+    ghcr.io/sebadob/rauthy:0.14.2-lite
 </code></pre>
 <p><strong>6. Restrict DB files access even more</strong><br />
 After rauthy has done the first start, you could harden the access rights of the SQLite files even more.<br />
@@ -529,7 +529,7 @@ spec:
           # hash for the latest version at this
           # point. The latest image with the correct hash will always be shown for the 
           # [Github Releases](https://github.com/sebadob/rauthy/releases)
-          image: sdobedev/rauthy:0.14.4-lite
+          image: ghcr.io/sebadob/rauthy:0.14.5-lite
           imagePullPolicy: IfNotPresent
           securityContext:
             # User ID 10001 is actually built into the container at the creation for
