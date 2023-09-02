@@ -16,6 +16,7 @@
 
 use crate::cache_notify::handle_notify;
 use crate::logging::setup_logging;
+use actix_web::web::Data;
 use actix_web::{middleware, web, App, HttpServer};
 use actix_web_grants::GrantsMiddleware;
 use rauthy_common::constants::{
@@ -23,6 +24,7 @@ use rauthy_common::constants::{
     CACHE_NAME_SESSIONS, CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, MFA_REQ_LIFETIME, POW_EXP,
     RAUTHY_VERSION, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
+use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::password_hasher;
 use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
 use rauthy_handlers::middleware::session::RauthySessionMiddleware;
@@ -30,14 +32,17 @@ use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{clients, generic, groups, oidc, roles, scopes, sessions, users};
 use rauthy_models::app_state::{AppState, Caches};
 use rauthy_models::email::EMail;
+use rauthy_models::entity::users::User;
+use rauthy_models::entity::webauthn::{PasskeyEntity, PasskeyEntityLegacy};
 use rauthy_models::{email, ListenScheme};
 use rauthy_service::auth;
+use std::collections::HashMap;
 use std::error::Error;
 use std::time::Duration;
 use std::{env, thread};
 use tokio::sync::mpsc;
 use tokio::time;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 use utoipa_swagger_ui::SwaggerUi;
 
 mod cache_notify;
@@ -162,6 +167,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // spawn remote cache notification service
     tokio::spawn(handle_notify(app_state.clone(), rx_notify));
+
+    // TODO remove this temp migration with v0.16 in the future -> keep for the whole 0.15 release!
+    TEMP_migrate_passkeys(&app_state)
+        .await
+        .expect("temp passkey migration");
 
     // schedulers
     match env::var("SCHED_DISABLE")
@@ -401,4 +411,81 @@ fn get_https_port() -> String {
     let port = env::var("LISTEN_PORT_HTTPS").unwrap_or_else(|_| "8443".to_string());
     info!("HTTPS listen port: {}", port);
     port
+}
+
+async fn TEMP_migrate_passkeys(app_state: &Data<AppState>) -> Result<(), ErrorResponse> {
+    warn!("\n\n\tRunning temporary migration of passkeys - this should be removed in v0.16+\n");
+
+    let mut txn = app_state.db.begin().await?;
+
+    let users = User::find_all(&app_state)
+        .await?
+        .into_iter()
+        .filter(|u| u.sec_key_1.is_some() || u.sec_key_2.is_some())
+        .collect::<Vec<User>>();
+
+    let legacy: Vec<PasskeyEntityLegacy> =
+        sqlx::query_as!(PasskeyEntityLegacy, "select * from webauthn")
+            .fetch_all(&mut *txn)
+            .await?;
+    let mut pk_map = HashMap::with_capacity(legacy.len());
+    for l in legacy {
+        pk_map.insert(l.id, l.passkey);
+    }
+
+    let mut migrated = 0;
+
+    for user in users {
+        if let Some(key) = user.sec_key_1 {
+            let pk = pk_map
+                .get(&key)
+                .expect("Data inconsistency: missing key in passkeys");
+
+            sqlx::query!(
+                "INSERT INTO passkeys (user_id, name, passkey) VALUES ($1, $2, $3)",
+                user.id,
+                key,
+                pk,
+            )
+            .execute(&mut *txn)
+            .await?;
+
+            migrated += 1;
+        }
+
+        if let Some(key) = user.sec_key_2 {
+            let pk = pk_map
+                .get(&key)
+                .expect("Data inconsistency: missing key in passkeys");
+
+            sqlx::query!(
+                "INSERT INTO passkeys (user_id, name, passkey) VALUES ($1, $2, $3)",
+                user.id,
+                key,
+                pk,
+            )
+            .execute(&mut *txn)
+            .await?;
+
+            migrated += 1;
+        }
+    }
+
+    sqlx::query!("UPDATE users SET sec_key_1 = null, sec_key_2 = null")
+        .execute(&mut *txn)
+        .await?;
+
+    sqlx::query!("DELETE FROM webauthn")
+        .execute(&mut *txn)
+        .await?;
+
+    txn.commit().await?;
+
+    if migrated > 0 {
+        info!("\n\n\tmigrated {} Passkeys\n", migrated);
+    } else {
+        info!("\n\n\tthere were no Passkeys to be migrated\n");
+    }
+
+    Ok(())
 }

@@ -11,7 +11,7 @@ use crate::entity::scopes::Scope;
 use crate::entity::sessions::Session;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::users::User;
-use crate::entity::webauthn::PasskeyEntity;
+use crate::entity::webauthn::PasskeyEntityLegacy;
 use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
@@ -304,7 +304,7 @@ pub async fn migrate_from_sqlite(
     info!("Starting migration to another DB");
 
     // WEBNAUTHN
-    let before = sqlx::query_as::<_, PasskeyEntity>("select * from webauthn")
+    let before = sqlx::query_as::<_, PasskeyEntityLegacy>("select * from webauthn")
         .fetch_all(&db_from)
         .await?;
     sqlx::query("delete from webauthn").execute(db_to).await?;
@@ -609,7 +609,7 @@ pub async fn migrate_from_postgres(
     info!("Starting migration to another DB");
 
     // WEBNAUTHN
-    let before = sqlx::query_as::<_, PasskeyEntity>("select * from rauthy.webauthn")
+    let before = sqlx::query_as::<_, PasskeyEntityLegacy>("select * from rauthy.webauthn")
         .fetch_all(&db_from)
         .await?;
     sqlx::query("delete from webauthn").execute(db_to).await?;

@@ -8,7 +8,7 @@ use crate::entity::pow::Pow;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
-use crate::entity::webauthn::PasskeyEntity;
+use crate::entity::webauthn::PasskeyEntityLegacy;
 use crate::language::Language;
 use crate::request::{
     NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
@@ -648,7 +648,7 @@ impl User {
         };
         self.save(data, None, Some(&mut txn)).await?;
 
-        PasskeyEntity::delete_by_id(data, &pk_id, Some(&mut txn)).await?;
+        PasskeyEntityLegacy::delete_by_id(data, &pk_id, Some(&mut txn)).await?;
 
         txn.commit().await?;
 
@@ -755,16 +755,16 @@ impl User {
     pub async fn get_passkeys(
         &self,
         data: &web::Data<AppState>,
-    ) -> Result<Vec<PasskeyEntity>, ErrorResponse> {
+    ) -> Result<Vec<PasskeyEntityLegacy>, ErrorResponse> {
         let mut pks = Vec::with_capacity(2); // TODO migrate to array or smallvec
 
         if let Some(ref id) = self.sec_key_1 {
-            let pk = PasskeyEntity::find(data, id.clone()).await?;
+            let pk = PasskeyEntityLegacy::find(data, id.clone()).await?;
             pks.push(pk);
         }
 
         if let Some(ref id) = self.sec_key_2 {
-            let pk = PasskeyEntity::find(data, id.clone()).await?;
+            let pk = PasskeyEntityLegacy::find(data, id.clone()).await?;
             pks.push(pk);
         }
 
