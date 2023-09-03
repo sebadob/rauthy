@@ -231,7 +231,7 @@
             MFA ACTIVE
         </div>
         <div class="value">
-            <CheckIcon check={user.sec_key_1?.length > 0 || user.sec_key_2?.length > 0}/>
+            <CheckIcon check={user.webauthn_enabled}/>
         </div>
     </div>
 
