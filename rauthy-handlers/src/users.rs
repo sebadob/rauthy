@@ -418,15 +418,15 @@ pub async fn get_user_password_reset(
         })
 }
 
-// Endpoint for resetting passwords
-//
-// On this endpoint, a password reset can be posted. This only works with a valid
-// `PWD_RESET_COOKIE` + CSRF token.
-//
-// Expects the CSRF token to be provided with an HTTP Header called `PWD_CSRF_HEADER`
-//
-// **Permissions**
-// - pre-authenticated with pwd-reset cookie from `GET /auth/v1/users/{id}/reset/{reset_id}`
+/// Endpoint for resetting passwords
+///
+/// On this endpoint, a password reset can be posted. This only works with a valid
+/// `PWD_RESET_COOKIE` + CSRF token.
+///
+/// Expects the CSRF token to be provided with an HTTP Header called `PWD_CSRF_HEADER`
+///
+/// **Permissions**
+/// - pre-authenticated with pwd-reset cookie from `GET /auth/v1/users/{id}/reset/{reset_id}`
 #[utoipa::path(
     put,
     path = "/users/{id}/reset",
@@ -605,7 +605,6 @@ pub async fn post_webauthn_auth_finish(
     Ok(res.into_response())
 }
 
-// TODO change to DELETE instead of PUT?
 /// Deletes the WebAuthn Device for this user in the given slot
 ///
 /// **Permissions**
