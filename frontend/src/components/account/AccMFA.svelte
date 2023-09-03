@@ -31,8 +31,6 @@
 
     let passkeys = [];
 
-    $: console.log(passkeys);
-
     let formValues = { passkeyName: '' };
     let formErrors = {};
     const schema = yup.object().shape({
@@ -50,17 +48,6 @@
         msg = '';
     }
 
-    // async function fetchUpdatedUser() {
-    //     resetMsgErr();
-    //
-    //     let res = await getUser(sessionInfo.user_id);
-    //     if (res.ok) {
-    //         user = await res.json();
-    //     } else {
-    //         redirectToLogin('account');
-    //     }
-    // }
-
     async function fetchPasskeys() {
         let res = await getUserPasskeys(sessionInfo.user_id);
         let body = await res.json();
@@ -72,46 +59,6 @@
         }
     }
 
-    // async function handleRegStart(slot) {
-    //     resetMsgErr();
-    //
-    //     let res = await webauthnRegStart(user.id, {slot});
-    //     if (res.status === 200) {
-    //         let challenge = await res.json();
-    //
-    //         // the navigator credentials engine needs some values as array buffers
-    //         challenge.publicKey.challenge = base64UrlSafeToArrBuf(challenge.publicKey.challenge);
-    //         challenge.publicKey.user.id = base64UrlSafeToArrBuf(challenge.publicKey.user.id);
-    //
-    //         // prompt for the user security key and get its public key
-    //         let challengePk = await navigator.credentials.create(challenge);
-    //
-    //         // the backend expects base64 url safe string instead of array buffers
-    //         let data = {
-    //             slot,
-    //             data: {
-    //                 id: challengePk.id,
-    //                 rawId: arrBufToBase64UrlSafe(challengePk.rawId),
-    //                 response: {
-    //                     attestationObject: arrBufToBase64UrlSafe(challengePk.response.attestationObject),
-    //                     clientDataJSON: arrBufToBase64UrlSafe(challengePk.response.clientDataJSON),
-    //                 },
-    //                 type: challengePk.type,
-    //             },
-    //         }
-    //
-    //         // send the keys' pk to the backend and finish the registration
-    //         res = await webauthnRegFinish(user.id, data);
-    //         if (res.status === 201) {
-    //             await fetchUpdatedUser();
-    //         } else {
-    //             console.error(res);
-    //         }
-    //     } else {
-    //         err = true;
-    //         msg = t.mfa.errorReg;
-    //     }
-    // }
     async function handleRegStart() {
         resetMsgErr();
 
