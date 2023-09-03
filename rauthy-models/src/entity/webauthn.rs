@@ -716,8 +716,7 @@ pub async fn reg_finish(
     id: String,
     req: WebauthnRegFinishRequest,
 ) -> Result<(), ErrorResponse> {
-    let user = User::find(data, id).await?;
-    // user.is_slot_free(req.slot)?;
+    let mut user = User::find(data, id).await?;
 
     let idx = format!("reg_{:?}_{}", req.passkey_name, user.id);
     let res = cache_get!(
@@ -761,7 +760,10 @@ pub async fn reg_finish(
             // }
             // TODO should we keep track of a registered passkey for faster lookups here?
             // TODO trade faster lookups for way more complexity when handling this field?
-            // user.save(data, None, Some(&mut txn)).await?;
+            if !user.webauthn_enabled {
+                user.webauthn_enabled = true;
+                user.save(data, None, Some(&mut txn)).await?;
+            }
 
             txn.commit().await?;
 

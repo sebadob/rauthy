@@ -22,7 +22,8 @@ use rauthy_models::request::{
     WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_models::response::{
-    UserAttrConfigResponse, UserAttrValueResponse, UserAttrValuesResponse, UserResponse,
+    PasskeyResponse, UserAttrConfigResponse, UserAttrValueResponse, UserAttrValuesResponse,
+    UserResponse,
 };
 use rauthy_models::templates::UserRegisterHtml;
 use rauthy_service::password_reset;
@@ -461,6 +462,53 @@ pub async fn put_user_password_reset(
     })
 }
 
+/// Get all registered Webauthn Passkeys for a user
+///
+/// **Permissions**
+/// - authenticated and logged in user for this very {id}
+/// - authenticated and logged in admin
+#[utoipa::path(
+    get,
+    path = "/users/{id}/webauthn",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[get("/users/{id}/webauthn")]
+#[has_any_permission("token-auth", "session-auth")]
+pub async fn get_user_webauthn_passkeys(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+    req: HttpRequest,
+    principal: web::ReqData<Option<Principal>>,
+    session_req: web::ReqData<Option<Session>>,
+) -> Result<HttpResponse, ErrorResponse> {
+    if session_req.is_some() {
+        Session::extract_validate_csrf(session_req, &req)?;
+    }
+
+    // make sure a non-admin can only access its own information
+    let principal = Principal::get_from_req(principal.into_inner())?;
+    let id = id.into_inner();
+    if principal.user_id != id && !principal.is_admin() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "You are not allowed to see another users values".to_string(),
+        ));
+    }
+
+    let pks = PasskeyEntity::find_for_user(&data, &id)
+        .await?
+        .into_iter()
+        .map(PasskeyResponse::from)
+        .collect::<Vec<PasskeyResponse>>();
+
+    Ok(HttpResponse::Ok().json(pks))
+}
+
 /// Starts the authentication process for a WebAuthn Device for this user
 ///
 /// **Permissions**
@@ -640,19 +688,28 @@ pub async fn delete_webauthn(
     let principal = Principal::get_from_req(principal.into_inner())?;
     if !principal.is_admin() {
         principal.validate_id(&id)?;
-        warn!("MFA reset for user {} for key {}", id, name);
+        warn!("Passkey delete for user {} for key {}", id, name);
     } else {
-        todo!("fix this case");
         warn!(
-            "MFA reset from admin {:?} for user {} for key {}",
+            "Passkey delete from admin {:?} for user {} for key {}",
             principal.email, id, name
         );
     }
 
-    // TODO if we want to keep track of passkeys in the user, do it here too
-    // let mut user = User::find(&data, id).await?;
-    // user.delete_mfa_slot(&data, slot).await?;
-    PasskeyEntity::delete_by_id_name(&data, &id, &name, None).await?;
+    // if we delete a passkey, we must check if this is the last existing one for the user
+    let pks = PasskeyEntity::find_for_user(&data, &id).await?;
+
+    let mut txn = data.db.begin().await?;
+
+    PasskeyEntity::delete_by_id_name(&data, &id, &name, Some(&mut txn)).await?;
+    if pks.len() < 2 {
+        let mut user = User::find(&data, id).await?;
+        user.webauthn_enabled = false;
+        user.save(&data, None, Some(&mut txn)).await?;
+        txn.commit().await?;
+    } else {
+        txn.commit().await?;
+    }
 
     // make sure to delete any existing MFA cookie when a key is deleted
     let cookie = cookie::Cookie::build(COOKIE_MFA, "")
@@ -867,7 +924,7 @@ pub async fn put_user_by_id(
     ),
 )]
 #[put("/users/{id}/self")]
-#[has_permissions("session-auth")] // TODO correct role? note authenticated? --> double check!
+#[has_permissions("session-auth")] // TODO correct role? not authenticated? --> double check!
 pub async fn put_user_self(
     data: web::Data<AppState>,
     id: web::Path<String>,

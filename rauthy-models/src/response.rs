@@ -5,6 +5,7 @@ use crate::entity::scopes::Scope;
 use crate::entity::sessions::SessionState;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::users::User;
+use crate::entity::webauthn::PasskeyEntity;
 use crate::language::Language;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
@@ -142,6 +143,25 @@ pub struct LoginTimeResponse {
     pub argon2_params: Argon2ParamsResponse,
     pub login_time: u32,
     pub num_cpus: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct PasskeyResponse {
+    pub name: String,
+    /// format: `NaiveDateTime`
+    pub registered: i64,
+    /// format: `NaiveDateTime`
+    pub last_used: i64,
+}
+
+impl From<PasskeyEntity> for PasskeyResponse {
+    fn from(value: PasskeyEntity) -> Self {
+        Self {
+            name: value.name,
+            registered: value.registered,
+            last_used: value.last_used,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]

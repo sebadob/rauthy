@@ -26,7 +26,7 @@ pub async fn handle_get_pwd_reset<'a>(
 
     // check if the user has MFA enabled
     let user = User::find(data, ml.user_id.clone()).await?;
-    let email = if user.has_webauthn_enabled() {
+    let email = if user.webauthn_enabled {
         Some(&user.email)
     } else {
         None
@@ -74,7 +74,7 @@ pub async fn handle_put_user_password_reset<'a>(
     }
 
     // check MFA code
-    if user.has_webauthn_enabled() {
+    if user.webauthn_enabled {
         match req_data.mfa_code {
             None => {
                 // TODO delete the whole ML too?
