@@ -13,7 +13,7 @@ clippy-sqlite:
 
 clippy-postgres:
     clear
-    DATABASE_URL={{db_url_postgres}} cargo clippy --features postgres
+    DATABASE_URL={{db_url_postgres}} cargo clippy
 
 
 migrate-sqlite:
@@ -33,7 +33,7 @@ run-sqlite:
 
 # runs the application with postgres feature
 run-postgres:
-    DATABASE_URL={{db_url_postgres}} cargo run --target x86_64-unknown-linux-musl --features postgres
+    DATABASE_URL={{db_url_postgres}} cargo run --target x86_64-unknown-linux-musl
 
 
 # runs the UI in development mode
@@ -70,13 +70,13 @@ test-postgres: migrate-postgres
     #!/usr/bin/env bash
     clear
 
-    DATABASE_URL={{db_url_postgres}} cargo build --features postgres
-    DATABASE_URL={{db_url_postgres}} cargo run --features postgres test &
+    DATABASE_URL={{db_url_postgres}} cargo build
+    DATABASE_URL={{db_url_postgres}} cargo run test &
     sleep 1
     PID=$(echo "$!")
     echo "PID: $PID"
 
-    DATABASE_URL={{db_url_postgres}} cargo test --features postgres
+    DATABASE_URL={{db_url_postgres}} cargo test
     kill "$PID"
     echo All tests successful
 
@@ -165,11 +165,10 @@ build-postgres: build-docs build-ui test-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    DATABASE_URL={{db_url_postgres}} cargo clippy --features postgres -- -D warnings
+    DATABASE_URL={{db_url_postgres}} cargo clippy -- -D warnings
     DATABASE_URL={{db_url_postgres}} cargo build \
         --release \
-        --target x86_64-unknown-linux-musl \
-        --features postgres
+        --target x86_64-unknown-linux-musl
     cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy
 
 
