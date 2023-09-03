@@ -261,7 +261,7 @@ impl Client {
             id,
             logo
         );
-        #[cfg(feature = "postgres")]
+        #[cfg(not(feature = "sqlite"))]
         let q = sqlx::query!(
             r#"insert into logos (client_id, data) values ($1, $2)
                 on conflict(client_id) do update set data = $2"#,

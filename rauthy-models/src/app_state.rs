@@ -24,12 +24,12 @@ use utoipa::ToSchema;
 use webauthn_rs::prelude::Url;
 use webauthn_rs::Webauthn;
 
-#[cfg(feature = "postgres")]
+#[cfg(not(feature = "sqlite"))]
 pub type DbPool = sqlx::PgPool;
 #[cfg(feature = "sqlite")]
 pub type DbPool = sqlx::SqlitePool;
 
-#[cfg(feature = "postgres")]
+#[cfg(not(feature = "sqlite"))]
 pub type DbTxn<'a> = sqlx::Transaction<'a, sqlx::Postgres>;
 #[cfg(feature = "sqlite")]
 pub type DbTxn<'a> = sqlx::Transaction<'a, sqlx::Sqlite>;
@@ -245,7 +245,7 @@ impl AppState {
 
         sqlx::any::install_default_drivers();
 
-        #[cfg(feature = "postgres")]
+        #[cfg(not(feature = "sqlite"))]
         let pool = {
             if *DB_TYPE == DbType::Sqlite {
                 let msg = r#"

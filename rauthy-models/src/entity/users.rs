@@ -8,7 +8,6 @@ use crate::entity::pow::Pow;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
-use crate::entity::webauthn::PasskeyEntity;
 use crate::language::Language;
 use crate::request::{
     NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
@@ -46,6 +45,7 @@ pub struct User {
     pub sec_key_1: Option<String>,
     pub sec_key_2: Option<String>,
     pub language: Language,
+    pub webauthn_enabled: bool,
 }
 
 // CRUD
@@ -297,7 +297,7 @@ impl User {
             email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6,
             enabled = $7, email_verified = $8, password_expires = $9, created_at = $10, last_login = $11,
             last_failed_login = $12, failed_login_attempts = $13, mfa_app = $14, sec_key_1 = $15,
-            sec_key_2 = $16, language = $17 where id = $18"#)
+            sec_key_2 = $16, language = $17, webauthn_enabled = $18 where id = $19"#)
             .bind(&self.email)
             .bind(&self.given_name)
             .bind(&self.family_name)
@@ -315,6 +315,7 @@ impl User {
             .bind(&self.sec_key_1)
             .bind(&self.sec_key_2)
             .bind(lang)
+            .bind(self.webauthn_enabled)
             .bind(&self.id);
 
         if let Some(txn) = txn {
@@ -620,40 +621,40 @@ impl User {
         Ok(())
     }
 
-    pub async fn delete_mfa_slot(
-        &mut self,
-        data: &web::Data<AppState>,
-        slot: u8,
-    ) -> Result<(), ErrorResponse> {
-        let pk_entity = match slot {
-            1 => &self.sec_key_1,
-            2 => &self.sec_key_2,
-            _ => unreachable!(),
-        };
-
-        if pk_entity.is_none() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "No key registered in this slot".to_string(),
-            ));
-        }
-        let pk_id = pk_entity.as_ref().unwrap().clone();
-
-        let mut txn = data.db.begin().await?;
-
-        match slot {
-            1 => self.sec_key_1 = None,
-            2 => self.sec_key_2 = None,
-            _ => unreachable!(),
-        };
-        self.save(data, None, Some(&mut txn)).await?;
-
-        PasskeyEntity::delete_by_id(data, &pk_id, Some(&mut txn)).await?;
-
-        txn.commit().await?;
-
-        Ok(())
-    }
+    // pub async fn delete_mfa_slot(
+    //     &mut self,
+    //     data: &web::Data<AppState>,
+    //     slot: u8,
+    // ) -> Result<(), ErrorResponse> {
+    //     let pk_entity = match slot {
+    //         1 => &self.sec_key_1,
+    //         2 => &self.sec_key_2,
+    //         _ => unreachable!(),
+    //     };
+    //
+    //     if pk_entity.is_none() {
+    //         return Err(ErrorResponse::new(
+    //             ErrorResponseType::BadRequest,
+    //             "No key registered in this slot".to_string(),
+    //         ));
+    //     }
+    //     let pk_id = pk_entity.as_ref().unwrap().clone();
+    //
+    //     let mut txn = data.db.begin().await?;
+    //
+    //     match slot {
+    //         1 => self.sec_key_1 = None,
+    //         2 => self.sec_key_2 = None,
+    //         _ => unreachable!(),
+    //     };
+    //     self.save(data, None, Some(&mut txn)).await?;
+    //
+    //     PasskeyEntityLegacy::delete_by_id(data, &pk_id, Some(&mut txn)).await?;
+    //
+    //     txn.commit().await?;
+    //
+    //     Ok(())
+    // }
 
     pub fn delete_group(&mut self, group: &str) {
         if self.groups.is_none() {
@@ -752,31 +753,31 @@ impl User {
         res
     }
 
-    pub async fn get_passkeys(
-        &self,
-        data: &web::Data<AppState>,
-    ) -> Result<Vec<PasskeyEntity>, ErrorResponse> {
-        let mut pks = Vec::with_capacity(2); // TODO migrate to array or smallvec
-
-        if let Some(ref id) = self.sec_key_1 {
-            let pk = PasskeyEntity::find(data, id.clone()).await?;
-            pks.push(pk);
-        }
-
-        if let Some(ref id) = self.sec_key_2 {
-            let pk = PasskeyEntity::find(data, id.clone()).await?;
-            pks.push(pk);
-        }
-
-        if pks.is_empty() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "This user has no registered Webauthn keys".to_string(),
-            ));
-        }
-
-        Ok(pks)
-    }
+    // pub async fn get_passkeys(
+    //     &self,
+    //     data: &web::Data<AppState>,
+    // ) -> Result<Vec<PasskeyEntityLegacy>, ErrorResponse> {
+    //     let mut pks = Vec::with_capacity(2); // TODO migrate to array or smallvec
+    //
+    //     if let Some(ref id) = self.sec_key_1 {
+    //         let pk = PasskeyEntityLegacy::find(data, id.clone()).await?;
+    //         pks.push(pk);
+    //     }
+    //
+    //     if let Some(ref id) = self.sec_key_2 {
+    //         let pk = PasskeyEntityLegacy::find(data, id.clone()).await?;
+    //         pks.push(pk);
+    //     }
+    //
+    //     if pks.is_empty() {
+    //         return Err(ErrorResponse::new(
+    //             ErrorResponseType::BadRequest,
+    //             "This user has no registered Webauthn keys".to_string(),
+    //         ));
+    //     }
+    //
+    //     Ok(pks)
+    // }
 
     pub fn get_roles(&self) -> Vec<String> {
         let mut res = Vec::new();
@@ -788,10 +789,10 @@ impl User {
         res
     }
 
-    #[inline]
-    pub fn has_webauthn_enabled(&self) -> bool {
-        self.sec_key_1.is_some() || self.sec_key_2.is_some()
-    }
+    // #[inline]
+    // pub fn has_webauthn_enabled(&self) -> bool {
+    //     self.sec_key_1.is_some() || self.sec_key_2.is_some()
+    // }
 
     pub fn is_argon2_uptodate(&self, params: &Argon2Params) -> Result<bool, ErrorResponse> {
         if self.password.is_none() {
@@ -828,6 +829,7 @@ impl User {
         }
     }
 
+    #[deprecated(since = "0.15.0", note = "will be removed in v0.16")]
     pub fn is_slot_free(&self, slot: u8) -> Result<(), ErrorResponse> {
         match slot {
             1 => {
@@ -984,6 +986,7 @@ impl Default for User {
             sec_key_1: None,
             sec_key_2: None,
             language: Language::En,
+            webauthn_enabled: false,
         }
     }
 }
@@ -1015,6 +1018,7 @@ mod tests {
             sec_key_1: None,
             sec_key_2: None,
             language: Language::En,
+            webauthn_enabled: false,
         };
         let session = Session::new(Some(&user), 1);
 
@@ -1071,6 +1075,7 @@ mod tests {
             sec_key_1: None,
             sec_key_2: None,
             language: Language::En,
+            webauthn_enabled: false,
         };
 
         // enabled

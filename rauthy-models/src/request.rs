@@ -339,7 +339,7 @@ pub struct NewUserRegistrationRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,32}`
     #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,32}"))]
     pub family_name: String,
-    /// Validation: [a-zA-Z0-9À-ÿ-\\s]{2,32}
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,32}`
     #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,32}"))]
     pub given_name: String,
     pub pow: PowRequest,
@@ -368,6 +368,13 @@ pub struct NewRoleRequest {
     /// Validation: `^[a-z0-9-_/,]{2,32}$`
     #[validate(regex(path = "RE_GROUPS", code = "^[a-z0-9-_/,]{2,32}$"))]
     pub role: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+pub struct PasskeyRequest {
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,32}`
+    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,32}"))]
+    pub name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
@@ -548,14 +555,16 @@ pub struct WebauthnAuthFinishRequest {
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct WebauthnRegStartRequest {
-    #[validate(range(min = 1, max = 2))]
-    pub slot: u8,
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,32}`
+    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,32}"))]
+    pub passkey_name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct WebauthnRegFinishRequest {
-    #[validate(range(min = 1, max = 2))]
-    pub slot: u8,
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,32}`
+    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,32}"))]
+    pub passkey_name: String,
     /// Note: `ToSchema` does currently not exist for `webauthn_rs::prelude::PublicKeyCredential`
     #[schema(value_type = str)]
     pub data: webauthn_rs::prelude::RegisterPublicKeyCredential,
