@@ -329,6 +329,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         .service(users::put_user_self)
                         .service(users::delete_user_by_id)
                         .service(users::post_user_password_request_reset)
+                        .service(users::get_user_webauthn_passkeys)
                         .service(users::post_webauthn_reg_start)
                         .service(users::post_webauthn_reg_finish)
                         .service(users::post_webauthn_auth_start)
