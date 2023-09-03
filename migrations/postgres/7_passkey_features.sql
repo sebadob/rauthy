@@ -9,8 +9,8 @@ create table passkeys
             on update cascade on delete cascade,
     name       varchar not null,
     passkey    varchar not null,
-    registered integer not null,
-    last_used  integer not null,
+    registered bigint  not null,
+    last_used  bigint  not null,
     constraint passkeys_pk
         primary key (user_id, name)
 );
