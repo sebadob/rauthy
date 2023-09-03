@@ -112,7 +112,7 @@ impl RefreshToken {
             self.scope,
             self.is_mfa,
         );
-        #[cfg(feature = "postgres")]
+        #[cfg(not(feature = "sqlite"))]
         let q = sqlx::query!(
             r#"insert into refresh_tokens (id, user_id, nbf, exp, scope, is_mfa)
                 values ($1, $2, $3, $4, $5, $6)

@@ -25,7 +25,7 @@ use tracing::{error, info};
 use utoipa::ToSchema;
 use webauthn_rs::prelude::*;
 
-#[deprecated(since = "0.15.0", note = "Passkeys will be migrated during v0.15")]
+// #[deprecated(since = "0.15.0", note = "Passkeys will be migrated during v0.15")]
 #[derive(Debug, Clone, FromRow, Deserialize, Serialize)]
 pub struct PasskeyEntityLegacy {
     pub id: String,
@@ -49,7 +49,7 @@ impl PasskeyEntity {
         name: String,
         pk: Passkey,
         txn: &mut DbTxn<'_>,
-    ) -> Result<Self, ErrorResponse> {
+    ) -> Result<(), ErrorResponse> {
         // json, because bincode does not support deserialize from any, which would be the case here
         let passkey = serde_json::to_string(&pk).unwrap();
         let now = OffsetDateTime::now_utc().unix_timestamp();
@@ -82,7 +82,7 @@ impl PasskeyEntity {
         )
         .await?;
 
-        Ok(entity)
+        Ok(())
     }
 
     pub async fn delete(
@@ -749,22 +749,11 @@ pub async fn reg_finish(
     {
         Ok(pk) => {
             let mut txn = data.db.begin().await?;
-            let pk_entity =
-                PasskeyEntity::create(data, user.id.clone(), req.passkey_name, pk, &mut txn)
-                    .await?;
-
-            // match req.slot {
-            //     1 => user.sec_key_1 = Some(pk_entity.id),
-            //     2 => user.sec_key_2 = Some(pk_entity.id),
-            //     _ => unreachable!(),
-            // }
-            // TODO should we keep track of a registered passkey for faster lookups here?
-            // TODO trade faster lookups for way more complexity when handling this field?
+            PasskeyEntity::create(data, user.id.clone(), req.passkey_name, pk, &mut txn).await?;
             if !user.webauthn_enabled {
                 user.webauthn_enabled = true;
                 user.save(data, None, Some(&mut txn)).await?;
             }
-
             txn.commit().await?;
 
             info!("New PasskeyEntity saved successfully for user {}", user.id);

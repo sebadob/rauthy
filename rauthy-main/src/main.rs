@@ -33,7 +33,7 @@ use rauthy_handlers::{clients, generic, groups, oidc, roles, scopes, sessions, u
 use rauthy_models::app_state::{AppState, Caches};
 use rauthy_models::email::EMail;
 use rauthy_models::entity::users::User;
-use rauthy_models::entity::webauthn::{PasskeyEntity, PasskeyEntityLegacy};
+use rauthy_models::entity::webauthn::PasskeyEntityLegacy;
 use rauthy_models::{email, ListenScheme};
 use rauthy_service::auth;
 use std::collections::HashMap;
@@ -419,7 +419,7 @@ async fn TEMP_migrate_passkeys(app_state: &Data<AppState>) -> Result<(), ErrorRe
 
     let mut txn = app_state.db.begin().await?;
 
-    let users = User::find_all(&app_state)
+    let users = User::find_all(app_state)
         .await?
         .into_iter()
         .filter(|u| u.sec_key_1.is_some() || u.sec_key_2.is_some())

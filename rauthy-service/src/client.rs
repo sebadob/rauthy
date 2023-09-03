@@ -23,9 +23,6 @@ pub async fn update_client(
         ));
     }
 
-    // do not allow too long auth code lifetime
-    if client_req.auth_code_lifetime > 300 {}
-
     client.name = client_req.name;
     if client_req.confidential {
         // only set a new secret if this value has been changed

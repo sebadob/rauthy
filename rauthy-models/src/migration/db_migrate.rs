@@ -11,7 +11,7 @@ use crate::entity::scopes::Scope;
 use crate::entity::sessions::Session;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::users::User;
-use crate::entity::webauthn::PasskeyEntityLegacy;
+use crate::entity::webauthn::{PasskeyEntity, PasskeyEntityLegacy};
 use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
@@ -87,7 +87,7 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         rauthy.challenge,
     );
 
-    #[cfg(feature = "postgres")]
+    #[cfg(not(feature = "sqlite"))]
     let q = sqlx::query!(
         r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
         redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled,
@@ -599,6 +599,25 @@ pub async fn migrate_from_sqlite(
             .await?;
     }
 
+    // PASSKEYS
+    let before = sqlx::query_as::<_, PasskeyEntity>("select * from passkeys")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from webauthn").execute(db_to).await?;
+    for b in before {
+        sqlx::query(
+            r#"insert into passkeys (user_id, name, passkey, registered, last_used)
+            values ($1, $2, $3, $4, $5)"#,
+        )
+        .bind(b.user_id)
+        .bind(b.name)
+        .bind(b.passkey)
+        .bind(b.registered)
+        .bind(b.last_used)
+        .execute(db_to)
+        .await?;
+    }
+
     Ok(())
 }
 
@@ -903,6 +922,25 @@ pub async fn migrate_from_postgres(
             .bind(b.passwords)
             .execute(db_to)
             .await?;
+    }
+
+    // PASSKEYS
+    let before = sqlx::query_as::<_, PasskeyEntity>("select * from passkeys")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from webauthn").execute(db_to).await?;
+    for b in before {
+        sqlx::query(
+            r#"insert into passkeys (user_id, name, passkey, registered, last_used)
+            values ($1, $2, $3, $4, $5)"#,
+        )
+        .bind(b.user_id)
+        .bind(b.name)
+        .bind(b.passkey)
+        .bind(b.registered)
+        .bind(b.last_used)
+        .execute(db_to)
+        .await?;
     }
 
     Ok(())

@@ -42,7 +42,7 @@ impl UserAttrConfigEntity {
             new_attr.desc,
         );
 
-        #[cfg(feature = "postgres")]
+        #[cfg(not(feature = "sqlite"))]
         let q = sqlx::query!(
             "insert into user_attr_config (name, \"desc\") values ($1, $2)",
             new_attr.name,
@@ -251,7 +251,7 @@ impl UserAttrConfigEntity {
             name,
         );
 
-        #[cfg(feature = "postgres")]
+        #[cfg(not(feature = "sqlite"))]
         let q = sqlx::query!(
             "update user_attr_config set name  = $1, \"desc\" = $2 where name = $3",
             slf.name,
@@ -479,7 +479,7 @@ impl UserAttrValueEntity {
                     v,
                 );
 
-                #[cfg(feature = "postgres")]
+                #[cfg(not(feature = "sqlite"))]
                 let q = sqlx::query!(
                     r#"insert into user_attr_values (user_id, key, value)
                     values ($1, $2, $3)

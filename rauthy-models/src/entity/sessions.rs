@@ -236,7 +236,7 @@ impl Session {
             self.last_seen,
         );
 
-        #[cfg(feature = "postgres")]
+        #[cfg(not(feature = "sqlite"))]
         let q = sqlx::query!(
             r#"insert into
             sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen)

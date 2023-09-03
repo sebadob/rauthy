@@ -315,7 +315,7 @@ impl User {
             .bind(&self.sec_key_1)
             .bind(&self.sec_key_2)
             .bind(lang)
-            .bind(&self.webauthn_enabled)
+            .bind(self.webauthn_enabled)
             .bind(&self.id);
 
         if let Some(txn) = txn {
