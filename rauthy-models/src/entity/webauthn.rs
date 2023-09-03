@@ -13,7 +13,7 @@ use rauthy_common::constants::{
     WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::{base64_decode, decrypt, new_store_id};
+use rauthy_common::utils::{base64_decode, decrypt};
 use rauthy_common::utils::{base64_encode, encrypt, get_rand};
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
@@ -33,119 +33,119 @@ pub struct PasskeyEntityLegacy {
 }
 
 // CRUD
-impl PasskeyEntityLegacy {
-    pub async fn create(pk: Passkey, txn: &mut DbTxn<'_>) -> Result<Self, ErrorResponse> {
-        // json, because bincode does not support deserialize from any, which would be the case here
-        let passkey = serde_json::to_string(&pk).unwrap();
-
-        let entity = Self {
-            id: new_store_id(),
-            passkey,
-        };
-
-        sqlx::query!(
-            "insert into webauthn (id, passkey) values ($1, $2)",
-            entity.id,
-            entity.passkey,
-        )
-        .execute(&mut **txn)
-        .await?;
-
-        Ok(entity)
-    }
-
-    pub async fn delete(
-        &self,
-        data: &web::Data<AppState>,
-        txn: Option<&mut DbTxn<'_>>,
-    ) -> Result<(), ErrorResponse> {
-        PasskeyEntityLegacy::delete_by_id(data, &self.id, txn).await
-    }
-
-    pub async fn delete_by_id(
-        data: &web::Data<AppState>,
-        id: &str,
-        txn: Option<&mut DbTxn<'_>>,
-    ) -> Result<(), ErrorResponse> {
-        let q = sqlx::query!("delete from webauthn where id = $1", id);
-
-        if let Some(txn) = txn {
-            q.execute(&mut **txn).await?;
-        } else {
-            q.execute(&data.db).await?;
-        }
-
-        let idx = format!("{}{}", IDX_WEBAUTHN, id);
-        cache_remove(
-            CACHE_NAME_WEBAUTHN.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
-
-        Ok(())
-    }
-
-    pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
-        let pk = cache_get!(
-            PasskeyEntityLegacy,
-            CACHE_NAME_WEBAUTHN.to_string(),
-            id.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if pk.is_some() {
-            return Ok(pk.unwrap());
-        }
-
-        let pk = sqlx::query_as!(Self, "select * from webauthn where id = $1", id)
-            .fetch_one(&data.db)
-            .await?;
-
-        let idx = format!("{}{}", IDX_WEBAUTHN, pk.id);
-        cache_insert(
-            CACHE_NAME_WEBAUTHN.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &pk,
-            AckLevel::Leader,
-        )
-        .await?;
-
-        Ok(pk)
-    }
-
-    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        sqlx::query!(
-            "update webauthn set passkey = $1 where id = $2",
-            self.passkey,
-            self.id,
-        )
-        .execute(&data.db)
-        .await?;
-
-        let idx = format!("{}{}", IDX_WEBAUTHN, self.id);
-        cache_insert(
-            CACHE_NAME_WEBAUTHN.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &self,
-            AckLevel::Quorum,
-        )
-        .await?;
-
-        Ok(())
-    }
-}
-
-impl PasskeyEntityLegacy {
-    pub fn get_pk(&self) -> Passkey {
-        // Passkeys cannot be serialized with bincode -> no support for deserialize from any
-        serde_json::from_str(&self.passkey).unwrap()
-    }
-}
+// impl PasskeyEntityLegacy {
+//     pub async fn create(pk: Passkey, txn: &mut DbTxn<'_>) -> Result<Self, ErrorResponse> {
+//         // json, because bincode does not support deserialize from any, which would be the case here
+//         let passkey = serde_json::to_string(&pk).unwrap();
+//
+//         let entity = Self {
+//             id: new_store_id(),
+//             passkey,
+//         };
+//
+//         sqlx::query!(
+//             "insert into webauthn (id, passkey) values ($1, $2)",
+//             entity.id,
+//             entity.passkey,
+//         )
+//         .execute(&mut **txn)
+//         .await?;
+//
+//         Ok(entity)
+//     }
+//
+//     pub async fn delete(
+//         &self,
+//         data: &web::Data<AppState>,
+//         txn: Option<&mut DbTxn<'_>>,
+//     ) -> Result<(), ErrorResponse> {
+//         PasskeyEntityLegacy::delete_by_id(data, &self.id, txn).await
+//     }
+//
+//     pub async fn delete_by_id(
+//         data: &web::Data<AppState>,
+//         id: &str,
+//         txn: Option<&mut DbTxn<'_>>,
+//     ) -> Result<(), ErrorResponse> {
+//         let q = sqlx::query!("delete from webauthn where id = $1", id);
+//
+//         if let Some(txn) = txn {
+//             q.execute(&mut **txn).await?;
+//         } else {
+//             q.execute(&data.db).await?;
+//         }
+//
+//         let idx = format!("{}{}", IDX_WEBAUTHN, id);
+//         cache_remove(
+//             CACHE_NAME_WEBAUTHN.to_string(),
+//             idx,
+//             &data.caches.ha_cache_config,
+//             AckLevel::Quorum,
+//         )
+//         .await?;
+//
+//         Ok(())
+//     }
+//
+//     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
+//         let pk = cache_get!(
+//             PasskeyEntityLegacy,
+//             CACHE_NAME_WEBAUTHN.to_string(),
+//             id.clone(),
+//             &data.caches.ha_cache_config,
+//             false
+//         )
+//         .await?;
+//         if pk.is_some() {
+//             return Ok(pk.unwrap());
+//         }
+//
+//         let pk = sqlx::query_as!(Self, "select * from webauthn where id = $1", id)
+//             .fetch_one(&data.db)
+//             .await?;
+//
+//         let idx = format!("{}{}", IDX_WEBAUTHN, pk.id);
+//         cache_insert(
+//             CACHE_NAME_WEBAUTHN.to_string(),
+//             idx,
+//             &data.caches.ha_cache_config,
+//             &pk,
+//             AckLevel::Leader,
+//         )
+//         .await?;
+//
+//         Ok(pk)
+//     }
+//
+//     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+//         sqlx::query!(
+//             "update webauthn set passkey = $1 where id = $2",
+//             self.passkey,
+//             self.id,
+//         )
+//         .execute(&data.db)
+//         .await?;
+//
+//         let idx = format!("{}{}", IDX_WEBAUTHN, self.id);
+//         cache_insert(
+//             CACHE_NAME_WEBAUTHN.to_string(),
+//             idx,
+//             &data.caches.ha_cache_config,
+//             &self,
+//             AckLevel::Quorum,
+//         )
+//         .await?;
+//
+//         Ok(())
+//     }
+// }
+//
+// impl PasskeyEntityLegacy {
+//     pub fn get_pk(&self) -> Passkey {
+//         // Passkeys cannot be serialized with bincode -> no support for deserialize from any
+//         serde_json::from_str(&self.passkey).unwrap()
+//     }
+// }
 
 #[derive(Debug, Clone, FromRow, Deserialize, Serialize)]
 pub struct PasskeyEntity {
@@ -308,27 +308,36 @@ impl PasskeyEntity {
         Ok(pks)
     }
 
-    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        todo!("PasskeyEntity::save needs a rework!");
-        // // sqlx::query!(
-        // //     "UPDATE webauthn SET passkey = $1, name = $2 WHERE id = $3 AND name = $4",
-        // //     self.passkey,
-        // //     self.id,
-        // // )
-        // // .execute(&data.db)
-        // // .await?;
-        // //
-        // // let idx = format!("{}{}", IDX_WEBAUTHN, self.id);
-        // // cache_insert(
-        // //     CACHE_NAME_WEBAUTHN.to_string(),
-        // //     idx,
-        // //     &data.caches.ha_cache_config,
-        // //     &self,
-        // //     AckLevel::Quorum,
-        // // )
-        // // .await?;
-        //
-        // Ok(())
+    pub async fn update_passkey(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        // todo!("PasskeyEntity::save needs a rework!");
+        sqlx::query!(
+            "UPDATE passkeys SET passkey = $1 WHERE user_id = $2 AND name = $3",
+            self.passkey,
+            self.user_id,
+            self.name,
+        )
+        .execute(&data.db)
+        .await?;
+
+        cache_insert(
+            CACHE_NAME_WEBAUTHN.to_string(),
+            Self::cache_idx_single(&self.user_id, &self.name),
+            &data.caches.ha_cache_config,
+            &self,
+            AckLevel::Quorum,
+        )
+        .await?;
+
+        // TODO instead of invalidating, we can update in advance
+        cache_remove(
+            CACHE_NAME_WEBAUTHN.to_string(),
+            Self::cache_idx_user(&self.user_id),
+            &data.caches.ha_cache_config,
+            AckLevel::Quorum,
+        )
+        .await?;
+
+        Ok(())
     }
 }
 
@@ -641,10 +650,10 @@ impl WebauthnServiceReq {
 
 pub async fn auth_start(
     data: &web::Data<AppState>,
-    id: String,
+    user_id: String,
     purpose: MfaPurpose,
 ) -> Result<WebauthnAuthStartResponse, ErrorResponse> {
-    let user = User::find(data, id).await?;
+    // let user = User::find(data, id).await?;
 
     // This app_data will be returned to the client upon successful webauthn authentication
     let add_data = match purpose {
@@ -653,15 +662,20 @@ pub async fn auth_start(
             WebauthnAdditionalData::Login(d)
         }
         MfaPurpose::PasswordReset => {
-            let svc_req = WebauthnServiceReq::new(user.id.clone());
+            let svc_req = WebauthnServiceReq::new(user_id.clone());
             svc_req.save(data).await?;
             WebauthnAdditionalData::Service(svc_req)
         }
         MfaPurpose::Test => WebauthnAdditionalData::Test,
     };
 
-    let pks = user
-        .get_passkeys(data)
+    // let pks = user
+    //     .get_passkeys(data)
+    //     .await?
+    //     .iter()
+    //     .map(|pk_entity| pk_entity.get_pk())
+    //     .collect::<Vec<Passkey>>();
+    let pks = PasskeyEntity::find_for_user(data, &user_id)
         .await?
         .iter()
         .map(|pk_entity| pk_entity.get_pk())
@@ -683,7 +697,7 @@ pub async fn auth_start(
             Ok(WebauthnAuthStartResponse {
                 code: auth_data.code,
                 rcr,
-                user_id: user.id,
+                user_id,
                 exp: *WEBAUTHN_REQ_EXP,
             })
         }
@@ -700,14 +714,15 @@ pub async fn auth_start(
 
 pub async fn auth_finish(
     data: &web::Data<AppState>,
-    id: String,
+    user_id: String,
     req: WebauthnAuthFinishRequest,
 ) -> Result<WebauthnAdditionalData, ErrorResponse> {
-    let user = User::find(data, id).await?;
+    // let user = User::find(data, id).await?;
     let auth_data = WebauthnData::find(data, req.code).await?;
     let auth_state = serde_json::from_str(&auth_data.auth_state_json).unwrap();
 
-    let pks = user.get_passkeys(data).await?;
+    // let pks = user.get_passkeys(data).await?;
+    let pks = PasskeyEntity::find_for_user(data, &user_id).await?;
 
     match data
         .webauthn
@@ -719,12 +734,12 @@ pub async fn auth_finish(
                 if let Some(updated) = pk.update_credential(&auth_result) {
                     if updated {
                         pk_entity.passkey = serde_json::to_string(&pk).unwrap();
-                        pk_entity.save(data).await?;
+                        pk_entity.update_passkey(data).await?;
                     }
                 }
             }
 
-            info!("Webauthn Authentication successful for user {}", user.id);
+            info!("Webauthn Authentication successful for user {}", user_id);
 
             Ok(auth_data.data)
         }
@@ -747,18 +762,20 @@ pub struct WebauthnReg {
 
 pub async fn reg_start(
     data: &web::Data<AppState>,
-    id: String,
+    user_id: String,
     req: WebauthnRegStartRequest,
 ) -> Result<CreationChallengeResponse, ErrorResponse> {
-    let user = User::find(data, id).await?;
-    user.is_slot_free(req.slot)?;
+    let user = User::find(data, user_id).await?;
+    // user.is_slot_free(req.slot)?;
     let uuid = Uuid::new_v4();
 
     match data
         .webauthn
+        // TODO check back how the exclude_credentials can be utilized
         .start_passkey_registration(uuid, &user.email, &user.email, None)
     {
         Ok((ccr, reg_state)) => {
+            // TODO can we hook in here and provide "with MFA only" as a feature?
             let reg_data = WebauthnReg {
                 uid: user.id.clone(),
                 uuid,
@@ -767,7 +784,7 @@ pub async fn reg_start(
             };
 
             // persist the reg_state
-            let idx = format!("reg_{:?}_{}", req.slot, user.id);
+            let idx = format!("reg_{:?}_{}", req.passkey_name, user.id);
             cache_insert(
                 CACHE_NAME_WEBAUTHN.to_string(),
                 idx,
@@ -795,10 +812,10 @@ pub async fn reg_finish(
     id: String,
     req: WebauthnRegFinishRequest,
 ) -> Result<(), ErrorResponse> {
-    let mut user = User::find(data, id).await?;
-    user.is_slot_free(req.slot)?;
+    let user = User::find(data, id).await?;
+    // user.is_slot_free(req.slot)?;
 
-    let idx = format!("reg_{:?}_{}", req.slot, user.id);
+    let idx = format!("reg_{:?}_{}", req.passkey_name, user.id);
     let res = cache_get!(
         WebauthnReg,
         CACHE_NAME_WEBAUTHN.to_string(),
@@ -829,14 +846,18 @@ pub async fn reg_finish(
     {
         Ok(pk) => {
             let mut txn = data.db.begin().await?;
-            let pk_entity = PasskeyEntityLegacy::create(pk, &mut txn).await?;
+            let pk_entity =
+                PasskeyEntity::create(data, user.id.clone(), req.passkey_name, pk, &mut txn)
+                    .await?;
 
-            match req.slot {
-                1 => user.sec_key_1 = Some(pk_entity.id),
-                2 => user.sec_key_2 = Some(pk_entity.id),
-                _ => unreachable!(),
-            }
-            user.save(data, None, Some(&mut txn)).await?;
+            // match req.slot {
+            //     1 => user.sec_key_1 = Some(pk_entity.id),
+            //     2 => user.sec_key_2 = Some(pk_entity.id),
+            //     _ => unreachable!(),
+            // }
+            // TODO should we keep track of a registered passkey for faster lookups here?
+            // TODO trade faster lookups for way more complexity when handling this field?
+            // user.save(data, None, Some(&mut txn)).await?;
 
             txn.commit().await?;
 

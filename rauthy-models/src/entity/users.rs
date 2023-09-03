@@ -8,7 +8,6 @@ use crate::entity::pow::Pow;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
-use crate::entity::webauthn::PasskeyEntityLegacy;
 use crate::language::Language;
 use crate::request::{
     NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
@@ -620,40 +619,40 @@ impl User {
         Ok(())
     }
 
-    pub async fn delete_mfa_slot(
-        &mut self,
-        data: &web::Data<AppState>,
-        slot: u8,
-    ) -> Result<(), ErrorResponse> {
-        let pk_entity = match slot {
-            1 => &self.sec_key_1,
-            2 => &self.sec_key_2,
-            _ => unreachable!(),
-        };
-
-        if pk_entity.is_none() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "No key registered in this slot".to_string(),
-            ));
-        }
-        let pk_id = pk_entity.as_ref().unwrap().clone();
-
-        let mut txn = data.db.begin().await?;
-
-        match slot {
-            1 => self.sec_key_1 = None,
-            2 => self.sec_key_2 = None,
-            _ => unreachable!(),
-        };
-        self.save(data, None, Some(&mut txn)).await?;
-
-        PasskeyEntityLegacy::delete_by_id(data, &pk_id, Some(&mut txn)).await?;
-
-        txn.commit().await?;
-
-        Ok(())
-    }
+    // pub async fn delete_mfa_slot(
+    //     &mut self,
+    //     data: &web::Data<AppState>,
+    //     slot: u8,
+    // ) -> Result<(), ErrorResponse> {
+    //     let pk_entity = match slot {
+    //         1 => &self.sec_key_1,
+    //         2 => &self.sec_key_2,
+    //         _ => unreachable!(),
+    //     };
+    //
+    //     if pk_entity.is_none() {
+    //         return Err(ErrorResponse::new(
+    //             ErrorResponseType::BadRequest,
+    //             "No key registered in this slot".to_string(),
+    //         ));
+    //     }
+    //     let pk_id = pk_entity.as_ref().unwrap().clone();
+    //
+    //     let mut txn = data.db.begin().await?;
+    //
+    //     match slot {
+    //         1 => self.sec_key_1 = None,
+    //         2 => self.sec_key_2 = None,
+    //         _ => unreachable!(),
+    //     };
+    //     self.save(data, None, Some(&mut txn)).await?;
+    //
+    //     PasskeyEntityLegacy::delete_by_id(data, &pk_id, Some(&mut txn)).await?;
+    //
+    //     txn.commit().await?;
+    //
+    //     Ok(())
+    // }
 
     pub fn delete_group(&mut self, group: &str) {
         if self.groups.is_none() {
@@ -752,31 +751,31 @@ impl User {
         res
     }
 
-    pub async fn get_passkeys(
-        &self,
-        data: &web::Data<AppState>,
-    ) -> Result<Vec<PasskeyEntityLegacy>, ErrorResponse> {
-        let mut pks = Vec::with_capacity(2); // TODO migrate to array or smallvec
-
-        if let Some(ref id) = self.sec_key_1 {
-            let pk = PasskeyEntityLegacy::find(data, id.clone()).await?;
-            pks.push(pk);
-        }
-
-        if let Some(ref id) = self.sec_key_2 {
-            let pk = PasskeyEntityLegacy::find(data, id.clone()).await?;
-            pks.push(pk);
-        }
-
-        if pks.is_empty() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "This user has no registered Webauthn keys".to_string(),
-            ));
-        }
-
-        Ok(pks)
-    }
+    // pub async fn get_passkeys(
+    //     &self,
+    //     data: &web::Data<AppState>,
+    // ) -> Result<Vec<PasskeyEntityLegacy>, ErrorResponse> {
+    //     let mut pks = Vec::with_capacity(2); // TODO migrate to array or smallvec
+    //
+    //     if let Some(ref id) = self.sec_key_1 {
+    //         let pk = PasskeyEntityLegacy::find(data, id.clone()).await?;
+    //         pks.push(pk);
+    //     }
+    //
+    //     if let Some(ref id) = self.sec_key_2 {
+    //         let pk = PasskeyEntityLegacy::find(data, id.clone()).await?;
+    //         pks.push(pk);
+    //     }
+    //
+    //     if pks.is_empty() {
+    //         return Err(ErrorResponse::new(
+    //             ErrorResponseType::BadRequest,
+    //             "This user has no registered Webauthn keys".to_string(),
+    //         ));
+    //     }
+    //
+    //     Ok(pks)
+    // }
 
     pub fn get_roles(&self) -> Vec<String> {
         let mut res = Vec::new();
@@ -828,6 +827,7 @@ impl User {
         }
     }
 
+    #[deprecated(since = "0.15.0", note = "will be removed in v0.16")]
     pub fn is_slot_free(&self, slot: u8) -> Result<(), ErrorResponse> {
         match slot {
             1 => {
