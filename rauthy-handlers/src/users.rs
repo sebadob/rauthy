@@ -13,6 +13,7 @@ use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
+use rauthy_models::entity::webauthn::PasskeyEntity;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
     MfaPurpose, NewUserRegistrationRequest, NewUserRequest, PasswordResetRequest,
@@ -611,8 +612,8 @@ pub async fn post_webauthn_auth_finish(
 /// - rauthy_admin
 /// - authenticated and logged in user for this very {id}
 #[utoipa::path(
-    post,
-    path = "/users/{id}/webauthn/delete/{slot}",
+    delete,
+    path = "/users/{id}/webauthn/delete/{name}",
     tag = "mfa",
     responses(
         (status = 200, description = "Ok"),
@@ -620,11 +621,11 @@ pub async fn post_webauthn_auth_finish(
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
 )]
-#[post("/users/{id}/webauthn/delete/{slot}")]
+#[delete("/users/{id}/webauthn/delete/{name}")]
 #[has_any_permission("token-auth", "session-auth")]
-pub async fn post_webauthn_delete(
+pub async fn delete_webauthn(
     data: web::Data<AppState>,
-    path: web::Path<(String, u8)>,
+    path: web::Path<(String, String)>,
     principal: web::ReqData<Option<Principal>>,
     req: HttpRequest,
     session_req: web::ReqData<Option<Session>>,
@@ -633,22 +634,26 @@ pub async fn post_webauthn_delete(
         Session::extract_validate_csrf(session_req, &req)?;
     }
 
-    let (id, slot) = path.into_inner();
+    let (id, name) = path.into_inner();
 
+    // TODO maybe introduce a new endpoint for the MFA reset via Admin UI
     // validate that Principal matches the user or is an admin
     let principal = Principal::get_from_req(principal.into_inner())?;
     if !principal.is_admin() {
         principal.validate_id(&id)?;
-        warn!("MFA reset for user {} slot {}", id, slot);
+        warn!("MFA reset for user {} for key {}", id, name);
     } else {
+        todo!("fix this case");
         warn!(
-            "MFA reset from admin {:?} for user {} slot {}",
-            principal.email, id, slot
+            "MFA reset from admin {:?} for user {} for key {}",
+            principal.email, id, name
         );
     }
 
-    let mut user = User::find(&data, id).await?;
-    user.delete_mfa_slot(&data, slot).await?;
+    // TODO if we want to keep track of passkeys in the user, do it here too
+    // let mut user = User::find(&data, id).await?;
+    // user.delete_mfa_slot(&data, slot).await?;
+    PasskeyEntity::delete_by_id_name(&data, &id, &name, None).await?;
 
     // make sure to delete any existing MFA cookie when a key is deleted
     let cookie = cookie::Cookie::build(COOKIE_MFA, "")

@@ -333,7 +333,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         .service(users::post_webauthn_reg_finish)
                         .service(users::post_webauthn_auth_start)
                         .service(users::post_webauthn_auth_finish)
-                        .service(users::post_webauthn_delete)
+                        .service(users::delete_webauthn)
                         .service(generic::get_password_policy)
                         .service(generic::put_password_policy)
                         .service(generic::get_pow)
