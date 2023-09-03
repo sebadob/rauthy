@@ -92,7 +92,7 @@ use utoipa::{openapi, OpenApi};
         users::put_user_password_reset,
         users::post_webauthn_auth_start,
         users::post_webauthn_auth_finish,
-        users::post_webauthn_delete,
+        users::delete_webauthn,
         users::post_webauthn_reg_start,
         users::post_user_password_request_reset,
         users::get_user_by_email,
