@@ -7,6 +7,7 @@ use serde::Serialize;
 #[serde(rename_all = "camelCase")]
 pub struct I18nAccount<'a> {
     account: &'a str,
+    cancel: &'a str,
     change_password: &'a str,
     created: &'a str,
     email: &'a str,
@@ -59,6 +60,7 @@ impl I18nAccount<'_> {
     fn build_en() -> Self {
         Self {
             account: "Account",
+            cancel: "Cancel",
             change_password: "Change Password",
             created: "created",
             email: "E-Mail",
@@ -98,6 +100,7 @@ impl I18nAccount<'_> {
     fn build_de() -> Self {
         Self {
             account: "Account",
+            cancel: "Abbrechen",
             change_password: "Passwort wechseln",
             created: "erstellt",
             email: "E-Mail",
@@ -140,14 +143,18 @@ impl I18nAccount<'_> {
 pub struct I18nAccountMfa<'a> {
     p_1: &'a str,
     p_2: &'a str,
-    p_3: &'a str,
 
     delete: &'a str,
     error_reg: &'a str,
     invalid_key_used: &'a str,
+    last_used: &'a str,
     no_key: &'a str,
     register: &'a str,
-    security_key: &'a str,
+    register_new: &'a str,
+    registerd: &'a str,
+    registerd_keys: &'a str,
+    passkey_name: &'a str,
+    passkey_name_err: &'a str,
     test: &'a str,
     test_error: &'a str,
     test_success: &'a str,
@@ -174,14 +181,18 @@ impl I18nAccountMfa<'_> {
             p_2: "Android is the platform with the least supported features for the passwordless \
             technology. Keys you register with Android work elsewhere too. However, this does not \
             apply the other way around.",
-            p_3: "You can register two Keys for your account.",
 
             delete: "Delete",
             error_reg: "Error starting the Registration process",
             invalid_key_used: "Invalid Key used",
+            last_used: "Last used",
             no_key: "No Security key registered on this slot",
             register: "Register",
-            security_key: "Security Key",
+            register_new: "Register New Key",
+            registerd: "Registered",
+            registerd_keys: "Registered Keys",
+            passkey_name: "Passkey Name",
+            passkey_name_err: "2 - 32 non-special characters",
             test: "Test",
             test_error: "Error starting the Test",
             test_success: "Test successful",
@@ -195,14 +206,18 @@ impl I18nAccountMfa<'_> {
             p_2: "Android ist diejenige Plattform, die derzeit die wenigsten Features der \
             passwortlosen Technologie unterstützt. Schlüssel, die dort registriert werden, \
             funktionieren auf anderen Geräten gleichermaßen. Dies gilt jedoch nicht andersherum.",
-            p_3: "Sie können pro Account zwei Schlüssel registrieren.",
 
             delete: "Löschen",
             error_reg: "Fehler beim Starten der Registrierung",
             invalid_key_used: "Ungültiger Sicherheitsschlüssel benutzt",
+            last_used: "Zuletzt genutzt",
             no_key: "Es wurde in diesem Speicher noch kein Sicherheitsschlüssel registriert",
             register: "Registrieren",
-            security_key: "Sicherheitsschlüssel",
+            register_new: "Neuen Key Registrieren",
+            registerd: "Registriert",
+            registerd_keys: "Registrierte Keys",
+            passkey_name: "Passkey Name",
+            passkey_name_err: "2 - 32 Buchstaben, keine Sonderzeichen",
             test: "Test",
             test_error: "Fehler beim Starten des Tests",
             test_success: "Test erfolgreich",
