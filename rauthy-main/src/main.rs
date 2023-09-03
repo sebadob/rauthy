@@ -40,7 +40,6 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::time::Duration;
 use std::{env, thread};
-use time::OffsetDateTime;
 use tokio::sync::mpsc;
 use tokio::time;
 use tracing::{debug, error, info, warn};
@@ -436,19 +435,25 @@ async fn TEMP_migrate_passkeys(app_state: &Data<AppState>) -> Result<(), ErrorRe
     }
 
     let mut migrated = 0;
-    let now = OffsetDateTime::now_utc().unix_timestamp();
+    let now = ::time::OffsetDateTime::now_utc().unix_timestamp();
 
-    for user in users {
+    for mut user in users {
+        user.webauthn_enabled = true;
+        user.save(app_state, None, Some(&mut txn)).await?;
+
         if let Some(key) = user.sec_key_1 {
             let pk = pk_map
                 .get(&key)
                 .expect("Data inconsistency: missing key in passkeys");
 
             sqlx::query!(
-                "INSERT INTO passkeys (user_id, name, passkey) VALUES ($1, $2, $3)",
+                r#"INSERT INTO passkeys (user_id, name, passkey, registered, last_used)
+                VALUES ($1, $2, $3, $4, $5)"#,
                 user.id,
                 key,
                 pk,
+                now,
+                now,
             )
             .execute(&mut *txn)
             .await?;
