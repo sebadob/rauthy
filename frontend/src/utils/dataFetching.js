@@ -140,6 +140,13 @@ export async function getUser(id) {
 	});
 }
 
+export async function getUserPasskeys(id) {
+	return await fetch(`/auth/v1/users/${id}/webauthn`, {
+		method: 'GET',
+		headers: getCsrfHeaders(),
+	});
+}
+
 export async function putUserSelf(id, data) {
 	return await fetch(`/auth/v1/users/${id}/self`, {
 		method: 'PUT',
@@ -187,9 +194,9 @@ export async function webauthnAuthFinish(id, data) {
 	});
 }
 
-export async function webauthnDelete(id, slot) {
-	return await fetch(`/auth/v1/users/${id}/webauthn/delete/${slot}`, {
-		method: 'POST',
+export async function webauthnDelete(id, name) {
+	return await fetch(`/auth/v1/users/${id}/webauthn/delete/${name}`, {
+		method: 'DELETE',
 		headers: getCsrfHeaders(),
 	});
 }
