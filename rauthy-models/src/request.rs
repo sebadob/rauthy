@@ -403,7 +403,7 @@ pub struct TokenRequest {
     pub redirect_uri: Option<String>,
     /// Validation: `^[a-z0-9-_/]{2,128}$`
     #[validate(regex(path = "RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
-    pub client_id: String,
+    pub client_id: Option<String>,
     /// Validation: `[a-zA-Z0-9]`
     #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub client_secret: Option<String>,

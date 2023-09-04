@@ -12,7 +12,7 @@ use std::env;
 use std::future::{ready, Ready};
 use std::rc::Rc;
 use std::str::FromStr;
-use tracing::info;
+use tracing::{debug, info};
 
 lazy_static! {
     static ref LOG_LEVEL_ACCESS: LogLevelAccess = env::var("LOG_LEVEL_ACCESS")
@@ -123,7 +123,7 @@ async fn log_access(uri: &Uri, req: &ServiceRequest) -> Result<(), ErrorResponse
 
     match *LOG_LEVEL_ACCESS {
         LogLevelAccess::Debug => {
-            info!("{:?}", req)
+            debug!("{:?}", req)
         }
         LogLevelAccess::Verbose => {
             info!(

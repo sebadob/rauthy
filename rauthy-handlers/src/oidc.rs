@@ -494,6 +494,7 @@ pub async fn get_session_xsrf(
 )]
 #[post("/oidc/token")]
 #[has_permissions("all")]
+#[tracing::instrument(level = "debug", skip_all)]
 pub async fn post_token(
     req_data: actix_web_validator::Form<TokenRequest>,
     req: HttpRequest,
