@@ -41,6 +41,8 @@
 
 {#if viewModePhone}
     <div class="wrapper">
+        <LangSelector absolute absoluteRight updateBackend/>
+
         <div class="headerPhone">
             <h2>{t.user} {t.account}</h2>
         </div>
@@ -62,6 +64,8 @@
         </div>
     </div>
 {:else}
+    <LangSelector absolute updateBackend/>
+
     <div class="header">
         <h2>{t.user} {t.account}</h2>
     </div>
@@ -82,8 +86,6 @@
         </div>
     </div>
 {/if}
-
-<LangSelector absolute updateBackend/>
 
 <style>
     .borderLeft {
@@ -111,7 +113,7 @@
     }
 
     .inner {
-        width: 380px;
+        width: 30rem;
     }
 
     .innerPhone {

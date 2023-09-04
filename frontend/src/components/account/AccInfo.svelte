@@ -9,6 +9,8 @@
     $: classRow = viewModePhone ? 'rowPhone' : 'row';
     $: classLabel = viewModePhone ? 'labelPhone' : 'label';
 
+    $: console.log(user);
+
 </script>
 
 <div class="container">
@@ -44,7 +46,7 @@
 
     <div class="row">
         <div class={classLabel}><b>{t.mfaActivated}:</b></div>
-        <CheckIcon check={user.mfa_app || user.sec_key_1 || user.sec_key_2}/>
+        <CheckIcon check={user.webauthn_enabled}/>
     </div>
 
     <div class="row">
@@ -79,11 +81,11 @@
     }
 
     .label {
-        width: 130px;
+        width: 10rem;
     }
 
     .labelPhone {
-        width: 150px;
+        width: 12rem;
     }
 
     .row {
@@ -91,6 +93,5 @@
     }
 
     .value {
-        width: 210px;
     }
 </style>

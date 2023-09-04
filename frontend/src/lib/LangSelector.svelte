@@ -5,6 +5,7 @@
     import {postUpdateUserLanguage} from "../utils/dataFetching.js";
 
     export let absolute = false;
+    export let absoluteRight = false;
     // if set to true, a request to the backend will be done for the currently logged in user
     export let updateBackend = false;
 
@@ -43,7 +44,7 @@
     }
 </script>
 
-<div class:absolute>
+<div class:absolute class:absoluteLeft={!absoluteRight} class:absoluteRight>
     <OptionSelect
             bind:value={langSelected}
             options={LANGUAGES}
@@ -53,7 +54,14 @@
 <style>
     .absolute {
         position: absolute;
-        top: calc(100dvh - 1.5rem);
-        left: 0;
+        top: calc(100dvh - 1.75rem);
+    }
+
+    .absoluteLeft {
+        left: .25rem;
+    }
+
+    .absoluteRight {
+        right: .25rem;
     }
 </style>
