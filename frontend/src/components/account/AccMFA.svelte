@@ -96,6 +96,8 @@
             // send the keys' pk to the backend and finish the registration
             res = await webauthnRegFinish(user.id, data);
             if (res.status === 201) {
+                showRegInput = false;
+                formValues.passkeyName = '';
                 await fetchPasskeys();
             } else {
                 console.error(res);
@@ -215,30 +217,32 @@
             {t.mfa.registerdKeys}
         </div>
     {/if}
-    {#each passkeys as passkey (passkey.name)}
-        <div class="keyContainer">
-            <div class="row">
-                {`${t.mfa.passkeyName}: `}
-                <b>{passkey.name}</b>
-            </div>
-            <div class="row">
-                {`${t.mfa.registerd}: `}
-                <span class="font-mono">{formatDateFromTs(passkey.registered)}</span>
-            </div>
-            <div class="row">
-                {`${t.mfa.lastUsed}: `}
-                <span class="font-mono">{formatDateFromTs(passkey.last_used)}</span>
-            </div>
-            <div class="row">
-                <div></div>
-                <div class="deleteBtn">
-                    <Button on:click={() => handleDelete(passkey.name)} level={4}>
-                        {t.mfa.delete.toUpperCase()}
-                    </Button>
+    <div class="keysContainer">
+        {#each passkeys as passkey (passkey.name)}
+            <div class="keyContainer">
+                <div class="row">
+                    {`${t.mfa.passkeyName}: `}
+                    <b>{passkey.name}</b>
+                </div>
+                <div class="row">
+                    {`${t.mfa.registerd}: `}
+                    <span class="font-mono">{formatDateFromTs(passkey.registered)}</span>
+                </div>
+                <div class="row">
+                    {`${t.mfa.lastUsed}: `}
+                    <span class="font-mono">{formatDateFromTs(passkey.last_used)}</span>
+                </div>
+                <div class="row">
+                    <div></div>
+                    <div class="deleteBtn">
+                        <Button on:click={() => handleDelete(passkey.name)} level={4}>
+                            {t.mfa.delete.toUpperCase()}
+                        </Button>
+                    </div>
                 </div>
             </div>
-        </div>
-    {/each}
+        {/each}
+    </div>
 
     {#if passkeys.length > 0}
         <div class="button">
@@ -267,6 +271,12 @@
 
     .deleteBtn {
         margin-right: -.8rem;
+    }
+
+    .keysContainer {
+        max-height: 20rem;
+        padding-right: 2rem;
+        overflow-y: auto;
     }
 
     .keyContainer {

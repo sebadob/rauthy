@@ -343,6 +343,7 @@ pub struct UserResponse {
     pub sec_key_1: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sec_key_2: Option<String>,
+    pub webauthn_enabled: bool,
 }
 
 impl From<User> for UserResponse {
@@ -371,6 +372,7 @@ impl From<User> for UserResponse {
             failed_login_attempts: u.failed_login_attempts,
             sec_key_1: u.sec_key_1,
             sec_key_2: u.sec_key_2,
+            webauthn_enabled: u.webauthn_enabled,
         }
     }
 }

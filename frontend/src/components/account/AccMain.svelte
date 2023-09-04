@@ -113,7 +113,7 @@
     }
 
     .inner {
-        width: 380px;
+        width: 30rem;
     }
 
     .innerPhone {
