@@ -7,6 +7,7 @@ use css_color::ParseColorError;
 use derive_more::Display;
 use redhac::CacheError;
 use serde::{Deserialize, Serialize};
+use std::string::FromUtf8Error;
 use time::OffsetDateTime;
 use tracing::{debug, error};
 use utoipa::ToSchema;
@@ -202,5 +203,11 @@ impl From<actix_multipart::MultipartError> for ErrorResponse {
         };
 
         ErrorResponse::new(ErrorResponseType::BadRequest, text.to_string())
+    }
+}
+
+impl From<FromUtf8Error> for ErrorResponse {
+    fn from(value: FromUtf8Error) -> Self {
+        ErrorResponse::new(ErrorResponseType::Internal, value.to_string())
     }
 }
