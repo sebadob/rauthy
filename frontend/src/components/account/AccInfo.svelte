@@ -9,8 +9,6 @@
     $: classRow = viewModePhone ? 'rowPhone' : 'row';
     $: classLabel = viewModePhone ? 'labelPhone' : 'label';
 
-    $: console.log(user);
-
 </script>
 
 <div class="container">

@@ -11,6 +11,7 @@ use sqlx::postgres::PgRow;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Error, FromRow, Row};
 use std::str::FromStr;
+use tracing::debug;
 
 #[macro_export]
 macro_rules! sign_jwt {
@@ -244,7 +245,7 @@ impl JWKSPublicKey {
             }
             JwkKeyPairType::EdDSA => {
                 let kp = algorithms::Ed25519KeyPair::from_der(&key_pair.bytes).unwrap();
-                let x = base64_url_encode(&kp.public_key().to_der());
+                let x = base64_url_encode(&kp.public_key().to_bytes());
                 get_ed25519(key_pair.kid.clone(), x)
             }
         }
