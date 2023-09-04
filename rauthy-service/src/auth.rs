@@ -625,25 +625,30 @@ async fn grant_type_code(
     req_data: TokenRequest,
 ) -> Result<(TokenSet, Option<(HeaderName, HeaderValue)>), ErrorResponse> {
     if req_data.code.is_none() {
+        warn!("'code' is missing");
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             String::from("'code' is missing"),
         ));
     }
 
-    // TODO another redirect_uri check?
+    // TODO another redirect_uri check? Add to AuthCode? Any security benefit?
+    // let redirect_uri = if let Some(uri) = req_data.redirect_uri {
+    //     if uri != code.
+    // }
 
     // check the client for external origin and auth flow
-    let id = String::from(&req_data.client_id);
-    let client = Client::find(data, id).await.map_err(|_| {
+    let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
+    let client = Client::find(data, client_id.clone()).await.map_err(|_| {
         ErrorResponse::new(
             ErrorResponseType::NotFound,
-            format!("Client '{}' not found", &req_data.client_id),
+            format!("Client '{}' not found", client_id),
         )
     })?;
     let header_origin = client.validate_origin(&req, &data.listen_scheme, &data.public_url)?;
     if client.confidential {
-        let secret = req_data.client_secret.ok_or_else(|| {
+        let secret = client_secret.ok_or_else(|| {
+            warn!("'client_secret' is missing");
             ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 String::from("'client_secret' is missing"),
@@ -656,7 +661,7 @@ async fn grant_type_code(
     // get the auth code from the cache
     let idx = req_data.code.as_ref().unwrap().to_owned();
     let code = AuthCode::find(data, idx).await?.ok_or_else(|| {
-        error!(
+        warn!(
             "'auth_code' could not be found inside the cache - Host: {}",
             get_client_ip(&req),
         );
@@ -665,22 +670,22 @@ async fn grant_type_code(
             "'auth_code' could not be found inside the cache".to_string(),
         )
     })?;
-
     // validate the auth code
+    if code.client_id != client_id {
+        let err = format!("Wrong 'code' for client_id '{}'", client_id);
+        warn!(err);
+        return Err(ErrorResponse::new(ErrorResponseType::Unauthorized, err));
+    }
     if code.exp < OffsetDateTime::now_utc().unix_timestamp() {
+        warn!("The Authorization Code has expired");
         return Err(ErrorResponse::new(
             ErrorResponseType::SessionExpired,
             String::from("The Authorization Code has expired"),
         ));
     }
-    if code.client_id != client.id {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Unauthorized,
-            format!("Wrong 'code' for client_id '{}'", req_data.client_id),
-        ));
-    }
     if code.challenge.is_some() {
         if req_data.code_verifier.is_none() {
+            warn!("'code_verifier' is missing");
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 String::from("'code_verifier' is missing"),
@@ -689,6 +694,7 @@ async fn grant_type_code(
 
         if code.challenge_method.as_ref().unwrap().eq("plain") {
             if !code.challenge.eq(&req_data.code_verifier) {
+                warn!("'code_verifier' does not match the challenge");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
                     String::from("'code_verifier' does not match the challenge"),
@@ -699,6 +705,7 @@ async fn grant_type_code(
             let hash_base64 = base64_url_encode(hash.as_ref());
 
             if !code.challenge.as_ref().unwrap().eq(&hash_base64) {
+                warn!("'code_verifier' does not match the challenge");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
                     String::from("'code_verifier' does not match the challenge"),
@@ -749,14 +756,15 @@ async fn grant_type_credentials(
         ));
     }
 
-    let client = Client::find(data, req_data.client_id).await?;
+    let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
+    let client = Client::find(data, client_id).await?;
     if !client.confidential {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             String::from("'client_credentials' flow is allowed for confidential clients only"),
         ));
     }
-    let secret = req_data.client_secret.ok_or_else(|| {
+    let secret = client_secret.ok_or_else(|| {
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             String::from("'client_secret' is missing"),
@@ -788,13 +796,14 @@ async fn grant_type_password(
             String::from("Missing 'password"),
         ));
     }
+    let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
     let email = req_data.username.as_ref().unwrap();
     let password = req_data.password.unwrap();
 
-    let client = Client::find(data, req_data.client_id).await?;
+    let client = Client::find(data, client_id).await?;
     let header_origin = client.validate_origin(&req, &data.listen_scheme, &data.public_url)?;
     if client.confidential {
-        let secret = req_data.client_secret.ok_or_else(|| {
+        let secret = client_secret.ok_or_else(|| {
             ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 String::from("Missing 'client_secret'"),
@@ -872,12 +881,12 @@ async fn grant_type_refresh(
             String::from("'refresh_token' is missing"),
         ));
     }
-
-    let client = Client::find(data, req_data.client_id).await?;
+    let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
+    let client = Client::find(data, client_id).await?;
     let header_origin = client.validate_origin(&req, &data.listen_scheme, &data.public_url)?;
 
     if client.confidential {
-        let secret = req_data.client_secret.ok_or_else(|| {
+        let secret = client_secret.ok_or_else(|| {
             ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 String::from("'client_secret' is missing"),

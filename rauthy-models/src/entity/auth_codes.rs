@@ -76,7 +76,7 @@ impl AuthCode {
         scopes: Vec<String>,
         lifetime_secs: i32,
     ) -> Self {
-        let id = get_rand(48);
+        let id = get_rand(64);
         let exp = OffsetDateTime::now_utc()
             .add(time::Duration::seconds(lifetime_secs as i64))
             .unix_timestamp();

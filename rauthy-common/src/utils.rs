@@ -100,6 +100,15 @@ pub fn base64_url_encode(input: &[u8]) -> String {
         .collect()
 }
 
+pub fn base64_url_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
+    B64_URL_SAFE.decode(b64).map_err(|_| {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "B64 decoding error".to_string(),
+        )
+    })
+}
+
 pub fn new_store_id() -> String {
     get_rand(24)
 }
