@@ -1,11 +1,14 @@
 use crate::language::Language;
+use actix_web::http::header;
+use actix_web::HttpRequest;
 use css_color::Srgb;
 use rauthy_common::constants::{
     RE_ALG, RE_ALNUM, RE_ALNUM_24, RE_ALNUM_48, RE_ALNUM_64, RE_ALNUM_SPACE, RE_APP_ID, RE_ATTR,
     RE_ATTR_DESC, RE_CHALLENGE, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_CODE_VERIFIER, RE_FLOWS,
     RE_GROUPS, RE_LOWERCASE, RE_MFA_CODE, RE_URI, RE_USER_NAME,
 };
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::base64_decode;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use utoipa::{IntoParams, ToSchema};
@@ -417,6 +420,41 @@ pub struct TokenRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub refresh_token: Option<String>,
+}
+
+impl TokenRequest {
+    // by RFC, the client auth can be either sent inside the POST body, or as an Authorization header
+    pub fn try_get_client_id_secret(
+        &self,
+        req: &HttpRequest,
+    ) -> Result<(String, Option<String>), ErrorResponse> {
+        let auth_header = req.headers().get(header::AUTHORIZATION).map(|h| {
+            let (_, b64) = h
+                .to_str()
+                .unwrap_or_default()
+                .split_once(' ')
+                .unwrap_or(("", ""));
+            b64
+        });
+
+        if let Some(header) = auth_header {
+            let decoded = String::from_utf8(base64_decode(header)?)?;
+            match decoded.split_once(':') {
+                None => Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "Bad Authorization header".to_string(),
+                )),
+                Some((client_id, client_secret)) => {
+                    Ok((client_id.to_string(), Some(client_secret.to_string())))
+                }
+            }
+        } else {
+            Ok((
+                self.client_id.clone().unwrap_or_default(),
+                self.client_secret.clone(),
+            ))
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Validate, ToSchema)]

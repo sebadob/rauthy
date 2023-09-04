@@ -62,7 +62,7 @@ pub async fn get_token_set() -> Result<TokenSet, Box<dyn Error>> {
         grant_type: "password".to_string(),
         code: None,
         redirect_uri: None,
-        client_id: CLIENT_ID.to_string(),
+        client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(CLIENT_SECRET.to_string()),
         code_verifier: None,
         username: Some(USERNAME.to_string()),
