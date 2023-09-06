@@ -11,7 +11,6 @@ use sqlx::postgres::PgRow;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Error, FromRow, Row};
 use std::str::FromStr;
-use tracing::debug;
 
 #[macro_export]
 macro_rules! sign_jwt {

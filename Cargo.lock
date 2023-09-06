@@ -2893,7 +2893,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.15.0-20230904"
+version = "0.15.0-20230906"
 dependencies = [
  "actix-service",
  "actix-web",
@@ -2928,7 +2928,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.15.0-20230904"
+version = "0.15.0-20230906"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -2959,7 +2959,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.15.0-20230904"
+version = "0.15.0-20230906"
 dependencies = [
  "actix",
  "actix-multipart",
@@ -2989,7 +2989,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.15.0-20230904"
+version = "0.15.0-20230906"
 dependencies = [
  "accept-language",
  "actix",
@@ -3036,7 +3036,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.15.0-20230904"
+version = "0.15.0-20230906"
 dependencies = [
  "actix-web",
  "argon2",

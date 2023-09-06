@@ -66,19 +66,25 @@
             {#each passkeys as passkey (passkey.name)}
                 <div class="keyContainer">
                     <div class="row">
-                        Passkey Name:
+                        <div class="label">
+                            Passkey Name:
+                        </div>
                         <b>{passkey.name}</b>
                     </div>
                     <div class="row">
-                        Key Registered:
+                        <div class="label">
+                            Key Registered:
+                        </div>
                         <span class="font-mono">{formatDateFromTs(passkey.registered)}</span>
                     </div>
                     <div class="row">
-                        Last Usage:
+                        <div class="label">
+                            Last Usage:
+                        </div>
                         <span class="font-mono">{formatDateFromTs(passkey.last_used)}</span>
                     </div>
                     <div class="row">
-                        <div></div>
+                        <div class="label"></div>
                         <div class="deleteBtn">
                             <Button on:click={() => handleDeleteKey(passkey.name)} level={4}>
                                 DELETE
@@ -103,7 +109,8 @@
     }
 
     .deleteBtn {
-        margin-right: -.8rem;
+        text-align: right;
+        margin: -.33rem 0 0 -.8rem;
     }
 
     .desc {
@@ -121,14 +128,17 @@
 
     .keysContainer {
         margin: .5rem;
-        max-width: 22rem;
+        gap: .5rem;
         padding-right: 2rem;
         overflow-y: auto;
+    }
+
+    .label {
+        width: 7rem;
     }
 
     .row {
         display: flex;
         gap: .5rem;
-        justify-content: space-between;
     }
 </style>
