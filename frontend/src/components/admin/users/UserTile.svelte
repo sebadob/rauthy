@@ -8,6 +8,7 @@
     import UserDelete from "./UserDelete.svelte";
     import UserForceLogout from "./UserForceLogout.svelte";
     import UserAttr from "./UserAttr.svelte";
+    import UserMfa from "./UserMfa.svelte";
 
     export let user = {};
     export let onSave;
@@ -19,6 +20,7 @@
         'INFO',
         'ATTRIBUTES',
         'PASSWORD',
+        'MFA',
         'LOGOUT',
         'DELETE',
     ];
@@ -62,6 +64,10 @@
         {:else if selected === 'PASSWORD'}
             <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <UserPassword bind:user bind:onSave/>
+            </div>
+        {:else if selected === 'MFA'}
+            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
+                <UserMfa bind:user bind:onSave/>
             </div>
         {:else if selected === 'LOGOUT'}
             <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
