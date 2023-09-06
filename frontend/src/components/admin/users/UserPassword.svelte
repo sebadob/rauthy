@@ -166,9 +166,8 @@
     </Button>
 
     <div class="desc">
-        You can reset the users MFA / Security Keys.<br>
-        Be careful though, since this <b>cannot be reverted</b> without user interaction.<br>
-        It will disable all MFA logins for this user.
+        You can either set and reset a user's password<br/>
+        or send out a new reset E-Mail for self-service.
     </div>
 
     <Button
