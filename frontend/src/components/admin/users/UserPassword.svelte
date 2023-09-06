@@ -125,19 +125,6 @@
         isLoading = false;
     }
 
-    async function handleDeleteSlot(slot) {
-        let res = await webauthnDelete(user.id, slot);
-        if (res.status === 200) {
-            return true;
-        } else {
-            let body = await res.json();
-            if (body.message !== 'No key registered in this slot') {
-                errPwd = body.message;
-            }
-            return false;
-        }
-    }
-
     function generate() {
         const len = policy.length_min > 24 ? policy.length_min : 24;
         let pwd = generatePassword(
@@ -145,13 +132,6 @@
         );
         formValues.new = pwd;
         formValues.verify = pwd;
-    }
-
-    async function resetMfa() {
-        // ignore the results, just fire the request and skip checking, if a key in these slots does exist -> more efficient
-        await handleDeleteSlot(1);
-        await handleDeleteSlot(2);
-        successPwd = true;
     }
 
 </script>
@@ -206,15 +186,6 @@
             width={btnWidth}
     >
         SAVE PASSWORD
-    </Button>
-
-    <Button
-            on:click={resetMfa}
-            bind:isLoading
-            width={btnWidth}
-            level={3}
-    >
-        RESET MFA
     </Button>
 
     {#if successPwd || successEmail}
