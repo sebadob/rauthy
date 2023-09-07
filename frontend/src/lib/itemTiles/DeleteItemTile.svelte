@@ -1,5 +1,5 @@
 <script>
-    import IconStop from "../icons/IconStop.svelte";
+    import IconStop from "$lib/icons/IconStop.svelte";
 
     export let label;
     export let onDelete = () => {

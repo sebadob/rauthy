@@ -20,9 +20,9 @@
     import IconShieldCheck from "$lib/icons/IconShieldCheck.svelte";
     import IconLogout from "$lib/icons/IconLogout.svelte";
     import IconId from "$lib/icons/IconId.svelte";
-    import RauthyLogo from "../icons/RauthyLogo.svelte";
+    import RauthyLogo from "$lib/icons/RauthyLogo.svelte";
     import Documentation from "./documentation/Documentation.svelte";
-    import IconBookOpen from "../icons/IconBookOpen.svelte";
+    import IconBookOpen from "$lib/icons/IconBookOpen.svelte";
     import {onMount} from "svelte";
 
     export let sessionInfo = {};

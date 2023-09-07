@@ -1,5 +1,4 @@
 <script>
-	export let color;
 	export let opacity = 0.9;
 	export let width = 24;
 </script>
@@ -10,7 +9,6 @@
   stroke="currentColor"
   stroke-width={2}
   width={width}
-  color={color}
   opacity={opacity}
 >
   <path

@@ -5,7 +5,7 @@
 
     export let level = 2;
     export let width = 'inherit';
-    export let selected;
+    export let selected = undefined;
     export let isLoading = false;
 
     let showText = !isLoading;
@@ -66,7 +66,7 @@
 >
     {#if isLoading}
         <div class="load">
-            <Loading local background={false} color={loadCol}/>
+            <Loading background={false} color={loadCol}/>
         </div>
     {:else if showText}
         <div in:fade class="txt">

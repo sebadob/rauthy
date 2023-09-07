@@ -70,7 +70,7 @@
     >
         {#if isLoading}
             <div class="load">
-                <Loading local background={false} color={loadCol}/>
+                <Loading background={false} color={loadCol}/>
             </div>
         {:else}
             <div class="txt">

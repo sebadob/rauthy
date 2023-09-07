@@ -1,5 +1,5 @@
 <script>
-    import RauthyLogo from "../../icons/RauthyLogo.svelte";
+    import RauthyLogo from "$lib/icons/RauthyLogo.svelte";
     import ClientBrandingPreviewBtn from "./ClientBrandingPreviewBtn.svelte";
     import ClientBrandingPreviewInput from "./ClientBrandingPreviewInput.svelte";
 

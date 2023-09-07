@@ -45,7 +45,6 @@
                 bind:items={missing}
                 bind:searchThreshold
                 onSelect={addItem}
-                yOffset={items > searchThreshold ? offsetSearch : offset}
         />
     {/if}
 </div>

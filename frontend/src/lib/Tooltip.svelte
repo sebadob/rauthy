@@ -5,8 +5,8 @@
 
     export let xOffset = 10;
     export let yOffset = 10;
-    export let text;
-    export let html;
+    export let text = '';
+    export let html = '';
 
     let show = false;
 

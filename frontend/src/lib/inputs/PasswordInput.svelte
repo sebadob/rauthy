@@ -1,8 +1,8 @@
 <script>
     import {createEventDispatcher} from "svelte";
-    import IconClipboard from "../icons/IconClipboard.svelte";
-    import IconEyeSlash from "../icons/IconEyeSlash.svelte";
-    import IconEye from "../icons/IconEye.svelte";
+    import IconClipboard from "$lib/icons/IconClipboard.svelte";
+    import IconEyeSlash from "$lib/icons/IconEyeSlash.svelte";
+    import IconEye from "$lib/icons/IconEye.svelte";
     import {getKey} from "../utils/helpers.js";
     import {slide} from "svelte/transition";
 
