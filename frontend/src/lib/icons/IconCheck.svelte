@@ -1,5 +1,5 @@
 <script>
-  export let color;
+  export let color = 'var(--col-text)';
   export let opacity = 0.9;
   export let width = 20;
 </script>

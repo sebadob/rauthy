@@ -1,7 +1,7 @@
 <script>
     import {fade, scale, slide} from "svelte/transition";
     import {navContainerExpanded, navIsExpanded, navWidthCollapsed} from "./navStore.js";
-    import IconChevronRight from "../icons/IconChevronRight.svelte";
+    import IconChevronRight from "$lib/icons/IconChevronRight.svelte";
     import {spring} from "svelte/motion";
     import {sleepAwait} from "../utils/helpers.js";
 

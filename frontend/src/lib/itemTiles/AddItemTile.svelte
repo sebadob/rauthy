@@ -1,5 +1,5 @@
 <script>
-    import IconPlus from "../icons/IconPlus.svelte";
+    import IconPlus from "$lib/icons/IconPlus.svelte";
     import {slide} from "svelte/transition";
     import SearchBar from "../search/SearchBar.svelte";
 

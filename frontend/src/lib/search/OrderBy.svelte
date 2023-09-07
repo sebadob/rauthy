@@ -1,7 +1,7 @@
 <script>
     import {onMount} from "svelte";
-    import IconBarsArrowDown from "../icons/IconBarsArrowDown.svelte";
-    import IconBarsArrowUp from "../icons/IconBarsArrowUp.svelte";
+    import IconBarsArrowDown from "$lib/icons/IconBarsArrowDown.svelte";
+    import IconBarsArrowUp from "$lib/icons/IconBarsArrowUp.svelte";
     import Tooltip from "../Tooltip.svelte";
 
     export let items = [];

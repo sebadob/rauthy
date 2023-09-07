@@ -1,7 +1,7 @@
 <script>
     import {navIsExpanded, navSelected, navWidthCollapsed, navWidthExpanded} from "./navStore.js";
-    import IconBurger from "../icons/IconBurger.svelte";
-    import IconClose from "../icons/IconStop.svelte";
+    import IconBurger from "$lib/icons/IconBurger.svelte";
+    import IconClose from "$lib/icons/IconStop.svelte";
     import {fade} from "svelte/transition";
     import {tweened} from "svelte/motion";
     import {cubicOut} from "svelte/easing";

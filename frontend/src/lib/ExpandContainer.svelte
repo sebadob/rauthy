@@ -5,7 +5,7 @@
 
     export let idx = 0;
     export let show = false;
-    export let expandedCallback;
+    export let expandedCallback = () => {};
 
     let isHover = false;
     let element;

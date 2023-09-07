@@ -1,9 +1,9 @@
 <script>
-    import IconMagnify from "../icons/IconMagnify.svelte";
+    import IconMagnify from "$lib/icons/IconMagnify.svelte";
     import {onMount} from "svelte";
     import Tooltip from "../Tooltip.svelte";
     import {getKey} from "../utils/helpers.js";
-    import IconBackspace from "../icons/IconBackspace.svelte";
+    import IconBackspace from "$lib/icons/IconBackspace.svelte";
 
     export let items = [];
     export let resItems;
