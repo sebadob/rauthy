@@ -5,8 +5,6 @@
 
     export let items = [];
     export let options = [];
-    export let offset = -55;
-    export let offsetSearch = -100;
     export let searchThreshold = 4;
 
     let missing = [];

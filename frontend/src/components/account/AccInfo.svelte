@@ -44,7 +44,7 @@
 
     <div class="row">
         <div class={classLabel}><b>{t.mfaActivated}:</b></div>
-        <CheckIcon check={user.webauthn_enabled}/>
+        <CheckIcon check={!!user.webauthn_user_id}/>
     </div>
 
     <div class="row">

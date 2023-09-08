@@ -8,7 +8,6 @@ use actix_web::cookie::Cookie;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
 use actix_web::{cookie, web, HttpResponse};
-use anyhow::Context;
 use rauthy_common::constants::{
     CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, COOKIE_MFA, IDX_WEBAUTHN, WEBAUTHN_FORCE_UV,
     WEBAUTHN_RENEW_EXP, WEBAUTHN_REQ_EXP,
@@ -21,6 +20,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::collections::HashMap;
 use std::ops::Add;
+use std::str::FromStr;
 use time::OffsetDateTime;
 use tracing::{error, info, warn};
 use utoipa::ToSchema;
@@ -33,11 +33,21 @@ pub struct PasskeyEntityLegacy {
     pub passkey: String,
 }
 
+impl PasskeyEntityLegacy {
+    pub fn get_cred_id_bytes(&self) -> Vec<u8> {
+        // Passkeys cannot be serialized with bincode -> no support for deserialize from any
+        let pk: Passkey = serde_json::from_str(&self.passkey).unwrap();
+        pk.cred_id().0.clone()
+    }
+}
+
 #[derive(Debug, Clone, FromRow, Deserialize, Serialize)]
 pub struct PasskeyEntity {
     pub user_id: String,
     pub name: String,
+    pub passkey_user_id: String,
     pub passkey: String,
+    pub credential_id: Vec<u8>,
     pub registered: i64,
     pub last_used: i64,
 }
@@ -47,6 +57,7 @@ impl PasskeyEntity {
     pub async fn create(
         data: &web::Data<AppState>,
         user_id: String,
+        passkey_user_id: Uuid,
         name: String,
         pk: Passkey,
         txn: &mut DbTxn<'_>,
@@ -58,17 +69,22 @@ impl PasskeyEntity {
         let entity = Self {
             user_id,
             name,
+            passkey_user_id: passkey_user_id.to_string(),
             passkey,
+            credential_id: pk.cred_id().0.clone(),
             registered: now,
             last_used: now,
         };
 
         sqlx::query!(
-            r#"INSERT INTO passkeys (user_id, name, passkey, registered, last_used)
-            VALUES ($1, $2, $3, $4, $5)"#,
+            r#"INSERT INTO passkeys
+            (user_id, name, passkey_user_id, passkey, credential_id, registered, last_used)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
             entity.user_id,
             entity.name,
+            entity.passkey_user_id,
             entity.passkey,
+            entity.credential_id,
             now,
             now,
         )
@@ -78,6 +94,13 @@ impl PasskeyEntity {
         cache_remove(
             CACHE_NAME_WEBAUTHN.to_string(),
             Self::cache_idx_user(&entity.user_id),
+            &data.caches.ha_cache_config,
+            AckLevel::Quorum,
+        )
+        .await?;
+        cache_remove(
+            CACHE_NAME_WEBAUTHN.to_string(),
+            Self::cache_idx_creds(&entity.user_id),
             &data.caches.ha_cache_config,
             AckLevel::Quorum,
         )
@@ -126,6 +149,13 @@ impl PasskeyEntity {
             AckLevel::Quorum,
         )
         .await?;
+        cache_remove(
+            CACHE_NAME_WEBAUTHN.to_string(),
+            Self::cache_idx_creds(user_id),
+            &data.caches.ha_cache_config,
+            AckLevel::Quorum,
+        )
+        .await?;
 
         Ok(())
     }
@@ -157,6 +187,36 @@ impl PasskeyEntity {
         .fetch_one(&data.db)
         .await?;
 
+        // let res = sqlx::query!(
+        //     "SELECT * FROM passkeys WHERE user_id = $1 AND name = $2",
+        //     user_id,
+        //     name,
+        // )
+        // .fetch_one(&data.db)
+        // .await?;
+        //
+        // #[cfg(feature = "sqlite")]
+        // let pk = Self {
+        //     user_id: res.user_id,
+        //     name: res.name,
+        //     passkey_user_id: Uuid::from_str(&res.passkey_user_id).expect("corrupted database"),
+        //     passkey: res.passkey,
+        //     credential_id: res.credential_id,
+        //     registered: res.registered,
+        //     last_used: res.last_used,
+        // };
+        //
+        // #[cfg(not(feature = "sqlite"))]
+        // let pk = Self {
+        //     user_id: res.user_id,
+        //     name: res.name,
+        //     passkey_user_id: res.passkey_user_id,
+        //     passkey: res.passkey,
+        //     credential_id: res.credential_id,
+        //     registered: res.registered,
+        //     last_used: res.last_used,
+        // };
+
         cache_insert(
             CACHE_NAME_WEBAUTHN.to_string(),
             idx,
@@ -167,6 +227,45 @@ impl PasskeyEntity {
         .await?;
 
         Ok(pk)
+    }
+
+    pub async fn find_cred_ids_for_user(
+        data: &web::Data<AppState>,
+        user_id: &str,
+    ) -> Result<Vec<CredentialID>, ErrorResponse> {
+        let idx = Self::cache_idx_creds(user_id);
+        let pk = cache_get!(
+            Vec<Vec<u8>>,
+            CACHE_NAME_WEBAUTHN.to_string(),
+            idx.clone(),
+            &data.caches.ha_cache_config,
+            false
+        )
+        .await?;
+        if pk.is_some() {
+            return Ok(pk.unwrap().into_iter().map(CredentialID::from).collect());
+        }
+
+        let creds = sqlx::query!(
+            "SELECT credential_id FROM passkeys WHERE user_id = $1",
+            user_id
+        )
+        .fetch_all(&data.db)
+        .await?
+        .into_iter()
+        .map(|row| row.credential_id)
+        .collect::<Vec<Vec<u8>>>();
+
+        cache_insert(
+            CACHE_NAME_WEBAUTHN.to_string(),
+            idx,
+            &data.caches.ha_cache_config,
+            &creds,
+            AckLevel::Leader,
+        )
+        .await?;
+
+        Ok(creds.into_iter().map(CredentialID::from).collect())
     }
 
     pub async fn find_for_user(
@@ -190,6 +289,40 @@ impl PasskeyEntity {
             .fetch_all(&data.db)
             .await?;
 
+        // let pks = sqlx::query!("SELECT * FROM passkeys WHERE user_id = $1", user_id)
+        //     .fetch_all(&data.db)
+        //     .await?
+        //     .into_iter()
+        //     .map(|res| {
+        //         debug!("\n\n{:?}", res);
+        //
+        //         #[cfg(feature = "sqlite")]
+        //         let slf = Self {
+        //             user_id: res.user_id,
+        //             name: res.name,
+        //             passkey_user_id: Uuid::from_str(&res.passkey_user_id)
+        //                 .expect("corrupted database"),
+        //             passkey: res.passkey,
+        //             credential_id: res.credential_id,
+        //             registered: res.registered,
+        //             last_used: res.last_used,
+        //         };
+        //
+        //         #[cfg(not(feature = "sqlite"))]
+        //         let slf = Self {
+        //             user_id: res.user_id,
+        //             name: res.name,
+        //             passkey_user_id: res.passkey_user_id,
+        //             passkey: res.passkey,
+        //             credential_id: res.credential_id,
+        //             registered: res.registered,
+        //             last_used: res.last_used,
+        //         };
+        //
+        //         slf
+        //     })
+        //     .collect();
+
         cache_insert(
             CACHE_NAME_WEBAUTHN.to_string(),
             idx,
@@ -208,7 +341,9 @@ impl PasskeyEntity {
         txn: &mut DbTxn<'_>,
     ) -> Result<(), ErrorResponse> {
         sqlx::query!(
-            "UPDATE passkeys SET passkey = $1, last_used = $2 WHERE user_id = $3 AND name = $4",
+            r#"UPDATE passkeys
+            SET passkey = $1, last_used = $2
+            WHERE user_id = $3 AND name = $4"#,
             self.passkey,
             self.last_used,
             self.user_id,
@@ -251,6 +386,10 @@ impl PasskeyEntity {
 
     fn cache_idx_user(user_id: &str) -> String {
         format!("{}{}", IDX_WEBAUTHN, user_id)
+    }
+
+    fn cache_idx_creds(user_id: &str) -> String {
+        format!("{}{}_creds", IDX_WEBAUTHN, user_id)
     }
 }
 
@@ -635,7 +774,7 @@ pub async fn auth_finish(
                 );
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
-                    format!("User Presence only is not allowed - Verification is needed"),
+                    "User Presence only is not allowed - Verification is needed".to_string(),
                 ));
             }
 
@@ -673,8 +812,8 @@ pub async fn auth_finish(
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct WebauthnReg {
-    pub uid: String,
-    pub uuid: Uuid,
+    pub user_id: String,
+    pub passkey_user_id: Uuid,
     pub reg_state: String,
 }
 
@@ -684,28 +823,23 @@ pub async fn reg_start(
     req: WebauthnRegStartRequest,
 ) -> Result<CreationChallengeResponse, ErrorResponse> {
     let user = User::find(data, user_id).await?;
-    let uuid = Uuid::new_v4();
-
-    // TODO:
-    // 1. add passkey_user_id to passkeys table instead of generating random each time
-    // 2. add cred_id to the passkeys table to make the exclude creds more efficient
-
-    let cred_ids = PasskeyEntity::find_for_user(data, &user.id)
-        .await?
-        .iter()
-        .map(|pk_entity| pk_entity.get_pk().cred_id().clone())
-        .collect::<Vec<CredentialID>>();
+    let passkey_user_id = if let Some(id) = &user.webauthn_user_id {
+        Uuid::from_str(id).expect("corrupted database: user.webauthn_user_id")
+    } else {
+        Uuid::new_v4()
+    };
+    let cred_ids = PasskeyEntity::find_cred_ids_for_user(data, &user.id).await?;
 
     match data
         .webauthn
         // TODO check back how the exclude_credentials can be utilized
-        .start_passkey_registration(uuid, &user.email, &user.email, Some(cred_ids))
+        .start_passkey_registration(passkey_user_id, &user.email, &user.email, Some(cred_ids))
     {
         Ok((ccr, reg_state)) => {
             // TODO can we hook in here and provide "with MFA only" as a feature?
             let reg_data = WebauthnReg {
-                uid: user.id.clone(),
-                uuid,
+                user_id: user.id.clone(),
+                passkey_user_id,
                 // TODO the reg_state cannot be serialized with bincode - open an issue?
                 reg_state: serde_json::to_string(&reg_state).unwrap(),
             };
@@ -771,10 +905,6 @@ pub async fn reg_finish(
         .finish_passkey_registration(&req.data, &reg_state)
     {
         Ok(pk) => {
-            let cred_id = pk.cred_id().to_string();
-            tracing::debug!("\n\n\ncred_id: {:?}", cred_id);
-            tracing::debug!("\n\n\n{:?}", pk);
-
             if *WEBAUTHN_FORCE_UV {
                 let cred = Credential::from(pk.clone());
                 if !cred.user_verified {
@@ -784,17 +914,25 @@ pub async fn reg_finish(
                     );
                     return Err(ErrorResponse::new(
                         ErrorResponseType::Forbidden,
-                        format!("User Presence only is not allowed - Verification is needed"),
+                        "User Presence only is not allowed - Verification is needed".to_string(),
                     ));
                 }
             }
 
             let mut txn = data.db.begin().await?;
-            PasskeyEntity::create(data, user.id.clone(), req.passkey_name, pk, &mut txn).await?;
-            if !user.webauthn_enabled {
-                user.webauthn_enabled = true;
+            if user.webauthn_user_id.is_none() {
+                user.webauthn_user_id = Some(reg_data.passkey_user_id.to_string());
                 user.save(data, None, Some(&mut txn)).await?;
             }
+            PasskeyEntity::create(
+                data,
+                user.id.clone(),
+                reg_data.passkey_user_id,
+                req.passkey_name,
+                pk,
+                &mut txn,
+            )
+            .await?;
             txn.commit().await?;
 
             info!("New PasskeyEntity saved successfully for user {}", user.id);
