@@ -8,6 +8,7 @@ use actix_web::cookie::Cookie;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
 use actix_web::{cookie, web, HttpResponse};
+use anyhow::Context;
 use rauthy_common::constants::{
     CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, COOKIE_MFA, IDX_WEBAUTHN, WEBAUTHN_FORCE_UV,
     WEBAUTHN_RENEW_EXP, WEBAUTHN_REQ_EXP,
@@ -683,13 +684,22 @@ pub async fn reg_start(
     req: WebauthnRegStartRequest,
 ) -> Result<CreationChallengeResponse, ErrorResponse> {
     let user = User::find(data, user_id).await?;
-    // user.is_slot_free(req.slot)?;
     let uuid = Uuid::new_v4();
+
+    // TODO:
+    // 1. add passkey_user_id to passkeys table instead of generating random each time
+    // 2. add cred_id to the passkeys table to make the exclude creds more efficient
+
+    let cred_ids = PasskeyEntity::find_for_user(data, &user.id)
+        .await?
+        .iter()
+        .map(|pk_entity| pk_entity.get_pk().cred_id().clone())
+        .collect::<Vec<CredentialID>>();
 
     match data
         .webauthn
         // TODO check back how the exclude_credentials can be utilized
-        .start_passkey_registration(uuid, &user.email, &user.email, None)
+        .start_passkey_registration(uuid, &user.email, &user.email, Some(cred_ids))
     {
         Ok((ccr, reg_state)) => {
             // TODO can we hook in here and provide "with MFA only" as a feature?
@@ -761,6 +771,10 @@ pub async fn reg_finish(
         .finish_passkey_registration(&req.data, &reg_state)
     {
         Ok(pk) => {
+            let cred_id = pk.cred_id().to_string();
+            tracing::debug!("\n\n\ncred_id: {:?}", cred_id);
+            tracing::debug!("\n\n\n{:?}", pk);
+
             if *WEBAUTHN_FORCE_UV {
                 let cred = Credential::from(pk.clone());
                 if !cred.user_verified {
