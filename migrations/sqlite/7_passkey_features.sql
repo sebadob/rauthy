@@ -31,11 +31,11 @@ create table users
     sec_key_2             varchar
         references webauthn,
     language              varchar default 'en'  not null,
-    webauthn_enabled      bool    default false not null
+    webauthn_user_id      varchar
 );
 
-create unique index users_email_uindex
-    on users (email);
+create unique index users_webauthn_user_id_index
+    on users (webauthn_user_id);
 
 insert into users(id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
                   password_expires, created_at, last_login, last_failed_login, failed_login_attempts, mfa_app,
@@ -206,9 +206,14 @@ create table passkeys
             references users
             on update cascade on delete cascade,
     name       varchar not null,
+    passkey_user_id varchar not null,
     passkey    varchar not null,
+    credential_id   blob not null,
     registered integer not null,
     last_used  integer not null,
     constraint passkeys_pk
         primary key (user_id, name)
 );
+
+create unique index passkeys_credential_id_index
+    on passkeys (credential_id);
