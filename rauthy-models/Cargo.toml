@@ -10,11 +10,11 @@ license.workspace = true
 doctest = false
 
 [features]
-postgres = []
+#postgres = []
 sqlite = []
 
-[package.metadata.cargo-all-features]
-skip_feature_sets = [["postgres", "sqlite"]]
+#[package.metadata.cargo-all-features]
+#skip_feature_sets = [["postgres", "sqlite"]]
 
 [dependencies]
 accept-language = "3"
@@ -57,6 +57,8 @@ tokio = { version = "1", features = ["full"] }
 utoipa = { version = "3", features = ["actix_extras", "chrono", "openapi_extensions"] }
 utoipa-swagger-ui = { version = "3", features = ["actix-web"] }
 validator = { version = "0.16", features = ["derive"] }
+# danger-allow-state-serialisation is needed to save the state into the DB for HA setup's
+# danger-credential-internals is needed for the feature to optionally force user verification
 webauthn-rs = { version = "0.4", features = ["danger-allow-state-serialisation", "danger-credential-internals"] }
 
 [dev-dependencies]

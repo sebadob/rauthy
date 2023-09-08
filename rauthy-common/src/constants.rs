@@ -177,4 +177,8 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("2160"))
         .parse::<i64>()
         .expect("WEBAUTHN_RENEW_EXP cannot be parsed to u64 - bad format");
+    pub static ref WEBAUTHN_FORCE_UV: bool = env::var("WEBAUTHN_FORCE_UV")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("WEBAUTHN_FORCE_UV cannot be parsed to bool - bad format");
 }
