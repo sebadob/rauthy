@@ -68,6 +68,12 @@
         }
 
         const passkeyName = formValues.passkeyName;
+        if (passkeyName.length < 2) {
+            err = true;
+            msg = t.mfa.passkeyNameErr;
+            return;
+        }
+
         let res = await webauthnRegStart(user.id, { passkey_name: passkeyName });
         if (res.status === 200) {
             let challenge = await res.json();
@@ -75,6 +81,14 @@
             // the navigator credentials engine needs some values as array buffers
             challenge.publicKey.challenge = base64UrlSafeToArrBuf(challenge.publicKey.challenge);
             challenge.publicKey.user.id = base64UrlSafeToArrBuf(challenge.publicKey.user.id);
+            challenge.publicKey.excludeCredentials = challenge.publicKey.excludeCredentials
+
+            if (challenge.publicKey.excludeCredentials) {
+                challenge.publicKey.excludeCredentials = challenge.publicKey.excludeCredentials.map(cred => {
+                    cred.id = base64UrlSafeToArrBuf(cred.id);
+                    return cred;
+                });
+            }
 
             // prompt for the user security key and get its public key
             let challengePk = await navigator.credentials.create(challenge);
