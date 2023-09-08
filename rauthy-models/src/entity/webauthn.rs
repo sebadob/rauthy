@@ -9,8 +9,8 @@ use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
 use actix_web::{cookie, web, HttpResponse};
 use rauthy_common::constants::{
-    CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, COOKIE_MFA, IDX_WEBAUTHN, WEBAUTHN_RENEW_EXP,
-    WEBAUTHN_REQ_EXP,
+    CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, COOKIE_MFA, IDX_WEBAUTHN, WEBAUTHN_FORCE_UV,
+    WEBAUTHN_RENEW_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{base64_decode, decrypt};
@@ -21,7 +21,7 @@ use sqlx::FromRow;
 use std::collections::HashMap;
 use std::ops::Add;
 use time::OffsetDateTime;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use utoipa::ToSchema;
 use webauthn_rs::prelude::*;
 
@@ -578,6 +578,8 @@ pub async fn auth_start(
         .map(|pk_entity| pk_entity.get_pk())
         .collect::<Vec<Passkey>>();
 
+    // TODO filter out all passkeys with presence only when UV is forced?
+
     match data.webauthn.start_passkey_authentication(pks.as_slice()) {
         Ok((rcr, auth_state)) => {
             add_data.delete(data).await?;
@@ -625,6 +627,17 @@ pub async fn auth_finish(
         .finish_passkey_authentication(&req.data, &auth_state)
     {
         Ok(auth_result) => {
+            if *WEBAUTHN_FORCE_UV && !auth_result.user_verified() {
+                warn!(
+                    "Webauthn Authentication Ceremony without User Verification for user {:?}",
+                    user.id
+                );
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    format!("User Presence only is not allowed - Verification is needed"),
+                ));
+            }
+
             for mut pk_entity in pks {
                 let mut pk = pk_entity.get_pk();
                 if let Some(updated) = pk.update_credential(&auth_result) {
@@ -748,6 +761,20 @@ pub async fn reg_finish(
         .finish_passkey_registration(&req.data, &reg_state)
     {
         Ok(pk) => {
+            if *WEBAUTHN_FORCE_UV {
+                let cred = Credential::from(pk.clone());
+                if !cred.user_verified {
+                    warn!(
+                        "Webauthn Registration Ceremony without User Verification for user {:?}",
+                        user.id
+                    );
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::Forbidden,
+                        format!("User Presence only is not allowed - Verification is needed"),
+                    ));
+                }
+            }
+
             let mut txn = data.db.begin().await?;
             PasskeyEntity::create(data, user.id.clone(), req.passkey_name, pk, &mut txn).await?;
             if !user.webauthn_enabled {
