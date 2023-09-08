@@ -15,7 +15,12 @@
 
     function handleKeyPress(event) {
         dispatch('keypress', event);
+        if (event.code === 'Enter') {
+            dispatch('enter', event);
+        }
     }
+
+    dispatch('blur', true);
 
     function handleOnBlur() {
         dispatch('blur', true);

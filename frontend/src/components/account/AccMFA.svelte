@@ -2,12 +2,11 @@
     import {
         arrBufToBase64UrlSafe,
         base64UrlSafeToArrBuf,
-        extractFormErrors, formatDateFromTs,
-        redirectToLogin
+        extractFormErrors,
+        formatDateFromTs
     } from "../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
     import {
-        getUser,
         getUserPasskeys,
         webauthnAuthFinish,
         webauthnAuthStart,
@@ -31,7 +30,7 @@
 
     let passkeys = [];
 
-    let formValues = { passkeyName: '' };
+    let formValues = {passkeyName: ''};
     let formErrors = {};
     const schema = yup.object().shape({
         passkeyName: yup.string()
@@ -74,7 +73,7 @@
             return;
         }
 
-        let res = await webauthnRegStart(user.id, { passkey_name: passkeyName });
+        let res = await webauthnRegStart(user.id, {passkey_name: passkeyName});
         if (res.status === 200) {
             let challenge = await res.json();
 
@@ -213,6 +212,8 @@
                 autocomplete="off"
                 placeholder={t.mfa.passkeyName}
                 on:input={validateForm}
+                autofocus
+                on:enter={handleRegStart}
         >
             {t.mfa.passkeyName}
         </Input>
