@@ -1658,6 +1658,14 @@ RP_NAME='Rauthy Webauthn'
 # The value is in hours (default: 2160)
 #WEBAUTHN_RENEW_EXP=2160
 
+# This feature can be set to 'true' to force User verification during the Webauthn ceremony.
+# UV will be true, if the user does not only need to verify its presence by touching the key, but by also providing
+# proof that he knows (or is) some secret via a PIN or biometric key for instance.
+# With UV, we have a true MFA scenario where UV == false (user presence only) would be a 2FA scenario (with password).
+# Be careful with this option, since Android and some special combinations of OS + browser to not support UV yet.
+# (default: false)
+#WEBAUTHN_FORCE_UV=false
+
 </code></pre>
 
                     </main>
