@@ -68,7 +68,7 @@ pub async fn authorize(
 
     let mfa_cookie =
         if let Ok(c) = WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA), &data.enc_keys) {
-            if c.email == user.email && user.webauthn_enabled {
+            if c.email == user.email && user.has_webauthn_enabled() {
                 Some(c)
             } else {
                 // If a possibly existing mfa cookie does not match the given email, or user has webauthn
@@ -172,7 +172,7 @@ pub async fn authorize(
     };
 
     // check if we need to validate the 2nd factor
-    if user.webauthn_enabled {
+    if user.has_webauthn_enabled() {
         session.set_mfa(data, true).await?;
 
         let step = AuthStepAwaitWebauthn {
@@ -252,7 +252,7 @@ pub async fn authorize_refresh(
     };
 
     // check if we need to validate the 2nd factor
-    if user.webauthn_enabled && *SESSION_RENEW_MFA {
+    if user.has_webauthn_enabled() && *SESSION_RENEW_MFA {
         let step = AuthStepAwaitWebauthn {
             code: get_rand(48),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
@@ -374,7 +374,7 @@ pub async fn build_id_token(
     scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
     is_auth_code_flow: bool,
 ) -> Result<String, ErrorResponse> {
-    let amr = match user.webauthn_enabled {
+    let amr = match user.has_webauthn_enabled() {
         true => {
             if is_auth_code_flow {
                 JwtAmrValue::Mfa.to_string()

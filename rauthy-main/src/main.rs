@@ -36,6 +36,7 @@ use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::PasskeyEntityLegacy;
 use rauthy_models::{email, ListenScheme};
 use rauthy_service::auth;
+use sqlx::types::Uuid;
 use std::collections::HashMap;
 use std::error::Error;
 use std::time::Duration;
@@ -431,27 +432,31 @@ async fn TEMP_migrate_passkeys(app_state: &Data<AppState>) -> Result<(), ErrorRe
             .await?;
     let mut pk_map = HashMap::with_capacity(legacy.len());
     for l in legacy {
-        pk_map.insert(l.id, l.passkey);
+        let cred_id = l.get_cred_id_bytes();
+        pk_map.insert(l.id, (l.passkey, cred_id));
     }
 
     let mut migrated = 0;
     let now = ::time::OffsetDateTime::now_utc().unix_timestamp();
 
     for mut user in users {
-        user.webauthn_enabled = true;
+        user.webauthn_user_id = Some(Uuid::new_v4().to_string());
         user.save(app_state, None, Some(&mut txn)).await?;
 
         if let Some(key) = user.sec_key_1 {
-            let pk = pk_map
+            let (pk, credential_id) = pk_map
                 .get(&key)
                 .expect("Data inconsistency: missing key in passkeys");
 
             sqlx::query!(
-                r#"INSERT INTO passkeys (user_id, name, passkey, registered, last_used)
-                VALUES ($1, $2, $3, $4, $5)"#,
+                r#"INSERT INTO passkeys
+                (user_id, name, passkey_user_id, passkey, credential_id, registered, last_used)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
                 user.id,
                 key,
+                user.webauthn_user_id,
                 pk,
+                credential_id,
                 now,
                 now,
             )
@@ -462,16 +467,19 @@ async fn TEMP_migrate_passkeys(app_state: &Data<AppState>) -> Result<(), ErrorRe
         }
 
         if let Some(key) = user.sec_key_2 {
-            let pk = pk_map
+            let (pk, credential_id) = pk_map
                 .get(&key)
                 .expect("Data inconsistency: missing key in passkeys");
 
             sqlx::query!(
-                r#"INSERT INTO passkeys (user_id, name, passkey, registered, last_used)
-                VALUES ($1, $2, $3, $4, $5)"#,
+                r#"INSERT INTO passkeys
+                (user_id, name, passkey_user_id, passkey, credential_id, registered, last_used)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
                 user.id,
                 key,
+                user.webauthn_user_id,
                 pk,
+                credential_id,
                 now,
                 now,
             )

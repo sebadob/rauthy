@@ -704,7 +704,7 @@ pub async fn delete_webauthn(
     PasskeyEntity::delete_by_id_name(&data, &id, &name, Some(&mut txn)).await?;
     if pks.len() < 2 {
         let mut user = User::find(&data, id).await?;
-        user.webauthn_enabled = false;
+        user.webauthn_user_id = None;
         user.save(&data, None, Some(&mut txn)).await?;
         txn.commit().await?;
     } else {

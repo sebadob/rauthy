@@ -92,7 +92,7 @@ pub async fn get_authorize(
         if let Ok(user) = User::find_by_email(&data, mfa_cookie.email.clone()).await {
             // we need to check this, because a user could deactivate MFA in another browser or
             // be deleted while still having existing mfa cookies somewhere else
-            if user.webauthn_enabled {
+            if user.has_webauthn_enabled() {
                 action = FrontendAction::MfaLogin(mfa_cookie.email);
             }
         }
