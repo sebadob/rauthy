@@ -108,7 +108,7 @@ docker run -d \
     -v $(pwd)/rauthy/data:/app/data \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.14.2-lite
+    ghcr.io/sebadob/rauthy:0.15.0-lite
 ```
 
 **6. Restrict DB files access even more**  
