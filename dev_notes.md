@@ -49,7 +49,4 @@ since postgres has pg_backrest and a lot of well established tooling anyway
 - oidc-client (google, github, ...)
 - 'rauthy-migrate' project to help migrating to rauthy?
 - add tracing-actix-web + opentelemetry
-- observe the svelte issue about the necessary 'unsafe-inline' CSP --> update: should be fixed with svelte 4
 - NATS events stream or maybe internal one?
-- store MFA App secrets encrypted?
-- PoW verification can potentially be performance optimized with 1 less allocation per iteration
