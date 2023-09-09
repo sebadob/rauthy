@@ -1,5 +1,36 @@
 # Changelog
 
+## v0.15.0
+
+### Breaking
+
+This version does modify the database and is therefore not backwards compatible with any previous version.
+If you need to downgrade vom v0.15 and above, you will only be able to do this via by applying a DB Backup.
+
+### Changes
+
+This release is all about new Passkey Features.
+
+- A user is not limited to just 2 keys anymore
+- During registration, you can (and must) provide a name for the passkey, which helps you identify and distinguish
+your keys, when you register multiple ones.
+- The `exclude_credentials` feature is now properly used and working. This makes sure, that you cannot register the
+same Passkey multiple times.
+- The Passkeys / MFA section in the Admin UI has been split from the User Password section to be more convenient to use
+
+Commits:  
+- New Passkey Features  
+[d317d90](https://github.com/sebadob/rauthy/commit/d317d902f66613b743955117dbede3d52efa74b6)
+[cd5d086](https://github.com/sebadob/rauthy/commit/cd5d086e0b38d8d906d3ce698ed9860bec3d52ab)
+[61464bf](https://github.com/sebadob/rauthy/commit/61464bfcc69921fae0c826fe8c3bac73e290a242)
+[e70c5a7](https://github.com/sebadob/rauthy/commit/e70c5a7bbf8f40f90a9d8d3d6570736e5322a0c5)
+[bc75610](https://github.com/sebadob/rauthy/commit/bc75610d7aa4cfc35abf1e0ee67af3b4dc2eea82)
+[49e9630](https://github.com/sebadob/rauthy/commit/49e9630bb3ffc25be1523492ef47d2fc66dc041c)
+- New config option `WEBAUTHN_FORCE_UV` to optionally reject Passkeys without user verification
+[c35ecc0](https://github.com/sebadob/rauthy/commit/c35ecc090b222196cf1ac095aa2b340edbeec0f5)
+- Better `/token` endpoint debugging capabilities
+[87f7969](https://github.com/sebadob/rauthy/commit/87f79695b86f9b7199dbad244c61e2eb1a0c6bcb)
+
 ## v0.14.5
 
 This is the last v0.14 release.  

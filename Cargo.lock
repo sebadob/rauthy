@@ -821,9 +821,9 @@ checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "bytes"
-version = "1.4.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
+checksum = "a2bd12c1caf447e69cd4528f47f94d203fd2582878ecb9e9465484c4148a8223"
 
 [[package]]
 name = "bytestring"
@@ -912,9 +912,9 @@ dependencies = [
 
 [[package]]
 name = "chrono"
-version = "0.4.29"
+version = "0.4.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d87d9d13be47a5b7c3907137f1290b0459a7f80efb26be8c52afb11963bccb02"
+checksum = "defd4e7873dbddba6c7c91e199c7fcb946abc4a6a4ac3195400bcfb01b5de877"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
@@ -2893,7 +2893,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.15.0-20230908"
+version = "0.15.0"
 dependencies = [
  "actix-service",
  "actix-web",
@@ -2928,7 +2928,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.15.0-20230908"
+version = "0.15.0"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -2959,7 +2959,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.15.0-20230908"
+version = "0.15.0"
 dependencies = [
  "actix",
  "actix-multipart",
@@ -2989,7 +2989,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.15.0-20230908"
+version = "0.15.0"
 dependencies = [
  "accept-language",
  "actix",
@@ -3037,7 +3037,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.15.0-20230908"
+version = "0.15.0"
 dependencies = [
  "actix-web",
  "argon2",

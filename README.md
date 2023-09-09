@@ -53,6 +53,11 @@ called [redhac](https://crates.io/crates/redhac), which cares about cache evicti
 You can choose between a *SQLite* for single instance deployments and a *Postgres*, if you need HA. MySQL support might
 come in the future.
 
+**Nice UI**  
+Unlike many other options, `rauthy` does have a nice Admin UI which can be used to basically do almost any operation you
+might need to administrate the whole application and its users. Some Screenshots and further introduction will follow
+in the future.
+
 **Client Branding**  
 You have a simple way to create some kind of branding or stylized look for the Login page for each client.  
 The whole color theme can be changed and each client can have its own custom logo.  
@@ -72,11 +77,6 @@ implemented (see below), while others might come or are even planned already.
 
 Currently missing features:
 
-**Rauthy Authenticator MFA App**  
-Even though things like OTP codes will never be implemented, it is not set in stone yet that there will never be Rauthy's
-own Authenticator App, which then basically acts as a Webauthn Software Authenticator. There are already existing
-solutions out there to serve this purpose.  
-
 **OIDC Client**  
 Rauthy will most probably have the option to be an OIDC Client itself as well. With this feature, you would be able
 to do things like "Login with Github" to Rauthy and then use Rauthy for the extended management and features.
@@ -87,7 +87,7 @@ Either just take a look at the [Rauthy Book](https://sebadob.github.io/rauthy/),
 the application yourself with docker on your localhost:
 
 ```
-docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.14.5-lite
+docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.15.0-lite
 ```
 
 **NOTE:**  

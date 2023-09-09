@@ -52,6 +52,7 @@ version:
 # runs the full set of tests with in-memory sqlite
 test-sqlite: migrate-sqlite
     #!/usr/bin/env bash
+    set -euxo pipefail
     clear
 
     DATABASE_URL={{db_url_sqlite}} cargo build --features sqlite
@@ -68,6 +69,7 @@ test-sqlite: migrate-sqlite
 # runs the full set of tests with postgres
 test-postgres: migrate-postgres
     #!/usr/bin/env bash
+    set -euxo pipefail
     clear
 
     DATABASE_URL={{db_url_postgres}} cargo build
