@@ -26,21 +26,6 @@ use tracing::{error, info, warn};
 use utoipa::ToSchema;
 use webauthn_rs::prelude::*;
 
-// #[deprecated(since = "0.15.0", note = "Passkeys will be migrated during v0.15")]
-#[derive(Debug, Clone, FromRow, Deserialize, Serialize)]
-pub struct PasskeyEntityLegacy {
-    pub id: String,
-    pub passkey: String,
-}
-
-impl PasskeyEntityLegacy {
-    pub fn get_cred_id_bytes(&self) -> Vec<u8> {
-        // Passkeys cannot be serialized with bincode -> no support for deserialize from any
-        let pk: Passkey = serde_json::from_str(&self.passkey).unwrap();
-        pk.cred_id().0.clone()
-    }
-}
-
 #[derive(Debug, Clone, FromRow, Deserialize, Serialize)]
 pub struct PasskeyEntity {
     pub user_id: String,
@@ -187,36 +172,6 @@ impl PasskeyEntity {
         .fetch_one(&data.db)
         .await?;
 
-        // let res = sqlx::query!(
-        //     "SELECT * FROM passkeys WHERE user_id = $1 AND name = $2",
-        //     user_id,
-        //     name,
-        // )
-        // .fetch_one(&data.db)
-        // .await?;
-        //
-        // #[cfg(feature = "sqlite")]
-        // let pk = Self {
-        //     user_id: res.user_id,
-        //     name: res.name,
-        //     passkey_user_id: Uuid::from_str(&res.passkey_user_id).expect("corrupted database"),
-        //     passkey: res.passkey,
-        //     credential_id: res.credential_id,
-        //     registered: res.registered,
-        //     last_used: res.last_used,
-        // };
-        //
-        // #[cfg(not(feature = "sqlite"))]
-        // let pk = Self {
-        //     user_id: res.user_id,
-        //     name: res.name,
-        //     passkey_user_id: res.passkey_user_id,
-        //     passkey: res.passkey,
-        //     credential_id: res.credential_id,
-        //     registered: res.registered,
-        //     last_used: res.last_used,
-        // };
-
         cache_insert(
             CACHE_NAME_WEBAUTHN.to_string(),
             idx,
@@ -289,40 +244,6 @@ impl PasskeyEntity {
             .fetch_all(&data.db)
             .await?;
 
-        // let pks = sqlx::query!("SELECT * FROM passkeys WHERE user_id = $1", user_id)
-        //     .fetch_all(&data.db)
-        //     .await?
-        //     .into_iter()
-        //     .map(|res| {
-        //         debug!("\n\n{:?}", res);
-        //
-        //         #[cfg(feature = "sqlite")]
-        //         let slf = Self {
-        //             user_id: res.user_id,
-        //             name: res.name,
-        //             passkey_user_id: Uuid::from_str(&res.passkey_user_id)
-        //                 .expect("corrupted database"),
-        //             passkey: res.passkey,
-        //             credential_id: res.credential_id,
-        //             registered: res.registered,
-        //             last_used: res.last_used,
-        //         };
-        //
-        //         #[cfg(not(feature = "sqlite"))]
-        //         let slf = Self {
-        //             user_id: res.user_id,
-        //             name: res.name,
-        //             passkey_user_id: res.passkey_user_id,
-        //             passkey: res.passkey,
-        //             credential_id: res.credential_id,
-        //             registered: res.registered,
-        //             last_used: res.last_used,
-        //         };
-        //
-        //         slf
-        //     })
-        //     .collect();
-
         cache_insert(
             CACHE_NAME_WEBAUTHN.to_string(),
             idx,
@@ -361,7 +282,7 @@ impl PasskeyEntity {
         )
         .await?;
 
-        // TODO instead of invalidating, we can update in advance
+        // TODO instead of invalidating, we could update in advance
         cache_remove(
             CACHE_NAME_WEBAUTHN.to_string(),
             Self::cache_idx_user(&self.user_id),
