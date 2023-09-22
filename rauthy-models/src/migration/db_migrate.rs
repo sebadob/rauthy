@@ -11,7 +11,7 @@ use crate::entity::scopes::Scope;
 use crate::entity::sessions::Session;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::users::User;
-use crate::entity::webauthn::{PasskeyEntity, PasskeyEntityLegacy};
+use crate::entity::webauthn::PasskeyEntity;
 use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
@@ -304,16 +304,25 @@ pub async fn migrate_from_sqlite(
     info!("Starting migration to another DB");
 
     // WEBNAUTHN
-    let before = sqlx::query_as::<_, PasskeyEntityLegacy>("select * from webauthn")
+    let before = sqlx::query_as::<_, PasskeyEntity>("SELECT * FROM passkeys")
         .fetch_all(&db_from)
         .await?;
-    sqlx::query("delete from webauthn").execute(db_to).await?;
+    sqlx::query("DELETE FROM passkeys").execute(db_to).await?;
     for b in before {
-        sqlx::query("insert into webauthn (id, passkey) values ($1, $2)")
-            .bind(b.id)
-            .bind(b.passkey)
-            .execute(db_to)
-            .await?;
+        sqlx::query!(
+            r#"INSERT INTO passkeys
+            (user_id, name, passkey_user_id, passkey, credential_id, registered, last_used)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+            b.user_id,
+            b.name,
+            b.passkey_user_id,
+            b.passkey,
+            b.credential_id,
+            b.registered,
+            b.last_used,
+        )
+        .execute(db_to)
+        .await?;
     }
 
     // USERS
@@ -628,16 +637,25 @@ pub async fn migrate_from_postgres(
     info!("Starting migration to another DB");
 
     // WEBNAUTHN
-    let before = sqlx::query_as::<_, PasskeyEntityLegacy>("select * from rauthy.webauthn")
+    let before = sqlx::query_as::<_, PasskeyEntity>("SELECT * FROM rauthy.passkeys")
         .fetch_all(&db_from)
         .await?;
-    sqlx::query("delete from webauthn").execute(db_to).await?;
+    sqlx::query("DELETE FROM passkeys").execute(db_to).await?;
     for b in before {
-        sqlx::query("insert into webauthn (id, passkey) values ($1, $2)")
-            .bind(b.id)
-            .bind(b.passkey)
-            .execute(db_to)
-            .await?;
+        sqlx::query!(
+            r#"INSERT INTO passkeys
+            (user_id, name, passkey_user_id, passkey, credential_id, registered, last_used)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+            b.user_id,
+            b.name,
+            b.passkey_user_id,
+            b.passkey,
+            b.credential_id,
+            b.registered,
+            b.last_used,
+        )
+        .execute(db_to)
+        .await?;
     }
 
     // USERS
