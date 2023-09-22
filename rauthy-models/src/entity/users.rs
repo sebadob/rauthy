@@ -794,31 +794,6 @@ impl User {
         }
     }
 
-    #[deprecated(since = "0.15.0", note = "will be removed in v0.16")]
-    pub fn is_slot_free(&self, slot: u8) -> Result<(), ErrorResponse> {
-        match slot {
-            1 => {
-                if self.sec_key_1.is_some() {
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::BadRequest,
-                        "The 1. slot is already in use".to_string(),
-                    ));
-                }
-            }
-            2 => {
-                if self.sec_key_2.is_some() {
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::BadRequest,
-                        "The 2nd slot is already in use".to_string(),
-                    ));
-                }
-            }
-            _ => unreachable!(),
-        };
-
-        Ok(())
-    }
-
     /// Returns `true` if the passwords match and `false` if they don't.
     /// It only returns an Err(ErrorResponse) in case of a hash parsing issue or corrupted data.
     async fn match_passwords(&self, plain: String) -> Result<bool, ErrorResponse> {
