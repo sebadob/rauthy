@@ -248,13 +248,6 @@ pub struct NewGroupRequest {
     pub group: String,
 }
 
-#[derive(Serialize, Deserialize, Validate, ToSchema)]
-pub struct NewMfaAppRequest {
-    /// Validation: `^[a-zA-Z0-9]{12}$`
-    #[validate(regex(path = "RE_APP_ID", code = "^[a-zA-Z0-9]{12}$"))]
-    pub app_id: String,
-}
-
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct PasswordHashTimesRequest {
     #[validate(range(min = 500))]

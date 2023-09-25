@@ -131,7 +131,6 @@ use utoipa::{openapi, OpenApi};
             request::MfaPurpose,
             request::NewClientRequest,
             request::NewGroupRequest,
-            request::NewMfaAppRequest,
             request::PasswordHashTimesRequest,
             request::PasswordPolicyRequest,
             request::PasswordResetRequest,
