@@ -7,6 +7,9 @@ alter table users
 alter table users
     drop column sec_key_2;
 
+alter table users
+    add user_expires bigint;
+
 alter table magic_links
     add usage varchar not null default 'password_reset';
 

@@ -43,6 +43,7 @@ pub struct User {
     pub failed_login_attempts: Option<i64>,
     pub language: Language,
     pub webauthn_user_id: Option<String>,
+    pub user_expires: Option<i64>,
 }
 
 // CRUD
@@ -53,8 +54,8 @@ impl User {
         sqlx::query!(
             r#"insert into users
             (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-            language)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#,
+            language, user_expires)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"#,
             new_user.id,
             new_user.email,
             new_user.given_name,
@@ -65,6 +66,7 @@ impl User {
             new_user.email_verified,
             new_user.created_at,
             lang,
+            new_user.user_expires,
         )
         .execute(&data.db)
         .await?;
@@ -298,8 +300,8 @@ impl User {
             email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6,
             enabled = $7, email_verified = $8, password_expires = $9, created_at = $10, last_login = $11,
             last_failed_login = $12, failed_login_attempts = $13, language = $14,
-            webauthn_user_id = $15
-            where id = $16"#)
+            webauthn_user_id = $15, user_expires = $16
+            where id = $17"#)
             .bind(&self.email)
             .bind(&self.given_name)
             .bind(&self.family_name)
@@ -315,6 +317,7 @@ impl User {
             .bind(self.failed_login_attempts)
             .bind(lang)
             .bind(&self.webauthn_user_id)
+            .bind(self.user_expires)
             .bind(&self.id);
 
         if let Some(txn) = txn {
@@ -903,6 +906,7 @@ impl Default for User {
             failed_login_attempts: None,
             language: Language::En,
             webauthn_user_id: None,
+            user_expires: None,
         }
     }
 }
@@ -932,6 +936,7 @@ mod tests {
             failed_login_attempts: None,
             language: Language::En,
             webauthn_user_id: None,
+            user_expires: None,
         };
         let session = Session::new(Some(&user), 1, None);
 
@@ -986,6 +991,7 @@ mod tests {
             failed_login_attempts: None,
             language: Language::En,
             webauthn_user_id: None,
+            user_expires: None,
         };
 
         // enabled
