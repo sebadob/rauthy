@@ -113,10 +113,9 @@ pub async fn magic_link_cleanup(db: DbPool) {
         // at all. These users should be deleted since they never cared about the (very important)
         // password E-Mail.
         let res = sqlx::query(
-            r#"
-        delete from users where
-        id in (select distinct user_id from magic_links where exp < 1683003398 and used = false)
-        and password is null"#,
+            r#"delete from users where
+            id in (select distinct user_id from magic_links where exp < 1683003398 and used = false)
+            and password is null"#,
         )
         .bind(exp)
         .execute(&db)
