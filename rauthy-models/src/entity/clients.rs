@@ -44,10 +44,10 @@ pub struct Client {
     // application itself with the `ENC_KEYS` and `ENC_KEY_ACTIVE` environment variables.
     pub secret: Option<Vec<u8>>,
     pub secret_kid: Option<String>,
-    pub redirect_uris: String,                     // TODO migrate to vec
-    pub post_logout_redirect_uris: Option<String>, // TODO migrate to vec
-    pub allowed_origins: Option<String>,           // TODO migrate to vec
-    pub flows_enabled: String,                     // TODO migrate to vec
+    pub redirect_uris: String,
+    pub post_logout_redirect_uris: Option<String>,
+    pub allowed_origins: Option<String>,
+    pub flows_enabled: String,
     // Currently supported Algorithms: RS 256, 384, 512 and ES 256, 384, 512
     pub access_token_alg: String,
     // Currently supported Algorithms: RS 256, 384, 512 and ES 256, 384, 512
@@ -55,9 +55,9 @@ pub struct Client {
     pub refresh_token: bool,
     pub auth_code_lifetime: i32,
     pub access_token_lifetime: i32,
-    pub scopes: String,            // TODO migrate to vec
-    pub default_scopes: String,    // TODO migrate to vec
-    pub challenge: Option<String>, // TODO migrate to vec
+    pub scopes: String,
+    pub default_scopes: String,
+    pub challenge: Option<String>,
 }
 
 // CRUD

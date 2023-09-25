@@ -683,7 +683,6 @@ pub async fn delete_webauthn(
 
     let (id, name) = path.into_inner();
 
-    // TODO maybe introduce a new endpoint for the MFA reset via Admin UI
     // validate that Principal matches the user or is an admin
     let principal = Principal::get_from_req(principal.into_inner())?;
     if !principal.is_admin() {

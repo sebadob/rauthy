@@ -611,8 +611,6 @@ pub async fn auth_start(
     user_id: String,
     purpose: MfaPurpose,
 ) -> Result<WebauthnAuthStartResponse, ErrorResponse> {
-    // let user = User::find(data, id).await?;
-
     // This app_data will be returned to the client upon successful webauthn authentication
     let add_data = match purpose {
         MfaPurpose::Login(code) => {
@@ -627,12 +625,6 @@ pub async fn auth_start(
         MfaPurpose::Test => WebauthnAdditionalData::Test,
     };
 
-    // let pks = user
-    //     .get_passkeys(data)
-    //     .await?
-    //     .iter()
-    //     .map(|pk_entity| pk_entity.get_pk())
-    //     .collect::<Vec<Passkey>>();
     let pks = PasskeyEntity::find_for_user(data, &user_id)
         .await?
         .iter()

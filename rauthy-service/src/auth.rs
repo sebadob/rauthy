@@ -349,7 +349,7 @@ pub async fn build_access_token(
         coarsetime::Duration::from_secs(lifetime as u64),
     )
     .with_issuer(data.issuer.clone())
-    .with_audience(client.id.to_string()); // TODO migrate to JSON array?
+    .with_audience(client.id.to_string());
 
     if let Some(sub) = sub {
         claims = claims.with_subject(sub);
@@ -461,7 +461,7 @@ pub async fn build_refresh_token(
 
     let claims = Claims::with_custom_claims(custom_claims, coarsetime::Duration::from_hours(48))
         .with_issuer(data.issuer.clone())
-        .with_audience(client.id.to_string()); // TODO change to JSON array?
+        .with_audience(client.id.to_string());
 
     let token = sign_refresh_token(data, claims).await?;
 

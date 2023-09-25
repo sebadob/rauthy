@@ -80,8 +80,6 @@ async fn get_session_from_cookie(req: &ServiceRequest) -> Result<Option<Session>
         .app_data::<web::Data<AppState>>()
         .expect("Error getting AppData inside session middleware");
 
-    // TODO extract CSRF header with each request and validate it
-
     match Session::find(data, session_id.to_string()).await {
         Ok(mut session) => {
             if session.is_valid(data.session_timeout) {

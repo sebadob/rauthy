@@ -41,7 +41,6 @@ pub enum ErrorResponseType {
 pub struct ErrorResponse {
     pub timestamp: i64,
     pub error: ErrorResponseType,
-    // TODO can this become a &str as well?
     pub message: String,
 }
 

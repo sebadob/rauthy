@@ -712,25 +712,6 @@ fn validate_vec_scope(value: &[String]) -> Result<(), ValidationError> {
     Ok(())
 }
 
-// TODO currently, providing regex via 'arg' from the macro does not work
-// also, passing param just as a Regex does not work because of lazy_static! returns no Regex type
-
-// fn validate_vec<T>(value: &Vec<String>, regex: T, msg: &str) -> Result<(), ValidationError>
-// {
-//     let mut err = None;
-//     value.iter().for_each(|v| {
-//         if !regex.is_match(v) {
-//             // if !RE_URI.is_match(v) {
-//             err = Some(msg);
-//             // err = Some("[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$");
-//         }
-//     });
-//     if err.is_some() {
-//         return Err(ValidationError::new(err.unwrap()));
-//     }
-//     Ok(())
-// }
-
 #[cfg(test)]
 mod tests {
     use crate::request::ColorsRequest;
