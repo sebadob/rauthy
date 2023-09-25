@@ -25,7 +25,7 @@ rauthy-common = { path = "../rauthy-common" }
 rauthy-handlers = { path = "../rauthy-handlers" }
 rauthy-models = { path = "../rauthy-models" }
 rauthy-service = { path = "../rauthy-service" }
-redhac = "0.6"
+redhac = "0.7"
 rustls = "0.21"
 rustls-pemfile = "1"
 serde_json = "1"
