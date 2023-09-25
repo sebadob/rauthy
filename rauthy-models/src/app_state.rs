@@ -420,55 +420,6 @@ again"#
             .await
             .context("failed to connect to sqlite")?;
 
-        // PRAGMA busy_timeout = 100;
-        // PRAGMA foreign_keys = true;
-        // PRAGMA schema.auto_vacuum = 2;
-        // PRAGMA schema.synchronous = 1;
-        // PRAGMA journal_mode = WAL;
-
-        // let url = format!("{}", addr);
-
-        // let opts = AnyConnectOptions::from_str(addr)?
-        //     .log_slow_statements(LevelFilter::Debug, Duration::from_secs(3));
-        //
-        // let pool = match AnyPoolOptions::new()
-        //     .min_connections(1)
-        //     .max_connections(max_conn)
-        //     .acquire_timeout(Duration::from_secs(10))
-        //     .connect_with(opts.clone())
-        //     .await
-        // {
-        //     Ok(pool) => pool,
-        //     Err(err) => {
-        //         debug!("Database connection error - SQLite race condition: {}", err);
-        //
-        //         // we sometimes get a race condition here with sqlite, when it is opened / created
-        //         // with all the additional options from above -> TODO investigate + possibly open issue about it
-        //         tokio::time::sleep(Duration::from_millis(100)).await;
-        //
-        //         // try again
-        //         AnyPoolOptions::new()
-        //             .min_connections(1)
-        //             .max_connections(max_conn)
-        //             .acquire_timeout(Duration::from_secs(10))
-        //             .connect_with(opts)
-        //             .await?
-        //     }
-        // };
-        //
-        // // set connection options
-        // query(
-        //     r#"
-        // PRAGMA busy_timeout = 100;
-        // PRAGMA foreign_keys = true;
-        // PRAGMA auto_vacuum = 2;
-        // PRAGMA synchronous = 1;
-        // PRAGMA journal_mode = WAL;
-        // "#,
-        // )
-        // .execute(&pool)
-        // .await?;
-
         info!("Database Connection Pool created successfully");
 
         Ok(pool)
