@@ -37,7 +37,6 @@ pub type DbTxn<'a> = sqlx::Transaction<'a, sqlx::Sqlite>;
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub db: DbPool,
-    // pub db: sqlx::AnyPool,
     pub public_url: String,
     pub argon2_params: Argon2Params,
     pub enc_keys: HashMap<String, Vec<u8>>,
@@ -165,9 +164,6 @@ impl AppState {
             .rp_name(&rp_name);
         let webauthn = Arc::new(builder.build().expect("Invalid configuration"));
 
-        // #[cfg(feature = "postgres")]
-        // #[cfg(feature = "sqlite")]
-
         let db = Self::new_db_pool(
             &enc_key_active,
             enc_keys.get(&enc_key_active).unwrap(),
@@ -243,8 +239,6 @@ impl AppState {
             .parse::<u32>()
             .expect("Error parsing DATABASE_MAX_CONN to u32");
 
-        sqlx::any::install_default_drivers();
-
         #[cfg(not(feature = "sqlite"))]
         let pool = {
             if *DB_TYPE == DbType::Sqlite {
@@ -289,31 +283,6 @@ impl AppState {
             pool
         };
 
-        // let pool = match *DB_TYPE {
-        //     DbType::Sqlite => {
-        //         let pool = Self::connect_sqlite(&DATABASE_URL, db_max_conn, false).await?;
-        //         if DATABASE_URL.ends_with(":memory:") {
-        //             info!("Using in-memory SQLite");
-        //         } else {
-        //             info!("Using on-disk SQLite");
-        //         }
-        //
-        //         debug!("Migrating data from ../migrations/sqlite");
-        //         sqlx::migrate!("../migrations/sqlite").run(&pool).await?;
-        //
-        //         pool
-        //     }
-        //     DbType::Postgres => {
-        //         let pool = Self::connect_postgres(&DATABASE_URL, db_max_conn).await?;
-        //         info!("Using Postgres");
-        //
-        //         debug!("Migrating data from ../migrations/postgres");
-        //         sqlx::migrate!("../migrations/postgres").run(&pool).await?;
-        //
-        //         pool
-        //     }
-        // };
-
         if !*DEV_MODE {
             migrate_init_prod(
                 &pool,
@@ -330,23 +299,13 @@ impl AppState {
             if is_ha_mode() {
                 error!(
                     r#"
-You cannot use 'MIGRATE_DB_FROM' with an active 'HA_MODE'.
-You need to disable 'HA_MODE' and scale down to a single replica, before you can then activate
-'MIGRATE_DB_FROM' again. This will prevent you from overlaps and conflicts.
-After the migration has been done, you remove the 'MIGRATE_DB_FROM' and can activate 'HA_MODE'
-again"#
+    You cannot use 'MIGRATE_DB_FROM' with an active 'HA_MODE'.
+    You need to disable 'HA_MODE' and scale down to a single replica, before you can then activate
+    'MIGRATE_DB_FROM' again. This will prevent you from overlaps and conflicts.
+    After the migration has been done, you remove the 'MIGRATE_DB_FROM' and can activate 'HA_MODE'
+    again"#
                 );
             } else {
-                // let pool_from = if from.starts_with("sqlite:") {
-                //     Self::connect_postgres(&from, 1).await?
-                // } else if from.starts_with("postgresql://") {
-                //     Self::connect_sqlite(&from, 1, true).await?
-                // } else {
-                //     panic!(
-                //         "You provided an unknown database type, please check the MIGRATE_DB_FROM"
-                //     );
-                // };
-
                 warn!(
                     r#"
 
@@ -376,10 +335,6 @@ again"#
                         "You provided an unknown database type, please check the MIGRATE_DB_FROM"
                     );
                 };
-
-                // if let Err(err) = db_migrate::migrate(&pool_from, &pool).await {
-                //     error!("Error during db migration: {:?}", err);
-                // }
             }
         } else if *DEV_MODE {
             migrate_dev_data(&pool).await.expect("Migrating DEV DATA");
@@ -419,55 +374,6 @@ again"#
             .connect_with(opts)
             .await
             .context("failed to connect to sqlite")?;
-
-        // PRAGMA busy_timeout = 100;
-        // PRAGMA foreign_keys = true;
-        // PRAGMA schema.auto_vacuum = 2;
-        // PRAGMA schema.synchronous = 1;
-        // PRAGMA journal_mode = WAL;
-
-        // let url = format!("{}", addr);
-
-        // let opts = AnyConnectOptions::from_str(addr)?
-        //     .log_slow_statements(LevelFilter::Debug, Duration::from_secs(3));
-        //
-        // let pool = match AnyPoolOptions::new()
-        //     .min_connections(1)
-        //     .max_connections(max_conn)
-        //     .acquire_timeout(Duration::from_secs(10))
-        //     .connect_with(opts.clone())
-        //     .await
-        // {
-        //     Ok(pool) => pool,
-        //     Err(err) => {
-        //         debug!("Database connection error - SQLite race condition: {}", err);
-        //
-        //         // we sometimes get a race condition here with sqlite, when it is opened / created
-        //         // with all the additional options from above -> TODO investigate + possibly open issue about it
-        //         tokio::time::sleep(Duration::from_millis(100)).await;
-        //
-        //         // try again
-        //         AnyPoolOptions::new()
-        //             .min_connections(1)
-        //             .max_connections(max_conn)
-        //             .acquire_timeout(Duration::from_secs(10))
-        //             .connect_with(opts)
-        //             .await?
-        //     }
-        // };
-        //
-        // // set connection options
-        // query(
-        //     r#"
-        // PRAGMA busy_timeout = 100;
-        // PRAGMA foreign_keys = true;
-        // PRAGMA auto_vacuum = 2;
-        // PRAGMA synchronous = 1;
-        // PRAGMA journal_mode = WAL;
-        // "#,
-        // )
-        // .execute(&pool)
-        // .await?;
 
         info!("Database Connection Pool created successfully");
 
@@ -547,19 +453,13 @@ impl WellKnown {
             String::from("RS256"),
             String::from("RS384"),
             String::from("RS512"),
-            String::from("EdDSA"), // is 'EdDSA' correct -> RFC?
-                                   // String::from("ES256"),
-                                   // String::from("ES384"),
-                                   // String::from("ES512"),
+            String::from("EdDSA"),
         ];
         let token_endpoint_auth_signing_alg_values_supported = vec![
             String::from("RS256"),
             String::from("RS384"),
             String::from("RS512"),
-            String::from("EdDSA"), // is 'EdDSA' correct -> RFC?
-                                   // String::from("ES256"),
-                                   // String::from("ES384"),
-                                   // String::from("ES512"),
+            String::from("EdDSA"),
         ];
         let claims_supported = vec![
             String::from("aud"),

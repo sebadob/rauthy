@@ -153,7 +153,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // build the application state
     let caches = Caches {
         ha_cache_config: cache_config.clone(),
-        // tx_ws_listen,
     };
     let app_state = web::Data::new(AppState::new(tx_email, caches).await?);
 
