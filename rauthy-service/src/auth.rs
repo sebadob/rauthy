@@ -10,7 +10,7 @@ use jwt_simple::claims;
 use jwt_simple::prelude::*;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME,
-    MFA_REQ_LIFETIME, SESSION_RENEW_MFA, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
+    SESSION_RENEW_MFA, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::HashPassword;
@@ -143,9 +143,7 @@ pub async fn authorize(
     }
 
     // add the timeout for mfa verification to the auth code lifetime
-    let code_lifetime = if user.mfa_app.is_some() {
-        client.auth_code_lifetime + *MFA_REQ_LIFETIME as i32
-    } else if user.sec_key_1.is_some() || user.sec_key_2.is_some() {
+    let code_lifetime = if user.has_webauthn_enabled() {
         client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
     } else {
         client.auth_code_lifetime
@@ -224,9 +222,7 @@ pub async fn authorize_refresh(
     user.check_enabled()?;
 
     let scopes = client.sanitize_login_scopes(&req_data.scopes)?;
-    let code_lifetime = if user.mfa_app.is_some() {
-        client.auth_code_lifetime + *MFA_REQ_LIFETIME as i32
-    } else if user.sec_key_1.is_some() || user.sec_key_2.is_some() {
+    let code_lifetime = if user.has_webauthn_enabled() {
         client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
     } else {
         client.auth_code_lifetime

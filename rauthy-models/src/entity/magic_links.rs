@@ -1,11 +1,48 @@
-use crate::app_state::AppState;
 use actix_web::{web, HttpRequest};
-use rauthy_common::constants::PWD_RESET_COOKIE;
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::get_rand;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use time::OffsetDateTime;
+
+use rauthy_common::constants::PWD_RESET_COOKIE;
+use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::get_rand;
+
+use crate::app_state::AppState;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MagicLinkUsage {
+    PasswordReset,
+    NewUser,
+}
+
+impl TryFrom<&str> for MagicLinkUsage {
+    type Error = ErrorResponse;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let slf = match value {
+            "password_reset" => MagicLinkUsage::PasswordReset,
+            "new_user" => MagicLinkUsage::NewUser,
+            _ => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "Invalid string for MagicLinkUsage parsing".to_string(),
+                ))
+            }
+        };
+
+        Ok(slf)
+    }
+}
+
+impl MagicLinkUsage {
+    pub fn as_str(&self) -> &str {
+        match self {
+            MagicLinkUsage::PasswordReset => "password_reset",
+            MagicLinkUsage::NewUser => "new_user",
+        }
+    }
+}
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct MagicLinkPassword {
@@ -15,6 +52,7 @@ pub struct MagicLinkPassword {
     pub cookie: Option<String>,
     pub exp: i64,
     pub used: bool,
+    pub usage: String,
 }
 
 // CRUD
@@ -23,6 +61,7 @@ impl MagicLinkPassword {
         data: &web::Data<AppState>,
         user_id: String,
         lifetime_minutes: i64,
+        usage: MagicLinkUsage,
     ) -> Result<Self, ErrorResponse> {
         let id = get_rand(64);
         let exp = OffsetDateTime::now_utc().unix_timestamp() + lifetime_minutes * 60;
@@ -33,16 +72,18 @@ impl MagicLinkPassword {
             cookie: None,
             exp,
             used: false,
+            usage: usage.as_str().to_string(),
         };
 
         sqlx::query!(
-            r#"insert into magic_links (id, user_id, csrf_token, exp, used)
-            values ($1, $2, $3, $4, $5)"#,
+            r#"insert into magic_links (id, user_id, csrf_token, exp, used, usage)
+            values ($1, $2, $3, $4, $5, $6)"#,
             link.id,
             link.user_id,
             link.csrf_token,
             link.exp,
             false,
+            link.usage,
         )
         .execute(&data.db)
         .await?;

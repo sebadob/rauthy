@@ -31,6 +31,7 @@ pub struct Session {
     pub state: SessionState,
     pub exp: i64,
     pub last_seen: i64,
+    pub remote_ip: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -223,8 +224,8 @@ impl Session {
         #[cfg(feature = "sqlite")]
         let q = sqlx::query!(
             r#"insert or replace into
-            sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
+            sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen, remote_ip)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#,
             self.id,
             self.csrf_token,
             self.user_id,
@@ -234,15 +235,16 @@ impl Session {
             state_str,
             self.exp,
             self.last_seen,
+            self.remote_ip,
         );
 
         #[cfg(not(feature = "sqlite"))]
         let q = sqlx::query!(
             r#"insert into
-            sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen, remote_ip)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             on conflict(id) do update set user_id = $3, roles = $4, groups = $5, is_mfa = $6,
-            state = $7, exp = $8, last_seen = $9"#,
+            state = $7, exp = $8, last_seen = $9, remote_ip = $10"#,
             self.id,
             self.csrf_token,
             self.user_id,
@@ -252,6 +254,7 @@ impl Session {
             state_str,
             self.exp,
             self.last_seen,
+            self.remote_ip,
         );
 
         q.execute(&data.db).await?;
@@ -272,7 +275,7 @@ impl Session {
 
 impl Session {
     /// exp_in will be the time in seconds when the session will expire
-    pub fn new(user: Option<&User>, exp_in: u32) -> Self {
+    pub fn new(user: Option<&User>, exp_in: u32, remote_ip: Option<String>) -> Self {
         let id = get_rand(32);
         let csrf_token = get_rand(32);
         let mut user_id: Option<String> = None;
@@ -299,6 +302,7 @@ impl Session {
                 .add(time::Duration::seconds(exp_in as i64))
                 .unix_timestamp(),
             last_seen: now.unix_timestamp(),
+            remote_ip,
         }
     }
 

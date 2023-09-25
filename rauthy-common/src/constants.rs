@@ -81,17 +81,6 @@ lazy_static! {
         .parse::<bool>()
         .unwrap_or(true);
 
-    pub static ref MFA_REQ_LIFETIME: u64 = env::var("CACHE_LT_MFA_APP_REQ")
-        .unwrap_or_else(|_| String::from("45"))
-        .trim()
-        .parse::<u64>()
-        .expect("CACHE_LT_MFA_APP_REQ cannot be parsed to u64 - bad format");
-    pub static ref MFA_REQ_LT_DUR: ::time::Duration = if *MFA_REQ_LIFETIME > i64::MAX as u64 {
-        ::time::Duration::seconds(i64::MAX)
-    } else {
-        ::time::Duration::seconds(*MFA_REQ_LIFETIME as i64)
-    };
-
     pub static ref OPEN_USER_REG: bool = env::var("OPEN_USER_REG")
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()

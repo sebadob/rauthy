@@ -1,6 +1,6 @@
 use crate::app_state::DbPool;
 use crate::entity::jwk::Jwk;
-use crate::entity::magic_links::MagicLinkPassword;
+use crate::entity::magic_links::{MagicLinkPassword, MagicLinkUsage};
 use rauthy_common::error_response::ErrorResponse;
 use std::ops::Add;
 use time::OffsetDateTime;
@@ -58,16 +58,18 @@ pub async fn migrate_dev_data(db: &DbPool) -> Result<(), ErrorResponse> {
             .add(::time::Duration::days(1))
             .unix_timestamp(),
         used: false,
+        usage: MagicLinkUsage::PasswordReset.as_str().to_string(),
     };
     let _ = sqlx::query(
-        r#"insert into magic_links (id, user_id, csrf_token, exp, used)
-        values ($1, $2, $3, $4, $5)"#,
+        r#"insert into magic_links (id, user_id, csrf_token, exp, used, usage)
+        values ($1, $2, $3, $4, $5, $6)"#,
     )
     .bind(&ml.id)
     .bind(&ml.user_id)
     .bind(&ml.csrf_token)
     .bind(ml.exp)
     .bind(false)
+    .bind(ml.usage)
     .execute(db)
     .await;
 

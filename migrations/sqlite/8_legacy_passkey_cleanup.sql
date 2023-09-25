@@ -194,6 +194,38 @@ from sessions_old;
 
 drop table sessions_old;
 
+-- migrate 'passkeys' table
+
+alter table passkeys
+    rename to passkeys_old;
+
+drop index passkeys_credential_id_index;
+
+create table passkeys
+(
+    user_id    varchar not null
+        constraint passkeys_users_id_fk
+            references users
+            on update cascade on delete cascade,
+    name       varchar not null,
+    passkey_user_id varchar not null,
+    passkey    varchar not null,
+    credential_id   blob not null,
+    registered integer not null,
+    last_used  integer not null,
+    constraint passkeys_pk
+        primary key (user_id, name)
+);
+
+create unique index passkeys_credential_id_index
+    on passkeys (credential_id);
+
+insert into passkeys(user_id, name, passkey_user_id, passkey, credential_id, registered, last_used)
+select user_id, name, passkey_user_id, passkey, credential_id, registered, last_used
+from passkeys_old;
+
+drop table passkeys_old;
+
 -- finally drop the old users table
 
 drop table users_old;
