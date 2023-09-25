@@ -26,7 +26,8 @@ create table users
     last_failed_login     int,
     failed_login_attempts int,
     language              varchar default 'en' not null,
-    webauthn_user_id      varchar
+    webauthn_user_id      varchar,
+    user_expires          int
 );
 
 create unique index users_email_uindex
@@ -79,7 +80,7 @@ create table magic_links
     cookie     varchar,
     exp        integer not null,
     used       bool    not null,
-    usage       varchar not null
+    usage      varchar not null
 );
 
 create index magic_links_exp_index
@@ -203,16 +204,16 @@ drop index passkeys_credential_id_index;
 
 create table passkeys
 (
-    user_id    varchar not null
+    user_id         varchar not null
         constraint passkeys_users_id_fk
             references users
             on update cascade on delete cascade,
-    name       varchar not null,
+    name            varchar not null,
     passkey_user_id varchar not null,
-    passkey    varchar not null,
-    credential_id   blob not null,
-    registered integer not null,
-    last_used  integer not null,
+    passkey         varchar not null,
+    credential_id   blob    not null,
+    registered      integer not null,
+    last_used       integer not null,
     constraint passkeys_pk
         primary key (user_id, name)
 );
