@@ -1,7 +1,7 @@
 use crate::app_state::{AppState, Argon2Params, DbTxn};
 use crate::email::send_pwd_reset;
 use crate::entity::groups::Group;
-use crate::entity::magic_links::MagicLinkPassword;
+use crate::entity::magic_links::{MagicLinkPassword, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::pow::Pow;
@@ -32,8 +32,8 @@ pub struct User {
     pub given_name: String,
     pub family_name: String,
     pub password: Option<String>,
-    pub roles: String,          // TODO migrate to vec after KV migration is done
-    pub groups: Option<String>, // TODO migrate to vec after KV migration is done
+    pub roles: String,
+    pub groups: Option<String>,
     pub enabled: bool,
     pub email_verified: bool,
     pub password_expires: Option<i64>,
@@ -41,9 +41,6 @@ pub struct User {
     pub last_login: Option<i64>,
     pub last_failed_login: Option<i64>,
     pub failed_login_attempts: Option<i64>,
-    pub mfa_app: Option<String>,
-    pub sec_key_1: Option<String>,
-    pub sec_key_2: Option<String>,
     pub language: Language,
     pub webauthn_user_id: Option<String>,
 }
@@ -72,9 +69,13 @@ impl User {
         .execute(&data.db)
         .await?;
 
-        let magic_link =
-            MagicLinkPassword::create(data, new_user.id.clone(), data.ml_lt_pwd_first as i64)
-                .await?;
+        let magic_link = MagicLinkPassword::create(
+            data,
+            new_user.id.clone(),
+            data.ml_lt_pwd_first as i64,
+            MagicLinkUsage::NewUser,
+        )
+        .await?;
         send_pwd_reset(data, &magic_link, &new_user).await;
 
         let mut users = User::find_all(data).await?;
@@ -296,8 +297,9 @@ impl User {
         let q = sqlx::query(r#"update users set
             email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6,
             enabled = $7, email_verified = $8, password_expires = $9, created_at = $10, last_login = $11,
-            last_failed_login = $12, failed_login_attempts = $13, mfa_app = $14, sec_key_1 = $15,
-            sec_key_2 = $16, language = $17, webauthn_user_id = $18 where id = $19"#)
+            last_failed_login = $12, failed_login_attempts = $13, language = $14,
+            webauthn_user_id = $15
+            where id = $16"#)
             .bind(&self.email)
             .bind(&self.given_name)
             .bind(&self.family_name)
@@ -311,9 +313,6 @@ impl User {
             .bind(self.last_login)
             .bind(self.last_failed_login)
             .bind(self.failed_login_attempts)
-            .bind(&self.mfa_app)
-            .bind(&self.sec_key_1)
-            .bind(&self.sec_key_2)
             .bind(lang)
             .bind(&self.webauthn_user_id)
             .bind(&self.id);
@@ -718,32 +717,6 @@ impl User {
         res
     }
 
-    // pub async fn get_passkeys(
-    //     &self,
-    //     data: &web::Data<AppState>,
-    // ) -> Result<Vec<PasskeyEntityLegacy>, ErrorResponse> {
-    //     let mut pks = Vec::with_capacity(2); // TODO migrate to array or smallvec
-    //
-    //     if let Some(ref id) = self.sec_key_1 {
-    //         let pk = PasskeyEntityLegacy::find(data, id.clone()).await?;
-    //         pks.push(pk);
-    //     }
-    //
-    //     if let Some(ref id) = self.sec_key_2 {
-    //         let pk = PasskeyEntityLegacy::find(data, id.clone()).await?;
-    //         pks.push(pk);
-    //     }
-    //
-    //     if pks.is_empty() {
-    //         return Err(ErrorResponse::new(
-    //             ErrorResponseType::BadRequest,
-    //             "This user has no registered Webauthn keys".to_string(),
-    //         ));
-    //     }
-    //
-    //     Ok(pks)
-    // }
-
     pub fn get_roles(&self) -> Vec<String> {
         let mut res = Vec::new();
         if self.roles.ne("") {
@@ -842,8 +815,13 @@ impl User {
             }
         }
 
-        let new_ml =
-            MagicLinkPassword::create(data, self.id.clone(), data.ml_lt_pwd_reset as i64).await?;
+        let new_ml = MagicLinkPassword::create(
+            data,
+            self.id.clone(),
+            data.ml_lt_pwd_reset as i64,
+            MagicLinkUsage::PasswordReset,
+        )
+        .await?;
         send_pwd_reset(data, &new_ml, self).await;
 
         Ok(())
@@ -877,6 +855,7 @@ impl User {
                         data,
                         self.id.clone(),
                         data.ml_lt_pwd_reset as i64,
+                        MagicLinkUsage::PasswordReset,
                     )
                     .await?;
                     send_pwd_reset(data, &magic_link, self).await;
@@ -922,9 +901,6 @@ impl Default for User {
             last_login: None,
             last_failed_login: None,
             failed_login_attempts: None,
-            mfa_app: None,
-            sec_key_1: None,
-            sec_key_2: None,
             language: Language::En,
             webauthn_user_id: None,
         }
@@ -954,13 +930,10 @@ mod tests {
             last_login: None,
             last_failed_login: None,
             failed_login_attempts: None,
-            mfa_app: None,
-            sec_key_1: None,
-            sec_key_2: None,
             language: Language::En,
             webauthn_user_id: None,
         };
-        let session = Session::new(Some(&user), 1);
+        let session = Session::new(Some(&user), 1, None);
 
         assert_eq!(session.is_valid(10), true);
         // sessions are validated with second accuracy
@@ -1011,9 +984,6 @@ mod tests {
             last_login: None,
             last_failed_login: None,
             failed_login_attempts: None,
-            mfa_app: None,
-            sec_key_1: None,
-            sec_key_2: None,
             language: Language::En,
             webauthn_user_id: None,
         };

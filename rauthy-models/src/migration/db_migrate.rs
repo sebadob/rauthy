@@ -334,8 +334,8 @@ pub async fn migrate_from_sqlite(
         sqlx::query(
             r#"insert into users(id, email, given_name, family_name, password, roles, groups,
             enabled, email_verified, password_expires, created_at, last_login, last_failed_login,
-            failed_login_attempts, mfa_app, sec_key_1, sec_key_2)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)"#,
+            failed_login_attempts)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
         )
         .bind(b.id)
         .bind(b.email)
@@ -351,9 +351,6 @@ pub async fn migrate_from_sqlite(
         .bind(b.last_login)
         .bind(b.last_failed_login)
         .bind(b.failed_login_attempts)
-        .bind(b.mfa_app)
-        .bind(b.sec_key_1)
-        .bind(b.sec_key_2)
         .execute(db_to)
         .await?;
     }
@@ -667,8 +664,8 @@ pub async fn migrate_from_postgres(
         sqlx::query(
             r#"insert into users(id, email, given_name, family_name, password, roles, groups,
             enabled, email_verified, password_expires, created_at, last_login, last_failed_login,
-            failed_login_attempts, mfa_app, sec_key_1, sec_key_2)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)"#,
+            failed_login_attempts)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
         )
         .bind(b.id)
         .bind(b.email)
@@ -684,9 +681,6 @@ pub async fn migrate_from_postgres(
         .bind(b.last_login)
         .bind(b.last_failed_login)
         .bind(b.failed_login_attempts)
-        .bind(b.mfa_app)
-        .bind(b.sec_key_1)
-        .bind(b.sec_key_2)
         .execute(db_to)
         .await?;
     }

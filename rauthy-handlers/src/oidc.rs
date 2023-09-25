@@ -1,4 +1,4 @@
-use crate::{build_csp_header, map_auth_step};
+use crate::{build_csp_header, map_auth_step, real_ip_from_req};
 use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::{header, StatusCode};
 use actix_web::{cookie, get, post, web, HttpRequest, HttpResponse};
@@ -82,7 +82,7 @@ pub async fn get_authorize(
             .body(body));
     }
 
-    let session = Session::new(None, *SESSION_LIFETIME);
+    let session = Session::new(None, *SESSION_LIFETIME, real_ip_from_req(&req));
     session.save(&data).await?;
 
     let mut action = FrontendAction::None;
