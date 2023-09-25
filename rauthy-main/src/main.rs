@@ -20,8 +20,8 @@ use actix_web::{middleware, web, App, HttpServer};
 use actix_web_grants::GrantsMiddleware;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW,
-    CACHE_NAME_SESSIONS, CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, MFA_REQ_LIFETIME, POW_EXP,
-    RAUTHY_VERSION, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
+    CACHE_NAME_SESSIONS, CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, POW_EXP, RAUTHY_VERSION,
+    WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::password_hasher;
 use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
@@ -100,7 +100,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // auth codes
     cache_config.spawn_cache(
         CACHE_NAME_AUTH_CODES.to_string(),
-        redhac::TimedCache::with_lifespan(300 + *MFA_REQ_LIFETIME),
+        redhac::TimedCache::with_lifespan(300 + *WEBAUTHN_REQ_EXP),
         Some(64),
     );
 
