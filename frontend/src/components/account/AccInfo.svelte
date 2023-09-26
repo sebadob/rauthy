@@ -71,6 +71,13 @@
         <div class={classLabel}><b>{t.user} {t.created}:</b></div>
         <span class="value">{formatDateFromTs(user.created_at)}</span>
     </div>
+
+    {#if user.user_expires}
+        <div class={classRow}>
+            <div class={classLabel}><b>{t.userExpiry}:</b></div>
+            <span class="value">{formatDateFromTs(user.user_expires)}</span>
+        </div>
+    {/if}
 </div>
 
 <style>

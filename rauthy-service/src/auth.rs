@@ -65,6 +65,7 @@ pub async fn authorize(
             )
         })?;
     user.check_enabled()?;
+    user.check_expired()?;
 
     let mfa_cookie =
         if let Ok(c) = WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA), &data.enc_keys) {

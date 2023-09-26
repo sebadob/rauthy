@@ -47,7 +47,7 @@ impl I18nPasswordReset<'_> {
             required: "Required",
             save: "Save",
             success_1: "The password has been updated successfully.",
-            success_2: "You can close this window now.",
+            success_2: "You will be redirected to your account shortly.",
         }
     }
 
@@ -63,8 +63,8 @@ impl I18nPasswordReset<'_> {
             password_no_match: "Passwörter stimmen nicht überein",
             required: "Notwendig",
             save: "Speichern",
-            success_1: "Das Passwort wurde erfolgreich zurückgesetzt",
-            success_2: "Sie können dieses Fenster jetzt schließen",
+            success_1: "Das Passwort wurde erfolgreich zurückgesetzt.",
+            success_2: "Sie werden in Kürze zu Ihrem Account weitergeleitet.",
         }
     }
 }

@@ -114,10 +114,11 @@ impl Session {
     // Returns a session by id
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
         // TODO set remote lookup to true here to be able to switch to in-memory sessions store only?
+        let idx = format!("{}{}", IDX_SESSION, id);
         let session = cache_get!(
             Session,
             CACHE_NAME_SESSIONS.to_string(),
-            id.clone(),
+            idx.clone(),
             &data.caches.ha_cache_config,
             false
         )
@@ -130,7 +131,6 @@ impl Session {
             .fetch_one(&data.db)
             .await?;
 
-        let idx = format!("{}{}", IDX_SESSION, session.id);
         cache_insert(
             CACHE_NAME_SESSIONS.to_string(),
             idx,

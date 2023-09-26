@@ -278,7 +278,7 @@ impl User {
             IDX_USERS.to_string(),
             &data.caches.ha_cache_config,
             &res,
-            AckLevel::Leader,
+            AckLevel::Quorum,
         )
         .await?;
         Ok(res)
@@ -644,7 +644,7 @@ impl User {
         if let Some(ts) = self.user_expires {
             if OffsetDateTime::now_utc().unix_timestamp() > ts {
                 return Err(ErrorResponse::new(
-                    ErrorResponseType::Forbidden,
+                    ErrorResponseType::Disabled,
                     String::from("User has expired"),
                 ));
             }
@@ -722,6 +722,7 @@ impl User {
             language: new_user.language,
             roles,
             groups,
+            user_expires: new_user.user_expires,
             ..Default::default()
         };
 

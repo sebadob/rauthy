@@ -46,6 +46,7 @@
             msg = 'Error fetching users: ' + res.body.message;
         } else {
             let u = await res.json();
+            console.log(u);
             users = [...u];
             resUsers = [...u];
         }
