@@ -82,7 +82,7 @@ pub async fn get_authorize(
             .body(body));
     }
 
-    let session = Session::new(None, *SESSION_LIFETIME, real_ip_from_req(&req));
+    let session = Session::new(*SESSION_LIFETIME, real_ip_from_req(&req));
     session.save(&data).await?;
 
     let mut action = FrontendAction::None;

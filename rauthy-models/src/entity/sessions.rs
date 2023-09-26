@@ -275,27 +275,17 @@ impl Session {
 
 impl Session {
     /// exp_in will be the time in seconds when the session will expire
-    pub fn new(user: Option<&User>, exp_in: u32, remote_ip: Option<String>) -> Self {
+    pub fn new(exp_in: u32, remote_ip: Option<String>) -> Self {
         let id = get_rand(32);
         let csrf_token = get_rand(32);
-        let mut user_id: Option<String> = None;
-        let mut roles: Option<String> = None;
-        let mut groups: Option<String> = None;
-
-        if let Some(u) = user {
-            user_id = Some(u.id.clone());
-            roles = Some(u.roles.clone());
-            groups = u.groups.clone();
-        }
-
         let now = OffsetDateTime::now_utc();
 
         Self {
             id,
             csrf_token,
-            user_id,
-            roles,
-            groups,
+            user_id: None,
+            roles: None,
+            groups: None,
             is_mfa: false, // cannot be known at the creation stage
             state: SessionState::Init,
             exp: now
@@ -304,6 +294,56 @@ impl Session {
             last_seen: now.unix_timestamp(),
             remote_ip,
         }
+    }
+
+    /// exp_in will be the time in seconds when the session will expire
+    pub fn try_new(
+        user: &User,
+        exp_in: u32,
+        remote_ip: Option<String>,
+    ) -> Result<Self, ErrorResponse> {
+        let id = get_rand(32);
+        let csrf_token = get_rand(32);
+        let user_id = Some(user.id.clone());
+        let roles = Some(user.roles.clone());
+        let groups = user.groups.clone();
+
+        let now = OffsetDateTime::now_utc();
+
+        // make sure to check the max session lifetime for expiring users
+        let exp = if let Some(ts) = user.user_expires {
+            if now.unix_timestamp() > ts {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "User has expired".to_string(),
+                ));
+            } else {
+                let target = now
+                    .add(time::Duration::seconds(exp_in as i64))
+                    .unix_timestamp();
+                if ts < target {
+                    ts
+                } else {
+                    target
+                }
+            }
+        } else {
+            now.add(time::Duration::seconds(exp_in as i64))
+                .unix_timestamp()
+        };
+
+        Ok(Self {
+            id,
+            csrf_token,
+            user_id,
+            roles,
+            groups,
+            is_mfa: false, // cannot be known at the creation stage
+            state: SessionState::Init,
+            exp,
+            last_seen: now.unix_timestamp(),
+            remote_ip,
+        })
     }
 
     pub fn client_cookie(&self) -> cookie::Cookie {
@@ -445,6 +485,21 @@ impl Session {
             ErrorResponseType::CSRFTokenError,
             String::from("CSRF Token is not correct"),
         ))
+    }
+
+    pub fn validate_user_expiry(&mut self, user: &User) -> Result<(), ErrorResponse> {
+        if let Some(ts) = user.user_expires {
+            if OffsetDateTime::now_utc().unix_timestamp() > ts {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "User has expired".to_string(),
+                ));
+            } else if ts < self.exp {
+                self.exp = ts;
+            }
+        }
+
+        Ok(())
     }
 }
 

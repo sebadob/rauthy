@@ -627,6 +627,18 @@ impl User {
         Ok(())
     }
 
+    pub fn check_expired(&self) -> Result<(), ErrorResponse> {
+        if let Some(ts) = self.user_expires {
+            if OffsetDateTime::now_utc().unix_timestamp() > ts {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    String::from("User has expired"),
+                ));
+            }
+        }
+        Ok(())
+    }
+
     pub fn delete_group(&mut self, group: &str) {
         if self.groups.is_none() {
             return;
@@ -923,7 +935,7 @@ mod tests {
 
     #[test]
     fn test_session_impl() {
-        let user = User {
+        let mut user = User {
             id: "123".to_string(),
             email: "admin@localhost.de".to_string(),
             given_name: "Admin".to_string(),
@@ -940,9 +952,13 @@ mod tests {
             failed_login_attempts: None,
             language: Language::En,
             webauthn_user_id: None,
-            user_expires: None,
+            user_expires: Some(OffsetDateTime::now_utc().unix_timestamp()),
         };
-        let session = Session::new(Some(&user), 1, None);
+        let session = Session::try_new(&user, 1, None);
+        assert!(session.is_err());
+
+        user.user_expires = None;
+        let session = Session::try_new(&user, 1, None).unwrap();
 
         assert_eq!(session.is_valid(10), true);
         // sessions are validated with second accuracy
