@@ -284,6 +284,19 @@ impl User {
         Ok(res)
     }
 
+    pub async fn find_expired(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
+        let now = OffsetDateTime::now_utc()
+            .add(time::Duration::seconds(10))
+            .unix_timestamp();
+        tracing::debug!("User::find_expired - now: {}", now);
+        let res = sqlx::query_as::<_, Self>("select * from users where user_expires < $1")
+            .bind(now)
+            .fetch_all(&data.db)
+            .await?;
+        tracing::debug!("User::find_expired - users: {:?}", res);
+        Ok(res)
+    }
+
     // Saves a user
     pub async fn save(
         &self,

@@ -182,6 +182,7 @@ impl Session {
         Ok(())
     }
 
+    // TODO is using old KV store logic - could be optimized
     /// Invalidates all sessions for the given user_id by setting the expiry to `now()`
     pub async fn invalidate_for_user(
         data: &web::Data<AppState>,
