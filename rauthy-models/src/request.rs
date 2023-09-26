@@ -16,7 +16,7 @@ use validator::{Validate, ValidationError};
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct AuthCodeRequest {
-    // Validation: `^[a-z0-9-_/]{2,128}$`
+    /// Validation: `^[a-z0-9-_/]{2,128}$`
     #[validate(regex(path = "RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
     pub grant_type: String,
     /// Validation: `[a-zA-Z0-9]`
@@ -526,6 +526,8 @@ pub struct UpdateUserRequest {
     pub groups: Option<Vec<String>>,
     pub enabled: bool,
     pub email_verified: bool,
+    #[validate(range(min = 1672527600, max = 4070905200))]
+    pub user_expires: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]

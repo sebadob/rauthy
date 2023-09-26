@@ -296,29 +296,31 @@ impl User {
         }
 
         let lang = self.language.as_str();
-        let q = sqlx::query(r#"update users set
+        let q = sqlx::query(
+            r#"update users set
             email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6,
-            enabled = $7, email_verified = $8, password_expires = $9, created_at = $10, last_login = $11,
-            last_failed_login = $12, failed_login_attempts = $13, language = $14,
+            enabled = $7, email_verified = $8, password_expires = $9, created_at = $10,
+            last_login = $11, last_failed_login = $12, failed_login_attempts = $13, language = $14,
             webauthn_user_id = $15, user_expires = $16
-            where id = $17"#)
-            .bind(&self.email)
-            .bind(&self.given_name)
-            .bind(&self.family_name)
-            .bind(&self.password)
-            .bind(&self.roles)
-            .bind(&self.groups)
-            .bind(self.enabled)
-            .bind(self.email_verified)
-            .bind(self.password_expires)
-            .bind(self.created_at)
-            .bind(self.last_login)
-            .bind(self.last_failed_login)
-            .bind(self.failed_login_attempts)
-            .bind(lang)
-            .bind(&self.webauthn_user_id)
-            .bind(self.user_expires)
-            .bind(&self.id);
+            where id = $17"#,
+        )
+        .bind(&self.email)
+        .bind(&self.given_name)
+        .bind(&self.family_name)
+        .bind(&self.password)
+        .bind(&self.roles)
+        .bind(&self.groups)
+        .bind(self.enabled)
+        .bind(self.email_verified)
+        .bind(self.password_expires)
+        .bind(self.created_at)
+        .bind(self.last_login)
+        .bind(self.last_failed_login)
+        .bind(self.failed_login_attempts)
+        .bind(lang)
+        .bind(&self.webauthn_user_id)
+        .bind(self.user_expires)
+        .bind(&self.id);
 
         if let Some(txn) = txn {
             q.execute(&mut **txn).await?;
@@ -412,6 +414,7 @@ impl User {
 
         user.enabled = upd_user.enabled;
         user.email_verified = upd_user.email_verified;
+        user.user_expires = upd_user.user_expires;
 
         user.save(data, old_email, None).await?;
         Ok(user)
@@ -468,6 +471,7 @@ impl User {
             groups,
             enabled: user.enabled,
             email_verified: user.email_verified,
+            user_expires: user.user_expires,
         };
 
         User::update(data, id, req, Some(user)).await
