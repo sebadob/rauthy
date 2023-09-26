@@ -326,6 +326,8 @@ pub struct NewUserRequest {
     /// Validation: `Vec<^[a-z0-9-_/,]{2,128}$>`
     #[validate(custom(function = "validate_vec_groups"))]
     pub roles: Vec<String>,
+    #[validate(range(min = 1672527600, max = 4070905200))]
+    pub user_expires: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
