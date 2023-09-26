@@ -339,7 +339,8 @@ pub struct UserResponse {
     pub last_failed_login: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub failed_login_attempts: Option<i64>,
-    pub webauthn_user_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_expires: Option<i64>,
 }
 
 impl From<User> for UserResponse {
@@ -366,7 +367,7 @@ impl From<User> for UserResponse {
             last_login: u.last_login,
             last_failed_login: u.last_failed_login,
             failed_login_attempts: u.failed_login_attempts,
-            webauthn_user_id: u.webauthn_user_id.map(|id| id.to_string()),
+            user_expires: u.user_expires,
         }
     }
 }

@@ -728,6 +728,11 @@ async fn grant_type_code(
 
         session.last_seen = OffsetDateTime::now_utc().unix_timestamp();
         session.state = SessionState::Auth;
+        if let Err(err) = session.validate_user_expiry(&user) {
+            code.delete(data).await?;
+            return Err(err);
+        }
+        session.validate_user_expiry(&user)?;
         session.user_id = Some(user.id);
         session.roles = Some(user.roles);
         session.groups = user.groups;
@@ -758,6 +763,12 @@ async fn grant_type_credentials(
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             String::from("'client_credentials' flow is allowed for confidential clients only"),
+        ));
+    }
+    if !client.enabled {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            String::from("client is disabled"),
         ));
     }
     let secret = client_secret.ok_or_else(|| {
@@ -825,6 +836,7 @@ async fn grant_type_password(
             )
         })?;
     user.check_enabled()?;
+    user.check_expired()?;
 
     match user.validate_password(data, password.clone()).await {
         Ok(_) => {
@@ -1405,9 +1417,12 @@ pub async fn validate_refresh_token(
         ));
     }
 
+    let mut user = User::find(data, uid).await?;
+    user.check_enabled()?;
+    user.check_expired()?;
+
     // at this point, everything has been validated -> we can issue a new TokenSet safely
     debug!("Refresh Token - all good!");
-    let mut user = User::find(data, uid).await?;
 
     // set last login
     user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());

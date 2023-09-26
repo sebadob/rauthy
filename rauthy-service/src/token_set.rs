@@ -1,7 +1,7 @@
 use crate::auth;
 use actix_web::web;
 use rauthy_common::constants::{OFFLINE_TOKEN_LT, TOKEN_BEARER};
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::scopes::Scope;
@@ -9,6 +9,7 @@ use rauthy_models::entity::user_attr::UserAttrValueEntity;
 use rauthy_models::entity::users::User;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use time::OffsetDateTime;
 use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -114,7 +115,23 @@ impl TokenSet {
         };
 
         // set the correct lifetime
-        let lifetime = if scope.contains("offline_access") {
+        let lifetime = if let Some(ts) = user.user_expires {
+            let now = OffsetDateTime::now_utc().unix_timestamp();
+            let diff = ts - now;
+            if diff < 1 {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "User has expired".to_string(),
+                ));
+            }
+
+            let client_lt = client.access_token_lifetime.unsigned_abs() as i64;
+            if client_lt < diff {
+                client_lt
+            } else {
+                diff
+            }
+        } else if scope.contains("offline_access") {
             *OFFLINE_TOKEN_LT
         } else {
             client.access_token_lifetime.unsigned_abs() as i64

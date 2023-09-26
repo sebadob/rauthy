@@ -284,6 +284,19 @@ impl User {
         Ok(res)
     }
 
+    pub async fn find_expired(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
+        let now = OffsetDateTime::now_utc()
+            .add(time::Duration::seconds(10))
+            .unix_timestamp();
+        tracing::debug!("User::find_expired - now: {}", now);
+        let res = sqlx::query_as::<_, Self>("select * from users where user_expires < $1")
+            .bind(now)
+            .fetch_all(&data.db)
+            .await?;
+        tracing::debug!("User::find_expired - users: {:?}", res);
+        Ok(res)
+    }
+
     // Saves a user
     pub async fn save(
         &self,
@@ -296,29 +309,31 @@ impl User {
         }
 
         let lang = self.language.as_str();
-        let q = sqlx::query(r#"update users set
+        let q = sqlx::query(
+            r#"update users set
             email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6,
-            enabled = $7, email_verified = $8, password_expires = $9, created_at = $10, last_login = $11,
-            last_failed_login = $12, failed_login_attempts = $13, language = $14,
+            enabled = $7, email_verified = $8, password_expires = $9, created_at = $10,
+            last_login = $11, last_failed_login = $12, failed_login_attempts = $13, language = $14,
             webauthn_user_id = $15, user_expires = $16
-            where id = $17"#)
-            .bind(&self.email)
-            .bind(&self.given_name)
-            .bind(&self.family_name)
-            .bind(&self.password)
-            .bind(&self.roles)
-            .bind(&self.groups)
-            .bind(self.enabled)
-            .bind(self.email_verified)
-            .bind(self.password_expires)
-            .bind(self.created_at)
-            .bind(self.last_login)
-            .bind(self.last_failed_login)
-            .bind(self.failed_login_attempts)
-            .bind(lang)
-            .bind(&self.webauthn_user_id)
-            .bind(self.user_expires)
-            .bind(&self.id);
+            where id = $17"#,
+        )
+        .bind(&self.email)
+        .bind(&self.given_name)
+        .bind(&self.family_name)
+        .bind(&self.password)
+        .bind(&self.roles)
+        .bind(&self.groups)
+        .bind(self.enabled)
+        .bind(self.email_verified)
+        .bind(self.password_expires)
+        .bind(self.created_at)
+        .bind(self.last_login)
+        .bind(self.last_failed_login)
+        .bind(self.failed_login_attempts)
+        .bind(lang)
+        .bind(&self.webauthn_user_id)
+        .bind(self.user_expires)
+        .bind(&self.id);
 
         if let Some(txn) = txn {
             q.execute(&mut **txn).await?;
@@ -412,6 +427,7 @@ impl User {
 
         user.enabled = upd_user.enabled;
         user.email_verified = upd_user.email_verified;
+        user.user_expires = upd_user.user_expires;
 
         user.save(data, old_email, None).await?;
         Ok(user)
@@ -468,6 +484,7 @@ impl User {
             groups,
             enabled: user.enabled,
             email_verified: user.email_verified,
+            user_expires: user.user_expires,
         };
 
         User::update(data, id, req, Some(user)).await
@@ -619,6 +636,18 @@ impl User {
                 ErrorResponseType::Disabled,
                 String::from("The user is not enabled"),
             ));
+        }
+        Ok(())
+    }
+
+    pub fn check_expired(&self) -> Result<(), ErrorResponse> {
+        if let Some(ts) = self.user_expires {
+            if OffsetDateTime::now_utc().unix_timestamp() > ts {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    String::from("User has expired"),
+                ));
+            }
         }
         Ok(())
     }
@@ -919,7 +948,7 @@ mod tests {
 
     #[test]
     fn test_session_impl() {
-        let user = User {
+        let mut user = User {
             id: "123".to_string(),
             email: "admin@localhost.de".to_string(),
             given_name: "Admin".to_string(),
@@ -936,9 +965,13 @@ mod tests {
             failed_login_attempts: None,
             language: Language::En,
             webauthn_user_id: None,
-            user_expires: None,
+            user_expires: Some(OffsetDateTime::now_utc().unix_timestamp()),
         };
-        let session = Session::new(Some(&user), 1, None);
+        let session = Session::try_new(&user, 1, None);
+        assert!(session.is_err());
+
+        user.user_expires = None;
+        let session = Session::try_new(&user, 1, None).unwrap();
 
         assert_eq!(session.is_valid(10), true);
         // sessions are validated with second accuracy

@@ -1,6 +1,11 @@
 <script>
     import * as yup from "yup";
-    import {extractFormErrors, formatDateFromTs} from "../../../utils/helpers.js";
+    import {
+        extractFormErrors,
+        formatDateFromTs,
+        formatDateToDateInput,
+        formatUtcTsFromDateInput
+    } from "../../../utils/helpers.js";
     import Switch from "$lib/Switch.svelte";
     import {globalGroupsNames, globalRolesNames} from "../../../stores/admin.js";
     import Button from "$lib/Button.svelte";
@@ -20,6 +25,8 @@
     let success = false;
     let timer;
     let language = user.language.toUpperCase();
+    let limitLifetime = !!user.user_expires;
+    let userExpires = limitLifetime ? formatDateFromTs(user.user_expires, true) : undefined;
 
     let allRoles = [];
     globalRolesNames.subscribe(rls => {
@@ -72,7 +79,17 @@
             groups: user.groups,
             enabled: user.enabled,
             email_verified: user.email_verified,
+            user_expires: null,
         };
+
+        if (limitLifetime) {
+            let d = formatUtcTsFromDateInput(userExpires);
+            if (!d) {
+                err = 'Invalid Date Input: User Expires';
+                return;
+            }
+            req.user_expires = d;
+        }
 
         let res = await putUser(user.id, req);
         if (res.ok) {
@@ -196,6 +213,29 @@
                 searchThreshold={4}
         />
     </div>
+
+    <!-- Limit Lifetime -->
+    <div class="unit" style:margin-top="12px">
+        <div class="label font-label">
+            LIMIT LIFETIME
+        </div>
+        <div class="value">
+            <Switch bind:selected={limitLifetime}/>
+        </div>
+    </div>
+    {#if limitLifetime}
+        <Input
+                type="datetime-local"
+                step="60"
+                width="18rem"
+                bind:value={userExpires}
+                on:input={validateForm}
+                min={new Date().toISOString().split('.')[0]}
+                max="2099-01-01T00:00"
+        >
+            USER EXPIRES
+        </Input>
+    {/if}
 
     <!-- Last Login-->
     <div class="unit" style:margin-top="12px">
