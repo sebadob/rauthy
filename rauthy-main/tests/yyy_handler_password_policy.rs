@@ -88,6 +88,7 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         language: Language::En,
         roles: vec!["user".to_string()],
         groups: None,
+        user_expires: None,
     };
     let mut res = reqwest::Client::new()
         .post(&url)
@@ -109,6 +110,7 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         groups: None,
         enabled: true,
         email_verified: false,
+        user_expires: None,
     };
     let user_url = format!("{}/{}", url, user.id);
     let mut res = reqwest::Client::new()
