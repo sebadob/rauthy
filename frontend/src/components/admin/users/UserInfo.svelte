@@ -26,7 +26,7 @@
     let timer;
     let language = user.language.toUpperCase();
     let limitLifetime = !!user.user_expires;
-    let userExpires = limitLifetime ? formatDateToDateInput(new Date(user.user_expires * 1000)) : undefined;
+    let userExpires = limitLifetime ? formatDateFromTs(user.user_expires, true) : undefined;
 
     let allRoles = [];
     globalRolesNames.subscribe(rls => {

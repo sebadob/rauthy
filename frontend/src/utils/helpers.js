@@ -148,11 +148,10 @@ export const formatUtcTsFromDateInput = inputDate => {
 	if (isNaN(d)) {
 		return;
 	}
-	const tzDiff = -new Date().getTimezoneOffset() * 60;
-	return d / 1000 + tzDiff;
+	return d / 1000;
 }
 
-export const formatDateFromTs = ts => {
+export const formatDateFromTs = (ts, fmtIso) => {
 	const utcOffsetMinutes = -new Date().getTimezoneOffset();
 	const d = new Date((ts + utcOffsetMinutes * 60) * 1000);
 
@@ -179,6 +178,9 @@ export const formatDateFromTs = ts => {
 		sc = '0' + sc;
 	}
 
+	if (fmtIso) {
+		return `${yyyy}-${mm}-${dd}T${hr}:${mn}:${sc}`;
+	}
 	return `${yyyy}/${mm}/${dd} ${hr}:${mn}:${sc}`;
 }
 
