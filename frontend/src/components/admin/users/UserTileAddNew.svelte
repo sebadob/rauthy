@@ -3,12 +3,13 @@
     import * as yup from "yup";
     import {LANGUAGES, REGEX_NAME} from "../../../utils/constants.js";
     import {globalGroupsNames, globalRolesNames} from "../../../stores/admin.js";
-    import {extractFormErrors} from "../../../utils/helpers.js";
+    import {extractFormErrors, formatUtcTsFromDateInput} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
     import {postUser} from "../../../utils/dataFetchingAdmin.js";
     import ItemTiles from "$lib/itemTiles/ItemTiles.svelte";
     import Input from "$lib/inputs/Input.svelte";
     import OptionSelect from "$lib/OptionSelect.svelte";
+    import Switch from "$lib/Switch.svelte";
 
     export let idx = -1;
     export let onSave;
@@ -18,6 +19,8 @@
     let expandContainer;
 
     let language = 'EN';
+    let limitLifetime = false;
+    let userExpires = undefined;
     let formValues = {
         email: '',
         family_name: '',
@@ -53,6 +56,15 @@
 
         let data = formValues;
         data.language = language.toLowerCase();
+
+        if (limitLifetime) {
+            let d = formatUtcTsFromDateInput(userExpires);
+            if (!d) {
+                err = 'Invalid Date Input: User Expires';
+                return;
+            }
+            data.user_expires = d;
+        }
 
         let res = await postUser(formValues);
         if (res.ok) {
@@ -144,6 +156,29 @@
                     searchThreshold={4}
             />
         </div>
+
+        <div class="unit" style:margin-top="12px">
+            <div class="label font-label">
+                LIMIT LIFETIME
+            </div>
+            <div class="value">
+                <Switch bind:selected={limitLifetime}/>
+            </div>
+        </div>
+        {#if limitLifetime}
+            <Input
+                    type="datetime-local"
+                    step="60"
+                    width="18rem"
+                    bind:value={userExpires}
+                    on:input={validateForm}
+                    min={new Date().toISOString().split('.')[0]}
+                    max="2099-01-01T00:00"
+            >
+                USER EXPIRES
+            </Input>
+        {/if}
+
         <div class="btn">
             <Button on:click={onSubmit} level={1}>SAVE</Button>
 
@@ -185,6 +220,10 @@
         margin: 7px 5px;
         display: flex;
         gap: .33rem;
+    }
+
+    .unit {
+        margin: 7px 5px;
     }
 
     .tiles {
