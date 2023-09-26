@@ -70,6 +70,13 @@
         if (res.ok) {
             formValues = {};
             expandContainer = false;
+            formValues = {
+                email: '',
+                family_name: '',
+                given_name: '',
+                roles: [],
+                groups: [],
+            };
             onSave();
         } else {
             let body = await res.json();
