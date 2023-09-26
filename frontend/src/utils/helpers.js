@@ -13,25 +13,25 @@ import {
 import sjcl from "sjcl";
 import { decode, encode } from "base64-arraybuffer";
 
-export function getCookie(cname) {
-	let name = cname + "=";
-	let decodedCookie = decodeURIComponent(document.cookie);
-	let ca = decodedCookie.split(';');
-	for (let i = 0; i < ca.length; i++) {
-		let c = ca[i];
-		while (c.charAt(0) === ' ') {
-			c = c.substring(1);
-		}
-		if (c.indexOf(name) === 0) {
-			return c.substring(name.length, c.length);
-		}
-	}
-	return "";
-}
-
-function deleteCookie(name) {
-	document.cookie = name + '=; Max-Age=-1;';
-}
+// export function getCookie(cname) {
+// 	let name = cname + "=";
+// 	let decodedCookie = decodeURIComponent(document.cookie);
+// 	let ca = decodedCookie.split(';');
+// 	for (let i = 0; i < ca.length; i++) {
+// 		let c = ca[i];
+// 		while (c.charAt(0) === ' ') {
+// 			c = c.substring(1);
+// 		}
+// 		if (c.indexOf(name) === 0) {
+// 			return c.substring(name.length, c.length);
+// 		}
+// 	}
+// 	return "";
+// }
+//
+// function deleteCookie(name) {
+// 	document.cookie = name + '=; Max-Age=-1;';
+// }
 
 export function extractFormErrors(err) {
 	return err.inner.reduce((acc, err) => {
@@ -134,12 +134,25 @@ export const computePow = (powChallenge) => {
 }
 
 
-export const dateFromUtcTs = (ts) => {
-	const utcOffsetMinutes = -new Date().getTimezoneOffset();
-	return new Date((ts + utcOffsetMinutes * 60) * 1000);
+// export const dateFromUtcTs = (ts) => {
+// 	const utcOffsetMinutes = -new Date().getTimezoneOffset();
+// 	return new Date((ts + utcOffsetMinutes * 60) * 1000);
+// }
+
+export const formatDateToDateInput = date => {
+	return date.toISOString().split('.')[0];
 }
 
-export const formatDateFromTs = (ts) => {
+export const formatUtcTsFromDateInput = inputDate => {
+	let d = Date.parse(inputDate);
+	if (isNaN(d)) {
+		return;
+	}
+	const tzDiff = -new Date().getTimezoneOffset() * 60;
+	return d / 1000 + tzDiff;
+}
+
+export const formatDateFromTs = ts => {
 	const utcOffsetMinutes = -new Date().getTimezoneOffset();
 	const d = new Date((ts + utcOffsetMinutes * 60) * 1000);
 
