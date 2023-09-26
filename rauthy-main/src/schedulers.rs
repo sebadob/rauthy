@@ -18,13 +18,6 @@ use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info};
 
-/**
-The main scheduler function, where everything is defined.<br>
-I runs in its own thread and executes the schedulers synchronously - no async needed here.
-
-One important value is the SCHED_SLEEP_DURATION. This affects the graceful shutdown time of the
-application, if it is too high.
-*/
 pub async fn scheduler_main(data: web::Data<AppState>) {
     info!("Starting schedulers");
 
@@ -70,33 +63,6 @@ pub async fn db_backup(db: DbPool) {
         }
     }
 }
-
-// // Cleans up old / expired / already used Authorization Codes
-// // Cleanup inside the cache is done automatically with a max entry lifetime of 300 seconds
-// pub async fn auth_codes_cleanup(data: web::Data<AppState>) {
-//     let mut interval = time::interval(Duration::from_secs(60 * 17));
-//
-//     loop {
-//         interval.tick().await;
-//
-//         debug!("Running auth_codes_cleanup scheduler");
-//         match DATA_STORE.scan_cf(Cf::AuthCodes).await {
-//             Ok(bytes) => {
-//                 let del = bytes
-//                     .iter()
-//                     .map(|(_, b)| bincode::deserialize::<AuthCode>(b).unwrap())
-//                     .filter(|code| code.exp < chrono::Local::now().naive_local())
-//                     .collect::<Vec<AuthCode>>();
-//                 for code in del {
-//                     if let Err(err) = code.delete(&data).await {
-//                         error!("Auth Code Cleanup Error: {}", err.message);
-//                     }
-//                 }
-//             }
-//             Err(err) => error!("AuthCodes cleanup scheduler error: {}", err.message),
-//         }
-//     }
-// }
 
 // Cleans up old / expired magic links and deletes users, that have never used their
 // 'set first ever password' magic link to keep the database clean in case of an open user registration.
@@ -206,6 +172,9 @@ pub async fn user_expiry_checker(data: web::Data<AppState>) {
                 * 60
         })
         .ok();
+    if cleanup_after_secs.is_none() {
+        info!("Auto cleanup for expired users disabled");
+    }
 
     loop {
         interval.tick().await;
@@ -246,14 +215,9 @@ pub async fn user_expiry_checker(data: web::Data<AppState>) {
                         );
                     }
 
-                    debug!("cleanup_after_secs {:?}", cleanup_after_secs);
                     // possibly auto-cleanup expired user
                     if let Some(secs) = cleanup_after_secs {
                         let expired_since_secs = (exp_ts - now).abs() as u64;
-                        debug!(
-                            "expired_since_secs > sec: {} > {}",
-                            expired_since_secs, secs
-                        );
                         if expired_since_secs > secs {
                             info!(
                                 "Auto cleanup for user {} after being expired for {} minutes",
