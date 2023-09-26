@@ -39,7 +39,6 @@
 
     let schema;
     $: if (t) {
-        console.log(t);
         schema = yup.object().shape({
             email: yup.string().required(t.required).email(t.badFormat),
             password: yup.string().required(t.required),
@@ -49,6 +48,12 @@
 
     $: if (formValues.password?.length > 0 && formValues.password === formValues.passwordConfirm) {
         showCopy = true;
+    }
+
+    $: if (success) {
+        setTimeout(() => {
+            window.location.replace('/auth/v1/account');
+        }, 5000);
     }
 
     onMount(async () => {
