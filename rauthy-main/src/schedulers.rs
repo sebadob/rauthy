@@ -217,7 +217,7 @@ pub async fn user_expiry_checker(data: web::Data<AppState>) {
 
                     // possibly auto-cleanup expired user
                     if let Some(secs) = cleanup_after_secs {
-                        let expired_since_secs = (exp_ts - now).abs() as u64;
+                        let expired_since_secs = (exp_ts - now).unsigned_abs();
                         if expired_since_secs > secs {
                             info!(
                                 "Auto cleanup for user {} after being expired for {} minutes",

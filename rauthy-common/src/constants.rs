@@ -170,4 +170,8 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
         .expect("WEBAUTHN_FORCE_UV cannot be parsed to bool - bad format");
+    pub static ref WEBAUTHN_NO_PASSWORD_EXPIRY: bool = env::var("WEBAUTHN_FORCE_UV")
+        .unwrap_or_else(|_| String::from("true"))
+        .parse::<bool>()
+        .expect("WEBAUTHN_NO_PASSWORD_EXPIRY cannot be parsed to bool - bad format");
 }

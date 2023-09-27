@@ -14,7 +14,7 @@ use crate::request::{
 };
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;
-use rauthy_common::constants::{CACHE_NAME_12HR, IDX_USERS};
+use rauthy_common::constants::{CACHE_NAME_12HR, IDX_USERS, WEBAUTHN_NO_PASSWORD_EXPIRY};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
 use rauthy_common::utils::{get_client_ip, new_store_id};
@@ -620,13 +620,19 @@ impl User {
             }
         }
 
-        let password_expires = rules.valid_days.map(|d| {
-            OffsetDateTime::now_utc()
-                .add(::time::Duration::days(d as i64))
-                .unix_timestamp()
-        });
-        self.password_expires = password_expires;
+        if *WEBAUTHN_NO_PASSWORD_EXPIRY && self.has_webauthn_enabled() {
+            self.password_expires = None;
+        } else {
+            let password_expires = rules.valid_days.map(|d| {
+                OffsetDateTime::now_utc()
+                    .add(::time::Duration::days(d as i64))
+                    .unix_timestamp()
+            });
+            self.password_expires = password_expires;
+        }
+
         self.password = Some(new_hash);
+
         Ok(())
     }
 

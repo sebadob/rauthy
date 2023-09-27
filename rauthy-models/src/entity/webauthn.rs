@@ -10,7 +10,7 @@ use actix_web::http::header::HeaderValue;
 use actix_web::{cookie, web, HttpResponse};
 use rauthy_common::constants::{
     CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, COOKIE_MFA, IDX_WEBAUTHN, WEBAUTHN_FORCE_UV,
-    WEBAUTHN_RENEW_EXP, WEBAUTHN_REQ_EXP,
+    WEBAUTHN_NO_PASSWORD_EXPIRY, WEBAUTHN_RENEW_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{base64_decode, decrypt};
@@ -835,6 +835,9 @@ pub async fn reg_finish(
             let mut txn = data.db.begin().await?;
             if user.webauthn_user_id.is_none() {
                 user.webauthn_user_id = Some(reg_data.passkey_user_id.to_string());
+                if *WEBAUTHN_NO_PASSWORD_EXPIRY {
+                    user.password_expires = None;
+                }
                 user.save(data, None, Some(&mut txn)).await?;
             }
             PasskeyEntity::create(
