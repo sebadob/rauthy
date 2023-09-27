@@ -4,10 +4,12 @@ use actix_web::{cookie, delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
 use rauthy_common::constants::{
     COOKIE_MFA, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE, USER_REG_DOMAIN_RESTRICTION,
+    WEBAUTHN_NO_PASSWORD_EXPIRY,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::colors::ColorEntity;
+use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
@@ -27,6 +29,8 @@ use rauthy_models::response::{
 };
 use rauthy_models::templates::UserRegisterHtml;
 use rauthy_service::password_reset;
+use std::ops::Add;
+use time::OffsetDateTime;
 use tracing::{error, warn};
 
 /// Returns all existing users
@@ -704,6 +708,20 @@ pub async fn delete_webauthn(
     if pks.len() < 2 {
         let mut user = User::find(&data, id).await?;
         user.webauthn_user_id = None;
+
+        // in this case, we need to check against the current password policy, if the password
+        // should expire again
+        let policy = PasswordPolicy::find(&data).await?;
+        if let Some(valid_days) = policy.valid_days {
+            if *WEBAUTHN_NO_PASSWORD_EXPIRY {
+                user.password_expires = Some(
+                    OffsetDateTime::now_utc()
+                        .add(time::Duration::days(valid_days as i64))
+                        .unix_timestamp(),
+                );
+            }
+        }
+
         user.save(&data, None, Some(&mut txn)).await?;
         txn.commit().await?;
     } else {
