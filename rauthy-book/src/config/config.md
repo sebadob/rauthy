@@ -420,4 +420,10 @@ RP_NAME='Rauthy Webauthn'
 # (default: false)
 #WEBAUTHN_FORCE_UV=false
 
+# Can be set to 'true' to disable password expiry for users that have at least one active passkey.
+# When set to 'false', the same password expiry from the set policy will apply to these users as well.
+# With this option active, rauthy will ignore any password expiry set by the password policy for Webauthn users.
+# default: true
+#WEBAUTHN_NO_PASSWORD_EXPIRY=true
+
 ```
