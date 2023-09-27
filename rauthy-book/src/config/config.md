@@ -13,12 +13,13 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 ############## ACCESS ###############
 #####################################
 
-# If the User Registration endpoint should be accessible by anyone. If not, an admin
-# must create each new user. (default: false)
+# If the User Registration endpoint should be accessible by anyone.
+# If not, an admin must create each new user. (default: false)
 #OPEN_USER_REG=true
 
-# Can be used when 'OPEN_USER_REG=true' to restrict the domains for a registration.
-# For instance, set it to 'USER_REG_DOMAIN_RESTRICTION=gmail.com' to allow only
+# Can be used when 'OPEN_USER_REG=true' to restrict the domains
+# for a registration. For instance, set it to
+# 'USER_REG_DOMAIN_RESTRICTION=gmail.com' to allow only
 # registrations with 'user@gmail.com' (default: '')
 #USER_REG_DOMAIN_RESTRICTION=some-domain.com
 
@@ -30,12 +31,12 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # sec min hour day_of_month month day_of_week year
 #BACKUP_TASK="0 0 4 * * * *"
 
-# The name for the data store backups. The current timestamp will always be appended
-# automatically. (default: rauthy-backup-)
+# The name for the data store backups. The current timestamp
+# will always be appended automatically. (default: rauthy-backup-)
 #BACKUP_NAME="rauthy-backup-"
 
-# All backups older than the specified hours will be cleaned up automatically
-# (default: 720)
+# All backups older than the specified hours will be cleaned up
+# automatically (default: 720)
 #BACKUP_RETENTION_LOCAL=720
 
 #####################################
@@ -46,7 +47,8 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # accepts 'true|false', defaults to 'false'
 #HA_MODE=false
 
-# The connection strings (with hostnames) of the HA instances as a CSV
+# The connection strings (with hostnames) of the HA instances
+# as a CSV.
 # Format: 'scheme://hostname:port'
 #HA_HOSTS="http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000"
 
@@ -56,13 +58,14 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 #HOSTNAME_OVERWRITE="rauthy-0.rauthy:8080"
 
 ## Define buffer sizes for channels between the components
-# Buffer for client requests on the incoming stream - server side (default: 128)
+# Buffer for client requests on the incoming stream - server
+# side (default: 128)
 # Make sense to have the CACHE_BUF_SERVER set to:
 # `(number of total HA cache hosts - 1) * CACHE_BUF_CLIENT`
 # In a non-HA deployment, set the same size for both
 #CACHE_BUF_SERVER=128
-# Buffer for client requests to remote servers for all cache operations
-# (default: 128)
+# Buffer for client requests to remote servers for all cache
+# operations (default: 128)
 #CACHE_BUF_CLIENT=128
 
 # Secret token, which is used to authenticate the cache members
@@ -76,17 +79,19 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # The keepalive ping timeout in seconds (default: 5)
 #CACHE_KEEPALIVE_TIMEOUT=5
 
-# The timeout for the leader election. If a newly saved leader request has
-# not reached quorum after the timeout, the leader will be reset and a new
-# request will be sent out.
-# CAUTION: This should not be lower than CACHE_RECONNECT_TIMEOUT_UPPER,
-# since cold starts and elections will be problematic in that case.
+# The timeout for the leader election. If a newly saved leader
+# request has not reached quorum after the timeout, the leader
+# will be reset and a new request will be sent out.
+# CAUTION:
+# This should not be lower than CACHE_RECONNECT_TIMEOUT_UPPER,
+# since cold starts and elections will be problematic in that
+# case.
 # value in seconds, default: 15
 #CACHE_ELECTION_TIMEOUT=15
 
-# These 2 values define the reconnect timeout for the HA Cache Clients.
-# The values are in ms and a random between these 2 will be chosen each
-# time to avoid conflicts and race conditions
+# These 2 values define the reconnect timeout for the HA Cache
+# Clients. The values are in ms and a random between these 2
+# will be chosen each time to avoid conflicts and race conditions
 # (default: 2500)
 #CACHE_RECONNECT_TIMEOUT_LOWER=2500
 # (default: 5000)
@@ -96,19 +101,22 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 ############ DATABASE ###############
 #####################################
 
-# The database driver will be chosen at runtime depending on the given
-# DATABASE_URL format. Examples:
+# The database driver will be chosen at runtime depending on
+# the given DATABASE_URL format. Examples:
 # Sqlite: 'sqlite:data/rauthy.db' or 'sqlite::memory:'
 # Postgres: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
 #
 # NOTE: The password in this case should be alphanumeric. Special
 # characters could cause problems in the connection string.
 #
-# CAUTION: To make the automatic migrations work with Postgres15, when
-# you do not want to just use the `postgres` user, You need to have a
-# user with the same name as the DB / schema. For instance, the
-# following would work without granting extra access to the `public`
-# schema which is disabled by default since PG15:
+# CAUTION:
+# To make the automatic migrations work with Postgres15, when
+# you do not want to just use the `postgres` user, You need
+# to have a user with the same name as the DB / schema. For
+# instance, the following would work without granting extra
+# access to the `public` schema which is disabled by default
+# since PG15:
+#
 # database: rauthy
 # user: rauthy
 # schema: rauthy with owner rauthy
@@ -120,9 +128,11 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # Max DB connections - irrelevant for SQLite (default: 5)
 #DATABASE_MAX_CONN=5
 
-# If specified, the current Database, set with DATABASE_URL, will be
-# DELETED and OVERWRITTEN with a migration from the given database
-# with this variable. Can be used to migrate between different databases.
+# If specified, the current Database, set with DATABASE_URL,
+# will be DELETED and OVERWRITTEN with a migration from the
+# given database with this variable. Can be used to migrate
+# between different databases.
+# 
 # !!! USE WITH CARE !!!
 #MIGRATE_DB_FROM=sqlite:data/rauthy.db
 
@@ -412,17 +422,24 @@ RP_NAME='Rauthy Webauthn'
 # The value is in hours (default: 2160)
 #WEBAUTHN_RENEW_EXP=2160
 
-# This feature can be set to 'true' to force User verification during the Webauthn ceremony.
-# UV will be true, if the user does not only need to verify its presence by touching the key, but by also providing
-# proof that he knows (or is) some secret via a PIN or biometric key for instance.
-# With UV, we have a true MFA scenario where UV == false (user presence only) would be a 2FA scenario (with password).
-# Be careful with this option, since Android and some special combinations of OS + browser to not support UV yet.
+# This feature can be set to 'true' to force User verification
+# during the Webauthn ceremony. UV will be true, if the user
+# does not only need to verify its presence by touching the key,
+# but by also providing proof that he knows (or is) some secret
+# via a PIN or biometric key for instance. With UV, we have a
+# true MFA scenario where UV == false (user presence only)
+# would be a 2FA scenario (with password). Be careful with this
+# option, since Android and some special combinations of OS +
+# browser to not support UV yet.
 # (default: false)
 #WEBAUTHN_FORCE_UV=false
 
-# Can be set to 'true' to disable password expiry for users that have at least one active passkey.
-# When set to 'false', the same password expiry from the set policy will apply to these users as well.
-# With this option active, rauthy will ignore any password expiry set by the password policy for Webauthn users.
+# Can be set to 'true' to disable password expiry for users
+# that have at least one active passkey. When set to 'false',
+# the same password expiry from the set policy will apply to
+# these users as well.
+# With this option active, rauthy will ignore any password
+# expiry set by the password policy for Webauthn users.
 # default: true
 #WEBAUTHN_NO_PASSWORD_EXPIRY=true
 
