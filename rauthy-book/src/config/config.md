@@ -23,6 +23,24 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # registrations with 'user@gmail.com' (default: '')
 #USER_REG_DOMAIN_RESTRICTION=some-domain.com
 
+# If set to 'true', this will validate the remote peer IP address with each request and compare it with the
+# IP which was used during the initial session creation / login.
+# If the IP is different, the session will be rejected.
+# This is a security hardening and prevents stolen access credentials, for instance if an attacker might have
+# copied the encrypted session cookie and the XSRF token from the local storage from a user. However, this event
+# is really unlikely, since it may only happen if an attacker has direct access to the machine itself.
+#
+# If your users are using mobile networks and get new IP addresses all the time, this means they have to do a
+# new login each time. This is no big deal at all with Webauthn / FIDO keys anyway and should not be a reason
+# to deactivate this feature.
+#
+# Caution: If you are running behind a reverse proxy which does not provide the X-FORWARDED-FOR header correctly,
+# or you have the PROXY_MODE in this config disabled, this feature will not work. You can validate the IPs for
+# each session in the Admin UI. If these are correct, your setup is okay.
+#
+# (default: true)
+#SESSION_VALIDATE_IP=true
+
 #####################################
 ############# BACKUPS ###############
 #####################################
@@ -261,6 +279,24 @@ MAX_HASH_THREADS=1
 # - Off
 # (default: Modifying)
 LOG_LEVEL_ACCESS=Basic
+
+#####################################
+############## METRICS ##############
+#####################################
+
+# To enable or disable the additional HTTP server to expose the /metrics endpoint
+# default: true
+#METRICS_ENABLE=true
+
+# The IP address to listen on for the /metrics endpoint.
+# You do not want to expose your metrics on a publicly reachable endpoint!
+# default: 0.0.0.0
+#METRICS_ADDR=0.0.0.0
+
+# The post to listen on for the /metrics endpoint.
+# You do not want to expose your metrics on a publicly reachable endpoint!
+# default: 9090
+#METRICS_PORT=9090
 
 #####################################
 ################ MFA ################

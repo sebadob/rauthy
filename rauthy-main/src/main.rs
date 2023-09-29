@@ -16,8 +16,11 @@
 
 use crate::cache_notify::handle_notify;
 use crate::logging::setup_logging;
+use actix_web::rt::System;
 use actix_web::{middleware, web, App, HttpServer};
 use actix_web_grants::GrantsMiddleware;
+use actix_web_prom::PrometheusMetricsBuilder;
+use prometheus::Registry;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW,
     CACHE_NAME_SESSIONS, CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, POW_EXP, RAUTHY_VERSION,
@@ -33,6 +36,8 @@ use rauthy_models::email::EMail;
 use rauthy_models::{email, ListenScheme};
 use rauthy_service::auth;
 use std::error::Error;
+use std::net::{AddrParseError, Ipv4Addr};
+use std::str::FromStr;
 use std::time::Duration;
 use std::{env, thread};
 use tokio::sync::mpsc;
@@ -214,11 +219,59 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
         workers = num_cpus::get();
     }
 
+    // OpenAPI / Swagger
     let swagger = SwaggerUi::new("/docs/v1/swagger-ui/{_:.*}")
         .url("/docs/v1/api-doc/openapi.json", ApiDoc::build(&app_state))
         .config(
             utoipa_swagger_ui::Config::from("../api-doc/openapi.json").try_it_out_enabled(false),
         );
+
+    // Prometheus metrics
+    let metrics_enable = env::var("METRICS_ENABLE")
+        .unwrap_or_else(|_| "true".to_string())
+        .parse::<bool>()
+        .expect("Cannot parse METRICS_ENABLE to bool");
+    let pub_metrics = if metrics_enable {
+        let shared_registry = Registry::new();
+        let metrics = PrometheusMetricsBuilder::new("api")
+            .registry(shared_registry.clone())
+            .endpoint("/metrics")
+            .exclude("/favicon.ico")
+            .exclude("/metrics")
+            .build()
+            .unwrap();
+
+        thread::spawn(move || {
+            let addr = env::var("METRICS_ADDR").unwrap_or_else(|_| "0.0.0.0".to_string());
+            let port = env::var("METRICS_PORT").unwrap_or_else(|_| "9090".to_string());
+            if let Err(err) = Ipv4Addr::from_str(&addr) {
+                let msg = format!("Error parsing METRICS_ADDR: {}", err);
+                error!(msg);
+                panic!("{}", msg);
+            }
+            let addr_full = format!("{}:{}", addr, port);
+
+            let srv = HttpServer::new(move || App::new().wrap(metrics.clone()))
+                .bind(addr_full)
+                .unwrap()
+                .run();
+            System::new().block_on(srv).unwrap();
+        });
+
+        PrometheusMetricsBuilder::new("rauthy")
+            .registry(shared_registry)
+            // no endpoint means it will not expose one, only collect data
+            .exclude("/favicon.ico")
+            .exclude("/metrics")
+            .build()
+            .unwrap()
+    } else {
+        PrometheusMetricsBuilder::new("rauthy")
+            // no endpoint means it will not expose one, only collect data
+            .exclude_regex(".*")
+            .build()
+            .unwrap()
+    };
 
     // Note: all .wrap's are executed in reverse order -> the last .wrap is executed as the first
     // one for any new request
@@ -249,6 +302,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                     .add(("cache-control", "no-store"))
                     .add(("pragma", "no-cache")),
             )
+            .wrap(pub_metrics.clone())
             .service(generic::redirect)
             .service(
                     web::scope("/auth")

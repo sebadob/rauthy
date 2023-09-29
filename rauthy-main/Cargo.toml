@@ -37,6 +37,8 @@ tokio = { version = "1", features = ["full"] }
 utoipa = { version = "3", features = ["actix_extras", "chrono", "openapi_extensions"] }
 utoipa-swagger-ui = { version = "3", features = ["actix-web"] }
 validator = { version = "0.16", features = ["derive"] }
+actix-web-prom = "0.7.0"
+prometheus = "0.13.3"
 
 [dev-dependencies]
 josekit = "0.8"
