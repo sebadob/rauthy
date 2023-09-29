@@ -24,6 +24,10 @@
             label: 'Session ID',
             callback: (item, search) => item.id.toLowerCase().includes(search.toLowerCase()),
         },
+        {
+            label: 'IP',
+            callback: (item, search) => item.remote_ip?.toLowerCase().includes(search.toLowerCase()),
+        },
     ];
     let orderOptions = [
         {label: 'Expires', callback: (a, b) => a.exp - b.exp},
@@ -31,6 +35,7 @@
         {label: 'Session ID', callback: (a, b) => a.id.localeCompare(b.id)},
         {label: 'User ID', callback: (a, b) => a.user_id?.localeCompare(b.user_id)},
         {label: 'State', callback: (a, b) => a.state.localeCompare(b.state)},
+        {label: 'IP', callback: (a, b) => a.remote_ip?.localeCompare(b.remote_ip)},
     ];
 
     onMount(async () => {
@@ -81,76 +86,52 @@
                     orderOptions={orderOptions}
                     firstDirReverse
             />
-            <div class="button">
+            <div class="button" style:margin-top="-10px">
                 <Button on:click={invalidateSessions} level={3}>
                     Invalidate All Sessions
                 </Button>
             </div>
         </div>
 
-        <!--  header-->
-        <div class="row">
-            <div class="c1">
-                <b>
-                    Session ID
-                </b>
-            </div>
-
-            <div class="c2">
-                <b>
-                    User ID
-                </b>
-            </div>
-
-            <div class="c3">
-                <b>
-                    State
-                </b>
-            </div>
-
-            <div class="c4">
-                <b>
-                    MFA
-                </b>
-            </div>
-
-            <div class="c5">
-                <b>
-                    Expires
-                </b>
-            </div>
-
-            <div class="c6">
-                <b>
-                    Last Seen
-                </b>
-            </div>
-        </div>
-
         {#each resSessions as session}
             <div class={session.exp > now ? 'entryRow' : 'entryRow expired'}>
-                <div class="c1 font-mono">
-                    {session.id}
+                <div class="row1">
+                    <div class="col-sid flex font-mono">
+                        <div class="label" style:margin-right=".75rem">SID:</div>
+                        {session.id}
+                    </div>
+
+                    <div class="col-exp flex">
+                        <div class="label">EXP:</div>
+                        {formatDateFromTs(session.exp)}
+                    </div>
+
+                    <div class="col-seen flex">
+                        <div class="label">SEEN:</div>
+                        {formatDateFromTs(session.last_seen)}
+                    </div>
                 </div>
 
-                <div class="c2 font-mono">
-                    {session.user_id}
-                </div>
+                <div class="row2">
+                    <div class="col-uid flex font-mono">
+                        <div class="label">USER:</div>
+                        {session.user_id}
+                    </div>
 
-                <div class="c3">
-                    {session.state}
-                </div>
+                    <div class="col-state flex">
+                        <div class="label">STATE:</div>
+                        {session.state}
+                    </div>
 
-                <div class="c4">
-                    <CheckIcon check={session.is_mfa}/>
-                </div>
+                    <div class="col-ip flex">
+                        <div class="label">IP:</div>
+                        {session.remote_ip}
+                    </div>
 
-                <div class="c5">
-                    {formatDateFromTs(session.exp)}
-                </div>
-
-                <div class="c6">
-                    {formatDateFromTs(session.last_seen)}
+                    <div class="col-mfa flex">
+                        <div class="label">MFA:</div>
+                        <CheckIcon check={session.is_mfa}/>
+                    </div>
                 </div>
             </div>
         {/each}
@@ -162,44 +143,68 @@
         margin: 10px 0 0 25px;
     }
 
-    .c1 {
-        width: 325px;
-        margin-left: 5px;
+    .col-sid {
+        width: 23rem;
     }
 
-    .c2 {
-        width: 240px;
+    .col-uid {
+        width: 23rem;
     }
 
-    .c3 {
-        width: 90px;
+    .col-state {
+        width: 12.25rem;
     }
 
-    .c4 {
-        width: 45px;
+    .col-mfa {
+        width: 4.5rem;
     }
 
-    .c5 {
-        width: 160px;
+    .col-exp {
+        width: 12.25rem;
     }
 
-    .c6 {
-        width: 160px;
+    .col-seen {
+        width: 13rem;
+    }
+
+    .col-ip {
+        width: 9.75rem;
     }
 
     .expired {
         background: var(--col-gmid);
     }
 
-    .row, .entryRow {
+    .flex {
         display: flex;
-        justify-content: space-between;
-        width: 1023px;
-        border-bottom: 1px solid var(--col-gmid);
+        align-items: center;
+    }
+
+    .label {
+        margin-right: .25rem;
+        font-weight: bold;
+        font-size: .9rem;
+    }
+
+    .entryRow {
+        max-width: 50rem;
+        margin-bottom: 1rem;
     }
 
     .entryRow:hover {
         background: var(--col-acnt);
         color: white
+    }
+
+    .row1, .row2 {
+        display: inline-flex;
+        flex-wrap: wrap;
+        flex: 1;
+    }
+
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
     }
 </style>
