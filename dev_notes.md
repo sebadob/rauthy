@@ -37,7 +37,6 @@ in another terminal:
 
 - add a new table that keeps track about when password expiry / reset emails were sent out to avoid duplicates
 - when a user changes his email address, set email to not verified again and send a validation email
-- add tracing-actix-web + opentelemetry
 - NATS events stream or maybe internal one?
 - benchmarks and performance tuning
 - double check against https://openid.net/specs/openid-connect-core-1_0.html that everything is implemented correctly one more time
