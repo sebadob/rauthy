@@ -24,6 +24,10 @@
             label: 'Session ID',
             callback: (item, search) => item.id.toLowerCase().includes(search.toLowerCase()),
         },
+        {
+            label: 'IP',
+            callback: (item, search) => item.remote_ip?.toLowerCase().includes(search.toLowerCase()),
+        },
     ];
     let orderOptions = [
         {label: 'Expires', callback: (a, b) => a.exp - b.exp},
@@ -31,6 +35,7 @@
         {label: 'Session ID', callback: (a, b) => a.id.localeCompare(b.id)},
         {label: 'User ID', callback: (a, b) => a.user_id?.localeCompare(b.user_id)},
         {label: 'State', callback: (a, b) => a.state.localeCompare(b.state)},
+        {label: 'IP', callback: (a, b) => a.remote_ip?.localeCompare(b.remote_ip)},
     ];
 
     onMount(async () => {
