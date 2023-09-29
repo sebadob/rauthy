@@ -46,6 +46,7 @@ pub async fn get_sessions(
             state: &s.state,
             exp: s.exp,
             last_seen: s.last_seen,
+            remote_ip: s.remote_ip.as_deref(),
         })
         .collect::<Vec<SessionResponse>>();
     Ok(HttpResponse::Ok().json(resp))

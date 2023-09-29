@@ -235,6 +235,7 @@ pub struct SessionResponse<'a> {
     pub state: &'a SessionState,
     pub exp: i64,
     pub last_seen: i64,
+    pub remote_ip: Option<&'a str>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
