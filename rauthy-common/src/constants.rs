@@ -137,6 +137,11 @@ lazy_static! {
         .parse::<u32>()
         .expect("SESSION_TIMEOUT cannot be parsed to u32 - bad format");
 
+    pub static ref SESSION_VALIDATE_IP: bool = env::var("SESSION_VALIDATE_IP")
+        .unwrap_or_else(|_| String::from("true"))
+        .parse::<bool>()
+        .expect("SESSION_VALIDATE_IP cannot be parsed to bool - bad format");
+
     pub static ref SMTP_USERNAME: String = env::var("SMTP_USERNAME")
         .expect("SMTP_USERNAME is not set")
         .trim()

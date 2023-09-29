@@ -1,9 +1,10 @@
+use crate::real_ip_from_svc_req;
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     web, Error, HttpMessage,
 };
 use futures::future::LocalBoxFuture;
-use rauthy_common::constants::COOKIE_SESSION;
+use rauthy_common::constants::{COOKIE_SESSION, SESSION_VALIDATE_IP};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::sessions::Session;
@@ -82,7 +83,12 @@ async fn get_session_from_cookie(req: &ServiceRequest) -> Result<Option<Session>
 
     match Session::find(data, session_id.to_string()).await {
         Ok(mut session) => {
-            if session.is_valid(data.session_timeout) {
+            let remote_ip = if *SESSION_VALIDATE_IP {
+                real_ip_from_svc_req(req)
+            } else {
+                None
+            };
+            if session.is_valid(data.session_timeout, remote_ip) {
                 let now = OffsetDateTime::now_utc().unix_timestamp();
                 // only update the last_seen, if it is older than 10 seconds
                 if session.last_seen < now - 10 {
