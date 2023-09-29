@@ -35,8 +35,6 @@ in another terminal:
 
 ### Stage 2 - features - do before v1.0.0
 
-- add session remote UI in UI
-- add env var to additionally check session remote IP each time? makes sense?
 - add a new table that keeps track about when password expiry / reset emails were sent out to avoid duplicates
 - when a user changes his email address, set email to not verified again and send a validation email
 - add tracing-actix-web + opentelemetry

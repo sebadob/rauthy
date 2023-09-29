@@ -16,7 +16,7 @@ use sqlx::{FromRow, Row};
 use std::ops::Add;
 use std::str::FromStr;
 use time::OffsetDateTime;
-use tracing::error;
+use tracing::{error, warn};
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -416,7 +416,7 @@ impl Session {
     }
 
     /// Checks if the current session is valid: has not expired and has not timed out (last_seen)
-    pub fn is_valid(&self, session_timeout: u32) -> bool {
+    pub fn is_valid(&self, session_timeout: u32, remote_ip: Option<String>) -> bool {
         let now = OffsetDateTime::now_utc().unix_timestamp();
         if self.exp < now {
             return false;
@@ -426,6 +426,19 @@ impl Session {
         }
         if self.state == SessionState::Unknown {
             return false;
+        }
+        if let Some(ip) = remote_ip {
+            if (self.state == SessionState::Open || self.state == SessionState::Auth)
+                && self.remote_ip.as_ref() != Some(&ip)
+            {
+                warn!(
+                    "Invalid access for session {} / {} with different IP: {}",
+                    self.id,
+                    self.remote_ip.as_ref().unwrap(),
+                    ip,
+                );
+                return false;
+            }
         }
         true
     }
