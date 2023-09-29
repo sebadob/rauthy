@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use actix_web::dev::ServiceRequest;
 use actix_web::{web, HttpRequest, HttpResponse};
 use rauthy_common::constants::{COOKIE_MFA, PROXY_MODE};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
@@ -127,6 +128,17 @@ pub fn build_csp_header(nonce: &str) -> (&str, String) {
 }
 
 pub fn real_ip_from_req(req: &HttpRequest) -> Option<String> {
+    if *PROXY_MODE {
+        // TODO maybe make this configurable and extract headers in user-configured order?
+        req.connection_info()
+            .realip_remote_addr()
+            .map(|ip| ip.to_string())
+    } else {
+        req.connection_info().peer_addr().map(|ip| ip.to_string())
+    }
+}
+
+pub fn real_ip_from_svc_req(req: &ServiceRequest) -> Option<String> {
     if *PROXY_MODE {
         // TODO maybe make this configurable and extract headers in user-configured order?
         req.connection_info()

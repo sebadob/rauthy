@@ -1,3 +1,4 @@
+use crate::real_ip_from_svc_req;
 use actix_web::http::header::HeaderValue;
 use actix_web::http::{Method, Uri};
 use actix_web::{
@@ -6,7 +7,6 @@ use actix_web::{
 };
 use futures::future::LocalBoxFuture;
 use lazy_static::lazy_static;
-use rauthy_common::constants::PROXY_MODE;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use std::env;
 use std::future::{ready, Ready};
@@ -111,15 +111,7 @@ async fn handle_req(req: &ServiceRequest) -> Result<(), ErrorResponse> {
 
 async fn log_access(uri: &Uri, req: &ServiceRequest) -> Result<(), ErrorResponse> {
     let path = uri.path();
-    let ip = {
-        let conn_info = req.connection_info();
-        let ip = if *PROXY_MODE {
-            conn_info.realip_remote_addr()
-        } else {
-            conn_info.peer_addr()
-        };
-        ip.unwrap_or("<UNKNOWN>").to_string()
-    };
+    let ip = real_ip_from_svc_req(req).unwrap_or_else(|| "<UNKNOWN>".to_string());
 
     match *LOG_LEVEL_ACCESS {
         LogLevelAccess::Debug => {
