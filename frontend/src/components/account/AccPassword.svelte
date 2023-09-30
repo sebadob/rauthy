@@ -148,16 +148,17 @@
                         {t.save.toUpperCase()}
                     </Button>
                 </div>
-                <div>
-                    <Button
-                            width={btnWidth}
-                            on:click={() => convertAccount = false}
-                            level={4}
-                            bind:isLoading
-                    >
-                        {t.cancel.toUpperCase()}
-                    </Button>
-                </div>
+                {#if convertAccount && !isLoading}
+                    <div>
+                        <Button
+                                width={btnWidth}
+                                on:click={() => convertAccount = false}
+                                level={4}
+                        >
+                            {t.cancel.toUpperCase()}
+                        </Button>
+                    </div>
+                {/if}
             </div>
 
             <div class="bottom">
