@@ -22,9 +22,10 @@ use std::collections::HashMap;
 use std::ops::Add;
 use std::str::FromStr;
 use time::OffsetDateTime;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 use utoipa::ToSchema;
 use webauthn_rs::prelude::*;
+use webauthn_rs_proto::{AuthenticatorSelectionCriteria, UserVerificationPolicy};
 
 #[derive(Debug, Clone, FromRow, Deserialize, Serialize)]
 pub struct PasskeyEntity {
@@ -747,17 +748,32 @@ pub async fn reg_start(
     };
     let cred_ids = PasskeyEntity::find_cred_ids_for_user(data, &user.id).await?;
 
-    match data
-        .webauthn
-        // TODO check back how the exclude_credentials can be utilized
-        .start_passkey_registration(passkey_user_id, &user.email, &user.email, Some(cred_ids))
-    {
-        Ok((ccr, reg_state)) => {
-            // TODO can we hook in here and provide "with MFA only" as a feature?
+    match data.webauthn.start_passkey_registration(
+        passkey_user_id,
+        &user.email,
+        &user.email,
+        Some(cred_ids),
+    ) {
+        Ok((mut ccr, reg_state)) => {
+            let ccr = if *WEBAUTHN_FORCE_UV || user.account_type() == AccountType::Passkey {
+                // in this case we need to force UV no matter what is set in the config
+                ccr.public_key.authenticator_selection =
+                    if let Some(mut auth_sel) = ccr.public_key.authenticator_selection {
+                        auth_sel.user_verification = UserVerificationPolicy::Required;
+                        Some(auth_sel)
+                    } else {
+                        Some(AuthenticatorSelectionCriteria {
+                            authenticator_attachment: None,
+                            require_resident_key: false,
+                            user_verification: UserVerificationPolicy::Required,
+                        })
+                    };
+            };
+
             let reg_data = WebauthnReg {
                 user_id: user.id.clone(),
                 passkey_user_id,
-                // TODO the reg_state cannot be serialized with bincode - open an issue?
+                // the reg_state cannot be serialized with bincode -> missing deserialize from Any
                 reg_state: serde_json::to_string(&reg_state).unwrap(),
             };
 
@@ -838,13 +854,18 @@ pub async fn reg_finish(
             }
 
             let mut txn = data.db.begin().await?;
+
             if user.webauthn_user_id.is_none() {
                 user.webauthn_user_id = Some(reg_data.passkey_user_id.to_string());
                 if user.password.is_none() || *WEBAUTHN_NO_PASSWORD_EXPIRY {
                     user.password_expires = None;
                 }
-                user.save(data, None, Some(&mut txn)).await?;
             }
+            user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
+            user.last_failed_login = None;
+            user.failed_login_attempts = None;
+            user.save(data, None, Some(&mut txn)).await?;
+
             PasskeyEntity::create(
                 data,
                 user.id.clone(),
