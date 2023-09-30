@@ -21,3 +21,17 @@ alter table sessions
 
 drop table mfa_apps;
 drop table webauthn;
+
+-- fix some indexes -> unique
+
+drop index passkeys_credential_id_index;
+
+create unique index passkeys_credential_id_uindex
+    on passkeys (credential_id);
+
+create unique index passkeys_passkey_user_id_uindex
+    on passkeys (passkey_user_id);
+
+-- add 'uv' to passkeys
+alter table passkeys
+    add uv bool;

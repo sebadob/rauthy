@@ -214,12 +214,16 @@ create table passkeys
     credential_id   blob    not null,
     registered      integer not null,
     last_used       integer not null,
+    uv              bool,
     constraint passkeys_pk
         primary key (user_id, name)
 );
 
 create unique index passkeys_credential_id_index
     on passkeys (credential_id);
+
+create index passkeys_passkey_user_id_index
+    on passkeys (passkey_user_id);
 
 insert into passkeys(user_id, name, passkey_user_id, passkey, credential_id, registered, last_used)
 select user_id, name, passkey_user_id, passkey, credential_id, registered, last_used
