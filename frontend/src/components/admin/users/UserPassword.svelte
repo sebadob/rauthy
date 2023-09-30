@@ -74,10 +74,6 @@
         return true;
     }
 
-    async function resetAccount() {
-        errEmail = 'TODO! Not yet implemented!';
-    }
-
     async function sendEmail() {
         let req = {
             email: user.email,
@@ -167,7 +163,9 @@
                 If the user has lost all his keys and you have verified everything, you may reset his account type to
                 password-only and send out a new Reset E-Mail, so the user can get access to his account again.
             </p>
-            <p><span class="caution">CAUTION:</span> <b>This action is irreversible!</b></p>
+            <p>
+                To reset the account, navigate to 'MFA' and delete all registered keys for this user.
+            </p>
         </div>
 
         <Button

@@ -5,7 +5,7 @@ use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::get_rand;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::colors::ColorEntity;
-use rauthy_models::entity::magic_links::MagicLinkPassword;
+use rauthy_models::entity::magic_links::{MagicLinkPassword, MagicLinkUsage};
 use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
@@ -34,7 +34,6 @@ pub async fn handle_get_pwd_reset<'a>(
     } else {
         None
     };
-    tracing::debug!("4");
 
     // get the html and insert values
     let rules = PasswordPolicy::find(data).await?;
@@ -60,7 +59,7 @@ pub async fn handle_get_pwd_reset<'a>(
     Ok((html, nonce, cookie))
 }
 
-#[tracing::instrument(level = "debug", skip_all, fields(email = req_data.email))]
+#[tracing::instrument(level = "debug", skip_all, fields(user_id = user_id))]
 pub async fn handle_put_user_passkey_start<'a>(
     data: &web::Data<AppState>,
     req: HttpRequest,
@@ -83,30 +82,34 @@ pub async fn handle_put_user_passkey_start<'a>(
     let ml = MagicLinkPassword::find(data, &ml_id).await?;
     ml.validate(&user.id, &req, true)?;
 
+    // if we register a new passkey, we need to make sure that the magic link is for a new user
+    if &ml.usage != MagicLinkUsage::NewUser.as_str() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "You cannot register a new passkey here for an existing user".to_string(),
+        ));
+    }
+
     webauthn::reg_start(&data, user.id, req_data)
         .await
         .map(|ccr| HttpResponse::Ok().json(ccr))
 }
 
-#[tracing::instrument(level = "debug", skip_all, fields(email = req_data.passkey_name))]
+#[tracing::instrument(level = "debug", skip_all, fields(user_id = user_id))]
 pub async fn handle_put_user_passkey_finish<'a>(
     data: &web::Data<AppState>,
     req: HttpRequest,
     user_id: String,
     req_data: WebauthnRegFinishRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    debug!("getting user");
-    let mut user = User::find(data, user_id).await?;
-
-    debug!("getting magic link");
     // unwrap is safe -> checked in API endpoint already
     let ml_id = req_data.magic_link_id.as_ref().unwrap();
     let mut ml = MagicLinkPassword::find(data, &ml_id).await?;
-    ml.validate(&user.id, &req, true)?;
+    ml.validate(&user_id, &req, true)?;
 
     // finish webauthn request -> always force UV for passkey only accounts
     debug!("ml is valid - finishing webauthn request");
-    webauthn::reg_finish(&data, user.id.clone(), req_data).await?;
+    webauthn::reg_finish(&data, user_id.clone(), req_data).await?;
 
     // validate csrf token
     match req.headers().get(PWD_CSRF_HEADER) {
@@ -129,6 +132,8 @@ pub async fn handle_put_user_passkey_finish<'a>(
     debug!("invalidating magic link pwd");
     // all good
     ml.invalidate(data).await?;
+    // we are re-fetching the user on purpose here to not need to modify the general webauthn fn
+    let mut user = User::find(data, user_id).await?;
     user.email_verified = true;
     user.save(data, None, None).await?;
 
