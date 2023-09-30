@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
 use crate::entity::users::User;
-use actix_web::cookie::{time, SameSite};
+use actix_web::cookie::{time, Cookie, SameSite};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{cookie, web, HttpRequest};
 use rauthy_common::constants::{
@@ -391,7 +391,10 @@ impl Session {
         )
     }
 
-    pub async fn invalidate(&mut self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn invalidate(
+        &mut self,
+        data: &web::Data<AppState>,
+    ) -> Result<Cookie, ErrorResponse> {
         let idx = Session::cache_idx(&self.id);
 
         self.exp = OffsetDateTime::now_utc().unix_timestamp();
@@ -412,7 +415,13 @@ impl Session {
         )
         .await?;
 
-        Ok(())
+        Ok(cookie::Cookie::build(COOKIE_SESSION, &self.id)
+            .http_only(true)
+            .secure(true)
+            .same_site(SameSite::Lax)
+            .max_age(cookie::time::Duration::ZERO)
+            .path("/auth")
+            .finish())
     }
 
     /// Checks if the current session is valid: has not expired and has not timed out (last_seen)
