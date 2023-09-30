@@ -320,10 +320,10 @@ impl User {
         let q = sqlx::query(
             r#"update users set
             email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6,
-            enabled = $7, email_verified = $8, password_expires = $9, created_at = $10,
-            last_login = $11, last_failed_login = $12, failed_login_attempts = $13, language = $14,
-            webauthn_user_id = $15, user_expires = $16
-            where id = $17"#,
+            enabled = $7, email_verified = $8, password_expires = $9, last_login = $10,
+            last_failed_login = $11, failed_login_attempts = $12, language = $13,
+            webauthn_user_id = $14, user_expires = $15
+            where id = $16"#,
         )
         .bind(&self.email)
         .bind(&self.given_name)
@@ -334,12 +334,11 @@ impl User {
         .bind(self.enabled)
         .bind(self.email_verified)
         .bind(self.password_expires)
-        .bind(self.created_at)
         .bind(self.last_login)
         .bind(self.last_failed_login)
         .bind(self.failed_login_attempts)
         .bind(lang)
-        .bind(&self.webauthn_user_id)
+        .bind(self.webauthn_user_id.clone())
         .bind(self.user_expires)
         .bind(&self.id);
 
@@ -355,6 +354,7 @@ impl User {
             RefreshToken::invalidate_for_user(data, &self.id).await?;
         }
 
+        // TODO think about a good way to catch a possibly failing transaction -> cache invalidation
         let users = User::find_all(data)
             .await?
             .into_iter()
@@ -742,6 +742,7 @@ impl User {
 
         let user = Self {
             email: new_user.email,
+            email_verified: false,
             given_name: new_user.given_name,
             family_name: new_user.family_name,
             language: new_user.language,
@@ -1000,10 +1001,10 @@ mod tests {
         user.user_expires = None;
         let session = Session::try_new(&user, 1, None).unwrap();
 
-        assert_eq!(session.is_valid(10), true);
+        assert_eq!(session.is_valid(10, None), true);
         // sessions are validated with second accuracy
         std::thread::sleep(core::time::Duration::from_secs(2));
-        assert_eq!(session.is_valid(10), false);
+        assert_eq!(session.is_valid(10, None), false);
 
         // new sessions should always be in state 1 -> initializing
         assert_eq!(session.state, SessionState::Init);

@@ -22,7 +22,7 @@ use std::collections::HashMap;
 use std::ops::Add;
 use std::str::FromStr;
 use time::OffsetDateTime;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 use utoipa::ToSchema;
 use webauthn_rs::prelude::*;
 
@@ -834,12 +834,15 @@ pub async fn reg_finish(
             }
 
             let mut txn = data.db.begin().await?;
+            debug!("\n\n\nuser.webauthn_user_id: {:?}\n", user.webauthn_user_id);
             if user.webauthn_user_id.is_none() {
+                debug!("\n\n\nuser.webauthn_user_id.is_none()\n");
                 user.webauthn_user_id = Some(reg_data.passkey_user_id.to_string());
-                if *WEBAUTHN_NO_PASSWORD_EXPIRY {
+                if user.password.is_none() || *WEBAUTHN_NO_PASSWORD_EXPIRY {
                     user.password_expires = None;
                 }
                 user.save(data, None, Some(&mut txn)).await?;
+                debug!("\n\n\nsaving user: {:?}\n", user);
             }
             PasskeyEntity::create(
                 data,
