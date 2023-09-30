@@ -4,7 +4,6 @@
     import * as yup from 'yup';
     import {extractFormErrors, getQueryParams, saveCsrfToken} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
-    import MfaAppRequest from "../../../components/mfa/MfaAppRequest.svelte";
     import WebauthnRequest from "../../../components/webauthn/WebauthnRequest.svelte";
     import {scale} from 'svelte/transition';
     import Input from "$lib/inputs/Input.svelte";
@@ -27,7 +26,6 @@
     let challengeMethod;
     let csrf = '';
     let refresh = false;
-    let mfaRequest;
     let existingMfaUser;
     // let webauthnData = {
     // 	code: "asdjknfasdjklfnasdlkjf",
@@ -149,8 +147,7 @@
             scopes,
         };
 
-        // Validate the password manually, since it can be null in case of an active mfa cookie session
-        if (formValues.email !== existingMfaUser) {
+        if (needsPassword && formValues.email !== existingMfaUser) {
             if (!formValues.password) {
                 formErrors.password = t.passwordRequired;
                 return;
@@ -168,13 +165,16 @@
             window.location.replace(res.headers.get('location'));
         } else if (res.status === 200) {
             err = '';
-            isLoading = false;
             webauthnData = await res.json();
+        } else if (!needsPassword) {
+            // this will happen always if the user does the first try with a password-only account
+            // the good thing about this is, that it is a prevention against autofill passwords from the browser
+            needsPassword = true;
         } else {
             err = t.invalidCredentials;
-            isLoading = false;
             showResetRequest = true;
         }
+        isLoading = false;
     }
 
     function onWebauthnError() {
@@ -309,7 +309,7 @@
             {/if}
         </div>
 
-        <LangSelector absolute />
+        <LangSelector absolute/>
     </WithI18n>
 </BrowserCheck>
 

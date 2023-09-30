@@ -66,6 +66,13 @@ pub async fn authorize(
         })?;
     user.check_enabled()?;
     user.check_expired()?;
+    let account_type = user.account_type();
+    if account_type == AccountType::New {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            String::from("Invalid user credentials"),
+        ));
+    }
 
     let mfa_cookie =
         if let Ok(c) = WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA), &data.enc_keys) {
@@ -82,8 +89,7 @@ pub async fn authorize(
 
     // this allows a user without the mfa cookie to login anyway if it is an only passkey account
     // in this case, UV is always enforced, not matter what -> safe to login without cookie
-    let is_account_type_passkey = user.account_type() == AccountType::Passkey;
-    if user.password.is_none() && !is_account_type_passkey && mfa_cookie.is_none() {
+    if req_data.password.is_none() && account_type != AccountType::Passkey && mfa_cookie.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
             String::from("Invalid user credentials"),
@@ -174,6 +180,8 @@ pub async fn authorize(
         loc = format!("{}&state={}", loc, state);
     };
 
+    // TODO double check that we do not have any problems with the direct webauthn login here
+    // TODO should we allow to skip this step if set so in the config?
     // check if we need to validate the 2nd factor
     if user.has_webauthn_enabled() {
         session.set_mfa(data, true).await?;
