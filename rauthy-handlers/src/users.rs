@@ -878,7 +878,7 @@ pub async fn post_user_password_request_reset(
         Session::extract_validate_csrf(session_req, &req)?;
     }
 
-    let user = User::find_by_email(&data, req_data.email.clone()).await?;
+    let user = User::find_by_email(&data, req_data.into_inner().email).await?;
     user.request_password_reset(&data, req)
         .await
         .map(|_| HttpResponse::Ok().status(StatusCode::OK).finish())
