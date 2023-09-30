@@ -41,6 +41,7 @@
     let isLoading = false;
     let err = '';
     let isReady = false;
+    let needsPassword = false;
     let showReset = false;
     let showResetRequest = false;
     let emailSuccess = false;
@@ -238,11 +239,6 @@
                 <h2>{clientName}</h2>
             </div>
 
-            <!-- TODO: clean this up after backend cleanup -->
-            {#if mfaRequest}
-                <MfaAppRequest bind:req={mfaRequest}/>
-            {/if}
-
             {#if webauthnData}
                 <WebauthnRequest
                         bind:t
@@ -264,7 +260,7 @@
                 {t.email?.toUpperCase()}
             </Input>
 
-            {#if existingMfaUser !== formValues.email && !showReset}
+            {#if needsPassword && existingMfaUser !== formValues.email && !showReset}
                 <PasswordInput
                         name="rauthyPassword"
                         bind:value={formValues.password}
