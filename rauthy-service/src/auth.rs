@@ -24,7 +24,7 @@ use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::scopes::Scope;
 use rauthy_models::entity::sessions::{Session, SessionState};
-use rauthy_models::entity::users::User;
+use rauthy_models::entity::users::{AccountType, User};
 use rauthy_models::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
 use rauthy_models::language::Language;
 use rauthy_models::request::{LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest};
@@ -80,7 +80,10 @@ pub async fn authorize(
             None
         };
 
-    if req_data.password.is_none() && mfa_cookie.is_none() {
+    // this allows a user without the mfa cookie to login anyway if it is an only passkey account
+    // in this case, UV is always enforced, not matter what -> safe to login without cookie
+    let is_account_type_passkey = user.account_type() == AccountType::Passkey;
+    if user.password.is_none() && !is_account_type_passkey && mfa_cookie.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
             String::from("Invalid user credentials"),
@@ -89,13 +92,14 @@ pub async fn authorize(
 
     if let Some(pwd) = req_data.password {
         user.validate_password(data, pwd).await?;
-    }
 
-    // update user info
-    user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
-    user.last_failed_login = None;
-    user.failed_login_attempts = None;
-    user.save(data, None, None).await?;
+        // update user info
+        // in case of webauthn login, the info will be updates in the auth finish step
+        user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
+        user.last_failed_login = None;
+        user.failed_login_attempts = None;
+        user.save(data, None, None).await?;
+    }
 
     let client = Client::find(data, req_data.client_id).await?;
 
