@@ -22,7 +22,7 @@ use std::collections::HashMap;
 use std::ops::Add;
 use std::str::FromStr;
 use time::OffsetDateTime;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 use utoipa::ToSchema;
 use webauthn_rs::prelude::*;
 use webauthn_rs_proto::{AuthenticatorSelectionCriteria, UserVerificationPolicy};
@@ -248,6 +248,43 @@ impl PasskeyEntity {
         let pks = sqlx::query_as!(Self, "SELECT * FROM passkeys WHERE user_id = $1", user_id)
             .fetch_all(&data.db)
             .await?;
+
+        cache_insert(
+            CACHE_NAME_WEBAUTHN.to_string(),
+            idx,
+            &data.caches.ha_cache_config,
+            &pks,
+            AckLevel::Leader,
+        )
+        .await?;
+
+        Ok(pks)
+    }
+
+    pub async fn find_for_user_with_uv(
+        data: &web::Data<AppState>,
+        user_id: &str,
+    ) -> Result<Vec<Self>, ErrorResponse> {
+        let idx = Self::cache_idx_user(user_id);
+        let pk = cache_get!(
+            Vec<PasskeyEntity>,
+            CACHE_NAME_WEBAUTHN.to_string(),
+            idx.clone(),
+            &data.caches.ha_cache_config,
+            false
+        )
+        .await?;
+        if pk.is_some() {
+            return Ok(pk.unwrap());
+        }
+
+        let pks = sqlx::query_as!(
+            Self,
+            "SELECT * FROM passkeys WHERE user_id = $1 AND user_verified = true",
+            user_id
+        )
+        .fetch_all(&data.db)
+        .await?;
 
         cache_insert(
             CACHE_NAME_WEBAUTHN.to_string(),
@@ -630,16 +667,36 @@ pub async fn auth_start(
         MfaPurpose::Test => WebauthnAdditionalData::Test,
     };
 
-    let pks = PasskeyEntity::find_for_user(data, &user_id)
-        .await?
-        .iter()
-        .map(|pk_entity| pk_entity.get_pk())
-        .collect::<Vec<Passkey>>();
+    let user = User::find(data, user_id).await?;
+    let force_uv = user.account_type() == AccountType::Passkey || *WEBAUTHN_FORCE_UV;
+    let pks = if force_uv {
+        // in this case, filter out all presence only keys
+        PasskeyEntity::find_for_user_with_uv(data, &user.id)
+            .await?
+            .iter()
+            .map(|pk_entity| pk_entity.get_pk())
+            .collect::<Vec<Passkey>>()
+    } else {
+        PasskeyEntity::find_for_user(data, &user.id)
+            .await?
+            .iter()
+            .map(|pk_entity| pk_entity.get_pk())
+            .collect::<Vec<Passkey>>()
+    };
 
-    // TODO filter out all passkeys with presence only when UV is forced?
+    if pks.is_empty() {
+        // may be the case if the user has presence only keys and the config has changed
+        return Err(ErrorResponse::new(
+            ErrorResponseType::NotFound,
+            "No Security Keys with active user verification found".to_string(),
+        ));
+    }
 
     match data.webauthn.start_passkey_authentication(pks.as_slice()) {
-        Ok((rcr, auth_state)) => {
+        Ok((mut rcr, auth_state)) => {
+            if force_uv {
+                rcr.public_key.user_verification = UserVerificationPolicy::Required;
+            }
             add_data.delete(data).await?;
 
             // cannot be serialized with bincode -> no deserialize from any
@@ -654,7 +711,7 @@ pub async fn auth_start(
             Ok(WebauthnAuthStartResponse {
                 code: auth_data.code,
                 rcr,
-                user_id,
+                user_id: user.id,
                 exp: *WEBAUTHN_REQ_EXP,
             })
         }
@@ -675,6 +732,8 @@ pub async fn auth_finish(
     req: WebauthnAuthFinishRequest,
 ) -> Result<WebauthnAdditionalData, ErrorResponse> {
     let mut user = User::find(data, user_id).await?;
+    let force_uv = user.account_type() == AccountType::Passkey || *WEBAUTHN_FORCE_UV;
+
     let auth_data = WebauthnData::find(data, req.code).await?;
     let auth_state = serde_json::from_str(&auth_data.auth_state_json).unwrap();
 
@@ -685,7 +744,7 @@ pub async fn auth_finish(
         .finish_passkey_authentication(&req.data, &auth_state)
     {
         Ok(auth_result) => {
-            if *WEBAUTHN_FORCE_UV && !auth_result.user_verified() {
+            if force_uv && !auth_result.user_verified() {
                 warn!(
                     "Webauthn Authentication Ceremony without User Verification for user {:?}",
                     user.id
@@ -706,6 +765,8 @@ pub async fn auth_finish(
                     let now = OffsetDateTime::now_utc().unix_timestamp();
                     pk_entity.last_used = now;
                     user.last_login = Some(now);
+                    user.last_failed_login = None;
+                    user.failed_login_attempts = None;
 
                     let mut txn = data.db.begin().await?;
                     pk_entity.update_passkey(data, &mut txn).await?;
@@ -755,7 +816,7 @@ pub async fn reg_start(
         Some(cred_ids),
     ) {
         Ok((mut ccr, reg_state)) => {
-            let ccr = if *WEBAUTHN_FORCE_UV || user.account_type() == AccountType::Passkey {
+            if *WEBAUTHN_FORCE_UV || user.account_type() == AccountType::Passkey {
                 // in this case we need to force UV no matter what is set in the config
                 ccr.public_key.authenticator_selection =
                     if let Some(mut auth_sel) = ccr.public_key.authenticator_selection {
@@ -860,11 +921,8 @@ pub async fn reg_finish(
                 if user.password.is_none() || *WEBAUTHN_NO_PASSWORD_EXPIRY {
                     user.password_expires = None;
                 }
+                user.save(data, None, Some(&mut txn)).await?;
             }
-            user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
-            user.last_failed_login = None;
-            user.failed_login_attempts = None;
-            user.save(data, None, Some(&mut txn)).await?;
 
             PasskeyEntity::create(
                 data,
