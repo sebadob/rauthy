@@ -1,5 +1,6 @@
 use crate::{build_csp_header, map_auth_step, real_ip_from_req};
 use actix_web::cookie::time::OffsetDateTime;
+use actix_web::cookie::SameSite;
 use actix_web::http::{header, StatusCode};
 use actix_web::{cookie, get, post, web, HttpRequest, HttpResponse};
 use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
@@ -327,8 +328,12 @@ pub async fn post_logout(
     let mut session = Session::extract_from_req(session_req)?;
     session.invalidate(&data).await?;
 
-    let cookie = cookie::Cookie::build(COOKIE_SESSION, "")
+    let cookie = cookie::Cookie::build(COOKIE_SESSION, session.id)
+        .http_only(true)
+        .secure(true)
+        .same_site(SameSite::Lax)
         .max_age(cookie::time::Duration::ZERO)
+        .path("/auth")
         .finish();
 
     if req_data.post_logout_redirect_uri.is_some() {

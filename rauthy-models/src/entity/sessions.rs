@@ -97,10 +97,9 @@ impl Session {
             .execute(&data.db)
             .await?;
 
-        let idx = format!("{}{}", IDX_SESSION, &self.id);
         cache_remove(
             CACHE_NAME_SESSIONS.to_string(),
-            idx,
+            Session::cache_idx(&self.id),
             &data.caches.ha_cache_config,
             AckLevel::Quorum,
         )
@@ -114,7 +113,7 @@ impl Session {
     // Returns a session by id
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
         // TODO set remote lookup to true here to be able to switch to in-memory sessions store only?
-        let idx = format!("{}{}", IDX_SESSION, id);
+        let idx = Session::cache_idx(&id);
         let session = cache_get!(
             Session,
             CACHE_NAME_SESSIONS.to_string(),
@@ -169,10 +168,9 @@ impl Session {
         }
 
         for id in removed {
-            let idx = format!("{}{}", IDX_SESSION, &id);
             cache_remove(
                 CACHE_NAME_SESSIONS.to_string(),
-                idx,
+                Session::cache_idx(&id),
                 &data.caches.ha_cache_config,
                 AckLevel::Quorum,
             )
@@ -205,10 +203,9 @@ impl Session {
         }
 
         for id in removed {
-            let idx = format!("{}{}", IDX_SESSION, &id);
             cache_remove(
                 CACHE_NAME_SESSIONS.to_string(),
-                idx,
+                Session::cache_idx(&id),
                 &data.caches.ha_cache_config,
                 AckLevel::Quorum,
             )
@@ -260,10 +257,9 @@ impl Session {
 
         q.execute(&data.db).await?;
 
-        let idx = format!("{}{}", IDX_SESSION, &self.id);
         cache_insert(
             CACHE_NAME_SESSIONS.to_string(),
-            idx,
+            Session::cache_idx(&self.id),
             &data.caches.ha_cache_config,
             &self,
             AckLevel::Quorum,
@@ -295,6 +291,10 @@ impl Session {
             last_seen: now.unix_timestamp(),
             remote_ip,
         }
+    }
+
+    fn cache_idx(id: &String) -> String {
+        format!("{}{}", IDX_SESSION, id)
     }
 
     /// exp_in will be the time in seconds when the session will expire
@@ -392,7 +392,7 @@ impl Session {
     }
 
     pub async fn invalidate(&mut self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        let idx = format!("session_{}", &self.id);
+        let idx = Session::cache_idx(&self.id);
 
         self.exp = OffsetDateTime::now_utc().unix_timestamp();
         self.state = SessionState::LoggedOut;
