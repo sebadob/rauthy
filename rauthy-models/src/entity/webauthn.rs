@@ -22,7 +22,7 @@ use std::collections::HashMap;
 use std::ops::Add;
 use std::str::FromStr;
 use time::OffsetDateTime;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 use utoipa::ToSchema;
 use webauthn_rs::prelude::*;
 
@@ -35,6 +35,7 @@ pub struct PasskeyEntity {
     pub credential_id: Vec<u8>,
     pub registered: i64,
     pub last_used: i64,
+    pub user_verified: Option<bool>,
 }
 
 // CRUD
@@ -45,6 +46,7 @@ impl PasskeyEntity {
         passkey_user_id: Uuid,
         name: String,
         pk: Passkey,
+        user_verified: bool,
         txn: &mut DbTxn<'_>,
     ) -> Result<(), ErrorResponse> {
         // json, because bincode does not support deserialize from any, which would be the case here
@@ -59,12 +61,13 @@ impl PasskeyEntity {
             credential_id: pk.cred_id().0.clone(),
             registered: now,
             last_used: now,
+            user_verified: Some(user_verified),
         };
 
         sqlx::query!(
             r#"INSERT INTO passkeys
-            (user_id, name, passkey_user_id, passkey, credential_id, registered, last_used)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+            (user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
             entity.user_id,
             entity.name,
             entity.passkey_user_id,
@@ -72,6 +75,7 @@ impl PasskeyEntity {
             entity.credential_id,
             now,
             now,
+            entity.user_verified,
         )
         .execute(&mut **txn)
         .await?;
@@ -819,8 +823,8 @@ pub async fn reg_finish(
     {
         Ok(pk) => {
             // force UV check
+            let cred = Credential::from(pk.clone());
             if user.account_type() != AccountType::Password || *WEBAUTHN_FORCE_UV {
-                let cred = Credential::from(pk.clone());
                 if !cred.user_verified {
                     warn!(
                         "Webauthn Registration Ceremony without User Verification for user {:?}",
@@ -834,15 +838,12 @@ pub async fn reg_finish(
             }
 
             let mut txn = data.db.begin().await?;
-            debug!("\n\n\nuser.webauthn_user_id: {:?}\n", user.webauthn_user_id);
             if user.webauthn_user_id.is_none() {
-                debug!("\n\n\nuser.webauthn_user_id.is_none()\n");
                 user.webauthn_user_id = Some(reg_data.passkey_user_id.to_string());
                 if user.password.is_none() || *WEBAUTHN_NO_PASSWORD_EXPIRY {
                     user.password_expires = None;
                 }
                 user.save(data, None, Some(&mut txn)).await?;
-                debug!("\n\n\nsaving user: {:?}\n", user);
             }
             PasskeyEntity::create(
                 data,
@@ -850,6 +851,7 @@ pub async fn reg_finish(
                 reg_data.passkey_user_id,
                 req.passkey_name,
                 pk,
+                cred.user_verified,
                 &mut txn,
             )
             .await?;
