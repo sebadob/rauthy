@@ -177,7 +177,6 @@
 
             // we need to force UV at this point in the browser already to have a better UV
             challenge.publicKey.authenticatorSelection.userVerification = 'required';
-            console.log(challenge);
 
             // the navigator credentials engine needs some values as array buffers
             challenge.publicKey.challenge = base64UrlSafeToArrBuf(challenge.publicKey.challenge);
@@ -225,6 +224,13 @@
             }
         } else {
             onWebauthnError();
+            let body = await res.json();
+            console.log(body.error);
+            console.log(body.message);
+            console.log(body.message.startsWith("E-Mail"));
+            if (body.error === "BadRequest" && body.message.startsWith("E-Mail")) {
+                err = t.emailErr;
+            }
         }
     }
 
@@ -253,7 +259,11 @@
             let res = await webauthnAuthStart(userId, {purpose: 'PasswordReset'});
             let body = await res.json();
             if (!res.ok) {
-                err = body.message;
+                if (body.error === "BadRequest" && body.message.startsWith("E-Mail")) {
+                    err = t.emailErr;
+                } else {
+                    err = body.message;
+                }
                 isLoading = false;
                 return;
             }
