@@ -36,7 +36,7 @@ use rauthy_models::email::EMail;
 use rauthy_models::{email, ListenScheme};
 use rauthy_service::auth;
 use std::error::Error;
-use std::net::{AddrParseError, Ipv4Addr};
+use std::net::Ipv4Addr;
 use std::str::FromStr;
 use std::time::Duration;
 use std::{env, thread};

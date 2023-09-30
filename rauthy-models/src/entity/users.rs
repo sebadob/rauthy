@@ -25,7 +25,15 @@ use std::ops::Add;
 use time::OffsetDateTime;
 use tracing::{error, warn};
 
-#[derive(Clone, Debug, FromRow, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
+pub enum AccountType {
+    // New -> neither password nor a passkey has been set yet
+    New,
+    Password,
+    Passkey,
+}
+
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct User {
     pub id: String,
     pub email: String,
@@ -492,6 +500,17 @@ impl User {
 }
 
 impl User {
+    #[inline]
+    pub fn account_type(&self) -> AccountType {
+        if self.password.is_some() {
+            AccountType::Password
+        } else if self.has_webauthn_enabled() {
+            AccountType::Passkey
+        } else {
+            AccountType::New
+        }
+    }
+
     pub async fn apply_password_rules(
         &mut self,
         data: &web::Data<AppState>,
@@ -854,13 +873,14 @@ impl User {
             }
         }
 
-        let new_ml = MagicLinkPassword::create(
-            data,
-            self.id.clone(),
-            data.ml_lt_pwd_reset as i64,
-            MagicLinkUsage::PasswordReset,
-        )
-        .await?;
+        let usage = if self.password.is_none() && !self.has_webauthn_enabled() {
+            MagicLinkUsage::NewUser
+        } else {
+            MagicLinkUsage::PasswordReset
+        };
+        let new_ml =
+            MagicLinkPassword::create(data, self.id.clone(), data.ml_lt_pwd_reset as i64, usage)
+                .await?;
         send_pwd_reset(data, &new_ml, self).await;
 
         Ok(())

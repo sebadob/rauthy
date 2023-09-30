@@ -1,5 +1,5 @@
 use crate::app_state::{AppState, DbTxn};
-use crate::entity::users::User;
+use crate::entity::users::{AccountType, User};
 use crate::request::{
     MfaPurpose, WebauthnAuthFinishRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
@@ -818,7 +818,8 @@ pub async fn reg_finish(
         .finish_passkey_registration(&req.data, &reg_state)
     {
         Ok(pk) => {
-            if *WEBAUTHN_FORCE_UV {
+            // force UV check
+            if user.account_type() != AccountType::Password || *WEBAUTHN_FORCE_UV {
                 let cred = Credential::from(pk.clone());
                 if !cred.user_verified {
                     warn!(

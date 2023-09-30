@@ -20,7 +20,7 @@ const config = {
 			'/auth/v1/encryption/keys': 'http://127.0.0.1:8080',
 			'/auth/v1/encryption/migrate': 'http://127.0.0.1:8080',
 			'/auth/v1/login_time': 'http://127.0.0.1:8080',
-			'/auth/v1/users': 'http://127.0.0.1:8080',
+			// '/auth/v1/users': 'http://127.0.0.1:8080',
 			'/auth/v1/roles': 'http://127.0.0.1:8080',
 			'/auth/v1/groups': 'http://127.0.0.1:8080',
 			'/auth/v1/password_hash_times': 'http://127.0.0.1:8080',

@@ -768,18 +768,31 @@ pub async fn post_webauthn_reg_start(
     session_req: web::ReqData<Option<Session>>,
     req_data: actix_web_validator::Json<WebauthnRegStartRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
-
-    // validate that Principal matches the user
-    let principal = Principal::get_from_req(principal.into_inner())?;
-    let id = id.into_inner();
-    principal.validate_id(&id)?;
-
-    webauthn::reg_start(&data, id, req_data.into_inner())
+    // If we have a magic link ID in the payload, we do not validate the active session / principal.
+    // This is mandatory to make registering a passkey for a completely new account work.
+    if req_data.magic_link_id.is_some() && req_data.email.is_some() {
+        // if req_data.magic_link_id.is_some() && req_data.email.is_some() && req_data.mfa_code.is_some() {
+        password_reset::handle_put_user_passkey_start(
+            &data,
+            req,
+            id.into_inner(),
+            req_data.into_inner(),
+        )
         .await
-        .map(|ccr| HttpResponse::Ok().json(ccr))
+    } else {
+        if session_req.is_some() {
+            Session::extract_validate_csrf(session_req, &req)?;
+        }
+
+        // validate that Principal matches the user
+        let principal = Principal::get_from_req(principal.into_inner())?;
+        let id = id.into_inner();
+        principal.validate_id(&id)?;
+
+        webauthn::reg_start(&data, id, req_data.into_inner())
+            .await
+            .map(|ccr| HttpResponse::Ok().json(ccr))
+    }
 }
 
 /// Finishes the registration process for a new WebAuthn Device for this user
@@ -807,18 +820,28 @@ pub async fn post_webauthn_reg_finish(
     session_req: web::ReqData<Option<Session>>,
     req_data: actix_web_validator::Json<WebauthnRegFinishRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
+    if req_data.magic_link_id.is_some() {
+        // if req_data.magic_link_id.is_some() && req_data.mfa_code.is_some() {
+        password_reset::handle_put_user_passkey_finish(
+            &data,
+            req,
+            id.into_inner(),
+            req_data.into_inner(),
+        )
+        .await
+    } else {
+        if session_req.is_some() {
+            Session::extract_validate_csrf(session_req, &req)?;
+        }
+
+        // validate that Principal matches the user
+        let principal = Principal::get_from_req(principal.into_inner())?;
+        let id = id.into_inner();
+        principal.validate_id(&id)?;
+
+        webauthn::reg_finish(&data, id, req_data.into_inner()).await?;
+        Ok(HttpResponse::Created().finish())
     }
-
-    // validate that Principal matches the user
-    let principal = Principal::get_from_req(principal.into_inner())?;
-    let id = id.into_inner();
-    principal.validate_id(&id)?;
-
-    webauthn::reg_finish(&data, id, req_data.into_inner()).await?;
-
-    Ok(HttpResponse::Created().finish())
 }
 
 /// Request a password reset

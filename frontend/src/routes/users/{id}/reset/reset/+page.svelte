@@ -1,8 +1,19 @@
 <script>
     import * as yup from "yup";
     import {onMount} from "svelte";
-    import {extractFormErrors, generatePassword} from "../../../../../utils/helpers.js";
-    import {resetPassword, webauthnAuthStart} from "../../../../../utils/dataFetching.js";
+    import {
+        arrBufToBase64UrlSafe,
+        base64UrlSafeToArrBuf,
+        extractFormErrors,
+        generatePassword,
+        getQueryParams
+    } from "../../../../../utils/helpers.js";
+    import {
+        resetPassword,
+        webauthnAuthStart,
+        webauthnRegStartAccReset,
+        webauthnRegFinishAccReset,
+    } from "../../../../../utils/dataFetching.js";
     import Loading from "$lib/Loading.svelte";
     import Button from "$lib/Button.svelte";
     import PasswordPolicy from "../../../../../components/passwordReset/PasswordPolicy.svelte";
@@ -11,7 +22,9 @@
     import WebauthnRequest from "../../../../../components/webauthn/WebauthnRequest.svelte";
     import BrowserCheck from "../../../../../components/BrowserCheck.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
+    import { slide } from "svelte/transition";
     import LangSelector from "$lib/LangSelector.svelte";
+    import {REGEX_NAME} from "../../../../../utils/constants.js";
 
     const btnWidth = 150;
     const inputWidth = '320px';
@@ -25,6 +38,9 @@
     let isLoading = false;
     let err = '';
     let userId = '';
+    let requestType = '';
+    let accountTypeNew = '';
+    let magicLinkId = '';
     let success = false;
     let accepted = false;
     let showCopy = false;
@@ -32,14 +48,22 @@
 
     let formValues = {
         email: '',
+        passkeyName: '',
         password: '',
         passwordConfirm: '',
     };
     let formErrors = {};
 
-    let schema;
+    let schemaPasskey;
+    let schemaPassword;
     $: if (t) {
-        schema = yup.object().shape({
+        schemaPasskey = yup.object().shape({
+            email: yup.string().required(t.required).email(t.badFormat),
+            passkeyName: yup.string()
+                .required(t.required)
+                .matches(REGEX_NAME, t.mfa.passkeyNameErr),
+        });
+        schemaPassword = yup.object().shape({
             email: yup.string().required(t.required).email(t.badFormat),
             password: yup.string().required(t.required),
             passwordConfirm: yup.string().required(t.required)
@@ -51,9 +75,21 @@
     }
 
     $: if (success) {
-        setTimeout(() => {
-            window.location.replace('/auth/v1/account');
-        }, 5000);
+        if (accountTypeNew === "password") {
+            setTimeout(() => {
+                navigateToAccount();
+            }, 5000);
+        }
+    }
+
+    $: if (accountTypeNew) {
+        // reset all possibly filled in form values from before
+        formValues = {
+            email: '',
+            passkeyName: '',
+            password: '',
+            passwordConfirm: '',
+        };
     }
 
     onMount(async () => {
@@ -89,8 +125,17 @@
 
         csrf = window.document.getElementsByName('rauthy-csrf-token')[0].id
         userId = window.location.href.split("/users/")[1].split("/")[0];
+        magicLinkId = window.location.href.split("/reset/")[1].split("?")[0];
+
+        const params = getQueryParams();
+        requestType = params['type'];
+
         isReady = true;
     })
+
+    function navigateToAccount() {
+        window.location.replace('/auth/v1/account');
+    }
 
     function generate() {
         const len = policy.length_min > 24 ? policy.length_min : 24;
@@ -104,9 +149,88 @@
         formValues.passwordConfirm = pwd;
     }
 
-    async function onSubmit() {
+    async function handleRegisterPasskey() {
+        err = '';
+
         try {
-            await schema.validate(formValues, {abortEarly: false});
+            await schemaPasskey.validate(formValues, {abortEarly: false});
+            formErrors = {};
+        } catch (err) {
+            formErrors = extractFormErrors(err);
+            return;
+        }
+
+        const passkeyName = formValues.passkeyName;
+        if (passkeyName.length < 2) {
+            err = t.mfa.passkeyNameErr;
+            return;
+        }
+
+        let data = {
+            passkey_name: passkeyName,
+            email: formValues.email,
+            magic_link_id: magicLinkId,
+        };
+        let res = await webauthnRegStartAccReset(userId, data, csrf);
+        if (res.status === 200) {
+            let challenge = await res.json();
+
+            // we need to force UV at this point in the browser already to have a better UV
+            challenge.publicKey.authenticatorSelection.userVerification = 'required';
+            console.log(challenge);
+
+            // the navigator credentials engine needs some values as array buffers
+            challenge.publicKey.challenge = base64UrlSafeToArrBuf(challenge.publicKey.challenge);
+            challenge.publicKey.user.id = base64UrlSafeToArrBuf(challenge.publicKey.user.id);
+            challenge.publicKey.excludeCredentials = challenge.publicKey.excludeCredentials
+
+            if (challenge.publicKey.excludeCredentials) {
+                challenge.publicKey.excludeCredentials = challenge.publicKey.excludeCredentials.map(cred => {
+                    cred.id = base64UrlSafeToArrBuf(cred.id);
+                    return cred;
+                });
+            }
+
+            // prompt for the user security key and get its public key
+            let challengePk = await navigator.credentials.create(challenge);
+
+            // the backend expects base64 url safe string instead of array buffers
+            let data = {
+                passkey_name: passkeyName,
+                data: {
+                    id: challengePk.id,
+                    rawId: arrBufToBase64UrlSafe(challengePk.rawId),
+                    response: {
+                        attestationObject: arrBufToBase64UrlSafe(challengePk.response.attestationObject),
+                        clientDataJSON: arrBufToBase64UrlSafe(challengePk.response.clientDataJSON),
+                    },
+                    type: challengePk.type,
+                },
+                magic_link_id: magicLinkId,
+            }
+
+            // send the keys' pk to the backend and finish the registration
+            res = await webauthnRegFinishAccReset(userId, data, csrf);
+            if (res.status === 201) {
+                formValues = {
+                    email: '',
+                    passkeyName: '',
+                    password: '',
+                    passwordConfirm: '',
+                };
+                success = true;
+            } else {
+                onWebauthnError();
+                console.error(res);
+            }
+        } else {
+            onWebauthnError();
+        }
+    }
+
+    async function passwordReset() {
+        try {
+            await schemaPassword.validate(formValues, {abortEarly: false});
             formErrors = {};
         } catch (err) {
             formErrors = extractFormErrors(err);
@@ -149,7 +273,6 @@
     async function onSubmitFinish(mfaCode) {
         isLoading = true;
 
-        const magicLinkId = window.location.href.split("/reset/")[1];
         const data = {
             email: formValues.email,
             password: formValues.password,
@@ -160,6 +283,12 @@
         const res = await resetPassword(userId, data, csrf);
         if (res.ok) {
             err = '';
+            formValues = {
+                email: '',
+                passkeyName: '',
+                password: '',
+                passwordConfirm: '',
+            };
             success = true;
         } else {
             const body = await res.json();
@@ -172,6 +301,7 @@
     function onWebauthnError() {
         // If there is any error with the key, the user should start a new login process
         webauthnData = undefined;
+        err = t.mfa.errorReg;
     }
 
     function onWebauthnSuccess(res) {
@@ -193,66 +323,191 @@
     {/if}
 
     <WithI18n bind:t content="passwordReset">
-        {#if webauthnData}
-            <WebauthnRequest
-                    bind:data={webauthnData}
-                    purpose="PasswordReset"
-                    onSuccess={onWebauthnSuccess}
-                    onError={onWebauthnError}
-            />
-        {/if}
-
         <div class="container">
-            <h1>Password Reset</h1>
+            {#if requestType === "new_user"}
+                {#if webauthnData}
+                    <WebauthnRequest
+                            bind:data={webauthnData}
+                            onSuccess={onWebauthnSuccess}
+                            onError={onWebauthnError}
+                    />
+                {/if}
 
-            <PasswordPolicy bind:t bind:accepted bind:policy bind:password={formValues.password}/>
+                <h1>{t.newAccount}</h1>
+                <p>{t.newAccDesc1}</p>
+                <p>{t.newAccDesc2}<a href={t.fidoLink} target="_blank">FIDO Alliance</a></p>
 
-            <Input
-                    type="email"
-                    bind:value={formValues.email}
-                    bind:error={formErrors.email}
-                    autocomplete="email"
-                    disabled={isMfa}
-                    placeholder={t.email}
-                    width={inputWidth}
-            >
-                {t.email.toUpperCase()}
-            </Input>
-            <PasswordInput
-                    bind:value={formValues.password}
-                    bind:error={formErrors.password}
-                    autocomplete="new-password"
-                    placeholder={t.password}
-                    width={inputWidth}
-                    bind:showCopy
-            >
-                {t.password.toUpperCase()}
-            </PasswordInput>
-            <PasswordInput
-                    bind:value={formValues.passwordConfirm}
-                    bind:error={formErrors.passwordConfirm}
-                    autocomplete="new-password"
-                    placeholder={t.passwordConfirm}
-                    width={inputWidth}
-                    bind:showCopy
-            >
-                {t.passwordConfirm.toUpperCase()}
-            </PasswordInput>
-
-            <Button on:click={generate} width={btnWidth} level={3}>
-                {t.generate.toUpperCase()}
-            </Button>
-            <Button on:click={onSubmit} width={btnWidth} bind:isLoading level={2}>
-                {t.save.toUpperCase()}
-            </Button>
-
-            {#if success}
-                <div class="success">
-                    {t.success1}
-                    <br>
-                    {t.success2}
+                <div style:margin-bottom="1rem">
+                    <Button
+                            on:click={() => accountTypeNew = "passkey"}
+                            width={btnWidth}
+                            bind:isLoading
+                            level={2}
+                    >
+                        {t.passwordless.toUpperCase()}
+                    </Button>
+                    <Button
+                            on:click={() => accountTypeNew = "password"}
+                            width={btnWidth}
+                            bind:isLoading
+                            level={3}
+                    >
+                        {t.password.toUpperCase()}
+                    </Button>
                 </div>
-            {:else if err}
+
+                {#if accountTypeNew === "password"}
+                    <div transition:slide>
+                        <PasswordPolicy bind:t bind:accepted bind:policy bind:password={formValues.password}/>
+
+                        <Input
+                                type="email"
+                                bind:value={formValues.email}
+                                bind:error={formErrors.email}
+                                autocomplete="email"
+                                disabled={isMfa}
+                                placeholder={t.email}
+                                width={inputWidth}
+                        >
+                            {t.email.toUpperCase()}
+                        </Input>
+                        <PasswordInput
+                                bind:value={formValues.password}
+                                bind:error={formErrors.password}
+                                autocomplete="new-password"
+                                placeholder={t.password}
+                                width={inputWidth}
+                                bind:showCopy
+                        >
+                            {t.password.toUpperCase()}
+                        </PasswordInput>
+                        <PasswordInput
+                                bind:value={formValues.passwordConfirm}
+                                bind:error={formErrors.passwordConfirm}
+                                autocomplete="new-password"
+                                placeholder={t.passwordConfirm}
+                                width={inputWidth}
+                                bind:showCopy
+                        >
+                            {t.passwordConfirm.toUpperCase()}
+                        </PasswordInput>
+
+                        <Button on:click={generate} width={btnWidth} level={3}>
+                            {t.generate.toUpperCase()}
+                        </Button>
+                        <Button on:click={passwordReset} width={btnWidth} bind:isLoading level={2}>
+                            {t.save.toUpperCase()}
+                        </Button>
+
+                        {#if success}
+                            <div class="success">
+                                {t.success1}
+                                <br>
+                                {t.success2}
+                            </div>
+                        {/if}
+                    </div>
+                {:else if accountTypeNew === "passkey"}
+                    <div transition:slide>
+                        <Input
+                                type="email"
+                                bind:value={formValues.email}
+                                bind:error={formErrors.email}
+                                autocomplete="email"
+                                disabled={isMfa}
+                                placeholder={t.email}
+                                width={inputWidth}
+                        >
+                            {t.email.toUpperCase()}
+                        </Input>
+                        <Input
+                                bind:value={formValues.passkeyName}
+                                bind:error={formErrors.passkeyName}
+                                autocomplete="off"
+                                placeholder={t.mfa.passkeyName}
+                                on:enter={handleRegisterPasskey}
+                                width={inputWidth}
+                        >
+                            {t.mfa.passkeyName}
+                        </Input>
+                        <Button on:click={handleRegisterPasskey} width={btnWidth} level={success ? 2 : 1}>
+                            {t.mfa.register.toUpperCase()}
+                        </Button>
+
+                        {#if success}
+                            <div class="success">
+                                <p>{t.successPasskey1}</p>
+                                <p>{t.successPasskey2}</p>
+                                <Button on:click={navigateToAccount} width={btnWidth} level={1}>
+                                    {t.accountLogin.toUpperCase()}
+                                </Button>
+                            </div>
+                        {/if}
+                    </div>
+                {/if}
+            {:else if requestType === "password_reset"}
+                {#if webauthnData}
+                    <WebauthnRequest
+                            bind:data={webauthnData}
+                            purpose="PasswordReset"
+                            onSuccess={onWebauthnSuccess}
+                            onError={onWebauthnError}
+                    />
+                {/if}
+
+                <h1>Password Reset</h1>
+
+                <PasswordPolicy bind:t bind:accepted bind:policy bind:password={formValues.password}/>
+
+                <Input
+                        type="email"
+                        bind:value={formValues.email}
+                        bind:error={formErrors.email}
+                        autocomplete="email"
+                        disabled={isMfa}
+                        placeholder={t.email}
+                        width={inputWidth}
+                >
+                    {t.email.toUpperCase()}
+                </Input>
+                <PasswordInput
+                        bind:value={formValues.password}
+                        bind:error={formErrors.password}
+                        autocomplete="new-password"
+                        placeholder={t.password}
+                        width={inputWidth}
+                        bind:showCopy
+                >
+                    {t.password.toUpperCase()}
+                </PasswordInput>
+                <PasswordInput
+                        bind:value={formValues.passwordConfirm}
+                        bind:error={formErrors.passwordConfirm}
+                        autocomplete="new-password"
+                        placeholder={t.passwordConfirm}
+                        width={inputWidth}
+                        bind:showCopy
+                >
+                    {t.passwordConfirm.toUpperCase()}
+                </PasswordInput>
+
+                <Button on:click={generate} width={btnWidth} level={3}>
+                    {t.generate.toUpperCase()}
+                </Button>
+                <Button on:click={passwordReset} width={btnWidth} bind:isLoading level={2}>
+                    {t.save.toUpperCase()}
+                </Button>
+
+                {#if success}
+                    <div class="success">
+                        {t.success1}
+                        <br>
+                        {t.success2}
+                    </div>
+                {/if}
+            {/if}
+
+            {#if err}
                 <div class="err">
                     {err}
                 </div>
@@ -264,6 +519,14 @@
 </BrowserCheck>
 
 <style>
+    a {
+        color: var(--col-act2);
+    }
+
+    a:visited {
+        color: var(--col-act2);
+    }
+
     .container {
         display: flex;
         flex-direction: column;

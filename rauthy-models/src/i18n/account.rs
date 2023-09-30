@@ -177,7 +177,7 @@ impl SsrJson for I18nAccountMfa<'_> {
 }
 
 impl I18nAccountMfa<'_> {
-    fn build_en() -> Self {
+    pub(crate) fn build_en() -> Self {
         Self {
             p_1: "If you plan on using your MFA key with multiple systems like Windows and \
             Android, you should do the registration with Android.",
@@ -202,7 +202,7 @@ impl I18nAccountMfa<'_> {
         }
     }
 
-    fn build_de() -> Self {
+    pub(crate) fn build_de() -> Self {
         Self {
             p_1: "Wenn Sie mehrere Systeme parallel nutzen möchten, wie z.B. Windows und Android, \
             sollten Sie die Registrierung mit Android durchführen.",

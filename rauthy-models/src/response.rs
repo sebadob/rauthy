@@ -4,7 +4,7 @@ use crate::entity::password::PasswordPolicy;
 use crate::entity::scopes::Scope;
 use crate::entity::sessions::SessionState;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
-use crate::entity::users::User;
+use crate::entity::users::{AccountType, User};
 use crate::entity::webauthn::PasskeyEntity;
 use crate::language::Language;
 use serde::{Deserialize, Serialize};
@@ -314,6 +314,24 @@ pub struct Userinfo {
     pub family_name: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum UserAccountTypeResponse {
+    New,
+    Password,
+    Passkey,
+}
+
+impl From<AccountType> for UserAccountTypeResponse {
+    fn from(value: AccountType) -> Self {
+        match value {
+            AccountType::New => Self::New,
+            AccountType::Password => Self::Password,
+            AccountType::Passkey => Self::Passkey,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct UserResponse {
     pub id: String,
@@ -342,6 +360,7 @@ pub struct UserResponse {
     pub failed_login_attempts: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_expires: Option<i64>,
+    pub account_type: UserAccountTypeResponse,
 }
 
 impl From<User> for UserResponse {
@@ -352,6 +371,7 @@ impl From<User> for UserResponse {
         } else {
             None
         };
+        let account_type = UserAccountTypeResponse::from(u.account_type());
 
         Self {
             id: u.id,
@@ -369,6 +389,7 @@ impl From<User> for UserResponse {
             last_failed_login: u.last_failed_login,
             failed_login_attempts: u.failed_login_attempts,
             user_expires: u.user_expires,
+            account_type,
         }
     }
 }

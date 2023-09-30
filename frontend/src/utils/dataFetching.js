@@ -170,10 +170,32 @@ export async function webauthnRegStart(id, data) {
 	});
 }
 
+export async function webauthnRegStartAccReset(id, data, csrf) {
+	return await fetch(`/auth/v1/users/${id}/webauthn/register/start`, {
+		method: 'POST',
+		headers: {
+			...HEADERS.json,
+			'pwd-csrf-token': csrf,
+		},
+		body: JSON.stringify(data),
+	});
+}
+
 export async function webauthnRegFinish(id, data) {
 	return await fetch(`/auth/v1/users/${id}/webauthn/register/finish`, {
 		method: 'POST',
 		headers: getCsrfHeaders(),
+		body: JSON.stringify(data),
+	});
+}
+
+export async function webauthnRegFinishAccReset(id, data, csrf) {
+	return await fetch(`/auth/v1/users/${id}/webauthn/register/finish`, {
+		method: 'POST',
+		headers: {
+			...HEADERS.json,
+			'pwd-csrf-token': csrf,
+		},
 		body: JSON.stringify(data),
 	});
 }

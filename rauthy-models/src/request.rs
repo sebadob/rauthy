@@ -593,6 +593,13 @@ pub struct WebauthnRegStartRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,32}`
     #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,32}"))]
     pub passkey_name: String,
+
+    /// Validation: `email`
+    #[validate(email)]
+    pub email: Option<String>,
+    /// Validation: `[a-zA-Z0-9]{64}`
+    #[validate(regex(path = "RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
+    pub magic_link_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
@@ -603,6 +610,9 @@ pub struct WebauthnRegFinishRequest {
     /// Note: `ToSchema` does currently not exist for `webauthn_rs::prelude::PublicKeyCredential`
     #[schema(value_type = str)]
     pub data: webauthn_rs::prelude::RegisterPublicKeyCredential,
+    /// Validation: `[a-zA-Z0-9]{64}`
+    #[validate(regex(path = "RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
+    pub magic_link_id: Option<String>,
 }
 
 // validation helpers
