@@ -34,4 +34,4 @@ create unique index passkeys_passkey_user_id_uindex
 
 -- add 'uv' to passkeys
 alter table passkeys
-    add uv bool;
+    add user_verified bool;

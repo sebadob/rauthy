@@ -214,7 +214,7 @@ create table passkeys
     credential_id   blob    not null,
     registered      integer not null,
     last_used       integer not null,
-    uv              bool,
+    user_verified   bool,
     constraint passkeys_pk
         primary key (user_id, name)
 );
