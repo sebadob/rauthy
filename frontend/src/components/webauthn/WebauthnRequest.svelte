@@ -40,7 +40,7 @@
         if (purpose === 'Login') {
             p = {purpose: {Login: data.code}};
         } else {
-            p = {purpose: 'PasswordReset'};
+            p = {purpose};
         }
 
         let res = {};

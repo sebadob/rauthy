@@ -28,14 +28,11 @@
     let msg = '';
     let showRegInput = false;
     let showDelete = user.account_type === "password";
-    console.log('user.account_type ' + user.account_type);
 
     let passkeys = [];
     $: if (passkeys.length > 0 && user.account_type === "passkey") {
-        console.log('passkeys.length: ' + passkeys.length);
         showDelete = passkeys.length > 1;
     }
-    $: console.log(showDelete);
 
     let formValues = {passkeyName: ''};
     let formErrors = {};
@@ -284,6 +281,10 @@
 </div>
 
 <style>
+    p {
+        margin: .5rem 0;
+    }
+
     .container {
         margin-top: -10px;
         padding-left: 10px;

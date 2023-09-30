@@ -8,6 +8,7 @@ use crate::entity::pow::Pow;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
+use crate::entity::webauthn::WebauthnServiceReq;
 use crate::language::Language;
 use crate::request::{
     NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
@@ -463,29 +464,50 @@ impl User {
 
         let mut password = None;
         if let Some(pwd_new) = upd_user.password_new {
-            match upd_user.password_current {
-                Some(pwd_curr) => {
-                    user.validate_password(data, pwd_curr).await?;
-                    password = Some(pwd_new);
-                }
-                None => {
+            if let Some(pwd_curr) = upd_user.password_current {
+                user.validate_password(data, pwd_curr).await?;
+            } else if let Some(mfa_code) = upd_user.mfa_code {
+                let svc_req = WebauthnServiceReq::find(data, mfa_code).await?;
+                if svc_req.user_id != user.id {
                     return Err(ErrorResponse::new(
-                        ErrorResponseType::BadRequest,
-                        "Cannot set a new password without the current one".to_string(),
-                    ))
+                        ErrorResponseType::Forbidden,
+                        "User ID does not match".to_string(),
+                    ));
                 }
-            };
+                svc_req.delete(data).await?;
+            } else {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "Cannot set a new password without the current one".to_string(),
+                ));
+            }
+            password = Some(pwd_new);
         }
 
+        let email = if let Some(email) = upd_user.email {
+            email
+        } else {
+            user.email.clone()
+        };
+        let given_name = if let Some(given_name) = upd_user.given_name {
+            given_name
+        } else {
+            user.given_name.clone()
+        };
+        let family_name = if let Some(family_name) = upd_user.family_name {
+            family_name
+        } else {
+            user.family_name.clone()
+        };
         let groups = if user.groups.is_some() {
             Some(user.get_groups())
         } else {
             None
         };
         let req = UpdateUserRequest {
-            email: upd_user.email,
-            given_name: upd_user.given_name,
-            family_name: upd_user.family_name,
+            email,
+            given_name,
+            family_name,
             language: upd_user.language,
             password,
             roles: user.get_roles(),
@@ -861,6 +883,12 @@ impl User {
         data: &web::Data<AppState>,
         req: HttpRequest,
     ) -> Result<(), ErrorResponse> {
+        // TODO implement something with a Backup Code for passkey only accounts?
+        // deny for passkey only accounts
+        if self.account_type() == AccountType::Passkey {
+            return Ok(());
+        }
+
         let ml_res = MagicLinkPassword::find_by_user(data, self.id.clone()).await;
         // if an active magic link already exists - invalidate it.
         if ml_res.is_ok() {

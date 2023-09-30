@@ -7,8 +7,12 @@ use serde::Serialize;
 #[serde(rename_all = "camelCase")]
 pub struct I18nAccount<'a> {
     account: &'a str,
+    acc_type_passkey_text_1: &'a str,
+    acc_type_passkey_text_2: &'a str,
+    acc_type_passkey_text_3: &'a str,
     cancel: &'a str,
     change_password: &'a str,
+    convert_account: &'a str,
     created: &'a str,
     email: &'a str,
     email_verified: &'a str,
@@ -24,6 +28,7 @@ pub struct I18nAccount<'a> {
     nav_info: &'a str,
     nav_edit: &'a str,
     nav_mfa: &'a str,
+    nav_password: &'a str,
     nav_logout: &'a str,
     never: &'a str,
     password_confirm: &'a str,
@@ -61,8 +66,16 @@ impl I18nAccount<'_> {
     fn build_en() -> Self {
         Self {
             account: "Account",
+            acc_type_passkey_text_1: r#"This is account is currently a passkey only account.
+This means, that you do not have any password, because you don't need one."#,
+            acc_type_passkey_text_2: r#"You can convert your account and add a password. But keep
+in mind, that this implies, that you need to verify each new device with the password additionally.
+You then cannot just log in on any device, where you have not entered the password beforehand at
+least once."#,
+            acc_type_passkey_text_3: "Do you want to convert your account and add a password?",
             cancel: "Cancel",
             change_password: "Change Password",
+            convert_account: "Convert Account",
             created: "created",
             email: "E-Mail",
             email_verified: "E-Mail verified",
@@ -78,6 +91,7 @@ impl I18nAccount<'_> {
             nav_info: "Info",
             nav_edit: "Edit",
             nav_mfa: "MFA",
+            nav_password: "Password",
             nav_logout: "Logout",
             never: "Never",
             password_confirm: "Confirm Password",
@@ -102,8 +116,16 @@ impl I18nAccount<'_> {
     fn build_de() -> Self {
         Self {
             account: "Account",
+            acc_type_passkey_text_1: r#"Dies ist ein "Passkey-Only" Account. Das bedeutet, dass
+dieser Account kein Passwort hat und auch keines benötigt."#,
+            acc_type_passkey_text_2: r#"Der Account kann in einen Passwort-Account umgewandelt
+werden. Das würde allerdings bedeuten, dass ein Login auf einem neuen Gerät ohne vorherige, zumindest
+einmalige zusätzliche Verifizierung des Passwortes nicht mehr möglich sein wird."#,
+            acc_type_passkey_text_3:
+                "Soll dieser Account gewandelt und ein Passwort hinzugefügt werden?",
             cancel: "Abbrechen",
             change_password: "Passwort wechseln",
+            convert_account: "Account Umwandeln",
             created: "erstellt",
             email: "E-Mail",
             email_verified: "E-Mail verifiziert",
@@ -119,6 +141,7 @@ impl I18nAccount<'_> {
             nav_info: "Info",
             nav_edit: "Editieren",
             nav_mfa: "MFA",
+            nav_password: "Passwort",
             nav_logout: "Logout",
             never: "Niemals",
             password_confirm: "Passwort bestätigen",

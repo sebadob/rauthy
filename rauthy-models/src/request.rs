@@ -216,6 +216,7 @@ pub struct MfaAwaitRequest {
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum MfaPurpose {
     Login(String),
+    PasswordNew,
     PasswordReset,
     Test,
 }
@@ -536,16 +537,17 @@ pub struct UpdateUserRequest {
 pub struct UpdateUserSelfRequest {
     /// Validation: `email`
     #[validate(email)]
-    pub email: String,
+    pub email: Option<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
     #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
-    pub given_name: String,
+    pub given_name: Option<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
     #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
-    pub family_name: String,
+    pub family_name: Option<String>,
     // optional to not break the public API and need a new major release
     pub language: Option<Language>,
     pub password_current: Option<String>,
+    pub mfa_code: Option<String>,
     /// Validation: Applies password policy
     pub password_new: Option<String>,
 }
