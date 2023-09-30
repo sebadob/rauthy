@@ -20,6 +20,8 @@
     export let user = {};
     export let onSave;
 
+    console.log(user);
+
     let isLoading = false;
     let err = '';
     let success = false;

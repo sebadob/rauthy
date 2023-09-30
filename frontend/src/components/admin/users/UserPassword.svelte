@@ -160,22 +160,13 @@
                 This means, that this user is using the passwordless login flow only and does not have any password.
             </p>
             <p>
-                If the user has lost all his keys and you have verified everything, you may reset his account type to
-                password-only and send out a new Reset E-Mail, so the user can get access to his account again.
+                If the user has lost all his keys and you have verified everything, you may reset his account type and
+                send out a new reset E-Mail, so the user can get access again.
             </p>
             <p>
                 To reset the account, navigate to 'MFA' and delete all registered keys for this user.
             </p>
         </div>
-
-        <Button
-                on:click={resetAccount}
-                bind:isLoading
-                width={btnWidth}
-                level={2}
-        >
-            RESET ACCOUNT
-        </Button>
     {:else}
         {#if policy}
             <PasswordPolicy bind:password={formValues.new} bind:accepted bind:policy/>
