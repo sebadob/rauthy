@@ -14,6 +14,7 @@ skip_feature_sets = [["postgres", "sqlite"]]
 
 [dependencies]
 actix-web = { version = "4.4", features = ["rustls-0_21"] }
+actix-web-prom = "0.7.0"
 actix-service = "2"
 actix-web-grants = "3.0"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
@@ -21,6 +22,7 @@ cron = "0.12"
 dotenvy = "0.15"
 flume = "0.11"
 num_cpus = "1"
+prometheus = "0.13.3"
 rauthy-common = { path = "../rauthy-common" }
 rauthy-handlers = { path = "../rauthy-handlers" }
 rauthy-models = { path = "../rauthy-models" }
@@ -37,8 +39,7 @@ tokio = { version = "1", features = ["full"] }
 utoipa = { version = "3", features = ["actix_extras", "chrono", "openapi_extensions"] }
 utoipa-swagger-ui = { version = "3", features = ["actix-web"] }
 validator = { version = "0.16", features = ["derive"] }
-actix-web-prom = "0.7.0"
-prometheus = "0.13.3"
+webauthn-rs = { version = "0.4", features = ["danger-allow-state-serialisation", "danger-credential-internals", "resident-key-support"] }
 
 [dev-dependencies]
 josekit = "0.8"
