@@ -361,6 +361,7 @@ pub struct UserResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_expires: Option<i64>,
     pub account_type: UserAccountTypeResponse,
+    pub webauthn_user_id: Option<String>,
 }
 
 impl From<User> for UserResponse {
@@ -390,6 +391,7 @@ impl From<User> for UserResponse {
             failed_login_attempts: u.failed_login_attempts,
             user_expires: u.user_expires,
             account_type,
+            webauthn_user_id: u.webauthn_user_id,
         }
     }
 }
