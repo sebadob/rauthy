@@ -20,6 +20,7 @@
     let redirectUri = '';
     let nonce = '';
     let scopes = [];
+    let passwordInput;
 
     let state;
     let challenge;
@@ -84,6 +85,10 @@
 
     $: if (clientId) {
         fetchClientLogo(clientId);
+    }
+
+    $: if (passwordInput) {
+        passwordInput.focus();
     }
 
     onMount(async () => {
@@ -262,6 +267,7 @@
 
             {#if needsPassword && existingMfaUser !== formValues.email && !showReset}
                 <PasswordInput
+                        bind:bindThis={passwordInput}
                         name="rauthyPassword"
                         bind:value={formValues.password}
                         bind:error={formErrors.password}
