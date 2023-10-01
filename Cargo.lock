@@ -2941,7 +2941,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.16.0-20230922"
+version = "0.16.0-20231001"
 dependencies = [
  "actix-service",
  "actix-web",
@@ -2974,11 +2974,12 @@ dependencies = [
  "utoipa",
  "utoipa-swagger-ui",
  "validator",
+ "webauthn-rs",
 ]
 
 [[package]]
 name = "rauthy-common"
-version = "0.16.0-20230922"
+version = "0.16.0-20231001"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -3009,7 +3010,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.16.0-20230922"
+version = "0.16.0-20231001"
 dependencies = [
  "actix",
  "actix-multipart",
@@ -3039,7 +3040,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.16.0-20230922"
+version = "0.16.0-20231001"
 dependencies = [
  "accept-language",
  "actix",
@@ -3083,11 +3084,12 @@ dependencies = [
  "uuid",
  "validator",
  "webauthn-rs",
+ "webauthn-rs-proto",
 ]
 
 [[package]]
 name = "rauthy-service"
-version = "0.16.0-20230922"
+version = "0.16.0-20231001"
 dependencies = [
  "actix-web",
  "argon2",

@@ -81,8 +81,8 @@ pub async fn send_pwd_reset(
     user: &User,
 ) {
     let link = format!(
-        "{}/users/{}/reset/{}",
-        data.issuer, magic_link.user_id, &magic_link.id
+        "{}/users/{}/reset/{}?type={}",
+        data.issuer, magic_link.user_id, &magic_link.id, magic_link.usage,
     );
     let exp = OffsetDateTime::from_unix_timestamp(magic_link.exp)
         .unwrap()

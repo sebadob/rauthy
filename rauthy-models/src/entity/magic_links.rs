@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use time::OffsetDateTime;
 
-use rauthy_common::constants::PWD_RESET_COOKIE;
+use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::get_rand;
 
@@ -135,7 +135,52 @@ impl MagicLinkPassword {
         self.save(data).await
     }
 
-    pub fn validate(&self, user_id: &str, req: &HttpRequest) -> Result<(), ErrorResponse> {
+    pub fn validate(
+        &self,
+        user_id: &str,
+        req: &HttpRequest,
+        with_csrf: bool,
+    ) -> Result<(), ErrorResponse> {
+        // binding cookie
+        if self.cookie.is_some() {
+            let err = ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                String::from(
+                    "The requested password reset link is already tied to another session",
+                ),
+            );
+
+            let cookie_opt = req.cookie(PWD_RESET_COOKIE);
+            if let Some(cookie) = cookie_opt {
+                // the extracted cookie from the request starts with 'rauthy-pwd-reset='
+                if !cookie.value().ends_with(self.cookie.as_ref().unwrap()) {
+                    return Err(err);
+                }
+            } else {
+                return Err(err);
+            }
+        }
+
+        // csrf token
+        if with_csrf {
+            match req.headers().get(PWD_CSRF_HEADER) {
+                None => {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::Unauthorized,
+                        String::from("CSRF Token is missing"),
+                    ));
+                }
+                Some(token) => {
+                    if self.csrf_token != token.to_str().unwrap_or("") {
+                        return Err(ErrorResponse::new(
+                            ErrorResponseType::Unauthorized,
+                            String::from("Invalid CSRF Token"),
+                        ));
+                    }
+                }
+            }
+        }
+
         if self.user_id != user_id {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -155,25 +200,6 @@ impl MagicLinkPassword {
                 ErrorResponseType::BadRequest,
                 String::from("The requested passwort reset link was already used"),
             ));
-        }
-
-        if self.cookie.is_some() {
-            let err = ErrorResponse::new(
-                ErrorResponseType::Forbidden,
-                String::from(
-                    "The requested password reset link is already tied to another session",
-                ),
-            );
-
-            let cookie_opt = req.cookie(PWD_RESET_COOKIE);
-            if let Some(cookie) = cookie_opt {
-                // the extracted cookie from the request starts with 'rauthy-pwd-reset='
-                if !cookie.value().ends_with(self.cookie.as_ref().unwrap()) {
-                    return Err(err);
-                }
-            } else {
-                return Err(err);
-            }
         }
 
         Ok(())

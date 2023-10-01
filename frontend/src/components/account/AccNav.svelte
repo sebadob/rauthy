@@ -5,7 +5,7 @@
     export let selected = t.navInfo;
     export let showWide = false;
 
-    let labels = [t.navInfo, t.navEdit, t.navMfa, t.navLogout];
+    let labels = [t.navInfo, t.navEdit, t.navPassword, t.navMfa, t.navLogout];
     let toggle = [];
 
     $: if (selected) {

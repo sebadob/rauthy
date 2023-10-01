@@ -102,41 +102,41 @@
 
             <li class="li" class:policyErr={!!errPolicy[1]}>
                 {t.passwordPolicy.lengthMax}
-                {policy?.length_max}
+                {policy?.length_max || 0}
             </li>
 
             {#if -1 !== policy.include_lower_case}
                 <li class="li" class:policyErr={!!errPolicy[2]}>
                     {t.passwordPolicy.lowercaseMin}
-                    {policy?.include_lower_case}
+                    {policy?.include_lower_case || 0}
                 </li>
             {/if}
 
             {#if -1 !== policy.include_upper_case}
                 <li class="li" class:policyErr={!!errPolicy[3]}>
                     {t.passwordPolicy.uppercaseMin}
-                    {policy?.include_upper_case}
+                    {policy?.include_upper_case || 0}
                 </li>
             {/if}
 
             {#if -1 !== policy.include_digits}
                 <li class="li" class:policyErr={!!errPolicy[4]}>
                     {t.passwordPolicy.digitsMin}
-                    {policy?.include_digits}
+                    {policy?.include_digits || 0}
                 </li>
             {/if}
 
             {#if -1 !== policy.include_special}
                 <li class="li" class:policyErr={!!errPolicy[5]}>
                     {t.passwordPolicy.specialMin}
-                    {policy?.include_special}
+                    {policy?.include_special || 0}
                 </li>
             {/if}
 
             {#if -1 !== policy.not_recently_used}
                 <li class="li">
                     {t.passwordPolicy.notRecent}
-                    {policy?.not_recently_used}
+                    {policy?.not_recently_used || 0}
                 </li>
             {/if}
         </ul>

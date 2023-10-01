@@ -23,13 +23,13 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
     let rules = res.json::<PasswordPolicyResponse>().await?;
-    assert_eq!(rules.length_min, 10);
+    assert_eq!(rules.length_min, 14);
     assert_eq!(rules.length_max, 128);
     assert_eq!(rules.include_lower_case, Some(1));
     assert_eq!(rules.include_upper_case, Some(1));
     assert_eq!(rules.include_digits, Some(1));
-    assert_eq!(rules.include_special, Some(1));
-    assert_eq!(rules.valid_days, Some(90));
+    assert_eq!(rules.include_special, None);
+    assert_eq!(rules.valid_days, Some(180));
     assert_eq!(rules.not_recently_used, Some(3));
 
     // modify the rules

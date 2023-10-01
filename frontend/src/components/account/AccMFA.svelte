@@ -18,6 +18,8 @@
     import Input from "$lib/inputs/Input.svelte";
     import * as yup from "yup";
     import {REGEX_NAME} from "../../utils/constants.js";
+    import IconFingerprint from "$lib/icons/IconFingerprint.svelte";
+    import Tooltip from "$lib/Tooltip.svelte";
 
     export let t;
     export let sessionInfo;
@@ -27,8 +29,12 @@
     let err = false;
     let msg = '';
     let showRegInput = false;
+    let showDelete = user.account_type === "password";
 
     let passkeys = [];
+    $: if (passkeys.length > 0 && user.account_type === "passkey") {
+        showDelete = passkeys.length > 1;
+    }
 
     let formValues = {passkeyName: ''};
     let formErrors = {};
@@ -54,7 +60,6 @@
             passkeys = body;
         } else {
             console.error('error fetching passkeys: ' + body.message);
-
         }
     }
 
@@ -237,7 +242,16 @@
             <div class="keyContainer">
                 <div class="row">
                     {`${t.mfa.passkeyName}: `}
-                    <b>{passkey.name}</b>
+                    <div class="nameUv">
+                        <b>{passkey.name}</b>
+                        {#if passkey.user_verified}
+                            <Tooltip text={t.userVerifiedTooltip}>
+                                <div style:margin-bottom="-.25rem">
+                                    <IconFingerprint width=18 color="var(--col-acnt)" />
+                                </div>
+                            </Tooltip>
+                        {/if}
+                    </div>
                 </div>
                 <div class="row">
                     {`${t.mfa.registerd}: `}
@@ -247,14 +261,21 @@
                     {`${t.mfa.lastUsed}: `}
                     <span class="font-mono">{formatDateFromTs(passkey.last_used)}</span>
                 </div>
-                <div class="row">
-                    <div></div>
-                    <div class="deleteBtn">
-                        <Button on:click={() => handleDelete(passkey.name)} level={4}>
-                            {t.mfa.delete.toUpperCase()}
-                        </Button>
+
+                {#if showDelete}
+                    <div class="row">
+                        <div></div>
+                        <div class="deleteBtn">
+                            <Button
+                                    on:click={() => handleDelete(passkey.name)}
+                                    level={4}
+                                    disabled={showDelete}
+                            >
+                                {t.mfa.delete.toUpperCase()}
+                            </Button>
+                        </div>
                     </div>
-                </div>
+                {/if}
             </div>
         {/each}
     </div>
@@ -271,6 +292,10 @@
 </div>
 
 <style>
+    p {
+        margin: .5rem 0;
+    }
+
     .container {
         margin-top: -10px;
         padding-left: 10px;
@@ -316,6 +341,12 @@
         color: var(--col-ok);
     }
 
+    .nameUv {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+    }
+
     .regBtns {
         display: flex;
         align-items: center;
@@ -329,5 +360,6 @@
         display: flex;
         gap: .5rem;
         justify-content: space-between;
+        align-items: center;
     }
 </style>

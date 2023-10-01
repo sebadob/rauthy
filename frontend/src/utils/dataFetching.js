@@ -155,6 +155,13 @@ export async function putUserSelf(id, data) {
 	});
 }
 
+export async function postUserSelfConvertPasskey(id) {
+	return await fetch(`/auth/v1/users/${id}/self/convert_passkey`, {
+		method: 'POST',
+		headers: getCsrfHeaders(),
+	});
+}
+
 export async function postUpdateUserLanguage() {
 	return await fetch('/auth/v1/update_language', {
 		method: 'POST',
@@ -170,10 +177,32 @@ export async function webauthnRegStart(id, data) {
 	});
 }
 
+export async function webauthnRegStartAccReset(id, data, csrf) {
+	return await fetch(`/auth/v1/users/${id}/webauthn/register/start`, {
+		method: 'POST',
+		headers: {
+			...HEADERS.json,
+			'pwd-csrf-token': csrf,
+		},
+		body: JSON.stringify(data),
+	});
+}
+
 export async function webauthnRegFinish(id, data) {
 	return await fetch(`/auth/v1/users/${id}/webauthn/register/finish`, {
 		method: 'POST',
 		headers: getCsrfHeaders(),
+		body: JSON.stringify(data),
+	});
+}
+
+export async function webauthnRegFinishAccReset(id, data, csrf) {
+	return await fetch(`/auth/v1/users/${id}/webauthn/register/finish`, {
+		method: 'POST',
+		headers: {
+			...HEADERS.json,
+			'pwd-csrf-token': csrf,
+		},
 		body: JSON.stringify(data),
 	});
 }

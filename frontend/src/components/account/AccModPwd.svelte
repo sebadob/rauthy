@@ -10,6 +10,7 @@
     export let t;
     export let formValues = {};
     export let btnWidth = "4rem";
+    export let hideCurrentPassword = false;
     export let inputWidth;
 
     let accepted = false;
@@ -20,6 +21,12 @@
 
     const schema = yup.object().shape({
         current: yup.string().required(t.passwordCurrReq),
+        new: yup.string()
+            .required(t.passwordNewReq),
+        verify: yup.string()
+            .required(t.passwordNoMatch),
+    });
+    const schemaWithoutCurrent = yup.object().shape({
         new: yup.string()
             .required(t.passwordNewReq),
         verify: yup.string()
@@ -41,12 +48,22 @@
     export async function isValid() {
         err = '';
 
-        try {
-            await schema.validate(formValues, {abortEarly: false});
-            formErrors = {};
-        } catch (err) {
-            formErrors = extractFormErrors(err);
-            return false;
+        if (hideCurrentPassword) {
+            try {
+                await schemaWithoutCurrent.validate(formValues, {abortEarly: false});
+                formErrors = {};
+            } catch (err) {
+                formErrors = extractFormErrors(err);
+                return false;
+            }
+        } else {
+            try {
+                await schema.validate(formValues, {abortEarly: false});
+                formErrors = {};
+            } catch (err) {
+                formErrors = extractFormErrors(err);
+                return false;
+            }
         }
 
         if (!accepted) {
@@ -77,16 +94,18 @@
     <div class="container">
         <PasswordPolicy bind:t bind:accepted bind:policy bind:password={formValues.new}/>
 
-        <PasswordInput
-                bind:value={formValues.current}
-                bind:error={formErrors.current}
-                autocomplete="current-password"
-                placeholder={t.passwordCurr}
-                on:input={isValid}
-                width={inputWidth}
-        >
-            {t.passwordCurr.toUpperCase()}
-        </PasswordInput>
+        {#if !hideCurrentPassword}
+            <PasswordInput
+                    bind:value={formValues.current}
+                    bind:error={formErrors.current}
+                    autocomplete="current-password"
+                    placeholder={t.passwordCurr}
+                    on:input={isValid}
+                    width={inputWidth}
+            >
+                {t.passwordCurr.toUpperCase()}
+            </PasswordInput>
+        {/if}
         <PasswordInput
                 bind:value={formValues.new}
                 bind:error={formErrors.new}
@@ -110,7 +129,7 @@
             {t.passwordConfirm.toUpperCase()}
         </PasswordInput>
 
-        <Button on:click={generate} level={3} width={btnWidth}>
+        <Button on:click={generate} level={2} width={btnWidth}>
             {t.generateRandom.toUpperCase()}
         </Button>
 

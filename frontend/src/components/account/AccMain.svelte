@@ -6,6 +6,7 @@
     import {tweened} from "svelte/motion";
     import AccMFA from "./AccMFA.svelte";
     import LangSelector from "$lib/LangSelector.svelte";
+    import AccPassword from "./AccPassword.svelte";
 
     export let t;
 
@@ -56,6 +57,8 @@
                         <AccInfo bind:t bind:user viewModePhone />
                     {:else if content === t.navEdit}
                         <AccEdit bind:t bind:user viewModePhone />
+                    {:else if content === t.navPassword}
+                        <AccPassword bind:t bind:user viewModePhone />
                     {:else if content === t.navMfa}
                         <AccMFA bind:t bind:sessionInfo bind:user/>
                     {/if}
@@ -79,6 +82,8 @@
                     <AccInfo bind:t bind:user />
                 {:else if content === t.navEdit}
                     <AccEdit bind:t bind:user />
+                {:else if content === t.navPassword}
+                    <AccPassword bind:t bind:user />
                 {:else if content === t.navMfa}
                     <AccMFA bind:t bind:sessionInfo bind:user/>
                 {/if}

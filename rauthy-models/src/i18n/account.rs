@@ -7,8 +7,14 @@ use serde::Serialize;
 #[serde(rename_all = "camelCase")]
 pub struct I18nAccount<'a> {
     account: &'a str,
+    acc_type: &'a str,
+    acc_type_passkey_text_1: &'a str,
+    acc_type_passkey_text_2: &'a str,
+    acc_type_passkey_text_3: &'a str,
     cancel: &'a str,
     change_password: &'a str,
+    convert_account: &'a str,
+    convert_account_p_1: &'a str,
     created: &'a str,
     email: &'a str,
     email_verified: &'a str,
@@ -24,6 +30,7 @@ pub struct I18nAccount<'a> {
     nav_info: &'a str,
     nav_edit: &'a str,
     nav_mfa: &'a str,
+    nav_password: &'a str,
     nav_logout: &'a str,
     never: &'a str,
     password_confirm: &'a str,
@@ -39,6 +46,7 @@ pub struct I18nAccount<'a> {
     save: &'a str,
     user: &'a str,
     user_expiry: &'a str,
+    user_verified_tooltip: &'a str,
     valid_email: &'a str,
     valid_given_name: &'a str,
     valid_family_name: &'a str,
@@ -61,8 +69,22 @@ impl I18nAccount<'_> {
     fn build_en() -> Self {
         Self {
             account: "Account",
+            acc_type: "Account Type",
+            acc_type_passkey_text_1: r#"This is account is currently a passkey only account.
+This means, that you do not have any password, because you don't need one."#,
+            acc_type_passkey_text_2: r#"You can convert your account and add a password. But keep
+in mind, that this implies, that you need to verify each new device with the password additionally.
+You then cannot just log in on any device, where you have not entered the password beforehand at
+least once."#,
+            acc_type_passkey_text_3: "Do you want to convert your account and add a password?",
             cancel: "Cancel",
             change_password: "Change Password",
+            convert_account: "Convert Account",
+            convert_account_p_1: r#"You can convert your account to a Passkey-Only account.
+This conversion deletes your password and you can and must only ever login with your registered
+passkeys. Keep in mind, that only passkeys with the additional User Verification will be accepted.
+If you passkeys support this, you will find a small symbol behind the name of the key on the 'MFA'
+page."#,
             created: "created",
             email: "E-Mail",
             email_verified: "E-Mail verified",
@@ -78,6 +100,7 @@ impl I18nAccount<'_> {
             nav_info: "Info",
             nav_edit: "Edit",
             nav_mfa: "MFA",
+            nav_password: "Password",
             nav_logout: "Logout",
             never: "Never",
             password_confirm: "Confirm Password",
@@ -93,6 +116,7 @@ impl I18nAccount<'_> {
             save: "Save",
             user: "User",
             user_expiry: "User Expires",
+            user_verified_tooltip: "Secured with fingerprint or PIN",
             valid_email: "Valid E-Mail format",
             valid_given_name: "Your given name with 2 - 32 non-special characters",
             valid_family_name: "Your family name with 2 - 32 non-special characters",
@@ -102,8 +126,21 @@ impl I18nAccount<'_> {
     fn build_de() -> Self {
         Self {
             account: "Account",
+            acc_type: "Account Typ",
+            acc_type_passkey_text_1: r#"Dies ist ein "Passkey-Only" Account. Das bedeutet, dass
+dieser Account kein Passwort hat und auch keines benötigt."#,
+            acc_type_passkey_text_2: r#"Der Account kann in einen Passwort-Account umgewandelt
+werden. Das würde allerdings bedeuten, dass ein Login auf einem neuen Gerät ohne vorherige, zumindest
+einmalige zusätzliche Verifizierung des Passwortes nicht mehr möglich sein wird."#,
+            acc_type_passkey_text_3:
+                "Soll dieser Account gewandelt und ein Passwort hinzugefügt werden?",
             cancel: "Abbrechen",
             change_password: "Passwort wechseln",
+            convert_account: "Account Umwandeln",
+            convert_account_p_1: r#"Dieser Account kann in einen Passkey-Only Account umgewandelt
+werden. Diese Umwandling löscht das Passwort und erlaubt den alleinigen Login mit den registrieren
+Passkeys. Nur Passkeys mit zusätzlicher Benutzerverifizierung werden akzeptiert. Diese sind auf der
+'MFA' Seite durch das zusätzliche Symbol hinter dem Passkey Namen gekennzeichnet."#,
             created: "erstellt",
             email: "E-Mail",
             email_verified: "E-Mail verifiziert",
@@ -119,6 +156,7 @@ impl I18nAccount<'_> {
             nav_info: "Info",
             nav_edit: "Editieren",
             nav_mfa: "MFA",
+            nav_password: "Passwort",
             nav_logout: "Logout",
             never: "Niemals",
             password_confirm: "Passwort bestätigen",
@@ -134,6 +172,7 @@ impl I18nAccount<'_> {
             save: "Speichern",
             user: "Benutzer",
             user_expiry: "Benutzer Ablauf",
+            user_verified_tooltip: "Abgesichert durch Fingerabdruck oder PIN",
             valid_email: "Gültige E-Mail Adresse",
             valid_given_name: "Vorname, 2 - 32 Buchstaben, keine Sonderzeichen",
             valid_family_name: "Nachname, 2 - 32  Buchstaben, keine Sonderzeichen",
@@ -177,7 +216,7 @@ impl SsrJson for I18nAccountMfa<'_> {
 }
 
 impl I18nAccountMfa<'_> {
-    fn build_en() -> Self {
+    pub(crate) fn build_en() -> Self {
         Self {
             p_1: "If you plan on using your MFA key with multiple systems like Windows and \
             Android, you should do the registration with Android.",
@@ -202,7 +241,7 @@ impl I18nAccountMfa<'_> {
         }
     }
 
-    fn build_de() -> Self {
+    pub(crate) fn build_de() -> Self {
         Self {
             p_1: "Wenn Sie mehrere Systeme parallel nutzen möchten, wie z.B. Windows und Android, \
             sollten Sie die Registrierung mit Android durchführen.",

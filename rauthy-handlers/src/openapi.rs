@@ -98,6 +98,7 @@ use utoipa::{openapi, OpenApi};
         users::get_user_by_email,
         users::put_user_by_id,
         users::put_user_self,
+        users::post_user_self_convert_passkey,
         users::delete_user_by_id,
     ),
     components(
@@ -171,6 +172,7 @@ use utoipa::{openapi, OpenApi};
             response::UserAttrValueResponse,
             response::UserAttrValuesResponse,
             response::Userinfo,
+            response::UserAccountTypeResponse,
             response::UserResponse,
             response::WebauthnAuthStartResponse,
             response::WebauthnLoginFinishResponse,

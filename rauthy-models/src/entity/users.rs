@@ -8,6 +8,7 @@ use crate::entity::pow::Pow;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
+use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
 use crate::language::Language;
 use crate::request::{
     NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
@@ -25,7 +26,15 @@ use std::ops::Add;
 use time::OffsetDateTime;
 use tracing::{error, warn};
 
-#[derive(Clone, Debug, FromRow, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
+pub enum AccountType {
+    // New -> neither password nor a passkey has been set yet
+    New,
+    Password,
+    Passkey,
+}
+
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct User {
     pub id: String,
     pub email: String,
@@ -312,10 +321,10 @@ impl User {
         let q = sqlx::query(
             r#"update users set
             email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6,
-            enabled = $7, email_verified = $8, password_expires = $9, created_at = $10,
-            last_login = $11, last_failed_login = $12, failed_login_attempts = $13, language = $14,
-            webauthn_user_id = $15, user_expires = $16
-            where id = $17"#,
+            enabled = $7, email_verified = $8, password_expires = $9, last_login = $10,
+            last_failed_login = $11, failed_login_attempts = $12, language = $13,
+            webauthn_user_id = $14, user_expires = $15
+            where id = $16"#,
         )
         .bind(&self.email)
         .bind(&self.given_name)
@@ -326,12 +335,11 @@ impl User {
         .bind(self.enabled)
         .bind(self.email_verified)
         .bind(self.password_expires)
-        .bind(self.created_at)
         .bind(self.last_login)
         .bind(self.last_failed_login)
         .bind(self.failed_login_attempts)
         .bind(lang)
-        .bind(&self.webauthn_user_id)
+        .bind(self.webauthn_user_id.clone())
         .bind(self.user_expires)
         .bind(&self.id);
 
@@ -347,6 +355,7 @@ impl User {
             RefreshToken::invalidate_for_user(data, &self.id).await?;
         }
 
+        // TODO think about a good way to catch a possibly failing transaction -> cache invalidation
         let users = User::find_all(data)
             .await?
             .into_iter()
@@ -455,29 +464,50 @@ impl User {
 
         let mut password = None;
         if let Some(pwd_new) = upd_user.password_new {
-            match upd_user.password_current {
-                Some(pwd_curr) => {
-                    user.validate_password(data, pwd_curr).await?;
-                    password = Some(pwd_new);
-                }
-                None => {
+            if let Some(pwd_curr) = upd_user.password_current {
+                user.validate_password(data, pwd_curr).await?;
+            } else if let Some(mfa_code) = upd_user.mfa_code {
+                let svc_req = WebauthnServiceReq::find(data, mfa_code).await?;
+                if svc_req.user_id != user.id {
                     return Err(ErrorResponse::new(
-                        ErrorResponseType::BadRequest,
-                        "Cannot set a new password without the current one".to_string(),
-                    ))
+                        ErrorResponseType::Forbidden,
+                        "User ID does not match".to_string(),
+                    ));
                 }
-            };
+                svc_req.delete(data).await?;
+            } else {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "Cannot set a new password without the current one".to_string(),
+                ));
+            }
+            password = Some(pwd_new);
         }
 
+        let email = if let Some(email) = upd_user.email {
+            email
+        } else {
+            user.email.clone()
+        };
+        let given_name = if let Some(given_name) = upd_user.given_name {
+            given_name
+        } else {
+            user.given_name.clone()
+        };
+        let family_name = if let Some(family_name) = upd_user.family_name {
+            family_name
+        } else {
+            user.family_name.clone()
+        };
         let groups = if user.groups.is_some() {
             Some(user.get_groups())
         } else {
             None
         };
         let req = UpdateUserRequest {
-            email: upd_user.email,
-            given_name: upd_user.given_name,
-            family_name: upd_user.family_name,
+            email,
+            given_name,
+            family_name,
             language: upd_user.language,
             password,
             roles: user.get_roles(),
@@ -489,9 +519,62 @@ impl User {
 
         User::update(data, id, req, Some(user)).await
     }
+
+    /// Converts a user account from as password account type to passkey only with all necessary
+    /// checks included.
+    pub async fn convert_to_passkey(
+        data: &web::Data<AppState>,
+        id: String,
+    ) -> Result<(), ErrorResponse> {
+        let mut user = User::find(data, id.clone()).await?;
+
+        // only allow conversion for password type accounts
+        if user.account_type() != AccountType::Password {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Only AccountType::Password can be converted".to_string(),
+            ));
+        }
+
+        // check webauthn enabled
+        if !user.has_webauthn_enabled() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Account type conversion can only happen with at least one active Passkey"
+                    .to_string(),
+            ));
+        }
+
+        // only allow passkeys with active UV
+        let pks = PasskeyEntity::find_for_user_with_uv(data, &user.id).await?;
+        if pks.is_empty() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::NotFound,
+                "Could not find any passkeys with active User Verification".to_string(),
+            ));
+        }
+
+        // all good -> delete password
+        user.password = None;
+        user.password_expires = None;
+
+        user.save(data, None, None).await?;
+        Ok(())
+    }
 }
 
 impl User {
+    #[inline]
+    pub fn account_type(&self) -> AccountType {
+        if self.password.is_some() {
+            AccountType::Password
+        } else if self.has_webauthn_enabled() {
+            AccountType::Passkey
+        } else {
+            AccountType::New
+        }
+    }
+
     pub async fn apply_password_rules(
         &mut self,
         data: &web::Data<AppState>,
@@ -723,6 +806,7 @@ impl User {
 
         let user = Self {
             email: new_user.email,
+            email_verified: false,
             given_name: new_user.given_name,
             family_name: new_user.family_name,
             language: new_user.language,
@@ -841,6 +925,12 @@ impl User {
         data: &web::Data<AppState>,
         req: HttpRequest,
     ) -> Result<(), ErrorResponse> {
+        // TODO implement something with a Backup Code for passkey only accounts?
+        // deny for passkey only accounts
+        if self.account_type() == AccountType::Passkey {
+            return Ok(());
+        }
+
         let ml_res = MagicLinkPassword::find_by_user(data, self.id.clone()).await;
         // if an active magic link already exists - invalidate it.
         if ml_res.is_ok() {
@@ -854,13 +944,14 @@ impl User {
             }
         }
 
-        let new_ml = MagicLinkPassword::create(
-            data,
-            self.id.clone(),
-            data.ml_lt_pwd_reset as i64,
-            MagicLinkUsage::PasswordReset,
-        )
-        .await?;
+        let usage = if self.password.is_none() && !self.has_webauthn_enabled() {
+            MagicLinkUsage::NewUser
+        } else {
+            MagicLinkUsage::PasswordReset
+        };
+        let new_ml =
+            MagicLinkPassword::create(data, self.id.clone(), data.ml_lt_pwd_reset as i64, usage)
+                .await?;
         send_pwd_reset(data, &new_ml, self).await;
 
         Ok(())
@@ -952,6 +1043,7 @@ mod tests {
     use super::*;
     use crate::entity::sessions::{Session, SessionState};
     use pretty_assertions::assert_eq;
+    use std::ops::Sub;
 
     #[test]
     fn test_session_impl() {
@@ -972,7 +1064,11 @@ mod tests {
             failed_login_attempts: None,
             language: Language::En,
             webauthn_user_id: None,
-            user_expires: Some(OffsetDateTime::now_utc().unix_timestamp()),
+            user_expires: Some(
+                OffsetDateTime::now_utc()
+                    .sub(::time::Duration::seconds(2))
+                    .unix_timestamp(),
+            ),
         };
         let session = Session::try_new(&user, 1, None);
         assert!(session.is_err());
@@ -980,10 +1076,10 @@ mod tests {
         user.user_expires = None;
         let session = Session::try_new(&user, 1, None).unwrap();
 
-        assert_eq!(session.is_valid(10), true);
+        assert_eq!(session.is_valid(10, None), true);
         // sessions are validated with second accuracy
         std::thread::sleep(core::time::Duration::from_secs(2));
-        assert_eq!(session.is_valid(10), false);
+        assert_eq!(session.is_valid(10, None), false);
 
         // new sessions should always be in state 1 -> initializing
         assert_eq!(session.state, SessionState::Init);

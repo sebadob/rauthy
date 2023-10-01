@@ -4,7 +4,6 @@ use actix_web::{cookie, delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
 use rauthy_common::constants::{
     COOKIE_MFA, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE, USER_REG_DOMAIN_RESTRICTION,
-    WEBAUTHN_NO_PASSWORD_EXPIRY,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
@@ -713,12 +712,14 @@ pub async fn delete_webauthn(
         // should expire again
         let policy = PasswordPolicy::find(&data).await?;
         if let Some(valid_days) = policy.valid_days {
-            if *WEBAUTHN_NO_PASSWORD_EXPIRY {
+            if user.password.is_some() {
                 user.password_expires = Some(
                     OffsetDateTime::now_utc()
                         .add(time::Duration::days(valid_days as i64))
                         .unix_timestamp(),
                 );
+            } else {
+                user.password_expires = None;
             }
         }
 
@@ -768,18 +769,31 @@ pub async fn post_webauthn_reg_start(
     session_req: web::ReqData<Option<Session>>,
     req_data: actix_web_validator::Json<WebauthnRegStartRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
-
-    // validate that Principal matches the user
-    let principal = Principal::get_from_req(principal.into_inner())?;
-    let id = id.into_inner();
-    principal.validate_id(&id)?;
-
-    webauthn::reg_start(&data, id, req_data.into_inner())
+    // If we have a magic link ID in the payload, we do not validate the active session / principal.
+    // This is mandatory to make registering a passkey for a completely new account work.
+    if req_data.magic_link_id.is_some() && req_data.email.is_some() {
+        // if req_data.magic_link_id.is_some() && req_data.email.is_some() && req_data.mfa_code.is_some() {
+        password_reset::handle_put_user_passkey_start(
+            &data,
+            req,
+            id.into_inner(),
+            req_data.into_inner(),
+        )
         .await
-        .map(|ccr| HttpResponse::Ok().json(ccr))
+    } else {
+        if session_req.is_some() {
+            Session::extract_validate_csrf(session_req, &req)?;
+        }
+
+        // validate that Principal matches the user
+        let principal = Principal::get_from_req(principal.into_inner())?;
+        let id = id.into_inner();
+        principal.validate_id(&id)?;
+
+        webauthn::reg_start(&data, id, req_data.into_inner())
+            .await
+            .map(|ccr| HttpResponse::Ok().json(ccr))
+    }
 }
 
 /// Finishes the registration process for a new WebAuthn Device for this user
@@ -807,18 +821,28 @@ pub async fn post_webauthn_reg_finish(
     session_req: web::ReqData<Option<Session>>,
     req_data: actix_web_validator::Json<WebauthnRegFinishRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
+    if req_data.magic_link_id.is_some() {
+        // if req_data.magic_link_id.is_some() && req_data.mfa_code.is_some() {
+        password_reset::handle_put_user_passkey_finish(
+            &data,
+            req,
+            id.into_inner(),
+            req_data.into_inner(),
+        )
+        .await
+    } else {
+        if session_req.is_some() {
+            Session::extract_validate_csrf(session_req, &req)?;
+        }
+
+        // validate that Principal matches the user
+        let principal = Principal::get_from_req(principal.into_inner())?;
+        let id = id.into_inner();
+        principal.validate_id(&id)?;
+
+        webauthn::reg_finish(&data, id, req_data.into_inner()).await?;
+        Ok(HttpResponse::Created().finish())
     }
-
-    // validate that Principal matches the user
-    let principal = Principal::get_from_req(principal.into_inner())?;
-    let id = id.into_inner();
-    principal.validate_id(&id)?;
-
-    webauthn::reg_finish(&data, id, req_data.into_inner()).await?;
-
-    Ok(HttpResponse::Created().finish())
 }
 
 /// Request a password reset
@@ -854,7 +878,7 @@ pub async fn post_user_password_request_reset(
         Session::extract_validate_csrf(session_req, &req)?;
     }
 
-    let user = User::find_by_email(&data, req_data.email.clone()).await?;
+    let user = User::find_by_email(&data, req_data.into_inner().email).await?;
     user.request_password_reset(&data, req)
         .await
         .map(|_| HttpResponse::Ok().status(StatusCode::OK).finish())
@@ -941,7 +965,7 @@ pub async fn put_user_by_id(
     ),
 )]
 #[put("/users/{id}/self")]
-#[has_permissions("session-auth")] // TODO correct role? not authenticated? --> double check!
+#[has_permissions("session-auth")]
 pub async fn put_user_self(
     data: web::Data<AppState>,
     id: web::Path<String>,
@@ -967,6 +991,47 @@ pub async fn put_user_self(
     User::update_self_req(&data, id, user.into_inner())
         .await
         .map(|user| HttpResponse::Ok().json(UserResponse::from(user)))
+}
+
+/// Allows an authenticated and logged in user to convert his account to passkey only
+///
+/// **Permissions**
+/// - authenticated user
+#[utoipa::path(
+    post,
+    path = "/users/{id}/self/convert_passkey",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok", body = UserResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[post("/users/{id}/self/convert_passkey")]
+#[has_permissions("session-auth")]
+pub async fn post_user_self_convert_passkey(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+    req: HttpRequest,
+    principal: web::ReqData<Option<Principal>>,
+    session_req: web::ReqData<Option<Session>>,
+) -> Result<HttpResponse, ErrorResponse> {
+    if session_req.is_some() {
+        Session::extract_validate_csrf(session_req, &req)?;
+    }
+
+    // make sure the logged in user can only update itself
+    let principal = Principal::get_from_req(principal.into_inner())?;
+    let id = id.into_inner();
+    if principal.user_id != id {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "You are not allowed to update another users values".to_string(),
+        ));
+    }
+
+    User::convert_to_passkey(&data, id).await?;
+    Ok(HttpResponse::Ok().finish())
 }
 
 /// Deletes a user

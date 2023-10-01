@@ -1,48 +1,25 @@
-# Internal development notes
+# TODO List
 
-## Build
+## CURRENT WORK
 
-To build the project, a few things have to be done:
-- `cd frontend`
-- `npm install`
-- `./build.sh`
-- `cd ..`
-- Rauthy Dev Build: `cargo build` - Prod Build: `cargo build --release`
+- when a user changes his email address, send out mail for new verification
+- add new table to keep track of these changes
+- do not actually change mail until it has been verified
 
-## Testing
-
-### Install Dependencies
-
-TODO
-
-### Execute tests:
-
-start the backend:
-
-`cargo run test`
-
-in another terminal:
-
-`cargo test`
-
-## TODO List
-
-### CURRENT WORK
-
-### Stage 1 - essentials
+## Stage 1 - essentials
 
 [x] finished
 
-### Stage 2 - features - do before v1.0.0
+## Stage 2 - features - do before v1.0.0
 
 - add a new table that keeps track about when password expiry / reset emails were sent out to avoid duplicates
-- when a user changes his email address, set email to not verified again and send a validation email
 - NATS events stream or maybe internal one?
 - benchmarks and performance tuning
 - double check against https://openid.net/specs/openid-connect-core-1_0.html that everything is implemented correctly one more time
 
-### Stage 3 - Possible nice to haves
+## Stage 3 - Possible nice to haves
 
+- add an 'ip blacklist' feature?
 - auto-encrypted backups + backups to remote locations (ssh, nfs, s3, ...) -> postponed - should be applied to sqlite only
 since postgres has pg_backrest and a lot of well established tooling anyway
 - add all default claims for users https://openid.net/specs/openid-connect-core-1_0.html#ScopeClaims

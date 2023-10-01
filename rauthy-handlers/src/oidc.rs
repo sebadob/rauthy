@@ -1,9 +1,9 @@
 use crate::{build_csp_header, map_auth_step, real_ip_from_req};
 use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::{header, StatusCode};
-use actix_web::{cookie, get, post, web, HttpRequest, HttpResponse};
+use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
-use rauthy_common::constants::{COOKIE_MFA, COOKIE_SESSION, HEADER_HTML, SESSION_LIFETIME};
+use rauthy_common::constants::{COOKIE_MFA, HEADER_HTML, SESSION_LIFETIME};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::colors::ColorEntity;
@@ -139,7 +139,7 @@ pub async fn get_authorize(
     tag = "oidc",
     request_body = LoginRequest,
     responses(
-        (status = 200, description = "Correct credentials, but needs to continue with Webauthn MFA Login", body = MfaLoginRequestAwait),
+        (status = 200, description = "Correct credentials, but needs to continue with Webauthn MFA Login", body = WebauthnLoginResponse),
         (status = 202, description = "Correct credentials and not MFA Login required, adds Location header"),
         (status = 400, description = "Missing / bad input data", body = ErrorResponse),
         (status = 401, description = "Bad input or CSRF Token error", body = ErrorResponse),
@@ -325,11 +325,7 @@ pub async fn post_logout(
     session_req: web::ReqData<Option<Session>>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let mut session = Session::extract_from_req(session_req)?;
-    session.invalidate(&data).await?;
-
-    let cookie = cookie::Cookie::build(COOKIE_SESSION, "")
-        .max_age(cookie::time::Duration::ZERO)
-        .finish();
+    let cookie = session.invalidate(&data).await?;
 
     if req_data.post_logout_redirect_uri.is_some() {
         let state = if req_data.state.is_some() {

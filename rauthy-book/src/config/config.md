@@ -281,24 +281,6 @@ MAX_HASH_THREADS=1
 LOG_LEVEL_ACCESS=Basic
 
 #####################################
-############## METRICS ##############
-#####################################
-
-# To enable or disable the additional HTTP server to expose the /metrics endpoint
-# default: true
-#METRICS_ENABLE=true
-
-# The IP address to listen on for the /metrics endpoint.
-# You do not want to expose your metrics on a publicly reachable endpoint!
-# default: 0.0.0.0
-#METRICS_ADDR=0.0.0.0
-
-# The post to listen on for the /metrics endpoint.
-# You do not want to expose your metrics on a publicly reachable endpoint!
-# default: 9090
-#METRICS_PORT=9090
-
-#####################################
 ################ MFA ################
 #####################################
 
@@ -357,6 +339,34 @@ PUB_URL=localhost:8080
 # When rauthy is running behind a reverse proxy, set to true
 # (default: false)
 PROXY_MODE=false
+
+# To enable or disable the additional HTTP server to expose the /metrics endpoint
+# default: true
+#METRICS_ENABLE=true
+
+# The IP address to listen on for the /metrics endpoint.
+# You do not want to expose your metrics on a publicly reachable endpoint!
+# default: 0.0.0.0
+#METRICS_ADDR=0.0.0.0
+
+# The post to listen on for the /metrics endpoint.
+# You do not want to expose your metrics on a publicly reachable endpoint!
+# default: 9090
+#METRICS_PORT=9090
+
+# If the Swagger UI should be served together with the /metrics route on the internal server.
+# It it then reachable via:
+# http://METRICS_ADDR:METRICS_PORT/docs/v1/swagger-ui/
+# (default: true)
+#SWAGGER_UI_INTERNAL=true
+
+# If the Swagger UI should be served externally as well. This makes the link in the Admin UI work.
+#
+# CAUTION: The Swagger UI is open and does not require any login to be seen!
+# Rauthy is open source, which means anyone could just download it and see on their own,
+# but it may be a security concern to just expose less information.
+# (default: false)
+#SWAGGER_UI_EXTERNAL=false
 
 #####################################
 ############### TLS #################

@@ -1,16 +1,19 @@
 use actix_web::cookie::SameSite;
-use actix_web::{cookie, web, HttpRequest};
+use actix_web::{cookie, web, HttpRequest, HttpResponse};
 use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::get_rand;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::colors::ColorEntity;
-use rauthy_models::entity::magic_links::MagicLinkPassword;
+use rauthy_models::entity::magic_links::{MagicLinkPassword, MagicLinkUsage};
 use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::users::User;
+use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::WebauthnServiceReq;
 use rauthy_models::language::Language;
-use rauthy_models::request::PasswordResetRequest;
+use rauthy_models::request::{
+    PasswordResetRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
+};
 use rauthy_models::templates::PwdResetHtml;
 use time::OffsetDateTime;
 use tracing::debug;
@@ -22,7 +25,7 @@ pub async fn handle_get_pwd_reset<'a>(
     reset_id: String,
 ) -> Result<(String, String, cookie::Cookie<'a>), ErrorResponse> {
     let mut ml = MagicLinkPassword::find(data, &reset_id).await?;
-    ml.validate(&user_id, &req)?;
+    ml.validate(&user_id, &req, false)?;
 
     // check if the user has MFA enabled
     let user = User::find(data, ml.user_id.clone()).await?;
@@ -54,6 +57,95 @@ pub async fn handle_get_pwd_reset<'a>(
         .finish();
 
     Ok((html, nonce, cookie))
+}
+
+#[tracing::instrument(level = "debug", skip_all, fields(user_id = user_id))]
+pub async fn handle_put_user_passkey_start<'a>(
+    data: &web::Data<AppState>,
+    req: HttpRequest,
+    user_id: String,
+    req_data: WebauthnRegStartRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    // validate user_id / given email address
+    debug!("getting user");
+    let user = User::find(data, user_id).await?;
+    if req_data.email != Some(user.email) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            String::from("E-Mail does not match for this user"),
+        ));
+    }
+
+    debug!("getting magic link");
+    // unwrap is safe -> checked in API endpoint already
+    let ml_id = req_data.magic_link_id.as_ref().unwrap();
+    let ml = MagicLinkPassword::find(data, &ml_id).await?;
+    ml.validate(&user.id, &req, true)?;
+
+    // if we register a new passkey, we need to make sure that the magic link is for a new user
+    if &ml.usage != MagicLinkUsage::NewUser.as_str() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "You cannot register a new passkey here for an existing user".to_string(),
+        ));
+    }
+
+    webauthn::reg_start(&data, user.id, req_data)
+        .await
+        .map(|ccr| HttpResponse::Ok().json(ccr))
+}
+
+#[tracing::instrument(level = "debug", skip_all, fields(user_id = user_id))]
+pub async fn handle_put_user_passkey_finish<'a>(
+    data: &web::Data<AppState>,
+    req: HttpRequest,
+    user_id: String,
+    req_data: WebauthnRegFinishRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    // unwrap is safe -> checked in API endpoint already
+    let ml_id = req_data.magic_link_id.as_ref().unwrap();
+    let mut ml = MagicLinkPassword::find(data, &ml_id).await?;
+    ml.validate(&user_id, &req, true)?;
+
+    // finish webauthn request -> always force UV for passkey only accounts
+    debug!("ml is valid - finishing webauthn request");
+    webauthn::reg_finish(&data, user_id.clone(), req_data).await?;
+
+    // validate csrf token
+    match req.headers().get(PWD_CSRF_HEADER) {
+        None => {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                String::from("CSRF Token is missing"),
+            ));
+        }
+        Some(token) => {
+            if ml.csrf_token != token.to_str().unwrap_or("") {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    String::from("Invalid CSRF Token"),
+                ));
+            }
+        }
+    }
+
+    debug!("invalidating magic link pwd");
+    // all good
+    ml.invalidate(data).await?;
+    // we are re-fetching the user on purpose here to not need to modify the general webauthn fn
+    let mut user = User::find(data, user_id).await?;
+    user.email_verified = true;
+    user.save(data, None, None).await?;
+
+    // delete the cookie
+    let cookie = cookie::Cookie::build(PWD_RESET_COOKIE, "")
+        .secure(true)
+        .http_only(true)
+        .same_site(SameSite::Lax)
+        .max_age(cookie::time::Duration::ZERO)
+        .path("/auth")
+        .finish();
+    Ok(HttpResponse::Created().cookie(cookie).finish())
 }
 
 #[tracing::instrument(level = "debug", skip_all, fields(email = req_data.email))]
@@ -100,25 +192,7 @@ pub async fn handle_put_user_password_reset<'a>(
 
     debug!("getting magic link");
     let mut ml = MagicLinkPassword::find(data, &req_data.magic_link_id).await?;
-    ml.validate(&user.id, &req)?;
-
-    // validate csrf token
-    match req.headers().get(PWD_CSRF_HEADER) {
-        None => {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                String::from("CSRF Token is missing"),
-            ));
-        }
-        Some(token) => {
-            if ml.csrf_token != token.to_str().unwrap_or("") {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Unauthorized,
-                    String::from("Invalid CSRF Token"),
-                ));
-            }
-        }
-    }
+    ml.validate(&user.id, &req, true)?;
 
     debug!("applying password rules");
     // validate password

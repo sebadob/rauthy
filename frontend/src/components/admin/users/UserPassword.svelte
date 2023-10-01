@@ -2,7 +2,7 @@
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import PasswordPolicy from "../../passwordReset/PasswordPolicy.svelte";
     import {onMount} from "svelte";
-    import {getPasswordPolicy, webauthnDelete} from "../../../utils/dataFetching.js";
+    import {getPasswordPolicy} from "../../../utils/dataFetching.js";
     import Button from "$lib/Button.svelte";
     import {postPasswordResetRequest, putUser} from "../../../utils/dataFetchingAdmin.js";
     import {generatePassword} from "../../../utils/helpers.js";
@@ -25,6 +25,8 @@
 
     let formValues = {new: '', verify: ''};
     let formErrors = {};
+
+    console.log(user);
 
     $: if (successPwd) {
         timer = setTimeout(() => {
@@ -137,55 +139,85 @@
 </script>
 
 <div class="container">
-    {#if policy}
-        <PasswordPolicy bind:password={formValues.new} bind:accepted bind:policy/>
+    {#if user.account_type === "new"}
+        <div class="desc">
+            <p><b>The user has not initialized this account yet.</b></p>
+            <p>You may send out a new Reset E-Mail, if the user has not received one.</p>
+        </div>
+
+        <Button
+                on:click={sendEmail}
+                bind:isLoading
+                width={btnWidth}
+                level={2}
+        >
+            SEND RESET E-MAIL
+        </Button>
+    {:else if user.account_type === "passkey"}
+        <div class="desc">
+            <p><b>This is a passkey only account type.</b></p>
+            <p>
+                This means, that this user is using the passwordless login flow only and does not have any password.
+            </p>
+            <p>
+                If the user has lost all his keys and you have verified everything, you may reset his account type and
+                send out a new reset E-Mail, so the user can get access again.
+            </p>
+            <p>
+                To reset the account, navigate to 'MFA' and delete all registered keys for this user.
+            </p>
+        </div>
+    {:else}
+        {#if policy}
+            <PasswordPolicy bind:password={formValues.new} bind:accepted bind:policy/>
+        {/if}
+
+        <PasswordInput
+                type="password"
+                bind:value={formValues.new}
+                on:blur={isFormValid}
+                bind:width={pwdWith}
+                autocomplete="off"
+                showCopy={formValues.new.length > 0 && formValues.new === formValues.verify}
+        >
+            New Password
+        </PasswordInput>
+        <PasswordInput
+                type="password"
+                bind:value={formValues.verify}
+                on:blur={isFormValid}
+                bind:width={pwdWith}
+                autocomplete="off"
+        >
+            New Password
+        </PasswordInput>
+
+        <Button on:click={generate} width={btnWidth} level={3}>
+            GENERATE RANDOM
+        </Button>
+
+        <div class="desc">
+            You can either set and reset a user's password<br/>
+            or send out a new reset E-Mail for self-service.
+        </div>
+
+        <Button
+                on:click={sendEmail}
+                bind:isLoading
+                width={btnWidth}
+                level={1}
+        >
+            SEND RESET E-MAIL
+        </Button>
+
+        <Button
+                on:click={savePwd}
+                bind:isLoading
+                width={btnWidth}
+        >
+            SAVE PASSWORD
+        </Button>
     {/if}
-
-    <PasswordInput
-            type="new-password"
-            bind:value={formValues.new}
-            on:blur={isFormValid}
-            bind:width={pwdWith}
-            autocomplete="off"
-            showCopy={formValues.new.length > 0 && formValues.new === formValues.verify}
-    >
-        New Password
-    </PasswordInput>
-    <PasswordInput
-            type="new-password"
-            bind:value={formValues.verify}
-            on:blur={isFormValid}
-            bind:width={pwdWith}
-            autocomplete="off"
-    >
-        New Password
-    </PasswordInput>
-
-    <Button on:click={generate} width={btnWidth} level={3}>
-        GENERATE RANDOM
-    </Button>
-
-    <div class="desc">
-        You can either set and reset a user's password<br/>
-        or send out a new reset E-Mail for self-service.
-    </div>
-
-    <Button
-            on:click={sendEmail}
-            bind:isLoading
-            width={btnWidth}
-            level={1}
-    >
-        SEND RESET E-MAIL
-    </Button>
-
-    <Button
-            on:click={savePwd}
-            bind:isLoading
-            width={btnWidth}
-    >
-        SAVE PASSWORD
-    </Button>
 
     {#if successPwd || successEmail}
         <div class="success">

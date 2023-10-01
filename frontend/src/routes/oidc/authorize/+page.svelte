@@ -4,7 +4,6 @@
     import * as yup from 'yup';
     import {extractFormErrors, getQueryParams, saveCsrfToken} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
-    import MfaAppRequest from "../../../components/mfa/MfaAppRequest.svelte";
     import WebauthnRequest from "../../../components/webauthn/WebauthnRequest.svelte";
     import {scale} from 'svelte/transition';
     import Input from "$lib/inputs/Input.svelte";
@@ -21,13 +20,13 @@
     let redirectUri = '';
     let nonce = '';
     let scopes = [];
+    let passwordInput;
 
     let state;
     let challenge;
     let challengeMethod;
     let csrf = '';
     let refresh = false;
-    let mfaRequest;
     let existingMfaUser;
     // let webauthnData = {
     // 	code: "asdjknfasdjklfnasdlkjf",
@@ -41,6 +40,7 @@
     let isLoading = false;
     let err = '';
     let isReady = false;
+    let needsPassword = false;
     let showReset = false;
     let showResetRequest = false;
     let emailSuccess = false;
@@ -85,6 +85,10 @@
 
     $: if (clientId) {
         fetchClientLogo(clientId);
+    }
+
+    $: if (passwordInput) {
+        passwordInput.focus();
     }
 
     onMount(async () => {
@@ -148,8 +152,7 @@
             scopes,
         };
 
-        // Validate the password manually, since it can be null in case of an active mfa cookie session
-        if (formValues.email !== existingMfaUser) {
+        if (needsPassword && formValues.email !== existingMfaUser) {
             if (!formValues.password) {
                 formErrors.password = t.passwordRequired;
                 return;
@@ -167,12 +170,23 @@
             window.location.replace(res.headers.get('location'));
         } else if (res.status === 200) {
             err = '';
-            isLoading = false;
             webauthnData = await res.json();
+        } else if (!needsPassword) {
+            // this will happen always if the user does the first try with a password-only account
+            // the good thing about this is, that it is a prevention against autofill passwords from the browser
+            needsPassword = true;
         } else {
             err = t.invalidCredentials;
-            isLoading = false;
             showResetRequest = true;
+        }
+        isLoading = false;
+    }
+
+    function onEmailInput() {
+        // this will basically remove the password input again if the user was asked to provide
+        // a password and afterward changes his email again
+        if (needsPassword) {
+            needsPassword = false;
         }
     }
 
@@ -238,11 +252,6 @@
                 <h2>{clientName}</h2>
             </div>
 
-            <!-- TODO: clean this up after backend cleanup -->
-            {#if mfaRequest}
-                <MfaAppRequest bind:req={mfaRequest}/>
-            {/if}
-
             {#if webauthnData}
                 <WebauthnRequest
                         bind:t
@@ -260,12 +269,14 @@
                     autocomplete="email"
                     placeholder={t.email}
                     on:enter={onSubmit}
+                    on:input={onEmailInput}
             >
                 {t.email?.toUpperCase()}
             </Input>
 
-            {#if existingMfaUser !== formValues.email && !showReset}
+            {#if needsPassword && existingMfaUser !== formValues.email && !showReset}
                 <PasswordInput
+                        bind:bindThis={passwordInput}
                         name="rauthyPassword"
                         bind:value={formValues.password}
                         bind:error={formErrors.password}
@@ -313,7 +324,7 @@
             {/if}
         </div>
 
-        <LangSelector absolute />
+        <LangSelector absolute/>
     </WithI18n>
 </BrowserCheck>
 

@@ -191,7 +191,7 @@ export const generatePassword = (length, minLowerCase, minUpperCase, minDigit, m
 	const specialNeeded = minSpecial || 1;
 
 	while (true) {
-		let pwdLength = length || 14;
+		let pwdLength = length || 16;
 		let lowerCaseIncluded = 0;
 		let upperCaseIncluded = 0;
 		let digitIncluded = 0;

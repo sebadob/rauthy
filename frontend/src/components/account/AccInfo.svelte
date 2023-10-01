@@ -33,6 +33,11 @@
     </div>
 
     <div class={classRow}>
+        <div class={classLabel}><b>{t.accType}:</b></div>
+        <span class="value">{user.account_type}</span>
+    </div>
+
+    <div class={classRow}>
         <div class={classLabel}><b>{t.roles}:</b></div>
         <span class="value">{user.roles || 'None'}</span>
     </div>

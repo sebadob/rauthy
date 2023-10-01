@@ -159,6 +159,15 @@ lazy_static! {
         .trim()
         .to_string();
 
+    pub static ref SWAGGER_UI_INTERNAL: bool = env::var("SESSION_VALIDATE_IP")
+        .unwrap_or_else(|_| String::from("true"))
+        .parse::<bool>()
+        .expect("SWAGGER_UI_INTERNAL cannot be parsed to bool - bad format");
+    pub static ref SWAGGER_UI_EXTERNAL: bool = env::var("SWAGGER_UI_EXTERNAL")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("SWAGGER_UI_EXTERNAL cannot be parsed to bool - bad format");
+
     pub static ref WEBAUTHN_REQ_EXP: u64 = env::var("WEBAUTHN_REQ_EXP")
         .unwrap_or_else(|_| String::from("60"))
         .parse::<u64>()
