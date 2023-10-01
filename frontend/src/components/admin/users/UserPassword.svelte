@@ -173,7 +173,7 @@
         {/if}
 
         <PasswordInput
-                type="new-password"
+                type="password"
                 bind:value={formValues.new}
                 on:blur={isFormValid}
                 bind:width={pwdWith}
@@ -183,7 +183,7 @@
             New Password
         </PasswordInput>
         <PasswordInput
-                type="new-password"
+                type="password"
                 bind:value={formValues.verify}
                 on:blur={isFormValid}
                 bind:width={pwdWith}
@@ -239,11 +239,6 @@
 </div>
 
 <style>
-    .caution {
-        color: var(--col-err);
-        font-weight: bold;
-    }
-
     .container {
         margin: 0 10px 10px 10px;
     }

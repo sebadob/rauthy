@@ -182,6 +182,14 @@
         isLoading = false;
     }
 
+    function onEmailInput() {
+        // this will basically remove the password input again if the user was asked to provide
+        // a password and afterward changes his email again
+        if (needsPassword) {
+            needsPassword = false;
+        }
+    }
+
     function onWebauthnError() {
         // If there is any error with the key, the user should start a new login process
         webauthnData = undefined;
@@ -261,6 +269,7 @@
                     autocomplete="email"
                     placeholder={t.email}
                     on:enter={onSubmit}
+                    on:input={onEmailInput}
             >
                 {t.email?.toUpperCase()}
             </Input>
