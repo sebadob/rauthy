@@ -6,6 +6,7 @@
     import {getKey} from "../utils/helpers.js";
     import {slide} from "svelte/transition";
 
+    export let bindThis = undefined;
     export let name = getKey();
     export let disabled = false;
     export let error = '';
@@ -61,6 +62,7 @@
     </div>
 
     <input
+            bind:this={bindThis}
             style:width
             style:padding-right={showCopy ? '45px' : '25px'}
             {type}

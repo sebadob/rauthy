@@ -18,6 +18,8 @@
     import Input from "$lib/inputs/Input.svelte";
     import * as yup from "yup";
     import {REGEX_NAME} from "../../utils/constants.js";
+    import IconFingerprint from "$lib/icons/IconFingerprint.svelte";
+    import Tooltip from "$lib/Tooltip.svelte";
 
     export let t;
     export let sessionInfo;
@@ -55,10 +57,10 @@
         let res = await getUserPasskeys(sessionInfo.user_id);
         let body = await res.json();
         if (res.ok) {
+            console.log(body);
             passkeys = body;
         } else {
             console.error('error fetching passkeys: ' + body.message);
-
         }
     }
 
@@ -241,7 +243,16 @@
             <div class="keyContainer">
                 <div class="row">
                     {`${t.mfa.passkeyName}: `}
-                    <b>{passkey.name}</b>
+                    <div class="nameUv">
+                        <b>{passkey.name}</b>
+                        {#if passkey.user_verified}
+                            <Tooltip text={t.userVerifiedTooltip}>
+                                <div style:margin-bottom="-.25rem">
+                                    <IconFingerprint width=18 color="var(--col-acnt)" />
+                                </div>
+                            </Tooltip>
+                        {/if}
+                    </div>
                 </div>
                 <div class="row">
                     {`${t.mfa.registerd}: `}
@@ -251,6 +262,7 @@
                     {`${t.mfa.lastUsed}: `}
                     <span class="font-mono">{formatDateFromTs(passkey.last_used)}</span>
                 </div>
+
                 {#if showDelete}
                     <div class="row">
                         <div></div>
@@ -330,6 +342,12 @@
         color: var(--col-ok);
     }
 
+    .nameUv {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+    }
+
     .regBtns {
         display: flex;
         align-items: center;
@@ -343,5 +361,6 @@
         display: flex;
         gap: .5rem;
         justify-content: space-between;
+        align-items: center;
     }
 </style>
