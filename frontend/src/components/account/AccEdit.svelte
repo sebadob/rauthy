@@ -16,19 +16,9 @@
 
     const btnWidth = "12rem";
 
-    let editPwd = false;
-    let pwdFormValues = {};
-    let isPwdValid;
-
     let isLoading = false;
     let err = '';
     let success = false;
-
-    let pwdContainerHeight = tweened(0, {
-        duration: 200,
-        delay: 200,
-    });
-    $: pwdContainerHeight.set(editPwd ? 360 : 0);
 
     let formValues = {
         email: user.email,
@@ -57,13 +47,8 @@
 
     async function onSubmit() {
         const valid = await validateForm();
-        const validPwd = await isPwdValid();
-        if (!valid || !validPwd) {
+        if (!valid) {
             err = t.invalidInput;
-            return;
-        }
-
-        if (editPwd && !isPwdValid()) {
             return;
         }
 
@@ -74,10 +59,6 @@
             given_name: formValues.givenName,
             family_name: formValues.familyName,
         };
-        if (editPwd) {
-            data.password_current = pwdFormValues.current;
-            data.password_new = pwdFormValues.new;
-        }
 
         let res = await putUserSelf(user.id, data);
         if (res.ok) {
@@ -139,35 +120,17 @@
             {t.familyName.toUpperCase()}
         </Input>
 
-        {#if editPwd}
-            <div in:blur|global={{ duration: 350 }}>
-                <AccModPwd
-                        bind:t
-                        bind:formValues={pwdFormValues}
-                        bind:isValid={isPwdValid}
-                        btnWidth={btnWidth}
-                        inputWidth={inputWidth}
-                />
-            </div>
-        {/if}
-
-        {#if !editPwd}
-            <Button width={btnWidth} bind:selected={editPwd}>
-                {t.changePassword.toUpperCase()}
-            </Button>
-        {/if}
-
         <Button width={btnWidth} on:click={onSubmit} level={1} bind:isLoading>
             {t.save.toUpperCase()}
         </Button>
 
         <div class="bottom">
             {#if success}
-                <div class="success" transition:fade|global>
+                <div class="success" transition:fade>
                     Update successful
                 </div>
             {:else if err}
-                <div class="err" transition:fade|global>
+                <div class="err" transition:fade>
                     {err}
                 </div>
             {/if}
