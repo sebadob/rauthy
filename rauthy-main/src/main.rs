@@ -14,17 +14,27 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::cache_notify::handle_notify;
-use crate::logging::setup_logging;
+use std::error::Error;
+use std::net::Ipv4Addr;
+use std::str::FromStr;
+use std::time::Duration;
+use std::{env, thread};
+
 use actix_web::rt::System;
 use actix_web::{middleware, web, App, HttpServer};
 use actix_web_grants::GrantsMiddleware;
 use actix_web_prom::PrometheusMetricsBuilder;
 use prometheus::Registry;
+use sqlx::{query, query_as};
+use tokio::sync::mpsc;
+use tokio::time;
+use tracing::{debug, error, info};
+use utoipa_swagger_ui::SwaggerUi;
+
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW,
     CACHE_NAME_SESSIONS, CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, POW_EXP, RAUTHY_VERSION,
-    WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
+    SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::password_hasher;
@@ -36,16 +46,9 @@ use rauthy_models::app_state::{AppState, Caches, DbPool};
 use rauthy_models::email::EMail;
 use rauthy_models::{email, ListenScheme};
 use rauthy_service::auth;
-use sqlx::{query, query_as};
-use std::error::Error;
-use std::net::Ipv4Addr;
-use std::str::FromStr;
-use std::time::Duration;
-use std::{env, thread};
-use tokio::sync::mpsc;
-use tokio::time;
-use tracing::{debug, error, info};
-use utoipa_swagger_ui::SwaggerUi;
+
+use crate::cache_notify::handle_notify;
+use crate::logging::setup_logging;
 
 mod cache_notify;
 mod logging;
@@ -248,6 +251,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
             .build()
             .unwrap();
 
+        let swagger_clone = swagger.clone();
         thread::spawn(move || {
             let addr = env::var("METRICS_ADDR").unwrap_or_else(|_| "0.0.0.0".to_string());
             let port = env::var("METRICS_PORT").unwrap_or_else(|_| "9090".to_string());
@@ -258,10 +262,26 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
             }
             let addr_full = format!("{}:{}", addr, port);
 
-            let srv = HttpServer::new(move || App::new().wrap(metrics.clone()))
+            info!("Metrics available on: http://{}/metrics", addr_full);
+            let srv = if *SWAGGER_UI_INTERNAL {
+                info!(
+                    "Serving Swagger UI internally on: http://{}/docs/v1/swagger-ui/",
+                    addr_full
+                );
+                HttpServer::new(move || {
+                    App::new()
+                        .wrap(metrics.clone())
+                        .service(swagger_clone.clone())
+                })
                 .bind(addr_full)
                 .unwrap()
-                .run();
+                .run()
+            } else {
+                HttpServer::new(move || App::new().wrap(metrics.clone()))
+                    .bind(addr_full)
+                    .unwrap()
+                    .run()
+            };
             System::new().block_on(srv).unwrap();
         });
 
@@ -283,7 +303,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
     // Note: all .wrap's are executed in reverse order -> the last .wrap is executed as the first
     // one for any new request
     let server = HttpServer::new(move || {
-        App::new()
+        let mut app = App::new()
             // .data shares application state for all workers
             .app_data(app_state.clone())
             .wrap(GrantsMiddleware::with_extractor(
@@ -415,8 +435,13 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         .service(generic::whoami)
                         .service(generic::get_static_assets)
                     )
-            )
-            .service(swagger.clone())
+            );
+
+        if *SWAGGER_UI_EXTERNAL {
+            app = app.service(swagger.clone());
+        }
+
+        app
     })
     // overwrites the number of worker threads -> default == available cpu cores
     .workers(workers)
