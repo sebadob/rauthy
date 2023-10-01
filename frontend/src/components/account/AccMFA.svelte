@@ -57,7 +57,6 @@
         let res = await getUserPasskeys(sessionInfo.user_id);
         let body = await res.json();
         if (res.ok) {
-            console.log(body);
             passkeys = body;
         } else {
             console.error('error fetching passkeys: ' + body.message);

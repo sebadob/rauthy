@@ -3,8 +3,14 @@
     import Button from "$lib/Button.svelte";
     import {blur, fade} from 'svelte/transition';
     import AccModPwd from "./AccModPwd.svelte";
-    import {putUserSelf, webauthnAuthStart} from "../../utils/dataFetching.js";
+    import {
+        getUserPasskeys,
+        postUserSelfConvertPasskey,
+        putUserSelf,
+        webauthnAuthStart
+    } from "../../utils/dataFetching.js";
     import WebauthnRequest from "../webauthn/WebauthnRequest.svelte";
+    import {onMount} from "svelte";
 
     export let t;
     export let user = {};
@@ -14,7 +20,7 @@
     const btnWidth = "12rem";
 
     let accType = user.account_type;
-    // let accType = "passkey"
+    let passkeys = [];
     let isPwdValid;
     let convertAccount = false;
     let isLoading = false;
@@ -25,7 +31,33 @@
     let formValues = {};
     let formErrors = {};
 
-    async function onSubmit(mfaCode) {
+    $: canConvertToPasskey = passkeys.filter(pk => pk.user_verified).length > 0;
+
+    onMount(() => {
+        fetchPasskeys();
+    });
+
+    async function fetchPasskeys() {
+        let res = await getUserPasskeys(user.id);
+        let body = await res.json();
+        if (res.ok) {
+            passkeys = body;
+        } else {
+            console.error('error fetching passkeys: ' + body.message);
+        }
+    }
+
+    async function convertToPasskeyOnly() {
+        let res = await postUserSelfConvertPasskey(user.id);
+        if (res.ok) {
+            window.location.reload();
+        } else {
+            let body = await res.json();
+            console.error('error fetching passkeys: ' + body.message);
+        }
+    }
+
+    async function onSubmit() {
         if (accType === "passkey") {
             await onSubmitMfa();
         } else {
@@ -64,8 +96,6 @@
         } else {
             data.password_current = formValues.current;
         }
-
-        console.log(data);
 
         let res = await putUserSelf(user.id, data);
         if (res.ok) {
@@ -134,6 +164,8 @@
 
         {#if accType === "password" || convertAccount}
             <div in:blur={{ duration: 350 }}>
+                <h3>{t.changePassword}</h3>
+
                 <AccModPwd
                         bind:t
                         bind:formValues
@@ -161,13 +193,27 @@
                 {/if}
             </div>
 
+            {#if !convertAccount && canConvertToPasskey}
+                <div class="convertPasskey">
+                    <h3>{t.convertAccount}</h3>
+                    <p>{t.convertAccountP1}</p>
+                    <Button
+                            width={btnWidth}
+                            on:click={convertToPasskeyOnly}
+                            level={3}
+                    >
+                        {t.convertAccount.toUpperCase()}
+                    </Button>
+                </div>
+            {/if}
+
             <div class="bottom">
                 {#if success}
-                    <div class="success" transition:fade|global>
+                    <div class="success" transition:fade>
                         Update successful
                     </div>
                 {:else if err}
-                    <div class="err" transition:fade|global>
+                    <div class="err" transition:fade>
                         {err}
                     </div>
                 {/if}
@@ -190,6 +236,10 @@
         padding: 0 5px;
         display: flex;
         flex-direction: column;
+    }
+
+    .convertPasskey {
+        margin: 1rem 0;
     }
 
     .err {

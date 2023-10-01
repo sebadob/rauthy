@@ -155,6 +155,13 @@ export async function putUserSelf(id, data) {
 	});
 }
 
+export async function postUserSelfConvertPasskey(id) {
+	return await fetch(`/auth/v1/users/${id}/self/convert_passkey`, {
+		method: 'POST',
+		headers: getCsrfHeaders(),
+	});
+}
+
 export async function postUpdateUserLanguage() {
 	return await fetch('/auth/v1/update_language', {
 		method: 'POST',

@@ -13,6 +13,7 @@ pub struct I18nAccount<'a> {
     cancel: &'a str,
     change_password: &'a str,
     convert_account: &'a str,
+    convert_account_p_1: &'a str,
     created: &'a str,
     email: &'a str,
     email_verified: &'a str,
@@ -77,6 +78,11 @@ least once."#,
             cancel: "Cancel",
             change_password: "Change Password",
             convert_account: "Convert Account",
+            convert_account_p_1: r#"You can convert your account to a Passkey-Only account.
+This conversion deletes your password and you can and must only ever login with your registered
+passkeys. Keep in mind, that only passkeys with the additional User Verification will be accepted.
+If you passkeys support this, you will find a small symbol behind the name of the key on the 'MFA'
+page."#,
             created: "created",
             email: "E-Mail",
             email_verified: "E-Mail verified",
@@ -128,6 +134,10 @@ einmalige zusätzliche Verifizierung des Passwortes nicht mehr möglich sein wir
             cancel: "Abbrechen",
             change_password: "Passwort wechseln",
             convert_account: "Account Umwandeln",
+            convert_account_p_1: r#"Dieser Account kann in einen Passkey-Only Account umgewandelt
+werden. Diese Umwandling löscht das Passwort und erlaubt den alleinigen Login mit den registrieren
+Passkeys. Nur Passkeys mit zusätzlicher Benutzerverifizierung werden akzeptiert. Diese sind auf der
+'MFA' Seite durch das zusätzliche Symbol hinter dem Passkey Namen gekennzeichnet."#,
             created: "erstellt",
             email: "E-Mail",
             email_verified: "E-Mail verifiziert",
