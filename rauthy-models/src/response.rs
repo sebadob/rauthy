@@ -152,6 +152,7 @@ pub struct PasskeyResponse {
     pub registered: i64,
     /// format: `NaiveDateTime`
     pub last_used: i64,
+    pub user_verified: Option<bool>,
 }
 
 impl From<PasskeyEntity> for PasskeyResponse {
@@ -160,6 +161,7 @@ impl From<PasskeyEntity> for PasskeyResponse {
             name: value.name,
             registered: value.registered,
             last_used: value.last_used,
+            user_verified: value.user_verified,
         }
     }
 }
