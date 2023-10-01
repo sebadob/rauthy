@@ -965,7 +965,7 @@ pub async fn put_user_by_id(
     ),
 )]
 #[put("/users/{id}/self")]
-#[has_permissions("session-auth")] // TODO correct role? not authenticated? --> double check!
+#[has_permissions("session-auth")]
 pub async fn put_user_self(
     data: web::Data<AppState>,
     id: web::Path<String>,
@@ -991,6 +991,47 @@ pub async fn put_user_self(
     User::update_self_req(&data, id, user.into_inner())
         .await
         .map(|user| HttpResponse::Ok().json(UserResponse::from(user)))
+}
+
+/// Allows an authenticated and logged in user to convert his account to passkey only
+///
+/// **Permissions**
+/// - authenticated user
+#[utoipa::path(
+    post,
+    path = "/users/{id}/self/convert_passkey",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok", body = UserResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[post("/users/{id}/self/convert_passkey")]
+#[has_permissions("session-auth")]
+pub async fn post_user_self_convert_passkey(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+    req: HttpRequest,
+    principal: web::ReqData<Option<Principal>>,
+    session_req: web::ReqData<Option<Session>>,
+) -> Result<HttpResponse, ErrorResponse> {
+    if session_req.is_some() {
+        Session::extract_validate_csrf(session_req, &req)?;
+    }
+
+    // make sure the logged in user can only update itself
+    let principal = Principal::get_from_req(principal.into_inner())?;
+    let id = id.into_inner();
+    if principal.user_id != id {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "You are not allowed to update another users values".to_string(),
+        ));
+    }
+
+    User::convert_to_passkey(&data, id).await?;
+    Ok(HttpResponse::Ok().finish())
 }
 
 /// Deletes a user

@@ -8,7 +8,7 @@ use crate::entity::pow::Pow;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
-use crate::entity::webauthn::WebauthnServiceReq;
+use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
 use crate::language::Language;
 use crate::request::{
     NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
@@ -518,6 +518,48 @@ impl User {
         };
 
         User::update(data, id, req, Some(user)).await
+    }
+
+    /// Converts a user account from as password account type to passkey only with all necessary
+    /// checks included.
+    pub async fn convert_to_passkey(
+        data: &web::Data<AppState>,
+        id: String,
+    ) -> Result<(), ErrorResponse> {
+        let mut user = User::find(data, id.clone()).await?;
+
+        // only allow conversion for password type accounts
+        if user.account_type() != AccountType::Password {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Only AccountType::Password can be converted".to_string(),
+            ));
+        }
+
+        // check webauthn enabled
+        if !user.has_webauthn_enabled() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Account type conversion can only happen with at least one active Passkey"
+                    .to_string(),
+            ));
+        }
+
+        // only allow passkeys with active UV
+        let pks = PasskeyEntity::find_for_user_with_uv(data, &user.id).await?;
+        if pks.is_empty() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::NotFound,
+                "Could not find any passkeys with active User Verification".to_string(),
+            ));
+        }
+
+        // all good -> delete password
+        user.password = None;
+        user.password_expires = None;
+
+        user.save(data, None, None).await?;
+        Ok(())
     }
 }
 
