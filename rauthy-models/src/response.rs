@@ -316,7 +316,7 @@ pub struct Userinfo {
     pub family_name: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum UserAccountTypeResponse {
     New,

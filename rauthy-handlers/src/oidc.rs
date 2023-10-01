@@ -139,7 +139,7 @@ pub async fn get_authorize(
     tag = "oidc",
     request_body = LoginRequest,
     responses(
-        (status = 200, description = "Correct credentials, but needs to continue with Webauthn MFA Login", body = MfaLoginRequestAwait),
+        (status = 200, description = "Correct credentials, but needs to continue with Webauthn MFA Login", body = WebauthnLoginResponse),
         (status = 202, description = "Correct credentials and not MFA Login required, adds Location header"),
         (status = 400, description = "Missing / bad input data", body = ErrorResponse),
         (status = 401, description = "Bad input or CSRF Token error", body = ErrorResponse),
