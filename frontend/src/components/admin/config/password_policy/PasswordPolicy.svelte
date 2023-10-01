@@ -59,6 +59,15 @@
                 err = body.message;
             } else {
                 policy = body;
+                policy.length_min = body.length_min || 0;
+                policy.length_max = body.length_max || 0;
+                policy.include_digits = body.include_digits || 0;
+                policy.include_lower_case = body.include_lower_case || 0;
+                policy.include_upper_case = body.include_upper_case || 0;
+                policy.include_special = body.include_special || 0;
+                policy.length_max = body.length_max || 0;
+                policy.valid_days = body.valid_days || 0;
+                policy.not_recently_used = body.not_recently_used || 0;
             }
         }
     });
