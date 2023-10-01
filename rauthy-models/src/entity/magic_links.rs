@@ -141,26 +141,6 @@ impl MagicLinkPassword {
         req: &HttpRequest,
         with_csrf: bool,
     ) -> Result<(), ErrorResponse> {
-        // csrf token
-        if with_csrf {
-            match req.headers().get(PWD_CSRF_HEADER) {
-                None => {
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::Unauthorized,
-                        String::from("CSRF Token is missing"),
-                    ));
-                }
-                Some(token) => {
-                    if self.csrf_token != token.to_str().unwrap_or("") {
-                        return Err(ErrorResponse::new(
-                            ErrorResponseType::Unauthorized,
-                            String::from("Invalid CSRF Token"),
-                        ));
-                    }
-                }
-            }
-        }
-
         // binding cookie
         if self.cookie.is_some() {
             let err = ErrorResponse::new(
@@ -178,6 +158,26 @@ impl MagicLinkPassword {
                 }
             } else {
                 return Err(err);
+            }
+        }
+
+        // csrf token
+        if with_csrf {
+            match req.headers().get(PWD_CSRF_HEADER) {
+                None => {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::Unauthorized,
+                        String::from("CSRF Token is missing"),
+                    ));
+                }
+                Some(token) => {
+                    if self.csrf_token != token.to_str().unwrap_or("") {
+                        return Err(ErrorResponse::new(
+                            ErrorResponseType::Unauthorized,
+                            String::from("Invalid CSRF Token"),
+                        ));
+                    }
+                }
             }
         }
 
