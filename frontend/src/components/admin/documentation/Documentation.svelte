@@ -11,8 +11,12 @@
         </p>
 
         <p>
-            If you want to integreate an external application and use Rauthy's REST API, take a look at the
-            <a href="/docs/v1/swagger-ui/" target="_blank">Swagger UI</a>
+            If you want to integrate an external application and use Rauthy's REST API, take a look at the
+            <a href="/docs/v1/swagger-ui/" target="_blank">Swagger UI</a><br/>
+
+            <b>Note:</b>
+            Depending on the backend configuration, the Swagger UI may not be exposed publicly at this point.
+            It is however by default available via the internal <code>/metrics</code> HTTP server to not expose any information.
         </p>
 
         <p>
@@ -31,6 +35,10 @@
 
     a:hover {
         color: var(--col-act2a);
+    }
+
+    p {
+        margin: .5rem 0;
     }
 
     .container {
