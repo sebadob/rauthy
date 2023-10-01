@@ -7,6 +7,7 @@ use serde::Serialize;
 #[serde(rename_all = "camelCase")]
 pub struct I18nAccount<'a> {
     account: &'a str,
+    acc_type: &'a str,
     acc_type_passkey_text_1: &'a str,
     acc_type_passkey_text_2: &'a str,
     acc_type_passkey_text_3: &'a str,
@@ -68,6 +69,7 @@ impl I18nAccount<'_> {
     fn build_en() -> Self {
         Self {
             account: "Account",
+            acc_type: "Account Type",
             acc_type_passkey_text_1: r#"This is account is currently a passkey only account.
 This means, that you do not have any password, because you don't need one."#,
             acc_type_passkey_text_2: r#"You can convert your account and add a password. But keep
@@ -124,6 +126,7 @@ page."#,
     fn build_de() -> Self {
         Self {
             account: "Account",
+            acc_type: "Account Typ",
             acc_type_passkey_text_1: r#"Dies ist ein "Passkey-Only" Account. Das bedeutet, dass
 dieser Account kein Passwort hat und auch keines benötigt."#,
             acc_type_passkey_text_2: r#"Der Account kann in einen Passwort-Account umgewandelt
