@@ -50,9 +50,8 @@ version:
 
 
 # runs the full set of tests with in-memory sqlite
-test-sqlite: migrate-sqlite
+test-sqlite test="": migrate-sqlite
     #!/usr/bin/env bash
-    set -euxo pipefail
     clear
 
     DATABASE_URL={{db_url_sqlite}} cargo build --features sqlite
@@ -61,15 +60,14 @@ test-sqlite: migrate-sqlite
     PID=$(echo "$!")
     echo "PID: $PID"
 
-    DATABASE_URL={{db_url_sqlite}} cargo test --features sqlite
+    DATABASE_URL={{db_url_sqlite}} cargo test --features sqlite {{test}}
     kill "$PID"
     echo All tests successful
 
 
 # runs the full set of tests with postgres
-test-postgres: migrate-postgres
+test-postgres test="": migrate-postgres
     #!/usr/bin/env bash
-    set -euxo pipefail
     clear
 
     DATABASE_URL={{db_url_postgres}} cargo build

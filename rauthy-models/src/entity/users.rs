@@ -1043,6 +1043,7 @@ mod tests {
     use super::*;
     use crate::entity::sessions::{Session, SessionState};
     use pretty_assertions::assert_eq;
+    use std::ops::Sub;
 
     #[test]
     fn test_session_impl() {
@@ -1063,7 +1064,11 @@ mod tests {
             failed_login_attempts: None,
             language: Language::En,
             webauthn_user_id: None,
-            user_expires: Some(OffsetDateTime::now_utc().unix_timestamp()),
+            user_expires: Some(
+                OffsetDateTime::now_utc()
+                    .sub(::time::Duration::seconds(2))
+                    .unix_timestamp(),
+            ),
         };
         let session = Session::try_new(&user, 1, None);
         assert!(session.is_err());
