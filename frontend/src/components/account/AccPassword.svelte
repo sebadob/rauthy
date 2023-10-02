@@ -172,7 +172,7 @@
                         bind:isValid={isPwdValid}
                         btnWidth={btnWidth}
                         inputWidth={inputWidth}
-                        hideCurrentPassword
+                        hideCurrentPassword={!(accType === "password" && passkeys.length < 1)}
                 />
 
                 <div>
