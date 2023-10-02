@@ -3,7 +3,7 @@ use crate::entity::clients::Client;
 use crate::entity::colors::ColorEntity;
 use crate::entity::groups::Group;
 use crate::entity::jwk::{Jwk, JwkKeyPairType};
-use crate::entity::magic_links::MagicLinkPassword;
+use crate::entity::magic_links::MagicLink;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
@@ -450,7 +450,7 @@ pub async fn migrate_from_sqlite(
     }
 
     // MAGIC LINKS
-    let before = sqlx::query_as::<_, MagicLinkPassword>("select * from magic_links")
+    let before = sqlx::query_as::<_, MagicLink>("select * from magic_links")
         .fetch_all(&db_from)
         .await?;
     sqlx::query("delete from magic_links")
@@ -780,7 +780,7 @@ pub async fn migrate_from_postgres(
     }
 
     // MAGIC LINKS
-    let before = sqlx::query_as::<_, MagicLinkPassword>("select * from rauthy.magic_links")
+    let before = sqlx::query_as::<_, MagicLink>("select * from rauthy.magic_links")
         .fetch_all(&db_from)
         .await?;
     sqlx::query("delete from magic_links")

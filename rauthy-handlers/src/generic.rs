@@ -17,6 +17,7 @@ use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::i18n::account::I18nAccount;
 use rauthy_models::i18n::authorize::I18nAuthorize;
+use rauthy_models::i18n::email_change_confirm::I18nEmailChangeConfirm;
 use rauthy_models::i18n::index::I18nIndex;
 use rauthy_models::i18n::logout::I18nLogout;
 use rauthy_models::i18n::password_reset::I18nPasswordReset;
@@ -93,6 +94,7 @@ pub async fn post_i18n(
     let body = match req_data.content {
         I18nContent::Authorize => I18nAuthorize::build(&lang).as_json(),
         I18nContent::Account => I18nAccount::build(&lang).as_json(),
+        I18nContent::EmailChangeConfirm => I18nEmailChangeConfirm::build(&lang).as_json(),
         I18nContent::Index => I18nIndex::build(&lang).as_json(),
         I18nContent::Logout => I18nLogout::build(&lang).as_json(),
         I18nContent::PasswordReset => I18nPasswordReset::build(&lang).as_json(),

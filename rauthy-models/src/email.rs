@@ -1,5 +1,5 @@
 use crate::app_state::AppState;
-use crate::entity::magic_links::MagicLinkPassword;
+use crate::entity::magic_links::MagicLink;
 use crate::entity::users::User;
 use crate::i18n::email_reset::I18nEmailReset;
 use crate::i18n::email_reset_info::I18nEmailResetInfo;
@@ -75,11 +75,7 @@ pub struct EmailResetInfoTxt<'a> {
     pub update: &'a str,
 }
 
-pub async fn send_pwd_reset(
-    data: &web::Data<AppState>,
-    magic_link: &MagicLinkPassword,
-    user: &User,
-) {
+pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, user: &User) {
     let link = format!(
         "{}/users/{}/reset/{}?type={}",
         data.issuer, magic_link.user_id, &magic_link.id, magic_link.usage,

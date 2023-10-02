@@ -1,7 +1,8 @@
 use crate::app_state::{AppState, Argon2Params, DbTxn};
 use crate::email::send_pwd_reset;
+use crate::entity::colors::ColorEntity;
 use crate::entity::groups::Group;
-use crate::entity::magic_links::{MagicLinkPassword, MagicLinkUsage};
+use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::pow::Pow;
@@ -13,6 +14,7 @@ use crate::language::Language;
 use crate::request::{
     NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
 };
+use crate::templates::UserEmailChangeConfirmHtml;
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;
 use rauthy_common::constants::{CACHE_NAME_12HR, IDX_USERS, WEBAUTHN_NO_PASSWORD_EXPIRY};
@@ -80,7 +82,7 @@ impl User {
         .execute(&data.db)
         .await?;
 
-        let magic_link = MagicLinkPassword::create(
+        let magic_link = MagicLink::create(
             data,
             new_user.id.clone(),
             data.ml_lt_pwd_first as i64,
@@ -459,7 +461,7 @@ impl User {
         data: &web::Data<AppState>,
         id: String,
         upd_user: UpdateUserSelfRequest,
-    ) -> Result<User, ErrorResponse> {
+    ) -> Result<(User, bool), ErrorResponse> {
         let user = User::find(data, id.clone()).await?;
 
         let mut password = None;
@@ -484,11 +486,19 @@ impl User {
             password = Some(pwd_new);
         }
 
-        let email = if let Some(email) = upd_user.email {
-            email
+        let email_updated = if let Some(email) = upd_user.email {
+            // if the email should be updated, we do not do it directly -> send out confirmation
+            // email to old AND new address
+            // TODO
+            true
         } else {
-            user.email.clone()
+            false
         };
+        // let email = if let Some(email) = upd_user.email {
+        //     email
+        // } else {
+        //     user.email.clone()
+        // };
         let given_name = if let Some(given_name) = upd_user.given_name {
             given_name
         } else {
@@ -517,7 +527,8 @@ impl User {
             user_expires: user.user_expires,
         };
 
-        User::update(data, id, req, Some(user)).await
+        let user = User::update(data, id, req, Some(user)).await?;
+        Ok((user, email_updated))
     }
 
     /// Converts a user account from as password account type to passkey only with all necessary
@@ -741,6 +752,48 @@ impl User {
         Ok(())
     }
 
+    pub async fn confirm_email_address(
+        data: &web::Data<AppState>,
+        req: HttpRequest,
+        user_id: String,
+        confirm_id: String,
+    ) -> Result<(String, String), ErrorResponse> {
+        let mut ml = MagicLink::find(data, &confirm_id).await?;
+        ml.validate(&user_id, &req, false)?;
+
+        let usage = MagicLinkUsage::try_from(&ml.usage)?;
+        let new_email = match usage {
+            MagicLinkUsage::NewUser | MagicLinkUsage::PasswordReset => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "The Magic Link is not meant to be used to confirm an E-Mail address"
+                        .to_string(),
+                ));
+            }
+            MagicLinkUsage::EmailChange(email) => email,
+        };
+
+        let mut user = Self::find(data, user_id).await?;
+
+        // build response HTML
+        let colors = ColorEntity::find_rauthy(data).await?;
+        let lang = Language::try_from(&req).unwrap_or_default();
+        let (html, nonce) =
+            UserEmailChangeConfirmHtml::build(&colors, &lang, &user.email, &new_email);
+
+        // save data
+        let old_email = user.email;
+        user.email = new_email;
+        user.email_verified = true;
+        user.save(data, Some(old_email), None).await?;
+        ml.invalidate(data).await?;
+
+        // finally, invalidate all existing sessions with the old email
+        Session::invalidate_for_user(data, &user.id).await?;
+
+        Ok((html, nonce))
+    }
+
     pub fn delete_group(&mut self, group: &str) {
         if self.groups.is_none() {
             return;
@@ -931,7 +984,7 @@ impl User {
             return Ok(());
         }
 
-        let ml_res = MagicLinkPassword::find_by_user(data, self.id.clone()).await;
+        let ml_res = MagicLink::find_by_user(data, self.id.clone()).await;
         // if an active magic link already exists - invalidate it.
         if ml_res.is_ok() {
             let mut ml = ml_res.unwrap();
@@ -950,8 +1003,7 @@ impl User {
             MagicLinkUsage::PasswordReset
         };
         let new_ml =
-            MagicLinkPassword::create(data, self.id.clone(), data.ml_lt_pwd_reset as i64, usage)
-                .await?;
+            MagicLink::create(data, self.id.clone(), data.ml_lt_pwd_reset as i64, usage).await?;
         send_pwd_reset(data, &new_ml, self).await;
 
         Ok(())
@@ -981,7 +1033,7 @@ impl User {
 
                 // if the given password does match, send out a reset link to set a new one
                 return if self.match_passwords(plain_password.clone()).await? {
-                    let magic_link = MagicLinkPassword::create(
+                    let magic_link = MagicLink::create(
                         data,
                         self.id.clone(),
                         data.ml_lt_pwd_reset as i64,

@@ -1,28 +1,37 @@
+use crate::app_state::AppState;
 use actix_web::{web, HttpRequest};
+use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
+use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::get_rand;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use time::OffsetDateTime;
 
-use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::get_rand;
-
-use crate::app_state::AppState;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MagicLinkUsage {
+    EmailChange(String),
     PasswordReset,
     NewUser,
+}
+
+impl TryFrom<&String> for MagicLinkUsage {
+    type Error = ErrorResponse;
+
+    fn try_from(value: &String) -> Result<Self, Self::Error> {
+        Self::try_from(value.as_str())
+    }
 }
 
 impl TryFrom<&str> for MagicLinkUsage {
     type Error = ErrorResponse;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let slf = match value {
+        let (ty, v) = value.split_once('$').unwrap_or((value, ""));
+        let slf = match ty {
             "password_reset" => MagicLinkUsage::PasswordReset,
             "new_user" => MagicLinkUsage::NewUser,
+            "email_change" => MagicLinkUsage::EmailChange(v.to_string()),
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
@@ -35,17 +44,20 @@ impl TryFrom<&str> for MagicLinkUsage {
     }
 }
 
-impl MagicLinkUsage {
-    pub fn as_str(&self) -> &str {
+impl ToString for MagicLinkUsage {
+    // For types with a value, `$` was chosen as the separating characters since it is URL safe.
+    // It also makes splitting of the value quite easy.
+    fn to_string(&self) -> String {
         match self {
-            MagicLinkUsage::PasswordReset => "password_reset",
-            MagicLinkUsage::NewUser => "new_user",
+            MagicLinkUsage::PasswordReset => "password_reset".to_string(),
+            MagicLinkUsage::NewUser => "new_user".to_string(),
+            MagicLinkUsage::EmailChange(email) => format!("email_change${}", email),
         }
     }
 }
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
-pub struct MagicLinkPassword {
+pub struct MagicLink {
     pub id: String,
     pub user_id: String,
     pub csrf_token: String,
@@ -56,7 +68,7 @@ pub struct MagicLinkPassword {
 }
 
 // CRUD
-impl MagicLinkPassword {
+impl MagicLink {
     pub async fn create(
         data: &web::Data<AppState>,
         user_id: String,
@@ -65,14 +77,14 @@ impl MagicLinkPassword {
     ) -> Result<Self, ErrorResponse> {
         let id = get_rand(64);
         let exp = OffsetDateTime::now_utc().unix_timestamp() + lifetime_minutes * 60;
-        let link = MagicLinkPassword {
+        let link = MagicLink {
             id,
             user_id,
             csrf_token: get_rand(48),
             cookie: None,
             exp,
             used: false,
-            usage: usage.as_str().to_string(),
+            usage: usage.to_string(),
         };
 
         sqlx::query!(
@@ -102,7 +114,7 @@ impl MagicLinkPassword {
     pub async fn find_by_user(
         data: &web::Data<AppState>,
         user_id: String,
-    ) -> Result<MagicLinkPassword, ErrorResponse> {
+    ) -> Result<MagicLink, ErrorResponse> {
         let res = sqlx::query_as!(
             Self,
             "select * from magic_links where user_id = $1",
@@ -129,7 +141,7 @@ impl MagicLinkPassword {
     }
 }
 
-impl MagicLinkPassword {
+impl MagicLink {
     pub async fn invalidate(&mut self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         self.exp = OffsetDateTime::now_utc().unix_timestamp() - 10;
         self.save(data).await
@@ -213,10 +225,33 @@ pub struct IdxMagicLinkPasswordUser {
 }
 
 impl IdxMagicLinkPasswordUser {
-    pub fn from_magic_link(ml: &MagicLinkPassword) -> Self {
+    pub fn from_magic_link(ml: &MagicLink) -> Self {
         Self {
             user_id: ml.user_id.clone(),
             id: ml.id.clone(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::entity::magic_links::MagicLinkUsage;
+
+    #[test]
+    fn test_magic_link_usage_conversions() {
+        let ml = MagicLinkUsage::NewUser;
+        let s = ml.to_string();
+        let ml_from = MagicLinkUsage::try_from(&s).unwrap();
+        assert_eq!(ml, ml_from);
+
+        let ml = MagicLinkUsage::PasswordReset;
+        let s = ml.to_string();
+        let ml_from = MagicLinkUsage::try_from(&s).unwrap();
+        assert_eq!(ml, ml_from);
+
+        let ml = MagicLinkUsage::EmailChange("admin@localhost.de".to_string());
+        let s = ml.to_string();
+        let ml_from = MagicLinkUsage::try_from(&s).unwrap();
+        assert_eq!(ml, ml_from);
     }
 }

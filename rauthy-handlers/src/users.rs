@@ -394,7 +394,38 @@ pub async fn put_user_attr(
 /// The `id` is the user id and `reset_id` is a random 64 character long string sent via E-Mail for a
 /// pre-authenticated request.
 #[utoipa::path(
-    post,
+    get,
+    path = "/users/{id}/email_confirm/{confirm_id}",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[get("/users/{id}/reset/{confirm_id}")]
+#[has_permissions("all")]
+pub async fn get_user_email_confirm(
+    data: web::Data<AppState>,
+    path: web::Path<(String, String)>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    let (user_id, confirm_id) = path.into_inner();
+    User::confirm_email_address(&data, req, user_id, confirm_id)
+        .await
+        .map(|(html, nonce)| {
+            HttpResponse::Ok()
+                .insert_header(HEADER_HTML)
+                .insert_header(build_csp_header(&nonce))
+                .body(html)
+        })
+}
+
+/// Endpoint for resetting passwords
+///
+/// The `id` is the user id and `reset_id` is a random 64 character long string sent via E-Mail for a
+/// pre-authenticated request.
+#[utoipa::path(
+    get,
     path = "/users/{id}/reset/{reset_id}",
     tag = "users",
     responses(
@@ -410,8 +441,8 @@ pub async fn get_user_password_reset(
     path: web::Path<(String, String)>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let path_inner = path.into_inner();
-    password_reset::handle_get_pwd_reset(&data, req, path_inner.0, path_inner.1)
+    let (user_id, reset_id) = path.into_inner();
+    password_reset::handle_get_pwd_reset(&data, req, user_id, reset_id)
         .await
         .map(|(html, nonce, cookie)| {
             HttpResponse::Ok()

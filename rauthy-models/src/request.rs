@@ -128,6 +128,7 @@ pub struct I18nRequest {
 pub enum I18nContent {
     Account,
     Authorize,
+    EmailChangeConfirm,
     Index,
     Logout,
     PasswordReset,
