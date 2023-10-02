@@ -126,6 +126,20 @@ impl MagicLink {
         Ok(res)
     }
 
+    pub async fn invalidate_all_email_change(
+        data: &web::Data<AppState>,
+        user_id: &str,
+    ) -> Result<(), ErrorResponse> {
+        sqlx::query!(
+            "delete from magic_links where user_id = $1 and usage like 'email_change$%'",
+            user_id,
+        )
+        .execute(&data.db)
+        .await?;
+
+        Ok(())
+    }
+
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         sqlx::query!(
             "update magic_links set cookie = $1, exp = $2, used = $3 where id = $4",

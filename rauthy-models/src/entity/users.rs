@@ -21,7 +21,9 @@ use rauthy_common::constants::{CACHE_NAME_12HR, IDX_USERS, WEBAUTHN_NO_PASSWORD_
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
 use rauthy_common::utils::{get_client_ip, new_store_id};
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
+use redhac::{
+    cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::ops::Add;
@@ -361,6 +363,8 @@ impl User {
         let users = User::find_all(data)
             .await?
             .into_iter()
+            // delete possibly existing cached user with the old email
+            .filter(|u| Some(&u.email) != old_email.as_ref())
             .map(|mut u| {
                 if u.id == self.id {
                     u = self.clone();
@@ -368,6 +372,16 @@ impl User {
                 u
             })
             .collect::<Vec<Self>>();
+
+        if let Some(email) = old_email {
+            let idx = format!("{}_{}", IDX_USERS, email);
+            cache_del(
+                CACHE_NAME_12HR.to_string(),
+                idx,
+                &data.caches.ha_cache_config,
+            )
+            .await?;
+        }
 
         cache_insert(
             CACHE_NAME_12HR.to_string(),
@@ -490,7 +504,8 @@ impl User {
             // if the email should be updated, we do not do it directly -> send out confirmation
             // email to old AND new address
             if email != user.email {
-                // TODO invalidate possible other existing MagicLinks of the same type
+                // invalidate possibly other existing MagicLinks of the same type
+                MagicLink::invalidate_all_email_change(data, &user.id).await?;
 
                 let ml = MagicLink::create(
                     data,
