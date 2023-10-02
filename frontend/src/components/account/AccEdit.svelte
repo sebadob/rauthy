@@ -19,6 +19,7 @@
     let isLoading = false;
     let err = '';
     let success = false;
+    let successEmailConfirm = false;
 
     let formValues = {
         email: user.email,
@@ -66,6 +67,10 @@
             user.email = formValues.email;
             user.given_name = formValues.givenName;
             user.family_name = formValues.familyName;
+
+            if (res.status === 202) {
+                successEmailConfirm = true;
+            }
         } else {
             let body = await res.json();
             err = body.message;
@@ -128,6 +133,9 @@
             {#if success}
                 <div class="success" transition:fade>
                     Update successful
+                    {#if successEmailConfirm}
+                        <p>{t.emailUpdateConfirm}</p>
+                    {/if}
                 </div>
             {:else if err}
                 <div class="err" transition:fade>
