@@ -2,6 +2,7 @@ use crate::entity::colors::Colors;
 use crate::entity::password::PasswordPolicy;
 use crate::i18n::account::I18nAccount;
 use crate::i18n::authorize::I18nAuthorize;
+use crate::i18n::email_change_confirm::I18nEmailChangeConfirm;
 use crate::i18n::index::I18nIndex;
 use crate::i18n::logout::I18nLogout;
 use crate::i18n::password_reset::I18nPasswordReset;
@@ -943,7 +944,7 @@ impl UserEmailChangeConfirmHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             nonce: &nonce,
-            i18n: I18nRegister::build(lang).as_json(),
+            i18n: I18nEmailChangeConfirm::build(lang).as_json(),
             ..Default::default()
         }
         .render()

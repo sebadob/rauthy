@@ -1,0 +1,6 @@
+{{ header }} {{ pub_url }}
+
+{{ change_info }}
+{{ click_link }}
+
+{{ link }}

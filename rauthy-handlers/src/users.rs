@@ -402,7 +402,7 @@ pub async fn put_user_attr(
         (status = 404, description = "NotFound", body = ErrorResponse),
     ),
 )]
-#[get("/users/{id}/reset/{confirm_id}")]
+#[get("/users/{id}/email_confirm/{confirm_id}")]
 #[has_permissions("all")]
 pub async fn get_user_email_confirm(
     data: web::Data<AppState>,

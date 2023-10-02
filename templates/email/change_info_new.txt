@@ -1,0 +1,8 @@
+{{ header }} {{ pub_url }}
+
+{{ click_link }}
+
+{{ validity }}
+{{ expires }} {{ exp }}
+
+{{ link }}

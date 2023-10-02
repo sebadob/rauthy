@@ -1,5 +1,5 @@
 use crate::app_state::{AppState, Argon2Params, DbTxn};
-use crate::email::send_pwd_reset;
+use crate::email::{send_email_change_info_new, send_pwd_reset};
 use crate::entity::colors::ColorEntity;
 use crate::entity::groups::Group;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
@@ -490,7 +490,16 @@ impl User {
             // if the email should be updated, we do not do it directly -> send out confirmation
             // email to old AND new address
             if email != user.email {
-                // TODO
+                // TODO invalidate possible other existing MagicLinks of the same type
+
+                let ml = MagicLink::create(
+                    data,
+                    user.id.clone(),
+                    60,
+                    MagicLinkUsage::EmailChange(email.clone()),
+                )
+                .await?;
+                send_email_change_info_new(data, &ml, &user, email).await;
                 true
             } else {
                 false

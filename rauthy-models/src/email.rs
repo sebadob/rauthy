@@ -1,6 +1,7 @@
 use crate::app_state::AppState;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::users::User;
+use crate::i18n::email_change_info_new::I18nEmailChangeInfoNew;
 use crate::i18n::email_reset::I18nEmailReset;
 use crate::i18n::email_reset_info::I18nEmailResetInfo;
 use crate::i18n::SsrJson;
@@ -21,6 +22,55 @@ pub struct EMail {
     pub subject: String,
     pub text: String,
     pub html: Option<String>,
+}
+
+// TODO implement
+// #[derive(Default, Template)]
+// #[template(path = "email/change_info_old.html")]
+// pub struct EMailChangeInfoOldHtml<'a> {
+//     pub pub_url: &'a str,
+//     pub link: &'a str,
+//     // i18n
+//     pub header: &'a str,
+//     pub click_link: &'a str,
+//     pub button_text: &'a str,
+// }
+//
+// #[derive(Default, Template)]
+// #[template(path = "email/change_info_old.txt")]
+// pub struct EMailChangeInfoOldTxt<'a> {
+//     pub pub_url: &'a str,
+//     pub link: &'a str,
+//     // i18n
+//     pub header: &'a str,
+//     pub click_link: &'a str,
+// }
+
+#[derive(Default, Template)]
+#[template(path = "email/change_info_new.html")]
+pub struct EMailChangeInfoNewHtml<'a> {
+    pub pub_url: &'a str,
+    pub link: &'a str,
+    pub exp: &'a str,
+    // i18n
+    pub header: &'a str,
+    pub click_link: &'a str,
+    pub validity: &'a str,
+    pub expires: &'a str,
+    pub button_text: &'a str,
+}
+
+#[derive(Default, Template)]
+#[template(path = "email/change_info_new.txt")]
+pub struct EMailChangeInfoNewTxt<'a> {
+    pub pub_url: &'a str,
+    pub link: &'a str,
+    pub exp: &'a str,
+    // i18n
+    pub header: &'a str,
+    pub click_link: &'a str,
+    pub validity: &'a str,
+    pub expires: &'a str,
 }
 
 #[derive(Default, Template)]
@@ -73,6 +123,71 @@ pub struct EmailResetInfoTxt<'a> {
     pub expires_1: &'a str,
     pub expires_2: &'a str,
     pub update: &'a str,
+}
+
+pub async fn send_email_change_info_new(
+    data: &web::Data<AppState>,
+    magic_link: &MagicLink,
+    user: &User,
+    new_email: String,
+) {
+    let link = format!(
+        "{}/users/{}/email_confirm/{}",
+        data.issuer, magic_link.user_id, &magic_link.id,
+    );
+    let exp = OffsetDateTime::from_unix_timestamp(magic_link.exp)
+        .unwrap()
+        .to_string();
+
+    let i18n = I18nEmailChangeInfoNew::build(&user.language);
+    let text = EMailChangeInfoNewTxt {
+        pub_url: &data.public_url,
+        link: &link,
+        exp: &exp,
+        header: i18n.header,
+        click_link: i18n.click_link,
+        validity: i18n.validity,
+        expires: i18n.expires,
+    };
+
+    let html = EMailChangeInfoNewHtml {
+        pub_url: &data.public_url,
+        link: &link,
+        exp: &exp,
+        header: i18n.header,
+        click_link: i18n.click_link,
+        validity: i18n.validity,
+        expires: i18n.expires,
+        button_text: i18n.button_text,
+    };
+
+    let req = EMail {
+        address: new_email.clone(),
+        subject: format!(
+            "{} - {} {}",
+            i18n.subject, user.given_name, user.family_name
+        ),
+        text: text
+            .render()
+            .expect("Template rendering: EMailChangeInfoNewTxt"),
+        html: Some(
+            html.render()
+                .expect("Template rendering: EMailChangeInfoNewHtml"),
+        ),
+    };
+
+    let tx = &data.tx_email;
+    let res = tx.send_timeout(req, Duration::from_secs(10)).await;
+    match res {
+        Ok(_) => {}
+        Err(ref e) => {
+            error!(
+                "Error sending magic link email request for user '{}': {:?}",
+                new_email, e
+            );
+        }
+    }
+    if res.is_err() {}
 }
 
 pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, user: &User) {

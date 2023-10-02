@@ -61,6 +61,8 @@
             family_name: formValues.familyName,
         };
 
+        console.log(data.email);
+
         let res = await putUserSelf(user.id, data);
         if (res.ok) {
             success = true;

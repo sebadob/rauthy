@@ -3,6 +3,8 @@ use crate::language::Language;
 pub mod account;
 pub mod authorize;
 pub mod email_change_confirm;
+pub mod email_change_info_new;
+pub mod email_change_info_old;
 pub mod email_reset;
 pub mod email_reset_info;
 pub mod index;

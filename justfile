@@ -113,6 +113,7 @@ build-ui:
     "templates/html/oidc/*.html"
     "templates/html/users/*.html"
     "templates/html/users/{id}/reset/*.html"
+    "templates/html/users/{id}/email_confirm/*.html"
     )
     for folder in "${PAGES[@]}"; do
         for html in $folder; do
