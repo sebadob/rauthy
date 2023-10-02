@@ -1021,7 +1021,13 @@ pub async fn put_user_self(
 
     User::update_self_req(&data, id, user.into_inner())
         .await
-        .map(|user| HttpResponse::Ok().json(UserResponse::from(user)))
+        .map(|(user, email_update)| {
+            if email_update {
+                HttpResponse::Accepted().json(UserResponse::from(user))
+            } else {
+                HttpResponse::Ok().json(UserResponse::from(user))
+            }
+        })
 }
 
 /// Allows an authenticated and logged in user to convert his account to passkey only

@@ -17,6 +17,7 @@ pub struct I18nAccount<'a> {
     convert_account_p_1: &'a str,
     created: &'a str,
     email: &'a str,
+    email_update_confirm: &'a str,
     email_verified: &'a str,
     enabled: &'a str,
     family_name: &'a str,
@@ -87,6 +88,9 @@ If you passkeys support this, you will find a small symbol behind the name of th
 page."#,
             created: "created",
             email: "E-Mail",
+            email_update_confirm: r#"The E-Mail address has not been updated yet. A message has been
+sent out to your new address. You need to click the confirmation link inside it. Once it has been
+confirmed, your new address will be updated."#,
             email_verified: "E-Mail verified",
             enabled: "Enabled",
             family_name: "Family Name",
@@ -143,6 +147,9 @@ Passkeys. Nur Passkeys mit zusätzlicher Benutzerverifizierung werden akzeptiert
 'MFA' Seite durch das zusätzliche Symbol hinter dem Passkey Namen gekennzeichnet."#,
             created: "erstellt",
             email: "E-Mail",
+            email_update_confirm: r#"Die E-Mail Adresse wurde noch nicht aktualisiert. Eine Nachricht
+mit einem Bestätigungslink wurde an die neue Adresse geschickt. Das Update muss über den
+enthaltenen Link bestätigt werden. Nach der Bestätigung wird die neue Adresse gesetzt."#,
             email_verified: "E-Mail verifiziert",
             enabled: "Aktiviert",
             family_name: "Nachname",

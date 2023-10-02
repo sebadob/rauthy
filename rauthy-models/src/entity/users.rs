@@ -489,16 +489,15 @@ impl User {
         let email_updated = if let Some(email) = upd_user.email {
             // if the email should be updated, we do not do it directly -> send out confirmation
             // email to old AND new address
-            // TODO
-            true
+            if email != user.email {
+                // TODO
+                true
+            } else {
+                false
+            }
         } else {
             false
         };
-        // let email = if let Some(email) = upd_user.email {
-        //     email
-        // } else {
-        //     user.email.clone()
-        // };
         let given_name = if let Some(given_name) = upd_user.given_name {
             given_name
         } else {
@@ -515,7 +514,8 @@ impl User {
             None
         };
         let req = UpdateUserRequest {
-            email,
+            // never update the email directly here, only via email confirmation action from the user
+            email: user.email.clone(),
             given_name,
             family_name,
             language: upd_user.language,
