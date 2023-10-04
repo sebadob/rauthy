@@ -901,17 +901,17 @@ pub async fn reg_finish(
         Ok(pk) => {
             // force UV check
             let cred = Credential::from(pk.clone());
-            if user.account_type() != AccountType::Password || *WEBAUTHN_FORCE_UV {
-                if !cred.user_verified {
-                    warn!(
-                        "Webauthn Registration Ceremony without User Verification for user {:?}",
-                        user.id
-                    );
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::Forbidden,
-                        "User Presence only is not allowed - Verification is needed".to_string(),
-                    ));
-                }
+            if (user.account_type() != AccountType::Password || *WEBAUTHN_FORCE_UV)
+                && !cred.user_verified
+            {
+                warn!(
+                    "Webauthn Registration Ceremony without User Verification for user {:?}",
+                    user.id
+                );
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "User Presence only is not allowed - Verification is needed".to_string(),
+                ));
             }
 
             let mut txn = data.db.begin().await?;

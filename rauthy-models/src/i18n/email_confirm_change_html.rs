@@ -3,14 +3,14 @@ use crate::language::Language;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
-pub struct I18nEmailChangeConfirm<'a> {
+pub struct I18nEmailConfirmChangeHtml<'a> {
     pub title: &'a str,
     pub text_changed: &'a str,
     pub text_login: &'a str,
     pub to: &'a str,
 }
 
-impl SsrJson for I18nEmailChangeConfirm<'_> {
+impl SsrJson for I18nEmailConfirmChangeHtml<'_> {
     fn build(lang: &Language) -> Self {
         match lang {
             Language::En => Self::build_en(),
@@ -23,7 +23,7 @@ impl SsrJson for I18nEmailChangeConfirm<'_> {
     }
 }
 
-impl I18nEmailChangeConfirm<'_> {
+impl I18nEmailConfirmChangeHtml<'_> {
     fn build_en() -> Self {
         Self {
             title: "E-Mail Change confirmed",
