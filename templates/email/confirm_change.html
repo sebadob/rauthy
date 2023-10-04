@@ -38,40 +38,13 @@
     .header {
         margin: 0 0 1.5em 0;
     }
-
-    .submitButtonWrapper {
-        margin-top: 2.75em;
-    }
-
-    .submitButton {
-        width: 120px;
-        margin-top: 5px;
-        padding: 7px 14px;
-        font-size: 1.05em;
-        font-weight: bold;
-        cursor: pointer;
-        color: #f2f2f2;
-        background: #388c51;
-        border-radius: 3px;
-        box-shadow: 2px 2px 2px #b2b2b2;
-    }
-
-    .submitButton:hover {
-        background: #4d8c62;
-        color: white;
-        box-shadow: 2px 2px 3px 1px #b2b2b2;
-    }
 </style>
 <body class="wrapper">
 <div class="container">
-    <h3 class="header">{{ header }} {{ pub_url }}</h3>
+    <h3 class="header">{{ header }} - {{ pub_url }}</h3>
     <div style="text-align: left">
-        <div style="margin-bottom: .35em;">{{ click_link }}</div>
-        <div>{{ validity }}</div>
-        <div>{{ expires }} <b>{{ exp }}</b></div>
-    </div>
-    <div class="submitButtonWrapper">
-        <a href="{{ link }}" class="submitButton">{{ button_text }}</a>
+        <div style="margin-bottom: .35em;">{{ msg }}</div>
+        <div>{{ email_changed_to }}</div>
     </div>
     <br/>
 </div>
