@@ -6,13 +6,14 @@
     export let level = 2;
     export let width = 'inherit';
     export let selected = undefined;
+    export let isDisabled = false;
     export let isLoading = false;
 
     let showText = !isLoading;
     let cls = 'button';
     let loadCol = 'white';
 
-    $: disabled = isLoading
+    $: disabled = isDisabled || isLoading;
 
     $: if (level) {
         switch (level) {

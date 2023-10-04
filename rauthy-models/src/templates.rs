@@ -2,6 +2,7 @@ use crate::entity::colors::Colors;
 use crate::entity::password::PasswordPolicy;
 use crate::i18n::account::I18nAccount;
 use crate::i18n::authorize::I18nAuthorize;
+use crate::i18n::email_confirm_change_html::I18nEmailConfirmChangeHtml;
 use crate::i18n::index::I18nIndex;
 use crate::i18n::logout::I18nLogout;
 use crate::i18n::password_reset::I18nPasswordReset;
@@ -893,6 +894,67 @@ impl PwdResetHtml<'_> {
 }
 
 #[derive(Default, Template)]
+#[template(path = "html/users/{id}/email_confirm/email_confirm.html")]
+pub struct UserEmailChangeConfirmHtml<'a> {
+    pub lang: &'a str,
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: bool,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+    pub i18n: String,
+}
+
+impl UserEmailChangeConfirmHtml<'_> {
+    pub fn build(
+        colors: &Colors,
+        lang: &Language,
+        email_old: &str,
+        email_new: &str,
+    ) -> (String, String) {
+        let nonce = nonce();
+        let data = format!("{},{}", email_old, email_new,);
+
+        let body = UserEmailChangeConfirmHtml {
+            lang: lang.as_str(),
+            data: &data,
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            i18n: I18nEmailConfirmChangeHtml::build(lang).as_json(),
+            ..Default::default()
+        }
+        .render()
+        .expect("rendering email_confirm.html");
+
+        (body, nonce)
+    }
+}
+
+#[derive(Default, Template)]
 #[template(path = "html/users/register.html")]
 pub struct UserRegisterHtml<'a> {
     pub lang: &'a str,
@@ -920,7 +982,7 @@ impl UserRegisterHtml<'_> {
     pub fn build(colors: &Colors, lang: &Language) -> (String, String) {
         let nonce = nonce();
 
-        let body = UserRegisterHtml {
+        let body = UserEmailChangeConfirmHtml {
             lang: lang.as_str(),
             data: USER_REG_DOMAIN_RESTRICTION
                 .as_ref()

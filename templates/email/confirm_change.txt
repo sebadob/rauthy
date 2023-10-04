@@ -1,0 +1,5 @@
+{{ header }} - {{ pub_url }}
+
+{{ msg }}
+
+{{ email_changed_to }}

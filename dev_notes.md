@@ -2,16 +2,15 @@
 
 ## CURRENT WORK
 
-- when a user changes his email address, send out mail for new verification
-- add new table to keep track of these changes
-- do not actually change mail until it has been verified
-
 ## Stage 1 - essentials
 
 [x] finished
 
 ## Stage 2 - features - do before v1.0.0
 
+- create a nice looking error page for things like expired magic link, bad client values, things like that...
+- introduce 'rauthy-db-version' or something like that into the config table to be able to do stricter validation
+between feature / major version migrations
 - add a new table that keeps track about when password expiry / reset emails were sent out to avoid duplicates
 - NATS events stream or maybe internal one?
 - benchmarks and performance tuning

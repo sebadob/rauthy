@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>E-Mail Reset</title>
+</head>
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    html, body {
+        padding: 0;
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+        Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+        font-size: 16px;
+    }
+
+    a:link, a:visited, a:hover, a:active {
+        text-decoration: none;
+    }
+
+    .wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #DFE0E2;
+        color: rgba(34, 30, 34, .8);
+    }
+
+    .container {
+        flex-direction: column;
+        padding: 3em 5em;
+    }
+
+    .header {
+        margin: 0 0 1.5em 0;
+    }
+
+    .submitButtonWrapper {
+        margin-top: 2.75em;
+    }
+
+    .submitButton {
+        width: 120px;
+        margin-top: 5px;
+        padding: 7px 14px;
+        font-size: 1.05em;
+        font-weight: bold;
+        cursor: pointer;
+        color: #f2f2f2;
+        background: #388c51;
+        border-radius: 3px;
+        box-shadow: 2px 2px 2px #b2b2b2;
+    }
+
+    .submitButton:hover {
+        background: #4d8c62;
+        color: white;
+        box-shadow: 2px 2px 3px 1px #b2b2b2;
+    }
+</style>
+<body class="wrapper">
+<div class="container">
+    <h3 class="header">{{ header }} {{ pub_url }}</h3>
+    <div style="text-align: left">
+        <div style="margin-bottom: .35em;">{{ change_info }}</div>
+        <div>{{ click_link }}</div>
+    </div>
+    <div class="submitButtonWrapper">
+        <a href="{{ link }}" class="submitButton">{{ button_text }}</a>
+    </div>
+    <br/>
+</div>
+</body>
+</html>
