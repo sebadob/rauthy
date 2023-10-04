@@ -1,5 +1,5 @@
 use crate::app_state::{AppState, Argon2Params, DbTxn};
-use crate::email::{send_email_change_info_new, send_pwd_reset};
+use crate::email::{send_email_change_info_new, send_email_confirm_change, send_pwd_reset};
 use crate::entity::colors::ColorEntity;
 use crate::entity::groups::Group;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
@@ -809,11 +809,15 @@ impl User {
         let old_email = user.email;
         user.email = new_email;
         user.email_verified = true;
-        user.save(data, Some(old_email), None).await?;
+        user.save(data, Some(old_email.clone()), None).await?;
         ml.invalidate(data).await?;
 
         // finally, invalidate all existing sessions with the old email
         Session::invalidate_for_user(data, &user.id).await?;
+
+        // send out confirmation E-Mails to both addresses
+        send_email_confirm_change(data, &user, &user.email, &user.email).await;
+        send_email_confirm_change(data, &user, &old_email, &user.email).await;
 
         Ok((html, nonce))
     }
