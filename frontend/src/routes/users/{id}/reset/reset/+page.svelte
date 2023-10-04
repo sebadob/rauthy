@@ -353,6 +353,7 @@
                             width={btnWidth}
                             bind:isLoading
                             level={2}
+                            isDisabled={success}
                     >
                         {t.passwordless.toUpperCase()}
                     </Button>
@@ -361,6 +362,7 @@
                             width={btnWidth}
                             bind:isLoading
                             level={3}
+                            isDisabled={success}
                     >
                         {t.password.toUpperCase()}
                     </Button>
@@ -375,7 +377,7 @@
                                 bind:value={formValues.email}
                                 bind:error={formErrors.email}
                                 autocomplete="email"
-                                disabled={isMfa}
+                                disabled={isMfa || success}
                                 placeholder={t.email}
                                 width={inputWidth}
                         >
@@ -388,6 +390,7 @@
                                 placeholder={t.password}
                                 width={inputWidth}
                                 bind:showCopy
+                                disabled={success}
                         >
                             {t.password.toUpperCase()}
                         </PasswordInput>
@@ -398,14 +401,25 @@
                                 placeholder={t.passwordConfirm}
                                 width={inputWidth}
                                 bind:showCopy
+                                disabled={success}
                         >
                             {t.passwordConfirm.toUpperCase()}
                         </PasswordInput>
 
-                        <Button on:click={generate} width={btnWidth} level={3}>
+                        <Button
+                                on:click={generate}
+                                width={btnWidth}
+                                level={3}
+                                isDisabled={success}
+                        >
                             {t.generate.toUpperCase()}
                         </Button>
-                        <Button on:click={passwordReset} width={btnWidth} bind:isLoading level={2}>
+                        <Button
+                                on:click={passwordReset}
+                                width={btnWidth}
+                                bind:isLoading level={2}
+                                isDisabled={success}
+                        >
                             {t.save.toUpperCase()}
                         </Button>
 
@@ -424,7 +438,7 @@
                                 bind:value={formValues.email}
                                 bind:error={formErrors.email}
                                 autocomplete="email"
-                                disabled={isMfa}
+                                disabled={isMfa || success}
                                 placeholder={t.email}
                                 width={inputWidth}
                         >
@@ -437,10 +451,15 @@
                                 placeholder={t.mfa.passkeyName}
                                 on:enter={handleRegisterPasskey}
                                 width={inputWidth}
+                                disabled={success}
                         >
                             {t.mfa.passkeyName}
                         </Input>
-                        <Button on:click={handleRegisterPasskey} width={btnWidth} level={success ? 2 : 1}>
+                        <Button
+                                on:click={handleRegisterPasskey} width={btnWidth}
+                                level={success ? 2 : 1}
+                                isDisabled={success}
+                        >
                             {t.mfa.register.toUpperCase()}
                         </Button>
 
