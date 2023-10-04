@@ -79,7 +79,7 @@ pub async fn handle_put_user_passkey_start<'a>(
     debug!("getting magic link");
     // unwrap is safe -> checked in API endpoint already
     let ml_id = req_data.magic_link_id.as_ref().unwrap();
-    let ml = MagicLink::find(data, &ml_id).await?;
+    let ml = MagicLink::find(data, ml_id).await?;
     ml.validate(&user.id, &req, true)?;
 
     // if we register a new passkey, we need to make sure that the magic link is for a new user
@@ -91,7 +91,7 @@ pub async fn handle_put_user_passkey_start<'a>(
         ));
     }
 
-    webauthn::reg_start(&data, user.id, req_data)
+    webauthn::reg_start(data, user.id, req_data)
         .await
         .map(|ccr| HttpResponse::Ok().json(ccr))
 }
@@ -105,12 +105,12 @@ pub async fn handle_put_user_passkey_finish<'a>(
 ) -> Result<HttpResponse, ErrorResponse> {
     // unwrap is safe -> checked in API endpoint already
     let ml_id = req_data.magic_link_id.as_ref().unwrap();
-    let mut ml = MagicLink::find(data, &ml_id).await?;
+    let mut ml = MagicLink::find(data, ml_id).await?;
     ml.validate(&user_id, &req, true)?;
 
     // finish webauthn request -> always force UV for passkey only accounts
     debug!("ml is valid - finishing webauthn request");
-    webauthn::reg_finish(&data, user_id.clone(), req_data).await?;
+    webauthn::reg_finish(data, user_id.clone(), req_data).await?;
 
     // validate csrf token
     match req.headers().get(PWD_CSRF_HEADER) {
