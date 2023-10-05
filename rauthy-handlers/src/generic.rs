@@ -18,6 +18,7 @@ use rauthy_models::entity::users::User;
 use rauthy_models::i18n::account::I18nAccount;
 use rauthy_models::i18n::authorize::I18nAuthorize;
 use rauthy_models::i18n::email_confirm_change_html::I18nEmailConfirmChangeHtml;
+use rauthy_models::i18n::error::I18nError;
 use rauthy_models::i18n::index::I18nIndex;
 use rauthy_models::i18n::logout::I18nLogout;
 use rauthy_models::i18n::password_reset::I18nPasswordReset;
@@ -95,6 +96,14 @@ pub async fn post_i18n(
         I18nContent::Authorize => I18nAuthorize::build(&lang).as_json(),
         I18nContent::Account => I18nAccount::build(&lang).as_json(),
         I18nContent::EmailChangeConfirm => I18nEmailConfirmChangeHtml::build(&lang).as_json(),
+        // Just return some default values for local dev -> dynamically built during prod
+        I18nContent::Error => I18nError::build_with(
+            &lang,
+            "404 Not Found".to_string(),
+            "The requested site was not found or your request has expired".to_string(),
+            "<empty>".to_string(),
+        )
+        .as_json(),
         I18nContent::Index => I18nIndex::build(&lang).as_json(),
         I18nContent::Logout => I18nLogout::build(&lang).as_json(),
         I18nContent::PasswordReset => I18nPasswordReset::build(&lang).as_json(),
