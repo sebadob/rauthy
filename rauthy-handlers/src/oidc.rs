@@ -1,8 +1,11 @@
-use crate::{map_auth_step, real_ip_from_req};
+use std::ops::Add;
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::{header, StatusCode};
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
+
 use rauthy_common::constants::{COOKIE_MFA, HEADER_HTML, SESSION_LIFETIME};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::build_csp_header;
@@ -19,11 +22,11 @@ use rauthy_models::request::{
     TokenRequest, TokenValidationRequest,
 };
 use rauthy_models::response::{JWKSCerts, JWKSPublicKeyCerts, SessionInfoResponse};
-use rauthy_models::templates::{AuthorizeHtml, CallbackHtml, FrontendAction};
+use rauthy_models::templates::{AuthorizeHtml, CallbackHtml, ErrorHtml, FrontendAction};
 use rauthy_models::JwtCommonClaims;
 use rauthy_service::auth;
-use std::ops::Add;
-use std::time::{SystemTime, UNIX_EPOCH};
+
+use crate::{map_auth_step, real_ip_from_req};
 
 /// OIDC Authorization HTML
 ///
@@ -47,7 +50,12 @@ pub async fn get_authorize(
     req_data: actix_web_validator::Query<AuthRequest>,
     session: web::ReqData<Option<Session>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let (client, origin_header) = auth::validate_auth_req_param(
+    let colors = ColorEntity::find(&data, &req_data.client_id)
+        .await
+        .unwrap_or_default();
+    let lang = Language::try_from(&req).unwrap_or_default();
+
+    let (client, origin_header) = match auth::validate_auth_req_param(
         &data,
         &req,
         &req_data.client_id,
@@ -55,10 +63,13 @@ pub async fn get_authorize(
         &req_data.code_challenge,
         &req_data.code_challenge_method,
     )
-    .await?;
-
-    let lang = Language::try_from(&req).unwrap_or_default();
-    let colors = ColorEntity::find(&data, &req_data.client_id).await?;
+    .await
+    {
+        Ok(res) => res,
+        Err(err) => {
+            return Ok(ErrorHtml::response_from_err(&colors, &lang, err));
+        }
+    };
 
     if session.is_some() && session.as_ref().unwrap().state == SessionState::Auth {
         let (body, nonce) = AuthorizeHtml::build(
@@ -84,7 +95,9 @@ pub async fn get_authorize(
     }
 
     let session = Session::new(*SESSION_LIFETIME, real_ip_from_req(&req));
-    session.save(&data).await?;
+    if let Err(err) = session.save(&data).await {
+        return Ok(ErrorHtml::response_from_err(&colors, &lang, err));
+    }
 
     let mut action = FrontendAction::None;
 
