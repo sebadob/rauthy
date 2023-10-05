@@ -26,7 +26,7 @@ use rauthy_models::response::{
     PasskeyResponse, UserAttrConfigResponse, UserAttrValueResponse, UserAttrValuesResponse,
     UserResponse,
 };
-use rauthy_models::templates::UserRegisterHtml;
+use rauthy_models::templates::{ErrorHtml, UserRegisterHtml};
 use rauthy_service::password_reset;
 use std::ops::Add;
 use time::OffsetDateTime;
@@ -235,15 +235,18 @@ pub async fn get_users_register(
     data: web::Data<AppState>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
+    let colors = ColorEntity::find_rauthy(&data).await?;
+    let lang = Language::try_from(&req).unwrap_or_default();
+
     if !*OPEN_USER_REG {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
-            "Open User Registration is not allowed".to_string(),
+        return Ok(ErrorHtml::response(
+            &colors,
+            &lang,
+            StatusCode::NOT_FOUND,
+            Some("Open User Registration is disabled".to_string()),
         ));
     }
 
-    let lang = Language::try_from(&req).unwrap_or_default();
-    let colors = ColorEntity::find_rauthy(&data).await?;
     let (body, nonce) = UserRegisterHtml::build(&colors, &lang);
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_HTML)
