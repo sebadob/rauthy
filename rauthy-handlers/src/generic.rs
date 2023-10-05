@@ -1,6 +1,6 @@
 use crate::Assets;
-use actix_web::http::header;
 use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
+use actix_web::http::{header, StatusCode};
 use actix_web::web::Json;
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
 use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
@@ -87,11 +87,7 @@ pub async fn get_static_assets(
         None => {
             let colors = ColorEntity::find_rauthy(&data).await.unwrap_or_default();
             let lang = Language::try_from(&req).unwrap_or_default();
-            let (body, nonce) = ErrorHtml::build(&colors, &lang, 404, None);
-            HttpResponse::NotFound()
-                .insert_header(HEADER_HTML)
-                .insert_header(build_csp_header(&nonce))
-                .body(body)
+            ErrorHtml::response(&colors, &lang, StatusCode::NOT_FOUND, None)
         }
     }
 }
@@ -109,7 +105,8 @@ pub async fn post_i18n(
         I18nContent::EmailChangeConfirm => I18nEmailConfirmChangeHtml::build(&lang).as_json(),
         // Just return some default values for local dev -> dynamically built during prod
         I18nContent::Error => {
-            I18nError::build_with(&lang, 404, Some("<empty>".to_string())).as_json()
+            I18nError::build_with(&lang, StatusCode::NOT_FOUND, Some("<empty>".to_string()))
+                .as_json()
         }
         I18nContent::Index => I18nIndex::build(&lang).as_json(),
         I18nContent::Logout => I18nLogout::build(&lang).as_json(),

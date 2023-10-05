@@ -10,9 +10,12 @@ use crate::i18n::password_reset::I18nPasswordReset;
 use crate::i18n::register::I18nRegister;
 use crate::i18n::SsrJson;
 use crate::language::Language;
+use actix_web::http::StatusCode;
+use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
 use askama_actix::Template;
-use rauthy_common::constants::{OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION};
-use rauthy_common::utils::get_rand;
+use rauthy_common::constants::{HEADER_HTML, OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION};
+use rauthy_common::error_response::ErrorResponse;
+use rauthy_common::utils::{build_csp_header, get_rand};
 use std::fmt::Debug;
 
 #[derive(Debug, Clone)]
@@ -216,7 +219,7 @@ impl ErrorHtml<'_> {
     pub fn build(
         colors: &Colors,
         lang: &Language,
-        status_code: u16,
+        status_code: StatusCode,
         details_text: Option<String>,
     ) -> (String, String) {
         let nonce = nonce();
@@ -242,6 +245,32 @@ impl ErrorHtml<'_> {
         };
 
         (res.render().unwrap(), nonce)
+    }
+
+    pub fn response(
+        colors: &Colors,
+        lang: &Language,
+        status_code: StatusCode,
+        details_text: Option<String>,
+    ) -> HttpResponse {
+        let (body, nonce) = Self::build(&colors, &lang, status_code, details_text);
+        HttpResponseBuilder::new(status_code)
+            .insert_header(HEADER_HTML)
+            .insert_header(build_csp_header(&nonce))
+            .body(body)
+    }
+
+    pub fn response_from_err(
+        colors: &Colors,
+        lang: &Language,
+        error: ErrorResponse,
+    ) -> HttpResponse {
+        let status = error.status_code();
+        let (body, nonce) = Self::build(&colors, &lang, status, Some(error.message));
+        HttpResponseBuilder::new(status)
+            .insert_header(HEADER_HTML)
+            .insert_header(build_csp_header(&nonce))
+            .body(body)
     }
 }
 
