@@ -1,4 +1,4 @@
-use crate::{build_csp_header, Assets};
+use crate::Assets;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::web::Json;
@@ -8,6 +8,7 @@ use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_NAME_LOGIN_DELAY, HEADER_HTML, IDX_LOGIN_TIME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::build_csp_header;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::password::{PasswordHashTimes, PasswordPolicy};

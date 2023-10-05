@@ -109,24 +109,6 @@ fn add_req_mfa_cookie(
     Ok(())
 }
 
-pub fn build_csp_header(nonce: &str) -> (&str, String) {
-    // Note: The unsafe-inline for the style-src currently has an open issue on the svelte repo.
-    // As soon as this is fixed, we can get rid of it:
-    // https://github.com/sveltejs/svelte/issues/6662
-
-    // let value = format!(
-    //     "default-src 'self'; script-src 'strict-dynamic' 'nonce-{}'; style-src 'self' 'nonce-{}'; \
-    //     frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
-    //     nonce, nonce,
-    // );
-    let value = format!(
-        "default-src 'self'; script-src 'strict-dynamic' 'nonce-{}'; style-src 'self' 'unsafe-inline'; \
-        frame-ancestors 'none'; object-src 'none'; img-src 'self' data:;",
-        nonce,
-    );
-    ("content-security-policy", value)
-}
-
 pub fn real_ip_from_req(req: &HttpRequest) -> Option<String> {
     if *PROXY_MODE {
         // TODO maybe make this configurable and extract headers in user-configured order?

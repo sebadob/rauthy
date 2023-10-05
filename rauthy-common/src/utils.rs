@@ -10,6 +10,15 @@ use tracing::error;
 const B64_URL_SAFE: engine::GeneralPurpose = general_purpose::URL_SAFE_NO_PAD;
 const B64_STD: engine::GeneralPurpose = general_purpose::STANDARD;
 
+pub fn build_csp_header(nonce: &str) -> (&str, String) {
+    let value = format!(
+        "default-src 'self'; script-src 'strict-dynamic' 'nonce-{}'; style-src 'self' 'unsafe-inline'; \
+        frame-ancestors 'none'; object-src 'none'; img-src 'self' data:;",
+        nonce,
+    );
+    ("content-security-policy", value)
+}
+
 // Decrypts a `&Vec<u8>` which was [encrypted](encrypt) before with the same key.
 pub fn decrypt(ciphertext: &[u8], key: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
     use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};

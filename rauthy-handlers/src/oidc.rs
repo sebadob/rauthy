@@ -1,10 +1,11 @@
-use crate::{build_csp_header, map_auth_step, real_ip_from_req};
+use crate::{map_auth_step, real_ip_from_req};
 use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::{header, StatusCode};
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
 use rauthy_common::constants::{COOKIE_MFA, HEADER_HTML, SESSION_LIFETIME};
 use rauthy_common::error_response::ErrorResponse;
+use rauthy_common::utils::build_csp_header;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JWKS};
