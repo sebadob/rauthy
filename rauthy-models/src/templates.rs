@@ -3,15 +3,17 @@ use crate::entity::password::PasswordPolicy;
 use crate::i18n::account::I18nAccount;
 use crate::i18n::authorize::I18nAuthorize;
 use crate::i18n::email_confirm_change_html::I18nEmailConfirmChangeHtml;
+use crate::i18n::error::I18nError;
 use crate::i18n::index::I18nIndex;
 use crate::i18n::logout::I18nLogout;
 use crate::i18n::password_reset::I18nPasswordReset;
 use crate::i18n::register::I18nRegister;
 use crate::i18n::SsrJson;
 use crate::language::Language;
+use actix_web::HttpResponse;
 use askama_actix::Template;
-use rauthy_common::constants::{OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION};
-use rauthy_common::utils::get_rand;
+use rauthy_common::constants::{HEADER_HTML, OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION};
+use rauthy_common::utils::{build_csp_header, get_rand};
 
 #[derive(Debug, Clone)]
 pub enum FrontendAction {
@@ -183,6 +185,78 @@ impl AdminHtml<'_> {
         };
 
         (res.render().unwrap(), nonce)
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/error.html")]
+pub struct ErrorHtml<'a> {
+    pub lang: &'a str,
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: bool,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+    pub i18n: String,
+}
+
+impl ErrorHtml<'_> {
+    pub fn build(
+        colors: &Colors,
+        lang: &Language,
+        error: String,
+        error_text: String,
+        details_text: String,
+    ) -> (String, String) {
+        let nonce = nonce();
+
+        let res = IndexHtml {
+            lang: lang.as_str(),
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            i18n: I18nError::build_with(lang, error, error_text, details_text).as_json(),
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
+    }
+
+    pub fn default_not_found() -> HttpResponse {
+        let (body, nonce) = Self::build(
+            &Colors::default(),
+            &Language::En,
+            "404 Not Found".to_string(),
+            "The resource you requested was not found".to_string(),
+            String::default(),
+        );
+        HttpResponse::NotFound()
+            .insert_header(HEADER_HTML)
+            .insert_header(build_csp_header(&nonce))
+            .body(body)
     }
 }
 
