@@ -8,6 +8,7 @@ pub mod email_confirm_change;
 pub mod email_confirm_change_html;
 pub mod email_reset;
 pub mod email_reset_info;
+pub mod error;
 pub mod index;
 pub mod logout;
 pub mod password_policy;

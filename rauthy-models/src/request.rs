@@ -129,6 +129,7 @@ pub enum I18nContent {
     Account,
     Authorize,
     EmailChangeConfirm,
+    Error,
     Index,
     Logout,
     PasswordReset,
