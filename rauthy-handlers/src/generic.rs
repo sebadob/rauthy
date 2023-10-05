@@ -1,6 +1,6 @@
-use crate::{build_csp_header, Assets};
-use actix_web::http::header;
+use crate::Assets;
 use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
+use actix_web::http::{header, StatusCode};
 use actix_web::web::Json;
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
 use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
@@ -8,6 +8,7 @@ use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_NAME_LOGIN_DELAY, HEADER_HTML, IDX_LOGIN_TIME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::build_csp_header;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::password::{PasswordHashTimes, PasswordPolicy};
@@ -18,6 +19,7 @@ use rauthy_models::entity::users::User;
 use rauthy_models::i18n::account::I18nAccount;
 use rauthy_models::i18n::authorize::I18nAuthorize;
 use rauthy_models::i18n::email_confirm_change_html::I18nEmailConfirmChangeHtml;
+use rauthy_models::i18n::error::I18nError;
 use rauthy_models::i18n::index::I18nIndex;
 use rauthy_models::i18n::logout::I18nLogout;
 use rauthy_models::i18n::password_reset::I18nPasswordReset;
@@ -34,7 +36,7 @@ use rauthy_models::response::{
 use rauthy_models::templates::{
     AccountHtml, AdminAttributesHtml, AdminClientsHtml, AdminConfigHtml, AdminDocsHtml,
     AdminGroupsHtml, AdminHtml, AdminRolesHtml, AdminScopesHtml, AdminSessionsHtml, AdminUsersHtml,
-    IndexHtml,
+    ErrorHtml, IndexHtml,
 };
 use rauthy_service::encryption;
 use redhac::{cache_get, cache_get_from, cache_get_value};
@@ -59,8 +61,10 @@ pub async fn get_index(
 #[get("/{_:.*}")]
 #[has_permissions("all")]
 pub async fn get_static_assets(
+    data: web::Data<AppState>,
     path: web::Path<String>,
     accept_encoding: web::Header<header::AcceptEncoding>,
+    req: HttpRequest,
 ) -> HttpResponse {
     let path = path.into_inner();
     let accept_encoding = accept_encoding.into_inner();
@@ -80,7 +84,11 @@ pub async fn get_static_assets(
             .insert_header(("content-encoding", encoding))
             .content_type(mime.first_or_octet_stream().as_ref())
             .body(content.data.into_owned()),
-        None => HttpResponse::NotFound().body("404 Not Found"),
+        None => {
+            let colors = ColorEntity::find_rauthy(&data).await.unwrap_or_default();
+            let lang = Language::try_from(&req).unwrap_or_default();
+            ErrorHtml::response(&colors, &lang, StatusCode::NOT_FOUND, None)
+        }
     }
 }
 
@@ -95,6 +103,11 @@ pub async fn post_i18n(
         I18nContent::Authorize => I18nAuthorize::build(&lang).as_json(),
         I18nContent::Account => I18nAccount::build(&lang).as_json(),
         I18nContent::EmailChangeConfirm => I18nEmailConfirmChangeHtml::build(&lang).as_json(),
+        // Just return some default values for local dev -> dynamically built during prod
+        I18nContent::Error => {
+            I18nError::build_with(&lang, StatusCode::NOT_FOUND, Some("<empty>".to_string()))
+                .as_json()
+        }
         I18nContent::Index => I18nIndex::build(&lang).as_json(),
         I18nContent::Logout => I18nLogout::build(&lang).as_json(),
         I18nContent::PasswordReset => I18nPasswordReset::build(&lang).as_json(),

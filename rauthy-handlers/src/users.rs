@@ -1,4 +1,3 @@
-use crate::build_csp_header;
 use actix_web::http::StatusCode;
 use actix_web::{cookie, delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
@@ -6,6 +5,7 @@ use rauthy_common::constants::{
     COOKIE_MFA, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE, USER_REG_DOMAIN_RESTRICTION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::build_csp_header;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::password::PasswordPolicy;
@@ -26,7 +26,7 @@ use rauthy_models::response::{
     PasskeyResponse, UserAttrConfigResponse, UserAttrValueResponse, UserAttrValuesResponse,
     UserResponse,
 };
-use rauthy_models::templates::UserRegisterHtml;
+use rauthy_models::templates::{ErrorHtml, UserRegisterHtml};
 use rauthy_service::password_reset;
 use std::ops::Add;
 use time::OffsetDateTime;
@@ -235,15 +235,18 @@ pub async fn get_users_register(
     data: web::Data<AppState>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
+    let colors = ColorEntity::find_rauthy(&data).await?;
+    let lang = Language::try_from(&req).unwrap_or_default();
+
     if !*OPEN_USER_REG {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
-            "Open User Registration is not allowed".to_string(),
+        return Ok(ErrorHtml::response(
+            &colors,
+            &lang,
+            StatusCode::NOT_FOUND,
+            Some("Open User Registration is disabled".to_string()),
         ));
     }
 
-    let lang = Language::try_from(&req).unwrap_or_default();
-    let colors = ColorEntity::find_rauthy(&data).await?;
     let (body, nonce) = UserRegisterHtml::build(&colors, &lang);
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_HTML)
@@ -408,16 +411,19 @@ pub async fn get_user_email_confirm(
     data: web::Data<AppState>,
     path: web::Path<(String, String)>,
     req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
+) -> HttpResponse {
+    let lang = Language::try_from(&req).unwrap_or_default();
     let (user_id, confirm_id) = path.into_inner();
-    User::confirm_email_address(&data, req, user_id, confirm_id)
-        .await
-        .map(|(html, nonce)| {
-            HttpResponse::Ok()
-                .insert_header(HEADER_HTML)
-                .insert_header(build_csp_header(&nonce))
-                .body(html)
-        })
+    match User::confirm_email_address(&data, req, user_id, confirm_id).await {
+        Ok((html, nonce)) => HttpResponse::Ok()
+            .insert_header(HEADER_HTML)
+            .insert_header(build_csp_header(&nonce))
+            .body(html),
+        Err(err) => {
+            let colors = ColorEntity::find_rauthy(&data).await.unwrap_or_default();
+            ErrorHtml::response_from_err(&colors, &lang, err)
+        }
+    }
 }
 
 /// Endpoint for resetting passwords
@@ -440,17 +446,20 @@ pub async fn get_user_password_reset(
     data: web::Data<AppState>,
     path: web::Path<(String, String)>,
     req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
+) -> HttpResponse {
+    let lang = Language::try_from(&req).unwrap_or_default();
     let (user_id, reset_id) = path.into_inner();
-    password_reset::handle_get_pwd_reset(&data, req, user_id, reset_id)
-        .await
-        .map(|(html, nonce, cookie)| {
-            HttpResponse::Ok()
-                .cookie(cookie)
-                .insert_header(HEADER_HTML)
-                .insert_header(build_csp_header(&nonce))
-                .body(html)
-        })
+    match password_reset::handle_get_pwd_reset(&data, req, user_id, reset_id).await {
+        Ok((html, nonce, cookie)) => HttpResponse::Ok()
+            .cookie(cookie)
+            .insert_header(HEADER_HTML)
+            .insert_header(build_csp_header(&nonce))
+            .body(html),
+        Err(err) => {
+            let colors = ColorEntity::find_rauthy(&data).await.unwrap_or_default();
+            ErrorHtml::response_from_err(&colors, &lang, err)
+        }
+    }
 }
 
 /// Endpoint for resetting passwords
