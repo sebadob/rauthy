@@ -411,16 +411,19 @@ pub async fn get_user_email_confirm(
     data: web::Data<AppState>,
     path: web::Path<(String, String)>,
     req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
+) -> HttpResponse {
+    let lang = Language::try_from(&req).unwrap_or_default();
     let (user_id, confirm_id) = path.into_inner();
-    User::confirm_email_address(&data, req, user_id, confirm_id)
-        .await
-        .map(|(html, nonce)| {
-            HttpResponse::Ok()
-                .insert_header(HEADER_HTML)
-                .insert_header(build_csp_header(&nonce))
-                .body(html)
-        })
+    match User::confirm_email_address(&data, req, user_id, confirm_id).await {
+        Ok((html, nonce)) => HttpResponse::Ok()
+            .insert_header(HEADER_HTML)
+            .insert_header(build_csp_header(&nonce))
+            .body(html),
+        Err(err) => {
+            let colors = ColorEntity::find_rauthy(&data).await.unwrap_or_default();
+            ErrorHtml::response_from_err(&colors, &lang, err)
+        }
+    }
 }
 
 /// Endpoint for resetting passwords
@@ -443,17 +446,20 @@ pub async fn get_user_password_reset(
     data: web::Data<AppState>,
     path: web::Path<(String, String)>,
     req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
+) -> HttpResponse {
+    let lang = Language::try_from(&req).unwrap_or_default();
     let (user_id, reset_id) = path.into_inner();
-    password_reset::handle_get_pwd_reset(&data, req, user_id, reset_id)
-        .await
-        .map(|(html, nonce, cookie)| {
-            HttpResponse::Ok()
-                .cookie(cookie)
-                .insert_header(HEADER_HTML)
-                .insert_header(build_csp_header(&nonce))
-                .body(html)
-        })
+    match password_reset::handle_get_pwd_reset(&data, req, user_id, reset_id).await {
+        Ok((html, nonce, cookie)) => HttpResponse::Ok()
+            .cookie(cookie)
+            .insert_header(HEADER_HTML)
+            .insert_header(build_csp_header(&nonce))
+            .body(html),
+        Err(err) => {
+            let colors = ColorEntity::find_rauthy(&data).await.unwrap_or_default();
+            ErrorHtml::response_from_err(&colors, &lang, err)
+        }
+    }
 }
 
 /// Endpoint for resetting passwords
