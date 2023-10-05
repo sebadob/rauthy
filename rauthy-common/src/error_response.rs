@@ -1,4 +1,5 @@
-use crate::constants::APPLICATION_JSON;
+use crate::constants::{APPLICATION_JSON, HEADER_HTML};
+use crate::utils::build_csp_header;
 use actix_multipart::MultipartError;
 use actix_web::error::BlockingError;
 use actix_web::http::StatusCode;
@@ -52,15 +53,16 @@ impl ErrorResponse {
             message,
         }
     }
+
+    pub fn error_response_html(&self, body: String, nonce: &str) -> HttpResponse {
+        HttpResponseBuilder::new(self.status_code())
+            .append_header(HEADER_HTML)
+            .append_header(build_csp_header(nonce))
+            .body(body)
+    }
 }
 
 impl ResponseError for ErrorResponse {
-    fn error_response(&self) -> HttpResponse {
-        HttpResponseBuilder::new(self.status_code())
-            .content_type(APPLICATION_JSON)
-            .body(serde_json::to_string(&self).unwrap())
-    }
-
     fn status_code(&self) -> StatusCode {
         match self.error {
             ErrorResponseType::BadRequest => StatusCode::BAD_REQUEST,
@@ -75,6 +77,12 @@ impl ResponseError for ErrorResponse {
             | ErrorResponseType::Unauthorized => StatusCode::UNAUTHORIZED,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
+    }
+
+    fn error_response(&self) -> HttpResponse {
+        HttpResponseBuilder::new(self.status_code())
+            .content_type(APPLICATION_JSON)
+            .body(serde_json::to_string(&self).unwrap())
     }
 }
 

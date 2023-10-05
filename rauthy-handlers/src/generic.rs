@@ -36,7 +36,7 @@ use rauthy_models::response::{
 use rauthy_models::templates::{
     AccountHtml, AdminAttributesHtml, AdminClientsHtml, AdminConfigHtml, AdminDocsHtml,
     AdminGroupsHtml, AdminHtml, AdminRolesHtml, AdminScopesHtml, AdminSessionsHtml, AdminUsersHtml,
-    IndexHtml,
+    ErrorHtml, IndexHtml,
 };
 use rauthy_service::encryption;
 use redhac::{cache_get, cache_get_from, cache_get_value};
@@ -61,8 +61,10 @@ pub async fn get_index(
 #[get("/{_:.*}")]
 #[has_permissions("all")]
 pub async fn get_static_assets(
+    data: web::Data<AppState>,
     path: web::Path<String>,
     accept_encoding: web::Header<header::AcceptEncoding>,
+    req: HttpRequest,
 ) -> HttpResponse {
     let path = path.into_inner();
     let accept_encoding = accept_encoding.into_inner();
@@ -82,7 +84,15 @@ pub async fn get_static_assets(
             .insert_header(("content-encoding", encoding))
             .content_type(mime.first_or_octet_stream().as_ref())
             .body(content.data.into_owned()),
-        None => HttpResponse::NotFound().body("404 Not Found"),
+        None => {
+            let colors = ColorEntity::find_rauthy(&data).await.unwrap_or_default();
+            let lang = Language::try_from(&req).unwrap_or_default();
+            let (body, nonce) = ErrorHtml::build(&colors, &lang, 404, None);
+            HttpResponse::NotFound()
+                .insert_header(HEADER_HTML)
+                .insert_header(build_csp_header(&nonce))
+                .body(body)
+        }
     }
 }
 
@@ -98,13 +108,9 @@ pub async fn post_i18n(
         I18nContent::Account => I18nAccount::build(&lang).as_json(),
         I18nContent::EmailChangeConfirm => I18nEmailConfirmChangeHtml::build(&lang).as_json(),
         // Just return some default values for local dev -> dynamically built during prod
-        I18nContent::Error => I18nError::build_with(
-            &lang,
-            "404 Not Found".to_string(),
-            "The requested site was not found or your request has expired".to_string(),
-            "<empty>".to_string(),
-        )
-        .as_json(),
+        I18nContent::Error => {
+            I18nError::build_with(&lang, 404, Some("<empty>".to_string())).as_json()
+        }
         I18nContent::Index => I18nIndex::build(&lang).as_json(),
         I18nContent::Logout => I18nLogout::build(&lang).as_json(),
         I18nContent::PasswordReset => I18nPasswordReset::build(&lang).as_json(),

@@ -10,10 +10,10 @@ use crate::i18n::password_reset::I18nPasswordReset;
 use crate::i18n::register::I18nRegister;
 use crate::i18n::SsrJson;
 use crate::language::Language;
-use actix_web::HttpResponse;
 use askama_actix::Template;
-use rauthy_common::constants::{HEADER_HTML, OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION};
-use rauthy_common::utils::{build_csp_header, get_rand};
+use rauthy_common::constants::{OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION};
+use rauthy_common::utils::get_rand;
+use std::fmt::Debug;
 
 #[derive(Debug, Clone)]
 pub enum FrontendAction {
@@ -188,7 +188,7 @@ impl AdminHtml<'_> {
     }
 }
 
-#[derive(Default, Template)]
+#[derive(Debug, Default, Template)]
 #[template(path = "html/error.html")]
 pub struct ErrorHtml<'a> {
     pub lang: &'a str,
@@ -216,13 +216,12 @@ impl ErrorHtml<'_> {
     pub fn build(
         colors: &Colors,
         lang: &Language,
-        error: String,
-        error_text: String,
-        details_text: String,
+        status_code: u16,
+        details_text: Option<String>,
     ) -> (String, String) {
         let nonce = nonce();
 
-        let res = IndexHtml {
+        let res = ErrorHtml {
             lang: lang.as_str(),
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
@@ -238,25 +237,11 @@ impl ErrorHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             nonce: &nonce,
-            i18n: I18nError::build_with(lang, error, error_text, details_text).as_json(),
+            i18n: I18nError::build_with(&lang, status_code, details_text).as_json(),
             ..Default::default()
         };
 
         (res.render().unwrap(), nonce)
-    }
-
-    pub fn default_not_found() -> HttpResponse {
-        let (body, nonce) = Self::build(
-            &Colors::default(),
-            &Language::En,
-            "404 Not Found".to_string(),
-            "The resource you requested was not found".to_string(),
-            String::default(),
-        );
-        HttpResponse::NotFound()
-            .insert_header(HEADER_HTML)
-            .insert_header(build_csp_header(&nonce))
-            .body(body)
     }
 }
 
