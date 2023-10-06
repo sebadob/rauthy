@@ -11,7 +11,9 @@ use askama_actix::Template;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication;
 use lettre::{AsyncSmtpTransport, AsyncTransport};
-use rauthy_common::constants::{SMTP_FROM, SMTP_PASSWORD, SMTP_URL, SMTP_USERNAME};
+use rauthy_common::constants::{
+    EMAIL_SUB_PREFIX, SMTP_FROM, SMTP_PASSWORD, SMTP_URL, SMTP_USERNAME,
+};
 use std::time::Duration;
 use time::OffsetDateTime;
 use tokio::sync::mpsc::Receiver;
@@ -182,10 +184,7 @@ pub async fn send_email_change_info_new(
 
     let req = EMail {
         address: new_email.clone(),
-        subject: format!(
-            "{} - {} {}",
-            i18n.subject, user.given_name, user.family_name
-        ),
+        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject,),
         text: text
             .render()
             .expect("Template rendering: EMailChangeInfoNewTxt"),
@@ -232,10 +231,7 @@ pub async fn send_email_confirm_change(
 
     let req = EMail {
         address: email_addr.to_string(),
-        subject: format!(
-            "{} - {} {}",
-            i18n.subject, user.given_name, user.family_name
-        ),
+        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject,),
         text: text
             .render()
             .expect("Template rendering: EMailConfirmChangeTxt"),
@@ -292,10 +288,7 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
 
     let req = EMail {
         address: user.email.to_string(),
-        subject: format!(
-            "{} - {} {}",
-            i18n.subject, user.given_name, user.family_name
-        ),
+        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject,),
         text: text.render().expect("Template rendering: EmailResetTxt"),
         html: Some(html.render().expect("Template rendering: EmailResetHtml")),
     };
@@ -341,7 +334,7 @@ pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
 
     let req = EMail {
         address: user.email.to_string(),
-        subject: i18n.subject.to_string(),
+        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject,),
         text: text
             .render()
             .expect("Template rendering: EmailResetInfoTxt"),

@@ -142,8 +142,8 @@ lazy_static! {
         .parse::<bool>()
         .expect("SESSION_VALIDATE_IP cannot be parsed to bool - bad format");
 
-    pub static ref E_MAIL_SUB_PREFIX: String = env::var("E_MAIL_SUB_PREFIX")
-        .unwrap_or_else(|_| String::from("Rauthy"))
+    pub static ref EMAIL_SUB_PREFIX: String = env::var("EMAIL_SUB_PREFIX")
+        .unwrap_or_else(|_| String::from("Rauthy"));
     pub static ref SMTP_USERNAME: String = env::var("SMTP_USERNAME")
         .expect("SMTP_USERNAME is not set")
         .trim()
