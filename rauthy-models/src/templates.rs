@@ -240,7 +240,7 @@ impl ErrorHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             nonce: &nonce,
-            i18n: I18nError::build_with(&lang, status_code, details_text).as_json(),
+            i18n: I18nError::build_with(lang, status_code, details_text).as_json(),
             ..Default::default()
         };
 
@@ -253,7 +253,7 @@ impl ErrorHtml<'_> {
         status_code: StatusCode,
         details_text: Option<String>,
     ) -> HttpResponse {
-        let (body, nonce) = Self::build(&colors, &lang, status_code, details_text);
+        let (body, nonce) = Self::build(colors, lang, status_code, details_text);
         HttpResponseBuilder::new(status_code)
             .insert_header(HEADER_HTML)
             .insert_header(build_csp_header(&nonce))
@@ -266,7 +266,7 @@ impl ErrorHtml<'_> {
         error: ErrorResponse,
     ) -> HttpResponse {
         let status = error.status_code();
-        let (body, nonce) = Self::build(&colors, &lang, status, Some(error.message));
+        let (body, nonce) = Self::build(colors, lang, status, Some(error.message));
         HttpResponseBuilder::new(status)
             .insert_header(HEADER_HTML)
             .insert_header(build_csp_header(&nonce))

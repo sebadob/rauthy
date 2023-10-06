@@ -135,8 +135,8 @@ impl Group {
             false
         )
         .await?;
-        if groups.is_some() {
-            return Ok(groups.unwrap());
+        if let Some(groups) = groups {
+            return Ok(groups);
         }
 
         let res = sqlx::query_as!(Self, "select * from groups")

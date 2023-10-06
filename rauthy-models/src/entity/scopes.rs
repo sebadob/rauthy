@@ -165,8 +165,8 @@ impl Scope {
             false
         )
         .await?;
-        if scopes.is_some() {
-            return Ok(scopes.unwrap());
+        if let Some(scopes) = scopes {
+            return Ok(scopes);
         }
 
         let res = sqlx::query_as!(Self, "select * from scopes")

@@ -143,8 +143,8 @@ impl Role {
             false
         )
         .await?;
-        if roles.is_some() {
-            return Ok(roles.unwrap());
+        if let Some(roles) = roles {
+            return Ok(roles);
         }
 
         let res = sqlx::query_as!(Self, "select * from roles")

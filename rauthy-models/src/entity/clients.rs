@@ -164,8 +164,8 @@ impl Client {
             false
         )
         .await?;
-        if client.is_some() {
-            return Ok(client.unwrap());
+        if let Some(client) = client {
+            return Ok(client);
         }
 
         let client = sqlx::query_as::<_, Self>("select * from clients where id = $1")
@@ -195,8 +195,8 @@ impl Client {
             false
         )
         .await?;
-        if clients.is_some() {
-            return Ok(clients.unwrap());
+        if let Some(clients) = clients {
+            return Ok(clients);
         }
 
         let clients = sqlx::query_as("select * from clients")
@@ -225,8 +225,8 @@ impl Client {
             false
         )
         .await?;
-        if logo.is_some() {
-            return Ok(logo.unwrap());
+        if let Some(logo) = logo {
+            return Ok(logo);
         }
 
         let logo_opt = sqlx::query("select data from logos where client_id = $1")

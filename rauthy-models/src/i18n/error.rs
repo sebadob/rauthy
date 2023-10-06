@@ -13,7 +13,7 @@ pub struct I18nError<'a> {
 }
 
 impl I18nError<'_> {
-    pub fn build_with<'a>(
+    pub fn build_with(
         lang: &Language,
         status_code: StatusCode,
         details_text: Option<String>,

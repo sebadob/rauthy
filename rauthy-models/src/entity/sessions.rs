@@ -122,8 +122,8 @@ impl Session {
             false
         )
         .await?;
-        if session.is_some() {
-            return Ok(session.unwrap());
+        if let Some(session) = session {
+            return Ok(session);
         }
 
         let session = sqlx::query_as!(Self, "select * from sessions where id = $1", id)

@@ -166,8 +166,8 @@ impl UserAttrConfigEntity {
             false
         )
         .await?;
-        if attr_opt.is_some() {
-            return Ok(attr_opt.unwrap());
+        if let Some(attr_opt) = attr_opt {
+            return Ok(attr_opt);
         }
 
         let attr = sqlx::query_as!(Self, "select * from user_attr_config where name = $1", name)
@@ -194,8 +194,8 @@ impl UserAttrConfigEntity {
             false
         )
         .await?;
-        if attrs.is_some() {
-            return Ok(attrs.unwrap());
+        if let Some(attrs) = attrs {
+            return Ok(attrs);
         }
 
         let res = sqlx::query_as!(Self, "select * from user_attr_config")
@@ -419,8 +419,8 @@ impl UserAttrValueEntity {
             false
         )
         .await?;
-        if attrs.is_some() {
-            return Ok(attrs.unwrap());
+        if let Some(attrs) = attrs {
+            return Ok(attrs);
         }
 
         let res = sqlx::query_as!(

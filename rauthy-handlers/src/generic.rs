@@ -668,10 +668,10 @@ pub async fn redirect_v1() -> HttpResponse {
 #[get("/whoami")]
 #[has_permissions("all")]
 pub async fn whoami(req: HttpRequest) -> impl Responder {
-    HttpResponse::Ok().body(
-        req.headers()
-            .iter()
-            .map(|(k, v)| format!("{}: {:?}\n", k, v.to_str().unwrap()))
-            .collect::<String>(),
-    )
+    use std::fmt::Write;
+    let mut resp = String::with_capacity(500);
+    req.headers().iter().for_each(|(k, v)| {
+        let _ = writeln!(resp, "{}: {:?}", k, v.to_str().unwrap_or_default());
+    });
+    HttpResponse::Ok().body(resp)
 }
