@@ -413,13 +413,12 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
                     .singlepart(SinglePart::plain(req.text))
             };
 
-            if email.is_err() {
-                error!("Error building the E-Mail to '{}'", req.address);
-            } else {
-                match mailer.send(email.unwrap()).await {
+            match email {
+                Ok(addr) => match mailer.send(addr).await {
                     Ok(_) => info!("E-Mail to '{}' sent successfully!", req.address),
                     Err(e) => error!("Could not send E-Mail: {:?}", e),
-                }
+                },
+                Err(_) => error!("Error building the E-Mail to '{}'", req.address),
             }
         } else {
             warn!("Received 'None' in email 'sender' - exiting");

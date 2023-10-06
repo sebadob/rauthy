@@ -309,8 +309,8 @@ impl JwkKeyPair {
             false
         )
         .await?;
-        if jwk_opt.is_some() {
-            return Ok(jwk_opt.unwrap());
+        if let Some(jwk_opt) = jwk_opt {
+            return Ok(jwk_opt);
         }
 
         let jwk = sqlx::query_as!(Jwk, "select * from jwks where kid = $1", kid,)
@@ -346,8 +346,8 @@ impl JwkKeyPair {
             false
         )
         .await?;
-        if jwk_opt.is_some() {
-            return Ok(jwk_opt.unwrap());
+        if let Some(jwk_opt) = jwk_opt {
+            return Ok(jwk_opt);
         }
 
         let mut jwks = sqlx::query_as!(Jwk, "select * from jwks")

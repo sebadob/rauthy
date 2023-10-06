@@ -130,8 +130,8 @@ impl PasswordPolicy {
             false
         )
         .await?;
-        if policy.is_some() {
-            return Ok(policy.unwrap());
+        if let Some(policy) = policy {
+            return Ok(policy);
         }
 
         let res = sqlx::query("select data from config where id = 'password_policy'")

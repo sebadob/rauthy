@@ -213,8 +213,8 @@ impl User {
             false
         )
         .await?;
-        if user_opt.is_some() {
-            return Ok(user_opt.unwrap());
+        if let Some(user_opt) = user_opt {
+            return Ok(user_opt);
         }
 
         // cannot be compile-time-checked because of 8byte integer on sqlite by default
@@ -248,8 +248,8 @@ impl User {
             false
         )
         .await?;
-        if user_opt.is_some() {
-            return Ok(user_opt.unwrap());
+        if let Some(user_opt) = user_opt {
+            return Ok(user_opt);
         }
 
         let user = sqlx::query_as::<_, Self>("select * from users where email = $1")
@@ -278,8 +278,8 @@ impl User {
             false
         )
         .await?;
-        if users.is_some() {
-            return Ok(users.unwrap());
+        if let Some(users) = users {
+            return Ok(users);
         }
 
         let res = sqlx::query_as::<_, Self>("select * from users")
@@ -700,6 +700,7 @@ impl User {
         if rules.not_recently_used.is_some() {
             let most_recent_res = RecentPasswordsEntity::find(data, &self.id).await;
             if self.password.is_some() && most_recent_res.is_ok() {
+                #[allow(clippy::unnecessary_unwrap)]
                 let mut most_recent = most_recent_res.unwrap();
 
                 let recent_req = rules.not_recently_used.unwrap();
@@ -1014,8 +1015,7 @@ impl User {
 
         let ml_res = MagicLink::find_by_user(data, self.id.clone()).await;
         // if an active magic link already exists - invalidate it.
-        if ml_res.is_ok() {
-            let mut ml = ml_res.unwrap();
+        if let Ok(mut ml) = ml_res {
             if ml.exp > OffsetDateTime::now_utc().unix_timestamp() {
                 warn!(
                     "Password reset request with already existing valid magic link from: {}",

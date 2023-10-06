@@ -164,8 +164,8 @@ impl PasskeyEntity {
             false
         )
         .await?;
-        if pk.is_some() {
-            return Ok(pk.unwrap());
+        if let Some(pk) = pk {
+            return Ok(pk);
         }
 
         let pk = sqlx::query_as!(
@@ -202,8 +202,8 @@ impl PasskeyEntity {
             false
         )
         .await?;
-        if pk.is_some() {
-            return Ok(pk.unwrap().into_iter().map(CredentialID::from).collect());
+        if let Some(pk) = pk {
+            return Ok(pk.into_iter().map(CredentialID::from).collect());
         }
 
         let creds = sqlx::query!(
@@ -241,8 +241,8 @@ impl PasskeyEntity {
             false
         )
         .await?;
-        if pk.is_some() {
-            return Ok(pk.unwrap());
+        if let Some(pk) = pk {
+            return Ok(pk);
         }
 
         let pks = sqlx::query_as!(Self, "SELECT * FROM passkeys WHERE user_id = $1", user_id)
@@ -274,8 +274,8 @@ impl PasskeyEntity {
             false
         )
         .await?;
-        if pk.is_some() {
-            return Ok(pk.unwrap());
+        if let Some(pk) = pk {
+            return Ok(pk);
         }
 
         let pks = sqlx::query_as!(
@@ -462,13 +462,12 @@ impl WebauthnData {
         )
         .await?;
 
-        if res.is_none() {
-            Err(ErrorResponse::new(
+        match res {
+            None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
                 "Webauthn Data not found".to_string(),
-            ))
-        } else {
-            Ok(res.unwrap())
+            )),
+            Some(res) => Ok(res),
         }
     }
 
@@ -564,13 +563,12 @@ impl WebauthnLoginReq {
         )
         .await?;
 
-        if res.is_none() {
-            Err(ErrorResponse::new(
+        match res {
+            None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
                 "Webauthn Login Request Data not found".to_string(),
-            ))
-        } else {
-            Ok(res.unwrap())
+            )),
+            Some(res) => Ok(res),
         }
     }
 
@@ -624,13 +622,12 @@ impl WebauthnServiceReq {
         )
         .await?;
 
-        if res.is_none() {
-            Err(ErrorResponse::new(
+        match res {
+            None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
                 "Webauthn Service Request Data not found".to_string(),
-            ))
-        } else {
-            Ok(res.unwrap())
+            )),
+            Some(res) => Ok(res),
         }
     }
 
