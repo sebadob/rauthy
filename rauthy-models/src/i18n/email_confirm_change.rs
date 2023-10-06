@@ -24,14 +24,14 @@ impl SsrJson for I18nEmailConfirmChange<'_> {
 impl I18nEmailConfirmChange<'_> {
     fn build_en() -> Self {
         Self {
-            subject: "E-Mail Change confirmed",
+            subject: "E-Mail Change confirmed for",
             msg: "Your E-Mail address has been changed successfully to:",
         }
     }
 
     fn build_de() -> Self {
         Self {
-            subject: "E-Mail Wechsel bestätigt",
+            subject: "E-Mail Wechsel bestätigt für",
             msg: "Ihre E-Mail Adresse wurde erfolgreich geändert zu:",
         }
     }

@@ -52,7 +52,7 @@ pub struct EMail {
 #[derive(Default, Template)]
 #[template(path = "email/change_info_new.html")]
 pub struct EMailChangeInfoNewHtml<'a> {
-    pub pub_url: &'a str,
+    pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
     // i18n
@@ -66,7 +66,7 @@ pub struct EMailChangeInfoNewHtml<'a> {
 #[derive(Default, Template)]
 #[template(path = "email/change_info_new.txt")]
 pub struct EMailChangeInfoNewTxt<'a> {
-    pub pub_url: &'a str,
+    pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
     // i18n
@@ -79,7 +79,7 @@ pub struct EMailChangeInfoNewTxt<'a> {
 #[derive(Default, Template)]
 #[template(path = "email/confirm_change.html")]
 pub struct EMailConfirmChangeHtml<'a> {
-    pub pub_url: &'a str,
+    pub email_sub_prefix: &'a str,
     pub header: &'a str,
     pub msg: &'a str,
     pub email_changed_to: &'a str,
@@ -88,7 +88,7 @@ pub struct EMailConfirmChangeHtml<'a> {
 #[derive(Default, Template)]
 #[template(path = "email/confirm_change.txt")]
 pub struct EMailConfirmChangeTxt<'a> {
-    pub pub_url: &'a str,
+    pub email_sub_prefix: &'a str,
     pub header: &'a str,
     pub msg: &'a str,
     pub email_changed_to: &'a str,
@@ -162,7 +162,7 @@ pub async fn send_email_change_info_new(
 
     let i18n = I18nEmailChangeInfoNew::build(&user.language);
     let text = EMailChangeInfoNewTxt {
-        pub_url: &data.public_url,
+        email_sub_prefix: &EMAIL_SUB_PREFIX,
         link: &link,
         exp: &exp,
         header: i18n.header,
@@ -172,7 +172,7 @@ pub async fn send_email_change_info_new(
     };
 
     let html = EMailChangeInfoNewHtml {
-        pub_url: &data.public_url,
+        email_sub_prefix: &EMAIL_SUB_PREFIX,
         link: &link,
         exp: &exp,
         header: i18n.header,
@@ -216,14 +216,14 @@ pub async fn send_email_confirm_change(
 ) {
     let i18n = I18nEmailConfirmChange::build(&user.language);
     let text = EMailConfirmChangeTxt {
-        pub_url: &data.public_url,
+        email_sub_prefix: &EMAIL_SUB_PREFIX,
         header: i18n.subject,
         msg: i18n.msg,
         email_changed_to,
     };
 
     let html = EMailConfirmChangeHtml {
-        pub_url: &data.public_url,
+        email_sub_prefix: &EMAIL_SUB_PREFIX,
         header: i18n.subject,
         msg: i18n.msg,
         email_changed_to,
