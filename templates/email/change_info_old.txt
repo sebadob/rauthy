@@ -1,4 +1,4 @@
-{{ header }} {{ pub_url }}
+{{ header }} {{ email_sub_prefix }}
 
 {{ change_info }}
 {{ click_link }}

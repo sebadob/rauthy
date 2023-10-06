@@ -39,7 +39,7 @@ impl I18nEmailChangeInfoNew<'_> {
 
     fn build_de() -> Self {
         Self {
-            subject: "E-Mail Wechsel Bestätigung",
+            subject: "E-Mail Wechsel Anfrage",
             header: "E-Mail Wechsel angefordert für",
             click_link:
                 "Klicken Sie auf den unten stehenden Link die E-Mail Adresse zu bestätigen.",

@@ -11,7 +11,9 @@ use askama_actix::Template;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication;
 use lettre::{AsyncSmtpTransport, AsyncTransport};
-use rauthy_common::constants::{SMTP_FROM, SMTP_PASSWORD, SMTP_URL, SMTP_USERNAME};
+use rauthy_common::constants::{
+    EMAIL_SUB_PREFIX, SMTP_FROM, SMTP_PASSWORD, SMTP_URL, SMTP_USERNAME,
+};
 use std::time::Duration;
 use time::OffsetDateTime;
 use tokio::sync::mpsc::Receiver;
@@ -50,7 +52,7 @@ pub struct EMail {
 #[derive(Default, Template)]
 #[template(path = "email/change_info_new.html")]
 pub struct EMailChangeInfoNewHtml<'a> {
-    pub pub_url: &'a str,
+    pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
     // i18n
@@ -64,7 +66,7 @@ pub struct EMailChangeInfoNewHtml<'a> {
 #[derive(Default, Template)]
 #[template(path = "email/change_info_new.txt")]
 pub struct EMailChangeInfoNewTxt<'a> {
-    pub pub_url: &'a str,
+    pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
     // i18n
@@ -77,7 +79,7 @@ pub struct EMailChangeInfoNewTxt<'a> {
 #[derive(Default, Template)]
 #[template(path = "email/confirm_change.html")]
 pub struct EMailConfirmChangeHtml<'a> {
-    pub pub_url: &'a str,
+    pub email_sub_prefix: &'a str,
     pub header: &'a str,
     pub msg: &'a str,
     pub email_changed_to: &'a str,
@@ -86,7 +88,7 @@ pub struct EMailConfirmChangeHtml<'a> {
 #[derive(Default, Template)]
 #[template(path = "email/confirm_change.txt")]
 pub struct EMailConfirmChangeTxt<'a> {
-    pub pub_url: &'a str,
+    pub email_sub_prefix: &'a str,
     pub header: &'a str,
     pub msg: &'a str,
     pub email_changed_to: &'a str,
@@ -160,7 +162,7 @@ pub async fn send_email_change_info_new(
 
     let i18n = I18nEmailChangeInfoNew::build(&user.language);
     let text = EMailChangeInfoNewTxt {
-        pub_url: &data.public_url,
+        email_sub_prefix: &EMAIL_SUB_PREFIX,
         link: &link,
         exp: &exp,
         header: i18n.header,
@@ -170,7 +172,7 @@ pub async fn send_email_change_info_new(
     };
 
     let html = EMailChangeInfoNewHtml {
-        pub_url: &data.public_url,
+        email_sub_prefix: &EMAIL_SUB_PREFIX,
         link: &link,
         exp: &exp,
         header: i18n.header,
@@ -182,10 +184,7 @@ pub async fn send_email_change_info_new(
 
     let req = EMail {
         address: new_email.clone(),
-        subject: format!(
-            "{} - {} {}",
-            i18n.subject, user.given_name, user.family_name
-        ),
+        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject,),
         text: text
             .render()
             .expect("Template rendering: EMailChangeInfoNewTxt"),
@@ -217,14 +216,14 @@ pub async fn send_email_confirm_change(
 ) {
     let i18n = I18nEmailConfirmChange::build(&user.language);
     let text = EMailConfirmChangeTxt {
-        pub_url: &data.public_url,
+        email_sub_prefix: &EMAIL_SUB_PREFIX,
         header: i18n.subject,
         msg: i18n.msg,
         email_changed_to,
     };
 
     let html = EMailConfirmChangeHtml {
-        pub_url: &data.public_url,
+        email_sub_prefix: &EMAIL_SUB_PREFIX,
         header: i18n.subject,
         msg: i18n.msg,
         email_changed_to,
@@ -232,10 +231,7 @@ pub async fn send_email_confirm_change(
 
     let req = EMail {
         address: email_addr.to_string(),
-        subject: format!(
-            "{} - {} {}",
-            i18n.subject, user.given_name, user.family_name
-        ),
+        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject,),
         text: text
             .render()
             .expect("Template rendering: EMailConfirmChangeTxt"),
@@ -292,10 +288,7 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
 
     let req = EMail {
         address: user.email.to_string(),
-        subject: format!(
-            "{} - {} {}",
-            i18n.subject, user.given_name, user.family_name
-        ),
+        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject,),
         text: text.render().expect("Template rendering: EmailResetTxt"),
         html: Some(html.render().expect("Template rendering: EmailResetHtml")),
     };
@@ -341,7 +334,7 @@ pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
 
     let req = EMail {
         address: user.email.to_string(),
-        subject: i18n.subject.to_string(),
+        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject,),
         text: text
             .render()
             .expect("Template rendering: EmailResetInfoTxt"),
