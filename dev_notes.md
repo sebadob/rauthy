@@ -2,26 +2,27 @@
 
 ## CURRENT WORK
 
+## TODO before v0.16.0
+
+- add a new table that keeps track about when password expiry / reset emails were sent out to avoid duplicates
+- update the book with all the new features
+
 ## Stage 1 - essentials
 
 [x] finished
 
 ## Stage 2 - features - do before v1.0.0
 
-- create a nice looking error page for things like expired magic link, bad client values, things like that...
-- introduce 'rauthy-db-version' or something like that into the config table to be able to do stricter validation
-between feature / major version migrations
-- add a new table that keeps track about when password expiry / reset emails were sent out to avoid duplicates
 - NATS events stream or maybe internal one?
-- benchmarks and performance tuning
+- add an 'ip blacklist' feature?
+- add all default claims for users https://openid.net/specs/openid-connect-core-1_0.html#ScopeClaims
 - double check against https://openid.net/specs/openid-connect-core-1_0.html that everything is implemented correctly one more time
+- benchmarks and performance tuning
 
 ## Stage 3 - Possible nice to haves
 
-- add an 'ip blacklist' feature?
 - auto-encrypted backups + backups to remote locations (ssh, nfs, s3, ...) -> postponed - should be applied to sqlite only
 since postgres has pg_backrest and a lot of well established tooling anyway
-- add all default claims for users https://openid.net/specs/openid-connect-core-1_0.html#ScopeClaims
 - oidc-client (google, github, ...)
 - 'rauthy-migrate' project to help migrating to rauthy?
-- custom event listener template to build own implementation?
+- custom event listener template to build own implementation? -> only if NATS will be implemented maybe?

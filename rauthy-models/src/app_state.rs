@@ -1,4 +1,5 @@
 use crate::email::EMail;
+use crate::entity::db_version::DbVersion;
 use crate::migration::db_migrate;
 use crate::migration::db_migrate::migrate_init_prod;
 use crate::migration::db_migrate_dev::migrate_dev_data;
@@ -283,6 +284,13 @@ impl AppState {
             pool
         };
 
+        // before we do any db migrations, we need to check the current DB version for
+        // for compatibility
+        let db_version = DbVersion::check_app_version(&pool)
+            .await
+            .map_err(|err| anyhow::Error::msg(err.message))?;
+
+        // migrate DB data
         if !*DEV_MODE {
             migrate_init_prod(
                 &pool,
@@ -343,6 +351,11 @@ impl AppState {
         if let Err(err) = db_migrate::anti_lockout(&pool, issuer).await {
             error!("Error when applying anti-lockout check: {:?}", err);
         }
+
+        // update the DbVersion after successful pool creation and migrations
+        DbVersion::update(&pool, db_version)
+            .await
+            .map_err(|err| anyhow::Error::msg(err.message))?;
 
         Ok(pool)
     }
