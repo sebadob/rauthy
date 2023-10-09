@@ -6,10 +6,10 @@ src = "src"
 title = "Rauthy Documentation"
 
 [output.html]
-additional-css = ["mdbook-admonish.css"]
+additional-css = ["./mdbook-admonish.css"]
 
 [preprocessor]
 
 [preprocessor.admonish]
 command = "mdbook-admonish"
-assets_version = "2.0.0" # do not edit: managed by `mdbook-admonish install`
+assets_version = "2.0.2" # do not edit: managed by `mdbook-admonish install`
