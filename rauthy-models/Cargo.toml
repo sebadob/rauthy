@@ -10,59 +10,55 @@ license.workspace = true
 doctest = false
 
 [features]
-#postgres = []
 sqlite = []
-
-#[package.metadata.cargo-all-features]
-#skip_feature_sets = [["postgres", "sqlite"]]
 
 [dependencies]
 accept-language = "3"
-actix = "0.13"
-actix-multipart = "0.6"
-actix-web = { version = "4", features = ["rustls"] }
-actix-web-actors = "4"
-actix-web-lab = "0.19"
-actix-service = "2"
+actix = { workspace = true }
+actix-multipart = { workspace = true }
+actix-web = { workspace = true }
+actix-web-actors = { workspace = true }
+actix-web-lab = { workspace = true }
+actix-service = { workspace = true }
 anyhow = "1"
-argon2 = { version = "0.5", features = ["std", "zeroize"] }
-askama = { version = "0.12", features = ["with-actix-web"] }
-askama_actix = "0.14"
-bincode = "1"
+argon2 = { workspace = true }
+askama = { workspace = true }
+askama_actix = { workspace = true }
+bincode = { workspace = true }
 cached = "0.46"
-chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
-css-color = "0.2"
-derive_more = "0.99"
-dotenvy = "0.15"
+chrono = { workspace = true }
+css-color = { workspace = true }
+derive_more = { workspace = true }
+dotenvy = { workspace = true }
 futures-util = "0.3"
 hex = { version = "0.4", features = ["serde"] }
-jwt-simple = "0.11"
+jwt-simple = { workspace = true }
 lettre = { version = "0.10", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls", "tracing"] }
-num_cpus = "1"
+num_cpus = { workspace = true }
 ## Add openssl-sys as a direct dependency so it can be cross compiled to
 ## x86_64-unknown-linux-musl using the "vendored" feature below
-openssl-sys = { version = "0.9", features = ["vendored"] }
-rand = "0.8"
-rand_core = { version = "0.6", features = ["std"] }
+openssl-sys = { workspace = true }
+rand = { workspace = true }
+rand_core = { workspace = true }
 rauthy-common = { path = "../rauthy-common" }
 redhac = { workspace = true }
-regex = "1"
-ring = "0.16"
+regex = { workspace = true }
+ring = { workspace = true }
 semver = { version = "1.0.19", features = ["serde"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde = { workspace = true }
+serde_json = { workspace = true }
 sqlx = { workspace = true }
-time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
-tracing = { version = "0.1", features = ["attributes"] }
-tokio = { version = "1", features = ["full"] }
-utoipa = { version = "3", features = ["actix_extras", "chrono", "openapi_extensions"] }
-utoipa-swagger-ui = { version = "3", features = ["actix-web"] }
+time = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+utoipa = { workspace = true }
+utoipa-swagger-ui = { workspace = true }
 uuid = { version = "1", features = ["serde", "v4"] }
-validator = { version = "0.16", features = ["derive"] }
+validator = { workspace = true }
 # danger-allow-state-serialisation is needed to save the state into the DB for HA setup's
 # danger-credential-internals is needed for the feature to optionally force user verification
-webauthn-rs = { version = "0.4", features = ["danger-allow-state-serialisation", "danger-credential-internals"] }
-webauthn-rs-proto = "0.4.9"
+webauthn-rs = { workspace = true }
+webauthn-rs-proto = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = "1"

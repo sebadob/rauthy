@@ -2,11 +2,6 @@
 
 ## CURRENT WORK
 
-## TODO before v0.16.0
-
-- add a new table that keeps track about when password expiry / reset emails were sent out to avoid duplicates
-- update the book with all the new features
-
 ## Stage 1 - essentials
 
 [x] finished

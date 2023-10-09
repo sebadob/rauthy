@@ -6,22 +6,21 @@ authors.workspace = true
 license.workspace = true
 
 [features]
-postgres = []
 sqlite = []
 
 [package.metadata.cargo-all-features]
 skip_feature_sets = [["postgres", "sqlite"]]
 
 [dependencies]
-actix-web = { version = "4.4", features = ["rustls-0_21"] }
+actix-web = { workspace = true }
 actix-web-prom = "0.7.0"
-actix-service = "2"
-actix-web-grants = "3.0"
-chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
+actix-service = { workspace = true }
+actix-web-grants = { workspace = true }
+chrono = { workspace = true }
 cron = "0.12"
-dotenvy = "0.15"
-flume = "0.11"
-num_cpus = "1"
+dotenvy = { workspace = true }
+flume = { workspace = true }
+num_cpus = { workspace = true }
 prometheus = "0.13.3"
 rauthy-common = { path = "../rauthy-common" }
 rauthy-handlers = { path = "../rauthy-handlers" }
@@ -30,20 +29,20 @@ rauthy-service = { path = "../rauthy-service" }
 redhac = { workspace = true }
 rustls = "0.21"
 rustls-pemfile = "1"
-serde_json = "1"
+serde_json = { workspace = true }
 sqlx = { workspace = true }
-time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
-tracing = { version = "0.1", features = ["attributes"] }
-tracing-subscriber = { version = "0.3", features = ["env-filter", "tracing"] }
-tokio = { version = "1", features = ["full"] }
-utoipa = { version = "3", features = ["actix_extras", "chrono", "openapi_extensions"] }
-utoipa-swagger-ui = { version = "3", features = ["actix-web"] }
-validator = { version = "0.16", features = ["derive"] }
-webauthn-rs = { version = "0.4", features = ["danger-allow-state-serialisation", "danger-credential-internals", "resident-key-support"] }
+time = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tokio = { workspace = true }
+utoipa = { workspace = true }
+utoipa-swagger-ui = { workspace = true }
+validator = { workspace = true }
+webauthn-rs = { workspace = true }
 
 [dev-dependencies]
 josekit = "0.8"
 pretty_assertions = "1"
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
-ring = "0.16"
+ring = { workspace = true }
 tokio-test = "*"
