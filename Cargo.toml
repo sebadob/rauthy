@@ -21,3 +21,4 @@ panic = "abort"
 
 [workspace.dependencies]
 sqlx = { version = "0.7", features = ["macros", "migrate", "postgres", "runtime-tokio", "sqlite", "tls-rustls", "uuid"] }
+redhac = "0.8.0"
