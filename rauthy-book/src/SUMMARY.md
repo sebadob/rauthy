@@ -8,7 +8,7 @@
     - [First Start](./getting_started/first_start.md)
 
 - [Argon 2](config/argon2.md)
-- [2FA / MFA](config/fido.md)
+- [FIDO 2 Passkeys](config/fido.md)
 - [Encryption](config/encryption.md)
 - [Database Migrations](config/db_migration.md)
 - [Backups](config/backup.md)

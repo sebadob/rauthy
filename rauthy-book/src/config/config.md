@@ -23,20 +23,22 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # registrations with 'user@gmail.com' (default: '')
 #USER_REG_DOMAIN_RESTRICTION=some-domain.com
 
-# If set to 'true', this will validate the remote peer IP address with each request and compare it with the
-# IP which was used during the initial session creation / login.
+# If set to 'true', this will validate the remote peer IP address with each request 
+# and compare it with the IP which was used during the initial session creation / login.
 # If the IP is different, the session will be rejected.
-# This is a security hardening and prevents stolen access credentials, for instance if an attacker might have
-# copied the encrypted session cookie and the XSRF token from the local storage from a user. However, this event
-# is really unlikely, since it may only happen if an attacker has direct access to the machine itself.
+# This is a security hardening and prevents stolen access credentials, for instance if
+# an attacker might have copied the encrypted session cookie and the XSRF token from
+# the local storage from a user. However, this event is really unlikely, since it may
+# only happen if an attacker has direct access to the machine itself.
 #
-# If your users are using mobile networks and get new IP addresses all the time, this means they have to do a
-# new login each time. This is no big deal at all with Webauthn / FIDO keys anyway and should not be a reason
-# to deactivate this feature.
+# If your users are using mobile networks and get new IP addresses all the time, this
+# means they have to do a new login each time. This is no big deal at all with 
+# Webauthn / FIDO keys anyway and should not be a reason to deactivate this feature.
 #
-# Caution: If you are running behind a reverse proxy which does not provide the X-FORWARDED-FOR header correctly,
-# or you have the PROXY_MODE in this config disabled, this feature will not work. You can validate the IPs for
-# each session in the Admin UI. If these are correct, your setup is okay.
+# Caution: If you are running behind a reverse proxy which does not provide the 
+# X-FORWARDED-FOR header correctly, or you have the PROXY_MODE in this config disabled,
+# this feature will not work. You can validate the IPs for each session in the Admin
+# UI. If these are correct, your setup is okay.
 #
 # (default: true)
 #SESSION_VALIDATE_IP=true
@@ -354,17 +356,18 @@ PROXY_MODE=false
 # default: 9090
 #METRICS_PORT=9090
 
-# If the Swagger UI should be served together with the /metrics route on the internal server.
-# It it then reachable via:
+# If the Swagger UI should be served together with the /metrics route on the internal
+# server. It it then reachable via:
 # http://METRICS_ADDR:METRICS_PORT/docs/v1/swagger-ui/
 # (default: true)
 #SWAGGER_UI_INTERNAL=true
 
-# If the Swagger UI should be served externally as well. This makes the link in the Admin UI work.
+# If the Swagger UI should be served externally as well. This makes the link in the
+# Admin UI work.
 #
 # CAUTION: The Swagger UI is open and does not require any login to be seen!
-# Rauthy is open source, which means anyone could just download it and see on their own,
-# but it may be a security concern to just expose less information.
+# Rauthy is open source, which means anyone could just download it and see on their
+# own, but it may be a security concern to just expose less information.
 # (default: false)
 #SWAGGER_UI_EXTERNAL=false
 
