@@ -1,11 +1,63 @@
 # FIDO 2 / WebAuthn
 
+## Passkey Only Accounts
+
+Since v0.16.0, Rauthy provides the ability to optionally create Passkey only accounts.  
+These accounts do not have any password at all. The user can lo gin via E-Mail and then providing the MFA
+FIDO 2 Passkey. Only keys and systems with additional user verification (UV) will be accepted for these accounts.
+This makes sure, that they are 2FA / MFA secured (depending on the device) all the time.
+
+You can choose the account type either during the initial password reset link you get via E-Mail, or you can
+convert a traditional password account to a passkey only account in your account view, if you have at least
+one Passkey with additional UV registered.
+
+Passkey only accounts provide a few benefits:
+- no need to remember or store any passwords
+- way easier and faster logging in
+- always 2FA / MFA
+- strongest type of authentication
+- no need to satisfy password policies
+- no need to reset your password after it has been expired
+
+```admonish caution
+Passkey only accounts cannot use the traditional password reset E-Mails.
+
+This is a drawback and a benefit at the same time:  
+No way to take over an account if the E-Mail account has been compromised, but at the same time the user
+relies on an Admin to reset the MFA devices, if no backup exists or all are lost.
+```
+
+```admonish info
+Android has finally added support for biometric UV in September 2023.  
+This has made is possible to implement this feature into Rauthy without sacrificing security.
+
+However, at the time of writing (09.10.2023), only biometric UV is supported and PIN UV is about to come
+in the near future.
+```
+
+```admonish tip
+If you want to register an Android device for a Passkey only account, but you are using for instance Yubikeys
+with PIN UV, you can do the following trick to get it done (works only with the latest Play store version):
+
+- Create a password for your account, if it does not exist yet
+- Remove all registered passkeys
+- Log in to your account view on your Android device and another device that works with your Yubikey
+- With both devices logged in at the same time:
+    - Register a new passkey with Android and choose "this device", which will create a Passkey flow with your fingerprint
+    - Register the Yubikey on the other device
+- You should now have 2 Passkeys: Android + Yubikey
+- Navigate to the Password page inside your account on any device and convert it to Passkey only
+- You should now be able to log in on your Android device with Passkey only and with your Yubikey
+```
+
+## Config
+
 You should use FIDO 2 in production for 2FA / MFA.
 To make sure it works, you need to check your the config.
 
 Set / check some variables in your config, to make sure it works correctly.
 
-## `RP_ID`
+### `RP_ID`
 
 This usually is the 'Relaying Party (RP) ID', which should be your effective domain name.
 For the above example, since our application is available under 'auth.example.com', this should also be:
@@ -19,7 +71,7 @@ When the `RP_ID` changes, already registered devices will stop working and users
 Be very careful, if you want / need to do this in production.
 ```
 
-## `RP_ORIGIN`
+### `RP_ORIGIN`
 
 The seconds important variable for FIDO 2 is the `RP_ORIGIN`. This needs to be set to the URL containing the effective
 domain name.
@@ -34,7 +86,7 @@ In this example, assuming rauthy will be available at port 443, correct would be
 RP_ORIGIN=https://auth.example.com:443
 ```
 
-## `RP_NAME`
+### `RP_NAME`
 
 This variable can be set to anything "nice".
 This may be shown to the user in a way like "`RP_BNAE` requests your security key ...". If this is shown depends on the
@@ -42,22 +94,16 @@ OS and the browser the client uses. Firefox, for instance, does not show this at
 
 You can change the `RP_NAME` later on without affecting the validation of already registered keys.
 
-## `WEBAUTHN_RENEW_EXP`
+### `WEBAUTHN_RENEW_EXP`
 
-In my opinion, passwordless login with WebAuthn is the best thing for the user experience and the safest too.
-
-However, not all operating systems and browsers have caught up fully yet until a point, where I would use only WebAuthn
-on its own. Firefox for instance is a good example. On Linux and Mac OS, it does not work with a PIN or any other second
-factor on your device, which basically downgrades the login to a (strong) single factor again.
-
-For this reason, Rauthy will always prompt a user at least once for the password on a new machine, even with active
-security keys. The keys are used either as a strong second factor, when they do not work with a PIN, or bump up the whole
+For all non Passkey only accounts, Rauthy will always prompt a user at least once for the password on a new machine, even with active
+passkeys. The keys are used either as a strong second factor, when they do not work with a PIN, or bump up the whole
 login to real MFA, if the OS / Browser / Key does support this.
 
 When a user as logged in successfully on a new device and active 2FA / MFA, he will get an encrypted cookie.  
 The lifetime of this cookie can be configured with `WEBAUTHN_RENEW_EXP`.  
 The **default** of this value is **2160 hours**. 
 
-As long as this cookie is present, non-expired and can be encrypted by the backend, the user can log in from this very
+As long as this cookie is present and can be decrypted by the backend, the user can log in from this very
 device with his FIDO 2 key only, which makes a very good user experience for the whole login flow. The E-Mail will
 already be filled automatically and only a single click on the login button is necessary.
