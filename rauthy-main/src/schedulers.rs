@@ -9,25 +9,28 @@ use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::migration::backup_db;
-use redhac::cache_del;
+use redhac::{cache_del, QuorumHealthState, QuorumState};
 use std::collections::HashSet;
 use std::env;
 use std::ops::{Add, Sub};
 use std::str::FromStr;
 use std::time::Duration;
+use tokio::sync::watch::Receiver;
 use tokio::time;
 use tracing::{debug, error, info};
 
 pub async fn scheduler_main(data: web::Data<AppState>) {
     info!("Starting schedulers");
 
+    let rx_health = data.caches.ha_cache_config.rx_health_state.clone();
+
     tokio::spawn(db_backup(data.db.clone()));
-    tokio::spawn(magic_link_cleanup(data.db.clone()));
-    tokio::spawn(refresh_tokens_cleanup(data.db.clone()));
-    tokio::spawn(sessions_cleanup(data.db.clone()));
-    tokio::spawn(jwks_cleanup(data.clone()));
-    tokio::spawn(password_expiry_checker(data.clone()));
-    tokio::spawn(user_expiry_checker(data));
+    tokio::spawn(magic_link_cleanup(data.db.clone(), rx_health.clone()));
+    tokio::spawn(refresh_tokens_cleanup(data.db.clone(), rx_health.clone()));
+    tokio::spawn(sessions_cleanup(data.db.clone(), rx_health.clone()));
+    tokio::spawn(jwks_cleanup(data.clone(), rx_health.clone()));
+    tokio::spawn(password_expiry_checker(data.clone(), rx_health.clone()));
+    tokio::spawn(user_expiry_checker(data, rx_health));
 }
 
 // TODO -> adapt to RDBMS
@@ -67,12 +70,22 @@ pub async fn db_backup(db: DbPool) {
 // Cleans up old / expired magic links and deletes users, that have never used their
 // 'set first ever password' magic link to keep the database clean in case of an open user registration.
 // Runs every 6 hours.
-pub async fn magic_link_cleanup(db: DbPool) {
+pub async fn magic_link_cleanup(db: DbPool, rx_health: Receiver<Option<QuorumHealthState>>) {
     let mut interval = time::interval(Duration::from_secs(3600 * 6));
 
     loop {
         interval.tick().await;
 
+        // will return None in a non-HA deployment
+        if let Some(is_ha_leader) = is_ha_leader(&rx_health) {
+            if !is_ha_leader {
+                debug!("Running HA mode without being the leader - skipping magic_link_cleanup scheduler");
+                continue;
+            }
+        }
+
+        // if this channel has an error, just go on and ignore it -> no HA mode
+        // if let Ok(cache_state) = rx_health.recv_async().await {}
         debug!("Running magic_link_cleanup scheduler");
 
         // allow 300 seconds of clock skew before cleaning up magic links
@@ -119,12 +132,24 @@ pub async fn magic_link_cleanup(db: DbPool) {
 // Checks soon expiring passwords and notifies the user accordingly.
 // Runs once every night at 04:30.
 // TODO modify somehow to prevent multiple E-Mails in a HA deployment
-pub async fn password_expiry_checker(data: web::Data<AppState>) {
+pub async fn password_expiry_checker(
+    data: web::Data<AppState>,
+    rx_health: Receiver<Option<QuorumHealthState>>,
+) {
     // sec min hour day_of_month month day_of_week year
     let schedule = cron::Schedule::from_str("0 30 4 * * * *").unwrap();
 
     loop {
         sleep_schedule_next(&schedule).await;
+
+        // will return None in a non-HA deployment
+        if let Some(is_ha_leader) = is_ha_leader(&rx_health) {
+            if !is_ha_leader {
+                debug!("Running HA mode without being the leader - skipping password_expiry_checker scheduler");
+                continue;
+            }
+        }
+
         debug!("Running password_expiry_checker scheduler");
 
         // warns, if the duration until the expiry is between 9 and 10 days, to only warn once
@@ -159,7 +184,10 @@ pub async fn password_expiry_checker(data: web::Data<AppState>) {
 }
 
 // Checks for expired users
-pub async fn user_expiry_checker(data: web::Data<AppState>) {
+pub async fn user_expiry_checker(
+    data: web::Data<AppState>,
+    rx_health: Receiver<Option<QuorumHealthState>>,
+) {
     let secs = env::var("SCHED_USER_EXP_MINS")
         .unwrap_or_else(|_| "60".to_string())
         .parse::<u64>()
@@ -178,6 +206,15 @@ pub async fn user_expiry_checker(data: web::Data<AppState>) {
 
     loop {
         interval.tick().await;
+
+        // will return None in a non-HA deployment
+        if let Some(is_ha_leader) = is_ha_leader(&rx_health) {
+            if !is_ha_leader {
+                debug!("Running HA mode without being the leader - skipping user_expiry_checker scheduler");
+                continue;
+            }
+        }
+
         debug!("Running user_expiry_checker scheduler");
 
         match User::find_expired(&data).await {
@@ -243,11 +280,19 @@ pub async fn user_expiry_checker(data: web::Data<AppState>) {
 }
 
 // Cleans up old / expired / already used Refresh Tokens
-pub async fn refresh_tokens_cleanup(db: DbPool) {
+pub async fn refresh_tokens_cleanup(db: DbPool, rx_health: Receiver<Option<QuorumHealthState>>) {
     let mut interval = time::interval(Duration::from_secs(3600 * 3));
 
     loop {
         interval.tick().await;
+
+        // will return None in a non-HA deployment
+        if let Some(is_ha_leader) = is_ha_leader(&rx_health) {
+            if !is_ha_leader {
+                debug!("Running HA mode without being the leader - skipping refresh_tokens_cleanup scheduler");
+                continue;
+            }
+        }
 
         debug!("Running refresh_tokens_cleanup scheduler");
 
@@ -265,11 +310,19 @@ pub async fn refresh_tokens_cleanup(db: DbPool) {
 }
 
 // Cleans up old / expired Sessions
-pub async fn sessions_cleanup(db: DbPool) {
+pub async fn sessions_cleanup(db: DbPool, rx_health: Receiver<Option<QuorumHealthState>>) {
     let mut interval = time::interval(Duration::from_secs(3595 * 2));
 
     loop {
         interval.tick().await;
+
+        // will return None in a non-HA deployment
+        if let Some(is_ha_leader) = is_ha_leader(&rx_health) {
+            if !is_ha_leader {
+                debug!("Running HA mode without being the leader - skipping sessions_cleanup scheduler");
+                continue;
+            }
+        }
 
         debug!("Running sessions_cleanup scheduler");
 
@@ -290,11 +343,24 @@ pub async fn sessions_cleanup(db: DbPool) {
 }
 
 // Cleans up old / expired JWKSs
-pub async fn jwks_cleanup(data: web::Data<AppState>) {
+pub async fn jwks_cleanup(
+    data: web::Data<AppState>,
+    rx_health: Receiver<Option<QuorumHealthState>>,
+) {
     let mut interval = time::interval(Duration::from_secs(3600 * 24));
 
     loop {
         interval.tick().await;
+
+        // will return None in a non-HA deployment
+        if let Some(is_ha_leader) = is_ha_leader(&rx_health) {
+            if !is_ha_leader {
+                debug!(
+                    "Running HA mode without being the leader - skipping jwks_cleanup scheduler"
+                );
+                continue;
+            }
+        }
 
         debug!("Running jwks_cleanup scheduler");
 
@@ -371,4 +437,11 @@ async fn sleep_schedule_next(schedule: &cron::Schedule) {
 
     // we are adding a future date here --> safe to cast from i64 to u64
     time::sleep(Duration::from_secs(until.num_seconds() as u64)).await;
+}
+
+fn is_ha_leader(rx_health: &Receiver<Option<QuorumHealthState>>) -> Option<bool> {
+    let health_state = rx_health.borrow();
+    health_state
+        .as_ref()
+        .map(|state| state.state == QuorumState::Leader)
 }

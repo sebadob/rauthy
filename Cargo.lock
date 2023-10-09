@@ -858,34 +858,20 @@ dependencies = [
 
 [[package]]
 name = "cached"
-version = "0.45.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90eb5776f28a149524d1d8623035760b4454ec881e8cf3838fa8d7e1b11254b3"
-dependencies = [
- "async-trait",
- "cached_proc_macro",
- "cached_proc_macro_types",
- "futures",
- "hashbrown 0.13.2",
- "instant",
- "once_cell",
- "thiserror",
- "tokio",
-]
-
-[[package]]
-name = "cached"
 version = "0.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8cead8ece0da6b744b2ad8ef9c58a4cdc7ef2921e60a6ddfb9eaaa86839b5fc5"
 dependencies = [
  "ahash",
+ "async-trait",
  "cached_proc_macro",
  "cached_proc_macro_types",
+ "futures",
  "hashbrown 0.14.1",
  "instant",
  "once_cell",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]
@@ -1772,12 +1758,6 @@ name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
-
-[[package]]
-name = "hashbrown"
-version = "0.13.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43a3c133739dddd0d2990f9a4bdf8eb4b21ef50e4851ca85ab661199821d510e"
 
 [[package]]
 name = "hashbrown"
@@ -3073,7 +3053,7 @@ dependencies = [
  "askama",
  "askama_actix",
  "bincode",
- "cached 0.46.0",
+ "cached",
  "chrono",
  "css-color",
  "derive_more",
@@ -3143,14 +3123,15 @@ dependencies = [
 
 [[package]]
 name = "redhac"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c05441aebf25e8f486e64a54398e2e54fce51cb6d7c99c7a8bf8f135ddc6fc1d"
+checksum = "4503b03ac929759b8a1b82bd74e559c85a3207523dd0c7adeaa76d761fcd05eb"
 dependencies = [
+ "ahash",
  "anyhow",
  "async-stream",
  "bincode",
- "cached 0.45.1",
+ "cached",
  "chrono",
  "crc32fast",
  "ctrlc",
