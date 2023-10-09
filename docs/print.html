@@ -30,7 +30,7 @@
         <link rel="stylesheet" href="ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="mdbook-admonish.css">
+        <link rel="stylesheet" href="./mdbook-admonish.css">
 
     </head>
     <body>
@@ -85,7 +85,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="config/fido.html"><strong aria-hidden="true">4.</strong> 2FA / MFA</a></li><li class="chapter-item expanded "><a href="config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="config/config.html"><strong aria-hidden="true">10.</strong> Reference Config</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="config/config.html"><strong aria-hidden="true">10.</strong> Reference Config</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -806,31 +806,97 @@ restricting it as much as necessary.</p>
 <p>For smaller deployments, set <code>MAX_HASH_THREADS=1</code>, which will technically allows only one user login at the exact same
 time. This value makes an external rate limiting for the login obsolete (while you may add some for the others).</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="fido-2--webauthn"><a class="header" href="#fido-2--webauthn">FIDO 2 / WebAuthn</a></h1>
-<p>You should use FIDO 2 in production for 2FA / MFA.
-To make sure it works, you need to check your the config.</p>
-<p>Set / check some variables in your config, to make sure it works correctly.</p>
-<h2 id="rp_id"><a class="header" href="#rp_id"><code>RP_ID</code></a></h2>
-<p>This usually is the 'Relaying Party (RP) ID', which should be your effective domain name.
-For the above example, since our application is available under 'auth.example.com', this should also be:</p>
-<pre><code>RP_ID=auth.example.com
-</code></pre>
+<h2 id="passkey-only-accounts"><a class="header" href="#passkey-only-accounts">Passkey Only Accounts</a></h2>
+<p>Since v0.16.0, Rauthy provides the ability to optionally create Passkey only accounts.<br />
+These accounts do not have any password at all. The user can lo gin via E-Mail and then providing the MFA
+FIDO 2 Passkey. Only keys and systems with additional user verification (UV) will be accepted for these accounts.
+This makes sure, that they are 2FA / MFA secured (depending on the device) all the time.</p>
+<p>You can choose the account type either during the initial password reset link you get via E-Mail, or you can
+convert a traditional password account to a passkey only account in your account view, if you have at least
+one Passkey with additional UV registered.</p>
+<p>Passkey only accounts provide a few benefits:</p>
+<ul>
+<li>no need to remember or store any passwords</li>
+<li>way easier and faster logging in</li>
+<li>always 2FA / MFA</li>
+<li>strongest type of authentication</li>
+<li>no need to satisfy password policies</li>
+<li>no need to reset your password after it has been expired</li>
+</ul>
 <div id="admonition-caution" class="admonition warning">
 <div class="admonition-title">
 <p>Caution</p>
 <p><a class="admonition-anchor-link" href="config/fido.html#admonition-caution"></a></p>
 </div>
 <div>
-<p>When the <code>RP_ID</code> changes, already registered devices will stop working and users cannot log in anymore!
-Be very careful, if you want / need to do this in production.</p>
+<p>Passkey only accounts cannot use the traditional password reset E-Mails.</p>
+<p>This is a drawback and a benefit at the same time:<br />
+No way to take over an account if the E-Mail account has been compromised, but at the same time the user
+relies on an Admin to reset the MFA devices, if no backup exists or all are lost.</p>
 </div>
 </div>
-<h2 id="rp_origin"><a class="header" href="#rp_origin"><code>RP_ORIGIN</code></a></h2>
-<p>The seconds important variable for FIDO 2 is the <code>RP_ORIGIN</code>. This needs to be set to the URL containing the effective
-domain name.</p>
+<div id="admonition-info" class="admonition info">
+<div class="admonition-title">
+<p>Info</p>
+<p><a class="admonition-anchor-link" href="config/fido.html#admonition-info"></a></p>
+</div>
+<div>
+<p>Android has finally added support for biometric UV in September 2023.<br />
+This has made is possible to implement this feature into Rauthy without sacrificing security.</p>
+<p>However, at the time of writing (09.10.2023), only biometric UV is supported and PIN UV is about to come
+in the near future.</p>
+</div>
+</div>
+<div id="admonition-tip" class="admonition tip">
+<div class="admonition-title">
+<p>Tip</p>
+<p><a class="admonition-anchor-link" href="config/fido.html#admonition-tip"></a></p>
+</div>
+<div>
+<p>If you want to register an Android device for a Passkey only account, but you are using for instance Yubikeys
+with PIN UV, you can do the following trick to get it done (works only with the latest Play store version):</p>
+<ul>
+<li>Create a password for your account, if it does not exist yet</li>
+<li>Remove all registered passkeys</li>
+<li>Log in to your account view on your Android device and another device that works with your Yubikey</li>
+<li>With both devices logged in at the same time:
+<ul>
+<li>Register a new passkey with Android and choose &quot;this device&quot;, which will create a Passkey flow with your fingerprint</li>
+<li>Register the Yubikey on the other device</li>
+</ul>
+</li>
+<li>You should now have 2 Passkeys: Android + Yubikey</li>
+<li>Navigate to the Password page inside your account on any device and convert it to Passkey only</li>
+<li>You should now be able to log in on your Android device with Passkey only and with your Yubikey</li>
+</ul>
+</div>
+</div>
+<h2 id="config-1"><a class="header" href="#config-1">Config</a></h2>
+<p>You should use FIDO 2 in production for 2FA / MFA.
+To make sure it works, you need to check your the config.</p>
+<p>Set / check some variables in your config, to make sure it works correctly.</p>
+<h3 id="rp_id"><a class="header" href="#rp_id"><code>RP_ID</code></a></h3>
+<p>This usually is the 'Relaying Party (RP) ID', which should be your effective domain name.
+For the above example, since our application is available under 'auth.example.com', this should also be:</p>
+<pre><code>RP_ID=auth.example.com
+</code></pre>
 <div id="admonition-caution-1" class="admonition warning">
 <div class="admonition-title">
 <p>Caution</p>
 <p><a class="admonition-anchor-link" href="config/fido.html#admonition-caution-1"></a></p>
+</div>
+<div>
+<p>When the <code>RP_ID</code> changes, already registered devices will stop working and users cannot log in anymore!
+Be very careful, if you want / need to do this in production.</p>
+</div>
+</div>
+<h3 id="rp_origin"><a class="header" href="#rp_origin"><code>RP_ORIGIN</code></a></h3>
+<p>The seconds important variable for FIDO 2 is the <code>RP_ORIGIN</code>. This needs to be set to the URL containing the effective
+domain name.</p>
+<div id="admonition-caution-2" class="admonition warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="config/fido.html#admonition-caution-2"></a></p>
 </div>
 <div>
 <p>The <code>RP_ORIGIN</code> must always include the port number, even it is just the default 443 for HTTPS.</p>
@@ -839,23 +905,19 @@ domain name.</p>
 <p>In this example, assuming rauthy will be available at port 443, correct would be:</p>
 <pre><code>RP_ORIGIN=https://auth.example.com:443
 </code></pre>
-<h2 id="rp_name"><a class="header" href="#rp_name"><code>RP_NAME</code></a></h2>
+<h3 id="rp_name"><a class="header" href="#rp_name"><code>RP_NAME</code></a></h3>
 <p>This variable can be set to anything &quot;nice&quot;.
 This may be shown to the user in a way like &quot;<code>RP_BNAE</code> requests your security key ...&quot;. If this is shown depends on the
 OS and the browser the client uses. Firefox, for instance, does not show this at the time of writing.</p>
 <p>You can change the <code>RP_NAME</code> later on without affecting the validation of already registered keys.</p>
-<h2 id="webauthn_renew_exp"><a class="header" href="#webauthn_renew_exp"><code>WEBAUTHN_RENEW_EXP</code></a></h2>
-<p>In my opinion, passwordless login with WebAuthn is the best thing for the user experience and the safest too.</p>
-<p>However, not all operating systems and browsers have caught up fully yet until a point, where I would use only WebAuthn
-on its own. Firefox for instance is a good example. On Linux and Mac OS, it does not work with a PIN or any other second
-factor on your device, which basically downgrades the login to a (strong) single factor again.</p>
-<p>For this reason, Rauthy will always prompt a user at least once for the password on a new machine, even with active
-security keys. The keys are used either as a strong second factor, when they do not work with a PIN, or bump up the whole
+<h3 id="webauthn_renew_exp"><a class="header" href="#webauthn_renew_exp"><code>WEBAUTHN_RENEW_EXP</code></a></h3>
+<p>For all non Passkey only accounts, Rauthy will always prompt a user at least once for the password on a new machine, even with active
+passkeys. The keys are used either as a strong second factor, when they do not work with a PIN, or bump up the whole
 login to real MFA, if the OS / Browser / Key does support this.</p>
 <p>When a user as logged in successfully on a new device and active 2FA / MFA, he will get an encrypted cookie.<br />
 The lifetime of this cookie can be configured with <code>WEBAUTHN_RENEW_EXP</code>.<br />
 The <strong>default</strong> of this value is <strong>2160 hours</strong>. </p>
-<p>As long as this cookie is present, non-expired and can be encrypted by the backend, the user can log in from this very
+<p>As long as this cookie is present and can be decrypted by the backend, the user can log in from this very
 device with his FIDO 2 key only, which makes a very good user experience for the whole login flow. The E-Mail will
 already be filled automatically and only a single click on the login button is necessary.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="encryption"><a class="header" href="#encryption">Encryption</a></h1>
@@ -1150,7 +1212,7 @@ redhac.local.key.pem
 As mentioned above already, another dedicated TLS project is in the making.</p>
 </div>
 </div>
-<h2 id="config-1"><a class="header" href="#config-1">Config</a></h2>
+<h2 id="config-2"><a class="header" href="#config-2">Config</a></h2>
 <p>The <a href="config/../config/config.html">reference config</a> contains a <code>TLS</code> section with all the values you can set.</p>
 <h3 id="cache"><a class="header" href="#cache">Cache</a></h3>
 <p>The cache layer (optionally) creates an mTLS connection and validates client certificates, if they are configured.<br />
@@ -1269,20 +1331,22 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # registrations with 'user@gmail.com' (default: '')
 #USER_REG_DOMAIN_RESTRICTION=some-domain.com
 
-# If set to 'true', this will validate the remote peer IP address with each request and compare it with the
-# IP which was used during the initial session creation / login.
+# If set to 'true', this will validate the remote peer IP address with each request 
+# and compare it with the IP which was used during the initial session creation / login.
 # If the IP is different, the session will be rejected.
-# This is a security hardening and prevents stolen access credentials, for instance if an attacker might have
-# copied the encrypted session cookie and the XSRF token from the local storage from a user. However, this event
-# is really unlikely, since it may only happen if an attacker has direct access to the machine itself.
+# This is a security hardening and prevents stolen access credentials, for instance if
+# an attacker might have copied the encrypted session cookie and the XSRF token from
+# the local storage from a user. However, this event is really unlikely, since it may
+# only happen if an attacker has direct access to the machine itself.
 #
-# If your users are using mobile networks and get new IP addresses all the time, this means they have to do a
-# new login each time. This is no big deal at all with Webauthn / FIDO keys anyway and should not be a reason
-# to deactivate this feature.
+# If your users are using mobile networks and get new IP addresses all the time, this
+# means they have to do a new login each time. This is no big deal at all with 
+# Webauthn / FIDO keys anyway and should not be a reason to deactivate this feature.
 #
-# Caution: If you are running behind a reverse proxy which does not provide the X-FORWARDED-FOR header correctly,
-# or you have the PROXY_MODE in this config disabled, this feature will not work. You can validate the IPs for
-# each session in the Admin UI. If these are correct, your setup is okay.
+# Caution: If you are running behind a reverse proxy which does not provide the 
+# X-FORWARDED-FOR header correctly, or you have the PROXY_MODE in this config disabled,
+# this feature will not work. You can validate the IPs for each session in the Admin
+# UI. If these are correct, your setup is okay.
 #
 # (default: true)
 #SESSION_VALIDATE_IP=true
@@ -1600,17 +1664,18 @@ PROXY_MODE=false
 # default: 9090
 #METRICS_PORT=9090
 
-# If the Swagger UI should be served together with the /metrics route on the internal server.
-# It it then reachable via:
+# If the Swagger UI should be served together with the /metrics route on the internal
+# server. It it then reachable via:
 # http://METRICS_ADDR:METRICS_PORT/docs/v1/swagger-ui/
 # (default: true)
 #SWAGGER_UI_INTERNAL=true
 
-# If the Swagger UI should be served externally as well. This makes the link in the Admin UI work.
+# If the Swagger UI should be served externally as well. This makes the link in the
+# Admin UI work.
 #
 # CAUTION: The Swagger UI is open and does not require any login to be seen!
-# Rauthy is open source, which means anyone could just download it and see on their own,
-# but it may be a security concern to just expose less information.
+# Rauthy is open source, which means anyone could just download it and see on their
+# own, but it may be a security concern to just expose less information.
 # (default: false)
 #SWAGGER_UI_EXTERNAL=false
 
