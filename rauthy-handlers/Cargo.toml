@@ -6,28 +6,28 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-actix = "0.13"
-actix-multipart = "0.6.0"
-actix-web = { version = "4", features = ["rustls"] }
-actix-web-actors = "4"
-actix-web-lab = "0.19"
+actix = { workspace = true }
+actix-multipart = { workspace = true }
+actix-web = { workspace = true }
+actix-web-actors = { workspace = true }
+actix-web-lab = { workspace = true }
 actix-web-validator = "5"
-actix-web-grants = "3"
+actix-web-grants = { workspace = true }
 futures = "0.3"
-lazy_static = "1"
+lazy_static = { workspace = true }
 mime_guess = "2"
-num_cpus = "1"
+num_cpus = { workspace = true }
 rauthy-common = { path = "../rauthy-common" }
 rauthy-models = { path = "../rauthy-models" }
 rauthy-service = { path = "../rauthy-service" }
 redhac = { workspace = true }
 rust-embed = { version = "6.8", features = ["actix-web", "tokio"] }
-time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
-tracing = { version = "0.1", features = ["attributes"] }
-tokio = { version = "1", features = ["full"] }
-utoipa = { version = "3", features = ["actix_extras", "chrono", "openapi_extensions"] }
-utoipa-swagger-ui = { version = "3", features = ["actix-web"] }
-validator = { version = "0.16", features = ["derive"] }
+time = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+utoipa = { workspace = true }
+utoipa-swagger-ui = { workspace = true }
+validator = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = "1"
