@@ -1,6 +1,7 @@
 use crate::app_state::DbPool;
 use crate::entity::clients::Client;
 use crate::entity::colors::ColorEntity;
+use crate::entity::config::ConfigEntity;
 use crate::entity::groups::Group;
 use crate::entity::jwk::{Jwk, JwkKeyPairType};
 use crate::entity::magic_links::MagicLink;
@@ -119,45 +120,6 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         rauthy.challenge,
     );
 
-    // match *DB_TYPE {
-    //     DbType::Sqlite => {
-    //         sqlx::query(r#"insert or replace into clients (id, name, enabled, confidential,
-    //         secret, secret_kid, redirect_uris, post_logout_redirect_uris, allowed_origins,
-    //         flows_enabled, access_token_alg, id_token_alg, refresh_token, auth_code_lifetime,
-    //         access_token_lifetime, scopes, default_scopes, challenge)
-    //         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#)
-    //     }
-    //     DbType::Postgres => {
-    //         sqlx::query(r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
-    //         redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled,
-    //         access_token_alg, id_token_alg, refresh_token, auth_code_lifetime,
-    //         access_token_lifetime, scopes, default_scopes, challenge)
-    //         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-    //         on conflict(id) do update set name = $2, enabled = $3, confidential = $4, secret = $5,
-    //         secret_kid = $6, redirect_uris = $7, post_logout_redirect_uris = $8, allowed_origins = $9,
-    //         flows_enabled = $10, access_token_alg = $11, id_token_alg = $12, refresh_token = $13,
-    //         auth_code_lifetime = $14, access_token_lifetime = $15, scopes = $16, default_scopes = $17,
-    //         challenge = $18"#)
-    //     }
-    // }
-    //     .bind(&rauthy.id)
-    //     .bind(&rauthy.name)
-    //     .bind(rauthy.enabled)
-    //     .bind(rauthy.confidential)
-    //     .bind(&rauthy.secret)
-    //     .bind(&rauthy.secret_kid)
-    //     .bind(&rauthy.redirect_uris)
-    //     .bind(&rauthy.post_logout_redirect_uris)
-    //     .bind(&rauthy.allowed_origins)
-    //     .bind(&rauthy.flows_enabled)
-    //     .bind(&rauthy.access_token_alg)
-    //     .bind(&rauthy.id_token_alg)
-    //     .bind(rauthy.refresh_token)
-    //     .bind(rauthy.auth_code_lifetime)
-    //     .bind(rauthy.access_token_lifetime)
-    //     .bind(&rauthy.scopes)
-    //     .bind(&rauthy.default_scopes)
-    //     .bind(&rauthy.challenge)
     q.execute(db).await?;
 
     Ok(())
@@ -303,23 +265,16 @@ pub async fn migrate_from_sqlite(
 ) -> Result<(), ErrorResponse> {
     info!("Starting migration to another DB");
 
-    // WEBNAUTHN
-    let before = sqlx::query_as::<_, PasskeyEntity>("SELECT * FROM passkeys")
+    // CONFIG
+    let before = sqlx::query_as::<_, ConfigEntity>("SELECT * FROM config")
         .fetch_all(&db_from)
         .await?;
-    sqlx::query("DELETE FROM passkeys").execute(db_to).await?;
+    sqlx::query("DELETE FROM config").execute(db_to).await?;
     for b in before {
         sqlx::query!(
-            r#"INSERT INTO passkeys
-            (user_id, name, passkey_user_id, passkey, credential_id, registered, last_used)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
-            b.user_id,
-            b.name,
-            b.passkey_user_id,
-            b.passkey,
-            b.credential_id,
-            b.registered,
-            b.last_used,
+            "INSERT INTO config (id, data) VALUES ($1, $2)",
+            b.id,
+            b.data,
         )
         .execute(db_to)
         .await?;
@@ -332,10 +287,11 @@ pub async fn migrate_from_sqlite(
     sqlx::query("delete from users").execute(db_to).await?;
     for b in before {
         sqlx::query(
-            r#"insert into users(id, email, given_name, family_name, password, roles, groups,
-            enabled, email_verified, password_expires, created_at, last_login, last_failed_login,
-            failed_login_attempts)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
+            r#"insert into users
+            (id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
+            password_expires, created_at, last_login, last_failed_login, failed_login_attempts,
+            language, webauthn_user_id, user_expires)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)"#,
         )
         .bind(b.id)
         .bind(b.email)
@@ -351,8 +307,34 @@ pub async fn migrate_from_sqlite(
         .bind(b.last_login)
         .bind(b.last_failed_login)
         .bind(b.failed_login_attempts)
+        .bind(b.language)
+        .bind(b.webauthn_user_id)
+        .bind(b.user_expires)
         .execute(db_to)
         .await?;
+    }
+
+    // PASSKEYS
+    let before = sqlx::query_as::<_, PasskeyEntity>("SELECT * FROM passkeys")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("DELETE FROM passkeys").execute(db_to).await?;
+    for b in before {
+        sqlx::query!(
+            r#"INSERT INTO passkeys
+            (user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+            b.user_id,
+            b.name,
+            b.passkey_user_id,
+            b.passkey,
+            b.credential_id,
+            b.registered,
+            b.last_used,
+            b.user_verified,
+        )
+            .execute(db_to)
+            .await?;
     }
 
     // CLIENTS
@@ -458,8 +440,9 @@ pub async fn migrate_from_sqlite(
         .await?;
     for b in before {
         sqlx::query(
-            r#"insert into magic_links (id, user_id, csrf_token, cookie, exp, used)
-            values ($1, $2, $3, $4, $5, $6)"#,
+            r#"insert into magic_links
+            (id, user_id, csrf_token, cookie, exp, used, usage)
+            values ($1, $2, $3, $4, $5, $6, $7)"#,
         )
         .bind(&b.id)
         .bind(&b.user_id)
@@ -467,6 +450,7 @@ pub async fn migrate_from_sqlite(
         .bind(&b.cookie)
         .bind(b.exp)
         .bind(b.used)
+        .bind(b.usage)
         .execute(db_to)
         .await?;
     }
@@ -605,24 +589,24 @@ pub async fn migrate_from_sqlite(
             .await?;
     }
 
-    // PASSKEYS
-    let before = sqlx::query_as::<_, PasskeyEntity>("select * from passkeys")
-        .fetch_all(&db_from)
-        .await?;
-    sqlx::query("delete from webauthn").execute(db_to).await?;
-    for b in before {
-        sqlx::query(
-            r#"insert into passkeys (user_id, name, passkey, registered, last_used)
-            values ($1, $2, $3, $4, $5)"#,
-        )
-        .bind(b.user_id)
-        .bind(b.name)
-        .bind(b.passkey)
-        .bind(b.registered)
-        .bind(b.last_used)
-        .execute(db_to)
-        .await?;
-    }
+    // // PASSKEYS
+    // let before = sqlx::query_as::<_, PasskeyEntity>("select * from passkeys")
+    //     .fetch_all(&db_from)
+    //     .await?;
+    // sqlx::query("delete from webauthn").execute(db_to).await?;
+    // for b in before {
+    //     sqlx::query(
+    //         r#"insert into passkeys (user_id, name, passkey, registered, last_used)
+    //         values ($1, $2, $3, $4, $5)"#,
+    //     )
+    //     .bind(b.user_id)
+    //     .bind(b.name)
+    //     .bind(b.passkey)
+    //     .bind(b.registered)
+    //     .bind(b.last_used)
+    //     .execute(db_to)
+    //     .await?;
+    // }
 
     Ok(())
 }
@@ -633,23 +617,16 @@ pub async fn migrate_from_postgres(
 ) -> Result<(), ErrorResponse> {
     info!("Starting migration to another DB");
 
-    // WEBNAUTHN
-    let before = sqlx::query_as::<_, PasskeyEntity>("SELECT * FROM rauthy.passkeys")
+    // CONFIG
+    let before = sqlx::query_as::<_, ConfigEntity>("SELECT id, data FROM rauthy.config")
         .fetch_all(&db_from)
         .await?;
-    sqlx::query("DELETE FROM passkeys").execute(db_to).await?;
+    sqlx::query("DELETE FROM config").execute(db_to).await?;
     for b in before {
         sqlx::query!(
-            r#"INSERT INTO passkeys
-            (user_id, name, passkey_user_id, passkey, credential_id, registered, last_used)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
-            b.user_id,
-            b.name,
-            b.passkey_user_id,
-            b.passkey,
-            b.credential_id,
-            b.registered,
-            b.last_used,
+            "INSERT INTO config (id, data) VALUES ($1, $2)",
+            b.id,
+            b.data,
         )
         .execute(db_to)
         .await?;
@@ -662,10 +639,11 @@ pub async fn migrate_from_postgres(
     sqlx::query("delete from users").execute(db_to).await?;
     for b in before {
         sqlx::query(
-            r#"insert into users(id, email, given_name, family_name, password, roles, groups,
-            enabled, email_verified, password_expires, created_at, last_login, last_failed_login,
-            failed_login_attempts)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
+            r#"insert into users
+            (id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
+            password_expires, created_at, last_login, last_failed_login, failed_login_attempts,
+            language, webauthn_user_id, user_expires)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)"#,
         )
         .bind(b.id)
         .bind(b.email)
@@ -681,8 +659,34 @@ pub async fn migrate_from_postgres(
         .bind(b.last_login)
         .bind(b.last_failed_login)
         .bind(b.failed_login_attempts)
+        .bind(b.language)
+        .bind(b.webauthn_user_id)
+        .bind(b.user_expires)
         .execute(db_to)
         .await?;
+    }
+
+    // PASSKEYS
+    let before = sqlx::query_as::<_, PasskeyEntity>("SELECT * FROM rauthy.passkeys")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("DELETE FROM passkeys").execute(db_to).await?;
+    for b in before {
+        sqlx::query!(
+            r#"INSERT INTO passkeys
+            (user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+            b.user_id,
+            b.name,
+            b.passkey_user_id,
+            b.passkey,
+            b.credential_id,
+            b.registered,
+            b.last_used,
+            b.user_verified,
+        )
+            .execute(db_to)
+            .await?;
     }
 
     // CLIENTS
@@ -788,8 +792,9 @@ pub async fn migrate_from_postgres(
         .await?;
     for b in before {
         sqlx::query(
-            r#"insert into magic_links (id, user_id, csrf_token, cookie, exp, used)
-            values ($1, $2, $3, $4, $5, $6)"#,
+            r#"insert into magic_links
+            (id, user_id, csrf_token, cookie, exp, used, usage)
+            values ($1, $2, $3, $4, $5, $6, $7)"#,
         )
         .bind(&b.id)
         .bind(&b.user_id)
@@ -797,6 +802,7 @@ pub async fn migrate_from_postgres(
         .bind(&b.cookie)
         .bind(b.exp)
         .bind(b.used)
+        .bind(b.usage)
         .execute(db_to)
         .await?;
     }
@@ -936,24 +942,24 @@ pub async fn migrate_from_postgres(
             .await?;
     }
 
-    // PASSKEYS
-    let before = sqlx::query_as::<_, PasskeyEntity>("select * from passkeys")
-        .fetch_all(&db_from)
-        .await?;
-    sqlx::query("delete from webauthn").execute(db_to).await?;
-    for b in before {
-        sqlx::query(
-            r#"insert into passkeys (user_id, name, passkey, registered, last_used)
-            values ($1, $2, $3, $4, $5)"#,
-        )
-        .bind(b.user_id)
-        .bind(b.name)
-        .bind(b.passkey)
-        .bind(b.registered)
-        .bind(b.last_used)
-        .execute(db_to)
-        .await?;
-    }
+    // // PASSKEYS
+    // let before = sqlx::query_as::<_, PasskeyEntity>("select * from passkeys")
+    //     .fetch_all(&db_from)
+    //     .await?;
+    // sqlx::query("delete from passkeys").execute(db_to).await?;
+    // for b in before {
+    //     sqlx::query(
+    //         r#"insert into passkeys (user_id, name, passkey, registered, last_used)
+    //         values ($1, $2, $3, $4, $5)"#,
+    //     )
+    //     .bind(b.user_id)
+    //     .bind(b.name)
+    //     .bind(b.passkey)
+    //     .bind(b.registered)
+    //     .bind(b.last_used)
+    //     .execute(db_to)
+    //     .await?;
+    // }
 
     Ok(())
 }

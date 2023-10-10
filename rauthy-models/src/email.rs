@@ -97,7 +97,7 @@ pub struct EMailConfirmChangeTxt<'a> {
 #[derive(Default, Template)]
 #[template(path = "email/reset.html")]
 pub struct EMailResetHtml<'a> {
-    pub pub_url: &'a str,
+    pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
     // i18n
@@ -111,7 +111,7 @@ pub struct EMailResetHtml<'a> {
 #[derive(Default, Template)]
 #[template(path = "email/reset.txt")]
 pub struct EmailResetTxt<'a> {
-    pub pub_url: &'a str,
+    pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
     // i18n
@@ -124,7 +124,7 @@ pub struct EmailResetTxt<'a> {
 #[derive(Default, Template)]
 #[template(path = "email/reset_info.html")]
 pub struct EMailResetInfoHtml<'a> {
-    pub pub_url: &'a str,
+    pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
     // i18n
@@ -137,7 +137,7 @@ pub struct EMailResetInfoHtml<'a> {
 #[derive(Default, Template)]
 #[template(path = "email/reset_info.txt")]
 pub struct EmailResetInfoTxt<'a> {
-    pub pub_url: &'a str,
+    pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
     // i18n
@@ -266,7 +266,7 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
 
     let i18n = I18nEmailReset::build(&user.language);
     let text = EmailResetTxt {
-        pub_url: &data.public_url,
+        email_sub_prefix: &EMAIL_SUB_PREFIX,
         link: &link,
         exp: &exp,
         header: i18n.header,
@@ -276,7 +276,7 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
     };
 
     let html = EMailResetHtml {
-        pub_url: &data.public_url,
+        email_sub_prefix: &EMAIL_SUB_PREFIX,
         link: &link,
         exp: &exp,
         header: i18n.header,
@@ -314,7 +314,7 @@ pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
 
     let i18n = I18nEmailResetInfo::build(&user.language);
     let text = EmailResetInfoTxt {
-        pub_url: &data.public_url,
+        email_sub_prefix: &EMAIL_SUB_PREFIX,
         link: &link,
         exp: &exp.to_string(),
         expires_1: i18n.expires_1,
@@ -323,7 +323,7 @@ pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
     };
 
     let html = EMailResetInfoHtml {
-        pub_url: &data.public_url,
+        email_sub_prefix: &EMAIL_SUB_PREFIX,
         link: &link,
         exp: &exp.to_string(),
         expires_1: i18n.expires_1,
