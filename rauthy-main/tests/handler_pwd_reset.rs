@@ -27,8 +27,8 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     let bad_url_get = format!("{backend_url}/users/2PYV3STNz3MN7VnPjJVcPQaX/reset/{reset_id}");
     let res = reqwest::Client::new().get(&bad_url_get).send().await?;
     assert_eq!(res.status(), 400);
-    let err = res.json::<ErrorResponse>().await?;
-    assert_eq!(err.message, "The user id is invalid");
+    let err_html = res.text().await?;
+    assert!(err_html.contains("request is malformed or incorrect"));
 
     // correct GET
     let mut res = reqwest::Client::new().get(&url_get).send().await?;
@@ -37,11 +37,9 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     // doing the same GET without the pwd_reset_cookie should fail now
     let res_2 = reqwest::Client::new().get(&url_get).send().await?;
     assert_eq!(res_2.status(), 403);
-    let err = res_2.json::<ErrorResponse>().await?;
-    assert_eq!(err.error, ErrorResponseType::Forbidden);
-    assert_eq!(
-        err.message,
-        "The requested password reset link is already tied to another session"
+    let err_html = res_2.text().await?;
+    assert!(
+        err_html.contains("The requested password reset link is already tied to another session")
     );
 
     // get the password reset cookie

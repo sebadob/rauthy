@@ -59,12 +59,14 @@ impl DbVersion {
         debug!("Current Rauthy Version: {:?}", app_version);
 
         // check DB version for compatibility
+        let db_exists = query!("select id from config limit 1")
+            .fetch_one(db)
+            .await
+            .is_ok();
         let db_version = match Self::find(db).await {
             None => {
                 debug!(" No Current DB Version found");
-                // check if the DB is completely new
-                let db_exists = query!("select id from config limit 1").fetch_one(db).await;
-                if db_exists.is_ok() {
+                if db_exists {
                     Self::is_db_compatible(db, &app_version, None).await?;
                 }
 
@@ -72,7 +74,10 @@ impl DbVersion {
             }
             Some(db_version) => {
                 debug!("Current DB Version: {:?}", db_version);
-                Self::is_db_compatible(db, &app_version, Some(&db_version.version)).await?;
+
+                if db_exists {
+                    Self::is_db_compatible(db, &app_version, Some(&db_version.version)).await?;
+                }
 
                 Some(db_version.version)
             }
@@ -117,9 +122,19 @@ impl DbVersion {
         // check the DB version in another way if we did not find an existing DB version
 
         // the passkeys table was introduced with v0.15.0
-        let passkeys_exist = query!("select user_id from passkeys limit 1")
-            .fetch_one(db)
-            .await;
+        #[cfg(not(feature = "sqlite"))]
+        let passkeys_exist = query!(
+            r#"select * from pg_tables
+            where schemaname = 'rauthy' and tablename = 'passkeys' limit 1"#
+        )
+        .fetch_one(db)
+        .await;
+        #[cfg(feature = "sqlite")]
+        let passkeys_exist = query!(
+            "select * from sqlite_master where type = 'table' and name = 'passkeys' limit 1"
+        )
+        .fetch_one(db)
+        .await;
         if passkeys_exist.is_err() {
             panic!("\nYou need to start at least rauthy v0.15 before you can upgrade");
         }
