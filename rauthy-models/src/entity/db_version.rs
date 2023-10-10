@@ -123,12 +123,9 @@ impl DbVersion {
 
         // the passkeys table was introduced with v0.15.0
         #[cfg(not(feature = "sqlite"))]
-        let passkeys_exist = query!(
-            r#"select * from pg_tables
-            where schemaname = 'rauthy' and tablename = 'passkeys' limit 1"#
-        )
-        .fetch_one(db)
-        .await;
+        let passkeys_exist = query!("select * from pg_tables where tablename = 'passkeys' limit 1")
+            .fetch_one(db)
+            .await;
         #[cfg(feature = "sqlite")]
         let passkeys_exist = query!(
             "select * from sqlite_master where type = 'table' and name = 'passkeys' limit 1"
