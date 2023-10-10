@@ -273,11 +273,13 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         .wrap(metrics.clone())
                         .service(swagger_clone.clone())
                 })
+                .workers(1)
                 .bind(addr_full)
                 .unwrap()
                 .run()
             } else {
                 HttpServer::new(move || App::new().wrap(metrics.clone()))
+                    .workers(1)
                     .bind(addr_full)
                     .unwrap()
                     .run()

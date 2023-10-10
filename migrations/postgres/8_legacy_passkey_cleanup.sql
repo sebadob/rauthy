@@ -29,7 +29,7 @@ drop index passkeys_credential_id_index;
 create unique index passkeys_credential_id_uindex
     on passkeys (credential_id);
 
-create unique index passkeys_passkey_user_id_uindex
+create index passkeys_passkey_user_id_uindex
     on passkeys (passkey_user_id);
 
 -- add 'uv' to passkeys

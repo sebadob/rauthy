@@ -297,7 +297,6 @@
     }
 
     .container {
-        margin-top: -10px;
         padding-left: 10px;
         display: flex;
         flex-direction: column;

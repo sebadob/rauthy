@@ -16,7 +16,13 @@
         <p>{t.errorText}</p>
 
         {#if t.detailsText}
-            <div class="showDetails" on:click={() => showDetails = !showDetails}>
+            <div
+                    role="button"
+                    tabindex="0"
+                    class="showDetails"
+                    on:click={() => showDetails = !showDetails}
+                    on:keypress={() => showDetails = !showDetails}
+            >
                 {t.details}
                 <div
                         class="chevron"
