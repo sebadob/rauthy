@@ -163,6 +163,11 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 ############# E-MAIL ################
 #####################################
 
+# Will be used as the prefix for the E-Mail subject for each E-Mail that will be sent out to a client.
+# This can be used to further customize your deployment.
+# default: "Rauthy IAM"
+EMAIL_SUB_PREFIX="Rauthy IAM"
+
 SMTP_USERNAME=
 #SMTP_PASSWORD=
 SMTP_URL=
