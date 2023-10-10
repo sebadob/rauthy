@@ -164,8 +164,6 @@
 
         {#if accType === "password" || convertAccount}
             <div in:blur={{ duration: 350 }}>
-                <h3>{t.changePassword}</h3>
-
                 <AccModPwd
                         bind:t
                         bind:formValues

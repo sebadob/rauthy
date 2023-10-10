@@ -45,10 +45,10 @@
         <LangSelector absolute absoluteRight updateBackend/>
 
         <div class="headerPhone">
-            <h2>{t.user} {t.account}</h2>
+            <h3>{t.user} {t.account}</h3>
         </div>
 
-        <div class="containerPhone">
+        <div class="container">
             <AccNav bind:t bind:selected showWide />
 
             <div class="innerPhone">
@@ -67,54 +67,48 @@
         </div>
     </div>
 {:else}
-    <LangSelector absolute updateBackend/>
+    <div class="wrapper">
+        <LangSelector absolute updateBackend/>
 
-    <div class="header">
-        <h2>{t.user} {t.account}</h2>
-    </div>
+        <div class="header">
+            <h3>{t.user} {t.account}</h3>
+        </div>
 
-    <div class="container">
-        <AccNav bind:t bind:selected/>
+        <div class="container">
+            <AccNav bind:t bind:selected showWide />
 
-        <div class="inner borderLeft">
-            <div style="opacity: {$op}">
-                {#if content === t.navInfo}
-                    <AccInfo bind:t bind:user />
-                {:else if content === t.navEdit}
-                    <AccEdit bind:t bind:user />
-                {:else if content === t.navPassword}
-                    <AccPassword bind:t bind:user />
-                {:else if content === t.navMfa}
-                    <AccMFA bind:t bind:sessionInfo bind:user/>
-                {/if}
+            <div class="inner">
+                <div style="opacity: {$op}">
+                    {#if content === t.navInfo}
+                        <AccInfo bind:t bind:user />
+                    {:else if content === t.navEdit}
+                        <AccEdit bind:t bind:user />
+                    {:else if content === t.navPassword}
+                        <AccPassword bind:t bind:user />
+                    {:else if content === t.navMfa}
+                        <AccMFA bind:t bind:sessionInfo bind:user/>
+                    {/if}
+                </div>
             </div>
         </div>
     </div>
 {/if}
 
 <style>
-    .borderLeft {
-        padding-left: 20px;
-        border-left: 1px solid var(--col-acnt);
-    }
-
     .container {
-        display: flex;
-    }
-
-    .containerPhone {
         display: flex;
         flex-direction: column;
     }
 
     .header {
         width: 100%;
-        margin-left: 150px;
-        margin-bottom: 30px;
+        margin-left: 10px;
+        margin-bottom: -10px;
     }
 
     .headerPhone {
         margin-left: 10px;
+        margin-bottom: -10px;
     }
 
     .inner {

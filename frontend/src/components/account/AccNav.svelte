@@ -39,7 +39,6 @@
 
 <style>
     .container {
-        margin-top: 5px;
         margin-right: 10px;
         display: flex;
         flex-direction: column;
@@ -52,5 +51,6 @@
         display: flex;
         flex-direction: row;
         align-items: center;
+        flex-wrap: wrap;
     }
 </style>

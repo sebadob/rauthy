@@ -149,11 +149,6 @@
 </div>
 
 <style>
-    .wrapper {
-        display: flex;
-        flex-direction: row;
-    }
-
     .container {
         padding: 0 5px;
         display: flex;
@@ -179,5 +174,11 @@
     .success {
         margin: 5px;
         color: var(--col-ok);
+    }
+
+    .wrapper {
+        margin-top: 10px;
+        display: flex;
+        flex-direction: row;
     }
 </style>
