@@ -1,4 +1,4 @@
-{{ expires_1 }} {{ pub_url }} {{ expires_2 }} {{ exp }}
+{{ expires_1 }} {{ email_sub_prefix }} {{ expires_2 }} {{ exp }}
 
 {{ update }}
 {{ link }}
