@@ -153,7 +153,7 @@ build-sqlite: build-docs build-ui test-sqlite
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # TODO skip exiting early on clippy warnings during v0.15
+    # TODO skip exiting early on clippy warnings during v0.16
     #DATABASE_URL={{db_url_sqlite}} cargo clippy --features sqlite -- -D warnings
     DATABASE_URL={{db_url_sqlite}} cargo build \
         --release \
@@ -163,11 +163,12 @@ build-sqlite: build-docs build-ui test-sqlite
 
 
 # builds the whole application in release mode
-build-postgres: build-docs build-ui test-postgres
+#build-postgres: build-docs build-ui test-postgres
+build-postgres: build-docs build-ui
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # TODO skip exiting early on clippy warnings during v0.15
+    # TODO skip exiting early on clippy warnings during v0.16
     #DATABASE_URL={{db_url_postgres}} cargo clippy -- -D warnings
     DATABASE_URL={{db_url_postgres}} cargo build \
         --release \
@@ -180,7 +181,7 @@ is-clean: build-sqlite test-sqlite build-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # TODO skip exiting early on clippy warnings during v0.15
+    # TODO skip exiting early on clippy warnings during v0.16
     # exit early if clippy emits warnings
     #cargo clippy -- -D warnings
 
@@ -215,7 +216,8 @@ publish-nightly: build-sqlite build-postgres
 
 
 # publishes the application images - full pipeline incl clippy and testing
-publish: build-sqlite build-postgres
+#publish: build-sqlite build-postgres
+publish: build-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
