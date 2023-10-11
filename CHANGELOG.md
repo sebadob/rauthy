@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.16.1
+
+This is a small bugfix release.  
+If you had an active and valid session from a v0.15.0, did an update to v0.16.0 and your session was still valid,
+it did not have valid information about the peer IP. This is mandatory for a new feature introduced with v0.16.0
+though and the warning logging in that case had an unwrap for the remote IP (which can never be null from v0.16.0 on),
+which then would panic.
+
+This is a tiny bugfix release that just gets rid of the possible panic and prints `UNKNOWN` into the logs instead.
+
+### Changes
+
+- print `UNKNOWN` into the logs for non-readable / -existing peer IPs
+[6dfd0f4](https://github.com/sebadob/rauthy/commit/6dfd0f4299b90c03d9b5a2fb4106d72f153146af)
+
 ## v0.16.0
 
 ### Breaking
