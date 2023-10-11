@@ -163,8 +163,7 @@ build-sqlite: build-docs build-ui test-sqlite
 
 
 # builds the whole application in release mode
-#build-postgres: build-docs build-ui test-postgres
-build-postgres: build-docs build-ui
+build-postgres: build-docs build-ui test-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
@@ -216,8 +215,7 @@ publish-nightly: build-sqlite build-postgres
 
 
 # publishes the application images - full pipeline incl clippy and testing
-#publish: build-sqlite build-postgres
-publish: build-postgres
+publish: build-sqlite build-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
