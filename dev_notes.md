@@ -17,9 +17,10 @@ start with simple polling every few seconds first because of the HA_MODE problem
 - implement an SSE endpoint for listening to events in real time
     - for SI deployments with SQLite, this is a no-brainer -> just copy each event to the corresponding tx 
     - for HA deployments:
-        - research sqlx + postgres + CDC to avoid additional deployment needs
-        - if postgres + cdc does not work out nicely with sqlx, think about using a NATS deployment for this task
+        - research sqlx + postgres + CDC to avoid additional deployment needs (or maybe just listen / notify? KISS?)
+        - if postgres does not work out nicely, think about using a NATS deployment for this task
 - switch the UI component to the SSE stream
+- add some way of configuring an email (or webhook, slack, ... ?) which gets messages depending on configured event level
 
 ### other features (some may come with v0.18 depending on amount of work)
 

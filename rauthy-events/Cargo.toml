@@ -12,11 +12,13 @@ rauthy-common = { path = "../rauthy-common" }
 rauthy-handlers = { path = "../rauthy-handlers" }
 rauthy-models = { path = "../rauthy-models" }
 rauthy-service = { path = "../rauthy-service" }
+serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
+uuid = { version = "1", features = ["serde", "v7"] }
 validator = { workspace = true }
 
 [dev-dependencies]
