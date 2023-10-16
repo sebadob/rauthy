@@ -2982,6 +2982,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "rauthy-events"
+version = "0.16.1"
+dependencies = [
+ "chrono",
+ "flume",
+ "pretty_assertions",
+ "rauthy-common",
+ "rauthy-handlers",
+ "rauthy-models",
+ "rauthy-service",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tokio-test",
+ "tracing",
+ "tracing-subscriber",
+ "validator",
+]
+
+[[package]]
 name = "rauthy-handlers"
 version = "0.16.1"
 dependencies = [
