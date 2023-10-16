@@ -38,6 +38,8 @@ use rauthy_common::constants::{
 };
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::password_hasher;
+use rauthy_events::event::Event;
+use rauthy_events::listener::EventListener;
 use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
 use rauthy_handlers::middleware::session::RauthySessionMiddleware;
 use rauthy_handlers::openapi::ApiDoc;
@@ -160,11 +162,45 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (tx_email, rx_email) = mpsc::channel::<EMail>(16);
     tokio::spawn(email::sender(rx_email, test_mode));
 
+    // events listener
+    let (tx_events, rx_events) = flume::unbounded();
+    tokio::spawn(EventListener::listen(rx_events));
+
+    // // TODO REMOVE AFTER TESTING
+    // Event::brute_force("192.15.15.1".to_string())
+    //     .send(&tx_events)
+    //     .await
+    //     .unwrap();
+    // Event::dos("192.15.15.1".to_string())
+    //     .send(&tx_events)
+    //     .await
+    //     .unwrap();
+    // Event::invalid_login(2, "192.15.15.1".to_string())
+    //     .send(&tx_events)
+    //     .await
+    //     .unwrap();
+    // Event::invalid_login(5, "192.15.15.1".to_string())
+    //     .send(&tx_events)
+    //     .await
+    //     .unwrap();
+    // Event::invalid_login(7, "192.15.15.1".to_string())
+    //     .send(&tx_events)
+    //     .await
+    //     .unwrap();
+    // Event::ip_blacklisted("192.15.15.1".to_string())
+    //     .send(&tx_events)
+    //     .await
+    //     .unwrap();
+    // Event::rauthy_admin("sebastiandobe@mailbox.org".to_string())
+    //     .send(&tx_events)
+    //     .await
+    //     .unwrap();
+
     // build the application state
     let caches = Caches {
         ha_cache_config: cache_config.clone(),
     };
-    let app_state = web::Data::new(AppState::new(tx_email, caches).await?);
+    let app_state = web::Data::new(AppState::new(tx_email, tx_events, caches).await?);
 
     // TODO remove with v0.17
     TEMP_migrate_passkeys_uv(&app_state.db)

@@ -23,6 +23,7 @@ flume = { workspace = true }
 num_cpus = { workspace = true }
 prometheus = "0.13.3"
 rauthy-common = { path = "../rauthy-common" }
+rauthy-events = { path = "../rauthy-events" }
 rauthy-handlers = { path = "../rauthy-handlers" }
 rauthy-models = { path = "../rauthy-models" }
 rauthy-service = { path = "../rauthy-service" }

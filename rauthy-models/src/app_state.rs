@@ -8,6 +8,7 @@ use anyhow::Context;
 use argon2::Params;
 use rauthy_common::constants::{DATABASE_URL, DB_TYPE, DEV_MODE, PROXY_MODE};
 use rauthy_common::DbType;
+use rauthy_events::event::Event;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use sqlx::pool::PoolOptions;
@@ -52,12 +53,17 @@ pub struct AppState {
     pub ml_lt_pwd_first: u32,
     pub ml_lt_pwd_reset: u32,
     pub tx_email: mpsc::Sender<EMail>,
+    pub tx_events: flume::Sender<Event>,
     pub caches: Caches,
     pub webauthn: Arc<Webauthn>,
 }
 
 impl AppState {
-    pub async fn new(tx_email: mpsc::Sender<EMail>, caches: Caches) -> anyhow::Result<Self> {
+    pub async fn new(
+        tx_email: mpsc::Sender<EMail>,
+        tx_events: flume::Sender<Event>,
+        caches: Caches,
+    ) -> anyhow::Result<Self> {
         dotenvy::dotenv().ok();
         debug!("New AppState on {:?}", std::thread::current().id());
 
@@ -189,6 +195,7 @@ impl AppState {
             ml_lt_pwd_first,
             ml_lt_pwd_reset,
             tx_email,
+            tx_events,
             caches,
             webauthn,
         })
