@@ -440,11 +440,7 @@ impl Session {
             if (self.state == SessionState::Open || self.state == SessionState::Auth)
                 && self.remote_ip.as_ref() != Some(&ip)
             {
-                let session_ip = self
-                    .remote_ip
-                    .as_ref()
-                    .map(|ip| ip.as_str())
-                    .unwrap_or("UNKNOWN");
+                let session_ip = self.remote_ip.as_deref().unwrap_or("UNKNOWN");
                 warn!(
                     "Invalid access for session {} / {} with different IP: {}",
                     self.id, session_ip, ip,
