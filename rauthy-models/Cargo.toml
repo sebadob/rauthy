@@ -42,7 +42,6 @@ openssl-sys = { workspace = true }
 rand = { workspace = true }
 rand_core = { workspace = true }
 rauthy-common = { path = "../rauthy-common" }
-rauthy-events = { path = "../rauthy-events" }
 redhac = { workspace = true }
 regex = { workspace = true }
 ring = { workspace = true }

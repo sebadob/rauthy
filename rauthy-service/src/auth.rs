@@ -97,14 +97,28 @@ pub async fn authorize(
     }
 
     if let Some(pwd) = req_data.password {
-        user.validate_password(data, pwd).await?;
+        match user.validate_password(data, pwd).await {
+            Ok(_) => {
+                // update user info
+                // in case of webauthn login, the info will be updates in the auth finish step
+                user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
+                user.last_failed_login = None;
+                user.failed_login_attempts = None;
+                user.save(data, None, None).await?;
+            }
+            Err(err) => {
+                return Err(err);
+            }
+        }
 
-        // update user info
-        // in case of webauthn login, the info will be updates in the auth finish step
-        user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
-        user.last_failed_login = None;
-        user.failed_login_attempts = None;
-        user.save(data, None, None).await?;
+        // user.validate_password(data, pwd).await?;
+        //
+        // // update user info
+        // // in case of webauthn login, the info will be updates in the auth finish step
+        // user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
+        // user.last_failed_login = None;
+        // user.failed_login_attempts = None;
+        // user.save(data, None, None).await?;
     }
 
     let client = Client::find(data, req_data.client_id).await?;

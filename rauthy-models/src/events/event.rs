@@ -1,9 +1,11 @@
+use crate::app_state::DbPool;
 use chrono::{DateTime, Timelike, Utc};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::get_rand;
 use serde::{Deserialize, Serialize};
+use sqlx::query;
 use std::fmt::{Display, Formatter};
 use tracing::error;
-use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum EventLevel {
@@ -25,6 +27,18 @@ impl Display for EventLevel {
     }
 }
 
+impl From<i16> for EventLevel {
+    fn from(value: i16) -> Self {
+        match value {
+            0 => EventLevel::Info,
+            1 => EventLevel::Notice,
+            2 => EventLevel::Warning,
+            3 => EventLevel::Critical,
+            _ => unreachable!(),
+        }
+    }
+}
+
 impl EventLevel {
     pub fn as_str(&self) -> &str {
         match self {
@@ -32,6 +46,15 @@ impl EventLevel {
             EventLevel::Notice => "NOTICE",
             EventLevel::Warning => "WARNING",
             EventLevel::Critical => "CRITICAL",
+        }
+    }
+
+    pub fn value(&self) -> i16 {
+        match self {
+            EventLevel::Info => 0,
+            EventLevel::Notice => 1,
+            EventLevel::Warning => 2,
+            EventLevel::Critical => 3,
         }
     }
 }
@@ -47,22 +70,49 @@ pub enum EventType {
     PossibleDoS,
 }
 
-impl ToString for EventType {
-    fn to_string(&self) -> String {
+impl Display for EventType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            EventType::InvalidLogins(count) => format!("invalid logins: {}", count),
-            EventType::IpBlacklisted => "IP blacklisted".to_string(),
-            EventType::NewRauthyAdmin(email) => format!("new rauthy_admin member: {}", email),
-            EventType::PossibleBruteForce => "possible brute force".to_string(),
-            EventType::PossibleDoS => "possible DoS".to_string(),
+            EventType::InvalidLogins(count) => write!(f, "invalid logins: {}", count),
+            EventType::IpBlacklisted => write!(f, "IP blacklisted"),
+            EventType::NewRauthyAdmin(email) => write!(f, "new rauthy_admin member: {}", email),
+            EventType::PossibleBruteForce => write!(f, "possible brute force"),
+            EventType::PossibleDoS => write!(f, "possible DoS"),
+        }
+    }
+}
+
+impl EventType {
+    fn db_value(&self) -> String {
+        match self {
+            EventType::InvalidLogins(count) => format!("InvalidLogins${}", count),
+            EventType::IpBlacklisted => "IpBlacklisted".to_string(),
+            EventType::NewRauthyAdmin(email) => format!("NewRauthyAdmin${}", email),
+            EventType::PossibleBruteForce => "PossibleBruteForce".to_string(),
+            EventType::PossibleDoS => "PossibleDoS".to_string(),
+        }
+    }
+}
+
+impl From<String> for EventType {
+    fn from(value: String) -> Self {
+        let (typ, value) = value.split_once('$').unwrap_or((value.as_str(), ""));
+        match typ {
+            "InvalidLogins" => Self::InvalidLogins(value.parse::<u32>().unwrap_or_default()),
+            "IpBlacklisted" => Self::IpBlacklisted,
+            "NewRauthyAdmin" => Self::NewRauthyAdmin(value.to_string()),
+            "PossibleBruteForce" => Self::PossibleBruteForce,
+            "PossibleDoS" => Self::PossibleDoS,
+            _ => unreachable!(),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Event {
-    pub id: Uuid,
+    pub id: String,
     pub timestamp: DateTime<Utc>,
+    // pub timestamp: i64,
     pub level: EventLevel,
     pub typ: EventType,
     pub ip: Option<String>,
@@ -78,16 +128,39 @@ impl Display for Event {
             self.timestamp.minute(),
             self.timestamp.second(),
             self.level,
-            self.typ.to_string(),
+            self.typ,
             self.ip.as_deref().unwrap_or_default(),
         )
     }
 }
 
 impl Event {
+    pub async fn insert(&self, db: &DbPool) -> Result<(), ErrorResponse> {
+        let ts = self.timestamp.timestamp_millis();
+        let level = self.level.value();
+        let typ = self.typ.db_value();
+
+        query!(
+            "INSERT INTO events (id, timestamp, level, typ, ip) VALUES ($1, $2, $3, $4, $5)",
+            self.id,
+            ts,
+            level,
+            typ,
+            self.ip,
+        )
+        .execute(db)
+        .await?;
+        Ok(())
+    }
+}
+
+impl Event {
     pub fn new(level: EventLevel, typ: EventType, ip: Option<String>) -> Self {
+        // These short random strings are enough "id" because the PK in the DB is 'id + timestamp_millis'
+        let id = get_rand(8);
+
         Self {
-            id: Uuid::now_v7(),
+            id,
             timestamp: Utc::now(),
             level,
             typ,
