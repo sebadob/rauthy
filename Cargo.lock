@@ -649,12 +649,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "atomic"
-version = "0.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c59bdb34bc650a32731b31bd8f0829cc15d24a708ee31559e0bb34f2bc320cba"
-
-[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2935,7 +2929,6 @@ dependencies = [
  "pretty_assertions",
  "prometheus",
  "rauthy-common",
- "rauthy-events",
  "rauthy-handlers",
  "rauthy-models",
  "rauthy-service",
@@ -2986,25 +2979,6 @@ dependencies = [
  "tokio-test",
  "tracing",
  "utoipa",
-]
-
-[[package]]
-name = "rauthy-events"
-version = "0.16.1"
-dependencies = [
- "chrono",
- "flume",
- "pretty_assertions",
- "rauthy-common",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "tokio-test",
- "tracing",
- "tracing-subscriber",
- "uuid",
- "validator",
 ]
 
 [[package]]
@@ -3069,7 +3043,6 @@ dependencies = [
  "rand",
  "rand_core",
  "rauthy-common",
- "rauthy-events",
  "redhac",
  "regex",
  "ring 0.17.3",
@@ -4544,7 +4517,6 @@ version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "79daa5ed5740825c40b389c5e50312b9c86df53fccd33f281df655642b43869d"
 dependencies = [
- "atomic",
  "getrandom",
  "serde",
 ]

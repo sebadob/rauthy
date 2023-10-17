@@ -2,7 +2,6 @@
 resolver = "2"
 members = [
     "rauthy-common",
-    "rauthy-events",
     "rauthy-handlers",
     "rauthy-main",
     "rauthy-models",

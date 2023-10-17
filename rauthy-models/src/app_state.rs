@@ -1,5 +1,6 @@
 use crate::email::EMail;
 use crate::entity::db_version::DbVersion;
+use crate::events::event::Event;
 use crate::migration::db_migrate;
 use crate::migration::db_migrate::migrate_init_prod;
 use crate::migration::db_migrate_dev::migrate_dev_data;
@@ -8,7 +9,6 @@ use anyhow::Context;
 use argon2::Params;
 use rauthy_common::constants::{DATABASE_URL, DB_TYPE, DEV_MODE, PROXY_MODE};
 use rauthy_common::DbType;
-use rauthy_events::event::Event;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use sqlx::pool::PoolOptions;
@@ -402,7 +402,6 @@ impl AppState {
 
     pub async fn connect_postgres(addr: &str, max_conn: u32) -> anyhow::Result<sqlx::PgPool> {
         let opts = sqlx::postgres::PgConnectOptions::from_str(addr)?
-            // let opts = AnyConnectOptions::from_str(addr)?
             .log_slow_statements(LevelFilter::Debug, Duration::from_secs(3));
         let pool = PoolOptions::new()
             .min_connections(2)
