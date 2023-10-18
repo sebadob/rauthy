@@ -16,8 +16,10 @@ pub struct Principal {
 }
 
 impl Principal {
-    pub fn get_from_req(principal: Option<Principal>) -> Result<Principal, ErrorResponse> {
-        principal.ok_or_else(|| {
+    pub fn from_req(
+        principal: web::ReqData<Option<Principal>>,
+    ) -> Result<Principal, ErrorResponse> {
+        principal.into_inner().ok_or_else(|| {
             ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 String::from("Only allowed as a logged in user"),
