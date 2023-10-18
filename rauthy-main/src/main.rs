@@ -41,7 +41,7 @@ use rauthy_common::password_hasher;
 use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
 use rauthy_handlers::middleware::session::RauthySessionMiddleware;
 use rauthy_handlers::openapi::ApiDoc;
-use rauthy_handlers::{clients, generic, groups, oidc, roles, scopes, sessions, users};
+use rauthy_handlers::{clients, events, generic, groups, oidc, roles, scopes, sessions, users};
 use rauthy_models::app_state::{AppState, Caches, DbPool};
 use rauthy_models::email::EMail;
 use rauthy_models::events::event::Event;
@@ -167,7 +167,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
         ha_cache_config: cache_config.clone(),
     };
     let (tx_events, rx_events) = flume::unbounded();
-    let app_state = web::Data::new(AppState::new(tx_email, tx_events.clone(), caches).await?);
+    let (tx_events_router, rx_events_router) = flume::unbounded();
+    let app_state = web::Data::new(
+        AppState::new(
+            tx_email,
+            tx_events.clone(),
+            tx_events_router.clone(),
+            caches,
+        )
+        .await?,
+    );
 
     // TODO remove with v0.17
     TEMP_migrate_passkeys_uv(&app_state.db)
@@ -175,37 +184,58 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .expect("Passkey UV migration to not fail");
 
     // events listener
-    tokio::spawn(EventListener::listen(rx_events, app_state.db.clone()));
+    tokio::spawn(EventListener::listen(
+        tx_events_router,
+        rx_events_router,
+        rx_events,
+        app_state.db.clone(),
+    ));
 
     // TODO REMOVE AFTER TESTING
-    Event::brute_force("192.15.15.1".to_string())
-        .send(&tx_events)
-        .await
-        .unwrap();
-    Event::dos("192.15.15.1".to_string())
-        .send(&tx_events)
-        .await
-        .unwrap();
-    Event::invalid_login(2, "192.15.15.1".to_string())
-        .send(&tx_events)
-        .await
-        .unwrap();
-    Event::invalid_login(5, "192.15.15.1".to_string())
-        .send(&tx_events)
-        .await
-        .unwrap();
-    Event::invalid_login(7, "192.15.15.1".to_string())
-        .send(&tx_events)
-        .await
-        .unwrap();
-    Event::ip_blacklisted("192.15.15.1".to_string())
-        .send(&tx_events)
-        .await
-        .unwrap();
-    Event::rauthy_admin("sebastiandobe@mailbox.org".to_string())
-        .send(&tx_events)
-        .await
-        .unwrap();
+    let txe = tx_events.clone();
+    tokio::spawn(async move {
+        time::sleep(Duration::from_secs(5)).await;
+        Event::brute_force("192.15.15.1".to_string())
+            .send(&txe)
+            .await
+            .unwrap();
+
+        time::sleep(Duration::from_secs(5)).await;
+        Event::dos("192.15.15.1".to_string())
+            .send(&txe)
+            .await
+            .unwrap();
+
+        time::sleep(Duration::from_secs(5)).await;
+        Event::invalid_login(2, "192.15.15.1".to_string())
+            .send(&txe)
+            .await
+            .unwrap();
+
+        time::sleep(Duration::from_secs(2)).await;
+        Event::invalid_login(5, "192.15.15.1".to_string())
+            .send(&txe)
+            .await
+            .unwrap();
+
+        time::sleep(Duration::from_secs(1)).await;
+        Event::invalid_login(7, "192.15.15.1".to_string())
+            .send(&txe)
+            .await
+            .unwrap();
+
+        time::sleep(Duration::from_secs(5)).await;
+        Event::ip_blacklisted("192.15.15.1".to_string())
+            .send(&txe)
+            .await
+            .unwrap();
+
+        time::sleep(Duration::from_secs(10)).await;
+        Event::rauthy_admin("sebastiandobe@mailbox.org".to_string())
+            .send(&txe)
+            .await
+            .unwrap();
+    });
 
     // spawn password hash limiter
     tokio::spawn(password_hasher::run());
@@ -374,6 +404,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                     .service(generic::redirect_v1)
                     .service(
                     web::scope("/v1")
+                        .service(events::sse_events)
                         .service(generic::get_index)
                         .service(generic::get_account_html)
                         .service(generic::get_admin_html)

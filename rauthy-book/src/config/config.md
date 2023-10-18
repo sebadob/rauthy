@@ -260,6 +260,11 @@ MAX_HASH_THREADS=1
 # setting the initial password. (default: 86400)
 #ML_LT_PWD_FIRST=86400
 
+# The interval in seconds in which keep-alives should be sent to SSE clients.
+# Depending on your network setup, proxy timeouts, ..., you may adjust this value to fit your needs.
+# default: 30
+#SSE_KEEP_ALIVE=30
+
 #####################################
 ############# LOGGING ###############
 #####################################
