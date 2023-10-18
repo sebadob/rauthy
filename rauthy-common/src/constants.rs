@@ -54,6 +54,8 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
         .expect("DEV_MODE cannot be parsed to bool - bad format");
+    pub static ref HA_MODE: bool =
+        env::var("HA_MODE").map(|s| s.to_lowercase() == "true").unwrap_or(false);
 
     pub static ref RE_ALG: Regex = Regex::new(r"^(RS256|RS384|RS512|EdDSA)$").unwrap();
     pub static ref RE_ATTR: Regex = Regex::new(r"^[a-zA-Z0-9-_/]{2,32}$").unwrap();
