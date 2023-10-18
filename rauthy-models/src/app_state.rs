@@ -1,13 +1,14 @@
 use crate::email::EMail;
 use crate::entity::db_version::DbVersion;
 use crate::events::event::Event;
+use crate::events::listener::EventRouterMsg;
 use crate::migration::db_migrate;
 use crate::migration::db_migrate::migrate_init_prod;
 use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::ListenScheme;
 use anyhow::Context;
 use argon2::Params;
-use rauthy_common::constants::{DATABASE_URL, DB_TYPE, DEV_MODE, PROXY_MODE};
+use rauthy_common::constants::{DATABASE_URL, DB_TYPE, DEV_MODE, HA_MODE, PROXY_MODE};
 use rauthy_common::DbType;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -54,6 +55,7 @@ pub struct AppState {
     pub ml_lt_pwd_reset: u32,
     pub tx_email: mpsc::Sender<EMail>,
     pub tx_events: flume::Sender<Event>,
+    pub tx_events_router: flume::Sender<EventRouterMsg>,
     pub caches: Caches,
     pub webauthn: Arc<Webauthn>,
 }
@@ -62,6 +64,7 @@ impl AppState {
     pub async fn new(
         tx_email: mpsc::Sender<EMail>,
         tx_events: flume::Sender<Event>,
+        tx_events_router: flume::Sender<EventRouterMsg>,
         caches: Caches,
     ) -> anyhow::Result<Self> {
         dotenvy::dotenv().ok();
@@ -196,6 +199,7 @@ impl AppState {
             ml_lt_pwd_reset,
             tx_email,
             tx_events,
+            tx_events_router,
             caches,
             webauthn,
         })
@@ -311,7 +315,7 @@ impl AppState {
         }
 
         if let Ok(from) = env::var("MIGRATE_DB_FROM") {
-            if is_ha_mode() {
+            if *HA_MODE {
                 error!(
                     r#"
     You cannot use 'MIGRATE_DB_FROM' with an active 'HA_MODE'.
@@ -373,7 +377,7 @@ impl AppState {
         migration_only: bool,
     ) -> anyhow::Result<sqlx::SqlitePool> {
         // HA_MODE must not be enabled while using SQLite
-        if !migration_only && is_ha_mode() {
+        if !migration_only && *HA_MODE {
             let msg = "HA_MODE must not be enabled while using SQLite";
             error!("{msg}");
             panic!("{msg}");
@@ -516,8 +520,4 @@ impl WellKnown {
             code_challenge_methods_supported,
         }
     }
-}
-
-fn is_ha_mode() -> bool {
-    env::var("HA_MODE").map(|s| s.to_lowercase()) == Ok("true".to_string())
 }
