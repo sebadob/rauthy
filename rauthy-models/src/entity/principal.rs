@@ -16,6 +16,7 @@ pub struct Principal {
 }
 
 impl Principal {
+    #[inline(always)]
     pub fn from_req(
         principal: web::ReqData<Option<Principal>>,
     ) -> Result<Principal, ErrorResponse> {
@@ -27,6 +28,7 @@ impl Principal {
         })
     }
 
+    #[inline(always)]
     pub fn is_user_authorized_for_id(&self, user_id: &str) -> Result<(), ErrorResponse> {
         if !self.is_admin() && self.user_id != user_id {
             Err(ErrorResponse::new(
@@ -38,10 +40,12 @@ impl Principal {
         }
     }
 
+    #[inline(always)]
     pub fn is_admin(&self) -> bool {
         self.roles.contains(&*ROLE_ADMIN)
     }
 
+    #[inline(always)]
     pub async fn validate_email(
         &self,
         email: &str,
@@ -67,6 +71,7 @@ impl Principal {
         Ok(())
     }
 
+    #[inline(always)]
     pub fn validate_id(&self, id: &str) -> Result<(), ErrorResponse> {
         if self.user_id != id {
             Err(ErrorResponse::new(
@@ -78,6 +83,7 @@ impl Principal {
         }
     }
 
+    #[inline(always)]
     pub fn validate_rauthy_admin(&self) -> Result<(), ErrorResponse> {
         if *ADMIN_FORCE_MFA && !self.has_mfa_active {
             return Err(ErrorResponse::new(

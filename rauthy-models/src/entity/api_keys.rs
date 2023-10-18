@@ -1,7 +1,7 @@
 use crate::app_state::AppState;
 use actix_web::web;
 use chrono::Utc;
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::HashPassword;
 use rauthy_common::utils::{encrypt, get_rand};
 use serde::{Deserialize, Serialize};
@@ -26,7 +26,7 @@ impl ApiKeyEntity {
         access: Vec<ApiKeyAccess>,
     ) -> Result<String, ErrorResponse> {
         let created = Utc::now().timestamp();
-        let secret_plain = format!("{}${}", name, get_rand(48));
+        let secret_plain = get_rand(48);
         let secret_hash = HashPassword::hash_password(secret_plain.clone()).await?;
         let access_bytes = bincode::serialize(&access)?;
         let enc_key = data.enc_keys.get(&data.enc_key_active).unwrap();
@@ -57,17 +57,10 @@ impl ApiKeyEntity {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ApiKey {
-    pub name: String,
-    pub created: i64,
-    pub expires: Option<i64>,
-    pub access: Vec<ApiKeyAccess>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum ApiKeyGroup {
+pub enum AccessGroup {
+    Attributes,
     Events,
     Groups,
     Sessions,
@@ -75,9 +68,9 @@ pub enum ApiKeyGroup {
     Users,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum ApiKeyAccessRights {
+pub enum AccessRights {
     Read,
     Create,
     Update,
@@ -86,6 +79,40 @@ pub enum ApiKeyAccessRights {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiKeyAccess {
-    pub group: ApiKeyGroup,
-    pub access_rights: ApiKeyAccessRights,
+    pub group: AccessGroup,
+    pub access_rights: AccessRights,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiKey {
+    pub name: String,
+    pub created: i64,
+    pub expires: Option<i64>,
+    pub access: Vec<ApiKeyAccess>,
+}
+
+impl ApiKey {
+    #[inline(always)]
+    pub fn has_access(
+        &self,
+        group: AccessGroup,
+        access_rights: AccessRights,
+    ) -> Result<(), ErrorResponse> {
+        for a in &self.access {
+            if a.group == group {
+                return if a.access_rights == access_rights {
+                    Ok(())
+                } else {
+                    Err(ErrorResponse::new(
+                        ErrorResponseType::Forbidden,
+                        "Access denied".to_string(),
+                    ))
+                };
+            }
+        }
+        Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Access denied".to_string(),
+        ))
+    }
 }
