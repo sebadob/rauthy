@@ -33,7 +33,7 @@ pub async fn get_clients(
     data: web::Data<AppState>,
     principal: web::ReqData<Option<Principal>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
 
     let clients = Client::find_all(&data).await?;
@@ -69,7 +69,7 @@ pub async fn get_client_by_id(
     data: web::Data<AppState>,
     principal: web::ReqData<Option<Principal>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
 
     Client::find(&data, path.into_inner())
@@ -100,7 +100,7 @@ pub async fn get_client_secret(
     path: web::Path<String>,
     principal: web::ReqData<Option<Principal>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
 
     client::get_client_secret(path.into_inner(), &data)
@@ -134,7 +134,7 @@ pub async fn post_clients(
     principal: web::ReqData<Option<Principal>>,
     session_req: web::ReqData<Option<Session>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -172,7 +172,7 @@ pub async fn put_clients(
     principal: web::ReqData<Option<Principal>>,
     session_req: web::ReqData<Option<Session>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -204,7 +204,7 @@ pub async fn get_client_colors(
     id: web::Path<String>,
     principal: web::ReqData<Option<Principal>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
 
     ColorEntity::find(&data, id.as_str())
@@ -238,7 +238,7 @@ pub async fn put_client_colors(
     session_req: web::ReqData<Option<Session>>,
     req_data: actix_web_validator::Json<ColorsRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -274,7 +274,7 @@ pub async fn delete_client_colors(
     principal: web::ReqData<Option<Principal>>,
     session_req: web::ReqData<Option<Session>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -333,7 +333,7 @@ pub async fn put_client_logo(
     session_req: web::ReqData<Option<Session>>,
     payload: actix_multipart::Multipart,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -368,7 +368,7 @@ pub async fn delete_client_logo(
     principal: web::ReqData<Option<Principal>>,
     session_req: web::ReqData<Option<Session>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -408,7 +408,7 @@ pub async fn put_generate_client_secret(
     principal: web::ReqData<Option<Principal>>,
     session_req: web::ReqData<Option<Session>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -444,7 +444,7 @@ pub async fn delete_client(
     principal: web::ReqData<Option<Principal>>,
     session_req: web::ReqData<Option<Session>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;

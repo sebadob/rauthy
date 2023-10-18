@@ -312,7 +312,7 @@ pub async fn get_auth_check_admin(
             "Not authenticated".to_string(),
         )),
         Some(p) => {
-            let principal = Principal::get_from_req(p.into_inner())?;
+            let principal = Principal::from_req(p)?;
             principal.validate_rauthy_admin()?;
             Ok(HttpResponse::Ok().finish())
         }
@@ -341,7 +341,7 @@ pub async fn get_enc_keys(
     data: web::Data<AppState>,
     principal: web::ReqData<Option<Principal>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
 
     let active = &data.enc_key_active;
@@ -377,7 +377,7 @@ pub async fn post_migrate_enc_key(
     session_req: web::ReqData<Option<Session>>,
     req_data: actix_web_validator::Json<EncKeyMigrateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -409,7 +409,7 @@ pub async fn get_login_time(
     data: web::Data<AppState>,
     principal: web::ReqData<Option<Principal>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
 
     let login_time = cache_get!(
@@ -460,7 +460,7 @@ pub async fn post_password_hash_times(
     session_req: web::ReqData<Option<Session>>,
     req_data: actix_web_validator::Json<PasswordHashTimesRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -516,7 +516,7 @@ pub async fn put_password_policy(
     session_req: web::ReqData<Option<Session>>,
     req_data: actix_web_validator::Json<PasswordPolicyRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -574,7 +574,7 @@ pub async fn post_update_language(
     principal: web::ReqData<Option<Principal>>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     let mut user = User::find(&data, principal.user_id).await?;
     user.language = Language::try_from(&req).unwrap_or_default();
     user.update_language(&data).await?;
