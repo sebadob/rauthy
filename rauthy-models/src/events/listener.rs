@@ -65,6 +65,7 @@ impl EventListener {
         }
 
         // forward to event router
+
         if let Err(err) = tx.send_async(EventRouterMsg::Event(event.as_json())).await {
             error!(
                 "Error sending Event {:?} internally - this should never happen!",
@@ -162,12 +163,24 @@ impl EventListener {
                     let payload = sse::Data::new(event);
 
                     for (ip, tx) in &clients {
-                        if let Err(err) = tx.send(payload.clone()).await {
-                            error!(
-                                "sending event to client {} from event listener - removing client\n{:?}",
-                                ip, err
-                            );
-                            ips_to_remove.push(ip.clone());
+                        match time::timeout(Duration::from_secs(5), tx.send(payload.clone())).await
+                        {
+                            Ok(tx_res) => {
+                                if let Err(err) = tx_res {
+                                    error!(
+                                        "sending event to client {} from event listener - removing client\n{:?}",
+                                        ip, err
+                                    );
+                                    ips_to_remove.push(ip.clone());
+                                }
+                            }
+                            Err(_) => {
+                                error!(
+                                    "Timeout reached sending event to client {} - removing client",
+                                    ip
+                                );
+                                ips_to_remove.push(ip.clone());
+                            }
                         }
                     }
 
