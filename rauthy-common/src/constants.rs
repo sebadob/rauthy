@@ -138,11 +138,15 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("5400"))
         .parse::<u32>()
         .expect("SESSION_TIMEOUT cannot be parsed to u32 - bad format");
-
     pub static ref SESSION_VALIDATE_IP: bool = env::var("SESSION_VALIDATE_IP")
         .unwrap_or_else(|_| String::from("true"))
         .parse::<bool>()
         .expect("SESSION_VALIDATE_IP cannot be parsed to bool - bad format");
+
+    pub static ref SSE_KEEP_ALIVE: u16 = env::var("SSE_KEEP_ALIVE")
+        .unwrap_or_else(|_| String::from("30"))
+        .parse::<u16>()
+        .expect("SSE_KEEP_ALIVE cannot be parsed to u16 - bad format");
 
     pub static ref EMAIL_SUB_PREFIX: String = env::var("EMAIL_SUB_PREFIX")
         .unwrap_or_else(|_| String::from("Rauthy IAM"));
