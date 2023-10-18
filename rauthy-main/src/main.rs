@@ -41,7 +41,7 @@ use rauthy_common::password_hasher;
 use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
 use rauthy_handlers::middleware::session::RauthySessionMiddleware;
 use rauthy_handlers::openapi::ApiDoc;
-use rauthy_handlers::{clients, generic, groups, oidc, roles, scopes, sessions, users};
+use rauthy_handlers::{clients, events, generic, groups, oidc, roles, scopes, sessions, users};
 use rauthy_models::app_state::{AppState, Caches, DbPool};
 use rauthy_models::email::EMail;
 use rauthy_models::events::event::Event;
@@ -404,6 +404,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                     .service(generic::redirect_v1)
                     .service(
                     web::scope("/v1")
+                        .service(events::listen_events)
                         .service(generic::get_index)
                         .service(generic::get_account_html)
                         .service(generic::get_admin_html)

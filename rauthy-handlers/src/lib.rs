@@ -26,6 +26,7 @@ use rust_embed::RustEmbed;
 use tracing::error;
 
 pub mod clients;
+pub mod events;
 pub mod generic;
 pub mod groups;
 pub mod middleware;

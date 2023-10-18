@@ -1,6 +1,6 @@
 use crate::app_state::DbPool;
 use crate::events::event::{Event, EventLevel};
-use flume::Sender;
+use actix_web_lab::sse;
 use rauthy_common::constants::HA_MODE;
 use rauthy_common::error_response::ErrorResponse;
 use std::collections::HashMap;
@@ -11,10 +11,7 @@ use tracing::{debug, error, info, warn};
 #[derive(Debug, Clone)]
 pub enum EventRouterMsg {
     Event(Event),
-    ClientReg {
-        ip: String,
-        tx: flume::Sender<Event>,
-    },
+    ClientReg { ip: String, tx: sse::Sender },
 }
 
 pub struct EventListener;
@@ -90,7 +87,7 @@ impl EventListener {
     async fn router_si(rx: flume::Receiver<EventRouterMsg>) {
         debug!("EventListener::router_si has been started");
 
-        let mut clients: HashMap<String, Sender<Event>> = HashMap::with_capacity(4);
+        let mut clients: HashMap<String, sse::Sender> = HashMap::with_capacity(4);
         let mut ips_to_remove = Vec::with_capacity(1);
 
         while let Ok(msg) = rx.recv_async().await {
@@ -100,9 +97,10 @@ impl EventListener {
                         "received new event in EventListener::router_si: {:?}",
                         event
                     );
+                    let payload = sse::Data::new_json(event).expect("serializing Event");
 
                     for (ip, tx) in &clients {
-                        if let Err(err) = tx.send_async(event.clone()).await {
+                        if let Err(err) = tx.send(payload.clone()).await {
                             error!(
                                 "sending event to client {} from event listener - removing client\n{:?}",
                                 ip, err
@@ -115,6 +113,7 @@ impl EventListener {
                         clients.remove(&ip);
                     }
                 }
+
                 EventRouterMsg::ClientReg { ip, tx } => {
                     info!("New client {} registered for the event listener", ip);
                     clients.insert(ip, tx);
