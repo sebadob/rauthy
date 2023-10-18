@@ -1,8 +1,10 @@
 use crate::app_state::DbPool;
 use crate::events::event::{Event, EventLevel};
 use actix_web_lab::sse;
-use rauthy_common::constants::HA_MODE;
+use rauthy_common::constants::{DATABASE_URL, DB_TYPE};
 use rauthy_common::error_response::ErrorResponse;
+use rauthy_common::DbType;
+use sqlx::postgres::PgListener;
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::time;
@@ -10,14 +12,14 @@ use tracing::{debug, error, info, warn};
 
 #[derive(Debug, Clone)]
 pub enum EventRouterMsg {
-    Event(Event),
+    Event(String),
     ClientReg { ip: String, tx: sse::Sender },
 }
 
 pub struct EventListener;
 
-// TODO we could even get rid of the HA functions for the SQLite binary to have it a tiny bit smaller
 impl EventListener {
+    #[tracing::instrument(level = "debug", skip_all)]
     pub async fn listen(
         tx_router: flume::Sender<EventRouterMsg>,
         rx_router: flume::Receiver<EventRouterMsg>,
@@ -26,14 +28,18 @@ impl EventListener {
     ) -> Result<(), ErrorResponse> {
         debug!("EventListener::listen has been started");
 
-        if *HA_MODE {
-            tokio::spawn(Self::router_ha(rx_router, db.clone()));
-        } else {
-            tokio::spawn(Self::router_si(rx_router));
-        };
+        // having a local copy is a tiny bit faster and needs one less memory lookup
+        // let is_ ha = *HA_MODE;
+        // TODO remove after enough testing -> only use postgres in HA_MODE
+        let is_ha = *DB_TYPE == DbType::Postgres;
+
+        if is_ha {
+            tokio::spawn(Self::pg_listener(tx_router.clone()));
+        }
+        tokio::spawn(Self::router(rx_router));
 
         while let Ok(event) = rx_event.recv_async().await {
-            if *HA_MODE {
+            if is_ha {
                 tokio::spawn(Self::handle_event_ha(event, db.clone()));
             } else {
                 tokio::spawn(Self::handle_event_si(event, db.clone(), tx_router.clone()));
@@ -43,6 +49,7 @@ impl EventListener {
         Ok(())
     }
 
+    #[tracing::instrument(level = "debug", skip_all)]
     async fn handle_event_si(event: Event, db: DbPool, tx: flume::Sender<EventRouterMsg>) {
         // insert into DB
         while let Err(err) = event.insert(&db).await {
@@ -58,7 +65,7 @@ impl EventListener {
         }
 
         // forward to event router
-        if let Err(err) = tx.send_async(EventRouterMsg::Event(event)).await {
+        if let Err(err) = tx.send_async(EventRouterMsg::Event(event.as_json())).await {
             error!(
                 "Error sending Event {:?} internally - this should never happen!",
                 err
@@ -66,6 +73,7 @@ impl EventListener {
         }
     }
 
+    #[tracing::instrument(level = "debug", skip_all)]
     async fn handle_event_ha(event: Event, db: DbPool) {
         // insert into DB
         while let Err(err) = event.insert(&db).await {
@@ -80,11 +88,65 @@ impl EventListener {
             EventLevel::Critical => warn!("{}", event),
         }
 
-        // forward to postgres listener
-        todo!("handle_event_ha")
+        // notify postgres listeners
+        while let Err(err) = sqlx::query(
+            r#"SELECT pg_notify(chan, payload)
+            FROM (VALUES ('events', $1)) NOTIFIES(chan, payload)"#,
+        )
+        .bind(event.as_json())
+        .execute(&db)
+        .await
+        {
+            error!("Publishing Event on Postgres channel: {:?}", err);
+            time::sleep(Duration::from_secs(1)).await;
+        }
     }
 
-    async fn router_si(rx: flume::Receiver<EventRouterMsg>) {
+    #[tracing::instrument(level = "debug", skip_all)]
+    async fn pg_listener(tx: flume::Sender<EventRouterMsg>) {
+        debug!("EventListener::router_ha has been started");
+
+        loop {
+            let mut listener = match PgListener::connect(&DATABASE_URL).await {
+                Ok(l) => l,
+                Err(err) => {
+                    error!(
+                        "Error opening Postgres connection for PgListener: {:?}",
+                        err
+                    );
+                    time::sleep(Duration::from_secs(5)).await;
+                    continue;
+                }
+            };
+            if let Err(err) = listener.listen("events").await {
+                error!("Error listening to 'events' channel on Postgres: {:?}", err);
+                time::sleep(Duration::from_secs(5)).await;
+                continue;
+            }
+
+            while let Ok(msg) = listener.recv().await {
+                debug!("{:?}", msg);
+
+                // forward to event router -> payload is already an Event in JSON format
+                if let Err(err) = tx
+                    .send_async(EventRouterMsg::Event(msg.payload().to_string()))
+                    .await
+                {
+                    error!(
+                        "Error sending Event {:?} internally - this should never happen!",
+                        err
+                    );
+                }
+            }
+
+            // try to do an unlisten on all channels even if we had an error and should be
+            // disconnected anyway
+            let _ = listener.unlisten_all().await;
+        }
+    }
+
+    #[tracing::instrument(level = "debug", skip_all)]
+    async fn router(rx: flume::Receiver<EventRouterMsg>) {
         debug!("EventListener::router_si has been started");
 
         let mut clients: HashMap<String, sse::Sender> = HashMap::with_capacity(4);
@@ -97,7 +159,7 @@ impl EventListener {
                         "received new event in EventListener::router_si: {:?}",
                         event
                     );
-                    let payload = sse::Data::new_json(event).expect("serializing Event");
+                    let payload = sse::Data::new(event);
 
                     for (ip, tx) in &clients {
                         if let Err(err) = tx.send(payload.clone()).await {
@@ -122,10 +184,5 @@ impl EventListener {
         }
 
         panic!("tx for EventRouterMsg has been closed - this should never happen!");
-    }
-
-    async fn router_ha(rx: flume::Receiver<EventRouterMsg>, db: DbPool) {
-        debug!("EventListener::router_ha has been started");
-        todo!("router_ha");
     }
 }

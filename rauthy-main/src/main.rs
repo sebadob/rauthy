@@ -404,7 +404,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                     .service(generic::redirect_v1)
                     .service(
                     web::scope("/v1")
-                        .service(events::listen_events)
+                        .service(events::sse_events)
                         .service(generic::get_index)
                         .service(generic::get_account_html)
                         .service(generic::get_admin_html)

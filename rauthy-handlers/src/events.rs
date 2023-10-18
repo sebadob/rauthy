@@ -8,8 +8,8 @@ use rauthy_models::events::listener::EventRouterMsg;
 use std::time::Duration;
 
 #[get("/events")]
-#[has_roles("rauthy_admin")] // TODO ADD BACK IN AFTER LOCAL TESTING!!!
-pub async fn listen_events(data: web::Data<AppState>) -> Result<impl Responder, ErrorResponse> {
+// #[has_roles("rauthy_admin")] // TODO ADD BACK IN AFTER LOCAL TESTING!!!
+pub async fn sse_events(data: web::Data<AppState>) -> Result<impl Responder, ErrorResponse> {
     let (tx, sse) = sse::channel(5);
 
     if let Err(err) = data
