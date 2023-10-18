@@ -8,6 +8,7 @@ pub const RAUTHY_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub const HEADER_HTML: (&str, &str) = ("content-type", "text/html;charset=utf-8");
 pub const APPLICATION_JSON: &str = "application/json";
+pub const TOKEN_API_KEY: &str = "API-Key";
 pub const TOKEN_BEARER: &str = "Bearer";
 pub const COOKIE_SESSION: &str = "rauthy-session";
 pub const COOKIE_MFA: &str = "rauthy-mfa";
