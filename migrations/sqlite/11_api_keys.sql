@@ -4,7 +4,6 @@ create table api_keys
         constraint api_keys_pk
             primary key,
     secret           blob              not null,
-    is_hash_uptodate bool default true not null,
     created          bigint            not null,
     expires          bigint,
     enc_key_id       varchar           not null,
