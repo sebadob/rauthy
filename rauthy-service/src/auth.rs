@@ -16,7 +16,7 @@ use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::HashPassword;
 use rauthy_common::utils::{base64_url_encode, encrypt, get_client_ip, get_rand};
 use rauthy_models::app_state::AppState;
-use rauthy_models::entity::api_keys::ApiKey;
+use rauthy_models::entity::api_keys::{ApiKey, ApiKeyEntity};
 use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::colors::ColorEntity;
@@ -1114,12 +1114,17 @@ pub async fn permission_extractor(req: &ServiceRequest) -> Result<Vec<String>, E
     // the Authorization header may contain either an 'API-Key' or a 'Bearer' token
     // only one of them may exist
     let mut api_key: Option<ApiKey> = None;
-    if let Some(api_key) = get_api_key_token_from_header(req.headers()) {
-        todo!("look up API Key and insert the key into the extensions");
-        res.push(String::from("api-key"));
-    } else {
-        req.extensions_mut().insert(api_key);
+    if let Some(api_key_token) = get_api_key_token_from_header(req.headers()) {
+        let data = req
+            .app_data::<web::Data<AppState>>()
+            .expect("Error getting AppData inside permission extractor");
+
+        if let Ok(key) = ApiKeyEntity::api_key_from_token_validated(data, api_key_token).await {
+            res.push(String::from("api-key"));
+            api_key = Some(key);
+        }
     }
+    req.extensions_mut().insert(api_key);
 
     let bearer = get_bearer_token_from_header(req.headers());
     if bearer.is_err() {
