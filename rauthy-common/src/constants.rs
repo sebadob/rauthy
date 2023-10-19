@@ -20,6 +20,7 @@ pub const PWD_CSRF_HEADER: &str = "pwd-csrf-token";
 
 pub const ARGON2ID_M_COST_MIN: u32 = 32768;
 pub const ARGON2ID_T_COST_MIN: u32 = 1;
+pub const API_KEY_LENGTH: usize = 48;
 
 pub const CACHE_NAME_12HR: &str = "12hr";
 pub const CACHE_NAME_AUTH_CODES: &str = "auth-codes";
