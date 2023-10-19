@@ -192,66 +192,66 @@ async fn main() -> Result<(), Box<dyn Error>> {
         app_state.db.clone(),
     ));
 
-    // TODO REMOVE AFTER TESTING
-    let txe = tx_events.clone();
-    let data = app_state.clone();
-    tokio::spawn(async move {
-        time::sleep(Duration::from_secs(2)).await;
-        let key = ApiKeyEntity::create(
-            &data,
-            "test".to_string(),
-            None,
-            vec![ApiKeyAccess {
-                group: AccessGroup::Events,
-                access_rights: AccessRights::Read,
-            }],
-        )
-        .await
-        .unwrap();
-        println!("\n\ntest${}\n", key);
-
-        time::sleep(Duration::from_secs(5)).await;
-        Event::brute_force("192.15.15.1".to_string())
-            .send(&txe)
-            .await
-            .unwrap();
-
-        time::sleep(Duration::from_secs(5)).await;
-        Event::dos("192.15.15.1".to_string())
-            .send(&txe)
-            .await
-            .unwrap();
-
-        time::sleep(Duration::from_secs(5)).await;
-        Event::invalid_login(2, "192.15.15.1".to_string())
-            .send(&txe)
-            .await
-            .unwrap();
-
-        time::sleep(Duration::from_secs(2)).await;
-        Event::invalid_login(5, "192.15.15.1".to_string())
-            .send(&txe)
-            .await
-            .unwrap();
-
-        time::sleep(Duration::from_secs(1)).await;
-        Event::invalid_login(7, "192.15.15.1".to_string())
-            .send(&txe)
-            .await
-            .unwrap();
-
-        time::sleep(Duration::from_secs(5)).await;
-        Event::ip_blacklisted("192.15.15.1".to_string())
-            .send(&txe)
-            .await
-            .unwrap();
-
-        time::sleep(Duration::from_secs(10)).await;
-        Event::rauthy_admin("sebastiandobe@mailbox.org".to_string())
-            .send(&txe)
-            .await
-            .unwrap();
-    });
+    // // TODO REMOVE AFTER TESTING
+    // let txe = tx_events.clone();
+    // // let data = app_state.clone();
+    // tokio::spawn(async move {
+    //     // time::sleep(Duration::from_secs(2)).await;
+    //     // let key = ApiKeyEntity::create(
+    //     //     &data,
+    //     //     "test".to_string(),
+    //     //     None,
+    //     //     vec![ApiKeyAccess {
+    //     //         group: AccessGroup::Events,
+    //     //         access_rights: vec![AccessRights::Read, AccessRights::Create],
+    //     //     }],
+    //     // )
+    //     // .await
+    //     // .unwrap();
+    //     // println!("\n\ntest${}\n", key);
+    //
+    //     time::sleep(Duration::from_secs(5)).await;
+    //     Event::brute_force("192.15.15.1".to_string())
+    //         .send(&txe)
+    //         .await
+    //         .unwrap();
+    //
+    //     time::sleep(Duration::from_secs(5)).await;
+    //     Event::dos("192.15.15.1".to_string())
+    //         .send(&txe)
+    //         .await
+    //         .unwrap();
+    //
+    //     time::sleep(Duration::from_secs(5)).await;
+    //     Event::invalid_login(2, "192.15.15.1".to_string())
+    //         .send(&txe)
+    //         .await
+    //         .unwrap();
+    //
+    //     time::sleep(Duration::from_secs(2)).await;
+    //     Event::invalid_login(5, "192.15.15.1".to_string())
+    //         .send(&txe)
+    //         .await
+    //         .unwrap();
+    //
+    //     time::sleep(Duration::from_secs(1)).await;
+    //     Event::invalid_login(7, "192.15.15.1".to_string())
+    //         .send(&txe)
+    //         .await
+    //         .unwrap();
+    //
+    //     time::sleep(Duration::from_secs(5)).await;
+    //     Event::ip_blacklisted("192.15.15.1".to_string())
+    //         .send(&txe)
+    //         .await
+    //         .unwrap();
+    //
+    //     time::sleep(Duration::from_secs(10)).await;
+    //     Event::rauthy_admin("sebastiandobe@mailbox.org".to_string())
+    //         .send(&txe)
+    //         .await
+    //         .unwrap();
+    // });
 
     // spawn password hash limiter
     tokio::spawn(password_hasher::run());
@@ -421,6 +421,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                     .service(
                     web::scope("/v1")
                         .service(events::sse_events)
+                        .service(events::post_event_test)
                         .service(generic::get_index)
                         .service(generic::get_account_html)
                         .service(generic::get_admin_html)

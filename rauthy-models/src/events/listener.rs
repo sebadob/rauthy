@@ -69,7 +69,6 @@ impl EventListener {
         }
 
         // forward to event router
-
         if let Err(err) = tx.send_async(EventRouterMsg::Event(event.as_json())).await {
             error!(
                 "Error sending Event {:?} internally - this should never happen!",

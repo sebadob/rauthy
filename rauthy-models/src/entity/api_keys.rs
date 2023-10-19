@@ -197,7 +197,7 @@ pub enum AccessRights {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiKeyAccess {
     pub group: AccessGroup,
-    pub access_rights: AccessRights,
+    pub access_rights: Vec<AccessRights>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -219,7 +219,7 @@ impl ApiKey {
     ) -> Result<(), ErrorResponse> {
         for a in &self.access {
             if a.group == group {
-                return if a.access_rights == access_rights {
+                return if a.access_rights.contains(&access_rights) {
                     Ok(())
                 } else {
                     Err(ErrorResponse::new(

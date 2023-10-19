@@ -81,6 +81,7 @@ pub enum EventType {
     NewRauthyAdmin(String),
     PossibleBruteForce,
     PossibleDoS,
+    Test,
 }
 
 impl Display for EventType {
@@ -91,6 +92,7 @@ impl Display for EventType {
             EventType::NewRauthyAdmin(email) => write!(f, "new rauthy_admin member: {}", email),
             EventType::PossibleBruteForce => write!(f, "possible brute force"),
             EventType::PossibleDoS => write!(f, "possible DoS"),
+            EventType::Test => write!(f, "TEST"),
         }
     }
 }
@@ -103,6 +105,7 @@ impl EventType {
             EventType::NewRauthyAdmin(email) => format!("NewRauthyAdmin${}", email),
             EventType::PossibleBruteForce => "PossibleBruteForce".to_string(),
             EventType::PossibleDoS => "PossibleDoS".to_string(),
+            EventType::Test => "TEST".to_string(),
         }
     }
 }
@@ -116,6 +119,7 @@ impl From<String> for EventType {
             "NewRauthyAdmin" => Self::NewRauthyAdmin(value.to_string()),
             "PossibleBruteForce" => Self::PossibleBruteForce,
             "PossibleDoS" => Self::PossibleDoS,
+            "TEST" => Self::Test,
             _ => unreachable!(),
         }
     }
@@ -207,6 +211,14 @@ impl Event {
         Self::new(level, EventType::InvalidLogins(count), Some(ip))
     }
 
+    pub fn brute_force(ip: String) -> Self {
+        Self::new(
+            EventLevel::Critical,
+            EventType::PossibleBruteForce,
+            Some(ip),
+        )
+    }
+
     pub fn ip_blacklisted(ip: String) -> Self {
         Self::new(EventLevel::Warning, EventType::IpBlacklisted, Some(ip))
     }
@@ -215,12 +227,8 @@ impl Event {
         Self::new(EventLevel::Notice, EventType::NewRauthyAdmin(email), None)
     }
 
-    pub fn brute_force(ip: String) -> Self {
-        Self::new(
-            EventLevel::Critical,
-            EventType::PossibleBruteForce,
-            Some(ip),
-        )
+    pub fn test(ip: Option<String>) -> Self {
+        Self::new(EventLevel::Info, EventType::Test, ip)
     }
 
     pub fn dos(ip: String) -> Self {

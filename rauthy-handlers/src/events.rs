@@ -1,5 +1,5 @@
 use crate::real_ip_from_req;
-use actix_web::{get, web, HttpRequest, Responder};
+use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use actix_web_grants::proc_macro::has_any_permission;
 use actix_web_lab::sse;
 use rauthy_common::constants::SSE_KEEP_ALIVE;
@@ -7,6 +7,8 @@ use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights, ApiKey};
 use rauthy_models::entity::principal::Principal;
+use rauthy_models::entity::sessions::Session;
+use rauthy_models::events::event::Event;
 use rauthy_models::events::listener::EventRouterMsg;
 use rauthy_models::request::EventsListenParams;
 use std::time::Duration;
@@ -71,4 +73,40 @@ pub async fn sse_events(
             }
         }
     }
+}
+
+/// Create a TEST Event
+#[utoipa::path(
+    post,
+    path = "/events/test",
+    tag = "events",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[post("/events/test")]
+#[has_any_permission("session-auth", "api-key")]
+pub async fn post_event_test(
+    data: web::Data<AppState>,
+    api_key: web::ReqData<Option<ApiKey>>,
+    principal: web::ReqData<Option<Principal>>,
+    req: HttpRequest,
+    session_req: web::ReqData<Option<Session>>,
+) -> Result<HttpResponse, ErrorResponse> {
+    if let Some(api_key) = api_key.into_inner() {
+        api_key.has_access(AccessGroup::Events, AccessRights::Create)?;
+    } else {
+        if session_req.is_some() {
+            Session::extract_validate_csrf(session_req, &req)?;
+        }
+        Principal::from_req(principal)?.validate_rauthy_admin()?;
+    }
+
+    Event::test(real_ip_from_req(&req))
+        .send(&data.tx_events)
+        .await?;
+
+    Ok(HttpResponse::Ok().finish())
 }

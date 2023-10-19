@@ -3,7 +3,6 @@ use actix_web::web;
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::{AppState, WellKnown};
-use rauthy_models::events::event;
 use rauthy_models::language;
 use rauthy_models::ListenScheme;
 use rauthy_models::{entity, request, response};
@@ -29,6 +28,7 @@ use utoipa::{openapi, OpenApi};
         clients::delete_client,
 
         events::sse_events,
+        events::post_event_test,
 
         generic::get_auth_check,
         generic::get_auth_check_admin,
@@ -195,6 +195,7 @@ use utoipa::{openapi, OpenApi};
         (name = "groups", description = "Groups endpoints"),
         (name = "roles", description = "Roles endpoints"),
         (name = "scopes", description = "Scopes endpoints"),
+        (name = "events", description = "Events Stream"),
         (name = "health", description = "Ping, Health, Ready Check"),
         (name = "generic", description = "Generic endpoints"),
         (name = "deprecated", description = "Deprecated endpoints - will be removed in a future version"),
