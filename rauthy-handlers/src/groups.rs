@@ -27,7 +27,7 @@ pub async fn get_groups(
     data: web::Data<AppState>,
     principal: web::ReqData<Option<Principal>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
 
     Group::find_all(&data)
@@ -59,7 +59,7 @@ pub async fn post_group(
     principal: web::ReqData<Option<Principal>>,
     session_req: web::ReqData<Option<Session>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -95,7 +95,7 @@ pub async fn put_group(
     principal: web::ReqData<Option<Principal>>,
     session_req: web::ReqData<Option<Session>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -131,7 +131,7 @@ pub async fn delete_group(
     principal: web::ReqData<Option<Principal>>,
     session_req: web::ReqData<Option<Session>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;

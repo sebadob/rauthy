@@ -21,11 +21,14 @@ start with simple polling every few seconds first because of the HA_MODE problem
         - if postgres does not work out nicely, think about using a NATS deployment for this task
 - switch the UI component to the SSE stream
 - add some way of configuring an email (or webhook, slack, ... ?) which gets messages depending on configured event level
+ 
 
 ### other features (some may come with v0.18 depending on amount of work)
 
+- impl ApiKeyEntity in enc keys migrations
 - add a way of detecting brute force or DoS attempts from certain IPs
 - add an 'ip blacklist' feature
+- add 'alg' in well-known jwks
 - create an optional config to auto-blacklist IPs that have been detected doing brute force or DoS
   think about the bigger picture here, maybe do this in 2 stages, like short block after 5 bad logins, 24h block after 10, ...
 - admin ui component to show blacklisted IPs

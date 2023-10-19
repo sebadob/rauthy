@@ -52,7 +52,7 @@ pub async fn get_users(
     data: web::Data<AppState>,
     principal: web::ReqData<Option<Principal>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
 
     let users = User::find_all(&data).await?;
@@ -88,7 +88,7 @@ pub async fn post_users(
     session_req: web::ReqData<Option<Session>>,
     user: actix_web_validator::Json<NewUserRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -115,7 +115,7 @@ pub async fn get_cust_attr(
     data: web::Data<AppState>,
     principal: web::ReqData<Option<Principal>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
 
     UserAttrConfigEntity::find_all(&data)
@@ -143,7 +143,7 @@ pub async fn post_cust_attr(
     session_req: web::ReqData<Option<Session>>,
     req_data: actix_web_validator::Json<UserAttrConfigRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -177,7 +177,7 @@ pub async fn put_cust_attr(
     session_req: web::ReqData<Option<Session>>,
     req_data: actix_web_validator::Json<UserAttrConfigRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -208,7 +208,7 @@ pub async fn delete_cust_attr(
     principal: web::ReqData<Option<Principal>>,
     session_req: web::ReqData<Option<Session>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -319,7 +319,7 @@ pub async fn get_user_by_id(
     let id = path.into_inner();
 
     // principal must either be admin or have the same user id
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.is_user_authorized_for_id(&id)?;
 
     User::find(&data, id)
@@ -344,7 +344,7 @@ pub async fn get_user_attr(
     path: web::Path<String>,
     principal: web::ReqData<Option<Principal>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
 
     let values = UserAttrValueEntity::find_for_user(&data, &path.into_inner())
@@ -377,7 +377,7 @@ pub async fn put_user_attr(
     session_req: web::ReqData<Option<Session>>,
     req_data: actix_web_validator::Json<UserAttrValuesUpdateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -534,7 +534,7 @@ pub async fn get_user_webauthn_passkeys(
     }
 
     // make sure a non-admin can only access its own information
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     let id = id.into_inner();
     if principal.user_id != id && !principal.is_admin() {
         return Err(ErrorResponse::new(
@@ -629,7 +629,7 @@ pub async fn post_webauthn_auth_start(
                     "You are not allowed to access this resource without a Login".to_string(),
                 )
             })?;
-            let principal = Principal::get_from_req(principal_opt.into_inner())?;
+            let principal = Principal::from_req(principal_opt)?;
             let id = id.into_inner();
             principal.validate_id(&id)?;
             id
@@ -687,7 +687,7 @@ pub async fn post_webauthn_auth_finish(
                 "You are not allowed to access this resource without a Login".to_string(),
             )
         })?;
-        let principal = Principal::get_from_req(principal_opt.into_inner())?;
+        let principal = Principal::from_req(principal_opt)?;
         principal.validate_id(&id)?;
 
         webauthn::auth_finish(&data, id, req_data.into_inner()).await?
@@ -727,7 +727,7 @@ pub async fn delete_webauthn(
     let (id, name) = path.into_inner();
 
     // validate that Principal matches the user or is an admin
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     if !principal.is_admin() {
         principal.validate_id(&id)?;
         warn!("Passkey delete for user {} for key {}", id, name);
@@ -826,7 +826,7 @@ pub async fn post_webauthn_reg_start(
         }
 
         // validate that Principal matches the user
-        let principal = Principal::get_from_req(principal.into_inner())?;
+        let principal = Principal::from_req(principal)?;
         let id = id.into_inner();
         principal.validate_id(&id)?;
 
@@ -876,7 +876,7 @@ pub async fn post_webauthn_reg_finish(
         }
 
         // validate that Principal matches the user
-        let principal = Principal::get_from_req(principal.into_inner())?;
+        let principal = Principal::from_req(principal)?;
         let id = id.into_inner();
         principal.validate_id(&id)?;
 
@@ -945,7 +945,7 @@ pub async fn get_user_by_email(
     path: web::Path<String>,
     principal: web::ReqData<Option<Principal>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
 
     User::find_by_email(&data, path.into_inner())
@@ -978,7 +978,7 @@ pub async fn put_user_by_id(
     session_req: web::ReqData<Option<Session>>,
     user: actix_web_validator::Json<UpdateUserRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -1019,7 +1019,7 @@ pub async fn put_user_self(
     }
 
     // make sure the logged in user can only update itself
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     let id = id.into_inner();
     if principal.user_id != id {
         return Err(ErrorResponse::new(
@@ -1067,7 +1067,7 @@ pub async fn post_user_self_convert_passkey(
     }
 
     // make sure the logged in user can only update itself
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     let id = id.into_inner();
     if principal.user_id != id {
         return Err(ErrorResponse::new(
@@ -1103,7 +1103,7 @@ pub async fn delete_user_by_id(
     principal: web::ReqData<Option<Principal>>,
     session_req: web::ReqData<Option<Session>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;

@@ -1,11 +1,11 @@
 use crate::app_state::DbPool;
 use crate::events::event::{Event, EventLevel};
 use actix_web_lab::sse;
-use rauthy_common::constants::{DATABASE_URL, DB_TYPE};
+use rauthy_common::constants::{DATABASE_URL, DB_TYPE, EVENTS_LATEST_LIMIT};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::DbType;
 use sqlx::postgres::PgListener;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info, warn};
@@ -13,7 +13,11 @@ use tracing::{debug, error, info, warn};
 #[derive(Debug, Clone)]
 pub enum EventRouterMsg {
     Event(String),
-    ClientReg { ip: String, tx: sse::Sender },
+    ClientReg {
+        ip: String,
+        tx: sse::Sender,
+        latest: Option<u16>,
+    },
 }
 
 pub struct EventListener;
@@ -36,7 +40,7 @@ impl EventListener {
         if is_ha {
             tokio::spawn(Self::pg_listener(tx_router.clone()));
         }
-        tokio::spawn(Self::router(rx_router));
+        tokio::spawn(Self::router(db.clone(), rx_router));
 
         while let Ok(event) = rx_event.recv_async().await {
             if is_ha {
@@ -146,11 +150,19 @@ impl EventListener {
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
-    async fn router(rx: flume::Receiver<EventRouterMsg>) {
+    async fn router(db: DbPool, rx: flume::Receiver<EventRouterMsg>) {
         debug!("EventListener::router_si has been started");
 
         let mut clients: HashMap<String, sse::Sender> = HashMap::with_capacity(4);
         let mut ips_to_remove = Vec::with_capacity(1);
+        // returns the latest events ordered by timestamp desc
+        let mut events = Event::find_latest(&db, EVENTS_LATEST_LIMIT as i64)
+            .await
+            .unwrap_or_default()
+            .into_iter()
+            .rev()
+            .map(|e| sse::Data::new(e.as_json()))
+            .collect::<VecDeque<sse::Data>>();
 
         while let Ok(msg) = rx.recv_async().await {
             match msg {
@@ -159,15 +171,32 @@ impl EventListener {
                         "received new event in EventListener::router_si: {:?}",
                         event
                     );
+
                     let payload = sse::Data::new(event);
+                    if events.len() > EVENTS_LATEST_LIMIT as usize {
+                        events.pop_front();
+                    }
+                    events.push_back(payload.clone());
 
                     for (ip, tx) in &clients {
-                        if let Err(err) = tx.send(payload.clone()).await {
-                            error!(
-                                "sending event to client {} from event listener - removing client\n{:?}",
-                                ip, err
-                            );
-                            ips_to_remove.push(ip.clone());
+                        match time::timeout(Duration::from_secs(5), tx.send(payload.clone())).await
+                        {
+                            Ok(tx_res) => {
+                                if let Err(err) = tx_res {
+                                    error!(
+                                        "sending event to client {} from event listener - removing client\n{:?}",
+                                        ip, err
+                                    );
+                                    ips_to_remove.push(ip.clone());
+                                }
+                            }
+                            Err(_) => {
+                                error!(
+                                    "Timeout reached sending event to client {} - removing client",
+                                    ip
+                                );
+                                ips_to_remove.push(ip.clone());
+                            }
                         }
                     }
 
@@ -176,9 +205,44 @@ impl EventListener {
                     }
                 }
 
-                EventRouterMsg::ClientReg { ip, tx } => {
+                EventRouterMsg::ClientReg { ip, tx, latest } => {
                     info!("New client {} registered for the event listener", ip);
-                    clients.insert(ip, tx);
+
+                    let mut is_err = false;
+                    if let Some(latest) = latest {
+                        let l = latest as usize;
+                        let evt_len = events.len();
+                        let skip = if l > evt_len { 0 } else { evt_len - l };
+
+                        for event in events.iter().skip(skip) {
+                            match time::timeout(Duration::from_secs(5), tx.send(event.clone()))
+                                .await
+                            {
+                                Ok(tx_res) => {
+                                    if let Err(err) = tx_res {
+                                        error!(
+                                        "sending latest event to client {} after ClientReg - removing client\n{:?}",
+                                        ip, err
+                                    );
+                                        is_err = true;
+                                        break;
+                                    }
+                                }
+                                Err(_) => {
+                                    error!(
+                                    "Timeout reached sending latest events to client {} - removing client",
+                                    ip
+                                );
+                                    is_err = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if !is_err {
+                        clients.insert(ip, tx);
+                    }
                 }
             }
         }

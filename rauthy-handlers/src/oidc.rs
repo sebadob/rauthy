@@ -388,7 +388,7 @@ pub async fn rotate_jwk(
     principal: web::ReqData<Option<Principal>>,
     session_req: web::ReqData<Option<Session>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;

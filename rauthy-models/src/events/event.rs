@@ -1,13 +1,14 @@
 use crate::app_state::DbPool;
-use chrono::{DateTime, Timelike, Utc};
+use chrono::{NaiveDateTime, Timelike, Utc};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::get_rand;
 use serde::{Deserialize, Serialize};
-use sqlx::query;
+use sqlx::{query, query_as};
 use std::fmt::{Display, Formatter};
 use tracing::error;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum EventLevel {
     Info,
     Notice,
@@ -29,6 +30,18 @@ impl Display for EventLevel {
 
 impl From<i16> for EventLevel {
     fn from(value: i16) -> Self {
+        match value {
+            0 => EventLevel::Info,
+            1 => EventLevel::Notice,
+            2 => EventLevel::Warning,
+            3 => EventLevel::Critical,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl From<i64> for EventLevel {
+    fn from(value: i64) -> Self {
         match value {
             0 => EventLevel::Info,
             1 => EventLevel::Notice,
@@ -68,6 +81,7 @@ pub enum EventType {
     NewRauthyAdmin(String),
     PossibleBruteForce,
     PossibleDoS,
+    Test,
 }
 
 impl Display for EventType {
@@ -78,6 +92,7 @@ impl Display for EventType {
             EventType::NewRauthyAdmin(email) => write!(f, "new rauthy_admin member: {}", email),
             EventType::PossibleBruteForce => write!(f, "possible brute force"),
             EventType::PossibleDoS => write!(f, "possible DoS"),
+            EventType::Test => write!(f, "TEST"),
         }
     }
 }
@@ -90,6 +105,7 @@ impl EventType {
             EventType::NewRauthyAdmin(email) => format!("NewRauthyAdmin${}", email),
             EventType::PossibleBruteForce => "PossibleBruteForce".to_string(),
             EventType::PossibleDoS => "PossibleDoS".to_string(),
+            EventType::Test => "TEST".to_string(),
         }
     }
 }
@@ -103,6 +119,7 @@ impl From<String> for EventType {
             "NewRauthyAdmin" => Self::NewRauthyAdmin(value.to_string()),
             "PossibleBruteForce" => Self::PossibleBruteForce,
             "PossibleDoS" => Self::PossibleDoS,
+            "TEST" => Self::Test,
             _ => unreachable!(),
         }
     }
@@ -111,8 +128,7 @@ impl From<String> for EventType {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Event {
     pub id: String,
-    pub timestamp: DateTime<Utc>,
-    // pub timestamp: i64,
+    pub timestamp: i64,
     pub level: EventLevel,
     pub typ: EventType,
     pub ip: Option<String>,
@@ -120,13 +136,14 @@ pub struct Event {
 
 impl Display for Event {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let ts = NaiveDateTime::from_timestamp_millis(self.timestamp).unwrap_or_default();
         write!(
             f,
             "EVENT {} {}:{}:{} {} {} {}",
-            self.timestamp.date_naive(),
-            self.timestamp.hour(),
-            self.timestamp.minute(),
-            self.timestamp.second(),
+            ts.date(),
+            ts.hour(),
+            ts.minute(),
+            ts.second(),
             self.level,
             self.typ,
             self.ip.as_deref().unwrap_or_default(),
@@ -136,14 +153,13 @@ impl Display for Event {
 
 impl Event {
     pub async fn insert(&self, db: &DbPool) -> Result<(), ErrorResponse> {
-        let ts = self.timestamp.timestamp_millis();
         let level = self.level.value();
         let typ = self.typ.db_value();
 
         query!(
             "INSERT INTO events (id, timestamp, level, typ, ip) VALUES ($1, $2, $3, $4, $5)",
             self.id,
-            ts,
+            self.timestamp,
             level,
             typ,
             self.ip,
@@ -151,6 +167,17 @@ impl Event {
         .execute(db)
         .await?;
         Ok(())
+    }
+
+    pub async fn find_latest(db: &DbPool, limit: i64) -> Result<Vec<Self>, ErrorResponse> {
+        let res = query_as!(
+            Self,
+            "SELECT * FROM events ORDER BY timestamp DESC LIMIT $1",
+            limit
+        )
+        .fetch_all(db)
+        .await?;
+        Ok(res)
     }
 
     pub fn as_json(&self) -> String {
@@ -165,7 +192,7 @@ impl Event {
 
         Self {
             id,
-            timestamp: Utc::now(),
+            timestamp: Utc::now().timestamp_millis(),
             level,
             typ,
             ip,
@@ -184,6 +211,14 @@ impl Event {
         Self::new(level, EventType::InvalidLogins(count), Some(ip))
     }
 
+    pub fn brute_force(ip: String) -> Self {
+        Self::new(
+            EventLevel::Critical,
+            EventType::PossibleBruteForce,
+            Some(ip),
+        )
+    }
+
     pub fn ip_blacklisted(ip: String) -> Self {
         Self::new(EventLevel::Warning, EventType::IpBlacklisted, Some(ip))
     }
@@ -192,12 +227,8 @@ impl Event {
         Self::new(EventLevel::Notice, EventType::NewRauthyAdmin(email), None)
     }
 
-    pub fn brute_force(ip: String) -> Self {
-        Self::new(
-            EventLevel::Critical,
-            EventType::PossibleBruteForce,
-            Some(ip),
-        )
+    pub fn test(ip: Option<String>) -> Self {
+        Self::new(EventLevel::Info, EventType::Test, ip)
     }
 
     pub fn dos(ip: String) -> Self {

@@ -1,3 +1,4 @@
+pub mod api_keys;
 pub mod auth_codes;
 pub mod clients;
 pub mod colors;

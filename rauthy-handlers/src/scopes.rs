@@ -28,7 +28,7 @@ pub async fn get_scopes(
     data: web::Data<AppState>,
     principal: web::ReqData<Option<Principal>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
 
     Scope::find_all(&data).await.map(|scp| {
@@ -64,7 +64,7 @@ pub async fn post_scope(
     session_req: web::ReqData<Option<Session>>,
     scope_req: actix_web_validator::Json<ScopeRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -100,7 +100,7 @@ pub async fn put_scope(
     session_req: web::ReqData<Option<Session>>,
     scope_req: actix_web_validator::Json<ScopeRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;
@@ -136,7 +136,7 @@ pub async fn delete_scope(
     principal: web::ReqData<Option<Principal>>,
     session_req: web::ReqData<Option<Session>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::get_from_req(principal.into_inner())?;
+    let principal = Principal::from_req(principal)?;
     principal.validate_rauthy_admin()?;
     if session_req.is_some() {
         Session::extract_validate_csrf(session_req, &req)?;

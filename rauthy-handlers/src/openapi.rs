@@ -1,4 +1,4 @@
-use crate::{clients, generic, groups, oidc, roles, scopes, sessions, users};
+use crate::{clients, events, generic, groups, oidc, roles, scopes, sessions, users};
 use actix_web::web;
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
@@ -26,6 +26,9 @@ use utoipa::{openapi, OpenApi};
         clients::put_clients,
         clients::put_generate_client_secret,
         clients::delete_client,
+
+        events::sse_events,
+        events::post_event_test,
 
         generic::get_auth_check,
         generic::get_auth_check_admin,
@@ -192,6 +195,7 @@ use utoipa::{openapi, OpenApi};
         (name = "groups", description = "Groups endpoints"),
         (name = "roles", description = "Roles endpoints"),
         (name = "scopes", description = "Scopes endpoints"),
+        (name = "events", description = "Events Stream"),
         (name = "health", description = "Ping, Health, Ready Check"),
         (name = "generic", description = "Generic endpoints"),
         (name = "deprecated", description = "Deprecated endpoints - will be removed in a future version"),

@@ -29,6 +29,7 @@ time = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 utoipa = { workspace = true }
+validator = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = "1"
