@@ -10,6 +10,19 @@ use rauthy_models::entity::principal::Principal;
 use rauthy_models::events::listener::EventRouterMsg;
 use std::time::Duration;
 
+/// Listen to the Events SSE stream
+#[utoipa::path(
+    get,
+    path = "/events",
+    tag = "events",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
 #[get("/events")]
 #[has_any_permission("session-auth", "api-key")]
 pub async fn sse_events(
