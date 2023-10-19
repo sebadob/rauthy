@@ -2977,6 +2977,7 @@ dependencies = [
  "tokio-test",
  "tracing",
  "utoipa",
+ "validator",
 ]
 
 [[package]]

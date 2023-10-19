@@ -8,13 +8,16 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights, ApiKey};
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::events::listener::EventRouterMsg;
+use rauthy_models::request::EventsListenParams;
 use std::time::Duration;
+use validator::Validate;
 
 /// Listen to the Events SSE stream
 #[utoipa::path(
     get,
     path = "/events",
     tag = "events",
+    params(EventsListenParams),
     responses(
         (status = 200, description = "Ok"),
         (status = 400, description = "BadRequest", body = ErrorResponse),
@@ -30,14 +33,17 @@ pub async fn sse_events(
     api_key: web::ReqData<Option<ApiKey>>,
     principal: web::ReqData<Option<Principal>>,
     req: HttpRequest,
+    params: web::Query<EventsListenParams>,
 ) -> Result<impl Responder, ErrorResponse> {
+    params.validate()?;
+
     if let Some(api_key) = api_key.into_inner() {
         api_key.has_access(AccessGroup::Events, AccessRights::Read)?;
     } else {
         Principal::from_req(principal)?.validate_rauthy_admin()?;
     }
 
-    let (tx, sse) = sse::channel(5);
+    let (tx, sse) = sse::channel(10);
 
     match real_ip_from_req(&req) {
         None => Err(ErrorResponse::new(
@@ -46,9 +52,14 @@ pub async fn sse_events(
                 .to_string(),
         )),
         Some(ip) => {
+            let params = params.into_inner();
             if let Err(err) = data
                 .tx_events_router
-                .send_async(EventRouterMsg::ClientReg { ip, tx })
+                .send_async(EventRouterMsg::ClientReg {
+                    ip,
+                    tx,
+                    latest: params.latest,
+                })
                 .await
             {
                 Err(ErrorResponse::new(

@@ -218,3 +218,12 @@ impl From<FromUtf8Error> for ErrorResponse {
         ErrorResponse::new(ErrorResponseType::Internal, value.to_string())
     }
 }
+
+impl From<validator::ValidationErrors> for ErrorResponse {
+    fn from(value: validator::ValidationErrors) -> Self {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("Payload validation error: {:?}", value),
+        )
+    }
+}
