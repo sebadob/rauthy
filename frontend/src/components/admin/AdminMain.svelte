@@ -24,6 +24,7 @@
     import Documentation from "./documentation/Documentation.svelte";
     import IconBookOpen from "$lib/icons/IconBookOpen.svelte";
     import {onMount} from "svelte";
+    import Events from "./events/Events.svelte";
 
     export let sessionInfo = {};
     export let selected = 'Users';
@@ -162,69 +163,73 @@
         </div>
     </Nav>
 
-    {#if 'Users' === selected}
-        <ContentWrapper>
-            <Users/>
-        </ContentWrapper>
-    {:else if 'Attributes' === selected}
-        <ContentWrapper>
-            <Attr/>
-        </ContentWrapper>
-    {:else if 'Clients' === selected}
-        <ContentWrapper>
-            <Clients/>
-        </ContentWrapper>
-    {:else if 'Roles' === selected}
-        <ContentWrapper>
-            <Roles/>
-        </ContentWrapper>
-    {:else if 'Groups' === selected}
-        <ContentWrapper>
-            <Groups/>
-        </ContentWrapper>
-    {:else if 'Scopes' === selected}
-        <ContentWrapper>
-            <Scopes/>
-        </ContentWrapper>
-    {:else if 'Sessions' === selected}
-        <ContentWrapper>
-            <Sessions/>
-        </ContentWrapper>
-    {:else if 'Config' === selected}
-        <ContentWrapper>
-            <Config/>
-        </ContentWrapper>
-    {:else if 'Docs' === selected}
-        <ContentWrapper>
-            <Documentation/>
-        </ContentWrapper>
-    {:else}
-        <ContentWrapper bind:selected>
-            <h1>ADMIN PAGE</h1>
-            <div>
-                <h3>Info:</h3>
-                {#if sessionInfo}
-                    <div>
-                        {sessionInfo.id}
-                    </div>
-                    <div>
-                        {sessionInfo.user_id}
-                    </div>
-                    <div>
-                        {sessionInfo.roles}
-                    </div>
-                    <div>
-                        {sessionInfo.groups}
-                    </div>
-                    <div>
-                        {sessionInfo.exp}
-                    </div>
-                {/if}
+    <div class="inner">
+        {#if 'Users' === selected}
+            <ContentWrapper>
+                <Users/>
+            </ContentWrapper>
+        {:else if 'Attributes' === selected}
+            <ContentWrapper>
+                <Attr/>
+            </ContentWrapper>
+        {:else if 'Clients' === selected}
+            <ContentWrapper>
+                <Clients/>
+            </ContentWrapper>
+        {:else if 'Roles' === selected}
+            <ContentWrapper>
+                <Roles/>
+            </ContentWrapper>
+        {:else if 'Groups' === selected}
+            <ContentWrapper>
+                <Groups/>
+            </ContentWrapper>
+        {:else if 'Scopes' === selected}
+            <ContentWrapper>
+                <Scopes/>
+            </ContentWrapper>
+        {:else if 'Sessions' === selected}
+            <ContentWrapper>
+                <Sessions/>
+            </ContentWrapper>
+        {:else if 'Config' === selected}
+            <ContentWrapper>
+                <Config/>
+            </ContentWrapper>
+        {:else if 'Docs' === selected}
+            <ContentWrapper>
+                <Documentation/>
+            </ContentWrapper>
+        {:else}
+            <ContentWrapper bind:selected>
+                <h1>ADMIN PAGE</h1>
+                <div>
+                    <h3>Info:</h3>
+                    {#if sessionInfo}
+                        <div>
+                            {sessionInfo.id}
+                        </div>
+                        <div>
+                            {sessionInfo.user_id}
+                        </div>
+                        <div>
+                            {sessionInfo.roles}
+                        </div>
+                        <div>
+                            {sessionInfo.groups}
+                        </div>
+                        <div>
+                            {sessionInfo.exp}
+                        </div>
+                    {/if}
 
-                <Button on:click={redirectToLogout}>Logout</Button>
-            </div>
-        </ContentWrapper>
-    {/if}
+                    <Button on:click={redirectToLogout}>Logout</Button>
+                </div>
+            </ContentWrapper>
+        {/if}
+
+        <Events />
+    </div>
 </main>
 
 <style>
@@ -235,5 +240,11 @@
         flex-direction: row;
         overflow-y: auto;
         overflow-x: hidden;
+    }
+
+    .inner {
+        display: flex;
+        width: 100vw;
+        justify-content: space-between;
     }
 </style>

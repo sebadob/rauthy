@@ -1,5 +1,6 @@
 <script>
     import {fade} from "svelte/transition";
+    import Events from "./events/Events.svelte";
 
     const tDur = 100;
 </script>
