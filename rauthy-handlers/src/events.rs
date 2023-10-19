@@ -1,6 +1,6 @@
 use crate::real_ip_from_req;
 use actix_web::{get, web, HttpRequest, Responder};
-use actix_web_grants::proc_macro::{has_any_permission, has_roles};
+use actix_web_grants::proc_macro::has_any_permission;
 use actix_web_lab::sse;
 use rauthy_common::constants::SSE_KEEP_ALIVE;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
