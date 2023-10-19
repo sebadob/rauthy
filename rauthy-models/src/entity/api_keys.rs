@@ -145,7 +145,7 @@ impl ApiKeyEntity {
             key
         };
 
-        api_key.validate_secret(secret)?;
+        api_key.validate(secret)?;
 
         Ok(api_key)
     }
@@ -235,7 +235,16 @@ impl ApiKey {
         ))
     }
 
-    pub fn validate_secret(&self, secret: &str) -> Result<(), ErrorResponse> {
+    pub fn validate(&self, secret: &str) -> Result<(), ErrorResponse> {
+        if let Some(exp) = self.expires {
+            if Utc::now().timestamp() > exp {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "API Key has expired".to_string(),
+                ));
+            }
+        }
+
         let hash = digest::digest(&digest::SHA256, secret.as_bytes());
         if hash.as_ref() == self.secret.as_slice() {
             Ok(())
