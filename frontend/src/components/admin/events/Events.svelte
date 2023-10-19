@@ -1,8 +1,9 @@
 <script>
     import {onMount} from "svelte";
-    import {formatDateFromTs} from "../../../utils/helpers.js";
+    import Event from "./Event.svelte";
+    import EventsLegend from "./EventsLegend.svelte";
 
-    let latest = 100;
+    let latest = 20;
     let es;
     let events = [];
 
@@ -27,17 +28,20 @@
                 }
             };
         }
-
-        console.log(es);
     });
 
     function eventColor(level) {
         switch (level) {
-            case 'test': return '#b2b2b2';
-            case 'info': return '#388c51';
-            case 'notice': return '#3d5d99';
-            case 'warning': return '#c29a4f';
-            case 'critical': return '#993d49';
+            case 'test':
+                return '#b2b2b2';
+            case 'info':
+                return '#388c51';
+            case 'notice':
+                return '#3d5d99';
+            case 'warning':
+                return '#c29a4f';
+            case 'critical':
+                return '#993d49';
         }
     }
 
@@ -49,23 +53,12 @@
 
         <div class="data">
             {#each events as event (event.id)}
-                <div class="event" style:border-left={`.33rem solid ${eventColor(event.level)}`}>
-                    {formatDateFromTs(event.timestamp / 1000)}<br/>
-                    {event.typ}<br/>
-                    {event.ip}<br/>
-                </div>
+                <Event bind:event eventColor={eventColor}/>
             {/each}
         </div>
     </div>
 
-    <div class="legend">
-        <div class="legendEntry" style:border-left=".33rem solid var(--col-bg)"><b>Legend</b></div>
-        <div class="legendEntry" style:border-left={`.33rem solid ${eventColor('test')}`}>TEST</div>
-        <div class="legendEntry" style:border-left={`.33rem solid ${eventColor('info')}`}>INFO</div>
-        <div class="legendEntry" style:border-left={`.33rem solid ${eventColor('notice')}`}>NOTICE</div>
-        <div class="legendEntry" style:border-left={`.33rem solid ${eventColor('warning')}`}>WARNING</div>
-        <div class="legendEntry" style:border-left={`.33rem solid ${eventColor('critical')}`}>CRITICAL</div>
-    </div>
+    <EventsLegend eventColor={eventColor}/>
 </div>
 
 <style>
@@ -80,15 +73,8 @@
     .data {
         max-height: calc(100dvh - 10.5rem);
         overflow-y: auto;
-        box-shadow: inset 0 0 3px var(--col-gmid);
     }
 
-    .event {
-        padding: 0 1rem;
-        margin-bottom: .33rem;
-    }
-
-    .legendEntry {
-        padding: 0 1rem;
+    .upper {
     }
 </style>
