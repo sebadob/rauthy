@@ -74,11 +74,9 @@ impl EventLevel {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum EventType {
-    /// number of invalid logins
-    InvalidLogins(u32),
+    InvalidLogins,
     IpBlacklisted,
-    /// E-Mail of the new admin role member
-    NewRauthyAdmin(String),
+    NewRauthyAdmin,
     PossibleBruteForce,
     PossibleDoS,
     Test,
@@ -87,9 +85,9 @@ pub enum EventType {
 impl Display for EventType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            EventType::InvalidLogins(count) => write!(f, "invalid logins: {}", count),
+            EventType::InvalidLogins => write!(f, "invalid logins"),
             EventType::IpBlacklisted => write!(f, "IP blacklisted"),
-            EventType::NewRauthyAdmin(email) => write!(f, "new rauthy_admin member: {}", email),
+            EventType::NewRauthyAdmin => write!(f, "new rauthy_admin member"),
             EventType::PossibleBruteForce => write!(f, "possible brute force"),
             EventType::PossibleDoS => write!(f, "possible DoS"),
             EventType::Test => write!(f, "TEST"),
@@ -98,29 +96,61 @@ impl Display for EventType {
 }
 
 impl EventType {
-    fn db_value(&self) -> String {
+    pub fn as_str(&self) -> &str {
         match self {
-            EventType::InvalidLogins(count) => format!("InvalidLogins${}", count),
-            EventType::IpBlacklisted => "IpBlacklisted".to_string(),
-            EventType::NewRauthyAdmin(email) => format!("NewRauthyAdmin${}", email),
-            EventType::PossibleBruteForce => "PossibleBruteForce".to_string(),
-            EventType::PossibleDoS => "PossibleDoS".to_string(),
-            EventType::Test => "TEST".to_string(),
+            Self::InvalidLogins => "InvalidLogins",
+            Self::IpBlacklisted => "IpBlacklisted",
+            Self::NewRauthyAdmin => "NewRauthyAdmin",
+            Self::PossibleBruteForce => "PossibleBruteForce",
+            Self::PossibleDoS => "PossibleDoS",
+            Self::Test => "TEST",
+        }
+    }
+
+    pub fn value(&self) -> i16 {
+        match self {
+            Self::Test => 0,
+            Self::InvalidLogins => 1,
+            Self::NewRauthyAdmin => 2,
+            Self::IpBlacklisted => 3,
+            Self::PossibleBruteForce => 4,
+            Self::PossibleDoS => 5,
         }
     }
 }
 
 impl From<String> for EventType {
     fn from(value: String) -> Self {
-        let (typ, value) = value.split_once('$').unwrap_or((value.as_str(), ""));
-        match typ {
-            "InvalidLogins" => Self::InvalidLogins(value.parse::<u32>().unwrap_or_default()),
+        match value.as_str() {
+            "InvalidLogins" => Self::InvalidLogins,
             "IpBlacklisted" => Self::IpBlacklisted,
-            "NewRauthyAdmin" => Self::NewRauthyAdmin(value.to_string()),
+            "NewRauthyAdmin" => Self::NewRauthyAdmin,
             "PossibleBruteForce" => Self::PossibleBruteForce,
             "PossibleDoS" => Self::PossibleDoS,
             "TEST" => Self::Test,
-            _ => unreachable!(),
+            // just return test to never panic
+            _ => Self::Test,
+        }
+    }
+}
+
+impl From<i16> for EventType {
+    fn from(value: i16) -> Self {
+        Self::from(value as i64)
+    }
+}
+
+impl From<i64> for EventType {
+    fn from(value: i64) -> Self {
+        match value {
+            0 => Self::Test,
+            1 => Self::InvalidLogins,
+            2 => Self::NewRauthyAdmin,
+            3 => Self::IpBlacklisted,
+            4 => Self::PossibleBruteForce,
+            5 => Self::PossibleDoS,
+            // just return test to never panic
+            _ => Self::Test,
         }
     }
 }
@@ -132,6 +162,8 @@ pub struct Event {
     pub level: EventLevel,
     pub typ: EventType,
     pub ip: Option<String>,
+    pub data: Option<i64>,
+    pub text: Option<String>,
 }
 
 impl Display for Event {
@@ -154,15 +186,18 @@ impl Display for Event {
 impl Event {
     pub async fn insert(&self, db: &DbPool) -> Result<(), ErrorResponse> {
         let level = self.level.value();
-        let typ = self.typ.db_value();
+        let typ = self.typ.value();
 
         query!(
-            "INSERT INTO events (id, timestamp, level, typ, ip) VALUES ($1, $2, $3, $4, $5)",
+            r#"INSERT INTO events (id, timestamp, level, typ, ip, data, text)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
             self.id,
             self.timestamp,
             level,
             typ,
             self.ip,
+            self.data,
+            self.text,
         )
         .execute(db)
         .await?;
@@ -186,7 +221,13 @@ impl Event {
 }
 
 impl Event {
-    pub fn new(level: EventLevel, typ: EventType, ip: Option<String>) -> Self {
+    pub fn new(
+        level: EventLevel,
+        typ: EventType,
+        ip: Option<String>,
+        data: Option<i64>,
+        text: Option<String>,
+    ) -> Self {
         // These short random strings are enough "id" because the PK in the DB is 'id + timestamp_millis'
         let id = get_rand(8);
 
@@ -196,6 +237,8 @@ impl Event {
             level,
             typ,
             ip,
+            data,
+            text,
         }
     }
 
@@ -208,7 +251,13 @@ impl Event {
         } else {
             EventLevel::Info
         };
-        Self::new(level, EventType::InvalidLogins(count), Some(ip))
+        Self::new(
+            level,
+            EventType::InvalidLogins,
+            Some(ip),
+            Some(count as i64),
+            None,
+        )
     }
 
     pub fn brute_force(ip: String) -> Self {
@@ -216,23 +265,49 @@ impl Event {
             EventLevel::Critical,
             EventType::PossibleBruteForce,
             Some(ip),
+            None,
+            None,
         )
     }
 
     pub fn ip_blacklisted(ip: String) -> Self {
-        Self::new(EventLevel::Warning, EventType::IpBlacklisted, Some(ip))
+        Self::new(
+            EventLevel::Warning,
+            EventType::IpBlacklisted,
+            Some(ip),
+            None,
+            None,
+        )
     }
 
     pub fn rauthy_admin(email: String) -> Self {
-        Self::new(EventLevel::Notice, EventType::NewRauthyAdmin(email), None)
+        Self::new(
+            EventLevel::Notice,
+            EventType::NewRauthyAdmin,
+            None,
+            None,
+            Some(email),
+        )
     }
 
     pub fn test(ip: Option<String>) -> Self {
-        Self::new(EventLevel::Info, EventType::Test, ip)
+        Self::new(
+            EventLevel::Info,
+            EventType::Test,
+            ip,
+            None,
+            Some("This is a Test-Event".to_string()),
+        )
     }
 
     pub fn dos(ip: String) -> Self {
-        Self::new(EventLevel::Critical, EventType::PossibleDoS, Some(ip))
+        Self::new(
+            EventLevel::Critical,
+            EventType::PossibleDoS,
+            Some(ip),
+            None,
+            None,
+        )
     }
 
     #[inline(always)]
