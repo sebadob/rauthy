@@ -3,9 +3,16 @@
     import Event from "./Event.svelte";
     import EventsLegend from "./EventsLegend.svelte";
 
+    export let collapsed = true;
+    export let wide;
+
     let latest = 20;
     let es;
     let events = [];
+
+    $: widthDefault = !collapsed && !wide;
+    $: widthCollapsed = collapsed && !wide;
+    $: widthWide = !collapsed && wide;
 
     onMount(() => {
         if (!es || es.closed) {
@@ -23,7 +30,6 @@
             es.onmessage = ev => {
                 if (ev.data) {
                     let event = JSON.parse(ev.data);
-                    // console.log(event);
                     events = [event, ...events];
                 }
             };
@@ -47,27 +53,38 @@
 
 </script>
 
-<div id="events">
+<div
+        id="events"
+        class:widthDefault
+        class:widthCollapsed
+        class:widthWide
+>
     <div class="upper">
         <b>Events</b><br/><br/>
 
         <div class="data">
             {#each events as event (event.id)}
-                <Event bind:event eventColor={eventColor}/>
+                <Event bind:event eventColor={eventColor} bind:collapsed bind:wide />
             {/each}
         </div>
     </div>
 
-    <EventsLegend eventColor={eventColor}/>
+    {#if !collapsed}
+        <EventsLegend eventColor={eventColor} bind:wide />
+    {/if}
 </div>
 
 <style>
     #events {
+        position: absolute;
+        right: 0;
+        top: 0;
         height: 100dvh;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
         box-shadow: -2px 0 5px var(--col-gmid);
+        transition: all 250ms ease-in-out;
     }
 
     .data {
@@ -76,5 +93,17 @@
     }
 
     .upper {
+    }
+
+    .widthDefault {
+        width: var(--width-events);
+    }
+
+    .widthCollapsed {
+        width: var(--width-events-collapsed);
+    }
+
+    .widthWide {
+        width: var(--width-events-wide);
     }
 </style>

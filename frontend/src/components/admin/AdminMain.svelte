@@ -31,10 +31,14 @@
 
     let title = 'Rauthy Admin';
     let isExpanded;
+    let eventsCollapsed;
+    let eventsWide;
     let innerWidth;
 
     $: if (innerWidth) {
         isExpanded = innerWidth > 1050;
+        eventsCollapsed = innerWidth < 1050;
+        eventsWide = innerWidth > 1450;
     }
 
     $: if (selected) {
@@ -95,10 +99,16 @@
             selected = event.state;
         });
 
+        calcWidths(window.innerWidth);
+
         return () => window.removeEventListener('popstate');
     });
 
-
+    function calcWidths(innerWidth) {
+        isExpanded = innerWidth > 1050;
+        eventsCollapsed = innerWidth < 1050;
+        eventsWide = innerWidth > 1450;
+    }
 
 </script>
 
@@ -165,39 +175,39 @@
 
     <div class="inner">
         {#if 'Users' === selected}
-            <ContentWrapper>
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
                 <Users/>
             </ContentWrapper>
         {:else if 'Attributes' === selected}
-            <ContentWrapper>
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
                 <Attr/>
             </ContentWrapper>
         {:else if 'Clients' === selected}
-            <ContentWrapper>
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
                 <Clients/>
             </ContentWrapper>
         {:else if 'Roles' === selected}
-            <ContentWrapper>
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
                 <Roles/>
             </ContentWrapper>
         {:else if 'Groups' === selected}
-            <ContentWrapper>
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
                 <Groups/>
             </ContentWrapper>
         {:else if 'Scopes' === selected}
-            <ContentWrapper>
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
                 <Scopes/>
             </ContentWrapper>
         {:else if 'Sessions' === selected}
-            <ContentWrapper>
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
                 <Sessions/>
             </ContentWrapper>
         {:else if 'Config' === selected}
-            <ContentWrapper>
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
                 <Config/>
             </ContentWrapper>
         {:else if 'Docs' === selected}
-            <ContentWrapper>
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
                 <Documentation/>
             </ContentWrapper>
         {:else}
@@ -228,7 +238,9 @@
             </ContentWrapper>
         {/if}
 
-        <Events />
+        {#if innerWidth !== undefined }
+            <Events collapsed={eventsCollapsed} wide={eventsWide} />
+        {/if}
     </div>
 </main>
 
