@@ -25,8 +25,38 @@
 
 <div class={cls} style:border-left={`.33rem solid ${eventColor(event.level)}`}>
     {formatDateFromTs(event.timestamp / 1000)}<br/>
-    {event.typ}<br/>
-    {event.ip}<br/>
+
+    {event.typ}
+
+    {#if event.typ === 'Test'}
+        <br/>
+        {#if event.text}
+            {event.text}
+            <br/>
+        {/if}
+        {event.ip}
+
+    {:else if event.typ === 'InvalidLogins'}
+        {`: ${event.data}`}<br/>
+        {event.ip}
+
+    {:else if event.typ === 'NewRauthyAdmin'}
+        <br/>
+        {event.text}
+
+    {:else if event.typ === 'IpBlacklisted'}
+        <br/>
+        {event.ip}
+
+    {:else if event.typ === 'PossibleBruteForce'}
+        <br/>
+        {event.ip}
+
+    {:else if event.typ === 'PossibleDoS'}
+        <br/>
+        {event.ip}
+
+    {/if}
 </div>
 
 <style>
