@@ -24,16 +24,21 @@
     import Documentation from "./documentation/Documentation.svelte";
     import IconBookOpen from "$lib/icons/IconBookOpen.svelte";
     import {onMount} from "svelte";
+    import Events from "./events/Events.svelte";
 
     export let sessionInfo = {};
     export let selected = 'Users';
 
     let title = 'Rauthy Admin';
     let isExpanded;
+    let eventsCollapsed;
+    let eventsWide;
     let innerWidth;
 
     $: if (innerWidth) {
         isExpanded = innerWidth > 1050;
+        eventsCollapsed = innerWidth < 1050;
+        eventsWide = innerWidth > 1450;
     }
 
     $: if (selected) {
@@ -94,10 +99,16 @@
             selected = event.state;
         });
 
+        calcWidths(window.innerWidth);
+
         return () => window.removeEventListener('popstate');
     });
 
-
+    function calcWidths(innerWidth) {
+        isExpanded = innerWidth > 1050;
+        eventsCollapsed = innerWidth < 1050;
+        eventsWide = innerWidth > 1450;
+    }
 
 </script>
 
@@ -162,69 +173,75 @@
         </div>
     </Nav>
 
-    {#if 'Users' === selected}
-        <ContentWrapper>
-            <Users/>
-        </ContentWrapper>
-    {:else if 'Attributes' === selected}
-        <ContentWrapper>
-            <Attr/>
-        </ContentWrapper>
-    {:else if 'Clients' === selected}
-        <ContentWrapper>
-            <Clients/>
-        </ContentWrapper>
-    {:else if 'Roles' === selected}
-        <ContentWrapper>
-            <Roles/>
-        </ContentWrapper>
-    {:else if 'Groups' === selected}
-        <ContentWrapper>
-            <Groups/>
-        </ContentWrapper>
-    {:else if 'Scopes' === selected}
-        <ContentWrapper>
-            <Scopes/>
-        </ContentWrapper>
-    {:else if 'Sessions' === selected}
-        <ContentWrapper>
-            <Sessions/>
-        </ContentWrapper>
-    {:else if 'Config' === selected}
-        <ContentWrapper>
-            <Config/>
-        </ContentWrapper>
-    {:else if 'Docs' === selected}
-        <ContentWrapper>
-            <Documentation/>
-        </ContentWrapper>
-    {:else}
-        <ContentWrapper bind:selected>
-            <h1>ADMIN PAGE</h1>
-            <div>
-                <h3>Info:</h3>
-                {#if sessionInfo}
-                    <div>
-                        {sessionInfo.id}
-                    </div>
-                    <div>
-                        {sessionInfo.user_id}
-                    </div>
-                    <div>
-                        {sessionInfo.roles}
-                    </div>
-                    <div>
-                        {sessionInfo.groups}
-                    </div>
-                    <div>
-                        {sessionInfo.exp}
-                    </div>
-                {/if}
+    <div class="inner">
+        {#if 'Users' === selected}
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
+                <Users/>
+            </ContentWrapper>
+        {:else if 'Attributes' === selected}
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
+                <Attr/>
+            </ContentWrapper>
+        {:else if 'Clients' === selected}
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
+                <Clients/>
+            </ContentWrapper>
+        {:else if 'Roles' === selected}
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
+                <Roles/>
+            </ContentWrapper>
+        {:else if 'Groups' === selected}
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
+                <Groups/>
+            </ContentWrapper>
+        {:else if 'Scopes' === selected}
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
+                <Scopes/>
+            </ContentWrapper>
+        {:else if 'Sessions' === selected}
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
+                <Sessions/>
+            </ContentWrapper>
+        {:else if 'Config' === selected}
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
+                <Config/>
+            </ContentWrapper>
+        {:else if 'Docs' === selected}
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
+                <Documentation/>
+            </ContentWrapper>
+        {:else}
+            <ContentWrapper bind:selected>
+                <h1>ADMIN PAGE</h1>
+                <div>
+                    <h3>Info:</h3>
+                    {#if sessionInfo}
+                        <div>
+                            {sessionInfo.id}
+                        </div>
+                        <div>
+                            {sessionInfo.user_id}
+                        </div>
+                        <div>
+                            {sessionInfo.roles}
+                        </div>
+                        <div>
+                            {sessionInfo.groups}
+                        </div>
+                        <div>
+                            {sessionInfo.exp}
+                        </div>
+                    {/if}
 
-                <Button on:click={redirectToLogout}>Logout</Button>
-            </div>
-        </ContentWrapper>
-    {/if}
+                    <Button on:click={redirectToLogout}>Logout</Button>
+                </div>
+            </ContentWrapper>
+        {/if}
+
+        {#if innerWidth !== undefined }
+            <Events collapsed={eventsCollapsed} wide={eventsWide} />
+        {/if}
+    </div>
 </main>
 
 <style>
@@ -235,5 +252,11 @@
         flex-direction: row;
         overflow-y: auto;
         overflow-x: hidden;
+    }
+
+    .inner {
+        display: flex;
+        width: 100vw;
+        justify-content: space-between;
     }
 </style>

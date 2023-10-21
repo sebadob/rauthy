@@ -44,8 +44,6 @@ use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{clients, events, generic, groups, oidc, roles, scopes, sessions, users};
 use rauthy_models::app_state::{AppState, Caches, DbPool};
 use rauthy_models::email::EMail;
-use rauthy_models::entity::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyEntity};
-use rauthy_models::events::event::Event;
 use rauthy_models::events::listener::EventListener;
 use rauthy_models::{email, ListenScheme};
 use rauthy_service::auth;
@@ -196,6 +194,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // let txe = tx_events.clone();
     // // let data = app_state.clone();
     // tokio::spawn(async move {
+    //     // use rauthy_models::entity::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyEntity};
+    //     // use rauthy_models::events::event::Event;
+    //     //
     //     // time::sleep(Duration::from_secs(2)).await;
     //     // let key = ApiKeyEntity::create(
     //     //     &data,
@@ -210,47 +211,51 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //     // .unwrap();
     //     // println!("\n\ntest${}\n", key);
     //
-    //     time::sleep(Duration::from_secs(5)).await;
-    //     Event::brute_force("192.15.15.1".to_string())
-    //         .send(&txe)
-    //         .await
-    //         .unwrap();
+    //     loop {
+    //         time::sleep(Duration::from_secs(5)).await;
+    //         Event::brute_force("192.15.15.1".to_string())
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
     //
-    //     time::sleep(Duration::from_secs(5)).await;
-    //     Event::dos("192.15.15.1".to_string())
-    //         .send(&txe)
-    //         .await
-    //         .unwrap();
+    //         time::sleep(Duration::from_secs(5)).await;
+    //         Event::dos("192.15.15.1".to_string())
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
     //
-    //     time::sleep(Duration::from_secs(5)).await;
-    //     Event::invalid_login(2, "192.15.15.1".to_string())
-    //         .send(&txe)
-    //         .await
-    //         .unwrap();
+    //         time::sleep(Duration::from_secs(5)).await;
+    //         Event::invalid_login(2, "192.15.15.1".to_string())
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
     //
-    //     time::sleep(Duration::from_secs(2)).await;
-    //     Event::invalid_login(5, "192.15.15.1".to_string())
-    //         .send(&txe)
-    //         .await
-    //         .unwrap();
+    //         time::sleep(Duration::from_secs(2)).await;
+    //         Event::invalid_login(5, "192.15.15.1".to_string())
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
     //
-    //     time::sleep(Duration::from_secs(1)).await;
-    //     Event::invalid_login(7, "192.15.15.1".to_string())
-    //         .send(&txe)
-    //         .await
-    //         .unwrap();
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         Event::invalid_login(7, "192.15.15.1".to_string())
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
     //
-    //     time::sleep(Duration::from_secs(5)).await;
-    //     Event::ip_blacklisted("192.15.15.1".to_string())
-    //         .send(&txe)
-    //         .await
-    //         .unwrap();
+    //         time::sleep(Duration::from_secs(5)).await;
+    //         Event::ip_blacklisted("192.15.15.1".to_string())
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
     //
-    //     time::sleep(Duration::from_secs(10)).await;
-    //     Event::rauthy_admin("sebastiandobe@mailbox.org".to_string())
-    //         .send(&txe)
-    //         .await
-    //         .unwrap();
+    //         time::sleep(Duration::from_secs(10)).await;
+    //         Event::rauthy_admin("sebastiandobe@mailbox.org".to_string())
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(10)).await;
+    //     }
     // });
 
     // spawn password hash limiter
