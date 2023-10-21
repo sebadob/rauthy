@@ -6,12 +6,13 @@
     export let collapsed = true;
     export let wide;
 
-    let latest = 20;
+    let latest = 50;
     let es;
     let events = [];
+    let isHover = false;
 
-    $: widthDefault = !collapsed && !wide;
-    $: widthCollapsed = collapsed && !wide;
+    $: widthDefault = !collapsed && !wide || isHover;
+    $: widthCollapsed = collapsed && !wide && !isHover;
     $: widthWide = !collapsed && wide;
 
     onMount(() => {
@@ -30,7 +31,8 @@
             es.onmessage = ev => {
                 if (ev.data) {
                     let event = JSON.parse(ev.data);
-                    events = [event, ...events];
+                    // keep max 500 events in the UI to not consume endless amounts of memory
+                    events = [event, ...events.slice(-499)];
                 }
             };
         }
@@ -58,18 +60,22 @@
         class:widthDefault
         class:widthCollapsed
         class:widthWide
+        on:mouseenter={() => isHover = true}
+        on:mouseleave={() => isHover = false}
 >
     <div class="upper">
-        <b>Events</b><br/><br/>
+        {#if !widthCollapsed}
+            <b>Events</b><br/><br/>
+        {/if}
 
-        <div class="data">
+        <div class={widthWide ? 'dataWide' : widthCollapsed ? 'dataCollapsed' : 'data'}>
             {#each events as event (event.id)}
-                <Event bind:event eventColor={eventColor} bind:collapsed bind:wide />
+                <Event bind:event eventColor={eventColor} collapsed={collapsed && !isHover} bind:wide />
             {/each}
         </div>
     </div>
 
-    {#if !collapsed}
+    {#if !collapsed || isHover}
         <EventsLegend eventColor={eventColor} bind:wide />
     {/if}
 </div>
@@ -87,9 +93,20 @@
         transition: all 250ms ease-in-out;
     }
 
-    .data {
-        max-height: calc(100dvh - 10.5rem);
+    .data, .dataCollapsed, .dataWide {
         overflow-y: auto;
+    }
+
+    .data {
+        max-height: calc(100dvh - 10rem);
+    }
+
+    .dataCollapsed {
+        max-height: 100dvh;
+    }
+
+    .dataWide {
+        max-height: calc(100dvh - 5.1rem);
     }
 
     .upper {

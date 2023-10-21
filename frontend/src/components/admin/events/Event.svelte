@@ -9,10 +9,12 @@
     export let wide;
 
     let cls = 'event';
+    let isHover = false;
 
     $: showDefault = !collapsed && !wide;
-    $: showCollapsed = collapsed && !wide;
+    $: showCollapsed = collapsed && !wide && !isHover;
     $: showWide = !collapsed && wide;
+    $: borderWidth = showCollapsed ? '.5rem' : '.33rem';
 
     onMount(() => {
         let now = new Date().getTime();
@@ -28,13 +30,36 @@
         }
     });
 
+    function eventIndex() {
+        switch (event.level) {
+            case 'test':
+                return 'T';
+            case 'info':
+                return 'I';
+            case 'notice':
+                return 'N';
+            case 'warning':
+                return 'W';
+            case 'critical':
+                return 'C';
+            default:
+                return 'U';
+        }
+    }
+
     function ts() {
         return formatDateFromTs(event.timestamp / 1000);
     }
 
 </script>
 
-<div class={cls} style:border-left={`.33rem solid ${eventColor(event.level)}`}>
+<div
+        class={cls}
+        class:showCollapsed
+        style:border-left={`${borderWidth} solid ${eventColor(event.level)}`}
+        on:mouseenter={() => isHover = true}
+        on:mouseleave={() => isHover = false}
+>
     {#if showWide}
         <div class="row">
             <div class="col-ts">{ts()}</div>
@@ -53,7 +78,7 @@
 
             {/if}
         </div>
-    {:else}
+    {:else if showDefault}
         {ts()}<br/>
 
         {event.typ}
@@ -72,7 +97,7 @@
 
         {:else if event.typ === 'NewRauthyAdmin'}
             <br/>
-            {event.text}
+            {@html event.text.replace('@', '<wbr/>@')}
 
         {:else if event.typ === 'IpBlacklisted'}
             <br/>
@@ -87,12 +112,15 @@
             {event.ip}
 
         {/if}
+    {:else}
+        {eventIndex()}
     {/if}
 </div>
 
 <style>
     .event, .eventNew {
         width: 100%;
+        min-width: 5px;
         padding: 0 1rem;
         margin-bottom: .33rem;
         word-break: break-word;
@@ -128,5 +156,9 @@
     .row {
         display: inline-flex;
         flex-wrap: wrap;
+    }
+
+    .showCollapsed {
+        padding: 0 .25rem;
     }
 </style>
