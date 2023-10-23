@@ -14,23 +14,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::error::Error;
-use std::net::Ipv4Addr;
-use std::str::FromStr;
-use std::time::Duration;
-use std::{env, thread};
-
 use actix_web::rt::System;
 use actix_web::{middleware, web, App, HttpServer};
 use actix_web_grants::GrantsMiddleware;
 use actix_web_prom::PrometheusMetricsBuilder;
 use prometheus::Registry;
-use sqlx::{query, query_as};
-use tokio::sync::mpsc;
-use tokio::time;
-use tracing::{debug, error, info};
-use utoipa_swagger_ui::SwaggerUi;
-
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW,
     CACHE_NAME_SESSIONS, CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, POW_EXP, RAUTHY_VERSION,
@@ -44,10 +32,20 @@ use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{clients, events, generic, groups, oidc, roles, scopes, sessions, users};
 use rauthy_models::app_state::{AppState, Caches, DbPool};
 use rauthy_models::email::EMail;
+use rauthy_models::events::init_event_vars;
 use rauthy_models::events::listener::EventListener;
-use rauthy_models::events::notifier::EventNotifier;
 use rauthy_models::{email, ListenScheme};
 use rauthy_service::auth;
+use sqlx::{query, query_as};
+use std::error::Error;
+use std::net::Ipv4Addr;
+use std::str::FromStr;
+use std::time::Duration;
+use std::{env, thread};
+use tokio::sync::mpsc;
+use tokio::time;
+use tracing::{debug, error, info};
+use utoipa_swagger_ui::SwaggerUi;
 
 use crate::cache_notify::handle_notify;
 use crate::logging::setup_logging;
@@ -180,7 +178,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .expect("Passkey UV migration to not fail");
 
     // events listener
-    EventNotifier::init().unwrap();
+    init_event_vars().unwrap();
     tokio::spawn(EventListener::listen(
         tx_email,
         tx_events_router,
