@@ -2,6 +2,8 @@
     import {onMount} from "svelte";
     import Event from "./Event.svelte";
     import EventsLegend from "./EventsLegend.svelte";
+    import Button from "$lib/Button.svelte";
+    import {postTestEvent} from "../../../utils/dataFetching.js";
 
     export let collapsed = true;
     export let wide;
@@ -53,6 +55,10 @@
         }
     }
 
+    async function sendTestEvent() {
+        await postTestEvent();
+    }
+
 </script>
 
 <div
@@ -64,9 +70,17 @@
         on:mouseleave={() => isHover = false}
 >
     <div class="upper">
-        {#if !widthCollapsed}
-            <b>Events</b><br/><br/>
-        {/if}
+        <div class="header">
+            {#if !widthCollapsed}
+                <b>Events</b>
+                <Button
+                        on:click={sendTestEvent}
+                        level=3
+                >
+                    TEST
+                </Button>
+            {/if}
+        </div>
 
         <div class={widthWide ? 'dataWide' : widthCollapsed ? 'dataCollapsed' : 'data'}>
             {#each events as event (event.id)}
@@ -109,7 +123,11 @@
         max-height: calc(100dvh - 5.1rem);
     }
 
-    .upper {
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 .5rem 0 1.25rem;
     }
 
     .widthDefault {

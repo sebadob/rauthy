@@ -125,6 +125,13 @@ export async function postPasswordResetRequest(data) {
 	});
 }
 
+export async function postTestEvent() {
+	return await fetch('/auth/v1/events/test', {
+		method: 'POST',
+		headers: getCsrfHeaders(),
+	});
+}
+
 export async function registerUser(data) {
 	return await fetch('/auth/v1/users/register', {
 		method: 'POST',
