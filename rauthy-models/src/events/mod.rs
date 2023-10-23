@@ -1,5 +1,4 @@
 use crate::events::event::EventLevel;
-use crate::events::notifier::EventNotifier;
 use rauthy_common::error_response::ErrorResponse;
 use std::env;
 use std::sync::OnceLock;
@@ -42,12 +41,6 @@ pub fn init_event_vars() -> Result<(), ErrorResponse> {
         .unwrap_or(EventLevel::Notice);
     info!("Event Persistence Level: {:?}", level);
     EVENT_PERSIST_LEVEL.set(level.value()).unwrap();
-
-    // let cleanup_days = env::var("EVENT_CLEANUP_DAYS")
-    //     .unwrap_or_else(|| "31".to_string())
-    //     .parse::<u16>()
-    //     .expect("Cannot parse EVENT_CLEANUP_DAYS to u16");
-    // EVENT_CLEANUP_DAYS.set(cleanup_days).unwrap();
 
     Ok(())
 }

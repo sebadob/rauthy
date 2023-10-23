@@ -71,7 +71,7 @@ impl EventListener {
         tx: flume::Sender<EventRouterMsg>,
     ) {
         // insert into DB
-        if event.level >= *EVENT_PERSIST_LEVEL {
+        if &event.level.value() >= EVENT_PERSIST_LEVEL.get().unwrap() {
             while let Err(err) = event.insert(&db).await {
                 error!("Inserting Event into Database: {:?}", err);
                 time::sleep(Duration::from_secs(1)).await;
@@ -96,7 +96,7 @@ impl EventListener {
     #[tracing::instrument(level = "debug", skip_all)]
     async fn handle_event_ha(tx_email: mpsc::Sender<EMail>, event: Event, db: DbPool) {
         // insert into DB
-        if event.level >= *EVENT_PERSIST_LEVEL {
+        if &event.level.value() >= EVENT_PERSIST_LEVEL.get().unwrap() {
             while let Err(err) = event.insert(&db).await {
                 error!("Inserting Event into Database: {:?}", err);
                 time::sleep(Duration::from_secs(1)).await;
