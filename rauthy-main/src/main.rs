@@ -45,6 +45,7 @@ use rauthy_handlers::{clients, events, generic, groups, oidc, roles, scopes, ses
 use rauthy_models::app_state::{AppState, Caches, DbPool};
 use rauthy_models::email::EMail;
 use rauthy_models::events::listener::EventListener;
+use rauthy_models::events::notifier::EventNotifier;
 use rauthy_models::{email, ListenScheme};
 use rauthy_service::auth;
 
@@ -58,7 +59,8 @@ mod tls;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let banner = r#"
+    println!(
+        r#"
                                           88
                                     ,d    88
                                     88    88
@@ -70,12 +72,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                                           d8'
                                                          d8'
     "#
-    .to_string();
-
-    // banner
-    println!("{}", banner);
-    // just a gimmick, drop it immediately and free up the memory
-    drop(banner);
+    );
     // This sleep is just a test. On some terminals, the banner gets mixed up with the first other
     // logs. We dont care about rauthy's startup time being 1ms longer.
     time::sleep(Duration::from_millis(1)).await;
@@ -169,7 +166,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (tx_events_router, rx_events_router) = flume::unbounded();
     let app_state = web::Data::new(
         AppState::new(
-            tx_email,
+            tx_email.clone(),
             tx_events.clone(),
             tx_events_router.clone(),
             caches,
@@ -183,7 +180,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .expect("Passkey UV migration to not fail");
 
     // events listener
+    EventNotifier::init().unwrap();
     tokio::spawn(EventListener::listen(
+        tx_email,
         tx_events_router,
         rx_events_router,
         rx_events,
@@ -213,46 +212,48 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //
     //     loop {
     //         time::sleep(Duration::from_secs(5)).await;
-    //         Event::brute_force("192.15.15.1".to_string())
+    //         rauthy_models::events::event::Event::brute_force("192.15.15.1".to_string())
     //             .send(&txe)
     //             .await
     //             .unwrap();
     //
     //         time::sleep(Duration::from_secs(5)).await;
-    //         Event::dos("192.15.15.1".to_string())
+    //         rauthy_models::events::event::Event::dos("192.15.15.1".to_string())
     //             .send(&txe)
     //             .await
     //             .unwrap();
     //
     //         time::sleep(Duration::from_secs(5)).await;
-    //         Event::invalid_login(2, "192.15.15.1".to_string())
+    //         rauthy_models::events::event::Event::invalid_login(2, "192.15.15.1".to_string())
     //             .send(&txe)
     //             .await
     //             .unwrap();
     //
     //         time::sleep(Duration::from_secs(2)).await;
-    //         Event::invalid_login(5, "192.15.15.1".to_string())
+    //         rauthy_models::events::event::Event::invalid_login(5, "192.15.15.1".to_string())
     //             .send(&txe)
     //             .await
     //             .unwrap();
     //
     //         time::sleep(Duration::from_secs(1)).await;
-    //         Event::invalid_login(7, "192.15.15.1".to_string())
+    //         rauthy_models::events::event::Event::invalid_login(7, "192.15.15.1".to_string())
     //             .send(&txe)
     //             .await
     //             .unwrap();
     //
     //         time::sleep(Duration::from_secs(5)).await;
-    //         Event::ip_blacklisted("192.15.15.1".to_string())
+    //         rauthy_models::events::event::Event::ip_blacklisted("192.15.15.1".to_string())
     //             .send(&txe)
     //             .await
     //             .unwrap();
     //
     //         time::sleep(Duration::from_secs(10)).await;
-    //         Event::rauthy_admin("sebastiandobe@mailbox.org".to_string())
-    //             .send(&txe)
-    //             .await
-    //             .unwrap();
+    //         rauthy_models::events::event::Event::rauthy_admin(
+    //             "sebastiandobe@mailbox.org".to_string(),
+    //         )
+    //         .send(&txe)
+    //         .await
+    //         .unwrap();
     //
     //         time::sleep(Duration::from_secs(10)).await;
     //     }

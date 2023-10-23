@@ -5,6 +5,7 @@ use rauthy_common::utils::get_rand;
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 use tracing::error;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -25,6 +26,26 @@ impl Display for EventLevel {
             EventLevel::Critical => "CRITICAL",
         };
         write!(f, "{}", s)
+    }
+}
+
+impl FromStr for EventLevel {
+    type Err = ErrorResponse;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let slf = match s {
+            "info" => Self::Info,
+            "notice" => Self::Notice,
+            "warning" => Self::Warning,
+            "critical" => Self::Critical,
+            _ => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Internal,
+                    "Cannot parse EventLevel".to_string(),
+                ));
+            }
+        };
+        Ok(slf)
     }
 }
 
@@ -85,11 +106,11 @@ pub enum EventType {
 impl Display for EventType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            EventType::InvalidLogins => write!(f, "invalid logins"),
+            EventType::InvalidLogins => write!(f, "Invalid logins"),
             EventType::IpBlacklisted => write!(f, "IP blacklisted"),
-            EventType::NewRauthyAdmin => write!(f, "new rauthy_admin member"),
-            EventType::PossibleBruteForce => write!(f, "possible brute force"),
-            EventType::PossibleDoS => write!(f, "possible DoS"),
+            EventType::NewRauthyAdmin => write!(f, "New rauthy_admin member"),
+            EventType::PossibleBruteForce => write!(f, "Possible brute force"),
+            EventType::PossibleDoS => write!(f, "Possible DoS"),
             EventType::Test => write!(f, "TEST"),
         }
     }
@@ -171,13 +192,14 @@ impl Display for Event {
         let ts = NaiveDateTime::from_timestamp_millis(self.timestamp).unwrap_or_default();
         write!(
             f,
-            "EVENT {} {}:{}:{} {} {} {}",
+            "EVENT {} {}:{}:{} {} {} {} {}",
             ts.date(),
             ts.hour(),
             ts.minute(),
             ts.second(),
             self.level,
             self.typ,
+            self.fmt_data(),
             self.ip.as_deref().unwrap_or_default(),
         )
     }
@@ -308,6 +330,21 @@ impl Event {
             None,
             None,
         )
+    }
+
+    pub fn fmt_data(&self) -> String {
+        match self.typ {
+            EventType::InvalidLogins => format!("Counter: {}", self.data.unwrap_or_default()),
+            EventType::IpBlacklisted => String::default(),
+            EventType::NewRauthyAdmin => {
+                format!("User E-Mail: {}", self.text.as_deref().unwrap_or_default())
+            }
+            EventType::PossibleBruteForce => String::default(),
+            EventType::PossibleDoS => String::default(),
+            EventType::Test => {
+                format!("Test Message: {}", self.text.as_deref().unwrap_or_default())
+            }
+        }
     }
 
     #[inline(always)]

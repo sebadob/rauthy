@@ -1,6 +1,7 @@
 use crate::app_state::AppState;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::users::User;
+use crate::events::event::Event;
 use crate::i18n::email_change_info_new::I18nEmailChangeInfoNew;
 use crate::i18n::email_confirm_change::I18nEmailConfirmChange;
 use crate::i18n::email_reset::I18nEmailReset;
@@ -8,14 +9,17 @@ use crate::i18n::email_reset_info::I18nEmailResetInfo;
 use crate::i18n::SsrJson;
 use actix_web::web;
 use askama_actix::Template;
+use chrono::NaiveDateTime;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication;
 use lettre::{AsyncSmtpTransport, AsyncTransport};
 use rauthy_common::constants::{
     EMAIL_SUB_PREFIX, SMTP_FROM, SMTP_PASSWORD, SMTP_URL, SMTP_USERNAME,
 };
+use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use std::time::Duration;
 use time::OffsetDateTime;
+use tokio::sync::mpsc;
 use tokio::sync::mpsc::Receiver;
 use tracing::{debug, error, info, warn};
 
@@ -27,27 +31,28 @@ pub struct EMail {
     pub html: Option<String>,
 }
 
-// TODO implement
-// #[derive(Default, Template)]
-// #[template(path = "email/change_info_old.html")]
-// pub struct EMailChangeInfoOldHtml<'a> {
-//     pub pub_url: &'a str,
-//     pub link: &'a str,
-//     // i18n
-//     pub header: &'a str,
-//     pub click_link: &'a str,
-//     pub button_text: &'a str,
-// }
-//
-// #[derive(Default, Template)]
-// #[template(path = "email/change_info_old.txt")]
-// pub struct EMailChangeInfoOldTxt<'a> {
-//     pub pub_url: &'a str,
-//     pub link: &'a str,
-//     // i18n
-//     pub header: &'a str,
-//     pub click_link: &'a str,
-// }
+#[derive(Default, Template)]
+#[template(path = "email/event.html")]
+pub struct EMailEventHtml<'a> {
+    pub email_sub_prefix: &'a str,
+    pub level: &'a str,
+    pub ts: &'a str,
+    pub typ: &'a str,
+    pub data: &'a str,
+    pub ip: &'a str,
+}
+
+#[derive(Default, Template)]
+#[template(path = "email/event.txt")]
+pub struct EMailEventTxt<'a> {
+    pub email_sub_prefix: &'a str,
+    pub level: &'a str,
+    pub ts: String,
+    pub typ: &'a str,
+    pub data: String,
+    pub ip: &'a str,
+    // pub ip: String,
+}
 
 #[derive(Default, Template)]
 #[template(path = "email/change_info_new.html")]
@@ -146,6 +151,43 @@ pub struct EmailResetInfoTxt<'a> {
     pub update: &'a str,
 }
 
+pub async fn send_email_event(address: String, tx_email: &mpsc::Sender<EMail>, event: &Event) {
+    let text = EMailEventTxt {
+        email_sub_prefix: &EMAIL_SUB_PREFIX,
+        level: event.level.as_str(),
+        ts: NaiveDateTime::from_timestamp_millis(event.timestamp)
+            .unwrap_or_default()
+            .to_string(),
+        typ: event.typ.as_str(),
+        data: event.fmt_data(),
+        ip: event.ip.as_deref().unwrap_or_default(),
+    };
+
+    let html = EMailEventHtml {
+        email_sub_prefix: text.email_sub_prefix,
+        level: text.level,
+        ts: &text.ts,
+        typ: text.typ,
+        data: &text.data,
+        ip: text.ip,
+    };
+
+    let req = EMail {
+        address,
+        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, text.level),
+        text: text.render().expect("Template rendering: EMailEventTxt"),
+        html: Some(html.render().expect("Template rendering: EMailEventHtml")),
+    };
+
+    let res = tx_email.send_timeout(req, Duration::from_secs(10)).await;
+    match res {
+        Ok(_) => {}
+        Err(ref err) => {
+            error!("Error sending Event E-Mail notification: {:?}", err);
+        }
+    }
+}
+
 pub async fn send_email_change_info_new(
     data: &web::Data<AppState>,
     magic_link: &MagicLink,
@@ -184,7 +226,7 @@ pub async fn send_email_change_info_new(
 
     let req = EMail {
         address: new_email.clone(),
-        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject,),
+        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
         text: text
             .render()
             .expect("Template rendering: EMailChangeInfoNewTxt"),
@@ -205,7 +247,6 @@ pub async fn send_email_change_info_new(
             );
         }
     }
-    if res.is_err() {}
 }
 
 pub async fn send_email_confirm_change(
@@ -231,7 +272,7 @@ pub async fn send_email_confirm_change(
 
     let req = EMail {
         address: email_addr.to_string(),
-        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject,),
+        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
         text: text
             .render()
             .expect("Template rendering: EMailConfirmChangeTxt"),
@@ -252,7 +293,6 @@ pub async fn send_email_confirm_change(
             );
         }
     }
-    if res.is_err() {}
 }
 
 pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, user: &User) {
@@ -288,7 +328,7 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
 
     let req = EMail {
         address: user.email.to_string(),
-        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject,),
+        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
         text: text.render().expect("Template rendering: EmailResetTxt"),
         html: Some(html.render().expect("Template rendering: EmailResetHtml")),
     };
@@ -304,7 +344,6 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
             );
         }
     }
-    if res.is_err() {}
 }
 
 pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
@@ -334,7 +373,7 @@ pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
 
     let req = EMail {
         address: user.email.to_string(),
-        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject,),
+        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
         text: text
             .render()
             .expect("Template rendering: EmailResetInfoTxt"),
@@ -355,7 +394,6 @@ pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
             );
         }
     }
-    if res.is_err() {}
 }
 
 pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
@@ -378,11 +416,23 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
         }
     }
 
-    let creds = authentication::Credentials::new(SMTP_USERNAME.clone(), SMTP_PASSWORD.clone());
-    let mailer = AsyncSmtpTransport::<lettre::Tokio1Executor>::relay(&SMTP_URL)
-        .expect("Connection Error with 'SMTP_URL'")
-        .credentials(creds)
-        .build();
+    let mailer = {
+        let mut retries = 0;
+
+        let mut conn = connect_test_smtp().await;
+        while let Err(err) = conn {
+            error!("{:?}", err);
+
+            if retries >= 3 {
+                panic!("SMTP connection retries exceeded");
+            }
+            retries += 1;
+            tokio::time::sleep(Duration::from_secs(5)).await;
+
+            conn = connect_test_smtp().await;
+        }
+        conn.unwrap()
+    };
 
     loop {
         debug!("Listening for incoming send E-Mail requests");
@@ -425,4 +475,52 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
             break;
         }
     }
+}
+
+async fn connect_test_smtp() -> Result<AsyncSmtpTransport<lettre::Tokio1Executor>, ErrorResponse> {
+    let creds = authentication::Credentials::new(SMTP_USERNAME.clone(), SMTP_PASSWORD.clone());
+
+    // always try fully wrapped TLS first
+    let mut conn = AsyncSmtpTransport::<lettre::Tokio1Executor>::relay(&SMTP_URL)
+        .expect("Connection Error with 'SMTP_URL'")
+        .credentials(creds.clone())
+        .timeout(Some(Duration::from_secs(10)))
+        .build();
+
+    match conn.test_connection().await {
+        Ok(true) => {
+            info!("Successfully connected to {} via TLS", *SMTP_URL);
+        }
+        Ok(false) | Err(_) => {
+            warn!(
+                "Could not connect to {} via TLS. Trying downgrade to STARTTLS",
+                *SMTP_URL,
+            );
+
+            // only if full TLS fails, try STARTTLS
+            conn = AsyncSmtpTransport::<lettre::Tokio1Executor>::starttls_relay(&SMTP_URL)
+                .expect("Connection Error with 'SMTP_URL'")
+                .credentials(creds)
+                .timeout(Some(Duration::from_secs(10)))
+                .build();
+
+            match conn.test_connection().await {
+                Ok(true) => {
+                    info!("Successfully connected to {} via STARTTLS", *SMTP_URL);
+                }
+                Ok(false) | Err(_) => {
+                    error!("Could not connect to {} via STARTTLS either", *SMTP_URL);
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::Internal,
+                        format!(
+                            "Could not connect to {} - neither TLS nor STARTTLS worked",
+                            *SMTP_URL
+                        ),
+                    ));
+                }
+            }
+        }
+    }
+
+    Ok(conn)
 }
