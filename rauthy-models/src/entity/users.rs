@@ -363,8 +363,8 @@ impl User {
         let users = User::find_all(data)
             .await?
             .into_iter()
-            // delete possibly existing cached user with the old email
-            .filter(|u| Some(&u.email) != old_email.as_ref())
+            // // delete possibly existing cached user with the old email
+            // .filter(|u| Some(&u.email) != old_email.as_ref())
             .map(|mut u| {
                 if u.id == self.id {
                     u = self.clone();
