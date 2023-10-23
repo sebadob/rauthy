@@ -2,6 +2,7 @@ use crate::app_state::DbPool;
 use crate::email::EMail;
 use crate::events::event::Event;
 use crate::events::notifier::EventNotifier;
+use crate::events::EVENT_PERSIST_LEVEL;
 use actix_web_lab::sse;
 use rauthy_common::constants::{DATABASE_URL, DB_TYPE, EVENTS_LATEST_LIMIT};
 use rauthy_common::error_response::ErrorResponse;
@@ -70,9 +71,11 @@ impl EventListener {
         tx: flume::Sender<EventRouterMsg>,
     ) {
         // insert into DB
-        while let Err(err) = event.insert(&db).await {
-            error!("Inserting Event into Database: {:?}", err);
-            time::sleep(Duration::from_secs(1)).await;
+        if &event.level.value() >= EVENT_PERSIST_LEVEL.get().unwrap() {
+            while let Err(err) = event.insert(&db).await {
+                error!("Inserting Event into Database: {:?}", err);
+                time::sleep(Duration::from_secs(1)).await;
+            }
         }
 
         // forward to event router
@@ -93,9 +96,11 @@ impl EventListener {
     #[tracing::instrument(level = "debug", skip_all)]
     async fn handle_event_ha(tx_email: mpsc::Sender<EMail>, event: Event, db: DbPool) {
         // insert into DB
-        while let Err(err) = event.insert(&db).await {
-            error!("Inserting Event into Database: {:?}", err);
-            time::sleep(Duration::from_secs(1)).await;
+        if &event.level.value() >= EVENT_PERSIST_LEVEL.get().unwrap() {
+            while let Err(err) = event.insert(&db).await {
+                error!("Inserting Event into Database: {:?}", err);
+                time::sleep(Duration::from_secs(1)).await;
+            }
         }
 
         // notify postgres listeners

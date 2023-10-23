@@ -1,5 +1,6 @@
 use ::time::OffsetDateTime;
 use actix_web::web;
+use chrono::Utc;
 use rauthy_common::constants::{CACHE_NAME_12HR, DB_TYPE, IDX_JWK_KID, OFFLINE_TOKEN_LT};
 use rauthy_common::DbType;
 use rauthy_models::app_state::{AppState, DbPool};
@@ -25,6 +26,7 @@ pub async fn scheduler_main(data: web::Data<AppState>) {
     let rx_health = data.caches.ha_cache_config.rx_health_state.clone();
 
     tokio::spawn(db_backup(data.db.clone()));
+    tokio::spawn(events_cleanup(data.db.clone(), rx_health.clone()));
     tokio::spawn(magic_link_cleanup(data.db.clone(), rx_health.clone()));
     tokio::spawn(refresh_tokens_cleanup(data.db.clone(), rx_health.clone()));
     tokio::spawn(sessions_cleanup(data.db.clone(), rx_health.clone()));
@@ -33,7 +35,6 @@ pub async fn scheduler_main(data: web::Data<AppState>) {
     tokio::spawn(user_expiry_checker(data, rx_health));
 }
 
-// TODO -> adapt to RDBMS
 // Creates a backup of the data store
 pub async fn db_backup(db: DbPool) {
     if *DB_TYPE == DbType::Postgres {
@@ -67,6 +68,45 @@ pub async fn db_backup(db: DbPool) {
     }
 }
 
+// Cleans up all Events that exceed the configured EVENT_CLEANUP_DAYS
+pub async fn events_cleanup(db: DbPool, rx_health: Receiver<Option<QuorumHealthState>>) {
+    let mut interval = time::interval(Duration::from_secs(3600));
+
+    let cleanup_days = env::var("EVENT_CLEANUP_DAYS")
+        .unwrap_or_else(|_| "31".to_string())
+        .parse::<u32>()
+        .expect("Cannot parse EVENT_CLEANUP_DAYS to u32") as i64;
+
+    loop {
+        interval.tick().await;
+
+        // will return None in a non-HA deployment
+        if let Some(is_ha_leader) = is_ha_leader(&rx_health) {
+            if !is_ha_leader {
+                debug!(
+                    "Running HA mode without being the leader - skipping events_cleanup scheduler"
+                );
+                continue;
+            }
+        }
+
+        debug!("Running events_cleanup scheduler");
+
+        let threshold = Utc::now()
+            .sub(chrono::Duration::days(cleanup_days))
+            .timestamp_millis();
+        let res = sqlx::query!("DELETE FROM events WHERE timestamp < $1", threshold)
+            .execute(&db)
+            .await;
+        match res {
+            Ok(r) => {
+                debug!("Cleaned up {} expired events", r.rows_affected());
+            }
+            Err(err) => error!("Events cleanup error: {:?}", err),
+        }
+    }
+}
+
 // Cleans up old / expired magic links and deletes users, that have never used their
 // 'set first ever password' magic link to keep the database clean in case of an open user registration.
 // Runs every 6 hours.
@@ -84,8 +124,6 @@ pub async fn magic_link_cleanup(db: DbPool, rx_health: Receiver<Option<QuorumHea
             }
         }
 
-        // if this channel has an error, just go on and ignore it -> no HA mode
-        // if let Ok(cache_state) = rx_health.recv_async().await {}
         debug!("Running magic_link_cleanup scheduler");
 
         // allow 300 seconds of clock skew before cleaning up magic links

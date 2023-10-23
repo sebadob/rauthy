@@ -2,6 +2,10 @@
     import {onMount} from "svelte";
     import Event from "./Event.svelte";
     import EventsLegend from "./EventsLegend.svelte";
+    import Button from "$lib/Button.svelte";
+    import {postTestEvent} from "../../../utils/dataFetching.js";
+    import OptionSelect from "$lib/OptionSelect.svelte";
+    import {EVENT_LEVELS} from "../../../utils/constants.js";
 
     export let collapsed = true;
     export let wide;
@@ -9,13 +13,45 @@
     let latest = 50;
     let es;
     let events = [];
+    let eventsFiltered = [];
+    let eventLevel;
     let isHover = false;
 
     $: widthDefault = !collapsed && !wide || isHover;
     $: widthCollapsed = collapsed && !wide && !isHover;
     $: widthWide = !collapsed && wide;
 
-    onMount(() => {
+    $: if (events) {
+        switch (eventLevel) {
+            case 'Info':
+                eventsFiltered = events;
+                break;
+            case 'Notice':
+                eventsFiltered = events.filter(
+                    evt => evt.typ === 'Test'
+                        || evt.level === 'notice'
+                        || evt.level === 'warning'
+                        || evt.level === 'critical'
+                );
+                break;
+            case 'Warning':
+                eventsFiltered = events.filter(
+                    evt => evt.typ === 'Test' || evt.level === 'warning' || evt.level === 'critical'
+                );
+                break;
+            case 'Critical':
+                eventsFiltered = events.filter(evt => evt.typ === 'Test' || evt.level === 'critical');
+                break;
+        }
+    }
+
+    $: if (eventLevel) {
+        saveEventLevel(eventLevel);
+    }
+
+    onMount(async () => {
+        eventLevel = await readSavedEventLevel();
+
         if (!es || es.closed) {
             es = new EventSource(`/auth/v1/events?latest=${latest}`);
 
@@ -53,9 +89,22 @@
         }
     }
 
+    async function readSavedEventLevel() {
+        return localStorage.getItem('eventLevel') || 'Info';
+    }
+
+    async function saveEventLevel(level) {
+        localStorage.setItem('eventLevel', level);
+    }
+
+    async function sendTestEvent() {
+        await postTestEvent();
+    }
+
 </script>
 
 <div
+        role="contentinfo"
         id="events"
         class:widthDefault
         class:widthCollapsed
@@ -64,19 +113,46 @@
         on:mouseleave={() => isHover = false}
 >
     <div class="upper">
-        {#if !widthCollapsed}
-            <b>Events</b><br/><br/>
+        <div class="header">
+            {#if !widthCollapsed}
+                {#if widthWide}
+                    <div class="headerWideInner">
+                        <b>Events</b>
+                        <OptionSelect
+                                bind:value={eventLevel}
+                                options={EVENT_LEVELS}
+                        />
+                    </div>
+                {:else}
+                    <b>Events</b>
+                {/if}
+
+                <Button
+                        on:click={sendTestEvent}
+                        level=3
+                >
+                    TEST
+                </Button>
+            {/if}
+        </div>
+        {#if !widthWide}
+            <div class="opts">
+                <OptionSelect
+                        bind:value={eventLevel}
+                        options={EVENT_LEVELS}
+                />
+            </div>
         {/if}
 
         <div class={widthWide ? 'dataWide' : widthCollapsed ? 'dataCollapsed' : 'data'}>
-            {#each events as event (event.id)}
-                <Event bind:event eventColor={eventColor} collapsed={collapsed && !isHover} bind:wide />
+            {#each eventsFiltered as event (event.id)}
+                <Event bind:event eventColor={eventColor} collapsed={collapsed && !isHover} bind:wide/>
             {/each}
         </div>
     </div>
 
     {#if !collapsed || isHover}
-        <EventsLegend eventColor={eventColor} bind:wide />
+        <EventsLegend eventColor={eventColor} bind:wide/>
     {/if}
 </div>
 
@@ -109,7 +185,22 @@
         max-height: calc(100dvh - 5.1rem);
     }
 
-    .upper {
+    .header, .opts {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 .5rem 0 1.25rem;
+    }
+
+    .headerWideInner {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+    }
+
+    .opts {
+        padding: 0 1.25rem;
+        width: 100%;
     }
 
     .widthDefault {

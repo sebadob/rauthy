@@ -116,7 +116,7 @@ pub struct EncKeyMigrateRequest {
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
 pub struct EventsListenParams {
-    /// Validation: `0 <= length_max <= 1000`
+    /// Validation: `0 <= latest <= 1000`
     #[validate(range(min = 0, max = 1000))]
     pub latest: Option<u16>,
 }
