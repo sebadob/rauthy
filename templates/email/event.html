@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>E-Mail Reset</title>
+</head>
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    html, body {
+        padding: 0;
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+        Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+        font-size: 16px;
+    }
+
+    a:link, a:visited, a:hover, a:active {
+        text-decoration: none;
+    }
+
+    .wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #DFE0E2;
+        color: rgba(34, 30, 34, .8);
+    }
+
+    .container {
+        flex-direction: column;
+        padding: 3em 5em;
+    }
+
+    .header {
+        margin: 0 0 1.5em 0;
+    }
+</style>
+<body class="wrapper">
+<div class="container">
+    <h3 class="header">{{ email_sub_prefix }} - {{ level }}</h3>
+    <div style="text-align: left">
+        <div style="margin-bottom: .35em;">{{ ts }}</div>
+        <div>{{ typ }}</div>
+        <div style="margin-bottom: .35em;">{{ data }}</div>
+        <div>Remote IP: {{ ip }}</div>
+    </div>
+</div>
+</body>
+</html>

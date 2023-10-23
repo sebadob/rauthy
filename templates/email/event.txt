@@ -1,0 +1,7 @@
+{{ email_sub_prefix }} - {{ level }}
+
+{{ ts }}
+{{ typ }}
+{{ data }}
+
+IP: {{ ip }}
