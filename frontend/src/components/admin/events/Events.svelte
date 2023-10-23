@@ -104,6 +104,7 @@
 </script>
 
 <div
+        role="contentinfo"
         id="events"
         class:widthDefault
         class:widthCollapsed

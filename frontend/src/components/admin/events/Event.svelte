@@ -54,6 +54,7 @@
 </script>
 
 <div
+        role="contentinfo"
         class={cls}
         class:showCollapsed
         style:border-left={`${borderWidth} solid ${eventColor(event.level)}`}
