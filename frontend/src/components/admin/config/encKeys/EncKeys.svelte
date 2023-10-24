@@ -64,7 +64,7 @@
             The active key is statically set in the Rauthy config file / environment variables. It cannot be changed
             here
             dynamically.<br>
-            All new encryptions will always use the currently active key.
+            <b>All new JWK encryption's will always use the currently active key.</b>
         </p>
 
         <div class="valRow">
