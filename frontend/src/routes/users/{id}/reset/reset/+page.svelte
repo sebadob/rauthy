@@ -532,6 +532,10 @@
                         {t.success1}
                         <br>
                         {t.success2}
+                        <br>
+                        {t.success3}
+                        <br>
+                        <a href="/auth/v1/account">Account Login</a>
                     </div>
                 {/if}
             {/if}
