@@ -114,6 +114,7 @@ impl From<JWKS> for JWKSCerts {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct JWKSPublicKeyCerts {
     pub kty: String, // RSA | OCT
+    pub alg: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub crv: Option<String>, // Ed25519
     pub kid: String,
@@ -129,6 +130,7 @@ impl From<JWKSPublicKey> for JWKSPublicKeyCerts {
     fn from(pk: JWKSPublicKey) -> Self {
         Self {
             kty: pk.kty,
+            alg: pk.alg,
             crv: pk.crv,
             kid: pk.kid,
             n: pk.n,
