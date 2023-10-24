@@ -2,6 +2,7 @@ use std::ops::Add;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use actix_web::cookie::time::OffsetDateTime;
+use actix_web::http::header::HeaderValue;
 use actix_web::http::{header, StatusCode};
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
@@ -244,7 +245,12 @@ pub async fn post_authorize_refresh(
 pub async fn get_certs(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
     let jwks = JWKS::find_pk(&data).await?;
     let res = JWKSCerts::from(jwks);
-    Ok(HttpResponse::Ok().json(res))
+    Ok(HttpResponse::Ok()
+        .insert_header((
+            header::ACCESS_CONTROL_ALLOW_ORIGIN,
+            HeaderValue::from_str("*").unwrap(),
+        ))
+        .json(res))
 }
 
 /// Single JWK by kid
@@ -655,5 +661,10 @@ pub async fn get_userinfo(
 #[get("/.well-known/openid-configuration")]
 #[has_permissions("all")]
 pub async fn get_well_known(data: web::Data<AppState>) -> HttpResponse {
-    HttpResponse::Ok().json(&data.well_known)
+    HttpResponse::Ok()
+        .insert_header((
+            header::ACCESS_CONTROL_ALLOW_ORIGIN,
+            HeaderValue::from_str("*").unwrap(),
+        ))
+        .json(&data.well_known)
 }
