@@ -3,3 +3,5 @@
 {{ msg }}
 
 {{ email_changed_to }}
+
+{{ changed_by_admin }}

@@ -38,6 +38,12 @@
     .header {
         margin: 0 0 1.5em 0;
     }
+
+    .adminChange {
+        margin: .35em 0;
+        font-weight: bold;
+        color: #993d49;
+    }
 </style>
 <body class="wrapper">
 <div class="container">
@@ -45,6 +51,7 @@
     <div style="text-align: left">
         <div style="margin-bottom: .35em;">{{ msg }}</div>
         <div>{{ email_changed_to }}</div>
+        <div class="adminChange">{{ changed_by_admin }}</div>
     </div>
     <br/>
 </div>
