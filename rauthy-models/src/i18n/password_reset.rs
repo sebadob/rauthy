@@ -27,6 +27,7 @@ pub struct I18nPasswordReset<'a> {
     save: &'a str,
     success_1: &'a str,
     success_2: &'a str,
+    success_3: &'a str,
     success_passkey_1: &'a str,
     success_passkey_2: &'a str,
 }
@@ -71,6 +72,7 @@ about this, you may follow this link: "#,
             save: "Save",
             success_1: "The password has been updated successfully.",
             success_2: "You will be redirected to your account shortly.",
+            success_3: "If you are not being redirected, please click here:",
             success_passkey_1: "Your new passkey has been registered successfully.",
             success_passkey_2: r#"Please log into your account and register a second backup key as
 soon as possible. With a passkey only account, you wil not be able to use a password reset via
@@ -105,6 +107,7 @@ FIDO2 Standard gerecht wird. Für weitere Informationen können Sie diesem Link 
             save: "Speichern",
             success_1: "Das Passwort wurde erfolgreich zurückgesetzt.",
             success_2: "Sie werden in Kürze zu Ihrem Account weitergeleitet.",
+            success_3: "Sollte Sie nicht weitergeleitet werden, klicken Sie bitte hier:",
             success_passkey_1: "Der neue Passkey wurde erfolgreich registriert.",
             success_passkey_2: r#"Bitte loggen Sie sich direkt in Ihren Account ein und registrieren
 Sie mindestens einen weiteren Backup Passkey. Ein passwortloser Account kann nicht den Passwort
