@@ -148,7 +148,7 @@ pub struct JWKS {
 
 // CRUD
 impl JWKS {
-    pub async fn find_pk(data: &web::Data<AppState>) -> Result<Self, ErrorResponse> {
+    pub async fn find_pk(data: &web::Data<AppState>) -> Result<JWKS, ErrorResponse> {
         if let Some(jwks) = cache_get!(
             JWKS,
             CACHE_NAME_12HR.to_string(),
@@ -198,7 +198,8 @@ impl JWKS {
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct JWKSPublicKey {
-    pub kty: String,         // RSA | OKP
+    pub kty: String, // RSA | OKP
+    pub alg: String,
     pub crv: Option<String>, // Ed25519
     pub kid: String,
     pub n: Option<String>, // RSA
@@ -210,6 +211,7 @@ impl JWKSPublicKey {
     pub fn from_key_pair(key_pair: &JwkKeyPair) -> Self {
         let get_rsa = |kid: String, comp: algorithms::RSAPublicKeyComponents| JWKSPublicKey {
             kty: "RSA".to_string(),
+            alg: key_pair.typ.to_string(),
             crv: None,
             kid,
             n: Some(base64_url_encode(&comp.n)),
@@ -219,6 +221,7 @@ impl JWKSPublicKey {
 
         let get_ed25519 = |kid: String, x: String| JWKSPublicKey {
             kty: "OKP".to_string(),
+            alg: key_pair.typ.to_string(),
             crv: Some("Ed25519".to_string()),
             kid,
             n: None,
