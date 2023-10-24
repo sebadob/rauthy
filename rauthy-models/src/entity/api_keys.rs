@@ -107,6 +107,23 @@ impl ApiKeyEntity {
 
         Ok(secret_plain)
     }
+
+    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        query!(
+            r#"UPDATE api_keys
+            SET secret = $1, expires = $2, enc_key_id = $3, access = $4
+            WHERE name = $5"#,
+            self.secret,
+            self.expires,
+            self.enc_key_id,
+            self.access,
+            self.name,
+        )
+        .execute(&data.db)
+        .await?;
+
+        Ok(())
+    }
 }
 
 impl ApiKeyEntity {

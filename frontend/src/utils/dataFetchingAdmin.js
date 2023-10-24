@@ -154,7 +154,7 @@ export async function getEncKeys() {
 export async function postEncMigrate(data) {
 	const res = await fetch('/auth/v1/encryption/migrate', {
 		method: 'POST',
-		headers: HEADERS,
+		headers: getHeaders(),
 		body: JSON.stringify(data),
 	});
 	return await checkRedirectForbidden(res);
