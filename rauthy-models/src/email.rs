@@ -88,6 +88,7 @@ pub struct EMailConfirmChangeHtml<'a> {
     pub header: &'a str,
     pub msg: &'a str,
     pub email_changed_to: &'a str,
+    pub changed_by_admin: &'a str,
 }
 
 #[derive(Default, Template)]
@@ -97,6 +98,7 @@ pub struct EMailConfirmChangeTxt<'a> {
     pub header: &'a str,
     pub msg: &'a str,
     pub email_changed_to: &'a str,
+    pub changed_by_admin: &'a str,
 }
 
 #[derive(Default, Template)]
@@ -254,6 +256,7 @@ pub async fn send_email_confirm_change(
     user: &User,
     email_addr: &str,
     email_changed_to: &str,
+    was_admin_action: bool,
 ) {
     let i18n = I18nEmailConfirmChange::build(&user.language);
     let text = EMailConfirmChangeTxt {
@@ -261,6 +264,11 @@ pub async fn send_email_confirm_change(
         header: i18n.subject,
         msg: i18n.msg,
         email_changed_to,
+        changed_by_admin: if was_admin_action {
+            i18n.msg_from_admin
+        } else {
+            ""
+        },
     };
 
     let html = EMailConfirmChangeHtml {
@@ -268,6 +276,7 @@ pub async fn send_email_confirm_change(
         header: i18n.subject,
         msg: i18n.msg,
         email_changed_to,
+        changed_by_admin: text.changed_by_admin,
     };
 
     let req = EMail {
