@@ -363,8 +363,6 @@ impl User {
         let users = User::find_all(data)
             .await?
             .into_iter()
-            // // delete possibly existing cached user with the old email
-            // .filter(|u| Some(&u.email) != old_email.as_ref())
             .map(|mut u| {
                 if u.id == self.id {
                     u = self.clone();
@@ -454,7 +452,17 @@ impl User {
         user.email_verified = upd_user.email_verified;
         user.user_expires = upd_user.user_expires;
 
-        user.save(data, old_email, None).await?;
+        user.save(data, old_email.clone(), None).await?;
+
+        // if the user was saved successfully and the email was changed, invalidate all existing
+        // sessions with the old address and send out notifications to the users addresses
+        Session::invalidate_for_user(data, &user.id).await?;
+
+        // send out confirmation E-Mails to both addresses
+        send_email_confirm_change(data, &user, &user.email, &user.email, true).await;
+        send_email_confirm_change(data, &user, old_email.as_ref().unwrap(), &user.email, true)
+            .await;
+
         Ok(user)
     }
 
@@ -817,8 +825,8 @@ impl User {
         Session::invalidate_for_user(data, &user.id).await?;
 
         // send out confirmation E-Mails to both addresses
-        send_email_confirm_change(data, &user, &user.email, &user.email).await;
-        send_email_confirm_change(data, &user, &old_email, &user.email).await;
+        send_email_confirm_change(data, &user, &user.email, &user.email, false).await;
+        send_email_confirm_change(data, &user, &old_email, &user.email, false).await;
 
         Ok((html, nonce))
     }
