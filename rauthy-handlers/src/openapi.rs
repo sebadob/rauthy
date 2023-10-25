@@ -51,7 +51,6 @@ use utoipa::{openapi, OpenApi};
 
         oidc::get_authorize,
         oidc::post_authorize,
-        oidc::post_authorize_refresh,
         oidc::get_certs,
         oidc::get_cert_by_kid,
         oidc::get_logout,
@@ -129,7 +128,6 @@ use utoipa::{openapi, OpenApi};
             request::ColorsRequest,
             request::EncKeyMigrateRequest,
             request::LoginRequest,
-            request::LoginRefreshRequest,
             request::LogoutRequest,
             request::MfaAwaitRequest,
             request::MfaPurpose,

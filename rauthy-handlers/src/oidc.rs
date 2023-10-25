@@ -19,8 +19,8 @@ use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::WebauthnCookie;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
-    AuthRequest, LoginRefreshRequest, LoginRequest, LogoutRequest, RefreshTokenRequest,
-    TokenRequest, TokenValidationRequest,
+    AuthRequest, LoginRequest, LogoutRequest, RefreshTokenRequest, TokenRequest,
+    TokenValidationRequest,
 };
 use rauthy_models::response::{JWKSCerts, JWKSPublicKeyCerts, SessionInfoResponse};
 use rauthy_models::templates::{AuthorizeHtml, CallbackHtml, ErrorHtml, FrontendAction};
@@ -172,11 +172,13 @@ pub async fn post_authorize(
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
 
     let session = Session::extract_validate_csrf(session_req, &req)?;
-    let res = auth::authorize(&data, &req, req_data.into_inner(), session)
-        .await
-        .map(|auth_step| map_auth_step(&data, auth_step, &req))?;
 
-    auth::handle_login_delay(start, &data.caches.ha_cache_config, res, true).await
+    let res = match auth::authorize(&data, &req, req_data.into_inner(), session).await {
+        Ok(auth_step) => map_auth_step(&data, auth_step, &req),
+        Err(err) => Err(err),
+    };
+
+    auth::handle_login_delay(start, &data.caches.ha_cache_config, res).await
 }
 
 #[get("/oidc/callback")]
@@ -189,46 +191,6 @@ pub async fn get_callback_html(data: web::Data<AppState>) -> Result<HttpResponse
         .insert_header(HEADER_HTML)
         .insert_header(build_csp_header(&nonce))
         .body(body))
-}
-
-// TODO clean up?
-/// DEPRECATED
-///
-/// This is an older refresh token endpoint, which is not being used anymore in favor of the
-/// *refresh_token* grant on the [POST /token](post_token) endpoint.
-#[utoipa::path(
-    post,
-    path = "/oidc/authorize/refresh",
-    tag = "deprecated",
-    request_body = LoginRefreshRequest,
-    responses(
-        (status = 202, description = "Accepted"),
-        (status = 400, description = "BadRequest", body = ErrorResponse),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-    ),
-)]
-#[post("/oidc/authorize/refresh")]
-#[has_permissions("session-auth")]
-pub async fn post_authorize_refresh(
-    data: web::Data<AppState>,
-    req: HttpRequest,
-    req_data: web::Json<LoginRefreshRequest>,
-    session_req: web::ReqData<Option<Session>>,
-) -> Result<HttpResponse, ErrorResponse> {
-    let (client, header_origin) = auth::validate_auth_req_param(
-        &data,
-        &req,
-        &req_data.client_id,
-        &req_data.redirect_uri,
-        &req_data.code_challenge,
-        &req_data.code_challenge_method,
-    )
-    .await?;
-
-    let session = Session::extract_validate_csrf(session_req, &req)?;
-    auth::authorize_refresh(&data, session, client, header_origin, req_data.into_inner())
-        .await
-        .map(|auth_step| map_auth_step(&data, auth_step, &req))?
 }
 
 /// JWT Token public JWKS
@@ -527,21 +489,40 @@ pub async fn post_token(
         Session::get_csrf_header("none")
     };
 
-    let res = auth::get_token_set(req_data.into_inner(), &data, req)
-        .await
-        .map(|(token_set, header_origin)| {
-            if let Some(o) = header_origin {
-                return HttpResponse::Ok()
+    let res = match auth::get_token_set(req_data.into_inner(), &data, req).await {
+        Ok((token_set, header_origin)) => {
+            let http_resp = if let Some(o) = header_origin {
+                HttpResponse::Ok()
                     .insert_header(o)
                     .insert_header(csrf_header)
-                    .json(token_set);
-            }
-            HttpResponse::Ok()
-                .insert_header(csrf_header)
-                .json(token_set)
-        });
+                    .json(token_set)
+            } else {
+                HttpResponse::Ok()
+                    .insert_header(csrf_header)
+                    .json(token_set)
+            };
+            Ok((http_resp, save_timer))
+        }
+        Err(err) => Err(err),
+    };
 
-    auth::handle_login_delay(start, &data.caches.ha_cache_config, res, save_timer).await
+    // let res = auth::get_token_set(req_data.into_inner(), &data, req)
+    //     .await
+    //     .map(|(token_set, header_origin)| {
+    //         let http_resp = if let Some(o) = header_origin {
+    //             HttpResponse::Ok()
+    //                 .insert_header(o)
+    //                 .insert_header(csrf_header)
+    //                 .json(token_set)
+    //         } else {
+    //             HttpResponse::Ok()
+    //                 .insert_header(csrf_header)
+    //                 .json(token_set)
+    //         };
+    //         (http_resp, save_timer)
+    //     });
+
+    auth::handle_login_delay(start, &data.caches.ha_cache_config, res).await
 }
 
 /// The tokenInfo endpoint for the OIDC standard.
