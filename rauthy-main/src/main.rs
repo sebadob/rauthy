@@ -26,6 +26,7 @@ use rauthy_common::constants::{
 };
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::{ip_blacklist_handler, password_hasher};
+use rauthy_handlers::middleware::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
 use rauthy_handlers::middleware::session::RauthySessionMiddleware;
 use rauthy_handlers::openapi::ApiDoc;
@@ -170,7 +171,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             tx_email.clone(),
             tx_events.clone(),
             tx_events_router.clone(),
-            tx_ip_blacklist,
+            tx_ip_blacklist.clone(),
             caches,
         )
         .await?,
@@ -265,7 +266,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     tokio::spawn(password_hasher::run());
 
     // spawn ip blacklist handler
-    tokio::spawn(ip_blacklist_handler::run(rx_ip_blacklist));
+    tokio::spawn(ip_blacklist_handler::run(tx_ip_blacklist, rx_ip_blacklist));
 
     // spawn remote cache notification service
     tokio::spawn(handle_notify(app_state.clone(), rx_notify));
@@ -401,6 +402,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
         let mut app = App::new()
             // .data shares application state for all workers
             .app_data(app_state.clone())
+            .wrap(RauthyIpBlacklistMiddleware)
             .wrap(GrantsMiddleware::with_extractor(
                 auth::permission_extractor,
             ))
