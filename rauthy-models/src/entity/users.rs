@@ -28,7 +28,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::ops::Add;
 use time::OffsetDateTime;
-use tracing::{debug, error, warn};
+use tracing::{error, warn};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccountType {
