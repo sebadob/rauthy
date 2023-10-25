@@ -178,7 +178,8 @@ pub async fn post_authorize(
         Err(err) => Err(err),
     };
 
-    auth::handle_login_delay(start, &data.caches.ha_cache_config, res).await
+    let ip = real_ip_from_req(&req);
+    auth::handle_login_delay(&data, ip, start, &data.caches.ha_cache_config, res).await
 }
 
 #[get("/oidc/callback")]
@@ -480,7 +481,7 @@ pub async fn post_token(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let save_timer = req_data.grant_type == "password";
+    let add_login_delay = req_data.grant_type == "password";
 
     let csrf_header = if let Some(s) = session_req.into_inner() {
         // TODO validate CSRF if a session is present? What about the RFC? -> Check
@@ -488,6 +489,7 @@ pub async fn post_token(
     } else {
         Session::get_csrf_header("none")
     };
+    let ip = real_ip_from_req(&req);
 
     let res = match auth::get_token_set(req_data.into_inner(), &data, req).await {
         Ok((token_set, header_origin)) => {
@@ -501,28 +503,12 @@ pub async fn post_token(
                     .insert_header(csrf_header)
                     .json(token_set)
             };
-            Ok((http_resp, save_timer))
+            Ok((http_resp, add_login_delay))
         }
-        Err(err) => Err(err),
+        Err(err) => Err((err, add_login_delay)),
     };
 
-    // let res = auth::get_token_set(req_data.into_inner(), &data, req)
-    //     .await
-    //     .map(|(token_set, header_origin)| {
-    //         let http_resp = if let Some(o) = header_origin {
-    //             HttpResponse::Ok()
-    //                 .insert_header(o)
-    //                 .insert_header(csrf_header)
-    //                 .json(token_set)
-    //         } else {
-    //             HttpResponse::Ok()
-    //                 .insert_header(csrf_header)
-    //                 .json(token_set)
-    //         };
-    //         (http_resp, save_timer)
-    //     });
-
-    auth::handle_login_delay(start, &data.caches.ha_cache_config, res).await
+    auth::handle_login_delay(&data, ip, start, &data.caches.ha_cache_config, res).await
 }
 
 /// The tokenInfo endpoint for the OIDC standard.

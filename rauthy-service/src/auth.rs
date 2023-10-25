@@ -3,6 +3,7 @@ use actix_web::dev::ServiceRequest;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderMap, HeaderName, HeaderValue};
 use actix_web::{web, Error, HttpMessage, HttpRequest, HttpResponse};
+use chrono::Utc;
 use jwt_simple::algorithms::{
     EdDSAKeyPairLike, EdDSAPublicKeyLike, RSAKeyPairLike, RSAPublicKeyLike,
 };
@@ -13,6 +14,9 @@ use rauthy_common::constants::{
     TOKEN_API_KEY, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::ip_blacklist_handler::{
+    IpBlacklist, IpBlacklistCleanup, IpBlacklistReq, IpFailedLoginCheck,
+};
 use rauthy_common::password_hasher::HashPassword;
 use rauthy_common::utils::{base64_url_encode, encrypt, get_client_ip, get_rand};
 use rauthy_models::app_state::AppState;
@@ -30,7 +34,7 @@ use rauthy_models::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
 use rauthy_models::language::Language;
 use rauthy_models::request::{LoginRequest, LogoutRequest, TokenRequest};
 use rauthy_models::response::{TokenInfo, Userinfo};
-use rauthy_models::templates::LogoutHtml;
+use rauthy_models::templates::{LogoutHtml, TooManyRequestsHtml};
 use rauthy_models::{
     sign_jwt, validate_jwt, AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn, JwtAccessClaims,
     JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtRefreshClaims, JwtType,
@@ -43,6 +47,7 @@ use std::ops::{Add, Sub};
 use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use time::OffsetDateTime;
+use tokio::sync::oneshot;
 use tracing::{debug, error, info, warn};
 
 /// # Business logic for [POST /oidc/authorize](crate::handlers::post_authorize)
@@ -52,7 +57,8 @@ pub async fn authorize(
     req: &HttpRequest,
     req_data: LoginRequest,
     mut session: Session,
-) -> Result<AuthStep, ErrorResponse> {
+    // the second argument with the error will be 'true' if a login delay should be added
+) -> Result<AuthStep, (ErrorResponse, bool)> {
     // This Error must be the same if user does not exist AND passwords do not match to prevent
     // username enumeration
     let mut user = User::find_by_email(data, req_data.email)
@@ -60,20 +66,14 @@ pub async fn authorize(
         .map_err(|e| {
             error!("{:?}", e);
             // be careful, that this Err and the one in User::validate_password are exactly the same
-            ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                String::from("Invalid user credentials"),
+            (
+                ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    String::from("Invalid user credentials"),
+                ),
+                false,
             )
         })?;
-    user.check_enabled()?;
-    user.check_expired()?;
-    let account_type = user.account_type();
-    if account_type == AccountType::New {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Unauthorized,
-            String::from("Invalid user credentials"),
-        ));
-    }
 
     let mfa_cookie =
         if let Ok(c) = WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA), &data.enc_keys) {
@@ -88,14 +88,38 @@ pub async fn authorize(
             None
         };
 
+    let account_type = user.account_type();
+
     // this allows a user without the mfa cookie to login anyway if it is an only passkey account
     // in this case, UV is always enforced, not matter what -> safe to login without cookie
-    if req_data.password.is_none() && account_type != AccountType::Passkey && mfa_cookie.is_none() {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Unauthorized,
-            String::from("Invalid user credentials"),
+    let user_must_provide_password =
+        req_data.password.is_none() && account_type != AccountType::Passkey && mfa_cookie.is_none();
+    if user_must_provide_password {
+        return Err((
+            ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                String::from("Invalid user credentials"),
+            ),
+            false,
         ));
     }
+
+    if account_type == AccountType::New {
+        return Err((
+            ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                String::from("Invalid user credentials"),
+            ),
+            // this basically means, if the user did the first login in the UI with just username,
+            // do not add any login delay afterwards for a better UX
+            !user_must_provide_password,
+        ));
+    }
+
+    user.check_enabled()
+        .map_err(|err| (err, !user_must_provide_password))?;
+    user.check_expired()
+        .map_err(|err| (err, !user_must_provide_password))?;
 
     let has_password_been_hashed = if let Some(pwd) = req_data.password {
         match user.validate_password(data, pwd).await {
@@ -105,10 +129,12 @@ pub async fn authorize(
                 user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
                 user.last_failed_login = None;
                 user.failed_login_attempts = None;
-                user.save(data, None, None).await?;
+                user.save(data, None, None)
+                    .await
+                    .map_err(|err| (err, true))?;
             }
             Err(err) => {
-                return Err(err);
+                return Err((err, true));
             }
         }
         true
@@ -116,10 +142,14 @@ pub async fn authorize(
         false
     };
 
-    let client = Client::find(data, req_data.client_id).await?;
+    let client = Client::find(data, req_data.client_id)
+        .await
+        .map_err(|err| (err, !user_must_provide_password))?;
 
     // check allowed origin
-    let header_origin = client.validate_origin(req, &data.listen_scheme, &data.public_url)?;
+    let header_origin = client
+        .validate_origin(req, &data.listen_scheme, &data.public_url)
+        .map_err(|err| (err, !user_must_provide_password))?;
 
     // check requested challenge
     let challenge: Option<String> = req_data.code_challenge.clone();
@@ -128,9 +158,12 @@ pub async fn authorize(
     // TODO -> double check, if the client has set code challenge? -> revert this logic and validate from client -> request
     if req_data.code_challenge.is_some() {
         if client.challenge.is_none() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                String::from("no 'code_challenge_method' allowed for this client"),
+            return Err((
+                ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    String::from("no 'code_challenge_method' allowed for this client"),
+                ),
+                false,
             ));
         }
 
@@ -142,21 +175,27 @@ pub async fn authorize(
                 "S256" => method = String::from("S256"),
                 "plain" => method = String::from("plain"),
                 _ => {
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::BadRequest,
-                        String::from("invalid 'code_challenge_method"),
+                    return Err((
+                        ErrorResponse::new(
+                            ErrorResponseType::BadRequest,
+                            String::from("invalid 'code_challenge_method"),
+                        ),
+                        false,
                     ))
                 }
             }
         }
 
         if !client.challenge.as_ref().unwrap().contains(&method) {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                format!(
-                    "'code_challenge_method' '{}' is not allowed for this client",
-                    method,
+            return Err((
+                ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!(
+                        "'code_challenge_method' '{}' is not allowed for this client",
+                        method,
+                    ),
                 ),
+                false,
             ));
         }
         challenge_method = Some(method);
@@ -170,7 +209,9 @@ pub async fn authorize(
     };
 
     // build authorization code
-    let scopes = client.sanitize_login_scopes(&req_data.scopes)?;
+    let scopes = client
+        .sanitize_login_scopes(&req_data.scopes)
+        .map_err(|err| (err, !user_must_provide_password))?;
     let code = AuthCode::new(
         user.id.clone(),
         client.id,
@@ -181,7 +222,9 @@ pub async fn authorize(
         scopes,
         code_lifetime,
     );
-    code.save(data).await?;
+    code.save(data)
+        .await
+        .map_err(|err| (err, !user_must_provide_password))?;
 
     // build location header
     let mut loc = format!("{}?code={}", req_data.redirect_uri, code.id);
@@ -193,7 +236,10 @@ pub async fn authorize(
     // TODO should we allow to skip this step if set so in the config?
     // check if we need to validate the 2nd factor
     if user.has_webauthn_enabled() {
-        session.set_mfa(data, true).await?;
+        session
+            .set_mfa(data, true)
+            .await
+            .map_err(|err| (err, !user_must_provide_password))?;
 
         let step = AuthStepAwaitWebauthn {
             has_password_been_hashed,
@@ -215,7 +261,10 @@ pub async fn authorize(
                 .as_ref()
                 .map(|h| h.1.to_str().unwrap().to_string()),
         };
-        login_req.save(data).await?;
+        login_req
+            .save(data)
+            .await
+            .map_err(|err| (err, !user_must_provide_password))?;
 
         Ok(AuthStep::AwaitWebauthn(step))
     } else {
@@ -958,9 +1007,13 @@ long it took for a successful login. If a login failed though, the answer will b
 current average for a successful login, to prevent things like username enumeration.
  */
 pub async fn handle_login_delay(
+    data: &web::Data<AppState>,
+    peer_ip: Option<String>,
     start: Duration,
     cache_config: &redhac::CacheConfig,
-    res: Result<(HttpResponse, bool), ErrorResponse>,
+    // the bool for Ok() is true is the password has been hashed
+    // the bool for Err() means if we need to add a login delay (and none otherwise for better UX)
+    res: Result<(HttpResponse, bool), (ErrorResponse, bool)>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let success_time = cache_get!(
         i64,
@@ -977,7 +1030,15 @@ pub async fn handle_login_delay(
 
     match res {
         Ok((resp, has_password_been_hashed)) => {
-            // TODO add possibly blacklisted IP cleanup here
+            // cleanup possibly blacklisted IP
+            if let Some(ip) = peer_ip {
+                data.tx_ip_blacklist
+                    .send_async(IpBlacklistReq::LoginCleanup(IpBlacklistCleanup { ip }))
+                    .await
+                    .expect("ip blacklist recv not to be closed");
+            } else {
+                warn!("No IP in login delay handler - check your reverse proxy setup");
+            }
 
             // only calculate the new median login time base on the full duration incl password hash
             if has_password_been_hashed {
@@ -996,16 +1057,189 @@ pub async fn handle_login_delay(
 
             Ok(resp)
         }
-        Err(err) => {
-            // TODO check possibly blacklisted IP cleanup here
-
-            // casting to u64 is safe here since these values are very small anyway
-            let time_taken = end.sub(start).as_millis() as u64;
-            let mut sleep_time = 0;
-            let su64 = success_time as u64;
-            if time_taken < su64 {
-                sleep_time = su64 - time_taken;
+        Err((err, add_login_delay)) => {
+            if !add_login_delay {
+                return Err(err);
             }
+
+            let mut failed_logins = 1;
+
+            // check possibly blacklisted IP
+            if let Some(ip) = peer_ip.clone() {
+                let (tx, rx) = oneshot::channel();
+                data.tx_ip_blacklist
+                    .send_async(IpBlacklistReq::LoginCheck(IpFailedLoginCheck {
+                        ip,
+                        increase_counter: true,
+                        tx,
+                    }))
+                    .await
+                    .expect("ip blacklist recv not to be closed");
+
+                match rx.await {
+                    Ok(res) => {
+                        if let Some(counter) = res {
+                            failed_logins = counter;
+                        }
+                    }
+                    Err(err) => {
+                        error!("oneshot recv error in login delay handler - this should never happen: {:?}", err);
+                    }
+                }
+            } else {
+                warn!("No IP in login delay handler - check your reverse proxy setup");
+            }
+
+            let sleep_time_median = {
+                let time_taken = end.sub(start).as_millis() as u64;
+                let mut sleep_time_median = 0;
+                let su64 = success_time as u64;
+                if time_taken < su64 {
+                    sleep_time_median = su64 - time_taken;
+                }
+                sleep_time_median
+            };
+
+            let sleep_time = match failed_logins as u64 {
+                // n-th blacklist -> blocks for 24h with each invalid request
+                t if t > 25 => {
+                    let not_before = Utc::now().add(chrono::Duration::seconds(86400));
+                    let ts = not_before.timestamp();
+                    let ip = peer_ip.unwrap_or_else(|| "UNKNOWN".to_string());
+                    let html = TooManyRequestsHtml::build(&ip, ts);
+
+                    data.tx_ip_blacklist
+                        .send_async(IpBlacklistReq::Blacklist(IpBlacklist {
+                            ip,
+                            exp: not_before,
+                        }))
+                        .await
+                        .unwrap();
+
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::TooManyRequests(ts),
+                        html,
+                    ));
+                }
+
+                t if t > 20 => sleep_time_median + t * 20_000,
+
+                // 4th blacklist
+                t if t == 20 => {
+                    let not_before = Utc::now().add(chrono::Duration::seconds(3600));
+                    let ts = not_before.timestamp();
+                    let ip = peer_ip.unwrap_or_else(|| "UNKNOWN".to_string());
+                    let html = TooManyRequestsHtml::build(&ip, ts);
+
+                    data.tx_ip_blacklist
+                        .send_async(IpBlacklistReq::Blacklist(IpBlacklist {
+                            ip,
+                            exp: not_before,
+                        }))
+                        .await
+                        .unwrap();
+
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::TooManyRequests(ts),
+                        html,
+                    ));
+                }
+
+                t if t > 15 => sleep_time_median + t * 15_000,
+
+                // 3rd blacklist
+                t if t == 15 => {
+                    let not_before = Utc::now().add(chrono::Duration::seconds(900));
+                    let ts = not_before.timestamp();
+                    let ip = peer_ip.unwrap_or_else(|| "UNKNOWN".to_string());
+                    let html = TooManyRequestsHtml::build(&ip, ts);
+
+                    data.tx_ip_blacklist
+                        .send_async(IpBlacklistReq::Blacklist(IpBlacklist {
+                            ip,
+                            exp: not_before,
+                        }))
+                        .await
+                        .unwrap();
+
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::TooManyRequests(ts),
+                        html,
+                    ));
+                }
+
+                t if t > 10 => sleep_time_median + t * 10_000,
+
+                // 2nd blacklist
+                t if t == 10 => {
+                    let not_before = Utc::now().add(chrono::Duration::seconds(600));
+                    let ts = not_before.timestamp();
+                    let ip = peer_ip.unwrap_or_else(|| "UNKNOWN".to_string());
+                    let html = TooManyRequestsHtml::build(&ip, ts);
+
+                    data.tx_ip_blacklist
+                        .send_async(IpBlacklistReq::Blacklist(IpBlacklist {
+                            ip,
+                            exp: not_before,
+                        }))
+                        .await
+                        .unwrap();
+
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::TooManyRequests(ts),
+                        html,
+                    ));
+                }
+
+                t if t > 7 => sleep_time_median + t * 5_000,
+
+                // 1st blacklist
+                t if t == 7 => {
+                    let not_before = Utc::now().add(chrono::Duration::seconds(60));
+                    let ts = not_before.timestamp();
+                    let ip = peer_ip.unwrap_or_else(|| "UNKNOWN".to_string());
+                    let html = TooManyRequestsHtml::build(&ip, ts);
+
+                    data.tx_ip_blacklist
+                        .send_async(IpBlacklistReq::Blacklist(IpBlacklist {
+                            ip,
+                            exp: not_before,
+                        }))
+                        .await
+                        .unwrap();
+
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::TooManyRequests(ts),
+                        html,
+                    ));
+                }
+
+                t if t >= 5 => sleep_time_median + t * 3_000,
+
+                t if t >= 3 => sleep_time_median + t * 2_000,
+
+                t if t == 2 => {
+                    let not_before = Utc::now().add(chrono::Duration::seconds(60));
+                    let ts = not_before.timestamp();
+                    let ip = peer_ip.unwrap_or_else(|| "UNKNOWN".to_string());
+                    let html = TooManyRequestsHtml::build(&ip, ts);
+
+                    data.tx_ip_blacklist
+                        .send_async(IpBlacklistReq::Blacklist(IpBlacklist {
+                            ip,
+                            exp: not_before,
+                        }))
+                        .await
+                        .unwrap();
+
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::TooManyRequests(ts),
+                        html,
+                    ));
+                }
+
+                _ => sleep_time_median,
+            };
 
             debug!("Failed login - sleeping for {}ms now", sleep_time);
             tokio::time::sleep(Duration::from_millis(sleep_time)).await;

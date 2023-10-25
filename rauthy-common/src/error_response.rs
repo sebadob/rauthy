@@ -1,4 +1,4 @@
-use crate::constants::{APPLICATION_JSON, HEADER_HTML};
+use crate::constants::{APPLICATION_JSON, HEADER_HTML, HEADER_RETRY_NOT_BEFORE};
 use crate::utils::build_csp_header;
 use actix_multipart::MultipartError;
 use actix_web::error::BlockingError;
@@ -30,6 +30,7 @@ pub enum ErrorResponseType {
     PasswordRefresh,
     SessionExpired,
     SessionTimeout,
+    TooManyRequests(i64),
     Unauthorized,
 }
 
@@ -75,14 +76,25 @@ impl ResponseError for ErrorResponse {
             | ErrorResponseType::SessionExpired
             | ErrorResponseType::SessionTimeout
             | ErrorResponseType::Unauthorized => StatusCode::UNAUTHORIZED,
+            ErrorResponseType::TooManyRequests(_not_before_timestamp) => {
+                StatusCode::TOO_MANY_REQUESTS
+            }
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
     fn error_response(&self) -> HttpResponse {
-        HttpResponseBuilder::new(self.status_code())
-            .content_type(APPLICATION_JSON)
-            .body(serde_json::to_string(&self).unwrap())
+        match self.error {
+            ErrorResponseType::TooManyRequests(not_before_timestamp) => {
+                HttpResponseBuilder::new(self.status_code())
+                    .insert_header((HEADER_RETRY_NOT_BEFORE, not_before_timestamp))
+                    .insert_header(HEADER_HTML)
+                    .body(serde_json::to_string(&self.message).unwrap())
+            }
+            _ => HttpResponseBuilder::new(self.status_code())
+                .content_type(APPLICATION_JSON)
+                .body(serde_json::to_string(&self).unwrap()),
+        }
     }
 }
 
