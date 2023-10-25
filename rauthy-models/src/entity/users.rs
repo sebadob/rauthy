@@ -28,7 +28,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::ops::Add;
 use time::OffsetDateTime;
-use tracing::{error, warn};
+use tracing::{debug, error, warn};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccountType {
@@ -454,14 +454,15 @@ impl User {
 
         user.save(data, old_email.clone(), None).await?;
 
-        // if the user was saved successfully and the email was changed, invalidate all existing
-        // sessions with the old address and send out notifications to the users addresses
-        Session::invalidate_for_user(data, &user.id).await?;
+        if let Some(old_email) = old_email.as_ref() {
+            // if the user was saved successfully and the email was changed, invalidate all existing
+            // sessions with the old address and send out notifications to the users addresses
+            Session::invalidate_for_user(data, &user.id).await?;
 
-        // send out confirmation E-Mails to both addresses
-        send_email_confirm_change(data, &user, &user.email, &user.email, true).await;
-        send_email_confirm_change(data, &user, old_email.as_ref().unwrap(), &user.email, true)
-            .await;
+            // send out confirmation E-Mails to both addresses
+            send_email_confirm_change(data, &user, &user.email, &user.email, true).await;
+            send_email_confirm_change(data, &user, old_email, &user.email, true).await;
+        }
 
         Ok(user)
     }
@@ -530,6 +531,7 @@ impl User {
         } else {
             false
         };
+
         let given_name = if let Some(given_name) = upd_user.given_name {
             given_name
         } else {
@@ -705,45 +707,41 @@ impl User {
         let mut new_recent = Vec::new();
 
         // check recently used passwords
-        if rules.not_recently_used.is_some() {
-            let most_recent_res = RecentPasswordsEntity::find(data, &self.id).await;
-            if self.password.is_some() && most_recent_res.is_ok() {
-                #[allow(clippy::unnecessary_unwrap)]
-                let mut most_recent = most_recent_res.unwrap();
+        if let Some(recent_req) = rules.not_recently_used {
+            match RecentPasswordsEntity::find(data, &self.id).await {
+                Ok(mut most_recent) => {
+                    let mut iteration = 1;
+                    for old_hash in most_recent.passwords.split('\n') {
+                        if ComparePasswords::is_match(plain_pwd.to_string(), old_hash.to_string())
+                            .await?
+                        {
+                            return Err(ErrorResponse::new(
+                                ErrorResponseType::BadRequest,
+                                format!(
+                                    "The new password must not be one of the last {} used passwords",
+                                    recent_req,
+                                ),
+                            ));
+                        }
 
-                let recent_req = rules.not_recently_used.unwrap();
+                        // build up the new most recent passwords value
+                        new_recent.push(old_hash);
 
-                // TODO cleanup after testing the migration
-                let mut iteration = 1;
-                // let argon2 = Argon2::default();
-                for old_hash in most_recent.passwords.split('\n') {
-                    if ComparePasswords::is_match(plain_pwd.to_string(), old_hash.to_string())
-                        .await?
-                    {
-                        return Err(ErrorResponse::new(
-                            ErrorResponseType::BadRequest,
-                            format!(
-                                "The new password must not be one of the last {} used passwords",
-                                recent_req,
-                            ),
-                        ));
+                        // check if we have more recent passwords than needed
+                        iteration += 1;
+                        if iteration == recent_req {
+                            break;
+                        }
                     }
 
-                    // build up the new most recent passwords value
-                    new_recent.push(old_hash);
-
-                    // check if we have more recent passwords than needed
-                    iteration += 1;
-                    if iteration == recent_req {
-                        break;
-                    }
+                    // all good - update most recent passwords
+                    most_recent.passwords = format!("{}\n{}", new_hash, new_recent.join("\n"));
+                    most_recent.save(data).await?;
                 }
 
-                // all good - update most recent passwords
-                most_recent.passwords = format!("{}\n{}", new_hash, new_recent.join("\n"));
-                most_recent.save(data).await?;
-            } else {
-                RecentPasswordsEntity::create(data, &self.id, &new_hash).await?;
+                Err(_) => {
+                    RecentPasswordsEntity::create(data, &self.id, &new_hash).await?;
+                }
             }
         }
 
