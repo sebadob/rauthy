@@ -9,6 +9,7 @@ use crate::ListenScheme;
 use anyhow::Context;
 use argon2::Params;
 use rauthy_common::constants::{DATABASE_URL, DB_TYPE, DEV_MODE, HA_MODE, PROXY_MODE};
+use rauthy_common::ip_blacklist_handler::IpBlacklistReq;
 use rauthy_common::DbType;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -56,6 +57,7 @@ pub struct AppState {
     pub tx_email: mpsc::Sender<EMail>,
     pub tx_events: flume::Sender<Event>,
     pub tx_events_router: flume::Sender<EventRouterMsg>,
+    pub tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
     pub caches: Caches,
     pub webauthn: Arc<Webauthn>,
 }
@@ -65,6 +67,7 @@ impl AppState {
         tx_email: mpsc::Sender<EMail>,
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
+        tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
         caches: Caches,
     ) -> anyhow::Result<Self> {
         dotenvy::dotenv().ok();
@@ -201,6 +204,7 @@ impl AppState {
             tx_events,
             tx_events_router,
             caches,
+            tx_ip_blacklist,
             webauthn,
         })
     }
