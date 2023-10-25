@@ -1,5 +1,4 @@
 <script>
-    import {extractFormErrors} from "../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
     import {blur, fade} from 'svelte/transition';
     import AccModPwd from "./AccModPwd.svelte";
@@ -58,7 +57,7 @@
     }
 
     async function onSubmit() {
-        if (accType === "passkey") {
+        if (passkeys.length > 0) {
             await onSubmitMfa();
         } else {
             await onSubmitFinish();
@@ -73,10 +72,7 @@
         }
 
         const res = await webauthnAuthStart(user.id, {purpose: 'PasswordNew'});
-        const body = await res.json();
-
-        isLoading = true;
-        webauthnData = body;
+        webauthnData = await res.json();
     }
 
     async function onSubmitFinish(mfaCode) {
@@ -122,17 +118,6 @@
             console.log(res);
             console.log(res.code);
             onSubmitFinish(res.code)
-        }
-    }
-
-    async function validateForm() {
-        try {
-            await schema.validate(formValues, {abortEarly: false});
-            formErrors = {};
-            return true;
-        } catch (err) {
-            formErrors = extractFormErrors(err);
-            return false;
         }
     }
 
