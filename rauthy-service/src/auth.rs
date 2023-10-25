@@ -1125,7 +1125,7 @@ pub async fn handle_login_delay(
                 t if t > 20 => sleep_time_median + t * 20_000,
 
                 // 4th blacklist
-                t if t == 20 => {
+                20 => {
                     let not_before = Utc::now().add(chrono::Duration::seconds(3600));
                     let ts = not_before.timestamp();
                     let ip = peer_ip.unwrap_or_else(|| "UNKNOWN".to_string());
@@ -1148,7 +1148,7 @@ pub async fn handle_login_delay(
                 t if t > 15 => sleep_time_median + t * 15_000,
 
                 // 3rd blacklist
-                t if t == 15 => {
+                15 => {
                     let not_before = Utc::now().add(chrono::Duration::seconds(900));
                     let ts = not_before.timestamp();
                     let ip = peer_ip.unwrap_or_else(|| "UNKNOWN".to_string());
@@ -1171,7 +1171,7 @@ pub async fn handle_login_delay(
                 t if t > 10 => sleep_time_median + t * 10_000,
 
                 // 2nd blacklist
-                t if t == 10 => {
+                10 => {
                     let not_before = Utc::now().add(chrono::Duration::seconds(600));
                     let ts = not_before.timestamp();
                     let ip = peer_ip.unwrap_or_else(|| "UNKNOWN".to_string());
@@ -1194,7 +1194,7 @@ pub async fn handle_login_delay(
                 t if t > 7 => sleep_time_median + t * 5_000,
 
                 // 1st blacklist
-                t if t == 7 => {
+                7 => {
                     let not_before = Utc::now().add(chrono::Duration::seconds(60));
                     let ts = not_before.timestamp();
                     let ip = peer_ip.unwrap_or_else(|| "UNKNOWN".to_string());
@@ -1217,26 +1217,6 @@ pub async fn handle_login_delay(
                 t if t >= 5 => sleep_time_median + t * 3_000,
 
                 t if t >= 3 => sleep_time_median + t * 2_000,
-
-                t if t == 2 => {
-                    let not_before = Utc::now().add(chrono::Duration::seconds(60));
-                    let ts = not_before.timestamp();
-                    let ip = peer_ip.unwrap_or_else(|| "UNKNOWN".to_string());
-                    let html = TooManyRequestsHtml::build(&ip, ts);
-
-                    data.tx_ip_blacklist
-                        .send_async(IpBlacklistReq::Blacklist(IpBlacklist {
-                            ip,
-                            exp: not_before,
-                        }))
-                        .await
-                        .unwrap();
-
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::TooManyRequests(ts),
-                        html,
-                    ));
-                }
 
                 _ => sleep_time_median,
             };
