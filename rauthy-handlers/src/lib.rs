@@ -45,7 +45,8 @@ pub fn map_auth_step(
     data: &web::Data<AppState>,
     auth_step: AuthStep,
     req: &HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
+    // Ok => HttpResponse + has_password_been_hashed
+) -> Result<(HttpResponse, bool), ErrorResponse> {
     match auth_step {
         AuthStep::LoggedIn(res) => {
             let mut resp = HttpResponse::Accepted()
@@ -55,7 +56,7 @@ pub fn map_auth_step(
             if let Some((name, value)) = res.header_origin {
                 resp.headers_mut().insert(name, value);
             }
-            Ok(resp)
+            Ok((resp, res.has_password_been_hashed))
         }
 
         AuthStep::AwaitWebauthn(res) => {
@@ -83,7 +84,7 @@ pub fn map_auth_step(
                 add_req_mfa_cookie(data, &mut resp, res.email.clone())?;
             }
 
-            Ok(resp)
+            Ok((resp, res.has_password_been_hashed))
         }
     }
 }

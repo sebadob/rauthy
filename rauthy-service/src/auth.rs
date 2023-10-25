@@ -10,7 +10,7 @@ use jwt_simple::claims;
 use jwt_simple::prelude::*;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME,
-    SESSION_RENEW_MFA, TOKEN_API_KEY, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
+    TOKEN_API_KEY, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::HashPassword;
@@ -28,7 +28,7 @@ use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::users::{AccountType, User};
 use rauthy_models::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
 use rauthy_models::language::Language;
-use rauthy_models::request::{LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest};
+use rauthy_models::request::{LoginRequest, LogoutRequest, TokenRequest};
 use rauthy_models::response::{TokenInfo, Userinfo};
 use rauthy_models::templates::LogoutHtml;
 use rauthy_models::{
@@ -97,7 +97,7 @@ pub async fn authorize(
         ));
     }
 
-    if let Some(pwd) = req_data.password {
+    let has_password_been_hashed = if let Some(pwd) = req_data.password {
         match user.validate_password(data, pwd).await {
             Ok(_) => {
                 // update user info
@@ -111,16 +111,10 @@ pub async fn authorize(
                 return Err(err);
             }
         }
-
-        // user.validate_password(data, pwd).await?;
-        //
-        // // update user info
-        // // in case of webauthn login, the info will be updates in the auth finish step
-        // user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
-        // user.last_failed_login = None;
-        // user.failed_login_attempts = None;
-        // user.save(data, None, None).await?;
-    }
+        true
+    } else {
+        false
+    };
 
     let client = Client::find(data, req_data.client_id).await?;
 
@@ -202,6 +196,7 @@ pub async fn authorize(
         session.set_mfa(data, true).await?;
 
         let step = AuthStepAwaitWebauthn {
+            has_password_been_hashed,
             code: get_rand(48),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
             header_origin,
@@ -225,6 +220,7 @@ pub async fn authorize(
         Ok(AuthStep::AwaitWebauthn(step))
     } else {
         Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
+            has_password_been_hashed,
             header_loc: (header::LOCATION, HeaderValue::from_str(&loc).unwrap()),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
             header_origin,
@@ -232,84 +228,86 @@ pub async fn authorize(
     }
 }
 
-/// # Business logic for [POST /oidc/authorize/refresh](crate::handlers::post_authorize_refresh)
-pub async fn authorize_refresh(
-    data: &web::Data<AppState>,
-    session: Session,
-    client: Client,
-    header_origin: Option<(HeaderName, HeaderValue)>,
-    req_data: LoginRefreshRequest,
-) -> Result<AuthStep, ErrorResponse> {
-    let user_id = session.user_id.as_ref().ok_or_else(|| {
-        ErrorResponse::new(
-            ErrorResponseType::Internal,
-            String::from("No linked user_id for already validated session"),
-        )
-    })?;
-    let user = User::find(data, user_id.clone()).await?;
-    user.check_enabled()?;
-
-    let scopes = client.sanitize_login_scopes(&req_data.scopes)?;
-    let code_lifetime = if user.has_webauthn_enabled() {
-        client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
-    } else {
-        client.auth_code_lifetime
-    };
-
-    let code = AuthCode::new(
-        user.id.clone(),
-        client.id,
-        Some(session.id.clone()),
-        req_data.code_challenge,
-        req_data.code_challenge_method,
-        req_data.nonce,
-        scopes,
-        code_lifetime,
-    );
-    code.save(data).await?;
-
-    // build location header
-    let header_loc = if let Some(s) = req_data.state {
-        format!("{}?code={}&state={}", req_data.redirect_uri, code.id, s)
-    } else {
-        format!("{}?code={}", req_data.redirect_uri, code.id)
-    };
-
-    // check if we need to validate the 2nd factor
-    if user.has_webauthn_enabled() && *SESSION_RENEW_MFA {
-        let step = AuthStepAwaitWebauthn {
-            code: get_rand(48),
-            header_csrf: Session::get_csrf_header(&session.csrf_token),
-            header_origin,
-            user_id: user.id.clone(),
-            email: user.email,
-            exp: *WEBAUTHN_REQ_EXP,
-            session,
-        };
-
-        let login_req = WebauthnLoginReq {
-            code: step.code.clone(),
-            user_id: user.id,
-            header_loc,
-            header_origin: step
-                .header_origin
-                .as_ref()
-                .map(|h| h.1.to_str().unwrap().to_string()),
-        };
-        login_req.save(data).await?;
-
-        Ok(AuthStep::AwaitWebauthn(step))
-    } else {
-        Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
-            header_loc: (
-                header::LOCATION,
-                HeaderValue::from_str(&header_loc).unwrap(),
-            ),
-            header_csrf: Session::get_csrf_header(&session.csrf_token),
-            header_origin,
-        }))
-    }
-}
+// /// # Business logic for [POST /oidc/authorize/refresh](crate::handlers::post_authorize_refresh)
+// pub async fn authorize_refresh(
+//     data: &web::Data<AppState>,
+//     session: Session,
+//     client: Client,
+//     header_origin: Option<(HeaderName, HeaderValue)>,
+//     req_data: LoginRefreshRequest,
+// ) -> Result<AuthStep, ErrorResponse> {
+//     let user_id = session.user_id.as_ref().ok_or_else(|| {
+//         ErrorResponse::new(
+//             ErrorResponseType::Internal,
+//             String::from("No linked user_id for already validated session"),
+//         )
+//     })?;
+//     let user = User::find(data, user_id.clone()).await?;
+//     user.check_enabled()?;
+//
+//     let scopes = client.sanitize_login_scopes(&req_data.scopes)?;
+//     let code_lifetime = if user.has_webauthn_enabled() {
+//         client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
+//     } else {
+//         client.auth_code_lifetime
+//     };
+//
+//     let code = AuthCode::new(
+//         user.id.clone(),
+//         client.id,
+//         Some(session.id.clone()),
+//         req_data.code_challenge,
+//         req_data.code_challenge_method,
+//         req_data.nonce,
+//         scopes,
+//         code_lifetime,
+//     );
+//     code.save(data).await?;
+//
+//     // build location header
+//     let header_loc = if let Some(s) = req_data.state {
+//         format!("{}?code={}&state={}", req_data.redirect_uri, code.id, s)
+//     } else {
+//         format!("{}?code={}", req_data.redirect_uri, code.id)
+//     };
+//
+//     // check if we need to validate the 2nd factor
+//     if user.has_webauthn_enabled() && *SESSION_RENEW_MFA {
+//         let step = AuthStepAwaitWebauthn {
+//             has_password_been_hashed: false,
+//             code: get_rand(48),
+//             header_csrf: Session::get_csrf_header(&session.csrf_token),
+//             header_origin,
+//             user_id: user.id.clone(),
+//             email: user.email,
+//             exp: *WEBAUTHN_REQ_EXP,
+//             session,
+//         };
+//
+//         let login_req = WebauthnLoginReq {
+//             code: step.code.clone(),
+//             user_id: user.id,
+//             header_loc,
+//             header_origin: step
+//                 .header_origin
+//                 .as_ref()
+//                 .map(|h| h.1.to_str().unwrap().to_string()),
+//         };
+//         login_req.save(data).await?;
+//
+//         Ok(AuthStep::AwaitWebauthn(step))
+//     } else {
+//         Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
+//             has_password_been_hashed: false,
+//             header_loc: (
+//                 header::LOCATION,
+//                 HeaderValue::from_str(&header_loc).unwrap(),
+//             ),
+//             header_csrf: Session::get_csrf_header(&session.csrf_token),
+//             header_origin,
+//         }))
+//     }
+// }
 
 /// Builds the access token for a user after all validation has been successful
 #[allow(clippy::type_complexity)]
@@ -962,8 +960,7 @@ current average for a successful login, to prevent things like username enumerat
 pub async fn handle_login_delay(
     start: Duration,
     cache_config: &redhac::CacheConfig,
-    res: Result<HttpResponse, ErrorResponse>,
-    save_timer: bool,
+    res: Result<(HttpResponse, bool), ErrorResponse>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let success_time = cache_get!(
         i64,
@@ -978,35 +975,44 @@ pub async fn handle_login_delay(
     let end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let delta = end - start;
 
-    if res.is_err() {
-        // casting to u64 is safe here since these values are very small anyway
-        let time_taken = end.sub(start).as_millis() as u64;
-        let mut sleep_time = 0;
-        let su64 = success_time as u64;
-        if time_taken < su64 {
-            sleep_time = su64 - time_taken;
+    match res {
+        Ok((resp, has_password_been_hashed)) => {
+            // TODO add possibly blacklisted IP cleanup here
+
+            // only calculate the new median login time base on the full duration incl password hash
+            if has_password_been_hashed {
+                let new_time = (success_time + delta.as_millis() as i64) / 2;
+
+                cache_put(
+                    CACHE_NAME_LOGIN_DELAY.to_string(),
+                    IDX_LOGIN_TIME.to_string(),
+                    cache_config,
+                    &new_time,
+                )
+                .await?;
+
+                debug!("New login_success_time: {}", new_time);
+            }
+
+            Ok(resp)
         }
-        debug!("Failed login - sleeping for {}ms now", sleep_time);
-        tokio::time::sleep(Duration::from_millis(sleep_time)).await;
-        return res;
+        Err(err) => {
+            // TODO check possibly blacklisted IP cleanup here
+
+            // casting to u64 is safe here since these values are very small anyway
+            let time_taken = end.sub(start).as_millis() as u64;
+            let mut sleep_time = 0;
+            let su64 = success_time as u64;
+            if time_taken < su64 {
+                sleep_time = su64 - time_taken;
+            }
+
+            debug!("Failed login - sleeping for {}ms now", sleep_time);
+            tokio::time::sleep(Duration::from_millis(sleep_time)).await;
+
+            Err(err)
+        }
     }
-
-    if !save_timer {
-        return res;
-    }
-    let new_time = (success_time + delta.as_millis() as i64) / 2;
-
-    cache_put(
-        CACHE_NAME_LOGIN_DELAY.to_string(),
-        IDX_LOGIN_TIME.to_string(),
-        cache_config,
-        &new_time,
-    )
-    .await?;
-
-    debug!("New login_success_time: {}", new_time);
-
-    res
 }
 
 /// Returns the Logout HTML Page for [GET /oidc/logout](crate::handlers::get_logout)
