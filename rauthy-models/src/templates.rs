@@ -982,6 +982,19 @@ impl PwdResetHtml<'_> {
 }
 
 #[derive(Default, Template)]
+#[template(path = "error/429.html")]
+pub struct TooManyRequestsHtml<'a> {
+    pub ip: &'a str,
+    pub exp: i64,
+}
+
+impl TooManyRequestsHtml<'_> {
+    pub fn build(ip: &str, exp: i64) -> String {
+        TooManyRequestsHtml { ip, exp }.render().unwrap()
+    }
+}
+
+#[derive(Default, Template)]
 #[template(path = "html/users/{id}/email_confirm/email_confirm.html")]
 pub struct UserEmailChangeConfirmHtml<'a> {
     pub lang: &'a str,

@@ -25,7 +25,7 @@ use rauthy_common::constants::{
     SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::ErrorResponse;
-use rauthy_common::password_hasher;
+use rauthy_common::{ip_blacklist_handler, password_hasher};
 use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
 use rauthy_handlers::middleware::session::RauthySessionMiddleware;
 use rauthy_handlers::openapi::ApiDoc;
@@ -160,13 +160,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let caches = Caches {
         ha_cache_config: cache_config.clone(),
     };
+
     let (tx_events, rx_events) = flume::unbounded();
     let (tx_events_router, rx_events_router) = flume::unbounded();
+    let (tx_ip_blacklist, rx_ip_blacklist) = flume::unbounded();
+
     let app_state = web::Data::new(
         AppState::new(
             tx_email.clone(),
             tx_events.clone(),
             tx_events_router.clone(),
+            tx_ip_blacklist,
             caches,
         )
         .await?,
@@ -259,6 +263,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // spawn password hash limiter
     tokio::spawn(password_hasher::run());
+
+    // spawn ip blacklist handler
+    tokio::spawn(ip_blacklist_handler::run(rx_ip_blacklist));
 
     // spawn remote cache notification service
     tokio::spawn(handle_notify(app_state.clone(), rx_notify));

@@ -45,8 +45,9 @@ pub fn map_auth_step(
     data: &web::Data<AppState>,
     auth_step: AuthStep,
     req: &HttpRequest,
-    // Ok => HttpResponse + has_password_been_hashed
-) -> Result<(HttpResponse, bool), ErrorResponse> {
+    // the bool for Ok() is true is the password has been hashed
+    // the bool for Err() means if we need to add a login delay (and none otherwise for better UX)
+) -> Result<(HttpResponse, bool), (ErrorResponse, bool)> {
     match auth_step {
         AuthStep::LoggedIn(res) => {
             let mut resp = HttpResponse::Accepted()
@@ -78,10 +79,12 @@ pub fn map_auth_step(
                 WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA), &data.enc_keys)
             {
                 if mfa_cookie.email != res.email {
-                    add_req_mfa_cookie(data, &mut resp, res.email.clone())?;
+                    add_req_mfa_cookie(data, &mut resp, res.email.clone())
+                        .map_err(|err| (err, true))?;
                 }
             } else {
-                add_req_mfa_cookie(data, &mut resp, res.email.clone())?;
+                add_req_mfa_cookie(data, &mut resp, res.email.clone())
+                    .map_err(|err| (err, true))?;
             }
 
             Ok((resp, res.has_password_been_hashed))
