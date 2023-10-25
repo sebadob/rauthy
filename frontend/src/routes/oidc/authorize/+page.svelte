@@ -44,6 +44,7 @@
     let showReset = false;
     let showResetRequest = false;
     let emailSuccess = false;
+    let emailAfterSubmit = '';
 
     let formValues = {email: '', password: ''};
     let formErrors = {};
@@ -175,6 +176,7 @@
             // this will happen always if the user does the first try with a password-only account
             // the good thing about this is, that it is a prevention against autofill passwords from the browser
             needsPassword = true;
+            emailAfterSubmit = formValues.email;
         } else {
             err = t.invalidCredentials;
             showResetRequest = true;
@@ -185,7 +187,7 @@
     function onEmailInput() {
         // this will basically remove the password input again if the user was asked to provide
         // a password and afterward changes his email again
-        if (needsPassword) {
+        if (needsPassword && emailAfterSubmit !== formValues.email) {
             needsPassword = false;
         }
     }
