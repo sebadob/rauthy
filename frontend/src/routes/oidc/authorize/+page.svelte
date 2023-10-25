@@ -2,7 +2,7 @@
     import {onMount, tick} from "svelte";
     import {authorize, authorizeRefresh, getClientLogo, postPasswordResetRequest} from "../../../utils/dataFetching.js";
     import * as yup from 'yup';
-    import {extractFormErrors, getQueryParams, saveCsrfToken} from "../../../utils/helpers.js";
+    import {extractFormErrors, formatDateFromTs, getQueryParams, saveCsrfToken} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
     import WebauthnRequest from "../../../components/webauthn/WebauthnRequest.svelte";
     import {scale} from 'svelte/transition';
@@ -44,6 +44,7 @@
     let showReset = false;
     let showResetRequest = false;
     let emailSuccess = false;
+    let tooManyRequests = false;
     let emailAfterSubmit = '';
 
     let formValues = {email: '', password: ''};
@@ -134,6 +135,8 @@
     }
 
     async function onSubmit() {
+        err = '';
+
         try {
             await schema.validate(formValues, {abortEarly: false});
             formErrors = {};
@@ -172,6 +175,23 @@
         } else if (res.status === 200) {
             err = '';
             webauthnData = await res.json();
+        } else if (res.status === 429) {
+            let notBefore =  Number.parseInt(res.headers.get('x-retry-not-before'));
+            let nbfDate =  formatDateFromTs(notBefore);
+            let diff = notBefore * 1000 - new Date().getTime();
+            console.log(diff);
+
+            tooManyRequests = true;
+            err = `${t.http429} ${nbfDate}`;
+
+            formValues.email = '';
+            formValues.password = '';
+            needsPassword = false;
+
+            setTimeout(() => {
+                tooManyRequests = false;
+                err = '';
+            }, diff);
         } else if (!needsPassword) {
             // this will happen always if the user does the first try with a password-only account
             // the good thing about this is, that it is a prevention against autofill passwords from the browser
@@ -189,6 +209,8 @@
         // a password and afterward changes his email again
         if (needsPassword && emailAfterSubmit !== formValues.email) {
             needsPassword = false;
+            formValues.password = '';
+            err = '';
         }
     }
 
@@ -270,6 +292,7 @@
                     bind:error={formErrors.email}
                     autocomplete="email"
                     placeholder={t.email}
+                    disabled={tooManyRequests}
                     on:enter={onSubmit}
                     on:input={onEmailInput}
             >
@@ -284,12 +307,13 @@
                         bind:error={formErrors.password}
                         autocomplete="current-password"
                         placeholder={t.password}
+                        disabled={tooManyRequests}
                         on:enter={onSubmit}
                 >
                     {t.password?.toUpperCase()}
                 </PasswordInput>
 
-                {#if showResetRequest}
+                {#if showResetRequest && !tooManyRequests}
                     <div
                             role="button"
                             tabindex="0"
@@ -303,14 +327,20 @@
                 {/if}
             {/if}
 
-            {#if showReset}
-                <div class="btn">
-                    <Button on:click={requestReset}>{t.passwordRequest?.toUpperCase()}</Button>
-                </div>
-            {:else}
-                <div class="btn">
-                    <Button on:click={onSubmit} bind:isLoading>{t.login?.toUpperCase()}</Button>
-                </div>
+            {#if !tooManyRequests}
+                {#if showReset}
+                    <div class="btn">
+                        <Button on:click={requestReset}>
+                            {t.passwordRequest?.toUpperCase()}
+                        </Button>
+                    </div>
+                {:else}
+                    <div class="btn">
+                        <Button on:click={onSubmit} bind:isLoading>
+                            {t.login?.toUpperCase()}
+                        </Button>
+                    </div>
+                {/if}
             {/if}
 
             {#if err}
@@ -346,6 +376,7 @@
     }
 
     .errMsg {
+        max-width: 15rem;
         margin: -5px 10px 0 10px;
         color: var(--col-err)
     }
