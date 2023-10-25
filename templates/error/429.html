@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Roboto', 'Segoe UI', 'Oxygen',
+            'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+            sans-serif;
+            color: #383838;
+        }
+        h1 { font-size: 1.3rem; }
+        h2 { font-size: 1.25rem; }
+    </style>
+    <title>IP Blocked</title>
+</head>
+<body>
+<h1>Too Many Requests</h1>
+<h2>Your IP {{ ip }} has been blocked until <span id="exp"></span></h2>
+<p>This incident has been reported</p>
+<script>
+    let exp = {{ exp }};
+    const offset = -new Date().getTimezoneOffset();
+    const d = new Date((exp + offset * 60) * 1000);
+
+    let dd = d.getUTCDate();
+    if (dd < 10) {
+        dd = '0' + dd;
+    }
+    let mm = d.getUTCMonth() + 1;
+    if (mm < 10) {
+        mm = '0' + mm;
+    }
+    const yyyy = d.getUTCFullYear();
+
+    let hr = d.getUTCHours();
+    if (hr < 10) {
+        hr = '0' + hr;
+    }
+    let mn = d.getUTCMinutes();
+    if (mn < 10) {
+        mn = '0' + mn;
+    }
+    let sc = d.getUTCSeconds();
+    if (sc < 10) {
+        sc = '0' + sc;
+    }
+
+    const ts =  `${yyyy}/${mm}/${dd} ${hr}:${mn}:${sc}`;
+    const el = document.getElementById('exp');
+    el.innerText = ts;
+</script>
+</body>
+</html>
