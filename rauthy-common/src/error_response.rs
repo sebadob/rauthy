@@ -87,9 +87,11 @@ impl ResponseError for ErrorResponse {
         match self.error {
             ErrorResponseType::TooManyRequests(not_before_timestamp) => {
                 HttpResponseBuilder::new(self.status_code())
-                    .insert_header((HEADER_RETRY_NOT_BEFORE, not_before_timestamp))
-                    .insert_header(HEADER_HTML)
-                    .body(serde_json::to_string(&self.message).unwrap())
+                    .append_header((HEADER_RETRY_NOT_BEFORE, not_before_timestamp))
+                    .append_header(HEADER_HTML)
+                    // TODO we could possibly to a small `unsafe` call here to just take
+                    // the content without cloning it -> more efficient, especially for blocked IPs
+                    .body(self.message.clone())
             }
             _ => HttpResponseBuilder::new(self.status_code())
                 .content_type(APPLICATION_JSON)
