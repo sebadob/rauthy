@@ -3,6 +3,7 @@ use actix_web::web;
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::{AppState, WellKnown};
+use rauthy_models::events::event;
 use rauthy_models::language;
 use rauthy_models::ListenScheme;
 use rauthy_models::{entity, request, response};
@@ -119,6 +120,7 @@ use utoipa::{openapi, OpenApi};
             entity::webauthn::WebauthnLoginReq,
             entity::webauthn::WebauthnServiceReq,
 
+            event::EventLevel,
             ErrorResponse,
             ErrorResponseType,
             language::Language,

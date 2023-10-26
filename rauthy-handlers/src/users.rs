@@ -1,3 +1,4 @@
+use crate::real_ip_from_req;
 use actix_web::http::StatusCode;
 use actix_web::{cookie, delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
@@ -15,6 +16,7 @@ use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::PasskeyEntity;
+use rauthy_models::events::event::Event;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
     MfaPurpose, NewUserRegistrationRequest, NewUserRequest, PasswordResetRequest,
@@ -94,9 +96,23 @@ pub async fn post_users(
         Session::extract_validate_csrf(session_req, &req)?;
     }
 
-    User::create_from_new(&data, user.into_inner())
+    let user = User::create_from_new(&data, user.into_inner()).await?;
+
+    data.tx_events
+        .send_async(Event::new_user(user.email.clone(), real_ip_from_req(&req)))
         .await
-        .map(|user| HttpResponse::Ok().json(UserResponse::from(user)))
+        .unwrap();
+    if user.is_admin() {
+        data.tx_events
+            .send_async(Event::new_rauthy_admin(
+                user.email.clone(),
+                real_ip_from_req(&req),
+            ))
+            .await
+            .unwrap();
+    }
+
+    Ok(HttpResponse::Ok().json(UserResponse::from(user)))
 }
 
 /// Get the configured / allowed additional custom user attribute
@@ -295,7 +311,13 @@ pub async fn post_users_register(
     }
 
     let lang = Language::try_from(&req).unwrap_or_default();
-    User::create_from_reg(&data, req_data.into_inner(), lang).await?;
+    let user = User::create_from_reg(&data, req_data.into_inner(), lang).await?;
+
+    data.tx_events
+        .send_async(Event::new_user(user.email, real_ip_from_req(&req)))
+        .await
+        .unwrap();
+
     Ok(HttpResponse::NoContent().finish())
 }
 
@@ -984,9 +1006,20 @@ pub async fn put_user_by_id(
         Session::extract_validate_csrf(session_req, &req)?;
     }
 
-    User::update(&data, id.into_inner(), user.into_inner(), None)
-        .await
-        .map(|user| HttpResponse::Ok().json(UserResponse::from(user)))
+    let (user, is_new_admin) =
+        User::update(&data, id.into_inner(), user.into_inner(), None).await?;
+
+    if is_new_admin {
+        data.tx_events
+            .send_async(Event::new_rauthy_admin(
+                user.email.clone(),
+                real_ip_from_req(&req),
+            ))
+            .await
+            .unwrap();
+    }
+
+    Ok(HttpResponse::Ok().json(UserResponse::from(user)))
 }
 
 /// Allows modification of specific user values from the user himself
@@ -1028,15 +1061,12 @@ pub async fn put_user_self(
         ));
     }
 
-    User::update_self_req(&data, id, user.into_inner())
-        .await
-        .map(|(user, email_update)| {
-            if email_update {
-                HttpResponse::Accepted().json(UserResponse::from(user))
-            } else {
-                HttpResponse::Ok().json(UserResponse::from(user))
-            }
-        })
+    let (user, email_updated) = User::update_self_req(&data, id, user.into_inner()).await?;
+    if email_updated {
+        Ok(HttpResponse::Accepted().json(UserResponse::from(user)))
+    } else {
+        Ok(HttpResponse::Ok().json(UserResponse::from(user)))
+    }
 }
 
 /// Allows an authenticated and logged in user to convert his account to passkey only

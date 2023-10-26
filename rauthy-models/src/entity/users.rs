@@ -10,14 +10,18 @@ use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
 use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
+use crate::events::event::Event;
 use crate::language::Language;
+use crate::real_ip_from_req;
 use crate::request::{
     NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
 };
 use crate::templates::UserEmailChangeConfirmHtml;
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;
-use rauthy_common::constants::{CACHE_NAME_12HR, IDX_USERS, WEBAUTHN_NO_PASSWORD_EXPIRY};
+use rauthy_common::constants::{
+    CACHE_NAME_12HR, IDX_USERS, RAUTHY_ADMIN_ROLE, WEBAUTHN_NO_PASSWORD_EXPIRY,
+};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
 use rauthy_common::utils::{get_client_ip, new_store_id};
@@ -121,16 +125,16 @@ impl User {
         data: &web::Data<AppState>,
         req_data: NewUserRegistrationRequest,
         lang: Language,
-    ) -> Result<(), ErrorResponse> {
+    ) -> Result<User, ErrorResponse> {
         let pow = Pow::find(data, &req_data.pow.challenge).await?;
         pow.validate(&req_data.pow.verifier).await?;
         pow.delete(data).await?;
 
         let mut new_user = User::from_reg_req(req_data);
         new_user.language = lang;
-        User::create(data, new_user).await?;
+        let new_user = User::create(data, new_user).await?;
 
-        Ok(())
+        Ok(new_user)
     }
 
     // Deletes a user
@@ -419,7 +423,8 @@ impl User {
         id: String,
         upd_user: UpdateUserRequest,
         user: Option<User>,
-    ) -> Result<User, ErrorResponse> {
+        // OK((User, is_new_rauthy_admin))
+    ) -> Result<(User, bool), ErrorResponse> {
         let mut user = match user {
             None => User::find(data, id).await?,
             Some(user) => user,
@@ -443,6 +448,7 @@ impl User {
         }
 
         // sanitize roles
+        let is_admin_before_update = user.is_admin();
         user.roles = Role::sanitize(data, upd_user.roles).await?;
 
         // sanitize groups
@@ -464,7 +470,8 @@ impl User {
             send_email_confirm_change(data, &user, old_email, &user.email, true).await;
         }
 
-        Ok(user)
+        let is_new_admin = !is_admin_before_update && user.is_admin();
+        Ok((user, is_new_admin))
     }
 
     pub async fn update_language(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
@@ -561,7 +568,8 @@ impl User {
             user_expires: user.user_expires,
         };
 
-        let user = User::update(data, id, req, Some(user)).await?;
+        // a user cannot become a new admin from a self-req
+        let (user, _is_new_admin) = User::update(data, id, req, Some(user)).await?;
         Ok((user, email_updated))
     }
 
@@ -826,6 +834,13 @@ impl User {
         send_email_confirm_change(data, &user, &user.email, &user.email, false).await;
         send_email_confirm_change(data, &user, &old_email, &user.email, false).await;
 
+        let event_text = format!("{} -> {}", old_email, user.email);
+        let ip = real_ip_from_req(&req);
+        data.tx_events
+            .send_async(Event::user_email_change(event_text, ip))
+            .await
+            .unwrap();
+
         Ok((html, nonce))
     }
 
@@ -966,6 +981,10 @@ impl User {
             return Ok(true);
         }
         Ok(false)
+    }
+
+    pub fn is_admin(&self) -> bool {
+        self.get_roles().contains(&RAUTHY_ADMIN_ROLE)
     }
 
     async fn is_email_free(data: &web::Data<AppState>, email: String) -> Result<(), ErrorResponse> {

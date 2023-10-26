@@ -61,6 +61,7 @@ pub async fn sse_events(
                     ip,
                     tx,
                     latest: params.latest,
+                    level: params.level.unwrap_or_default(),
                 })
                 .await
             {

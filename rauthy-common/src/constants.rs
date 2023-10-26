@@ -3,9 +3,9 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::env;
 use std::str::FromStr;
+use std::string::ToString;
 
 pub const RAUTHY_VERSION: &str = env!("CARGO_PKG_VERSION");
-
 pub const HEADER_HTML: (&str, &str) = ("content-type", "text/html;charset=utf-8");
 pub const HEADER_RETRY_NOT_BEFORE: &str = "x-retry-not-before";
 pub const APPLICATION_JSON: &str = "application/json";
@@ -52,6 +52,7 @@ pub const IDX_USER_ATTR_CONFIG: &str = "user_attrs_";
 pub const IDX_WEBAUTHN: &str = "webauthn_";
 
 lazy_static! {
+    pub static ref RAUTHY_ADMIN_ROLE: String = "rauthy_admin".to_string();
     pub static ref DATABASE_URL: String = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
     pub static ref DB_TYPE: DbType = DbType::from_str(&DATABASE_URL).unwrap();
     pub static ref ROLE_ADMIN: String = "ROLE_rauthy_admin".to_string();
