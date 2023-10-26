@@ -47,31 +47,14 @@
 
     $: if (eventLevel) {
         saveEventLevel(eventLevel);
+        if (es && es.readyState !== 2) {
+            es.close();
+        }
+        stream();
     }
 
     onMount(async () => {
         eventLevel = await readSavedEventLevel();
-
-        if (!es || es.closed) {
-            es = new EventSource(`/auth/v1/events?latest=${latest}`);
-
-            es.onopen = () => {
-                console.log('SSE Events Stream opened');
-                events = [];
-            };
-
-            es.onerror = () => {
-                console.error('SSE Events Stream closed');
-            };
-
-            es.onmessage = ev => {
-                if (ev.data) {
-                    let event = JSON.parse(ev.data);
-                    // keep max 500 events in the UI to not consume endless amounts of memory
-                    events = [event, ...events.slice(-499)];
-                }
-            };
-        }
     });
 
     function eventColor(level) {
@@ -99,6 +82,28 @@
 
     async function sendTestEvent() {
         await postTestEvent();
+    }
+
+    function stream() {
+        console.log('opening SSE stream');
+        es = new EventSource(`/auth/v1/events?latest=${latest}&level=${eventLevel?.toLowerCase() || 'info'}`);
+
+        es.onopen = () => {
+            console.log('SSE Events Stream opened');
+            events = [];
+        };
+
+        es.onerror = () => {
+            console.error('SSE Events Stream closed');
+        };
+
+        es.onmessage = ev => {
+            if (ev.data) {
+                let event = JSON.parse(ev.data);
+                // keep max 500 events in the UI to not consume endless amounts of memory
+                events = [event, ...events.slice(-499)];
+            }
+        };
     }
 
 </script>
