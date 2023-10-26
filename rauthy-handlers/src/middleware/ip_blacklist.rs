@@ -6,8 +6,8 @@ use actix_web::{
 use chrono::Utc;
 use futures::future::LocalBoxFuture;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::ip_blacklist_handler::{IpBlacklistCheck, IpBlacklistReq};
 use rauthy_models::app_state::AppState;
+use rauthy_models::events::ip_blacklist_handler::{IpBlacklistCheck, IpBlacklistReq};
 use rauthy_models::templates::TooManyRequestsHtml;
 use std::future::{ready, Ready};
 use std::rc::Rc;
