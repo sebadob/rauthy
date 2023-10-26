@@ -19,12 +19,16 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use rauthy_common::constants::{COOKIE_MFA, PROXY_MODE};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
+use rauthy_models::entity::api_keys::ApiKey;
+use rauthy_models::entity::principal::Principal;
+use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::webauthn::WebauthnCookie;
 use rauthy_models::response::WebauthnLoginResponse;
 use rauthy_models::AuthStep;
 use rust_embed::RustEmbed;
 use tracing::error;
 
+pub mod blacklist;
 pub mod clients;
 pub mod events;
 pub mod generic;
@@ -36,6 +40,10 @@ pub mod roles;
 pub mod scopes;
 pub mod sessions;
 pub mod users;
+
+pub type ReqApiKey = web::ReqData<Option<ApiKey>>;
+pub type ReqPrincipal = web::ReqData<Option<Principal>>;
+pub type ReqSession = web::ReqData<Option<Session>>;
 
 #[derive(RustEmbed)]
 #[folder = "../static/v1/"]
@@ -135,3 +143,23 @@ pub fn real_ip_from_svc_req(req: &ServiceRequest) -> Option<String> {
         req.connection_info().peer_addr().map(|ip| ip.to_string())
     }
 }
+
+// pub fn validate_api_key_principal(
+//     api_key: ReqApiKey,
+//     access_group: AccessGroup,
+//     access_rights: AccessRights,
+//     session: ReqSession,
+// ) -> Result<(), ErrorResponse> {
+//     if let Some(api_key) = api_key.into_inner() {
+//         api_key.has_access(access_group, access_rights)?;
+//     } else {
+//         let session = if let Some(req) = req {
+//             Session::extract_validate_csrf(session, req)?
+//         } else {
+//             Session::extract_from_req(session)?
+//         };
+//         session.validate_csrf()
+//     }
+//
+//     Ok(())
+// }

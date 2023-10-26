@@ -1,4 +1,4 @@
-use crate::real_ip_from_req;
+use crate::{real_ip_from_req, ReqApiKey, ReqPrincipal};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use actix_web_grants::proc_macro::has_any_permission;
 use actix_web_lab::sse;
@@ -32,18 +32,25 @@ use validator::Validate;
 #[has_any_permission("session-auth", "api-key")]
 pub async fn sse_events(
     data: web::Data<AppState>,
-    api_key: web::ReqData<Option<ApiKey>>,
-    principal: web::ReqData<Option<Principal>>,
+    api_key: ReqApiKey,
+    principal: ReqPrincipal,
     req: HttpRequest,
     params: web::Query<EventsListenParams>,
 ) -> Result<impl Responder, ErrorResponse> {
-    params.validate()?;
-
+    // validate_api_key_principal(
+    //     api_key,
+    //     AccessGroup::Events,
+    //     AccessRights::Read,
+    //     principal,
+    //     None,
+    // )?;
     if let Some(api_key) = api_key.into_inner() {
         api_key.has_access(AccessGroup::Events, AccessRights::Read)?;
     } else {
         Principal::from_req(principal)?.validate_rauthy_admin()?;
     }
+
+    params.validate()?;
 
     let (tx, sse) = sse::channel(10);
 

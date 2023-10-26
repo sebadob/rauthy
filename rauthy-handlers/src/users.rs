@@ -558,7 +558,7 @@ pub async fn get_user_webauthn_passkeys(
     // make sure a non-admin can only access its own information
     let principal = Principal::from_req(principal)?;
     let id = id.into_inner();
-    if principal.user_id != id && !principal.is_admin() {
+    if principal.user_id() != Ok(&id) && !principal.is_admin() {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
             "You are not allowed to see another users values".to_string(),
@@ -754,10 +754,7 @@ pub async fn delete_webauthn(
         principal.validate_id(&id)?;
         warn!("Passkey delete for user {} for key {}", id, name);
     } else {
-        warn!(
-            "Passkey delete from admin {:?} for user {} for key {}",
-            principal.email, id, name
-        );
+        warn!("Passkey delete from admin for user {} for key {}", id, name);
     }
 
     // if we delete a passkey, we must check if this is the last existing one for the user
@@ -1054,7 +1051,7 @@ pub async fn put_user_self(
     // make sure the logged in user can only update itself
     let principal = Principal::from_req(principal)?;
     let id = id.into_inner();
-    if principal.user_id != id {
+    if principal.user_id() != Ok(&id) {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
             "You are not allowed to update another users values".to_string(),
@@ -1099,7 +1096,7 @@ pub async fn post_user_self_convert_passkey(
     // make sure the logged in user can only update itself
     let principal = Principal::from_req(principal)?;
     let id = id.into_inner();
-    if principal.user_id != id {
+    if principal.user_id() != Ok(&id) {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
             "You are not allowed to update another users values".to_string(),

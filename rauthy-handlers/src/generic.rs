@@ -583,7 +583,8 @@ pub async fn post_update_language(
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     let principal = Principal::from_req(principal)?;
-    let mut user = User::find(&data, principal.user_id).await?;
+    let user_id = principal.user_id()?;
+    let mut user = User::find(&data, user_id.to_string()).await?;
     user.language = Language::try_from(&req).unwrap_or_default();
     user.update_language(&data).await?;
     Ok(HttpResponse::Ok().finish())
