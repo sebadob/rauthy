@@ -89,11 +89,12 @@ pub struct EncKeysResponse<'a> {
 
 #[derive(Debug, Default, Serialize, ToSchema)]
 pub struct HealthResponse {
+    pub is_db_alive: bool,
     #[schema(value_type = str)]
-    pub health: redhac::QuorumHealth,
+    pub cache_health: Option<redhac::QuorumHealth>,
     #[schema(value_type = str)]
-    pub state: redhac::QuorumState,
-    pub connected_hosts: usize,
+    pub cache_state: Option<redhac::QuorumState>,
+    pub cache_connected_hosts: Option<usize>,
 }
 
 #[derive(Debug, Default, Serialize, ToSchema)]
