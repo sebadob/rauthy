@@ -179,7 +179,7 @@
     }
 
     .data {
-        max-height: calc(100dvh - 10rem);
+        max-height: calc(100dvh - 12.5rem);
     }
 
     .dataCollapsed {
