@@ -1,20 +1,34 @@
 use crate::app_state::DbPool;
-use chrono::{NaiveDateTime, Timelike, Utc};
+use crate::events::{
+    EVENT_LEVEL_FAILED_LOGIN, EVENT_LEVEL_FAILED_LOGINS_10, EVENT_LEVEL_FAILED_LOGINS_15,
+    EVENT_LEVEL_FAILED_LOGINS_20, EVENT_LEVEL_FAILED_LOGINS_25, EVENT_LEVEL_FAILED_LOGINS_7,
+    EVENT_LEVEL_IP_BLACKLISTED, EVENT_LEVEL_JWKS_ROTATE, EVENT_LEVEL_NEW_RAUTHY_ADMIN,
+    EVENT_LEVEL_NEW_USER, EVENT_LEVEL_RAUTHY_HEALTHY, EVENT_LEVEL_RAUTHY_START,
+    EVENT_LEVEL_RAUTHY_UNHEALTHY, EVENT_LEVEL_SECRETS_MIGRATED, EVENT_LEVEL_USER_EMAIL_CHANGE,
+};
+use chrono::{DateTime, NaiveDateTime, Timelike, Utc};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::get_rand;
+use rauthy_common::utils::{get_local_hostname, get_rand};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use tracing::error;
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum EventLevel {
     Info,
     Notice,
     Warning,
     Critical,
+}
+
+impl Default for EventLevel {
+    fn default() -> Self {
+        Self::Info
+    }
 }
 
 impl Display for EventLevel {
@@ -97,9 +111,16 @@ impl EventLevel {
 pub enum EventType {
     InvalidLogins,
     IpBlacklisted,
+    IpBlacklistRemoved,
+    JwksRotated,
+    NewUserRegistered,
     NewRauthyAdmin,
-    PossibleBruteForce,
-    PossibleDoS,
+    PossibleBruteForce, // TODO
+    RauthyStarted,
+    RauthyHealthy,
+    RauthyUnhealthy,
+    SecretsMigrated,
+    UserEmailChange,
     Test,
 }
 
@@ -108,9 +129,16 @@ impl Display for EventType {
         match self {
             EventType::InvalidLogins => write!(f, "Invalid logins"),
             EventType::IpBlacklisted => write!(f, "IP blacklisted"),
+            EventType::IpBlacklistRemoved => write!(f, "IP blacklist removed"),
+            EventType::JwksRotated => write!(f, "JWKS has been rotated"),
+            EventType::NewUserRegistered => write!(f, "New user registered"),
             EventType::NewRauthyAdmin => write!(f, "New rauthy_admin member"),
             EventType::PossibleBruteForce => write!(f, "Possible brute force"),
-            EventType::PossibleDoS => write!(f, "Possible DoS"),
+            EventType::RauthyStarted => write!(f, "Rauthy has been restarted"),
+            EventType::RauthyHealthy => write!(f, "Rauthy is healthy"),
+            EventType::RauthyUnhealthy => write!(f, "Rauthy is unhealthy"),
+            EventType::SecretsMigrated => write!(f, "Secrets have been migrated"),
+            EventType::UserEmailChange => write!(f, "User's E-Mail has been changed"),
             EventType::Test => write!(f, "TEST"),
         }
     }
@@ -121,21 +149,35 @@ impl EventType {
         match self {
             Self::InvalidLogins => "InvalidLogins",
             Self::IpBlacklisted => "IpBlacklisted",
+            Self::IpBlacklistRemoved => "IpBlacklistRemoved",
+            Self::JwksRotated => "JwksRotated",
+            Self::NewUserRegistered => "NewUserRegistered",
             Self::NewRauthyAdmin => "NewRauthyAdmin",
             Self::PossibleBruteForce => "PossibleBruteForce",
-            Self::PossibleDoS => "PossibleDoS",
+            Self::RauthyStarted => "RauthyRestarted",
+            Self::RauthyHealthy => "RauthyHealthy",
+            Self::RauthyUnhealthy => "RauthyUnhealthy",
+            Self::SecretsMigrated => "SecretsMigrated",
+            Self::UserEmailChange => "UserEmailChange",
             Self::Test => "TEST",
         }
     }
 
     pub fn value(&self) -> i16 {
         match self {
-            Self::Test => 0,
-            Self::InvalidLogins => 1,
-            Self::NewRauthyAdmin => 2,
-            Self::IpBlacklisted => 3,
-            Self::PossibleBruteForce => 4,
-            Self::PossibleDoS => 5,
+            EventType::InvalidLogins => 0,
+            EventType::IpBlacklisted => 1,
+            EventType::IpBlacklistRemoved => 2,
+            EventType::JwksRotated => 3,
+            EventType::NewUserRegistered => 4,
+            EventType::NewRauthyAdmin => 5,
+            EventType::PossibleBruteForce => 6,
+            EventType::RauthyStarted => 7,
+            EventType::RauthyHealthy => 8,
+            EventType::RauthyUnhealthy => 9,
+            EventType::SecretsMigrated => 10,
+            EventType::UserEmailChange => 11,
+            EventType::Test => 12,
         }
     }
 }
@@ -145,9 +187,16 @@ impl From<String> for EventType {
         match value.as_str() {
             "InvalidLogins" => Self::InvalidLogins,
             "IpBlacklisted" => Self::IpBlacklisted,
+            "IpBlacklistRemoved" => Self::IpBlacklistRemoved,
+            "JwksRotated" => Self::JwksRotated,
+            "NewUserRegistered" => Self::NewUserRegistered,
             "NewRauthyAdmin" => Self::NewRauthyAdmin,
             "PossibleBruteForce" => Self::PossibleBruteForce,
-            "PossibleDoS" => Self::PossibleDoS,
+            "RauthyRestarted" => Self::RauthyStarted,
+            "RauthyHealthy" => Self::RauthyHealthy,
+            "RauthyUnhealthy" => Self::RauthyUnhealthy,
+            "SecretsMigrated" => Self::SecretsMigrated,
+            "UserEmailChange" => Self::UserEmailChange,
             "TEST" => Self::Test,
             // just return test to never panic
             _ => Self::Test,
@@ -164,14 +213,20 @@ impl From<i16> for EventType {
 impl From<i64> for EventType {
     fn from(value: i64) -> Self {
         match value {
-            0 => Self::Test,
-            1 => Self::InvalidLogins,
-            2 => Self::NewRauthyAdmin,
-            3 => Self::IpBlacklisted,
-            4 => Self::PossibleBruteForce,
-            5 => Self::PossibleDoS,
-            // just return test to never panic
-            _ => Self::Test,
+            0 => EventType::InvalidLogins,
+            1 => EventType::IpBlacklisted,
+            2 => EventType::IpBlacklistRemoved,
+            3 => EventType::JwksRotated,
+            4 => EventType::NewUserRegistered,
+            5 => EventType::NewRauthyAdmin,
+            6 => EventType::PossibleBruteForce,
+            7 => EventType::RauthyStarted,
+            8 => EventType::RauthyHealthy,
+            9 => EventType::RauthyUnhealthy,
+            10 => EventType::SecretsMigrated,
+            11 => EventType::UserEmailChange,
+            12 => EventType::Test,
+            _ => EventType::Test,
         }
     }
 }
@@ -265,19 +320,20 @@ impl Event {
     }
 
     /// The EventLevel will change depending on the amount of invalid logins
-    pub fn invalid_login(count: u32, ip: String) -> Self {
-        let level = if count > 6 {
-            EventLevel::Warning
-        } else if count > 3 {
-            EventLevel::Notice
-        } else {
-            EventLevel::Info
+    pub fn invalid_login(failed_logins: u32, ip: String) -> Self {
+        let level = match failed_logins {
+            l if l >= 25 => EVENT_LEVEL_FAILED_LOGINS_25.get().unwrap(),
+            l if l >= 20 => EVENT_LEVEL_FAILED_LOGINS_20.get().unwrap(),
+            l if l >= 15 => EVENT_LEVEL_FAILED_LOGINS_15.get().unwrap(),
+            l if l >= 10 => EVENT_LEVEL_FAILED_LOGINS_10.get().unwrap(),
+            l if l >= 7 => EVENT_LEVEL_FAILED_LOGINS_7.get().unwrap(),
+            _ => EVENT_LEVEL_FAILED_LOGIN.get().unwrap(),
         };
         Self::new(
-            level,
+            level.clone(),
             EventType::InvalidLogins,
             Some(ip),
-            Some(count as i64),
+            Some(failed_logins as i64),
             None,
         )
     }
@@ -292,9 +348,19 @@ impl Event {
         )
     }
 
-    pub fn ip_blacklisted(ip: String) -> Self {
+    pub fn ip_blacklisted(exp: DateTime<Utc>, ip: String) -> Self {
         Self::new(
-            EventLevel::Warning,
+            EVENT_LEVEL_IP_BLACKLISTED.get().cloned().unwrap(),
+            EventType::IpBlacklisted,
+            Some(ip),
+            Some(exp.timestamp()),
+            None,
+        )
+    }
+
+    pub fn ip_blacklist_removed(ip: String) -> Self {
+        Self::new(
+            EVENT_LEVEL_IP_BLACKLISTED.get().cloned().unwrap(),
             EventType::IpBlacklisted,
             Some(ip),
             None,
@@ -302,13 +368,89 @@ impl Event {
         )
     }
 
-    pub fn rauthy_admin(email: String) -> Self {
+    pub fn new_user(email: String, ip: Option<String>) -> Self {
         Self::new(
-            EventLevel::Notice,
-            EventType::NewRauthyAdmin,
-            None,
+            EVENT_LEVEL_NEW_USER.get().cloned().unwrap(),
+            EventType::NewUserRegistered,
+            ip,
             None,
             Some(email),
+        )
+    }
+
+    pub fn new_rauthy_admin(email: String, ip: Option<String>) -> Self {
+        Self::new(
+            EVENT_LEVEL_NEW_RAUTHY_ADMIN.get().cloned().unwrap(),
+            EventType::NewRauthyAdmin,
+            ip,
+            None,
+            Some(email),
+        )
+    }
+
+    pub fn jwks_rotated() -> Self {
+        Self::new(
+            EVENT_LEVEL_JWKS_ROTATE.get().cloned().unwrap(),
+            EventType::JwksRotated,
+            None,
+            None,
+            None,
+        )
+    }
+
+    pub fn rauthy_started() -> Self {
+        let text = format!("Rauthy has been started on host {}", get_local_hostname());
+        Self::new(
+            EVENT_LEVEL_RAUTHY_START.get().cloned().unwrap(),
+            EventType::RauthyStarted,
+            None,
+            None,
+            Some(text),
+        )
+    }
+
+    pub fn rauthy_healthy() -> Self {
+        let text = format!("Rauthy is healthy now on host {}", get_local_hostname());
+        Self::new(
+            EVENT_LEVEL_RAUTHY_HEALTHY.get().cloned().unwrap(),
+            EventType::RauthyHealthy,
+            None,
+            None,
+            Some(text),
+        )
+    }
+
+    pub fn rauthy_unhealthy_cache() -> Self {
+        let text = format!(
+            "The HA Cache layer is unhealthy on host {}",
+            get_local_hostname()
+        );
+        Self::new(
+            EVENT_LEVEL_RAUTHY_UNHEALTHY.get().cloned().unwrap(),
+            EventType::RauthyUnhealthy,
+            None,
+            None,
+            Some(text),
+        )
+    }
+
+    pub fn rauthy_unhealthy_db() -> Self {
+        Self::new(
+            EVENT_LEVEL_RAUTHY_UNHEALTHY.get().cloned().unwrap(),
+            EventType::RauthyUnhealthy,
+            None,
+            None,
+            Some("The database connection is unhealthy".to_string()),
+        )
+    }
+
+    pub fn secrets_migrated(ip: Option<String>) -> Self {
+        Self::new(
+            EVENT_LEVEL_SECRETS_MIGRATED.get().cloned().unwrap(),
+            EventType::SecretsMigrated,
+            ip,
+            None,
+            None,
         )
     }
 
@@ -322,25 +464,39 @@ impl Event {
         )
     }
 
-    pub fn dos(ip: String) -> Self {
+    pub fn user_email_change(text: String, ip: Option<String>) -> Self {
         Self::new(
-            EventLevel::Critical,
-            EventType::PossibleDoS,
-            Some(ip),
+            EVENT_LEVEL_USER_EMAIL_CHANGE.get().cloned().unwrap(),
+            EventType::UserEmailChange,
+            ip,
             None,
-            None,
+            Some(text),
         )
     }
 
     pub fn fmt_data(&self) -> String {
         match self.typ {
             EventType::InvalidLogins => format!("Counter: {}", self.data.unwrap_or_default()),
-            EventType::IpBlacklisted => String::default(),
+            EventType::IpBlacklisted => format!(
+                "Blacklisted until: {}",
+                self.text.as_deref().unwrap_or_default()
+            ),
+            EventType::IpBlacklistRemoved => "IP removed from blacklist".to_string(),
+            EventType::JwksRotated => String::default(),
+            EventType::NewUserRegistered => {
+                format!("User E-Mail: {}", self.text.as_deref().unwrap_or_default())
+            }
             EventType::NewRauthyAdmin => {
                 format!("User E-Mail: {}", self.text.as_deref().unwrap_or_default())
             }
             EventType::PossibleBruteForce => String::default(),
-            EventType::PossibleDoS => String::default(),
+            EventType::RauthyStarted => self.text.clone().unwrap(),
+            EventType::RauthyHealthy => self.text.clone().unwrap(),
+            EventType::RauthyUnhealthy => self.text.clone().unwrap(),
+            EventType::SecretsMigrated => String::default(),
+            EventType::UserEmailChange => {
+                format!("User E-Mail: {}", self.text.as_deref().unwrap_or_default())
+            }
             EventType::Test => {
                 format!("Test Message: {}", self.text.as_deref().unwrap_or_default())
             }
