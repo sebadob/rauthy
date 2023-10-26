@@ -195,109 +195,109 @@ async fn main() -> Result<(), Box<dyn Error>> {
         app_state.db.clone(),
     ));
 
-    // TODO REMOVE AFTER TESTING
-    let txe = tx_events.clone();
-    // let data = app_state.clone();
-    tokio::spawn(async move {
-        // use rauthy_models::entity::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyEntity};
-        // use rauthy_models::events::event::Event;
-        //
-        // time::sleep(Duration::from_secs(2)).await;
-        // let key = ApiKeyEntity::create(
-        //     &data,
-        //     "test".to_string(),
-        //     None,
-        //     vec![ApiKeyAccess {
-        //         group: AccessGroup::Events,
-        //         access_rights: vec![AccessRights::Read, AccessRights::Create],
-        //     }],
-        // )
-        // .await
-        // .unwrap();
-        // println!("\n\ntest${}\n", key);
-
-        use chrono::Utc;
-        use std::ops::Add;
-
-        loop {
-            let ip = "255.255.255.255".to_string();
-            let email = "sebastiandobe@mailbox.org".to_string();
-
-            time::sleep(Duration::from_secs(1)).await;
-            rauthy_models::events::event::Event::invalid_login(3, ip.clone())
-                .send(&txe)
-                .await
-                .unwrap();
-
-            time::sleep(Duration::from_secs(1)).await;
-            rauthy_models::events::event::Event::invalid_login(8, ip.clone())
-                .send(&txe)
-                .await
-                .unwrap();
-
-            time::sleep(Duration::from_secs(1)).await;
-            rauthy_models::events::event::Event::invalid_login(13, ip.clone())
-                .send(&txe)
-                .await
-                .unwrap();
-
-            time::sleep(Duration::from_secs(1)).await;
-            rauthy_models::events::event::Event::ip_blacklisted(
-                Utc::now().add(chrono::Duration::hours(2)),
-                ip.clone(),
-            )
-            .send(&txe)
-            .await
-            .unwrap();
-
-            time::sleep(Duration::from_secs(1)).await;
-            rauthy_models::events::event::Event::new_user(email.clone(), Some(ip.clone()))
-                .send(&txe)
-                .await
-                .unwrap();
-
-            time::sleep(Duration::from_secs(1)).await;
-            rauthy_models::events::event::Event::new_rauthy_admin(email.clone(), Some(ip.clone()))
-                .send(&txe)
-                .await
-                .unwrap();
-
-            time::sleep(Duration::from_secs(1)).await;
-            rauthy_models::events::event::Event::jwks_rotated()
-                .send(&txe)
-                .await
-                .unwrap();
-
-            time::sleep(Duration::from_secs(1)).await;
-            rauthy_models::events::event::Event::rauthy_unhealthy_cache()
-                .send(&txe)
-                .await
-                .unwrap();
-
-            time::sleep(Duration::from_secs(1)).await;
-            rauthy_models::events::event::Event::rauthy_unhealthy_db()
-                .send(&txe)
-                .await
-                .unwrap();
-
-            time::sleep(Duration::from_secs(1)).await;
-            rauthy_models::events::event::Event::secrets_migrated(Some(ip.clone()))
-                .send(&txe)
-                .await
-                .unwrap();
-
-            time::sleep(Duration::from_secs(1)).await;
-            rauthy_models::events::event::Event::user_email_change(
-                "sebastian.dobe@gmail.com -> sebastiandobe@mailbox.org".to_string(),
-                Some(ip),
-            )
-            .send(&txe)
-            .await
-            .unwrap();
-
-            time::sleep(Duration::from_secs(10)).await;
-        }
-    });
+    // // TODO REMOVE AFTER TESTING
+    // let txe = tx_events.clone();
+    // // let data = app_state.clone();
+    // tokio::spawn(async move {
+    //     // use rauthy_models::entity::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyEntity};
+    //     // use rauthy_models::events::event::Event;
+    //     //
+    //     // time::sleep(Duration::from_secs(2)).await;
+    //     // let key = ApiKeyEntity::create(
+    //     //     &data,
+    //     //     "test".to_string(),
+    //     //     None,
+    //     //     vec![ApiKeyAccess {
+    //     //         group: AccessGroup::Events,
+    //     //         access_rights: vec![AccessRights::Read, AccessRights::Create],
+    //     //     }],
+    //     // )
+    //     // .await
+    //     // .unwrap();
+    //     // println!("\n\ntest${}\n", key);
+    //
+    //     use chrono::Utc;
+    //     use std::ops::Add;
+    //
+    //     loop {
+    //         let ip = "255.255.255.255".to_string();
+    //         let email = "sebastiandobe@mailbox.org".to_string();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::invalid_login(3, ip.clone())
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::invalid_login(8, ip.clone())
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::invalid_login(13, ip.clone())
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::ip_blacklisted(
+    //             Utc::now().add(chrono::Duration::hours(2)),
+    //             ip.clone(),
+    //         )
+    //         .send(&txe)
+    //         .await
+    //         .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::new_user(email.clone(), Some(ip.clone()))
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::new_rauthy_admin(email.clone(), Some(ip.clone()))
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::jwks_rotated()
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::rauthy_unhealthy_cache()
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::rauthy_unhealthy_db()
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::secrets_migrated(Some(ip.clone()))
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::user_email_change(
+    //             "sebastian.dobe@gmail.com -> sebastiandobe@mailbox.org".to_string(),
+    //             Some(ip),
+    //         )
+    //         .send(&txe)
+    //         .await
+    //         .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(10)).await;
+    //     }
+    // });
 
     // spawn password hash limiter
     tokio::spawn(password_hasher::run());
