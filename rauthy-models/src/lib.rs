@@ -16,6 +16,8 @@
 
 use crate::entity::sessions::Session;
 use actix_web::http::header::{HeaderName, HeaderValue};
+use actix_web::HttpRequest;
+use rauthy_common::constants::PROXY_MODE;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -40,6 +42,7 @@ pub enum AuthStep {
 
 pub struct AuthStepLoggedIn {
     pub has_password_been_hashed: bool,
+    pub email: String,
     pub header_loc: (HeaderName, HeaderValue),
     pub header_csrf: (HeaderName, HeaderValue),
     pub header_origin: Option<(HeaderName, HeaderValue)>,
@@ -173,5 +176,16 @@ impl ToString for JwtAmrValue {
             Self::Mfa => "mfa",
         };
         s.to_string()
+    }
+}
+
+pub fn real_ip_from_req(req: &HttpRequest) -> Option<String> {
+    if *PROXY_MODE {
+        // TODO maybe make this configurable and extract headers in user-configured order?
+        req.connection_info()
+            .realip_remote_addr()
+            .map(|ip| ip.to_string())
+    } else {
+        req.connection_info().peer_addr().map(|ip| ip.to_string())
     }
 }

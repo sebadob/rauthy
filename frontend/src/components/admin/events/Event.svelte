@@ -65,17 +65,39 @@
         <div class="row">
             <div class="col-ts">{ts()}</div>
 
-            {#if event.typ === 'NewRauthyAdmin'}
+            {#if event.typ === 'Test'}
                 <div class="col-typ">{event.typ}</div>
+                <div class="col-ip">{event.ip}</div>
                 <div class="col-text">{event.text}</div>
 
             {:else if event.typ === 'InvalidLogins'}
                 <div class="col-typ">{`${event.typ}: ${event.data}`}</div>
                 <div class="col-ip">{event.ip}</div>
 
-            {:else}
+            {:else if event.typ === 'SecretsMigrated'}
+                <div class="col-typ">{event.typ}</div>
+                <div class="col-ip">{event.ip || ''}</div>
+
+            {:else if event.typ === 'NewRauthyAdmin' || event.typ === 'NewUserRegistered'}
+                <div class="col-typ">{event.typ}</div>
+                <div class="col-ip">{event.ip || ''}</div>
+                <div class="col-text">{@html event.text.replace('@', '<wbr/>@')}</div>
+
+            {:else if event.typ === 'IpBlacklisted'}
                 <div class="col-typ">{event.typ}</div>
                 <div class="col-ip">{event.ip}</div>
+                <div class="col-text">{`Expires: ${formatDateFromTs(event.data)}`}</div>
+
+            {:else if event.typ === 'RauthyStarted'
+                || event.typ === 'RauthyHealthy'
+                || event.typ === 'RauthyUnhealthy'
+            }
+                <div class="col-typ">{event.typ}</div>
+                <div class="col-ip"></div>
+                <div class="col-text">{event.text}</div>
+
+            {:else}
+                <div class="col-typ">{event.typ}</div>
 
             {/if}
         </div>
@@ -96,21 +118,29 @@
             {`: ${event.data}`}<br/>
             {event.ip}
 
-        {:else if event.typ === 'NewRauthyAdmin'}
+        {:else if event.typ === 'SecretsMigrated'}
+            {event.ip}
+
+        {:else if event.typ === 'NewRauthyAdmin'
+            || event.typ === 'NewUserRegistered'
+        }
+            <br/>
+            {event.ip || ''}
             <br/>
             {@html event.text.replace('@', '<wbr/>@')}
 
         {:else if event.typ === 'IpBlacklisted'}
             <br/>
             {event.ip}
-
-        {:else if event.typ === 'PossibleBruteForce'}
             <br/>
-            {event.ip}
+            {formatDateFromTs(event.data)}
 
-        {:else if event.typ === 'PossibleDoS'}
+        {:else if event.typ === 'RauthyStarted'
+            || event.typ === 'RauthyHealthy'
+            || event.typ === 'RauthyUnhealthy'
+        }
             <br/>
-            {event.ip}
+            {event.text}
 
         {/if}
     {:else}

@@ -25,7 +25,7 @@ use rauthy_common::constants::{
     SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::ErrorResponse;
-use rauthy_common::{ip_blacklist_handler, password_hasher};
+use rauthy_common::password_hasher;
 use rauthy_handlers::middleware::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
 use rauthy_handlers::middleware::session::RauthySessionMiddleware;
@@ -33,8 +33,10 @@ use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{clients, events, generic, groups, oidc, roles, scopes, sessions, users};
 use rauthy_models::app_state::{AppState, Caches, DbPool};
 use rauthy_models::email::EMail;
-use rauthy_models::events::init_event_vars;
+use rauthy_models::events::event::Event;
+use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::listener::EventListener;
+use rauthy_models::events::{init_event_vars, ip_blacklist_handler};
 use rauthy_models::{email, ListenScheme};
 use rauthy_service::auth;
 use sqlx::{query, query_as};
@@ -186,6 +188,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     init_event_vars().unwrap();
     tokio::spawn(EventListener::listen(
         tx_email,
+        tx_ip_blacklist.clone(),
         tx_events_router,
         rx_events_router,
         rx_events,
@@ -213,46 +216,80 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //     // .unwrap();
     //     // println!("\n\ntest${}\n", key);
     //
+    //     use chrono::Utc;
+    //     use std::ops::Add;
+    //
     //     loop {
-    //         time::sleep(Duration::from_secs(5)).await;
-    //         rauthy_models::events::event::Event::brute_force("192.15.15.1".to_string())
-    //             .send(&txe)
-    //             .await
-    //             .unwrap();
+    //         let ip = "255.255.255.255".to_string();
+    //         let email = "sebastiandobe@mailbox.org".to_string();
     //
-    //         time::sleep(Duration::from_secs(5)).await;
-    //         rauthy_models::events::event::Event::dos("192.15.15.1".to_string())
-    //             .send(&txe)
-    //             .await
-    //             .unwrap();
-    //
-    //         time::sleep(Duration::from_secs(5)).await;
-    //         rauthy_models::events::event::Event::invalid_login(2, "192.15.15.1".to_string())
-    //             .send(&txe)
-    //             .await
-    //             .unwrap();
-    //
-    //         time::sleep(Duration::from_secs(2)).await;
-    //         rauthy_models::events::event::Event::invalid_login(5, "192.15.15.1".to_string())
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::invalid_login(3, ip.clone())
     //             .send(&txe)
     //             .await
     //             .unwrap();
     //
     //         time::sleep(Duration::from_secs(1)).await;
-    //         rauthy_models::events::event::Event::invalid_login(7, "192.15.15.1".to_string())
+    //         rauthy_models::events::event::Event::invalid_login(8, ip.clone())
     //             .send(&txe)
     //             .await
     //             .unwrap();
     //
-    //         time::sleep(Duration::from_secs(5)).await;
-    //         rauthy_models::events::event::Event::ip_blacklisted("192.15.15.1".to_string())
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::invalid_login(13, ip.clone())
     //             .send(&txe)
     //             .await
     //             .unwrap();
     //
-    //         time::sleep(Duration::from_secs(10)).await;
-    //         rauthy_models::events::event::Event::rauthy_admin(
-    //             "sebastiandobe@mailbox.org".to_string(),
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::ip_blacklisted(
+    //             Utc::now().add(chrono::Duration::hours(2)),
+    //             ip.clone(),
+    //         )
+    //         .send(&txe)
+    //         .await
+    //         .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::new_user(email.clone(), Some(ip.clone()))
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::new_rauthy_admin(email.clone(), Some(ip.clone()))
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::jwks_rotated()
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::rauthy_unhealthy_cache()
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::rauthy_unhealthy_db()
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::secrets_migrated(Some(ip.clone()))
+    //             .send(&txe)
+    //             .await
+    //             .unwrap();
+    //
+    //         time::sleep(Duration::from_secs(1)).await;
+    //         rauthy_models::events::event::Event::user_email_change(
+    //             "sebastian.dobe@gmail.com -> sebastiandobe@mailbox.org".to_string(),
+    //             Some(ip),
     //         )
     //         .send(&txe)
     //         .await
@@ -270,6 +307,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // spawn remote cache notification service
     tokio::spawn(handle_notify(app_state.clone(), rx_notify));
+
+    // spawn health watcher
+    tokio::spawn(watch_health(
+        app_state.db.clone(),
+        app_state.tx_events.clone(),
+        app_state.caches.ha_cache_config.rx_health_state.clone(),
+    ));
 
     // schedulers
     match env::var("SCHED_DISABLE")
@@ -396,13 +440,19 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
             .unwrap()
     };
 
+    // send start event
+    app_state
+        .tx_events
+        .send_async(Event::rauthy_started())
+        .await
+        .unwrap();
+
     // Note: all .wrap's are executed in reverse order -> the last .wrap is executed as the first
     // one for any new request
     let server = HttpServer::new(move || {
         let mut app = App::new()
             // .data shares application state for all workers
             .app_data(app_state.clone())
-            .wrap(RauthyIpBlacklistMiddleware)
             .wrap(GrantsMiddleware::with_extractor(
                 auth::permission_extractor,
             ))
@@ -428,6 +478,9 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
             )
             .wrap(pub_metrics.clone())
             .service(generic::redirect)
+            // Important: Do not move this middleware do need the least amount of computing
+            // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
+            .wrap(RauthyIpBlacklistMiddleware)
             .service(
                     web::scope("/auth")
                     .service(generic::redirect_v1)

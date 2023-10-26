@@ -1,3 +1,4 @@
+use crate::events::event::EventLevel;
 use crate::language::Language;
 use actix_web::http::header;
 use actix_web::HttpRequest;
@@ -119,6 +120,7 @@ pub struct EventsListenParams {
     /// Validation: `0 <= latest <= 1000`
     #[validate(range(min = 0, max = 1000))]
     pub latest: Option<u16>,
+    pub level: Option<EventLevel>,
 }
 
 fn default_scope() -> String {

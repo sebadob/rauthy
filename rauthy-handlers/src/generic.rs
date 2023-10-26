@@ -1,4 +1,4 @@
-use crate::Assets;
+use crate::{real_ip_from_req, Assets};
 use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::{header, StatusCode};
 use actix_web::web::Json;
@@ -11,11 +11,13 @@ use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::build_csp_header;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::colors::ColorEntity;
+use rauthy_models::entity::is_db_alive;
 use rauthy_models::entity::password::{PasswordHashTimes, PasswordPolicy};
 use rauthy_models::entity::pow::Pow;
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
+use rauthy_models::events::event::Event;
 use rauthy_models::i18n::account::I18nAccount;
 use rauthy_models::i18n::authorize::I18nAuthorize;
 use rauthy_models::i18n::email_confirm_change_html::I18nEmailConfirmChangeHtml;
@@ -39,7 +41,7 @@ use rauthy_models::templates::{
     ErrorHtml, IndexHtml,
 };
 use rauthy_service::encryption;
-use redhac::{cache_get, cache_get_from, cache_get_value};
+use redhac::{cache_get, cache_get_from, cache_get_value, QuorumHealth, QuorumState};
 use std::borrow::Cow;
 
 #[get("/")]
@@ -384,6 +386,12 @@ pub async fn post_migrate_enc_key(
     }
 
     encryption::migrate_encryption_alg(&data, &req_data.key_id).await?;
+
+    data.tx_events
+        .send_async(Event::secrets_migrated(real_ip_from_req(&req)))
+        .await
+        .unwrap();
+
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -595,15 +603,39 @@ pub async fn post_update_language(
 #[get("/health")]
 #[has_permissions("all")]
 pub async fn get_health(data: web::Data<AppState>) -> impl Responder {
+    let is_db_alive = is_db_alive(&data.db).await;
+
     match data.caches.ha_cache_config.rx_health_state.borrow().clone() {
-        None => HttpResponse::Ok().finish(),
-        Some(hs) => {
+        None => {
             let body = HealthResponse {
-                health: hs.health,
-                state: hs.state,
-                connected_hosts: hs.connected_hosts,
+                is_db_alive,
+                cache_health: None,
+                cache_state: None,
+                cache_connected_hosts: None,
             };
-            HttpResponse::Ok().json(body)
+            if is_db_alive {
+                HttpResponse::Ok().json(body)
+            } else {
+                HttpResponse::InternalServerError().json(body)
+            }
+        }
+        Some(hs) => {
+            let is_bad = hs.health == QuorumHealth::Bad
+                || hs.state == QuorumState::Undefined
+                || hs.state == QuorumState::Retry;
+
+            let body = HealthResponse {
+                is_db_alive,
+                cache_health: Some(hs.health),
+                cache_state: Some(hs.state),
+                cache_connected_hosts: Some(hs.connected_hosts),
+            };
+
+            if is_bad {
+                HttpResponse::InternalServerError().json(body)
+            } else {
+                HttpResponse::Ok().json(body)
+            }
         }
     }
 }

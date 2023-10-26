@@ -2962,6 +2962,7 @@ dependencies = [
  "css-color",
  "derive_more",
  "flume",
+ "gethostname",
  "lazy_static",
  "once_cell",
  "pretty_assertions",

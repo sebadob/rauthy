@@ -3,6 +3,7 @@ use actix_web::HttpRequest;
 use base64::{engine, engine::general_purpose, Engine as _};
 use chacha20poly1305::aead::Aead;
 use chacha20poly1305::KeyInit;
+use gethostname::gethostname;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
 use tracing::error;
@@ -71,6 +72,14 @@ pub fn get_client_ip(req: &HttpRequest) -> String {
     req.connection_info()
         .peer_addr()
         .unwrap_or("unknown")
+        .to_string()
+}
+
+pub fn get_local_hostname() -> String {
+    let hostname_os = gethostname();
+    hostname_os
+        .to_str()
+        .expect("Error getting the hostname from the OS")
         .to_string()
 }
 

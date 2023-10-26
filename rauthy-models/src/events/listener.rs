@@ -1,12 +1,16 @@
 use crate::app_state::DbPool;
 use crate::email::EMail;
-use crate::events::event::Event;
+use crate::events::event::{Event, EventLevel, EventType};
+use crate::events::ip_blacklist_handler::{
+    IpBlacklist, IpBlacklistCleanup, IpBlacklistReq, IpLoginFailedSet,
+};
 use crate::events::notifier::EventNotifier;
 use crate::events::EVENT_PERSIST_LEVEL;
 use actix_web_lab::sse;
-use rauthy_common::constants::{DATABASE_URL, DB_TYPE, EVENTS_LATEST_LIMIT};
+use chrono::DateTime;
+use rauthy_common::constants::HA_MODE;
+use rauthy_common::constants::{DATABASE_URL, EVENTS_LATEST_LIMIT};
 use rauthy_common::error_response::ErrorResponse;
-use rauthy_common::DbType;
 use sqlx::postgres::PgListener;
 use std::collections::{HashMap, VecDeque};
 use std::time::Duration;
@@ -21,6 +25,7 @@ pub enum EventRouterMsg {
         ip: String,
         tx: sse::Sender,
         latest: Option<u16>,
+        level: EventLevel,
     },
 }
 
@@ -30,6 +35,7 @@ impl EventListener {
     #[tracing::instrument(level = "debug", skip_all)]
     pub async fn listen(
         tx_email: mpsc::Sender<EMail>,
+        tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
         tx_router: flume::Sender<EventRouterMsg>,
         rx_router: flume::Receiver<EventRouterMsg>,
         rx_event: flume::Receiver<Event>,
@@ -38,14 +44,12 @@ impl EventListener {
         debug!("EventListener::listen has been started");
 
         // having a local copy is a tiny bit faster and needs one less memory lookup
-        // let is_ ha = *HA_MODE;
-        // TODO remove after enough testing -> only use postgres in HA_MODE
-        let is_ha = *DB_TYPE == DbType::Postgres;
+        let is_ha = *HA_MODE;
 
         if is_ha {
             tokio::spawn(Self::pg_listener(tx_router.clone()));
         }
-        tokio::spawn(Self::router(db.clone(), rx_router));
+        tokio::spawn(Self::router(db.clone(), rx_router, tx_ip_blacklist));
 
         while let Ok(event) = rx_event.recv_async().await {
             if is_ha {
@@ -167,35 +171,84 @@ impl EventListener {
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
-    async fn router(db: DbPool, rx: flume::Receiver<EventRouterMsg>) {
+    async fn router(
+        db: DbPool,
+        rx: flume::Receiver<EventRouterMsg>,
+        tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
+    ) {
         debug!("EventListener::router_si has been started");
 
-        let mut clients: HashMap<String, sse::Sender> = HashMap::with_capacity(4);
+        let mut clients: HashMap<String, (i16, sse::Sender)> = HashMap::with_capacity(4);
         let mut ips_to_remove = Vec::with_capacity(1);
-        // returns the latest events ordered by timestamp desc
+        // Event::find_latest returns the latest events ordered by timestamp desc
         let mut events = Event::find_latest(&db, EVENTS_LATEST_LIMIT as i64)
             .await
             .unwrap_or_default()
             .into_iter()
             .rev()
-            .map(|e| sse::Data::new(e.as_json()))
-            .collect::<VecDeque<sse::Data>>();
+            .map(|e| (e.level.value(), sse::Data::new(e.as_json())))
+            .collect::<VecDeque<(i16, sse::Data)>>();
 
         while let Ok(msg) = rx.recv_async().await {
             match msg {
                 EventRouterMsg::Event(event) => {
-                    debug!(
-                        "received new event in EventListener::router_si: {:?}",
-                        event
-                    );
+                    debug!("received new event in EventListener::router: {:?}", event);
 
-                    let payload = sse::Data::new(event);
-                    if events.len() > EVENTS_LATEST_LIMIT as usize {
-                        events.pop_front();
+                    // deserialize the event and check for important updates
+                    let evt = serde_json::from_str::<Event>(&event)
+                        .expect("Event to deserialize correctly");
+                    match evt.typ {
+                        EventType::InvalidLogins => {
+                            tx_ip_blacklist
+                                .send_async(IpBlacklistReq::LoginFailedSet(IpLoginFailedSet {
+                                    ip: evt.ip.unwrap_or_default(),
+                                    invalid_logins: evt.data.unwrap_or_default() as u32,
+                                }))
+                                .await
+                                .unwrap();
+                        }
+                        EventType::IpBlacklisted => {
+                            tx_ip_blacklist
+                                .send_async(IpBlacklistReq::Blacklist(IpBlacklist {
+                                    ip: evt.ip.unwrap_or_default(),
+                                    exp: DateTime::from_timestamp(evt.data.unwrap(), 0)
+                                        .unwrap_or_default(),
+                                }))
+                                .await
+                                .unwrap();
+                        }
+                        EventType::IpBlacklistRemoved => {
+                            tx_ip_blacklist
+                                .send_async(IpBlacklistReq::BlacklistCleanup(IpBlacklistCleanup {
+                                    ip: evt.ip.unwrap_or_default(),
+                                }))
+                                .await
+                                .unwrap();
+                        }
+                        EventType::JwksRotated => {}
+                        EventType::NewUserRegistered => {}
+                        EventType::NewRauthyAdmin => {}
+                        EventType::PossibleBruteForce => {}
+                        EventType::RauthyStarted => {}
+                        EventType::RauthyHealthy => {}
+                        EventType::RauthyUnhealthy => {}
+                        EventType::SecretsMigrated => {}
+                        EventType::UserEmailChange => {}
+                        EventType::Test => {}
                     }
-                    events.push_back(payload.clone());
 
-                    for (ip, tx) in &clients {
+                    // pre-compute the payload
+                    // the incoming data is already in JSON format
+                    let payload = sse::Data::new(event);
+                    let event_level_value = evt.level.value();
+
+                    // send payload to all clients
+                    for (ip, (client_level, tx)) in &clients {
+                        if *client_level > event_level_value {
+                            // skip the event if the client does not want to receive its level
+                            continue;
+                        }
+
                         match time::timeout(Duration::from_secs(5), tx.send(payload.clone())).await
                         {
                             Ok(tx_res) => {
@@ -217,22 +270,45 @@ impl EventListener {
                         }
                     }
 
+                    // keep current events max size and push payload
+                    if events.len() > EVENTS_LATEST_LIMIT as usize {
+                        events.pop_front();
+                    }
+                    events.push_back((event_level_value, payload));
+
                     while let Some(ip) = ips_to_remove.pop() {
                         clients.remove(&ip);
                     }
                 }
 
-                EventRouterMsg::ClientReg { ip, tx, latest } => {
+                EventRouterMsg::ClientReg {
+                    ip,
+                    tx,
+                    latest,
+                    level,
+                } => {
                     info!("New client {} registered for the event listener", ip);
+                    let client_level_val = level.value();
 
                     let mut is_err = false;
                     if let Some(latest) = latest {
-                        let l = latest as usize;
-                        let evt_len = events.len();
-                        let skip = if l > evt_len { 0 } else { evt_len - l };
+                        let latest = latest as usize;
 
-                        for event in events.iter().skip(skip) {
-                            match time::timeout(Duration::from_secs(5), tx.send(event.clone()))
+                        let events_filtered = events
+                            .iter()
+                            .filter(|(level, _payload)| *level >= client_level_val)
+                            .map(|(_level, payload)| payload)
+                            .collect::<Vec<&sse::Data>>();
+
+                        let evt_len = events_filtered.len();
+                        let skip = if latest > evt_len {
+                            0
+                        } else {
+                            evt_len - latest
+                        };
+
+                        for event in events_filtered.iter().skip(skip) {
+                            match time::timeout(Duration::from_secs(5), tx.send((*event).clone()))
                                 .await
                             {
                                 Ok(tx_res) => {
@@ -258,7 +334,7 @@ impl EventListener {
                     }
 
                     if !is_err {
-                        clients.insert(ip, tx);
+                        clients.insert(ip, (client_level_val, tx));
                     }
                 }
             }

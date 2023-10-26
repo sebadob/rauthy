@@ -41,7 +41,7 @@ pub mod users;
 #[folder = "../static/v1/"]
 struct Assets;
 
-pub fn map_auth_step(
+pub async fn map_auth_step(
     data: &web::Data<AppState>,
     auth_step: AuthStep,
     req: &HttpRequest,

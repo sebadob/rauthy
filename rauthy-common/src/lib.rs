@@ -18,7 +18,6 @@ use std::str::FromStr;
 
 pub mod constants;
 pub mod error_response;
-pub mod ip_blacklist_handler;
 pub mod password_hasher;
 pub mod utils;
 

@@ -50,8 +50,7 @@ pub struct EMailEventTxt<'a> {
     pub ts: String,
     pub typ: &'a str,
     pub data: String,
-    pub ip: &'a str,
-    // pub ip: String,
+    pub ip: String,
 }
 
 #[derive(Default, Template)]
@@ -162,7 +161,11 @@ pub async fn send_email_event(address: String, tx_email: &mpsc::Sender<EMail>, e
             .to_string(),
         typ: event.typ.as_str(),
         data: event.fmt_data(),
-        ip: event.ip.as_deref().unwrap_or_default(),
+        ip: event
+            .ip
+            .as_deref()
+            .map(|ip| format!("IP: {}", ip))
+            .unwrap_or_default(),
     };
 
     let html = EMailEventHtml {
@@ -171,7 +174,7 @@ pub async fn send_email_event(address: String, tx_email: &mpsc::Sender<EMail>, e
         ts: &text.ts,
         typ: text.typ,
         data: &text.data,
-        ip: text.ip,
+        ip: &text.ip,
     };
 
     let req = EMail {

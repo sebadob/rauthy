@@ -1,6 +1,7 @@
 use crate::email::EMail;
 use crate::entity::db_version::DbVersion;
 use crate::events::event::Event;
+use crate::events::ip_blacklist_handler::IpBlacklistReq;
 use crate::events::listener::EventRouterMsg;
 use crate::migration::db_migrate;
 use crate::migration::db_migrate::migrate_init_prod;
@@ -9,7 +10,6 @@ use crate::ListenScheme;
 use anyhow::Context;
 use argon2::Params;
 use rauthy_common::constants::{DATABASE_URL, DB_TYPE, DEV_MODE, HA_MODE, PROXY_MODE};
-use rauthy_common::ip_blacklist_handler::IpBlacklistReq;
 use rauthy_common::DbType;
 use regex::Regex;
 use serde::{Deserialize, Serialize};

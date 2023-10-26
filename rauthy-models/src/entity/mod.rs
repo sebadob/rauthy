@@ -1,3 +1,6 @@
+use crate::app_state::DbPool;
+use sqlx::query;
+
 pub mod api_keys;
 pub mod auth_codes;
 pub mod clients;
@@ -17,3 +20,7 @@ pub mod sessions;
 pub mod user_attr;
 pub mod users;
 pub mod webauthn;
+
+pub async fn is_db_alive(db: &DbPool) -> bool {
+    query("SELECT 1 FROM config").execute(db).await.is_ok()
+}

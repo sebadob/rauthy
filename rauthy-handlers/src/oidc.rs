@@ -174,7 +174,7 @@ pub async fn post_authorize(
     let session = Session::extract_validate_csrf(session_req, &req)?;
 
     let res = match auth::authorize(&data, &req, req_data.into_inner(), session).await {
-        Ok(auth_step) => map_auth_step(&data, auth_step, &req),
+        Ok(auth_step) => map_auth_step(&data, auth_step, &req).await,
         Err(err) => Err(err),
     };
 

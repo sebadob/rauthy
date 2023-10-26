@@ -14,9 +14,6 @@ use rauthy_common::constants::{
     TOKEN_API_KEY, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::ip_blacklist_handler::{
-    IpBlacklist, IpBlacklistCleanup, IpBlacklistReq, IpFailedLoginCheck,
-};
 use rauthy_common::password_hasher::HashPassword;
 use rauthy_common::utils::{base64_url_encode, encrypt, get_client_ip, get_rand};
 use rauthy_models::app_state::AppState;
@@ -31,6 +28,10 @@ use rauthy_models::entity::scopes::Scope;
 use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::users::{AccountType, User};
 use rauthy_models::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
+use rauthy_models::events::event::Event;
+use rauthy_models::events::ip_blacklist_handler::{
+    IpBlacklistCleanup, IpBlacklistReq, IpFailedLoginCheck,
+};
 use rauthy_models::language::Language;
 use rauthy_models::request::{LoginRequest, LogoutRequest, TokenRequest};
 use rauthy_models::response::{TokenInfo, Userinfo};
@@ -270,6 +271,7 @@ pub async fn authorize(
     } else {
         Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
             has_password_been_hashed,
+            email: user.email,
             header_loc: (header::LOCATION, HeaderValue::from_str(&loc).unwrap()),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
             header_origin,
@@ -1090,6 +1092,18 @@ pub async fn handle_login_delay(
                 warn!("No IP in login delay handler - check your reverse proxy setup");
             }
 
+            // event for failed login
+            let ip = if let Some(ip) = peer_ip {
+                ip
+            } else {
+                error!("No peer IP for connected client - check your reverse proxy setup!");
+                "UNKNOWN".to_string()
+            };
+            data.tx_events
+                .send_async(Event::invalid_login(failed_logins, ip.clone()))
+                .await
+                .unwrap();
+
             let sleep_time_median = {
                 let time_taken = end.sub(start).as_millis() as u64;
                 let mut sleep_time_median = 0;
@@ -1102,17 +1116,13 @@ pub async fn handle_login_delay(
 
             let sleep_time = match failed_logins as u64 {
                 // n-th blacklist -> blocks for 24h with each invalid request
-                t if t > 25 => {
+                t if t >= 25 => {
                     let not_before = Utc::now().add(chrono::Duration::seconds(86400));
                     let ts = not_before.timestamp();
-                    let ip = peer_ip.unwrap_or_else(|| "UNKNOWN".to_string());
                     let html = TooManyRequestsHtml::build(&ip, ts);
 
-                    data.tx_ip_blacklist
-                        .send_async(IpBlacklistReq::Blacklist(IpBlacklist {
-                            ip,
-                            exp: not_before,
-                        }))
+                    data.tx_events
+                        .send_async(Event::ip_blacklisted(not_before, ip.clone()))
                         .await
                         .unwrap();
 
@@ -1128,14 +1138,10 @@ pub async fn handle_login_delay(
                 20 => {
                     let not_before = Utc::now().add(chrono::Duration::seconds(3600));
                     let ts = not_before.timestamp();
-                    let ip = peer_ip.unwrap_or_else(|| "UNKNOWN".to_string());
                     let html = TooManyRequestsHtml::build(&ip, ts);
 
-                    data.tx_ip_blacklist
-                        .send_async(IpBlacklistReq::Blacklist(IpBlacklist {
-                            ip,
-                            exp: not_before,
-                        }))
+                    data.tx_events
+                        .send_async(Event::ip_blacklisted(not_before, ip.clone()))
                         .await
                         .unwrap();
 
@@ -1151,14 +1157,10 @@ pub async fn handle_login_delay(
                 15 => {
                     let not_before = Utc::now().add(chrono::Duration::seconds(900));
                     let ts = not_before.timestamp();
-                    let ip = peer_ip.unwrap_or_else(|| "UNKNOWN".to_string());
                     let html = TooManyRequestsHtml::build(&ip, ts);
 
-                    data.tx_ip_blacklist
-                        .send_async(IpBlacklistReq::Blacklist(IpBlacklist {
-                            ip,
-                            exp: not_before,
-                        }))
+                    data.tx_events
+                        .send_async(Event::ip_blacklisted(not_before, ip.clone()))
                         .await
                         .unwrap();
 
@@ -1174,14 +1176,10 @@ pub async fn handle_login_delay(
                 10 => {
                     let not_before = Utc::now().add(chrono::Duration::seconds(600));
                     let ts = not_before.timestamp();
-                    let ip = peer_ip.unwrap_or_else(|| "UNKNOWN".to_string());
                     let html = TooManyRequestsHtml::build(&ip, ts);
 
-                    data.tx_ip_blacklist
-                        .send_async(IpBlacklistReq::Blacklist(IpBlacklist {
-                            ip,
-                            exp: not_before,
-                        }))
+                    data.tx_events
+                        .send_async(Event::ip_blacklisted(not_before, ip.clone()))
                         .await
                         .unwrap();
 
@@ -1197,14 +1195,10 @@ pub async fn handle_login_delay(
                 7 => {
                     let not_before = Utc::now().add(chrono::Duration::seconds(60));
                     let ts = not_before.timestamp();
-                    let ip = peer_ip.unwrap_or_else(|| "UNKNOWN".to_string());
                     let html = TooManyRequestsHtml::build(&ip, ts);
 
-                    data.tx_ip_blacklist
-                        .send_async(IpBlacklistReq::Blacklist(IpBlacklist {
-                            ip,
-                            exp: not_before,
-                        }))
+                    data.tx_events
+                        .send_async(Event::ip_blacklisted(not_before, ip.clone()))
                         .await
                         .unwrap();
 
@@ -1526,6 +1520,11 @@ pub async fn rotate_jwks(data: &web::Data<AppState>) -> Result<(), ErrorResponse
     .await?;
 
     info!("Finished JWKS rotation");
+
+    data.tx_events
+        .send_async(Event::jwks_rotated())
+        .await
+        .unwrap();
 
     Ok(())
 }
