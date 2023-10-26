@@ -160,14 +160,6 @@ impl Principal {
             ));
         }
 
-        // TODO CAUTION - config variable is currently ignored -> cleanup after migration
-        // if *ADMIN_ACCESS_SESSION_ONLY && !self.has_session {
-        //     return Err(ErrorResponse::new(
-        //         ErrorResponseType::Forbidden,
-        //         "Rauthy admin access denied with JWT tokens".to_string(),
-        //     ));
-        // }
-
         Ok(())
     }
 

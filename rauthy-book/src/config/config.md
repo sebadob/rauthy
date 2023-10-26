@@ -394,12 +394,6 @@ LOG_LEVEL_ACCESS=Basic
 # rauthy admin UI (default: true)
 ADMIN_FORCE_MFA=false
 
-# If set to true, you can access rauthy's admin API only with
-# a valid session + CSRF token. If you need some external access
-# via JWT tokens, since sessions are managed with cookies, set
-# this to false. (default: true)
-ADMIN_ACCESS_SESSION_ONLY=true
-
 #####################################
 ############## POW  #################
 #####################################

@@ -128,10 +128,6 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("true"))
         .parse::<bool>()
         .expect("ADMIN_FORCE_MFA cannot be parsed to bool - bad format");
-    pub static ref ADMIN_ACCESS_SESSION_ONLY: bool = env::var("ADMIN_ACCESS_SESSION_ONLY")
-        .unwrap_or_else(|_| String::from("true"))
-        .parse::<bool>()
-        .expect("ADMIN_ACCESS_SESSION_ONLY cannot be parsed to bool - bad format");
 
     pub static ref SESSION_LIFETIME: u32 = env::var("SESSION_LIFETIME")
         .unwrap_or_else(|_| String::from("14400"))

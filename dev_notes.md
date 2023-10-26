@@ -2,13 +2,13 @@
 
 ## CURRENT WORK
 
-- JWK auto-rotate scheduler
+- admin ui component to show blacklisted IPs
 
 ## TODO v0.17
 
+
 - add a mechanism to detect DoS attempts
 - admin ui component for the new ApiKeys
-- admin ui component to show blacklisted IPs
 - maybe functionality to manually blacklist IPs?
 - rauthy-notify crate for matrix + slack notifiers
 - latest app version check via github api
