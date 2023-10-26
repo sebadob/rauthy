@@ -472,14 +472,13 @@ impl Session {
                 format!("User '{}' is not assigned to any roles", &self.id),
             ));
         }
-        let mut res = Vec::new();
-        self.roles
+        Ok(self
+            .roles
             .as_ref()
             .unwrap()
             .split(',')
-            .map(|x| format!("ROLE_{}", x.trim()))
-            .for_each(|x| res.push(x));
-        Ok(res)
+            .map(|r| r.to_string())
+            .collect())
     }
 
     #[inline]

@@ -4,7 +4,7 @@ use actix_web::{
     http, web, Error, HttpMessage,
 };
 use futures::future::LocalBoxFuture;
-use rauthy_common::constants::{COOKIE_SESSION, SESSION_VALIDATE_IP, TOKEN_BEARER};
+use rauthy_common::constants::{COOKIE_SESSION, SESSION_VALIDATE_IP, TOKEN_API_KEY};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{ApiKey, ApiKeyEntity};
@@ -87,7 +87,7 @@ async fn get_api_key_from_headers(
     let headers = req.headers();
     let auth_header = headers.get("Authorization")?.to_str().ok()?;
     let (k, v) = auth_header.split_once(' ')?;
-    let api_key_value = if k.ne(TOKEN_BEARER) || k.is_empty() {
+    let api_key_value = if k.ne(TOKEN_API_KEY) || k.is_empty() {
         None
     } else {
         Some(v)
@@ -131,7 +131,7 @@ async fn get_session_from_cookie(
                     session.save(data).await?;
                 }
 
-                if req.method() != http::Method::GET {
+                if req.method() != http::Method::GET && !is_path_csrf_exception(req.path()) {
                     // any request other than GET needs to validate the CSRF token in the header
                     if session.validate_csrf(req.request()).is_ok() {
                         Ok(Some(session))
@@ -153,4 +153,11 @@ async fn get_session_from_cookie(
             Ok(None)
         }
     }
+}
+
+// !!! CAUTION !!!
+// CSRF MUST BE CHECKED FOR THESE EXCEPTIONS MANUALLY !
+#[inline(always)]
+fn is_path_csrf_exception(path: &str) -> bool {
+    path.ends_with("/webauthn/register/start") || path.ends_with("/webauthn/register/finish")
 }

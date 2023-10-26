@@ -162,7 +162,7 @@ impl ApiKeyEntity {
             key
         };
 
-        api_key.validate(secret)?;
+        api_key.validate_secret(secret)?;
 
         Ok(api_key)
     }
@@ -194,11 +194,15 @@ impl ApiKeyEntity {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AccessGroup {
-    Attributes,
+    Clients,
     Events,
+    Generic,
     Groups,
+    Roles,
+    Secrets,
     Sessions,
     Scopes,
+    UserAttrs,
     Users,
 }
 
@@ -229,14 +233,14 @@ pub struct ApiKey {
 
 impl ApiKey {
     #[inline(always)]
-    pub fn has_access(
+    pub fn validate_access(
         &self,
-        group: AccessGroup,
-        access_rights: AccessRights,
+        group: &AccessGroup,
+        access_rights: &AccessRights,
     ) -> Result<(), ErrorResponse> {
         for a in &self.access {
-            if a.group == group {
-                return if a.access_rights.contains(&access_rights) {
+            if &a.group == group {
+                return if a.access_rights.contains(access_rights) {
                     Ok(())
                 } else {
                     Err(ErrorResponse::new(
@@ -252,7 +256,8 @@ impl ApiKey {
         ))
     }
 
-    pub fn validate(&self, secret: &str) -> Result<(), ErrorResponse> {
+    #[inline(always)]
+    pub fn validate_secret(&self, secret: &str) -> Result<(), ErrorResponse> {
         if let Some(exp) = self.expires {
             if Utc::now().timestamp() > exp {
                 return Err(ErrorResponse::new(

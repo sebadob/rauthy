@@ -1,10 +1,9 @@
-use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
-use actix_web_grants::proc_macro::has_roles;
+use crate::ReqPrincipal;
+use actix_web::{delete, get, post, put, web, HttpResponse};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::app_state::AppState;
-use rauthy_models::entity::principal::Principal;
+use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::scopes::Scope;
-use rauthy_models::entity::sessions::Session;
 use rauthy_models::request::ScopeRequest;
 use rauthy_models::response::ScopeResponse;
 
@@ -23,13 +22,11 @@ use rauthy_models::response::ScopeResponse;
     ),
 )]
 #[get("/scopes")]
-#[has_roles("rauthy_admin")]
 pub async fn get_scopes(
     data: web::Data<AppState>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Scopes, AccessRights::Read)?;
 
     Scope::find_all(&data).await.map(|scp| {
         let res = scp
@@ -56,19 +53,12 @@ pub async fn get_scopes(
     ),
 )]
 #[post("/scopes")]
-#[has_roles("rauthy_admin")]
 pub async fn post_scope(
     data: web::Data<AppState>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
     scope_req: actix_web_validator::Json<ScopeRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Scopes, AccessRights::Create)?;
 
     Scope::create(&data, scope_req.into_inner())
         .await
@@ -91,20 +81,13 @@ pub async fn post_scope(
     ),
 )]
 #[put("/scopes/{id}")]
-#[has_roles("rauthy_admin")]
 pub async fn put_scope(
     data: web::Data<AppState>,
     path: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
     scope_req: actix_web_validator::Json<ScopeRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Scopes, AccessRights::Update)?;
 
     Scope::update(&data, path.as_str(), scope_req.into_inner())
         .await
@@ -128,19 +111,12 @@ pub async fn put_scope(
     ),
 )]
 #[delete("/scopes/{id}")]
-#[has_roles("rauthy_admin")]
 pub async fn delete_scope(
     data: web::Data<AppState>,
     path: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Scopes, AccessRights::Delete)?;
 
     Scope::delete(&data, path.as_str())
         .await

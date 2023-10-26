@@ -1,21 +1,19 @@
-use crate::{real_ip_from_req, Assets};
+use crate::{real_ip_from_req, Assets, ReqPrincipal};
 use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::{header, StatusCode};
 use actix_web::web::Json;
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
-use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_NAME_LOGIN_DELAY, HEADER_HTML, IDX_LOGIN_TIME,
 };
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::build_csp_header;
 use rauthy_models::app_state::AppState;
+use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::is_db_alive;
 use rauthy_models::entity::password::{PasswordHashTimes, PasswordPolicy};
 use rauthy_models::entity::pow::Pow;
-use rauthy_models::entity::principal::Principal;
-use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
 use rauthy_models::i18n::account::I18nAccount;
@@ -45,7 +43,6 @@ use redhac::{cache_get, cache_get_from, cache_get_value, QuorumHealth, QuorumSta
 use std::borrow::Cow;
 
 #[get("/")]
-#[has_permissions("all")]
 pub async fn get_index(
     data: web::Data<AppState>,
     req: HttpRequest,
@@ -61,7 +58,6 @@ pub async fn get_index(
 }
 
 #[get("/{_:.*}")]
-#[has_permissions("all")]
 pub async fn get_static_assets(
     data: web::Data<AppState>,
     path: web::Path<String>,
@@ -95,7 +91,6 @@ pub async fn get_static_assets(
 }
 
 #[post("/i18n")]
-#[has_permissions("all")]
 pub async fn post_i18n(
     req: HttpRequest,
     req_data: Json<I18nRequest>,
@@ -122,7 +117,6 @@ pub async fn post_i18n(
 }
 
 #[get("/account")]
-#[has_permissions("all")]
 pub async fn get_account_html(
     data: web::Data<AppState>,
     req: HttpRequest,
@@ -138,7 +132,6 @@ pub async fn get_account_html(
 }
 
 #[get("/admin")]
-#[has_permissions("all")]
 pub async fn get_admin_html(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
     let (body, nonce) = AdminHtml::build(&colors);
@@ -150,7 +143,6 @@ pub async fn get_admin_html(data: web::Data<AppState>) -> Result<HttpResponse, E
 }
 
 #[get("/admin/attributes")]
-#[has_permissions("all")]
 pub async fn get_admin_attr_html(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
     let (body, nonce) = AdminAttributesHtml::build(&colors);
@@ -162,7 +154,6 @@ pub async fn get_admin_attr_html(data: web::Data<AppState>) -> Result<HttpRespon
 }
 
 #[get("/admin/clients")]
-#[has_permissions("all")]
 pub async fn get_admin_clients_html(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -176,7 +167,6 @@ pub async fn get_admin_clients_html(
 }
 
 #[get("/admin/config")]
-#[has_permissions("all")]
 pub async fn get_admin_config_html(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -190,7 +180,6 @@ pub async fn get_admin_config_html(
 }
 
 #[get("/admin/docs")]
-#[has_permissions("all")]
 pub async fn get_admin_docs_html(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
     let (body, nonce) = AdminDocsHtml::build(&colors);
@@ -202,7 +191,6 @@ pub async fn get_admin_docs_html(data: web::Data<AppState>) -> Result<HttpRespon
 }
 
 #[get("/admin/groups")]
-#[has_permissions("all")]
 pub async fn get_admin_groups_html(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -216,7 +204,6 @@ pub async fn get_admin_groups_html(
 }
 
 #[get("/admin/roles")]
-#[has_permissions("all")]
 pub async fn get_admin_roles_html(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -230,7 +217,6 @@ pub async fn get_admin_roles_html(
 }
 
 #[get("/admin/scopes")]
-#[has_permissions("all")]
 pub async fn get_admin_scopes_html(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -244,7 +230,6 @@ pub async fn get_admin_scopes_html(
 }
 
 #[get("/admin/sessions")]
-#[has_permissions("all")]
 pub async fn get_admin_sessions_html(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -258,7 +243,6 @@ pub async fn get_admin_sessions_html(
 }
 
 #[get("/admin/users")]
-#[has_permissions("all")]
 pub async fn get_admin_users_html(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -271,25 +255,21 @@ pub async fn get_admin_users_html(
         .body(body))
 }
 
-/// Check if the given JWT Token is valid
-///
-/// This endpoint only exists for checking if the User accessing it has a valid token / session or
-/// not.<br>
-/// This could be used for instance for [Traefiks](https://traefik.io/traefik/) ForwardAuth middleware.
+/// Check if the current session is valid
 #[utoipa::path(
     get,
     path = "/auth_check",
     tag = "generic",
     responses(
-        (status = 200, description = "Valid Token / Session"),
+        (status = 200, description = "Ok"),
         (status = 400, description = "BadRequest"),
         (status = 401, description = "Unauthorized"),
     ),
 )]
 #[get("/auth_check")]
-#[has_any_permission("token-auth", "session-auth")]
-pub async fn get_auth_check() -> HttpResponse {
-    HttpResponse::Ok().finish()
+pub async fn get_auth_check(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+    Ok(HttpResponse::Ok().finish())
 }
 
 /// Check if access to the rauthy admin API is allowed
@@ -298,27 +278,15 @@ pub async fn get_auth_check() -> HttpResponse {
     path = "/auth_check_admin",
     tag = "generic",
     responses(
-        (status = 200, description = "Valid Token / Session"),
+        (status = 200, description = "Ok"),
         (status = 400, description = "BadRequest"),
         (status = 401, description = "Unauthorized"),
     ),
 )]
 #[get("/auth_check_admin")]
-#[has_roles("rauthy_admin")]
-pub async fn get_auth_check_admin(
-    principal_opt: Option<web::ReqData<Option<Principal>>>,
-) -> Result<HttpResponse, ErrorResponse> {
-    match principal_opt {
-        None => Err(ErrorResponse::new(
-            ErrorResponseType::Unauthorized,
-            "Not authenticated".to_string(),
-        )),
-        Some(p) => {
-            let principal = Principal::from_req(p)?;
-            principal.validate_rauthy_admin()?;
-            Ok(HttpResponse::Ok().finish())
-        }
-    }
+pub async fn get_auth_check_admin(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+    Ok(HttpResponse::Ok().finish())
 }
 
 /// Returns the existing encryption key ID's
@@ -338,13 +306,11 @@ pub async fn get_auth_check_admin(
     ),
 )]
 #[get("/encryption/keys")]
-#[has_roles("rauthy_admin")]
 pub async fn get_enc_keys(
     data: web::Data<AppState>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Read)?;
 
     let active = &data.enc_key_active;
     let mut keys = Vec::with_capacity(data.enc_keys.len());
@@ -371,19 +337,13 @@ pub async fn get_enc_keys(
     ),
 )]
 #[post("/encryption/migrate")]
-#[has_roles("rauthy_admin")]
 pub async fn post_migrate_enc_key(
     data: web::Data<AppState>,
     req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
     req_data: actix_web_validator::Json<EncKeyMigrateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
 
     encryption::migrate_encryption_alg(&data, &req_data.key_id).await?;
 
@@ -412,13 +372,11 @@ pub async fn post_migrate_enc_key(
     ),
 )]
 #[get("/login_time")]
-#[has_roles("rauthy_admin")]
 pub async fn get_login_time(
     data: web::Data<AppState>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Generic, AccessRights::Read)?;
 
     let login_time = cache_get!(
         u32,
@@ -461,18 +419,11 @@ pub async fn get_login_time(
     ),
 )]
 #[post("/password_hash_times")]
-#[has_roles("rauthy_admin")]
 pub async fn post_password_hash_times(
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
     req_data: actix_web_validator::Json<PasswordHashTimesRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Generic, AccessRights::Create)?;
 
     PasswordHashTimes::compute(req_data.into_inner())
         .await
@@ -493,8 +444,11 @@ pub async fn post_password_hash_times(
     ),
 )]
 #[get("/password_policy")]
-#[has_any_permission("token-auth", "session-auth")]
-pub async fn get_password_policy(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_password_policy(
+    data: web::Data<AppState>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
     let rules = PasswordPolicy::find(&data).await?;
     Ok(HttpResponse::Ok().json(PasswordPolicyResponse::from(rules)))
 }
@@ -516,19 +470,12 @@ pub async fn get_password_policy(data: web::Data<AppState>) -> Result<HttpRespon
     ),
 )]
 #[put("/password_policy")]
-#[has_roles("rauthy_admin")]
 pub async fn put_password_policy(
     data: web::Data<AppState>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
     req_data: actix_web_validator::Json<PasswordPolicyRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
 
     let mut rules = PasswordPolicy::find(&data).await?;
     rules.apply_req(req_data.into_inner());
@@ -561,6 +508,7 @@ pub async fn ping() -> impl Responder {
 )]
 #[get("/pow")]
 pub async fn get_pow(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+    // TODO request at least a session in init state or something like that?
     let pow = Pow::create(&data).await?;
     Ok(HttpResponse::Ok().json(pow))
 }
@@ -576,17 +524,19 @@ pub async fn get_pow(data: web::Data<AppState>) -> Result<HttpResponse, ErrorRes
     ),
 )]
 #[post("/update_language")]
-#[has_any_permission("token-auth", "session-auth")]
 pub async fn post_update_language(
     data: web::Data<AppState>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
+    principal.validate_session_auth()?;
+
     let user_id = principal.user_id()?;
     let mut user = User::find(&data, user_id.to_string()).await?;
+
     user.language = Language::try_from(&req).unwrap_or_default();
     user.update_language(&data).await?;
+
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -602,7 +552,6 @@ pub async fn post_update_language(
     ),
 )]
 #[get("/health")]
-#[has_permissions("all")]
 pub async fn get_health(data: web::Data<AppState>) -> impl Responder {
     let is_db_alive = is_db_alive(&data.db).await;
 
@@ -652,7 +601,6 @@ pub async fn get_health(data: web::Data<AppState>) -> impl Responder {
     ),
 )]
 #[get("/ready")]
-#[has_permissions("all")]
 pub async fn get_ready(data: web::Data<AppState>) -> impl Responder {
     match data.caches.ha_cache_config.rx_health_state.borrow().clone() {
         None => {}
@@ -668,7 +616,6 @@ pub async fn get_ready(data: web::Data<AppState>) -> impl Responder {
 
 /// Redirects from root to the "real root" /auth/v1/
 #[get("/")]
-#[has_permissions("all")]
 pub async fn redirect() -> impl Responder {
     HttpResponse::MovedPermanently()
         .insert_header((
@@ -679,7 +626,6 @@ pub async fn redirect() -> impl Responder {
 }
 
 #[get("/v1")]
-#[has_permissions("all")]
 pub async fn redirect_v1() -> HttpResponse {
     HttpResponse::MovedPermanently()
         .insert_header(("location", "/auth/v1/"))
@@ -699,7 +645,6 @@ pub async fn redirect_v1() -> HttpResponse {
     ),
 )]
 #[get("/whoami")]
-#[has_permissions("all")]
 pub async fn whoami(req: HttpRequest) -> impl Responder {
     use std::fmt::Write;
     let mut resp = String::with_capacity(500);

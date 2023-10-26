@@ -42,7 +42,7 @@ pub mod sessions;
 pub mod users;
 
 pub type ReqApiKey = web::ReqData<Option<ApiKey>>;
-pub type ReqPrincipal = web::ReqData<Option<Principal>>;
+pub type ReqPrincipal = web::ReqData<Principal>;
 pub type ReqSession = web::ReqData<Option<Session>>;
 
 #[derive(RustEmbed)]
@@ -143,23 +143,3 @@ pub fn real_ip_from_svc_req(req: &ServiceRequest) -> Option<String> {
         req.connection_info().peer_addr().map(|ip| ip.to_string())
     }
 }
-
-// pub fn validate_api_key_principal(
-//     api_key: ReqApiKey,
-//     access_group: AccessGroup,
-//     access_rights: AccessRights,
-//     session: ReqSession,
-// ) -> Result<(), ErrorResponse> {
-//     if let Some(api_key) = api_key.into_inner() {
-//         api_key.has_access(access_group, access_rights)?;
-//     } else {
-//         let session = if let Some(req) = req {
-//             Session::extract_validate_csrf(session, req)?
-//         } else {
-//             Session::extract_from_req(session)?
-//         };
-//         session.validate_csrf()
-//     }
-//
-//     Ok(())
-// }

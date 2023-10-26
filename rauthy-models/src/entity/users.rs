@@ -1194,10 +1194,7 @@ mod tests {
         assert_eq!(session.groups_as_vec(), Ok(vec!["admin", "user"]));
         assert_eq!(
             session.roles_as_vec(),
-            Ok(vec![
-                "ROLE_rauthy_admin".to_string(),
-                "ROLE_admin".to_string()
-            ])
+            Ok(vec!["rauthy_admin".to_string(), "admin".to_string()])
         );
     }
 

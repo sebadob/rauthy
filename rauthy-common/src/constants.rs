@@ -10,7 +10,7 @@ pub const HEADER_HTML: (&str, &str) = ("content-type", "text/html;charset=utf-8"
 pub const HEADER_RETRY_NOT_BEFORE: &str = "x-retry-not-before";
 pub const APPLICATION_JSON: &str = "application/json";
 
-// pub const TOKEN_API_KEY: &str = "API-Key";
+pub const TOKEN_API_KEY: &str = "API-Key";
 pub const TOKEN_BEARER: &str = "Bearer";
 pub const COOKIE_SESSION: &str = "rauthy-session";
 pub const COOKIE_MFA: &str = "rauthy-mfa";
@@ -55,7 +55,8 @@ lazy_static! {
     pub static ref RAUTHY_ADMIN_ROLE: String = "rauthy_admin".to_string();
     pub static ref DATABASE_URL: String = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
     pub static ref DB_TYPE: DbType = DbType::from_str(&DATABASE_URL).unwrap();
-    pub static ref ROLE_ADMIN: String = "ROLE_rauthy_admin".to_string();
+    pub static ref ROLE_ADMIN: String = "rauthy_admin".to_string();
+    // pub static ref ROLE_ADMIN: String = "ROLE_rauthy_admin".to_string();
     pub static ref DEV_MODE: bool = env::var("DEV_MODE")
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()

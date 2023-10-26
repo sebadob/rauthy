@@ -1,11 +1,10 @@
-use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
-use actix_web_grants::proc_macro::{has_permissions, has_roles};
+use crate::ReqPrincipal;
+use actix_web::{delete, get, post, put, web, HttpResponse};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::app_state::AppState;
+use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::colors::ColorEntity;
-use rauthy_models::entity::principal::Principal;
-use rauthy_models::entity::sessions::Session;
 use rauthy_models::request::{ColorsRequest, NewClientRequest, UpdateClientRequest};
 use rauthy_models::response::ClientResponse;
 use rauthy_service::client;
@@ -28,13 +27,11 @@ use rauthy_service::client;
 )]
 #[tracing::instrument(skip_all)]
 #[get("/clients")]
-#[has_roles("rauthy_admin")]
 pub async fn get_clients(
     data: web::Data<AppState>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Read)?;
 
     let clients = Client::find_all(&data).await?;
 
@@ -63,14 +60,12 @@ pub async fn get_clients(
     ),
 )]
 #[get("/clients/{id}")]
-#[has_roles("rauthy_admin")]
 pub async fn get_client_by_id(
     path: web::Path<String>,
     data: web::Data<AppState>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Read)?;
 
     Client::find(&data, path.into_inner())
         .await
@@ -94,14 +89,12 @@ pub async fn get_client_by_id(
     ),
 )]
 #[get("/clients/{id}/secret")]
-#[has_roles("rauthy_admin")]
 pub async fn get_client_secret(
     data: web::Data<AppState>,
     path: web::Path<String>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Read)?;
 
     client::get_client_secret(path.into_inner(), &data)
         .await
@@ -126,19 +119,12 @@ pub async fn get_client_secret(
     ),
 )]
 #[post("/clients")]
-#[has_roles("rauthy_admin")]
 pub async fn post_clients(
     client: actix_web_validator::Json<NewClientRequest>,
     data: web::Data<AppState>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Create)?;
 
     Client::create(&data, client.into_inner())
         .await
@@ -163,20 +149,13 @@ pub async fn post_clients(
     ),
 )]
 #[put("/clients/{id}")]
-#[has_roles("rauthy_admin")]
 pub async fn put_clients(
     data: web::Data<AppState>,
     client: actix_web_validator::Json<UpdateClientRequest>,
     path: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Update)?;
 
     client::update_client(&data, path.into_inner(), client.into_inner())
         .await
@@ -198,14 +177,12 @@ pub async fn put_clients(
     ),
 )]
 #[get("/clients/{id}/colors")]
-#[has_roles("rauthy_admin")]
 pub async fn get_client_colors(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Read)?;
 
     ColorEntity::find(&data, id.as_str())
         .await
@@ -229,20 +206,13 @@ pub async fn get_client_colors(
     ),
 )]
 #[put("/clients/{id}/colors")]
-#[has_roles("rauthy_admin")]
 pub async fn put_client_colors(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
     req_data: actix_web_validator::Json<ColorsRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Update)?;
 
     let colors = req_data.into_inner();
     colors.validate_css()?;
@@ -266,19 +236,12 @@ pub async fn put_client_colors(
     ),
 )]
 #[delete("/clients/{id}/colors")]
-#[has_roles("rauthy_admin")]
 pub async fn delete_client_colors(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Delete)?;
 
     ColorEntity::delete(&data, id.as_str()).await?;
 
@@ -298,7 +261,6 @@ pub async fn delete_client_colors(
     ),
 )]
 #[get("/clients/{id}/logo")]
-#[has_permissions("all")]
 pub async fn get_client_logo(
     data: web::Data<AppState>,
     id: web::Path<String>,
@@ -324,20 +286,13 @@ pub async fn get_client_logo(
     ),
 )]
 #[put("/clients/{id}/logo")]
-#[has_roles("rauthy_admin")]
 pub async fn put_client_logo(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
     payload: actix_multipart::Multipart,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Update)?;
 
     let id = id.into_inner();
     Client::upload_logo(&data, &id, payload).await?;
@@ -360,19 +315,12 @@ delete,
     ),
 )]
 #[delete("/clients/{id}/logo")]
-#[has_roles("rauthy_admin")]
 pub async fn delete_client_logo(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Delete)?;
 
     let id = id.into_inner();
     Client::delete_logo(&data, &id).await?;
@@ -389,7 +337,7 @@ pub async fn delete_client_logo(
 /// - rauthy_admin
 #[utoipa::path(
     put,
-    path = "/clients/{id}}/secret",
+    path = "/clients/{id}/secret",
     tag = "clients",
     responses(
         (status = 200, description = "Ok", body = ClientSecretResponse),
@@ -400,19 +348,12 @@ pub async fn delete_client_logo(
     ),
 )]
 #[put("/clients/{id}/secret")]
-#[has_roles("rauthy_admin")]
 pub async fn put_generate_client_secret(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
 
     client::generate_new_secret(id.into_inner(), &data)
         .await
@@ -436,19 +377,12 @@ pub async fn put_generate_client_secret(
     ),
 )]
 #[delete("/clients/{id}")]
-#[has_roles("rauthy_admin")]
 pub async fn delete_client(
     data: web::Data<AppState>,
     path: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Delete)?;
 
     let client = Client::find(&data, path.into_inner()).await?;
     client.delete(&data).await?;

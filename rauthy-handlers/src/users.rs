@@ -1,17 +1,15 @@
-use crate::real_ip_from_req;
+use crate::{real_ip_from_req, ReqPrincipal};
 use actix_web::http::StatusCode;
 use actix_web::{cookie, delete, get, post, put, web, HttpRequest, HttpResponse};
-use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
 use rauthy_common::constants::{
     COOKIE_MFA, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE, USER_REG_DOMAIN_RESTRICTION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::build_csp_header;
 use rauthy_models::app_state::AppState;
+use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::password::PasswordPolicy;
-use rauthy_models::entity::principal::Principal;
-use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
@@ -49,13 +47,11 @@ use tracing::{error, warn};
     ),
 )]
 #[get("/users")]
-#[has_roles("rauthy_admin")]
 pub async fn get_users(
     data: web::Data<AppState>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
 
     let users = User::find_all(&data).await?;
     let mut res = Vec::new();
@@ -82,19 +78,13 @@ pub async fn get_users(
     ),
 )]
 #[post("/users")]
-#[has_roles("rauthy_admin")]
 pub async fn post_users(
     data: web::Data<AppState>,
     req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
     user: actix_web_validator::Json<NewUserRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Create)?;
 
     let user = User::create_from_new(&data, user.into_inner()).await?;
 
@@ -126,13 +116,11 @@ pub async fn post_users(
     ),
 )]
 #[get("/users/attr")]
-#[has_roles("rauthy_admin")]
 pub async fn get_cust_attr(
     data: web::Data<AppState>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::UserAttrs, AccessRights::Read)?;
 
     UserAttrConfigEntity::find_all(&data)
         .await
@@ -151,19 +139,12 @@ pub async fn get_cust_attr(
     ),
 )]
 #[post("/users/attr")]
-#[has_roles("rauthy_admin")]
 pub async fn post_cust_attr(
     data: web::Data<AppState>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
     req_data: actix_web_validator::Json<UserAttrConfigRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::UserAttrs, AccessRights::Create)?;
 
     UserAttrConfigEntity::create(&data, req_data.into_inner())
         .await
@@ -184,20 +165,13 @@ pub async fn post_cust_attr(
     ),
 )]
 #[put("/users/attr/{name}")]
-#[has_roles("rauthy_admin")]
 pub async fn put_cust_attr(
     data: web::Data<AppState>,
     path: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
     req_data: actix_web_validator::Json<UserAttrConfigRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::UserAttrs, AccessRights::Update)?;
 
     UserAttrConfigEntity::update(&data, path.into_inner(), req_data.into_inner())
         .await
@@ -216,19 +190,12 @@ pub async fn put_cust_attr(
     ),
 )]
 #[delete("/users/attr/{name}")]
-#[has_roles("rauthy_admin")]
 pub async fn delete_cust_attr(
     data: web::Data<AppState>,
     path: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::UserAttrs, AccessRights::Delete)?;
 
     UserAttrConfigEntity::delete(&data, path.into_inner()).await?;
     Ok(HttpResponse::Ok().finish())
@@ -246,7 +213,6 @@ pub async fn delete_cust_attr(
     ),
 )]
 #[get("/users/register")]
-#[has_permissions("all")]
 pub async fn get_users_register(
     data: web::Data<AppState>,
     req: HttpRequest,
@@ -286,7 +252,6 @@ pub async fn get_users_register(
     ),
 )]
 #[post("/users/register")]
-#[has_permissions("all")]
 pub async fn post_users_register(
     data: web::Data<AppState>,
     req: HttpRequest,
@@ -332,17 +297,21 @@ pub async fn post_users_register(
     ),
 )]
 #[get("/users/{id}")]
-#[has_any_permission("token-auth", "session-auth")]
 pub async fn get_user_by_id(
     data: web::Data<AppState>,
     path: web::Path<String>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let id = path.into_inner();
+    principal.validate_session_auth()?;
 
-    // principal must either be admin or have the same user id
-    let principal = Principal::from_req(principal)?;
-    principal.is_user_authorized_for_id(&id)?;
+    let id = path.into_inner();
+    // principal must either be an admin or have the same user id
+    let api_key_or_admin = principal
+        .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)
+        .is_ok();
+    if !api_key_or_admin {
+        principal.is_user(&id)?;
+    }
 
     User::find(&data, id)
         .await
@@ -360,14 +329,12 @@ pub async fn get_user_by_id(
     ),
 )]
 #[get("/users/{id}/attr")]
-#[has_roles("rauthy_admin")]
 pub async fn get_user_attr(
     data: web::Data<AppState>,
     path: web::Path<String>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::UserAttrs, AccessRights::Read)?;
 
     let values = UserAttrValueEntity::find_for_user(&data, &path.into_inner())
         .await?
@@ -390,20 +357,13 @@ pub async fn get_user_attr(
     ),
 )]
 #[put("/users/{id}/attr")]
-#[has_roles("rauthy_admin")]
 pub async fn put_user_attr(
     data: web::Data<AppState>,
     path: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
     req_data: actix_web_validator::Json<UserAttrValuesUpdateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::UserAttrs, AccessRights::Update)?;
 
     let values =
         UserAttrValueEntity::update_for_user(&data, &path.into_inner(), req_data.into_inner())
@@ -428,7 +388,6 @@ pub async fn put_user_attr(
     ),
 )]
 #[get("/users/{id}/email_confirm/{confirm_id}")]
-#[has_permissions("all")]
 pub async fn get_user_email_confirm(
     data: web::Data<AppState>,
     path: web::Path<(String, String)>,
@@ -463,7 +422,6 @@ pub async fn get_user_email_confirm(
     ),
 )]
 #[get("/users/{id}/reset/{reset_id}")]
-#[has_permissions("all")]
 pub async fn get_user_password_reset(
     data: web::Data<AppState>,
     path: web::Path<(String, String)>,
@@ -505,7 +463,6 @@ pub async fn get_user_password_reset(
     ),
 )]
 #[put("/users/{id}/reset")]
-#[has_permissions("all")]
 pub async fn put_user_password_reset(
     data: web::Data<AppState>,
     path: web::Path<String>,
@@ -543,26 +500,20 @@ pub async fn put_user_password_reset(
     ),
 )]
 #[get("/users/{id}/webauthn")]
-#[has_any_permission("token-auth", "session-auth")]
 pub async fn get_user_webauthn_passkeys(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
-
-    // make sure a non-admin can only access its own information
-    let principal = Principal::from_req(principal)?;
     let id = id.into_inner();
-    if principal.user_id() != Ok(&id) && !principal.is_admin() {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
-            "You are not allowed to see another users values".to_string(),
-        ));
+
+    if principal
+        .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)
+        .is_err()
+    {
+        // make sure a non-admin can only access its own information
+        principal.validate_session_auth()?;
+        principal.is_user(&id)?;
     }
 
     let pks = PasskeyEntity::find_for_user(&data, &id)
@@ -590,24 +541,16 @@ pub async fn get_user_webauthn_passkeys(
     ),
 )]
 #[post("/users/{id}/webauthn/auth/start")]
-#[has_any_permission("token-auth", "session-auth", "session-init")]
 pub async fn post_webauthn_auth_start(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    principal: Option<web::ReqData<Option<Principal>>>,
+    principal: ReqPrincipal,
     req: HttpRequest,
-    session_req: web::ReqData<Option<Session>>,
     req_data: actix_web_validator::Json<WebauthnAuthStartRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth_or_init()?;
+
     let purpose = req_data.into_inner().purpose;
-
-    let session_state = if session_req.is_some() {
-        let session = Session::extract_validate_csrf(session_req, &req)?;
-        Some(session.state)
-    } else {
-        None
-    };
-
     let id = match purpose {
         // only for a Login purpose, this can be accessed without authentication (yet)
         MfaPurpose::Login(_) => id.into_inner(),
@@ -634,26 +577,11 @@ pub async fn post_webauthn_auth_start(
         }
 
         _ => {
-            if session_state.is_some() && session_state.unwrap() == SessionState::Init {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Forbidden,
-                    "You are not allowed to do this operation with a Session Init State"
-                        .to_string(),
-                ));
-            }
+            principal.validate_session_auth()?;
 
-            // Validate that Principal matches the user.
-            // If we have no Init Session at this point, we must have a principal, which is always
-            // there for an authed session or with a valid JWT token.
-            let principal_opt = principal.ok_or_else(|| {
-                ErrorResponse::new(
-                    ErrorResponseType::Forbidden,
-                    "You are not allowed to access this resource without a Login".to_string(),
-                )
-            })?;
-            let principal = Principal::from_req(principal_opt)?;
+            // make sure the principal is this very user
             let id = id.into_inner();
-            principal.validate_id(&id)?;
+            principal.is_user(&id)?;
             id
         }
     };
@@ -679,40 +607,28 @@ pub async fn post_webauthn_auth_start(
     ),
 )]
 #[post("/users/{id}/webauthn/auth/finish")]
-#[has_any_permission("token-auth", "session-auth", "session-init")]
 pub async fn post_webauthn_auth_finish(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    principal: Option<web::ReqData<Option<Principal>>>,
-    req: HttpRequest,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
     req_data: actix_web_validator::Json<WebauthnAuthFinishRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let session_state = if session_req.is_some() {
-        let session = Session::extract_validate_csrf(session_req, &req)?;
-        Some(session.state)
-    } else {
-        None
-    };
-
     let id = id.into_inner();
-    let res = if session_state.is_some() && session_state.unwrap() == SessionState::Init {
+    let res = if principal.validate_session_init().is_ok() {
         // The Session is only in init state in a very tiny window, when the /oidc/authorize page has
         // been received and until the credentials have been validated.
         // As a double check, we have the 'code' from the /start endpoint.
         webauthn::auth_finish(&data, id, req_data.into_inner()).await?
-    } else {
+    } else if principal.validate_session_auth().is_ok() {
         // For any authenticated request, validate that Principal matches the user.
-        let principal_opt = principal.ok_or_else(|| {
-            ErrorResponse::new(
-                ErrorResponseType::Forbidden,
-                "You are not allowed to access this resource without a Login".to_string(),
-            )
-        })?;
-        let principal = Principal::from_req(principal_opt)?;
-        principal.validate_id(&id)?;
+        principal.is_user(&id)?;
 
         webauthn::auth_finish(&data, id, req_data.into_inner()).await?
+    } else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "No valid session".to_string(),
+        ));
     };
 
     Ok(res.into_response())
@@ -734,24 +650,25 @@ pub async fn post_webauthn_auth_finish(
     ),
 )]
 #[delete("/users/{id}/webauthn/delete/{name}")]
-#[has_any_permission("token-auth", "session-auth")]
 pub async fn delete_webauthn(
     data: web::Data<AppState>,
     path: web::Path<(String, String)>,
-    principal: web::ReqData<Option<Principal>>,
-    req: HttpRequest,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    // Note: Currently, this is not allowed with an ApiKey on purpose
+    let is_admin = match principal.validate_admin_session() {
+        Ok(()) => true,
+        Err(_) => {
+            principal.validate_session_auth()?;
+            false
+        }
+    };
 
     let (id, name) = path.into_inner();
 
     // validate that Principal matches the user or is an admin
-    let principal = Principal::from_req(principal)?;
-    if !principal.is_admin() {
-        principal.validate_id(&id)?;
+    if !is_admin {
+        principal.is_user(&id)?;
         warn!("Passkey delete for user {} for key {}", id, name);
     } else {
         warn!("Passkey delete from admin for user {} for key {}", id, name);
@@ -819,19 +736,18 @@ pub async fn delete_webauthn(
     ),
 )]
 #[post("/users/{id}/webauthn/register/start")]
-#[has_any_permission("token-auth", "session-auth")]
 pub async fn post_webauthn_reg_start(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
     req: HttpRequest,
-    session_req: web::ReqData<Option<Session>>,
     req_data: actix_web_validator::Json<WebauthnRegStartRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+
     // If we have a magic link ID in the payload, we do not validate the active session / principal.
     // This is mandatory to make registering a passkey for a completely new account work.
     if req_data.magic_link_id.is_some() && req_data.email.is_some() {
-        // if req_data.magic_link_id.is_some() && req_data.email.is_some() && req_data.mfa_code.is_some() {
         password_reset::handle_put_user_passkey_start(
             &data,
             req,
@@ -840,14 +756,12 @@ pub async fn post_webauthn_reg_start(
         )
         .await
     } else {
-        if session_req.is_some() {
-            Session::extract_validate_csrf(session_req, &req)?;
-        }
+        // this endpoint is a CSRF check exception inside the Principal Middleware -> check here!
+        principal.validate_session_csrf_exception(&req)?;
 
         // validate that Principal matches the user
-        let principal = Principal::from_req(principal)?;
         let id = id.into_inner();
-        principal.validate_id(&id)?;
+        principal.is_user(&id)?;
 
         webauthn::reg_start(&data, id, req_data.into_inner())
             .await
@@ -871,17 +785,16 @@ pub async fn post_webauthn_reg_start(
     ),
 )]
 #[post("/users/{id}/webauthn/register/finish")]
-#[has_any_permission("token-auth", "session-auth")]
 pub async fn post_webauthn_reg_finish(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
     req: HttpRequest,
-    session_req: web::ReqData<Option<Session>>,
     req_data: actix_web_validator::Json<WebauthnRegFinishRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+
     if req_data.magic_link_id.is_some() {
-        // if req_data.magic_link_id.is_some() && req_data.mfa_code.is_some() {
         password_reset::handle_put_user_passkey_finish(
             &data,
             req,
@@ -890,14 +803,12 @@ pub async fn post_webauthn_reg_finish(
         )
         .await
     } else {
-        if session_req.is_some() {
-            Session::extract_validate_csrf(session_req, &req)?;
-        }
+        // this endpoint is a CSRF check exception inside the Principal Middleware -> check here!
+        principal.validate_session_csrf_exception(&req)?;
 
         // validate that Principal matches the user
-        let principal = Principal::from_req(principal)?;
         let id = id.into_inner();
-        principal.validate_id(&id)?;
+        principal.is_user(&id)?;
 
         webauthn::reg_finish(&data, id, req_data.into_inner()).await?;
         Ok(HttpResponse::Created().finish())
@@ -926,16 +837,13 @@ pub async fn post_webauthn_reg_finish(
     ),
 )]
 #[post("/users/request_reset")]
-#[has_any_permission("token-auth", "session-init", "session-auth")]
 pub async fn post_user_password_request_reset(
     data: web::Data<AppState>,
     req: HttpRequest,
     req_data: actix_web_validator::Json<RequestResetRequest>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_session_auth_or_init()?;
 
     let user = User::find_by_email(&data, req_data.into_inner().email).await?;
     user.request_password_reset(&data, req)
@@ -958,14 +866,12 @@ pub async fn post_user_password_request_reset(
     ),
 )]
 #[get("/users/email/{email}")]
-#[has_roles("rauthy_admin")]
 pub async fn get_user_by_email(
     data: web::Data<AppState>,
     path: web::Path<String>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
 
     User::find_by_email(&data, path.into_inner())
         .await
@@ -988,20 +894,14 @@ pub async fn get_user_by_email(
     ),
 )]
 #[put("/users/{id}")]
-#[has_roles("rauthy_admin")]
 pub async fn put_user_by_id(
     data: web::Data<AppState>,
     id: web::Path<String>,
     req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
     user: actix_web_validator::Json<UpdateUserRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
 
     let (user, is_new_admin) =
         User::update(&data, id.into_inner(), user.into_inner(), None).await?;
@@ -1035,28 +935,17 @@ pub async fn put_user_by_id(
     ),
 )]
 #[put("/users/{id}/self")]
-#[has_permissions("session-auth")]
 pub async fn put_user_self(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
     user: actix_web_validator::Json<UpdateUserSelfRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_session_auth()?;
 
     // make sure the logged in user can only update itself
-    let principal = Principal::from_req(principal)?;
     let id = id.into_inner();
-    if principal.user_id() != Ok(&id) {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
-            "You are not allowed to update another users values".to_string(),
-        ));
-    }
+    principal.is_user(&id)?;
 
     let (user, email_updated) = User::update_self_req(&data, id, user.into_inner()).await?;
     if email_updated {
@@ -1081,27 +970,16 @@ pub async fn put_user_self(
     ),
 )]
 #[post("/users/{id}/self/convert_passkey")]
-#[has_permissions("session-auth")]
 pub async fn post_user_self_convert_passkey(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_session_auth()?;
 
     // make sure the logged in user can only update itself
-    let principal = Principal::from_req(principal)?;
     let id = id.into_inner();
-    if principal.user_id() != Ok(&id) {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
-            "You are not allowed to update another users values".to_string(),
-        ));
-    }
+    principal.is_user(&id)?;
 
     User::convert_to_passkey(&data, id).await?;
     Ok(HttpResponse::Ok().finish())
@@ -1122,19 +1000,12 @@ pub async fn post_user_self_convert_passkey(
     ),
 )]
 #[delete("/users/{id}")]
-#[has_roles("rauthy_admin")]
 pub async fn delete_user_by_id(
     data: web::Data<AppState>,
     path: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Delete)?;
 
     let user = User::find(&data, path.into_inner()).await?;
     user.delete(&data).await?;

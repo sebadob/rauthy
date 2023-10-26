@@ -1223,7 +1223,7 @@ pub async fn handle_login_delay(
 /// Returns the Logout HTML Page for [GET /oidc/logout](crate::handlers::get_logout)
 pub async fn logout(
     logout_request: LogoutRequest,
-    session: Session,
+    session: &Session,
     data: &web::Data<AppState>,
     lang: &Language,
 ) -> Result<(String, String), ErrorResponse> {

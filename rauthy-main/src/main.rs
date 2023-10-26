@@ -197,7 +197,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // let txe = tx_events.clone();
     // // let data = app_state.clone();
     // tokio::spawn(async move {
-    //     // use rauthy_models::entity::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyEntity};
+    //     // use rauthy_models::entity::api_keys::{
+    //     //     AccessGroup, AccessRights, ApiKeyAccess, ApiKeyEntity,
+    //     // };
     //     // use rauthy_models::events::event::Event;
     //     //
     //     // time::sleep(Duration::from_secs(2)).await;
@@ -451,10 +453,6 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
         let mut app = App::new()
             // .data shares application state for all workers
             .app_data(app_state.clone())
-            // .wrap(GrantsMiddleware::with_extractor(
-            //     auth::permission_extractor,
-            // ))
-            // .wrap(RauthySessionMiddleware)
             .wrap(RauthyPrincipalMiddleware)
             .wrap(RauthyLoggingMiddleware)
             .wrap(
