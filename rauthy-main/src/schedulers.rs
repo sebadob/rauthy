@@ -10,6 +10,7 @@ use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::migration::backup_db;
+use rauthy_service::auth;
 use redhac::{cache_del, QuorumHealthState, QuorumState};
 use std::collections::HashSet;
 use std::env;
@@ -30,6 +31,7 @@ pub async fn scheduler_main(data: web::Data<AppState>) {
     tokio::spawn(magic_link_cleanup(data.db.clone(), rx_health.clone()));
     tokio::spawn(refresh_tokens_cleanup(data.db.clone(), rx_health.clone()));
     tokio::spawn(sessions_cleanup(data.db.clone(), rx_health.clone()));
+    tokio::spawn(jwks_auto_rotate(data.clone(), rx_health.clone()));
     tokio::spawn(jwks_cleanup(data.clone(), rx_health.clone()));
     tokio::spawn(password_expiry_checker(data.clone(), rx_health.clone()));
     tokio::spawn(user_expiry_checker(data, rx_health));
@@ -376,6 +378,33 @@ pub async fn sessions_cleanup(db: DbPool, rx_health: Receiver<Option<QuorumHealt
         match res {
             Ok(_) => {}
             Err(err) => error!("Session Cleanup Error: {:?}", err),
+        }
+    }
+}
+
+// Auto-Rotates JWKS
+pub async fn jwks_auto_rotate(
+    data: web::Data<AppState>,
+    rx_health: Receiver<Option<QuorumHealthState>>,
+) {
+    // sec min hour day_of_month month day_of_week year
+    let schedule = cron::Schedule::from_str("0 30 3 1 * * *").unwrap();
+
+    loop {
+        sleep_schedule_next(&schedule).await;
+
+        // will return None in a non-HA deployment
+        if let Some(is_ha_leader) = is_ha_leader(&rx_health) {
+            if !is_ha_leader {
+                debug!(
+                    "Running HA mode without being the leader - skipping jwks_cleanup scheduler"
+                );
+                continue;
+            }
+        }
+
+        if let Err(err) = auth::rotate_jwks(&data).await {
+            error!("Error during JWKS auto-rotation: {}", err.message);
         }
     }
 }

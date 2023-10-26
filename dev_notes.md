@@ -10,6 +10,9 @@
 - admin ui component for the new ApiKeys
 - admin ui component to show blacklisted IPs
 - maybe functionality to manually blacklist IPs?
+- rauthy-notify crate for matrix + slack notifiers
+- latest app version check via github api
+- show current app version in admin ui
 
 ## Stage 1 - essentials
 
@@ -17,8 +20,6 @@
 
 ## Stage 2 - features - do before v1.0.0
 
-- maybe add a 'Static Admin API Token' feature: Create static service API tokens with very specific access rights to
-the API for certain automated tasks from the outside. (?)
 - add all default claims for users https://openid.net/specs/openid-connect-core-1_0.html#ScopeClaims
 - double check against https://openid.net/specs/openid-connect-core-1_0.html that everything is implemented correctly one more time
 - benchmarks and performance tuning
