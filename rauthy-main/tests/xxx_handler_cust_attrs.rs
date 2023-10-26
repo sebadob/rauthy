@@ -93,7 +93,8 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
     );
 
     // get the current client config and then add a default mapping
-    let url_client = format!("{}/clients/init_client", backend_url);
+    // we do these changes for the rauthy client to be able to re-use the original login data
+    let url_client = format!("{}/clients/rauthy", backend_url);
     let res = client
         .get(&url_client)
         .headers(auth_headers.clone())
@@ -101,7 +102,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
     let c = res.json::<ClientResponse>().await?;
-    assert_eq!(c.id, "init_client".to_string());
+    assert_eq!(c.id, "rauthy".to_string());
     let mut scopes = c.scopes;
     scopes.push("cust_scope".to_string());
     let mut default_scopes = c.default_scopes;
@@ -132,7 +133,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
     let c = res.json::<ClientResponse>().await?;
-    assert_eq!(c.id, "init_client".to_string());
+    assert_eq!(c.id, "rauthy".to_string());
     assert!(c.scopes.contains(&"cust_scope".to_string()));
     assert!(c.default_scopes.contains(&"cust_scope".to_string()));
 
@@ -160,7 +161,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
     assert_eq!(user_attr.value, test_val);
 
     // fetch a new token and check the scope mapping
-    let token = get_token_set().await?;
+    let token = get_token_set().await;
     let claims = extract_token_claims_unverified::<JwtAccessClaims>(&token.access_token).unwrap();
     assert!(claims.custom.is_some());
     let cust_claims = claims.custom.unwrap();
@@ -224,7 +225,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
     assert_eq!(user_attr_mod.value, user_attr.value);
 
     // fetch a new token and check the scope mapping
-    let token = get_token_set().await?;
+    let token = get_token_set().await;
     let claims = extract_token_claims_unverified::<JwtAccessClaims>(&token.access_token).unwrap();
     assert!(claims.custom.is_some());
     let cust_claims = claims.custom.unwrap();
@@ -271,7 +272,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
     assert!(resp.values.is_empty());
 
     // no custom token mapping anymore
-    let token = get_token_set().await?;
+    let token = get_token_set().await;
     let claims = extract_token_claims_unverified::<JwtAccessClaims>(&token.access_token).unwrap();
     assert!(claims.custom.is_none());
 

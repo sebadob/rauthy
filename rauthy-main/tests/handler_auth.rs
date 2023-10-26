@@ -1,17 +1,15 @@
 use crate::common::{
-    check_status, get_auth_headers, get_backend_url, CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME,
+    check_status, code_state_from_headers, cookie_csrf_headers_from_res, get_auth_headers,
+    get_backend_url, CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME,
 };
 use josekit::jwk;
 use pretty_assertions::assert_eq;
-use rauthy_common::constants::CSRF_HEADER;
 use rauthy_common::utils::{base64_url_encode, get_rand};
 use rauthy_models::entity::jwk::JWKS;
 use rauthy_models::request::{
     LoginRequest, TokenRequest, TokenValidationRequest, UpdateClientRequest,
 };
 use rauthy_service::token_set::TokenSet;
-use reqwest::header::{HeaderMap, HeaderValue};
-use reqwest::{header, Response};
 use ring::digest;
 use std::error::Error;
 use std::ops::Sub;
@@ -270,6 +268,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     };
     let url_client = format!("{}/clients/{}", backend_url, CLIENT_ID);
     let auth_headers = get_auth_headers().await?;
+    println!("{:?}", auth_headers);
     let res = reqwest::Client::new()
         .put(&url_client)
         .headers(auth_headers.clone())
@@ -295,6 +294,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .await?;
     res = check_status(res, 202).await?;
     let (code, state_check) = code_state_from_headers(res)?;
+    println!("1");
     assert_eq!(state, state_check.unwrap());
 
     req_token.code = Some(code);
@@ -322,46 +322,6 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     check_status(res, 200).await?;
 
     Ok(())
-}
-
-async fn cookie_csrf_headers_from_res(res: Response) -> Result<HeaderMap, Box<dyn Error>> {
-    let cookie = res.headers().get(header::SET_COOKIE).unwrap();
-    let (session_cookie, _) = cookie.to_str()?.split_once(';').unwrap();
-    println!("Extracted session cookie: {:?}", session_cookie);
-    let mut headers = HeaderMap::new();
-    headers.append(header::COOKIE, HeaderValue::from_str(&session_cookie)?);
-
-    let content = res.text().await?;
-    let csrf_find = "name=\"rauthy-csrf-token\" id=\"";
-    let (_, content_split) = content.split_once(csrf_find).unwrap();
-    let (csrf_token, _) = content_split.split_once('"').unwrap();
-    println!("Extracted CSRF Token: {}", csrf_token);
-    headers.append(CSRF_HEADER, HeaderValue::from_str(csrf_token)?);
-
-    Ok(headers)
-}
-
-fn code_state_from_headers(res: Response) -> Result<(String, Option<String>), Box<dyn Error>> {
-    let loc_header = res
-        .headers()
-        .get(header::LOCATION)
-        .unwrap()
-        .to_str()
-        .unwrap();
-    println!("Location Header: {}", loc_header);
-
-    let code: String;
-    let mut state = None;
-    let (_, code_str) = loc_header.split_once("code=").unwrap();
-    if let Some((c, state_str)) = code_str.split_once('&') {
-        code = c.to_string();
-        let (_, s) = state_str.split_once("state=").unwrap();
-        state = Some(s.to_string());
-    } else {
-        code = code_str.to_string();
-    }
-
-    Ok((code, state))
 }
 
 #[tokio::test]
