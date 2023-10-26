@@ -26,8 +26,6 @@
     let formValues = {new: '', verify: ''};
     let formErrors = {};
 
-    console.log(user);
-
     $: if (successPwd) {
         timer = setTimeout(() => {
             successPwd = false;

@@ -188,7 +188,7 @@
 
     .entryRow {
         max-width: 50rem;
-        margin-bottom: 1rem;
+        margin-bottom: .5rem;
     }
 
     .entryRow:hover {

@@ -66,7 +66,6 @@
         // compute PoW
         const powRes = await getPow();
         let powChallenge = await powRes.json();
-        // console.log(powChallenge);
         let start = new Date().getUTCMilliseconds();
         const pow = computePow(powChallenge);
         let diff = new Date().getUTCMilliseconds() - start;

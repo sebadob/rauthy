@@ -86,7 +86,7 @@
 
     function stream() {
         console.log('opening SSE stream');
-        es = new EventSource(`/auth/v1/events?latest=${latest}&level=${eventLevel?.toLowerCase() || 'info'}`);
+        es = new EventSource(`/auth/v1/events/stream?latest=${latest}&level=${eventLevel?.toLowerCase() || 'info'}`);
 
         es.onopen = () => {
             console.log('SSE Events Stream opened');
