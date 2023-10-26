@@ -16,7 +16,6 @@
 
 use actix_web::rt::System;
 use actix_web::{middleware, web, App, HttpServer};
-use actix_web_grants::GrantsMiddleware;
 use actix_web_prom::PrometheusMetricsBuilder;
 use prometheus::Registry;
 use rauthy_common::constants::{
@@ -28,7 +27,7 @@ use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::password_hasher;
 use rauthy_handlers::middleware::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
-use rauthy_handlers::middleware::session::RauthySessionMiddleware;
+use rauthy_handlers::middleware::principal::RauthyPrincipalMiddleware;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{clients, events, generic, groups, oidc, roles, scopes, sessions, users};
 use rauthy_models::app_state::{AppState, Caches, DbPool};
@@ -38,7 +37,6 @@ use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::listener::EventListener;
 use rauthy_models::events::{init_event_vars, ip_blacklist_handler};
 use rauthy_models::{email, ListenScheme};
-use rauthy_service::auth;
 use sqlx::{query, query_as};
 use std::error::Error;
 use std::net::Ipv4Addr;
@@ -199,7 +197,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // let txe = tx_events.clone();
     // // let data = app_state.clone();
     // tokio::spawn(async move {
-    //     // use rauthy_models::entity::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyEntity};
+    //     // use rauthy_models::entity::api_keys::{
+    //     //     AccessGroup, AccessRights, ApiKeyAccess, ApiKeyEntity,
+    //     // };
     //     // use rauthy_models::events::event::Event;
     //     //
     //     // time::sleep(Duration::from_secs(2)).await;
@@ -453,10 +453,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
         let mut app = App::new()
             // .data shares application state for all workers
             .app_data(app_state.clone())
-            .wrap(GrantsMiddleware::with_extractor(
-                auth::permission_extractor,
-            ))
-            .wrap(RauthySessionMiddleware)
+            .wrap(RauthyPrincipalMiddleware)
             .wrap(RauthyLoggingMiddleware)
             .wrap(
                 middleware::DefaultHeaders::new()

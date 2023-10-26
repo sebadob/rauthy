@@ -1,5 +1,5 @@
 <script>
-    import IconUpload from "./icons/IconUpload.svelte";
+    import IconUpload from "$lib/icons/IconUpload.svelte";
 
     export let text = 'UPLOAD LOGO';
     export let image;

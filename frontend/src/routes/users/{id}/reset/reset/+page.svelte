@@ -32,13 +32,15 @@
     let t;
     let csrf = '';
     let policy;
-    let isReady = false;
+    let isReady = true;
+    // let isReady = false;
     let isMfa = false;
 
     let isLoading = false;
     let err = '';
     let userId = '';
-    let requestType = '';
+    // let requestType = '';
+    let requestType = "password_reset"
     let accountTypeNew = '';
     let magicLinkId = '';
     let success = false;
@@ -75,11 +77,9 @@
     }
 
     $: if (success) {
-        if (accountTypeNew === "password") {
-            setTimeout(() => {
-                navigateToAccount();
-            }, 5000);
-        }
+        setTimeout(() => {
+            navigateToAccount();
+        }, 5000);
     }
 
     $: if (accountTypeNew) {
@@ -225,9 +225,9 @@
         } else {
             onWebauthnError();
             let body = await res.json();
-            console.log(body.error);
-            console.log(body.message);
-            console.log(body.message.startsWith("E-Mail"));
+            console.error(body.error);
+            console.error(body.message);
+            console.error(body.message.startsWith("E-Mail"));
             if (body.error === "BadRequest" && body.message.startsWith("E-Mail")) {
                 err = t.emailErr;
             }
@@ -530,7 +530,6 @@
                 {#if success}
                     <div class="success">
                         {t.success1}
-                        <br>
                         {t.success2}
                         <br>
                         {t.success3}
@@ -564,6 +563,7 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
+        max-width: 20.5rem;
     }
 
     .err {

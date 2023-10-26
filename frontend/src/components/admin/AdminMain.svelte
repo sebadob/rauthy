@@ -25,6 +25,8 @@
     import IconBookOpen from "$lib/icons/IconBookOpen.svelte";
     import {onMount} from "svelte";
     import Events from "./events/Events.svelte";
+    import IconStop from "$lib/icons/IconStop.svelte";
+    import Blacklist from "./blacklist/Blacklist.svelte";
 
     export let sessionInfo = {};
     export let selected = 'Users';
@@ -76,6 +78,11 @@
             case 'Sessions': {
                 window.history.pushState('Sessions', '', '/auth/v1/admin/sessions');
                 title = 'Sessions';
+                break;
+            }
+            case 'Blacklist': {
+                window.history.pushState('Blacklist', '', '/auth/v1/admin/blacklist');
+                title = 'Blacklist';
                 break;
             }
             case 'Config': {
@@ -159,6 +166,10 @@
                 <IconShieldCheck/>
             </NavEntry>
 
+            <NavEntry label="Blacklist">
+                <IconStop width=24 />
+            </NavEntry>
+
             <NavEntry label="Config">
                 <IconWrenchScrew/>
             </NavEntry>
@@ -201,6 +212,10 @@
         {:else if 'Sessions' === selected}
             <ContentWrapper bind:eventsWide bind:eventsCollapsed>
                 <Sessions/>
+            </ContentWrapper>
+        {:else if 'Blacklist' === selected}
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
+                <Blacklist/>
             </ContentWrapper>
         {:else if 'Config' === selected}
             <ContentWrapper bind:eventsWide bind:eventsCollapsed>

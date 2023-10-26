@@ -19,12 +19,16 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use rauthy_common::constants::{COOKIE_MFA, PROXY_MODE};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
+use rauthy_models::entity::api_keys::ApiKey;
+use rauthy_models::entity::principal::Principal;
+use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::webauthn::WebauthnCookie;
 use rauthy_models::response::WebauthnLoginResponse;
 use rauthy_models::AuthStep;
 use rust_embed::RustEmbed;
 use tracing::error;
 
+pub mod blacklist;
 pub mod clients;
 pub mod events;
 pub mod generic;
@@ -36,6 +40,10 @@ pub mod roles;
 pub mod scopes;
 pub mod sessions;
 pub mod users;
+
+pub type ReqApiKey = web::ReqData<Option<ApiKey>>;
+pub type ReqPrincipal = web::ReqData<Principal>;
+pub type ReqSession = web::ReqData<Option<Session>>;
 
 #[derive(RustEmbed)]
 #[folder = "../static/v1/"]

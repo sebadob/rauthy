@@ -44,8 +44,8 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     assert_eq!(client.refresh_token, false);
     assert_eq!(client.auth_code_lifetime, 60);
     assert_eq!(client.access_token_lifetime, 1800);
-    assert_eq!(client.scopes.len(), 1);
-    assert_eq!(client.default_scopes.len(), 1);
+    assert_eq!(client.scopes.len(), 2);
+    assert_eq!(client.default_scopes.len(), 2);
     assert_eq!(client.challenges.as_ref().unwrap().len(), 1);
 
     // add a new client

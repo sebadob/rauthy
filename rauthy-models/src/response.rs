@@ -244,16 +244,16 @@ pub struct SessionResponse<'a> {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
-pub struct SessionInfoResponse {
-    pub id: String,
+pub struct SessionInfoResponse<'a> {
+    pub id: &'a String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub csrf_token: Option<String>,
+    pub csrf_token: Option<&'a String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub user_id: Option<String>,
+    pub user_id: Option<&'a String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub roles: Option<String>,
+    pub roles: Option<&'a String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub groups: Option<String>,
+    pub groups: Option<&'a String>,
     /// format: `OffsetDateTime`
     #[schema(value_type = str)]
     #[serde(with = "time::serde::rfc3339")]

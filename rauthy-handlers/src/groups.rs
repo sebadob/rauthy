@@ -1,10 +1,9 @@
-use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
-use actix_web_grants::proc_macro::has_roles;
+use crate::ReqPrincipal;
+use actix_web::{delete, get, post, put, web, HttpResponse};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::app_state::AppState;
+use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::groups::Group;
-use rauthy_models::entity::principal::Principal;
-use rauthy_models::entity::sessions::Session;
 use rauthy_models::request::NewGroupRequest;
 
 /// Returns all existing *groups*
@@ -22,13 +21,11 @@ use rauthy_models::request::NewGroupRequest;
     ),
 )]
 #[get("/groups")]
-#[has_roles("rauthy_admin")]
 pub async fn get_groups(
     data: web::Data<AppState>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Read)?;
 
     Group::find_all(&data)
         .await
@@ -51,19 +48,12 @@ pub async fn get_groups(
     ),
 )]
 #[post("/groups")]
-#[has_roles("rauthy_admin")]
 pub async fn post_group(
     data: web::Data<AppState>,
     group_req: actix_web_validator::Json<NewGroupRequest>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Create)?;
 
     Group::create(&data, group_req.into_inner())
         .await
@@ -86,20 +76,13 @@ pub async fn post_group(
     ),
 )]
 #[put("/groups/{id}")]
-#[has_roles("rauthy_admin")]
 pub async fn put_group(
     data: web::Data<AppState>,
     id: web::Path<String>,
     group_req: actix_web_validator::Json<NewGroupRequest>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Update)?;
 
     Group::update(&data, id.into_inner(), group_req.group.to_owned())
         .await
@@ -123,19 +106,12 @@ pub async fn put_group(
     ),
 )]
 #[delete("/groups/{id}")]
-#[has_roles("rauthy_admin")]
 pub async fn delete_group(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Delete)?;
 
     Group::delete(&data, id.into_inner())
         .await

@@ -1,8 +1,8 @@
-use actix_web::{delete, get, web, HttpRequest, HttpResponse};
-use actix_web_grants::proc_macro::has_roles;
+use crate::ReqPrincipal;
+use actix_web::{delete, get, web, HttpResponse};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::app_state::AppState;
-use rauthy_models::entity::principal::Principal;
+use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::response::SessionResponse;
@@ -22,13 +22,11 @@ use rauthy_models::response::SessionResponse;
     ),
 )]
 #[get("/sessions")]
-#[has_roles("rauthy_admin")]
 pub async fn get_sessions(
     data: web::Data<AppState>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Read)?;
 
     // TODO benchmark, which of these 2 implementations is faster in the end
     // let sessions = Session::find_all()
@@ -69,18 +67,11 @@ pub async fn get_sessions(
     ),
 )]
 #[delete("/sessions")]
-#[has_roles("rauthy_admin")]
 pub async fn delete_sessions(
     data: web::Data<AppState>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
 
     Session::invalidate_all(&data).await?;
     RefreshToken::invalidate_all(&data).await?;
@@ -105,19 +96,12 @@ pub async fn delete_sessions(
     ),
 )]
 #[delete("/sessions/{user_id}")]
-#[has_roles("rauthy_admin")]
 pub async fn delete_sessions_for_user(
     data: web::Data<AppState>,
     path: web::Path<String>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
 
     let uid = path.into_inner();
     Session::invalidate_for_user(&data, &uid).await?;

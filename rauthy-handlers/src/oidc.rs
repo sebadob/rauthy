@@ -5,16 +5,15 @@ use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::header::HeaderValue;
 use actix_web::http::{header, StatusCode};
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
-use actix_web_grants::proc_macro::{has_any_permission, has_permissions, has_roles};
 
 use rauthy_common::constants::{COOKIE_MFA, HEADER_HTML, SESSION_LIFETIME};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::build_csp_header;
 use rauthy_models::app_state::AppState;
+use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JWKS};
-use rauthy_models::entity::principal::Principal;
-use rauthy_models::entity::sessions::{Session, SessionState};
+use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::WebauthnCookie;
 use rauthy_models::language::Language;
@@ -27,7 +26,7 @@ use rauthy_models::templates::{AuthorizeHtml, CallbackHtml, ErrorHtml, FrontendA
 use rauthy_models::JwtCommonClaims;
 use rauthy_service::auth;
 
-use crate::{map_auth_step, real_ip_from_req};
+use crate::{map_auth_step, real_ip_from_req, ReqPrincipal};
 
 /// OIDC Authorization HTML
 ///
@@ -44,12 +43,11 @@ use crate::{map_auth_step, real_ip_from_req};
     ),
 )]
 #[get("/oidc/authorize")]
-#[has_permissions("all")]
 pub async fn get_authorize(
     data: web::Data<AppState>,
     req: HttpRequest,
     req_data: actix_web_validator::Query<AuthRequest>,
-    session: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find(&data, &req_data.client_id)
         .await
@@ -72,14 +70,10 @@ pub async fn get_authorize(
         }
     };
 
-    if session.is_some() && session.as_ref().unwrap().state == SessionState::Auth {
-        let (body, nonce) = AuthorizeHtml::build(
-            &client.name,
-            &session.as_ref().unwrap().csrf_token,
-            FrontendAction::Refresh,
-            &colors,
-            &lang,
-        );
+    if principal.validate_session_auth().is_ok() {
+        let csrf = principal.get_session_csrf_token()?;
+        let (body, nonce) =
+            AuthorizeHtml::build(&client.name, csrf, FrontendAction::Refresh, &colors, &lang);
 
         // TODO make this prettier - append header conditionally easier?
         if let Some(o) = origin_header {
@@ -161,19 +155,19 @@ pub async fn get_authorize(
     ),
 )]
 #[post("/oidc/authorize")]
-#[has_any_permission("session-auth", "session-init")]
 pub async fn post_authorize(
     data: web::Data<AppState>,
     req: HttpRequest,
     req_data: web::Json<LoginRequest>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth_or_init()?;
+
     // TODO refactor login delay to use Instant, which is a bit cleaner
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
 
-    let session = Session::extract_validate_csrf(session_req, &req)?;
-
-    let res = match auth::authorize(&data, &req, req_data.into_inner(), session).await {
+    let session = principal.get_session()?;
+    let res = match auth::authorize(&data, &req, req_data.into_inner(), session.clone()).await {
         Ok(auth_step) => map_auth_step(&data, auth_step, &req).await,
         Err(err) => Err(err),
     };
@@ -182,8 +176,8 @@ pub async fn post_authorize(
     auth::handle_login_delay(&data, ip, start, &data.caches.ha_cache_config, res).await
 }
 
+// TODO request at least session state init ?
 #[get("/oidc/callback")]
-#[has_permissions("all")]
 pub async fn get_callback_html(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
     let (body, nonce) = CallbackHtml::build(&colors);
@@ -204,7 +198,6 @@ pub async fn get_callback_html(data: web::Data<AppState>) -> Result<HttpResponse
     responses((status = 200, description = "Ok")),
 )]
 #[get("/oidc/certs")]
-#[has_permissions("all")]
 pub async fn get_certs(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
     let jwks = JWKS::find_pk(&data).await?;
     let res = JWKSCerts::from(jwks);
@@ -226,7 +219,6 @@ pub async fn get_certs(data: web::Data<AppState>) -> Result<HttpResponse, ErrorR
     responses((status = 200, description = "Ok")),
 )]
 #[get("/oidc/certs/{kid}")]
-#[has_permissions("all")]
 pub async fn get_cert_by_kid(
     data: web::Data<AppState>,
     kid: web::Path<String>,
@@ -252,16 +244,15 @@ pub async fn get_cert_by_kid(
     ),
 )]
 #[get("/oidc/logout")]
-#[has_permissions("all")]
 pub async fn get_logout(
     data: web::Data<AppState>,
     req: HttpRequest,
     req_data: web::Query<LogoutRequest>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> HttpResponse {
     // If we get any logout errors, maybe because there is no session anymore or whatever happens,
     // just redirect to rauthy's root page, since the user is not logged in anyway anymore.
-    let session = match Session::extract_from_req(session_req) {
+    let session = match principal.get_session() {
         Ok(s) => s,
         Err(_) => {
             return HttpResponse::build(StatusCode::from_u16(302).unwrap())
@@ -301,13 +292,12 @@ pub async fn get_logout(
     ),
 )]
 #[post("/oidc/logout")]
-#[has_permissions("all")]
 pub async fn post_logout(
     data: web::Data<AppState>,
     req_data: web::Query<LogoutRequest>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let mut session = Session::extract_from_req(session_req)?;
+    let mut session = principal.get_session()?.clone();
     let cookie = session.invalidate(&data).await?;
 
     if req_data.post_logout_redirect_uri.is_some() {
@@ -350,18 +340,11 @@ pub async fn post_logout(
     ),
 )]
 #[post("/oidc/rotateJwk")]
-#[has_roles("rauthy_admin")]
 pub async fn rotate_jwk(
     data: web::Data<AppState>,
-    req: HttpRequest,
-    principal: web::ReqData<Option<Principal>>,
-    session_req: web::ReqData<Option<Session>>,
+    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let principal = Principal::from_req(principal)?;
-    principal.validate_rauthy_admin()?;
-    if session_req.is_some() {
-        Session::extract_validate_csrf(session_req, &req)?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
 
     auth::rotate_jwks(&data)
         .await
@@ -385,27 +368,28 @@ pub async fn rotate_jwk(
     ),
 )]
 #[get("/oidc/sessioninfo")]
-#[has_permissions("session-auth")]
 pub async fn get_session_info(
     data: web::Data<AppState>,
-    session_req: web::ReqData<Option<Session>>,
-) -> HttpResponse {
-    // direct unwrap is safe: 'session-auth' permission means there can only be an active session
-    let session = session_req.into_inner().unwrap();
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+    let session = principal.get_session()?;
+
     // let timeout_secs = session.last_seen.timestamp() + data.session_timeout as i64;
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
         .add(::time::Duration::seconds(data.session_timeout as i64));
     let info = SessionInfoResponse {
-        id: session.id,
+        id: &session.id,
         csrf_token: None,
-        user_id: session.user_id,
-        roles: session.roles,
-        groups: session.groups,
+        user_id: session.user_id.as_ref(),
+        roles: session.roles.as_ref(),
+        groups: session.groups.as_ref(),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
     };
-    HttpResponse::Ok().json(info)
+
+    Ok(HttpResponse::Ok().json(info))
 }
 
 // TODO maybe generate a new csrf token each time this endpoint is used. This would boost the security
@@ -431,26 +415,26 @@ pub async fn get_session_info(
     ),
 )]
 #[get("/oidc/sessioninfo/xsrf")]
-#[has_permissions("token-auth", "session-auth")]
 pub async fn get_session_xsrf(
     data: web::Data<AppState>,
-    session_req: web::ReqData<Option<Session>>,
-) -> HttpResponse {
-    // direct unwrap is safe: 'session-auth' permission means there can only be an active session
-    let session = session_req.into_inner().unwrap();
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+    let session = principal.get_session()?;
+
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
         .add(::time::Duration::seconds(data.session_timeout as i64));
     let info = SessionInfoResponse {
-        id: session.id,
-        csrf_token: Some(session.csrf_token),
-        user_id: session.user_id,
-        roles: session.roles,
-        groups: session.groups,
+        id: &session.id,
+        csrf_token: Some(&session.csrf_token),
+        user_id: session.user_id.as_ref(),
+        roles: session.roles.as_ref(),
+        groups: session.groups.as_ref(),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
     };
-    HttpResponse::Ok().json(info)
+    Ok(HttpResponse::Ok().json(info))
 }
 
 /// The token endpoint for the OAuth2 / OIDC workflow.
@@ -472,23 +456,22 @@ pub async fn get_session_xsrf(
     ),
 )]
 #[post("/oidc/token")]
-#[has_permissions("all")]
 #[tracing::instrument(level = "debug", skip_all, fields(grant_type = req_data.grant_type))]
 pub async fn post_token(
     req_data: actix_web_validator::Form<TokenRequest>,
     req: HttpRequest,
-    session_req: web::ReqData<Option<Session>>,
+    // session_req: web::ReqData<Option<Session>>,
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let add_login_delay = req_data.grant_type == "password";
 
-    let csrf_header = if let Some(s) = session_req.into_inner() {
-        // TODO validate CSRF if a session is present? What about the RFC? -> Check
-        Session::get_csrf_header(&s.csrf_token)
-    } else {
-        Session::get_csrf_header("none")
-    };
+    // let csrf_header = if let Some(s) = session_req.into_inner() {
+    //     // TODO validate CSRF if a session is present? What about the RFC? -> Check
+    //     Session::get_csrf_header(&s.csrf_token)
+    // } else {
+    //     Session::get_csrf_header("none")
+    // };
     let ip = real_ip_from_req(&req);
 
     let res = match auth::get_token_set(req_data.into_inner(), &data, req).await {
@@ -496,11 +479,11 @@ pub async fn post_token(
             let http_resp = if let Some(o) = header_origin {
                 HttpResponse::Ok()
                     .insert_header(o)
-                    .insert_header(csrf_header)
+                    // .insert_header(csrf_header)
                     .json(token_set)
             } else {
                 HttpResponse::Ok()
-                    .insert_header(csrf_header)
+                    // .insert_header(csrf_header)
                     .json(token_set)
             };
             Ok((http_resp, add_login_delay))
@@ -524,7 +507,6 @@ pub async fn post_token(
     ),
 )]
 #[post("/oidc/tokenInfo")]
-#[has_permissions("all")]
 pub async fn post_token_info(
     data: web::Data<AppState>,
     req_data: actix_web_validator::Json<TokenValidationRequest>,
@@ -551,7 +533,6 @@ pub async fn post_token_info(
     ),
 )]
 #[post("/oidc/token/refresh")]
-#[has_permissions("all")]
 pub async fn post_refresh_token(
     req_data: actix_web_validator::Json<RefreshTokenRequest>,
     data: web::Data<AppState>,
@@ -577,7 +558,6 @@ pub async fn post_refresh_token(
     ),
 )]
 #[post("/oidc/token/validate")]
-#[has_permissions("all")]
 pub async fn post_validate_token(
     data: web::Data<AppState>,
     req_data: actix_web_validator::Json<TokenValidationRequest>,
@@ -603,7 +583,6 @@ pub async fn post_validate_token(
     ),
 )]
 #[get("/oidc/userinfo")]
-#[has_permissions("token-auth")]
 pub async fn get_userinfo(
     data: web::Data<AppState>,
     req: HttpRequest,
@@ -626,7 +605,6 @@ pub async fn get_userinfo(
     ),
 )]
 #[get("/.well-known/openid-configuration")]
-#[has_permissions("all")]
 pub async fn get_well_known(data: web::Data<AppState>) -> HttpResponse {
     HttpResponse::Ok()
         .insert_header((

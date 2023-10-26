@@ -142,7 +142,7 @@ impl Session {
         Ok(session)
     }
 
-    // TODO should we even cache this, since this is only used rarely in the frontend?
+    // not cached, since this is only used in the admin ui
     /// Returns all sessions and an empty Vec if not a single session exists
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
         let sessions = sqlx::query_as!(Self, "select * from sessions")
@@ -472,14 +472,13 @@ impl Session {
                 format!("User '{}' is not assigned to any roles", &self.id),
             ));
         }
-        let mut res = Vec::new();
-        self.roles
+        Ok(self
+            .roles
             .as_ref()
             .unwrap()
             .split(',')
-            .map(|x| format!("ROLE_{}", x.trim()))
-            .for_each(|x| res.push(x));
-        Ok(res)
+            .map(|r| r.to_string())
+            .collect())
     }
 
     #[inline]
@@ -492,6 +491,7 @@ impl Session {
         self.save(data).await
     }
 
+    #[inline(always)]
     pub fn validate_csrf(&self, req: &HttpRequest) -> Result<(), ErrorResponse> {
         let csrf = get_header_value(req, CSRF_HEADER);
         if csrf.is_err() {

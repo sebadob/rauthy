@@ -1,13 +1,10 @@
-use crate::real_ip_from_req;
+use crate::{real_ip_from_req, ReqPrincipal};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
-use actix_web_grants::proc_macro::has_any_permission;
 use actix_web_lab::sse;
 use rauthy_common::constants::SSE_KEEP_ALIVE;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
-use rauthy_models::entity::api_keys::{AccessGroup, AccessRights, ApiKey};
-use rauthy_models::entity::principal::Principal;
-use rauthy_models::entity::sessions::Session;
+use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::events::event::Event;
 use rauthy_models::events::listener::EventRouterMsg;
 use rauthy_models::request::EventsListenParams;
@@ -17,7 +14,7 @@ use validator::Validate;
 /// Listen to the Events SSE stream
 #[utoipa::path(
     get,
-    path = "/events",
+    path = "/events/stream",
     tag = "events",
     params(EventsListenParams),
     responses(
@@ -28,22 +25,16 @@ use validator::Validate;
         (status = 404, description = "NotFound", body = ErrorResponse),
     ),
 )]
-#[get("/events")]
-#[has_any_permission("session-auth", "api-key")]
+#[get("/events/stream")]
 pub async fn sse_events(
     data: web::Data<AppState>,
-    api_key: web::ReqData<Option<ApiKey>>,
-    principal: web::ReqData<Option<Principal>>,
-    req: HttpRequest,
+    principal: ReqPrincipal,
     params: web::Query<EventsListenParams>,
+    req: HttpRequest,
 ) -> Result<impl Responder, ErrorResponse> {
-    params.validate()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Events, AccessRights::Read)?;
 
-    if let Some(api_key) = api_key.into_inner() {
-        api_key.has_access(AccessGroup::Events, AccessRights::Read)?;
-    } else {
-        Principal::from_req(principal)?.validate_rauthy_admin()?;
-    }
+    params.validate()?;
 
     let (tx, sse) = sse::channel(10);
 
@@ -88,22 +79,12 @@ pub async fn sse_events(
     ),
 )]
 #[post("/events/test")]
-#[has_any_permission("session-auth", "api-key")]
 pub async fn post_event_test(
     data: web::Data<AppState>,
-    api_key: web::ReqData<Option<ApiKey>>,
-    principal: web::ReqData<Option<Principal>>,
+    principal: ReqPrincipal,
     req: HttpRequest,
-    session_req: web::ReqData<Option<Session>>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if let Some(api_key) = api_key.into_inner() {
-        api_key.has_access(AccessGroup::Events, AccessRights::Create)?;
-    } else {
-        if session_req.is_some() {
-            Session::extract_validate_csrf(session_req, &req)?;
-        }
-        Principal::from_req(principal)?.validate_rauthy_admin()?;
-    }
+    principal.validate_api_key_or_admin_session(AccessGroup::Events, AccessRights::Create)?;
 
     Event::test(real_ip_from_req(&req))
         .send(&data.tx_events)

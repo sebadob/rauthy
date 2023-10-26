@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use time::OffsetDateTime;
 use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct TokenSet {
     pub access_token: String,
     #[serde(skip_serializing_if = "Option::is_none")]

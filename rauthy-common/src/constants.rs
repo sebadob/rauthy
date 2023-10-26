@@ -55,7 +55,8 @@ lazy_static! {
     pub static ref RAUTHY_ADMIN_ROLE: String = "rauthy_admin".to_string();
     pub static ref DATABASE_URL: String = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
     pub static ref DB_TYPE: DbType = DbType::from_str(&DATABASE_URL).unwrap();
-    pub static ref ROLE_ADMIN: String = "ROLE_rauthy_admin".to_string();
+    pub static ref ROLE_ADMIN: String = "rauthy_admin".to_string();
+    // pub static ref ROLE_ADMIN: String = "ROLE_rauthy_admin".to_string();
     pub static ref DEV_MODE: bool = env::var("DEV_MODE")
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
@@ -127,10 +128,6 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("true"))
         .parse::<bool>()
         .expect("ADMIN_FORCE_MFA cannot be parsed to bool - bad format");
-    pub static ref ADMIN_ACCESS_SESSION_ONLY: bool = env::var("ADMIN_ACCESS_SESSION_ONLY")
-        .unwrap_or_else(|_| String::from("true"))
-        .parse::<bool>()
-        .expect("ADMIN_ACCESS_SESSION_ONLY cannot be parsed to bool - bad format");
 
     pub static ref SESSION_LIFETIME: u32 = env::var("SESSION_LIFETIME")
         .unwrap_or_else(|_| String::from("14400"))

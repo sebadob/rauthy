@@ -80,6 +80,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
         .await?;
     res = check_status(res, 400).await?;
     let err = res.text().await?;
+    eprintln!("0 {err}");
     assert!(err.contains("magic_link_id"));
 
     // bad email
@@ -91,6 +92,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
         .await?;
     res = check_status(res, 400).await?;
     let err = res.json::<ErrorResponse>().await?;
+    eprintln!("1 {err:?}");
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert_eq!(err.message, "E-Mail does not match for this user");
 
@@ -103,6 +105,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
         .await?;
     res = check_status(res, 403).await?;
     let err = res.json::<ErrorResponse>().await?;
+    eprintln!("2 {err:?}");
     assert_eq!(err.error, ErrorResponseType::Forbidden);
     assert_eq!(
         err.message,
@@ -118,6 +121,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
         .await?;
     res = check_status(res, 401).await?;
     let err = res.json::<ErrorResponse>().await?;
+    eprintln!("3 {err:?}");
     assert_eq!(err.error, ErrorResponseType::Unauthorized);
     assert_eq!(err.message, "CSRF Token is missing");
 

@@ -179,7 +179,6 @@
             let notBefore =  Number.parseInt(res.headers.get('x-retry-not-before'));
             let nbfDate =  formatDateFromTs(notBefore);
             let diff = notBefore * 1000 - new Date().getTime();
-            console.log(diff);
 
             tooManyRequests = true;
             err = `${t.http429} ${nbfDate}`;
@@ -369,6 +368,7 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
+        max-width: 19rem;
         padding: 20px;
         border: 1px solid var(--col-gmid);
         border-radius: 5px;

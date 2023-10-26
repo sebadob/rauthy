@@ -115,8 +115,6 @@
     function onWebauthnSuccess(res) {
         if (res) {
             webauthnData = undefined;
-            console.log(res);
-            console.log(res.code);
             onSubmitFinish(res.code)
         }
     }

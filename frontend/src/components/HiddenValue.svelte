@@ -1,9 +1,9 @@
 <script>
     import {onMount} from "svelte";
-    import IconEyeSlash from "./icons/IconEyeSlash.svelte";
-    import IconEye from "./icons/IconEye.svelte";
+    import IconEyeSlash from "$lib/icons/IconEyeSlash.svelte";
+    import IconEye from "$lib/icons/IconEye.svelte";
     import {sleepAwait} from "../utils/helpers.js";
-    import IconClipboard from "./icons/IconClipboard.svelte";
+    import IconClipboard from "$lib/icons/IconClipboard.svelte";
 
     export let value = '';
 

@@ -12,7 +12,6 @@ sqlite = []
 actix-web = { workspace = true }
 actix-web-prom = "0.7.0"
 actix-service = { workspace = true }
-actix-web-grants = { workspace = true }
 chrono = { workspace = true }
 cron = "0.12"
 dotenvy = { workspace = true }

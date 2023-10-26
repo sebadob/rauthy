@@ -1483,7 +1483,7 @@ SMTP_URL=
 SMTP_FROM=
 
 #####################################
-###### Encryption / Hashing #########
+###### ENCRYPTION / HASHING #########
 #####################################
 
 # Format: &quot;key_id/enc_key another_key_id/another_enc_key&quot; - the
@@ -1505,15 +1505,26 @@ ARGON2_P_COST=2
 # still allowing a good amount of memory for the argon2id
 # algorithm (default: 2)
 # CAUTION: You must make sure, that you have at least
-# (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + 30 MB of memory
+# (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + ~30 MB of memory
 # available.
 MAX_HASH_THREADS=1
 
 # The time in ms when to log a warning, if a request waited
 # longer than this time. This is an indicator, that you have
-# more concurrent logins than allowed and may need config adjustments,
+# more concurrent logins than allowed and may need config 
+# adjustments,
 # if this happens more often. (default: 500)
 #HASH_AWAIT_WARN_TIME=500
+
+# JWKS auto rotate cronjob. This will (by default) rotate 
+# all JWKs every 1. day of the month. If you need smaller 
+# intervals, you may adjust this value. For security reasons,
+# you cannot fully disable it.
+# In a HA deployment, this job will only be executed on the 
+# current cache leader at that time.
+# Format: &quot;sec min hour day_of_month month day_of_week year&quot;
+# default: &quot;0 30 3 1 * * *&quot;
+JWK_AUTOROTATE_CRON=&quot;0 30 3 1 * * *&quot;
 
 #####################################
 ######### EVENTS / AUDIT ############
@@ -1522,8 +1533,9 @@ MAX_HASH_THREADS=1
 # The E-Mail address event notifications should be sent to
 #EVENT_EMAIL=admin@localhost.de
 
-# The notification level for events. Works the same way as a logging level. For instance:
-# 'notice' means send out a notifications for all events with the info level or higher.
+# The notification level for events. Works the same way as a 
+# logging level. For instance: 'notice' means send out a 
+# notifications for all events with the info level or higher.
 # Possible values:
 # - info
 # - notice
@@ -1532,8 +1544,9 @@ MAX_HASH_THREADS=1
 # default: 'notice'
 EVENT_NOTIFY_LEVEL=notice
 
-# Define the level from which on events should be persisted inside the database.
-# All events with a lower level will be lost, if there is no active event subscriber.
+# Define the level from which on events should be persisted 
+# inside the database. All events with a lower level will be 
+# lost, if there is no active event subscriber.
 # Possible values:
 # - info
 # - notice
@@ -1542,38 +1555,47 @@ EVENT_NOTIFY_LEVEL=notice
 # default: 'info'
 EVENT_PERSIST_LEVEL=info
 
-# Define the number of days when events should be cleaned up from the database.
+# Define the number of days when events should be cleaned up 
+# from the database.
 # default: 31
 EVENT_CLEANUP_DAYS=31
 
-# The level for the generated Event after a new user has been registered.
+# The level for the generated Event after a new user has been 
+# registered.
 # default: info
 EVENT_LEVEL_NEW_USER=info
-# The level for the generated Event after a user has changed his E-Mail
+# The level for the generated Event after a user has changed 
+# his E-Mail
 # default: notice
 EVENT_LEVEL_USER_EMAIL_CHANGE=notice
-# The level for the generated Event after a user has been given the 'rauthy_admin' role
+# The level for the generated Event after a user has been given 
+# the 'rauthy_admin' role
 # default: notice
 EVENT_LEVEL_RAUTHY_ADMIN=notice
 # The level for the generated Event after the JWKS has been rotated
 # default: notice
 EVENT_LEVEL_JWKS_ROTATE=notice
-# The level for the generated Event after DB secrets have been migrated to a new key
+# The level for the generated Event after DB secrets have been 
+# migrated to a new key
 # default: notice
 EVENT_LEVEL_SECRETS_MIGRATED=notice
-# The level for the generated Event after a Rauthy instance has been started
+# The level for the generated Event after a Rauthy instance 
+# has been started
 # default: info
 EVENT_LEVEL_RAUTHY_START=info
-# The level for the generated Event after a Rauthy entered a healthy state (again)
+# The level for the generated Event after a Rauthy entered a 
+# healthy state (again)
 # default: notice
 EVENT_LEVEL_RAUTHY_HEALTHY=notice
-# The level for the generated Event after a Rauthy entered an unhealthy state
+# The level for the generated Event after a Rauthy entered an 
+# unhealthy state
 # default: critical
 EVENT_LEVEL_RAUTHY_UNHEALTHY=critical
 # The level for the generated Event after an IP has been blacklisted
 # default: warning
 EVENT_LEVEL_IP_BLACKLISTED=warning
-# The level for the generated Event after certain amounts of false logins from an IP
+# The level for the generated Event after certain amounts of 
+# false logins from an IP
 # default: criticao
 EVENT_LEVEL_FAILED_LOGINS_25=critical
 # default: criticao
@@ -1679,12 +1701,6 @@ LOG_LEVEL_ACCESS=Basic
 # If 'true', MFA for an account must be enabled to access the
 # rauthy admin UI (default: true)
 ADMIN_FORCE_MFA=false
-
-# If set to true, you can access rauthy's admin API only with
-# a valid session + CSRF token. If you need some external access
-# via JWT tokens, since sessions are managed with cookies, set
-# this to false. (default: true)
-ADMIN_ACCESS_SESSION_ONLY=true
 
 #####################################
 ############## POW  #################

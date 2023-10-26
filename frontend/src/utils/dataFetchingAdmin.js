@@ -101,10 +101,7 @@ export async function deleteClientColors(id) {
 
 export async function putClientLogo(id, data) {
 	const formData  = new FormData();
-	// for(const name in data) {
-	// console.log(data);
 	formData.append("logo", data);
-	// }
 
 	const res = await fetch(`/auth/v1/clients/${id}/logo`, {
 		method: 'PUT',

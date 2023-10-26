@@ -115,8 +115,6 @@
             data.allowed_origins = [];
         }
 
-        console.log(data);
-
         let res = await putClient(data);
         if (res.ok) {
             success = true;
