@@ -2,6 +2,7 @@ use crate::app_state::DbPool;
 use sqlx::query;
 
 pub mod api_keys;
+pub mod app_version;
 pub mod auth_codes;
 pub mod clients;
 pub mod colors;

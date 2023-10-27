@@ -33,6 +33,7 @@ pub const CACHE_NAME_POW: &str = "pow";
 pub const CACHE_NAME_WEBAUTHN: &str = "webauthn";
 pub const CACHE_NAME_WEBAUTHN_DATA: &str = "webauthn-data";
 
+pub const IDX_APP_VERSION: &str = "rauthy_app_version";
 pub const IDX_CLIENTS: &str = "clients_";
 pub const IDX_CLIENT_LOGO: &str = "client_logo_";
 pub const IDX_GROUPS: &str = "groups_";

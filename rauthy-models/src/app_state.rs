@@ -368,7 +368,7 @@ impl AppState {
         }
 
         // update the DbVersion after successful pool creation and migrations
-        DbVersion::update(&pool, db_version)
+        DbVersion::upsert(&pool, db_version)
             .await
             .map_err(|err| anyhow::Error::msg(err.message))?;
 
