@@ -9,6 +9,11 @@ license.workspace = true
 async-trait = { workspace = true }
 chrono = { workspace = true }
 flume = { workspace = true }
+# we currently need to use the git version to resolve a conflict on zeroize
+# switch back to stable as soon as a new version comes out
+matrix-sdk = { git = "https://github.com/sebadob/matrix-rust-sdk", default-features = false, features = [
+    "e2e-encryption", "markdown", "rustls-tls"
+] }
 rauthy-common = { path = "../rauthy-common" }
 reqwest = { workspace = true }
 serde = { workspace = true }

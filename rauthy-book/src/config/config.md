@@ -226,11 +226,22 @@ JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
 # If left empty, no messages will be sent to Slack.
 #EVENT_EMAIL=admin@localhost.de
 
-# TODO MATRIX
+# Matrix variables for event notifications.
+# `EVENT_MATRIX_USER_ID` and `EVENT_MATRIX_ROOM_ID` are mandatory.
+# Depending on your Matrix setup, additionally one of
+# `EVENT_MATRIX_ACCESS_TOKEN` or `EVENT_MATRIX_USER_PASSWORD` is needed.
+# If you log in to Matrix with User + Password, you may use `EVENT_MATRIX_USER_PASSWORD`.
+# If you log in via OIDC SSO (or just want to use a session token you can revoke),
+# you should provide `EVENT_MATRIX_ACCESS_TOKEN`.
+# If both are given, the `EVENT_MATRIX_ACCESS_TOKEN` will be preferred.
+#
 # If left empty, no messages will be sent to Slack.
-#EVENT_MATRIX_SERVER=
-#EVENT_MATRIX_SERVER=
-#EVENT_MATRIX_SERVER=
+# Format: `@<user_id>:<server address>`
+#EVENT_MATRIX_USER_ID=
+# Format: `!<random string>:<server address>`
+#EVENT_MATRIX_ROOM_ID=
+#EVENT_MATRIX_ACCESS_TOKEN=
+#EVENT_MATRIX_USER_PASSWORD=
 
 # The Webhook for Slack Notifications.
 # If left empty, no messages will be sent to Slack.
