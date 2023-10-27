@@ -1,4 +1,4 @@
-!#[allow(dead_code)]
+#![allow(dead_code)]
 use rauthy_common::constants::CSRF_HEADER;
 use rauthy_common::utils::base64_url_encode;
 use rauthy_models::request::{LoginRequest, TokenRequest};

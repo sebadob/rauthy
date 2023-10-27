@@ -1,7 +1,6 @@
 use crate::app_state::AppState;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::users::User;
-use crate::events::event::Event;
 use crate::i18n::email_change_info_new::I18nEmailChangeInfoNew;
 use crate::i18n::email_confirm_change::I18nEmailConfirmChange;
 use crate::i18n::email_reset::I18nEmailReset;
@@ -9,7 +8,6 @@ use crate::i18n::email_reset_info::I18nEmailResetInfo;
 use crate::i18n::SsrJson;
 use actix_web::web;
 use askama_actix::Template;
-use chrono::NaiveDateTime;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication;
 use lettre::{AsyncSmtpTransport, AsyncTransport};
@@ -17,6 +15,7 @@ use rauthy_common::constants::{
     EMAIL_SUB_PREFIX, SMTP_FROM, SMTP_PASSWORD, SMTP_URL, SMTP_USERNAME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_notify::Notification;
 use std::time::Duration;
 use time::OffsetDateTime;
 use tokio::sync::mpsc;
@@ -34,23 +33,17 @@ pub struct EMail {
 #[derive(Default, Template)]
 #[template(path = "email/event.html")]
 pub struct EMailEventHtml<'a> {
-    pub email_sub_prefix: &'a str,
-    pub level: &'a str,
-    pub ts: &'a str,
-    pub typ: &'a str,
-    pub data: &'a str,
-    pub ip: &'a str,
+    pub head: &'a str,
+    pub row_1: &'a str,
+    pub row_2: &'a str,
 }
 
 #[derive(Default, Template)]
 #[template(path = "email/event.txt")]
 pub struct EMailEventTxt<'a> {
-    pub email_sub_prefix: &'a str,
-    pub level: &'a str,
-    pub ts: String,
-    pub typ: &'a str,
-    pub data: String,
-    pub ip: String,
+    pub head: &'a str,
+    pub row_1: &'a str,
+    pub row_2: &'a str,
 }
 
 #[derive(Default, Template)]
@@ -152,34 +145,26 @@ pub struct EmailResetInfoTxt<'a> {
     pub update: &'a str,
 }
 
-pub async fn send_email_event(address: String, tx_email: &mpsc::Sender<EMail>, event: &Event) {
+pub async fn send_email_notification(
+    address: String,
+    tx_email: &mpsc::Sender<EMail>,
+    notification: &Notification,
+) {
     let text = EMailEventTxt {
-        email_sub_prefix: &EMAIL_SUB_PREFIX,
-        level: event.level.as_str(),
-        ts: NaiveDateTime::from_timestamp_millis(event.timestamp)
-            .unwrap_or_default()
-            .to_string(),
-        typ: event.typ.as_str(),
-        data: event.fmt_data(),
-        ip: event
-            .ip
-            .as_deref()
-            .map(|ip| format!("IP: {}", ip))
-            .unwrap_or_default(),
+        head: &notification.head,
+        row_1: &notification.row_1,
+        row_2: notification.row_2.as_deref().unwrap_or_default(),
     };
 
     let html = EMailEventHtml {
-        email_sub_prefix: text.email_sub_prefix,
-        level: text.level,
-        ts: &text.ts,
-        typ: text.typ,
-        data: &text.data,
-        ip: &text.ip,
+        head: text.head,
+        row_1: text.row_1,
+        row_2: text.row_2,
     };
 
     let req = EMail {
         address,
-        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, text.level),
+        subject: notification.head.to_string(),
         text: text.render().expect("Template rendering: EMailEventTxt"),
         html: Some(html.render().expect("Template rendering: EMailEventHtml")),
     };

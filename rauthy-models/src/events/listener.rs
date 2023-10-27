@@ -1,5 +1,4 @@
 use crate::app_state::DbPool;
-use crate::email::EMail;
 use crate::events::event::{Event, EventLevel, EventType};
 use crate::events::ip_blacklist_handler::{IpBlacklist, IpBlacklistReq, IpLoginFailedSet};
 use crate::events::notifier::EventNotifier;
@@ -12,7 +11,6 @@ use rauthy_common::error_response::ErrorResponse;
 use sqlx::postgres::PgListener;
 use std::collections::{HashMap, VecDeque};
 use std::time::Duration;
-use tokio::sync::mpsc;
 use tokio::time;
 use tracing::{debug, error, info};
 
@@ -32,7 +30,6 @@ pub struct EventListener;
 impl EventListener {
     #[tracing::instrument(level = "debug", skip_all)]
     pub async fn listen(
-        tx_email: mpsc::Sender<EMail>,
         tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
         tx_router: flume::Sender<EventRouterMsg>,
         rx_router: flume::Receiver<EventRouterMsg>,
@@ -51,14 +48,9 @@ impl EventListener {
 
         while let Ok(event) = rx_event.recv_async().await {
             if is_ha {
-                tokio::spawn(Self::handle_event_ha(tx_email.clone(), event, db.clone()));
+                tokio::spawn(Self::handle_event_ha(event, db.clone()));
             } else {
-                tokio::spawn(Self::handle_event_si(
-                    tx_email.clone(),
-                    event,
-                    db.clone(),
-                    tx_router.clone(),
-                ));
+                tokio::spawn(Self::handle_event_si(event, db.clone(), tx_router.clone()));
             }
         }
 
@@ -66,12 +58,7 @@ impl EventListener {
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
-    async fn handle_event_si(
-        tx_email: mpsc::Sender<EMail>,
-        event: Event,
-        db: DbPool,
-        tx: flume::Sender<EventRouterMsg>,
-    ) {
+    async fn handle_event_si(event: Event, db: DbPool, tx: flume::Sender<EventRouterMsg>) {
         // insert into DB
         if &event.level.value() >= EVENT_PERSIST_LEVEL.get().unwrap() {
             while let Err(err) = event.insert(&db).await {
@@ -89,14 +76,14 @@ impl EventListener {
         }
 
         // send notification
-        while let Err(err) = EventNotifier::send(&tx_email, &event).await {
+        while let Err(err) = EventNotifier::send(&event).await {
             error!("Sending Event Notification: {:?}", err);
             time::sleep(Duration::from_secs(1)).await;
         }
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
-    async fn handle_event_ha(tx_email: mpsc::Sender<EMail>, event: Event, db: DbPool) {
+    async fn handle_event_ha(event: Event, db: DbPool) {
         // insert into DB
         if &event.level.value() >= EVENT_PERSIST_LEVEL.get().unwrap() {
             while let Err(err) = event.insert(&db).await {
@@ -119,7 +106,7 @@ impl EventListener {
         }
 
         // send notification
-        while let Err(err) = EventNotifier::send(&tx_email, &event).await {
+        while let Err(err) = EventNotifier::send(&event).await {
             error!("Sending Event Notification: {:?}", err);
             time::sleep(Duration::from_secs(1)).await;
         }

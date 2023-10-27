@@ -40,6 +40,6 @@ webauthn-rs = { workspace = true }
 [dev-dependencies]
 josekit = "0.8"
 pretty_assertions = "1"
-reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { workspace = true }
 ring = { workspace = true }
 tokio-test = "*"
