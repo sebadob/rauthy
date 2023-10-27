@@ -228,6 +228,7 @@ impl EventListener {
                         EventType::JwksRotated => {}
                         EventType::NewUserRegistered => {}
                         EventType::NewRauthyAdmin => {}
+                        EventType::NewRauthyVersion => {}
                         EventType::PossibleBruteForce => {}
                         EventType::RauthyStarted => {}
                         EventType::RauthyHealthy => {}

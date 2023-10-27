@@ -29,7 +29,7 @@ impl DbVersion {
         }
     }
 
-    pub async fn update(db: &DbPool, db_version: Option<Version>) -> Result<(), ErrorResponse> {
+    pub async fn upsert(db: &DbPool, db_version: Option<Version>) -> Result<(), ErrorResponse> {
         let app_version = Self::app_version();
         if Some(&app_version) != db_version.as_ref() {
             let slf = Self {

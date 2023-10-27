@@ -44,8 +44,9 @@ rand_core = { workspace = true }
 rauthy-common = { path = "../rauthy-common" }
 redhac = { workspace = true }
 regex = { workspace = true }
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
 ring = { workspace = true }
-semver = { version = "1.0.19", features = ["serde"] }
+semver = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true }
@@ -56,8 +57,6 @@ utoipa = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
 uuid = { version = "1", features = ["serde", "v4"] }
 validator = { workspace = true }
-# danger-allow-state-serialisation is needed to save the state into the DB for HA setup's
-# danger-credential-internals is needed for the feature to optionally force user verification
 webauthn-rs = { workspace = true }
 webauthn-rs-proto = { workspace = true }
 

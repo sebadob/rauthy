@@ -3,8 +3,9 @@ use crate::events::{
     EVENT_LEVEL_FAILED_LOGIN, EVENT_LEVEL_FAILED_LOGINS_10, EVENT_LEVEL_FAILED_LOGINS_15,
     EVENT_LEVEL_FAILED_LOGINS_20, EVENT_LEVEL_FAILED_LOGINS_25, EVENT_LEVEL_FAILED_LOGINS_7,
     EVENT_LEVEL_IP_BLACKLISTED, EVENT_LEVEL_JWKS_ROTATE, EVENT_LEVEL_NEW_RAUTHY_ADMIN,
-    EVENT_LEVEL_NEW_USER, EVENT_LEVEL_RAUTHY_HEALTHY, EVENT_LEVEL_RAUTHY_START,
-    EVENT_LEVEL_RAUTHY_UNHEALTHY, EVENT_LEVEL_SECRETS_MIGRATED, EVENT_LEVEL_USER_EMAIL_CHANGE,
+    EVENT_LEVEL_NEW_RAUTHY_VERSION, EVENT_LEVEL_NEW_USER, EVENT_LEVEL_RAUTHY_HEALTHY,
+    EVENT_LEVEL_RAUTHY_START, EVENT_LEVEL_RAUTHY_UNHEALTHY, EVENT_LEVEL_SECRETS_MIGRATED,
+    EVENT_LEVEL_USER_EMAIL_CHANGE,
 };
 use chrono::{DateTime, NaiveDateTime, Timelike, Utc};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
@@ -115,6 +116,7 @@ pub enum EventType {
     JwksRotated,
     NewUserRegistered,
     NewRauthyAdmin,
+    NewRauthyVersion,
     PossibleBruteForce, // TODO
     RauthyStarted,
     RauthyHealthy,
@@ -133,6 +135,7 @@ impl Display for EventType {
             EventType::JwksRotated => write!(f, "JWKS has been rotated"),
             EventType::NewUserRegistered => write!(f, "New user registered"),
             EventType::NewRauthyAdmin => write!(f, "New rauthy_admin member"),
+            EventType::NewRauthyVersion => write!(f, "New Rauthy App Version available"),
             EventType::PossibleBruteForce => write!(f, "Possible brute force"),
             EventType::RauthyStarted => write!(f, "Rauthy has been restarted"),
             EventType::RauthyHealthy => write!(f, "Rauthy is healthy"),
@@ -153,6 +156,7 @@ impl EventType {
             Self::JwksRotated => "JwksRotated",
             Self::NewUserRegistered => "NewUserRegistered",
             Self::NewRauthyAdmin => "NewRauthyAdmin",
+            Self::NewRauthyVersion => "NewRauthyVersion",
             Self::PossibleBruteForce => "PossibleBruteForce",
             Self::RauthyStarted => "RauthyRestarted",
             Self::RauthyHealthy => "RauthyHealthy",
@@ -171,13 +175,14 @@ impl EventType {
             EventType::JwksRotated => 3,
             EventType::NewUserRegistered => 4,
             EventType::NewRauthyAdmin => 5,
-            EventType::PossibleBruteForce => 6,
-            EventType::RauthyStarted => 7,
-            EventType::RauthyHealthy => 8,
-            EventType::RauthyUnhealthy => 9,
-            EventType::SecretsMigrated => 10,
-            EventType::UserEmailChange => 11,
-            EventType::Test => 12,
+            EventType::NewRauthyVersion => 6,
+            EventType::PossibleBruteForce => 7,
+            EventType::RauthyStarted => 8,
+            EventType::RauthyHealthy => 9,
+            EventType::RauthyUnhealthy => 10,
+            EventType::SecretsMigrated => 11,
+            EventType::UserEmailChange => 12,
+            EventType::Test => 13,
         }
     }
 }
@@ -191,6 +196,7 @@ impl From<String> for EventType {
             "JwksRotated" => Self::JwksRotated,
             "NewUserRegistered" => Self::NewUserRegistered,
             "NewRauthyAdmin" => Self::NewRauthyAdmin,
+            "NewRauthyVersion" => Self::NewRauthyVersion,
             "PossibleBruteForce" => Self::PossibleBruteForce,
             "RauthyRestarted" => Self::RauthyStarted,
             "RauthyHealthy" => Self::RauthyHealthy,
@@ -219,13 +225,14 @@ impl From<i64> for EventType {
             3 => EventType::JwksRotated,
             4 => EventType::NewUserRegistered,
             5 => EventType::NewRauthyAdmin,
-            6 => EventType::PossibleBruteForce,
-            7 => EventType::RauthyStarted,
-            8 => EventType::RauthyHealthy,
-            9 => EventType::RauthyUnhealthy,
-            10 => EventType::SecretsMigrated,
-            11 => EventType::UserEmailChange,
-            12 => EventType::Test,
+            6 => EventType::NewRauthyVersion,
+            7 => EventType::PossibleBruteForce,
+            8 => EventType::RauthyStarted,
+            9 => EventType::RauthyHealthy,
+            10 => EventType::RauthyUnhealthy,
+            11 => EventType::SecretsMigrated,
+            12 => EventType::UserEmailChange,
+            13 => EventType::Test,
             _ => EventType::Test,
         }
     }
@@ -388,6 +395,16 @@ impl Event {
         )
     }
 
+    pub fn new_rauthy_version(version_url: String) -> Self {
+        Self::new(
+            EVENT_LEVEL_NEW_RAUTHY_VERSION.get().cloned().unwrap(),
+            EventType::NewRauthyAdmin,
+            None,
+            None,
+            Some(version_url),
+        )
+    }
+
     pub fn jwks_rotated() -> Self {
         Self::new(
             EVENT_LEVEL_JWKS_ROTATE.get().cloned().unwrap(),
@@ -488,6 +505,12 @@ impl Event {
             }
             EventType::NewRauthyAdmin => {
                 format!("User E-Mail: {}", self.text.as_deref().unwrap_or_default())
+            }
+            EventType::NewRauthyVersion => {
+                format!(
+                    "New Rauthy Version available: {}",
+                    self.text.as_deref().unwrap_or_default()
+                )
             }
             EventType::PossibleBruteForce => String::default(),
             EventType::RauthyStarted => self.text.clone().unwrap(),

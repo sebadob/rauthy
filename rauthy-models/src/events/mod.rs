@@ -17,6 +17,7 @@ pub static EVENT_PERSIST_LEVEL: OnceLock<i16> = OnceLock::new();
 pub static EVENT_LEVEL_NEW_USER: OnceLock<EventLevel> = OnceLock::new();
 pub static EVENT_LEVEL_USER_EMAIL_CHANGE: OnceLock<EventLevel> = OnceLock::new();
 pub static EVENT_LEVEL_NEW_RAUTHY_ADMIN: OnceLock<EventLevel> = OnceLock::new();
+pub static EVENT_LEVEL_NEW_RAUTHY_VERSION: OnceLock<EventLevel> = OnceLock::new();
 pub static EVENT_LEVEL_JWKS_ROTATE: OnceLock<EventLevel> = OnceLock::new();
 pub static EVENT_LEVEL_SECRETS_MIGRATED: OnceLock<EventLevel> = OnceLock::new();
 pub static EVENT_LEVEL_RAUTHY_START: OnceLock<EventLevel> = OnceLock::new();
@@ -66,6 +67,12 @@ pub fn init_event_vars() -> Result<(), ErrorResponse> {
     EVENT_LEVEL_NEW_RAUTHY_ADMIN
         .set(map_env_var_level(
             "EVENT_LEVEL_RAUTHY_ADMIN",
+            EventLevel::Notice,
+        ))
+        .unwrap();
+    EVENT_LEVEL_NEW_RAUTHY_VERSION
+        .set(map_env_var_level(
+            "EVENT_LEVEL_RAUTHY_VERSION",
             EventLevel::Notice,
         ))
         .unwrap();

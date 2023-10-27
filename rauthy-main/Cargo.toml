@@ -25,6 +25,7 @@ rauthy-service = { path = "../rauthy-service" }
 redhac = { workspace = true }
 rustls = "0.21"
 rustls-pemfile = "1"
+semver = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true }
 time = { workspace = true }
