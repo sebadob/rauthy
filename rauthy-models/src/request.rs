@@ -11,6 +11,7 @@ use rauthy_common::constants::{
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::base64_decode;
 use serde::{Deserialize, Serialize};
+use std::net::Ipv4Addr;
 use std::str::FromStr;
 use utoipa::{IntoParams, ToSchema};
 use validator::{Validate, ValidationError};
@@ -32,6 +33,16 @@ pub struct AuthCodeRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$"))]
     pub redirect_uri: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct IpBlacklistRequest {
+    /// Validation: Ipv4Addr
+    #[schema(value_type = str)]
+    pub ip: Ipv4Addr,
+    /// Unix timestamp in seconds in the future (max year 2099)
+    #[validate(range(min = 1672527600, max = 4070905200))]
+    pub exp: i64,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
