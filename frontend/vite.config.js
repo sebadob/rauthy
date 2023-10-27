@@ -8,6 +8,7 @@ const config = {
 			'/auth/v1/_app': 'http://127.0.0.1:8080',
 			'/auth/v1/book/': 'http://127.0.0.1:8080',
 			'/auth/v1/auth_check_admin': 'http://127.0.0.1:8080',
+			'/auth/v1/blacklist': 'http://127.0.0.1:8080',
 			'/auth/v1/events': 'http://127.0.0.1:8080',
 			'/auth/v1/i18n': 'http://127.0.0.1:8080',
 			'/auth/v1/oidc/authorize': 'http://127.0.0.1:8080',

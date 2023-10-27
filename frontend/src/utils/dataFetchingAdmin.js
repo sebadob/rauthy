@@ -343,6 +343,32 @@ export async function updateUserAttr(uid, data) {
 	return await checkRedirectForbidden(res);
 }
 
+
+export async function getBlacklist() {
+	const res = await fetch('/auth/v1/blacklist', {
+		method: 'GET',
+		headers: HEADERS,
+	});
+	return await checkRedirectForbidden(res);
+}
+
+export async function postBlacklist(data) {
+	const res = await fetch('/auth/v1/blacklist', {
+		method: 'POST',
+		headers: getHeaders(),
+		body: JSON.stringify(data),
+	});
+	return await checkRedirectForbidden(res);
+}
+
+export async function deleteBlacklistedIp(ip) {
+	const res = await fetch(`/auth/v1/blacklist/${ip}`, {
+		method: 'DELETE',
+		headers: getHeaders(),
+	});
+	return await checkRedirectForbidden(res);
+}
+
 export async function getRoles() {
 	const res = await fetch('/auth/v1/roles', {
 		method: 'GET',
