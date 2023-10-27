@@ -1,0 +1,21 @@
+[package]
+name = "rauthy-notify"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+chrono = { workspace = true }
+flume = { workspace = true }
+rauthy-common = { path = "../rauthy-common" }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = "1"
+tokio-test = "*"
