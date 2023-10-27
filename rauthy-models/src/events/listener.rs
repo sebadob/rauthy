@@ -1,9 +1,7 @@
 use crate::app_state::DbPool;
 use crate::email::EMail;
 use crate::events::event::{Event, EventLevel, EventType};
-use crate::events::ip_blacklist_handler::{
-    IpBlacklist, IpBlacklistCleanup, IpBlacklistReq, IpLoginFailedSet,
-};
+use crate::events::ip_blacklist_handler::{IpBlacklist, IpBlacklistReq, IpLoginFailedSet};
 use crate::events::notifier::EventNotifier;
 use crate::events::EVENT_PERSIST_LEVEL;
 use actix_web_lab::sse;
@@ -219,9 +217,9 @@ impl EventListener {
                         }
                         EventType::IpBlacklistRemoved => {
                             tx_ip_blacklist
-                                .send_async(IpBlacklistReq::BlacklistCleanup(IpBlacklistCleanup {
-                                    ip: evt.ip.unwrap_or_default(),
-                                }))
+                                .send_async(IpBlacklistReq::BlacklistDelete(
+                                    evt.ip.unwrap_or_default(),
+                                ))
                                 .await
                                 .unwrap();
                         }

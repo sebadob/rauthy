@@ -14,6 +14,9 @@ edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "AGPLv3"
 
+[profile.dev]
+panic = "abort"
+
 [profile.release]
 codegen-units = 1
 lto = true

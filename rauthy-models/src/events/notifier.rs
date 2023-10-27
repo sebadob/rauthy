@@ -2,6 +2,7 @@ use crate::email;
 use crate::email::EMail;
 use crate::events::event::{Event, EventLevel, EventType};
 use crate::events::{EVENT_EMAIL, EVENT_NOTIFY_LEVEL};
+use rauthy_common::constants::DEV_MODE;
 use rauthy_common::error_response::ErrorResponse;
 use tokio::sync::mpsc;
 use tracing::{info, warn};
@@ -14,6 +15,14 @@ impl EventNotifier {
             EventLevel::Info | EventLevel::Notice => info!("{}", event),
             EventLevel::Warning => warn!("{}", event),
             EventLevel::Critical => warn!("{}", event),
+        }
+
+        if *DEV_MODE {
+            warn!(
+                "Running in DEV_MODE -> skipping sending out events. New Event to be sent:\n{:?}",
+                event
+            );
+            return Ok(());
         }
 
         if let Some(email) = EVENT_EMAIL.get() {

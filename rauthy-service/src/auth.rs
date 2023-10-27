@@ -26,9 +26,7 @@ use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::users::{AccountType, User};
 use rauthy_models::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
 use rauthy_models::events::event::Event;
-use rauthy_models::events::ip_blacklist_handler::{
-    IpBlacklistCleanup, IpBlacklistReq, IpFailedLoginCheck,
-};
+use rauthy_models::events::ip_blacklist_handler::{IpBlacklistReq, IpFailedLoginCheck};
 use rauthy_models::language::Language;
 use rauthy_models::request::{LoginRequest, LogoutRequest, TokenRequest};
 use rauthy_models::response::{TokenInfo, Userinfo};
@@ -1032,7 +1030,7 @@ pub async fn handle_login_delay(
             // cleanup possibly blacklisted IP
             if let Some(ip) = peer_ip {
                 data.tx_ip_blacklist
-                    .send_async(IpBlacklistReq::LoginCleanup(IpBlacklistCleanup { ip }))
+                    .send_async(IpBlacklistReq::LoginFailedDelete(ip))
                     .await
                     .expect("ip blacklist recv not to be closed");
             } else {
