@@ -16,6 +16,7 @@ use utoipa::ToSchema;
 #[derive(Debug, Clone, Display, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum ErrorResponseType {
     BadRequest,
+    Connection,
     CSRFTokenError,
     Database,
     DatabaseIo,
