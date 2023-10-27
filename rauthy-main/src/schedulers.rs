@@ -1,14 +1,18 @@
 use ::time::OffsetDateTime;
 use actix_web::web;
 use chrono::Utc;
-use rauthy_common::constants::{CACHE_NAME_12HR, DB_TYPE, IDX_JWK_KID, OFFLINE_TOKEN_LT};
+use rauthy_common::constants::{
+    CACHE_NAME_12HR, DB_TYPE, IDX_JWK_KID, OFFLINE_TOKEN_LT, RAUTHY_VERSION,
+};
 use rauthy_common::DbType;
 use rauthy_models::app_state::{AppState, DbPool};
 use rauthy_models::email::send_pwd_reset_info;
+use rauthy_models::entity::app_version::LatestAppVersion;
 use rauthy_models::entity::jwk::Jwk;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
+use rauthy_models::events::event::Event;
 use rauthy_models::migration::backup_db;
 use rauthy_service::auth;
 use redhac::{cache_del, QuorumHealthState, QuorumState};
@@ -19,7 +23,7 @@ use std::str::FromStr;
 use std::time::Duration;
 use tokio::sync::watch::Receiver;
 use tokio::time;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 pub async fn scheduler_main(data: web::Data<AppState>) {
     info!("Starting schedulers");
@@ -34,7 +38,8 @@ pub async fn scheduler_main(data: web::Data<AppState>) {
     tokio::spawn(jwks_auto_rotate(data.clone(), rx_health.clone()));
     tokio::spawn(jwks_cleanup(data.clone(), rx_health.clone()));
     tokio::spawn(password_expiry_checker(data.clone(), rx_health.clone()));
-    tokio::spawn(user_expiry_checker(data, rx_health));
+    tokio::spawn(user_expiry_checker(data.clone(), rx_health.clone()));
+    tokio::spawn(app_version_check(data, rx_health));
 }
 
 // Creates a backup of the data store
@@ -491,6 +496,72 @@ pub async fn jwks_cleanup(
             .await;
         }
         info!("Cleaned up old JWKs: {}", count);
+    }
+}
+
+pub async fn app_version_check(
+    data: web::Data<AppState>,
+    rx_health: Receiver<Option<QuorumHealthState>>,
+) {
+    let disable = env::var("DISABLE_APP_VERSION_CHECK")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .expect("Cannot parse DISABLE_APP_VERSION_CHECK to bool");
+    if disable {
+        warn!("The automatic Rauthy version checker is disabled");
+        return;
+    }
+
+    // do a first check shortly after startup to not wait hours on a fresh install
+    tokio::time::sleep(Duration::from_secs(120)).await;
+    check_app_version(&data, &rx_health).await;
+
+    let mut interval = time::interval(Duration::from_secs(3595 * 8));
+    loop {
+        interval.tick().await;
+        check_app_version(&data, &rx_health).await;
+    }
+}
+
+async fn check_app_version(
+    data: &web::Data<AppState>,
+    rx_health: &Receiver<Option<QuorumHealthState>>,
+) {
+    // will return None in a non-HA deployment
+    if let Some(is_ha_leader) = is_ha_leader(rx_health) {
+        if !is_ha_leader {
+            debug!(
+                "Running HA mode without being the leader - skipping app_version_check scheduler"
+            );
+            return;
+        }
+    }
+
+    debug!("Running app_version_check scheduler");
+
+    let (latest_version, url) = match LatestAppVersion::lookup().await {
+        Ok(l) => l,
+        Err(err) => {
+            error!("LatestAppVersion::lookup(): {:?}", err);
+            return;
+        }
+    };
+    let this_version = semver::Version::parse(RAUTHY_VERSION).unwrap();
+
+    if latest_version > this_version && latest_version.pre.is_empty() {
+        info!("A new Rauthy App Version is available: {}", latest_version);
+        let version_url = format!("v{} -> {}", latest_version, url);
+
+        if let Err(err) = LatestAppVersion::upsert(data, latest_version).await {
+            error!("Saving LatestAppVersion into DB: {:?}", err);
+        }
+
+        data.tx_events
+            .send_async(Event::new_rauthy_version(version_url))
+            .await
+            .unwrap();
+    } else {
+        debug!("No new Rauthy App Version available");
     }
 }
 
