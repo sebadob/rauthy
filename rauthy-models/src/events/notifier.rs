@@ -2,8 +2,8 @@ use crate::email;
 use crate::email::EMail;
 use crate::events::event::{Event, EventLevel, EventType};
 use async_trait::async_trait;
-use rauthy_common::constants::DEV_MODE;
 use rauthy_common::error_response::ErrorResponse;
+use rauthy_notify::matrix::NotifierMatrix;
 use rauthy_notify::slack::NotifierSlack;
 use rauthy_notify::{Notification, Notify};
 use std::env;
@@ -12,6 +12,7 @@ use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
 static NOTIFIER_EMAIL: OnceLock<(i16, NotifierEmail)> = OnceLock::new();
+static NOTIFIER_MATRIX: OnceLock<(i16, NotifierMatrix)> = OnceLock::new();
 static NOTIFIER_SLACK: OnceLock<(i16, NotifierSlack)> = OnceLock::new();
 
 pub struct EventNotifier;
@@ -24,14 +25,6 @@ impl EventNotifier {
             EventLevel::Critical => warn!("{}", event),
         }
 
-        if *DEV_MODE {
-            warn!(
-                "Running in DEV_MODE -> skipping sending out events. New Event to be sent:\n{:?}",
-                event
-            );
-            return Ok(());
-        }
-
         let notification = Notification::from(event);
 
         // if there will be more notifier targets in the future, a macro may make sense for a
@@ -41,6 +34,15 @@ impl EventNotifier {
             if event.typ == EventType::Test || &event.level.value() >= level {
                 if let Err(err) = notifier.notify(&notification).await {
                     error!("sending Event via E-Mail Notifier: {:?}", err);
+                    // TODO implement some retry mechanism
+                }
+            }
+        }
+
+        if let Some((level, notifier)) = NOTIFIER_MATRIX.get() {
+            if event.typ == EventType::Test || &event.level.value() >= level {
+                if let Err(err) = notifier.notify(&notification).await {
+                    error!("sending Event via Matrix Notifier: {:?}", err);
                     // TODO implement some retry mechanism
                 }
             }
@@ -58,7 +60,7 @@ impl EventNotifier {
         Ok(())
     }
 
-    pub fn init_notifiers(tx_email: mpsc::Sender<EMail>) -> Result<(), ErrorResponse> {
+    pub async fn init_notifiers(tx_email: mpsc::Sender<EMail>) -> Result<(), ErrorResponse> {
         // E-Mail
         if let Ok(email) = env::var("EVENT_EMAIL") {
             let level = env::var("EVENT_NOTIFY_LEVEL_EMAIL")
@@ -102,7 +104,35 @@ impl EventNotifier {
                 .expect("init_notifiers should only be called once");
         }
 
-        // TODO Matrix
+        // Matrix
+        // Matrix setup
+        if let Ok(user_id) = env::var("EVENT_MATRIX_USER_ID") {
+            let level = env::var("EVENT_NOTIFY_LEVEL_MATRIX")
+                .map(|level| {
+                    level.parse::<EventLevel>().expect(
+                        "Cannot parse EVENT_NOTIFY_LEVEL_MATRIX. Possible values: info, notice, warning, critical",
+                    )
+                })
+                .unwrap_or(EventLevel::Notice);
+
+            let room_id = env::var("EVENT_MATRIX_ROOM_ID")
+                .expect("EVENT_MATRIX_USER_ID is given but no EVENT_MATRIX_ROOM_ID");
+
+            let access_token = env::var("EVENT_MATRIX_ACCESS_TOKEN").ok();
+            let user_password = env::var("EVENT_MATRIX_USER_PASSWORD").ok();
+
+            if access_token.is_none() && user_password.is_none() {
+                panic!("Specific one of: EVENT_MATRIX_ACCESS_TOKEN or EVENT_MATRIX_USER_PASSWORD");
+            }
+
+            let notifier =
+                NotifierMatrix::try_new(&user_id, &room_id, access_token, user_password).await?;
+            NOTIFIER_MATRIX
+                .set((level.value(), notifier))
+                .expect("init_notifiers should only be called once");
+
+            info!("Event Notifications will be sent to Matrix");
+        }
 
         Ok(())
     }

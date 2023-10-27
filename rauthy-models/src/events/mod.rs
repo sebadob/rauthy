@@ -2,7 +2,7 @@ use crate::events::event::EventLevel;
 use rauthy_common::error_response::ErrorResponse;
 use std::env;
 use std::sync::OnceLock;
-use tracing::{debug, info};
+use tracing::info;
 
 pub mod event;
 pub mod health_watch;
@@ -10,12 +10,7 @@ pub mod ip_blacklist_handler;
 pub mod listener;
 pub mod notifier;
 
-pub static EVENT_EMAIL: OnceLock<String> = OnceLock::new();
-pub static EVENT_SLACK_WEBHOOK: OnceLock<String> = OnceLock::new();
-pub static EVENT_NOTIFY_LEVEL_EMAIL: OnceLock<i16> = OnceLock::new();
-pub static EVENT_NOTIFY_LEVEL_SLACK: OnceLock<i16> = OnceLock::new();
 pub static EVENT_PERSIST_LEVEL: OnceLock<i16> = OnceLock::new();
-
 pub static EVENT_LEVEL_NEW_USER: OnceLock<EventLevel> = OnceLock::new();
 pub static EVENT_LEVEL_USER_EMAIL_CHANGE: OnceLock<EventLevel> = OnceLock::new();
 pub static EVENT_LEVEL_NEW_RAUTHY_ADMIN: OnceLock<EventLevel> = OnceLock::new();
@@ -34,46 +29,6 @@ pub static EVENT_LEVEL_FAILED_LOGINS_7: OnceLock<EventLevel> = OnceLock::new();
 pub static EVENT_LEVEL_FAILED_LOGIN: OnceLock<EventLevel> = OnceLock::new();
 
 pub fn init_event_vars() -> Result<(), ErrorResponse> {
-    // E-Mail setup
-    if let Ok(email) = env::var("EVENT_EMAIL") {
-        info!("Event Notifications will be sent to: {}", email);
-        EVENT_EMAIL
-            .set(email)
-            .expect("init_event_vars() must only be called once");
-    } else {
-        debug!("No Event Notifications will be sent via E-Mail");
-    }
-    let level = env::var("EVENT_NOTIFY_LEVEL_EMAIL")
-        .map(|level| {
-            level.parse::<EventLevel>().expect(
-                "Cannot parse EVENT_NOTIFY_LEVEL_EMAIL. Possible values: info, notice, warning, critical",
-            )
-        })
-        .unwrap_or(EventLevel::Warning);
-    info!("Event Notification Level: {:?}", level);
-    EVENT_NOTIFY_LEVEL_EMAIL
-        .set(level.value())
-        .expect("init_event_vars() must only be called once");
-
-    // Slack setup
-    if let Ok(url) = env::var("EVENT_SLACK_WEBHOOK") {
-        info!("Event Notifications will be sent to Slack");
-        EVENT_SLACK_WEBHOOK.set(url).unwrap();
-    } else {
-        debug!("No Event Notifications will be sent to Slack");
-    }
-    let level = env::var("EVENT_NOTIFY_LEVEL_SLACK")
-        .map(|level| {
-            level.parse::<EventLevel>().expect(
-                "Cannot parse EVENT_NOTIFY_LEVEL_SLACK. Possible values: info, notice, warning, critical",
-            )
-        })
-        .unwrap_or(EventLevel::Notice);
-    EVENT_NOTIFY_LEVEL_SLACK.set(level.value()).unwrap();
-
-    // TODO Matrix setup
-
-    // Levels
     let level = map_env_var_level("EVENT_PERSIST_LEVEL", EventLevel::Info);
     info!("Event Persistence Level: {:?}", level);
     EVENT_PERSIST_LEVEL.set(level.value()).unwrap();

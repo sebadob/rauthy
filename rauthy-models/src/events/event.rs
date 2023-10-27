@@ -270,7 +270,7 @@ impl From<&Event> for Notification {
             EventLevel::Warning => "⚠️",
             EventLevel::Critical => "🆘",
         };
-        let head = format!("{} {} - {}", icon, *EMAIL_SUB_PREFIX, value.level);
+        let head = format!("{} {} - {}", icon, *EMAIL_SUB_PREFIX, value.level.as_str());
 
         let d = DateTime::from_timestamp(value.timestamp / 1000, 0).unwrap_or_default();
         let row_1 = format!("{} {}", d.format("%Y/%m/%d %H:%M:%S"), value.typ);
