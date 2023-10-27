@@ -24,6 +24,7 @@ anyhow = "1"
 argon2 = { workspace = true }
 askama = { workspace = true }
 askama_actix = { workspace = true }
+async-trait = { workspace = true }
 bincode = { workspace = true }
 cached = "0.46"
 chrono = { workspace = true }
@@ -42,9 +43,10 @@ openssl-sys = { workspace = true }
 rand = { workspace = true }
 rand_core = { workspace = true }
 rauthy-common = { path = "../rauthy-common" }
+rauthy-notify = { path = "../rauthy-notify" }
 redhac = { workspace = true }
 regex = { workspace = true }
-reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { workspace = true }
 ring = { workspace = true }
 semver = { workspace = true }
 serde = { workspace = true }

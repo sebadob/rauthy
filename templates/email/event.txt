@@ -1,7 +1,4 @@
-{{ email_sub_prefix }} - {{ level }}
+{{ head }}
 
-{{ ts }}
-{{ typ }}
-{{ data }}
-
-{{ ip }}
+{{ row_1 }}
+{{ row_2 }}

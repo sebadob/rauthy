@@ -8,8 +8,10 @@ use crate::events::{
     EVENT_LEVEL_USER_EMAIL_CHANGE,
 };
 use chrono::{DateTime, NaiveDateTime, Timelike, Utc};
+use rauthy_common::constants::EMAIL_SUB_PREFIX;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{get_local_hostname, get_rand};
+use rauthy_notify::{Notification, NotificationLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
 use std::fmt::{Display, Formatter};
@@ -24,6 +26,17 @@ pub enum EventLevel {
     Notice,
     Warning,
     Critical,
+}
+
+impl From<&EventLevel> for NotificationLevel {
+    fn from(value: &EventLevel) -> Self {
+        match value {
+            EventLevel::Info => NotificationLevel::Info,
+            EventLevel::Notice => NotificationLevel::Notice,
+            EventLevel::Warning => NotificationLevel::Warning,
+            EventLevel::Critical => NotificationLevel::Critical,
+        }
+    }
 }
 
 impl Default for EventLevel {
@@ -247,6 +260,71 @@ pub struct Event {
     pub ip: Option<String>,
     pub data: Option<i64>,
     pub text: Option<String>,
+}
+
+impl From<&Event> for Notification {
+    fn from(value: &Event) -> Self {
+        let icon = match value.level {
+            EventLevel::Info => "ℹ️",
+            EventLevel::Notice => "📢",
+            EventLevel::Warning => "⚠️",
+            EventLevel::Critical => "🆘",
+        };
+        let head = format!("{} {} - {}", icon, *EMAIL_SUB_PREFIX, value.level);
+
+        let d = DateTime::from_timestamp(value.timestamp / 1000, 0).unwrap_or_default();
+        let row_1 = format!("{} {}", d.format("%Y/%m/%d %H:%M:%S"), value.typ);
+
+        let row_2 = match value.typ {
+            EventType::InvalidLogins => Some(format!(
+                "{} invalid logins from IP: `{}`",
+                value.data.unwrap_or_default(),
+                value.ip.as_deref().unwrap_or_default()
+            )),
+            EventType::IpBlacklisted => {
+                let d =
+                    DateTime::from_timestamp(value.data.unwrap_or_default(), 0).unwrap_or_default();
+                Some(format!(
+                    "IP `{}` blacklisted until {}",
+                    value.ip.as_deref().unwrap_or_default(),
+                    d.format("%Y/%m/%d %H:%M:%S"),
+                ))
+            }
+            EventType::IpBlacklistRemoved => Some(format!(
+                "IP `{}` was removed from the blacklist",
+                value.ip.as_deref().unwrap_or_default()
+            )),
+            EventType::JwksRotated => None,
+            EventType::NewUserRegistered => Some(format!(
+                "E-Mail `{}` registered from IP: `{}`",
+                value.text.as_deref().unwrap_or_default(),
+                value.ip.as_deref().unwrap_or_default()
+            )),
+            EventType::NewRauthyAdmin => Some(format!(
+                "User `{}` added to `rauthy_admin` role from IP: `{}`",
+                value.text.as_deref().unwrap_or_default(),
+                value.ip.as_deref().unwrap_or_default()
+            )),
+            EventType::NewRauthyVersion => value.text.clone(),
+            EventType::PossibleBruteForce => Some(format!(
+                "From IP: `{}`",
+                value.ip.as_deref().unwrap_or_default()
+            )),
+            EventType::RauthyStarted => value.text.clone(),
+            EventType::RauthyHealthy => value.text.clone(),
+            EventType::RauthyUnhealthy => value.text.clone(),
+            EventType::SecretsMigrated => value.ip.clone(),
+            EventType::UserEmailChange => value.text.clone(),
+            EventType::Test => value.text.clone(),
+        };
+
+        Self {
+            level: NotificationLevel::from(&value.level),
+            head,
+            row_1,
+            row_2,
+        }
+    }
 }
 
 impl Display for Event {
