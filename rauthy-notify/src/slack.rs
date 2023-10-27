@@ -18,11 +18,11 @@ impl NotifierSlack {
 #[async_trait]
 impl Notify for NotifierSlack {
     async fn notify(&self, notification: &Notification) -> Result<(), ErrorResponse> {
-        debug!("Posting message to Slack");
+        debug!("Sending message to Slack");
 
         let color = notification.level.as_hex_color();
         let fields = vec![SlackMessageField::new(
-            &notification.head,
+            format!("*{}*", notification.head),
             format!(
                 "{}\n{}",
                 notification.row_1,
@@ -55,24 +55,24 @@ impl Notify for NotifierSlack {
 #[derive(Debug, Serialize)]
 struct SlackMessageApi<'a> {
     pub color: &'a str,
-    pub fields: Vec<SlackMessageField<'a>>,
+    pub fields: Vec<SlackMessageField>,
 }
 
 impl SlackMessageApi<'_> {
-    pub fn new<'a>(color: &'a str, fields: Vec<SlackMessageField<'a>>) -> SlackMessageApi<'a> {
+    pub fn new(color: &str, fields: Vec<SlackMessageField>) -> SlackMessageApi {
         SlackMessageApi { color, fields }
     }
 }
 
 /// Matches the SlackAPIs message fields
 #[derive(Debug, Serialize)]
-pub struct SlackMessageField<'a> {
-    title: &'a str,
+pub struct SlackMessageField {
+    title: String,
     value: String,
 }
 
-impl SlackMessageField<'_> {
-    pub fn new(title: &str, value: String) -> SlackMessageField {
-        SlackMessageField { title, value }
+impl SlackMessageField {
+    pub fn new(title: String, value: String) -> Self {
+        Self { title, value }
     }
 }
