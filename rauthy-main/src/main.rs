@@ -29,7 +29,9 @@ use rauthy_handlers::middleware::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
 use rauthy_handlers::middleware::principal::RauthyPrincipalMiddleware;
 use rauthy_handlers::openapi::ApiDoc;
-use rauthy_handlers::{clients, events, generic, groups, oidc, roles, scopes, sessions, users};
+use rauthy_handlers::{
+    blacklist, clients, events, generic, groups, oidc, roles, scopes, sessions, users,
+};
 use rauthy_models::app_state::{AppState, Caches, DbPool};
 use rauthy_models::email::EMail;
 use rauthy_models::events::event::Event;
@@ -483,12 +485,16 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                     .service(generic::redirect_v1)
                     .service(
                     web::scope("/v1")
+                        .service(blacklist::get_blacklist)
+                        .service(blacklist::post_blacklist)
+                        .service(blacklist::delete_blacklist)
                         .service(events::sse_events)
                         .service(events::post_event_test)
                         .service(generic::get_index)
                         .service(generic::get_account_html)
                         .service(generic::get_admin_html)
                         .service(generic::get_admin_attr_html)
+                        .service(generic::get_admin_blacklist_html)
                         .service(generic::get_admin_clients_html)
                         .service(generic::get_admin_config_html)
                         .service(generic::get_admin_docs_html)

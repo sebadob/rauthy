@@ -19,6 +19,17 @@ pub struct Argon2ParamsResponse {
     pub p_cost: u32,
 }
 
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct BlacklistResponse {
+    pub ips: Vec<BlacklistedIp>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct BlacklistedIp {
+    pub ip: String,
+    pub exp: i64,
+}
+
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct ClientResponse {
     pub id: String,

@@ -194,6 +194,7 @@ impl ApiKeyEntity {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AccessGroup {
+    Blacklist,
     Clients,
     Events,
     Generic,

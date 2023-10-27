@@ -13,19 +13,30 @@
 
 <div class="container">
     <div>
-        <OrderBy items={searchItems} bind:resItems={resItems} options={orderOptions} firstDirReverse={firstDirReverse}/>
+        <OrderBy
+                items={searchItems}
+                bind:resItems={resItems}
+                options={orderOptions}
+                firstDirReverse={firstDirReverse}
+        />
     </div>
 
-    <div class="divider"></div>
+    {#if orderOptions.length > 0}
+        <div class="divider"></div>
+    {/if}
 
     <div>
-        <SearchBar items={items} bind:resItems={searchItems} options={searchOptions}/>
+        <SearchBar
+                items={items}
+                bind:resItems={searchItems}
+                options={searchOptions}
+        />
     </div>
 </div>
 
 <style>
     .divider {
-        margin: 0 17px;
+        margin: 0 1rem;
     }
 
     .container {

@@ -1,4 +1,4 @@
-use crate::{clients, events, generic, groups, oidc, roles, scopes, sessions, users};
+use crate::{blacklist, clients, events, generic, groups, oidc, roles, scopes, sessions, users};
 use actix_web::web;
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
@@ -14,6 +14,10 @@ use utoipa::{openapi, OpenApi};
 #[derive(OpenApi)]
 #[openapi(
     paths(
+        blacklist::get_blacklist,
+        blacklist::post_blacklist,
+        blacklist::delete_blacklist,
+
         clients::get_clients,
         clients::get_client_by_id,
         clients::get_client_colors,
@@ -127,6 +131,7 @@ use utoipa::{openapi, OpenApi};
 
             request::AuthCodeRequest,
             request::AuthRequest,
+            request::IpBlacklistRequest,
             request::ColorsRequest,
             request::EncKeyMigrateRequest,
             request::LoginRequest,
@@ -158,6 +163,8 @@ use utoipa::{openapi, OpenApi};
             request::WebauthnAuthStartRequest,
             request::WebauthnAuthFinishRequest,
 
+            response::BlacklistResponse,
+            response::BlacklistedIp,
             response::LoginTimeResponse,
             response::ClientResponse,
             response::ClientSecretResponse,

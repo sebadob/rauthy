@@ -368,7 +368,7 @@ impl Event {
     pub fn ip_blacklist_removed(ip: String) -> Self {
         Self::new(
             EVENT_LEVEL_IP_BLACKLISTED.get().cloned().unwrap(),
-            EventType::IpBlacklisted,
+            EventType::IpBlacklistRemoved,
             Some(ip),
             None,
             None,

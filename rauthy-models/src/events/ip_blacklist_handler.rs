@@ -4,18 +4,19 @@ use std::time::Duration;
 use tokio::sync::oneshot;
 use tracing::{debug, error};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum IpBlacklistReq {
     CheckExp,
     Blacklist(IpBlacklist),
     BlacklistCheck(IpBlacklistCheck),
-    BlacklistCleanup(IpBlacklistCleanup),
+    BlacklistDelete(String),
     LoginCheck(IpFailedLoginCheck),
     LoginFailedSet(IpLoginFailedSet),
-    LoginCleanup(IpBlacklistCleanup),
+    LoginFailedDelete(String),
+    GetBlacklistedIps(oneshot::Sender<HashMap<String, DateTime<Utc>>>),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct IpBlacklist {
     pub ip: String,
     pub exp: DateTime<Utc>,
@@ -27,12 +28,6 @@ pub struct IpBlacklistCheck {
     pub tx: oneshot::Sender<Option<DateTime<Utc>>>,
 }
 
-impl PartialEq for IpBlacklistCheck {
-    fn eq(&self, other: &Self) -> bool {
-        self.ip == other.ip
-    }
-}
-
 #[derive(Debug)]
 pub struct IpFailedLoginCheck {
     pub ip: String,
@@ -41,27 +36,16 @@ pub struct IpFailedLoginCheck {
     pub tx: oneshot::Sender<Option<u32>>,
 }
 
-impl PartialEq for IpFailedLoginCheck {
-    fn eq(&self, other: &Self) -> bool {
-        self.ip == other.ip
-    }
-}
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct IpLoginFailedSet {
     pub ip: String,
     pub invalid_logins: u32,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct IpBlacklistCleanup {
-    pub ip: String,
-}
-
 /// Handles blacklisted IP's and IP's with failed logins
 pub async fn run(tx: flume::Sender<IpBlacklistReq>, rx: flume::Receiver<IpBlacklistReq>) {
     let mut data_blacklist: HashMap<String, DateTime<Utc>> = HashMap::with_capacity(2);
-    let mut data_failed_logins: HashMap<String, u32> = HashMap::with_capacity(5);
+    let mut data_failed_logins: HashMap<String, u32> = HashMap::with_capacity(2);
 
     let mut exp_checker_handle = tokio::spawn(spawn_exp_checker(tx.clone()));
 
@@ -133,12 +117,18 @@ pub async fn run(tx: flume::Sender<IpBlacklistReq>, rx: flume::Receiver<IpBlackl
                     }
                 }
 
-                IpBlacklistReq::BlacklistCleanup(req) => {
-                    data_blacklist.remove(&req.ip);
+                IpBlacklistReq::BlacklistDelete(ip) => {
+                    data_blacklist.remove(&ip);
                 }
 
-                IpBlacklistReq::LoginCleanup(req) => {
-                    data_failed_logins.remove(&req.ip);
+                IpBlacklistReq::LoginFailedDelete(ip) => {
+                    data_failed_logins.remove(&ip);
+                }
+
+                IpBlacklistReq::GetBlacklistedIps(tx) => {
+                    // just clone the whole HashMap and don't do any iterations here
+                    // this handler is in a performance-critical spot.
+                    tx.send(data_blacklist.clone()).unwrap();
                 }
             },
 
