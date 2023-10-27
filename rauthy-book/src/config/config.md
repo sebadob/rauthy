@@ -225,9 +225,8 @@ JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
 # The E-Mail address event notifications should be sent to
 #EVENT_EMAIL=admin@localhost.de
 
-# The notification level for events. Works the same way as a 
-# logging level. For instance: 'notice' means send out a 
-# notifications for all events with the info level or higher.
+# The notification level for events. Works the same way as a logging level. For instance:
+# 'notice' means send out a notifications for all events with the info level or higher.
 # Possible values:
 # - info
 # - notice
@@ -236,9 +235,8 @@ JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
 # default: 'notice'
 EVENT_NOTIFY_LEVEL=notice
 
-# Define the level from which on events should be persisted 
-# inside the database. All events with a lower level will be 
-# lost, if there is no active event subscriber.
+# Define the level from which on events should be persisted inside the database.
+# All events with a lower level will be lost, if there is no active event subscriber.
 # Possible values:
 # - info
 # - notice
@@ -247,47 +245,41 @@ EVENT_NOTIFY_LEVEL=notice
 # default: 'info'
 EVENT_PERSIST_LEVEL=info
 
-# Define the number of days when events should be cleaned up 
-# from the database.
+# Define the number of days when events should be cleaned up from the database.
 # default: 31
 EVENT_CLEANUP_DAYS=31
 
-# The level for the generated Event after a new user has been 
-# registered.
+# The level for the generated Event after a new user has been registered.
 # default: info
 EVENT_LEVEL_NEW_USER=info
-# The level for the generated Event after a user has changed 
-# his E-Mail
+# The level for the generated Event after a user has changed his E-Mail
 # default: notice
 EVENT_LEVEL_USER_EMAIL_CHANGE=notice
-# The level for the generated Event after a user has been given 
-# the 'rauthy_admin' role
+# The level for the generated Event after a user has been given the 'rauthy_admin' role
 # default: notice
 EVENT_LEVEL_RAUTHY_ADMIN=notice
+# The level for the generated Event after a new App version has been found
+# default: notice
+EVENT_LEVEL_RAUTHY_VERSION=notice
 # The level for the generated Event after the JWKS has been rotated
 # default: notice
 EVENT_LEVEL_JWKS_ROTATE=notice
-# The level for the generated Event after DB secrets have been 
-# migrated to a new key
+# The level for the generated Event after DB secrets have been migrated to a new key
 # default: notice
 EVENT_LEVEL_SECRETS_MIGRATED=notice
-# The level for the generated Event after a Rauthy instance 
-# has been started
+# The level for the generated Event after a Rauthy instance has been started
 # default: info
 EVENT_LEVEL_RAUTHY_START=info
-# The level for the generated Event after a Rauthy entered a 
-# healthy state (again)
+# The level for the generated Event after a Rauthy entered a healthy state (again)
 # default: notice
 EVENT_LEVEL_RAUTHY_HEALTHY=notice
-# The level for the generated Event after a Rauthy entered an 
-# unhealthy state
+# The level for the generated Event after a Rauthy entered an unhealthy state
 # default: critical
 EVENT_LEVEL_RAUTHY_UNHEALTHY=critical
 # The level for the generated Event after an IP has been blacklisted
 # default: warning
 EVENT_LEVEL_IP_BLACKLISTED=warning
-# The level for the generated Event after certain amounts of 
-# false logins from an IP
+# The level for the generated Event after certain amounts of false logins from an IP
 # default: criticao
 EVENT_LEVEL_FAILED_LOGINS_25=critical
 # default: criticao
@@ -300,6 +292,13 @@ EVENT_LEVEL_FAILED_LOGINS_10=warning
 EVENT_LEVEL_FAILED_LOGINS_7=notice
 # default: info
 EVENT_LEVEL_FAILED_LOGIN=info
+
+# If set to 'true', it will disable the app version checker.
+# This is a scheduled task that looks up the latest version periodically
+# by doing a request to the Github API to check the latest release.
+# This ignores any type of prerelease and will only notify for a new stable.
+# default: false
+#DISABLE_APP_VERSION_CHECK=false
 
 #####################################
 ####### LIFETIMES / TIMEOUTS ########
