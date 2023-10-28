@@ -133,9 +133,10 @@ impl DbVersion {
 
         // the passkeys table was introduced with v0.15.0
         #[cfg(not(feature = "sqlite"))]
-        let passkeys_exist = query!("select * from pg_tables where tablename = 'passkeys' limit 1")
+        let is_db_v0_15_0 = query!("select * from pg_tables where tablename = 'passkeys' limit 1")
             .fetch_one(db)
-            .await;
+            .await
+            .is_err();
         #[cfg(feature = "sqlite")]
         let is_db_v0_15_0 = query!(
             "select * from sqlite_master where type = 'table' and name = 'passkeys' limit 1"
@@ -145,11 +146,33 @@ impl DbVersion {
         .is_err();
         if is_db_v0_15_0 {
             panic!(
-                "Your database is older than Rauthy v0.15.0.\n\
+                "Your database is Rauthy v0.15.0. You need to upgrade to Rauthy v0.16 first.\n\
                 Please check https://github.com/sebadob/rauthy/releases for additional information."
             );
         }
 
+        // To check for any DB older than 0.15.0, we check for the existence of the 'clients' table
+        // which is there since the very beginning.
+        #[cfg(not(feature = "sqlite"))]
+        let is_db_pre_v0_15_0 =
+            query!("select * from pg_tables where tablename = 'clients' limit 1")
+                .fetch_one(db)
+                .await
+                .is_err();
+        #[cfg(feature = "sqlite")]
+        let is_db_pre_v0_15_0 =
+            query!("select * from sqlite_master where type = 'table' and name = 'clients' limit 1")
+                .fetch_one(db)
+                .await
+                .is_err();
+        if is_db_pre_v0_15_0 {
+            panic!(
+                "Your database is older than Rauthy v0.15.0. You need to upgrade to Rauthy v0.15 first.\n\
+                Please check https://github.com/sebadob/rauthy/releases for additional information."
+            );
+        }
+
+        // Since we did not find the clients table, we can assume, that the DB is really empty.
         Ok(())
     }
 }
