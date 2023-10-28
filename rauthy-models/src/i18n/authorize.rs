@@ -5,6 +5,7 @@ use serde::Serialize;
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct I18nAuthorize<'a> {
+    client_force_mfa: &'a str,
     email: &'a str,
     email_bad_format: &'a str,
     email_required: &'a str,
@@ -38,6 +39,8 @@ impl SsrJson for I18nAuthorize<'_> {
 impl I18nAuthorize<'_> {
     fn build_en() -> Self {
         Self {
+            client_force_mfa: r#"This login forces MFA to achieve higher security.
+To get access, you need to log in to your account and add at least one additional Passkey"#,
             email: "E-Mail",
             email_bad_format: "Bad E-Mail format",
             email_required: "E-Mail is required",
@@ -58,6 +61,9 @@ impl I18nAuthorize<'_> {
 
     fn build_de() -> Self {
         Self {
+            client_force_mfa: r#"Dieser Login setzt MFA voraus für eine erhöhte Sicherheit.
+Um Zugang zu bekommen, müssen Sie sie in Ihren Account einloggen und mindestens einen Passkey
+hinzufügen."#,
             email: "E-Mail",
             email_bad_format: "Inkorrektes E-Mail Format",
             email_required: "E-Mail ist notwendig",
