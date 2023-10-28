@@ -124,6 +124,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         scopes,
         default_scopes,
         challenges: c.challenges,
+        force_mfa: c.force_mfa,
     };
     let res = client
         .put(&url_client)

@@ -538,6 +538,7 @@ pub struct UpdateClientRequest {
     /// Validation: `Vec<^(plain|S256)$>`
     #[validate(custom(function = "validate_vec_challenge"))]
     pub challenges: Option<Vec<String>>,
+    pub force_mfa: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]

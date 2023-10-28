@@ -20,7 +20,7 @@ use jwt_simple::algorithms::{
     Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
 };
 use rand_core::OsRng;
-use rauthy_common::constants::{DB_TYPE, DEV_MODE};
+use rauthy_common::constants::{ADMIN_FORCE_MFA, DB_TYPE, DEV_MODE};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::{encrypt, get_rand};
 use rauthy_common::DbType;
@@ -59,6 +59,7 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         scopes: "openid".to_string(),
         default_scopes: "openid".to_string(),
         challenge: Some("S256".to_string()),
+        force_mfa: *ADMIN_FORCE_MFA,
     };
 
     #[cfg(feature = "sqlite")]
@@ -66,8 +67,8 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         r#"insert or replace into clients (id, name, enabled, confidential,
         secret, secret_kid, redirect_uris, post_logout_redirect_uris, allowed_origins,
         flows_enabled, access_token_alg, id_token_alg, refresh_token, auth_code_lifetime,
-        access_token_lifetime, scopes, default_scopes, challenge)
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#,
+        access_token_lifetime, scopes, default_scopes, challenge, force_mfa)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#,
         rauthy.id,
         rauthy.name,
         rauthy.enabled,
@@ -86,6 +87,7 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         rauthy.scopes,
         rauthy.default_scopes,
         rauthy.challenge,
+        rauthy.force_mfa,
     );
 
     #[cfg(not(feature = "sqlite"))]
@@ -93,13 +95,13 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
         redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled,
         access_token_alg, id_token_alg, refresh_token, auth_code_lifetime,
-        access_token_lifetime, scopes, default_scopes, challenge)
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+        access_token_lifetime, scopes, default_scopes, challenge, force_mfa)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
         on conflict(id) do update set name = $2, enabled = $3, confidential = $4, secret = $5,
         secret_kid = $6, redirect_uris = $7, post_logout_redirect_uris = $8, allowed_origins = $9,
         flows_enabled = $10, access_token_alg = $11, id_token_alg = $12, refresh_token = $13,
         auth_code_lifetime = $14, access_token_lifetime = $15, scopes = $16, default_scopes = $17,
-        challenge = $18"#,
+        challenge = $18, force_mfa = $19"#,
         rauthy.id,
         rauthy.name,
         rauthy.enabled,
@@ -118,6 +120,7 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         rauthy.scopes,
         rauthy.default_scopes,
         rauthy.challenge,
+        rauthy.force_mfa,
     );
 
     q.execute(db).await?;
@@ -347,8 +350,8 @@ pub async fn migrate_from_sqlite(
             r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
             redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg,
             id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
-            challenge)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#)
+            challenge, force_mfa)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#)
             .bind(&b.id)
             .bind(&b.name)
             .bind(b.enabled)
@@ -367,6 +370,7 @@ pub async fn migrate_from_sqlite(
             .bind(&b.scopes)
             .bind(&b.default_scopes)
             .bind(&b.challenge)
+            .bind(b.force_mfa)
             .execute(db_to)
             .await?;
     }
@@ -699,8 +703,8 @@ pub async fn migrate_from_postgres(
             r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
             redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg,
             id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
-            challenge)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#)
+            challenge, force_mfa)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#)
             .bind(&b.id)
             .bind(&b.name)
             .bind(b.enabled)
@@ -719,6 +723,7 @@ pub async fn migrate_from_postgres(
             .bind(&b.scopes)
             .bind(&b.default_scopes)
             .bind(&b.challenge)
+            .bind(b.force_mfa)
             .execute(db_to)
             .await?;
     }

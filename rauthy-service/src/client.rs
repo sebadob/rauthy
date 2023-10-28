@@ -55,6 +55,7 @@ pub async fn update_client(
     client.default_scopes = Client::sanitize_scopes(data, client_req.default_scopes).await?;
 
     client.challenge = client_req.challenges.map(|c| c.join(","));
+    client.force_mfa = client_req.force_mfa;
 
     client.save(data, None).await?;
     Ok(client)

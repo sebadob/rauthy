@@ -265,6 +265,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         ],
         default_scopes: vec!["openid".to_string(), "email".to_string()],
         challenges: None,
+        force_mfa: false,
     };
     let url_client = format!("{}/clients/{}", backend_url, CLIENT_ID);
     let auth_headers = get_auth_headers().await?;

@@ -58,6 +58,7 @@ pub struct Client {
     pub scopes: String,
     pub default_scopes: String,
     pub challenge: Option<String>,
+    pub force_mfa: bool,
 }
 
 // CRUD
@@ -80,8 +81,8 @@ impl Client {
             r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
             redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg,
             id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
-            challenge)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#,
+            challenge, force_mfa)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#,
             client.id,
             client.name,
             client.enabled,
@@ -100,6 +101,7 @@ impl Client {
             client.scopes,
             client.default_scopes,
             client.challenge,
+            client.force_mfa,
         )
             .execute(&data.db)
             .await?
@@ -309,7 +311,7 @@ impl Client {
             secret_kid = $5, redirect_uris = $6, post_logout_redirect_uris = $7, allowed_origins = $8,
             flows_enabled = $9, access_token_alg = $10, id_token_alg = $11, refresh_token = $12,
             auth_code_lifetime = $13, access_token_lifetime = $14, scopes = $15, default_scopes = $16,
-            challenge = $17 where id = $18"#,
+            challenge = $17, force_mfa= $18 where id = $19"#,
             self.name,
             self.enabled,
             self.confidential,
@@ -327,7 +329,8 @@ impl Client {
             self.scopes,
             self.default_scopes,
             self.challenge,
-            self.id
+            self.force_mfa,
+            self.id,
         );
 
         if let Some(txn) = txn {
@@ -786,6 +789,7 @@ impl Default for Client {
             scopes: "openid,email,profile,groups".to_string(),
             default_scopes: "openid".to_string(),
             challenge: Some("S256".to_string()),
+            force_mfa: false,
         }
     }
 }
@@ -886,6 +890,7 @@ mod tests {
             scopes: "openid,email,profile,groups".to_string(),
             default_scopes: "openid,email,profile,groups".to_string(),
             challenge: Some("S256,plain".to_string()),
+            force_mfa: false,
         };
 
         assert_eq!(
