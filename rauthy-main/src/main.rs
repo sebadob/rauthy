@@ -23,7 +23,6 @@ use rauthy_common::constants::{
     CACHE_NAME_SESSIONS, CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, POW_EXP, RAUTHY_VERSION,
     SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
-use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::password_hasher;
 use rauthy_handlers::middleware::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
@@ -32,7 +31,7 @@ use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
     api_keys, blacklist, clients, events, generic, groups, oidc, roles, scopes, sessions, users,
 };
-use rauthy_models::app_state::{AppState, Caches, DbPool};
+use rauthy_models::app_state::{AppState, Caches};
 use rauthy_models::email::EMail;
 use rauthy_models::events::event::Event;
 use rauthy_models::events::health_watch::watch_health;
@@ -40,7 +39,6 @@ use rauthy_models::events::listener::EventListener;
 use rauthy_models::events::notifier::EventNotifier;
 use rauthy_models::events::{init_event_vars, ip_blacklist_handler};
 use rauthy_models::{email, ListenScheme};
-use sqlx::{query, query_as};
 use std::error::Error;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
@@ -179,11 +177,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .await?,
     );
-
-    // TODO remove with v0.17
-    TEMP_migrate_passkeys_uv(&app_state.db)
-        .await
-        .expect("Passkey UV migration to not fail");
 
     // events listener
     init_event_vars().unwrap();
@@ -546,36 +539,4 @@ fn get_https_port() -> String {
     let port = env::var("LISTEN_PORT_HTTPS").unwrap_or_else(|_| "8443".to_string());
     info!("HTTPS listen port: {}", port);
     port
-}
-
-async fn TEMP_migrate_passkeys_uv(db: &DbPool) -> Result<(), ErrorResponse> {
-    use rauthy_models::entity::webauthn::PasskeyEntity;
-    use webauthn_rs::prelude::Credential;
-
-    let entities: Vec<PasskeyEntity> = query_as!(
-        PasskeyEntity,
-        "select * from passkeys where user_verified is null"
-    )
-    .fetch_all(db)
-    .await?;
-
-    // TODO
-    let mut count = 0;
-    for entity in entities {
-        let pk = entity.get_pk();
-        let cred = Credential::from(pk.clone());
-        let uv = Some(cred.user_verified);
-        query!(
-            "update passkeys set user_verified = $1 where passkey_user_id = $2",
-            uv,
-            entity.passkey_user_id
-        )
-        .execute(db)
-        .await?;
-        count += 1;
-    }
-
-    debug!("\n\n\tupdated {} passkey user_verified columns\n", count);
-
-    Ok(())
 }

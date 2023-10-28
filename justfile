@@ -153,8 +153,7 @@ build-sqlite: build-docs build-ui test-sqlite
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # TODO skip exiting early on clippy warnings during v0.16
-    #DATABASE_URL={{db_url_sqlite}} cargo clippy --features sqlite -- -D warnings
+    DATABASE_URL={{db_url_sqlite}} cargo clippy --features sqlite -- -D warnings
     DATABASE_URL={{db_url_sqlite}} cargo build \
         --release \
         --target x86_64-unknown-linux-musl \
@@ -167,8 +166,7 @@ build-postgres: build-docs build-ui test-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # TODO skip exiting early on clippy warnings during v0.16
-    #DATABASE_URL={{db_url_postgres}} cargo clippy -- -D warnings
+    DATABASE_URL={{db_url_postgres}} cargo clippy -- -D warnings
     DATABASE_URL={{db_url_postgres}} cargo build \
         --release \
         --target x86_64-unknown-linux-musl
@@ -215,25 +213,27 @@ publish-nightly: build-sqlite build-postgres
 
 
 # publishes the application images - full pipeline incl clippy and testing
-publish: build-sqlite build-postgres
+publish-versions: build-sqlite build-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
     docker build --no-cache -t sdobedev/rauthy:$TAG -f Dockerfile.postgres .
     docker push sdobedev/rauthy:$TAG
-    docker build --no-cache -f Dockerfile.debug -t sdobedev/rauthy:$TAG-debug -f Dockerfile.postgres.debug .
-    docker push sdobedev/rauthy:$TAG-debug
 
     docker build --no-cache -t sdobedev/rauthy:$TAG-lite -f Dockerfile.sqlite .
     docker push sdobedev/rauthy:$TAG-lite
-    docker build --no-cache -f Dockerfile.debug -t sdobedev/rauthy:$TAG-lite-debug -f Dockerfile.sqlite.debug .
-    docker push sdobedev/rauthy:$TAG-lite-debug
 
     # push both default images to ghcr as well
     docker tag sdobedev/rauthy:$TAG ghcr.io/sebadob/rauthy:$TAG
     docker push ghcr.io/sebadob/rauthy:$TAG
     docker tag sdobedev/rauthy:$TAG-lite ghcr.io/sebadob/rauthy:$TAG-lite
     docker push ghcr.io/sebadob/rauthy:$TAG-lite
+
+
+# publishes the application images - full pipeline incl clippy and testing
+publish: build-sqlite build-postgres publish-versions
+    #!/usr/bin/env bash
+    set -euxo pipefail
 
     # the `latest` image will always point to the postgres version, which is used more often
     docker tag sdobedev/rauthy:$TAG sdobedev/rauthy:latest
