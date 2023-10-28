@@ -95,7 +95,7 @@ impl DbVersion {
     ) -> Result<(), ErrorResponse> {
         // this check panics on purpose and it is there to never forget to adjust this
         // version check before doing any major or minor release
-        if app_version.major != 0 || app_version.minor != 16 {
+        if app_version.major != 0 || app_version.minor != 17 {
             panic!(
                 "\nDbVersion::check_app_version needs adjustment for the new RAUTHY_VERSION: {}",
                 RAUTHY_VERSION
@@ -104,15 +104,22 @@ impl DbVersion {
 
         // warn on prerelease usage
         if !app_version.pre.is_empty() {
-            warn!("!!! Caution: you are using a prerelease version !!!");
+            warn!(
+                "!!! Caution: you are using a prerelease version: {} !!!",
+                app_version.pre.as_str()
+            );
         }
 
         // check for the lowest DB version we can use with this App Version
         if let Some(db_version) = db_version {
-            if db_version.major != 0 || db_version.minor < 15 || db_version.minor > 16 {
+            let lowest_compatible_version = Version::parse("0.16.0").unwrap();
+
+            if db_version < &lowest_compatible_version {
                 panic!(
-                    "\nRauthy {} needs at least a DB version v0.15 and max v0.16",
-                    app_version
+                    "Your database is too old for this upgrade.\n\
+                    Rauthy {} needs at least a DB version {}\n\
+                    Please check https://github.com/sebadob/rauthy/releases for additional information.",
+                    app_version, lowest_compatible_version,
                 );
             }
 
@@ -121,19 +128,26 @@ impl DbVersion {
 
         // check the DB version in another way if we did not find an existing DB version
 
+        // from v0.16.0 on we did have the db_version inside the `config` table,
+        // which is already checked above
+
         // the passkeys table was introduced with v0.15.0
         #[cfg(not(feature = "sqlite"))]
         let passkeys_exist = query!("select * from pg_tables where tablename = 'passkeys' limit 1")
             .fetch_one(db)
             .await;
         #[cfg(feature = "sqlite")]
-        let passkeys_exist = query!(
+        let is_db_v0_15_0 = query!(
             "select * from sqlite_master where type = 'table' and name = 'passkeys' limit 1"
         )
         .fetch_one(db)
-        .await;
-        if passkeys_exist.is_err() {
-            panic!("\nYou need to start at least rauthy v0.15 before you can upgrade");
+        .await
+        .is_err();
+        if is_db_v0_15_0 {
+            panic!(
+                "Your database is older than Rauthy v0.15.0.\n\
+                Please check https://github.com/sebadob/rauthy/releases for additional information."
+            );
         }
 
         Ok(())
