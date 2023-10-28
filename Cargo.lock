@@ -3946,6 +3946,7 @@ dependencies = [
  "rauthy-service",
  "redhac",
  "rust-embed 6.8.1",
+ "semver",
  "time",
  "tokio",
  "tokio-test",

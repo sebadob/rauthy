@@ -4,6 +4,7 @@
     import BrowserCheck from "../../components/BrowserCheck.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
     import LangSelector from "$lib/LangSelector.svelte";
+    import AppVersion from "../../components/AppVersion.svelte";
 
     const btnWidth = "9rem";
 
@@ -44,6 +45,10 @@
             <Button on:click={redirectToAdmin} width={btnWidth}>{t.adminLogin.toUpperCase()}</Button>
         </div>
         <LangSelector absolute />
+
+        <div class="version">
+            <AppVersion />
+        </div>
     </WithI18n>
 </BrowserCheck>
 
@@ -51,5 +56,11 @@
     .btn {
         display: flex;
         flex-direction: column;
+    }
+
+    .version {
+        position: absolute;
+        bottom: 0;
+        right: 0;
     }
 </style>

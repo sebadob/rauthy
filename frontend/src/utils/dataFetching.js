@@ -46,6 +46,14 @@ export async function authorizeRefresh(data) {
 	return res;
 }
 
+
+export async function getAppVersion() {
+	return await fetch('/auth/v1/version', {
+		method: 'GET',
+		headers: HEADERS.json,
+	});
+}
+
 export async function checkAdminAccess() {
 	return await fetch('/auth/v1/auth_check_admin', {
 		method: 'GET',
