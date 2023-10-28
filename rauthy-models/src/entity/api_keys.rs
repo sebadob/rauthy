@@ -4,11 +4,12 @@ use chrono::Utc;
 use rauthy_common::constants::{API_KEY_LENGTH, CACHE_NAME_12HR};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{decrypt, encrypt, get_rand};
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
+use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
 use ring::digest;
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
 use tracing::error;
+use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiKeyEntity {
@@ -53,13 +54,16 @@ impl ApiKeyEntity {
         .execute(&data.db)
         .await?;
 
-        Ok(secret_plain)
+        let secret_fmt = format!("{}${}", name, secret_plain);
+        Ok(secret_fmt)
     }
 
     pub async fn delete(data: &web::Data<AppState>, name: &str) -> Result<(), ErrorResponse> {
         query!("DELETE FROM api_keys WHERE name = $1", name)
-            .fetch_one(&data.db)
+            .execute(&data.db)
             .await?;
+
+        Self::cache_invalidate(data, name).await?;
         Ok(())
     }
 
@@ -81,17 +85,18 @@ impl ApiKeyEntity {
         data: &web::Data<AppState>,
         name: &str,
     ) -> Result<String, ErrorResponse> {
-        let slf = Self::find(data, name).await?;
+        let entity = ApiKeyEntity::find(data, name).await?;
+        let api_key = entity.into_api_key(data)?;
 
         let enc_key = data.enc_keys.get(&data.enc_key_active).unwrap();
 
+        // generate a new secret
         let secret_plain = get_rand(API_KEY_LENGTH);
-        let secret_hash = digest::digest(&digest::SHA256, secret_plain.as_bytes());
-        let secret_enc =
-            encrypt(secret_hash.as_ref(), enc_key).expect("Encryption Keys not set up correctly");
+        let hash = digest::digest(&digest::SHA256, secret_plain.as_bytes());
+        let secret_enc = encrypt(hash.as_ref(), enc_key).unwrap();
 
-        let access_bytes =
-            bincode::deserialize::<Vec<u8>>(&slf.access).expect("deserializing AccessRights");
+        // re-encrypt access rights with possibly new active key as well
+        let access_bytes = bincode::serialize(&api_key.access)?;
         let access_enc =
             encrypt(&access_bytes, enc_key).expect("Encryption Keys not set up correctly");
 
@@ -102,10 +107,49 @@ impl ApiKeyEntity {
             access_enc,
             name,
         )
-        .fetch_one(&data.db)
+        .execute(&data.db)
         .await?;
 
-        Ok(secret_plain)
+        Self::cache_invalidate(data, name).await?;
+
+        let secret_fmt = format!("{}${}", name, secret_plain);
+        Ok(secret_fmt)
+    }
+
+    /// Updates the API Key. Does NOT update the secret in any way!
+    pub async fn update(
+        data: &web::Data<AppState>,
+        name: &str,
+        expires: Option<i64>,
+        access: Vec<ApiKeyAccess>,
+    ) -> Result<(), ErrorResponse> {
+        let entity = ApiKeyEntity::find(data, name).await?;
+        let api_key = entity.into_api_key(data)?;
+
+        let enc_key = data.enc_keys.get(&data.enc_key_active).unwrap();
+
+        let secret_enc = encrypt(&api_key.secret, enc_key).unwrap();
+
+        let access_bytes = bincode::serialize(&access)?;
+        let access_enc =
+            encrypt(&access_bytes, enc_key).expect("Encryption Keys not set up correctly");
+
+        query!(
+            r#"UPDATE
+            api_keys set secret = $1, expires = $2, enc_key_id = $3, access = $4
+            WHERE name = $5"#,
+            secret_enc,
+            expires,
+            data.enc_key_active,
+            access_enc,
+            name,
+        )
+        .execute(&data.db)
+        .await?;
+
+        Self::cache_invalidate(data, name).await?;
+
+        Ok(())
     }
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
@@ -122,11 +166,29 @@ impl ApiKeyEntity {
         .execute(&data.db)
         .await?;
 
+        Self::cache_invalidate(data, &self.name).await?;
+
         Ok(())
     }
 }
 
 impl ApiKeyEntity {
+    fn cache_idx(name: &str) -> String {
+        format!("api_key_{}", name)
+    }
+
+    async fn cache_invalidate(data: &web::Data<AppState>, name: &str) -> Result<(), ErrorResponse> {
+        let idx = Self::cache_idx(name);
+        cache_del(
+            CACHE_NAME_12HR.to_string(),
+            idx,
+            &data.caches.ha_cache_config,
+        )
+        .await?;
+
+        Ok(())
+    }
+
     #[inline(always)]
     pub async fn api_key_from_token_validated(
         data: &web::Data<AppState>,
@@ -139,7 +201,7 @@ impl ApiKeyEntity {
             )
         })?;
 
-        let idx = format!("api_key_{}", name);
+        let idx = Self::cache_idx(name);
         let api_key = if let Some(key) = cache_get!(
             ApiKey,
             CACHE_NAME_12HR.to_string(),
@@ -191,8 +253,7 @@ impl ApiKeyEntity {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum AccessGroup {
     Blacklist,
     Clients,
@@ -203,11 +264,11 @@ pub enum AccessGroup {
     Secrets,
     Sessions,
     Scopes,
-    UserAttrs,
+    UserAttributes,
     Users,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum AccessRights {
     Read,
@@ -216,7 +277,7 @@ pub enum AccessRights {
     Delete,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ApiKeyAccess {
     pub group: AccessGroup,
     pub access_rights: Vec<AccessRights>,
