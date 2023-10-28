@@ -22,6 +22,7 @@ rauthy-models = { path = "../rauthy-models" }
 rauthy-service = { path = "../rauthy-service" }
 redhac = { workspace = true }
 rust-embed = { version = "6.8", features = ["actix-web", "tokio"] }
+semver = { workspace = true }
 time = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }

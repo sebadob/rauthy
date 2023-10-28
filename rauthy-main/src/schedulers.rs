@@ -513,6 +513,7 @@ pub async fn app_version_check(
     }
 
     // do a first check shortly after startup to not wait hours on a fresh install
+    // tokio::time::sleep(Duration::from_secs(10)).await;
     tokio::time::sleep(Duration::from_secs(120)).await;
     check_app_version(&data, &rx_health).await;
 
@@ -539,30 +540,39 @@ async fn check_app_version(
 
     debug!("Running app_version_check scheduler");
 
-    let (latest_version, url) = match LatestAppVersion::lookup().await {
-        Ok(l) => l,
+    match LatestAppVersion::lookup().await {
+        Ok((latest_version, url)) => {
+            if let Err(err) =
+                LatestAppVersion::upsert(data, latest_version.clone(), url.clone()).await
+            {
+                error!("Inserting LatestAppVersion into database: {:?}", err);
+            }
+
+            let this_version = semver::Version::parse(RAUTHY_VERSION).unwrap();
+
+            if latest_version > this_version && latest_version.pre.is_empty() {
+                info!("A new Rauthy App Version is available: {}", latest_version);
+                let version_url = format!("v{} -> {}", latest_version, url);
+
+                if let Err(err) =
+                    LatestAppVersion::upsert(data, latest_version, version_url.clone()).await
+                {
+                    error!("Saving LatestAppVersion into DB: {:?}", err);
+                }
+
+                data.tx_events
+                    .send_async(Event::new_rauthy_version(version_url))
+                    .await
+                    .unwrap();
+            } else {
+                debug!("No new Rauthy App Version available");
+            }
+        }
+
         Err(err) => {
             error!("LatestAppVersion::lookup(): {:?}", err);
-            return;
         }
     };
-    let this_version = semver::Version::parse(RAUTHY_VERSION).unwrap();
-
-    if latest_version > this_version && latest_version.pre.is_empty() {
-        info!("A new Rauthy App Version is available: {}", latest_version);
-        let version_url = format!("v{} -> {}", latest_version, url);
-
-        if let Err(err) = LatestAppVersion::upsert(data, latest_version).await {
-            error!("Saving LatestAppVersion into DB: {:?}", err);
-        }
-
-        data.tx_events
-            .send_async(Event::new_rauthy_version(version_url))
-            .await
-            .unwrap();
-    } else {
-        debug!("No new Rauthy App Version available");
-    }
 }
 
 // sleeps until the next scheduled event

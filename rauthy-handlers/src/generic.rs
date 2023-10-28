@@ -4,12 +4,13 @@ use actix_web::http::{header, StatusCode};
 use actix_web::web::Json;
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
 use rauthy_common::constants::{
-    APPLICATION_JSON, CACHE_NAME_LOGIN_DELAY, HEADER_HTML, IDX_LOGIN_TIME,
+    APPLICATION_JSON, CACHE_NAME_LOGIN_DELAY, HEADER_HTML, IDX_LOGIN_TIME, RAUTHY_VERSION,
 };
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::build_csp_header;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_models::entity::app_version::LatestAppVersion;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::is_db_alive;
 use rauthy_models::entity::password::{PasswordHashTimes, PasswordPolicy};
@@ -30,7 +31,7 @@ use rauthy_models::request::{
     EncKeyMigrateRequest, I18nContent, I18nRequest, PasswordHashTimesRequest, PasswordPolicyRequest,
 };
 use rauthy_models::response::{
-    Argon2ParamsResponse, EncKeysResponse, HealthResponse, LoginTimeResponse,
+    AppVersionResponse, Argon2ParamsResponse, EncKeysResponse, HealthResponse, LoginTimeResponse,
     PasswordPolicyResponse,
 };
 use rauthy_models::templates::{
@@ -40,7 +41,10 @@ use rauthy_models::templates::{
 };
 use rauthy_service::encryption;
 use redhac::{cache_get, cache_get_from, cache_get_value, QuorumHealth, QuorumState};
+use semver::Version;
 use std::borrow::Cow;
+use std::str::FromStr;
+use tracing::error;
 
 #[get("/")]
 pub async fn get_index(
@@ -678,4 +682,43 @@ pub async fn whoami(req: HttpRequest) -> impl Responder {
         let _ = writeln!(resp, "{}: {:?}", k, v.to_str().unwrap_or_default());
     });
     HttpResponse::Ok().body(resp)
+}
+
+/// Returns the current Rauthy Version
+#[utoipa::path(
+    get,
+    path = "/version",
+    tag = "generic",
+    responses(
+        (status = 200, description = "Ok"),
+    ),
+)]
+#[get("/version")]
+pub async fn get_version(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+    let resp = match LatestAppVersion::find(&data).await {
+        Some(latest) => {
+            let update_available = match Version::from_str(RAUTHY_VERSION) {
+                Ok(current) => latest.latest_version > current,
+                Err(err) => {
+                    error!("Cannot parse RAUTHY_VERSION: {:?}", err);
+                    false
+                }
+            };
+            AppVersionResponse {
+                current: RAUTHY_VERSION.to_string(),
+                last_check: Some(latest.timestamp),
+                latest: Some(latest.latest_version.to_string()),
+                latest_url: Some(latest.release_url.to_string()),
+                update_available,
+            }
+        }
+        None => AppVersionResponse {
+            current: RAUTHY_VERSION.to_string(),
+            last_check: None,
+            latest: None,
+            latest_url: None,
+            update_available: false,
+        },
+    };
+    Ok(HttpResponse::Ok().json(resp))
 }

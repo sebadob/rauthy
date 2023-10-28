@@ -15,6 +15,7 @@ use tracing::error;
 pub struct LatestAppVersion {
     pub timestamp: i64,
     pub latest_version: semver::Version,
+    pub release_url: String,
 }
 
 impl LatestAppVersion {
@@ -66,10 +67,12 @@ impl LatestAppVersion {
     pub async fn upsert(
         app_state: &web::Data<AppState>,
         latest_version: semver::Version,
+        release_url: String,
     ) -> Result<(), ErrorResponse> {
         let slf = Self {
             timestamp: Utc::now().timestamp(),
             latest_version,
+            release_url,
         };
         let data = bincode::serialize(&slf)?;
 

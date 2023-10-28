@@ -57,6 +57,7 @@ use utoipa::{openapi, OpenApi};
         generic::get_ready,
         generic::ping,
         generic::whoami,
+        generic::get_version,
 
         groups::get_groups,
         groups::post_group,
@@ -176,6 +177,7 @@ use utoipa::{openapi, OpenApi};
             request::WebauthnAuthStartRequest,
             request::WebauthnAuthFinishRequest,
 
+            response::AppVersionResponse,
             response::BlacklistResponse,
             response::BlacklistedIp,
             response::LoginTimeResponse,
