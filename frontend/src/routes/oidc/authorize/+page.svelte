@@ -41,6 +41,7 @@
     let err = '';
     let isReady = false;
     let needsPassword = false;
+    let clientMfaForce = false;
     let showReset = false;
     let showResetRequest = false;
     let emailSuccess = false;
@@ -171,11 +172,18 @@
 
     async function handleAuthRes(res) {
         if (res.status === 202) {
+            // -> all good
             window.location.replace(res.headers.get('location'));
         } else if (res.status === 200) {
+            // -> all good, but needs additional passkey validation
             err = '';
             webauthnData = await res.json();
+        } else if (res.status === 406) {
+            // 406 -> client forces MFA while the user has none
+            err = t.clientForceMfa;
+            clientMfaForce = true;
         } else if (res.status === 429) {
+            // 429 -> too many failed logins
             let notBefore =  Number.parseInt(res.headers.get('x-retry-not-before'));
             let nbfDate =  formatDateFromTs(notBefore);
             let diff = notBefore * 1000 - new Date().getTime();
@@ -284,61 +292,63 @@
                 />
             {/if}
 
-            <Input
-                    type="email"
-                    name="rauthyEmail"
-                    bind:value={formValues.email}
-                    bind:error={formErrors.email}
-                    autocomplete="email"
-                    placeholder={t.email}
-                    disabled={tooManyRequests}
-                    on:enter={onSubmit}
-                    on:input={onEmailInput}
-            >
-                {t.email?.toUpperCase()}
-            </Input>
-
-            {#if needsPassword && existingMfaUser !== formValues.email && !showReset}
-                <PasswordInput
-                        bind:bindThis={passwordInput}
-                        name="rauthyPassword"
-                        bind:value={formValues.password}
-                        bind:error={formErrors.password}
-                        autocomplete="current-password"
-                        placeholder={t.password}
-                        disabled={tooManyRequests}
+            {#if !clientMfaForce}
+                <Input
+                        type="email"
+                        name="rauthyEmail"
+                        bind:value={formValues.email}
+                        bind:error={formErrors.email}
+                        autocomplete="email"
+                        placeholder={t.email}
+                        disabled={tooManyRequests || clientMfaForce}
                         on:enter={onSubmit}
+                        on:input={onEmailInput}
                 >
-                    {t.password?.toUpperCase()}
-                </PasswordInput>
+                    {t.email?.toUpperCase()}
+                </Input>
 
-                {#if showResetRequest && !tooManyRequests}
-                    <div
-                            role="button"
-                            tabindex="0"
-                            class="forgotten"
-                            transition:scale|global
-                            on:click={handleShowReset}
-                            on:keypress={handleShowReset}
+                {#if needsPassword && existingMfaUser !== formValues.email && !showReset}
+                    <PasswordInput
+                            bind:bindThis={passwordInput}
+                            name="rauthyPassword"
+                            bind:value={formValues.password}
+                            bind:error={formErrors.password}
+                            autocomplete="current-password"
+                            placeholder={t.password}
+                            disabled={tooManyRequests || clientMfaForce}
+                            on:enter={onSubmit}
                     >
-                        {t.passwordForgotten}
-                    </div>
-                {/if}
-            {/if}
+                        {t.password?.toUpperCase()}
+                    </PasswordInput>
 
-            {#if !tooManyRequests}
-                {#if showReset}
-                    <div class="btn">
-                        <Button on:click={requestReset}>
-                            {t.passwordRequest?.toUpperCase()}
-                        </Button>
-                    </div>
-                {:else}
-                    <div class="btn">
-                        <Button on:click={onSubmit} bind:isLoading>
-                            {t.login?.toUpperCase()}
-                        </Button>
-                    </div>
+                    {#if showResetRequest && !tooManyRequests}
+                        <div
+                                role="button"
+                                tabindex="0"
+                                class="forgotten"
+                                transition:scale|global
+                                on:click={handleShowReset}
+                                on:keypress={handleShowReset}
+                        >
+                            {t.passwordForgotten}
+                        </div>
+                    {/if}
+                {/if}
+
+                {#if !tooManyRequests && !clientMfaForce}
+                    {#if showReset}
+                        <div class="btn">
+                            <Button on:click={requestReset}>
+                                {t.passwordRequest?.toUpperCase()}
+                            </Button>
+                        </div>
+                    {:else}
+                        <div class="btn">
+                            <Button on:click={onSubmit} bind:isLoading>
+                                {t.login?.toUpperCase()}
+                            </Button>
+                        </div>
+                    {/if}
                 {/if}
             {/if}
 
@@ -351,6 +361,14 @@
             {#if emailSuccess}
                 <div class="success">
                     {t.emailSentMsg}
+                </div>
+            {/if}
+
+            {#if clientMfaForce}
+                <div class="btn">
+                    <Button on:click={() => window.location.href = '/auth/v1/account'}>
+                        ACCOUNT LOGIN
+                    </Button>
                 </div>
             {/if}
         </div>

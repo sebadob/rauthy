@@ -22,7 +22,7 @@
             if (resAdmin.ok) {
                 sessionInfo = body;
                 isAdmin = true;
-            } else if (res.status === 406 ) {
+            } else if (resAdmin.status === 406 ) {
                 mfaReqErr = true;
                 sessionInfo = {};
             } else {
@@ -54,7 +54,8 @@
     {:else if !isAdmin}
         <div class="noAdmin">
             <div class="text">
-                You are not assigned to the <b>rauthy_admin</b> role and have no access to the admin panel.
+                You are not assigned to the <b>rauthy_admin</b> role.<br/>
+                You do not have access to the admin panel.
             </div>
             <Button on:click={() => window.location.href = '/auth/v1/'}>GO BACK</Button>
         </div>

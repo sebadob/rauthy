@@ -11,7 +11,7 @@
         class="content"
         class:mr={!eventsCollapsed && !eventsWide}
         class:mrCollapsed={eventsCollapsed && !eventsWide}
-        class:mrWide={eventsCollapsed && eventsWide}
+        class:mrWide={!eventsCollapsed && eventsWide}
         in:fade={{delay: tDur * 2, duration: tDur}}
         out:fade={{duration: tDur}}
 >
@@ -31,14 +31,14 @@
     }
 
     .mr {
-        margin-right: calc(var(--width-events) - 10px);
+        margin-right: var(--width-events);
     }
 
     .mrCollapsed {
-        margin-right: calc(var(--width-events-collapsed) - 10px);
+        margin-right: var(--width-events-collapsed);
     }
 
     .mrWide {
-        margin-right: calc(var(--width-events-wide) - 10px);
+        margin-right: var(--width-events-wide);
     }
 </style>
