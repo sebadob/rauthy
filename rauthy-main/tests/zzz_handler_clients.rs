@@ -114,6 +114,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
             "doestnotexist".to_string(),
         ],
         challenges: Some(vec!["S256".to_string(), "plain".to_string()]),
+        force_mfa: false,
     };
 
     let url_id = format!("{}/clients/{}", backend_url, client.id);

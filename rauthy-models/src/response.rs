@@ -79,6 +79,7 @@ pub struct ClientResponse {
     pub default_scopes: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub challenges: Option<Vec<String>>,
+    pub force_mfa: bool,
 }
 
 impl From<Client> for ClientResponse {
@@ -108,6 +109,7 @@ impl From<Client> for ClientResponse {
             scopes,
             default_scopes,
             challenges,
+            force_mfa: client.force_mfa,
         }
     }
 }

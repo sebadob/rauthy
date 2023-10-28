@@ -12,6 +12,7 @@
     import {putClient} from "../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";
     import ExpandableInput from "$lib/expandableInputs/ExpandableInputs.svelte";
+    import {slide} from "svelte/transition";
 
     export let client = {};
     export let onSave;
@@ -57,7 +58,7 @@
             client.post_logout_redirect_uris = [];
         }
         if (!client.name) {
-          client.name = '';
+            client.name = '';
         }
         return () => clearTimeout(timer);
     });
@@ -197,6 +198,34 @@
             <SwitchList bind:options={clientFlows}/>
         </div>
     </div>
+
+    <!-- Force MFA -->
+    <div class="unit">
+        <div class="label font-label">
+            FORCE MFA
+        </div>
+        <div class="value">
+            <Switch bind:selected={client.force_mfa}/>
+        </div>
+    </div>
+    {#if client.id === 'rauthy'}
+        <div class="desc" style:margin="-10px 0 -15px 5px">
+            <p>
+                <span style:color="var(--col-err)"><b>CAUTION:</b></span>
+                The <code>FORCE MFA</code> option for <code>rauthy</code> itself is managed statically via the
+                <code>ADMIN_FORCE_MFA</code> config variable and will be overridden with each restart.
+            </p>
+        </div>
+    {:else if client.force_mfa}
+        <div transition:slide class="desc" style:margin="-10px 0 -15px 5px">
+            <p>
+                <span style:color="var(--col-err)"><b>CAUTION:</b></span>
+                If you <code>FORCE MFA</code> for this client here, this will only apply to the
+                <code>authorization_code</code> flow! If you use other flows,
+                MFA cannot be forced for them!
+            </p>
+        </div>
+    {/if}
 
     <!-- Scopes Description -->
     <div class="separator"></div>
@@ -412,6 +441,10 @@
 </div>
 
 <style>
+    code {
+        font-size: .95rem;
+    }
+
     .challenges {
         width: 140px;
     }
