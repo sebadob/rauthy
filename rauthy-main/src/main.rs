@@ -30,7 +30,7 @@ use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
 use rauthy_handlers::middleware::principal::RauthyPrincipalMiddleware;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
-    blacklist, clients, events, generic, groups, oidc, roles, scopes, sessions, users,
+    api_keys, blacklist, clients, events, generic, groups, oidc, roles, scopes, sessions, users,
 };
 use rauthy_models::app_state::{AppState, Caches, DbPool};
 use rauthy_models::email::EMail;
@@ -380,6 +380,12 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                     .service(generic::redirect_v1)
                     .service(
                     web::scope("/v1")
+                        .service(api_keys::get_api_keys)
+                        .service(api_keys::post_api_key)
+                        .service(api_keys::put_api_key)
+                        .service(api_keys::delete_api_key)
+                        .service(api_keys::get_api_key_test)
+                        .service(api_keys::put_api_key_secret)
                         .service(blacklist::get_blacklist)
                         .service(blacklist::post_blacklist)
                         .service(blacklist::delete_blacklist)

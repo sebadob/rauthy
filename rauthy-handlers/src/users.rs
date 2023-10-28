@@ -120,7 +120,7 @@ pub async fn get_cust_attr(
     data: web::Data<AppState>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::UserAttrs, AccessRights::Read)?;
+    principal.validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Read)?;
 
     UserAttrConfigEntity::find_all(&data)
         .await
@@ -144,7 +144,8 @@ pub async fn post_cust_attr(
     principal: ReqPrincipal,
     req_data: actix_web_validator::Json<UserAttrConfigRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::UserAttrs, AccessRights::Create)?;
+    principal
+        .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Create)?;
 
     UserAttrConfigEntity::create(&data, req_data.into_inner())
         .await
@@ -171,7 +172,8 @@ pub async fn put_cust_attr(
     principal: ReqPrincipal,
     req_data: actix_web_validator::Json<UserAttrConfigRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::UserAttrs, AccessRights::Update)?;
+    principal
+        .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Update)?;
 
     UserAttrConfigEntity::update(&data, path.into_inner(), req_data.into_inner())
         .await
@@ -195,7 +197,8 @@ pub async fn delete_cust_attr(
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::UserAttrs, AccessRights::Delete)?;
+    principal
+        .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Delete)?;
 
     UserAttrConfigEntity::delete(&data, path.into_inner()).await?;
     Ok(HttpResponse::Ok().finish())
@@ -334,7 +337,7 @@ pub async fn get_user_attr(
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::UserAttrs, AccessRights::Read)?;
+    principal.validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Read)?;
 
     let values = UserAttrValueEntity::find_for_user(&data, &path.into_inner())
         .await?
@@ -363,7 +366,8 @@ pub async fn put_user_attr(
     principal: ReqPrincipal,
     req_data: actix_web_validator::Json<UserAttrValuesUpdateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::UserAttrs, AccessRights::Update)?;
+    principal
+        .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Update)?;
 
     let values =
         UserAttrValueEntity::update_for_user(&data, &path.into_inner(), req_data.into_inner())

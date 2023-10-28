@@ -1,3 +1,4 @@
+use crate::entity::api_keys::{ApiKey, ApiKeyAccess};
 use crate::entity::clients::Client;
 use crate::entity::jwk::{JWKSPublicKey, JWKS};
 use crate::entity::password::PasswordPolicy;
@@ -11,6 +12,32 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use tracing::debug;
 use utoipa::ToSchema;
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct ApiKeysResponse {
+    pub keys: Vec<ApiKeyResponse>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct ApiKeyResponse {
+    pub name: String,
+    /// unix timestamp
+    pub created: i64,
+    /// unix timestamp
+    pub expires: Option<i64>,
+    pub access: Vec<ApiKeyAccess>,
+}
+
+impl From<ApiKey> for ApiKeyResponse {
+    fn from(value: ApiKey) -> Self {
+        Self {
+            name: value.name,
+            created: value.created,
+            expires: value.expires,
+            access: value.access,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct Argon2ParamsResponse {

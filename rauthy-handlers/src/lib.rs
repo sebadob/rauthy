@@ -28,6 +28,7 @@ use rauthy_models::AuthStep;
 use rust_embed::RustEmbed;
 use tracing::error;
 
+pub mod api_keys;
 pub mod blacklist;
 pub mod clients;
 pub mod events;
