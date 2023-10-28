@@ -220,6 +220,7 @@ impl EventListener {
                         EventType::RauthyUnhealthy => {}
                         EventType::SecretsMigrated => {}
                         EventType::UserEmailChange => {}
+                        EventType::UserPasswordReset => {}
                         EventType::Test => {}
                     }
 
