@@ -13,6 +13,7 @@ pub mod notifier;
 pub static EVENT_PERSIST_LEVEL: OnceLock<i16> = OnceLock::new();
 pub static EVENT_LEVEL_NEW_USER: OnceLock<EventLevel> = OnceLock::new();
 pub static EVENT_LEVEL_USER_EMAIL_CHANGE: OnceLock<EventLevel> = OnceLock::new();
+pub static EVENT_LEVEL_USER_PASSWORD_RESET: OnceLock<EventLevel> = OnceLock::new();
 pub static EVENT_LEVEL_NEW_RAUTHY_ADMIN: OnceLock<EventLevel> = OnceLock::new();
 pub static EVENT_LEVEL_NEW_RAUTHY_VERSION: OnceLock<EventLevel> = OnceLock::new();
 pub static EVENT_LEVEL_JWKS_ROTATE: OnceLock<EventLevel> = OnceLock::new();
@@ -39,6 +40,12 @@ pub fn init_event_vars() -> Result<(), ErrorResponse> {
     EVENT_LEVEL_USER_EMAIL_CHANGE
         .set(map_env_var_level(
             "EVENT_LEVEL_USER_EMAIL_CHANGE",
+            EventLevel::Notice,
+        ))
+        .unwrap();
+    EVENT_LEVEL_USER_PASSWORD_RESET
+        .set(map_env_var_level(
+            "EVENT_LEVEL_USER_PASSWORD_RESET",
             EventLevel::Notice,
         ))
         .unwrap();

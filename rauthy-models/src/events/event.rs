@@ -5,7 +5,7 @@ use crate::events::{
     EVENT_LEVEL_IP_BLACKLISTED, EVENT_LEVEL_JWKS_ROTATE, EVENT_LEVEL_NEW_RAUTHY_ADMIN,
     EVENT_LEVEL_NEW_RAUTHY_VERSION, EVENT_LEVEL_NEW_USER, EVENT_LEVEL_RAUTHY_HEALTHY,
     EVENT_LEVEL_RAUTHY_START, EVENT_LEVEL_RAUTHY_UNHEALTHY, EVENT_LEVEL_SECRETS_MIGRATED,
-    EVENT_LEVEL_USER_EMAIL_CHANGE,
+    EVENT_LEVEL_USER_EMAIL_CHANGE, EVENT_LEVEL_USER_PASSWORD_RESET,
 };
 use chrono::{DateTime, NaiveDateTime, Timelike, Utc};
 use rauthy_common::constants::EMAIL_SUB_PREFIX;
@@ -136,6 +136,7 @@ pub enum EventType {
     RauthyUnhealthy,
     SecretsMigrated,
     UserEmailChange,
+    UserPasswordReset,
     Test,
 }
 
@@ -155,6 +156,7 @@ impl Display for EventType {
             EventType::RauthyUnhealthy => write!(f, "Rauthy is unhealthy"),
             EventType::SecretsMigrated => write!(f, "Secrets have been migrated"),
             EventType::UserEmailChange => write!(f, "User's E-Mail has been changed"),
+            EventType::UserPasswordReset => write!(f, "User has reset its password"),
             EventType::Test => write!(f, "TEST"),
         }
     }
@@ -176,6 +178,7 @@ impl EventType {
             Self::RauthyUnhealthy => "RauthyUnhealthy",
             Self::SecretsMigrated => "SecretsMigrated",
             Self::UserEmailChange => "UserEmailChange",
+            Self::UserPasswordReset => "UserPasswordReset",
             Self::Test => "TEST",
         }
     }
@@ -195,7 +198,8 @@ impl EventType {
             EventType::RauthyUnhealthy => 10,
             EventType::SecretsMigrated => 11,
             EventType::UserEmailChange => 12,
-            EventType::Test => 13,
+            EventType::UserPasswordReset => 13,
+            EventType::Test => 14,
         }
     }
 }
@@ -216,6 +220,7 @@ impl From<String> for EventType {
             "RauthyUnhealthy" => Self::RauthyUnhealthy,
             "SecretsMigrated" => Self::SecretsMigrated,
             "UserEmailChange" => Self::UserEmailChange,
+            "UserPasswordReset" => Self::UserPasswordReset,
             "TEST" => Self::Test,
             // just return test to never panic
             _ => Self::Test,
@@ -245,7 +250,8 @@ impl From<i64> for EventType {
             10 => EventType::RauthyUnhealthy,
             11 => EventType::SecretsMigrated,
             12 => EventType::UserEmailChange,
-            13 => EventType::Test,
+            13 => EventType::UserPasswordReset,
+            14 => EventType::Test,
             _ => EventType::Test,
         }
     }
@@ -315,6 +321,7 @@ impl From<&Event> for Notification {
             EventType::RauthyUnhealthy => value.text.clone(),
             EventType::SecretsMigrated => value.ip.clone(),
             EventType::UserEmailChange => value.text.clone(),
+            EventType::UserPasswordReset => value.text.clone(),
             EventType::Test => value.text.clone(),
         };
 
@@ -569,6 +576,16 @@ impl Event {
         )
     }
 
+    pub fn user_password_reset(text: String, ip: Option<String>) -> Self {
+        Self::new(
+            EVENT_LEVEL_USER_PASSWORD_RESET.get().cloned().unwrap(),
+            EventType::UserPasswordReset,
+            ip,
+            None,
+            Some(text),
+        )
+    }
+
     pub fn fmt_data(&self) -> String {
         match self.typ {
             EventType::InvalidLogins => format!("Counter: {}", self.data.unwrap_or_default()),
@@ -597,6 +614,12 @@ impl Event {
             EventType::SecretsMigrated => String::default(),
             EventType::UserEmailChange => {
                 format!("User E-Mail: {}", self.text.as_deref().unwrap_or_default())
+            }
+            EventType::UserPasswordReset => {
+                format!(
+                    "User {} has reset its password",
+                    self.text.as_deref().unwrap_or_default()
+                )
             }
             EventType::Test => {
                 format!("Test Message: {}", self.text.as_deref().unwrap_or_default())

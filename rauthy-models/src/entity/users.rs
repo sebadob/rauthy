@@ -443,8 +443,8 @@ impl User {
             user.language = lang;
         }
 
-        if let Some(password) = upd_user.password {
-            user.apply_password_rules(data, &password).await?;
+        if let Some(password) = &upd_user.password {
+            user.apply_password_rules(data, password).await?;
         }
 
         // sanitize roles
@@ -460,6 +460,16 @@ impl User {
 
         user.save(data, old_email.clone(), None).await?;
 
+        if upd_user.password.is_some() {
+            data.tx_events
+                .send_async(Event::user_password_reset(
+                    format!("Reset done by admin for user {}", user.email),
+                    None,
+                ))
+                .await
+                .unwrap();
+        }
+
         if let Some(old_email) = old_email.as_ref() {
             // if the user was saved successfully and the email was changed, invalidate all existing
             // sessions with the old address and send out notifications to the users addresses
@@ -468,6 +478,12 @@ impl User {
             // send out confirmation E-Mails to both addresses
             send_email_confirm_change(data, &user, &user.email, &user.email, true).await;
             send_email_confirm_change(data, &user, old_email, &user.email, true).await;
+
+            let event_text = format!("Change by admin: {} -> {}", old_email, user.email);
+            data.tx_events
+                .send_async(Event::user_email_change(event_text, None))
+                .await
+                .unwrap();
         }
 
         let is_new_admin = !is_admin_before_update && user.is_admin();
