@@ -287,6 +287,9 @@ EVENT_LEVEL_NEW_USER=info
 # The level for the generated Event after a user has changed his E-Mail
 # default: notice
 EVENT_LEVEL_USER_EMAIL_CHANGE=notice
+# The level for the generated Event after a user has reset its password
+# default: notice
+EVENT_LEVEL_USER_PASSWORD_RESET=notice
 # The level for the generated Event after a user has been given the 
 # 'rauthy_admin' role
 # default: notice
