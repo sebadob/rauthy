@@ -22,7 +22,7 @@ pub const PWD_CSRF_HEADER: &str = "pwd-csrf-token";
 
 pub const ARGON2ID_M_COST_MIN: u32 = 32768;
 pub const ARGON2ID_T_COST_MIN: u32 = 1;
-pub const API_KEY_LENGTH: usize = 48;
+pub const API_KEY_LENGTH: usize = 64;
 pub const EVENTS_LATEST_LIMIT: u16 = 100;
 
 pub const CACHE_NAME_12HR: &str = "12hr";
@@ -73,6 +73,7 @@ lazy_static! {
     pub static ref RE_ALNUM_48: Regex = Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap();
     pub static ref RE_ALNUM_64: Regex = Regex::new(r"^[a-zA-Z0-9]{64}$").unwrap();
     pub static ref RE_ALNUM_SPACE: Regex = Regex::new(r"^[a-zA-Z0-9\s]+$").unwrap();
+    pub static ref RE_API_KEY: Regex = Regex::new(r"^[a-zA-Z0-9_/-]{2,24}$").unwrap();
     pub static ref RE_APP_ID: Regex = Regex::new(r"^[a-zA-Z0-9]{12}$").unwrap();
     pub static ref RE_BASE64: Regex = Regex::new(r"^[a-zA-Z0-9+/=]{4}$").unwrap();
     pub static ref RE_CHALLENGE: Regex = Regex::new(r"^(plain|S256)$").unwrap();
