@@ -209,17 +209,18 @@ pub async fn handle_put_user_password_reset<'a>(
 
     let ip = match real_ip_from_req(&req) {
         None => {
-            error!(
-                "Extracting clients real IP from HttpRequest during password reset: {:?}",
-                err
-            );
-            "UNKOWN".to_string()
+            error!("Extracting clients real IP from HttpRequest during password reset");
+            "UNKNOWN".to_string()
         }
         Some(ip) => ip,
     };
     data.tx_events
-        .send_async(Event::user_password_reset(user.email, ip))
-        .await?;
+        .send_async(Event::user_password_reset(
+            format!("Reset via Password Reset Form: {}", user.email),
+            Some(ip),
+        ))
+        .await
+        .unwrap();
 
     // delete the cookie
     let cookie = cookie::Cookie::build(PWD_RESET_COOKIE, "")

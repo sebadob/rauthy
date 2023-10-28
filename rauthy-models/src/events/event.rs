@@ -576,13 +576,13 @@ impl Event {
         )
     }
 
-    pub fn user_password_reset(email: String, ip: String) -> Self {
+    pub fn user_password_reset(text: String, ip: Option<String>) -> Self {
         Self::new(
             EVENT_LEVEL_USER_PASSWORD_RESET.get().cloned().unwrap(),
             EventType::UserPasswordReset,
-            Some(ip),
+            ip,
             None,
-            Some(email),
+            Some(text),
         )
     }
 
