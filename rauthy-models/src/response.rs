@@ -459,3 +459,12 @@ pub struct WebauthnLoginResponse {
     pub user_id: String,
     pub exp: u64,
 }
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct AppVersionResponse {
+    pub current: String,
+    pub last_check: Option<i64>,
+    pub latest: Option<String>,
+    pub latest_url: Option<String>,
+    pub update_available: bool,
+}
