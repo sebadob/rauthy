@@ -22,12 +22,12 @@
 
     let formValues = {
         ip: '',
-        exp: new Date().toLocaleString(),
+        exp: '',
     }
     let formErrors = {};
     const schema = yup.object().shape({
         ip: yup.string()
-            .required(true)
+            .required('IP is required')
             .matches(REGEX_IP_V4, 'Invalid IPv4'),
     });
 

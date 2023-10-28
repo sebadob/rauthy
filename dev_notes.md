@@ -2,17 +2,12 @@
 
 ## CURRENT WORK
 
-- admin ui component to show blacklisted IPs
-- maybe functionality to manually blacklist IPs?
+- add event for a user password reset
 
 ## TODO v0.17
 
-- admin ui component for the new ApiKeys
-- add event for a user password reset
-- rauthy-notify crate for matrix + slack notifiers
-- latest app version check via github api
 - show current app version in admin ui
-- add event for new app version available
+- maybe 'force_mfa' option for oidc clients?
 
 ## Stage 1 - essentials
 

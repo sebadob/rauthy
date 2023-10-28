@@ -163,7 +163,8 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 ############# E-MAIL ################
 #####################################
 
-# Will be used as the prefix for the E-Mail subject for each E-Mail that will be sent out to a client.
+# Will be used as the prefix for the E-Mail subject for each E-Mail 
+# that will be sent out to a client.
 # This can be used to further customize your deployment.
 # default: "Rauthy IAM"
 EMAIL_SUB_PREFIX="Rauthy IAM"
@@ -249,8 +250,9 @@ JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
 
 # TODO Matrix
 
-# The notification level for events. Works the same way as a logging level. For instance:
-# 'notice' means send out a notifications for all events with the info level or higher.
+# The notification level for events. Works the same way as a logging level. 
+# For instance: 'notice' means send out a notifications for all events with 
+# the info level or higher.
 # Possible values:
 # - info
 # - notice
@@ -264,8 +266,9 @@ EVENT_NOTIFY_LEVEL_MATRIX=notice
 # default: 'notice'
 EVENT_NOTIFY_LEVEL_SLACK=notice
 
-# Define the level from which on events should be persisted inside the database.
-# All events with a lower level will be lost, if there is no active event subscriber.
+# Define the level from which on events should be persisted inside the 
+# database. All events with a lower level will be lost, if there is no 
+# active event subscriber.
 # Possible values:
 # - info
 # - notice
@@ -284,7 +287,8 @@ EVENT_LEVEL_NEW_USER=info
 # The level for the generated Event after a user has changed his E-Mail
 # default: notice
 EVENT_LEVEL_USER_EMAIL_CHANGE=notice
-# The level for the generated Event after a user has been given the 'rauthy_admin' role
+# The level for the generated Event after a user has been given the 
+# 'rauthy_admin' role
 # default: notice
 EVENT_LEVEL_RAUTHY_ADMIN=notice
 # The level for the generated Event after a new App version has been found
@@ -293,22 +297,27 @@ EVENT_LEVEL_RAUTHY_VERSION=notice
 # The level for the generated Event after the JWKS has been rotated
 # default: notice
 EVENT_LEVEL_JWKS_ROTATE=notice
-# The level for the generated Event after DB secrets have been migrated to a new key
+# The level for the generated Event after DB secrets have been migrated 
+# to a new key
 # default: notice
 EVENT_LEVEL_SECRETS_MIGRATED=notice
-# The level for the generated Event after a Rauthy instance has been started
+# The level for the generated Event after a Rauthy instance has been 
+# started
 # default: info
 EVENT_LEVEL_RAUTHY_START=info
-# The level for the generated Event after a Rauthy entered a healthy state (again)
+# The level for the generated Event after a Rauthy entered a healthy 
+# state (again)
 # default: notice
 EVENT_LEVEL_RAUTHY_HEALTHY=notice
-# The level for the generated Event after a Rauthy entered an unhealthy state
+# The level for the generated Event after a Rauthy entered an unhealthy 
+#state
 # default: critical
 EVENT_LEVEL_RAUTHY_UNHEALTHY=critical
 # The level for the generated Event after an IP has been blacklisted
 # default: warning
 EVENT_LEVEL_IP_BLACKLISTED=warning
-# The level for the generated Event after certain amounts of false logins from an IP
+# The level for the generated Event after certain amounts of false 
+# logins from an IP
 # default: criticao
 EVENT_LEVEL_FAILED_LOGINS_25=critical
 # default: criticao
@@ -383,7 +392,8 @@ EVENT_LEVEL_FAILED_LOGIN=info
 #ML_LT_PWD_FIRST=86400
 
 # The interval in seconds in which keep-alives should be sent to SSE clients.
-# Depending on your network setup, proxy timeouts, ..., you may adjust this value to fit your needs.
+# Depending on your network setup, proxy timeouts, ...
+# you may adjust this value to fit your needs.
 # default: 30
 #SSE_KEEP_ALIVE=30
 

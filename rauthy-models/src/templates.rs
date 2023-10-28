@@ -275,6 +275,57 @@ impl ErrorHtml<'_> {
 }
 
 #[derive(Default, Template)]
+#[template(path = "html/admin/api_keys.html")]
+pub struct AdminApiKeysHtml<'a> {
+    pub lang: &'a str,
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: &'a str,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+    pub i18n: String,
+}
+
+impl AdminApiKeysHtml<'_> {
+    pub fn build(colors: &Colors) -> (String, String) {
+        let nonce = nonce();
+
+        let res = AdminApiKeysHtml {
+            lang: "en",
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
+    }
+}
+
+#[derive(Default, Template)]
 #[template(path = "html/admin/attributes.html")]
 pub struct AdminAttributesHtml<'a> {
     pub lang: &'a str,

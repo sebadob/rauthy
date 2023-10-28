@@ -1,4 +1,6 @@
-use crate::{blacklist, clients, events, generic, groups, oidc, roles, scopes, sessions, users};
+use crate::{
+    api_keys, blacklist, clients, events, generic, groups, oidc, roles, scopes, sessions, users,
+};
 use actix_web::web;
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
@@ -14,6 +16,13 @@ use utoipa::{openapi, OpenApi};
 #[derive(OpenApi)]
 #[openapi(
     paths(
+        api_keys::get_api_keys,
+        api_keys::post_api_key,
+        api_keys::put_api_key,
+        api_keys::delete_api_key,
+        api_keys::get_api_key_test,
+        api_keys::put_api_key_secret,
+
         blacklist::get_blacklist,
         blacklist::post_blacklist,
         blacklist::delete_blacklist,
@@ -110,6 +119,9 @@ use utoipa::{openapi, OpenApi};
     ),
     components(
         schemas(
+            entity::api_keys::AccessGroup,
+            entity::api_keys::AccessRights,
+            entity::api_keys::ApiKeyAccess,
             entity::clients::Client,
             entity::colors::Colors,
             entity::groups::Group,
@@ -129,6 +141,7 @@ use utoipa::{openapi, OpenApi};
             ErrorResponseType,
             language::Language,
 
+            request::ApiKeyRequest,
             request::AuthCodeRequest,
             request::AuthRequest,
             request::IpBlacklistRequest,
@@ -204,6 +217,8 @@ use utoipa::{openapi, OpenApi};
         (name = "scopes", description = "Scopes endpoints"),
         (name = "events", description = "Events Stream"),
         (name = "health", description = "Ping, Health, Ready Check"),
+        (name = "blacklist", description = "IP Blacklist endpoints"),
+        (name = "api_keys", description = "API Keys endpoints"),
         (name = "generic", description = "Generic endpoints"),
         (name = "deprecated", description = "Deprecated endpoints - will be removed in a future version"),
     ),

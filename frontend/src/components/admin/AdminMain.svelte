@@ -27,6 +27,8 @@
     import Events from "./events/Events.svelte";
     import IconStop from "$lib/icons/IconStop.svelte";
     import Blacklist from "./blacklist/Blacklist.svelte";
+    import IconKey from "$lib/icons/IconKey.svelte";
+    import ApiKeys from "./api_keys/ApiKeys.svelte";
 
     export let sessionInfo = {};
     export let selected = 'Users';
@@ -83,6 +85,11 @@
             case 'Blacklist': {
                 window.history.pushState('Blacklist', '', '/auth/v1/admin/blacklist');
                 title = 'Blacklist';
+                break;
+            }
+            case 'ApiKeys': {
+                window.history.pushState('ApiKeys', '', '/auth/v1/admin/api_keys');
+                title = 'ApiKeys';
                 break;
             }
             case 'Config': {
@@ -170,6 +177,10 @@
                 <IconStop width=24 />
             </NavEntry>
 
+            <NavEntry label="ApiKeys">
+                <IconKey />
+            </NavEntry>
+
             <NavEntry label="Config">
                 <IconWrenchScrew/>
             </NavEntry>
@@ -216,6 +227,10 @@
         {:else if 'Blacklist' === selected}
             <ContentWrapper bind:eventsWide bind:eventsCollapsed>
                 <Blacklist/>
+            </ContentWrapper>
+        {:else if 'ApiKeys' === selected}
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
+                <ApiKeys/>
             </ContentWrapper>
         {:else if 'Config' === selected}
             <ContentWrapper bind:eventsWide bind:eventsCollapsed>

@@ -1,12 +1,13 @@
+use crate::entity::api_keys::ApiKeyAccess;
 use crate::events::event::EventLevel;
 use crate::language::Language;
 use actix_web::http::header;
 use actix_web::HttpRequest;
 use css_color::Srgb;
 use rauthy_common::constants::{
-    RE_ALG, RE_ALNUM, RE_ALNUM_24, RE_ALNUM_48, RE_ALNUM_64, RE_ALNUM_SPACE, RE_APP_ID, RE_ATTR,
-    RE_ATTR_DESC, RE_CHALLENGE, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_CODE_VERIFIER, RE_FLOWS,
-    RE_GROUPS, RE_LOWERCASE, RE_MFA_CODE, RE_URI, RE_USER_NAME,
+    RE_ALG, RE_ALNUM, RE_ALNUM_24, RE_ALNUM_48, RE_ALNUM_64, RE_ALNUM_SPACE, RE_API_KEY, RE_APP_ID,
+    RE_ATTR, RE_ATTR_DESC, RE_CHALLENGE, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_CODE_VERIFIER,
+    RE_FLOWS, RE_GROUPS, RE_LOWERCASE, RE_MFA_CODE, RE_URI, RE_USER_NAME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::base64_decode;
@@ -15,6 +16,17 @@ use std::net::Ipv4Addr;
 use std::str::FromStr;
 use utoipa::{IntoParams, ToSchema};
 use validator::{Validate, ValidationError};
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct ApiKeyRequest {
+    /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
+    #[validate(regex(path = "RE_API_KEY", code = "^[a-zA-Z0-9_-/]{2,24}$"))]
+    pub name: String,
+    /// Unix timestamp in seconds in the future (max year 2099)
+    #[validate(range(min = 1672527600, max = 4070905200))]
+    pub exp: Option<i64>,
+    pub access: Vec<ApiKeyAccess>,
+}
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct AuthCodeRequest {
