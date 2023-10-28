@@ -9,6 +9,7 @@ use rauthy_models::events::event::Event;
 use rauthy_models::events::listener::EventRouterMsg;
 use rauthy_models::request::EventsListenParams;
 use std::time::Duration;
+use tokio::sync::mpsc;
 use validator::Validate;
 
 /// Listen to the Events SSE stream
@@ -36,8 +37,6 @@ pub async fn sse_events(
 
     params.validate()?;
 
-    let (tx, sse) = sse::channel(10);
-
     match real_ip_from_req(&req) {
         None => Err(ErrorResponse::new(
             ErrorResponseType::NotFound,
@@ -46,6 +45,8 @@ pub async fn sse_events(
         )),
         Some(ip) => {
             let params = params.into_inner();
+            let (tx, rx) = mpsc::channel(10);
+
             if let Err(err) = data
                 .tx_events_router
                 .send_async(EventRouterMsg::ClientReg {
@@ -61,7 +62,9 @@ pub async fn sse_events(
                     format!("Cannot register SSE client: {:?}", err),
                 ))
             } else {
-                Ok(sse.with_keep_alive(Duration::from_secs(*SSE_KEEP_ALIVE as u64)))
+                Ok(sse::Sse::from_infallible_receiver(rx)
+                    .with_keep_alive(Duration::from_secs(*SSE_KEEP_ALIVE as u64))
+                    .with_retry_duration(Duration::from_secs(10)))
             }
         }
     }

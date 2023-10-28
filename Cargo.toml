@@ -29,7 +29,7 @@ actix-multipart = "0.6"
 actix-service = "2"
 actix-web = { version = "4.4", features = ["rustls-0_21"] }
 actix-web-actors = "4"
-actix-web-lab = "0.19"
+actix-web-lab = "0.20"
 argon2 = { version = "0.5", features = ["std", "zeroize"] }
 askama = { version = "0.12", features = ["with-actix-web"] }
 askama_actix = "0.14"

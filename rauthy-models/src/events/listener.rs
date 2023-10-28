@@ -11,6 +11,7 @@ use rauthy_common::error_response::ErrorResponse;
 use sqlx::postgres::PgListener;
 use std::collections::{HashMap, VecDeque};
 use std::time::Duration;
+use tokio::sync::mpsc;
 use tokio::time;
 use tracing::{debug, error, info};
 
@@ -19,7 +20,7 @@ pub enum EventRouterMsg {
     Event(String),
     ClientReg {
         ip: String,
-        tx: sse::Sender,
+        tx: mpsc::Sender<sse::Event>,
         latest: Option<u16>,
         level: EventLevel,
     },
@@ -163,7 +164,8 @@ impl EventListener {
     ) {
         debug!("EventListener::router_si has been started");
 
-        let mut clients: HashMap<String, (i16, sse::Sender)> = HashMap::with_capacity(4);
+        let mut clients: HashMap<String, (i16, mpsc::Sender<sse::Event>)> =
+            HashMap::with_capacity(4);
         let mut ips_to_remove = Vec::with_capacity(1);
         // Event::find_latest returns the latest events ordered by timestamp desc
         let mut events = Event::find_latest(&db, EVENTS_LATEST_LIMIT as i64)
@@ -171,8 +173,13 @@ impl EventListener {
             .unwrap_or_default()
             .into_iter()
             .rev()
-            .map(|e| (e.level.value(), sse::Data::new(e.as_json())))
-            .collect::<VecDeque<(i16, sse::Data)>>();
+            .map(|e| {
+                (
+                    e.level.value(),
+                    sse::Event::Data(sse::Data::new(e.as_json())),
+                )
+            })
+            .collect::<VecDeque<(i16, sse::Event)>>();
 
         while let Ok(msg) = rx.recv_async().await {
             match msg {
@@ -226,7 +233,7 @@ impl EventListener {
 
                     // pre-compute the payload
                     // the incoming data is already in JSON format
-                    let payload = sse::Data::new(event);
+                    let payload = sse::Event::Data(sse::Data::new(event));
                     let event_level_value = evt.level.value();
 
                     // send payload to all clients
@@ -285,7 +292,7 @@ impl EventListener {
                             .iter()
                             .filter(|(level, _payload)| *level >= client_level_val)
                             .map(|(_level, payload)| payload)
-                            .collect::<Vec<&sse::Data>>();
+                            .collect::<Vec<&sse::Event>>();
 
                         let evt_len = events_filtered.len();
                         let skip = if latest > evt_len {
