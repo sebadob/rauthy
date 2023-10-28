@@ -2,13 +2,6 @@
 
 ## CURRENT WORK
 
-- add event for a user password reset
-
-## TODO v0.17
-
-- show current app version in admin ui
-- maybe 'force_mfa' option for oidc clients?
-
 ## Stage 1 - essentials
 
 [x] finished
