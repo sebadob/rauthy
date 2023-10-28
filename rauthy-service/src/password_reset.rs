@@ -10,13 +10,15 @@ use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::WebauthnServiceReq;
+use rauthy_models::events::event::Event;
 use rauthy_models::language::Language;
+use rauthy_models::real_ip_from_req;
 use rauthy_models::request::{
     PasswordResetRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_models::templates::PwdResetHtml;
 use time::OffsetDateTime;
-use tracing::debug;
+use tracing::{debug, error};
 
 pub async fn handle_get_pwd_reset<'a>(
     data: &web::Data<AppState>,
@@ -204,6 +206,20 @@ pub async fn handle_put_user_password_reset<'a>(
     ml.invalidate(data).await?;
     user.email_verified = true;
     user.save(data, None, None).await?;
+
+    let ip = match real_ip_from_req(&req) {
+        None => {
+            error!(
+                "Extracting clients real IP from HttpRequest during password reset: {:?}",
+                err
+            );
+            "UNKOWN".to_string()
+        }
+        Some(ip) => ip,
+    };
+    data.tx_events
+        .send_async(Event::user_password_reset(user.email, ip))
+        .await?;
 
     // delete the cookie
     let cookie = cookie::Cookie::build(PWD_RESET_COOKIE, "")
