@@ -153,8 +153,7 @@ build-sqlite: build-docs build-ui test-sqlite
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # TODO skip exiting early on clippy warnings during v0.16
-    #DATABASE_URL={{db_url_sqlite}} cargo clippy --features sqlite -- -D warnings
+    DATABASE_URL={{db_url_sqlite}} cargo clippy --features sqlite -- -D warnings
     DATABASE_URL={{db_url_sqlite}} cargo build \
         --release \
         --target x86_64-unknown-linux-musl \
@@ -167,8 +166,7 @@ build-postgres: build-docs build-ui test-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # TODO skip exiting early on clippy warnings during v0.16
-    #DATABASE_URL={{db_url_postgres}} cargo clippy -- -D warnings
+    DATABASE_URL={{db_url_postgres}} cargo clippy -- -D warnings
     DATABASE_URL={{db_url_postgres}} cargo build \
         --release \
         --target x86_64-unknown-linux-musl
