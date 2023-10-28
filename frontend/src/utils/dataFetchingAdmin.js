@@ -344,6 +344,49 @@ export async function updateUserAttr(uid, data) {
 }
 
 
+export async function getApiKeys() {
+	const res = await fetch('/auth/v1/api_keys', {
+		method: 'GET',
+		headers: HEADERS,
+	});
+	return await checkRedirectForbidden(res);
+}
+
+export async function postApiKey(data) {
+	const res = await fetch('/auth/v1/api_keys', {
+		method: 'POST',
+		headers: getHeaders(),
+		body: JSON.stringify(data),
+	});
+	return await checkRedirectForbidden(res);
+}
+
+export async function putApiKey(data) {
+	const res = await fetch(`/auth/v1/api_keys/${data.name}`, {
+		method: 'PUT',
+		headers: getHeaders(),
+		body: JSON.stringify(data),
+	});
+	return await checkRedirectForbidden(res);
+}
+
+export async function deleteApiKey(name) {
+	const res = await fetch(`/auth/v1/api_keys/${name}`, {
+		method: 'DELETE',
+		headers: getHeaders(),
+	});
+	return await checkRedirectForbidden(res);
+}
+
+
+export async function putApiKeySecret(name) {
+	const res = await fetch(`/auth/v1/api_keys/${name}/secret`, {
+		method: 'PUT',
+		headers: getHeaders(),
+	});
+	return await checkRedirectForbidden(res);
+}
+
 export async function getBlacklist() {
 	const res = await fetch('/auth/v1/blacklist', {
 		method: 'GET',
