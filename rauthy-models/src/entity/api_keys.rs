@@ -7,11 +7,11 @@ use rauthy_common::utils::{decrypt, encrypt, get_rand};
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
 use ring::digest;
 use serde::{Deserialize, Serialize};
-use sqlx::{query, query_as};
+use sqlx::{query, query_as, FromRow};
 use tracing::error;
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ApiKeyEntity {
     pub name: String,
     pub secret: Vec<u8>,

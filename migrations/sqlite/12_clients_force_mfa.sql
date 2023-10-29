@@ -1,3 +1,5 @@
+-- modify the clients table and add 'force_mfa'
+
 alter table clients
     rename to clients_old;
 
@@ -66,4 +68,50 @@ select id,
        false as force_mfa
 from clients_old;
 
+-- recreate all tables with foreign keys to clients
+
+-- colors
+alter table colors
+    rename to colors_old;
+
+create table colors
+(
+    client_id varchar(36) not null
+        constraint colors_pk
+            primary key
+        constraint colors_clients_id_fk
+            references clients
+            on update cascade
+            on delete cascade,
+    data      blob not null
+);
+
+insert into colors(client_id, data)
+select client_id, data
+from colors_old;
+
+-- logos
+alter table logos
+    rename to logos_old;
+
+create table logos
+(
+    client_id varchar(36) not null
+        constraint logos_pk
+            primary key
+        constraint logos_clients_id_fk
+            references clients
+            on update cascade
+            on delete cascade,
+    data     blob not null
+);
+
+insert into logos(client_id, data)
+select client_id, data
+from logos_old;
+
+-- finally, drop all the old tables
+
+drop table colors_old;
+drop table logos_old;
 drop table clients_old;
