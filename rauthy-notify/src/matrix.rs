@@ -9,7 +9,8 @@ use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use std::str::FromStr;
 use std::time::Duration;
-use tracing::{debug, error, warn};
+use tokio::time;
+use tracing::{debug, error, info, warn};
 
 #[derive(Debug)]
 pub struct NotifierMatrix {
@@ -70,9 +71,31 @@ impl NotifierMatrix {
         };
 
         // try login and check access and config
-        slf.login().await?;
+        let mut retry = 0;
+        while retry < 3 {
+            match slf.login().await {
+                Ok(_) => break,
+                Err(err) => {
+                    if retry < 3 {
+                        warn!("{:?} - retry in 5 seconds", err);
+                        retry += 1;
+                        time::sleep(Duration::from_secs(5)).await;
+                    } else {
+                        return Err(err);
+                    }
+                }
+            }
+        }
         slf.logged_in_check_sync().await?;
         slf.check_room_config().await?;
+
+        let mut rx = slf.client.subscribe_to_session_changes();
+        tokio::spawn(async move {
+            while let Ok(state_change) = rx.recv().await {
+                info!("Matrix Session State change: {:?}", state_change);
+                // TODO do we need to monitor these and re-login manually, or does the client do it already?
+            }
+        });
 
         // all good
         Ok(slf)
@@ -84,11 +107,8 @@ impl NotifierMatrix {
             return Ok(());
         }
 
-        // do we have an old expired session? -> try to restore first
-        if let Some(session) = self.client.session() {
-            if self.client.restore_session(session).await.is_ok()
-                && self.logged_in_check_sync().await.is_ok()
-            {
+        if let Some(_session) = self.client.session() {
+            if self.logged_in_check_sync().await.is_ok() {
                 return Ok(());
             }
         } else if let Some(access_token) = &self.access_token {
@@ -129,6 +149,7 @@ impl NotifierMatrix {
 
     async fn logged_in_check_sync(&self) -> Result<(), ErrorResponse> {
         if self.client.logged_in() && self.client.sync_once(SyncSettings::default()).await.is_ok() {
+            info!("Successfully logged in to matrix");
             Ok(())
         } else {
             Err(ErrorResponse::new(
