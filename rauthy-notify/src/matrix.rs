@@ -56,6 +56,8 @@ impl NotifierMatrix {
             .handle_refresh_tokens();
         if disable_tls_validation {
             builder = builder.disable_ssl_verification();
+            // TODO impl creating a custom reqwest client here with private CA option
+            // builder.http_client(reqwest::Client)
         }
         let client = builder.build().await.map_err(|err| {
             ErrorResponse::new(

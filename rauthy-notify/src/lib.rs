@@ -71,7 +71,9 @@ impl Notification {
                 .timeout(Duration::from_secs(10))
                 .user_agent(format!("Rauthy v{} Notifier", RAUTHY_VERSION))
                 .min_tls_version(tls::Version::TLS_1_2)
-                .pool_idle_timeout(Duration::from_secs(300))
+                .pool_idle_timeout(Duration::from_secs(600))
+                .http2_keep_alive_while_idle(true)
+                // TODO impl config var to add private CA and disable TLS verify
                 .build()
                 .unwrap()
         })
