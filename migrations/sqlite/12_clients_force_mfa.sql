@@ -65,3 +65,5 @@ select id,
        challenge,
        false as force_mfa
 from clients_old;
+
+drop table clients_old;
