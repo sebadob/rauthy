@@ -31,7 +31,7 @@ pub struct Session {
     pub state: SessionState,
     pub exp: i64,
     pub last_seen: i64,
-    pub remote_ip: Option<String>,
+    pub remote_ip: Option<String>, // TODO should we maybe force a linked remote_ip all the time?
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]

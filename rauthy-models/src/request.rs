@@ -199,30 +199,30 @@ pub struct LoginRequest {
     pub code_challenge_method: Option<String>,
 }
 
-// #[derive(Debug, Deserialize, Validate, ToSchema)]
-// pub struct LoginRefreshRequest {
-//     /// Validation: `^[a-z0-9-_/]{2,128}$`
-//     #[validate(regex(path = "RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
-//     pub client_id: String,
-//     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-//     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
-//     pub redirect_uri: String,
-//     /// Validation: `Vec<^[a-zA-Z0-9\\s]$>`
-//     #[validate(custom(function = "validate_vec_scope"))]
-//     pub scopes: Option<Vec<String>>,
-//     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-//     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
-//     pub state: Option<String>,
-//     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-//     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
-//     pub nonce: Option<String>,
-//     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-//     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
-//     pub code_challenge: Option<String>,
-//     /// Validation: `[a-zA-Z0-9-._~]{43,128}`
-//     #[validate(regex(path = "RE_CODE_CHALLENGE", code = "[a-zA-Z0-9-._~]{43,128}"))]
-//     pub code_challenge_method: Option<String>,
-// }
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct LoginRefreshRequest {
+    /// Validation: `^[a-z0-9-_/]{2,128}$`
+    #[validate(regex(path = "RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
+    pub client_id: String,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub redirect_uri: String,
+    /// Validation: `Vec<^[a-zA-Z0-9\\s]$>`
+    #[validate(custom(function = "validate_vec_scope"))]
+    pub scopes: Option<Vec<String>>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub state: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub nonce: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub code_challenge: Option<String>,
+    /// Validation: `[a-zA-Z0-9-._~]{43,128}`
+    #[validate(regex(path = "RE_CODE_CHALLENGE", code = "[a-zA-Z0-9-._~]{43,128}"))]
+    pub code_challenge_method: Option<String>,
+}
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
 pub struct LogoutRequest {

@@ -405,6 +405,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         .service(generic::get_version)
                         .service(oidc::get_authorize)
                         .service(oidc::post_authorize)
+                        .service(oidc::post_authorize_refresh)
                         .service(oidc::get_callback_html)
                         .service(oidc::get_certs)
                         .service(oidc::get_cert_by_kid)
