@@ -11,6 +11,7 @@
 
     const minDate = new Date().toISOString().split('.')[0];
 
+    export let apiKeys = [];
     export let onSave = () => {};
 
     let err = '';
@@ -75,11 +76,19 @@
         try {
             await schema.validate(formValues, {abortEarly: false});
             formErrors = {};
-            return true;
         } catch (err) {
             formErrors = extractFormErrors(err);
             return false;
         }
+
+        for (let key of apiKeys) {
+            if (key.name === formValues.name) {
+                formErrors.name = 'Name already exists';
+                return false;
+            }
+        }
+
+        return true;
     }
 
 </script>
