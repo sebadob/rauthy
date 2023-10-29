@@ -1,16 +1,19 @@
-use crate::{Notification, Notify};
+use std::str::FromStr;
+use std::time::Duration;
+
 use async_trait::async_trait;
 use matrix_sdk::config::SyncSettings;
 use matrix_sdk::matrix_auth::{MatrixSession, MatrixSessionTokens};
 use matrix_sdk::ruma::events::room::message::RoomMessageEventContent;
 use matrix_sdk::ruma::{OwnedDeviceId, OwnedRoomId, OwnedUserId};
 use matrix_sdk::{AuthSession, Client, RoomState, SessionMeta};
-use rauthy_common::constants::RAUTHY_VERSION;
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use std::str::FromStr;
-use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info, warn};
+
+use rauthy_common::constants::RAUTHY_VERSION;
+use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+
+use crate::{Notification, Notify};
 
 #[derive(Debug)]
 pub struct NotifierMatrix {
@@ -28,6 +31,7 @@ impl NotifierMatrix {
         room_id: &str,
         access_token: Option<String>,
         user_password: Option<String>,
+        disable_tls_validation: bool,
     ) -> Result<Self, ErrorResponse> {
         // init variables
         let user_id = OwnedUserId::from_str(user_id).map_err(|err| {
@@ -46,19 +50,19 @@ impl NotifierMatrix {
         let rauthy_notifier = format!("Rauthy v{} Notifier", RAUTHY_VERSION);
         let device_id = OwnedDeviceId::from(rauthy_notifier.as_str());
 
-        let client = Client::builder()
+        let mut builder = Client::builder()
             .server_name(user_id.server_name())
             .user_agent(rauthy_notifier)
-            .handle_refresh_tokens()
-            .disable_ssl_verification() // TODO enable again afterwards
-            .build()
-            .await
-            .map_err(|err| {
-                ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    format!("Cannot build Matrix Notification Client: {:?}", err),
-                )
-            })?;
+            .handle_refresh_tokens();
+        if disable_tls_validation {
+            builder = builder.disable_ssl_verification();
+        }
+        let client = builder.build().await.map_err(|err| {
+            ErrorResponse::new(
+                ErrorResponseType::Internal,
+                format!("Cannot build Matrix Notification Client: {:?}", err),
+            )
+        })?;
 
         // build self
         let slf = Self {
