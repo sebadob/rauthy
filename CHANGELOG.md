@@ -1,5 +1,253 @@
 # Changelog
 
+## v0.17.0
+
+This is a pretty huge update with a lot of new features.
+
+### New Features
+
+#### Events and Auditing
+
+Rauthy now produces events in all different kinds of situations. These can be used for auditing, monitoring, and so on.
+You can configure quite a lot for them in the new `EVENTS / AUDIT` section in the
+[Rauthy Config](https://sebadob.github.io/rauthy/config/config.html).
+
+These events are persisted in the database, and they can be fetched in real time via a new Server Sent Events(SSE)
+endpoint `/auth/v1/events/stream`. There is a new UI component in the Admin UI that uses the same events stream.
+In case of a HA deployment, Rauthy will use one additional DB connection (all the time) from the connection pool
+to distribute these events via pg listen / notify to the other members. This makes a much simpler deployment and
+there is no real need to deploy additional resources like Nats or something like that. This keeps the setup easier
+and therefore more fault-tolerant.
+
+> You should at least set `EVENT_EMAIL` now, if you update from an older version.
+
+#### Slack and Matrix Integrations
+
+The new Events can be sent to a Slack Webhook or Matrix Server.
+
+The Slack integration uses the simple (legacy) Slack Webhooks and can be configured with `EVENT_SLACK_WEBHOOK`:
+
+```
+# The Webhook for Slack Notifications.
+# If left empty, no messages will be sent to Slack.
+#EVENT_SLACK_WEBHOOK=
+```
+
+The Matrix integration can connect to a Matrix server and room. This setup requires you to provide a few more
+variables:
+
+```
+# Matrix variables for event notifications.
+# `EVENT_MATRIX_USER_ID` and `EVENT_MATRIX_ROOM_ID` are mandatory.
+# Depending on your Matrix setup, additionally one of
+# `EVENT_MATRIX_ACCESS_TOKEN` or `EVENT_MATRIX_USER_PASSWORD` is needed.
+# If you log in to Matrix with User + Password, you may use `EVENT_MATRIX_USER_PASSWORD`.
+# If you log in via OIDC SSO (or just want to use a session token you can revoke),
+# you should provide `EVENT_MATRIX_ACCESS_TOKEN`.
+# If both are given, the `EVENT_MATRIX_ACCESS_TOKEN` will be preferred.
+#
+# If left empty, no messages will be sent to Slack.
+# Format: `@<user_id>:<server address>`
+#EVENT_MATRIX_USER_ID=
+# Format: `!<random string>:<server address>`
+#EVENT_MATRIX_ROOM_ID=
+#EVENT_MATRIX_ACCESS_TOKEN=
+#EVENT_MATRIX_USER_PASSWORD=
+# Optional path to a PEM Root CA certificate file for the Matrix client.
+#EVENT_MATRIX_ROOT_CA_PATH=tls/root.cert.pem
+# May be set to disable the TLS validation for the Matrix client.
+# default: false
+#EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION=false
+```
+
+You can configure the minimum event level which would trigger it to be sent:
+
+```
+# The notification level for events. Works the same way as a logging level. For instance:
+# 'notice' means send out a notifications for all events with the info level or higher.
+# Possible values:
+# - info
+# - notice
+# - warning
+# - critical
+#
+# default: 'warning'
+EVENT_NOTIFY_LEVEL_EMAIL=warning
+# default: 'notice'
+EVENT_NOTIFY_LEVEL_MATRIX=notice
+# default: 'notice'
+EVENT_NOTIFY_LEVEL_SLACK=notice
+```
+
+#### Increasing Login Timeouts
+
+Up until version 0.16, a failed login would extend the time the client needed to wait for the result
+artificially until it ended up in the region of the median time to log in successfully.
+This was already a good thing to do to prevent username enumeration.
+However, this has been improved a lot now.
+
+When a client does too many invalid logins, the time he needs to wait until he may do another try
+increases with each failed attempt. The important thing here is, that this is not bound to a user,
+but instead to the clients IP.  
+This makes sure, that an attacker cannot just lock a users account by doing invalid logins and therefore
+kind of DoS the user. Additionally, Rauthy can detect Brute-Force or DoS attempts independently of
+a users account.
+
+There are certain thresholds at 7, 10, 15, 20, 25 invalid logins, when a clients IP will get fully
+blacklisted (explained below) for a certain amount of time. This is a good DoS and even DDoS prevention.
+
+
+#### Ip Blacklist Middleware
+
+This is a new HTTP middleware which checks the clients IP against an internal blacklist.
+
+This middleware is the very first thing that is being executed and just returns an HTML page
+to a blacklisted client with the information about the blacklisting and the expiry.  
+This blacklist is in-memory only to be as fast as possible to actually be able to handle brute
+force and DoS attacks in the best way possible while consuming the least amount of resources
+to do this.
+
+Currently, IP's may get blacklisted in two ways:
+- Automatically when exceeding the above-mentioned thresholds for invalid logins in a row
+- Manually via the Admin UI
+
+Blacklisted IP's always have an expiry and will get removed from the blacklist automatically.
+Both actions will trigger one of the new Rauthy Events and send out notifications.
+
+#### JWKS Auto-Rotate Scheduler
+
+This is a simple new cron job which rotates the JSON Web Key Set (JWKS) automatically for
+enhanced security, just in case one of the keys may get leaked at some point.
+
+By default, it runs every first day of the month. This can be adjusted in the config:
+```
+# JWKS auto rotate cronjob. This will (by default) rotate all JWKs every
+# 1. day of the month. If you need smaller intervals, you may adjust this
+# value. For security reasons, you cannot fully disable it.
+# In a HA deployment, this job will only be executed on the current cache
+# leader at that time.
+# Format: "sec min hour day_of_month month day_of_week year"
+# default: "0 30 3 1 * * *"
+JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
+```
+
+#### Fully Reworked Authentication Middleware
+
+The authentication and authorization system has been fully reworked and improved.
+
+The new middleware and way of checking the client's access rights in each endpoint is way
+less error-prone than before. The whole process has been much simplified which indirectly
+improves the security:
+- CSRF Tokens are now checked automatically if the request method is any other than a `GET`
+- `Bearer` Tokens are not allowed anymore to access the Admin API
+- A new `ApiKey` token type has been added (explained below)
+- Only a single authn/authz struct is needed to validate each endpoint
+- The old permission extractor middleware was removed which also increases the performance a bit
+
+#### New API-Key Type
+
+This new API-Key type may be used, if you need to access Rauthy API from other applications.
+
+Beforehand, you needed to create a "user" for an application, if you wanted to access the API,
+which is kind of counter-intuitive and cumbersome.  
+These new API-Keys can be used to handle this task now. These are static keys with an
+optional expiry date and fine-grained access rights. You should only give them permissions
+to the resources you actually need to further improve your backend security.
+
+They can be easily created, configured and revoked / deleted in the Admin UI at any time.
+
+> IMPORTANt: The API now cannot be accessed anymore with Bearer tokens! If you used this
+> method until now, you need to switch to the new API Keys
+
+#### OIDC Client FORCE_MFA feature
+
+In the configuration for each individual OIDC client, you can find a new `FORCE MFA` switch.
+It this new option is activated for a client, it will only issue authentication codes for
+those users, that have at least one Passkey registered.  
+This makes it possible to force MFA for all your different applications from Rauthy directly
+without the need to check for the `amr` claim in the ID token and do or configure all of
+this manually downstream. Most of the time, you may not even have control over the client
+itself, and you are basically screwed, if the client does not have its own "force mfa integration".
+
+> CAUTION: This mentioned in the UI as well, but when you check this new force mfa option,
+> it can only force MFA for the `authorization_code` flow of course! If you use other flows,
+> there just is no MFA that could be checked / forced.
+
+#### Rauthy Version Checker
+
+Since we do have an Events system now, there is a new scheduled cron job, which checks the
+latest available Rauthy Version.
+
+This Job runs once every 8 hours and does a single poll to the Github Releases API. It looks
+for the latest available Rauthy Version that is not a prerelease or anything unstable.
+If it finds a version higher than the currently running one, a new Event will be generated.
+Additionally,
+you will see the current Rauthy Version in the UI now and a small indicator just next to it,
+if there is a stable update available.
+
+### Changes
+
+- New events and auditing
+[758dda6](https://github.com/sebadob/rauthy/commit/758dda631734c0c8e5baddf79ff2b0aa67947929)
+[488f9de](https://github.com/sebadob/rauthy/commit/488f9de03653c5eb2c673644deb188599763afbb)
+[7b95acc](https://github.com/sebadob/rauthy/commit/7b95acc22470bc49af6cd1812d87a414d7b4176b)
+[34d8888](https://github.com/sebadob/rauthy/commit/34d8888faa3ee6740d633814bf29920d2c2856a6)
+[f70f0b2](https://github.com/sebadob/rauthy/commit/f70f0b2a20e9e3fc53958959238b9f8136b5c9f0)
+[5f0c9c9](https://github.com/sebadob/rauthy/commit/5f0c9c979c0ba3cb4d3a75cd78a899eee7d13464)
+[a9af494](https://github.com/sebadob/rauthy/commit/a9af494bba788e462bb22eb31131d19b5ffaeaed)
+[797dad5](https://github.com/sebadob/rauthy/commit/797dad564ff190b8739393c0405486b8f55b057e)
+[b338f26](https://github.com/sebadob/rauthy/commit/b338f2613e9d19581677915c5ceb1996653709d7)
+- `rauthy-notify` crate has been added which implements the above mentioned Slack and
+Matrix integrations for Event notifications.
+[8767389](https://github.com/sebadob/rauthy/commit/8767389dafe3dc392910135d8cfc7f6a63bf3cd5)
+- Increasing login timeouts and delays after invalid logins
+[7f7a675](https://github.com/sebadob/rauthy/commit/7f7a675102f21aabe9f4cd2a5eef95d4947134d4)
+[5d19d2d](https://github.com/sebadob/rauthy/commit/5d19d2d6d4434b2192eb3c8860eb8111ffdb8d79)
+- IpBlacklist Middleware
+[d69845e](https://github.com/sebadob/rauthy/commit/d69845ed772e1454e8ac902fdffb253416cbac14)
+- IPBlacklist Admin UI Component
+[c76c208](https://github.com/sebadob/rauthy/commit/c76c20871a303cbf6cfc587483113cd544d65424)
+- JWKS Auto-Rotate
+[cd087eb](https://github.com/sebadob/rauthy/commit/cd087eb8b475c9b8ae409e7a34bc880e76f2ee69)
+- New Authentication Middleware
+[a097a5d](https://github.com/sebadob/rauthy/commit/a097a5d2d0d75940cc192b2b1a86f59e5a732a88)
+- ApiKey Admin UI Component
+[53ffe49](https://github.com/sebadob/rauthy/commit/53ffe4938a8f5a2fd6d30188ac0a819f3eae2f96)
+- OIDC Client `FORCE_MFA`
+[3efdcce](https://github.com/sebadob/rauthy/commit/3efdcceb2277b2f8b28572485cdd8137115d8b66)
+- Rauthy Version Checker
+[aea7794](https://github.com/sebadob/rauthy/commit/aea77942b2488a26d12e7d191582996637079918)
+[41b4c9c](https://github.com/sebadob/rauthy/commit/41b4c9c19c061f36f3ed5fa97d75ddcf803e0614)
+- Show a Link to the accounts page after a password reset if the redirection does not work
+[ace4daf](https://github.com/sebadob/rauthy/commit/ace4daf180b09f0cc8677bf4cf85e792496f9ee0)
+- Send out E-Mail change confirmations E-Mails to both old and new address when an admin changes the address
+[8e97e31](https://github.com/sebadob/rauthy/commit/8e97e310a6369bd5150d087cd5cd402d8edc221e)
+[97197db](https://github.com/sebadob/rauthy/commit/97197dbcdf3268647a3269c5cf5648176f0000d7)
+- Allow CORS requests to the `.well-known` endpoints to make the oidc config lookup from an external UI possible
+[b57656f](https://github.com/sebadob/rauthy/commit/b57656ffaf7e822527d2d8c9d74b7c948193c220)
+- include the `alg` in the JWKS response for the `openid-configuration`
+[c9073cb](https://github.com/sebadob/rauthy/commit/c9073cb473be04092e326c95ca7a1b3502379f40)
+- The E-Mail HTML templates have been optically adjusted a bit to make them "prettier"
+[926de6e](https://github.com/sebadob/rauthy/commit/926de6e7348a8294fe284500cb41381a56a5cd2b)
+
+### Bugfixes
+
+- A User may have not been updated correctly in the cache when the E-Mail was changed.
+[8d9cdce](https://github.com/sebadob/rauthy/commit/8d9cdce61992ee59e381876b71b18168e7e3ce31)
+- With v0.16, it was possible to not be able to switch back to a password account type from passkey,
+when it was a password account before already which did update its password in the past and therefore
+would have entries in the DB for `last_recent_passwords` if you had the password policy correctly.
+[7a965a2](https://github.com/sebadob/rauthy/commit/7a965a276b2a127057dfd589afde23cf5ec981d1)
+- When you were using a password manager that filled out the username 'again' in the login form,
+after the additional password request input showed up, it could reset the form on some browser.
+[09d1d3a](https://github.com/sebadob/rauthy/commit/09d1d3a7446d5f636b69046c8066d69b09537411)
+
+### Removed
+
+- The `ADMIN_ACCESS_SESSION_ONLY` config variable was removed. This was obsolete now with
+the introduction of the new ApiKey type.
+[b28d8ba](https://github.com/sebadob/rauthy/commit/b28d8baa50f778867647535cf204cf87a896968b)
+
 ## v0.16.1
 
 This is a small bugfix release.  

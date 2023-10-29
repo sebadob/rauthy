@@ -62,7 +62,7 @@
     </div>
     {#if showAddNew}
         <div transition:slide>
-            <ApiKeyAddNew onSave={fetchApiKeys} />
+            <ApiKeyAddNew onSave={fetchApiKeys} apiKeys={keys} />
         </div>
     {/if}
 
