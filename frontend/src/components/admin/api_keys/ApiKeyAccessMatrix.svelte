@@ -24,6 +24,10 @@
         'delete',
     ];
 
+    // keep the state for whole row or column toggles
+    let groupsToggle = new Array(GROUPS.length).fill(false);
+    let opsToggle = new Array(OPS.length).fill(false);
+
     onMount(() => {
         buildArray();
         if (apiKey?.access) {
@@ -73,6 +77,31 @@
         return access;
     }
 
+    function toggleGroup(idx) {
+        groupsToggle[idx] = !groupsToggle[idx];
+
+        const toggleTo = groupsToggle[idx];
+        let row = accessMatrix[idx];
+        for (let i = 0; i < OPS.length; i++) {
+            for (let [key, value] of Object.entries(row)) {
+                if (key !== 'group') {
+                    console.log(`${key} - ${value}`);
+                    row[key] = toggleTo;
+                }
+            }
+        }
+        accessMatrix[idx] = row;
+    }
+
+    function toggleOp(idx) {
+        opsToggle[idx] = !opsToggle[idx];
+
+        const toggleTo = opsToggle[idx];
+        for (let i = 0; i < GROUPS.length; i++) {
+            accessMatrix[i][OPS[idx]] = toggleTo;
+        }
+    }
+
 </script>
 
 <div class="matrix">
@@ -81,18 +110,34 @@
     <div class="mr">
         <div class="label"></div>
         {#each OPS as op, i (i)}
-            <div class="cell">{OPS[i]}</div>
+            <div
+                    role="button"
+                    tabindex="0"
+                    class="cell pointer"
+                    on:click={toggleOp.bind(this, i)}
+                    on:keypress={toggleOp.bind(this, i)}
+            >
+                {OPS[i]}
+            </div>
         {/each}
     </div>
 
     {#if accessMatrix}
         {#each GROUPS as group, i (i)}
             <div class="mr">
-                <div class="label">{GROUPS[i]}</div>
+                <div
+                        role="button"
+                        tabindex="0"
+                        class="label pointer"
+                        on:click={toggleGroup.bind(this, i)}
+                        on:keypress={toggleGroup.bind(this, i)}
+                >
+                    {GROUPS[i]}
+                </div>
                 {#each OPS as op, j (j)}
                     <div class="cell">
                         <input
-                                class="chkbox"
+                                class="pointer"
                                 type="checkbox"
                                 bind:checked={accessMatrix[i][op]}
                         >
@@ -107,10 +152,6 @@
     .cell {
         width: 3.5rem;
         text-align: center;
-    }
-
-    .chkbox {
-        cursor: pointer;
     }
 
     .label {
@@ -129,5 +170,9 @@
 
     .mr:hover {
         background: var(--col-gmid);
+    }
+
+    .pointer {
+        cursor: pointer;
     }
 </style>
