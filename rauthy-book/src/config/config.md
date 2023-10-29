@@ -243,6 +243,8 @@ JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
 #EVENT_MATRIX_ROOM_ID=
 #EVENT_MATRIX_ACCESS_TOKEN=
 #EVENT_MATRIX_USER_PASSWORD=
+# Optional path to a PEM Root CA certificate file for the Matrix client.
+#EVENT_MATRIX_ROOT_CA_PATH=path/to/my/root_ca_cert.pem
 # May be set to disable the TLS validation for the Matrix client.
 # default: false
 #EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION=false
