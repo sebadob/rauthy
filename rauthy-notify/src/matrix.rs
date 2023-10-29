@@ -32,6 +32,7 @@ impl NotifierMatrix {
         access_token: Option<String>,
         user_password: Option<String>,
         disable_tls_validation: bool,
+        root_ca_path: Option<&str>,
     ) -> Result<Self, ErrorResponse> {
         // init variables
         let user_id = OwnedUserId::from_str(user_id).map_err(|err| {
@@ -50,21 +51,24 @@ impl NotifierMatrix {
         let rauthy_notifier = format!("Rauthy v{} Notifier", RAUTHY_VERSION);
         let device_id = OwnedDeviceId::from(rauthy_notifier.as_str());
 
-        let mut builder = Client::builder()
+        let http_client = Notification::build_client(disable_tls_validation, root_ca_path).await;
+        let client = Client::builder()
             .server_name(user_id.server_name())
             .user_agent(rauthy_notifier)
-            .handle_refresh_tokens();
+            .handle_refresh_tokens()
+            .http_client(http_client)
+            .build()
+            .await
+            .map_err(|err| {
+                ErrorResponse::new(
+                    ErrorResponseType::Internal,
+                    format!("Cannot build Matrix Notification Client: {:?}", err),
+                )
+            })?;
+
         if disable_tls_validation {
-            builder = builder.disable_ssl_verification();
-            // TODO impl creating a custom reqwest client here with private CA option
-            // builder.http_client(reqwest::Client)
-        }
-        let client = builder.build().await.map_err(|err| {
-            ErrorResponse::new(
-                ErrorResponseType::Internal,
-                format!("Cannot build Matrix Notification Client: {:?}", err),
-            )
-        })?;
+            warn!("Matrix Event Notifier client has TLS validation disabled");
+        };
 
         // build self
         let slf = Self {

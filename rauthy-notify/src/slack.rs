@@ -33,6 +33,7 @@ impl Notify for NotifierSlack {
         debug!("{:?}", msg);
 
         match Notification::client()
+            .await
             .post(&self.webhook_url)
             .json(&msg)
             .send()
