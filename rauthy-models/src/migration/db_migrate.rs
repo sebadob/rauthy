@@ -1,4 +1,21 @@
+use actix_web::web;
+use argon2::password_hash::SaltString;
+use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
+use jwt_simple::algorithms::{
+    Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
+};
+use rand_core::OsRng;
+use sqlx::Row;
+use time::OffsetDateTime;
+use tracing::{debug, info};
+
+use rauthy_common::constants::{ADMIN_FORCE_MFA, DB_TYPE, DEV_MODE};
+use rauthy_common::error_response::ErrorResponse;
+use rauthy_common::utils::{encrypt, get_rand};
+use rauthy_common::DbType;
+
 use crate::app_state::DbPool;
+use crate::entity::api_keys::ApiKeyEntity;
 use crate::entity::clients::Client;
 use crate::entity::colors::ColorEntity;
 use crate::entity::config::ConfigEntity;
@@ -13,20 +30,6 @@ use crate::entity::sessions::Session;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::users::User;
 use crate::entity::webauthn::PasskeyEntity;
-use actix_web::web;
-use argon2::password_hash::SaltString;
-use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
-use jwt_simple::algorithms::{
-    Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
-};
-use rand_core::OsRng;
-use rauthy_common::constants::{ADMIN_FORCE_MFA, DB_TYPE, DEV_MODE};
-use rauthy_common::error_response::ErrorResponse;
-use rauthy_common::utils::{encrypt, get_rand};
-use rauthy_common::DbType;
-use sqlx::Row;
-use time::OffsetDateTime;
-use tracing::{debug, info};
 
 pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse> {
     debug!("Executing anti_lockout_check");
@@ -279,6 +282,27 @@ pub async fn migrate_from_sqlite(
             b.id,
             b.data,
         )
+        .execute(db_to)
+        .await?;
+    }
+
+    // API KEYS
+    let before = sqlx::query_as::<_, ApiKeyEntity>("SELECT * FROM api_keys")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query!("DELETE FROM api_keys").execute(db_to).await?;
+    for b in before {
+        sqlx::query(
+            r#"INSERT INTO
+            api_keys (name, secret, created, expires, enc_key_id, access)
+            VALUES ($1, $2, $3, $4, $5, $6)"#,
+        )
+        .bind(b.name)
+        .bind(b.secret)
+        .bind(b.created)
+        .bind(b.expires)
+        .bind(b.enc_key_id)
+        .bind(b.access)
         .execute(db_to)
         .await?;
     }
@@ -632,6 +656,27 @@ pub async fn migrate_from_postgres(
             b.id,
             b.data,
         )
+        .execute(db_to)
+        .await?;
+    }
+
+    // API KEYS
+    let before = sqlx::query_as::<_, ApiKeyEntity>("SELECT * FROM api_keys")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query!("DELETE FROM api_keys").execute(db_to).await?;
+    for b in before {
+        sqlx::query(
+            r#"INSERT INTO
+            api_keys (name, secret, created, expires, enc_key_id, access)
+            VALUES ($1, $2, $3, $4, $5, $6)"#,
+        )
+        .bind(b.name)
+        .bind(b.secret)
+        .bind(b.created)
+        .bind(b.expires)
+        .bind(b.enc_key_id)
+        .bind(b.access)
         .execute(db_to)
         .await?;
     }

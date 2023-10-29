@@ -105,7 +105,6 @@ impl EventNotifier {
         }
 
         // Matrix
-        // Matrix setup
         if let Ok(user_id) = env::var("EVENT_MATRIX_USER_ID") {
             let level = env::var("EVENT_NOTIFY_LEVEL_MATRIX")
                 .map(|level| {
@@ -125,8 +124,19 @@ impl EventNotifier {
                 panic!("Specific one of: EVENT_MATRIX_ACCESS_TOKEN or EVENT_MATRIX_USER_PASSWORD");
             }
 
-            let notifier =
-                NotifierMatrix::try_new(&user_id, &room_id, access_token, user_password).await?;
+            let disable_tls_validation = env::var("EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION")
+                .unwrap_or_else(|_| "false".to_string())
+                .parse::<bool>()
+                .expect("Cannot parse EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION to bool");
+
+            let notifier = NotifierMatrix::try_new(
+                &user_id,
+                &room_id,
+                access_token,
+                user_password,
+                disable_tls_validation,
+            )
+            .await?;
             NOTIFIER_MATRIX
                 .set((level.value(), notifier))
                 .expect("init_notifiers should only be called once");

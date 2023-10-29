@@ -1,15 +1,19 @@
-use crate::{Notification, Notify};
+use std::str::FromStr;
+use std::time::Duration;
+
 use async_trait::async_trait;
 use matrix_sdk::config::SyncSettings;
 use matrix_sdk::matrix_auth::{MatrixSession, MatrixSessionTokens};
 use matrix_sdk::ruma::events::room::message::RoomMessageEventContent;
 use matrix_sdk::ruma::{OwnedDeviceId, OwnedRoomId, OwnedUserId};
 use matrix_sdk::{AuthSession, Client, RoomState, SessionMeta};
+use tokio::time;
+use tracing::{debug, error, info, warn};
+
 use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use std::str::FromStr;
-use std::time::Duration;
-use tracing::{debug, error, warn};
+
+use crate::{Notification, Notify};
 
 #[derive(Debug)]
 pub struct NotifierMatrix {
@@ -27,6 +31,7 @@ impl NotifierMatrix {
         room_id: &str,
         access_token: Option<String>,
         user_password: Option<String>,
+        disable_tls_validation: bool,
     ) -> Result<Self, ErrorResponse> {
         // init variables
         let user_id = OwnedUserId::from_str(user_id).map_err(|err| {
@@ -45,19 +50,21 @@ impl NotifierMatrix {
         let rauthy_notifier = format!("Rauthy v{} Notifier", RAUTHY_VERSION);
         let device_id = OwnedDeviceId::from(rauthy_notifier.as_str());
 
-        let client = Client::builder()
+        let mut builder = Client::builder()
             .server_name(user_id.server_name())
             .user_agent(rauthy_notifier)
-            .handle_refresh_tokens()
-            .disable_ssl_verification() // TODO enable again afterwards
-            .build()
-            .await
-            .map_err(|err| {
-                ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    format!("Cannot build Matrix Notification Client: {:?}", err),
-                )
-            })?;
+            .handle_refresh_tokens();
+        if disable_tls_validation {
+            builder = builder.disable_ssl_verification();
+            // TODO impl creating a custom reqwest client here with private CA option
+            // builder.http_client(reqwest::Client)
+        }
+        let client = builder.build().await.map_err(|err| {
+            ErrorResponse::new(
+                ErrorResponseType::Internal,
+                format!("Cannot build Matrix Notification Client: {:?}", err),
+            )
+        })?;
 
         // build self
         let slf = Self {
@@ -70,9 +77,31 @@ impl NotifierMatrix {
         };
 
         // try login and check access and config
-        slf.login().await?;
+        let mut retry = 0;
+        while retry < 3 {
+            match slf.login().await {
+                Ok(_) => break,
+                Err(err) => {
+                    if retry < 3 {
+                        warn!("{:?} - retry in 5 seconds", err);
+                        retry += 1;
+                        time::sleep(Duration::from_secs(5)).await;
+                    } else {
+                        return Err(err);
+                    }
+                }
+            }
+        }
         slf.logged_in_check_sync().await?;
         slf.check_room_config().await?;
+
+        let mut rx = slf.client.subscribe_to_session_changes();
+        tokio::spawn(async move {
+            while let Ok(state_change) = rx.recv().await {
+                info!("Matrix Session State change: {:?}", state_change);
+                // TODO do we need to monitor these and re-login manually, or does the client do it already?
+            }
+        });
 
         // all good
         Ok(slf)
@@ -84,11 +113,8 @@ impl NotifierMatrix {
             return Ok(());
         }
 
-        // do we have an old expired session? -> try to restore first
-        if let Some(session) = self.client.session() {
-            if self.client.restore_session(session).await.is_ok()
-                && self.logged_in_check_sync().await.is_ok()
-            {
+        if let Some(_session) = self.client.session() {
+            if self.logged_in_check_sync().await.is_ok() {
                 return Ok(());
             }
         } else if let Some(access_token) = &self.access_token {
@@ -129,6 +155,7 @@ impl NotifierMatrix {
 
     async fn logged_in_check_sync(&self) -> Result<(), ErrorResponse> {
         if self.client.logged_in() && self.client.sync_once(SyncSettings::default()).await.is_ok() {
+            info!("Successfully logged in to matrix");
             Ok(())
         } else {
             Err(ErrorResponse::new(

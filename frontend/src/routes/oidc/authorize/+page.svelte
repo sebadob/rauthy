@@ -395,7 +395,7 @@
 
     .errMsg {
         max-width: 15rem;
-        margin: -5px 10px 0 10px;
+        margin: -5px 10px 0 5px;
         color: var(--col-err)
     }
 

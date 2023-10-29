@@ -243,12 +243,13 @@ JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
 #EVENT_MATRIX_ROOM_ID=
 #EVENT_MATRIX_ACCESS_TOKEN=
 #EVENT_MATRIX_USER_PASSWORD=
+# May be set to disable the TLS validation for the Matrix client.
+# default: false
+#EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION=false
 
 # The Webhook for Slack Notifications.
 # If left empty, no messages will be sent to Slack.
 #EVENT_SLACK_WEBHOOK=
-
-# TODO Matrix
 
 # The notification level for events. Works the same way as a logging level. 
 # For instance: 'notice' means send out a notifications for all events with 
