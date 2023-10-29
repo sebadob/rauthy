@@ -143,20 +143,7 @@ pub async fn authorize(
         .map_err(|err| (err, !user_must_provide_password))?;
 
     // check force mfa
-    // Do this check after a possible password hash to not leak information to unauthenticated users.
-    //
-    // The "rauthy" client is the exception for this check to make logging into the account possible
-    // without MFA. The force MFA for the rauthy admin UI is done in Principal::validate_admin_session()
-    // depending on the `ADMIN_FORCE_MFA` config variable.
-    if &client.id != "rauthy" && client.force_mfa && !user.has_webauthn_enabled() {
-        return Err((
-            ErrorResponse::new(
-                ErrorResponseType::MfaRequired,
-                "MFA is required for this client".to_string(),
-            ),
-            has_password_been_hashed,
-        ));
-    }
+    client.validate_mfa(&user)?;
 
     // check allowed origin
     let header_origin = client
@@ -306,6 +293,9 @@ pub async fn authorize_refresh(
     })?;
     let user = User::find(data, user_id.clone()).await?;
     user.check_enabled()?;
+    user.check_expired()?;
+
+    client.validate_mfa(&user)?;
 
     let scopes = client.sanitize_login_scopes(&req_data.scopes)?;
     let code_lifetime = if user.has_webauthn_enabled() {
