@@ -143,7 +143,9 @@ pub async fn authorize(
         .map_err(|err| (err, !user_must_provide_password))?;
 
     // check force mfa
-    client.validate_mfa(&user)?;
+    client
+        .validate_mfa(&user)
+        .map_err(|err| (err, has_password_been_hashed))?;
 
     // check allowed origin
     let header_origin = client

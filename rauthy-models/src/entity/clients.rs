@@ -640,16 +640,11 @@ impl Client {
     /// The "rauthy" client is the exception for this check to makes logging into the account
     /// possible without MFA. The force MFA for the Rauthy admin UI is done in
     /// Principal::validate_admin_session() depending on the `ADMIN_FORCE_MFA` config variable.
-    pub fn validate_mfa(
-        &self,
-        user: &User,
-    ) -> Result<(), ErrorResponse> {
+    pub fn validate_mfa(&self, user: &User) -> Result<(), ErrorResponse> {
         if &self.id != "rauthy" && self.force_mfa && !user.has_webauthn_enabled() {
-            Err(
-                ErrorResponse::new(
-                    ErrorResponseType::MfaRequired,
-                    "MFA is required for this client".to_string(),
-                )
+            Err(ErrorResponse::new(
+                ErrorResponseType::MfaRequired,
+                "MFA is required for this client".to_string(),
             ))
         } else {
             Ok(())
