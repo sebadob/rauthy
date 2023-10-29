@@ -23,5 +23,5 @@ pub mod users;
 pub mod webauthn;
 
 pub async fn is_db_alive(db: &DbPool) -> bool {
-    query("SELECT 1 FROM config").execute(db).await.is_ok()
+    query("SELECT 1").execute(db).await.is_ok()
 }

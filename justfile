@@ -52,6 +52,7 @@ version:
 # runs the full set of tests with in-memory sqlite
 test-sqlite test="": migrate-sqlite
     #!/usr/bin/env bash
+    set -euxo pipefail
     clear
 
     DATABASE_URL={{db_url_sqlite}} cargo build --features sqlite
@@ -68,6 +69,7 @@ test-sqlite test="": migrate-sqlite
 # runs the full set of tests with postgres
 test-postgres test="": migrate-postgres
     #!/usr/bin/env bash
+    set -euxo pipefail
     clear
 
     DATABASE_URL={{db_url_postgres}} cargo build
@@ -149,7 +151,7 @@ build-docs:
 
 
 # builds the whole application in release mode
-build-sqlite: build-docs build-ui test-sqlite
+build-sqlite: test-sqlite
     #!/usr/bin/env bash
     set -euxo pipefail
 
@@ -162,7 +164,7 @@ build-sqlite: build-docs build-ui test-sqlite
 
 
 # builds the whole application in release mode
-build-postgres: build-docs build-ui test-postgres
+build-postgres: test-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
@@ -213,7 +215,7 @@ publish-nightly: build-sqlite build-postgres
 
 
 # publishes the application images - full pipeline incl clippy and testing
-publish-versions: build-sqlite build-postgres
+publish-versions: build-docs build-ui build-sqlite build-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 

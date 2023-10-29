@@ -20,7 +20,7 @@ pub fn setup_logging() -> tracing::Level {
         _ => panic!("Log Level must be one of the following: error, warn, info, debug, trace"),
     };
     let filter = format!(
-        "{},async_nats=info,hyper=info,matrix_sdk_crypto=error",
+        "{},hyper=info,matrix_sdk_crypto=error,matrix_sdk_base=error,matrix_sdk::encryption=error",
         log_level.as_str()
     );
     env::set_var("RUST_LOG", &filter);
