@@ -202,18 +202,20 @@ impl Principal {
     }
 
     #[inline(always)]
-    pub fn validate_session_auth(&self) -> Result<(), ErrorResponse> {
-        if self
-            .session
-            .as_ref()
-            .map(|s| s.state == SessionState::Auth)
-            .unwrap_or(false)
-        {
-            Ok(())
+    pub fn validate_session_auth(&self) -> Result<&Session, ErrorResponse> {
+        if let Some(session) = &self.session {
+            if session.state == SessionState::Auth {
+                Ok(session)
+            } else {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "Unauthorized Session".to_string(),
+                ))
+            }
         } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                "Unauthorized Session".to_string(),
+                "No valid session".to_string(),
             ))
         }
     }

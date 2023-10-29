@@ -10,7 +10,7 @@ use jwt_simple::claims;
 use jwt_simple::prelude::*;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME,
-    TOKEN_BEARER, WEBAUTHN_REQ_EXP,
+    SESSION_RENEW_MFA, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::HashPassword;
@@ -28,7 +28,7 @@ use rauthy_models::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
 use rauthy_models::events::event::Event;
 use rauthy_models::events::ip_blacklist_handler::{IpBlacklistReq, IpFailedLoginCheck};
 use rauthy_models::language::Language;
-use rauthy_models::request::{LoginRequest, LogoutRequest, TokenRequest};
+use rauthy_models::request::{LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest};
 use rauthy_models::response::{TokenInfo, Userinfo};
 use rauthy_models::templates::{LogoutHtml, TooManyRequestsHtml};
 use rauthy_models::{
@@ -290,86 +290,87 @@ pub async fn authorize(
     }
 }
 
-// /// # Business logic for [POST /oidc/authorize/refresh](crate::handlers::post_authorize_refresh)
-// pub async fn authorize_refresh(
-//     data: &web::Data<AppState>,
-//     session: Session,
-//     client: Client,
-//     header_origin: Option<(HeaderName, HeaderValue)>,
-//     req_data: LoginRefreshRequest,
-// ) -> Result<AuthStep, ErrorResponse> {
-//     let user_id = session.user_id.as_ref().ok_or_else(|| {
-//         ErrorResponse::new(
-//             ErrorResponseType::Internal,
-//             String::from("No linked user_id for already validated session"),
-//         )
-//     })?;
-//     let user = User::find(data, user_id.clone()).await?;
-//     user.check_enabled()?;
-//
-//     let scopes = client.sanitize_login_scopes(&req_data.scopes)?;
-//     let code_lifetime = if user.has_webauthn_enabled() {
-//         client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
-//     } else {
-//         client.auth_code_lifetime
-//     };
-//
-//     let code = AuthCode::new(
-//         user.id.clone(),
-//         client.id,
-//         Some(session.id.clone()),
-//         req_data.code_challenge,
-//         req_data.code_challenge_method,
-//         req_data.nonce,
-//         scopes,
-//         code_lifetime,
-//     );
-//     code.save(data).await?;
-//
-//     // build location header
-//     let header_loc = if let Some(s) = req_data.state {
-//         format!("{}?code={}&state={}", req_data.redirect_uri, code.id, s)
-//     } else {
-//         format!("{}?code={}", req_data.redirect_uri, code.id)
-//     };
-//
-//     // check if we need to validate the 2nd factor
-//     if user.has_webauthn_enabled() && *SESSION_RENEW_MFA {
-//         let step = AuthStepAwaitWebauthn {
-//             has_password_been_hashed: false,
-//             code: get_rand(48),
-//             header_csrf: Session::get_csrf_header(&session.csrf_token),
-//             header_origin,
-//             user_id: user.id.clone(),
-//             email: user.email,
-//             exp: *WEBAUTHN_REQ_EXP,
-//             session,
-//         };
-//
-//         let login_req = WebauthnLoginReq {
-//             code: step.code.clone(),
-//             user_id: user.id,
-//             header_loc,
-//             header_origin: step
-//                 .header_origin
-//                 .as_ref()
-//                 .map(|h| h.1.to_str().unwrap().to_string()),
-//         };
-//         login_req.save(data).await?;
-//
-//         Ok(AuthStep::AwaitWebauthn(step))
-//     } else {
-//         Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
-//             has_password_been_hashed: false,
-//             header_loc: (
-//                 header::LOCATION,
-//                 HeaderValue::from_str(&header_loc).unwrap(),
-//             ),
-//             header_csrf: Session::get_csrf_header(&session.csrf_token),
-//             header_origin,
-//         }))
-//     }
-// }
+/// # Business logic for [POST /oidc/authorize/refresh](crate::handlers::post_authorize_refresh)
+pub async fn authorize_refresh(
+    data: &web::Data<AppState>,
+    session: &Session,
+    client: Client,
+    header_origin: Option<(HeaderName, HeaderValue)>,
+    req_data: LoginRefreshRequest,
+) -> Result<AuthStep, ErrorResponse> {
+    let user_id = session.user_id.as_ref().ok_or_else(|| {
+        ErrorResponse::new(
+            ErrorResponseType::Internal,
+            String::from("No linked user_id for already validated session"),
+        )
+    })?;
+    let user = User::find(data, user_id.clone()).await?;
+    user.check_enabled()?;
+
+    let scopes = client.sanitize_login_scopes(&req_data.scopes)?;
+    let code_lifetime = if user.has_webauthn_enabled() {
+        client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
+    } else {
+        client.auth_code_lifetime
+    };
+
+    let code = AuthCode::new(
+        user.id.clone(),
+        client.id,
+        Some(session.id.clone()),
+        req_data.code_challenge,
+        req_data.code_challenge_method,
+        req_data.nonce,
+        scopes,
+        code_lifetime,
+    );
+    code.save(data).await?;
+
+    // build location header
+    let header_loc = if let Some(s) = req_data.state {
+        format!("{}?code={}&state={}", req_data.redirect_uri, code.id, s)
+    } else {
+        format!("{}?code={}", req_data.redirect_uri, code.id)
+    };
+
+    // check if we need to validate the 2nd factor
+    if user.has_webauthn_enabled() && *SESSION_RENEW_MFA {
+        let step = AuthStepAwaitWebauthn {
+            has_password_been_hashed: false,
+            code: get_rand(48),
+            header_csrf: Session::get_csrf_header(&session.csrf_token),
+            header_origin,
+            user_id: user.id.clone(),
+            email: user.email,
+            exp: *WEBAUTHN_REQ_EXP,
+            session: session.clone(),
+        };
+
+        let login_req = WebauthnLoginReq {
+            code: step.code.clone(),
+            user_id: user.id,
+            header_loc,
+            header_origin: step
+                .header_origin
+                .as_ref()
+                .map(|h| h.1.to_str().unwrap().to_string()),
+        };
+        login_req.save(data).await?;
+
+        Ok(AuthStep::AwaitWebauthn(step))
+    } else {
+        Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
+            has_password_been_hashed: false,
+            email: user.email,
+            header_loc: (
+                header::LOCATION,
+                HeaderValue::from_str(&header_loc).unwrap(),
+            ),
+            header_csrf: Session::get_csrf_header(&session.csrf_token),
+            header_origin,
+        }))
+    }
+}
 
 /// Builds the access token for a user after all validation has been successful
 #[allow(clippy::type_complexity)]

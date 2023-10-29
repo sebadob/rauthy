@@ -5,6 +5,7 @@ use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::header::HeaderValue;
 use actix_web::http::{header, StatusCode};
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
+use tracing::debug;
 
 use rauthy_common::constants::{COOKIE_MFA, HEADER_HTML, SESSION_LIFETIME};
 use rauthy_common::error_response::ErrorResponse;
@@ -18,8 +19,8 @@ use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::WebauthnCookie;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
-    AuthRequest, LoginRequest, LogoutRequest, RefreshTokenRequest, TokenRequest,
-    TokenValidationRequest,
+    AuthRequest, LoginRefreshRequest, LoginRequest, LogoutRequest, RefreshTokenRequest,
+    TokenRequest, TokenValidationRequest,
 };
 use rauthy_models::response::{JWKSCerts, JWKSPublicKeyCerts, SessionInfoResponse};
 use rauthy_models::templates::{AuthorizeHtml, CallbackHtml, ErrorHtml, FrontendAction};
@@ -176,9 +177,63 @@ pub async fn post_authorize(
     auth::handle_login_delay(&data, ip, start, &data.caches.ha_cache_config, res).await
 }
 
+/// Immediate login refresh with valid session
+///
+/// This endpoint is used from the login form if an authenticated and valid session still exists
+/// and the user wants to log in to another client. Since the session is still valid, an auth code
+/// can be issued without further authentication checks to provide a better UX.
+#[utoipa::path(
+    post,
+    path = "/oidc/authorize/refresh",
+    tag = "oidc",
+    request_body = LoginRefreshRequest,
+    responses(
+        (status = 202, description = "Accepted"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+    ),
+)]
+#[post("/oidc/authorize/refresh")]
+pub async fn post_authorize_refresh(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+    req_data: web::Json<LoginRefreshRequest>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    let session = principal.validate_session_auth()?;
+
+    let (client, header_origin) = auth::validate_auth_req_param(
+        &data,
+        &req,
+        &req_data.client_id,
+        &req_data.redirect_uri,
+        &req_data.code_challenge,
+        &req_data.code_challenge_method,
+    )
+    .await?;
+
+    let auth_step =
+        auth::authorize_refresh(&data, session, client, header_origin, req_data.into_inner())
+            .await?;
+    map_auth_step(&data, auth_step, &req)
+        .await
+        .map(|res| res.0)
+        .map_err(|err| err.0)
+}
+
 // TODO request at least session state init ?
 #[get("/oidc/callback")]
-pub async fn get_callback_html(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_callback_html(
+    data: web::Data<AppState>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    // TODO remove debug log after testing
+    let session_auth = principal.validate_session_auth();
+    debug!(
+        "principal.validate_session_auth() in /oidc/callback: {:?}",
+        session_auth
+    );
+
     let colors = ColorEntity::find_rauthy(&data).await?;
     let (body, nonce) = CallbackHtml::build(&colors);
 
