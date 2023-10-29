@@ -128,6 +128,7 @@ impl EventNotifier {
                 .unwrap_or_else(|_| "false".to_string())
                 .parse::<bool>()
                 .expect("Cannot parse EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION to bool");
+            let root_ca_path = env::var("EVENT_MATRIX_ROOT_CA_PATH").ok();
 
             let notifier = NotifierMatrix::try_new(
                 &user_id,
@@ -135,6 +136,7 @@ impl EventNotifier {
                 access_token,
                 user_password,
                 disable_tls_validation,
+                root_ca_path.as_deref(),
             )
             .await?;
             NOTIFIER_MATRIX

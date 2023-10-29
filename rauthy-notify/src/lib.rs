@@ -21,6 +21,7 @@ use reqwest::tls;
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 use std::time::Duration;
+use tracing::info;
 
 pub mod matrix;
 pub mod slack;
@@ -64,19 +65,50 @@ pub struct Notification {
 }
 
 impl Notification {
-    pub fn client() -> &'static reqwest::Client {
-        HTTP_CLIENT.get_or_init(|| {
-            reqwest::Client::builder()
-                .connect_timeout(Duration::from_secs(10))
-                .timeout(Duration::from_secs(10))
-                .user_agent(format!("Rauthy v{} Notifier", RAUTHY_VERSION))
-                .min_tls_version(tls::Version::TLS_1_2)
-                .pool_idle_timeout(Duration::from_secs(600))
-                .http2_keep_alive_while_idle(true)
-                // TODO impl config var to add private CA and disable TLS verify
-                .build()
-                .unwrap()
-        })
+    pub async fn client() -> &'static reqwest::Client {
+        if let Some(client) = HTTP_CLIENT.get() {
+            client
+        } else {
+            let client = Self::build_client(false, None).await;
+            let _ = HTTP_CLIENT.set(client);
+            HTTP_CLIENT.get().unwrap()
+        }
+    }
+
+    pub async fn build_client(
+        disable_tls_validation: bool,
+        root_ca_path: Option<&str>,
+    ) -> reqwest::Client {
+        let mut builder = reqwest::Client::builder()
+            .connect_timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(10))
+            .user_agent(format!("Rauthy v{} Notifier", RAUTHY_VERSION))
+            .min_tls_version(tls::Version::TLS_1_2)
+            .pool_idle_timeout(Duration::from_secs(600))
+            .http2_keep_alive_while_idle(true);
+
+        if disable_tls_validation {
+            builder = builder.danger_accept_invalid_certs(true);
+        }
+
+        if let Some(path) = root_ca_path {
+            let pem_file = tokio::fs::read(path)
+                .await
+                .expect("Cannot read Event Notifier Root CA PEM file");
+            let root_cert = reqwest::tls::Certificate::from_pem(pem_file.as_slice())
+                .expect("Cannot build Root TLS from Event Notifier Root CA PEM file");
+            builder = builder.add_root_certificate(root_cert);
+
+            info!(
+                "Custom Root CA from {} was added to the Event Notifier Client",
+                path
+            );
+        }
+
+        builder
+            // TODO impl config var to add private CA and disable TLS verify
+            .build()
+            .unwrap()
     }
 }
 
