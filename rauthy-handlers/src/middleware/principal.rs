@@ -107,7 +107,7 @@ async fn get_api_key_from_headers(
     if let Some(api_key_value) = api_key_value {
         ApiKeyEntity::api_key_from_token_validated(data, api_key_value)
             .await
-            .map(|k| Some(k))
+            .map(Some)
     } else {
         Ok(None)
     }
