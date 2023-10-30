@@ -179,24 +179,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          # This example uses the version tag.
-          # In production, I would highly recommend to actually use SHA 
-          # hashes to prevent someone from overwriting the image tag on your possibly
-          # own container registry with malicious content.
-          #
-          # Take a look at https://hub.docker.com/r/sdobedev/rauthy to see all tags
-          # and if you go into the details for # a tag, you find the SHA hash like in
-          # this example:
-          # https://hub.docker.com/layers/sdobedev/rauthy/0.12.0/images/sha256-4d0a3977f4fda68e848b45899d3b8a1b63c09c80dca0cc737be7338876194c40?context=explore
-          # directly under the image name on the top -> DIGEST: sha256:....
-          # Then adopt the image name to something like:
-          # sdobedev/rauthy@sha256:4d0a3977f4fda68e848b45899d3b8a1b63c09c80dca0cc737be7338876194c40
-          #
-          # Because of a chicken and egg problem, I cannot document the correct sha
-          # hash for the latest version at this
-          # point. The latest image with the correct hash will always be shown for the 
-          # [Github Releases](https://github.com/sebadob/rauthy/releases)
-          image: ghcr.io/sebadob/rauthy:0.16.0-lite
+          image: ghcr.io/sebadob/rauthy:0.17.0-lite
           imagePullPolicy: IfNotPresent
           securityContext:
             # User ID 10001 is actually built into the container at the creation for

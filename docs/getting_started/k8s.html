@@ -7,7 +7,7 @@
 
 
         <!-- Custom HTML head -->
-        
+
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
@@ -206,17 +206,17 @@ data:
   # The CACHE_AUTH_TOKEN is only needed for a deployment with HA_MODE == true
   # Secret token, which is used to authenticate the cache members
   #CACHE_AUTH_TOKEN:
-  
+
   # The database driver will be chosen at runtime depending on the given DATABASE_URL format. Examples:
   # Sqlite: 'sqlite:data/rauthy.db' or 'sqlite::memory:'
   # Postgres: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
-  DATABASE_URL: 
-    
+  DATABASE_URL:
+
   # Format: &quot;key_id/enc_key another_key_id/another_enc_key&quot; - the enc_key itself must be exactly 32 characters long and
   # and should not contain special characters.
   # The ID must match '[a-zA-Z0-9]{2,20}'
   ENC_KEYS:
-  
+
   # Needed for sending E-Mails for password resets and so on
   SMTP_PASSWORD:
 </code></pre>
@@ -292,7 +292,7 @@ spec:
       containers:
         - name: rauthy
           # This example uses the version tag.
-          # In production, I would highly recommend to actually use SHA 
+          # In production, I would highly recommend to actually use SHA
           # hashes to prevent someone from overwriting the image tag on your possibly
           # own container registry with malicious content.
           #
@@ -306,9 +306,9 @@ spec:
           #
           # Because of a chicken and egg problem, I cannot document the correct sha
           # hash for the latest version at this
-          # point. The latest image with the correct hash will always be shown for the 
+          # point. The latest image with the correct hash will always be shown for the
           # [Github Releases](https://github.com/sebadob/rauthy/releases)
-          image: ghcr.io/sebadob/rauthy:0.16.0-lite
+          image: ghcr.io/sebadob/rauthy:0.17.0-lite
           imagePullPolicy: IfNotPresent
           securityContext:
             # User ID 10001 is actually built into the container at the creation for
@@ -389,7 +389,7 @@ spec:
               #memory:
               # A CPU limit may make sense in case of DDoS attacks or something
               # like this, if you do not have external rate limiting or other
-              # mechanisms. Otherwise, `MAX_HASH_THREADS` is the main mechanism 
+              # mechanisms. Otherwise, `MAX_HASH_THREADS` is the main mechanism
               # to limit resources.
               cpu: 1000m
       volumes:
