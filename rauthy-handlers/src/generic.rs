@@ -28,7 +28,8 @@ use rauthy_models::i18n::register::I18nRegister;
 use rauthy_models::i18n::SsrJson;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
-    EncKeyMigrateRequest, I18nContent, I18nRequest, PasswordHashTimesRequest, PasswordPolicyRequest,
+    EncKeyMigrateRequest, I18nContent, I18nRequest, PasswordHashTimesRequest,
+    PasswordPolicyRequest, WhoamiRequestParam, WhoamiRequestParams,
 };
 use rauthy_models::response::{
     AppVersionResponse, Argon2ParamsResponse, EncKeysResponse, HealthResponse, LoginTimeResponse,
@@ -669,19 +670,32 @@ pub async fn redirect_v1() -> HttpResponse {
     get,
     path = "/whoami",
     tag = "generic",
+    params(WhoamiRequestParams),
     responses(
         (status = 200, description = "Ok"),
         (status = 503, description = "ServiceUnavailable"),
     ),
 )]
 #[get("/whoami")]
-pub async fn whoami(req: HttpRequest) -> impl Responder {
+pub async fn whoami(req: HttpRequest, params: web::Query<WhoamiRequestParams>) -> impl Responder {
     use std::fmt::Write;
-    let mut resp = String::with_capacity(500);
-    req.headers().iter().for_each(|(k, v)| {
-        let _ = writeln!(resp, "{}: {:?}", k, v.to_str().unwrap_or_default());
-    });
-    HttpResponse::Ok().body(resp)
+
+    let ip = real_ip_from_req(&req).unwrap_or_default();
+
+    if let Some(typ) = &params.typ {
+        match typ {
+            WhoamiRequestParam::Ip => HttpResponse::Ok().append_header(HEADER_HTML).body(ip),
+        }
+    } else {
+        let mut resp = String::with_capacity(500);
+
+        req.headers().iter().for_each(|(k, v)| {
+            let _ = writeln!(resp, "{}: {:?}", k, v.to_str().unwrap_or_default());
+        });
+        let _ = writeln!(resp, "ip: {}", ip);
+
+        HttpResponse::Ok().body(resp)
+    }
 }
 
 /// Returns the current Rauthy Version

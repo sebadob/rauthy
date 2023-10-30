@@ -277,7 +277,7 @@ pub enum AccessRights {
     Delete,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct ApiKeyAccess {
     pub group: AccessGroup,
     pub access_rights: Vec<AccessRights>,

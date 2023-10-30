@@ -50,7 +50,7 @@ pub async fn get_api_keys(
     tag = "api_keys",
     request_body = ApiKeyRequest,
     responses(
-        (status = 200, description = "Ok"),
+        (status = 200, description = "Ok", body = String),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
@@ -64,9 +64,11 @@ pub async fn post_api_key(
     principal.validate_admin_session()?;
 
     let req = payload.into_inner();
-    ApiKeyEntity::create(&data, req.name, req.exp, req.access).await?;
+    let secret = ApiKeyEntity::create(&data, req.name, req.exp, req.access).await?;
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok()
+        .content_type(TEXT_PLAIN_UTF_8)
+        .body(secret))
 }
 
 /// Update an API Key

@@ -17,7 +17,7 @@ use std::str::FromStr;
 use utoipa::{IntoParams, ToSchema};
 use validator::{Validate, ValidationError};
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct ApiKeyRequest {
     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
     #[validate(regex(path = "RE_API_KEY", code = "^[a-zA-Z0-9_-/]{2,24}$"))]
@@ -47,7 +47,7 @@ pub struct AuthCodeRequest {
     pub redirect_uri: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct IpBlacklistRequest {
     /// Validation: Ipv4Addr
     #[schema(value_type = str)]
@@ -650,6 +650,17 @@ pub struct WebauthnRegFinishRequest {
     /// Validation: `[a-zA-Z0-9]{64}`
     #[validate(regex(path = "RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
     pub magic_link_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Validate, IntoParams)]
+pub struct WhoamiRequestParams {
+    pub typ: Option<WhoamiRequestParam>,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum WhoamiRequestParam {
+    Ip,
 }
 
 // validation helpers
