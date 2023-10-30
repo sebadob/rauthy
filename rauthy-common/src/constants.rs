@@ -163,10 +163,9 @@ lazy_static! {
         .expect("SMTP_USERNAME is not set")
         .trim()
         .to_string();
-    pub static ref SMTP_URL: String = env::var("SMTP_URL")
-        .expect("SMTP_URL is not set")
-        .trim()
-        .to_string();
+    pub static ref SMTP_URL: Option<String> = env::var("SMTP_URL")
+        .ok()
+        .map(|url| url.trim().to_string());
     pub static ref SMTP_FROM: String = env::var("SMTP_FROM")
         .expect("SMTP_FROM is not set")
         .trim()

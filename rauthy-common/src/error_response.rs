@@ -164,7 +164,7 @@ impl From<sqlx::Error> for ErrorResponse {
             sqlx::Error::Configuration(e) => (ErrorResponseType::Database, e.to_string()),
             sqlx::Error::Database(e) => {
                 let s = e.to_string();
-                if s.contains("UNIQUE") {
+                if s.contains("duplicate key") || s.contains("UNIQUE") {
                     // basically returns http 400 on duplicate id column errors -> no distinct err type
                     (ErrorResponseType::BadRequest, s)
                 } else {
