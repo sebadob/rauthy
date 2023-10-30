@@ -162,7 +162,15 @@ impl From<sqlx::Error> for ErrorResponse {
         debug!("From<sqlx::Error>: {:?}", err);
         let (error, msg) = match err {
             sqlx::Error::Configuration(e) => (ErrorResponseType::Database, e.to_string()),
-            sqlx::Error::Database(e) => (ErrorResponseType::Database, e.to_string()),
+            sqlx::Error::Database(e) => {
+                let s = e.to_string();
+                if s.contains("UNIQUE") {
+                    // basically returns http 400 on duplicate id column errors -> no distinct err type
+                    (ErrorResponseType::BadRequest, s)
+                } else {
+                    (ErrorResponseType::Database, s)
+                }
+            }
             sqlx::Error::Io(e) => (ErrorResponseType::DatabaseIo, e.to_string()),
             sqlx::Error::RowNotFound => (ErrorResponseType::NotFound, "not found".to_string()),
             sqlx::Error::TypeNotFound { type_name } => (
