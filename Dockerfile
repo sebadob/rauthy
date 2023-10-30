@@ -1,20 +1,35 @@
-FROM alpine:3.18.2 AS builderBackend
+FROM --platform=$BUILDPLATFORM alpine:3.18.4 AS builderBackend
+
+# docker buildx args automatically available
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
+RUN echo "I'm building on $BUILDPLATFORM for $TARGETOS/$TARGETARCH"
 
 WORKDIR /work
 
-# Just a workaroudn to get an empty dir and be able to copy it over to scratch with
+# Just a workaround to get an empty dir and be able to copy it over to scratch with
 # the correct access rights
 RUN mkdir data
 
-FROM alpine:3.18.3
+FROM --platform=$TARGETPLATFORM scratch
 
-ARG BINARY
+# docker buildx args automatically available
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
+# for selecting the correct pre-built binary
+ARG DB
 
 USER 10001:10001
 
 WORKDIR /app
 
-COPY --chown=10001:10001 /out/"$BINARY" ./rauthy
+COPY --chown=10001:10001 /out/rauthy-"$DB"-"$TARGETARCH" ./rauthy
 COPY --chown=10001:10001 --from=builderBackend /work/data ./data
 
 COPY --chown=10001:10001 tls/ ./tls/
