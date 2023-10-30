@@ -19,7 +19,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
     let groups = res.json::<Vec<Group>>().await?;
-    assert_eq!(groups.len(), 2);
+    assert_eq!(groups.len(), 3);
 
     // add a group
     let new_group = NewGroupRequest {
@@ -68,7 +68,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
 
     let groups = res.json::<Vec<Group>>().await?;
-    assert_eq!(groups.len(), 2);
+    assert_eq!(groups.len(), 3);
 
     Ok(())
 }
