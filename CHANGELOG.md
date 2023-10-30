@@ -6,6 +6,13 @@ This is a pretty huge update with a lot of new features.
 
 ### New Features
 
+#### Support for `linux/arm64`
+
+With the release of v0.17.0, Rauthy's container images are now multi-platform.
+
+Both a `linux/amd64` and a `linux/arm64` are supported. This means you can "just use it" now on Raspberry Pi and
+others, or on Ampere architecture from Cloud providers without the need to compile it yourself.
+
 #### Events and Auditing
 
 Rauthy now produces events in all different kinds of situations. These can be used for auditing, monitoring, and so on.
@@ -187,6 +194,8 @@ if there is a stable update available.
 
 ### Changes
 
+- Support for `linux/arm64`
+[2abb071](https://github.com/sebadob/rauthy/commit/2abb071afd6e9379fa3deca233c649bf62d33032)
 - New events and auditing
 [758dda6](https://github.com/sebadob/rauthy/commit/758dda631734c0c8e5baddf79ff2b0aa67947929)
 [488f9de](https://github.com/sebadob/rauthy/commit/488f9de03653c5eb2c673644deb188599763afbb)
@@ -197,7 +206,7 @@ if there is a stable update available.
 [a9af494](https://github.com/sebadob/rauthy/commit/a9af494bba788e462bb22eb31131d19b5ffaeaed)
 [797dad5](https://github.com/sebadob/rauthy/commit/797dad564ff190b8739393c0405486b8f55b057e)
 [b338f26](https://github.com/sebadob/rauthy/commit/b338f2613e9d19581677915c5ceb1996653709d7)
-- `rauthy-notify` crate has been added which implements the above mentioned Slack and
+- `rauthy-notify` crate has been added which implements the above-mentioned Slack and
 Matrix integrations for Event notifications.
 [8767389](https://github.com/sebadob/rauthy/commit/8767389dafe3dc392910135d8cfc7f6a63bf3cd5)
 - Increasing login timeouts and delays after invalid logins
