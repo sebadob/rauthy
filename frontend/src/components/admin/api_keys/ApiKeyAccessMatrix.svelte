@@ -83,9 +83,8 @@
         const toggleTo = groupsToggle[idx];
         let row = accessMatrix[idx];
         for (let i = 0; i < OPS.length; i++) {
-            for (let [key, value] of Object.entries(row)) {
+            for (let key of Object.keys(row)) {
                 if (key !== 'group') {
-                    console.log(`${key} - ${value}`);
                     row[key] = toggleTo;
                 }
             }

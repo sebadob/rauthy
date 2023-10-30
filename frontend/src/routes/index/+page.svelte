@@ -60,7 +60,7 @@
 
     .version {
         position: absolute;
-        bottom: 0;
         right: 0;
+        top: calc(100dvh - 1.2rem);
     }
 </style>

@@ -56,7 +56,6 @@
         }
 
         if (doesExpire) {
-            console.log('doesExpire');
             let exp = formatUtcTsFromDateInput(formValues.exp);
             if (!exp) {
                 err = 'Invalid Date Input: User Expires';
@@ -64,8 +63,6 @@
             }
             data.exp = exp;
         }
-
-        console.log(data);
 
         let res = await putApiKey(data);
         if (res.ok) {
