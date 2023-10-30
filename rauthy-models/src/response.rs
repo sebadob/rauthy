@@ -13,12 +13,12 @@ use time::OffsetDateTime;
 use tracing::debug;
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ApiKeysResponse {
     pub keys: Vec<ApiKeyResponse>,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ApiKeyResponse {
     pub name: String,
     /// unix timestamp
@@ -130,10 +130,13 @@ pub struct EncKeysResponse<'a> {
 #[derive(Debug, Default, Serialize, ToSchema)]
 pub struct HealthResponse {
     pub is_db_alive: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = str)]
     pub cache_health: Option<redhac::QuorumHealth>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = str)]
     pub cache_state: Option<redhac::QuorumState>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cache_connected_hosts: Option<usize>,
 }
 
