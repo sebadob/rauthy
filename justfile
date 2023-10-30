@@ -6,6 +6,22 @@ db_url_sqlite := "sqlite:data/rauthy.db"
 db_url_sqlite_mem := "sqlite::memory"
 db_url_postgres := "postgresql://rauthy:123SuperSafe@localhost:5432/rauthy"
 
+
+docker-buildx-setup:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    clear
+
+    # create 'rauthy_builder' buildx instance
+    docker buildx create --name rauthy_builder --bootstrap --use
+    docker buildx inspect rauthy_builder
+
+
+pull-latest-cross:
+    #!/usr/bin/env bash
+    docker pull ghcr.io/cross-rs/aarch64-unknown-linux-musl:main
+
+
 clippy-sqlite:
     clear
     DATABASE_URL={{db_url_sqlite}} cargo clippy --features sqlite
@@ -67,7 +83,7 @@ test-sqlite test="": migrate-sqlite
 
 
 # runs the full set of tests with postgres
-test-postgres test="": migrate-postgres
+test-postgres test="": build-ui migrate-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
@@ -155,12 +171,16 @@ build-sqlite: test-sqlite
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    DATABASE_URL={{db_url_sqlite}} cargo clippy --features sqlite -- -D warnings
-    DATABASE_URL={{db_url_sqlite}} cargo build \
-        --release \
-        --target x86_64-unknown-linux-musl \
-        --features sqlite
-    cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-lite
+    cargo clean
+    DATABASE_URL={{db_url_sqlite}} cargo sqlx prepare --workspace -- --features sqlite
+
+    cargo clippy --features sqlite -- -D warnings
+    cargo build --release --target x86_64-unknown-linux-musl --features sqlite
+    cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-amd64
+
+    cargo clean
+    cross build --release --target aarch64-unknown-linux-musl --features sqlite
+    cp target/aarch64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-arm64
 
 
 # builds the whole application in release mode
@@ -168,21 +188,25 @@ build-postgres: test-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    DATABASE_URL={{db_url_postgres}} cargo clippy -- -D warnings
-    DATABASE_URL={{db_url_postgres}} cargo build \
-        --release \
-        --target x86_64-unknown-linux-musl
-    cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy
+    #cargo clean
+    DATABASE_URL={{db_url_postgres}} cargo sqlx prepare --workspace
+
+    cargo clippy -- -D warnings
+    cargo build --release --target x86_64-unknown-linux-musl
+    cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-postgres-amd64
+
+    cargo clean
+    cross build --release --target aarch64-unknown-linux-musl
+    cp target/aarch64-unknown-linux-musl/release/rauthy out/rauthy-postgres-arm64
 
 
 # makes sure everything is fine
-is-clean: build-sqlite test-sqlite build-postgres
+is-clean:
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # TODO skip exiting early on clippy warnings during v0.16
     # exit early if clippy emits warnings
-    #cargo clippy -- -D warnings
+    cargo clippy -- -D warnings
 
     # make sure everything has been committed
     git diff --exit-code
@@ -214,31 +238,57 @@ publish-nightly: build-sqlite build-postgres
     docker push ghcr.io/sebadob/rauthy:nightly-lite
 
 
+multi-platform-test:
+    #!/usr/bin/env bash
+
+    # build and push sqlite version
+    docker buildx build \
+          -t ghcr.io/sebadob/rauthy:multi-arch-test \
+           --platform linux/amd64,linux/arm64 \
+           --build-arg="DB=sqlite" \
+           --no-cache \
+           --push \
+           .
+
+    # build and push postgres version
+    docker buildx build \
+          -t ghcr.io/sebadob/rauthy:multi-arch-test \
+          --platform linux/amd64,linux/arm64 \
+          --build-arg="DB=postgres" \
+          --no-cache \
+          --push \
+          .
+
+
 # publishes the application images - full pipeline incl clippy and testing
-publish-versions: build-docs build-ui build-sqlite build-postgres
+publish-versions: pull-latest-cross build-docs build-ui build-sqlite build-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    docker build --no-cache -t sdobedev/rauthy:$TAG -f Dockerfile.postgres .
-    docker push sdobedev/rauthy:$TAG
+    # build and push sqlite version
+    docker buildx build \
+          -t ghcr.io/sebadob/rauthy:$TAG-lite \
+           --platform linux/amd64,linux/arm64 \
+           --build-arg="DB=sqlite" \
+           --no-cache \
+           --push \
+           .
 
-    docker build --no-cache -t sdobedev/rauthy:$TAG-lite -f Dockerfile.sqlite .
-    docker push sdobedev/rauthy:$TAG-lite
-
-    # push both default images to ghcr as well
-    docker tag sdobedev/rauthy:$TAG ghcr.io/sebadob/rauthy:$TAG
-    docker push ghcr.io/sebadob/rauthy:$TAG
-    docker tag sdobedev/rauthy:$TAG-lite ghcr.io/sebadob/rauthy:$TAG-lite
-    docker push ghcr.io/sebadob/rauthy:$TAG-lite
+    # build and push postgres version
+    docker buildx build \
+          -t ghcr.io/sebadob/rauthy:$TAG \
+          --platform linux/amd64,linux/arm64 \
+          --build-arg="DB=postgres" \
+          --no-cache \
+          --push \
+          .
 
 
 # publishes the application images - full pipeline incl clippy and testing
-publish: build-sqlite build-postgres publish-versions
+publish: publish-versions
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # the `latest` image will always point to the postgres version, which is used more often
-    docker tag sdobedev/rauthy:$TAG sdobedev/rauthy:latest
-    docker push sdobedev/rauthy:latest
-    docker tag sdobedev/rauthy:$TAG ghcr.io/sebadob/rauthy:latest
+    # the `latest` image will always point to the postgres x86 version, which is used the most (probably)
+    docker tag ghcr.io/sebadob/rauthy:$TAG ghcr.io/sebadob/rauthy:latest
     docker push ghcr.io/sebadob/rauthy:latest
