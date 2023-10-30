@@ -398,7 +398,11 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
 
     // to make the integration tests not panic, results are taken and just thrown away
     // not the nicest approach for now, but it works
-    if test_mode {
+    if test_mode || SMTP_URL.is_none() {
+        if SMTP_URL.is_none() {
+            error!("SMTP_URL is not configured, cannot send out any E-Mails!");
+        }
+
         loop {
             let req = rx.recv().await;
             if req.is_some() {
@@ -413,10 +417,11 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
         }
     }
 
+    let smtp_url = SMTP_URL.as_deref().unwrap();
     let mailer = {
         let mut retries = 0;
 
-        let mut conn = connect_test_smtp().await;
+        let mut conn = connect_test_smtp(smtp_url).await;
         while let Err(err) = conn {
             error!("{:?}", err);
 
@@ -426,7 +431,7 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
             retries += 1;
             tokio::time::sleep(Duration::from_secs(5)).await;
 
-            conn = connect_test_smtp().await;
+            conn = connect_test_smtp(smtp_url).await;
         }
         conn.unwrap()
     };
@@ -474,11 +479,13 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
     }
 }
 
-async fn connect_test_smtp() -> Result<AsyncSmtpTransport<lettre::Tokio1Executor>, ErrorResponse> {
+async fn connect_test_smtp(
+    smtp_url: &str,
+) -> Result<AsyncSmtpTransport<lettre::Tokio1Executor>, ErrorResponse> {
     let creds = authentication::Credentials::new(SMTP_USERNAME.clone(), SMTP_PASSWORD.clone());
 
     // always try fully wrapped TLS first
-    let mut conn = AsyncSmtpTransport::<lettre::Tokio1Executor>::relay(&SMTP_URL)
+    let mut conn = AsyncSmtpTransport::<lettre::Tokio1Executor>::relay(smtp_url)
         .expect("Connection Error with 'SMTP_URL'")
         .credentials(creds.clone())
         .timeout(Some(Duration::from_secs(10)))
@@ -486,16 +493,16 @@ async fn connect_test_smtp() -> Result<AsyncSmtpTransport<lettre::Tokio1Executor
 
     match conn.test_connection().await {
         Ok(true) => {
-            info!("Successfully connected to {} via TLS", *SMTP_URL);
+            info!("Successfully connected to {} via TLS", smtp_url);
         }
         Ok(false) | Err(_) => {
             warn!(
                 "Could not connect to {} via TLS. Trying downgrade to STARTTLS",
-                *SMTP_URL,
+                smtp_url,
             );
 
             // only if full TLS fails, try STARTTLS
-            conn = AsyncSmtpTransport::<lettre::Tokio1Executor>::starttls_relay(&SMTP_URL)
+            conn = AsyncSmtpTransport::<lettre::Tokio1Executor>::starttls_relay(smtp_url)
                 .expect("Connection Error with 'SMTP_URL'")
                 .credentials(creds)
                 .timeout(Some(Duration::from_secs(10)))
@@ -503,15 +510,15 @@ async fn connect_test_smtp() -> Result<AsyncSmtpTransport<lettre::Tokio1Executor
 
             match conn.test_connection().await {
                 Ok(true) => {
-                    info!("Successfully connected to {} via STARTTLS", *SMTP_URL);
+                    info!("Successfully connected to {} via STARTTLS", smtp_url);
                 }
                 Ok(false) | Err(_) => {
-                    error!("Could not connect to {} via STARTTLS either", *SMTP_URL);
+                    error!("Could not connect to {} via STARTTLS either", smtp_url);
                     return Err(ErrorResponse::new(
                         ErrorResponseType::Internal,
                         format!(
                             "Could not connect to {} - neither TLS nor STARTTLS worked",
-                            *SMTP_URL
+                            smtp_url
                         ),
                     ));
                 }
