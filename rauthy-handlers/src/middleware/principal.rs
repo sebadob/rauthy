@@ -5,7 +5,7 @@ use actix_web::{
 };
 use futures::future::LocalBoxFuture;
 use rauthy_common::constants::{COOKIE_SESSION, SESSION_VALIDATE_IP, TOKEN_API_KEY};
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{ApiKey, ApiKeyEntity};
 use rauthy_models::entity::principal::Principal;
@@ -65,7 +65,7 @@ where
                 .app_data::<web::Data<AppState>>()
                 .expect("Error getting AppData inside session middleware");
 
-            principal.api_key = get_api_key_from_headers(&req, data).await;
+            principal.api_key = get_api_key_from_headers(&req, data).await?;
             if let Some(s) = get_session_from_cookie(&req, data).await? {
                 principal.roles = s.roles_as_vec().unwrap_or_default();
                 principal.session = Some(s);
@@ -83,10 +83,21 @@ where
 async fn get_api_key_from_headers(
     req: &ServiceRequest,
     data: &web::Data<AppState>,
-) -> Option<ApiKey> {
+) -> Result<Option<ApiKey>, ErrorResponse> {
     let headers = req.headers();
-    let auth_header = headers.get("Authorization")?.to_str().ok()?;
-    let (k, v) = auth_header.split_once(' ')?;
+    let auth_header = if let Some(Ok(header)) = headers.get("Authorization").map(|h| h.to_str()) {
+        header
+    } else {
+        return Ok(None);
+    };
+    let (k, v) = if let Some(res) = auth_header.split_once(' ') {
+        res
+    } else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Malformed 'Authorization' header".to_string(),
+        ));
+    };
     let api_key_value = if k.ne(TOKEN_API_KEY) || k.is_empty() {
         None
     } else {
@@ -94,13 +105,11 @@ async fn get_api_key_from_headers(
     };
 
     if let Some(api_key_value) = api_key_value {
-        if let Ok(api_key) = ApiKeyEntity::api_key_from_token_validated(data, api_key_value).await {
-            Some(api_key)
-        } else {
-            None
-        }
+        ApiKeyEntity::api_key_from_token_validated(data, api_key_value)
+            .await
+            .map(|k| Some(k))
     } else {
-        None
+        Ok(None)
     }
 }
 
