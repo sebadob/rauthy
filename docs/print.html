@@ -8,7 +8,7 @@
 
 
         <!-- Custom HTML head -->
-        
+
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
@@ -187,9 +187,9 @@ An Example for a not correctly working combination would be Firefox on Mac OS, F
 every browser on Android.</p>
 <p><strong>Fast and efficient</strong><br />
 The main goal was to provide an SSO solution like Keycloak and others while using a way lower footprint
-and being more efficient with resources. For instance, Rauthy can easily run a fully blown SSO provider on just a 
+and being more efficient with resources. For instance, Rauthy can easily run a fully blown SSO provider on just a
 Raspberry Pi. It makes extensive use of caching to be as fast as possible in cases where your database is further
-away or just a bit slower, because it is maybe running on an SBC from an SD card. Most things are even cached 
+away or just a bit slower, because it is maybe running on an SBC from an SD card. Most things are even cached
 for several hours (config options will come in the future) and special care has been taken into account in case of cache
 eviction and invalidation.<br />
 A Rauthy deployment with the embedded SQLite, filled caches and a small set of clients and users configured typically
@@ -204,7 +204,7 @@ touched again.</p>
 <p><strong>Highly Available</strong><br />
 Even though it makes extensive use of caching, you can run it in HA mode. It uses its own embedded distributed HA cache
 called <a href="https://crates.io/crates/redhac">redhac</a>, which cares about cache eviction on remote hosts.
-You can choose between a <em>SQLite</em> for single instance deployments and a <em>Postgres</em>, if you need HA. MySQL support might 
+You can choose between a <em>SQLite</em> for single instance deployments and a <em>Postgres</em>, if you need HA. MySQL support might
 come in the future.</p>
 <p><strong>Client Branding</strong><br />
 You have a simple way to create some kind of branding or stylized look for the Login page for each client.<br />
@@ -212,7 +212,7 @@ The whole color theme can be changed and each client can have its own custom log
 Additionally, if you modify the branding for the default <code>rauthy</code> client, it will not only change the look for the Login
 page, but also for the Account and Admin page.</p>
 <p><strong>Already in production</strong><br />
-Rauthy is already being used in production, and it works with all typical OIDC clients (so far). It was just not an 
+Rauthy is already being used in production, and it works with all typical OIDC clients (so far). It was just not an
 open source project for quite some time.<br />
 Keycloak was a rough inspiration in certain places and if something is working with Keycloak, it does with <code>rauthy</code> too
 (again, so far).</p>
@@ -222,7 +222,7 @@ implemented (see below), while others might come or are even planned already.</p
 <p>Currently missing features:</p>
 <p><strong>Rauthy Authenticator MFA App</strong><br />
 Even though things like OTP codes will never be implemented, it is not set in stone yet that there will never be Rauthy's
-own Authenticator App, which then basically acts as a Webauthn Software Authenticator. There are already existing 
+own Authenticator App, which then basically acts as a Webauthn Software Authenticator. There are already existing
 solutions out there to serve this purpose.</p>
 <p><strong>OIDC Client</strong><br />
 Rauthy will most probably have the option to be an OIDC Client itself as well. With this feature, you would be able
@@ -263,7 +263,7 @@ The image contains a basic default config which is sufficient for local testing.
 <pre><code>docker run --rm \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.16.0-lite
+    ghcr.io/sebadob/rauthy:0.17.0-lite
 </code></pre>
 <p>This will start the container in interactive mode with an in-memory SQLite database. Just take a look at the log at the
 logs to see the URL and first password.</p>
@@ -272,7 +272,7 @@ logs to see the URL and first password.</p>
     -e DATABASE_URL=sqlite:data/rauthy.db \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.16.0-lite
+    ghcr.io/sebadob/rauthy:0.17.0-lite
 </code></pre>
 <div id="admonition-note" class="admonition note">
 <div class="admonition-title">
@@ -357,7 +357,7 @@ Make sure to adjust the volume mount for the sqlite directory in step 5, if it d
     -v $(pwd)/rauthy/data:/app/data \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.16.0-lite
+    ghcr.io/sebadob/rauthy:0.17.0-lite
 </code></pre>
 <p><strong>6. Restrict DB files access even more</strong><br />
 After rauthy has done the first start, you could harden the access rights of the SQLite files even more.<br />
@@ -427,17 +427,17 @@ data:
   # The CACHE_AUTH_TOKEN is only needed for a deployment with HA_MODE == true
   # Secret token, which is used to authenticate the cache members
   #CACHE_AUTH_TOKEN:
-  
+
   # The database driver will be chosen at runtime depending on the given DATABASE_URL format. Examples:
   # Sqlite: 'sqlite:data/rauthy.db' or 'sqlite::memory:'
   # Postgres: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
-  DATABASE_URL: 
-    
+  DATABASE_URL:
+
   # Format: &quot;key_id/enc_key another_key_id/another_enc_key&quot; - the enc_key itself must be exactly 32 characters long and
   # and should not contain special characters.
   # The ID must match '[a-zA-Z0-9]{2,20}'
   ENC_KEYS:
-  
+
   # Needed for sending E-Mails for password resets and so on
   SMTP_PASSWORD:
 </code></pre>
@@ -513,7 +513,7 @@ spec:
       containers:
         - name: rauthy
           # This example uses the version tag.
-          # In production, I would highly recommend to actually use SHA 
+          # In production, I would highly recommend to actually use SHA
           # hashes to prevent someone from overwriting the image tag on your possibly
           # own container registry with malicious content.
           #
@@ -527,9 +527,9 @@ spec:
           #
           # Because of a chicken and egg problem, I cannot document the correct sha
           # hash for the latest version at this
-          # point. The latest image with the correct hash will always be shown for the 
+          # point. The latest image with the correct hash will always be shown for the
           # [Github Releases](https://github.com/sebadob/rauthy/releases)
-          image: ghcr.io/sebadob/rauthy:0.16.0-lite
+          image: ghcr.io/sebadob/rauthy:0.17.0-lite
           imagePullPolicy: IfNotPresent
           securityContext:
             # User ID 10001 is actually built into the container at the creation for
@@ -610,7 +610,7 @@ spec:
               #memory:
               # A CPU limit may make sense in case of DDoS attacks or something
               # like this, if you do not have external rate limiting or other
-              # mechanisms. Otherwise, `MAX_HASH_THREADS` is the main mechanism 
+              # mechanisms. Otherwise, `MAX_HASH_THREADS` is the main mechanism
               # to limit resources.
               cpu: 1000m
       volumes:
@@ -788,7 +788,7 @@ anyway.</p>
 beging done by the application and the variables need to be tuned for every deployment to provide the best compromise
 of security, resource usage and user experience.<br />
 The default values are way too low for a real production deployment. They should only be used for testing.</p>
-<p>The Admin UI provides a utility which helps you find the values for your deployment quickly. What and how to do is 
+<p>The Admin UI provides a utility which helps you find the values for your deployment quickly. What and how to do is
 described in the Admin UI itself, I just want to guide you to this utility especially, since it is an important step
 security wise.</p>
 <p>When you are logged in to the Admin UI, please navigate to <code>Config</code> -&gt; <code>Argon2 Parameters</code> to find your values.<br />
@@ -801,7 +801,7 @@ hashing operations. This is really important when we think about constrained mem
 <p><code>MAX_HASH_THREADS</code> limits the maximum amount of parallel password hashes at the exact same time to never exceed system
 memory while still allowing a good amount of memory.<br />
 The <strong>default</strong> value <strong>is 2</strong>.</p>
-<p>The rule is simple: Allow as many resources as possible for hashing to have the maximum amount of security, while 
+<p>The rule is simple: Allow as many resources as possible for hashing to have the maximum amount of security, while
 restricting it as much as necessary.</p>
 <p>For smaller deployments, set <code>MAX_HASH_THREADS=1</code>, which will technically allows only one user login at the exact same
 time. This value makes an external rate limiting for the login obsolete (while you may add some for the others).</p>
@@ -957,7 +957,7 @@ value: <code>echo 'PutTheWholeValueHere' | base64</code></p>
 </div>
 </div>
 <p><strong>3. Set the <code>ENC_KEY_ACTIVE</code> to the ID of your newly generated key</strong></p>
-<p>This will make sure, that all new encryptions will use the new key. If you do not care about removing the old keys, 
+<p>This will make sure, that all new encryptions will use the new key. If you do not care about removing the old keys,
 because you maybe just want to rotate because its good practice, the secrets will migrate &quot;by themselves&quot; over time.
 If Rauthy finds any secrets during its normal operation, that have been encrypted with an older key than the current
 <code>ENC_KEY_ACTIVE</code>, it will re-encrypt these secrets and update the values.<br />
@@ -1026,7 +1026,7 @@ switch to the correct rauthy image as well. Rauthy v0.14 and beyond has differen
 <p><a class="admonition-anchor-link" href="config/db_migration.html#admonition-hint"></a></p>
 </div>
 <div>
-<p>The easiest to do is to just set <code>MIGRATE_DB_FROM</code> as an environmant variable, which is easier and quicker to remove 
+<p>The easiest to do is to just set <code>MIGRATE_DB_FROM</code> as an environmant variable, which is easier and quicker to remove
 again afterwards.</p>
 </div>
 </div>
@@ -1067,7 +1067,7 @@ There are a lot of way better tools out there to handle this task.</p>
 <p>Some values, like authentication codes for instance, do live in the cache only. Additionally, there might come an
 option with a future version which offers a special in-memory only mode in some situations.</p>
 <p>Because of this, all instances create and share a single HA cache layer, which means at the same time, that you cannot
-just scale up the replicas infinitely. The optimal amount of replicas for a HA mode would be 3, or if you need even higher 
+just scale up the replicas infinitely. The optimal amount of replicas for a HA mode would be 3, or if you need even higher
 resilience 5. More replicas should work just fine, but this has never been really tested and the performance will
 degrade at some point.</p>
 <p>To achieve the HA caching layer embedded directly into the application, I created a library (or crate in Rust terms)
@@ -1079,7 +1079,7 @@ or inconsistencies and to guarantee a configured level of safety. Different so c
 Rauthy uses different levels in different situations to provide real HA and sync all caches between the pods. This
 means that you can loose a pod and still have the in-cache-only values available on the other ones.</p>
 <p>This syncing of the cache is the reason why write performance will degrade, if you scale up too many replicas, which should
-not really be necessary anyway. The best HA performance will be achieved with 3 replicas and then scaling up the 
+not really be necessary anyway. The best HA performance will be achieved with 3 replicas and then scaling up the
 resources for each pod before adding more replicas.</p>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <p>The way to configure the <code>HA_MODE</code> is optimized for a Kubernetes deployment but may seem a bit odd at the same time,
@@ -1087,7 +1087,7 @@ if you deploy somewhere else. You need to the following values in the config fil
 <h3 id="ha_mode"><a class="header" href="#ha_mode"><code>HA_MODE</code></a></h3>
 <p>The first one is easy, just set <code>HA_MODE=true</code></p>
 <h3 id="ha_hosts"><a class="header" href="#ha_hosts"><code>HA_HOSTS</code></a></h3>
-<p>The <code>HA_HOSTS</code> is working in a way, that it is really easy inside Kubernetes to configure it, as long as a 
+<p>The <code>HA_HOSTS</code> is working in a way, that it is really easy inside Kubernetes to configure it, as long as a
 StatefulSet is used for the deployment.</p>
 <p>The way a cache node finds its members is by the <code>HA_HOSTS</code> and its own <code>HOSTNAME</code>.<br />
 In the <code>HA_HOSTS</code>, add every cache member. For instance, if you want to use 3 replicas in HA mode which are running
@@ -1155,7 +1155,7 @@ A project specifically tailored to TLS CA and certificates is in the making.</p>
 </div>
 <p>As mentioned, the tools are very basic. If you for instance type in a bad password during CA / intermediate generation,
 they will just throw an error, and you need to clean up again. They should only get you started and be used for testing.<br />
-There are a lot of good tools out there which can get you started with TLS and there is no real benefit in creating 
+There are a lot of good tools out there which can get you started with TLS and there is no real benefit in creating
 just another one that does the same stuff.</p>
 <p>The scripts can be found here (TODO add link to tools).<br />
 You need to have <code>openssl</code> and a BASH shell available on your system. They have not been tested with Windows.</p>
@@ -1250,7 +1250,7 @@ CACHE_TLS_CLIENT_VALIDATE_DOMAIN=redhac.local
 </code></pre>
 <h3 id="server"><a class="header" href="#server">Server</a></h3>
 <p>The TLS configuration for the REST API is much simpler.<br />
-By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and <code>/app/tls/tls.crt</code>, which is the 
+By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and <code>/app/tls/tls.crt</code>, which is the
 default naming for a Kubernetes TLS secret. The expected format is PEM, but you could provide the key in DER format too,
 if you rename the file-ending to <code>*.der</code>.</p>
 <p>You can change the default path for the files with the config variables <code>TLS_CERT</code> and <code>TLS_KEY</code>.</p>
@@ -1331,7 +1331,7 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # registrations with 'user@gmail.com' (default: '')
 #USER_REG_DOMAIN_RESTRICTION=some-domain.com
 
-# If set to 'true', this will validate the remote peer IP address with each request 
+# If set to 'true', this will validate the remote peer IP address with each request
 # and compare it with the IP which was used during the initial session creation / login.
 # If the IP is different, the session will be rejected.
 # This is a security hardening and prevents stolen access credentials, for instance if
@@ -1340,10 +1340,10 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # only happen if an attacker has direct access to the machine itself.
 #
 # If your users are using mobile networks and get new IP addresses all the time, this
-# means they have to do a new login each time. This is no big deal at all with 
+# means they have to do a new login each time. This is no big deal at all with
 # Webauthn / FIDO keys anyway and should not be a reason to deactivate this feature.
 #
-# Caution: If you are running behind a reverse proxy which does not provide the 
+# Caution: If you are running behind a reverse proxy which does not provide the
 # X-FORWARDED-FOR header correctly, or you have the PROXY_MODE in this config disabled,
 # this feature will not work. You can validate the IPs for each session in the Admin
 # UI. If these are correct, your setup is okay.
@@ -1460,7 +1460,7 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # will be DELETED and OVERWRITTEN with a migration from the
 # given database with this variable. Can be used to migrate
 # between different databases.
-# 
+#
 # !!! USE WITH CARE !!!
 #MIGRATE_DB_FROM=sqlite:data/rauthy.db
 
@@ -1471,7 +1471,7 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 ############# E-MAIL ################
 #####################################
 
-# Will be used as the prefix for the E-Mail subject for each E-Mail 
+# Will be used as the prefix for the E-Mail subject for each E-Mail
 # that will be sent out to a client.
 # This can be used to further customize your deployment.
 # default: &quot;Rauthy IAM&quot;
@@ -1512,16 +1512,16 @@ MAX_HASH_THREADS=1
 
 # The time in ms when to log a warning, if a request waited
 # longer than this time. This is an indicator, that you have
-# more concurrent logins than allowed and may need config 
+# more concurrent logins than allowed and may need config
 # adjustments,
 # if this happens more often. (default: 500)
 #HASH_AWAIT_WARN_TIME=500
 
-# JWKS auto rotate cronjob. This will (by default) rotate 
-# all JWKs every 1. day of the month. If you need smaller 
+# JWKS auto rotate cronjob. This will (by default) rotate
+# all JWKs every 1. day of the month. If you need smaller
 # intervals, you may adjust this value. For security reasons,
 # you cannot fully disable it.
-# In a HA deployment, this job will only be executed on the 
+# In a HA deployment, this job will only be executed on the
 # current cache leader at that time.
 # Format: &quot;sec min hour day_of_month month day_of_week year&quot;
 # default: &quot;0 30 3 1 * * *&quot;
@@ -1561,8 +1561,8 @@ JWK_AUTOROTATE_CRON=&quot;0 30 3 1 * * *&quot;
 # If left empty, no messages will be sent to Slack.
 #EVENT_SLACK_WEBHOOK=
 
-# The notification level for events. Works the same way as a logging level. 
-# For instance: 'notice' means send out a notifications for all events with 
+# The notification level for events. Works the same way as a logging level.
+# For instance: 'notice' means send out a notifications for all events with
 # the info level or higher.
 # Possible values:
 # - info
@@ -1577,8 +1577,8 @@ EVENT_NOTIFY_LEVEL_MATRIX=notice
 # default: 'notice'
 EVENT_NOTIFY_LEVEL_SLACK=notice
 
-# Define the level from which on events should be persisted inside the 
-# database. All events with a lower level will be lost, if there is no 
+# Define the level from which on events should be persisted inside the
+# database. All events with a lower level will be lost, if there is no
 # active event subscriber.
 # Possible values:
 # - info
@@ -1601,7 +1601,7 @@ EVENT_LEVEL_USER_EMAIL_CHANGE=notice
 # The level for the generated Event after a user has reset its password
 # default: notice
 EVENT_LEVEL_USER_PASSWORD_RESET=notice
-# The level for the generated Event after a user has been given the 
+# The level for the generated Event after a user has been given the
 # 'rauthy_admin' role
 # default: notice
 EVENT_LEVEL_RAUTHY_ADMIN=notice
@@ -1611,26 +1611,26 @@ EVENT_LEVEL_RAUTHY_VERSION=notice
 # The level for the generated Event after the JWKS has been rotated
 # default: notice
 EVENT_LEVEL_JWKS_ROTATE=notice
-# The level for the generated Event after DB secrets have been migrated 
+# The level for the generated Event after DB secrets have been migrated
 # to a new key
 # default: notice
 EVENT_LEVEL_SECRETS_MIGRATED=notice
-# The level for the generated Event after a Rauthy instance has been 
+# The level for the generated Event after a Rauthy instance has been
 # started
 # default: info
 EVENT_LEVEL_RAUTHY_START=info
-# The level for the generated Event after a Rauthy entered a healthy 
+# The level for the generated Event after a Rauthy entered a healthy
 # state (again)
 # default: notice
 EVENT_LEVEL_RAUTHY_HEALTHY=notice
-# The level for the generated Event after a Rauthy entered an unhealthy 
+# The level for the generated Event after a Rauthy entered an unhealthy
 #state
 # default: critical
 EVENT_LEVEL_RAUTHY_UNHEALTHY=critical
 # The level for the generated Event after an IP has been blacklisted
 # default: warning
 EVENT_LEVEL_IP_BLACKLISTED=warning
-# The level for the generated Event after certain amounts of false 
+# The level for the generated Event after certain amounts of false
 # logins from an IP
 # default: criticao
 EVENT_LEVEL_FAILED_LOGINS_25=critical

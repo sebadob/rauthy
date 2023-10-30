@@ -7,6 +7,7 @@ db_url_sqlite_mem := "sqlite::memory"
 db_url_postgres := "postgresql://rauthy:123SuperSafe@localhost:5432/rauthy"
 
 
+# This may be executed if you don't have a local `docker buildx` setup
 docker-buildx-setup:
     #!/usr/bin/env bash
     set -euxo pipefail
@@ -17,27 +18,32 @@ docker-buildx-setup:
     docker buildx inspect rauthy_builder
 
 
+# Force-pulls the latest `cross` docker image for cross-compilation
 pull-latest-cross:
     #!/usr/bin/env bash
     docker pull ghcr.io/cross-rs/aarch64-unknown-linux-musl:main
 
 
+# clippy with sqlite features
 clippy-sqlite:
     clear
     DATABASE_URL={{db_url_sqlite}} cargo clippy --features sqlite
 
 
+# clippy with postgres features
 clippy-postgres:
     clear
     DATABASE_URL={{db_url_postgres}} cargo clippy
 
 
+# re-create and migrate the sqlite database with sqlx
 migrate-sqlite:
     rm data/rauthy.db*
     DATABASE_URL={{db_url_sqlite}} sqlx database create
     DATABASE_URL={{db_url_sqlite}} sqlx migrate run --source migrations/sqlite
 
 
+# migrate the postgres database with sqlx
 migrate-postgres:
     DATABASE_URL={{db_url_postgres}} sqlx migrate run --source migrations/postgres
 
@@ -285,10 +291,11 @@ publish-versions: pull-latest-cross build-docs build-ui build-sqlite build-postg
 
 
 # publishes the application images - full pipeline incl clippy and testing
-publish: publish-versions
+publish-latest: publish-versions
     #!/usr/bin/env bash
     set -euxo pipefail
 
     # the `latest` image will always point to the postgres x86 version, which is used the most (probably)
+    docker pull ghcr.io/sebadob/rauthy:$TAG
     docker tag ghcr.io/sebadob/rauthy:$TAG ghcr.io/sebadob/rauthy:latest
     docker push ghcr.io/sebadob/rauthy:latest

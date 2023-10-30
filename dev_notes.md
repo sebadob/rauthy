@@ -2,9 +2,6 @@
 
 ## CURRENT WORK
 
-- add integration tests for api keys an ip blacklisting
-- styling colors of checkboxes in ApiKey access matrix
-
 ## Stage 1 - essentials
 
 [x] finished
