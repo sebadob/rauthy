@@ -115,7 +115,3 @@ the application yourself with docker on your localhost:
 ```
 docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.17.0-lite
 ```
-
-**NOTE:**  
-Please keep in mind, that t the time of writing, the docker image is hosted in the free tier and will be rate limited 
-if there are too many pulls.
