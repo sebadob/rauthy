@@ -8,6 +8,11 @@ Use this software at your own risk!
 This project is currently pre v1.0, which means, even though it is not expected, breaking changes might come
 with new versions.
 
+## License Changes Incoming
+
+Rauthy will be changed to an Apache 2.0 with the next release.  
+This will make the integration with other projects a lot easier.
+
 ## What it is
 
 Rauthy is an OpenID Connect (OIDC) Provider and Single Sign-On solution written in Rust.
@@ -99,13 +104,6 @@ this support with Rauthy as well.
 **OIDC Client**  
 Rauthy will most probably have the option to be an OIDC Client itself as well. With this feature, you would be able
 to do things like "Login with Github" to Rauthy and then use Rauthy for the extended management and features.
-
-## A word about the current license choice
-
-I am aware of the fact, that the AGPL limits the possibilities to integrate it with other open source projects.
-Rauthy may be changed to an Apache 2.0 or similar in the future, I am not fully sold on the AGPLv3 yet.
-It was chosen in the beginning to give myself some more freedom as a single developer, since I did not have any idea,
-how fast I could get it up an running to a point, where I would be happy with the feature set.
 
 ## Getting Started
 
