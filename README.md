@@ -102,7 +102,7 @@ to do things like "Login with Github" to Rauthy and then use Rauthy for the exte
 
 ## A word about the current license choice
 
-I am aware of the fact, that the AGPL limits to possibilities to integrate it with other open source projects.
+I am aware of the fact, that the AGPL limits the possibilities to integrate it with other open source projects.
 Rauthy may be changed to an Apache 2.0 or similar in the future, I am not fully sold on the AGPLv3 yet.
 It was chosen in the beginning to give myself some more freedom as a single developer, since I did not have any idea,
 how fast I could get it up an running to a point, where I would be happy with the feature set.
