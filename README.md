@@ -19,16 +19,14 @@ token signing and S256 PKCE flow. This will not work with old clients, which do 
 deactivate this to your liking.
 
 **MFA and Passwordless Login**  
+1. Option: Password + Security Key (without User Verification):  
 Rauthy provides FIDO 2 / Webauthn login flows. If you once logged in on a new client with your username + password, you
 will get an encrypted cookie which will allow you to log in without a password from that moment on. You only need to
-have a FIDO  compliant Passkey being registered for your account.  
-The reason why it requests your password on a new host at least once is pretty simple. Even though most browsers have
-full support even for user verification, it is possible that in some scenarios a set PIN oder biometric fingerprint
-reader will just be ignored by some browsers, which would reduce the strong MFA login to only a single factor again.
-As long as the full support does not exist on every device out there, Rauthy will not allow a "Passkey only Login flow"
-for security reasons.  
-An Example for a not correctly working combination would be Firefox on Mac OS, Firefox pre v114 on Linux, or almost
-every browser on Android.
+have a FIDO  compliant Passkey being registered for your account.
+2. Option: Passkey-Only Accounts:  
+Since v0.16, Rauthy supports Passkey-Only-Accounts. You basically just provide your E-Mail address and log in with your
+FIDO 2 Passkey. Your account will not even have / need a password. This login flow is restricted though to only those
+passkeys, that can provide User Verification (UV) to always have at least 2FA security.  
 
 **Fast and efficient**  
 The main goal was to provide an SSO solution like Keycloak and others while using a way lower footprint
@@ -64,6 +62,16 @@ The whole color theme can be changed and each client can have its own custom log
 Additionally, if you modify the branding for the default `rauthy` client, it will not only change the look for the Login
 page, but also for the Account and Admin page.
 
+**Events and Auditing**  
+Since v0.17, Rauthy implements an Event-System. Events are generated in all kinds of scenarios. They can be sent via
+E-Mail, Matrix or Slack, depending on the severity and the configured level. You will see them in the Admin UI in real 
+time, or you can subscribe to the events stream and externally handle them depending on your own business logic.
+
+**Brute-Force and basic DoS protection**  
+Rauthy has brute force and basic DoS protection for the login endpoint. Your timeout will be artificially delayed after
+enough invalid logins. It does auto-balacklist IP's that exceeded too many invalid logins, with automatic
+expiry of the blacklisting. You can, if you like, manually blacklist certain IP's as well via the Admin UI.
+
 **Already in production**  
 Rauthy is already being used in production, and it works with all typical OIDC clients (so far). It was just not an
 open source project for quite some time.  
@@ -77,9 +85,27 @@ implemented (see below), while others might come or are even planned already.
 
 Currently missing features:
 
+**Resident Keys / Discoverable Credentials**  
+You can have a Passkey-Only account, as long as you provide your E-Mail address. But full support for resident keys
+does not yet exist for two resons:  
+- Platform support is not fully there yet. For instance, my Android device always returns a UUID of all 0's when
+requesting the discoverable credential, which would of course not work. Android has just implemented support for
+CTAP2 in September 2023, and then it is not even complete yet. Currently, only Fingerprint does work and PIN / NFC
+is still not working. Resisdent Keys will be the next step afterwards.
+- The dependencies I use for the Webauthn integration do have some support for resident keys in the current nightly
+versions, but not in stable yet. As soon as they push this support into their stable versions, I will start investigating
+this support with Rauthy as well.
+
 **OIDC Client**  
 Rauthy will most probably have the option to be an OIDC Client itself as well. With this feature, you would be able
 to do things like "Login with Github" to Rauthy and then use Rauthy for the extended management and features.
+
+## A word about the current license choice
+
+I am aware of the fact, that the AGPL limits to possibilities to integrate it with other open source projects.
+Rauthy may be changed to an Apache 2.0 or similar in the future, I am not fully sold on the AGPLv3 yet.
+It was chosen in the beginning to give myself some more freedom as a single developer, since I did not have any idea,
+how fast I could get it up an running to a point, where I would be happy with the feature set.
 
 ## Getting Started
 
