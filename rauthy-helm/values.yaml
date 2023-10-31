@@ -1,0 +1,58 @@
+# Default values for rauthy.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# The currently used container image
+image: ghcr.io/sebadob/rauthy:0.17.0
+# Define custom image pull secrets for a private registry
+#imagePullSecrets: "myImagePullSecretsName"
+
+# Enable HA mode
+haMode: false
+# Will always be 1 if HA mode is not enabled. Should be an odd number >= 3 otherwise.
+replicas: 1
+
+sqlite:
+  # If you want to deploy Rauthy in HA mode, you cannot use SQLite, you need Postgres instead
+  enabled: false
+
+  persistence:
+    # If set to false, Rauthy will use an in-memory SQLite instance
+    enabled: false
+    # Overwrite the default storage class
+    #storageClassName: myCustomStorageClass
+    # The size of the PVC
+    storage: 1Gi
+
+postgres:
+  # If you want to deploy Rauthy in HA mode, you can only use Postgres
+  enabled: true
+  url:
+    # The secret name which contains the database url connection string
+    secretName: rauthy-secrets
+    # This must contain the postgres connection string in the format:
+    # postgresql://username:password@host:5432/rauthy
+    # Currently, some passwords with special characters might cause problems.
+    # Choose a longer alphanumeric one instead.
+    secretKey: DATABASE_URL
+
+secrets:
+  # SMTP secrets
+  smtp:
+    # The secret name which contains the smtp credentials
+    secretName: rauthy-secrets
+    # The secret key which contains the SMTP username
+    usernameKey: SMTP_USERNAME
+    # The secret key which contains the SMTP password
+    passwordKey: SMTP_PASSWORD
+
+  # Encryption Key Secrets
+  # Format: "key_id/enc_key another_key_id/another_enc_key"
+  # The enc_key itself must be exactly 32 characters long
+  # and should not contain special characters.
+  # The ID must match '[a-zA-Z0-9]{2,20}'
+  encKeys:
+    # The secret name which contains the encryption keys
+    secretName: rauthy-secrets
+    # The secret key which contains the encryption keys
+    secretKey: ENC_KEYS
