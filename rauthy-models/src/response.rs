@@ -1,6 +1,6 @@
 use crate::entity::api_keys::{ApiKey, ApiKeyAccess};
 use crate::entity::clients::Client;
-use crate::entity::jwk::{JWKSPublicKey, JWKS};
+use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType, JWKS};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::scopes::Scope;
 use crate::entity::sessions::SessionState;
@@ -157,11 +157,12 @@ impl From<JWKS> for JWKSCerts {
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct JWKSPublicKeyCerts {
-    pub kty: String, // RSA | OCT
-    pub alg: String,
+    pub kty: JwkKeyPairType,
+    pub alg: JwkKeyPairAlg,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub crv: Option<String>, // Ed25519
-    pub kid: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kid: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub n: Option<String>, // RSA
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -174,7 +175,7 @@ impl From<JWKSPublicKey> for JWKSPublicKeyCerts {
     fn from(pk: JWKSPublicKey) -> Self {
         Self {
             kty: pk.kty,
-            alg: pk.alg,
+            alg: pk.alg.unwrap_or_default(),
             crv: pk.crv,
             kid: pk.kid,
             n: pk.n,

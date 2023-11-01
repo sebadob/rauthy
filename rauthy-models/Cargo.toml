@@ -31,9 +31,13 @@ chrono = { workspace = true }
 css-color = { workspace = true }
 derive_more = { workspace = true }
 dotenvy = { workspace = true }
+ed25519-compact = { version = "2.0.4", features = ["ed25519"] }
 flume = { workspace = true }
 futures-util = "0.3"
 hex = { version = "0.4", features = ["serde"] }
+hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
+hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
+http-serde = "1.1.3"
 jwt-simple = { workspace = true }
 lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls", "tracing"] }
 num_cpus = { workspace = true }
@@ -61,6 +65,8 @@ uuid = { version = "1", features = ["serde", "v4"] }
 validator = { workspace = true }
 webauthn-rs = { workspace = true }
 webauthn-rs-proto = { workspace = true }
+itertools = "0.11.0"
+rsa = { version = "0.9.3", features = ["serde", "sha2"] }
 
 [dev-dependencies]
 pretty_assertions = "1"

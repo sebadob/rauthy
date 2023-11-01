@@ -1,4 +1,5 @@
 use crate::DbType;
+use actix_web::http::Uri;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::env;
@@ -12,6 +13,8 @@ pub const APPLICATION_JSON: &str = "application/json";
 
 pub const TOKEN_API_KEY: &str = "API-Key";
 pub const TOKEN_BEARER: &str = "Bearer";
+pub const TOKEN_DPOP: &str = "DPoP";
+pub const TOKEN_DPOP_NONCE: &str = "DPoP-nonce";
 pub const COOKIE_SESSION: &str = "rauthy-session";
 pub const COOKIE_MFA: &str = "rauthy-mfa";
 pub const COOKIE_LOCALE: &str = "locale";
@@ -65,7 +68,6 @@ lazy_static! {
     pub static ref HA_MODE: bool =
         env::var("HA_MODE").map(|s| s.to_lowercase() == "true").unwrap_or(false);
 
-    pub static ref RE_ALG: Regex = Regex::new(r"^(RS256|RS384|RS512|EdDSA)$").unwrap();
     pub static ref RE_ATTR: Regex = Regex::new(r"^[a-zA-Z0-9-_/]{2,32}$").unwrap();
     pub static ref RE_ATTR_DESC: Regex = Regex::new(r"^[a-zA-Z0-9-_/\s]{0,128}$").unwrap();
     pub static ref RE_ALNUM: Regex = Regex::new(r"^[a-zA-Z0-9]+$").unwrap();
@@ -86,6 +88,13 @@ lazy_static! {
     pub static ref RE_MFA_CODE: Regex = Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap();
     pub static ref RE_URI: Regex = Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+$").unwrap();
     pub static ref RE_USER_NAME: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-\s]{2,32}$").unwrap();
+    pub static ref RE_TOKEN_68: Regex = Regex::new(r"^[a-zA-Z0-9-._~+/]+=*$").unwrap();
+
+    pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
+        let pub_url = env::var("PUB_URL").expect("PUB_URL env var is not set");
+        let uri = format!("https://{}/auth/v1/oidc/token", pub_url);
+        Uri::from_str(&uri).unwrap()
+    };
 
     pub static ref PROXY_MODE: bool = env::var("PROXY_MODE")
         .unwrap_or_else(|_| String::from("false"))
