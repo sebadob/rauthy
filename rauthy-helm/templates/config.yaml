@@ -11,13 +11,16 @@ data:
     
     # If the User Registration endpoint should be accessible by anyone.
     # If not, an admin must create each new user. (default: false)
-    #OPEN_USER_REG=false
+    OPEN_USER_REG={{- if .Values.access.userRegistration.open }}
     
     # Can be used when 'OPEN_USER_REG=true' to restrict the domains
     # for a registration. For instance, set it to
     # 'USER_REG_DOMAIN_RESTRICTION=gmail.com' to allow only
     # registrations with 'user@gmail.com' (default: '')
     #USER_REG_DOMAIN_RESTRICTION=some-domain.com
+    {{- if .Values.access.userRegistration.domainRestriction }}
+    USER_REG_DOMAIN_RESTRICTION={{ .Values.access.userRegistration.domainRestriction }}
+    {{- end }}
     
     # If set to 'true', this will validate the remote peer IP address with each request 
     # and compare it with the IP which was used during the initial session creation / login.
@@ -37,7 +40,7 @@ data:
     # UI. If these are correct, your setup is okay.
     #
     # (default: true)
-    #SESSION_VALIDATE_IP=true
+    SESSION_VALIDATE_IP={{ .Values.access.sessionValidateIp }}
     
     #####################################
     ############# BACKUPS ###############
@@ -46,6 +49,7 @@ data:
     # Cron job for automatic data store backups (default: "0 0 4 * * * *")
     # sec min hour day_of_month month day_of_week year
     #BACKUP_TASK="0 0 4 * * * *"
+    BACKUP_TASK={{ .Values.sqlite.backups.cron }}
     
     # The name for the data store backups. The current timestamp
     # will always be appended automatically. (default: rauthy-backup-)
@@ -53,7 +57,7 @@ data:
     
     # All backups older than the specified hours will be cleaned up
     # automatically (default: 720)
-    #BACKUP_RETENTION_LOCAL=720
+    BACKUP_RETENTION_LOCAL={{ .Values.sqlite.backups.keepForHours }}
     
     #####################################
     ############## CACHE ################
@@ -61,12 +65,15 @@ data:
     
     # If the cache should start in HA mode or standalone
     # accepts 'true|false', defaults to 'false'
-    #HA_MODE=false
+    HA_MODE={{ .Values.haMode }}
     
     # The connection strings (with hostnames) of the HA instances
     # as a CSV.
     # Format: 'scheme://hostname:port'
     #HA_HOSTS="http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000"
+    {{- if eq .Values.replicas 3}}
+    HA_HOSTS="http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000"
+    # TODO
     
     # Overwrite the hostname which is used to identify each cache member.
     # Useful in scenarios, where for instance all members are on the same host with
@@ -145,7 +152,7 @@ data:
     {{- end }}
     
     # Max DB connections - irrelevant for SQLite (default: 5)
-    #DATABASE_MAX_CONN=5
+    DATABASE_MAX_CONN={{ .Values.postgres.poolMaxConnections }}
     
     # If specified, the current Database, set with DATABASE_URL,
     # will be DELETED and OVERWRITTEN with a migration from the
@@ -166,13 +173,13 @@ data:
     # that will be sent out to a client.
     # This can be used to further customize your deployment.
     # default: "Rauthy IAM"
-    EMAIL_SUB_PREFIX="Rauthy IAM"
+    EMAIL_SUB_PREFIX={{ .Values.email.smtpUrl | quote }}
     
-    SMTP_USERNAME=
+    #SMTP_USERNAME=
     #SMTP_PASSWORD=
-    SMTP_URL=
+    SMTP_URL={{ .Values.email.smtpUrl }}
     # Format: "Rauthy <rauthy@localhost.de>"
-    SMTP_FROM=
+    SMTP_FROM={{ .Values.email.sender | quote }}
     
     #####################################
     ###### ENCRYPTION / HASHING #########
@@ -186,11 +193,11 @@ data:
     ENC_KEY_ACTIVE=bVCyTsGaggVy5yqQ
     
     # M_COST should never be below 32768 in production
-    ARGON2_M_COST=32768
+    ARGON2_M_COST={{ .Values.hashing.argon2id.mCost }}
     # T_COST should never be below 1 in production
-    ARGON2_T_COST=3
+    ARGON2_T_COST={{ .Values.hashing.argon2id.tCost }}
     # P_COST should never be below 2 in production
-    ARGON2_P_COST=2
+    ARGON2_P_COST={{ .Values.hashing.argon2id.pCost }}
     
     # Limits the maximum amount of parallel password hashes at
     # the exact same time to never exceed system memory while
@@ -199,7 +206,7 @@ data:
     # CAUTION: You must make sure, that you have at least
     # (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + ~30 MB of memory
     # available.
-    MAX_HASH_THREADS=1
+    MAX_HASH_THREADS={{ .Values.hashing.maxHashThreads }}
     
     # The time in ms when to log a warning, if a request waited
     # longer than this time. This is an indicator, that you have

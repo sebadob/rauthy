@@ -20,7 +20,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: {{ .Release.Name }}
-          image: {{ if .Values.sqlite.enabled }}"{{ $.Values.image }}-lite"{{ else }}{{ $.Values.image }}{{ end }}
+          image: {{ if .Values.sqlite.enabled }}{{ $.Values.image }}-lite{{ else }}{{ $.Values.image }}{{ end }}
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 10001
@@ -54,9 +54,11 @@ spec:
                   key: {{ .encKeys.secretKey | required "secrets.encKeys.secretKey must be set" }}
             {{- end }}
           volumeMounts:
+            {{- if and .Values.sqlite.enabled .Values.sqlite.persistence.enabled }}
             - mountPath: /app/data
               name: {{ .Release.Name }}-data
               readOnly: false
+            {{- end }}
             - mountPath: /app/rauthy.cfg
               subPath: rauthy.cfg
               name: {{ .Release.Name }}-config
@@ -85,7 +87,7 @@ spec:
       imagePullSecrets:
         - name: {{ .Values.imagePullSecrets }}
       {{- end }}
-  {{- if .Values.sqlite.persistence.enabled }}
+  {{- if and .Values.sqlite.enabled .Values.sqlite.persistence.enabled }}
   volumeClaimTemplates:
     - metadata:
         name: {{ .Release.Name }}-data

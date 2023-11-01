@@ -9,12 +9,14 @@ image: ghcr.io/sebadob/rauthy:0.17.0
 
 # Enable HA mode
 haMode: false
-# Will always be 1 if HA mode is not enabled. Should be an odd number >= 3 otherwise.
+# Will always be 1 if HA mode is not enabled.
+# Should be an odd number >= 3 otherwise.
 replicas: 1
 
 sqlite:
-  # If you want to deploy Rauthy in HA mode, you cannot use SQLite, you need Postgres instead
-  enabled: false
+  # If you want to deploy Rauthy in HA mode, you cannot use SQLite,
+  # you need Postgres instead
+  enabled: true
 
   persistence:
     # If set to false, Rauthy will use an in-memory SQLite instance
@@ -22,11 +24,21 @@ sqlite:
     # Overwrite the default storage class
     #storageClassName: myCustomStorageClass
     # The size of the PVC
-    storage: 1Gi
+    storage: 256Mi
+
+  backups:
+    # Cron job for automatic data store backups (default: "0 0 4 * * * *")
+    # sec min hour day_of_month month day_of_week year
+    cron: "0 0 4 * * * *"
+
+    # All backups older than the specified hours will be cleaned up
+    # automatically (default: 720)
+    keepForHours: 720
 
 postgres:
   # If you want to deploy Rauthy in HA mode, you can only use Postgres
-  enabled: true
+  enabled: false
+
   url:
     # The secret name which contains the database url connection string
     secretName: rauthy-secrets
@@ -35,6 +47,64 @@ postgres:
     # Currently, some passwords with special characters might cause problems.
     # Choose a longer alphanumeric one instead.
     secretKey: DATABASE_URL
+
+  # The maximum amount of database connections inside the database pool
+  poolMaxConnections: 10
+
+access:
+  userRegistration:
+    # If the User Registration endpoint should be accessible by anyone.
+    # If not, an admin must create each new user. (default: false)
+    open: false
+    # If the user registration is opened, this value can restrict the registration.
+    # For instance, only "my-user@example.com" could register, but not "my-user@notallowed.org"
+    #domainRestriction: "example.com"
+
+  # If set to 'true', this will validate the remote peer IP address with each request
+  # and compare it with the IP which was used during the initial session creation / login.
+  # If the IP is different, the session will be rejected.
+  # This is a security hardening and prevents stolen access credentials, for instance if
+  # an attacker might have copied the encrypted session cookie and the XSRF token from
+  # the local storage from a user. However, this event is really unlikely, since it may
+  # only happen if an attacker has direct access to the machine itself.
+  #
+  # If your users are using mobile networks and get new IP addresses all the time, this
+  # means they have to do a new login each time. This is no big deal at all with
+  # Webauthn / FIDO keys anyway and should not be a reason to deactivate this feature.
+  #
+  # Caution: If you are running behind a reverse proxy which does not provide the
+  # X-FORWARDED-FOR header correctly, or you have the PROXY_MODE in this config disabled,
+  # this feature will not work. You can validate the IPs for each session in the Admin
+  # UI. If these are correct, your setup is okay.
+  #
+  # (default: true)
+  sessionValidateIp: true
+
+email:
+  # The Sender for E-Mails coming from Rauthy. This may be overridden by your E-Mail provider.
+  sender: "Rauthy <rauthy@localhost.de>"
+  # The SMTP URL for sending out E-Mails
+  smtpUrl: smtp.example.com
+  # This prefix will be added to each E-Mail subject that Rauthy will be sending out.
+  prefix: "Rauthy IAM"
+
+hashing:
+  # These are the settings for the Argon2ID password hashing algorithm.
+  # The configuration and best values are explained in the Admin UI -> Config -> Argon2 Parameters
+  # The default values are the recommended minimum values which are quite a
+  # bit above the recommended values from the OWASP cheat sheet:
+  # https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#argon2id
+  argon2id:
+    mCost: 32768
+    tCost: 3
+    pCost: 2
+
+  # Limits the maximum amount of parallel password hashes at the exact same time
+  # to never exceed system memory while still allowing a good amount of memory
+  # for the Argon2ID algorithm.
+  # The default value of 1 means, that only one password will be hashed actively
+  # at the exact same time.
+  maxHashThreads: 1
 
 secrets:
   # SMTP secrets
@@ -56,3 +126,16 @@ secrets:
     secretName: rauthy-secrets
     # The secret key which contains the encryption keys
     secretKey: ENC_KEYS
+
+# The resources for Rauthy are a bit tricky.
+# Don't get fooled by the resources when you take a look at them after a few hours.
+# This really depends on your Argon2ID settings and max hash threads config.
+# Rauthy itself is really memory efficient, but a Password Hash like Argon2ID on
+# the other hand should by definition be as resource hungry as you can afford,
+# but only for a very short amount of time.
+# A good rule for the memory costs is:
+# (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + ~30 MB
+resources:
+  requests:
+    memory: 128Mi
+    cpu: 100m
