@@ -2,12 +2,14 @@ use crate::constants::{APPLICATION_JSON, HEADER_HTML, HEADER_RETRY_NOT_BEFORE};
 use crate::utils::build_csp_header;
 use actix_multipart::MultipartError;
 use actix_web::error::BlockingError;
+use actix_web::http::header::ToStrError;
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
 use css_color::ParseColorError;
 use derive_more::Display;
 use redhac::CacheError;
 use serde::{Deserialize, Serialize};
+use serde_json::Error;
 use std::string::FromUtf8Error;
 use time::OffsetDateTime;
 use tracing::{debug, error};
@@ -247,6 +249,26 @@ impl From<validator::ValidationErrors> for ErrorResponse {
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Payload validation error: {:?}", value),
+        )
+    }
+}
+
+impl From<serde_json::Error> for ErrorResponse {
+    fn from(value: Error) -> Self {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("Payload deserialization error: {:?}", value),
+        )
+    }
+}
+impl From<reqwest::header::ToStrError> for ErrorResponse {
+    fn from(value: ToStrError) -> Self {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!(
+                "Request headers contained non ASCII characters: {:?}",
+                value
+            ),
         )
     }
 }

@@ -44,8 +44,8 @@ pub async fn update_client(
     client.enabled = client_req.enabled;
     client.flows_enabled = client_req.flows_enabled.join(",");
 
-    client.access_token_alg = client_req.access_token_alg;
-    client.id_token_alg = client_req.id_token_alg;
+    client.access_token_alg = client_req.access_token_alg.to_string();
+    client.id_token_alg = client_req.id_token_alg.to_string();
     client.refresh_token = client_req.refresh_token;
 
     client.auth_code_lifetime = client_req.auth_code_lifetime;

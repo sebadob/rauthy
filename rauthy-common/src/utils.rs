@@ -8,7 +8,8 @@ use rand::distributions::Alphanumeric;
 use rand::Rng;
 use tracing::error;
 
-const B64_URL_SAFE: engine::GeneralPurpose = general_purpose::URL_SAFE_NO_PAD;
+const B64_URL_SAFE: engine::GeneralPurpose = general_purpose::URL_SAFE;
+const B64_URL_SAFE_NO_PAD: engine::GeneralPurpose = general_purpose::URL_SAFE_NO_PAD;
 const B64_STD: engine::GeneralPurpose = general_purpose::STANDARD;
 
 pub fn build_csp_header(nonce: &str) -> (&str, String) {
@@ -118,8 +119,21 @@ pub fn base64_url_encode(input: &[u8]) -> String {
         .collect()
 }
 
+pub fn base64_url_no_pad_encode(input: &[u8]) -> String {
+    B64_URL_SAFE_NO_PAD.encode(input)
+}
+
 pub fn base64_url_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
     B64_URL_SAFE.decode(b64).map_err(|_| {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "B64 decoding error".to_string(),
+        )
+    })
+}
+
+pub fn base64_url_no_pad_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
+    B64_URL_SAFE_NO_PAD.decode(b64).map_err(|_| {
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "B64 decoding error".to_string(),
@@ -150,7 +164,7 @@ where
     }
     let body = body.unwrap();
 
-    let b64 = match B64_URL_SAFE.decode(body) {
+    let b64 = match B64_URL_SAFE_NO_PAD.decode(body) {
         Ok(values) => values,
         Err(err) => {
             error!(

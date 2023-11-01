@@ -19,7 +19,7 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::colors::ColorEntity;
-use rauthy_models::entity::jwk::{Jwk, JwkKeyPair, JwkKeyPairType};
+use rauthy_models::entity::jwk::{Jwk, JwkKeyPair, JwkKeyPairAlg};
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::scopes::Scope;
 use rauthy_models::entity::sessions::{Session, SessionState};
@@ -1438,7 +1438,7 @@ pub async fn rotate_jwks(data: &web::Data<AppState>) -> Result<(), ErrorResponse
     let entity = Jwk {
         kid: jwk_plain.key_id().as_ref().unwrap().clone(),
         created_at: OffsetDateTime::now_utc().unix_timestamp(),
-        signature: JwkKeyPairType::RS256,
+        signature: JwkKeyPairAlg::RS256,
         enc_key_id: data.enc_key_active.to_string(),
         jwk,
     };
@@ -1455,7 +1455,7 @@ pub async fn rotate_jwks(data: &web::Data<AppState>) -> Result<(), ErrorResponse
     let entity = Jwk {
         kid: jwk_plain.key_id().as_ref().unwrap().clone(),
         created_at: OffsetDateTime::now_utc().unix_timestamp(),
-        signature: JwkKeyPairType::RS384,
+        signature: JwkKeyPairAlg::RS384,
         enc_key_id: data.enc_key_active.to_string(),
         jwk,
     };
@@ -1472,7 +1472,7 @@ pub async fn rotate_jwks(data: &web::Data<AppState>) -> Result<(), ErrorResponse
     let entity = Jwk {
         kid: jwk_plain.key_id().as_ref().unwrap().clone(),
         created_at: OffsetDateTime::now_utc().unix_timestamp(),
-        signature: JwkKeyPairType::RS512,
+        signature: JwkKeyPairAlg::RS512,
         enc_key_id: data.enc_key_active.to_string(),
         jwk,
     };
@@ -1484,7 +1484,7 @@ pub async fn rotate_jwks(data: &web::Data<AppState>) -> Result<(), ErrorResponse
     let entity = Jwk {
         kid: jwk_plain.key_id().as_ref().unwrap().clone(),
         created_at: OffsetDateTime::now_utc().unix_timestamp(),
-        signature: JwkKeyPairType::EdDSA,
+        signature: JwkKeyPairAlg::EdDSA,
         enc_key_id: data.enc_key_active.to_string(),
         jwk,
     };
@@ -1493,25 +1493,25 @@ pub async fn rotate_jwks(data: &web::Data<AppState>) -> Result<(), ErrorResponse
     // clear all latest_jwk from cache
     cache_del(
         CACHE_NAME_12HR.to_string(),
-        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairType::RS256.to_string()),
+        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS256.to_string()),
         &data.caches.ha_cache_config,
     )
     .await?;
     cache_del(
         CACHE_NAME_12HR.to_string(),
-        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairType::RS384.to_string()),
+        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS384.to_string()),
         &data.caches.ha_cache_config,
     )
     .await?;
     cache_del(
         CACHE_NAME_12HR.to_string(),
-        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairType::RS512.to_string()),
+        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS512.to_string()),
         &data.caches.ha_cache_config,
     )
     .await?;
     cache_del(
         CACHE_NAME_12HR.to_string(),
-        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairType::EdDSA.to_string()),
+        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::EdDSA.to_string()),
         &data.caches.ha_cache_config,
     )
     .await?;
@@ -1540,7 +1540,7 @@ async fn sign_access_token(
     claims: claims::JWTClaims<JwtAccessClaims>,
     client: &Client,
 ) -> Result<String, ErrorResponse> {
-    let key_pair_type = JwkKeyPairType::from_str(&client.access_token_alg)?;
+    let key_pair_type = JwkKeyPairAlg::from_str(&client.access_token_alg)?;
     let kp = JwkKeyPair::find_latest(data, &client.access_token_alg, key_pair_type).await?;
     sign_jwt!(kp, claims)
 }
@@ -1551,7 +1551,7 @@ async fn sign_id_token(
     claims: claims::JWTClaims<JwtIdClaims>,
     client: &Client,
 ) -> Result<String, ErrorResponse> {
-    let key_pair_type = JwkKeyPairType::from_str(&client.id_token_alg)?;
+    let key_pair_type = JwkKeyPairAlg::from_str(&client.id_token_alg)?;
     let kp = JwkKeyPair::find_latest(data, &client.id_token_alg, key_pair_type).await?;
     sign_jwt!(kp, claims)
 }
@@ -1562,7 +1562,7 @@ async fn sign_refresh_token(
     claims: claims::JWTClaims<JwtRefreshClaims>,
 ) -> Result<String, ErrorResponse> {
     let alg = String::from("EdDSA");
-    let key_pair_type = JwkKeyPairType::from_str(&alg)?;
+    let key_pair_type = JwkKeyPairAlg::from_str(&alg)?;
     let kp = JwkKeyPair::find_latest(data, &alg, key_pair_type).await?;
     sign_jwt!(kp, claims)
 }

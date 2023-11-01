@@ -1,5 +1,5 @@
 use crate::app_state::{AppState, DbTxn};
-use crate::entity::jwk::JwkKeyPairType;
+use crate::entity::jwk::JwkKeyPairAlg;
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
 use crate::request::NewClientRequest;
@@ -444,8 +444,8 @@ impl Client {
         Ok((rnd, rnd_enc))
     }
 
-    pub fn get_access_token_alg(&self) -> Result<JwkKeyPairType, ErrorResponse> {
-        JwkKeyPairType::from_str(self.access_token_alg.as_str())
+    pub fn get_access_token_alg(&self) -> Result<JwkKeyPairAlg, ErrorResponse> {
+        JwkKeyPairAlg::from_str(self.access_token_alg.as_str())
     }
 
     pub fn get_allowed_origins(&self) -> Option<Vec<String>> {
@@ -497,8 +497,8 @@ impl Client {
         res
     }
 
-    pub fn get_id_token_alg(&self) -> Result<JwkKeyPairType, ErrorResponse> {
-        JwkKeyPairType::from_str(self.id_token_alg.as_str())
+    pub fn get_id_token_alg(&self) -> Result<JwkKeyPairAlg, ErrorResponse> {
+        JwkKeyPairAlg::from_str(self.id_token_alg.as_str())
     }
 
     pub fn get_flows(&self) -> Vec<String> {
@@ -911,11 +911,8 @@ mod tests {
             force_mfa: false,
         };
 
-        assert_eq!(
-            client.get_access_token_alg().unwrap(),
-            JwkKeyPairType::EdDSA
-        );
-        assert_eq!(client.get_id_token_alg().unwrap(), JwkKeyPairType::RS256);
+        assert_eq!(client.get_access_token_alg().unwrap(), JwkKeyPairAlg::EdDSA);
+        assert_eq!(client.get_id_token_alg().unwrap(), JwkKeyPairAlg::RS256);
 
         assert_eq!(
             client.get_challenges(),

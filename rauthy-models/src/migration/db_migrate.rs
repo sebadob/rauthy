@@ -20,7 +20,7 @@ use crate::entity::clients::Client;
 use crate::entity::colors::ColorEntity;
 use crate::entity::config::ConfigEntity;
 use crate::entity::groups::Group;
-use crate::entity::jwk::{Jwk, JwkKeyPairType};
+use crate::entity::jwk::{Jwk, JwkKeyPairAlg};
 use crate::entity::magic_links::MagicLink;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::refresh_tokens::RefreshToken;
@@ -205,7 +205,7 @@ pub async fn migrate_init_prod(
         entities.push(Jwk {
             kid: jwk_plain.key_id().as_ref().unwrap().clone(),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
-            signature: JwkKeyPairType::RS256,
+            signature: JwkKeyPairAlg::RS256,
             enc_key_id: enc_key_active.clone(),
             jwk,
         });
@@ -221,7 +221,7 @@ pub async fn migrate_init_prod(
         entities.push(Jwk {
             kid: jwk_plain.key_id().as_ref().unwrap().clone(),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
-            signature: JwkKeyPairType::RS384,
+            signature: JwkKeyPairAlg::RS384,
             enc_key_id: enc_key_active.clone(),
             jwk,
         });
@@ -237,7 +237,7 @@ pub async fn migrate_init_prod(
         entities.push(Jwk {
             kid: jwk_plain.key_id().as_ref().unwrap().clone(),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
-            signature: JwkKeyPairType::RS512,
+            signature: JwkKeyPairAlg::RS512,
             enc_key_id: enc_key_active.clone(),
             jwk,
         });
@@ -249,7 +249,7 @@ pub async fn migrate_init_prod(
         entities.push(Jwk {
             kid: jwk_plain.key_id().as_ref().unwrap().clone(),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
-            signature: JwkKeyPairType::EdDSA,
+            signature: JwkKeyPairAlg::EdDSA,
             enc_key_id: enc_key_active,
             jwk,
         });

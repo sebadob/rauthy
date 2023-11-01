@@ -126,6 +126,8 @@ use utoipa::{openapi, OpenApi};
             entity::clients::Client,
             entity::colors::Colors,
             entity::groups::Group,
+            entity::jwk::JwkKeyPairAlg,
+            entity::jwk::JwkKeyPairType,
             entity::password::PasswordHashTime,
             entity::password::PasswordHashTimes,
             entity::roles::Role,
