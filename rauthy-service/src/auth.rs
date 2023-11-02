@@ -31,10 +31,7 @@ use rauthy_models::language::Language;
 use rauthy_models::request::{LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest};
 use rauthy_models::response::{TokenInfo, Userinfo};
 use rauthy_models::templates::{LogoutHtml, TooManyRequestsHtml};
-use rauthy_models::{
-    sign_jwt, validate_jwt, AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn, JwtAccessClaims,
-    JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtRefreshClaims, JwtType,
-};
+use rauthy_models::{sign_jwt, validate_jwt, AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn, JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtRefreshClaims, JwtTokenType, JktClaim};
 use redhac::cache_del;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
 use ring::digest;
@@ -45,6 +42,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use time::OffsetDateTime;
 use tokio::sync::oneshot;
 use tracing::{debug, error, info, warn};
+use rauthy_models::entity::dpop_proof::DPoPProof;
 
 /// # Business logic for [POST /oidc/authorize](crate::handlers::post_authorize)
 #[tracing::instrument(name = "post_authorize", skip_all, fields(client_id = req_data.client_id, email = req_data.email))]
@@ -370,6 +368,7 @@ pub async fn build_access_token(
     user: Option<&User>,
     data: &web::Data<AppState>,
     client: &Client,
+    dpop_fingerprint: Option<String>,
     lifetime: i64,
     scope: Option<String>,
     scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
@@ -381,7 +380,7 @@ pub async fn build_access_token(
     };
 
     let mut custom_claims = JwtAccessClaims {
-        typ: JwtType::Bearer,
+        typ: JwtTokenType::Bearer,
         azp: client.id.to_string(),
         scope,
         allowed_origins: None,
@@ -389,6 +388,7 @@ pub async fn build_access_token(
         preferred_username: None,
         roles: None,
         groups: None,
+        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt }),
         custom: None,
     };
 
@@ -464,7 +464,7 @@ pub async fn build_id_token(
 
     let mut custom_claims = JwtIdClaims {
         azp: client.id.clone(),
-        typ: JwtType::Id,
+        typ: JwtTokenType::Id,
         amr: vec![amr],
         preferred_username: user.email.clone(),
         email: None,
@@ -529,6 +529,7 @@ pub async fn build_id_token(
 pub async fn build_refresh_token(
     user: &User,
     data: &web::Data<AppState>,
+    dpop_fingerprint: Option<String>,
     client: &Client,
     access_token_lifetime: i64,
     scope: Option<String>,
@@ -536,8 +537,9 @@ pub async fn build_refresh_token(
 ) -> Result<String, ErrorResponse> {
     let custom_claims = JwtRefreshClaims {
         azp: client.id.clone(),
-        typ: JwtType::Refresh,
+        typ: JwtTokenType::Refresh,
         uid: user.id.clone(),
+        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt }),
     };
 
     let claims = Claims::with_custom_claims(custom_claims, coarsetime::Duration::from_hours(48))
@@ -565,17 +567,6 @@ pub async fn build_refresh_token(
 
     Ok(token)
 }
-
-// #[inline(always)]
-// fn get_api_key_token_from_header(headers: &HeaderMap) -> Option<&str> {
-//     let api_key = headers.get("Authorization")?.to_str().ok()?;
-//     let (k, v) = api_key.split_once(' ')?;
-//     if k.ne(TOKEN_API_KEY) || k.is_empty() {
-//         None
-//     } else {
-//         Some(v)
-//     }
-// }
 
 #[inline(always)]
 fn get_bearer_token_from_header(headers: &HeaderMap) -> Result<String, ErrorResponse> {
@@ -669,6 +660,7 @@ pub async fn get_token_info(
             client_id: None,
             username: None,
             exp: None,
+            cnf: None,
         });
     }
 
@@ -678,6 +670,7 @@ pub async fn get_token_info(
     let client_id = claims.custom.azp;
     let username = claims.subject;
     let exp = claims.expires_at.unwrap().as_secs();
+    let cnf = claims.custom.cnf;
 
     Ok(TokenInfo {
         active: true,
@@ -685,6 +678,7 @@ pub async fn get_token_info(
         client_id: Some(client_id),
         username,
         exp: Some(exp),
+        cnf,
     })
 }
 
@@ -720,6 +714,13 @@ async fn grant_type_code(
             String::from("'code' is missing"),
         ));
     }
+
+    // check for DPoP header
+    let dpop_fingerprint = if let Some(proof) = DPoPProof::opt_validated_from(&req)? {
+        Some(proof.jwk_fingerprint()?)
+    } else {
+        None
+    };
 
     // TODO another redirect_uri check? Add to AuthCode? Any security benefit?
     // let redirect_uri = if let Some(uri) = req_data.redirect_uri {
@@ -809,6 +810,7 @@ async fn grant_type_code(
         &user,
         data,
         &client,
+        dpop_fingerprint,
         code.nonce.clone(),
         Some(code.scopes.join(" ")),
         true,
@@ -850,6 +852,12 @@ async fn grant_type_credentials(
         ));
     }
 
+    let dpop_fingerprint = if let Some(proof) = DPoPProof::opt_validated_from(&req)? {
+        Some(proof.jwk_fingerprint()?)
+    } else {
+        None
+    };
+
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
     let client = Client::find(data, client_id).await?;
     if !client.confidential {
@@ -873,7 +881,7 @@ async fn grant_type_credentials(
     client.validate_secret(data, &secret, &req)?;
     client.validate_flow("client_credentials")?;
 
-    let ts = TokenSet::for_client_credentials(data, &client).await?;
+    let ts = TokenSet::for_client_credentials(data, &client, dpop_fingerprint).await?;
     Ok((ts, None))
 }
 
@@ -896,6 +904,13 @@ async fn grant_type_password(
             String::from("Missing 'password"),
         ));
     }
+
+    let dpop_fingerprint = if let Some(proof) = DPoPProof::opt_validated_from(&req)? {
+        Some(proof.jwk_fingerprint()?)
+    } else {
+        None
+    };
+
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
     let email = req_data.username.as_ref().unwrap();
     let password = req_data.password.unwrap();
@@ -948,7 +963,7 @@ async fn grant_type_password(
 
             user.save(data, None, None).await?;
 
-            let ts = TokenSet::from_user(&user, data, &client, None, None, false).await?;
+            let ts = TokenSet::from_user(&user, data, &client, dpop_fingerprint, None, None, false).await?;
             Ok((ts, header_origin))
         }
         Err(err) => {
@@ -1001,7 +1016,7 @@ async fn grant_type_refresh(
     let refresh_token = req_data.refresh_token.unwrap();
 
     // validate common refresh token claims first and get the payload
-    let ts = validate_refresh_token(Some(client), &refresh_token, data).await?;
+    let ts = validate_refresh_token(Some(client), &refresh_token, data, &req).await?;
     Ok((ts, header_origin))
 }
 
@@ -1245,7 +1260,7 @@ pub async fn logout(
     let claims = validate_token::<JwtIdClaims>(data, &token_raw).await?;
 
     // check if it is an ID token
-    if JwtType::Id != claims.custom.typ {
+    if JwtTokenType::Id != claims.custom.typ {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             String::from("The provided token is not an ID token"),
@@ -1637,9 +1652,10 @@ pub async fn validate_refresh_token(
     client_opt: Option<Client>,
     refresh_token: &str,
     data: &web::Data<AppState>,
+    req: &HttpRequest,
 ) -> Result<TokenSet, ErrorResponse> {
     let options = VerificationOptions {
-        // allowed_audiences: Some(HashSet::from_strings(&[&])), // TODO
+        // allowed_audiences: Some(HashSet::from_strings(&[&])), // TODO change after making client non-opt
         allowed_issuers: Some(HashSet::from_strings(&[&data.issuer])),
         ..Default::default()
     };
@@ -1653,7 +1669,7 @@ pub async fn validate_refresh_token(
         validate_jwt!(JwtRefreshClaims, kp, refresh_token, options)?;
 
     // validate typ
-    if claims.custom.typ != JwtType::Refresh {
+    if claims.custom.typ != JwtTokenType::Refresh {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             String::from("Provided Token is not a valid refresh token"),
@@ -1672,13 +1688,35 @@ pub async fn validate_refresh_token(
     if client.id != claims.custom.azp {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("'client_id' does not match"),
+            String::from("Invalid 'azp'"),
         ));
     }
 
+    // validate DPoP proof
+    let dpop_fingerprint = if let Some(cnf) = claims.custom.cnf {
+        // if the refresh token contains the 'cnf' header, we must validate the DPoP as well
+        if let Some(proof) = DPoPProof::opt_validated_from(req)? {
+            let fingerprint = proof.jwk_fingerprint()?;
+            if fingerprint != cnf.jkt {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "The refresh token is bound to a missing DPoP proof".to_string(),
+                ));
+            }
+            debug!("DPoP-Bound refresh token accepted");
+            Some(fingerprint)
+        } else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "The refresh token is bound to a missing DPoP proof".to_string(),
+            ));
+        }
+    } else {
+        None
+    };
+
     // validate that it exists in the db
     let (_, validation_str) = refresh_token.split_at(refresh_token.len() - 49);
-    // let validation_str = String::from(refresh_token).split_off(&refresh_token.len() - 49);
 
     let mut rt = RefreshToken::find(data, validation_str).await?;
 
@@ -1718,9 +1756,9 @@ pub async fn validate_refresh_token(
 
     // TODO do we somehow need to be able to set 'nonce' here too?
     if let Some(s) = rt.scope {
-        TokenSet::from_user(&user, data, &client, None, Some(s), rt.is_mfa).await
+        TokenSet::from_user(&user, data, &client, dpop_fingerprint, None, Some(s), rt.is_mfa).await
     } else {
-        TokenSet::from_user(&user, data, &client, None, None, rt.is_mfa).await
+        TokenSet::from_user(&user, data, &client, dpop_fingerprint, None, None, rt.is_mfa).await
     }
 }
 

@@ -22,7 +22,6 @@ pub struct DPoPHeader {
     ///
     /// In case of DPoP, must always be: 'dpop+jwt'
     pub typ: String,
-    // TODO accept any alg, or limit to the ones Rauthy can actually validate?
     /// An identifier for a JWS asymmetric digital signature algorithm
     /// from [IANA.JOSE.ALGS]. It MUST NOT be none or an identifier for a
     /// symmetric algorithm (Message Authentication Code (MAC)).
@@ -57,20 +56,20 @@ pub struct DPoPClaims {
     /// Creation timestamp of the JWT (Section 4.1.6 of [RFC7519]).
     pub iat: i64,
 
-    // TODO does Rauthy even need 'ath'? -> double check
-    /// Hash of the access token. The value MUST be the result of a
-    /// base64url encoding (as defined in Section 2 of [RFC7515])
-    /// the SHA-256 [SHS] hash of the ASCII encoding of the associated
-    /// access token's value.
-    ///
-    /// MUST be valid when used in conjunction with an access token
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ath: Option<String>,
+    // // TODO does Rauthy even need 'ath'? maybe when refreshing a token?
+    // /// Hash of the access token. The value MUST be the result of a
+    // /// base64url encoding (as defined in Section 2 of [RFC7515])
+    // /// the SHA-256 [SHS] hash of the ASCII encoding of the associated
+    // /// access token's value.
+    // ///
+    // /// MUST be valid when used in conjunction with an access token
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub ath: Option<String>,
 
-    // TODO Optional all the time or just during creating with the nonce header?
-    /// A recent nonce provided via the DPoP-Nonce HTTP header.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub nonce: Option<String>,
+    // // TODO Optional all the time or just during creating with the nonce header?
+    // /// A recent nonce provided via the DPoP-Nonce HTTP header.
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub nonce: Option<String>,
 }
 
 impl TryFrom<&str> for DPoPProof {
@@ -121,7 +120,14 @@ impl TryFrom<&str> for DPoPProof {
 }
 
 impl DPoPProof {
-    pub fn opt_from(req: &HttpRequest) -> Result<Option<Self>, ErrorResponse> {
+    #[inline(always)]
+    pub fn jwk_fingerprint(&self) -> Result<String, ErrorResponse> {
+        self.header.jwk.fingerprint()
+    }
+
+    /// Tries to extract a DPoP header from the given HttpRequest and validates the given JWK
+    /// if it exists.
+    pub fn opt_validated_from(req: &HttpRequest) -> Result<Option<Self>, ErrorResponse> {
         match req.headers().get(TOKEN_DPOP) {
             None => Ok(None),
             Some(v) => {
@@ -133,8 +139,9 @@ impl DPoPProof {
                     ))
                 } else {
                     let slf = Self::try_from(b64)?;
+                    slf.validate(b64)?;
 
-                    // TODO impl nonce check
+                    // TODO impl nonce check? Does Rauthy need to do this at all here?
                     // let nonce = req.headers().get(TOKEN_DPOP_NONCE);
 
                     Ok(Some(slf))
@@ -193,8 +200,8 @@ impl DPoPProof {
 
         // 6. The JWT signature verifies with the public key contained in the jwk
         // JOSE Header Parameter.
-        let nonce = self.claims.nonce.clone();
-        kp.validate_dpop(raw_token, nonce)?;
+        // let nonce = self.claims.nonce.clone();
+        kp.validate_dpop(raw_token)?;
 
         // 7. The jwk JOSE Header Parameter does not contain a private key.
         // TODO ?
@@ -249,7 +256,6 @@ mod tests {
     use crate::entity::dpop_proof::{DPoPClaims, DPoPHeader, DPoPProof};
     use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType};
     use actix_web::http;
-    use actix_web::http::Uri;
     use chrono::Utc;
     use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_encode};
     // use rsa::pkcs1v15::{SigningKey};
@@ -257,10 +263,9 @@ mod tests {
     // use rsa::sha2::{Digest, Sha256};
     // use rsa::signature::SignatureEncoding;
     // use rsa::traits::{PublicKeyParts};
-    use std::hash::Hash;
     use std::fmt::Write;
-    use std::str::FromStr;
     use ed25519_compact::Noise;
+    use rauthy_common::constants::DPOP_TOKEN_ENDPOINT;
 
     // Note: this test does not work anymore with the way more strict deserialization after
     // the initial testing with just Strings.
@@ -301,6 +306,9 @@ mod tests {
 
     #[test]
     fn test_dpop_validation_eddsa() {
+        // mandatory to read the PUB_URL for the request validation
+        dotenvy::from_filename("rauthy.test.cfg").ok();
+
         // manually build up a dpop token
         let kp = ed25519_compact::KeyPair::generate();
 
@@ -311,7 +319,7 @@ mod tests {
                 kty: JwkKeyPairType::OKP,
                 // DPoP request will not have the 'alg' here but one level higher
                 alg: None,
-                crv: None,
+                crv: Some("Ed25519".to_string()),
                 kid: None,
                 n: None,
                 e: None,
@@ -323,10 +331,10 @@ mod tests {
         let claims = DPoPClaims {
             jti: "-BwC3ESc6acc2lTc".to_string(),
             htm: http::Method::POST,
-            htu: Uri::from_str("https://localhost:8080/auth/v1/oidc/token").unwrap(),
+            htu: DPOP_TOKEN_ENDPOINT.clone(),
             iat: Utc::now().timestamp(),
-            ath: None,
-            nonce: None,
+            // ath: None,
+            // nonce: None,
         };
 
         // build and sign the raw token string

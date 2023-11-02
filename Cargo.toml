@@ -10,7 +10,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.17.0"
+version = "0.17.1-20231102"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "AGPLv3"
@@ -40,6 +40,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "serd
 css-color = "0.2"
 derive_more = "0.99"
 dotenvy = "0.15"
+ed25519-compact = { version = "2.0.4", features = ["ed25519"] }
 flume = "0.11"
 gethostname = "0.4"
 jwt-simple = "0.11"

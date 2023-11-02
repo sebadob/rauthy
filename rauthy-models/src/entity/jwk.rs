@@ -308,6 +308,43 @@ impl JWKSPublicKey {
         }
     }
 
+    /// Creates a JWK thumbprint by https://datatracker.ietf.org/doc/html/rfc7638
+    pub fn fingerprint(&self) -> Result<String, ErrorResponse> {
+        let s = match self.kty {
+            JwkKeyPairType::RSA => {
+                if self.e.is_none() || self.n.is_none() {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::Internal,
+                        "Incorrect format for RSA JWK: e / n missing".to_string(),
+                    ));
+                }
+
+                // mandatory keys for RSA are in order: e, kty, n
+                let e = self.e.as_deref().unwrap();
+                let n = self.n.as_deref().unwrap();
+                format!("{{\"e\":\"{}\",\"kty\":\"{}\",\"n\":\"{}\"}}", e, self.kty.as_str(), n)
+            }
+
+            JwkKeyPairType::OKP => {
+                if self.crv.is_none() || self.x.is_none() {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::Internal,
+                        "Incorrect format for OKP JWK: crv / x missing".to_string(),
+                    ));
+                }
+
+                // mandatory keys for OKP are in order: crv, kty, x
+                let crv = self.crv.as_deref().unwrap();
+                let x = self.x.as_deref().unwrap();
+                format!("{{\"crv\":\"{}\",\"kty\":\"{}\",\"x\":\"{}\"}}", crv, self.kty.as_str(), x)
+            }
+        };
+
+        let hash = hmac_sha256::Hash::hash(s.as_bytes());
+        let b64 = base64_url_encode(hash.as_slice());
+        Ok(b64)
+    }
+
     /// Validates a reconstructed key from a remote location against Rauthy's supported values.
     pub fn validate_self(&self) -> Result<(), ErrorResponse> {
         match &self.alg {
@@ -348,6 +385,21 @@ impl JWKSPublicKey {
                             ));
                         }
 
+                        if self.crv.is_none() {
+                            return Err(ErrorResponse::new(
+                                ErrorResponseType::BadRequest,
+                                "OKP kty must have 'crv'".to_string(),
+                            ));
+                        }
+                        if let Some(crv) = &self.crv {
+                            if crv != "Ed25519" {
+                                return Err(ErrorResponse::new(
+                                    ErrorResponseType::BadRequest,
+                                    "Only 'Ed25519' for 'crv' is supported".to_string(),
+                                ));
+                            }
+                        }
+
                         if self.n.is_some() || self.e.is_some() {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
@@ -375,7 +427,7 @@ impl JWKSPublicKey {
     /// switch to another IDE).
     /// Until this is solved, I will only have the RSA keys prepared, but actually only support
     /// EdDSA for now.
-    pub fn validate_dpop(&self, token: &str, _nonce: Option<String>) -> Result<(), ErrorResponse> {
+    pub fn validate_dpop(&self, token: &str) -> Result<(), ErrorResponse> {
         let (header, rest) = token.split_once('.').ok_or_else(|| {
             ErrorResponse::new(ErrorResponseType::BadRequest, "Malformed token".to_string())
         })?;
@@ -705,6 +757,54 @@ mod tests {
     use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType};
 
     #[test]
+    fn test_fingerprint() {
+        // example from RFC7638 https://datatracker.ietf.org/doc/html/rfc7638
+        let tp = JWKSPublicKey {
+            kty: JwkKeyPairType::RSA,
+            alg: Some(JwkKeyPairAlg::RS256),
+            crv: None,
+            kid: Some("2011-04-29".to_string()),
+            n: Some("0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw".to_string()),
+            e: Some("AQAB".to_string()),
+            x: None,
+        }.fingerprint().unwrap();
+        assert_eq!(tp.as_str(), "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs");
+
+        let tp = JWKSPublicKey {
+            kty: JwkKeyPairType::RSA,
+            alg: Some(JwkKeyPairAlg::RS384),
+            crv: None,
+            kid: None,
+            n: Some("0OJuIbD0k90-Xod2cnqcGWu0xP4Z3Eyfi3CXBxdzlEwFHSNat6Vjts2g5Uzbdvmgm2ys-UWUaCcw2zPEbn25dtcv0MVK26J71OV0Q38yB701SniEJqLXf3OehSR7lfd9HNasZF_-2u6oJMwvKLe10qlSGYLzeUCWIV4LDPDv7lxsWFx0WntgLlHpKfVmYuvW_AQ1Q8XSO53K4Xk3n84zzAXvCUyW8Z4tmE4tc3ibriHH63AYpKbB8oDR-zhbIoGHtZnDdRo02JvS11KNINLdmMOE2zre7hPgXVbgnYS9qbpz4nsc4sPCiGclM2c2faSkwyxI60Ng6272e3fIEkBTKtYidoaG00tM1j42kD-b7bNjWJIsY92F15SdRA4stpic2KcAnyphNrLeDMKd_c-h3PC22eR-a8pb5nE1VvDSagn9g8WE3TSMEJxEmAgVcOcldSV9EDpSz4uk2CqRdytwAZOnRDEwehnRQiLNiwgyNEygLAcaVWDR8ym8ARRLWCRL".to_string()),
+            e: Some("AQAB".to_string()),
+            x: None,
+        }.fingerprint().unwrap();
+        assert_eq!(tp.as_str(), "EunK2QL42BZ2Eb4urUxXiFFomdjus4UtGB9qJ8Vnjtw");
+
+        let tp = JWKSPublicKey {
+            kty: JwkKeyPairType::RSA,
+            alg: Some(JwkKeyPairAlg::RS512),
+            crv: None,
+            kid: None,
+            n: Some("1UjNug4a3OEo8saHbM14jhEqpgRHvjMaQ0lB_1rRuK4yMNPLxhdes8PcMXfEuCOYrC4jxkeVb31QgM5OFwxRtyBT-T1SmiWCtXX2beFtRrvZcGYQrd_LooKLrcjww-P8atQBBYKgf82e9aqb5I-4BFYTBdDQ5lQKQtZDwiU-lUVYP103SphHQMkkWLKsC7oFcthN2m8IliQnJ3-XeqgYt9dc6AszDEjNTDZMeC-HWwRXI9JGYjIgNIZj_u0n6UgaqhdjR1sEHxRGI_t6xQX_L9zRecdDM6-e_lNxIaeROZJ2FU-t9GmZZWyyDWUHk7tk4dS1cU5CdtwvL75dXMHsmwyTs8QK9YUvCWmLeCp6JNPOpCalwyW8YcqJphINhKgonsMinxWLPlO4jtSXKzrpGDLxOF_8xVMW3gNmnIWuUY0_29p7-DzdVm44GEYhQRNNX7yh850uYpwoi42fFvXa5wXm6Hy5QHh_Aqv3tTZgG2f20xCKOzzGzWB28BdJJa9EPu2WLrxaPbn8Qi536979UvMhlZsnUc4fW3TSy20coMb1NIatZaJCDu-uQuGFz7FHBFWjJV6fjF7gqiNqu8cZTeOedGjMitdCnMtOjCz8SASphF12_opWTvtFjq0IMNo4kR8zgZQ24Kt2o2qDhH7fYJI1cLj0RBGDCUU3AlozG_U".to_string()),
+            e: Some("AQAB".to_string()),
+            x: None,
+        }.fingerprint().unwrap();
+        assert_eq!(tp.as_str(), "rSJa_34h-WFCVMoSG7ORvEvxhF45iCvcm1FRZlxSRio");
+
+        let tp = JWKSPublicKey {
+            kty: JwkKeyPairType::OKP,
+            alg: Some(JwkKeyPairAlg::EdDSA),
+            crv: Some("Ed25519".to_string()),
+            kid: None,
+            n: None,
+            e: None,
+            x: Some("suwfa9fyMHqS0yOh9T-Bsdkji0naFVRRGZFBNrGX_RQ".to_string()),
+        }.fingerprint().unwrap();
+        assert_eq!(tp.as_str(), "lVstH-NNQsIRpUp1nMmxD3cUoDS_dUbi4Or5awQ34EQ");
+    }
+
+    #[test]
     fn test_jwk_validate_self() {
         // these should be fine
         JWKSPublicKey {
@@ -740,7 +840,7 @@ mod tests {
         JWKSPublicKey {
             kty: JwkKeyPairType::OKP,
             alg: Some(JwkKeyPairAlg::EdDSA),
-            crv: None,
+            crv: Some("Ed25519".to_string()),
             kid: None,
             n: None,
             e: None,
@@ -753,7 +853,7 @@ mod tests {
         let key = JWKSPublicKey {
             kty: JwkKeyPairType::OKP,
             alg: Some(JwkKeyPairAlg::RS256),
-            crv: None,
+            crv: Some("Ed25519".to_string()),
             kid: None,
             n: Some("r5Xn8yuwc7ekL5NLFnBw76cRUiYbIQqNgPq6XYw6_Mgle3BSJ-UTKTWjGLDoTSlFC7k2xCZNOt8pqix2R_qoGwlNo8kYXlgMpAEo00rSKoG1RO1PMj1M_--swijR8l1bnb-VfIPgT_kM3zv7RLPLEEjYHMuT7N5liFVq1Xh-So8i3X1UeWGHyJPHjF5koB_XO1vleYQCZQeGFaomJgrFJsxdmtFueJaMEMQ1-mPwuPjvSwOtMMAu0nO9DJm3-xwkygPqGmEbbDHLeEO1dEOlDdEYlYle5Pa70FGinCBqaAl7lDaJ1umAvpcLBUHtFOM7VBmt-xUjzOU7VDPareR6Ww".to_string()),
             e: Some("AQAB".to_string()),
@@ -764,7 +864,7 @@ mod tests {
         let key = JWKSPublicKey {
             kty: JwkKeyPairType::OKP,
             alg: Some(JwkKeyPairAlg::EdDSA),
-            crv: None,
+            crv: Some("Ed25519".to_string()),
             kid: None,
             n: Some("r5Xn8yuwc7ekL5NLFnBw76cRUiYbIQqNgPq6XYw6_Mgle3BSJ-UTKTWjGLDoTSlFC7k2xCZNOt8pqix2R_qoGwlNo8kYXlgMpAEo00rSKoG1RO1PMj1M_--swijR8l1bnb-VfIPgT_kM3zv7RLPLEEjYHMuT7N5liFVq1Xh-So8i3X1UeWGHyJPHjF5koB_XO1vleYQCZQeGFaomJgrFJsxdmtFueJaMEMQ1-mPwuPjvSwOtMMAu0nO9DJm3-xwkygPqGmEbbDHLeEO1dEOlDdEYlYle5Pa70FGinCBqaAl7lDaJ1umAvpcLBUHtFOM7VBmt-xUjzOU7VDPareR6Ww".to_string()),
             e: Some("AQAB".to_string()),
@@ -822,7 +922,7 @@ mod tests {
         let key = JWKSPublicKey {
             kty: JwkKeyPairType::OKP,
             alg: Some(JwkKeyPairAlg::EdDSA),
-            crv: None,
+            crv: Some("Ed25519".to_string()),
             kid: None,
             n: None,
             e: None,
@@ -834,7 +934,7 @@ mod tests {
         let key = JWKSPublicKey {
             kty: JwkKeyPairType::OKP,
             alg: Some(JwkKeyPairAlg::EdDSA),
-            crv: None,
+            crv: Some("Ed25519".to_string()),
             kid: None,
             n: Some("n".to_string()),
             e: None,
@@ -846,7 +946,7 @@ mod tests {
         let key = JWKSPublicKey {
             kty: JwkKeyPairType::OKP,
             alg: Some(JwkKeyPairAlg::EdDSA),
-            crv: None,
+            crv: Some("Ed25519".to_string()),
             kid: None,
             n: Some("n".to_string()),
             e: None,
@@ -858,7 +958,7 @@ mod tests {
         let key = JWKSPublicKey {
             kty: JwkKeyPairType::OKP,
             alg: Some(JwkKeyPairAlg::EdDSA),
-            crv: None,
+            crv: Some("Ed25519".to_string()),
             kid: None,
             n: None,
             e: Some("e".to_string()),

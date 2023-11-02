@@ -461,7 +461,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         .service(generic::get_password_policy)
                         .service(generic::put_password_policy)
                         .service(generic::get_pow)
-                        .service(oidc::post_refresh_token)
+                        // .service(oidc::post_refresh_token)
                         .service(groups::get_groups)
                         .service(groups::post_group)
                         .service(groups::put_group)

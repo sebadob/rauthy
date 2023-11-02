@@ -2,16 +2,25 @@ use crate::common::{
     check_status, code_state_from_headers, cookie_csrf_headers_from_res, get_auth_headers,
     get_backend_url, CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME,
 };
+use actix_web::http;
+use chrono::Utc;
+use ed25519_compact::Noise;
 use josekit::jwk;
 use pretty_assertions::assert_eq;
-use rauthy_common::utils::{base64_url_encode, get_rand};
-use rauthy_models::entity::jwk::JWKS;
+use rauthy_common::constants::{DPOP_TOKEN_ENDPOINT, TOKEN_DPOP};
+use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_encode, get_rand};
+use rauthy_models::entity::dpop_proof::{DPoPClaims, DPoPHeader};
+use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType, JWKS};
 use rauthy_models::request::{
     LoginRequest, TokenRequest, TokenValidationRequest, UpdateClientRequest,
 };
+use rauthy_models::response::TokenInfo;
+use rauthy_models::JwtTokenType;
 use rauthy_service::token_set::TokenSet;
 use ring::digest;
 use std::error::Error;
+use std::fmt::Write;
 use std::ops::Sub;
 use std::thread::JoinHandle;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -252,8 +261,8 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
             "client_credentials".to_string(),
             "refresh_token".to_string(),
         ],
-        access_token_alg: "RS384".to_string(),
-        id_token_alg: "EdDSA".to_string(),
+        access_token_alg: JwkKeyPairAlg::RS384,
+        id_token_alg: JwkKeyPairAlg::EdDSA,
         refresh_token: true,
         auth_code_lifetime: 120,
         access_token_lifetime: 60,
@@ -352,7 +361,7 @@ async fn test_client_credentials_flow() -> Result<(), Box<dyn Error>> {
 
     let ts = res.json::<TokenSet>().await?;
     assert!(ts.access_token.len() > 0);
-    assert_eq!(ts.token_type.as_ref().unwrap(), "Bearer");
+    assert_eq!(ts.token_type, JwtTokenType::Bearer);
     assert_eq!(ts.expires_in, 60);
     // important: no id token for client_credentials and not refresh token
     assert!(ts.id_token.is_none());
@@ -540,13 +549,133 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn validate_token(req: TokenValidationRequest) -> Result<(), Box<dyn Error>> {
-    let url_valid = format!("{}/oidc/token/validate", get_backend_url());
+#[tokio::test]
+async fn test_dpop() -> Result<(), Box<dyn Error>> {
+    let client = reqwest::Client::new();
+
+    let url = format!("{}/oidc/token", get_backend_url());
+
+    // token request itself
+    let body = TokenRequest {
+        grant_type: "password".to_string(),
+        code: None,
+        redirect_uri: None,
+        client_id: Some(CLIENT_ID.to_string()),
+        client_secret: Some(CLIENT_SECRET.to_string()),
+        code_verifier: None,
+        username: Some(USERNAME.to_string()),
+        password: Some(PASSWORD.to_string()),
+        refresh_token: None,
+    };
+
+    // dpop header
+    let kp = ed25519_compact::KeyPair::generate();
+
+    let header = DPoPHeader {
+        typ: "dpop+jwt".to_string(),
+        alg: JwkKeyPairAlg::EdDSA,
+        jwk: JWKSPublicKey {
+            kty: JwkKeyPairType::OKP,
+            // DPoP request will not have the 'alg' here but one level higher
+            alg: None,
+            crv: Some("Ed25519".to_string()),
+            kid: None,
+            n: None,
+            e: None,
+            x: Some(base64_url_encode(kp.pk.as_slice())),
+        },
+        kid: None,
+    };
+    let claims = DPoPClaims {
+        jti: "-BwC3ESc6acc2lTc".to_string(),
+        htm: http::Method::POST,
+        htu: DPOP_TOKEN_ENDPOINT.clone(),
+        iat: Utc::now().timestamp(),
+        // ath: None,
+        // nonce: None,
+    };
+
+    let fingerprint = header.jwk.fingerprint().unwrap();
+
+    let header_json = serde_json::to_string(&header).unwrap();
+    let header_b64 = base64_url_no_pad_encode(header_json.as_bytes());
+    let claims_json = serde_json::to_string(&claims).unwrap();
+    let claims_b64 = base64_url_no_pad_encode(claims_json.as_bytes());
+    let mut dpop_token = format!("{}.{}", header_b64, claims_b64);
+
+    let sig = kp.sk.sign(&dpop_token, Some(Noise::generate()));
+    let sig_b64 = base64_url_no_pad_encode(sig.as_ref());
+    write!(dpop_token, ".{}", sig_b64).unwrap();
+    println!("test signed token:\n{}", dpop_token);
+
+    let mut res = client
+        .post(&url)
+        .header(TOKEN_DPOP, &dpop_token)
+        .form(&body)
+        .send()
+        .await?;
+    res = check_status(res, 200).await?;
+
+    let ts = res.json::<TokenSet>().await?;
+    assert_eq!(ts.token_type, JwtTokenType::DPoP);
+    let req = TokenValidationRequest {
+        token: ts.access_token.to_owned(),
+    };
+    let token_info = validate_token(req).await?;
+    assert!(token_info.cnf.is_some());
+    assert_eq!(token_info.cnf.unwrap().jkt, fingerprint);
+
+    // refresh it
+    time::sleep(Duration::from_secs(1)).await;
+    let req = TokenRequest {
+        grant_type: "refresh_token".to_string(),
+        code: None,
+        redirect_uri: None,
+        client_id: Some(CLIENT_ID.to_string()),
+        client_secret: Some(CLIENT_SECRET.to_string()),
+        code_verifier: None,
+        username: None,
+        password: None,
+        refresh_token: Some(ts.refresh_token.clone().unwrap()),
+    };
+
+    // without DPoP header, it should fail
+    let res = reqwest::Client::new().post(&url).form(&req).send().await?;
+    assert_eq!(res.status(), 403);
+    let err = res.json::<ErrorResponse>().await.unwrap();
+    println!("{:?}", err);
+    assert_eq!(err.error, ErrorResponseType::Forbidden);
+    assert!(err.message.to_lowercase().contains("dpop"));
+
+    // now a proper refresh with DPoP header
+    let res = reqwest::Client::new()
+        .post(&url)
+        .header(TOKEN_DPOP, dpop_token)
+        .form(&req)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    let ts = res.json::<TokenSet>().await?;
+    assert_eq!(ts.token_type, JwtTokenType::DPoP);
+    let req = TokenValidationRequest {
+        token: ts.access_token.to_owned(),
+    };
+    let token_info = validate_token(req).await?;
+    assert!(token_info.cnf.is_some());
+    assert_eq!(token_info.cnf.unwrap().jkt, fingerprint);
+
+    Ok(())
+}
+
+async fn validate_token(req: TokenValidationRequest) -> Result<TokenInfo, Box<dyn Error>> {
+    let url_valid = format!("{}/oidc/tokenInfo", get_backend_url());
     let res = reqwest::Client::new()
         .post(&url_valid)
         .json(&req)
         .send()
         .await?;
-    assert_eq!(res.status(), 202);
-    Ok(())
+    assert_eq!(res.status(), 200);
+    let info = res.json::<TokenInfo>().await.unwrap();
+    Ok(info)
 }

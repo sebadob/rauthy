@@ -75,7 +75,6 @@ use utoipa::{openapi, OpenApi};
         oidc::get_session_xsrf,
         oidc::post_token,
         oidc::post_token_info,
-        oidc::post_refresh_token,
         oidc::post_validate_token,
         oidc::get_userinfo,
         oidc::get_well_known,
@@ -163,7 +162,6 @@ use utoipa::{openapi, OpenApi};
             request::NewUserRequest,
             request::NewUserRegistrationRequest,
             request::PowRequest,
-            request::RefreshTokenRequest,
             request::NewRoleRequest,
             request::ScopeRequest,
             request::TokenRequest,
@@ -205,6 +203,7 @@ use utoipa::{openapi, OpenApi};
             response::WebauthnLoginFinishResponse,
             response::WebauthnLoginResponse,
 
+            rauthy_models::JktClaim,
             token_set::TokenSet,
 
             WellKnown,
