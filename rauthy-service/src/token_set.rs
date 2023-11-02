@@ -1,6 +1,6 @@
 use crate::auth;
 use actix_web::web;
-use rauthy_common::constants::{OFFLINE_TOKEN_LT, TOKEN_BEARER};
+use rauthy_common::constants::{OFFLINE_TOKEN_LT};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
@@ -11,12 +11,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use time::OffsetDateTime;
 use utoipa::ToSchema;
+use rauthy_models::JwtTokenType;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct TokenSet {
     pub access_token: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub token_type: Option<String>,
+    pub token_type: JwtTokenType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id_token: Option<String>,
     pub expires_in: i32,
@@ -28,11 +28,18 @@ impl TokenSet {
     pub async fn for_client_credentials(
         data: &web::Data<AppState>,
         client: &Client,
+        dpop_fingerprint: Option<String>,
     ) -> Result<Self, ErrorResponse> {
+        let token_type = if dpop_fingerprint.is_some() {
+            JwtTokenType::DPoP
+        } else {
+            JwtTokenType::Bearer
+        };
         let access_token = auth::build_access_token(
             None,
             data,
             client,
+            dpop_fingerprint,
             client.access_token_lifetime as i64,
             None,
             None,
@@ -41,7 +48,7 @@ impl TokenSet {
 
         Ok(Self {
             access_token,
-            token_type: Some(String::from(TOKEN_BEARER)),
+            token_type,
             id_token: None,
             expires_in: client.access_token_lifetime,
             refresh_token: None,
@@ -52,6 +59,7 @@ impl TokenSet {
         user: &User,
         data: &web::Data<AppState>,
         client: &Client,
+        dpop_fingerprint: Option<String>,
         nonce: Option<String>,
         scopes: Option<String>,
         is_auth_code_flow: bool,
@@ -68,7 +76,6 @@ impl TokenSet {
         let scps;
         let attrs;
         let (customs_access, customs_id) = if !cust.is_empty() {
-            // let (customs_access, customs_id, attrs) = if !cust.is_empty() {
             scps = Some(Scope::find_all(data).await?);
 
             let mut customs_access = Vec::with_capacity(cust.len());
@@ -137,6 +144,11 @@ impl TokenSet {
             client.access_token_lifetime.unsigned_abs() as i64
         };
 
+        let token_type = if dpop_fingerprint.is_some() {
+            JwtTokenType::DPoP
+        } else {
+            JwtTokenType::Bearer
+        };
         let id_token = auth::build_id_token(
             user,
             data,
@@ -152,6 +164,7 @@ impl TokenSet {
             Some(user),
             data,
             client,
+            dpop_fingerprint.clone(),
             lifetime,
             Some(scope),
             customs_access,
@@ -159,7 +172,7 @@ impl TokenSet {
         .await?;
         let refresh_token = if client.refresh_token {
             Some(
-                auth::build_refresh_token(user, data, client, lifetime, scopes, is_auth_code_flow)
+                auth::build_refresh_token(user, data, dpop_fingerprint, client, lifetime, scopes, is_auth_code_flow)
                     .await?,
             )
         } else {
@@ -168,7 +181,7 @@ impl TokenSet {
 
         Ok(Self {
             access_token,
-            token_type: None,
+            token_type,
             id_token: Some(id_token),
             expires_in: client.access_token_lifetime,
             refresh_token,
