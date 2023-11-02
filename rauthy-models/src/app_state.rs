@@ -459,6 +459,7 @@ pub struct WellKnown {
     pub claims_supported: Vec<String>,
     pub scopes_supported: Vec<String>,
     pub code_challenge_methods_supported: Vec<String>,
+    pub dpop_signing_alg_values_supported: Vec<String>,
 }
 
 impl WellKnown {
@@ -506,6 +507,8 @@ impl WellKnown {
             String::from("groups"),
         ];
         let code_challenge_methods_supported = vec![String::from("plain"), String::from("S256")];
+        // support for RSA will come after a bugfix I am waiting for
+        let dpop_signing_alg_values_supported = vec![String::from("EdDSA")];
 
         Self {
             issuer: String::from(issuer),
@@ -522,6 +525,7 @@ impl WellKnown {
             claims_supported,
             scopes_supported,
             code_challenge_methods_supported,
+            dpop_signing_alg_values_supported,
         }
     }
 }
