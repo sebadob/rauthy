@@ -10,7 +10,7 @@
         'PASSWORD POLICY',
         'JWKS',
         'ARGON2 PARAMETERS',
-        'ENCRYOPTION KEYS',
+        'ENCRYPTION KEYS',
     ];
     let selected = tabBarItems[0];
     const tabBarDur = 200;
@@ -36,7 +36,7 @@
                 <Argon2Params/>
             </div>
 
-        {:else if selected === 'ENCRYOPTION KEYS'}
+        {:else if selected === 'ENCRYPTION KEYS'}
             <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <EncKeys/>
             </div>
