@@ -121,7 +121,7 @@ build-ui:
     )
     for folder in "${FOLDERS[@]}"; do
       if [ ! -d "$folder" ]; then
-          mkdir -p "$directory"
+          mkdir -p "$folder"
       fi
     done
 
