@@ -136,7 +136,7 @@ impl AppState {
             panic!("ENC_KEY_ACTIVE not found in ENC_KEYS");
         }
 
-        let issuer_scheme = if listen_scheme == ListenScheme::HttpHttps || *PROXY_MODE {
+        let issuer_scheme = if matches!(listen_scheme, ListenScheme::HttpHttps | ListenScheme::Https) || *PROXY_MODE {
             "https"
         } else {
             "http"
