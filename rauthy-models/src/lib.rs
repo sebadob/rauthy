@@ -23,6 +23,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use utoipa::ToSchema;
 
 pub mod app_state;
 pub mod email;
@@ -84,15 +85,21 @@ impl Display for ListenScheme {
 // This is used for the token info endpoint
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JwtCommonClaims {
-    pub typ: JwtType,
+    pub typ: JwtTokenType,
     pub azp: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
+    pub cnf: Option<JktClaim>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct JktClaim {
+    pub jkt: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JwtAccessClaims {
-    pub typ: JwtType,
+    pub typ: JwtTokenType,
     pub azp: String,
     pub scope: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -106,13 +113,15 @@ pub struct JwtAccessClaims {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub groups: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub cnf: Option<JktClaim>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JwtIdClaims {
     pub azp: String,
-    pub typ: JwtType,
+    pub typ: JwtTokenType,
     pub amr: Vec<String>,
     pub preferred_username: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -133,15 +142,29 @@ pub struct JwtIdClaims {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JwtRefreshClaims {
     pub azp: String,
-    pub typ: JwtType,
+    pub typ: JwtTokenType,
     pub uid: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cnf: Option<JktClaim>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum JwtType {
+pub enum JwtTokenType {
     Bearer,
+    DPoP,
     Id,
     Refresh,
+}
+
+impl JwtTokenType {
+    pub fn as_str(&self) -> &str {
+        match self {
+            JwtTokenType::Bearer => "Bearer",
+            JwtTokenType::DPoP => "DPoP",
+            JwtTokenType::Id => "Id",
+            JwtTokenType::Refresh => "Refresh",
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

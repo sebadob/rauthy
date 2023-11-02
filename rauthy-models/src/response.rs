@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use tracing::debug;
 use utoipa::ToSchema;
+use crate::JktClaim;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ApiKeysResponse {
@@ -308,7 +309,7 @@ pub struct SessionInfoResponse<'a> {
     pub timeout: OffsetDateTime,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct TokenInfo {
     pub active: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -319,6 +320,8 @@ pub struct TokenInfo {
     pub username: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub exp: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cnf: Option<JktClaim>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
