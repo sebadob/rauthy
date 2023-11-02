@@ -390,12 +390,12 @@ pub struct PowRequest {
     pub verifier: String,
 }
 
-#[derive(Deserialize, Validate, ToSchema)]
-pub struct RefreshTokenRequest {
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
-    pub refresh_token: String,
-}
+// #[derive(Deserialize, Validate, ToSchema)]
+// pub struct RefreshTokenRequest {
+//     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+//     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+//     pub refresh_token: String,
+// }
 
 #[derive(Serialize, Deserialize, Validate, ToSchema)]
 pub struct NewRoleRequest {

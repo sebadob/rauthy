@@ -19,7 +19,7 @@ use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::WebauthnCookie;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
-    AuthRequest, LoginRefreshRequest, LoginRequest, LogoutRequest, RefreshTokenRequest,
+    AuthRequest, LoginRefreshRequest, LoginRequest, LogoutRequest,
     TokenRequest, TokenValidationRequest,
 };
 use rauthy_models::response::{JWKSCerts, JWKSPublicKeyCerts, SessionInfoResponse};
@@ -515,18 +515,11 @@ pub async fn get_session_xsrf(
 pub async fn post_token(
     req_data: actix_web_validator::Form<TokenRequest>,
     req: HttpRequest,
-    // session_req: web::ReqData<Option<Session>>,
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let add_login_delay = req_data.grant_type == "password";
 
-    // let csrf_header = if let Some(s) = session_req.into_inner() {
-    //     // TODO validate CSRF if a session is present? What about the RFC? -> Check
-    //     Session::get_csrf_header(&s.csrf_token)
-    // } else {
-    //     Session::get_csrf_header("none")
-    // };
     let ip = real_ip_from_req(&req);
 
     let res = match auth::get_token_set(req_data.into_inner(), &data, req).await {
@@ -571,31 +564,31 @@ pub async fn post_token_info(
         .map(|i| HttpResponse::Ok().json(i))
 }
 
-// TODO remove?
-/// DEPRECATED
-///
-/// This is an older endpoint for refreshing tokens manually. This is not being used anymore an will
-/// be removed soon in favor of the `refresh_token` flow on the [token](post_token) endpoint.
-#[utoipa::path(
-    post,
-    path = "/oidc/token/refresh",
-    tag = "deprecated",
-    request_body = RefreshTokenRequest,
-    responses(
-        (status = 200, description = "Ok", body = TokenSet),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-        (status = 404, description = "NotFound", body = ErrorResponse),
-    ),
-)]
-#[post("/oidc/token/refresh")]
-pub async fn post_refresh_token(
-    req_data: actix_web_validator::Json<RefreshTokenRequest>,
-    data: web::Data<AppState>,
-) -> Result<HttpResponse, ErrorResponse> {
-    auth::validate_refresh_token(None, &req_data.refresh_token, &data)
-        .await
-        .map(|token_set| HttpResponse::Ok().json(token_set))
-}
+// // TODO remove?
+// /// DEPRECATED
+// ///
+// /// This is an older endpoint for refreshing tokens manually. This is not being used anymore an will
+// /// be removed soon in favor of the `refresh_token` flow on the [token](post_token) endpoint.
+// #[utoipa::path(
+//     post,
+//     path = "/oidc/token/refresh",
+//     tag = "deprecated",
+//     request_body = RefreshTokenRequest,
+//     responses(
+//         (status = 200, description = "Ok", body = TokenSet),
+//         (status = 401, description = "Unauthorized", body = ErrorResponse),
+//         (status = 404, description = "NotFound", body = ErrorResponse),
+//     ),
+// )]
+// #[post("/oidc/token/refresh")]
+// pub async fn post_refresh_token(
+//     req_data: actix_web_validator::Json<RefreshTokenRequest>,
+//     data: web::Data<AppState>,
+// ) -> Result<HttpResponse, ErrorResponse> {
+//     auth::validate_refresh_token(None, &req_data.refresh_token, &data)
+//         .await
+//         .map(|token_set| HttpResponse::Ok().json(token_set))
+// }
 
 /// DEPRECATED
 ///
