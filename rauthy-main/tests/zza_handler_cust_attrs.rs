@@ -11,6 +11,7 @@ use rauthy_models::response::{
 use rauthy_models::JwtAccessClaims;
 use serde_json::Value;
 use std::error::Error;
+use rauthy_models::entity::jwk::JwkKeyPairAlg;
 
 mod common;
 
@@ -116,8 +117,8 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         allowed_origins: c.allowed_origins,
         enabled: c.enabled,
         flows_enabled: c.flows_enabled,
-        access_token_alg: c.access_token_alg,
-        id_token_alg: c.id_token_alg,
+        access_token_alg: JwkKeyPairAlg::from(c.access_token_alg),
+        id_token_alg: JwkKeyPairAlg::from(c.id_token_alg),
         refresh_token: c.refresh_token,
         auth_code_lifetime: c.auth_code_lifetime,
         access_token_lifetime: c.access_token_lifetime,

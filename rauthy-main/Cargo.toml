@@ -38,6 +38,7 @@ validator = { workspace = true }
 webauthn-rs = { workspace = true }
 
 [dev-dependencies]
+ed25519-compact = { workspace = true }
 josekit = "0.8"
 pretty_assertions = "1"
 reqwest = { workspace = true }

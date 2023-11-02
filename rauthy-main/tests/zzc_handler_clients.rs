@@ -3,6 +3,7 @@ use pretty_assertions::{assert_eq, assert_ne};
 use rauthy_models::request::{NewClientRequest, UpdateClientRequest};
 use rauthy_models::response::{ClientResponse, ClientSecretResponse};
 use std::error::Error;
+use rauthy_models::entity::jwk::JwkKeyPairAlg;
 
 mod common;
 
@@ -98,8 +99,8 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         allowed_origins: allowed_origins.clone(),
         enabled: false,
         flows_enabled,
-        access_token_alg: "RS256".to_string(),
-        id_token_alg: "RS256".to_string(),
+        access_token_alg: JwkKeyPairAlg::RS256,
+        id_token_alg: JwkKeyPairAlg::RS256,
         refresh_token: true,
         auth_code_lifetime: 60,
         access_token_lifetime: 900,
