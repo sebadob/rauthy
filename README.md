@@ -8,11 +8,6 @@ Use this software at your own risk!
 This project is currently pre v1.0, which means, even though it is not expected, breaking changes might come
 with new versions.
 
-## License Changes Incoming
-
-Rauthy will be changed to an Apache 2.0 with the next release.  
-This will make the integration with other projects a lot easier.
-
 ## What it is
 
 Rauthy is an OpenID Connect (OIDC) Provider and Single Sign-On solution written in Rust.
@@ -111,5 +106,5 @@ Either just take a look at the [Rauthy Book](https://sebadob.github.io/rauthy/),
 the application yourself with docker on your localhost:
 
 ```
-docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.17.0-lite
+docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.18.0-lite
 ```
