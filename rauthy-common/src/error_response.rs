@@ -102,7 +102,7 @@ impl ResponseError for ErrorResponse {
             }
 
             ErrorResponseType::DPoP => HttpResponseBuilder::new(self.status_code())
-                .append_header((WWW_AUTHENTICATE, "error=invalid_dpop_proof"))
+                .append_header((WWW_AUTHENTICATE, "DPoP error=invalid_dpop_proof"))
                 .content_type(APPLICATION_JSON)
                 .body(serde_json::to_string(&self).unwrap()),
 
