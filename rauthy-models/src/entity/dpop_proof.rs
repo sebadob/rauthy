@@ -1,11 +1,92 @@
+use crate::app_state::AppState;
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg};
+use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::http::Uri;
-use actix_web::{http, HttpRequest};
-use chrono::Utc;
-use rauthy_common::constants::{DPOP_TOKEN_ENDPOINT, RE_TOKEN_68, TOKEN_DPOP};
+use actix_web::{http, web, HttpRequest};
+use chrono::{DateTime, Utc};
+use rauthy_common::constants::{
+    CACHE_NAME_DPOP_NONCES, DPOP_FORCE_NONCE, DPOP_NONCE_EXP, DPOP_TOKEN_ENDPOINT, RE_TOKEN_68,
+    TOKEN_DPOP,
+};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::base64_url_no_pad_decode;
+use rauthy_common::utils::{base64_url_no_pad_decode, get_rand};
+use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
+use std::ops::{Add, Sub};
+use tracing::error;
+
+/// A DPoP nonce that only live inside the cache to limit client's DPoP lifetimes
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DPoPNonce {
+    pub exp: DateTime<Utc>,
+    pub value: String,
+}
+
+impl DPoPNonce {
+    /// Creates a new DPoP nonce, inserts it into the cache and returns its value.
+    pub async fn new_value(data: &web::Data<AppState>) -> Result<String, ErrorResponse> {
+        let exp = Utc::now().add(chrono::Duration::seconds(*DPOP_NONCE_EXP as i64));
+        let slf = Self {
+            exp,
+            value: get_rand(32),
+        };
+
+        cache_put(
+            CACHE_NAME_DPOP_NONCES.to_string(),
+            "latest".to_string(),
+            &data.caches.ha_cache_config,
+            &slf,
+        )
+        .await?;
+        // we need by its own value additionally, because the "latest" may be overwritten
+        // before its expiration
+        cache_put(
+            CACHE_NAME_DPOP_NONCES.to_string(),
+            slf.value.clone(),
+            &data.caches.ha_cache_config,
+            &slf,
+        )
+        .await?;
+
+        Ok(slf.value)
+    }
+
+    /// Checks the validity of the given DPoP nonce value
+    pub async fn is_valid(data: &web::Data<AppState>, value: String) -> bool {
+        cache_get!(
+            Self,
+            CACHE_NAME_DPOP_NONCES.to_string(),
+            value,
+            &data.caches.ha_cache_config,
+            true
+        )
+        .await
+        .is_ok()
+    }
+
+    /// Always returns the value of the latest valid DPoP nonce which is valid for at least
+    /// 15 more seconds or longer.
+    pub async fn get_latest(data: &web::Data<AppState>) -> Result<String, ErrorResponse> {
+        if let Some(slf) = cache_get!(
+            Self,
+            CACHE_NAME_DPOP_NONCES.to_string(),
+            "latest".to_string(),
+            &data.caches.ha_cache_config,
+            true
+        )
+        .await?
+        {
+            let now_minus_15 = Utc::now().sub(chrono::Duration::seconds(15));
+            if slf.exp < now_minus_15 {
+                Self::new_value(data).await
+            } else {
+                Ok(slf.value)
+            }
+        } else {
+            Self::new_value(data).await
+        }
+    }
+}
 
 /// https://datatracker.ietf.org/doc/html/rfc9449
 #[derive(Debug, Serialize, Deserialize)]
@@ -66,20 +147,16 @@ pub struct DPoPClaims {
     // MUST be valid when used in conjunction with an access token
     // #[serde(skip_serializing_if = "Option::is_none")]
     // pub ath: Option<String>,
-
-    // // TODO Optional all the time or just during creating with the nonce header?
-    // /// A recent nonce provided via the DPoP-Nonce HTTP header.
-    // #[serde(skip_serializing_if = "Option::is_none")]
-    // pub nonce: Option<String>,
+    /// A recent nonce provided via the DPoP-Nonce HTTP header.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
 }
 
-impl TryFrom<&str> for DPoPProof {
-    type Error = ErrorResponse;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+impl DPoPProof {
+    fn try_from_str(origin: Option<&str>, value: &str) -> Result<Self, ErrorResponse> {
         match value.split_once('.') {
             None => Err(ErrorResponse::new(
-                ErrorResponseType::DPoP,
+                ErrorResponseType::DPoP(origin.map(String::from)),
                 "Invalid DPoP header format".to_string(),
             )),
 
@@ -98,7 +175,7 @@ impl TryFrom<&str> for DPoPProof {
 
                 match rest.split_once('.') {
                     None => Err(ErrorResponse::new(
-                        ErrorResponseType::DPoP,
+                        ErrorResponseType::DPoP(origin.map(String::from)),
                         "Invalid DPoP claims format".to_string(),
                     )),
                     Some((claims, signature)) => {
@@ -128,22 +205,38 @@ impl DPoPProof {
 
     /// Tries to extract a DPoP header from the given HttpRequest and validates the given JWK
     /// if it exists.
-    pub fn opt_validated_from(req: &HttpRequest) -> Result<Option<Self>, ErrorResponse> {
+    pub async fn opt_validated_from(
+        data: &web::Data<AppState>,
+        req: &HttpRequest,
+        header_origin: &Option<(HeaderName, HeaderValue)>,
+    ) -> Result<Option<Self>, ErrorResponse> {
+        // the String conversion is mandatory for to make it possible to build an automatic
+        // ErrorResponse from the value -> could maybe be optimized in the future
+        let origin = header_origin
+            .as_ref()
+            .map(|(_, name)| name.to_str().unwrap_or_default().to_string());
+
         match req.headers().get(TOKEN_DPOP) {
             None => Ok(None),
             Some(v) => {
                 let b64 = v.to_str()?;
                 if !RE_TOKEN_68.is_match(b64) {
                     Err(ErrorResponse::new(
-                        ErrorResponseType::DPoP,
+                        ErrorResponseType::DPoP(origin),
                         "DPoP header must be in Token68 format".to_string(),
                     ))
                 } else {
-                    let slf = Self::try_from(b64)?;
-                    slf.validate(b64)?;
+                    let slf = Self::try_from_str(origin.as_deref(), b64)?;
 
-                    // TODO impl nonce check? Does Rauthy need to do this at all here?
-                    // let nonce = req.headers().get(TOKEN_DPOP_NONCE);
+                    if let Err(msg) = slf.validate(b64) {
+                        return Err(ErrorResponse::new(ErrorResponseType::DPoP(origin), msg));
+                    }
+                    if let Err(nonce) = slf.validate_nonce(data).await {
+                        return Err(ErrorResponse::new(
+                            ErrorResponseType::UseDpopNonce((origin, nonce)),
+                            "DPoP 'nonce' is required in DPoP proof".to_string(),
+                        ));
+                    }
 
                     Ok(Some(slf))
                 }
@@ -177,7 +270,7 @@ impl DPoPProof {
     /// - ensure that the value of the ath claim equals the hash of that access token, and
     /// - confirm that the public key to which the access token is bound matches the
     ///   public key from the DPoP proof.
-    pub fn validate(&self, raw_token: &str) -> Result<(), ErrorResponse> {
+    pub fn validate(&self, raw_token: &str) -> Result<(), String> {
         // 1. we do not need to validate that there is only one head field with DPoP since
         // actix serializes into a HashMap which implies this anyway
 
@@ -187,46 +280,39 @@ impl DPoPProof {
 
         // 4. The typ JOSE Header Parameter has the value dpop+jwt.The alg JOSE Header
         if &self.header.typ != "dpop+jwt" {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::DPoP,
-                "Expected header typ of 'dpop+jwt'".to_string(),
-            ));
+            return Err("Expected header typ of 'dpop+jwt'".to_string());
         }
 
         // 5. The alg JOSE Header Parameter indicates a registered asymmetric digital
         // signature algorithm [IANA.JOSE.ALGS], is not none, is supported by the
         // application, and is acceptable per local policy.
         let kp = &self.header.jwk;
-        kp.validate_self()?;
+        kp.validate_self().map_err(|err| err.message)?;
 
         // 6. The JWT signature verifies with the public key contained in the jwk
         // JOSE Header Parameter.
         // let nonce = self.claims.nonce.clone();
-        kp.validate_dpop(raw_token)?;
+        kp.validate_dpop(raw_token).map_err(|err| err.message)?;
 
         // 7. The jwk JOSE Header Parameter does not contain a private key.
         // TODO ?
 
         // 8. The htm claim matches the HTTP method of the current request.
         if self.claims.htm != http::Method::POST {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::DPoP,
-                "The 'htm' claim from the DPoP header != POST".to_string(),
-            ));
+            return Err("The 'htm' claim from the DPoP header != POST".to_string());
         }
 
         // 9. The htu claim matches the HTTP URI value for the HTTP request in
         // which the JWT was received, ignoring any query and fragment parts.
         if self.claims.htu != *DPOP_TOKEN_ENDPOINT {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::DPoP,
-                "Invalid 'htu' claim".to_string(),
-            ));
+            return Err("Invalid 'htu' claim".to_string());
         }
 
         // 10. If the server provided a nonce value to the client,
         // the nonce claim matches the server-provided nonce value.
-        // TODO does this apply to Rauthy as the OP only? -> check!
+        //
+        // The nonce is being validated in its extra function for better unit testing
+        // -> Self::validate_nonce()
 
         // 11. The creation time of the JWT, as determined by either the iat
         // claim or a server managed timestamp via the nonce claim, is within an
@@ -236,10 +322,7 @@ impl DPoPProof {
         let now = Utc::now().timestamp();
         let now_minus_1 = now - 60;
         if self.claims.iat < now_minus_1 || self.claims.iat > now {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::DPoP,
-                "DPoP 'iat' claim is out of range".to_string(),
-            ));
+            return Err("DPoP 'iat' claim is out of range".to_string());
         }
 
         // 12. If presented to a protected resource in conjunction with an access token:
@@ -247,6 +330,32 @@ impl DPoPProof {
         // - confirm that the public key to which the access token is bound matches the
         //   public key from the DPoP proof.
         // TODO does this even apply to Rauthy? Maybe when refreshing? -> double check
+
+        Ok(())
+    }
+
+    pub async fn validate_nonce(&self, data: &web::Data<AppState>) -> Result<(), String> {
+        if let Some(nonce) = &self.claims.nonce {
+            if !DPoPNonce::is_valid(data, nonce.clone()).await {
+                let latest = match DPoPNonce::get_latest(data).await {
+                    Ok(v) => v,
+                    Err(err) => {
+                        error!("Cache lookup error during DPoP nonce generation: {:?}", err);
+                        err.message
+                    }
+                };
+                return Err(latest);
+            }
+        } else if *DPOP_FORCE_NONCE {
+            let latest = match DPoPNonce::get_latest(data).await {
+                Ok(v) => v,
+                Err(err) => {
+                    error!("Cache lookup error during DPoP nonce generation: {:?}", err);
+                    err.message
+                }
+            };
+            return Err(latest);
+        };
 
         Ok(())
     }
@@ -334,7 +443,7 @@ mod tests {
             htm: http::Method::POST,
             htu: DPOP_TOKEN_ENDPOINT.clone(),
             iat: Utc::now().timestamp(),
-            // nonce: None,
+            nonce: None,
         };
 
         // build and sign the raw token string
@@ -350,8 +459,11 @@ mod tests {
         println!("test signed token:\n{}", token_raw);
 
         // now we have our token like it should come in with the DPoP header -> try to verify it
-        let dpop = DPoPProof::try_from(token_raw.as_str()).unwrap();
+        let dpop = DPoPProof::try_from_str(None, token_raw.as_str()).unwrap();
         dpop.validate(&token_raw).unwrap();
+
+        // Note: we cannot validate the nonce in this unit test because of missing AppState and
+        // cache -> will be done in integration tests
     }
 
     // Currently, the SigningKey from the `rsa` crate makes my IDE fully crash.
