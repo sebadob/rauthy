@@ -4,7 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::header::HeaderValue;
 use actix_web::http::{header, StatusCode};
-use actix_web::{get, post, web, HttpRequest, HttpResponse};
+use actix_web::{get, post, web, HttpRequest, HttpResponse, ResponseError};
 use tracing::debug;
 
 use rauthy_common::constants::{COOKIE_MFA, HEADER_HTML, SESSION_LIFETIME};
@@ -19,11 +19,13 @@ use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::WebauthnCookie;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
-    AuthRequest, LoginRefreshRequest, LoginRequest, LogoutRequest,
-    TokenRequest, TokenValidationRequest,
+    AuthRequest, LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest,
+    TokenValidationRequest,
 };
 use rauthy_models::response::{JWKSCerts, JWKSPublicKeyCerts, SessionInfoResponse};
-use rauthy_models::templates::{AuthorizeHtml, CallbackHtml, ErrorHtml, FrontendAction};
+use rauthy_models::templates::{
+    AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction,
+};
 use rauthy_models::JwtCommonClaims;
 use rauthy_service::auth;
 
@@ -67,7 +69,9 @@ pub async fn get_authorize(
     {
         Ok(res) => res,
         Err(err) => {
-            return Ok(ErrorHtml::response_from_err(&colors, &lang, err));
+            let status = err.status_code();
+            let (body, nonce) = Error1Html::build(&colors, &lang, status, Some(err.message));
+            return Ok(ErrorHtml::response(body, nonce, status));
         }
     };
 
@@ -92,7 +96,9 @@ pub async fn get_authorize(
 
     let session = Session::new(*SESSION_LIFETIME, real_ip_from_req(&req));
     if let Err(err) = session.save(&data).await {
-        return Ok(ErrorHtml::response_from_err(&colors, &lang, err));
+        let status = err.status_code();
+        let (body, nonce) = Error1Html::build(&colors, &lang, status, Some(err.message));
+        return Ok(ErrorHtml::response(body, nonce, status));
     }
 
     let mut action = FrontendAction::None;

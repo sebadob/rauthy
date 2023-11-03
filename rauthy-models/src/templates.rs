@@ -11,10 +11,9 @@ use crate::i18n::register::I18nRegister;
 use crate::i18n::SsrJson;
 use crate::language::Language;
 use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
+use actix_web::{HttpResponse, HttpResponseBuilder};
 use askama_actix::Template;
 use rauthy_common::constants::{HEADER_HTML, OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION};
-use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::{build_csp_header, get_rand};
 use std::fmt::Debug;
 
@@ -248,29 +247,210 @@ impl ErrorHtml<'_> {
     }
 
     pub fn response(
-        colors: &Colors,
-        lang: &Language,
+        body: String,
+        nonce: String,
+        // colors: &Colors,
+        // lang: &Language,
         status_code: StatusCode,
-        details_text: Option<String>,
+        // details_text: Option<String>,
     ) -> HttpResponse {
-        let (body, nonce) = Self::build(colors, lang, status_code, details_text);
+        // let (body, nonce) = Self::build(colors, lang, status_code, details_text);
         HttpResponseBuilder::new(status_code)
             .insert_header(HEADER_HTML)
             .insert_header(build_csp_header(&nonce))
             .body(body)
     }
 
-    pub fn response_from_err(
+    // pub fn response_from_err(
+    //     body: String,
+    //     nonce: String,
+    //     colors: &Colors,
+    //     lang: &Language,
+    //     error: ErrorResponse,
+    // ) -> HttpResponse {
+    //     let status = error.status_code();
+    //     let (body, nonce) = Self::build(colors, lang, status, Some(error.message));
+    //     HttpResponseBuilder::new(status)
+    //         .insert_header(HEADER_HTML)
+    //         .insert_header(build_csp_header(&nonce))
+    //         .body(body)
+    // }
+}
+
+// The error template is defined 3 more times.
+// This may look a bit ugly here in the code, but is actually better for the efficiency and
+// performance down the road. The same error template is being pre-compiled 4 times with just
+// slightly different resource links. This makes it possible to just server the correct error
+// page in every location without the need to dynamically modify the path for each render.
+
+#[derive(Debug, Default, Template)]
+#[template(path = "html/error/error.html")]
+pub struct Error1Html<'a> {
+    pub lang: &'a str,
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: bool,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+    pub i18n: String,
+}
+
+impl Error1Html<'_> {
+    pub fn build(
         colors: &Colors,
         lang: &Language,
-        error: ErrorResponse,
-    ) -> HttpResponse {
-        let status = error.status_code();
-        let (body, nonce) = Self::build(colors, lang, status, Some(error.message));
-        HttpResponseBuilder::new(status)
-            .insert_header(HEADER_HTML)
-            .insert_header(build_csp_header(&nonce))
-            .body(body)
+        status_code: StatusCode,
+        details_text: Option<String>,
+    ) -> (String, String) {
+        let nonce = nonce();
+
+        let res = Error1Html {
+            lang: lang.as_str(),
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            i18n: I18nError::build_with(lang, status_code, details_text).as_json(),
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
+    }
+}
+
+#[derive(Debug, Default, Template)]
+#[template(path = "html/error/error/error.html")]
+pub struct Error2Html<'a> {
+    pub lang: &'a str,
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: bool,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+    pub i18n: String,
+}
+
+impl Error2Html<'_> {
+    pub fn build(
+        colors: &Colors,
+        lang: &Language,
+        status_code: StatusCode,
+        details_text: Option<String>,
+    ) -> (String, String) {
+        let nonce = nonce();
+
+        let res = Error2Html {
+            lang: lang.as_str(),
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            i18n: I18nError::build_with(lang, status_code, details_text).as_json(),
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
+    }
+}
+
+#[derive(Debug, Default, Template)]
+#[template(path = "html/error/error/error/error.html")]
+pub struct Error3Html<'a> {
+    pub lang: &'a str,
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: bool,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub nonce: &'a str,
+    pub i18n: String,
+}
+
+impl Error3Html<'_> {
+    pub fn build(
+        colors: &Colors,
+        lang: &Language,
+        status_code: StatusCode,
+        details_text: Option<String>,
+    ) -> (String, String) {
+        let nonce = nonce();
+
+        let res = Error3Html {
+            lang: lang.as_str(),
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            nonce: &nonce,
+            i18n: I18nError::build_with(lang, status_code, details_text).as_json(),
+            ..Default::default()
+        };
+
+        (res.render().unwrap(), nonce)
     }
 }
 
@@ -1185,7 +1365,7 @@ impl UserRegisterHtml<'_> {
     pub fn build(colors: &Colors, lang: &Language) -> (String, String) {
         let nonce = nonce();
 
-        let body = UserEmailChangeConfirmHtml {
+        let body = UserRegisterHtml {
             lang: lang.as_str(),
             data: USER_REG_DOMAIN_RESTRICTION
                 .as_ref()

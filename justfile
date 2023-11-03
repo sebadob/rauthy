@@ -134,6 +134,9 @@ build-ui:
     PAGES=(
     "templates/html/*.html"
     "templates/html/admin/*.html"
+    "templates/html/error/*.html"
+    "templates/html/error/error/*.html"
+    "templates/html/error/error/error/*.html"
     "templates/html/oidc/*.html"
     "templates/html/users/*.html"
     "templates/html/users/{id}/reset/*.html"
@@ -242,28 +245,6 @@ publish-nightly: build-sqlite build-postgres
 
     docker build --no-cache -f Dockerfile.debug -t ghcr.io/sebadob/rauthy:nightly-lite -f Dockerfile.sqlite.debug .
     docker push ghcr.io/sebadob/rauthy:nightly-lite
-
-
-multi-platform-test:
-    #!/usr/bin/env bash
-
-    # build and push sqlite version
-    docker buildx build \
-          -t ghcr.io/sebadob/rauthy:multi-arch-test \
-           --platform linux/amd64,linux/arm64 \
-           --build-arg="DB=sqlite" \
-           --no-cache \
-           --push \
-           .
-
-    # build and push postgres version
-    docker buildx build \
-          -t ghcr.io/sebadob/rauthy:multi-arch-test \
-          --platform linux/amd64,linux/arm64 \
-          --build-arg="DB=postgres" \
-          --no-cache \
-          --push \
-          .
 
 
 # publishes the application images - full pipeline incl clippy and testing
