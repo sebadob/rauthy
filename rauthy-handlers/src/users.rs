@@ -1,6 +1,6 @@
 use crate::{real_ip_from_req, ReqPrincipal};
 use actix_web::http::StatusCode;
-use actix_web::{cookie, delete, get, post, put, web, HttpRequest, HttpResponse};
+use actix_web::{cookie, delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
 use rauthy_common::constants::{
     COOKIE_MFA, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE, USER_REG_DOMAIN_RESTRICTION,
 };
@@ -26,7 +26,7 @@ use rauthy_models::response::{
     PasskeyResponse, UserAttrConfigResponse, UserAttrValueResponse, UserAttrValuesResponse,
     UserResponse,
 };
-use rauthy_models::templates::{ErrorHtml, UserRegisterHtml};
+use rauthy_models::templates::{Error1Html, Error3Html, ErrorHtml, UserRegisterHtml};
 use rauthy_service::password_reset;
 use std::ops::Add;
 use time::OffsetDateTime;
@@ -224,12 +224,14 @@ pub async fn get_users_register(
     let lang = Language::try_from(&req).unwrap_or_default();
 
     if !*OPEN_USER_REG {
-        return Ok(ErrorHtml::response(
+        let status = StatusCode::NOT_FOUND;
+        let (body, nonce) = Error1Html::build(
             &colors,
             &lang,
-            StatusCode::NOT_FOUND,
+            status,
             Some("Open User Registration is disabled".to_string()),
-        ));
+        );
+        return Ok(ErrorHtml::response(body, nonce, status));
     }
 
     let (body, nonce) = UserRegisterHtml::build(&colors, &lang);
@@ -406,7 +408,9 @@ pub async fn get_user_email_confirm(
             .body(html),
         Err(err) => {
             let colors = ColorEntity::find_rauthy(&data).await.unwrap_or_default();
-            ErrorHtml::response_from_err(&colors, &lang, err)
+            let status = err.status_code();
+            let (body, nonce) = Error3Html::build(&colors, &lang, status, Some(err.message));
+            ErrorHtml::response(body, nonce, status)
         }
     }
 }
@@ -441,7 +445,9 @@ pub async fn get_user_password_reset(
             .body(html),
         Err(err) => {
             let colors = ColorEntity::find_rauthy(&data).await.unwrap_or_default();
-            ErrorHtml::response_from_err(&colors, &lang, err)
+            let status = err.status_code();
+            let (body, nonce) = Error3Html::build(&colors, &lang, status, Some(err.message));
+            ErrorHtml::response(body, nonce, status)
         }
     }
 }

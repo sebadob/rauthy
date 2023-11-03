@@ -38,7 +38,7 @@ use rauthy_models::response::{
 use rauthy_models::templates::{
     AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
     AdminConfigHtml, AdminDocsHtml, AdminGroupsHtml, AdminHtml, AdminRolesHtml, AdminScopesHtml,
-    AdminSessionsHtml, AdminUsersHtml, ErrorHtml, IndexHtml,
+    AdminSessionsHtml, AdminUsersHtml, IndexHtml,
 };
 use rauthy_service::encryption;
 use redhac::{cache_get, cache_get_from, cache_get_value, QuorumHealth, QuorumState};
@@ -64,10 +64,8 @@ pub async fn get_index(
 
 #[get("/{_:.*}")]
 pub async fn get_static_assets(
-    data: web::Data<AppState>,
     path: web::Path<String>,
     accept_encoding: web::Header<header::AcceptEncoding>,
-    req: HttpRequest,
 ) -> HttpResponse {
     let path = path.into_inner();
     let accept_encoding = accept_encoding.into_inner();
@@ -88,9 +86,9 @@ pub async fn get_static_assets(
             .content_type(mime.first_or_octet_stream().as_ref())
             .body(content.data.into_owned()),
         None => {
-            let colors = ColorEntity::find_rauthy(&data).await.unwrap_or_default();
-            let lang = Language::try_from(&req).unwrap_or_default();
-            ErrorHtml::response(&colors, &lang, StatusCode::NOT_FOUND, None)
+            // Since this may resolve to a sub url path of any length, we cannot now, which
+            // error template we need to serve -> just return not found
+            HttpResponse::NotFound().finish()
         }
     }
 }
