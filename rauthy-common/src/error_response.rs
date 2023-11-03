@@ -2,7 +2,7 @@ use crate::constants::{APPLICATION_JSON, HEADER_HTML, HEADER_RETRY_NOT_BEFORE};
 use crate::utils::build_csp_header;
 use actix_multipart::MultipartError;
 use actix_web::error::BlockingError;
-use actix_web::http::header::ToStrError;
+use actix_web::http::header::{ToStrError, WWW_AUTHENTICATE};
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
 use css_color::ParseColorError;
@@ -23,6 +23,7 @@ pub enum ErrorResponseType {
     Database,
     DatabaseIo,
     Disabled,
+    DPoP,
     Forbidden,
     Internal,
     JoseError,
@@ -75,6 +76,7 @@ impl ResponseError for ErrorResponse {
             ErrorResponseType::NotFound => StatusCode::NOT_FOUND,
             ErrorResponseType::Disabled
             | ErrorResponseType::CSRFTokenError
+            | ErrorResponseType::DPoP
             | ErrorResponseType::PasswordExpired
             | ErrorResponseType::SessionExpired
             | ErrorResponseType::SessionTimeout
@@ -87,18 +89,35 @@ impl ResponseError for ErrorResponse {
     }
 
     fn error_response(&self) -> HttpResponse {
+        let status = self.status_code();
+
         match self.error {
             ErrorResponseType::TooManyRequests(not_before_timestamp) => {
                 HttpResponseBuilder::new(self.status_code())
                     .append_header((HEADER_RETRY_NOT_BEFORE, not_before_timestamp))
                     .append_header(HEADER_HTML)
-                    // TODO we could possibly to a small `unsafe` call here to just take
+                    // TODO we could possibly do a small `unsafe` call here to just take
                     // the content without cloning it -> more efficient, especially for blocked IPs
                     .body(self.message.clone())
             }
-            _ => HttpResponseBuilder::new(self.status_code())
+
+            ErrorResponseType::DPoP => HttpResponseBuilder::new(self.status_code())
+                .append_header((WWW_AUTHENTICATE, "error=invalid_dpop_proof"))
                 .content_type(APPLICATION_JSON)
                 .body(serde_json::to_string(&self).unwrap()),
+
+            _ => {
+                if status == StatusCode::UNAUTHORIZED {
+                    HttpResponseBuilder::new(self.status_code())
+                        .append_header((WWW_AUTHENTICATE, "OAuth"))
+                        .content_type(APPLICATION_JSON)
+                        .body(serde_json::to_string(&self).unwrap())
+                } else {
+                    HttpResponseBuilder::new(self.status_code())
+                        .content_type(APPLICATION_JSON)
+                        .body(serde_json::to_string(&self).unwrap())
+                }
+            }
         }
     }
 }

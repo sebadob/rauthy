@@ -55,7 +55,6 @@ pub struct DPoPClaims {
     pub htu: Uri,
     /// Creation timestamp of the JWT (Section 4.1.6 of [RFC7519]).
     pub iat: i64,
-
     // // TODO does Rauthy even need 'ath'? maybe when refreshing a token?
     // /// Hash of the access token. The value MUST be the result of a
     // /// base64url encoding (as defined in Section 2 of [RFC7515])
@@ -78,7 +77,7 @@ impl TryFrom<&str> for DPoPProof {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value.split_once('.') {
             None => Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
+                ErrorResponseType::DPoP,
                 "Invalid DPoP header format".to_string(),
             )),
 
@@ -97,7 +96,7 @@ impl TryFrom<&str> for DPoPProof {
 
                 match rest.split_once('.') {
                     None => Err(ErrorResponse::new(
-                        ErrorResponseType::BadRequest,
+                        ErrorResponseType::DPoP,
                         "Invalid DPoP claims format".to_string(),
                     )),
                     Some((claims, signature)) => {
@@ -134,7 +133,7 @@ impl DPoPProof {
                 let b64 = v.to_str()?;
                 if !RE_TOKEN_68.is_match(b64) {
                     Err(ErrorResponse::new(
-                        ErrorResponseType::BadRequest,
+                        ErrorResponseType::DPoP,
                         "DPoP header must be in Token68 format".to_string(),
                     ))
                 } else {
@@ -187,7 +186,7 @@ impl DPoPProof {
         // 4. The typ JOSE Header Parameter has the value dpop+jwt.The alg JOSE Header
         if &self.header.typ != "dpop+jwt" {
             return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
+                ErrorResponseType::DPoP,
                 "Expected header typ of 'dpop+jwt'".to_string(),
             ));
         }
@@ -209,7 +208,7 @@ impl DPoPProof {
         // 8. The htm claim matches the HTTP method of the current request.
         if self.claims.htm != http::Method::POST {
             return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
+                ErrorResponseType::DPoP,
                 "The 'htm' claim from the DPoP header != POST".to_string(),
             ));
         }
@@ -218,7 +217,7 @@ impl DPoPProof {
         // which the JWT was received, ignoring any query and fragment parts.
         if self.claims.htu != *DPOP_TOKEN_ENDPOINT {
             return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
+                ErrorResponseType::DPoP,
                 "Invalid 'htu' claim".to_string(),
             ));
         }
@@ -236,7 +235,7 @@ impl DPoPProof {
         let now_minus_1 = now - 60;
         if self.claims.iat < now_minus_1 || self.claims.iat > now {
             return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
+                ErrorResponseType::DPoP,
                 "DPoP 'iat' claim is out of range".to_string(),
             ));
         }
@@ -263,9 +262,9 @@ mod tests {
     // use rsa::sha2::{Digest, Sha256};
     // use rsa::signature::SignatureEncoding;
     // use rsa::traits::{PublicKeyParts};
-    use std::fmt::Write;
     use ed25519_compact::Noise;
     use rauthy_common::constants::DPOP_TOKEN_ENDPOINT;
+    use std::fmt::Write;
 
     // Note: this test does not work anymore with the way more strict deserialization after
     // the initial testing with just Strings.
