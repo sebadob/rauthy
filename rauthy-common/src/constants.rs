@@ -60,11 +60,14 @@ lazy_static! {
     pub static ref DATABASE_URL: String = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
     pub static ref DB_TYPE: DbType = DbType::from_str(&DATABASE_URL).unwrap();
     pub static ref ROLE_ADMIN: String = "rauthy_admin".to_string();
-    // pub static ref ROLE_ADMIN: String = "ROLE_rauthy_admin".to_string();
     pub static ref DEV_MODE: bool = env::var("DEV_MODE")
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
         .expect("DEV_MODE cannot be parsed to bool - bad format");
+    pub static ref DEV_DPOP_HTTP: bool = env::var("DEV_DPOP_HTTP")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("DEV_DPOP_HTTP cannot be parsed to bool - bad format");
     pub static ref HA_MODE: bool =
         env::var("HA_MODE").map(|s| s.to_lowercase() == "true").unwrap_or(false);
 
@@ -92,7 +95,8 @@ lazy_static! {
 
     pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
         let pub_url = env::var("PUB_URL").expect("PUB_URL env var is not set");
-        let uri = format!("https://{}/auth/v1/oidc/token", pub_url);
+        let scheme = if *DEV_MODE && *DEV_DPOP_HTTP { "http" } else { "https" };
+        let uri = format!("{}://{}/auth/v1/oidc/token", scheme, pub_url);
         Uri::from_str(&uri).unwrap()
     };
 

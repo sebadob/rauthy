@@ -508,7 +508,7 @@ pub async fn get_session_xsrf(
     post,
     path = "/oidc/token",
     tag = "oidc",
-    request_body = TokenRequest,
+    request_body(content = TokenRequest, content_type = "application/x-www-form-urlencoded"),
     responses(
         (status = 200, description = "Ok", body = TokenSet),
         (status = 400, description = "BadRequest", body = ErrorResponse),
