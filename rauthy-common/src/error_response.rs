@@ -1,8 +1,10 @@
-use crate::constants::{APPLICATION_JSON, HEADER_HTML, HEADER_RETRY_NOT_BEFORE};
+use crate::constants::{APPLICATION_JSON, HEADER_DPOP_NONCE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE};
 use crate::utils::build_csp_header;
 use actix_multipart::MultipartError;
 use actix_web::error::BlockingError;
-use actix_web::http::header::{ToStrError, WWW_AUTHENTICATE};
+use actix_web::http::header::{
+    ToStrError, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS, WWW_AUTHENTICATE,
+};
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
 use css_color::ParseColorError;
@@ -10,12 +12,13 @@ use derive_more::Display;
 use redhac::CacheError;
 use serde::{Deserialize, Serialize};
 use serde_json::Error;
+use std::fmt::{Display, Formatter};
 use std::string::FromUtf8Error;
 use time::OffsetDateTime;
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Display, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum ErrorResponseType {
     BadRequest,
     Connection,
@@ -23,7 +26,10 @@ pub enum ErrorResponseType {
     Database,
     DatabaseIo,
     Disabled,
-    DPoP,
+    // These String could be optimized in the future with borrowing
+    // -> just not going down that rabbit hole for now
+    DPoP(Option<String>),
+    UseDpopNonce((Option<String>, String)),
     Forbidden,
     Internal,
     JoseError,
@@ -36,6 +42,12 @@ pub enum ErrorResponseType {
     SessionTimeout,
     TooManyRequests(i64),
     Unauthorized,
+}
+
+impl Display for ErrorResponseType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 // This is the default `ErrorResponse` that could be the answer on almost every API endpoint in
@@ -70,13 +82,15 @@ impl ErrorResponse {
 impl ResponseError for ErrorResponse {
     fn status_code(&self) -> StatusCode {
         match self.error {
-            ErrorResponseType::BadRequest => StatusCode::BAD_REQUEST,
+            ErrorResponseType::BadRequest | ErrorResponseType::UseDpopNonce(_) => {
+                StatusCode::BAD_REQUEST
+            }
             ErrorResponseType::Forbidden => StatusCode::FORBIDDEN,
             ErrorResponseType::MfaRequired => StatusCode::NOT_ACCEPTABLE,
             ErrorResponseType::NotFound => StatusCode::NOT_FOUND,
             ErrorResponseType::Disabled
             | ErrorResponseType::CSRFTokenError
-            | ErrorResponseType::DPoP
+            | ErrorResponseType::DPoP(_)
             | ErrorResponseType::PasswordExpired
             | ErrorResponseType::SessionExpired
             | ErrorResponseType::SessionTimeout
@@ -90,32 +104,60 @@ impl ResponseError for ErrorResponse {
 
     fn error_response(&self) -> HttpResponse {
         let status = self.status_code();
-
-        match self.error {
+        match &self.error {
             ErrorResponseType::TooManyRequests(not_before_timestamp) => {
-                HttpResponseBuilder::new(self.status_code())
-                    .append_header((HEADER_RETRY_NOT_BEFORE, not_before_timestamp))
-                    .append_header(HEADER_HTML)
+                HttpResponseBuilder::new(status)
+                    .insert_header((HEADER_RETRY_NOT_BEFORE, *not_before_timestamp))
+                    .insert_header(HEADER_HTML)
                     // TODO we could possibly do a small `unsafe` call here to just take
                     // the content without cloning it -> more efficient, especially for blocked IPs
                     .body(self.message.clone())
             }
 
-            ErrorResponseType::DPoP => HttpResponseBuilder::new(self.status_code())
-                .append_header((WWW_AUTHENTICATE, "DPoP error=invalid_dpop_proof"))
-                .content_type(APPLICATION_JSON)
-                .body(serde_json::to_string(&self).unwrap()),
+            ErrorResponseType::DPoP(header_origin) => {
+                if let Some(origin) = header_origin {
+                    HttpResponseBuilder::new(status)
+                        .insert_header((WWW_AUTHENTICATE, "DPoP error=invalid_dpop_proof"))
+                        .content_type(APPLICATION_JSON)
+                        .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, origin.as_str()))
+                        .body(serde_json::to_string(&self).unwrap())
+                } else {
+                    HttpResponseBuilder::new(status)
+                        .insert_header((WWW_AUTHENTICATE, "DPoP error=invalid_dpop_proof"))
+                        .content_type(APPLICATION_JSON)
+                        .body(serde_json::to_string(&self).unwrap())
+                }
+            }
 
-            _ => {
-                if status == StatusCode::UNAUTHORIZED {
-                    HttpResponseBuilder::new(self.status_code())
-                        .append_header((WWW_AUTHENTICATE, "OAuth"))
+            ErrorResponseType::UseDpopNonce((header_origin, value)) => {
+                if let Some(origin) = header_origin {
+                    HttpResponseBuilder::new(status)
+                        .insert_header((WWW_AUTHENTICATE, "DPoP error=use_dpop_nonce"))
+                        .insert_header((HEADER_DPOP_NONCE, value.as_str()))
+                        .content_type(APPLICATION_JSON)
+                        .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, origin.as_str()))
+                        .insert_header((ACCESS_CONTROL_EXPOSE_HEADERS, HEADER_DPOP_NONCE))
                         .content_type(APPLICATION_JSON)
                         .body(serde_json::to_string(&self).unwrap())
                 } else {
-                    HttpResponseBuilder::new(self.status_code())
+                    HttpResponseBuilder::new(status)
+                        .insert_header((WWW_AUTHENTICATE, "DPoP error=use_dpop_nonce"))
+                        .insert_header((HEADER_DPOP_NONCE, value.as_str()))
                         .content_type(APPLICATION_JSON)
                         .body(serde_json::to_string(&self).unwrap())
+                }
+            }
+
+            _ => {
+                if status == StatusCode::UNAUTHORIZED {
+                    HttpResponseBuilder::new(status)
+                        .append_header((WWW_AUTHENTICATE, "OAuth"))
+                        .content_type(APPLICATION_JSON)
+                        .body(serde_json::to_string(self).unwrap())
+                } else {
+                    HttpResponseBuilder::new(status)
+                        .content_type(APPLICATION_JSON)
+                        .body(serde_json::to_string(self).unwrap())
                 }
             }
         }
