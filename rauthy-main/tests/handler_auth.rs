@@ -7,7 +7,7 @@ use chrono::Utc;
 use ed25519_compact::Noise;
 use josekit::jwk;
 use pretty_assertions::assert_eq;
-use rauthy_common::constants::{DPOP_TOKEN_ENDPOINT, TOKEN_DPOP};
+use rauthy_common::constants::{DPOP_TOKEN_ENDPOINT, HEADER_DPOP_NONCE, TOKEN_DPOP};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_encode, get_rand};
 use rauthy_models::entity::dpop_proof::{DPoPClaims, DPoPHeader};
@@ -586,13 +586,13 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
         },
         kid: None,
     };
-    let claims = DPoPClaims {
+    let mut claims = DPoPClaims {
         jti: "-BwC3ESc6acc2lTc".to_string(),
         htm: http::Method::POST,
         htu: DPOP_TOKEN_ENDPOINT.clone(),
         iat: Utc::now().timestamp(),
         // ath: None,
-        // nonce: None,
+        nonce: None,
     };
 
     let fingerprint = header.jwk.fingerprint().unwrap();
@@ -606,7 +606,35 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
     let sig = kp.sk.sign(&dpop_token, Some(Noise::generate()));
     let sig_b64 = base64_url_no_pad_encode(sig.as_ref());
     write!(dpop_token, ".{}", sig_b64).unwrap();
-    println!("test signed token:\n{}", dpop_token);
+    println!("test signed token without nonce:\n{}", dpop_token);
+
+    let res = client
+        .post(&url)
+        .header(TOKEN_DPOP, &dpop_token)
+        .form(&body)
+        .send()
+        .await?;
+    // this should fail, because nonce is enforced, which we did not provide
+    assert_eq!(res.status(), 400);
+    let nonce = res
+        .headers()
+        .get(HEADER_DPOP_NONCE)
+        .unwrap()
+        .to_str()
+        .unwrap();
+    println!("nonce we should use: {}", nonce);
+
+    // insert the nonce and rebuild
+    claims.nonce = Some(nonce.to_string());
+
+    let claims_json = serde_json::to_string(&claims).unwrap();
+    let claims_b64 = base64_url_no_pad_encode(claims_json.as_bytes());
+    let mut dpop_token = format!("{}.{}", header_b64, claims_b64);
+
+    let sig = kp.sk.sign(&dpop_token, Some(Noise::generate()));
+    let sig_b64 = base64_url_no_pad_encode(sig.as_ref());
+    write!(dpop_token, ".{}", sig_b64).unwrap();
+    println!("test signed token with nonce:\n{}", dpop_token);
 
     let mut res = client
         .post(&url)
@@ -614,7 +642,16 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
         .form(&body)
         .send()
         .await?;
+    // not it should be good
     res = check_status(res, 200).await?;
+    // make sure nonce header is still there
+    let nonce_new = res
+        .headers()
+        .get(HEADER_DPOP_NONCE)
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert_eq!(nonce, nonce_new);
 
     let ts = res.json::<TokenSet>().await?;
     assert_eq!(ts.token_type, JwtTokenType::DPoP);

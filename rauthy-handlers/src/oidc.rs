@@ -4,7 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::header::HeaderValue;
 use actix_web::http::{header, StatusCode};
-use actix_web::{get, post, web, HttpRequest, HttpResponse, ResponseError};
+use actix_web::{get, post, web, HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError};
 use tracing::debug;
 
 use rauthy_common::constants::{COOKIE_MFA, HEADER_HTML, SESSION_LIFETIME};
@@ -529,18 +529,13 @@ pub async fn post_token(
     let ip = real_ip_from_req(&req);
 
     let res = match auth::get_token_set(req_data.into_inner(), &data, req).await {
-        Ok((token_set, header_origin)) => {
-            let http_resp = if let Some(o) = header_origin {
-                HttpResponse::Ok()
-                    .insert_header(o)
-                    // .insert_header(csrf_header)
-                    .json(token_set)
-            } else {
-                HttpResponse::Ok()
-                    // .insert_header(csrf_header)
-                    .json(token_set)
-            };
-            Ok((http_resp, add_login_delay))
+        Ok((token_set, headers)) => {
+            let mut builder = HttpResponseBuilder::new(StatusCode::OK);
+            for h in headers {
+                builder.insert_header(h);
+            }
+            let resp = builder.json(token_set);
+            Ok((resp, add_login_delay))
         }
         Err(err) => Err((err, add_login_delay)),
     };

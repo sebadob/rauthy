@@ -7,6 +7,8 @@ use std::str::FromStr;
 use std::string::ToString;
 
 pub const RAUTHY_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub const HEADER_DPOP_NONCE: &str = "DPoP-Nonce";
 pub const HEADER_HTML: (&str, &str) = ("content-type", "text/html;charset=utf-8");
 pub const HEADER_RETRY_NOT_BEFORE: &str = "x-retry-not-before";
 pub const APPLICATION_JSON: &str = "application/json";
@@ -30,6 +32,7 @@ pub const EVENTS_LATEST_LIMIT: u16 = 100;
 
 pub const CACHE_NAME_12HR: &str = "12hr";
 pub const CACHE_NAME_AUTH_CODES: &str = "auth-codes";
+pub const CACHE_NAME_DPOP_NONCES: &str = "dpop-nonces";
 pub const CACHE_NAME_LOGIN_DELAY: &str = "login-dly";
 pub const CACHE_NAME_SESSIONS: &str = "sessions";
 pub const CACHE_NAME_POW: &str = "pow";
@@ -99,6 +102,10 @@ lazy_static! {
         let uri = format!("{}://{}/auth/v1/oidc/token", scheme, pub_url);
         Uri::from_str(&uri).unwrap()
     };
+    pub static ref DPOP_FORCE_NONCE: bool = env::var("DPOP_NONCE_FORCE")
+        .unwrap_or_else(|_| String::from("true"))
+        .parse::<bool>()
+        .unwrap_or(true);
 
     pub static ref PROXY_MODE: bool = env::var("PROXY_MODE")
         .unwrap_or_else(|_| String::from("false"))
@@ -143,6 +150,12 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("true"))
         .parse::<bool>()
         .expect("ADMIN_FORCE_MFA cannot be parsed to bool - bad format");
+
+    pub static ref DPOP_NONCE_EXP: u32 = env::var("DPOP_NONCE_EXP")
+        .unwrap_or_else(|_| String::from("900"))
+        // parsing to u32 to be able to typecast to i64 for chrono safely
+        .parse::<u32>()
+        .expect("DPOP_NONCE_EXP cannot be parsed to u32 - bad format");
 
     pub static ref SESSION_LIFETIME: u32 = env::var("SESSION_LIFETIME")
         .unwrap_or_else(|_| String::from("14400"))

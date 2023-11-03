@@ -77,34 +77,6 @@ impl Principal {
         self.session.as_ref().map(|s| s.is_mfa).unwrap_or(false)
     }
 
-    // #[inline(always)]
-    // pub async fn validate_email(
-    //     &self,
-    //     email: &str,
-    //     data: &web::Data<AppState>,
-    // ) -> Result<(), ErrorResponse> {
-    //     // let email = self.session.and_then(|s| s.)
-    //
-    //     if self.email.is_some() {
-    //         if self.email.as_ref().unwrap().as_str() != email {
-    //             return Err(ErrorResponse::new(
-    //                 ErrorResponseType::Forbidden,
-    //                 String::from("Invalid email in path for JWT token user"),
-    //             ));
-    //         }
-    //     } else if self.has_session {
-    //         let user = User::find(data, self.user_id.as_ref().unwrap().clone()).await?;
-    //         if user.email.as_str() != email {
-    //             return Err(ErrorResponse::new(
-    //                 ErrorResponseType::Forbidden,
-    //                 String::from("Invalid email in path for session user"),
-    //             ));
-    //         }
-    //     }
-    //
-    //     Ok(())
-    // }
-
     #[inline(always)]
     pub fn user_id(&self) -> Result<&str, ErrorResponse> {
         self.session
