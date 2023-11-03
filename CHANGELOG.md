@@ -1,5 +1,52 @@
 # Changelog
 
+## v0.18.0
+
+This is a rather small release.
+The main reason it is coming so early is the license change.
+
+### License Change To Apache 2.0
+
+With this release, the license of Rauthy is changed from the AGPLv3 to an Apache 2.0.
+The Apache is way more permissive and make the integration with other open source projects and software a lot easier.
+
+### DPoP Token Support (Experimental)
+
+The first steps towards DPoP Token support have been made.
+It is marked as experimental though, because the other authentication methods have been tested and verified with
+various real world applications already. This is not the case for DPoP yet.
+Additionally, the only supported alg for DPoP proofs is EdDSA for now. The main reason being that I am using Jetbrains
+IDE's and the Rust plugin for both IDEA and RustRover are currently broken in conjunction with the `rsa` crate
+(and some others) which makes writing code with them a nightmare. RSA support is prepared as much as possible
+though and I hope they will fix this bug soon, so it can be included.
+
+If you have or use a DPoP application, I would really appreciate testing with Rauthy and to get some feedback, so I
+can make the whole DPoP flow more resilient as well.
+
+Please note that Authorization Code binding to a DPoP key is also not yet supported, only the `/token` endpoint accepts
+and validates the `DPoP` header for now.
+
+### Changes
+
+- Experimental DPoP support
+[803e312](https://github.com/sebadob/rauthy/commit/803e312194b67a20e475e685bd1fecf69d8a98fa)
+[51dc320](https://github.com/sebadob/rauthy/commit/51dc320291b125cee5c56e97eda54a12149caf33)
+[4329303](https://github.com/sebadob/rauthy/commit/43293030bf575175706357dda7ebed0beb6684dd)
+[29dce66](https://github.com/sebadob/rauthy/commit/29dce66aa167e789fab689fe680d07201b1126c7)
+
+### Bugfixes
+
+- Typos have been changed in docs and config
+[51dc320](https://github.com/sebadob/rauthy/commit/51dc320291b125cee5c56e97eda54a12149caf33)
+- Listen Scheme was not properly set when only HTTP was selected exclusively
+[c002fbe](https://github.com/sebadob/rauthy/commit/c002fbed506e9dae2024e6e3ea5af33b7429cf11)
+- Resource links in default error HTML template did not work properly in all locations
+[5965d9a](https://github.com/sebadob/rauthy/commit/5965d9aa1f7d7144786a2f6d73ce966570da5467)
+
+### New Contributors
+
+[twistedfall](https://github.com/twistedfall)
+
 ## v0.17.0
 
 This is a pretty huge update with a lot of new features.
