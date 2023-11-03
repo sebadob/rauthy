@@ -55,13 +55,15 @@ pub struct DPoPClaims {
     pub htu: Uri,
     /// Creation timestamp of the JWT (Section 4.1.6 of [RFC7519]).
     pub iat: i64,
-    // // TODO does Rauthy even need 'ath'? maybe when refreshing a token?
-    // /// Hash of the access token. The value MUST be the result of a
-    // /// base64url encoding (as defined in Section 2 of [RFC7515])
-    // /// the SHA-256 [SHS] hash of the ASCII encoding of the associated
-    // /// access token's value.
-    // ///
-    // /// MUST be valid when used in conjunction with an access token
+    // The 'ath' claim does not apply to Rauthy, only used by resource servers.
+    // It is just here for completeness.
+    //
+    // Hash of the access token. The value MUST be the result of a
+    // base64url encoding (as defined in Section 2 of [RFC7515])
+    // the SHA-256 [SHS] hash of the ASCII encoding of the associated
+    // access token's value.
+    //
+    // MUST be valid when used in conjunction with an access token
     // #[serde(skip_serializing_if = "Option::is_none")]
     // pub ath: Option<String>,
 
@@ -332,7 +334,6 @@ mod tests {
             htm: http::Method::POST,
             htu: DPOP_TOKEN_ENDPOINT.clone(),
             iat: Utc::now().timestamp(),
-            // ath: None,
             // nonce: None,
         };
 
