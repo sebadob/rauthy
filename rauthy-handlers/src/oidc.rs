@@ -2,12 +2,12 @@ use std::ops::Add;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use actix_web::cookie::time::OffsetDateTime;
-use actix_web::http::header::HeaderValue;
+use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::{header, StatusCode};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError};
 use tracing::debug;
 
-use rauthy_common::constants::{COOKIE_MFA, HEADER_HTML, SESSION_LIFETIME};
+use rauthy_common::constants::{APPLICATION_JSON, COOKIE_MFA, HEADER_HTML, SESSION_LIFETIME};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::build_csp_header;
 use rauthy_models::app_state::AppState;
@@ -17,6 +17,7 @@ use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JWKS};
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::WebauthnCookie;
+use rauthy_models::entity::well_known::WellKnown;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
     AuthRequest, LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest,
@@ -654,11 +655,13 @@ pub async fn get_userinfo(
     ),
 )]
 #[get("/.well-known/openid-configuration")]
-pub async fn get_well_known(data: web::Data<AppState>) -> HttpResponse {
-    HttpResponse::Ok()
+pub async fn get_well_known(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+    let wk = WellKnown::json(&data).await?;
+    Ok(HttpResponse::Ok()
+        .insert_header((CONTENT_TYPE, APPLICATION_JSON))
         .insert_header((
             header::ACCESS_CONTROL_ALLOW_ORIGIN,
             HeaderValue::from_str("*").unwrap(),
         ))
-        .json(&data.well_known)
+        .body(wk))
 }

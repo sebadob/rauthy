@@ -14,6 +14,7 @@ use rauthy_common::utils::new_store_id;
 use crate::app_state::{AppState, DbTxn};
 use crate::entity::clients::Client;
 use crate::entity::user_attr::UserAttrConfigEntity;
+use crate::entity::well_known::WellKnown;
 use crate::request::ScopeRequest;
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema)]
@@ -82,6 +83,8 @@ impl Scope {
         )
         .await?;
 
+        WellKnown::rebuild(data).await?;
+
         Ok(new_scope)
     }
 
@@ -143,6 +146,8 @@ impl Scope {
             AckLevel::Quorum,
         )
         .await?;
+
+        WellKnown::rebuild(data).await?;
 
         Ok(())
     }
@@ -210,7 +215,7 @@ impl Scope {
         let mut txn = data.db.begin().await?;
 
         // if the name has changed, we need to update all connected clients
-        if scope.name != scope_req.scope {
+        let is_name_update = if scope.name != scope_req.scope {
             // find all clients with the old_name assigned
             let mut clients = vec![];
             Client::find_all(data)
@@ -240,7 +245,11 @@ impl Scope {
             for client in clients {
                 client.save(data, Some(&mut txn)).await?;
             }
-        }
+
+            true
+        } else {
+            false
+        };
 
         debug!("scope_req: {:?}", scope_req);
         // check configured custom attributes and clean them up
@@ -288,6 +297,10 @@ impl Scope {
             AckLevel::Quorum,
         )
         .await?;
+
+        if is_name_update {
+            WellKnown::rebuild(data).await?;
+        }
 
         Ok(new_scope)
     }

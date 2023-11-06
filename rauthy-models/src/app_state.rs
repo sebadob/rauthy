@@ -12,7 +12,6 @@ use argon2::Params;
 use rauthy_common::constants::{DATABASE_URL, DB_TYPE, DEV_MODE, HA_MODE, PROXY_MODE};
 use rauthy_common::DbType;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
 use sqlx::pool::PoolOptions;
 use sqlx::ConnectOptions;
 use std::collections::HashMap;
@@ -24,7 +23,6 @@ use tokio::sync::mpsc;
 use tokio::time::sleep;
 use tracing::log::LevelFilter;
 use tracing::{debug, error, info, warn};
-use utoipa::ToSchema;
 use webauthn_rs::prelude::Url;
 use webauthn_rs::Webauthn;
 
@@ -49,7 +47,6 @@ pub struct AppState {
     pub listen_addr: String,
     pub listen_scheme: ListenScheme,
     pub refresh_grace_time: u32,
-    pub well_known: WellKnown,
     pub session_lifetime: u32,
     pub session_timeout: u32,
     pub ml_lt_pwd_first: u32,
@@ -146,7 +143,6 @@ impl AppState {
             "http"
         };
         let issuer = format!("{}://{}/auth/v1", issuer_scheme, public_url);
-        let well_known = WellKnown::new(&issuer);
 
         let session_lifetime = env::var("SESSION_LIFETIME")
             .unwrap_or_else(|_| String::from("14400"))
@@ -199,7 +195,6 @@ impl AppState {
             listen_addr,
             listen_scheme,
             refresh_grace_time,
-            well_known,
             session_lifetime,
             session_timeout,
             ml_lt_pwd_first,
@@ -442,98 +437,4 @@ pub struct Argon2Params {
 #[derive(Debug, Clone)]
 pub struct Caches {
     pub ha_cache_config: redhac::CacheConfig,
-}
-
-/// The struct for the `.well-known` endpoint for automatic OIDC discovery
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
-pub struct WellKnown {
-    pub issuer: String,
-    pub authorization_endpoint: String,
-    pub token_endpoint: String,
-    pub introspection_endpoint: String,
-    pub userinfo_endpoint: String,
-    pub end_session_endpoint: String,
-    pub jwks_uri: String,
-    // pub registration_endpoint: String,
-    // pub check_session_iframe: String,
-    pub grant_types_supported: Vec<String>,
-    pub response_types_supported: Vec<String>,
-    pub id_token_signing_alg_values_supported: Vec<String>,
-    pub token_endpoint_auth_signing_alg_values_supported: Vec<String>,
-    pub claims_supported: Vec<String>,
-    pub scopes_supported: Vec<String>,
-    pub code_challenge_methods_supported: Vec<String>,
-    pub dpop_signing_alg_values_supported: Vec<String>,
-}
-
-impl WellKnown {
-    pub fn new(issuer: &str) -> Self {
-        let authorization_endpoint = format!("{}/oidc/authorize", issuer);
-        let token_endpoint = format!("{}/oidc/token", issuer);
-        let introspection_endpoint = format!("{}/oidc/tokenInfo", issuer);
-        let userinfo_endpoint = format!("{}/oidc/userinfo", issuer);
-        let end_session_endpoint = format!("{}/oidc/userinfo", issuer);
-        let jwks_uri = format!("{}/oidc/certs", issuer);
-        let grant_types_supported = vec![
-            String::from("authorization_code"),
-            String::from("client_credentials"),
-            String::from("password"),
-            String::from("refresh_token"),
-        ];
-        let response_types_supported = vec![String::from("code")];
-        let id_token_signing_alg_values_supported = vec![
-            String::from("RS256"),
-            String::from("RS384"),
-            String::from("RS512"),
-            String::from("EdDSA"),
-        ];
-        let token_endpoint_auth_signing_alg_values_supported = vec![
-            String::from("RS256"),
-            String::from("RS384"),
-            String::from("RS512"),
-            String::from("EdDSA"),
-        ];
-        let claims_supported = vec![
-            String::from("aud"),
-            String::from("sub"),
-            String::from("iss"),
-            String::from("name"),
-            String::from("given_name"),
-            String::from("family_name"),
-            String::from("preferred_username"),
-            String::from("email"),
-        ];
-        let scopes_supported = vec![
-            String::from("openid"),
-            String::from("profile"),
-            String::from("email"),
-            String::from("roles"),
-            String::from("groups"),
-        ];
-        let code_challenge_methods_supported = vec![String::from("plain"), String::from("S256")];
-        let dpop_signing_alg_values_supported = vec![
-            String::from("RS256"),
-            String::from("RS384"),
-            String::from("RS512"),
-            String::from("EdDSA"),
-        ];
-
-        Self {
-            issuer: String::from(issuer),
-            authorization_endpoint,
-            token_endpoint,
-            introspection_endpoint,
-            userinfo_endpoint,
-            end_session_endpoint,
-            jwks_uri,
-            grant_types_supported,
-            response_types_supported,
-            id_token_signing_alg_values_supported,
-            token_endpoint_auth_signing_alg_values_supported,
-            claims_supported,
-            scopes_supported,
-            code_challenge_methods_supported,
-            dpop_signing_alg_values_supported,
-        }
-    }
 }

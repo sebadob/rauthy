@@ -4,7 +4,7 @@ use crate::{
 use actix_web::web;
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_models::app_state::{AppState, WellKnown};
+use rauthy_models::app_state::AppState;
 use rauthy_models::events::event;
 use rauthy_models::language;
 use rauthy_models::ListenScheme;
@@ -137,6 +137,7 @@ use utoipa::{openapi, OpenApi};
             entity::webauthn::WebauthnAdditionalData,
             entity::webauthn::WebauthnLoginReq,
             entity::webauthn::WebauthnServiceReq,
+            entity::well_known::WellKnown,
 
             event::EventLevel,
             ErrorResponse,
@@ -205,8 +206,6 @@ use utoipa::{openapi, OpenApi};
 
             rauthy_models::JktClaim,
             token_set::TokenSet,
-
-            WellKnown,
         ),
     ),
     tags(
