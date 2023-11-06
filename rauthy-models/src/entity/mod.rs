@@ -23,6 +23,7 @@ pub mod sessions;
 pub mod user_attr;
 pub mod users;
 pub mod webauthn;
+pub mod well_known;
 
 pub async fn is_db_alive(db: &DbPool) -> bool {
     query("SELECT 1").execute(db).await.is_ok()
