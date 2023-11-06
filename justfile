@@ -18,7 +18,6 @@ create-root-ca:
     docker run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
           ghcr.io/sebadob/nioca \
           x509 \
-          --cn 'Rauthy Dev CA' \
           --stage root \
           --clean
 
@@ -26,7 +25,6 @@ create-root-ca:
     docker run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
           ghcr.io/sebadob/nioca \
           x509 \
-          --cn 'Rauthy Dev IT CA' \
           --stage intermediate
 
     cp tls/ca/x509/intermediate/ca-chain.pem tls/ca-chain.pem
@@ -53,7 +51,6 @@ create-end-entity-tls:
     # copy it in the correct place
     cp tls/ca/x509/end_entity/$(cat tls/ca/x509/end_entity/serial)/cert-chain.pem tls/cert-chain.pem
     cp tls/ca/x509/end_entity/$(cat tls/ca/x509/end_entity/serial)/key.pem tls/key.pem
-
 
 
 # This may be executed if you don't have a local `docker buildx` setup

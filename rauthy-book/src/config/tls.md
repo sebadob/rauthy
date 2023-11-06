@@ -2,70 +2,73 @@
 
 If you do have TLS certificates from another source already, skip directly to [Config](#config).
 
-## Generate Certificates
+## Generating Certificates
 
 ```admonish hint
-The tools provided in the rauthy repository are very basic and have a terrible user experience.  
-They should only be used, if you do not have an already existing TLS setup or workflow.  
-A project specifically tailored to TLS CA and certificates is in the making.
+We are using another project of mine called [Nioca](https://github.com/sebadob/nioca) for an easy creation of a
+fully functioning and production ready private Root Certificate Authority (CA).
 ```
 
-As mentioned, the tools are very basic. If you for instance type in a bad password during CA / intermediate generation,
-they will just throw an error, and you need to clean up again. They should only get you started and be used for testing.  
-There are a lot of good tools out there which can get you started with TLS and there is no real benefit in creating 
-just another one that does the same stuff.
+I suggest to use `docker` for this task. Otherwise, you can use the `nioca` binary directly on any linux machine.
+If you want a permanent way of generating certificates for yourself, take a look at Rauthy's `justfile` and copy
+and adjust the recipes `create-root-ca` and `create-end-entity-tls` to your liking.  
+If you just want to get everything started quickly, follow these steps:
 
-The scripts can be found here (TODO add link to tools).  
-You need to have `openssl` and a BASH shell available on your system. They have not been tested with Windows.
+### Create an alias for the `docker` command
+```
+alias nioca='docker run --rm -it -v ./:/ca -u $(id -u ${USER}):$(id -g ${USER}) ghcr.io/sebadob/nioca'
+```
 
-The cache layer does validate the CA for mTLS connections, which is why you can generate a full set of certificates.
+To see the full feature set for more customization than mentioned below:
+```
+nioca x509 -h
+```
 
-**1. Certificate Authority (CA)**  
-- Execute
-```
-./build_ca.sh
-```
-and enter an at least 4 character password for the private key file for the CA 3 times.
+### Generate full certificate chain
 
-**2. Intermediate CA**
-- Execute
-```
-./build_intermediate.sh
-```
-  and enter an at least 4 character password for the private key file for the CA 3 times.
-- The 4. password needs to be the one from the CA private key file from step 1.
-- Type `y` 2 times to verify the signing of the new certificate
-- On success, you will see `intermediate/certs/intermediate.cert.pem: OK` as the last line
+To make your browser happy, your need to have at least one `--alt-name-dns` for the URL of your application.
+You can define as many of them as you like.
 
-**3. End Entity Certificates**  
-These are the certificates used by the cache, rauthy itself, or any other server / client.
-- The end entity script needs the common name for the certificate as the 1. option when you execute it:
 ```
-./build_end_entity.sh redhac.local
+nioca x509 \
+    --cn 'Rauthy Default' \
+    --o 'Rauthy OIDC' \
+    --alt-name-dns localhost \
+    --alt-name-dns redhac.local \
+    --usages-ext server-auth \
+    --usages-ext client-auth \
+    --stage full \
+    --clean
 ```
-- Enter the password for the Intermediate CA private key from step 2 and verify the signing.  
-- On success, you will see `intermediate/certs/redhac.local.cert.pem: OK` as the last line 
-- Generate another set of certificates for rauthy itself and add your domain name as argument
+
+You will be asked 6 times (yes, 6) for an at least 16 character password:
+- The first 3 times, you need to provide the encryption password for your Root CA
+- The last 3 times, you should provide a different password for your Intermediate CA
+
+When everything was successful, you will have a new folder named `x509` with sub folders `root`, `intermediate`
+and `end_entity` in your current one.
+
+From these, you will need the following files:
+
 ```
-./build_end_entity.sh auth.example.com
+cp x509/intermediate/ca-chain.pem . && \
+cp x509/end_entity/$(cat x509/end_entity/serial)/cert-chain.pem . && \
+cp x509/end_entity/$(cat x509/end_entity/serial)/key.pem .
 ```
-- You should have 5 files in the `../` folder:
+
+- You should have 3 files in `ls -l`:
 ```
-auth.example.com.cert.pem
-auth.example.com.key.pem
 ca-chain.pem
-redhac.local.cert.pem
-redhac.local.key.pem
-```
-
-```admonish info
-This is not a tutorial about TLS certificates.  
-As mentioned above already, another dedicated TLS project is in the making.
+cert-chain.pem
+key.pem
 ```
 
 ## Config
 
 The [reference config](../config/config.html) contains a `TLS` section with all the values you can set.
+
+For this example, we will be using the same certificates for both the internal cache mTLS connections and the
+public facing HTTPS server.
 
 ### Cache
 
@@ -84,20 +87,20 @@ If this differs from your setup, you can set the following config variables:
 
 ```
 # The path to the server TLS certificate PEM file (default: tls/redhac.local.cert.pem)
-CACHE_TLS_SERVER_CERT=tls/redhac.local.cert.pem
+CACHE_TLS_SERVER_CERT=tls/cert-chain.pem
 # The path to the server TLS key PEM file (default: tls/redhac.local.key.pem)
-CACHE_TLS_SERVER_KEY=tls/redhac.local.key.pem
+CACHE_TLS_SERVER_KEY=tls/key.pem
 # If not empty, the PEM file from the specified location will be added as the CA certificate chain for validating
 # the servers TLS certificate (default: tls/ca-chain.cert.pem)
-CACHE_TLS_CA_SERVER=tls/ca-chain.cert.pem
+CACHE_TLS_CA_SERVER=tls/ca-chain.pem
 
 # The path to the client mTLS certificate PEM file (default: tls/redhac.local.cert.pem)
-CACHE_TLS_CLIENT_CERT=tls/redhac.local.cert.pem
+CACHE_TLS_CLIENT_CERT=tls/cert-chain.pem
 # The path to the client mTLS key PEM file (default: tls/redhac.local.key.pem)
-CACHE_TLS_CLIENT_KEY=tls/redhac.local.key.pem
+CACHE_TLS_CLIENT_KEY=tls/key.pem
 # If not empty, the PEM file from the specified location will be added as the CA certificate chain for validating
 # the clients mTLS certificate (default: tls/ca-chain.cert.pem)
-CACHE_TLS_CA_CLIENT=tls/ca-chain.cert.pem
+CACHE_TLS_CA_CLIENT=tls/ca-chain.pem
 
 # The domain / CN the client should validate the certificate against. This domain MUST be inside the
 # 'X509v3 Subject Alternative Name' when you take a look at the servers certificate with the openssl tool.
@@ -126,17 +129,22 @@ following command, to create the Kubernetes secrets.
 **Secrets - REST API**
 
 ```
-kubectl -n rauthy create secret tls rauthy-tls --key="../auth.example.com.key.pem" --cert="../auth.example.com.cert.pem" && \
+kubectl -n rauthy create secret tls rauthy-tls --key="key.pem" --cert="cert-chain.pem"
 ``` 
 
 **Secrets - `redhac` cache**
 
 ```
-kubectl -n rauthy create secret tls redhac-tls-server --key="../redhac.local.key.pem" --cert="../redhac.local.cert.pem" && \
-kubectl -n rauthy create secret generic redhac-server-ca --from-file ../ca-chain.pem
+kubectl -n rauthy create secret tls redhac-tls-server --key="key.pem" --cert="cert-chain.pem" && \
+kubectl -n rauthy create secret generic redhac-server-ca --from-file ca-chain.pem
 ``` 
 
-#### Config Adjustements - REST API
+```admonish notice
+We create the `redhac-tls-server` here with the exact same values. If you really want to harden your setup in production,
+you should provide a different set of certificates for the internal mTLS connection.
+```
+
+#### Config Adjustments - REST API
 
 We need to configure the newly created Kubernetes secrets in the `std.yaml` from the
 [Kubernetes](../getting_started/k8s.md#create-and-apply-the-stateful-set) setup.
