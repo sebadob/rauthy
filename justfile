@@ -7,6 +7,55 @@ db_url_sqlite_mem := "sqlite::memory"
 db_url_postgres := "postgresql://rauthy:123SuperSafe@localhost:5432/rauthy"
 
 
+# Creates a new Root + Intermediate CA for development and testing TLS certificates
+create-root-ca:
+    # Password for both root and intermediate dev CA is always: 123SuperMegaSafe
+
+    # The nioca container runs with 10001:10001 uid:gid
+    #chmod 0766 tls/ca
+
+    # Root CA
+    docker run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
+          ghcr.io/sebadob/nioca \
+          x509 \
+          --cn 'Rauthy Dev CA' \
+          --stage root \
+          --clean
+
+    # Intermediate CA
+    docker run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
+          ghcr.io/sebadob/nioca \
+          x509 \
+          --cn 'Rauthy Dev IT CA' \
+          --stage intermediate
+
+    cp tls/ca/x509/intermediate/ca-chain.pem tls/ca-chain.pem
+
+
+# Create a new End Entity TLS certificate for development and testing
+create-end-entity-tls:
+    # create the new certificate
+    docker run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
+          ghcr.io/sebadob/nioca \
+          x509 \
+          --cn 'Rauthy Default' \
+          --alt-name-dns 'localhost' \
+          --alt-name-dns 'redhac.local' \
+          --alt-name-dns 'rauthy.local' \
+          --alt-name-ip '127.0.0.1' \
+          --alt-name-uri 'localhost:8080' \
+          --alt-name-uri 'localhost:8443' \
+          --usages-ext server-auth \
+          --usages-ext client-auth \
+          --o 'Rauthy OIDC' \
+          --stage end-entity
+
+    # copy it in the correct place
+    cp tls/ca/x509/end_entity/$(cat tls/ca/x509/end_entity/serial)/cert-chain.pem tls/cert-chain.pem
+    cp tls/ca/x509/end_entity/$(cat tls/ca/x509/end_entity/serial)/key.pem tls/key.pem
+
+
+
 # This may be executed if you don't have a local `docker buildx` setup
 docker-buildx-setup:
     #!/usr/bin/env bash
@@ -233,18 +282,6 @@ release:
 
     git tag "v$TAG"
     git push origin "v$TAG"
-
-
-# publishes nightly application images with unreleased changes and debug images
-publish-nightly: build-sqlite build-postgres
-    #!/usr/bin/env bash
-    set -euxo pipefail
-
-    docker build --no-cache -f Dockerfile.debug -t ghcr.io/sebadob/rauthy:nightly -f Dockerfile.postgres.debug .
-    docker push ghcr.io/sebadob/rauthy:nightly
-
-    docker build --no-cache -f Dockerfile.debug -t ghcr.io/sebadob/rauthy:nightly-lite -f Dockerfile.sqlite.debug .
-    docker push ghcr.io/sebadob/rauthy:nightly-lite
 
 
 # publishes the application images - full pipeline incl clippy and testing
