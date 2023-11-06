@@ -32,7 +32,10 @@ WORKDIR /app
 COPY --chown=10001:10001 /out/rauthy-"$DB"-"$TARGETARCH" ./rauthy
 COPY --chown=10001:10001 --from=builderBackend /work/data ./data
 
-COPY --chown=10001:10001 tls/ ./tls/
+COPY --chown=10001:10001 tls/ca-chain.pem ./tls/ca-chain.pem
+COPY --chown=10001:10001 tls/cert-chain.pem ./tls/cert-chain.pem
+COPY --chown=10001:10001 tls/key.pem ./tls/key.pem
+
 COPY --chown=10001:10001 rauthy.deploy.cfg ./rauthy.cfg
 
 CMD ["/app/rauthy"]
