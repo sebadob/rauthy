@@ -1,6 +1,6 @@
 use crate::common::{get_backend_url, get_issuer};
 use pretty_assertions::assert_eq;
-use rauthy_models::app_state::WellKnown;
+use rauthy_models::entity::well_known::WellKnown;
 use std::error::Error;
 
 mod common;
