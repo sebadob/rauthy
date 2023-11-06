@@ -292,7 +292,8 @@ impl DPoPProof {
         // 6. The JWT signature verifies with the public key contained in the jwk
         // JOSE Header Parameter.
         // let nonce = self.claims.nonce.clone();
-        kp.validate_dpop(raw_token).map_err(|err| err.message)?;
+        kp.validate_token_signature(raw_token)
+            .map_err(|err| err.message)?;
 
         // 7. The jwk JOSE Header Parameter does not contain a private key.
         // TODO ?
@@ -367,52 +368,12 @@ mod tests {
     use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType};
     use actix_web::http;
     use chrono::Utc;
-    use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_encode};
-    // use rsa::pkcs1v15::{SigningKey};
-    // use rsa::signature::{Keypair, RandomizedSigner};
-    // use rsa::sha2::{Digest, Sha256};
-    // use rsa::signature::SignatureEncoding;
-    // use rsa::traits::{PublicKeyParts};
     use ed25519_compact::Noise;
     use rauthy_common::constants::DPOP_TOKEN_ENDPOINT;
+    use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_encode};
+    use rsa::sha2::Sha256;
+    use rsa::traits::PublicKeyParts;
     use std::fmt::Write;
-
-    // Note: this test does not work anymore with the way more strict deserialization after
-    // the initial testing with just Strings.
-    // It was using the original Header value from the RFC, but Rauthy does not support the EC alg.
-    // #[test]
-    // fn test_dpop_extraction() {
-    //     // test value taken out of the RFC9449
-    //     let header = "eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7Imt0eSI6IkVDIiwie\
-    //     CI6Imw4dEZyaHgtMzR0VjNoUklDUkRZOXpDa0RscEJoRjQyVVFVZldWQVdCRnMiLCJ5IjoiOVZFNGpmX09rX282N\
-    //     HpiVFRsY3VOSmFqSG10NnY5VERWclUwQ2R2R1JEQSIsImNydiI6IlAtMjU2In19.eyJqdGkiOiItQndDM0VTYzZh\
-    //     Y2MybFRjIiwiaHRtIjoiUE9TVCIsImh0dSI6Imh0dHBzOi8vc2VydmVyLmV4YW1wbGUuY29tL3Rva2VuIiwiaWF0\
-    //     IjoxNTYyMjYyNjE2fQ.2-GxA6T8lP4vfrg8v-FdWP0A0zdrj8igiMLvqRMUvwnQg4PtFLbdLXiOSsX0x7NVY-FNy\
-    //     JK70nfbV37xRZT3Lg";
-    //     println!("test header:\n{}", header);
-    //
-    //     let dpop = DPoPProof::try_from(header).unwrap();
-    //
-    //     assert_eq!(dpop.header.typ, "dpop+jwt");
-    //     // assert_eq!(dpop.header.alg.as_str(), "ES256");
-    //     assert_eq!(dpop.header.jwk.kty, "EC");
-    //     assert_eq!(
-    //         dpop.header.jwk.x.as_deref(),
-    //         Some("l8tFrhx-34tV3hRICRDY9zCkDlpBhF42UQUfWVAWBFs")
-    //     );
-    //     // We don't validate 'y' from the example here because Rauthy does not (and will not)
-    //     // support EC keys. Just took the original value to be more on the safe side with the
-    //     // extraction.
-    //     assert_eq!(dpop.header.jwk.crv.as_deref(), Some("P-256"));
-    //
-    //     assert_eq!(dpop.claims.jti, "-BwC3ESc6acc2lTc");
-    //     assert_eq!(dpop.claims.htm, http::Method::POST);
-    //     assert_eq!(
-    //         dpop.claims.htu,
-    //         Uri::from_str("https://server.example.com/token").unwrap()
-    //     );
-    //     assert_eq!(dpop.claims.iat, 1562262616);
-    // }
 
     #[test]
     fn test_dpop_validation_eddsa() {
@@ -466,78 +427,60 @@ mod tests {
         // cache -> will be done in integration tests
     }
 
-    // Currently, the SigningKey from the `rsa` crate makes my IDE fully crash.
-    // There is a bug in the Rust plugin which makes coding basically impossible (unless I would
-    // switch to another IDE).
-    // Until this is solved, I will only have the RSA keys prepared, but actually only support
-    // EdDSA for now.
-    //
-    // #[test]
-    // fn test_dpop_validation_rsa() {
-    //     // manually build up a dpop token
-    //     let mut rng = rand::thread_rng();
-    //     let rsa_sk = rsa::RsaPrivateKey::new(&mut rng, 2048).unwrap();
-    //     let rsa_pk = rsa_sk.to_public_key();
-    //     let n = rsa_pk.n().to_bytes_be();
-    //     let e = rsa_pk.e().to_bytes_be();
-    //
-    //     let header = DPoPHeader {
-    //         typ: "dpop+jwt".to_string(),
-    //         alg: JwkKeyPairAlg::RS256,
-    //         jwk: JWKSPublicKey {
-    //             kty: JwkKeyPairType::RSA,
-    //             // DPoP request will not have the 'alg' here but one level higher
-    //             alg: None,
-    //             crv: None,
-    //             kid: None,
-    //             n: Some(base64_url_encode(&n)),
-    //             e: Some(base64_url_encode(&e)),
-    //             x: None,
-    //         },
-    //         kid: None,
-    //     };
-    //
-    //     let claims = DPoPClaims {
-    //         jti: "-BwC3ESc6acc2lTc".to_string(),
-    //         htm: http::Method::POST,
-    //         htu: Uri::from_str("https://localhost:8080/auth/v1/oidc/token").unwrap(),
-    //         iat: Utc::now().timestamp(),
-    //         ath: None,
-    //         nonce: None,
-    //     };
-    //
-    //     // build and sign the raw token string
-    //     let header_json = serde_json::to_string(&header).unwrap();
-    //     let header_b64 = base64_url_no_pad_encode(header_json.as_bytes());
-    //     let claims_json = serde_json::to_string(&claims).unwrap();
-    //     let claims_b64 = base64_url_no_pad_encode(claims_json.as_bytes());
-    //     let mut token_raw = format!("{}.{}", header_b64, claims_b64);
-    //
-    //     let hash = hmac_sha256::Hash::hash(token_raw.as_bytes());
-    //
-    //     // let signing_key: rsa::pkcs1v15::SigningKey<rsa::sha2::Sha256> = rsa::pkcs1v15::SigningKey::new(rsa_sk);
-    //     let signing_key = SigningKey::new(rsa_sk);
-    //     let verifying_key = signing_key.verifying_key();
-    //     let signature = signing_key.sign_with_rng(&mut rng, &hash).to_bytes();
-    //
-    //     let sig_b64 = base64_url_no_pad_encode(&signature);
-    //     write!(token_raw, ".{}", sig_b64).unwrap();
-    //     println!("test signed token:\n{}", token_raw);
-    //
-    //     // // manual validation first
-    //     // let decoded = base64_url_no_pad_decode(&header.jwk.n.clone().unwrap()).unwrap();
-    //     // let n = BigUint::from_bytes_be(&decoded);
-    //     // let decoded = base64_url_no_pad_decode(&header.jwk.e.clone().unwrap()).unwrap();
-    //     // let e = BigUint::from_bytes_be(&decoded);
-    //     // let pk = rsa::RsaPublicKey::new(n, e).unwrap();
-    //     // let sig_bytes = base64_url_no_pad_decode(&sig_b64).unwrap();
-    //     // let sig = rsa::pkcs1v15::Signature::try_from(sig_bytes.as_slice()).unwrap();
-    //     // let hash = hmac_sha256::Hash::hash(token_raw.as_bytes());
-    //     // let verifier = rsa::pkcs1v15::VerifyingKey::<sha2::Sha256>::from(pk);
-    //     // verifier.verify(&hash, &sig).unwrap();
-    //     //
-    //     // // now we have our token like it should come in with the DPoP header -> try to verify it
-    //     // let dpop = DPoPProof::try_from(token_raw.as_str()).unwrap();
-    //     // dpop.validate(&token_raw).unwrap();
-    // }
+    #[test]
+    fn test_dpop_validation_rsa() {
+        // manually build up a dpop token
+        let mut rng = rand::thread_rng();
+        let rsa_sk = rsa::RsaPrivateKey::new(&mut rng, 2048).unwrap();
+        let rsa_pk = rsa_sk.to_public_key();
+        let n = rsa_pk.n().to_bytes_be();
+        let e = rsa_pk.e().to_bytes_be();
+
+        let header = DPoPHeader {
+            typ: "dpop+jwt".to_string(),
+            alg: JwkKeyPairAlg::RS256,
+            jwk: JWKSPublicKey {
+                kty: JwkKeyPairType::RSA,
+                // DPoP request will not have the 'alg' here but one level higher
+                alg: None,
+                crv: None,
+                kid: None,
+                n: Some(base64_url_encode(&n)),
+                e: Some(base64_url_encode(&e)),
+                x: None,
+            },
+            kid: None,
+        };
+
+        let claims = DPoPClaims {
+            jti: "-BwC3ESc6acc2lTc".to_string(),
+            htm: http::Method::POST,
+            htu: DPOP_TOKEN_ENDPOINT.clone(),
+            iat: Utc::now().timestamp(),
+            nonce: None,
+        };
+
+        // build and sign the raw token string
+        let header_json = serde_json::to_string(&header).unwrap();
+        let header_b64 = base64_url_no_pad_encode(header_json.as_bytes());
+        let claims_json = serde_json::to_string(&claims).unwrap();
+        let claims_b64 = base64_url_no_pad_encode(claims_json.as_bytes());
+        let mut token_raw = format!("{}.{}", header_b64, claims_b64);
+
+        let hash = hmac_sha256::Hash::hash(token_raw.as_bytes());
+        let signature = rsa_sk
+            .sign(rsa::Pkcs1v15Sign::new::<Sha256>(), hash.as_slice())
+            .unwrap();
+        let sig_b64 = base64_url_no_pad_encode(&signature);
+        write!(token_raw, ".{}", sig_b64).unwrap();
+
+        // now we have our token like it should come in with the DPoP header -> try to verify it
+        let dpop = DPoPProof::try_from_str(None, token_raw.as_str()).unwrap();
+        dpop.validate(&token_raw).unwrap();
+
+        // This only tests the RS256 validation. The logic for 384 and 512 is the same, and the
+        // token signature validation itself for the 2 others is tested already in
+        // jwk::test_signature_validation
+        // -> no need to test it again here
+    }
 }

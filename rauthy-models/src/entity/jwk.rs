@@ -6,6 +6,7 @@ use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::decrypt;
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode};
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
+use rsa::BigUint;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
 use sqlx::sqlite::SqliteRow;
@@ -13,7 +14,6 @@ use sqlx::{Error, FromRow, Row};
 use std::default::Default;
 use std::fmt::Debug;
 use std::str::FromStr;
-use tracing::warn;
 use utoipa::ToSchema;
 
 #[macro_export]
@@ -228,29 +228,29 @@ impl JWKSPublicKey {
         }
     }
 
-    // fn n(&self) -> Result<BigUint, ErrorResponse> {
-    //     if let Some(n) = &self.n {
-    //         let decoded = base64_url_no_pad_decode(n)?;
-    //         Ok(BigUint::from_bytes_be(&decoded))
-    //     } else {
-    //         Err(ErrorResponse::new(
-    //             ErrorResponseType::Internal,
-    //             "No 'n' in JwkKeyPublicKey".to_string(),
-    //         ))
-    //     }
-    // }
-    //
-    // fn e(&self) -> Result<BigUint, ErrorResponse> {
-    //     if let Some(e) = &self.e {
-    //         let decoded = base64_url_no_pad_decode(e)?;
-    //         Ok(BigUint::from_bytes_be(&decoded))
-    //     } else {
-    //         Err(ErrorResponse::new(
-    //             ErrorResponseType::Internal,
-    //             "No 'e' in JwkKeyPublicKey".to_string(),
-    //         ))
-    //     }
-    // }
+    pub fn n(&self) -> Result<BigUint, ErrorResponse> {
+        if let Some(n) = &self.n {
+            let decoded = base64_url_no_pad_decode(n)?;
+            Ok(BigUint::from_bytes_be(&decoded))
+        } else {
+            Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                "No 'n' in JwkKeyPublicKey".to_string(),
+            ))
+        }
+    }
+
+    pub fn e(&self) -> Result<BigUint, ErrorResponse> {
+        if let Some(e) = &self.e {
+            let decoded = base64_url_no_pad_decode(e)?;
+            Ok(BigUint::from_bytes_be(&decoded))
+        } else {
+            Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                "No 'e' in JwkKeyPublicKey".to_string(),
+            ))
+        }
+    }
 
     pub fn x(&self) -> Result<Vec<u8>, ErrorResponse> {
         if let Some(x) = &self.x {
@@ -322,7 +322,12 @@ impl JWKSPublicKey {
                 // mandatory keys for RSA are in order: e, kty, n
                 let e = self.e.as_deref().unwrap();
                 let n = self.n.as_deref().unwrap();
-                format!("{{\"e\":\"{}\",\"kty\":\"{}\",\"n\":\"{}\"}}", e, self.kty.as_str(), n)
+                format!(
+                    "{{\"e\":\"{}\",\"kty\":\"{}\",\"n\":\"{}\"}}",
+                    e,
+                    self.kty.as_str(),
+                    n
+                )
             }
 
             JwkKeyPairType::OKP => {
@@ -336,7 +341,12 @@ impl JWKSPublicKey {
                 // mandatory keys for OKP are in order: crv, kty, x
                 let crv = self.crv.as_deref().unwrap();
                 let x = self.x.as_deref().unwrap();
-                format!("{{\"crv\":\"{}\",\"kty\":\"{}\",\"x\":\"{}\"}}", crv, self.kty.as_str(), x)
+                format!(
+                    "{{\"crv\":\"{}\",\"kty\":\"{}\",\"x\":\"{}\"}}",
+                    crv,
+                    self.kty.as_str(),
+                    x
+                )
             }
         };
 
@@ -420,90 +430,6 @@ impl JWKSPublicKey {
                 Ok(())
             }
         }
-    }
-
-    /// Currently, the SigningKey from the `rsa` crate makes my IDE fully crash.
-    /// There is a bug in the Rust plugin which makes coding basically impossible (unless I would
-    /// switch to another IDE).
-    /// Until this is solved, I will only have the RSA keys prepared, but actually only support
-    /// EdDSA for now.
-    pub fn validate_dpop(&self, token: &str) -> Result<(), ErrorResponse> {
-        let (header, rest) = token.split_once('.').ok_or_else(|| {
-            ErrorResponse::new(ErrorResponseType::BadRequest, "Malformed token".to_string())
-        })?;
-        let (claims, sig_str) = rest.split_once('.').ok_or_else(|| {
-            ErrorResponse::new(ErrorResponseType::BadRequest, "Malformed token".to_string())
-        })?;
-        // TODO this can be made way more efficient
-        let message = format!("{}.{}", header, claims);
-        let sig_bytes = base64_url_no_pad_decode(sig_str).unwrap();
-
-        match self.alg()? {
-            JwkKeyPairAlg::RS256 => {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    "Currently, only EdDSA DPoP is supported".to_string(),
-                ));
-                // if let Ok(rsa_pk) = RsaPublicKey::new(self.n()?, self.e()?) {
-                //     if let Ok(signature) = Signature::try_from(sig_bytes.as_slice()) {
-                //         let hash = hmac_sha256::Hash::hash(message.as_bytes());
-                //         let verifier = VerifyingKey::<rsa::sha2::Sha256>::from(rsa_pk);
-                //         if verifier.verify(&hash, &signature).is_ok() {
-                //             return Ok(());
-                //         }
-                //     }
-                // }
-            }
-
-            JwkKeyPairAlg::RS384 => {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    "Currently, only EdDSA DPoP is supported".to_string(),
-                ));
-                // if let Ok(rsa_pk) = RsaPublicKey::new(self.n()?, self.e()?) {
-                //     if let Ok(signature) = Signature::try_from(sig_bytes.as_slice()) {
-                //         let hash = hmac_sha512::sha384::Hash::hash(message.as_bytes());
-                //         let verifier = VerifyingKey::<rsa::sha2::Sha384>::from(rsa_pk);
-                //         if verifier.verify(&hash, &signature).is_ok() {
-                //             return Ok(());
-                //         }
-                //     }
-                // }
-            }
-
-            JwkKeyPairAlg::RS512 => {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    "Currently, only EdDSA DPoP is supported".to_string(),
-                ));
-                // if let Ok(rsa_pk) = RsaPublicKey::new(self.n()?, self.e()?) {
-                //     if let Ok(signature) = Signature::try_from(sig_bytes.as_slice()) {
-                //         let hash = hmac_sha512::Hash::hash(message.as_bytes());
-                //         let verifier = VerifyingKey::<rsa::sha2::Sha512>::from(rsa_pk);
-                //         if verifier.verify(&hash, &signature).is_ok() {
-                //             return Ok(());
-                //         }
-                //     }
-                // }
-            }
-
-            JwkKeyPairAlg::EdDSA => {
-                let x = self.x()?;
-                if let Ok(pubkey) = ed25519_compact::PublicKey::from_slice(x.as_slice()) {
-                    let signature =
-                        ed25519_compact::Signature::from_slice(sig_bytes.as_slice()).unwrap();
-                    if pubkey.verify(message, &signature).is_ok() {
-                        return Ok(());
-                    }
-                }
-            }
-        };
-
-        warn!("JWT Token validation error");
-        Err(ErrorResponse::new(
-            ErrorResponseType::Unauthorized,
-            "Invalid JWT Token".to_string(),
-        ))
     }
 }
 
@@ -755,6 +681,9 @@ impl FromStr for JwkKeyPairAlg {
 #[cfg(test)]
 mod tests {
     use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType};
+    use crate::{JwtRefreshClaims, JwtTokenType};
+    use jwt_simple::prelude::*;
+    use rauthy_common::utils::base64_url_encode;
 
     #[test]
     fn test_fingerprint() {
@@ -800,7 +729,9 @@ mod tests {
             n: None,
             e: None,
             x: Some("suwfa9fyMHqS0yOh9T-Bsdkji0naFVRRGZFBNrGX_RQ".to_string()),
-        }.fingerprint().unwrap();
+        }
+        .fingerprint()
+        .unwrap();
         assert_eq!(tp.as_str(), "lVstH-NNQsIRpUp1nMmxD3cUoDS_dUbi4Or5awQ34EQ");
     }
 
@@ -966,5 +897,87 @@ mod tests {
         }
         .validate_self();
         assert!(key.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_signature_validation() {
+        // generate some JWKs with third party libraries and validate them with out own logic
+        // make sure they are all fine
+
+        let claims = Claims::with_custom_claims(
+            JwtRefreshClaims {
+                azp: "some_azp".to_string(),
+                typ: JwtTokenType::Refresh,
+                uid: "user_id_13337".to_string(),
+                cnf: None,
+            },
+            coarsetime::Duration::from_secs(300),
+        );
+
+        // Ed25519
+        let kp = Ed25519KeyPair::generate();
+        let signed_token = kp.sign(claims.clone()).unwrap();
+        let x = base64_url_encode(&kp.public_key().to_bytes());
+        let jwk = JWKSPublicKey {
+            kty: JwkKeyPairType::OKP,
+            alg: Some(JwkKeyPairAlg::EdDSA),
+            crv: Some("Ed25519".to_string()),
+            kid: None,
+            n: None,
+            e: None,
+            x: Some(x),
+        };
+        jwk.validate_token_signature(&signed_token).unwrap();
+
+        // RS256
+        let kp = RS256KeyPair::generate(2048).unwrap();
+        let signed_token = kp.sign(claims.clone()).unwrap();
+        let comp = kp.public_key().to_components();
+        let n = base64_url_encode(&comp.n);
+        let e = base64_url_encode(&comp.e);
+        let jwk = JWKSPublicKey {
+            kty: JwkKeyPairType::RSA,
+            alg: Some(JwkKeyPairAlg::RS256),
+            crv: None,
+            kid: None,
+            n: Some(n),
+            e: Some(e),
+            x: None,
+        };
+        jwk.validate_token_signature(&signed_token).unwrap();
+
+        // RS384
+        let kp = RS384KeyPair::generate(3072).unwrap();
+        let signed_token = kp.sign(claims.clone()).unwrap();
+        let comp = kp.public_key().to_components();
+        let n = base64_url_encode(&comp.n);
+        let e = base64_url_encode(&comp.e);
+        let jwk = JWKSPublicKey {
+            kty: JwkKeyPairType::RSA,
+            alg: Some(JwkKeyPairAlg::RS384),
+            crv: None,
+            kid: None,
+            n: Some(n),
+            e: Some(e),
+            x: None,
+        };
+        jwk.validate_token_signature(&signed_token).unwrap();
+
+        // RS512
+        let kp = RS512KeyPair::generate(4096).unwrap();
+        let signed_token = kp.sign(claims.clone()).unwrap();
+        let comp = kp.public_key().to_components();
+        let n = base64_url_encode(&comp.n);
+        let e = base64_url_encode(&comp.e);
+        let jwk = JWKSPublicKey {
+            kty: JwkKeyPairType::RSA,
+            alg: Some(JwkKeyPairAlg::RS512),
+            crv: None,
+            kid: None,
+            n: Some(n),
+            e: Some(e),
+            x: None,
+        };
+        jwk.validate_token_signature(&signed_token).unwrap();
     }
 }

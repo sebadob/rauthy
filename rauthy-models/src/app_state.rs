@@ -136,7 +136,11 @@ impl AppState {
             panic!("ENC_KEY_ACTIVE not found in ENC_KEYS");
         }
 
-        let issuer_scheme = if matches!(listen_scheme, ListenScheme::HttpHttps | ListenScheme::Https) || *PROXY_MODE {
+        let issuer_scheme = if matches!(
+            listen_scheme,
+            ListenScheme::HttpHttps | ListenScheme::Https
+        ) || *PROXY_MODE
+        {
             "https"
         } else {
             "http"
@@ -507,8 +511,12 @@ impl WellKnown {
             String::from("groups"),
         ];
         let code_challenge_methods_supported = vec![String::from("plain"), String::from("S256")];
-        // support for RSA will come after a bugfix I am waiting for
-        let dpop_signing_alg_values_supported = vec![String::from("EdDSA")];
+        let dpop_signing_alg_values_supported = vec![
+            String::from("RS256"),
+            String::from("RS384"),
+            String::from("RS512"),
+            String::from("EdDSA"),
+        ];
 
         Self {
             issuer: String::from(issuer),
