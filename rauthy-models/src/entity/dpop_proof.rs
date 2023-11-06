@@ -371,10 +371,7 @@ mod tests {
     use ed25519_compact::Noise;
     use rauthy_common::constants::DPOP_TOKEN_ENDPOINT;
     use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_encode};
-    use rsa::pkcs1v15::SigningKey;
     use rsa::sha2::Sha256;
-    use rsa::signature::RandomizedSigner;
-    use rsa::signature::SignatureEncoding;
     use rsa::traits::PublicKeyParts;
     use std::fmt::Write;
 
