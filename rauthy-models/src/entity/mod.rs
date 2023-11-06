@@ -11,6 +11,7 @@ pub mod db_version;
 pub mod dpop_proof;
 pub mod groups;
 pub mod jwk;
+pub mod jwk_token_validation;
 pub mod magic_links;
 pub mod password;
 pub mod pow;
