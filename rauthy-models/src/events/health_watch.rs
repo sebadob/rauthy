@@ -24,16 +24,16 @@ pub async fn watch_health(
         let hs = rx_cache.borrow().clone();
         let cache_healthy = match hs {
             // non-HA cache is always healthy in non-HA mode
-            None => !!*HA_MODE,
+            None => !*HA_MODE,
 
             Some(hs) => {
-                if is_cache_bad(&hs) {
+                if hs.health != QuorumHealth::Good {
                     // wait for a few seconds and try again before alerting
                     tokio::time::sleep(Duration::from_secs(10)).await;
 
                     // cannot be None anymore at this point
                     let hs = rx_cache.borrow().clone().unwrap();
-                    if is_cache_bad(&hs) && was_healthy_after_startup {
+                    if hs.health != QuorumHealth::Good && was_healthy_after_startup {
                         tx_events
                             .send_async(Event::rauthy_unhealthy_cache())
                             .await
@@ -78,10 +78,4 @@ pub async fn watch_health(
 
         last_state = is_good_now;
     }
-}
-
-fn is_cache_bad(hs: &QuorumHealthState) -> bool {
-    !(hs.health == QuorumHealth::Bad
-        || hs.state == QuorumState::Undefined
-        || hs.state == QuorumState::Retry)
 }
