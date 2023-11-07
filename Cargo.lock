@@ -4146,9 +4146,9 @@ checksum = "d7b323e7196daa571c8584de958be19e92941c41f845776fe06babfe8fa280a2"
 
 [[package]]
 name = "redhac"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4503b03ac929759b8a1b82bd74e559c85a3207523dd0c7adeaa76d761fcd05eb"
+checksum = "476e290b6eb59088029a0063e38ddcf3b1035d3a29af4713459d4b4d8544f454"
 dependencies = [
  "ahash",
  "anyhow",
