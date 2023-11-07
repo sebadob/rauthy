@@ -8,7 +8,8 @@ use css_color::Srgb;
 use rauthy_common::constants::{
     RE_ALNUM, RE_ALNUM_24, RE_ALNUM_48, RE_ALNUM_64, RE_ALNUM_SPACE, RE_API_KEY, RE_APP_ID,
     RE_ATTR, RE_ATTR_DESC, RE_CHALLENGE, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_CODE_VERIFIER,
-    RE_FLOWS, RE_GROUPS, RE_LOWERCASE, RE_MFA_CODE, RE_URI, RE_USER_NAME,
+    RE_FLOWS, RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE, RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_URI,
+    RE_USER_NAME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::base64_decode;
@@ -137,6 +138,38 @@ impl ColorsRequest {
 pub struct EncKeyMigrateRequest {
     #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub key_id: String,
+}
+
+/// This request is used for ephemeral clients, which are needed for Solid OIDC for instance.
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+pub struct EphemeralClientRequest {
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub client_id: String,
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
+    #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
+    pub client_name: Option<String>,
+    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
+    #[validate(custom(function = "validate_vec_uri"))]
+    pub redirect_uris: Vec<String>,
+    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
+    #[validate(custom(function = "validate_vec_uri"))]
+    pub post_logout_redirect_uris: Option<Vec<String>>,
+    /// Validation: `Vec<^(authorization_code|client_credentials|password|refresh_token)$>`
+    #[validate(custom(function = "validate_vec_grant_type"))]
+    pub grant_types: Vec<String>,
+    /// Validation: `60 <= access_token_lifetime <= 86400`
+    #[validate(range(min = 60, max = 86400))]
+    pub default_max_age: Option<i32>,
+    /// Validation: `Vec<^[a-z0-9-_/\s]{2,128}$>`
+    #[validate(regex(path = "RE_LOWERCASE_SPACE", code = "[a-z0-9-_/\\s]{2,128}"))]
+    pub scope: Option<String>,
+    pub require_auth_time: Option<bool>,
+
+    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
+    pub access_token_signed_response_alg: Option<JwkKeyPairAlg>,
+    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
+    pub id_token_signed_response_alg: Option<JwkKeyPairAlg>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
@@ -739,6 +772,19 @@ fn validate_vec_uri(value: &[String]) -> Result<(), ValidationError> {
     value.iter().for_each(|v| {
         if !RE_URI.is_match(v) {
             err = Some("^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$");
+        }
+    });
+    if let Some(e) = err {
+        return Err(ValidationError::new(e));
+    }
+    Ok(())
+}
+
+fn validate_vec_grant_type(value: &[String]) -> Result<(), ValidationError> {
+    let mut err = None;
+    value.iter().for_each(|v| {
+        if !RE_GRANT_TYPES.is_match(v) {
+            err = Some("authorization_code|client_credentials|password|refresh_token");
         }
     });
     if let Some(e) = err {
