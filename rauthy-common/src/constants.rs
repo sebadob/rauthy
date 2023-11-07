@@ -89,7 +89,9 @@ lazy_static! {
     pub static ref RE_CODE_CHALLENGE: Regex = Regex::new(r"^[a-zA-Z0-9-\._~]{43,128}$").unwrap();
     pub static ref RE_CODE_VERIFIER: Regex = Regex::new(r"^[a-zA-Z0-9-\._~+/=]+$").unwrap();
     pub static ref RE_FLOWS: Regex = Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap();
+    pub static ref RE_GRANT_TYPES: Regex = Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap();
     pub static ref RE_LOWERCASE: Regex = Regex::new(r"^[a-z0-9-_/]{2,128}$").unwrap();
+    pub static ref RE_LOWERCASE_SPACE: Regex = Regex::new(r"^[a-z0-9-_/\s]{2,128}$").unwrap();
     pub static ref RE_GROUPS: Regex = Regex::new(r"^[a-z0-9-_/,]{2,32}$").unwrap();
     pub static ref RE_MFA_CODE: Regex = Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap();
     pub static ref RE_URI: Regex = Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+$").unwrap();
