@@ -1,6 +1,7 @@
 use crate::app_state::DbPool;
 use crate::entity::is_db_alive;
 use crate::events::event::Event;
+use rauthy_common::constants::HA_MODE;
 use redhac::{QuorumHealth, QuorumHealthState, QuorumState};
 use std::time::Duration;
 use tokio::sync::watch;
@@ -22,8 +23,8 @@ pub async fn watch_health(
 
         let hs = rx_cache.borrow().clone();
         let cache_healthy = match hs {
-            // non-HA cache is always healthy
-            None => true,
+            // non-HA cache is always healthy in non-HA mode
+            None => !!*HA_MODE,
 
             Some(hs) => {
                 if is_cache_bad(&hs) {
@@ -80,7 +81,7 @@ pub async fn watch_health(
 }
 
 fn is_cache_bad(hs: &QuorumHealthState) -> bool {
-    hs.health == QuorumHealth::Bad
+    !(hs.health == QuorumHealth::Bad
         || hs.state == QuorumState::Undefined
-        || hs.state == QuorumState::Retry
+        || hs.state == QuorumState::Retry)
 }
