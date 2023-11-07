@@ -36,7 +36,7 @@ create-end-entity-tls:
     docker run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
           ghcr.io/sebadob/nioca \
           x509 \
-          --cn 'Rauthy Default' \
+          --cn 'localhost' \
           --alt-name-dns 'localhost' \
           --alt-name-dns 'redhac.local' \
           --alt-name-dns 'rauthy.local' \
