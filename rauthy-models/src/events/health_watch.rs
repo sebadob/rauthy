@@ -2,7 +2,7 @@ use crate::app_state::DbPool;
 use crate::entity::is_db_alive;
 use crate::events::event::Event;
 use rauthy_common::constants::HA_MODE;
-use redhac::{QuorumHealth, QuorumHealthState, QuorumState};
+use redhac::{QuorumHealth, QuorumHealthState};
 use std::time::Duration;
 use tokio::sync::watch;
 use tracing::debug;
