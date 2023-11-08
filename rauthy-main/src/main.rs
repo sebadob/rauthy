@@ -5,10 +5,10 @@ use actix_web::{middleware, web, App, HttpServer};
 use actix_web_prom::PrometheusMetricsBuilder;
 use prometheus::Registry;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_DPOP_NONCES, CACHE_NAME_LOGIN_DELAY,
-    CACHE_NAME_POW, CACHE_NAME_SESSIONS, CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA,
-    DPOP_NONCE_EXP, POW_EXP, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
-    WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
+    CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_DPOP_NONCES, CACHE_NAME_EPHEMERAL_CLIENTS,
+    CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW, CACHE_NAME_SESSIONS, CACHE_NAME_WEBAUTHN,
+    CACHE_NAME_WEBAUTHN_DATA, DPOP_NONCE_EXP, EPHEMERAL_CLIENTS_CACHE_LIFETIME, POW_EXP,
+    RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::password_hasher;
 use rauthy_handlers::middleware::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -103,6 +103,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     cache_config.spawn_cache(
         CACHE_NAME_DPOP_NONCES.to_string(),
         redhac::TimedCache::with_lifespan(*DPOP_NONCE_EXP as u64),
+        None,
+    );
+
+    // ephemeral clients
+    cache_config.spawn_cache(
+        CACHE_NAME_EPHEMERAL_CLIENTS.to_string(),
+        redhac::TimedCache::with_lifespan(*EPHEMERAL_CLIENTS_CACHE_LIFETIME),
         None,
     );
 
