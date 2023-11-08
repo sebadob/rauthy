@@ -1,20 +1,27 @@
 use std::str::FromStr;
+use std::sync::OnceLock;
+use std::time::Duration;
 
 use actix_multipart::Multipart;
+use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::http::{header, Uri};
 use actix_web::{web, HttpRequest};
 use futures_util::StreamExt;
 use redhac::{
     cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, cache_put, cache_remove,
     AckLevel,
 };
+use reqwest::header::CONTENT_TYPE;
+use reqwest::tls;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
 use tracing::{debug, error, warn};
 use utoipa::ToSchema;
+use validator::Validate;
 
-use rauthy_common::constants::{CACHE_NAME_12HR, IDX_CLIENTS, IDX_CLIENT_LOGO, PROXY_MODE};
+use rauthy_common::constants::{
+    APPLICATION_JSON, CACHE_NAME_12HR, IDX_CLIENTS, IDX_CLIENT_LOGO, PROXY_MODE, RAUTHY_VERSION,
+};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{cache_entry_client, get_client_ip, get_rand};
 use rauthy_common::utils::{decrypt, encrypt};
@@ -27,6 +34,8 @@ use crate::request::{EphemeralClientRequest, NewClientRequest};
 use crate::ListenScheme;
 
 const RAUTHY_DEFAULT_LOGO: &str = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+Cjxzdmcgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgdmlld0JveD0iMCAwIDUxMiAxMzgiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSIgeG1sbnM6c2VyaWY9Imh0dHA6Ly93d3cuc2VyaWYuY29tLyIgc3R5bGU9ImZpbGwtcnVsZTpldmVub2RkO2NsaXAtcnVsZTpldmVub2RkO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxLjU7Ij4KICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDEsMCwwLDEsMCwtMTEpIj4KICAgICAgICA8ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLDAsMCwxLDAsLTE3NikiPgogICAgICAgICAgICA8ZyB0cmFuc2Zvcm09Im1hdHJpeCgwLjkyMDMyNSwwLDAsMS44NDE1MSw0NS45Mjc5LDI2LjQ1OSkiPgogICAgICAgICAgICAgICAgPHJlY3QgeD0iMjcuNzQxIiB5PSIxNTEuNTciIHdpZHRoPSIyMDAuNTE3IiBoZWlnaHQ9IjEwLjE0OCIgc3R5bGU9ImZpbGw6cmdiKDQsNywxMSk7Ii8+CiAgICAgICAgICAgIDwvZz4KICAgICAgICAgICAgPGcgdHJhbnNmb3JtPSJtYXRyaXgoMS45MzQ3MiwwLDAsMS44MjczMiw4LjM1NjE4LDI4Ljc1MzMpIj4KICAgICAgICAgICAgICAgIDxyZWN0IHg9IjMzLjMwNyIgeT0iOTcuMTUiIHdpZHRoPSI5NC42OTMiIGhlaWdodD0iNTQuNDIiIHN0eWxlPSJmaWxsOnJnYig0LDcsMTEpO3N0cm9rZTpyZ2IoNCw3LDExKTtzdHJva2Utd2lkdGg6MS4wNnB4OyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDEuODI3MzIsMCwwLDEuODI3MzIsLTE2MC44MjIsNzAuMTgwNikiPgogICAgICAgICAgICAgICAgPGcgdHJhbnNmb3JtPSJtYXRyaXgoNzIsMCwwLDcyLDIyNy4xNzQsMTIzLjQxNykiPgogICAgICAgICAgICAgICAgPC9nPgogICAgICAgICAgICAgICAgPHRleHQgeD0iMTI4Ljk4MnB4IiB5PSIxMjMuNDE3cHgiIHN0eWxlPSJmb250LWZhbWlseTonQ2FsaWJyaS1Cb2xkJywgJ0NhbGlicmknLCBzYW5zLXNlcmlmO2ZvbnQtd2VpZ2h0OjcwMDtmb250LXNpemU6NzJweDtmaWxsOndoaXRlOyI+cjx0c3BhbiB4PSIxNTIuOTk0cHggMTg4LjUzN3B4ICIgeT0iMTIzLjQxN3B4IDEyMy40MTdweCAiPmF1PC90c3Bhbj48L3RleHQ+CiAgICAgICAgICAgIDwvZz4KICAgICAgICAgICAgPGcgdHJhbnNmb3JtPSJtYXRyaXgoMSwwLDAsMS4wMTYxNywtMS40MjEwOWUtMTQsLTUuMjQ0OTIpIj4KICAgICAgICAgICAgICAgIDxwYXRoIGQ9Ik00NDAuOTM2LDMyMi42NDNMNDM5LjIwNCwzMjQuMjY2TDI1NS40ODIsMzI0LjI2NkwyNTUuNDgyLDMwNS43MjFMNDQwLjkzNiwzMDUuNzIxTDQ0MC45MzYsMzIyLjY0M1oiIHN0eWxlPSJmaWxsOnVybCgjX0xpbmVhcjEpOyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDAuOTIwMTkxLDAsMCwxLjg0MTIxLDQ2LjI0NjQsLTkxLjMzODMpIj4KICAgICAgICAgICAgICAgIDxyZWN0IHg9IjI3Ljc0MSIgeT0iMTUxLjU3IiB3aWR0aD0iMjAwLjUxNyIgaGVpZ2h0PSIxMC4xNDgiIHN0eWxlPSJmaWxsOnVybCgjX0xpbmVhcjIpOyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDEuOTc1OTgsMCwwLDEuODQ2MTksMTkwLjE4NywyNi4wNjIpIj4KICAgICAgICAgICAgICAgIDxyZWN0IHg9IjMzLjMwNyIgeT0iOTcuMTUiIHdpZHRoPSI5NC42OTMiIGhlaWdodD0iNTQuNDIiIHN0eWxlPSJmaWxsOnJnYig0Myw2NSwxMDcpOyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik00MzkuMjA0LDE4Ny43MzRMNDQwLjU1NywxODkuMDA3TDQ0MC41NTcsMjA2LjI3OUwyNTYsMjA2LjI3OUwyNTYsMTg3LjczNEw0MzkuMjA0LDE4Ny43MzRaIiBzdHlsZT0iZmlsbDpyZ2IoNDMsNjUsMTA3KTsiLz4KICAgICAgICAgICAgPGcgdHJhbnNmb3JtPSJtYXRyaXgoMS44MjczMiwwLDAsMS44MjczMiwtMTU0LjY2MSw3MC4xODA2KSI+CiAgICAgICAgICAgICAgICA8ZyB0cmFuc2Zvcm09Im1hdHJpeCg3MiwwLDAsNzIsMzIzLjA0NSwxMjMuNDE3KSI+CiAgICAgICAgICAgICAgICA8L2c+CiAgICAgICAgICAgICAgICA8dGV4dCB4PSIyMjYuNjQ2cHgiIHk9IjEyMy40MTdweCIgc3R5bGU9ImZvbnQtZmFtaWx5OidDYWxpYnJpLUJvbGQnLCAnQ2FsaWJyaScsIHNhbnMtc2VyaWY7Zm9udC13ZWlnaHQ6NzAwO2ZvbnQtc2l6ZTo3MnB4O2ZpbGw6d2hpdGU7Ij50aDx0c3BhbiB4PSIyODguOTQzcHggIiB5PSIxMjMuNDE3cHggIj55PC90c3Bhbj48L3RleHQ+CiAgICAgICAgICAgIDwvZz4KICAgICAgICAgICAgPGcgdHJhbnNmb3JtPSJtYXRyaXgoMiwwLDAsMiwwLDApIj4KICAgICAgICAgICAgICAgIDxwYXRoIGQ9Ik0yMTkuNjAyLDkzLjg2N0wyNTYsMTI4TDIxOS42MDIsMTYyLjEzM0wyMTkuNjAyLDkzLjg2N1oiIHN0eWxlPSJmaWxsOnJnYig0Myw2NSwxMDcpOyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDIsMCwwLDEuOTU3MzksMCwzLjk5OTk3KSI+CiAgICAgICAgICAgICAgICA8cGF0aCBkPSJNMzYuMzk4LDkzLjg2N0wwLDkzLjg2N0wzNS45MDgsMTI4LjUyNEwwLDE2My42MTlMMzYuMzk4LDE2My42MTkiIHN0eWxlPSJmaWxsOnJnYig0LDcsMTEpOyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgPC9nPgogICAgPC9nPgogICAgPGRlZnM+CiAgICAgICAgPGxpbmVhckdyYWRpZW50IGlkPSJfTGluZWFyMSIgeDE9IjAiIHkxPSIwIiB4Mj0iMSIgeTI9IjAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiBncmFkaWVudFRyYW5zZm9ybT0ibWF0cml4KDE4NS40NTQsMCwwLDE4LjU0NDMsMjU1LjQ4MiwzMTQuOTk0KSI+PHN0b3Agb2Zmc2V0PSIwIiBzdHlsZT0ic3RvcC1jb2xvcjpyZ2IoNCw3LDExKTtzdG9wLW9wYWNpdHk6MSIvPjxzdG9wIG9mZnNldD0iMSIgc3R5bGU9InN0b3AtY29sb3I6cmdiKDQzLDY1LDEwNyk7c3RvcC1vcGFjaXR5OjEiLz48L2xpbmVhckdyYWRpZW50PgogICAgICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iX0xpbmVhcjIiIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgZ3JhZGllbnRUcmFuc2Zvcm09Im1hdHJpeCgyMDAuNTE3LDAsMCwxMC4xNDgzLDI3Ljc0MTQsMTU2LjY0NSkiPjxzdG9wIG9mZnNldD0iMCIgc3R5bGU9InN0b3AtY29sb3I6cmdiKDQsNywxMSk7c3RvcC1vcGFjaXR5OjEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0eWxlPSJzdG9wLWNvbG9yOnJnYig0Myw2NSwxMDcpO3N0b3Atb3BhY2l0eToxIi8+PC9saW5lYXJHcmFkaWVudD4KICAgIDwvZGVmcz4KPC9zdmc+Cg==";
+
+static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 
 /**
 # OIDC Client
@@ -779,9 +788,51 @@ impl Client {
     }
 }
 
-impl From<Uri> for Client {
-    fn from(value: Uri) -> Self {
-        todo!()
+impl Client {
+    async fn ephemeral_from_url(value: &str) -> Result<Self, ErrorResponse> {
+        let client = HTTP_CLIENT.get_or_init(|| {
+            reqwest::Client::builder()
+                .connect_timeout(Duration::from_secs(10))
+                .timeout(Duration::from_secs(10))
+                .user_agent(format!(
+                    "Rauthy v{} Ephemeral Client Resolver",
+                    RAUTHY_VERSION
+                ))
+                .min_tls_version(tls::Version::TLS_1_2)
+                .pool_idle_timeout(Duration::from_secs(600))
+                .build()
+                .unwrap()
+        });
+
+        let res = client
+            .get(value)
+            .header(CONTENT_TYPE, APPLICATION_JSON)
+            .send()
+            .await?;
+
+        // TODO should we follow redirections? If yes - how many?
+        // if res.status().is_redirection() {}
+
+        if !res.status().is_success() {
+            let msg = format!("Cannot fetch ephemeral client information from {}", value);
+            error!("{}", msg);
+            return Err(ErrorResponse::new(ErrorResponseType::Connection, msg));
+        }
+
+        let body = match res.json::<EphemeralClientRequest>().await {
+            Ok(b) => b,
+            Err(err) => {
+                let msg = format!(
+                    "Cannot deserialize into EphemeralClientRequest from {}: {:?}",
+                    value, err,
+                );
+                error!("{}", msg);
+                return Err(ErrorResponse::new(ErrorResponseType::BadRequest, msg));
+            }
+        };
+        body.validate()?;
+
+        Ok(Self::from(body))
     }
 }
 
@@ -930,11 +981,15 @@ pub fn is_origin_external<'a>(
 
 #[cfg(test)]
 mod tests {
-    use std::env;
+    use std::thread::JoinHandle;
+    use std::time::Duration;
+    use std::{env, thread};
 
     use actix_web::http::header;
     use actix_web::test::TestRequest;
+    use actix_web::{App, HttpResponse, HttpServer};
     use pretty_assertions::assert_eq;
+    use rauthy_common::constants::APPLICATION_JSON;
     use validator::Validate;
 
     use super::*;
@@ -1199,5 +1254,59 @@ mod tests {
         assert_eq!(flows.len(), 2);
 
         assert!(client.refresh_token);
+    }
+
+    #[tokio::test]
+    async fn test_ephemeral_from_url() {
+        let handle = serve_ephemeral_client();
+
+        // make sure the http server starts and keeps running
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        assert!(!handle.is_finished());
+
+        // try to build up the whole client from the url
+        let client_id = "http://127.0.0.1:10080/client";
+        let client = Client::ephemeral_from_url(client_id).await.unwrap();
+
+        // only id assertion here, the rest has been validated above in test_from_ephemeral_client()
+        assert_eq!(client.id.as_str(), "https://decentphtos.example/webid#this");
+    }
+
+    fn serve_ephemeral_client() -> JoinHandle<()> {
+        thread::spawn(move || {
+            let actix_system = actix_web::rt::System::new();
+            actix_system.block_on(async {
+                HttpServer::new(|| {
+                    App::new().route(
+                        "/client",
+                        web::get().to(|| async {
+                            // Serves the example client response from the Solid OIDC primer
+                            // https://solidproject.org/TR/oidc-primer
+                            HttpResponse::Ok().content_type(APPLICATION_JSON).body(r#"{
+                              "@context": [ "https://www.w3.org/ns/solid/oidc-context.jsonld" ],
+
+                              "client_id": "https://decentphtos.example/webid#this",
+                              "client_name": "DecentPhotos",
+                              "redirect_uris": [ "https://decentphotos.example/callback" ],
+                              "post_logout_redirect_uris": [ "https://decentphotos.example/logout" ],
+                              "client_uri": "https://decentphotos.example/",
+                              "logo_uri": "https://decentphotos.example/logo.png",
+                              "tos_uri": "https://decentphotos.example/tos.html",
+                              "scope": "openid webid offline_access",
+                              "grant_types": [ "refresh_token", "authorization_code" ],
+                              "response_types": [ "code" ],
+                              "default_max_age": 3600,
+                              "require_auth_time": true
+                            }"#,
+                            )
+                        }),
+                    )
+                })
+                .bind(("127.0.0.1", 10080))
+                .expect("port 10080 to be free for testing")
+                .run()
+                .await
+                .expect("ephemeral client test http server to start") })
+        })
     }
 }
