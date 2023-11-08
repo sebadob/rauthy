@@ -220,6 +220,42 @@ MAX_HASH_THREADS=1
 JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
 
 #####################################
+####### EPHEMERAL CLIENTS ###########
+#####################################
+
+# Can be set to 'true' to allow the dynamic client lookup via URLs as
+# 'client_id's during authorization_code flow initiation.
+# default: false
+#ENABLE_EPHEMERAL_CLIENTS=false
+
+# If set to 'true', a possibly existing 'webid' scope with an existing custom
+# attribute for a user will be mapped into the ID token's root (instead of
+# custom.webid) with the claim name 'webid'
+# default: false
+#ENABLE_WEBID_MAPPING=false
+
+# If set to 'true', 'solid' will be added to the 'aud' claim from the ID token
+# for ephemeral clients.
+# default: false
+#ENABLE_SOLID_AUD=false
+
+# If set to 'true', MFA / Passkeys will be forced for ephemeral clients.
+# default: false
+#EPHEMERAL_CLIENTS_FORCE_MFA=false
+
+# The allowed flows separated by ' ' for ephemeral clients.
+# default: "authorization_code"
+#EPHEMERAL_CLIENTS_ALLOWED_FLOWS="authorization_code refresh_token"
+
+# The allowed scopes separated by ' ' for ephemeral clients.
+# default: "openid profile email webid"
+#EPHEMERAL_CLIENTS_ALLOWED_SCOPES="openid profile email webid"
+
+# The lifetime in seconds ephemeral clients will be kept inside the cache.
+# default: 3600
+#EPHEMERAL_CLIENTS_CACHE_LIFETIME=3600
+
+#####################################
 ######### EVENTS / AUDIT ############
 #####################################
 
