@@ -282,7 +282,7 @@ release:
 
 
 # publishes the application images - full pipeline incl clippy and testing
-publish-versions: pull-latest-cross build-docs build-ui build-sqlite build-postgres
+publish: pull-latest-cross build-docs build-ui build-sqlite build-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 

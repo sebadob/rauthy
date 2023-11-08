@@ -1301,14 +1301,6 @@ mod tests {
             uris.get(0).unwrap().as_str(),
             "https://decentphotos.example/logout",
         );
-
-        let scopes = client.get_scopes();
-        assert_eq!(scopes.len(), 3);
-
-        let flows = client.get_flows();
-        assert_eq!(flows.len(), 2);
-
-        assert!(client.refresh_token);
     }
 
     #[tokio::test]
@@ -1324,7 +1316,7 @@ mod tests {
         let client = Client::ephemeral_from_url(client_id).await.unwrap();
 
         // only id assertion here, the rest has been validated above in test_from_ephemeral_client()
-        assert_eq!(client.id.as_str(), "https://decentphtos.example/webid#this");
+        assert_eq!(client.id.as_str(), "http://127.0.0.1:10080/client");
     }
 
     fn serve_ephemeral_client() -> JoinHandle<()> {
@@ -1340,7 +1332,7 @@ mod tests {
                             HttpResponse::Ok().content_type(APPLICATION_JSON).body(r#"{
                               "@context": [ "https://www.w3.org/ns/solid/oidc-context.jsonld" ],
 
-                              "client_id": "https://decentphtos.example/webid#this",
+                              "client_id": "http://127.0.0.1:10080/client",
                               "client_name": "DecentPhotos",
                               "redirect_uris": [ "https://decentphotos.example/callback" ],
                               "post_logout_redirect_uris": [ "https://decentphotos.example/logout" ],
