@@ -1,7 +1,7 @@
 use crate::app_state::AppState;
 use crate::entity::scopes::Scope;
 use actix_web::web;
-use rauthy_common::constants::CACHE_NAME_12HR;
+use rauthy_common::constants::{CACHE_NAME_12HR, ENABLE_WEBID_MAPPING};
 use rauthy_common::error_response::ErrorResponse;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
@@ -115,16 +115,23 @@ impl WellKnown {
             "RS512".to_string(),
             "EdDSA".to_string(),
         ];
-        let claims_supported = vec![
-            "aud".to_string(),
-            "sub".to_string(),
+        let mut claims_supported = vec![
             "iss".to_string(),
-            "name".to_string(),
-            "given_name".to_string(),
-            "family_name".to_string(),
+            "azp".to_string(),
+            "amr".to_string(),
+            "sub".to_string(),
             "preferred_username".to_string(),
             "email".to_string(),
+            "email_verified".to_string(),
+            "given_name".to_string(),
+            "family_name".to_string(),
+            "roles".to_string(),
+            "groups".to_string(),
+            "custom".to_string(),
         ];
+        if *ENABLE_WEBID_MAPPING {
+            claims_supported.push("webid".to_string());
+        }
         let code_challenge_methods_supported = vec!["plain".to_string(), "S256".to_string()];
         let dpop_signing_alg_values_supported = vec![
             "RS256".to_string(),
