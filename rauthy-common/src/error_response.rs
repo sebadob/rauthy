@@ -333,3 +333,12 @@ impl From<reqwest::header::ToStrError> for ErrorResponse {
         )
     }
 }
+
+impl From<reqwest::Error> for ErrorResponse {
+    fn from(value: reqwest::Error) -> Self {
+        ErrorResponse::new(
+            ErrorResponseType::Connection,
+            format!("Cannot send out HTTP request: {:?}", value),
+        )
+    }
+}
