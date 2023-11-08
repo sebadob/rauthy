@@ -7,9 +7,9 @@ use actix_web::HttpRequest;
 use css_color::Srgb;
 use rauthy_common::constants::{
     RE_ALNUM, RE_ALNUM_24, RE_ALNUM_48, RE_ALNUM_64, RE_ALNUM_SPACE, RE_API_KEY, RE_APP_ID,
-    RE_ATTR, RE_ATTR_DESC, RE_CHALLENGE, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_CODE_VERIFIER,
-    RE_FLOWS, RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE, RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_URI,
-    RE_USER_NAME,
+    RE_ATTR, RE_ATTR_DESC, RE_CHALLENGE, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE,
+    RE_CODE_VERIFIER, RE_FLOWS, RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE, RE_LOWERCASE_SPACE,
+    RE_MFA_CODE, RE_URI, RE_USER_NAME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::base64_decode;
@@ -30,6 +30,7 @@ pub struct ApiKeyRequest {
     pub access: Vec<ApiKeyAccess>,
 }
 
+// TODO is this not being used anymore? -> check!
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct AuthCodeRequest {
     /// Validation: `^[a-z0-9-_/]{2,128}$`
@@ -61,8 +62,11 @@ pub struct IpBlacklistRequest {
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
 pub struct AuthRequest {
-    /// Validation: `^[a-z0-9-_/]{2,128}$`
-    #[validate(regex(path = "RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
+    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
+    #[validate(regex(
+        path = "RE_CLIENT_ID_EPHEMERAL",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
+    ))]
     pub client_id: String,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
@@ -210,8 +214,11 @@ pub struct LoginRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub password: Option<String>,
-    /// Validation: `^[a-z0-9-_/]{2,128}$`
-    #[validate(regex(path = "RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
+    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
+    #[validate(regex(
+        path = "RE_CLIENT_ID_EPHEMERAL",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
+    ))]
     pub client_id: String,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
@@ -235,8 +242,11 @@ pub struct LoginRequest {
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct LoginRefreshRequest {
-    /// Validation: `^[a-z0-9-_/]{2,128}$`
-    #[validate(regex(path = "RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
+    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
+    #[validate(regex(
+        path = "RE_CLIENT_ID_EPHEMERAL",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
+    ))]
     pub client_id: String,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
@@ -468,8 +478,11 @@ pub struct TokenRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub redirect_uri: Option<String>,
-    /// Validation: `^[a-z0-9-_/]{2,128}$`
-    #[validate(regex(path = "RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
+    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
+    #[validate(regex(
+        path = "RE_CLIENT_ID_EPHEMERAL",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
+    ))]
     pub client_id: Option<String>,
     /// Validation: `[a-zA-Z0-9]`
     #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]

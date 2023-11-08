@@ -9,8 +9,9 @@ use jwt_simple::algorithms::{
 use jwt_simple::claims;
 use jwt_simple::prelude::*;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, HEADER_DPOP_NONCE, IDX_JWKS,
-    IDX_JWK_LATEST, IDX_LOGIN_TIME, SESSION_RENEW_MFA, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
+    CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, ENABLE_SOLID_AUD, ENABLE_WEBID_MAPPING,
+    HEADER_DPOP_NONCE, IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME, SESSION_RENEW_MFA, TOKEN_BEARER,
+    WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::HashPassword;
@@ -139,7 +140,7 @@ pub async fn authorize(
         false
     };
 
-    let client = Client::find(data, req_data.client_id)
+    let client = Client::find_maybe_ephemeral(data, req_data.client_id)
         .await
         .map_err(|err| (err, !user_must_provide_password))?;
 
@@ -393,6 +394,7 @@ pub async fn build_access_token(
         groups: None,
         cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt }),
         custom: None,
+        webid: None,
     };
 
     // add user specific claims if available
@@ -416,9 +418,14 @@ pub async fn build_access_token(
                 let scopes = csv.split(',');
                 for cust_name in scopes {
                     if let Some(value) = user_attrs.get(cust_name) {
-                        let json = serde_json::from_slice(value.as_slice())
-                            .expect("Converting cust user access attr to json");
-                        attr.insert(cust_name.to_string(), json);
+                        let json: serde_json::Value = serde_json::from_slice(value.as_slice())
+                            .expect("Converting cust user id attr to json");
+
+                        if cust_name == "webid" && *ENABLE_WEBID_MAPPING {
+                            custom_claims.webid = Some(json);
+                        } else {
+                            attr.insert(cust_name.to_string(), json);
+                        }
                     };
                 }
             }
@@ -448,6 +455,7 @@ pub async fn build_id_token(
     user: &User,
     data: &web::Data<AppState>,
     client: &Client,
+    dpop_fingerprint: Option<String>,
     lifetime: i64,
     nonce: Option<String>,
     scope: &str,
@@ -476,7 +484,9 @@ pub async fn build_id_token(
         family_name: None,
         roles: user.get_roles(),
         groups: None,
+        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt }),
         custom: None,
+        webid: None,
     };
 
     if scope.contains("email") {
@@ -501,9 +511,14 @@ pub async fn build_id_token(
                 let scopes = csv.split(',');
                 for cust_name in scopes {
                     if let Some(value) = user_attrs.get(cust_name) {
-                        let json = serde_json::from_slice(value.as_slice())
+                        let json: serde_json::Value = serde_json::from_slice(value.as_slice())
                             .expect("Converting cust user id attr to json");
-                        attr.insert(cust_name.to_string(), json);
+
+                        if cust_name == "webid" && *ENABLE_WEBID_MAPPING {
+                            custom_claims.webid = Some(json);
+                        } else {
+                            attr.insert(cust_name.to_string(), json);
+                        }
                     };
                 }
             }
@@ -518,8 +533,16 @@ pub async fn build_id_token(
         coarsetime::Duration::from_secs(lifetime as u64),
     )
     .with_subject(user.id.clone())
-    .with_issuer(data.issuer.clone())
-    .with_audience(client.id.to_string());
+    .with_issuer(data.issuer.clone());
+
+    if client.is_ephemeral() && *ENABLE_SOLID_AUD {
+        let mut aud = HashSet::with_capacity(2);
+        aud.insert("solid".to_string());
+        aud.insert(client.id.to_string());
+        claims = claims.with_audiences(aud);
+    } else {
+        claims = claims.with_audience(client.id.to_string());
+    }
 
     if let Some(nonce) = nonce {
         claims = claims.with_nonce(nonce);
@@ -725,12 +748,14 @@ async fn grant_type_code(
 
     // check the client for external origin and auth flow
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
-    let client = Client::find(data, client_id.clone()).await.map_err(|_| {
-        ErrorResponse::new(
-            ErrorResponseType::NotFound,
-            format!("Client '{}' not found", client_id),
-        )
-    })?;
+    let client = Client::find_maybe_ephemeral(data, client_id.clone())
+        .await
+        .map_err(|_| {
+            ErrorResponse::new(
+                ErrorResponseType::NotFound,
+                format!("Client '{}' not found", client_id),
+            )
+        })?;
     let header_origin = client.validate_origin(&req, &data.listen_scheme, &data.public_url)?;
     if client.confidential {
         let secret = client_secret.ok_or_else(|| {
@@ -1035,7 +1060,7 @@ async fn grant_type_refresh(
         ));
     }
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
-    let client = Client::find(data, client_id).await?;
+    let client = Client::find_maybe_ephemeral(data, client_id).await?;
 
     let header_origin = client.validate_origin(&req, &data.listen_scheme, &data.public_url)?;
 
@@ -1642,12 +1667,7 @@ pub async fn validate_auth_req_param(
     code_challenge_method: &Option<String>,
 ) -> Result<(Client, Option<(HeaderName, HeaderValue)>), ErrorResponse> {
     // client exists
-    let client = Client::find(data, String::from(client_id))
-        .await
-        .map_err(|mut e| {
-            e.message = format!("Client '{}' not found", client_id);
-            e
-        })?;
+    let client = Client::find_maybe_ephemeral(data, String::from(client_id)).await?;
 
     // allowed origin
     let header = client.validate_origin(req, &data.listen_scheme, &data.public_url)?;

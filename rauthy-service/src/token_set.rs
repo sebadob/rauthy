@@ -1,17 +1,17 @@
 use crate::auth;
 use actix_web::web;
-use rauthy_common::constants::{OFFLINE_TOKEN_LT};
+use rauthy_common::constants::OFFLINE_TOKEN_LT;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::scopes::Scope;
 use rauthy_models::entity::user_attr::UserAttrValueEntity;
 use rauthy_models::entity::users::User;
+use rauthy_models::JwtTokenType;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use time::OffsetDateTime;
 use utoipa::ToSchema;
-use rauthy_models::JwtTokenType;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct TokenSet {
@@ -153,6 +153,7 @@ impl TokenSet {
             user,
             data,
             client,
+            dpop_fingerprint.clone(),
             lifetime,
             nonce,
             &scope,
@@ -172,8 +173,16 @@ impl TokenSet {
         .await?;
         let refresh_token = if client.refresh_token {
             Some(
-                auth::build_refresh_token(user, data, dpop_fingerprint, client, lifetime, scopes, is_auth_code_flow)
-                    .await?,
+                auth::build_refresh_token(
+                    user,
+                    data,
+                    dpop_fingerprint,
+                    client,
+                    lifetime,
+                    scopes,
+                    is_auth_code_flow,
+                )
+                .await?,
             )
         } else {
             None
