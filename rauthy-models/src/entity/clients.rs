@@ -12,7 +12,7 @@ use redhac::{
     AckLevel,
 };
 use reqwest::header::CONTENT_TYPE;
-use reqwest::tls;
+use reqwest::{tls, Url};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
 use tracing::{debug, error, warn};
@@ -20,7 +20,9 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use rauthy_common::constants::{
-    APPLICATION_JSON, CACHE_NAME_12HR, IDX_CLIENTS, IDX_CLIENT_LOGO, PROXY_MODE, RAUTHY_VERSION,
+    APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_EPHEMERAL_CLIENTS, ENABLE_EPHEMERAL_CLIENTS,
+    EPHEMERAL_CLIENTS_ALLOWED_FLOWS, EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA,
+    IDX_CLIENTS, IDX_CLIENT_LOGO, PROXY_MODE, RAUTHY_VERSION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{cache_entry_client, get_client_ip, get_rand};
@@ -228,6 +230,43 @@ impl Client {
         .await?;
 
         Ok(clients)
+    }
+
+    /// Accepts either a pre-registered client_id or a URL as such.
+    /// If allowed, it will dynamically build an ephemeral client and cache it, it the client_id
+    /// is a URL. Otherwise, it will do a classic fetch from the database.
+    /// This function should be used in places where we would possibly accept an ephemeral client.
+    pub async fn find_maybe_ephemeral(
+        data: &web::Data<AppState>,
+        id: String,
+    ) -> Result<Self, ErrorResponse> {
+        if !*ENABLE_EPHEMERAL_CLIENTS || Url::from_str(&id).is_err() {
+            return Self::find(data, id).await;
+        }
+
+        if let Some(client) = cache_get!(
+            Client,
+            CACHE_NAME_EPHEMERAL_CLIENTS.to_string(),
+            id.clone(),
+            &data.caches.ha_cache_config,
+            false
+        )
+        .await?
+        {
+            return Ok(client);
+        }
+
+        let client = Self::ephemeral_from_url(&id).await?;
+
+        cache_put(
+            CACHE_NAME_EPHEMERAL_CLIENTS.to_string(),
+            id,
+            &data.caches.ha_cache_config,
+            &client,
+        )
+        .await?;
+
+        Ok(client)
     }
 
     pub async fn find_logo(data: &web::Data<AppState>, id: &str) -> Result<String, ErrorResponse> {
@@ -553,6 +592,10 @@ impl Client {
         self.scopes.replace(',', " ")
     }
 
+    pub fn is_ephemeral(&self) -> bool {
+        Url::from_str(&self.id).is_ok()
+    }
+
     /// Sanitizes the current scopes and deletes everything, which does not exist in the `scopes`
     /// table in the database
     pub async fn sanitize_scopes(
@@ -808,10 +851,16 @@ impl Client {
             .get(value)
             .header(CONTENT_TYPE, APPLICATION_JSON)
             .send()
-            .await?;
-
-        // TODO should we follow redirections? If yes - how many?
-        // if res.status().is_redirection() {}
+            .await
+            .map_err(|err| {
+                ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!(
+                        "Cannot fetch ephemeral client data from {}: {:?}",
+                        value, err
+                    ),
+                )
+            })?;
 
         if !res.status().is_success() {
             let msg = format!("Cannot fetch ephemeral client information from {}", value);
@@ -832,19 +881,25 @@ impl Client {
         };
         body.validate()?;
 
-        Ok(Self::from(body))
+        let slf = Self::from(body);
+        tracing::debug!("\n\n{:?}\n", slf);
+        if slf.id != value {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                format!(
+                    "Client id from remote document {} does not match the given URL {}",
+                    slf.id, value,
+                ),
+            ));
+        }
+
+        Ok(slf)
     }
 }
 
 impl From<EphemeralClientRequest> for Client {
     fn from(value: EphemeralClientRequest) -> Self {
-        let scopes = if let Some(scopes) = value.scope {
-            scopes.replace(' ', ",")
-        } else {
-            "openid,email,profile,groups".to_string()
-        };
-        let flows_enabled = value.grant_types.join(",");
-        let refresh_token = flows_enabled.contains("refresh_token");
+        let scopes = EPHEMERAL_CLIENTS_ALLOWED_SCOPES.clone();
 
         Self {
             id: value.client_id,
@@ -856,7 +911,7 @@ impl From<EphemeralClientRequest> for Client {
             redirect_uris: value.redirect_uris.join(","),
             post_logout_redirect_uris: value.post_logout_redirect_uris.map(|uris| uris.join(",")),
             allowed_origins: None,
-            flows_enabled,
+            flows_enabled: EPHEMERAL_CLIENTS_ALLOWED_FLOWS.clone(),
             access_token_alg: value
                 .access_token_signed_response_alg
                 .unwrap_or_default()
@@ -865,13 +920,13 @@ impl From<EphemeralClientRequest> for Client {
                 .id_token_signed_response_alg
                 .unwrap_or_default()
                 .to_string(),
-            refresh_token,
+            refresh_token: EPHEMERAL_CLIENTS_ALLOWED_FLOWS.contains("refresh_token"),
             auth_code_lifetime: 60,
             access_token_lifetime: value.default_max_age.unwrap_or(1800),
             scopes: scopes.clone(),
             default_scopes: scopes,
             challenge: Some("S256".to_string()),
-            force_mfa: false, // TODO maybe set by config var?
+            force_mfa: *EPHEMERAL_CLIENTS_FORCE_MFA,
         }
     }
 }
@@ -1295,7 +1350,7 @@ mod tests {
                               "scope": "openid webid offline_access",
                               "grant_types": [ "refresh_token", "authorization_code" ],
                               "response_types": [ "code" ],
-                              "default_max_age": 3600,
+                              "default_max_age": 60,
                               "require_auth_time": true
                             }"#,
                             )
