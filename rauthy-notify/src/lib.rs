@@ -91,10 +91,7 @@ impl Notification {
             );
         }
 
-        builder
-            // TODO impl config var to add private CA and disable TLS verify
-            .build()
-            .unwrap()
+        builder.build().unwrap()
     }
 }
 

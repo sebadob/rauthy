@@ -1,0 +1,62 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select * from pg_tables where tablename = 'passkeys' limit 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "schemaname",
+        "type_info": "Name"
+      },
+      {
+        "ordinal": 1,
+        "name": "tablename",
+        "type_info": "Name"
+      },
+      {
+        "ordinal": 2,
+        "name": "tableowner",
+        "type_info": "Name"
+      },
+      {
+        "ordinal": 3,
+        "name": "tablespace",
+        "type_info": "Name"
+      },
+      {
+        "ordinal": 4,
+        "name": "hasindexes",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "hasrules",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "hastriggers",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "rowsecurity",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "1ad4e762b16e3aa2451868b9638df4de8052bfa2a4b94cc57f2009f07f06eb21"
+}

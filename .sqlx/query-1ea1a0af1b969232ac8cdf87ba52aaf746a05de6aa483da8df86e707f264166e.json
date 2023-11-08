@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into clients (id, name, enabled, confidential, secret, secret_kid,\n        redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled,\n        access_token_alg, id_token_alg, refresh_token, auth_code_lifetime,\n        access_token_lifetime, scopes, default_scopes, challenge, force_mfa)\n        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)\n        on conflict(id) do update set name = $2, enabled = $3, confidential = $4, secret = $5,\n        secret_kid = $6, redirect_uris = $7, post_logout_redirect_uris = $8, allowed_origins = $9,\n        flows_enabled = $10, access_token_alg = $11, id_token_alg = $12, refresh_token = $13,\n        auth_code_lifetime = $14, access_token_lifetime = $15, scopes = $16, default_scopes = $17,\n        challenge = $18, force_mfa = $19",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Bool",
+        "Bool",
+        "Bytea",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Bool",
+        "Int4",
+        "Int4",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1ea1a0af1b969232ac8cdf87ba52aaf746a05de6aa483da8df86e707f264166e"
+}

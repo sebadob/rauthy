@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into colors (client_id, data) values ($1, $2)\n                on conflict(client_id) do update set data = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c5e89134147fb47eb9d2c3ab69890a7bce776d69bac1c9fa18ab0beca2c7ff79"
+}

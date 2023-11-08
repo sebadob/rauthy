@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into refresh_tokens (id, user_id, nbf, exp, scope, is_mfa)\n                values ($1, $2, $3, $4, $5, $6)\n                on conflict(id) do update set user_id = $2, nbf = $3, exp = $4, scope = $5",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Int8",
+        "Int8",
+        "Varchar",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b74ae383dffaa212acc204a4153ab7f87c234ee4f6fc61d8fae4b1001f33ec08"
+}
