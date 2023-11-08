@@ -1,4 +1,5 @@
 // Copyright 2023 Sebastian Dobe <sebastiandobe@mailbox.org>
+#![recursion_limit = "256"]
 
 use std::str::FromStr;
 

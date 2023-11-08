@@ -1,9 +1,9 @@
 use crate::common::{get_auth_headers, get_backend_url, CLIENT_SECRET};
 use pretty_assertions::{assert_eq, assert_ne};
+use rauthy_models::entity::jwk::JwkKeyPairAlg;
 use rauthy_models::request::{NewClientRequest, UpdateClientRequest};
 use rauthy_models::response::{ClientResponse, ClientSecretResponse};
 use std::error::Error;
-use rauthy_models::entity::jwk::JwkKeyPairAlg;
 
 mod common;
 
@@ -182,50 +182,51 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
 async fn test_client_secret() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
     let backend_url = get_backend_url();
+    let client = reqwest::Client::new();
 
     // get the current client secret
     let url = format!("{}/clients/init_client/secret", backend_url);
-    let res = reqwest::Client::new()
+    let res = client
         .get(&url)
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    assert!(res.status().is_success());
     let resp = res.json::<ClientSecretResponse>().await?;
     assert_eq!(resp.id, "init_client");
     assert_eq!(resp.confidential, true);
     assert_eq!(resp.secret.unwrap(), CLIENT_SECRET);
 
     let url = format!("{}/clients/init_client/secret", backend_url);
-    let res = reqwest::Client::new()
+    let res = client
         .get(&url)
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    assert!(res.status().is_success());
     let resp = res.json::<ClientSecretResponse>().await?;
     assert!(resp.secret.is_some());
     let secret = resp.secret.unwrap();
 
     // generate a new secret
-    let res = reqwest::Client::new()
+    let res = client
         .put(&url)
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    assert!(res.status().is_success());
     let resp = res.json::<ClientSecretResponse>().await?;
     assert!(resp.secret.is_some());
     let new_secret = resp.secret.unwrap();
     assert_ne!(new_secret, secret);
 
     let url = format!("{}/clients/init_client/secret", backend_url);
-    let res = reqwest::Client::new()
+    let res = client
         .get(&url)
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    assert!(res.status().is_success());
     let resp = res.json::<ClientSecretResponse>().await?;
     assert!(resp.secret.is_some());
     assert_eq!(resp.secret.unwrap(), new_secret);

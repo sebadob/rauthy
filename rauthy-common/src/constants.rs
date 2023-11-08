@@ -33,6 +33,7 @@ pub const EVENTS_LATEST_LIMIT: u16 = 100;
 pub const CACHE_NAME_12HR: &str = "12hr";
 pub const CACHE_NAME_AUTH_CODES: &str = "auth-codes";
 pub const CACHE_NAME_DPOP_NONCES: &str = "dpop-nonces";
+pub const CACHE_NAME_EPHEMERAL_CLIENTS: &str = "ephemeral-clients";
 pub const CACHE_NAME_LOGIN_DELAY: &str = "login-dly";
 pub const CACHE_NAME_SESSIONS: &str = "sessions";
 pub const CACHE_NAME_POW: &str = "pow";
@@ -85,6 +86,7 @@ lazy_static! {
     pub static ref RE_APP_ID: Regex = Regex::new(r"^[a-zA-Z0-9]{12}$").unwrap();
     pub static ref RE_BASE64: Regex = Regex::new(r"^[a-zA-Z0-9+/=]{4}$").unwrap();
     pub static ref RE_CHALLENGE: Regex = Regex::new(r"^(plain|S256)$").unwrap();
+    pub static ref RE_CLIENT_ID_EPHEMERAL: Regex = Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$").unwrap();
     pub static ref RE_CLIENT_NAME: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-\s]{2,128}$").unwrap();
     pub static ref RE_CODE_CHALLENGE: Regex = Regex::new(r"^[a-zA-Z0-9-\._~]{43,128}$").unwrap();
     pub static ref RE_CODE_VERIFIER: Regex = Regex::new(r"^[a-zA-Z0-9-\._~+/=]+$").unwrap();
@@ -108,6 +110,46 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("true"))
         .parse::<bool>()
         .unwrap_or(true);
+
+    pub static ref ENABLE_EPHEMERAL_CLIENTS: bool = env::var("ENABLE_EPHEMERAL_CLIENTS")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("ENABLE_EPHEMERAL_CLIENTS cannot be parsed to bool - bad format");
+    pub static ref ENABLE_WEBID_MAPPING: bool = env::var("ENABLE_WEBID_MAPPING")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("ENABLE_WEBID_MAPPING cannot be parsed to bool - bad format");
+    pub static ref ENABLE_SOLID_AUD: bool = env::var("ENABLE_SOLID_AUD")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("ENABLE_SOLID_AUD cannot be parsed to bool - bad format");
+    pub static ref EPHEMERAL_CLIENTS_FORCE_MFA: bool = env::var("EPHEMERAL_CLIENTS_FORCE_MFA")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("EPHEMERAL_CLIENTS_FORCE_MFA cannot be parsed to bool - bad format");
+    pub static ref EPHEMERAL_CLIENTS_ALLOWED_FLOWS: String = env::var("EPHEMERAL_CLIENTS_ALLOWED_FLOWS")
+            .unwrap_or_else(|_| String::from("authorization_code"))
+            .split(' ')
+            .map(|flow| {
+                let flow = flow.trim();
+                if !RE_FLOWS.is_match(flow) {
+                    panic!("unknown EPHEMERAL_CLIENTS_ALLOWED_FLOWS: {}", flow)
+                }
+                flow.to_string()
+            })
+            .collect::<Vec<String>>()
+            .join(",");
+    pub static ref EPHEMERAL_CLIENTS_ALLOWED_SCOPES: String = env::var("EPHEMERAL_CLIENTS_ALLOWED_SCOPES")
+            .unwrap_or_else(|_| String::from("openid profile email webid"))
+            .split(' ')
+            .filter(|scope| !scope.is_empty())
+            .map(|scope| scope.to_string())
+            .collect::<Vec<String>>()
+            .join(",");
+    pub static ref EPHEMERAL_CLIENTS_CACHE_LIFETIME: u64 = env::var("EPHEMERAL_CLIENTS_CACHE_LIFETIME")
+            .unwrap_or_else(|_| String::from("3600"))
+            .parse::<u64>()
+            .expect("EPHEMERAL_CLIENTS_CACHE_LIFETIME cannot be parsed to u64 - bad format");
 
     pub static ref PROXY_MODE: bool = env::var("PROXY_MODE")
         .unwrap_or_else(|_| String::from("false"))

@@ -2,12 +2,14 @@ use crate::common::{
     check_status, code_state_from_headers, cookie_csrf_headers_from_res, get_auth_headers,
     get_backend_url, CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME,
 };
-use actix_web::http;
+use actix_web::{http, web, App, HttpResponse, HttpServer};
 use chrono::Utc;
 use ed25519_compact::Noise;
 use josekit::jwk;
 use pretty_assertions::assert_eq;
-use rauthy_common::constants::{DPOP_TOKEN_ENDPOINT, HEADER_DPOP_NONCE, TOKEN_DPOP};
+use rauthy_common::constants::{
+    APPLICATION_JSON, DPOP_TOKEN_ENDPOINT, HEADER_DPOP_NONCE, TOKEN_DPOP,
+};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_encode, get_rand};
 use rauthy_models::entity::dpop_proof::{DPoPClaims, DPoPHeader};
@@ -22,6 +24,7 @@ use ring::digest;
 use std::error::Error;
 use std::fmt::Write;
 use std::ops::Sub;
+use std::thread;
 use std::thread::JoinHandle;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time;
@@ -703,6 +706,149 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
     assert_eq!(token_info.cnf.unwrap().jkt, fingerprint);
 
     Ok(())
+}
+
+#[tokio::test]
+async fn test_authorization_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
+    let backend_url = get_backend_url();
+    let client = reqwest::Client::new();
+
+    // host our own ephemeral client
+    let handle = serve_ephemeral_client();
+    // make sure the http server starts and keeps running
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    assert!(!handle.is_finished());
+    // our ephemeral client's id
+    let client_id = "http://127.0.0.1:10080/client";
+
+    // Step 1: GET /authorize for the CSRF token and simulate UI login
+    let challenge_plain = "oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys";
+    let hash = digest::digest(&digest::SHA256, challenge_plain.as_bytes());
+    let challenge_s256 = base64_url_encode(hash.as_ref());
+
+    let redirect_uri = "http://localhost:3000/oidc/callback";
+    let query = format!(
+        "client_id={}&redirect_uri={}&response_type=code&scope=openid+profile+email+webid",
+        client_id, redirect_uri
+    );
+    let query_pkce = format!(
+        "{}&code_challenge_method=S256&code_challenge={}",
+        query, challenge_s256
+    );
+    let url_auth = format!("{}/oidc/authorize?{}", backend_url, query_pkce);
+
+    // make s simple GET to extract the CSRF token
+    let res = reqwest::get(&url_auth).await?;
+    assert!(res.status().is_success());
+    let headers = cookie_csrf_headers_from_res(res).await?;
+
+    // login and get an authorization code
+    let nonce = get_rand(32);
+    let req_login = LoginRequest {
+        email: USERNAME.to_string(),
+        password: Some(PASSWORD.to_string()),
+        client_id: client_id.to_string(),
+        redirect_uri: redirect_uri.to_owned(),
+        scopes: None,
+        state: None,
+        nonce: Some(nonce.to_owned()),
+        code_challenge: Some(challenge_s256),
+        code_challenge_method: Some("S256".to_string()),
+    };
+    let res = client
+        .post(&url_auth)
+        .headers(headers.clone())
+        .json(&req_login)
+        .send()
+        .await?;
+    assert!(res.status().is_success());
+    let (code, state) = code_state_from_headers(res)?;
+    assert!(state.is_none());
+    println!("Extracted code: {:?}", code);
+
+    // get a token with the code
+    let req_token = TokenRequest {
+        grant_type: "authorization_code".to_string(),
+        code: Some(code.to_string()),
+        redirect_uri: None,
+        client_id: Some(client_id.to_string()),
+        client_secret: None,
+        code_verifier: Some(challenge_plain.to_string()),
+        username: None,
+        password: None,
+        refresh_token: None,
+    };
+
+    let url_token = format!("{}/oidc/token", backend_url);
+    let res = client.post(&url_token).form(&req_token).send().await?;
+    assert!(res.status().is_success());
+
+    let ts = res.json::<TokenSet>().await?;
+    assert!(ts.access_token.len() > 0);
+    assert!(ts.id_token.is_some());
+    assert!(ts.refresh_token.is_some());
+    assert_eq!(ts.expires_in, 60);
+
+    // now try to refresh the token
+    time::sleep(Duration::from_secs(1)).await;
+    let req = TokenRequest {
+        grant_type: "refresh_token".to_string(),
+        code: None,
+        redirect_uri: None,
+        client_id: Some(client_id.to_string()),
+        client_secret: None,
+        code_verifier: None,
+        username: None,
+        password: None,
+        refresh_token: Some(ts.refresh_token.clone().unwrap()),
+    };
+    let res = client.post(&url_token).form(&req).send().await?;
+    assert!(res.status().is_success());
+
+    let new_ts = res.json::<TokenSet>().await?;
+    assert!(ts.access_token.len() > 0);
+    assert!(new_ts.id_token.is_some());
+    assert!(new_ts.refresh_token.is_some());
+
+    Ok(())
+}
+
+fn serve_ephemeral_client() -> JoinHandle<()> {
+    thread::spawn(move || {
+        let actix_system = actix_web::rt::System::new();
+        actix_system.block_on(async {
+            HttpServer::new(|| {
+                App::new().route(
+                    "/client",
+                    web::get().to(|| async {
+                        // Serves the example client response from the Solid OIDC primer
+                        // https://solidproject.org/TR/oidc-primer
+                        HttpResponse::Ok().content_type(APPLICATION_JSON).body(r#"{
+                              "@context": [ "https://www.w3.org/ns/solid/oidc-context.jsonld" ],
+
+                              "client_id": "http://127.0.0.1:10080/client",
+                              "client_name": "DecentPhotos",
+                              "redirect_uris": [ "https://decentphotos.example/callback", "http://localhost:3000/oidc/callback" ],
+                              "post_logout_redirect_uris": [ "https://decentphotos.example/logout" ],
+                              "client_uri": "https://decentphotos.example/",
+                              "logo_uri": "https://decentphotos.example/logo.png",
+                              "tos_uri": "https://decentphotos.example/tos.html",
+                              "scope": "openid webid offline_access",
+                              "grant_types": [ "refresh_token", "authorization_code" ],
+                              "response_types": [ "code" ],
+                              "default_max_age": 60,
+                              "require_auth_time": true
+                            }"#,
+                        )
+                    }),
+                )
+            })
+                .bind(("127.0.0.1", 10080))
+                .expect("port 10080 to be free for testing")
+                .run()
+                .await
+                .expect("ephemeral client test http server to start") })
+    })
 }
 
 async fn validate_token(req: TokenValidationRequest) -> Result<TokenInfo, Box<dyn Error>> {

@@ -7,7 +7,6 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::ApiKeyEntity;
 use rauthy_models::request::ApiKeyRequest;
 use rauthy_models::response::{ApiKeyResponse, ApiKeysResponse};
-use tracing::debug;
 
 /// Returns all API Keys
 ///
@@ -157,7 +156,6 @@ pub async fn get_api_key_test(
     name: web::Path<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let p = principal.into_inner();
-    debug!("\n\n{:?}\n", p);
     if let Some(api_key) = p.api_key {
         let name = name.into_inner();
         if name != api_key.name {
