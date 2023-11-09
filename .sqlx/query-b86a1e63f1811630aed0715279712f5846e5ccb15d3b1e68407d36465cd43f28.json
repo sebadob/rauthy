@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select * from colors where client_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "client_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "data",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "b86a1e63f1811630aed0715279712f5846e5ccb15d3b1e68407d36465cd43f28"
+}

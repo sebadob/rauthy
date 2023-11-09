@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO passkeys\n            (user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified)\n            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Bytea",
+        "Int8",
+        "Int8",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e152872f2a21809783cbdea328e4798e2ab861457b364d19a21591f209ed8564"
+}

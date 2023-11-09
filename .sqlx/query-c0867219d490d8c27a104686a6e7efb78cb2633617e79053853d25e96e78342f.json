@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM api_keys WHERE name = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "secret",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 2,
+        "name": "created",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "expires",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "enc_key_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "access",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "c0867219d490d8c27a104686a6e7efb78cb2633617e79053853d25e96e78342f"
+}

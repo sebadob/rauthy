@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE\n            api_keys set secret = $1, expires = $2, enc_key_id = $3, access = $4\n            WHERE name = $5",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Int8",
+        "Varchar",
+        "Bytea",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7c7950d4b61a74e72744adc2f5d816feaa38992a014047834a725a3be6a07f3f"
+}

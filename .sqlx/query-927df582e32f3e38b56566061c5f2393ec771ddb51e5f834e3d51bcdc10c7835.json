@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from user_attr_values where key = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "927df582e32f3e38b56566061c5f2393ec771ddb51e5f834e3d51bcdc10c7835"
+}

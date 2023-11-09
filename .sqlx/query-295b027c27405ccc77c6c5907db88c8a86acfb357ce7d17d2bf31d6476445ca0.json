@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from magic_links where user_id = $1 and usage like 'email_change$%'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "295b027c27405ccc77c6c5907db88c8a86acfb357ce7d17d2bf31d6476445ca0"
+}

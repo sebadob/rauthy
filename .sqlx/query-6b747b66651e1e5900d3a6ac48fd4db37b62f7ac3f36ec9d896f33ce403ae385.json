@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from clients where id = 'init_client'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "6b747b66651e1e5900d3a6ac48fd4db37b62f7ac3f36ec9d896f33ce403ae385"
+}

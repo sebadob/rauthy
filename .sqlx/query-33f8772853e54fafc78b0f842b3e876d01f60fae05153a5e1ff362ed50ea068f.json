@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update magic_links set cookie = $1, exp = $2, used = $3 where id = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Int8",
+        "Bool",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "33f8772853e54fafc78b0f842b3e876d01f60fae05153a5e1ff362ed50ea068f"
+}

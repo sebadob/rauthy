@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select * from roles",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "ef03e49b8182cb1a2b7de11647c83ca386f9689aa00136a51cb12def4e40ecdb"
+}
