@@ -96,6 +96,7 @@
 
 <style>
     .container {
+        margin: 0 .25rem;
         padding: 10px;
     }
 

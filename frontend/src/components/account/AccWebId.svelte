@@ -3,7 +3,6 @@
     import {fade, slide} from 'svelte/transition';
     import {putUserWebIdData} from "../../utils/dataFetching.js";
     import Switch from "$lib/Switch.svelte";
-    import {REGEX_URI} from "../../utils/constants.js";
     import AccWebIdEntries from "./AccWebIdEntries.svelte";
 
     export let t;
@@ -16,6 +15,10 @@
     let success = false;
     let successEmailConfirm = false;
 
+    // do not set any value here - will be bound to validate function in <AccWebIdEntries/>
+    let getData;
+    let validateData;
+
     $: webIdLink = webIdData.is_open ?
         `${window.location.origin}/auth/v1/users/${webIdData.user_id}/webid`
         : '';
@@ -26,48 +29,27 @@
         }, 3000);
     }
 
-    // let formValues = {
-    //     email: user.email,
-    //     givenName: user.given_name,
-    //     familyName: user.family_name,
-    // };
-    // let formErrors = {};
-    //
-    // const schema = yup.object().shape({
-    //     email: yup.string()
-    //         .required(t.validEmail)
-    //         .email(t.validEmail),
-    //     givenName: yup.string()
-    //         .required(t.validGivenName)
-    //         .matches(REGEX_NAME, t.validGivenName),
-    //     familyName: yup.string()
-    //         .required(t.validFamilyName)
-    //         .matches(REGEX_NAME, t.validFamilyName),
-    // });
-
-    // function handleKeyPress(event) {
-    //     if (event.code === 'Enter') {
-    //         onSubmit();
-    //     }
-    // }
-
     async function onSubmit() {
-        // const valid = await validateForm();
-        // if (!valid) {
-        //     err = t.invalidInput;
-        //     return;
-        // }
+        err = '';
 
-        const data = {
-            user_id: webIdData.user_id,
-            is_open: webIdData.is_open,
-        };
-
+        let data = getData();
         console.log(data);
 
-        // TODO add key / value pairs
+        const isValid = validateData();
+        console.log(isValid);
+        if (!isValid) {
+            return;
+        }
 
-        let res = await putUserWebIdData(data.user_id, data);
+        const payload = {
+            user_id: webIdData.user_id,
+            is_open: webIdData.is_open,
+            data,
+        };
+
+        console.log(payload);
+
+        let res = await putUserWebIdData(payload.user_id, payload);
         if (res.ok) {
             success = true;
         } else {
@@ -75,17 +57,6 @@
             err = body.message;
         }
     }
-
-    // async function validateForm() {
-    //     try {
-    //         await schema.validate(formValues, {abortEarly: false});
-    //         formErrors = {};
-    //         return true;
-    //     } catch (err) {
-    //         formErrors = extractFormErrors(err);
-    //         return false;
-    //     }
-    // }
 
 </script>
 
@@ -107,7 +78,13 @@
 
                 <!-- Custom Data -->
                 <p>{t.webIdDescData}</p>
-                <AccWebIdEntries bind:t bind:webIdData bind:viewModePhone />
+                <AccWebIdEntries
+                        bind:t
+                        bind:webIdData
+                        bind:viewModePhone
+                        bind:getData
+                        bind:validateData
+                />
             </div>
         {/if}
 

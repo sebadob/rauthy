@@ -1,52 +1,36 @@
 <script>
-    import * as yup from "yup";
-    import {REGEX_NAME} from "../../utils/constants.js";
+    import {REGEX_URI_SPACE} from "../../utils/constants.js";
     import Input from "$lib/inputs/Input.svelte";
     import IconStop from "$lib/icons/IconStop.svelte";
 
     export let t;
+    export let entry = { key: '', value: '', keyErr: '', valueErr: '' };
 
-    export let entry = {
-        key: '',
-        value: '',
-    };
     export let isKeyUnique;
     export let removeKey;
     export let viewModePhone = false;
 
-    $: inputWidth = viewModePhone ? 'calc(100vw - 1.5rem)' : '350px';
-    $: inputWidthValue = viewModePhone ? 'calc(100vw - 1.5rem)' : 'calc(350px + 3rem)';
+    $: inputWidth = viewModePhone ? 'calc(100vw - 3.5rem)' : '360px';
+    $: inputWidthValue = viewModePhone ? 'calc(100vw - 1.5rem)' : 'calc(380px + 3rem)';
 
-    let formErrors = {};
-    const schema = yup.object().shape({
-        key: yup.string()
-            .required('*')
-            .email(t.validEmail),
-        value: yup.string()
-            .required('*')
-            .matches(REGEX_NAME, t.validGivenName),
-    });
-
-    async function validateForm() {
-        formErrors = {};
-
+    function validateKey() {
+        entry.keyErr = '';
         if (!isKeyUnique(entry.key)) {
-            formErrors.key = t.keyUnique;
+            entry.keyErr = t.keyUnique;
         }
-        // TODO
     }
 
 </script>
 
 <div class="entry">
-    <div class="row1">
+    <div class="row1" style:gap={viewModePhone ? '0' : '2.5rem'}>
         <Input
                 bind:value={entry.key}
-                bind:error={formErrors.key}
+                bind:error={entry.keyErr}
                 autocomplete="off"
                 placeholder={t.key}
-                on:input={validateForm}
                 width={inputWidth}
+                on:input={validateKey}
         >
             {t.key.toUpperCase()}
         </Input>
@@ -58,16 +42,14 @@
                 on:click={() => removeKey(entry.key)}
                 on:keypress={() => removeKey(entry.key)}
         >
-            <IconStop color="var(--col-err)" width="1.75rem" />
+            <IconStop color="var(--col-err)" width="1.5rem" />
         </div>
     </div>
-
     <Input
             bind:value={entry.value}
-            bind:error={formErrors.value}
+            bind:error={entry.valueErr}
             autocomplete="off"
             placeholder={entry.key}
-            on:input={validateForm}
             width={inputWidthValue}
     >
         {entry.key}
@@ -76,19 +58,17 @@
 
 <style>
     .delete {
-        margin-top: -.15rem;
+        margin-top: -.5rem;
         margin-left: .15rem;
         cursor: pointer;
     }
 
     .entry {
         margin: 1rem 0;
-        /*border: 1px solid red;*/
     }
 
     .row1 {
         display: flex;
         align-items: center;
-        gap: 1rem;
     }
 </style>
