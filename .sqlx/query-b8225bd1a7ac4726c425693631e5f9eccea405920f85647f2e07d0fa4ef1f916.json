@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE passkeys\n            SET passkey = $1, last_used = $2\n            WHERE user_id = $3 AND name = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Int8",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b8225bd1a7ac4726c425693631e5f9eccea405920f85647f2e07d0fa4ef1f916"
+}

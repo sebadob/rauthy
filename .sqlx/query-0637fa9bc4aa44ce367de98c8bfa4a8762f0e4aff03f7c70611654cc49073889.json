@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM events ORDER BY timestamp DESC LIMIT $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "timestamp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "typ",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 3,
+        "name": "level",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 4,
+        "name": "ip",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "data",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "text",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "0637fa9bc4aa44ce367de98c8bfa4a8762f0e4aff03f7c70611654cc49073889"
+}

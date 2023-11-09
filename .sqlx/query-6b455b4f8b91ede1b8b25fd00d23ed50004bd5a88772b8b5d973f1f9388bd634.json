@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select * from scopes",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "attr_include_access",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "attr_include_id",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "6b455b4f8b91ede1b8b25fd00d23ed50004bd5a88772b8b5d973f1f9388bd634"
+}

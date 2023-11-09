@@ -14,6 +14,7 @@ use rauthy_common::constants::{
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::base64_decode;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 use utoipa::{IntoParams, ToSchema};
@@ -695,6 +696,12 @@ pub struct WebauthnRegFinishRequest {
     /// Validation: `[a-zA-Z0-9]{64}`
     #[validate(regex(path = "RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
     pub magic_link_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+pub struct WebIdRequest {
+    pub is_open: bool,
+    pub data: Option<HashMap<String, String>>,
 }
 
 #[derive(Debug, Deserialize, Validate, IntoParams)]

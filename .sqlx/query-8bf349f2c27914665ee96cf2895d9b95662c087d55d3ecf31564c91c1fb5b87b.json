@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM passkeys WHERE user_id = $1 AND user_verified = true",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "passkey_user_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "passkey",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "credential_id",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 5,
+        "name": "registered",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "last_used",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "user_verified",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "8bf349f2c27914665ee96cf2895d9b95662c087d55d3ecf31564c91c1fb5b87b"
+}

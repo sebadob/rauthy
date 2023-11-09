@@ -1,21 +1,18 @@
-use std::collections::HashSet;
-
-use actix_web::web;
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
-use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
-use tracing::debug;
-use utoipa::ToSchema;
-
-use rauthy_common::constants::{CACHE_NAME_12HR, IDX_CLIENTS, IDX_SCOPES};
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::new_store_id;
-
 use crate::app_state::{AppState, DbTxn};
 use crate::entity::clients::Client;
 use crate::entity::user_attr::UserAttrConfigEntity;
 use crate::entity::well_known::WellKnown;
 use crate::request::ScopeRequest;
+use actix_web::web;
+use rauthy_common::constants::{CACHE_NAME_12HR, IDX_CLIENTS, IDX_SCOPES};
+use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::new_store_id;
+use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
+use std::collections::HashSet;
+use tracing::debug;
+use utoipa::ToSchema;
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, ToSchema)]
 pub struct Scope {

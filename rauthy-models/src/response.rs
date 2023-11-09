@@ -8,11 +8,12 @@ use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::users::{AccountType, User};
 use crate::entity::webauthn::PasskeyEntity;
 use crate::language::Language;
+use crate::JktClaim;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use time::OffsetDateTime;
 use tracing::debug;
 use utoipa::ToSchema;
-use crate::JktClaim;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ApiKeysResponse {
@@ -467,6 +468,31 @@ pub struct WebauthnLoginResponse {
     pub code: String,
     pub user_id: String,
     pub exp: u64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct WebIdResponse {
+    pub user_id: String,
+    pub email: String,
+    pub given_name: String,
+    pub family_name: String,
+    pub language: Language,
+    pub custom_data: Option<HashMap<String, String>>,
+}
+
+impl WebIdResponse {
+    pub fn as_turtle(&self) -> String {
+        // TODO serialize into correct turtle format for webid's
+        format!(
+            "{}\n{}\n{}\n{}\n{}\n{:?}",
+            self.user_id,
+            self.email,
+            self.given_name,
+            self.family_name,
+            self.language.as_str(),
+            self.custom_data,
+        )
+    }
 }
 
 #[derive(Debug, Serialize, ToSchema)]

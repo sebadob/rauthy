@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO\n            api_keys (name, secret, created, expires, enc_key_id, access)\n            VALUES ($1, $2, $3, $4, $5, $6)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Bytea",
+        "Int8",
+        "Int8",
+        "Varchar",
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bfe918d71b81ce159fbbdf088142fc1af737399e28cc8167ee812141bff86d31"
+}

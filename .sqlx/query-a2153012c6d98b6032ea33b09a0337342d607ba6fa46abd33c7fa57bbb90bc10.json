@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update recent_passwords set passwords = $1 where user_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a2153012c6d98b6032ea33b09a0337342d607ba6fa46abd33c7fa57bbb90bc10"
+}

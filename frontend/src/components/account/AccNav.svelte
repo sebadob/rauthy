@@ -3,9 +3,12 @@
 
     export let t;
     export let selected = t.navInfo;
+    export let showWebId = false;
     export let showWide = false;
 
-    let labels = [t.navInfo, t.navEdit, t.navPassword, t.navMfa, t.navLogout];
+    let labels = showWebId ?
+        [t.navInfo, t.navEdit, t.navPassword, t.navMfa, 'WebID', t.navLogout]
+        : [t.navInfo, t.navEdit, t.navPassword, t.navMfa, t.navLogout];
     let toggle = [];
 
     $: if (selected) {

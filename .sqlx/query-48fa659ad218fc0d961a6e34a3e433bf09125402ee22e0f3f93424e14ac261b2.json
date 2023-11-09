@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select * from sessions where id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "csrf_token",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "roles",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "groups",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "is_mfa",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "state",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "exp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 8,
+        "name": "last_seen",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
+        "name": "remote_ip",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "48fa659ad218fc0d961a6e34a3e433bf09125402ee22e0f3f93424e14ac261b2"
+}

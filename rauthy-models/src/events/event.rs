@@ -589,10 +589,11 @@ impl Event {
     pub fn fmt_data(&self) -> String {
         match self.typ {
             EventType::InvalidLogins => format!("Counter: {}", self.data.unwrap_or_default()),
-            EventType::IpBlacklisted => format!(
-                "Blacklisted until: {}",
-                self.text.as_deref().unwrap_or_default()
-            ),
+            EventType::IpBlacklisted => {
+                let d =
+                    DateTime::from_timestamp(self.data.unwrap_or_default(), 0).unwrap_or_default();
+                format!("IP blacklisted until {}", d.format("%Y/%m/%d %H:%M:%S"))
+            }
             EventType::IpBlacklistRemoved => "IP removed from blacklist".to_string(),
             EventType::JwksRotated => String::default(),
             EventType::NewUserRegistered => {

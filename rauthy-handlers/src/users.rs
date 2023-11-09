@@ -1,8 +1,11 @@
 use crate::{real_ip_from_req, ReqPrincipal};
+use actix_web::http::header::CONTENT_TYPE;
 use actix_web::http::StatusCode;
 use actix_web::{cookie, delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
+use actix_web_validator::Json;
 use rauthy_common::constants::{
-    COOKIE_MFA, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE, USER_REG_DOMAIN_RESTRICTION,
+    APPLICATION_JSON, COOKIE_MFA, ENABLE_WEB_ID, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE,
+    TEXT_TURTLE, USER_REG_DOMAIN_RESTRICTION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::build_csp_header;
@@ -14,17 +17,18 @@ use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::PasskeyEntity;
+use rauthy_models::entity::webids::WebId;
 use rauthy_models::events::event::Event;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
     MfaPurpose, NewUserRegistrationRequest, NewUserRequest, PasswordResetRequest,
     RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest, UserAttrConfigRequest,
-    UserAttrValuesUpdateRequest, WebauthnAuthFinishRequest, WebauthnAuthStartRequest,
+    UserAttrValuesUpdateRequest, WebIdRequest, WebauthnAuthFinishRequest, WebauthnAuthStartRequest,
     WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_models::response::{
     PasskeyResponse, UserAttrConfigResponse, UserAttrValueResponse, UserAttrValuesResponse,
-    UserResponse,
+    UserResponse, WebIdResponse,
 };
 use rauthy_models::templates::{Error1Html, Error3Html, ErrorHtml, UserRegisterHtml};
 use rauthy_service::password_reset;
@@ -82,7 +86,7 @@ pub async fn post_users(
     data: web::Data<AppState>,
     req: HttpRequest,
     principal: ReqPrincipal,
-    user: actix_web_validator::Json<NewUserRequest>,
+    user: Json<NewUserRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Create)?;
 
@@ -823,6 +827,143 @@ pub async fn post_webauthn_reg_finish(
         webauthn::reg_finish(&data, id, req_data.into_inner()).await?;
         Ok(HttpResponse::Created().finish())
     }
+}
+
+/// Returns a user's webid, if enabled
+#[utoipa::path(
+    get,
+    path = "/users/{id}/webid",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok", body = WebIdResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+        (status = 405, description = "MethodNotAllowed"),
+    ),
+)]
+#[get("/users/{id}/webid")]
+pub async fn get_user_webid(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    // check if webid's are enabled globally
+    if !*ENABLE_WEB_ID {
+        return Ok(HttpResponse::MethodNotAllowed().finish());
+    }
+
+    let id = id.into_inner();
+    let webid = WebId::find(&data, id).await?;
+
+    if !webid.is_open {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::NotFound,
+            "WebID not found".to_string(),
+        ));
+    }
+
+    let user = User::find(&data, webid.user_id).await?;
+
+    let resp = WebIdResponse {
+        user_id: user.id,
+        email: user.email,
+        given_name: user.given_name,
+        family_name: user.family_name,
+        language: user.language,
+        custom_data: webid.data,
+    };
+
+    let content_type = req
+        .headers()
+        .get(CONTENT_TYPE)
+        .map(|h| h.to_str().unwrap_or(TEXT_TURTLE))
+        .unwrap_or(TEXT_TURTLE);
+
+    if content_type == APPLICATION_JSON {
+        Ok(HttpResponse::Ok().json(resp))
+    } else {
+        // TODO serialize to turtle correctly
+        Ok(HttpResponse::Ok()
+            .content_type(TEXT_TURTLE)
+            .body(resp.as_turtle()))
+    }
+}
+
+/// Returns data and options set by the user for the `webid` preferences
+#[utoipa::path(
+    get,
+    path = "/users/{id}/webid/data",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok", body = WebId),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+        (status = 405, description = "MethodNotAllowed"),
+    ),
+)]
+#[get("/users/{id}/webid/data")]
+pub async fn get_user_webid_data(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    // check if webid's are enabled globally
+    if !*ENABLE_WEB_ID {
+        return Ok(HttpResponse::MethodNotAllowed().finish());
+    }
+
+    // check auth
+    principal.validate_session_auth()?;
+
+    let id = id.into_inner();
+    if principal.is_user(&id).is_err() {
+        // if the user id does not match, check if the principal is an admin
+        principal.validate_admin_session()?;
+    }
+
+    // request is valid -> either the user requests own data, or it is an admin
+    let webid = WebId::find(&data, id).await?;
+
+    Ok(HttpResponse::Ok().json(webid))
+}
+
+/// Returns data and options set by the user for the `webid` preferences
+#[utoipa::path(
+    put,
+    path = "/users/{id}/webid/data",
+    tag = "users",
+    request_body = WebIdRequest,
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 405, description = "MethodNotAllowed"),
+    ),
+)]
+#[put("/users/{id}/webid/data")]
+pub async fn put_user_webid_data(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+    payload: Json<WebIdRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    // check if webid's are enabled globally
+    if !*ENABLE_WEB_ID {
+        return Ok(HttpResponse::MethodNotAllowed().finish());
+    }
+
+    // check auth
+    principal.validate_session_auth()?;
+    let id = id.into_inner();
+    principal.is_user(&id)?;
+
+    let payload = payload.into_inner();
+    let web_id = WebId {
+        user_id: id,
+        is_open: payload.is_open,
+        data: payload.data,
+    };
+    WebId::upsert(&data, web_id).await?;
+
+    Ok(HttpResponse::Ok().finish())
 }
 
 /// Request a password reset

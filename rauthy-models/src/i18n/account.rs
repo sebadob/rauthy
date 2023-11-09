@@ -25,6 +25,8 @@ pub struct I18nAccount<'a> {
     given_name: &'a str,
     groups: &'a str,
     invalid_input: &'a str,
+    key: &'a str,
+    key_unique: &'a str,
     last_login: &'a str,
     mfa: I18nAccountMfa<'a>,
     mfa_activated: &'a str,
@@ -51,6 +53,10 @@ pub struct I18nAccount<'a> {
     valid_email: &'a str,
     valid_given_name: &'a str,
     valid_family_name: &'a str,
+    web_id_active: &'a str,
+    web_id_desc: &'a str,
+    web_id_desc_data: &'a str,
+    web_id_link_text: &'a str,
 }
 
 impl SsrJson for I18nAccount<'_> {
@@ -98,6 +104,8 @@ confirmed, your new address will be updated."#,
             given_name: "Given Name",
             groups: "Groups",
             invalid_input: "Invalid Input",
+            key: "Key",
+            key_unique: "Key must be unique",
             last_login: "Last Login",
             mfa: I18nAccountMfa::build_en(),
             mfa_activated: "MFA activated",
@@ -124,6 +132,12 @@ confirmed, your new address will be updated."#,
             valid_email: "Valid E-Mail format",
             valid_given_name: "Your given name with 2 - 32 non-special characters",
             valid_family_name: "Your family name with 2 - 32 non-special characters",
+            web_id_active: "WebID activated",
+            web_id_desc: r#"You have the option to enable your WebID here.
+This is a feature used by some networks for decentralized logins. If you do not know what it is,
+you most probably do not need it."#,
+            web_id_desc_data: "You can add personalized data to your WebID with key / value pairs:",
+            web_id_link_text: "If you have enabled and saved the activation, your WebID link is:",
         }
     }
 
@@ -157,6 +171,8 @@ enthaltenen Link bestätigt werden. Nach der Bestätigung wird die neue Adresse 
             given_name: "Vorname",
             groups: "Gruppen",
             invalid_input: "Ungültige Eingaben",
+            key: "Schlüssel",
+            key_unique: "Schlüssel muss einzigartig sein",
             last_login: "Letzter Login",
             mfa: I18nAccountMfa::build_de(),
             mfa_activated: "MFA aktiviert",
@@ -183,6 +199,14 @@ enthaltenen Link bestätigt werden. Nach der Bestätigung wird die neue Adresse 
             valid_email: "Gültige E-Mail Adresse",
             valid_given_name: "Vorname, 2 - 32 Buchstaben, keine Sonderzeichen",
             valid_family_name: "Nachname, 2 - 32  Buchstaben, keine Sonderzeichen",
+            web_id_active: "WebID aktiviert",
+            web_id_desc: r#"Hier haben sie die Option ihre WebID zu aktivieren.
+Dies ist ein Feature, was von manchen Netzwerken für dezentrale Logins genutzt wird.
+Sollten Sie nicht wissen, was die WebID ist, brauchen Sie sie höchstwahrscheinlich nicht."#,
+            web_id_desc_data: r#"Sie können personalisierte Daten zu Ihrer WebID in
+Schlüssel / Wert Paaren hinzufügen:"#,
+            web_id_link_text: r#"Wenn Sie die Einstellung aktiviert und gespeichert haben,
+ist Ihr WebID Link:"#,
         }
     }
 }

@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select * from magic_links where id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "csrf_token",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "cookie",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "exp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "used",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "usage",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "985f2f77ff6e4e7f3365a6f837dcf6ffe8a6fa411e6a007548609c837bc69f1b"
+}

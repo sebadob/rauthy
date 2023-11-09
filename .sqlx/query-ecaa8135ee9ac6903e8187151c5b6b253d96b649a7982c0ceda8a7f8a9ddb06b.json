@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update scopes set name = $1, attr_include_access = $2, attr_include_id = $3 where id = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ecaa8135ee9ac6903e8187151c5b6b253d96b649a7982c0ceda8a7f8a9ddb06b"
+}

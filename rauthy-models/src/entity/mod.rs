@@ -23,6 +23,7 @@ pub mod sessions;
 pub mod user_attr;
 pub mod users;
 pub mod webauthn;
+pub mod webids;
 pub mod well_known;
 
 pub async fn is_db_alive(db: &DbPool) -> bool {

@@ -11,7 +11,6 @@ export const REDIRECT_URI_SUCCESS = '/auth/v1/admin';
 export const REDIRECT_URI_SUCCESS_ACC = '/auth/v1/account';
 export const POST_LOGOUT_REDIRECT_URI = '/auth/v1/';
 
-// export const REGEX_LOWERCASE = /^[a-z0-9-_/]{2,128}$/gm;
 export const REGEX_API_KEY = /^[a-zA-Z0-9_/-]{2,24}$/gm;
 export const REGEX_NAME = /^[\w\sÀ-ÿ\-]{0,32}$/gm;
 export const REGEX_ATTR_DESC = /^[a-zA-Z0-9\-_/\s]{0,128}$/gm;
@@ -20,6 +19,7 @@ export const REGEX_CLIENT_ID = /^[a-zA-Z0-9\-_/]{2,128}$/gm;
 export const REGEX_CLIENT_NAME = /^[a-zA-Z0-9À-ÿ\-\s]{0,128}$/gm;
 export const REGEX_ROLES = /^[a-z0-9\-_/]{2,128}$/gm;
 export const REGEX_URI = /^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+$/gm;
+export const REGEX_URI_SPACE = /^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%\s]+$/m;
 export const REGEX_IP_V4 = /^(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}$/gm;
 
 // https://gist.github.com/olmokramer/82ccce673f86db7cda5e

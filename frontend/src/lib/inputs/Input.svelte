@@ -102,7 +102,7 @@
     }
 
     .err {
-        margin-top: -.4rem;
+        margin-top: -.3rem;
         margin-left: 5px;
         padding: 0 10px;
         font-size: .85rem;

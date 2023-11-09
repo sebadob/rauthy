@@ -228,11 +228,10 @@ JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
 # default: false
 #ENABLE_EPHEMERAL_CLIENTS=false
 
-# If set to 'true', a possibly existing 'webid' scope with an existing custom
-# attribute for a user will be mapped into the ID token's root (instead of
-# custom.webid) with the claim name 'webid'
+# Can be set to 'true' to enable WebID functionality like needed
+# for things like Solid OIDC.
 # default: false
-#ENABLE_WEBID_MAPPING=false
+ENABLE_WEB_ID=true
 
 # If set to 'true', 'solid' will be added to the 'aud' claim from the ID token
 # for ephemeral clients.

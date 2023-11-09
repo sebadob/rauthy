@@ -4,6 +4,8 @@
 
     export let t;
     export let user = {};
+    // webIdData will stay undefined if it is not enabled in the backend
+    export let webIdData;
     export let viewModePhone = false;
 
     $: classRow = viewModePhone ? 'rowPhone' : 'row';
@@ -62,6 +64,13 @@
         <CheckIcon check={user.email_verified}/>
     </div>
 
+    {#if webIdData}
+        <div class={classRow}>
+            <div class={classLabel}><b>{t.webIdActive}:</b></div>
+            <CheckIcon check={webIdData.is_open}/>
+        </div>
+    {/if}
+
     <div class={classRow}>
         <div class={classLabel}><b>{t.lastLogin}:</b></div>
         <span class="value">{formatDateFromTs(user.last_login)}</span>
@@ -87,6 +96,7 @@
 
 <style>
     .container {
+        margin: 0 .25rem;
         padding: 10px;
     }
 
