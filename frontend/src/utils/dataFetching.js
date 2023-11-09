@@ -162,6 +162,21 @@ export async function getUserPasskeys(id) {
 	});
 }
 
+export async function getUserWebIdData(id) {
+	return await fetch(`/auth/v1/users/${id}/webid/data`, {
+		method: 'GET',
+		headers: getCsrfHeaders(),
+	});
+}
+
+export async function putUserWebIdData(id, data) {
+	return await fetch(`/auth/v1/users/${id}/webid/data`, {
+		method: 'PUT',
+		headers: getCsrfHeaders(),
+		body: JSON.stringify(data),
+	});
+}
+
 export async function putUserSelf(id, data) {
 	return await fetch(`/auth/v1/users/${id}/self`, {
 		method: 'PUT',
