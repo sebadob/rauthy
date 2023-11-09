@@ -471,7 +471,7 @@ pub async fn build_id_token(
     let webid = if *ENABLE_WEB_ID && scope.contains("webid") {
         let is_open = WebId::find(data, user.id.clone())
             .await
-            .and_then(|webid| Ok(webid.is_open))
+            .map(|webid| webid.is_open)
             .unwrap_or(false);
 
         if is_open {
