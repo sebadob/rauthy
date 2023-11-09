@@ -31,10 +31,10 @@ impl From<WebId> for WebIdEntity {
 pub struct WebId {
     pub user_id: String,
     pub is_open: bool,
-    // TODO is JSON value a "good" value type here or does turtle only have String anyway?
+    // TODO is String / String a good combination here?
     // turtle works with triplets -> key and value are clear, what about predicate in this case?
     // is is always the same, or do we need to create some "turtle entry struct"?
-    pub data: Option<HashMap<String, serde_json::Value>>,
+    pub data: Option<HashMap<String, String>>,
 }
 
 impl WebId {

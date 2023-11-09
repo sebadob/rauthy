@@ -899,7 +899,10 @@ mod tests {
         assert!(key.is_err());
     }
 
+    // We usually want to ignore this test and only run it specifically, since it takes quite
+    // a long time to generate all these RSA keys
     #[tokio::test]
+    #[ignore]
     async fn test_signature_validation() {
         // generate some JWKs with third party libraries and validate them with out own logic
         // make sure they are all fine

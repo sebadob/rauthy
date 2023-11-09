@@ -922,6 +922,7 @@ pub async fn get_user_webid_data(
 
     // request is valid -> either the user requests own data, or it is an admin
     let webid = WebId::find(&data, id).await?;
+
     Ok(HttpResponse::Ok().json(webid))
 }
 

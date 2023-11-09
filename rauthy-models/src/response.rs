@@ -477,7 +477,7 @@ pub struct WebIdResponse {
     pub given_name: String,
     pub family_name: String,
     pub language: Language,
-    pub custom_data: Option<HashMap<String, serde_json::Value>>,
+    pub custom_data: Option<HashMap<String, String>>,
 }
 
 impl WebIdResponse {
