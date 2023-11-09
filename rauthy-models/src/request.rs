@@ -14,6 +14,7 @@ use rauthy_common::constants::{
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::base64_decode;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 use utoipa::{IntoParams, ToSchema};
@@ -695,6 +696,15 @@ pub struct WebauthnRegFinishRequest {
     /// Validation: `[a-zA-Z0-9]{64}`
     #[validate(regex(path = "RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
     pub magic_link_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+pub struct WebIdRequest {
+    pub is_open: bool,
+    // TODO is JSON value a "good" value type here or does turtle only have String anyway?
+    // turtle works with triplets -> key and value are clear, what about predicate in this case?
+    // is is always the same, or do we need to create some "turtle entry struct"?
+    pub data: Option<HashMap<String, serde_json::Value>>,
 }
 
 #[derive(Debug, Deserialize, Validate, IntoParams)]

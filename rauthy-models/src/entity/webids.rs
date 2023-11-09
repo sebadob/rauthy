@@ -2,10 +2,11 @@ use crate::app_state::AppState;
 use actix_web::web;
 use rauthy_common::constants::CACHE_NAME_12HR;
 use rauthy_common::error_response::ErrorResponse;
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
+use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
 use std::collections::HashMap;
+use utoipa::ToSchema;
 
 #[derive(Debug)]
 pub struct WebIdEntity {
@@ -26,7 +27,7 @@ impl From<WebId> for WebIdEntity {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct WebId {
     pub user_id: String,
     pub is_open: bool,
