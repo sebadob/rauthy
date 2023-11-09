@@ -138,6 +138,7 @@ use utoipa::{openapi, OpenApi};
             entity::webauthn::WebauthnLoginReq,
             entity::webauthn::WebauthnServiceReq,
             entity::well_known::WellKnown,
+            entity::webids::WebId,
 
             event::EventLevel,
             ErrorResponse,
@@ -177,6 +178,7 @@ use utoipa::{openapi, OpenApi};
             request::WebauthnRegFinishRequest,
             request::WebauthnAuthStartRequest,
             request::WebauthnAuthFinishRequest,
+            request::WebIdRequest,
 
             response::AppVersionResponse,
             response::BlacklistResponse,
@@ -203,6 +205,7 @@ use utoipa::{openapi, OpenApi};
             response::WebauthnAuthStartResponse,
             response::WebauthnLoginFinishResponse,
             response::WebauthnLoginResponse,
+            response::WebIdResponse,
 
             rauthy_models::JktClaim,
             token_set::TokenSet,
