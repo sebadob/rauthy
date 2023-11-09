@@ -10,7 +10,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.18.1-20231108"
+version = "0.19.0-20231109"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
