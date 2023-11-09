@@ -102,8 +102,6 @@ pub struct JwtAccessClaims {
     pub cnf: Option<JktClaim>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub webid: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -128,7 +126,7 @@ pub struct JwtIdClaims {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub webid: Option<serde_json::Value>,
+    pub webid: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

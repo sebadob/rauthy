@@ -9,9 +9,9 @@ use jwt_simple::algorithms::{
 use jwt_simple::claims;
 use jwt_simple::prelude::*;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, ENABLE_SOLID_AUD, ENABLE_WEBID_MAPPING,
-    HEADER_DPOP_NONCE, IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME, SESSION_RENEW_MFA, TOKEN_BEARER,
-    WEBAUTHN_REQ_EXP,
+    CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, ENABLE_SOLID_AUD, ENABLE_WEB_ID,
+    HEADER_DPOP_NONCE, IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME, PUB_URL_WITH_SCHEME,
+    SESSION_RENEW_MFA, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::HashPassword;
@@ -27,6 +27,7 @@ use rauthy_models::entity::scopes::Scope;
 use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::users::{AccountType, User};
 use rauthy_models::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
+use rauthy_models::entity::webids::WebId;
 use rauthy_models::events::event::Event;
 use rauthy_models::events::ip_blacklist_handler::{IpBlacklistReq, IpFailedLoginCheck};
 use rauthy_models::language::Language;
@@ -394,7 +395,6 @@ pub async fn build_access_token(
         groups: None,
         cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt }),
         custom: None,
-        webid: None,
     };
 
     // add user specific claims if available
@@ -418,14 +418,9 @@ pub async fn build_access_token(
                 let scopes = csv.split(',');
                 for cust_name in scopes {
                     if let Some(value) = user_attrs.get(cust_name) {
-                        let json: serde_json::Value = serde_json::from_slice(value.as_slice())
+                        let json = serde_json::from_slice(value.as_slice())
                             .expect("Converting cust user id attr to json");
-
-                        if cust_name == "webid" && *ENABLE_WEBID_MAPPING {
-                            custom_claims.webid = Some(json);
-                        } else {
-                            attr.insert(cust_name.to_string(), json);
-                        }
+                        attr.insert(cust_name.to_string(), json);
                     };
                 }
             }
@@ -473,6 +468,24 @@ pub async fn build_id_token(
         false => JwtAmrValue::Pwd.to_string(),
     };
 
+    let webid = if *ENABLE_WEB_ID && scope.contains("webid") {
+        let is_open = WebId::find(data, user.id.clone())
+            .await
+            .and_then(|webid| Ok(webid.is_open))
+            .unwrap_or(false);
+
+        if is_open {
+            Some(format!(
+                "{}/auth/v1/users/{}/webid",
+                *PUB_URL_WITH_SCHEME, user.id
+            ))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     let mut custom_claims = JwtIdClaims {
         azp: client.id.clone(),
         typ: JwtTokenType::Id,
@@ -486,7 +499,7 @@ pub async fn build_id_token(
         groups: None,
         cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt }),
         custom: None,
-        webid: None,
+        webid,
     };
 
     if scope.contains("email") {
@@ -511,14 +524,9 @@ pub async fn build_id_token(
                 let scopes = csv.split(',');
                 for cust_name in scopes {
                     if let Some(value) = user_attrs.get(cust_name) {
-                        let json: serde_json::Value = serde_json::from_slice(value.as_slice())
+                        let json = serde_json::from_slice(value.as_slice())
                             .expect("Converting cust user id attr to json");
-
-                        if cust_name == "webid" && *ENABLE_WEBID_MAPPING {
-                            custom_claims.webid = Some(json);
-                        } else {
-                            attr.insert(cust_name.to_string(), json);
-                        }
+                        attr.insert(cust_name.to_string(), json);
                     };
                 }
             }
@@ -535,6 +543,8 @@ pub async fn build_id_token(
     .with_subject(user.id.clone())
     .with_issuer(data.issuer.clone());
 
+    // TODO should we maybe always include the "solid" claim here depending on if a webid exists?
+    // like it is now, static clients would never include this claim, even though they might need it
     if client.is_ephemeral() && *ENABLE_SOLID_AUD {
         let mut aud = HashSet::with_capacity(2);
         aud.insert("solid".to_string());
