@@ -12,6 +12,7 @@ pub const HEADER_DPOP_NONCE: &str = "DPoP-Nonce";
 pub const HEADER_HTML: (&str, &str) = ("content-type", "text/html;charset=utf-8");
 pub const HEADER_RETRY_NOT_BEFORE: &str = "x-retry-not-before";
 pub const APPLICATION_JSON: &str = "application/json";
+pub const TEXT_TURTLE: &str = "text/turtle";
 
 pub const TOKEN_API_KEY: &str = "API-Key";
 pub const TOKEN_BEARER: &str = "Bearer";
@@ -100,10 +101,18 @@ lazy_static! {
     pub static ref RE_USER_NAME: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-\s]{2,32}$").unwrap();
     pub static ref RE_TOKEN_68: Regex = Regex::new(r"^[a-zA-Z0-9-._~+/]+=*$").unwrap();
 
+    pub static ref PUB_URL: String = env::var("PUB_URL").expect("PUB_URL env var is not set");
+    pub static ref PUB_URL_WITH_SCHEME: String = {
+        let scheme = if env::var("LISTEN_SCHEME").as_deref() == Ok("http") && !*PROXY_MODE {
+            "http"
+        } else {
+            "https"
+        };
+        format!("{}://{}", scheme, *PUB_URL)
+    };
     pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
-        let pub_url = env::var("PUB_URL").expect("PUB_URL env var is not set");
         let scheme = if *DEV_MODE && *DEV_DPOP_HTTP { "http" } else { "https" };
-        let uri = format!("{}://{}/auth/v1/oidc/token", scheme, pub_url);
+        let uri = format!("{}://{}/auth/v1/oidc/token", scheme, *PUB_URL);
         Uri::from_str(&uri).unwrap()
     };
     pub static ref DPOP_FORCE_NONCE: bool = env::var("DPOP_NONCE_FORCE")
@@ -115,10 +124,10 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
         .expect("ENABLE_EPHEMERAL_CLIENTS cannot be parsed to bool - bad format");
-    pub static ref ENABLE_WEBID_MAPPING: bool = env::var("ENABLE_WEBID_MAPPING")
+    pub static ref ENABLE_WEB_ID: bool = env::var("ENABLE_WEB_ID")
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
-        .expect("ENABLE_WEBID_MAPPING cannot be parsed to bool - bad format");
+        .expect("ENABLE_WEB_ID cannot be parsed to bool - bad format");
     pub static ref ENABLE_SOLID_AUD: bool = env::var("ENABLE_SOLID_AUD")
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
