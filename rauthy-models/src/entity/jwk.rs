@@ -14,7 +14,6 @@ use sqlx::{Error, FromRow, Row};
 use std::default::Default;
 use std::fmt::Debug;
 use std::str::FromStr;
-use tracing::debug;
 use utoipa::ToSchema;
 
 #[macro_export]
@@ -154,7 +153,6 @@ pub struct JWKS {
 // CRUD
 impl JWKS {
     pub async fn find_pk(data: &web::Data<AppState>) -> Result<JWKS, ErrorResponse> {
-        debug!("JWKS::find_pk");
         if let Some(jwks) = cache_get!(
             JWKS,
             CACHE_NAME_12HR.to_string(),
@@ -166,8 +164,6 @@ impl JWKS {
         {
             return Ok(jwks);
         }
-
-        debug!("JWKS::find_pk no cache hit");
 
         let res = sqlx::query_as!(Jwk, "select * from jwks")
             .fetch_all(&data.db)
