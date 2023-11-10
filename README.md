@@ -150,5 +150,5 @@ docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.18.0-lite
 
 ## Contributing
 
-If you want to contribute to this reposiroity, please take a look at
+If you want to contribute to this repository, please take a look at
 [CONTRIBUTING.md](https://github.com/sebadob/rauthy/blob/main/CONTRIBUTING.md)
