@@ -1,5 +1,7 @@
 // Copyright 2023 Sebastian Dobe <sebastiandobe@mailbox.org>
 
+#![forbid(unsafe_code)]
+
 use async_trait::async_trait;
 use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::error_response::ErrorResponse;

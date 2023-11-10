@@ -1,5 +1,7 @@
 // Copyright 2023 Sebastian Dobe <sebastiandobe@mailbox.org>
 
+#![forbid(unsafe_code)]
+
 use actix_web::rt::System;
 use actix_web::{middleware, web, App, HttpServer};
 use actix_web_prom::PrometheusMetricsBuilder;
