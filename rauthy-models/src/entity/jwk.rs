@@ -14,6 +14,7 @@ use sqlx::{Error, FromRow, Row};
 use std::default::Default;
 use std::fmt::Debug;
 use std::str::FromStr;
+use tracing::debug;
 use utoipa::ToSchema;
 
 #[macro_export]
@@ -153,6 +154,7 @@ pub struct JWKS {
 // CRUD
 impl JWKS {
     pub async fn find_pk(data: &web::Data<AppState>) -> Result<JWKS, ErrorResponse> {
+        debug!("JWKS::find_pk");
         if let Some(jwks) = cache_get!(
             JWKS,
             CACHE_NAME_12HR.to_string(),
@@ -164,6 +166,8 @@ impl JWKS {
         {
             return Ok(jwks);
         }
+
+        debug!("JWKS::find_pk no cache hit");
 
         let res = sqlx::query_as!(Jwk, "select * from jwks")
             .fetch_all(&data.db)
@@ -200,19 +204,16 @@ impl JWKS {
     }
 }
 
+// Note: do not add `serde(skip_serializing_if = "Option::is_none")` here.
+// This will lead to cache errors when deserializing the JWKS
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct JWKSPublicKey {
     pub kty: JwkKeyPairType,
     pub alg: Option<JwkKeyPairAlg>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub crv: Option<String>, // Ed25519
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub kid: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub n: Option<String>, // RSA
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub e: Option<String>, // RSA
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub x: Option<String>, // OKP
 }
 
