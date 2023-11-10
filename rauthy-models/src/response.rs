@@ -7,10 +7,15 @@ use crate::entity::sessions::SessionState;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::users::{AccountType, User};
 use crate::entity::webauthn::PasskeyEntity;
+use crate::entity::webids::NTriplesGraph;
 use crate::language::Language;
 use crate::JktClaim;
+use rauthy_common::constants::OIDC_ISSUER;
+use rauthy_common::utils::{resolve_webid_card_uri, resolve_webid_uri};
+use rio_api::formatter::TriplesFormatter;
+use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
+use rio_turtle::{TurtleError, TurtleFormatter};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use time::OffsetDateTime;
 use tracing::debug;
 use utoipa::ToSchema;
@@ -477,21 +482,90 @@ pub struct WebIdResponse {
     pub given_name: String,
     pub family_name: String,
     pub language: Language,
-    pub custom_data: Option<HashMap<String, String>>,
+    pub custom_data: Option<NTriplesGraph>,
 }
 
 impl WebIdResponse {
-    pub fn as_turtle(&self) -> String {
-        // TODO serialize into correct turtle format for webid's
-        format!(
-            "{}\n{}\n{}\n{}\n{}\n{:?}",
-            self.user_id,
-            self.email,
-            self.given_name,
-            self.family_name,
-            self.language.as_str(),
-            self.custom_data,
-        )
+    fn triple<'a>(s: impl Into<Subject<'a>>, p: &'a str, o: impl Into<Term<'a>>) -> Triple<'a> {
+        Triple {
+            subject: s.into(),
+            predicate: NamedNode { iri: p },
+            object: o.into(),
+        }
+    }
+
+    /// Serialize the webid response to a graph serializable syntax.
+    fn serialize<F: TriplesFormatter>(&self, formatter: &mut F) -> Result<(), F::Error> {
+        let t_user = NamedNode {
+            iri: &resolve_webid_uri(&self.user_id),
+        };
+        let t_card = NamedNode {
+            iri: &resolve_webid_card_uri(&self.user_id),
+        };
+        let t_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+
+        formatter.format(&Self::triple(
+            t_card,
+            t_type,
+            NamedNode {
+                iri: "http://xmlns.com/foaf/0.1/PersonalProfileDocument",
+            },
+        ))?;
+
+        formatter.format(&Self::triple(
+            t_card,
+            "http://xmlns.com/foaf/0.1/primaryTopic",
+            t_user,
+        ))?;
+
+        formatter.format(&Self::triple(
+            t_user,
+            "http://www.w3.org/ns/solid/terms#oidcIssuer",
+            NamedNode { iri: &*OIDC_ISSUER },
+        ))?;
+
+        // rdf:type
+        formatter.format(&Self::triple(
+            t_user,
+            t_type,
+            NamedNode {
+                iri: "http://xmlns.com/foaf/0.1/Person",
+            },
+        ))?;
+
+        // foaf:name
+        formatter.format(&Self::triple(
+            t_user,
+            "http://xmlns.com/foaf/0.1/name",
+            Literal::Simple {
+                value: &self.given_name,
+            },
+        ))?;
+
+        // foaf:mbox
+        // TODO public nature of email must be configurable.
+        formatter.format(&Self::triple(
+            t_user,
+            "http://xmlns.com/foaf/0.1/mbox",
+            Literal::Simple {
+                value: &self.given_name,
+            },
+        ))?;
+
+        // Format custom data.
+        if let Some(custom_data) = &self.custom_data {
+            custom_data.for_each_triple(|triple| formatter.format(&triple))?;
+        }
+
+        Ok(())
+    }
+
+    pub fn as_turtle(&self) -> Result<String, TurtleError> {
+        let mut formatter = TurtleFormatter::new(Vec::<u8>::new());
+
+        self.serialize(&mut formatter)?;
+
+        Ok(String::from_utf8(formatter.finish().unwrap()).expect("Must be a valid turtle string."))
     }
 }
 

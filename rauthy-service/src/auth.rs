@@ -10,12 +10,14 @@ use jwt_simple::claims;
 use jwt_simple::prelude::*;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, ENABLE_SOLID_AUD, ENABLE_WEB_ID,
-    HEADER_DPOP_NONCE, IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME, PUB_URL_WITH_SCHEME,
-    SESSION_RENEW_MFA, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
+    HEADER_DPOP_NONCE, IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME, SESSION_RENEW_MFA, TOKEN_BEARER,
+    WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::HashPassword;
-use rauthy_common::utils::{base64_url_encode, encrypt, get_client_ip, get_rand};
+use rauthy_common::utils::{
+    base64_url_encode, encrypt, get_client_ip, get_rand, resolve_webid_uri,
+};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
@@ -475,10 +477,7 @@ pub async fn build_id_token(
             .unwrap_or(false);
 
         if is_open {
-            Some(format!(
-                "{}/auth/v1/users/{}/webid",
-                *PUB_URL_WITH_SCHEME, user.id
-            ))
+            Some(resolve_webid_uri(&user.id))
         } else {
             None
         }

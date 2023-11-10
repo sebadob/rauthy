@@ -84,7 +84,8 @@ clippy-postgres:
 
 # re-create and migrate the sqlite database with sqlx
 migrate-sqlite:
-    rm data/rauthy.db*
+    mkdir -p data/
+    rm -f data/rauthy.db*
     DATABASE_URL={{db_url_sqlite}} sqlx database create
     DATABASE_URL={{db_url_sqlite}} sqlx migrate run --source migrations/sqlite
 
@@ -98,6 +99,9 @@ migrate-postgres:
 run-sqlite:
     DATABASE_URL={{db_url_sqlite}} cargo run --target x86_64-unknown-linux-musl --features sqlite
 
+# runs the application with sqlite feature, on native target
+run-sqlite-native:
+    DATABASE_URL={{db_url_sqlite}} cargo run --features sqlite
 
 # runs the application with postgres feature
 run-postgres:

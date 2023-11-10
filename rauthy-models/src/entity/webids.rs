@@ -3,9 +3,12 @@ use actix_web::web;
 use rauthy_common::constants::CACHE_NAME_12HR;
 use rauthy_common::error_response::ErrorResponse;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
+use rio_api::{model::Triple, parser::TriplesParser};
+use rio_turtle::{NTriplesParser, TurtleError};
 use serde::{Deserialize, Serialize};
+use serde_with::{DeserializeFromStr, SerializeDisplay};
 use sqlx::{query, query_as};
-use std::collections::HashMap;
+use std::{fmt::Display, str::FromStr};
 use utoipa::ToSchema;
 
 #[derive(Debug)]
@@ -17,13 +20,69 @@ pub struct WebIdEntity {
 
 impl From<WebId> for WebIdEntity {
     fn from(value: WebId) -> Self {
-        let data = value.data.map(|d| bincode::serialize(&d).unwrap());
-
         Self {
             user_id: value.user_id,
             is_open: value.is_open,
-            data,
+            data: value.data.map(|data| data.serialized.into_bytes()),
         }
+    }
+}
+
+/// An rdf graph that is backed by valid n-triples serialized data.
+#[derive(Debug, Clone, SerializeDisplay, DeserializeFromStr)]
+pub struct NTriplesGraph {
+    serialized: String,
+}
+
+impl NTriplesGraph {
+    /// Call the function for each given triple.
+    pub fn for_each_triple<'s, E, F>(&'s self, mut f: F) -> Result<(), E>
+    where
+        F: for<'a> FnMut(Triple<'a>) -> Result<(), E>,
+    {
+        struct WE<IE>(Option<IE>);
+        impl<IE> From<TurtleError> for WE<IE> {
+            fn from(_v: TurtleError) -> Self {
+                Self(None)
+            }
+        }
+
+        NTriplesParser::new(self.serialized.as_bytes())
+            .parse_all(&mut move |t| f(t).map_err(|e| WE(Some(e))))
+            .map_err(|e| e.0.expect("Must be only callback error."))
+    }
+}
+
+impl Display for NTriplesGraph {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.serialized.fmt(f)
+    }
+}
+
+impl TryFrom<Vec<u8>> for NTriplesGraph {
+    type Error = TurtleError;
+
+    fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+        NTriplesParser::new(bytes.as_slice()).parse_all(&mut |_| Ok::<_, TurtleError>(()))?;
+        Ok(Self {
+            serialized: String::from_utf8(bytes).expect("Checked to be valid."),
+        })
+    }
+}
+
+impl From<NTriplesGraph> for String {
+    #[inline]
+    fn from(v: NTriplesGraph) -> String {
+        v.serialized
+    }
+}
+
+impl FromStr for NTriplesGraph {
+    type Err = TurtleError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.to_owned().into_bytes().try_into()
     }
 }
 
@@ -31,10 +90,7 @@ impl From<WebId> for WebIdEntity {
 pub struct WebId {
     pub user_id: String,
     pub is_open: bool,
-    // TODO is String / String a good combination here?
-    // turtle works with triplets -> key and value are clear, what about predicate in this case?
-    // is is always the same, or do we need to create some "turtle entry struct"?
-    pub data: Option<HashMap<String, String>>,
+    pub data: Option<NTriplesGraph>,
 }
 
 impl WebId {
@@ -113,17 +169,10 @@ impl WebId {
 }
 impl From<WebIdEntity> for WebId {
     fn from(value: WebIdEntity) -> Self {
-        let data = if let Some(data) = value.data {
-            let d = bincode::deserialize(&data).unwrap();
-            Some(d)
-        } else {
-            None
-        };
-
         Self {
             user_id: value.user_id,
             is_open: value.is_open,
-            data,
+            data: value.data.and_then(|data| data.try_into().ok()),
         }
     }
 }
