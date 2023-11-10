@@ -36,7 +36,7 @@ away or just a bit slower, because it is maybe running on an SBC from an SD card
 for several hours (config options will come in the future) and special care has been taken into account in case of cache
 eviction and invalidation.<br />
 A Rauthy deployment with the embedded SQLite, filled caches and a small set of clients and users configured typically
-only uses **between 15 and 20 MB of memory**! This is pretty awesome when comparing it to other existing solutions
+only uses **between 17 and 22 MB of memory**! This is pretty awesome when comparing it to other existing solutions
 out there. If a password from a login is hashed, the memory consumption will of course go up way higher than this
 depending on your configured Argon2ID parameters, which you got fully under control. If you use it with an external
 Postgres, the memory consumption of Rauthy itself will even be a bit lower, since it does not need to care about SQLite.
@@ -78,27 +78,66 @@ open source project for quite some time.
 Keycloak was a rough inspiration in certain places and if something is working with Keycloak, it does with `rauthy` too
 (again, so far).
 
-## What it is not (yet?)
+### Features List
 
-Since Rauthy is currently pre v1.0, it might be missing some nice to have features. Some of them will never be
-implemented (see below), while others might come or are even planned already.
+- [x] Fully working OIDC provider
+- [x] SQLite or Postgres as database
+- [x] Fast and efficient with minimal footprint
+- [x] Highly configurable
+- [x] Secure default values
+- [x] True passwordless accounts with E-Mail + Magic Link + Passkey
+- [x] Account conversions between traditional password and Passkey only
+- [x] Supports DPoP tokens for decentralized login flows
+- [x] Supports ephemeral, dynamic clients for decentralized login flows
+- [x] Admin UI
+- [x] Account UI for each user with self-service
+- [x] Simple per client branding for the login page
+- [x] All End-User facing sites support i18n server-side translation
+- [x] Custom roles
+- [x] Custom groups
+- [x] Custom scopes
+- [x] Custom user attributes
+- [x] User attribute binding to custom scopes
+- [x] Configurable password policy
+- [x] Admin API Keys with fine-grained access rights
+- [x] Events and alerting system
+- [x] Optional event notifications via: E-Mail, Matrix, Slack
+- [x] Optional event persistence
+- [x] Optional Force MFA for the Admin UI
+- [x] Optional Force MFA for each individual client
+- [x] Additional encryption inside the database for the most critical entries
+- [x] Automatic database backups with configurable retention and auto-cleanup (SQLite only)
+- [x] High-Availability
+- [x] HA cache layer with its own (optional) mTLS connection
+- [x] Username enumeration prevention
+- [x] Login / Password hashing rate limiting
+- [x] Session client peer IP binding
+- [x] IP blacklisting feature
+- [x] Auto-IP blacklisting for login endpoints
+- [x] Argon2ID with config helper UI utility
+- [x] Housekeeping schedulers and cron jobs
+- [x] JSON Web Key Set (JWKS) auto-rotation feature
+- [x] Optional open user registration
+- [x] Optional user registration domain restriction
+- [x] App version update checker
+- [x] Prometheus `/metrics` endpoint on separate port
+- [x] SwaggerUI documentation
+- [x] No-Setup migrations between different databases (Yes, even between SQLite and Postgres)
 
-Currently missing features:
+### Features TODO
 
-**Resident Keys / Discoverable Credentials**  
-You can have a Passkey-Only account, as long as you provide your E-Mail address. But full support for resident keys
-does not yet exist for two resons:  
-- Platform support is not fully there yet. For instance, my Android device always returns a UUID of all 0's when
-requesting the discoverable credential, which would of course not work. Android has just implemented support for
-CTAP2 in September 2023, and then it is not even complete yet. Currently, only Fingerprint does work and PIN / NFC
-is still not working. Resisdent Keys will be the next step afterwards.
-- The dependencies I use for the Webauthn integration do have some support for resident keys in the current nightly
-versions, but not in stable yet. As soon as they push this support into their stable versions, I will start investigating
-this support with Rauthy as well.
+This is a non-exhaustive list of currently open TODO's
 
-**OIDC Client**  
-Rauthy will most probably have the option to be an OIDC Client itself as well. With this feature, you would be able
-to do things like "Login with Github" to Rauthy and then use Rauthy for the extended management and features.
+- [ ] Serve custom `webid` documents for each user
+- [ ] Admin UI component for archived / persisted events
+- [ ] Add more values for each user (and therefore more OIDC default claims)
+- [ ] auto-encrypted backups (SQLite)
+- [ ] pushing SQLite backups to S3 storage
+- [ ] Benchmarks and Optimizations
+- [ ] Maybe get a nicer Rauthy Logo
+- [ ] experimental implementation of [dilithium](https://pq-crystals.org/dilithium/) singing algorithm to become
+quantum safe
+- [ ] maybe something like a `rauthy-migrate` project to make migrating an existing user's DB easier
 
 ## Getting Started
 
@@ -108,3 +147,8 @@ the application yourself with docker on your localhost:
 ```
 docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.18.0-lite
 ```
+
+## Contributing
+
+If you want to contribute to this repository, please take a look at
+[CONTRIBUTING.md](https://github.com/sebadob/rauthy/blob/main/CONTRIBUTING.md)

@@ -200,19 +200,16 @@ impl JWKS {
     }
 }
 
+// Note: do not add `serde(skip_serializing_if = "Option::is_none")` here.
+// This will lead to cache errors when deserializing the JWKS
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct JWKSPublicKey {
     pub kty: JwkKeyPairType,
     pub alg: Option<JwkKeyPairAlg>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub crv: Option<String>, // Ed25519
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub kid: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub n: Option<String>, // RSA
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub e: Option<String>, // RSA
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub x: Option<String>, // OKP
 }
 

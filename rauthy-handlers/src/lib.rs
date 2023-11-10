@@ -1,5 +1,7 @@
 // Copyright 2023 Sebastian Dobe <sebastiandobe@mailbox.org>
 
+#![forbid(unsafe_code)]
+
 use actix_web::dev::ServiceRequest;
 use actix_web::{web, HttpRequest, HttpResponse};
 use rauthy_common::constants::{COOKIE_MFA, PROXY_MODE};

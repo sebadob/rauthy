@@ -64,6 +64,12 @@ docker-buildx-setup:
     docker buildx inspect rauthy_builder
 
 
+# Just uses `cargo fmt --all`
+fmt:
+    #!/usr/bin/env bash
+    cargo fmt --all
+
+
 # Force-pulls the latest `cross` docker image for cross-compilation
 pull-latest-cross:
     #!/usr/bin/env bash
@@ -286,7 +292,7 @@ release:
 
 
 # publishes the application images - full pipeline incl clippy and testing
-publish: pull-latest-cross build-docs build-ui build-sqlite build-postgres
+publish: pull-latest-cross build-docs build-ui fmt build-sqlite build-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 

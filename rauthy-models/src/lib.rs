@@ -1,5 +1,7 @@
 // Copyright 2023 Sebastian Dobe <sebastiandobe@mailbox.org>
 
+#![forbid(unsafe_code)]
+
 use crate::entity::sessions::Session;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::HttpRequest;
