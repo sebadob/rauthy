@@ -1,5 +1,6 @@
 use crate::common::{get_auth_headers, get_backend_url, get_token_set};
 use rauthy_common::utils::extract_token_claims_unverified;
+use rauthy_models::entity::jwk::JwkKeyPairAlg;
 use rauthy_models::entity::user_attr::UserAttrConfigEntity;
 use rauthy_models::request::{
     ScopeRequest, UpdateClientRequest, UserAttrConfigRequest, UserAttrValueRequest,
@@ -11,7 +12,6 @@ use rauthy_models::response::{
 use rauthy_models::JwtAccessClaims;
 use serde_json::Value;
 use std::error::Error;
-use rauthy_models::entity::jwk::JwkKeyPairAlg;
 
 mod common;
 
