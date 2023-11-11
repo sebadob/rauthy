@@ -864,6 +864,7 @@ pub async fn get_user_webid(
 
     let resp = WebIdResponse {
         user_id: user.id,
+        issuer: data.issuer.clone(),
         email: user.email,
         given_name: user.given_name,
         family_name: user.family_name,

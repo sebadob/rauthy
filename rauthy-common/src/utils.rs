@@ -1,4 +1,3 @@
-use crate::constants::PUB_URL_WITH_SCHEME;
 use crate::error_response::{ErrorResponse, ErrorResponseType};
 use actix_web::HttpRequest;
 use base64::{engine, engine::general_purpose, Engine as _};
@@ -191,21 +190,6 @@ where
     };
 
     Ok(claims)
-}
-
-/// Resolve webid uri
-#[inline]
-pub fn resolve_webid_uri(user_id: &str) -> String {
-    format!(
-        "{}/auth/v1/users/{}/webid#me",
-        *PUB_URL_WITH_SCHEME, user_id
-    )
-}
-
-/// Resolve webid card uri.
-#[inline]
-pub fn resolve_webid_card_uri(user_id: &str) -> String {
-    format!("{}/auth/v1/users/{}/webid", *PUB_URL_WITH_SCHEME, user_id)
 }
 
 #[cfg(test)]

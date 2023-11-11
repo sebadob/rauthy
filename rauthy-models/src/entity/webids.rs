@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
 use actix_web::web;
-use rauthy_common::constants::CACHE_NAME_12HR;
+use rauthy_common::constants::{CACHE_NAME_12HR, PUB_URL_WITH_SCHEME};
 use rauthy_common::error_response::ErrorResponse;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use rio_api::{model::Triple, parser::TriplesParser};
@@ -94,6 +94,21 @@ pub struct WebId {
 }
 
 impl WebId {
+    /// Resolve webid uri
+    #[inline]
+    pub fn resolve_webid_uri(user_id: &str) -> String {
+        format!(
+            "{}/auth/v1/users/{}/webid#me",
+            *PUB_URL_WITH_SCHEME, user_id
+        )
+    }
+
+    /// Resolve webid card uri.
+    #[inline]
+    pub fn resolve_webid_card_uri(user_id: &str) -> String {
+        format!("{}/auth/v1/users/{}/webid", *PUB_URL_WITH_SCHEME, user_id)
+    }
+
     pub async fn find(data: &web::Data<AppState>, user_id: String) -> Result<Self, ErrorResponse> {
         if let Some(web_id) = cache_get!(
             Self,

@@ -110,9 +110,6 @@ lazy_static! {
         };
         format!("{}://{}", scheme, *PUB_URL)
     };
-    pub static ref OIDC_ISSUER: String = {
-        format!("{}/auth/v1/", *PUB_URL_WITH_SCHEME)
-    };
     pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
         let scheme = if *DEV_MODE && *DEV_DPOP_HTTP { "http" } else { "https" };
         let uri = format!("{}://{}/auth/v1/oidc/token", scheme, *PUB_URL);

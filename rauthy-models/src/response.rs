@@ -7,11 +7,9 @@ use crate::entity::sessions::SessionState;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::users::{AccountType, User};
 use crate::entity::webauthn::PasskeyEntity;
-use crate::entity::webids::NTriplesGraph;
+use crate::entity::webids::{NTriplesGraph, WebId};
 use crate::language::Language;
 use crate::JktClaim;
-use rauthy_common::constants::OIDC_ISSUER;
-use rauthy_common::utils::{resolve_webid_card_uri, resolve_webid_uri};
 use rio_api::formatter::TriplesFormatter;
 use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
 use rio_turtle::{TurtleError, TurtleFormatter};
@@ -478,6 +476,7 @@ pub struct WebauthnLoginResponse {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct WebIdResponse {
     pub user_id: String,
+    pub issuer: String,
     pub email: String,
     pub given_name: String,
     pub family_name: String,
@@ -497,10 +496,10 @@ impl WebIdResponse {
     /// Serialize the webid response to a graph serializable syntax.
     fn serialize<F: TriplesFormatter>(&self, formatter: &mut F) -> Result<(), F::Error> {
         let t_user = NamedNode {
-            iri: &resolve_webid_uri(&self.user_id),
+            iri: &WebId::resolve_webid_uri(&self.user_id),
         };
         let t_card = NamedNode {
-            iri: &resolve_webid_card_uri(&self.user_id),
+            iri: &WebId::resolve_webid_card_uri(&self.user_id),
         };
         let t_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
@@ -521,7 +520,7 @@ impl WebIdResponse {
         formatter.format(&Self::triple(
             t_user,
             "http://www.w3.org/ns/solid/terms#oidcIssuer",
-            NamedNode { iri: &*OIDC_ISSUER },
+            NamedNode { iri: &self.issuer },
         ))?;
 
         // rdf:type
@@ -547,8 +546,8 @@ impl WebIdResponse {
         formatter.format(&Self::triple(
             t_user,
             "http://xmlns.com/foaf/0.1/mbox",
-            Literal::Simple {
-                value: &self.given_name,
+            NamedNode {
+                iri: &format!("mailto:{}", &self.email),
             },
         ))?;
 
