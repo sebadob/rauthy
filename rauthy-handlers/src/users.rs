@@ -1,11 +1,10 @@
 use crate::{real_ip_from_req, ReqPrincipal};
-use actix_web::http::header::CONTENT_TYPE;
 use actix_web::http::StatusCode;
 use actix_web::{cookie, delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
 use actix_web_validator::Json;
 use rauthy_common::constants::{
-    APPLICATION_JSON, COOKIE_MFA, ENABLE_WEB_ID, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE,
-    TEXT_TURTLE, USER_REG_DOMAIN_RESTRICTION,
+    COOKIE_MFA, ENABLE_WEB_ID, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE, TEXT_TURTLE,
+    USER_REG_DOMAIN_RESTRICTION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::build_csp_header;
@@ -829,7 +828,7 @@ pub async fn post_webauthn_reg_finish(
     }
 }
 
-/// Returns a user's webid, if enabled
+/// Returns a user's webid document, if enabled
 #[utoipa::path(
     get,
     path = "/users/{id}/webid",
@@ -844,7 +843,7 @@ pub async fn post_webauthn_reg_finish(
 pub async fn get_user_webid(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    req: HttpRequest,
+    _req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     // check if webid's are enabled globally
     if !*ENABLE_WEB_ID {
@@ -865,6 +864,7 @@ pub async fn get_user_webid(
 
     let resp = WebIdResponse {
         user_id: user.id,
+        issuer: data.issuer.clone(),
         email: user.email,
         given_name: user.given_name,
         family_name: user.family_name,
@@ -872,20 +872,10 @@ pub async fn get_user_webid(
         custom_data: webid.data,
     };
 
-    let content_type = req
-        .headers()
-        .get(CONTENT_TYPE)
-        .map(|h| h.to_str().unwrap_or(TEXT_TURTLE))
-        .unwrap_or(TEXT_TURTLE);
-
-    if content_type == APPLICATION_JSON {
-        Ok(HttpResponse::Ok().json(resp))
-    } else {
-        // TODO serialize to turtle correctly
-        Ok(HttpResponse::Ok()
-            .content_type(TEXT_TURTLE)
-            .body(resp.as_turtle()))
-    }
+    // TODO content-negotiation based on `Accept` header.
+    resp.as_turtle()
+        .map(|content| HttpResponse::Ok().content_type(TEXT_TURTLE).body(content))
+        .map_err(|_| ErrorResponse::new(ErrorResponseType::Internal, "Invalid custom data".into()))
 }
 
 /// Returns data and options set by the user for the `webid` preferences
@@ -926,7 +916,7 @@ pub async fn get_user_webid_data(
     Ok(HttpResponse::Ok().json(webid))
 }
 
-/// Returns data and options set by the user for the `webid` preferences
+/// Returns data and options set by the user for the `webid` preferences. Data must be serialized in ntriples.
 #[utoipa::path(
     put,
     path = "/users/{id}/webid/data",
