@@ -24,6 +24,8 @@ rand_core = { workspace = true }
 redhac = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }
+rio_api = { workspace = true }
+rio_turtle = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true }

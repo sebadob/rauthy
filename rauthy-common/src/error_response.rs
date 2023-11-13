@@ -10,6 +10,7 @@ use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
 use css_color::ParseColorError;
 use derive_more::Display;
 use redhac::CacheError;
+use rio_turtle::TurtleError;
 use serde::{Deserialize, Serialize};
 use serde_json::Error;
 use std::fmt::{Display, Formatter};
@@ -161,6 +162,15 @@ impl ResponseError for ErrorResponse {
                 }
             }
         }
+    }
+}
+
+impl From<std::io::Error> for ErrorResponse {
+    fn from(value: std::io::Error) -> Self {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("IO Error: {}", value),
+        )
     }
 }
 
@@ -339,6 +349,15 @@ impl From<reqwest::Error> for ErrorResponse {
         ErrorResponse::new(
             ErrorResponseType::Connection,
             format!("Cannot send out HTTP request: {:?}", value),
+        )
+    }
+}
+
+impl From<TurtleError> for ErrorResponse {
+    fn from(value: TurtleError) -> Self {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("Cannot format / parse turtle data: {:?}", value),
         )
     }
 }
