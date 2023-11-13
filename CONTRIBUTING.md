@@ -15,6 +15,10 @@ bit of performance in special places when we would give up memory safety for tha
 `has_access`. All functions that do any database lookup currently use keywords like `find`, `create`, `update`, `save`
 and `delete` and have their own `impl` block for the structs to be "easily" interchangeable. Basically, you should have
 a general idea what a function does if you just read its name.
+- Simple and readable code is way better than making everything generic without a good reason just because you can.
+- Any function that returns a `Result<_>` should return Rauthy's custom `ErrorResponse` from `rauthy-common` as the
+error type. This decision was made instead of just simple `anyhow` error Strings for instance to actually make
+errors understandable by external code by using the `error` field and by humans by using the `message` field.
 
 ## Getting Started
 
