@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "delete from colors where client_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "da2dd54ff791e920458763855f4ca6b64b959cb3840f228fbe1aba952eee4061"
+}

@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "select * from user_attr_values where key = $1",
+  "describe": {
+    "columns": [
+      {
+        "name": "user_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "key",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "value",
+        "ordinal": 2,
+        "type_info": "Blob"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "b8a21ffd00ed0422f91ddf5e7f5432e2508e6ed73980f3f335f106285f0d1413"
+}

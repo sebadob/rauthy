@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "select data from config where id = 'db_version'",
+  "describe": {
+    "columns": [
+      {
+        "name": "data",
+        "ordinal": 0,
+        "type_info": "Blob"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "1f7b6a85ebca804404e27e576a8511bc50a34ba2bc779d8fcf26ad39a1641448"
+}

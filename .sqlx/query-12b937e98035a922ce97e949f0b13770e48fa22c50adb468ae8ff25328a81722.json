@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "select * from jwks where kid = $1",
+  "describe": {
+    "columns": [
+      {
+        "name": "kid",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 1,
+        "type_info": "Int64"
+      },
+      {
+        "name": "signature",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "enc_key_id",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "jwk",
+        "ordinal": 4,
+        "type_info": "Blob"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "12b937e98035a922ce97e949f0b13770e48fa22c50adb468ae8ff25328a81722"
+}

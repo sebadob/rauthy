@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "insert or replace into colors (client_id, data) values ($1, $2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "4148c95ab959a08813372bfc1ca38d56c7c876bf4700f38af27d28c463a9f988"
+}

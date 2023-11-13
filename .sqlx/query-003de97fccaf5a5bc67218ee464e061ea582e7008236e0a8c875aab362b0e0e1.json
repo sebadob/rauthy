@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "update users set password = $1 where email = 'admin@localhost.de'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "003de97fccaf5a5bc67218ee464e061ea582e7008236e0a8c875aab362b0e0e1"
+}

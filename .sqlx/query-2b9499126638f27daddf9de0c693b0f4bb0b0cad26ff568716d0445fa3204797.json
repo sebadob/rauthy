@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "update roles set name = $1 where id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "2b9499126638f27daddf9de0c693b0f4bb0b0cad26ff568716d0445fa3204797"
+}

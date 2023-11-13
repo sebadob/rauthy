@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "delete from users where email in ('init_admin@localhost.de', 'test_admin@localhost.de')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "3839ad9988717212a6baee78598e6a69cf1346d672d0eaf48389b6c0502e1dee"
+}

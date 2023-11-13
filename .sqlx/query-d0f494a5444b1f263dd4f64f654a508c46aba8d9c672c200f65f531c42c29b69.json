@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "delete from scopes where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "d0f494a5444b1f263dd4f64f654a508c46aba8d9c672c200f65f531c42c29b69"
+}

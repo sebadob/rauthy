@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "select id from users where id = $1",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "deebef7cbea8c091569d74b7d4331c212a48840cb445c5ad09d34d6f2cdacffd"
+}

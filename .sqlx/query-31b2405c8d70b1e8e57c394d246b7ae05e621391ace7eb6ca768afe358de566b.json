@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "select * from roles where id = $1",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "31b2405c8d70b1e8e57c394d246b7ae05e621391ace7eb6ca768afe358de566b"
+}

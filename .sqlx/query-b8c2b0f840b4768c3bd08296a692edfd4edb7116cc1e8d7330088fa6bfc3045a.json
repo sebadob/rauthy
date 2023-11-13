@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "select * from sessions",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "csrf_token",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_id",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "roles",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "groups",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "is_mfa",
+        "ordinal": 5,
+        "type_info": "Bool"
+      },
+      {
+        "name": "state",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "exp",
+        "ordinal": 7,
+        "type_info": "Int64"
+      },
+      {
+        "name": "last_seen",
+        "ordinal": 8,
+        "type_info": "Int64"
+      },
+      {
+        "name": "remote_ip",
+        "ordinal": 9,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "b8c2b0f840b4768c3bd08296a692edfd4edb7116cc1e8d7330088fa6bfc3045a"
+}

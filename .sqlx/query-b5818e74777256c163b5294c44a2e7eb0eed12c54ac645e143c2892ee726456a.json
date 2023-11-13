@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "select * from recent_passwords where user_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "name": "user_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "passwords",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "b5818e74777256c163b5294c44a2e7eb0eed12c54ac645e143c2892ee726456a"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "insert into scopes (id, name, attr_include_access, attr_include_id) values ($1, $2, $3, $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "0c3bb9e2ba6860e734f45a58cf9e60378083ddf68b51236151116cc3be4f3f77"
+}

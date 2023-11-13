@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "update scopes set attr_include_access = $1, attr_include_id = $2 where id = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "1c337e22982c1ed74928647a94c78d8f175373ad2ed40cb052b13efeb97b8fc6"
+}

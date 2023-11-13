@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT * FROM events ORDER BY timestamp DESC LIMIT $1",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "timestamp",
+        "ordinal": 1,
+        "type_info": "Int64"
+      },
+      {
+        "name": "typ",
+        "ordinal": 2,
+        "type_info": "Int64"
+      },
+      {
+        "name": "level",
+        "ordinal": 3,
+        "type_info": "Int64"
+      },
+      {
+        "name": "ip",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "data",
+        "ordinal": 5,
+        "type_info": "Int64"
+      },
+      {
+        "name": "text",
+        "ordinal": 6,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "0637fa9bc4aa44ce367de98c8bfa4a8762f0e4aff03f7c70611654cc49073889"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE api_keys SET secret = $1, enc_key_id = $2, access = $3 WHERE name = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "de5aeecef179c8ea2d48a60019f3fe67678dac4418310559fed96b4afa0a99e0"
+}

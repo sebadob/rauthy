@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "delete from clients where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "de7ca6a4bb9618a0621d84c637ee369ff90635b08af1e87605adfe809cfb50e6"
+}

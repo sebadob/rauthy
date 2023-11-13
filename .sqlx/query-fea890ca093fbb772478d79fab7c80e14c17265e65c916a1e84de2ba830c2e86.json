@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "delete from refresh_tokens where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "fea890ca093fbb772478d79fab7c80e14c17265e65c916a1e84de2ba830c2e86"
+}

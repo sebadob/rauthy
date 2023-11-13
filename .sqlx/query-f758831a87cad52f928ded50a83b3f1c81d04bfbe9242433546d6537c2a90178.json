@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "select * from scopes where id = $1",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "attr_include_access",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "attr_include_id",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "f758831a87cad52f928ded50a83b3f1c81d04bfbe9242433546d6537c2a90178"
+}

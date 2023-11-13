@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "delete from logos where client_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "9be758f4a367b7c53175a613e69b86b01bc07ebac4bcac25d03c05de12f07fde"
+}

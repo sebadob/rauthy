@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "select * from groups",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "0982c1614c5c64adb89682f365f33ec14c843bfbac14135c75e3103da8eb0eaf"
+}

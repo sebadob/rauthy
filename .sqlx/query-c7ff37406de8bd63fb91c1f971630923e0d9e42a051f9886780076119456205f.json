@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "insert into recent_passwords (user_id, passwords) values ($1, $2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "c7ff37406de8bd63fb91c1f971630923e0d9e42a051f9886780076119456205f"
+}

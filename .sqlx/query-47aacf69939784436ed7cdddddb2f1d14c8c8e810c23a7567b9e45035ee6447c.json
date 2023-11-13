@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "insert into magic_links (id, user_id, csrf_token, exp, used, usage)\n            values ($1, $2, $3, $4, $5, $6)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "47aacf69939784436ed7cdddddb2f1d14c8c8e810c23a7567b9e45035ee6447c"
+}

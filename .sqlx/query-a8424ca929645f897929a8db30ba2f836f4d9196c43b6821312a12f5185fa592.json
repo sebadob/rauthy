@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "update config set data = $1 where id = 'password_policy'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "a8424ca929645f897929a8db30ba2f836f4d9196c43b6821312a12f5185fa592"
+}

@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "select * from user_attr_config where name = $1",
+  "describe": {
+    "columns": [
+      {
+        "name": "name",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "desc",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "f02f8d0c1e710ce81bd00aca2ca08a0151e31f0b73973e48915088b66b6b941c"
+}
