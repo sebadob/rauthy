@@ -374,6 +374,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
             .service(
                     web::scope("/auth")
                     .service(generic::redirect_v1)
+                    .service(users::get_user_webid)
                     .service(
                     web::scope("/v1")
                         .service(api_keys::get_api_keys)
@@ -441,7 +442,6 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         .service(users::get_user_by_id)
                         .service(users::get_user_attr)
                         .service(users::put_user_attr)
-                        .service(users::get_user_webid)
                         .service(users::get_user_webid_data)
                         .service(users::put_user_webid_data)
                         .service(users::get_user_email_confirm)
