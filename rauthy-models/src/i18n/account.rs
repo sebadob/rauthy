@@ -134,8 +134,7 @@ confirmed, your new address will be updated."#,
             web_id_desc: r#"You can configure the fields that should be exposed with your WebID.
 This is a feature used by some networks for decentralized logins. If you do not know what it is,
 you most probably do not need it."#,
-            web_id_desc_data:
-                "You can add custom data fields to your WebID in valid FOAF vocabulary",
+            web_id_desc_data: "You can add custom data fields to your WebID in valid turtle",
             web_id_expert_mode: "Enable Expert Mode",
         }
     }

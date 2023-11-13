@@ -476,14 +476,12 @@ pub struct WebauthnLoginResponse {
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct WebIdResponse {
-    pub user_id: String,
+    pub webid: WebId,
     pub issuer: String,
     pub email: String,
-    pub expose_email: bool,
     pub given_name: String,
     pub family_name: String,
     pub language: Language,
-    pub custom_triples: Option<String>,
 }
 
 impl WebIdResponse {
@@ -500,11 +498,12 @@ impl WebIdResponse {
         &self,
         formatter: &mut TurtleFormatter<Vec<u8>>,
     ) -> Result<(), ErrorResponse> {
+        let webid = &self.webid;
         let t_user = NamedNode {
-            iri: &WebId::resolve_webid_uri(&self.user_id),
+            iri: &WebId::resolve_webid_uri(&webid.user_id),
         };
         let t_card = NamedNode {
-            iri: &WebId::resolve_webid_card_uri(&self.user_id),
+            iri: &WebId::resolve_webid_card_uri(&webid.user_id),
         };
         let t_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
@@ -554,7 +553,7 @@ impl WebIdResponse {
         ))?;
 
         // foaf:mbox
-        if self.expose_email {
+        if webid.expose_email {
             formatter.format(&Self::triple(
                 t_user,
                 "http://xmlns.com/foaf/0.1/mbox",
@@ -565,9 +564,9 @@ impl WebIdResponse {
         }
 
         // Format custom data.
-        if let Some(custom_triples) = &self.custom_triples {
-            WebId::try_fmt_triples(custom_triples, formatter)?;
-        }
+        webid
+            .fmt_custom_triples_to_ttl(formatter)
+            .expect("Must be valid");
 
         Ok(())
     }
@@ -592,31 +591,31 @@ pub struct AppVersionResponse {
 
 #[cfg(test)]
 mod tests {
-    use crate::response::WebIdResponse;
+    use rstest::rstest;
 
-    #[test]
-    fn test_web_id_response() {
-        let mut resp = WebIdResponse {
-            user_id: "SomeId123".to_string(),
+    use crate::{entity::webids::WebId, response::WebIdResponse};
+
+    #[rstest]
+    #[case(
+        Some(r#"
+<http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me>
+<http://www.w3.org/ns/solid/terms#oidcIssuer>
+<http://localhost:8080/auth/v1> .
+"#),
+  "<http://localhost:8080/auth/webid/SomeId123/profile> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/PersonalProfileDocument> ;\n\t<http://xmlns.com/foaf/0.1/primaryTopic> <http://localhost:8080/auth/webid/SomeId123/profile#me> .\n<http://localhost:8080/auth/webid/SomeId123/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> ;\n\t<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> ;\n\t<http://xmlns.com/foaf/0.1/givenname> \"Given\" ;\n\t<http://xmlns.com/foaf/0.1/family_name> \"Family\" ;\n\t<http://xmlns.com/foaf/0.1/mbox> <mailto:mail@example.com> .\n<http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> .\n"
+    )]
+    fn test_web_id_response(#[case] custom_triples: Option<&str>, #[case] expected_resp: &str) {
+        let resp = WebIdResponse {
+            webid: WebId::try_new("SomeId123".to_string(), custom_triples, true)
+                .expect("Invalid cusyom triples in test case"),
             issuer: "http://localhost:8080/auth/v1".to_string(),
             email: "mail@example.com".to_string(),
-            expose_email: true,
             given_name: "Given".to_string(),
             family_name: "Family".to_string(),
             language: Default::default(),
-            custom_triples: Some(
-                r#"
-<http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me>
-<http://www.w3.org/ns/solid/terms#oidcIssuer>
-<http://localhost:8080/auth/v1>
-"#
-                .to_string(),
-            ),
         };
 
-        let turtle = resp.as_turtle().unwrap();
-        assert_eq!(turtle.as_str(), "<https://localhost:8080/auth/webid/SomeId123/profile> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/PersonalProfileDocument> ;\n\t<http://xmlns.com/foaf/0.1/primaryTopic> <https://localhost:8080/auth/webid/SomeId123/profile#me> .\n<https://localhost:8080/auth/webid/SomeId123/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> ;\n\t<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> ;\n\t<http://xmlns.com/foaf/0.1/givenname> \"Given\" ;\n\t<http://xmlns.com/foaf/0.1/family_name> \"Family\" ;\n\t<http://xmlns.com/foaf/0.1/mbox> <mailto:mail@example.com> .\n<http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> .\n")
-
+        assert_eq!(resp.as_turtle().unwrap(), expected_resp);
         // TODO we actually need real test cases with complex custom_triples to make sure
         // the outcome is as expected
     }

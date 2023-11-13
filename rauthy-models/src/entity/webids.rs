@@ -1,11 +1,11 @@
 use crate::app_state::AppState;
 use actix_web::web;
 use rauthy_common::constants::{CACHE_NAME_12HR, PUB_URL_WITH_SCHEME};
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::error_response::ErrorResponse;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use rio_api::formatter::TriplesFormatter;
 use rio_api::parser::TriplesParser;
-use rio_turtle::{NTriplesParser, TurtleFormatter};
+use rio_turtle::{NTriplesFormatter, NTriplesParser, TurtleError, TurtleFormatter, TurtleParser};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
 use std::fmt::Debug;
@@ -14,8 +14,8 @@ use utoipa::ToSchema;
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct WebId {
     pub user_id: String,
-    pub custom_triples: Option<String>,
     pub expose_email: bool,
+    custom_triples: Option<String>,
 }
 
 impl WebId {
@@ -107,104 +107,84 @@ impl WebId {
         format!("web_id_{}", user_id)
     }
 
-    #[inline]
-    fn clean_up_triple_data(custom_triples: &str) -> String {
-        // We need to clean up things like linefeeds before the triples parse will be happy
-        let mut cleaned = custom_triples.replace(['\n', ';'], "");
+    pub fn try_new(
+        user_id: String,
+        custom_data_turtle: Option<&str>,
+        expose_email: bool,
+    ) -> Result<Self, TurtleError> {
+        let custom_triples = custom_data_turtle
+            .map(|data| {
+                let mut ttl_parser = TurtleParser::new(
+                    data.as_bytes(),
+                    Some(
+                        Self::resolve_webid_card_uri(&user_id)
+                            .parse()
+                            .expect("Must be valid iri"),
+                    ),
+                );
 
-        // Additionally, the parse complains if there is no '.' at the end
-        if !cleaned.ends_with('.') {
-            cleaned.push('.');
-        }
+                let mut ntriples_fmt = NTriplesFormatter::new(Vec::<u8>::new());
+                ttl_parser.parse_all(&mut |t| {
+                    Ok::<_, TurtleError>(ntriples_fmt.format(&t).expect("Must be valid"))
+                })?;
 
-        // TODO for some reason, we cannot input data into the parser with ';', which separates
-        // these triples in the final format. How should we handle this?
-        // It seems we cannot put in multiple triples at once, even though the `parse_all()`
-        // is being called
-
-        cleaned
-    }
-
-    pub fn try_fmt_triples(
-        custom_triples: &str,
-        formatter: &mut TurtleFormatter<Vec<u8>>,
-    ) -> Result<(), ErrorResponse> {
-        // The parser complains about a lof of things.
-        // To have a good UX when editing the custom data in the UI, we should not save the
-        // data cleaned up, but actually return it to the user later again like it was written,
-        // with all linebreaks, spaces, and so on.
-        // -> cleanup dynamically here each time before actually parsing it
-        let triples = Self::clean_up_triple_data(custom_triples);
-
-        NTriplesParser::new(triples.as_bytes()).parse_all(&mut |t| {
-            tracing::debug!("\n\n triple in parse_all: {:?}\n", t);
-            formatter.format(&t).map_err(|err| {
-                ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    format!("Cannot format custom Triple {}: {:?}", t, err),
+                Ok::<_, TurtleError>(
+                    String::from_utf8(ntriples_fmt.finish().unwrap())
+                        .expect("Must be valid string."),
                 )
             })
-        })?;
+            .transpose()?;
 
-        Ok(())
+        Ok(Self {
+            user_id,
+            custom_triples,
+            expose_email,
+        })
     }
 
-    pub fn validate_custom_triples(&self) -> Result<(), ErrorResponse> {
-        let mut formatter = TurtleFormatter::new(Vec::<u8>::new());
-        if let Some(triples) = &self.custom_triples {
-            Self::try_fmt_triples(triples, &mut formatter)?;
+    pub fn fmt_custom_triples_to_ttl(
+        &self,
+        formatter: &mut TurtleFormatter<Vec<u8>>,
+    ) -> Result<(), TurtleError> {
+        if let Some(custom_triples) = self.custom_triples.as_ref() {
+            NTriplesParser::new(custom_triples.as_bytes()).parse_all(&mut |t| {
+                Ok::<_, TurtleError>(formatter.format(&t).expect("Must be valid."))
+            })
+        } else {
+            Ok(())
         }
-
-        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use rstest::rstest;
+
     use crate::entity::webids::WebId;
 
     // Tests the validation for a String that comes from the UI account page in the end.
     // Whatever input should work in the UI must be passing this test.
     // TODO expand this test
-    #[test]
-    fn test_custom_triple_validation() {
-        let mut web_id = WebId {
-            user_id: "SomeId123".to_string(),
-            custom_triples: None,
-            expose_email: false,
-        };
-
-        // success without any triples of course
-        assert!(web_id.validate_custom_triples().is_ok());
-
-        // TODO add more tests here which make sense
-        web_id.custom_triples = Some(
-            r#"
+    #[rstest]
+    #[case(None)]
+    #[case(Some(
+        r#"
 <http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me>
 <http://www.w3.org/ns/solid/terms#oidcIssuer>
-<http://localhost:8080/auth/v1>
+<http://localhost:8080/auth/v1> .
 "#
-            .to_string(),
-        );
-        assert!(web_id.validate_custom_triples().is_ok());
-
-        // TODO for some reason, we cannot input data into the parser with ';', which separates
-        // these triples in the final format. How should we handle this?
-        // It seems we cannot put in multiple triples at once, even though the `parse_all()`
-        // is being called
-        web_id.custom_triples = Some(
-            r#"
+    ))]
+    #[case(Some(
+        r#"
 <http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me>
- <http://www.w3.org/ns/solid/terms#oidcIssuer>
-<http://localhost:8080/auth/v1>;
+<http://www.w3.org/ns/solid/terms#oidcIssuer>
+<http://localhost:8080/auth/v1>; .
 "#
-            .to_string(),
-        );
-        // helps with debugging the test case
-        if let Err(err) = web_id.validate_custom_triples() {
-            eprintln!("{}", err.message);
-        }
-        // TODO assert!(web_id.validate_custom_triples().is_ok());
-        assert!(web_id.validate_custom_triples().is_ok());
+    ))]
+    fn test_custom_triple_validation(#[case] custom_data_turtle: Option<&str>) {
+        let user_id = "SomeId123".to_owned();
+        let expose_email = false;
+
+        assert!(WebId::try_new(user_id, custom_data_turtle, expose_email).is_ok());
     }
 }
