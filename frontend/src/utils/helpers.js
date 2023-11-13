@@ -14,7 +14,7 @@ import sjcl from "sjcl";
 import { decode, encode } from "base64-arraybuffer";
 
 export function buidlWebIdUri(userId) {
-	return `${window.location.origin}/auth/webid/${userId}/profile`
+	return `${window.location.origin}/auth/webid/${userId}/profile#me`
 }
 
 export function extractFormErrors(err) {

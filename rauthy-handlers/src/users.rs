@@ -854,17 +854,15 @@ pub async fn get_user_webid(
 
     let id = id.into_inner();
     let webid = WebId::find(&data, id).await?;
-    let user = User::find(&data, webid.user_id).await?;
+    let user = User::find(&data, webid.user_id.clone()).await?;
 
     let resp = WebIdResponse {
-        user_id: user.id,
+        webid,
         issuer: data.issuer.clone(),
         email: user.email,
-        expose_email: webid.expose_email,
         given_name: user.given_name,
         family_name: user.family_name,
         language: user.language,
-        custom_triples: webid.custom_triples,
     };
 
     resp.as_turtle()
@@ -942,12 +940,13 @@ pub async fn put_user_webid_data(
     let payload = payload.into_inner();
     tracing::debug!("\n\n{:?}\n", payload);
 
-    let web_id = WebId {
-        user_id: id,
-        custom_triples: payload.custom_triples,
-        expose_email: payload.expose_email,
-    };
-    web_id.validate_custom_triples()?;
+    let web_id = WebId::try_new(id, payload.custom_triples.as_deref(), payload.expose_email)
+        .map_err(|e| {
+            ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                format!("Invalid custom data. {}", e),
+            )
+        })?;
 
     WebId::upsert(&data, web_id).await?;
 

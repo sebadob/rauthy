@@ -72,4 +72,5 @@ webauthn-rs-proto = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = "1"
+rstest = "0.18.2"
 tokio-test = "*"
