@@ -32,6 +32,7 @@ const config = {
 			'/auth/v1/sessions': 'http://127.0.0.1:8080',
 			'/auth/v1/update_language': 'http://127.0.0.1:8080',
 			'/auth/v1/version': 'http://127.0.0.1:8080',
+			'/auth/webid/': 'http://127.0.0.1:8080',
 			'/docs/v1/': 'http://127.0.0.1:8080',
 		}
 	}

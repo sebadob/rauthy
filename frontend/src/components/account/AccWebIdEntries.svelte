@@ -4,7 +4,6 @@
     import {onMount} from "svelte";
     import {REGEX_URI_SPACE} from "../../utils/constants.js";
 
-    export let t;
     export let webIdData;
     export let viewModePhone = false;
 
@@ -74,10 +73,10 @@
 
 {#if entries}
     {#each entries as entry, c (c)}
+<!--                isKeyUnique={isKeyUnique}-->
+<!--                removeKey={remove}-->
         <AccWebIdEntry
-                bind:t
-                isKeyUnique={isKeyUnique}
-                removeKey={remove}
+                removeEntry={remove}
                 bind:viewModePhone
                 bind:entry
         />

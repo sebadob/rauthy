@@ -1,6 +1,6 @@
 <script>
     import CheckIcon from "$lib/CheckIcon.svelte";
-    import {formatDateFromTs} from "../../utils/helpers.js";
+    import {buidlWebIdUri, formatDateFromTs} from "../../utils/helpers.js";
 
     export let t;
     export let user = {};
@@ -64,13 +64,6 @@
         <CheckIcon check={user.email_verified}/>
     </div>
 
-    {#if webIdData}
-        <div class={classRow}>
-            <div class={classLabel}><b>{t.webIdActive}:</b></div>
-            <CheckIcon check={webIdData.is_open}/>
-        </div>
-    {/if}
-
     <div class={classRow}>
         <div class={classLabel}><b>{t.lastLogin}:</b></div>
         <span class="value">{formatDateFromTs(user.last_login)}</span>
@@ -92,6 +85,18 @@
             <span class="value">{formatDateFromTs(user.user_expires)}</span>
         </div>
     {/if}
+
+    {#if webIdData}
+        <div class={classRow}>
+            <div class={classLabel}><b>WebID:</b></div>
+            <span class="value">
+                <a href={buidlWebIdUri(user.id)} target="_blank">
+                    {@html buidlWebIdUri(user.id).replace('/webid/', '/webid/<wbr/>')}
+                </a>
+            </span>
+        </div>
+    {/if}
+
 </div>
 
 <style>
@@ -113,5 +118,7 @@
     }
 
     .value {
+        max-width: 18rem;
+        word-break: break-word;
     }
 </style>

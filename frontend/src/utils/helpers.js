@@ -13,6 +13,10 @@ import {
 import sjcl from "sjcl";
 import { decode, encode } from "base64-arraybuffer";
 
+export function buidlWebIdUri(userId) {
+	return `${window.location.origin}/auth/webid/${userId}/profile`
+}
+
 export function extractFormErrors(err) {
 	return err.inner.reduce((acc, err) => {
 		return {...acc, [err.path]: err.message};

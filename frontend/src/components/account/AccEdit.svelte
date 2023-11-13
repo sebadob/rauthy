@@ -3,9 +3,7 @@
     import {extractFormErrors} from "../../utils/helpers.js";
     import {REGEX_NAME} from "../../utils/constants.js";
     import Button from "$lib/Button.svelte";
-    import {blur, fade} from 'svelte/transition';
-    import {tweened} from 'svelte/motion';
-    import AccModPwd from "./AccModPwd.svelte";
+    import {fade} from 'svelte/transition';
     import {putUserSelf} from "../../utils/dataFetching.js";
     import Input from "$lib/inputs/Input.svelte";
 
