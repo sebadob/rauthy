@@ -1,12 +1,10 @@
 {
-  "db_name": "PostgreSQL",
+  "db_name": "SQLite",
   "query": "update config set data = $1 where id = 'password_policy'",
   "describe": {
     "columns": [],
     "parameters": {
-      "Left": [
-        "Bytea"
-      ]
+      "Right": 1
     },
     "nullable": []
   },

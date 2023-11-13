@@ -469,16 +469,7 @@ pub async fn build_id_token(
     };
 
     let webid = if *ENABLE_WEB_ID && scope.contains("webid") {
-        let is_open = WebId::find(data, user.id.clone())
-            .await
-            .map(|webid| webid.is_open)
-            .unwrap_or(false);
-
-        if is_open {
-            Some(WebId::resolve_webid_uri(&user.id))
-        } else {
-            None
-        }
+        Some(WebId::resolve_webid_uri(&user.id))
     } else {
         None
     };

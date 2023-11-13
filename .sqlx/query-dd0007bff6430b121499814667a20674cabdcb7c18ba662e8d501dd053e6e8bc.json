@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "insert or replace into config (id, data) values ('latest_version', $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "dd0007bff6430b121499814667a20674cabdcb7c18ba662e8d501dd053e6e8bc"
+}

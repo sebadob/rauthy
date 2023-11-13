@@ -1,13 +1,10 @@
 {
-  "db_name": "PostgreSQL",
+  "db_name": "SQLite",
   "query": "update recent_passwords set passwords = $1 where user_id = $2",
   "describe": {
     "columns": [],
     "parameters": {
-      "Left": [
-        "Varchar",
-        "Text"
-      ]
+      "Right": 2
     },
     "nullable": []
   },

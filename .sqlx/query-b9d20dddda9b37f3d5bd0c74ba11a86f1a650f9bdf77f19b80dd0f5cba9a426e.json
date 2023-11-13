@@ -1,18 +1,10 @@
 {
-  "db_name": "PostgreSQL",
+  "db_name": "SQLite",
   "query": "INSERT INTO events (id, timestamp, level, typ, ip, data, text)\n            VALUES ($1, $2, $3, $4, $5, $6, $7)",
   "describe": {
     "columns": [],
     "parameters": {
-      "Left": [
-        "Varchar",
-        "Int8",
-        "Int2",
-        "Int2",
-        "Varchar",
-        "Int8",
-        "Varchar"
-      ]
+      "Right": 7
     },
     "nullable": []
   },

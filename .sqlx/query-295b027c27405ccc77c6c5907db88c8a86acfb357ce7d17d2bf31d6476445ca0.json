@@ -1,12 +1,10 @@
 {
-  "db_name": "PostgreSQL",
+  "db_name": "SQLite",
   "query": "delete from magic_links where user_id = $1 and usage like 'email_change$%'",
   "describe": {
     "columns": [],
     "parameters": {
-      "Left": [
-        "Text"
-      ]
+      "Right": 1
     },
     "nullable": []
   },

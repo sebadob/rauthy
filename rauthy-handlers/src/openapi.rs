@@ -228,6 +228,7 @@ use utoipa::{openapi, OpenApi};
         (name = "blacklist", description = "IP Blacklist endpoints"),
         (name = "api_keys", description = "API Keys endpoints"),
         (name = "generic", description = "Generic endpoints"),
+        (name = "webid", description = "WebID endpoints"),
         (name = "deprecated", description = "Deprecated endpoints - will be removed in a future version"),
     ),
 )]

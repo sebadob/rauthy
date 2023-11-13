@@ -1,15 +1,10 @@
 {
-  "db_name": "PostgreSQL",
+  "db_name": "SQLite",
   "query": "update scopes set name = $1, attr_include_access = $2, attr_include_id = $3 where id = $4",
   "describe": {
     "columns": [],
     "parameters": {
-      "Left": [
-        "Varchar",
-        "Varchar",
-        "Varchar",
-        "Text"
-      ]
+      "Right": 4
     },
     "nullable": []
   },

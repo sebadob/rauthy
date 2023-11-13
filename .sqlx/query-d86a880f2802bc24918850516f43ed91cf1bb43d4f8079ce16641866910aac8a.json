@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "insert or replace into refresh_tokens (id, user_id, nbf, exp, scope, is_mfa)\n                values ($1, $2, $3, $4, $5, $6)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "d86a880f2802bc24918850516f43ed91cf1bb43d4f8079ce16641866910aac8a"
+}

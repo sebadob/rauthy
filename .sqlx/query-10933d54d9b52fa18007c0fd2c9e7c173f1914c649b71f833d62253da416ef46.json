@@ -1,13 +1,10 @@
 {
-  "db_name": "PostgreSQL",
+  "db_name": "SQLite",
   "query": "insert into roles (id, name) values ($1, $2)",
   "describe": {
     "columns": [],
     "parameters": {
-      "Left": [
-        "Varchar",
-        "Varchar"
-      ]
+      "Right": 2
     },
     "nullable": []
   },

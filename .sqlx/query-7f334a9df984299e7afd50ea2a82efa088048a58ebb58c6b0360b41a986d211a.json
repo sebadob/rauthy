@@ -1,16 +1,10 @@
 {
-  "db_name": "PostgreSQL",
+  "db_name": "SQLite",
   "query": "insert into jwks (kid, created_at, signature, enc_key_id, jwk)\n            values ($1, $2, $3, $4, $5)",
   "describe": {
     "columns": [],
     "parameters": {
-      "Left": [
-        "Varchar",
-        "Int8",
-        "Varchar",
-        "Varchar",
-        "Bytea"
-      ]
+      "Right": 5
     },
     "nullable": []
   },

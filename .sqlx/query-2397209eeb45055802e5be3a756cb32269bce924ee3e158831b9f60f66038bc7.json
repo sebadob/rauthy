@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "insert into user_attr_config (name, desc) values ($1, $2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "2397209eeb45055802e5be3a756cb32269bce924ee3e158831b9f60f66038bc7"
+}

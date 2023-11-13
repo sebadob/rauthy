@@ -1,12 +1,10 @@
 {
-  "db_name": "PostgreSQL",
+  "db_name": "SQLite",
   "query": "update users set password = $1 where email = 'admin@localhost.de'",
   "describe": {
     "columns": [],
     "parameters": {
-      "Left": [
-        "Varchar"
-      ]
+      "Right": 1
     },
     "nullable": []
   },

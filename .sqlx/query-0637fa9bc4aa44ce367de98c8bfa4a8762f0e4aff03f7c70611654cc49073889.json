@@ -1,48 +1,46 @@
 {
-  "db_name": "PostgreSQL",
+  "db_name": "SQLite",
   "query": "SELECT * FROM events ORDER BY timestamp DESC LIMIT $1",
   "describe": {
     "columns": [
       {
-        "ordinal": 0,
         "name": "id",
-        "type_info": "Varchar"
+        "ordinal": 0,
+        "type_info": "Text"
       },
       {
-        "ordinal": 1,
         "name": "timestamp",
-        "type_info": "Int8"
+        "ordinal": 1,
+        "type_info": "Int64"
       },
       {
-        "ordinal": 2,
         "name": "typ",
-        "type_info": "Int2"
+        "ordinal": 2,
+        "type_info": "Int64"
       },
       {
-        "ordinal": 3,
         "name": "level",
-        "type_info": "Int2"
+        "ordinal": 3,
+        "type_info": "Int64"
       },
       {
-        "ordinal": 4,
         "name": "ip",
-        "type_info": "Varchar"
+        "ordinal": 4,
+        "type_info": "Text"
       },
       {
-        "ordinal": 5,
         "name": "data",
-        "type_info": "Int8"
+        "ordinal": 5,
+        "type_info": "Int64"
       },
       {
-        "ordinal": 6,
         "name": "text",
-        "type_info": "Varchar"
+        "ordinal": 6,
+        "type_info": "Text"
       }
     ],
     "parameters": {
-      "Left": [
-        "Int8"
-      ]
+      "Right": 1
     },
     "nullable": [
       false,

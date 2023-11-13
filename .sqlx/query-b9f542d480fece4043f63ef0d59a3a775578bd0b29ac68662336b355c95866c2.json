@@ -1,16 +1,16 @@
 {
-  "db_name": "PostgreSQL",
+  "db_name": "SQLite",
   "query": "select data from config where id = 'latest_version'",
   "describe": {
     "columns": [
       {
-        "ordinal": 0,
         "name": "data",
-        "type_info": "Bytea"
+        "ordinal": 0,
+        "type_info": "Blob"
       }
     ],
     "parameters": {
-      "Left": []
+      "Right": 0
     },
     "nullable": [
       true

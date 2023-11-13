@@ -1,15 +1,10 @@
 {
-  "db_name": "PostgreSQL",
+  "db_name": "SQLite",
   "query": "update magic_links set cookie = $1, exp = $2, used = $3 where id = $4",
   "describe": {
     "columns": [],
     "parameters": {
-      "Left": [
-        "Varchar",
-        "Int8",
-        "Bool",
-        "Text"
-      ]
+      "Right": 4
     },
     "nullable": []
   },

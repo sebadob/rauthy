@@ -3,25 +3,23 @@
     import {fade, slide} from 'svelte/transition';
     import {putUserWebIdData} from "../../utils/dataFetching.js";
     import Switch from "$lib/Switch.svelte";
-    import AccWebIdEntries from "./AccWebIdEntries.svelte";
+    import {buidlWebIdUri} from "../../utils/helpers.js";
 
     export let t;
     export let webIdData;
-    export let viewModePhone;
+    // export let viewModePhone;
 
     const btnWidth = "12rem";
 
     let err = '';
     let success = false;
     let successEmailConfirm = false;
+    let expertMode = !!webIdData.data;
+    let webIdLink = buidlWebIdUri(webIdData.user_id);
 
     // do not set any value here - will be bound to validate function in <AccWebIdEntries/>
     let getData;
     let validateData;
-
-    $: webIdLink = webIdData.is_open ?
-        `${window.location.origin}/auth/v1/users/${webIdData.user_id}/webid`
-        : '';
 
     $: if (success) {
         setTimeout(() => {
@@ -32,24 +30,7 @@
     async function onSubmit() {
         err = '';
 
-        let data = getData();
-        console.log(data);
-
-        const isValid = validateData();
-        console.log(isValid);
-        if (!isValid) {
-            return;
-        }
-
-        const payload = {
-            user_id: webIdData.user_id,
-            is_open: webIdData.is_open,
-            data,
-        };
-
-        console.log(payload);
-
-        let res = await putUserWebIdData(payload.user_id, payload);
+        let res = await putUserWebIdData(webIdData.user_id, webIdData);
         if (res.ok) {
             success = true;
         } else {
@@ -64,27 +45,42 @@
     <div class="container">
         <p>{t.webIdDesc}</p>
 
+        <p>
+            <a href={webIdLink} target="_blank">
+                {@html webIdLink.replace('/webid/', '/webid/<wbr/>')}
+            </a>
+        </p>
+
         <div class="row">
             <div class="label">
-                {t.webIdActive}
+                E-Mail
             </div>
-            <Switch bind:selected={webIdData.is_open}/>
+            <Switch bind:selected={webIdData.expose_email}/>
         </div>
 
-        {#if webIdData.is_open}
-            <div transition:slide>
-                <p>{t.webIdLinkText}</p>
-                <p><a href={webIdLink} target="_blank">{webIdLink}</a></p>
+        <div class="row">
+            <div class="label">
+                {t.webIdExpertMode}
+            </div>
+            <Switch bind:selected={expertMode}/>
+        </div>
 
-                <!-- Custom Data -->
+        {#if expertMode}
+            <div transition:slide>
                 <p>{t.webIdDescData}</p>
-                <AccWebIdEntries
-                        bind:t
-                        bind:webIdData
-                        bind:viewModePhone
-                        bind:getData
-                        bind:validateData
-                />
+<!--                <AccWebIdEntries-->
+<!--                        bind:t-->
+<!--                        bind:webIdData-->
+<!--                        bind:viewModePhone-->
+<!--                        bind:getData-->
+<!--                        bind:validateData-->
+<!--                />-->
+                <textarea
+                        class="font-mono text"
+                        rows={15}
+                        cols={40}
+                        bind:value={webIdData.custom_triples}
+                ></textarea>
             </div>
         {/if}
 
@@ -111,6 +107,15 @@
         margin: 0 .5rem .5rem .5rem;
     }
 
+    textarea {
+        margin: .5rem;
+        resize: none;
+    }
+
+    .bottom {
+        height: 1em;
+    }
+
     .container {
         padding: 0 5px;
         display: flex;
@@ -129,8 +134,8 @@
         color: var(--col-err);
     }
 
-    .bottom {
-        height: 1em;
+    .label {
+        width: 12rem;
     }
 
     .row {

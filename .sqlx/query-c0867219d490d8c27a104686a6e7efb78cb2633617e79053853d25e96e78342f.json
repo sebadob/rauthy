@@ -1,43 +1,41 @@
 {
-  "db_name": "PostgreSQL",
+  "db_name": "SQLite",
   "query": "SELECT * FROM api_keys WHERE name = $1",
   "describe": {
     "columns": [
       {
-        "ordinal": 0,
         "name": "name",
-        "type_info": "Varchar"
+        "ordinal": 0,
+        "type_info": "Text"
       },
       {
-        "ordinal": 1,
         "name": "secret",
-        "type_info": "Bytea"
+        "ordinal": 1,
+        "type_info": "Blob"
       },
       {
-        "ordinal": 2,
         "name": "created",
-        "type_info": "Int8"
+        "ordinal": 2,
+        "type_info": "Int64"
       },
       {
-        "ordinal": 3,
         "name": "expires",
-        "type_info": "Int8"
+        "ordinal": 3,
+        "type_info": "Int64"
       },
       {
-        "ordinal": 4,
         "name": "enc_key_id",
-        "type_info": "Varchar"
+        "ordinal": 4,
+        "type_info": "Text"
       },
       {
-        "ordinal": 5,
         "name": "access",
-        "type_info": "Bytea"
+        "ordinal": 5,
+        "type_info": "Blob"
       }
     ],
     "parameters": {
-      "Left": [
-        "Text"
-      ]
+      "Right": 1
     },
     "nullable": [
       false,

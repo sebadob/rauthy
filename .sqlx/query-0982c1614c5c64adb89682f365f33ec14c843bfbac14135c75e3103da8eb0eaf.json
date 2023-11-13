@@ -1,21 +1,21 @@
 {
-  "db_name": "PostgreSQL",
+  "db_name": "SQLite",
   "query": "select * from groups",
   "describe": {
     "columns": [
       {
-        "ordinal": 0,
         "name": "id",
-        "type_info": "Varchar"
+        "ordinal": 0,
+        "type_info": "Text"
       },
       {
-        "ordinal": 1,
         "name": "name",
-        "type_info": "Varchar"
+        "ordinal": 1,
+        "type_info": "Text"
       }
     ],
     "parameters": {
-      "Left": []
+      "Right": 0
     },
     "nullable": [
       false,

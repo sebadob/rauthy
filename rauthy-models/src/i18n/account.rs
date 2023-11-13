@@ -53,10 +53,9 @@ pub struct I18nAccount<'a> {
     valid_email: &'a str,
     valid_given_name: &'a str,
     valid_family_name: &'a str,
-    web_id_active: &'a str,
     web_id_desc: &'a str,
     web_id_desc_data: &'a str,
-    web_id_link_text: &'a str,
+    web_id_expert_mode: &'a str,
 }
 
 impl SsrJson for I18nAccount<'_> {
@@ -132,12 +131,12 @@ confirmed, your new address will be updated."#,
             valid_email: "Valid E-Mail format",
             valid_given_name: "Your given name with 2 - 32 non-special characters",
             valid_family_name: "Your family name with 2 - 32 non-special characters",
-            web_id_active: "WebID activated",
-            web_id_desc: r#"You have the option to enable your WebID here.
+            web_id_desc: r#"You can configure the fields that should be exposed with your WebID.
 This is a feature used by some networks for decentralized logins. If you do not know what it is,
 you most probably do not need it."#,
-            web_id_desc_data: "You can add personalized data to your WebID with key / value pairs:",
-            web_id_link_text: "If you have enabled and saved the activation, your WebID link is:",
+            web_id_desc_data:
+                "You can add custom data fields to your WebID in valid FOAF vocabulary",
+            web_id_expert_mode: "Enable Expert Mode",
         }
     }
 
@@ -199,14 +198,12 @@ enthaltenen Link bestätigt werden. Nach der Bestätigung wird die neue Adresse 
             valid_email: "Gültige E-Mail Adresse",
             valid_given_name: "Vorname, 2 - 32 Buchstaben, keine Sonderzeichen",
             valid_family_name: "Nachname, 2 - 32  Buchstaben, keine Sonderzeichen",
-            web_id_active: "WebID aktiviert",
-            web_id_desc: r#"Hier haben sie die Option ihre WebID zu aktivieren.
-Dies ist ein Feature, was von manchen Netzwerken für dezentrale Logins genutzt wird.
+            web_id_desc: r#"Hier können Sie die Felder festlegen, die über Ihre WebID veröffentlicht
+werden. Dies ist ein Feature, was von manchen Netzwerken für dezentrale Logins genutzt wird.
 Sollten Sie nicht wissen, was die WebID ist, brauchen Sie sie höchstwahrscheinlich nicht."#,
-            web_id_desc_data: r#"Sie können personalisierte Daten zu Ihrer WebID in
-Schlüssel / Wert Paaren hinzufügen:"#,
-            web_id_link_text: r#"Wenn Sie die Einstellung aktiviert und gespeichert haben,
-ist Ihr WebID Link:"#,
+            web_id_desc_data: r#"Sie können eigene Daten zu Ihrer WebID in gültigem FOAF Vokabular
+hinzufügen:"#,
+            web_id_expert_mode: "Expertenmodus aktivieren",
         }
     }
 }

@@ -1,15 +1,10 @@
 {
-  "db_name": "PostgreSQL",
+  "db_name": "SQLite",
   "query": "UPDATE passkeys\n            SET passkey = $1, last_used = $2\n            WHERE user_id = $3 AND name = $4",
   "describe": {
     "columns": [],
     "parameters": {
-      "Left": [
-        "Varchar",
-        "Int8",
-        "Text",
-        "Text"
-      ]
+      "Right": 4
     },
     "nullable": []
   },

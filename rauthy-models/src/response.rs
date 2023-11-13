@@ -7,12 +7,13 @@ use crate::entity::sessions::SessionState;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::users::{AccountType, User};
 use crate::entity::webauthn::PasskeyEntity;
-use crate::entity::webids::{NTriplesGraph, WebId};
+use crate::entity::webids::WebId;
 use crate::language::Language;
 use crate::JktClaim;
+use rauthy_common::error_response::ErrorResponse;
 use rio_api::formatter::TriplesFormatter;
 use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
-use rio_turtle::{TurtleError, TurtleFormatter};
+use rio_turtle::TurtleFormatter;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use tracing::debug;
@@ -478,10 +479,11 @@ pub struct WebIdResponse {
     pub user_id: String,
     pub issuer: String,
     pub email: String,
+    pub expose_email: bool,
     pub given_name: String,
     pub family_name: String,
     pub language: Language,
-    pub custom_data: Option<NTriplesGraph>,
+    pub custom_triples: Option<String>,
 }
 
 impl WebIdResponse {
@@ -494,7 +496,10 @@ impl WebIdResponse {
     }
 
     /// Serialize the webid response to a graph serializable syntax.
-    fn serialize<F: TriplesFormatter>(&self, formatter: &mut F) -> Result<(), F::Error> {
+    fn serialize_turtle(
+        &self,
+        formatter: &mut TurtleFormatter<Vec<u8>>,
+    ) -> Result<(), ErrorResponse> {
         let t_user = NamedNode {
             iri: &WebId::resolve_webid_uri(&self.user_id),
         };
@@ -535,36 +540,44 @@ impl WebIdResponse {
         // foaf:name
         formatter.format(&Self::triple(
             t_user,
-            "http://xmlns.com/foaf/0.1/name",
+            "http://xmlns.com/foaf/0.1/givenname",
             Literal::Simple {
                 value: &self.given_name,
             },
         ))?;
-
-        // foaf:mbox
-        // TODO public nature of email must be configurable.
         formatter.format(&Self::triple(
             t_user,
-            "http://xmlns.com/foaf/0.1/mbox",
-            NamedNode {
-                iri: &format!("mailto:{}", &self.email),
+            "http://xmlns.com/foaf/0.1/family_name",
+            Literal::Simple {
+                value: &self.family_name,
             },
         ))?;
 
+        // foaf:mbox
+        if self.expose_email {
+            formatter.format(&Self::triple(
+                t_user,
+                "http://xmlns.com/foaf/0.1/mbox",
+                NamedNode {
+                    iri: &format!("mailto:{}", &self.email),
+                },
+            ))?;
+        }
+
         // Format custom data.
-        if let Some(custom_data) = &self.custom_data {
-            custom_data.for_each_triple(|triple| formatter.format(&triple))?;
+        if let Some(custom_triples) = &self.custom_triples {
+            WebId::try_fmt_triples(custom_triples, formatter)?;
         }
 
         Ok(())
     }
 
-    pub fn as_turtle(&self) -> Result<String, TurtleError> {
+    pub fn as_turtle(&self) -> Result<String, ErrorResponse> {
         let mut formatter = TurtleFormatter::new(Vec::<u8>::new());
+        self.serialize_turtle(&mut formatter)?;
 
-        self.serialize(&mut formatter)?;
-
-        Ok(String::from_utf8(formatter.finish().unwrap()).expect("Must be a valid turtle string."))
+        let finished = formatter.finish()?;
+        Ok(String::from_utf8(finished).expect("Must be a valid turtle string."))
     }
 }
 
@@ -575,4 +588,36 @@ pub struct AppVersionResponse {
     pub latest: Option<String>,
     pub latest_url: Option<String>,
     pub update_available: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::response::WebIdResponse;
+
+    #[test]
+    fn test_web_id_response() {
+        let mut resp = WebIdResponse {
+            user_id: "SomeId123".to_string(),
+            issuer: "http://localhost:8080/auth/v1".to_string(),
+            email: "mail@example.com".to_string(),
+            expose_email: true,
+            given_name: "Given".to_string(),
+            family_name: "Family".to_string(),
+            language: Default::default(),
+            custom_triples: Some(
+                r#"
+<http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me>
+<http://www.w3.org/ns/solid/terms#oidcIssuer>
+<http://localhost:8080/auth/v1>
+"#
+                .to_string(),
+            ),
+        };
+
+        let turtle = resp.as_turtle().unwrap();
+        assert_eq!(turtle.as_str(), "<https://localhost:8080/auth/webid/SomeId123/profile> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/PersonalProfileDocument> ;\n\t<http://xmlns.com/foaf/0.1/primaryTopic> <https://localhost:8080/auth/webid/SomeId123/profile#me> .\n<https://localhost:8080/auth/webid/SomeId123/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> ;\n\t<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> ;\n\t<http://xmlns.com/foaf/0.1/givenname> \"Given\" ;\n\t<http://xmlns.com/foaf/0.1/family_name> \"Family\" ;\n\t<http://xmlns.com/foaf/0.1/mbox> <mailto:mail@example.com> .\n<http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> .\n")
+
+        // TODO we actually need real test cases with complex custom_triples to make sure
+        // the outcome is as expected
+    }
 }

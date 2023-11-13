@@ -1,6 +1,5 @@
 use crate::entity::api_keys::ApiKeyAccess;
 use crate::entity::jwk::JwkKeyPairAlg;
-use crate::entity::webids::NTriplesGraph;
 use crate::events::event::EventLevel;
 use crate::language::Language;
 use actix_web::http::header;
@@ -700,8 +699,8 @@ pub struct WebauthnRegFinishRequest {
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct WebIdRequest {
-    pub is_open: bool,
-    pub data: Option<NTriplesGraph>,
+    pub custom_triples: Option<String>,
+    pub expose_email: bool,
 }
 
 #[derive(Debug, Deserialize, Validate, IntoParams)]
