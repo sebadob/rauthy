@@ -145,7 +145,7 @@ pub async fn get_cust_attr(
 pub async fn post_cust_attr(
     data: web::Data<AppState>,
     principal: ReqPrincipal,
-    req_data: actix_web_validator::Json<UserAttrConfigRequest>,
+    req_data: Json<UserAttrConfigRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal
         .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Create)?;
@@ -173,7 +173,7 @@ pub async fn put_cust_attr(
     data: web::Data<AppState>,
     path: web::Path<String>,
     principal: ReqPrincipal,
-    req_data: actix_web_validator::Json<UserAttrConfigRequest>,
+    req_data: Json<UserAttrConfigRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal
         .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Update)?;
@@ -263,7 +263,7 @@ pub async fn get_users_register(
 pub async fn post_users_register(
     data: web::Data<AppState>,
     req: HttpRequest,
-    req_data: actix_web_validator::Json<NewUserRegistrationRequest>,
+    req_data: Json<NewUserRegistrationRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     if !*OPEN_USER_REG {
         return Err(ErrorResponse::new(
@@ -369,7 +369,7 @@ pub async fn put_user_attr(
     data: web::Data<AppState>,
     path: web::Path<String>,
     principal: ReqPrincipal,
-    req_data: actix_web_validator::Json<UserAttrValuesUpdateRequest>,
+    req_data: Json<UserAttrValuesUpdateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal
         .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Update)?;
@@ -480,7 +480,7 @@ pub async fn put_user_password_reset(
     data: web::Data<AppState>,
     path: web::Path<String>,
     req: HttpRequest,
-    req_data: actix_web_validator::Json<PasswordResetRequest>,
+    req_data: Json<PasswordResetRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     password_reset::handle_put_user_password_reset(
         &data,
@@ -559,7 +559,7 @@ pub async fn post_webauthn_auth_start(
     id: web::Path<String>,
     principal: ReqPrincipal,
     req: HttpRequest,
-    req_data: actix_web_validator::Json<WebauthnAuthStartRequest>,
+    req_data: Json<WebauthnAuthStartRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
 
@@ -624,7 +624,7 @@ pub async fn post_webauthn_auth_finish(
     data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
-    req_data: actix_web_validator::Json<WebauthnAuthFinishRequest>,
+    req_data: Json<WebauthnAuthFinishRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let id = id.into_inner();
     let res = if principal.validate_session_init().is_ok() {
@@ -754,7 +754,7 @@ pub async fn post_webauthn_reg_start(
     id: web::Path<String>,
     principal: ReqPrincipal,
     req: HttpRequest,
-    req_data: actix_web_validator::Json<WebauthnRegStartRequest>,
+    req_data: Json<WebauthnRegStartRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth()?;
 
@@ -803,7 +803,7 @@ pub async fn post_webauthn_reg_finish(
     id: web::Path<String>,
     principal: ReqPrincipal,
     req: HttpRequest,
-    req_data: actix_web_validator::Json<WebauthnRegFinishRequest>,
+    req_data: Json<WebauthnRegFinishRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth()?;
 
@@ -829,21 +829,23 @@ pub async fn post_webauthn_reg_finish(
 }
 
 /// Returns a user's webid document, if enabled
+///
+/// Note: The way the SwaggerUI is set up currently, the path will not be correct for this single
+/// endpoint. It is an absolute path: `/auth/webid/{id}/profile`
 #[utoipa::path(
     get,
-    path = "/users/{id}/webid",
-    tag = "users",
+    path = "/auth/webid/{id}/profile",
+    tag = "webid",
     responses(
         (status = 200, description = "Ok", body = WebIdResponse),
         (status = 404, description = "NotFound", body = ErrorResponse),
         (status = 405, description = "MethodNotAllowed"),
     ),
 )]
-#[get("/users/{id}/webid")]
+#[get("/webid/{id}/profile")]
 pub async fn get_user_webid(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    _req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     // check if webid's are enabled globally
     if !*ENABLE_WEB_ID {
@@ -852,30 +854,21 @@ pub async fn get_user_webid(
 
     let id = id.into_inner();
     let webid = WebId::find(&data, id).await?;
-
-    if !webid.is_open {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::NotFound,
-            "WebID not found".to_string(),
-        ));
-    }
-
     let user = User::find(&data, webid.user_id).await?;
 
     let resp = WebIdResponse {
         user_id: user.id,
         issuer: data.issuer.clone(),
         email: user.email,
+        expose_email: webid.expose_email,
         given_name: user.given_name,
         family_name: user.family_name,
         language: user.language,
-        custom_data: webid.data,
+        custom_triples: webid.custom_triples,
     };
 
-    // TODO content-negotiation based on `Accept` header.
     resp.as_turtle()
         .map(|content| HttpResponse::Ok().content_type(TEXT_TURTLE).body(content))
-        .map_err(|_| ErrorResponse::new(ErrorResponseType::Internal, "Invalid custom data".into()))
 }
 
 /// Returns data and options set by the user for the `webid` preferences
@@ -916,7 +909,8 @@ pub async fn get_user_webid_data(
     Ok(HttpResponse::Ok().json(webid))
 }
 
-/// Returns data and options set by the user for the `webid` preferences. Data must be serialized in ntriples.
+/// Returns data and options set by the user for the `webid` preferences. Data must be serialized
+/// in ntriples.
 #[utoipa::path(
     put,
     path = "/users/{id}/webid/data",
@@ -946,11 +940,15 @@ pub async fn put_user_webid_data(
     principal.is_user(&id)?;
 
     let payload = payload.into_inner();
+    tracing::debug!("\n\n{:?}\n", payload);
+
     let web_id = WebId {
         user_id: id,
-        is_open: payload.is_open,
-        data: payload.data,
+        custom_triples: payload.custom_triples,
+        expose_email: payload.expose_email,
     };
+    web_id.validate_custom_triples()?;
+
     WebId::upsert(&data, web_id).await?;
 
     Ok(HttpResponse::Ok().finish())
@@ -981,7 +979,7 @@ pub async fn put_user_webid_data(
 pub async fn post_user_password_request_reset(
     data: web::Data<AppState>,
     req: HttpRequest,
-    req_data: actix_web_validator::Json<RequestResetRequest>,
+    req_data: Json<RequestResetRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
@@ -1040,7 +1038,7 @@ pub async fn put_user_by_id(
     id: web::Path<String>,
     req: HttpRequest,
     principal: ReqPrincipal,
-    user: actix_web_validator::Json<UpdateUserRequest>,
+    user: Json<UpdateUserRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
 
@@ -1080,7 +1078,7 @@ pub async fn put_user_self(
     data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
-    user: actix_web_validator::Json<UpdateUserSelfRequest>,
+    user: Json<UpdateUserSelfRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth()?;
 
