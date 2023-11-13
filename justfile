@@ -127,8 +127,16 @@ version:
     echo "v$TAG"
 
 
+prepare-sqlite: migrate-sqlite
+    DATABASE_URL={{db_url_sqlite}} cargo sqlx prepare --workspace -- --features sqlite
+
+
+prepare-postgres: migrate-postgres
+    DATABASE_URL={{db_url_postgres}} cargo sqlx prepare --workspace
+
+
 # runs the full set of tests with in-memory sqlite
-test-sqlite test="": migrate-sqlite
+test-sqlite test="": migrate-sqlite prepare-sqlite
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
@@ -237,7 +245,6 @@ build-sqlite: test-sqlite
     set -euxo pipefail
 
     cargo clean
-    DATABASE_URL={{db_url_sqlite}} cargo sqlx prepare --workspace -- --features sqlite
 
     cargo clippy --features sqlite -- -D warnings
     cargo build --release --target x86_64-unknown-linux-musl --features sqlite
@@ -253,8 +260,7 @@ build-postgres: test-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    #cargo clean
-    DATABASE_URL={{db_url_postgres}} cargo sqlx prepare --workspace
+    cargo clean
 
     cargo clippy -- -D warnings
     cargo build --release --target x86_64-unknown-linux-musl
