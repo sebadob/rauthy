@@ -1,5 +1,95 @@
 # Changelog
 
+## v0.19.0
+
+### Solid OIDC Support
+
+This is the main new feature for this release.
+
+With the now accepted `RSA` signatures for DPoP tokens, the ephemeral, dynamic clients and
+the basic serving of `webid` documents for each user, Rauthy should now fully support Solid OIDC.
+This feature just needs some more real world testing with already existing applications though.
+
+These 3 new features are all opt-in, because a default deployment of Rauthy will most probably
+not use them at all. There is a whole new section in the [Config](https://sebadob.github.io/rauthy/config/config.html)
+called `EPHEMERAL CLIENTS` where you can configure these things. The 3 main variables you need
+to set are:
+
+```
+# Can be set to 'true' to allow the dynamic client lookup via URLs as
+# 'client_id's during authorization_code flow initiation.
+# default: false
+ENABLE_EPHEMERAL_CLIENTS=true
+
+# Can be set to 'true' to enable WebID functionality like needed
+# for things like Solid OIDC.
+# default: false
+ENABLE_WEB_ID=true
+
+# If set to 'true', 'solid' will be added to the 'aud' claim from the ID token
+# for ephemeral clients.
+# default: false
+ENABLE_SOLID_AUD=true
+```
+
+Afterward, the only "manual" thing you need to do is to add a custom scope called `webid`
+once via the Admin UI.
+
+### `EVENT_MATRIX_ERROR_NO_PANIC`
+
+This new config variable solves a possible chicken and egg problem, if you use a self-hosted
+Matrix server and Rauthy as its OIDC provider at the same time. If both services are offline,
+for instance because of a server reboot, you would not be able to start them.
+
+- The Matrix Server would panic because it cannot connect to and verify Rauthy
+- Rauthy would panic because it cannot connect to Matrix
+
+Setting this variable to `true` solves this issue and Rauthy would only log an error in that
+case instead of panicking. The panic is the preferred behavior though, because this makes 
+100% sure that Rauthy will actually be able to send out notification to configured endpoints.
+
+### Features
+
+- ~20% smaller binary size by stripping unnecessary symbols
+[680d5e5](https://github.com/sebadob/rauthy/commit/680d5e5926481947324d8e5868a9c4d903ead05a)
+- Accept `DPoP` tokens with `RSA` validations
+[daade41](https://github.com/sebadob/rauthy/commit/daade41a4ff22980d41e54570462eef783607766)
+- Dynamically build up and serve custom scopes in the `/.well-known/openid-configuration`
+[904cf09](https://github.com/sebadob/rauthy/commit/904cf090a1f3070a33dbbac8c503b7190dd6ee47)
+- A much nicer way of generating both DEV and PROD TLS certificates by using [Nioca](https://github.com/sebadob/nioca)
+has been integrated into the project itself, as well as the 
+[Rauthy Book](https://sebadob.github.io/rauthy/config/tls.html)
+[463bf8a](https://github.com/sebadob/rauthy/commit/463bf8a40bf71e588a0449d647714acc96c68f83)
+[a14beda](https://github.com/sebadob/rauthy/commit/a14beda84942ecb17ac56d15b52e4668ebb12b41)
+- Implement opt-in ephemeral clients
+[52c84c2](https://github.com/sebadob/rauthy/commit/52c84c2343447698978be4e25e5f537aad0070e0)
+[617908b](https://github.com/sebadob/rauthy/commit/617908bada3ba3e16d352e797e25c2d62eb512a6)
+- Implement opt-in basic `webid` document serving
+[bca77f5](https://github.com/sebadob/rauthy/commit/bca77f5612a2a374d8e34ca8a717d94832328e7f)
+[1e32f6f](https://github.com/sebadob/rauthy/commit/1e32f6f93dd09aacabd6ea8596d028818691624e)
+[79cb836](https://github.com/sebadob/rauthy/commit/79cb83622fe508b3d296e9a6a71f5d6761a6b83a)
+[55433f4](https://github.com/sebadob/rauthy/commit/55433f4c614b7660dad32ad2321ff86367d8892e)
+[3cdf81c](https://github.com/sebadob/rauthy/commit/3cdf81c03cf9b78177412069264fa76f4d770ecc)
+- For developers, a new [CONTRIBUTING.md](https://github.com/sebadob/rauthy/blob/main/CONTRIBUTING.md)
+guide has been added to get people started quickly
+[7c38142](https://github.com/sebadob/rauthy/commit/7c381428f74210a2dc56a5d995ab76485a3686ad)
+[411393f](https://github.com/sebadob/rauthy/commit/411393faab2d4f0242ea6fc1414d501c1260d50c)
+- Add a new config variable `EVENT_MATRIX_ERROR_NO_PANIC` to only throw an error instead of
+panic on Matrix connection errors
+[4fc3382](https://github.com/sebadob/rauthy/commit/4fc3382929e65780fb20a78994233357423f0aab)
+- Not really a bug nor a feature, but the "App Version Update" watcher now remembers a
+sent notification for an update and will only notify after a restart again.
+[be19735](https://github.com/sebadob/rauthy/commit/be197355437d0338041cc3206421ec638ca938d7)
+
+### Bugfixes
+
+- In a HA deployment, the new integrated health watcher from v0.17.0 could return false positives
+[93d75d5](https://github.com/sebadob/rauthy/commit/93d75d5d97e92d20a54f4781cea0f0b186b1098d)
+[9bbaeb2](https://github.com/sebadob/rauthy/commit/9bbaeb2f0b582838398547ddb477b7f8ab537a30)
+- In v0.18.0 a bug has been introduced because of internal JWKS optimizations. This produced
+cache errors when trying to deserialize cached JWKS after multiple requests.
+[3808423](https://github.com/sebadob/rauthy/commit/3808423c8c13c06cdd82f6d97a9ef01486561a79)
+
 ## v0.18.0
 
 This is a rather small release.

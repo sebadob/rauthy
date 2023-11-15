@@ -101,15 +101,15 @@ migrate-postgres:
     DATABASE_URL={{db_url_postgres}} sqlx migrate run --source migrations/postgres
 
 
-# runs the application with sqlite feature
+# runs the application with sqlite feature with musl target
 run-sqlite:
     DATABASE_URL={{db_url_sqlite}} cargo run --target x86_64-unknown-linux-musl --features sqlite
 
-# runs the application with sqlite feature, on native target
+# runs the application with sqlite feature with native target
 run-sqlite-native:
     DATABASE_URL={{db_url_sqlite}} cargo run --features sqlite
 
-# runs the application with postgres feature
+# runs the application with postgres feature with musl target
 run-postgres:
     DATABASE_URL={{db_url_postgres}} cargo run --target x86_64-unknown-linux-musl
 
@@ -142,7 +142,7 @@ test-sqlite test="": migrate-sqlite prepare-sqlite
     clear
 
     DATABASE_URL={{db_url_sqlite}} cargo build --features sqlite
-    DATABASE_URL={{db_url_sqlite}} cargo run --features sqlite test &
+    DATABASE_URL={{db_url_sqlite}} ./target/debug/rauthy test &
     sleep 1
     PID=$(echo "$!")
     echo "PID: $PID"
@@ -153,13 +153,13 @@ test-sqlite test="": migrate-sqlite prepare-sqlite
 
 
 # runs the full set of tests with postgres
-test-postgres test="": build-ui migrate-postgres
+test-postgres test="": migrate-postgres prepare-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
 
     DATABASE_URL={{db_url_postgres}} cargo build
-    DATABASE_URL={{db_url_postgres}} cargo run test &
+    DATABASE_URL={{db_url_postgres}} ./target/debug/rauthy test &
     sleep 1
     PID=$(echo "$!")
     echo "PID: $PID"
