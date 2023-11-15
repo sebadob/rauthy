@@ -10,7 +10,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.19.0-20231109"
+version = "0.19.0"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -44,7 +44,7 @@ dotenvy = "0.15"
 ed25519-compact = { version = "2.0.4", features = ["ed25519"] }
 flume = "0.11"
 gethostname = "0.4"
-itertools = "0.11.0"
+itertools = "0.12"
 jwt-simple = "0.11"
 lazy_static = "1"
 num_cpus = "1"
