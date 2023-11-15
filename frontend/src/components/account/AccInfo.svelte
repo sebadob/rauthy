@@ -91,7 +91,7 @@
             <div class={classLabel}><b>WebID:</b></div>
             <span class="value">
                 <a href={buidlWebIdUri(user.id)} target="_blank">
-                    {@html buidlWebIdUri(user.id).replace('/webid/', '/webid/<wbr/>')}
+                    {@html buidlWebIdUri(user.id).replace('/auth/', '/auth/<wbr/>')}
                 </a>
             </span>
         </div>

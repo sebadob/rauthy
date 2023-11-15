@@ -5,7 +5,7 @@ use rauthy_common::error_response::ErrorResponse;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use rio_api::formatter::TriplesFormatter;
 use rio_api::parser::TriplesParser;
-use rio_turtle::{NTriplesFormatter, NTriplesParser, TurtleError, TurtleFormatter, TurtleParser};
+use rio_turtle::{NTriplesFormatter, NTriplesParser, TurtleFormatter, TurtleParser};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
 use std::fmt::Debug;
@@ -21,12 +21,12 @@ pub struct WebId {
 impl WebId {
     #[inline]
     pub fn resolve_webid_uri(user_id: &str) -> String {
-        format!("{}/auth/webid/{}/profile#me", *PUB_URL_WITH_SCHEME, user_id)
+        format!("{}/auth/{}/profile#me", *PUB_URL_WITH_SCHEME, user_id)
     }
 
     #[inline]
     pub fn resolve_webid_card_uri(user_id: &str) -> String {
-        format!("{}/auth/webid/{}/profile", *PUB_URL_WITH_SCHEME, user_id)
+        format!("{}/auth/{}/profile", *PUB_URL_WITH_SCHEME, user_id)
     }
 
     /// Returns the WebId from the database, if it exists, and a default otherwise.
@@ -81,7 +81,7 @@ impl WebId {
         #[cfg(not(feature = "sqlite"))]
         let q = query!(
             r#"INSERT INTO webids (user_id, custom_triples, expose_email) VALUES ($1, $2, $3)
-            ON CONFLICT(user_id) DO UPDATE SET data = $2, expose_email = $3"#,
+            ON CONFLICT(user_id) DO UPDATE SET custom_triples = $2, expose_email = $3"#,
             web_id.user_id,
             web_id.custom_triples,
             web_id.expose_email,
@@ -111,29 +111,20 @@ impl WebId {
         user_id: String,
         custom_data_turtle: Option<&str>,
         expose_email: bool,
-    ) -> Result<Self, TurtleError> {
-        let custom_triples = custom_data_turtle
-            .map(|data| {
-                let mut ttl_parser = TurtleParser::new(
-                    data.as_bytes(),
-                    Some(
-                        Self::resolve_webid_card_uri(&user_id)
-                            .parse()
-                            .expect("Must be valid iri"),
-                    ),
-                );
+    ) -> Result<Self, ErrorResponse> {
+        let custom_triples = if let Some(data) = custom_data_turtle {
+            let mut ttl_parser = TurtleParser::new(
+                data.as_bytes(),
+                Some(Self::resolve_webid_card_uri(&user_id).parse()?),
+            );
+            let mut ntriples_fmt = NTriplesFormatter::new(Vec::<u8>::new());
+            ttl_parser.parse_all(&mut |t| ntriples_fmt.format(&t))?;
 
-                let mut ntriples_fmt = NTriplesFormatter::new(Vec::<u8>::new());
-                ttl_parser.parse_all(&mut |t| {
-                    Ok::<_, TurtleError>(ntriples_fmt.format(&t).expect("Must be valid"))
-                })?;
-
-                Ok::<_, TurtleError>(
-                    String::from_utf8(ntriples_fmt.finish().unwrap())
-                        .expect("Must be valid string."),
-                )
-            })
-            .transpose()?;
+            // as long as the formatter itself is not buggy, this String conversion should never panic
+            Some(String::from_utf8(ntriples_fmt.finish().unwrap()).expect("Must be valid string."))
+        } else {
+            None
+        };
 
         Ok(Self {
             user_id,
@@ -145,10 +136,11 @@ impl WebId {
     pub fn fmt_custom_triples_to_ttl(
         &self,
         formatter: &mut TurtleFormatter<Vec<u8>>,
-    ) -> Result<(), TurtleError> {
+    ) -> Result<(), ErrorResponse> {
         if let Some(custom_triples) = self.custom_triples.as_ref() {
             NTriplesParser::new(custom_triples.as_bytes()).parse_all(&mut |t| {
-                Ok::<_, TurtleError>(formatter.format(&t).expect("Must be valid."))
+                formatter.format(&t)?;
+                Ok(())
             })
         } else {
             Ok(())
@@ -159,12 +151,13 @@ impl WebId {
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
+    use std::env;
 
     use crate::entity::webids::WebId;
 
     // Tests the validation for a String that comes from the UI account page in the end.
     // Whatever input should work in the UI must be passing this test.
-    // TODO expand this test
+    // TODO expand this test -> still only accepts a single triple and not multiple ones
     #[rstest]
     #[case(None)]
     #[case(Some(
@@ -182,6 +175,7 @@ mod tests {
 "#
     ))]
     fn test_custom_triple_validation(#[case] custom_data_turtle: Option<&str>) {
+        env::set_var("PUB_URL", "localhost:8081".to_string());
         let user_id = "SomeId123".to_owned();
         let expose_email = false;
 

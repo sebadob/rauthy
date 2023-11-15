@@ -7,14 +7,12 @@
 
     export let t;
     export let webIdData;
-    // export let viewModePhone;
 
     const btnWidth = "12rem";
 
     let err = '';
     let success = false;
-    let successEmailConfirm = false;
-    let expertMode = !!webIdData.data;
+    let expertMode = !!webIdData.custom_triples;
     let webIdLink = buidlWebIdUri(webIdData.user_id);
 
     // do not set any value here - will be bound to validate function in <AccWebIdEntries/>
@@ -47,7 +45,7 @@
 
         <p>
             <a href={webIdLink} target="_blank">
-                {@html webIdLink.replace('/webid/', '/webid/<wbr/>')}
+                {@html webIdLink.replace('/auth/', '/auth/<wbr/>')}
             </a>
         </p>
 
