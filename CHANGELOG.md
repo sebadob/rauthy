@@ -32,6 +32,9 @@ ENABLE_WEB_ID=true
 ENABLE_SOLID_AUD=true
 ```
 
+Afterward, the only "manual" thing you need to do is to add a custom scope called `webid`
+once via the Admin UI.
+
 ### `EVENT_MATRIX_ERROR_NO_PANIC`
 
 This new config variable solves a possible chicken and egg problem, if you use a self-hosted
