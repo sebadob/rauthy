@@ -2,6 +2,7 @@ use crate::email;
 use crate::email::EMail;
 use crate::events::event::{Event, EventLevel, EventType};
 use async_trait::async_trait;
+use rauthy_common::constants::EVENT_MATRIX_ERROR_NO_PANIC;
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_notify::matrix::NotifierMatrix;
 use rauthy_notify::slack::NotifierSlack;
@@ -130,7 +131,7 @@ impl EventNotifier {
                 .expect("Cannot parse EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION to bool");
             let root_ca_path = env::var("EVENT_MATRIX_ROOT_CA_PATH").ok();
 
-            let notifier = NotifierMatrix::try_new(
+            match NotifierMatrix::try_new(
                 &user_id,
                 &room_id,
                 access_token,
@@ -138,12 +139,29 @@ impl EventNotifier {
                 disable_tls_validation,
                 root_ca_path.as_deref(),
             )
-            .await?;
-            NOTIFIER_MATRIX
-                .set((level.value(), notifier))
-                .expect("init_notifiers should only be called once");
+            .await
+            {
+                Ok(notifier) => {
+                    NOTIFIER_MATRIX
+                        .set((level.value(), notifier))
+                        .expect("init_notifiers should only be called once");
 
-            info!("Event Notifications will be sent to Matrix");
+                    info!("Event Notifications will be sent to Matrix");
+                }
+                Err(err) => {
+                    let no_panic = env::var("EVENT_MATRIX_ERROR_NO_PANIC")
+                        .unwrap_or_else(|_| "false".to_string())
+                        .parse::<bool>()
+                        .expect("Cannot parse EVENT_MATRIX_ERROR_NO_PANIC to bool");
+
+                    let msg = format!("Error creating the Matrix Notifier: {:?}", err.message);
+                    if no_panic {
+                        error!(msg);
+                    } else {
+                        panic!(msg);
+                    }
+                }
+            };
         }
 
         Ok(())
