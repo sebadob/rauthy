@@ -2,7 +2,6 @@ use crate::email;
 use crate::email::EMail;
 use crate::events::event::{Event, EventLevel, EventType};
 use async_trait::async_trait;
-use rauthy_common::constants::EVENT_MATRIX_ERROR_NO_PANIC;
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_notify::matrix::NotifierMatrix;
 use rauthy_notify::slack::NotifierSlack;
@@ -156,9 +155,9 @@ impl EventNotifier {
 
                     let msg = format!("Error creating the Matrix Notifier: {:?}", err.message);
                     if no_panic {
-                        error!(msg);
+                        error!("{msg}");
                     } else {
-                        panic!(msg);
+                        panic!("{msg}");
                     }
                 }
             };
