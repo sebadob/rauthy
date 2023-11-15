@@ -4002,6 +4002,7 @@ dependencies = [
  "gethostname",
  "lazy_static",
  "once_cell",
+ "oxiri",
  "pretty_assertions",
  "rand",
  "rand_core",

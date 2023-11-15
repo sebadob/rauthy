@@ -283,6 +283,17 @@ ENABLE_WEB_ID=true
 # May be set to disable the TLS validation for the Matrix client.
 # default: false
 #EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION=false
+# The default behavior is, that Rauthy will panic at startup if it cannot connect
+# to a configured Matrix server. The reason is that event notifications cannot be
+# dropped silently.
+# However, if you use a self-hosted Matrix server which uses Rauthy as its OIDC
+# provider and both instances went offline, you will have a chicken and egg problem:
+# - Rauthy cannot connect to Matrix and will panic
+# - Your Matrix server cannot connect to Rauthy and will panic
+# To solve this issue, you can temporarily set this value to 'true' and revert
+# back, after the system is online again.
+# default: false
+#EVENT_MATRIX_ERROR_NO_PANIC=false
 
 # The Webhook for Slack Notifications.
 # If left empty, no messages will be sent to Slack.
