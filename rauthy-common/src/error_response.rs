@@ -361,3 +361,12 @@ impl From<TurtleError> for ErrorResponse {
         )
     }
 }
+
+impl From<oxiri::IriParseError> for ErrorResponse {
+    fn from(value: oxiri::IriParseError) -> Self {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("Invalid iri given: {:?}", value),
+        )
+    }
+}

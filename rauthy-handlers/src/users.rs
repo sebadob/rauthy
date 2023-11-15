@@ -834,7 +834,7 @@ pub async fn post_webauthn_reg_finish(
 /// endpoint. It is an absolute path: `/auth/webid/{id}/profile`
 #[utoipa::path(
     get,
-    path = "/auth/webid/{id}/profile",
+    path = "/auth/{id}/profile",
     tag = "webid",
     responses(
         (status = 200, description = "Ok", body = WebIdResponse),
@@ -842,7 +842,7 @@ pub async fn post_webauthn_reg_finish(
         (status = 405, description = "MethodNotAllowed"),
     ),
 )]
-#[get("/webid/{id}/profile")]
+#[get("/{id}/profile")]
 pub async fn get_user_webid(
     data: web::Data<AppState>,
     id: web::Path<String>,
@@ -938,8 +938,6 @@ pub async fn put_user_webid_data(
     principal.is_user(&id)?;
 
     let payload = payload.into_inner();
-    tracing::debug!("\n\n{:?}\n", payload);
-
     let web_id = WebId::try_new(id, payload.custom_triples.as_deref(), payload.expose_email)
         .map_err(|e| {
             ErrorResponse::new(
