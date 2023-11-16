@@ -89,6 +89,7 @@ Keycloak was a rough inspiration in certain places and if something is working w
 - [x] Account conversions between traditional password and Passkey only
 - [x] Supports DPoP tokens for decentralized login flows
 - [x] Supports ephemeral, dynamic clients for decentralized login flows
+- [x] Can serve a basic `webid` document for decentralized logins
 - [x] Admin UI
 - [x] Account UI for each user with self-service
 - [x] Simple per client branding for the login page
@@ -128,7 +129,6 @@ Keycloak was a rough inspiration in certain places and if something is working w
 
 This is a non-exhaustive list of currently open TODO's
 
-- [ ] Serve custom `webid` documents for each user
 - [ ] Admin UI component for archived / persisted events
 - [ ] Add more values for each user (and therefore more OIDC default claims)
 - [ ] auto-encrypted backups (SQLite)
@@ -145,7 +145,7 @@ Either just take a look at the [Rauthy Book](https://sebadob.github.io/rauthy/),
 the application yourself with docker on your localhost:
 
 ```
-docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.18.0-lite
+docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.19.0-lite
 ```
 
 ## Contributing
