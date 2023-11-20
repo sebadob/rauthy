@@ -156,7 +156,7 @@ impl AppState {
             .expect("SESSION_TIMEOUT cannot be parsed to u32 - bad format");
 
         let ml_lt_pwd_first = env::var("ML_LT_PWD_FIRST")
-            .unwrap_or_else(|_| String::from("86400"))
+            .unwrap_or_else(|_| String::from("4320"))
             .trim()
             .parse::<u32>()
             .expect("ML_LT_PWD_FIRST cannot be parsed to u32 - bad format");
