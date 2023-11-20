@@ -8,6 +8,7 @@ use crate::i18n::email_reset_info::I18nEmailResetInfo;
 use crate::i18n::SsrJson;
 use actix_web::web;
 use askama_actix::Template;
+use chrono::DateTime;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication;
 use lettre::{AsyncSmtpTransport, AsyncTransport};
@@ -17,7 +18,6 @@ use rauthy_common::constants::{
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::Notification;
 use std::time::Duration;
-use time::OffsetDateTime;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Receiver;
 use tracing::{debug, error, info, warn};
@@ -188,9 +188,7 @@ pub async fn send_email_change_info_new(
         "{}/users/{}/email_confirm/{}",
         data.issuer, magic_link.user_id, &magic_link.id,
     );
-    let exp = OffsetDateTime::from_unix_timestamp(magic_link.exp)
-        .unwrap()
-        .to_string();
+    let exp = email_ts_prettify(magic_link.exp);
 
     let i18n = I18nEmailChangeInfoNew::build(&user.language);
     let text = EMailChangeInfoNewTxt {
@@ -297,9 +295,7 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
         "{}/users/{}/reset/{}?type={}",
         data.issuer, magic_link.user_id, &magic_link.id, magic_link.usage,
     );
-    let exp = OffsetDateTime::from_unix_timestamp(magic_link.exp)
-        .unwrap()
-        .to_string();
+    let exp = email_ts_prettify(magic_link.exp);
 
     let i18n = I18nEmailReset::build(&user.language);
     let text = EmailResetTxt {
@@ -344,8 +340,7 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
 }
 
 pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
-    let exp = OffsetDateTime::from_unix_timestamp(user.password_expires.unwrap())
-        .expect("Corrupt user password expiry timestamp");
+    let exp = email_ts_prettify(user.password_expires.unwrap());
     let link = format!("{}/auth/v1/account.html", data.public_url);
 
     let i18n = I18nEmailResetInfo::build(&user.language);
@@ -527,4 +522,12 @@ async fn connect_test_smtp(
     }
 
     Ok(conn)
+}
+
+/// Prettifies unix timestamps for E-Mails in a better readable format for end users
+#[inline]
+fn email_ts_prettify(ts: i64) -> String {
+    let dt = DateTime::from_timestamp(ts, 0).unwrap_or_default();
+    let fmt = dt.format("%d/%m/%Y %H:%M:%S");
+    format!("{} UTC", fmt)
 }
