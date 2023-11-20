@@ -199,25 +199,49 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # registrations with 'user@gmail.com' (default: '')
 #USER_REG_DOMAIN_RESTRICTION=some-domain.com
 
-# If set to 'true', this will validate the remote peer IP address with each request 
-# and compare it with the IP which was used during the initial session creation / login.
-# If the IP is different, the session will be rejected.
-# This is a security hardening and prevents stolen access credentials, for instance if
-# an attacker might have copied the encrypted session cookie and the XSRF token from
-# the local storage from a user. However, this event is really unlikely, since it may
-# only happen if an attacker has direct access to the machine itself.
+# If set to 'true', this will validate the remote peer IP address with
+# each request and compare it with the IP which was used during the initial
+# session creation / login. If the IP is different, the session will be
+# rejected. This is a security hardening and prevents stolen access credentials,
+# for instance if an attacker might have copied the encrypted session cookie
+# and the XSRF token from the local storage from a user. However, this event
+# is really unlikely, since it may only happen if an attacker has direct access
+# to the machine itself.
 #
-# If your users are using mobile networks and get new IP addresses all the time, this
-# means they have to do a new login each time. This is no big deal at all with 
+# If your users are using mobile networks and get new IP addresses all the time,
+# this means they have to do a new login each time. This is no big deal at all with 
 # Webauthn / FIDO keys anyway and should not be a reason to deactivate this feature.
 #
 # Caution: If you are running behind a reverse proxy which does not provide the 
-# X-FORWARDED-FOR header correctly, or you have the PROXY_MODE in this config disabled,
-# this feature will not work. You can validate the IPs for each session in the Admin
-# UI. If these are correct, your setup is okay.
+# X-FORWARDED-FOR header correctly, or you have the PROXY_MODE in this config
+# disabled, this feature will not work. You can validate the IPs for each session
+# in the Admin UI. If these are correct, your setup is okay.
 #
 # (default: true)
 #SESSION_VALIDATE_IP=true
+
+# This value may be set to 'true' to disable the binding cookie checking
+# when a user uses the password reset link from an E-Mail.
+#
+# When using such a link, you will get a so called binding cookie. This
+# happens on the very first usage of such a reset link. From that moment on,
+# you will only be able to access the password reset form with this very 
+# device and browser. This is just another security mechanism and prevents
+# someone else who might be passively sniffing network traffic to extract 
+# the (unencrypted) URI from the header and just use it, before the user 
+# has a change to fill out the form. This is a mechanism to prevent against
+# account takeovers during a password reset.
+#
+# The problem however are companies (e.g. Microsoft) who scan their customers
+# E-Mails and even follow links and so on. They call it a &quot;feature&quot;. The
+# problem is, that their servers get this binding cookie and the user will be
+# unable to use this link himself. The usage of this config option is highly
+# discouraged, but since everything moves very slow in big enterprises and
+# you cannot change your E-Mail provider quickly, you can use it do just make
+# it work for the moment and deal with it later.
+#
+# default: false
+UNSAFE_NO_RESET_BINDING=true
 
 #####################################
 ############# BACKUPS ###############
