@@ -569,7 +569,7 @@ pub async fn post_webauthn_auth_start(
         MfaPurpose::Login(_) => id.into_inner(),
 
         MfaPurpose::PasswordReset => {
-            let binding_cookie = match req.cookie(PWD_RESET_COOKIE) {
+            match req.cookie(PWD_RESET_COOKIE) {
                 None => {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::BadRequest,
@@ -577,14 +577,15 @@ pub async fn post_webauthn_auth_start(
                             .to_string(),
                     ));
                 }
-                Some(c) => c,
+                Some(c) => {
+                    if c.value().len() != 48 {
+                        return Err(ErrorResponse::new(
+                            ErrorResponseType::BadRequest,
+                            "Malformed magic link binding cookie".to_string(),
+                        ));
+                    };
+                }
             };
-            if binding_cookie.value().len() != 48 {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "Malformed magic link binding cookie".to_string(),
-                ));
-            }
 
             id.into_inner()
         }
@@ -756,8 +757,6 @@ pub async fn post_webauthn_reg_start(
     req: HttpRequest,
     req_data: Json<WebauthnRegStartRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth()?;
-
     // If we have a magic link ID in the payload, we do not validate the active session / principal.
     // This is mandatory to make registering a passkey for a completely new account work.
     if req_data.magic_link_id.is_some() && req_data.email.is_some() {
@@ -769,6 +768,7 @@ pub async fn post_webauthn_reg_start(
         )
         .await
     } else {
+        principal.validate_session_auth()?;
         // this endpoint is a CSRF check exception inside the Principal Middleware -> check here!
         principal.validate_session_csrf_exception(&req)?;
 
@@ -805,8 +805,8 @@ pub async fn post_webauthn_reg_finish(
     req: HttpRequest,
     req_data: Json<WebauthnRegFinishRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth()?;
-
+    // If we have a magic link ID in the payload, we do not validate the active session / principal.
+    // This is mandatory to make registering a passkey for a completely new account work.
     if req_data.magic_link_id.is_some() {
         password_reset::handle_put_user_passkey_finish(
             &data,
@@ -816,6 +816,7 @@ pub async fn post_webauthn_reg_finish(
         )
         .await
     } else {
+        principal.validate_session_auth()?;
         // this endpoint is a CSRF check exception inside the Principal Middleware -> check here!
         principal.validate_session_csrf_exception(&req)?;
 
