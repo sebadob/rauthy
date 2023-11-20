@@ -882,7 +882,6 @@ impl Client {
         body.validate()?;
 
         let slf = Self::from(body);
-        tracing::debug!("\n\n{:?}\n", slf);
         if slf.id != value {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,

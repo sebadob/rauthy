@@ -1,5 +1,61 @@
 # Changelog
 
+## v0.19.1
+
+This is a small bugfix and compatibility release regarding password reset E-Mails.
+
+The main reason for this release are problems with the Password Reset via E-Mail when users
+are using Microsoft (the only service provider where this problems can be replicated 100% of the time)
+and / or Outlook. These users were unable to use password reset links at all.
+The reason is a "Feature" from Microsoft. They fully scan the user's E-Mails and even follow all links
+inside it. The problem is, that the binding cookie from Rauthy will go to the Microsoft servers instead
+of the user, making is unusable and basically invalidating everything before the user has any chance to
+use the link properly.
+
+The usage of this config variable is **highly discouraged,** and you should **avoid it, if you can**.
+However, big enterprises are moving slowly (and often not at all). This new config variable can be used
+as a last resort, to make it usable by giving up some security.
+
+```
+# This value may be set to 'true' to disable the binding cookie checking
+# when a user uses the password reset link from an E-Mail.
+#
+# When using such a link, you will get a so called binding cookie. This
+# happens on the very first usage of such a reset link. From that moment on,
+# you will only be able to access the password reset form with this very 
+# device and browser. This is just another security mechanism and prevents
+# someone else who might be passively sniffing network traffic to extract 
+# the (unencrypted) URI from the header and just use it, before the user 
+# has a change to fill out the form. This is a mechanism to prevent against
+# account takeovers during a password reset.
+#
+# The problem however are companies (e.g. Microsoft) who scan their customers
+# E-Mails and even follow links and so on. They call it a "feature". The
+# problem is, that their servers get this binding cookie and the user will be
+# unable to use this link himself. The usage of this config option is highly
+# discouraged, but since everything moves very slow in big enterprises and
+# you cannot change your E-Mail provider quickly, you can use it do just make
+# it work for the moment and deal with it later.
+#
+# default: false
+#UNSAFE_NO_RESET_BINDING=false
+```
+
+### Changes
+
+- implement `UNSAFE_NO_RESET_BINDING` like mentioned above
+[1f4a146](https://github.com/sebadob/rauthy/commit/1f4a1462697e85e068edd6bbd3f670f9d1ed985b)
+- prettify the expiry timestamp in some E-Mails
+[1173fa0](https://github.com/sebadob/rauthy/commit/1173fa0f5ac517c7797c34e1240cbd37cb54dae6)
+
+### Bugfixes
+- It was possible to get an "Unauthorized Session" error during a password reset, if it has been
+initiated by an admin and / or from another browser.
+[e5d1d9d](https://github.com/sebadob/rauthy/commit/e5d1d9dd30452fdf5c33cc8e1cfac9670a514c74)
+- Correctly set `ML_LT_PWD_FIRST` - set the default value in minutes (like documented) instead
+of seconds. New default is `ML_LT_PWD_FIRST=4320`
+[e9d1b56](https://github.com/sebadob/rauthy/commit/e9d1b5627809825241fcb0dbea4935f76d1334f1)
+
 ## v0.19.0
 
 ### Solid OIDC Support

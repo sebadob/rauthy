@@ -483,7 +483,7 @@ impl Event {
     pub fn new_rauthy_version(version_url: String) -> Self {
         Self::new(
             EVENT_LEVEL_NEW_RAUTHY_VERSION.get().cloned().unwrap(),
-            EventType::NewRauthyAdmin,
+            EventType::NewRauthyVersion,
             None,
             None,
             Some(version_url),
