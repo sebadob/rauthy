@@ -1377,7 +1377,7 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # it work for the moment and deal with it later.
 #
 # default: false
-UNSAFE_NO_RESET_BINDING=true
+#UNSAFE_NO_RESET_BINDING=false
 
 #####################################
 ############# BACKUPS ###############
@@ -1776,8 +1776,8 @@ EVENT_LEVEL_FAILED_LOGIN=info
 #ML_LT_PWD_RESET=30
 
 # Lifetime in minutes for the first password magic link, for
-# setting the initial password. (default: 86400)
-#ML_LT_PWD_FIRST=86400
+# setting the initial password. (default: 4320)
+#ML_LT_PWD_FIRST=4320
 
 # The interval in seconds in which keep-alives should be sent to SSE clients.
 # Depending on your network setup, proxy timeouts, ...

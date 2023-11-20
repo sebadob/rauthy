@@ -65,7 +65,7 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # it work for the moment and deal with it later.
 #
 # default: false
-UNSAFE_NO_RESET_BINDING=true
+#UNSAFE_NO_RESET_BINDING=false
 
 #####################################
 ############# BACKUPS ###############
