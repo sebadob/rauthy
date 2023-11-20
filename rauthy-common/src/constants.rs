@@ -259,6 +259,11 @@ lazy_static! {
         .parse::<bool>()
         .expect("SWAGGER_UI_EXTERNAL cannot be parsed to bool - bad format");
 
+    pub static ref UNSAFE_NO_RESET_BINDING: bool = env::var("UNSAFE_NO_RESET_BINDING")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("UNSAFE_NO_RESET_BINDING cannot be parsed to bool - bad format");
+
     pub static ref WEBAUTHN_REQ_EXP: u64 = env::var("WEBAUTHN_REQ_EXP")
         .unwrap_or_else(|_| String::from("60"))
         .parse::<u64>()

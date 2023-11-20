@@ -159,7 +159,6 @@ pub async fn handle_put_user_password_reset<'a>(
     req_data: PasswordResetRequest,
 ) -> Result<cookie::Cookie<'a>, ErrorResponse> {
     // validate user_id / given email address
-    debug!("getting user");
     let mut user = User::find(data, user_id).await?;
     if user.email != req_data.email {
         return Err(ErrorResponse::new(
@@ -193,15 +192,12 @@ pub async fn handle_put_user_password_reset<'a>(
         }
     }
 
-    debug!("getting magic link");
     let mut ml = MagicLink::find(data, &req_data.magic_link_id).await?;
     ml.validate(&user.id, &req, true)?;
 
-    debug!("applying password rules");
     // validate password
     user.apply_password_rules(data, &req_data.password).await?;
 
-    debug!("invalidating magic link pwd");
     // all good
     ml.invalidate(data).await?;
     user.email_verified = true;
