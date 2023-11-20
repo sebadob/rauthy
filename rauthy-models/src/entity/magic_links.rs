@@ -1,11 +1,13 @@
 use crate::app_state::AppState;
+use crate::real_ip_from_req;
 use actix_web::{web, HttpRequest};
-use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
+use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE, UNSAFE_NO_RESET_BINDING};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::get_rand;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use time::OffsetDateTime;
+use tracing::warn;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -180,10 +182,20 @@ impl MagicLink {
             if let Some(cookie) = cookie_opt {
                 // the extracted cookie from the request starts with 'rauthy-pwd-reset='
                 if !cookie.value().ends_with(self.cookie.as_ref().unwrap()) {
-                    return Err(err);
+                    if *UNSAFE_NO_RESET_BINDING {
+                        let ip = real_ip_from_req(req).unwrap_or_default();
+                        warn!("UNSAFE_RESET_NO_BINDING is set to true -> ignoring invalid binding cookie from {}", ip);
+                    } else {
+                        return Err(err);
+                    }
                 }
             } else {
-                return Err(err);
+                if *UNSAFE_NO_RESET_BINDING {
+                    let ip = real_ip_from_req(req).unwrap_or_default();
+                    warn!("UNSAFE_RESET_NO_BINDING is set to true -> ignoring invalid binding cookie from {}", ip);
+                } else {
+                    return Err(err);
+                }
             }
         }
 
