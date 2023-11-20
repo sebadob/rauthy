@@ -7,7 +7,7 @@
 
 
         <!-- Custom HTML head -->
-
+        
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
@@ -233,17 +233,17 @@ data:
   # The CACHE_AUTH_TOKEN is only needed for a deployment with HA_MODE == true
   # Secret token, which is used to authenticate the cache members
   #CACHE_AUTH_TOKEN:
-
+  
   # The database driver will be chosen at runtime depending on the given DATABASE_URL format. Examples:
   # Sqlite: 'sqlite:data/rauthy.db' or 'sqlite::memory:'
   # Postgres: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
-  DATABASE_URL:
-
+  DATABASE_URL: 
+    
   # Format: &quot;key_id/enc_key another_key_id/another_enc_key&quot; - the enc_key itself must be exactly 32 characters long and
   # and should not contain special characters.
   # The ID must match '[a-zA-Z0-9]{2,20}'
   ENC_KEYS:
-
+  
   # Needed for sending E-Mails for password resets and so on
   SMTP_PASSWORD:
 </code></pre>
@@ -399,7 +399,7 @@ spec:
               #memory:
               # A CPU limit may make sense in case of DDoS attacks or something
               # like this, if you do not have external rate limiting or other
-              # mechanisms. Otherwise, `MAX_HASH_THREADS` is the main mechanism
+              # mechanisms. Otherwise, `MAX_HASH_THREADS` is the main mechanism 
               # to limit resources.
               cpu: 1000m
       volumes:
