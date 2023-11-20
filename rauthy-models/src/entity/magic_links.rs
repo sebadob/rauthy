@@ -189,13 +189,11 @@ impl MagicLink {
                         return Err(err);
                     }
                 }
+            } else if *UNSAFE_NO_RESET_BINDING {
+                let ip = real_ip_from_req(req).unwrap_or_default();
+                warn!("UNSAFE_RESET_NO_BINDING is set to true -> ignoring invalid binding cookie from {}", ip);
             } else {
-                if *UNSAFE_NO_RESET_BINDING {
-                    let ip = real_ip_from_req(req).unwrap_or_default();
-                    warn!("UNSAFE_RESET_NO_BINDING is set to true -> ignoring invalid binding cookie from {}", ip);
-                } else {
-                    return Err(err);
-                }
+                return Err(err);
             }
         }
 
