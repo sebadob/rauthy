@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rauthy Axum Example</title>
+</head>
+<body>
+    <p>Logged In: <span id="status"></span></p>
+    <div id="btn"></div>
+    <p>Answer from protected resource:</p>
+    <p id="content"></p>
+</body>
+<script>
+    let status = document.getElementById('status');
+    let content = document.getElementById('content');
+    let btn = document.getElementById('btn');
+
+    // this token will be saved by the callback endpoint
+    const token = localStorage.getItem('access_token');
+
+    fetch('/auth_check', {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` },
+    }).then(res => {
+        if (res.status === 202) {
+            status.innerText = 'Yes';
+            btn.innerHTML = '<button onclick="logout()">Logout</button>';
+        } else {
+            status.innerText = 'No';
+            let loc = res.headers.get('location');
+            btn.innerHTML = `<a href=${loc}>Login</a>`;
+        }
+    });
+
+    fetch('/protected', {
+        method: 'GET',
+        headers: {'Authorization': `Bearer ${token}`},
+    }).then(res => {
+        if (res.ok) {
+            res.text().then(text => content.innerHTML = text);
+        } else {
+            content.innerText = `Status: ${res.status}`;
+        }
+    });
+
+    // This is not really a good logout, just for demonstration here
+    function logout() {
+        localStorage.removeItem('access_token');
+        window.location.reload();
+    }
+</script>
+</html>
