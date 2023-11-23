@@ -59,8 +59,7 @@ pub fn base64_url_no_pad_decode(b64: &str) -> anyhow::Result<Vec<u8>> {
         .map_err(|_| anyhow::Error::msg("B64 decoding error"))
 }
 
-/// Extracts the claims from a given token into a HashMap.
-/// Returns an empty HashMap if no values could be extracted at all.
+/// Extracts the claims from a given token into the given struct.
 /// CAUTION: Does not validate the token!
 pub fn extract_token_claims<T>(token: &str) -> anyhow::Result<T>
 where
@@ -106,6 +105,30 @@ pub fn generate_pkce_challenge() -> (String, String) {
     (plain, challenge)
 }
 
+#[derive(Debug, PartialEq)]
+pub enum RauthyHttpsOnly {
+    Yes,
+    No,
+}
+
+impl RauthyHttpsOnly {
+    pub fn bool(&self) -> bool {
+        self == &Self::Yes
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum DangerAcceptInvalidCerts {
+    Yes,
+    No,
+}
+
+impl DangerAcceptInvalidCerts {
+    pub fn bool(&self) -> bool {
+        self == &Self::Yes
+    }
+}
+
 /// This function must(!) be called exactly once during your app start up before(!) the
 /// OidcProvider::setup_*() function.
 /// It will initialize variables, clients, cache, and validate the OIDC configuration.
@@ -114,8 +137,8 @@ pub fn generate_pkce_challenge() -> (String, String) {
 /// This will panic if it is called more than once.
 pub async fn init(
     root_certificate: Option<RootCertificate>,
-    https_only: bool,
-    danger_accept_invalid_certs: bool,
+    https_only: RauthyHttpsOnly,
+    danger_accept_invalid_certs: DangerAcceptInvalidCerts,
 ) -> anyhow::Result<()> {
     #[cfg(feature = "actix")]
     panic!("`actix` is not yet implemented");

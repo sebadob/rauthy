@@ -1,5 +1,3 @@
-use rand::{distributions, Rng};
-
 /// Application config
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -8,7 +6,9 @@ pub struct Config {
 
 impl Config {
     pub async fn new() -> anyhow::Result<Self> {
-        let enc_key = secure_random(32);
+        // the encryption key used to encrypt cookies later on
+        // MUST be exactly 32 bytes long
+        let enc_key = rauthy_client::secure_random(32);
 
         // you will most probably do some async stuff here like open a DB pool ...
 
@@ -16,15 +16,4 @@ impl Config {
             enc_key: enc_key.into_bytes(),
         })
     }
-}
-
-/// Generates a secure random value with the given length.
-/// Used for generating temp encryption keys in this example.
-#[inline]
-pub fn secure_random(count: usize) -> String {
-    rand::thread_rng()
-        .sample_iter(&distributions::Alphanumeric)
-        .take(count)
-        .map(char::from)
-        .collect::<String>()
 }
