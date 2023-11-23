@@ -1,6 +1,6 @@
 use crate::jwks::JwksMsg;
 use crate::oidc_config::{JwtClaim, RauthyConfig};
-use crate::VERSION;
+use crate::{DangerAcceptInvalidCerts, RauthyHttpsOnly, VERSION};
 use jwt_simple::common::VerificationOptions;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -142,14 +142,14 @@ impl OidcProvider {
 
     pub fn init_client(
         root_certificate: Option<reqwest::Certificate>,
-        https_only: bool,
-        danger_accept_invalid_certs: bool,
+        https_only: RauthyHttpsOnly,
+        danger_accept_invalid_certs: DangerAcceptInvalidCerts,
     ) -> anyhow::Result<()> {
         let mut c = reqwest::Client::builder()
             .timeout(Duration::from_secs(10))
             .connect_timeout(Duration::from_secs(10))
-            .https_only(https_only)
-            .danger_accept_invalid_certs(danger_accept_invalid_certs)
+            .https_only(https_only.bool())
+            .danger_accept_invalid_certs(danger_accept_invalid_certs.bool())
             .user_agent(format!("Rauthy OIDC Client v{}", VERSION))
             .brotli(true)
             .http2_prior_knowledge()
