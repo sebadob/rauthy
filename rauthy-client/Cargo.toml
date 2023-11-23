@@ -13,7 +13,7 @@ repository = "https://github.com/sebadob/rauthy/tree/main/rauthy-client"
 
 [features]
 default = ["axum"]
-actix = []
+actix-web = []
 axum = ["dep:axum", "dep:axum-extra", "dep:time"]
 
 [dependencies]
