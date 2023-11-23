@@ -140,7 +140,7 @@ pub async fn init(
     https_only: RauthyHttpsOnly,
     danger_accept_invalid_certs: DangerAcceptInvalidCerts,
 ) -> anyhow::Result<()> {
-    #[cfg(feature = "actix")]
+    #[cfg(feature = "actix-web")]
     panic!("`actix` is not yet implemented");
 
     OidcProvider::init_client(root_certificate, https_only, danger_accept_invalid_certs)?;
