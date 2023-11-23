@@ -1,7 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-    "rauthy-client",
     "rauthy-common",
     "rauthy-handlers",
     "rauthy-main",
@@ -9,9 +8,10 @@ members = [
     "rauthy-notify",
     "rauthy-service",
 ]
+exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.19.1"
+version = "0.19.1-20231123"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
