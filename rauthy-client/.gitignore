@@ -1,2 +1,5 @@
 target
+examples/*/.idea
+examples/*/target
 .idea
+Cargo.lock
