@@ -117,6 +117,9 @@ pub async fn init(
     https_only: bool,
     danger_accept_invalid_certs: bool,
 ) -> anyhow::Result<()> {
+    #[cfg(feature = "actix")]
+    panic!("`actix` is not yet implemented");
+
     OidcProvider::init_client(root_certificate, https_only, danger_accept_invalid_certs)?;
     jwks_handler().await;
     Ok(())
