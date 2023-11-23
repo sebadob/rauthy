@@ -18,24 +18,29 @@ axum = ["dep:axum", "dep:axum-extra", "dep:time"]
 
 [dependencies]
 # common
-anyhow = "1.0.70"
-base64 = "0.21"
-bincode = "1.3"
-cached = { version = "0.46", features = [] }
-chacha20poly1305 = { version = "0.10", features = ["std"] }
-chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
-jwt-simple = "0.11"
-rand = "0.8"
+anyhow = "1.0.75"
+base64 = "0.21.5"
+bincode = "1.3.3"
+cached = { version = "0.46.1", features = [] }
+chacha20poly1305 = { version = "0.10.1", features = ["std"] }
+chrono = { version = "0.4.31", default-features = false, features = ["clock", "serde", "std"] }
+jwt-simple = "0.11.9"
+rand = "0.8.5"
 reqwest = { version = "0.11", default-features = false, features = [
     "brotli", "json", "rustls-tls", "rustls-tls-webpki-roots"
 ] }
-ring = "0.17"
+ring = "0.17.5"
 serde = { version = "1.0.180", features = ["derive"] }
 serde_json = "1.0.100"
-tokio = "1.26"
-tracing = "0.1"
+tokio = "1.34"
+tracing = "0.1.40"
 
 # axum
-axum = { version = "0.6", optional = true, features = ["headers"] }
+axum = { version = "0.6.20", optional = true, features = ["headers"] }
 axum-extra = { version = "0.8", optional = true, features = ["cookie"] }
-time = { version = "0.3", optional = true, features = [] }
+time = { version = "0.3.30", optional = true, features = [] }
+
+# make minimal versions happy
+# both needed for axum 0.6.20
+bitflags = "1.3.2"
+elliptic-curve = "0.13.8"
