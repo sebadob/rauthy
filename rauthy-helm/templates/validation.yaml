@@ -1,0 +1,20 @@
+{{ if .Values.haMode }}
+  # make sure replicas is >= 3 in ha mode
+  {{ if lt (int .Values.replicas) 3 }}
+    {{ fail "'replicas' mut be at least 3 with haMode == true" }}
+  {{ end }}
+
+  # cannot use sqlite in ha mode
+  {{ if .Values.sqlite.enabled }}
+    {{ fail "You cannot use SQLite with HA mode"}}
+  {{ end }}
+
+  # error is postgres is disabled
+  {{ if .Values.sqlite.enabled }}
+    {{ fail "You must enable Postgres with HA mode" }}
+  {{ end }}
+{{ end}}
+
+{{ if eq .Values.sqlite.enabled .Values.postgres.enabled }}
+  {{ fail "You can only use SQLite OR Postgres" }}
+{{ end }}

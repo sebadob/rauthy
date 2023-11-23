@@ -331,3 +331,9 @@ publish-latest:
     docker pull ghcr.io/sebadob/rauthy:$TAG
     docker tag ghcr.io/sebadob/rauthy:$TAG ghcr.io/sebadob/rauthy:latest
     docker push ghcr.io/sebadob/rauthy:latest
+
+
+# prints out the raw computed helm template for easier development and debugging
+helm-debug:
+    #!/usr/bin/env bash
+    helm install --debug --dry-run rauthy ./rauthy-helm

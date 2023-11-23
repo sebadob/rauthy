@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  serviceName: {{ .Release.Name }}
+  replicas: {{ if eq .Values.haMode false }}1{{ else }}3{{ end }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      securityContext:
+        fsGroup: 10001
+      containers:
+        - name: {{ .Release.Name }}
+          image: {{ if .Values.sqlite.enabled }}{{ $.Values.image }}-lite{{ else }}{{ $.Values.image }}{{ end }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 10001
+            runAsGroup: 10001
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 8080
+          env:
+            {{- if .Values.postgres.enabled}}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.url.secretName | required "postgres.url.secretName must be set" }}
+                  key: {{ .Values.postgres.url.secretKey | required "postgres.url.secretKey must be set" }}
+            {{- end }}
+            {{- with .Values.secret }}
+            - name: SMTP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .smtp.secretName | required "secrets.smtp.secretName must be set" }}
+                  key: {{ .smtp.usernameKey | required "secrets.smtp.usernameKey must be set" }}
+            - name: SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .smtp.secretName | required "secrets.smtp.secretName must be set" }}
+                  key: {{ .smtp.passwordKey | required "secrets.smtp.passwordKey must be set" }}
+            - name: ENC_KEYS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .encKeys.secretName | required "secrets.encKeys.secretName must be set" }}
+                  key: {{ .encKeys.secretKey | required "secrets.encKeys.secretKey must be set" }}
+            {{- end }}
+          volumeMounts:
+            {{- if and .Values.sqlite.enabled .Values.sqlite.persistence.enabled }}
+            - mountPath: /app/data
+              name: {{ .Release.Name }}-data
+              readOnly: false
+            {{- end }}
+            - mountPath: /app/rauthy.cfg
+              subPath: rauthy.cfg
+              name: {{ .Release.Name }}-config
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /auth/v1/ping
+              port: 8080
+            initialDelaySeconds: 1
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /auth/v1/health
+              port: 8080
+            initialDelaySeconds: 1
+            periodSeconds: 30
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+      volumes:
+        - name: {{ .Release.Name }}-config
+          configMap:
+            name: {{ .Release.Name }}-config
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecrets }}
+      {{- end }}
+  {{- if and .Values.sqlite.enabled .Values.sqlite.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ .Release.Name }}-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        {{- if .Values.sqlite.persistence.storageClassName }}
+        storageClassName: {{ .Values.sqlite.persistence.storageClassName }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.sqlite.persistence.storage | required "sqlite.persistence.storage must be set" }}
+  {{ end }}
