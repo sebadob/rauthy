@@ -9,11 +9,11 @@ license = "Apache-2.0"
 anyhow = "1.0.75"
 axum = { version = "0.6", features = ["headers", "http2"] }
 axum-extra = { version = "0.8", features = ["cookie"] }
-dotenvy = "0.15.7"
-rand = "0.8.5"
+dotenvy = "0.15.0"
+rand = "0.8.0"
 tokio = { version = "1.26", features = ["full"] }
 tower = { version = "0.4", features = ["full"] }
-tower-http = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.5", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["tracing"] }
 
