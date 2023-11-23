@@ -4,8 +4,7 @@ use axum::body::Body;
 use axum::extract::Query;
 use axum::http::header::{CONTENT_TYPE, SET_COOKIE};
 use axum::response::{IntoResponse, Response};
-use rauthy_client::handler::OidcCallbackParams;
-use rauthy_client::handler::{OidcCookieInsecure, OidcSetRedirectStatus};
+use rauthy_client::handler::{OidcCallbackParams, OidcCookieInsecure, OidcSetRedirectStatus};
 use rauthy_client::principal::PrincipalOidc;
 use std::sync::Arc;
 
@@ -32,27 +31,23 @@ pub async fn get_index() -> Response<Body> {
 pub async fn get_auth_check(config: ConfigExt, principal: Option<PrincipalOidc>) -> Response<Body> {
     let enc_key = config.enc_key.as_slice();
 
-    if DEV_MODE {
-        rauthy_client::handler::validate_redirect_principal(
-            principal,
-            // this enc_key must be exactly 32 bytes long
-            enc_key,
-            // if we are in dev mode, we allow insecure cookies
-            OidcCookieInsecure::Yes,
-            // if you want to browser to automatically redirect to the login, set to yes
-            // we set this to no to actually show a button for logging in beforehand
-            OidcSetRedirectStatus::No,
-        )
-        .await
+    // if we are in dev mode, we allow insecure cookies
+    let insecure = if DEV_MODE {
+        OidcCookieInsecure::Yes
     } else {
-        rauthy_client::handler::validate_redirect_principal(
-            principal,
-            enc_key,
-            OidcCookieInsecure::No,
-            OidcSetRedirectStatus::No,
-        )
-        .await
-    }
+        OidcCookieInsecure::No
+    };
+
+    rauthy_client::handler::validate_redirect_principal(
+        principal,
+        // this enc_key must be exactly 32 bytes long
+        enc_key,
+        insecure,
+        // if you want the browser to automatically redirect to the login, set to yes
+        // we set this to no to actually show a button for logging in beforehand
+        OidcSetRedirectStatus::No,
+    )
+    .await
 }
 
 /// OIDC Callback endpoint - must match the `redirect_uri` for the login flow
@@ -63,13 +58,14 @@ pub async fn get_callback(
 ) -> Response<Body> {
     let enc_key = config.enc_key.as_slice();
 
-    // The `DEV_MODE` again here to just have a nicer DX when developing
-    let callback = if DEV_MODE {
-        rauthy_client::handler::oidc_callback(&jar, params, enc_key, OidcCookieInsecure::Yes)
+    // The `DEV_MODE` again here to just have a nicer DX when developing -> we allow insecure cookies
+    let insecure = if DEV_MODE {
+        OidcCookieInsecure::Yes
     } else {
-        rauthy_client::handler::oidc_callback(&jar, params, enc_key, OidcCookieInsecure::No)
+        OidcCookieInsecure::No
     };
-    let (cookie_str, token_set, _id_claims) = match callback.await {
+    let callback_res = rauthy_client::handler::oidc_callback(&jar, params, enc_key, insecure).await;
+    let (cookie_str, token_set, _id_claims) = match callback_res {
         Ok(res) => res,
         Err(err) => {
             return Response::builder()
