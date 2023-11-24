@@ -559,7 +559,7 @@ pub async fn post_webauthn_auth_start(
     id: web::Path<String>,
     // The principal here must be optional to make cases like user password reset in a
     // fully new / different browser which does not have any lefter data or cookies
-    principal: Option<ReqPrincipal>,
+    principal: ReqPrincipal,
     req: HttpRequest,
     req_data: Json<WebauthnAuthStartRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -567,12 +567,6 @@ pub async fn post_webauthn_auth_start(
     let id = match purpose {
         // only for a Login purpose, this can be accessed without authentication (yet)
         MfaPurpose::Login(_) => {
-            let principal = principal.ok_or_else(|| {
-                ErrorResponse::new(
-                    ErrorResponseType::Unauthorized,
-                    "Unauthorized Session".to_string(),
-                )
-            })?;
             // During Login, the session is allowed to be in init only state
             principal.validate_session_auth_or_init()?;
             id.into_inner()
@@ -604,12 +598,6 @@ pub async fn post_webauthn_auth_start(
         }
 
         _ => {
-            let principal = principal.ok_or_else(|| {
-                ErrorResponse::new(
-                    ErrorResponseType::Unauthorized,
-                    "Unauthorized Session".to_string(),
-                )
-            })?;
             // for all other purposes, we need an authenticated session
             principal.validate_session_auth()?;
 
