@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.19.2
+
+### Changes
+
+- Invalidate all user sessions after a password reset to have a more uniform flow and better UX
+[570dea6](https://github.com/sebadob/rauthy/commit/570dea6379d1bba061a8b7acee64d9e36cf52733)
+- Add an additional foreign key constraint on the `user_attr_values` table to cascade rows
+on user deletion for enhanced stability during user deletions
+[1dc730c](https://github.com/sebadob/rauthy/commit/1dc730c78c7f4e0a9c6b0b1b3dab8a35a4893b47)
+
+### Bugfixes
+
+- Fix a bug when an existing user with already registered passkeys would not be able
+to use the password reset functionality correctly when opened in a fully fresh browser
+[24af03c](https://github.com/sebadob/rauthy/commit/24af03c0365faad2108516bba3174d208e52d616)
+- Fix cache evictions of existing user sessions after a user has been deleted while having
+an active session
+[ed76418](https://github.com/sebadob/rauthy/commit/ed764180fff5ed1f4aa6f497b0fc2362412db7d7)
+- Fix some default values in the reference config docs not having the correct default documented
+[a7101b2](https://github.com/sebadob/rauthy/commit/a7101b25d72ced35e7bc22c7a084816ce7fa7635)
+
 ## v0.19.1
 
 This is a small bugfix and compatibility release regarding password reset E-Mails.

@@ -10,11 +10,7 @@ use std::sync::Arc;
 
 type ConfigExt = axum::extract::State<Arc<Config>>;
 
-/// OIDC Auth check and login
-///
-/// Endpoint with no redirect on purpose to use the result inside Javascript from the frontend.
-/// HTTP 200 will have a location header and a manual redirect must be done
-/// HTTP 202 means logged in Principal
+/// Index HTML
 pub async fn get_index() -> Response<Body> {
     Response::builder()
         .status(200)
