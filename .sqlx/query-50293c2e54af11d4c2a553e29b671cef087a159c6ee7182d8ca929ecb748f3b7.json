@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "delete from sessions where id = $1",
+  "query": "DELETE FROM users WHERE id = $1",
   "describe": {
     "columns": [],
     "parameters": {
@@ -8,5 +8,5 @@
     },
     "nullable": []
   },
-  "hash": "3c9893d4ce373ee15ffe251833ab8f782c0d7bab667971a434d1b8871ea47d6b"
+  "hash": "50293c2e54af11d4c2a553e29b671cef087a159c6ee7182d8ca929ecb748f3b7"
 }
