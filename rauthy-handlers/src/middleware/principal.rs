@@ -71,7 +71,6 @@ where
                 principal.session = Some(s);
             }
 
-            // req.extensions_mut().insert(session);
             req.extensions_mut().insert(principal);
 
             service.call(req).await

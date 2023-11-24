@@ -423,7 +423,6 @@ impl User {
         id: String,
         upd_user: UpdateUserRequest,
         user: Option<User>,
-        // OK((User, is_new_rauthy_admin))
     ) -> Result<(User, bool), ErrorResponse> {
         let mut user = match user {
             None => User::find(data, id).await?,
