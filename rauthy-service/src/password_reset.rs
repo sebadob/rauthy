@@ -7,6 +7,7 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::magic_links::{MagicLink, MagicLinkUsage};
 use rauthy_models::entity::password::PasswordPolicy;
+use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::WebauthnServiceReq;
@@ -217,6 +218,9 @@ pub async fn handle_put_user_password_reset<'a>(
         ))
         .await
         .unwrap();
+
+    // delete all existing user sessions to have a clean flow
+    Session::invalidate_for_user(data, &user.id).await?;
 
     // delete the cookie
     let cookie = cookie::Cookie::build(PWD_RESET_COOKIE, "")
