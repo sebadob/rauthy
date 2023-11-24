@@ -139,10 +139,15 @@ impl User {
 
     // Deletes a user
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        sqlx::query!("delete from users where id = $1", self.id)
+        // Clean up all possibly existing sessions from the cache
+        Session::delete_by_user(data, &self.id).await?;
+
+        // Delete the user itself
+        sqlx::query!("DELETE FROM users WHERE id = $1", self.id)
             .execute(&data.db)
             .await?;
 
+        // Now clean up all caches
         let users = User::find_all(data)
             .await?
             .into_iter()
@@ -175,11 +180,6 @@ impl User {
             AckLevel::Quorum,
         )
         .await?;
-
-        // This should not be a problem with a non-existent user, but delete all sessions and
-        // refresh tokens in advance.
-        Session::invalidate_for_user(data, &self.id).await?;
-        RefreshToken::invalidate_for_user(data, &self.id).await?;
 
         Ok(())
     }
