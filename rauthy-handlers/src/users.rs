@@ -557,18 +557,31 @@ pub async fn get_user_webauthn_passkeys(
 pub async fn post_webauthn_auth_start(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    principal: ReqPrincipal,
+    // The principal here must be optional to make cases like user password reset in a
+    // fully new / different browser which does not have any lefter data or cookies
+    principal: Option<ReqPrincipal>,
     req: HttpRequest,
     req_data: Json<WebauthnAuthStartRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth_or_init()?;
-
     let purpose = req_data.into_inner().purpose;
     let id = match purpose {
         // only for a Login purpose, this can be accessed without authentication (yet)
-        MfaPurpose::Login(_) => id.into_inner(),
+        MfaPurpose::Login(_) => {
+            let principal = principal.ok_or_else(|| {
+                ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "Unauthorized Session".to_string(),
+                )
+            })?;
+            // During Login, the session is allowed to be in init only state
+            principal.validate_session_auth_or_init()?;
+            id.into_inner()
+        }
 
         MfaPurpose::PasswordReset => {
+            // A password reset webauthn req can be opened without any session at all.
+            // This is mandatory to make password reset flows fully work, even with an old
+            // account with linked Passkeys.
             match req.cookie(PWD_RESET_COOKIE) {
                 None => {
                     return Err(ErrorResponse::new(
@@ -591,6 +604,13 @@ pub async fn post_webauthn_auth_start(
         }
 
         _ => {
+            let principal = principal.ok_or_else(|| {
+                ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "Unauthorized Session".to_string(),
+                )
+            })?;
+            // for all other purposes, we need an authenticated session
             principal.validate_session_auth()?;
 
             // make sure the principal is this very user
@@ -624,27 +644,15 @@ pub async fn post_webauthn_auth_start(
 pub async fn post_webauthn_auth_finish(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    principal: ReqPrincipal,
     req_data: Json<WebauthnAuthFinishRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let id = id.into_inner();
-    let res = if principal.validate_session_init().is_ok() {
-        // The Session is only in init state in a very tiny window, when the /oidc/authorize page has
-        // been received and until the credentials have been validated.
-        // As a double check, we have the 'code' from the /start endpoint.
-        webauthn::auth_finish(&data, id, req_data.into_inner()).await?
-    } else if principal.validate_session_auth().is_ok() {
-        // For any authenticated request, validate that Principal matches the user.
-        principal.is_user(&id)?;
 
-        webauthn::auth_finish(&data, id, req_data.into_inner()).await?
-    } else {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Unauthorized,
-            "No valid session".to_string(),
-        ));
-    };
+    // We do not need to further validate the principal here.
+    // All of this is done at the /start endpoint.
+    // This here will simply fail, if the secret code from the /start does not exist.
 
+    let res = webauthn::auth_finish(&data, id, req_data.into_inner()).await?;
     Ok(res.into_response())
 }
 
