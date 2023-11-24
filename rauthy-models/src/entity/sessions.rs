@@ -93,7 +93,7 @@ impl SessionState {
 // CRUD
 impl Session {
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        sqlx::query!("delete from sessions where id = $1", self.id)
+        sqlx::query!("DELETE FROM sessions WHERE id = $1", self.id)
             .execute(&data.db)
             .await?;
 
@@ -108,11 +108,35 @@ impl Session {
         Ok(())
     }
 
-    // TODO add 'delete_by_user'
+    pub async fn delete_by_user(
+        data: &web::Data<AppState>,
+        user_id: &str,
+    ) -> Result<(), ErrorResponse> {
+        let sessions: Vec<Self> =
+            sqlx::query_as!(Self, "SELECT * FROM sessions WHERE user_id = $1", user_id)
+                .fetch_all(&data.db)
+                .await?;
+
+        // we do not use any fancy 'returning' statement here for compatibility with sqlite
+        sqlx::query!("DELETE FROM sessions WHERE user_id = $1", user_id)
+            .execute(&data.db)
+            .await?;
+
+        for s in sessions {
+            cache_remove(
+                CACHE_NAME_SESSIONS.to_string(),
+                Session::cache_idx(&s.id),
+                &data.caches.ha_cache_config,
+                AckLevel::Quorum,
+            )
+            .await?;
+        }
+
+        Ok(())
+    }
 
     // Returns a session by id
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
-        // TODO set remote lookup to true here to be able to switch to in-memory sessions store only?
         let idx = Session::cache_idx(&id);
         let session = cache_get!(
             Session,
@@ -180,7 +204,6 @@ impl Session {
         Ok(())
     }
 
-    // TODO is using old KV store logic - could be optimized
     /// Invalidates all sessions for the given user_id by setting the expiry to `now()`
     pub async fn invalidate_for_user(
         data: &web::Data<AppState>,
