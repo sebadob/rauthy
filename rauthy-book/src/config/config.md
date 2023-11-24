@@ -241,7 +241,7 @@ MAX_HASH_THREADS=1
 # current cache leader at that time.
 # Format: "sec min hour day_of_month month day_of_week year"
 # default: "0 30 3 1 * * *"
-JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
+#JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
 
 #####################################
 ####### EPHEMERAL CLIENTS ###########
@@ -255,7 +255,7 @@ JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
 # Can be set to 'true' to enable WebID functionality like needed
 # for things like Solid OIDC.
 # default: false
-ENABLE_WEB_ID=true
+#ENABLE_WEB_ID=false
 
 # If set to 'true', 'solid' will be added to the 'aud' claim from the ID token
 # for ephemeral clients.
@@ -348,11 +348,11 @@ EVENT_NOTIFY_LEVEL_SLACK=notice
 # - warning
 # - critical
 # default: 'info'
-EVENT_PERSIST_LEVEL=info
+#EVENT_PERSIST_LEVEL=info
 
 # Define the number of days when events should be cleaned up from the database.
 # default: 31
-EVENT_CLEANUP_DAYS=31
+#EVENT_CLEANUP_DAYS=31
 
 # The level for the generated Event after a new user has been registered.
 # default: info
@@ -498,7 +498,7 @@ EVENT_LEVEL_FAILED_LOGIN=info
 #   Logs only requests to modifying endpoints and skips all GET
 # - Off
 # (default: Modifying)
-LOG_LEVEL_ACCESS=Basic
+#LOG_LEVEL_ACCESS=Basic
 
 #####################################
 ################ MFA ################
@@ -506,7 +506,7 @@ LOG_LEVEL_ACCESS=Basic
 
 # If 'true', MFA for an account must be enabled to access the
 # rauthy admin UI (default: true)
-ADMIN_FORCE_MFA=false
+#ADMIN_FORCE_MFA=true
 
 #####################################
 ############## POW  #################
