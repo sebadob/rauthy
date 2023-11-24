@@ -728,11 +728,11 @@ pub async fn auth_finish(
     user_id: String,
     req: WebauthnAuthFinishRequest,
 ) -> Result<WebauthnAdditionalData, ErrorResponse> {
-    let mut user = User::find(data, user_id).await?;
-    let force_uv = user.account_type() == AccountType::Passkey || *WEBAUTHN_FORCE_UV;
-
     let auth_data = WebauthnData::find(data, req.code).await?;
     let auth_state = serde_json::from_str(&auth_data.auth_state_json).unwrap();
+
+    let mut user = User::find(data, user_id).await?;
+    let force_uv = user.account_type() == AccountType::Passkey || *WEBAUTHN_FORCE_UV;
 
     let pks = PasskeyEntity::find_for_user(data, &user.id).await?;
 
