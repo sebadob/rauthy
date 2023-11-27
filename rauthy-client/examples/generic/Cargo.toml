@@ -1,5 +1,5 @@
 [package]
-name = "actix-web"
+name = "generic-actix-web"
 version = "0.1.0"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
@@ -12,4 +12,5 @@ dotenvy = "0.15.7"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["tracing"] }
 
-rauthy-client = { path = "../..", features = ["actix-web"] }
+# This example uses actix-web, but shows the generic usage -> no actix-web feature set
+rauthy-client = { path = "../..", features = [] }

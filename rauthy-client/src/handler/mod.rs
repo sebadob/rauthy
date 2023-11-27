@@ -63,12 +63,54 @@ impl OidcCodeRequestParams {
     }
 }
 
+/// Check the authentication
+///
+/// # Returns
+/// - Ok(()) if the user is logged in
+/// - Err(None) if the user is not logged in and the OIDC provider is not correctly set up
+/// - Err(Some(String, String)) if the user is not logged in.
+///   In this case, the values in the tuple are header values you should return to the client:
+///   (LocationHeaderString, EncryptedStateCookieValue)
+#[cfg(not(any(feature = "axum", feature = "actix-web")))]
+pub async fn validate_principal_generic(
+    principal: Option<crate::principal::PrincipalOidc>,
+    enc_key: &[u8],
+    insecure: OidcCookieInsecure,
+) -> Result<(), Option<(String, String)>> {
+    if principal.is_some() {
+        Ok(())
+    } else {
+        let (cookie_state, challenge) = OidcCookieState::generate();
+        let loc = {
+            let base = match OidcProvider::config() {
+                Ok(c) => &c.auth_url_base,
+                Err(_) => {
+                    return Err(None);
+                }
+            };
+            format!(
+                "{base}&code_challenge={challenge}&nonce={}&state={}",
+                cookie_state.nonce, cookie_state.state
+            )
+        };
+
+        let value = cookie_state.to_encrypted_cookie_value(enc_key);
+        let cookie = build_lax_cookie_300(
+            OIDC_STATE_COOKIE,
+            &value,
+            insecure == OidcCookieInsecure::Yes,
+        );
+
+        Err(Some((loc, cookie)))
+    }
+}
+
 /// Handles the OIDC callback
 ///
 /// # Panics
 /// If the given `enc_key` is not exactly 32 bytes long
 #[allow(dead_code)]
-async fn oidc_callback(
+pub async fn oidc_callback(
     cookie_state: OidcCookieState,
     params: OidcCallbackParams,
     insecure: OidcCookieInsecure,

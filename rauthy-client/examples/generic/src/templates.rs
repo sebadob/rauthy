@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+pub const HTML_INDEX: &str = r#"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Rauthy Axum Example</title>
+    <title>Rauthy Client Generic Example</title>
 </head>
 <body>
     <p>Logged In: <span id="status"></span></p>
@@ -50,3 +50,32 @@
     }
 </script>
 </html>
+"#;
+
+pub const HTML_CALLBACK: &str = r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rauthy Generic Callback</title>
+</head>
+<body>
+    <template id="token">{{ TOKEN }}</template>
+    <template id="uri">{{ URI }}</template>
+</body>
+<script>
+    // This is an example how we could get an XSRF token from
+    // the callback endpoint easily without doing some sketchy
+    // stuff like setting it with an additional cookie for instance.
+    // As long as the redirect URI has the same origin, we will be
+    // able to access the localStorage from the main UI later.
+    let token = document.querySelector('#token');
+    localStorage.setItem('access_token', token.content.textContent);
+
+    // When we want to manually extract an additional csrf token or
+    // other information instead of returning a 302 status, we need
+    // to do the redirect manually as well.
+    let redirectUri = document.querySelector('#uri');
+    window.location.replace(redirectUri.content.textContent);
+</script>
+</html>
+"#;
