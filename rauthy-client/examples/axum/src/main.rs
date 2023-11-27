@@ -4,7 +4,6 @@ use axum::Router;
 use rauthy_client::oidc_config::{JwtClaim, JwtClaimTyp, RauthyConfig};
 use rauthy_client::provider::OidcProvider;
 use std::collections::HashSet;
-use std::net::SocketAddr;
 use std::sync::Arc;
 use rauthy_client::{DangerAcceptInvalidCerts, RauthyHttpsOnly};
 use tracing::{info, Level};
@@ -79,11 +78,11 @@ async fn main() -> anyhow::Result<()> {
         // in production, you should add middlewares here with safe default resposne headers
         .with_state(Arc::new(config));
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-    info!("Server listening on {}", addr);
-    axum::Server::bind(&addr)
-        .serve(routes.into_make_service())
-        .await?;
+    let addr = "0.0.0.0:3000";
+    let listener = tokio::net::TcpListener::bind(addr).await.expect("port 3000 to be free");
+    info!("Server listening on {:?}", addr);
+
+    axum::serve(listener, routes).await?;
 
     Ok(())
 }
