@@ -8,8 +8,23 @@ version:
     echo "v$TAG"
 
 
+# makes sure clippy is fine for each example
+clippy-examples:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    cd examples/actix-web
+    cargo +nightly clippy -- -D warnings
+
+    cd ../axum
+    cargo +nightly clippy -- -D warnings
+
+    cd ../generic
+    cargo +nightly clippy -- -D warnings
+
+
 # clippy lint + check with minimal versions from nightly
-check:
+check: clippy-examples
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
