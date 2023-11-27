@@ -11,11 +11,10 @@ pub(crate) static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 static OIDC_CONFIG: OnceLock<OidcProviderConfig> = OnceLock::new();
 
 #[derive(Debug)]
-pub struct OidcProviderConfig {
+pub(crate) struct OidcProviderConfig {
     pub auth_url_base: String,
     pub client_id: String,
     pub email_verified: bool,
-    pub oidc_config_url: String,
     pub provider: OidcProvider,
     pub redirect_uri: String,
     pub secret: Option<String>,
@@ -63,7 +62,6 @@ impl OidcProviderConfig {
             auth_url_base,
             client_id,
             email_verified,
-            oidc_config_url,
             provider,
             redirect_uri,
             secret,
@@ -74,6 +72,7 @@ impl OidcProviderConfig {
     }
 }
 
+/// The configured Rauthy OIDC Provider
 #[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OidcProvider {
@@ -174,6 +173,7 @@ impl OidcProvider {
     }
 }
 
+/// Rauthy-supported token algorithms
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Algorithm {
     RS256,
@@ -182,6 +182,7 @@ pub enum Algorithm {
     EdDSA,
 }
 
+/// Rauthy-supported PKCE challenges
 #[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Challenge {
@@ -189,6 +190,7 @@ pub enum Challenge {
     S256,
 }
 
+/// OIDC login flows
 #[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Flows {

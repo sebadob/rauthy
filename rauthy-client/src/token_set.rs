@@ -6,6 +6,7 @@ use jwt_simple::claims;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// The token set returned upon a successful login flow
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OidcTokenSet {
     pub access_token: String,
@@ -15,6 +16,7 @@ pub struct OidcTokenSet {
     pub refresh_token: Option<String>,
 }
 
+/// Rauthy-supported token types. This client however does currently not support `DPoP`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum JwtTokenType {
     Bearer,
@@ -117,13 +119,7 @@ pub struct JwtRefreshClaims {
     pub cnf: Option<JktClaim>,
 }
 
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-pub enum JwtType {
-    Bearer,
-    Id,
-    Refresh,
-}
-
+/// Will be set to JwtAmrValue::Mfa if the user provided at least a second factor during login
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all(serialize = "lowercase"))]
 pub enum JwtAmrValue {

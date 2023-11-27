@@ -12,20 +12,32 @@ mod axum;
 /// The AuthorizedUser making requests to the API
 #[derive(Debug)]
 pub struct PrincipalOidc {
+    /// Matches the `uid` token claim
     pub id: String,
+    /// Matches the `expires_at` token claim -> UNIX timestamp in seconds
     pub expires_at_ts: Option<u64>,
+    /// Rauthy always set's the users email as the `preferred_username`
     pub preferred_username: Option<String>,
+    /// Matches the `sub` token claim
     pub sub: String,
+    /// Matches the `roles` token claim
     pub roles: Vec<String>,
+    /// Matches the `groups` token claim
     pub groups: Vec<String>,
+    /// Matches the `scope` token claim
     pub scope: String,
+    /// Will be true, if the access token matches the `RauthyConfig.admin_claim`
     pub is_admin: bool,
+    /// Will be true, if the access token matches the `RauthyConfig.user_claim`
     pub is_user: bool,
+    /// Contains all custom scopes that are configured inside Rauthy and are mapped into the
+    /// `access_token` for the given user
     pub custom_claims: Option<HashMap<String, serde_json::Value>>,
 }
 
 impl PrincipalOidc {
     /// Creates a Principal from a raw Base64 encoded JWT token.
+    /// This will also validate the token against the JWK fetched from the issuer.
     pub async fn from_token_validated(token: &str) -> anyhow::Result<Self> {
         let claims = JwtAccessClaims::from_token_validated(token).await?;
 
