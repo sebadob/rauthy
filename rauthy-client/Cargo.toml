@@ -36,8 +36,8 @@ tokio = "1.34"
 tracing = "0.1.40"
 
 # axum
-axum = { version = "0.6.20", optional = true, features = ["headers"] }
-axum-extra = { version = "0.8", optional = true, features = ["cookie"] }
+axum = { version = "0.7", optional = true, features = [] }
+axum-extra = { version = "0.9", optional = true, features = ["cookie", "typed-header"] }
 time = { version = "0.3.30", optional = true, features = [] }
 
 # make minimal versions happy
