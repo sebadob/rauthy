@@ -12,4 +12,4 @@ dotenvy = "0.15.7"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["tracing"] }
 
-rauthy-client = { path = "../..", default-features = false, features = ["actix-web"] }
+rauthy-client = { path = "../..", features = ["actix-web"] }

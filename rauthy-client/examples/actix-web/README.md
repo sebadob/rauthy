@@ -1,3 +1,3 @@
 # Basic Actix-Web Example
 
-WIP
+This example shows the basic usage with `actix-web` + `rauthy-client`

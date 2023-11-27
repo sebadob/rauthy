@@ -1516,7 +1516,6 @@ dependencies = [
  "axum-extra",
  "base64",
  "bincode",
- "bitflags",
  "cached",
  "chacha20poly1305",
  "chrono",
