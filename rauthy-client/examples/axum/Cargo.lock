@@ -1509,7 +1509,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-client"
-version = "0.1.0-20231127"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum 0.7.1",
