@@ -1,0 +1,16 @@
+[package]
+name = "generic-actix-web"
+version = "0.1.0"
+edition = "2021"
+authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
+license = "Apache-2.0"
+
+[dependencies]
+actix-web = { version = "4.4", features = ["rustls-0_21"] }
+anyhow = "1.0.75"
+dotenvy = "0.15.7"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["tracing"] }
+
+# This example uses actix-web, but shows the generic usage -> no actix-web feature set
+rauthy-client = { path = "../..", features = [] }
