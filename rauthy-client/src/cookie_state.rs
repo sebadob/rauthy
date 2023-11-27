@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use tracing::error;
 
 #[allow(dead_code)]
-pub(crate) static OIDC_STATE_COOKIE: &str = "OIDC_STATE";
+pub static OIDC_STATE_COOKIE: &str = "OIDC_STATE";
 
 #[derive(Serialize, Deserialize)]
 pub struct OidcCookieState {
