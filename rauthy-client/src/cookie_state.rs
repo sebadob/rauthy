@@ -5,9 +5,11 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
+/// The name of the encrypted OIDC state cookie during the login flow
 #[allow(dead_code)]
 pub static OIDC_STATE_COOKIE: &str = "OIDC_STATE";
 
+/// The encrypted OIDC state cookie during the login flow
 #[derive(Serialize, Deserialize)]
 pub struct OidcCookieState {
     pub nonce: String,

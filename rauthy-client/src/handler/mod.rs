@@ -11,11 +11,12 @@ pub mod axum;
 #[cfg(feature = "actix-web")]
 pub mod actix_web;
 
+/// Query params appended to the callback URL after a successful login from the user
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 pub struct OidcCallbackParams {
-    code: String,
-    state: String,
+    pub code: String,
+    pub state: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -28,14 +29,14 @@ struct OidcCodeRequestParams {
     redirect_uri: String,
 }
 
-// Used instead of a normal bool to never confuse people about a meaning of multiple bool's
+/// Used instead of a normal bool to never confuse people about a meaning of multiple bool's
 #[derive(Debug, PartialEq)]
 pub enum OidcCookieInsecure {
     Yes,
     No,
 }
 
-// Used instead of a normal bool to never confuse people about a meaning of multiple bool's
+/// Used instead of a normal bool to never confuse people about a meaning of multiple bool's
 #[derive(Debug, PartialEq)]
 pub enum OidcSetRedirectStatus {
     Yes,
@@ -64,6 +65,8 @@ impl OidcCodeRequestParams {
 }
 
 /// Check the authentication
+///
+/// This will only exist without `actix-web` or `axum` features
 ///
 /// # Returns
 /// - Ok(()) if the user is logged in
@@ -106,6 +109,8 @@ pub async fn validate_principal_generic(
 }
 
 /// Handles the OIDC callback
+///
+/// If you use `actix-web` or `axum` features, you should use the more specific implementations.
 ///
 /// # Panics
 /// If the given `enc_key` is not exactly 32 bytes long

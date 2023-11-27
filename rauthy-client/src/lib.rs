@@ -1,3 +1,18 @@
+//! Minimal and safe by default client library for the [Rauthy](https://github.com/sebadob/rauthy)
+//! project.
+//!
+//! You can of course use any generic OIDC client with [Rauthy](https://github.com/sebadob/rauthy).
+//! However, the idea of this crate is to provide the simplest possible production ready setup,
+//! with the least amount of overhead and secure default values, if you only use
+//! [Rauthy](https://github.com/sebadob/rauthy) anyway.
+//!
+//! This client should work without any issues with other OIDC providers as well, as long as they
+//! support the S256 PKCE flow. However, this was only tested against
+//! [Rauthy](https://github.com/sebadob/rauthy).
+//!
+//! You can find examples for `actix-web`, `axum` or a fully generic framework / application in the
+//! [Examples](https://github.com/sebadob/rauthy/tree/main/rauthy-client/examples) directory.
+
 use crate::provider::OidcProvider;
 use base64::{engine, engine::general_purpose, Engine as _};
 use rand::{distributions, Rng};
@@ -7,41 +22,40 @@ use tracing::{error, warn};
 use crate::jwks::jwks_handler;
 pub use reqwest::Certificate as RootCertificate;
 
+/// Handles the encrypted OIDC state cookie for the login flow
 pub mod cookie_state;
+/// The handlers which need to be called from your endpoints
 pub mod handler;
-pub mod jwks;
+mod jwks;
+/// The Rauthy OIDC config
 pub mod oidc_config;
+/// The authenticated Principal, extracted from valid JWT tokens
 pub mod principal;
+/// Rauthy / OIDC provider config and setup
 pub mod provider;
+/// Provides everything necessary to extract and validate JWT token claims
 pub mod token_set;
 
 pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const B64_URL_SAFE_NO_PAD: engine::GeneralPurpose = general_purpose::URL_SAFE_NO_PAD;
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum CacheMethod {
-    Get,
-    Set,
-    Exit,
-}
-
 /// Decodes a base64 value
 #[allow(dead_code)]
-pub fn b64_decode(value: &str) -> anyhow::Result<Vec<u8>> {
+pub(crate) fn b64_decode(value: &str) -> anyhow::Result<Vec<u8>> {
     let b = general_purpose::STANDARD.decode(value)?;
     Ok(b)
 }
 
 /// Returns the given input as a base64 encoded String
 #[inline]
-pub fn b64_encode(value: &[u8]) -> String {
+pub(crate) fn b64_encode(value: &[u8]) -> String {
     general_purpose::STANDARD.encode(value)
 }
 
 /// Returns the given input as a base64 URL encoded String
 #[inline]
-pub fn base64_url_encode(input: &[u8]) -> String {
+pub(crate) fn base64_url_encode(input: &[u8]) -> String {
     let b64 = general_purpose::STANDARD.encode(input);
     b64.chars()
         .filter_map(|c| match c {
@@ -53,7 +67,7 @@ pub fn base64_url_encode(input: &[u8]) -> String {
         .collect()
 }
 
-pub fn base64_url_no_pad_decode(b64: &str) -> anyhow::Result<Vec<u8>> {
+pub(crate) fn base64_url_no_pad_decode(b64: &str) -> anyhow::Result<Vec<u8>> {
     B64_URL_SAFE_NO_PAD
         .decode(b64)
         .map_err(|_| anyhow::Error::msg("B64 decoding error"))
