@@ -14,8 +14,14 @@ check:
     set -euxo pipefail
     clear
     cargo update
+
     cargo +nightly clippy -- -D warnings
+    cargo +nightly clippy --features actix-web -- -D warnings
+    cargo +nightly clippy --features axum -- -D warnings
+
     cargo minimal-versions check
+    cargo minimal-versions check --features actix-web
+    cargo minimal-versions check --features axum
 
 
 # runs the full set of tests
@@ -35,7 +41,7 @@ build:
     cargo build --target x86_64-unknown-linux-musl
 
 
-# verifies the MSRV
+# verifies the MSRV - Note: Currently, you cannot specify features for this -> add features to default beforehand
 msrv-verify:
     cargo msrv verify
 

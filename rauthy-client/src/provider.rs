@@ -175,7 +175,6 @@ impl OidcProvider {
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[allow(dead_code)]
 pub enum Algorithm {
     RS256,
     RS384,
@@ -184,7 +183,6 @@ pub enum Algorithm {
 }
 
 #[allow(non_camel_case_types)]
-#[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Challenge {
     plain,
@@ -192,7 +190,6 @@ pub enum Challenge {
 }
 
 #[allow(non_camel_case_types)]
-#[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Flows {
     authorization_code,

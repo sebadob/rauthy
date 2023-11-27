@@ -2,7 +2,7 @@ use crate::provider::OidcProvider;
 use base64::{engine, engine::general_purpose, Engine as _};
 use rand::{distributions, Rng};
 use ring::digest;
-use tracing::error;
+use tracing::{error, warn};
 
 use crate::jwks::jwks_handler;
 pub use reqwest::Certificate as RootCertificate;
@@ -57,6 +57,23 @@ pub fn base64_url_no_pad_decode(b64: &str) -> anyhow::Result<Vec<u8>> {
     B64_URL_SAFE_NO_PAD
         .decode(b64)
         .map_err(|_| anyhow::Error::msg("B64 decoding error"))
+}
+
+#[inline]
+#[allow(dead_code)]
+fn build_lax_cookie_300(name: &str, value: &str, secure: bool) -> String {
+    if secure {
+        format!(
+            "{}={}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=300",
+            name, value
+        )
+    } else {
+        warn!("Building an INSECURE cookie - DO NOT USE IN PRODUCTION");
+        format!(
+            "{}={}; Path=/; HttpOnly; SameSite=Lax; Max-Age=300",
+            name, value
+        )
+    }
 }
 
 /// Extracts the claims from a given token into the given struct.
@@ -140,15 +157,12 @@ pub async fn init(
     https_only: RauthyHttpsOnly,
     danger_accept_invalid_certs: DangerAcceptInvalidCerts,
 ) -> anyhow::Result<()> {
-    #[cfg(feature = "actix-web")]
-    panic!("`actix` is not yet implemented");
-
     OidcProvider::init_client(root_certificate, https_only, danger_accept_invalid_certs)?;
     jwks_handler().await;
     Ok(())
 }
 
-/// Generates a secure random alpahnumeric value with the given length.
+/// Generates a secure random alphanumeric value with the given length.
 #[inline]
 pub fn secure_random(count: usize) -> String {
     rand::thread_rng()
