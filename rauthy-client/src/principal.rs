@@ -3,13 +3,14 @@ use crate::provider::OidcProvider;
 use crate::token_set::JwtAccessClaims;
 use axum::body::Body;
 use axum::extract::FromRequestParts;
-use axum::headers::authorization::Bearer;
-use axum::headers::Authorization;
 use axum::http::request::Parts;
 use axum::response::Response;
-use axum::{async_trait, TypedHeader};
+use axum::{async_trait};
 use std::collections::HashMap;
 use std::fmt::Display;
+use axum_extra::headers::Authorization;
+use axum_extra::headers::authorization::Bearer;
+use axum_extra::TypedHeader;
 
 /// The AuthorizedUser making requests to the API
 #[derive(Debug)]

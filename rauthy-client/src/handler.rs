@@ -103,7 +103,7 @@ pub async fn validate_redirect_principal(
         };
 
         let value = cookie_state.to_cookie_value(enc_key);
-        let mut builder = Cookie::build(OIDC_STATE_COOKIE, value)
+        let mut builder = Cookie::build((OIDC_STATE_COOKIE, value))
             .path("/")
             .secure(true)
             .http_only(true)
@@ -115,7 +115,7 @@ pub async fn validate_redirect_principal(
         } else {
             builder.secure(true)
         };
-        let cookie = builder.finish().to_string();
+        let cookie = builder.build().to_string();
 
         let code = if set_redirect_status == OidcSetRedirectStatus::Yes {
             302
@@ -195,7 +195,7 @@ pub async fn oidc_callback(
                 .await?;
 
                 // reset STATE_COOKIE
-                let mut builder = Cookie::build(OIDC_STATE_COOKIE, "")
+                let mut builder = Cookie::build((OIDC_STATE_COOKIE, ""))
                     .path("/")
                     .http_only(true)
                     .same_site(SameSite::Lax)
@@ -206,7 +206,7 @@ pub async fn oidc_callback(
                 } else {
                     builder.secure(true)
                 };
-                let cookie = builder.finish().to_string();
+                let cookie = builder.build().to_string();
 
                 Ok((cookie, ts, id_claims))
             }
