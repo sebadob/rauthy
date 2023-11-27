@@ -3,18 +3,15 @@ use axum::routing::get;
 use axum::Router;
 use rauthy_client::oidc_config::{JwtClaim, JwtClaimTyp, RauthyConfig};
 use rauthy_client::provider::OidcProvider;
+use rauthy_client::{DangerAcceptInvalidCerts, RauthyHttpsOnly};
 use std::collections::HashSet;
 use std::sync::Arc;
-use rauthy_client::{DangerAcceptInvalidCerts, RauthyHttpsOnly};
-use tracing::{info, Level};
+use tracing::{info, subscriber, Level};
+use tracing_subscriber::FmtSubscriber;
 
 mod config;
 mod routes;
 pub mod templates;
-
-// If you plan to use CSRF protection headers, declare a const and add it to the sensitive
-// headers down below to never leak these in debug logs
-pub const XSRF_HEADER: &str = "X-XSRF";
 
 // I often use something like DEV_MODE to make local dev easier in certain places and really
 // secure in production. In a real app, you would read this value in from a config or env.
@@ -22,10 +19,10 @@ pub const DEV_MODE: bool = true;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let subscriber = tracing_subscriber::FmtSubscriber::builder()
+    let subscriber = FmtSubscriber::builder()
         .with_max_level(Level::INFO)
         .finish();
-    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+    subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
     // we need to start the backend for the rauthy-client
     rauthy_client::init(None, RauthyHttpsOnly::No, DangerAcceptInvalidCerts::Yes).await?;
@@ -78,8 +75,10 @@ async fn main() -> anyhow::Result<()> {
         // in production, you should add middlewares here with safe default resposne headers
         .with_state(Arc::new(config));
 
-    let addr = "0.0.0.0:3000";
-    let listener = tokio::net::TcpListener::bind(addr).await.expect("port 3000 to be free");
+    let addr = "127.0.0.1:3000";
+    let listener = tokio::net::TcpListener::bind(addr)
+        .await
+        .expect("port 3000 to be free");
     info!("Server listening on {:?}", addr);
 
     axum::serve(listener, routes).await?;

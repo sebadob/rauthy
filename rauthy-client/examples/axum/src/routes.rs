@@ -34,7 +34,7 @@ pub async fn get_auth_check(config: ConfigExt, principal: Option<PrincipalOidc>)
         OidcCookieInsecure::No
     };
 
-    rauthy_client::handler::validate_redirect_principal(
+    rauthy_client::handler::axum::validate_redirect_principal(
         principal,
         // this enc_key must be exactly 32 bytes long
         enc_key,
@@ -60,7 +60,8 @@ pub async fn get_callback(
     } else {
         OidcCookieInsecure::No
     };
-    let callback_res = rauthy_client::handler::oidc_callback(&jar, params, enc_key, insecure).await;
+    let callback_res =
+        rauthy_client::handler::axum::oidc_callback(&jar, params, enc_key, insecure).await;
     let (cookie_str, token_set, _id_claims) = match callback_res {
         Ok(res) => res,
         Err(err) => {
@@ -97,9 +98,9 @@ pub async fn get_callback(
 }
 
 /// As soon as you request the `principal: PrincipalOidc` as a parameter, this route can only be
-/// accessed with a valid Token. Otherwise, the Principal cannot be built and would return a 401
+/// accessed with a valid Token. Otherwise, the Principal cannot be build and would return a 401
 /// from the extractor function.
-pub async fn get_protected(principal: PrincipalOidc) -> impl IntoResponse {
+pub async fn get_protected(principal: PrincipalOidc) -> Result<Response, Response> {
     // As soon as we get here, the principal is actually valid already.
     // The Principal provides some handy base functions for further easy validation, like:
     //
@@ -107,5 +108,9 @@ pub async fn get_protected(principal: PrincipalOidc) -> impl IntoResponse {
     // principal.has_any_group(vec!["group123", "group456"])?;
     // principal.has_any_role(vec!["admin", "root"])?;
 
-    format!("Hello from Protected Resource:<br/>{:?}", principal)
+    Ok(Response::new(format!(
+        "Hello from Protected Resource:<br/>{:?}",
+        principal
+    ))
+    .into_response())
 }
