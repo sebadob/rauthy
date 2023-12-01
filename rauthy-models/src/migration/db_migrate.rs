@@ -533,11 +533,14 @@ pub async fn migrate_from_sqlite(
         .await?;
     sqlx::query("delete from scopes").execute(db_to).await?;
     for b in before {
-        sqlx::query("insert into scopes (id, name) values ($1, $2)")
-            .bind(b.id)
-            .bind(b.name)
-            .execute(db_to)
-            .await?;
+        sqlx::query(
+            r#"insert into scopes (id, name, attr_include_access, attr_include_id)
+            values ($1, $2, $3, $4)"#,
+        )
+        .bind(b.id)
+        .bind(b.name)
+        .execute(db_to)
+        .await?;
     }
 
     // USER ATTR CONFIG
@@ -907,11 +910,14 @@ pub async fn migrate_from_postgres(
         .await?;
     sqlx::query("delete from scopes").execute(db_to).await?;
     for b in before {
-        sqlx::query("insert into scopes (id, name) values ($1, $2)")
-            .bind(b.id)
-            .bind(b.name)
-            .execute(db_to)
-            .await?;
+        sqlx::query(
+            r#"insert into scopes (id, name, attr_include_access, attr_include_id)
+            values ($1, $2, $3, $4)"#,
+        )
+        .bind(b.id)
+        .bind(b.name)
+        .execute(db_to)
+        .await?;
     }
 
     // USER ATTR CONFIG
