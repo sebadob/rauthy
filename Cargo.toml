@@ -46,10 +46,11 @@ ed25519-compact = { version = "2.0.4", features = ["ed25519"] }
 flume = "0.11"
 gethostname = "0.4"
 itertools = "0.12"
-jwt-simple = "0.11"
+#jwt-simple = "0.12.1"
+jwt-simple = "0.11.9"
 lazy_static = "1"
 num_cpus = "1"
-## Add openssl-sys as a direct dependency so it can be cross compiled to
+## Add openssl-sys as a direct dependency, so it can be cross compiled to
 ## x86_64-unknown-linux-musl using the "vendored" feature below
 openssl-sys = { version = "0.9", features = ["vendored"] }
 rand = "0.8"
