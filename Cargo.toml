@@ -46,8 +46,8 @@ ed25519-compact = { version = "2.0.4", features = ["ed25519"] }
 flume = "0.11"
 gethostname = "0.4"
 itertools = "0.12"
-#jwt-simple = "0.12.1"
-jwt-simple = "0.11.9"
+#jwt-simple = { path = "../rust-jwt-simple", default-features = false, features = ["pure-rust"] }
+jwt-simple = { version = "0.12.6", default-features = false, features = ["pure-rust"] }
 lazy_static = "1"
 num_cpus = "1"
 ## Add openssl-sys as a direct dependency, so it can be cross compiled to
