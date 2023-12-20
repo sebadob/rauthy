@@ -29,17 +29,20 @@
             label: 'IP',
             callback: (item, search) => item.ip?.includes(search),
         },
+        // {
+        //     label: 'Content',
+        //     callback: (item, search) => item.data?.includes(search)
+        //         || item.text?.toLowerCase()?.contains(search.toLowerCase()),
+        // },
         {
             label: 'Content',
-            callback: (item, search) => item.data?.includes(search)
-                || item.text?.toLowerCase().contains(search.toLowerCase()),
+            callback: (item, search) => item.text?.toLowerCase()?.includes(search.toLowerCase()),
         },
     ];
     let orderOptions = [
         {label: 'Timestamp', callback: (a, b) => a.timestamp - b.timestamp},
         {label: 'Level', callback: (a, b) => a.level.localeCompare(b.level)},
         {label: 'Type', callback: (a, b) => a.typ.localeCompare(b.typ)},
-        {label: 'IP', callback: (a, b) => a.ip?.localeCompare(b.ip)},
     ];
 
     onMount(() => {
@@ -124,7 +127,7 @@
             No events found
         </div>
     {:else}
-        {#each resEvents as event}
+        {#each resEvents as event (event.id)}
             <Event bind:event collapsed={false} wide />
         {/each}
     {/if}
