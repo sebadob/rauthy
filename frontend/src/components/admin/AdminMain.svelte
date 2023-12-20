@@ -29,6 +29,8 @@
     import Blacklist from "./blacklist/Blacklist.svelte";
     import IconKey from "$lib/icons/IconKey.svelte";
     import ApiKeys from "./api_keys/ApiKeys.svelte";
+    import EventsArchive from "./events/EventsArchive.svelte";
+    import IconBellAlert from "$lib/icons/IconBellAlert.svelte";
 
     export let sessionInfo = {};
     export let selected = 'Users';
@@ -80,6 +82,11 @@
             case 'Sessions': {
                 window.history.pushState('Sessions', '', '/auth/v1/admin/sessions');
                 title = 'Sessions';
+                break;
+            }
+            case 'Events': {
+                window.history.pushState('Sessions', '', '/auth/v1/admin/events');
+                title = 'Events';
                 break;
             }
             case 'Blacklist': {
@@ -173,8 +180,12 @@
                 <IconShieldCheck/>
             </NavEntry>
 
+            <NavEntry label="Events">
+                <IconBellAlert/>
+            </NavEntry>
+
             <NavEntry label="Blacklist">
-                <IconStop width=24 />
+                <IconStop width={24} />
             </NavEntry>
 
             <NavEntry label="ApiKeys">
@@ -223,6 +234,10 @@
         {:else if 'Sessions' === selected}
             <ContentWrapper bind:eventsWide bind:eventsCollapsed>
                 <Sessions/>
+            </ContentWrapper>
+        {:else if 'Events' === selected}
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
+                <EventsArchive/>
             </ContentWrapper>
         {:else if 'Blacklist' === selected}
             <ContentWrapper bind:eventsWide bind:eventsCollapsed>

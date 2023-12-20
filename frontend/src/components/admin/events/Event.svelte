@@ -1,10 +1,8 @@
 <script>
-    import {formatDateFromTs} from "../../../utils/helpers.js";
+    import {formatDateFromTs, eventColor} from "../../../utils/helpers.js";
     import {onMount} from "svelte";
 
     export let event;
-    export let eventColor = () => {
-    };
     export let collapsed = true;
     export let wide;
 
@@ -174,7 +172,7 @@
     }
 
     .col-typ {
-        width: 9rem;
+        width: 9.5rem;
     }
 
     .col-ip {

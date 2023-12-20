@@ -57,20 +57,7 @@
         eventLevel = await readSavedEventLevel();
     });
 
-    function eventColor(level) {
-        switch (level) {
-            case 'test':
-                return '#b2b2b2';
-            case 'info':
-                return '#388c51';
-            case 'notice':
-                return '#3d5d99';
-            case 'warning':
-                return '#c29a4f';
-            case 'critical':
-                return '#993d49';
-        }
-    }
+    //
 
     async function readSavedEventLevel() {
         return localStorage.getItem('eventLevel') || 'Info';
@@ -134,7 +121,7 @@
 
                 <Button
                         on:click={sendTestEvent}
-                        level=3
+                        level={3}
                 >
                     TEST
                 </Button>
@@ -151,13 +138,13 @@
 
         <div class={widthWide ? 'dataWide' : widthCollapsed ? 'dataCollapsed' : 'data'}>
             {#each eventsFiltered as event (event.id)}
-                <Event bind:event eventColor={eventColor} collapsed={collapsed && !isHover} bind:wide/>
+                <Event bind:event collapsed={collapsed && !isHover} bind:wide/>
             {/each}
         </div>
     </div>
 
     {#if !collapsed || isHover}
-        <EventsLegend eventColor={eventColor} bind:wide/>
+        <EventsLegend bind:wide/>
     {/if}
 </div>
 

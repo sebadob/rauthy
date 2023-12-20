@@ -157,6 +157,15 @@ export async function postEncMigrate(data) {
 	return await checkRedirectForbidden(res);
 }
 
+export async function postEvents(data) {
+	const res = await fetch('/auth/v1/events', {
+		method: 'POST',
+		headers: getHeaders(),
+		body: JSON.stringify(data),
+	});
+	return await checkRedirectForbidden(res);
+}
+
 export async function getGroups() {
 	const res = await fetch('/auth/v1/groups', {
 		method: 'GET',
