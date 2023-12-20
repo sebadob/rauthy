@@ -1,9 +1,9 @@
 use crate::app_state::{AppState, DbPool};
 use actix_web::web;
+use cryptr::EncValue;
 use jwt_simple::algorithms;
 use rauthy_common::constants::{CACHE_NAME_12HR, IDX_JWKS, IDX_JWK_KID, IDX_JWK_LATEST};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::decrypt;
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode};
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
 use rsa::BigUint;
@@ -171,8 +171,9 @@ impl JWKS {
 
         let mut jwks = JWKS::default();
         for cert in res {
-            let key = data.enc_keys.get(&cert.enc_key_id).unwrap();
-            let jwk_decrypted = decrypt(&cert.jwk, key)?;
+            // let key = data.enc_keys.get(&cert.enc_key_id).unwrap();
+            // let jwk_decrypted = decrypt_legacy(&cert.jwk, key)?;
+            let jwk_decrypted = EncValue::try_from(cert.jwk)?.decrypt()?.to_vec();
             let kp = JwkKeyPair {
                 kid: cert.kid.clone(),
                 typ: cert.signature,
@@ -438,17 +439,11 @@ pub struct JwkKeyPair {
 }
 
 impl JwkKeyPair {
-    // Decrypts a Json Web Key which is in an [encrypted](encrypt) format from inside the database
-    pub fn decrypt(
-        data: &web::Data<AppState>,
-        jwk_entity: &Jwk,
-        key_pair_type: JwkKeyPairAlg,
-    ) -> Result<Self, ErrorResponse> {
-        let key = data
-            .enc_keys
-            .get(&jwk_entity.enc_key_id)
-            .expect("JWK in Database corrupted");
-        let jwk_decrypted = decrypt(&jwk_entity.jwk, key)?;
+    // Decrypts a Json Web Key which is in an encrypted format from inside the database
+    pub fn decrypt(jwk_entity: &Jwk, key_pair_type: JwkKeyPairAlg) -> Result<Self, ErrorResponse> {
+        let jwk_decrypted = EncValue::try_from(jwk_entity.jwk.clone())?
+            .decrypt()?
+            .to_vec();
 
         let kid = jwk_entity.kid.clone();
         let res = match key_pair_type {
@@ -496,7 +491,7 @@ impl JwkKeyPair {
             .fetch_one(&data.db)
             .await?;
 
-        let kp = JwkKeyPair::decrypt(data, &jwk, jwk.signature.clone())?;
+        let kp = JwkKeyPair::decrypt(&jwk, jwk.signature.clone())?;
 
         cache_put(
             CACHE_NAME_12HR.to_string(),
@@ -541,7 +536,7 @@ impl JwkKeyPair {
             panic!("No latest JWK found - database corrupted?");
         }
 
-        let jwk = JwkKeyPair::decrypt(data, jwks.get(0).unwrap(), key_pair_type)?;
+        let jwk = JwkKeyPair::decrypt(jwks.get(0).unwrap(), key_pair_type)?;
 
         cache_put(
             CACHE_NAME_12HR.to_string(),

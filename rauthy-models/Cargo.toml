@@ -28,6 +28,7 @@ async-trait = { workspace = true }
 bincode = { workspace = true }
 cached = "0.46"
 chrono = { workspace = true }
+cryptr = { workspace = true }
 css-color = { workspace = true }
 derive_more = { workspace = true }
 dotenvy = { workspace = true }

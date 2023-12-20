@@ -3,6 +3,7 @@ use actix_web::http::header;
 use actix_web::http::header::{HeaderMap, HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::Utc;
+use cryptr::{EncKeys, EncValue};
 use jwt_simple::algorithms::{
     EdDSAKeyPairLike, EdDSAPublicKeyLike, RSAKeyPairLike, RSAPublicKeyLike,
 };
@@ -15,7 +16,7 @@ use rauthy_common::constants::{
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::HashPassword;
-use rauthy_common::utils::{base64_url_encode, encrypt, get_client_ip, get_rand};
+use rauthy_common::utils::{base64_url_encode, get_client_ip, get_rand};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
@@ -74,18 +75,17 @@ pub async fn authorize(
             )
         })?;
 
-    let mfa_cookie =
-        if let Ok(c) = WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA), &data.enc_keys) {
-            if c.email == user.email && user.has_webauthn_enabled() {
-                Some(c)
-            } else {
-                // If a possibly existing mfa cookie does not match the given email, or user has webauthn
-                // disabled in the meantime -> ignore the cookie
-                None
-            }
+    let mfa_cookie = if let Ok(c) = WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA)) {
+        if c.email == user.email && user.has_webauthn_enabled() {
+            Some(c)
         } else {
+            // If a possibly existing mfa cookie does not match the given email, or user has webauthn
+            // disabled in the meantime -> ignore the cookie
             None
-        };
+        }
+    } else {
+        None
+    };
 
     let account_type = user.account_type();
 
@@ -763,7 +763,7 @@ async fn grant_type_code(
                 String::from("'client_secret' is missing"),
             )
         })?;
-        client.validate_secret(data, &secret, &req)?;
+        client.validate_secret(&secret, &req)?;
     }
     client.validate_flow("authorization_code")?;
 
@@ -909,7 +909,7 @@ async fn grant_type_credentials(
             String::from("'client_secret' is missing"),
         )
     })?;
-    client.validate_secret(data, &secret, &req)?;
+    client.validate_secret(&secret, &req)?;
     client.validate_flow("client_credentials")?;
     let header_origin = client.validate_origin(&req, &data.listen_scheme, &data.public_url)?;
 
@@ -966,7 +966,7 @@ async fn grant_type_password(
                 String::from("Missing 'client_secret'"),
             )
         })?;
-        client.validate_secret(data, &secret, &req)?;
+        client.validate_secret(&secret, &req)?;
     }
     client.validate_flow("password")?;
 
@@ -1069,7 +1069,7 @@ async fn grant_type_refresh(
                 String::from("'client_secret' is missing"),
             )
         })?;
-        client.validate_secret(data, &secret, &req)?;
+        client.validate_secret(&secret, &req)?;
     }
 
     client.validate_flow("refresh_token")?;
@@ -1513,7 +1513,8 @@ pub async fn logout(
 pub async fn rotate_jwks(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
     info!("Starting JWKS rotation");
 
-    let key = data.enc_keys.get(&data.enc_key_active).unwrap();
+    // let key = data.enc_keys.get(&data.enc_key_active).unwrap();
+    let enc_key_active = &EncKeys::get_static().enc_key_active;
 
     // RSA256
     let jwk_plain = web::block(|| {
@@ -1522,12 +1523,14 @@ pub async fn rotate_jwks(data: &web::Data<AppState>) -> Result<(), ErrorResponse
             .with_key_id(&get_rand(24))
     })
     .await?;
-    let jwk = encrypt(jwk_plain.to_der().unwrap().as_slice(), key)?;
+    let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
+        .into_bytes()
+        .to_vec();
     let entity = Jwk {
         kid: jwk_plain.key_id().as_ref().unwrap().clone(),
         created_at: OffsetDateTime::now_utc().unix_timestamp(),
         signature: JwkKeyPairAlg::RS256,
-        enc_key_id: data.enc_key_active.to_string(),
+        enc_key_id: enc_key_active.to_string(),
         jwk,
     };
     entity.save(&data.db).await?;
@@ -1539,12 +1542,14 @@ pub async fn rotate_jwks(data: &web::Data<AppState>) -> Result<(), ErrorResponse
             .with_key_id(&get_rand(24))
     })
     .await?;
-    let jwk = encrypt(jwk_plain.to_der().unwrap().as_slice(), key)?;
+    let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
+        .into_bytes()
+        .to_vec();
     let entity = Jwk {
         kid: jwk_plain.key_id().as_ref().unwrap().clone(),
         created_at: OffsetDateTime::now_utc().unix_timestamp(),
         signature: JwkKeyPairAlg::RS384,
-        enc_key_id: data.enc_key_active.to_string(),
+        enc_key_id: enc_key_active.to_string(),
         jwk,
     };
     entity.save(&data.db).await?;
@@ -1556,24 +1561,28 @@ pub async fn rotate_jwks(data: &web::Data<AppState>) -> Result<(), ErrorResponse
             .with_key_id(&get_rand(24))
     })
     .await?;
-    let jwk = encrypt(jwk_plain.to_der().unwrap().as_slice(), key)?;
+    let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
+        .into_bytes()
+        .to_vec();
     let entity = Jwk {
         kid: jwk_plain.key_id().as_ref().unwrap().clone(),
         created_at: OffsetDateTime::now_utc().unix_timestamp(),
         signature: JwkKeyPairAlg::RS512,
-        enc_key_id: data.enc_key_active.to_string(),
+        enc_key_id: enc_key_active.to_string(),
         jwk,
     };
     entity.save(&data.db).await?;
 
     // Ed25519
     let jwk_plain = web::block(|| Ed25519KeyPair::generate().with_key_id(&get_rand(24))).await?;
-    let jwk = encrypt(jwk_plain.to_der().as_slice(), key)?;
+    let jwk = EncValue::encrypt(jwk_plain.to_der().as_slice())?
+        .into_bytes()
+        .to_vec();
     let entity = Jwk {
         kid: jwk_plain.key_id().as_ref().unwrap().clone(),
         created_at: OffsetDateTime::now_utc().unix_timestamp(),
         signature: JwkKeyPairAlg::EdDSA,
-        enc_key_id: data.enc_key_active.to_string(),
+        enc_key_id: enc_key_active.to_string(),
         jwk,
     };
     entity.save(&data.db).await?;

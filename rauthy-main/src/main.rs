@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 use actix_web::rt::System;
+use actix_web::web::Data;
 use actix_web::{middleware, web, App, HttpServer};
 use actix_web_prom::PrometheusMetricsBuilder;
 use prometheus::Registry;
@@ -12,6 +13,7 @@ use rauthy_common::constants::{
     CACHE_NAME_WEBAUTHN_DATA, DPOP_NONCE_EXP, EPHEMERAL_CLIENTS_CACHE_LIFETIME, POW_EXP,
     RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
+use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::password_hasher;
 use rauthy_handlers::middleware::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
@@ -166,6 +168,49 @@ async fn main() -> Result<(), Box<dyn Error>> {
         ha_cache_config: cache_config.clone(),
     };
 
+    if let Err(err) = cryptr::EncKeys::from_env() {
+        error!(
+            r#"
+
+If you are migrating from an earlier version, you must convert your `ENC_KEYS` before starting
+any version v0.20+
+
+To do this, you need to:
+
+1. Install cryptr - https://github.com/sebadob/cryptr
+If you have Rust available on your system, just execute:
+
+cargo install cryptr --features cli --locked
+
+Otherwise, pre-built binaries do exist for either Linux or Windows: https://github.com/sebadob/cryptr/tree/main/out
+
+2. Execute:
+
+cryptr keys convert legacy-string
+
+3. Paste your current ENC_KEYS into the command line.
+
+For instance, if you have
+ENC_KEYS="bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA"
+in your config, paste
+bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA
+
+If you provide your ENC_KEYS via a Kubernetes secret, you need to do a base64 decode first.
+For instance, if your secret looks something like this
+ENC_KEYS: YlZDeVRzR2FnZ1Z5NXlxUS9TOW43b0NlbjUzeFNKTHpjc21mZG5CRHZOcnFRNjNyNCBxNnUyNm9uUnZYVkc0NDI3LzNDRUM4UkpXQmNNa3JCTWtSWGd4NjVBbUpzTlRnaFNB
+Then decode via shell or any tool your like:
+echo -n YlZDeVRzR2FnZ1Z5NXlxUS9TOW43b0NlbjUzeFNKTHpjc21mZG5CRHZOcnFRNjNyNCBxNnUyNm9uUnZYVkc0NDI3LzNDRUM4UkpXQmNNa3JCTWtSWGd4NjVBbUpzTlRnaFNB | base64 -d
+... and paste the decoded value into cryptr
+
+4. cryptr will output the correct format for either usage in config or as kubernetes secret again
+
+5. Paste the new format into your Rauthy config / secret and restart.
+
+"#
+        );
+        panic!("{}", err);
+    }
+
     let (tx_events, rx_events) = flume::unbounded();
     let (tx_events_router, rx_events_router) = flume::unbounded();
     let (tx_ip_blacklist, rx_ip_blacklist) = flume::unbounded();
@@ -180,6 +225,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .await?,
     );
+
+    // TODO remove with v0.21
+    // migrate existing encrypted values to `cryptr`
+    V20_migrate_to_cryptr(&app_state)
+        .await
+        .expect("TEMP_migrate_to_cryptr to succeed");
 
     // events listener
     init_event_vars().unwrap();
@@ -546,4 +597,32 @@ fn get_https_port() -> String {
     let port = env::var("LISTEN_PORT_HTTPS").unwrap_or_else(|_| "8443".to_string());
     info!("HTTPS listen port: {}", port);
     port
+}
+
+// TODO remove with v0.21
+async fn V20_migrate_to_cryptr(app_state: &Data<AppState>) -> Result<(), ErrorResponse> {
+    // check `config` table if the migration has been done already
+    let db_id = "";
+    if sqlx::query!("SELECT * FROM config WHERE id = $1", db_id)
+        .fetch_one(&app_state.db)
+        .await
+        .is_ok()
+    {
+        debug!("Secrets have already been migrated - skipping");
+        return Ok(());
+    }
+
+    todo!("V20_migrate_to_cryptr");
+
+    // if not, migrate values wrapped in a transaction to not screw up something
+
+    // API keys
+
+    // JWKs
+
+    // Clients
+
+    // TODO maybe encrypt webauthn data while we are doing it already anyway?
+
+    // save the state in `config` table to only do all this once
 }

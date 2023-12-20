@@ -8,17 +8,17 @@ use actix_web::cookie::Cookie;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
 use actix_web::{cookie, web, HttpResponse};
+use cryptr::EncValue;
 use rauthy_common::constants::{
     CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, COOKIE_MFA, IDX_WEBAUTHN, WEBAUTHN_FORCE_UV,
     WEBAUTHN_NO_PASSWORD_EXPIRY, WEBAUTHN_RENEW_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::{base64_decode, decrypt};
-use rauthy_common::utils::{base64_encode, encrypt, get_rand};
+use rauthy_common::utils::base64_decode;
+use rauthy_common::utils::{base64_encode, get_rand};
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use std::collections::HashMap;
 use std::ops::Add;
 use std::str::FromStr;
 use time::OffsetDateTime;
@@ -368,14 +368,13 @@ impl WebauthnCookie {
         Self { email, exp }
     }
 
-    pub fn build(&self, key_id: &str, enc_key: &[u8]) -> Result<Cookie, ErrorResponse> {
+    pub fn build(&self) -> Result<Cookie, ErrorResponse> {
         let ser = bincode::serialize(self)?;
-        let enc = encrypt(&ser, enc_key)?;
+        let enc = EncValue::encrypt(&ser)?.into_bytes();
         let b64 = base64_encode(&enc);
-        let value = format!("{}/{}", key_id, b64);
 
         let cookie_exp = cookie::Expiration::from(self.exp);
-        Ok(Cookie::build(COOKIE_MFA, value)
+        Ok(Cookie::build(COOKIE_MFA, b64)
             .http_only(true)
             .secure(true)
             .same_site(cookie::SameSite::Lax)
@@ -384,10 +383,7 @@ impl WebauthnCookie {
             .finish())
     }
 
-    pub fn parse_validate(
-        cookie: &Option<Cookie>,
-        enc_keys: &HashMap<String, Vec<u8>>,
-    ) -> Result<Self, ErrorResponse> {
+    pub fn parse_validate(cookie: &Option<Cookie>) -> Result<Self, ErrorResponse> {
         if cookie.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -395,29 +391,8 @@ impl WebauthnCookie {
             ));
         }
         let cookie = cookie.as_ref().unwrap();
-
-        let (key_id, b64) = match cookie.value().split_once('/') {
-            None => {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "Webauthn Cookie is in a bad format".to_string(),
-                ));
-            }
-            Some(s) => s,
-        };
-
-        let key = match enc_keys.get(key_id) {
-            None => {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "Webauthn Cookie key ID does not exist".to_string(),
-                ));
-            }
-            Some(id) => id,
-        };
-
-        let b64 = base64_decode(b64)?;
-        let dec = decrypt(&b64, key.as_ref())?;
+        let bytes = base64_decode(cookie.value())?;
+        let dec = EncValue::try_from(bytes)?.decrypt()?;
         let slf = bincode::deserialize::<Self>(&dec)?;
 
         if slf.exp < OffsetDateTime::now_utc() {

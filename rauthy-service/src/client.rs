@@ -27,7 +27,7 @@ pub async fn update_client(
     if client_req.confidential {
         // only set a new secret if this value has been changed
         if !client.confidential {
-            let (_, enc) = Client::generate_new_secret(data)?;
+            let (_, enc) = Client::generate_new_secret()?;
             client.secret = Some(enc);
         }
     } else {
@@ -74,7 +74,7 @@ pub async fn get_client_secret(
             format!("'{}' is a public client", &client.id),
         ));
     }
-    let secret = client.get_secret_cleartext(data)?;
+    let secret = client.get_secret_cleartext()?;
 
     Ok(ClientSecretResponse {
         id: client.id,
@@ -90,7 +90,7 @@ pub async fn generate_new_secret(
     data: &web::Data<AppState>,
 ) -> Result<ClientSecretResponse, ErrorResponse> {
     let mut client = Client::find(data, id).await?;
-    let (clear, enc) = Client::generate_new_secret(data)?;
+    let (clear, enc) = Client::generate_new_secret()?;
 
     client.confidential = true;
     client.secret = Some(enc);

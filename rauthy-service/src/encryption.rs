@@ -1,6 +1,6 @@
 use crate::auth;
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::{decrypt, encrypt};
+use cryptr::{EncKeys, EncValue};
+use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::ApiKeyEntity;
 use rauthy_models::entity::clients::Client;
@@ -12,12 +12,8 @@ pub async fn migrate_encryption_alg(
     data: &actix_web::web::Data<AppState>,
     new_kid: &str,
 ) -> Result<(), ErrorResponse> {
-    let new_enc_key = data.enc_keys.get(new_kid).ok_or_else(|| {
-        ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            format!("Encryption key id {} does not exist", new_kid),
-        )
-    })?;
+    // check that the requested Key ID exists
+    EncKeys::get_static_key(new_kid)?;
 
     let start = tokio::time::Instant::now();
     info!("Starting secrets migration to key id: {}", new_kid);
@@ -37,12 +33,10 @@ pub async fn migrate_encryption_alg(
             continue;
         }
 
-        let key = data
-            .enc_keys
-            .get(client.secret_kid.as_ref().expect("client secret_kid"))
-            .expect("client secret_kid to be in AppState");
-        let dec = decrypt(client.secret.as_ref().unwrap(), key)?;
-        let enc = encrypt(&dec, new_enc_key).unwrap();
+        let dec = EncValue::try_from(client.secret.unwrap())?.decrypt()?;
+        let enc = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
+            .into_bytes()
+            .to_vec();
 
         client.secret = Some(enc);
         client.secret_kid = Some(new_kid.to_string());
@@ -63,20 +57,17 @@ pub async fn migrate_encryption_alg(
         .filter(|k| k.enc_key_id != new_kid)
         .collect::<Vec<ApiKeyEntity>>();
     for mut api_key in api_keys {
-        let key = data
-            .enc_keys
-            .get(&api_key.enc_key_id)
-            .expect("ApiKey enc_key_id to be in AppState");
-
         // secret
-        let dec = decrypt(&api_key.secret, key)?;
-        let enc = encrypt(&dec, new_enc_key).unwrap();
-        api_key.secret = enc;
+        let dec = EncValue::try_from(api_key.secret)?.decrypt()?;
+        api_key.secret = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
+            .into_bytes()
+            .to_vec();
 
         // access rights
-        let dec = decrypt(&api_key.access, key)?;
-        let enc = encrypt(&dec, new_enc_key).unwrap();
-        api_key.access = enc;
+        let dec = EncValue::try_from(api_key.access)?.decrypt()?;
+        api_key.access = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
+            .into_bytes()
+            .to_vec();
 
         api_key.enc_key_id = new_kid.to_string();
 

@@ -1,14 +1,14 @@
 use crate::app_state::AppState;
 use actix_web::web;
 use chrono::Utc;
+use cryptr::{EncKeys, EncValue};
 use rauthy_common::constants::{API_KEY_LENGTH, CACHE_NAME_12HR};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::{decrypt, encrypt, get_rand};
+use rauthy_common::utils::get_rand;
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
 use ring::digest;
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, FromRow};
-use tracing::error;
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -28,17 +28,17 @@ impl ApiKeyEntity {
         expires: Option<i64>,
         access: Vec<ApiKeyAccess>,
     ) -> Result<String, ErrorResponse> {
-        let enc_key = data.enc_keys.get(&data.enc_key_active).unwrap();
-
         let created = Utc::now().timestamp();
         let secret_plain = get_rand(API_KEY_LENGTH);
         let secret_hash = digest::digest(&digest::SHA256, secret_plain.as_bytes());
-        let secret_enc =
-            encrypt(secret_hash.as_ref(), enc_key).expect("Encryption Keys not set up correctly");
+        let secret_enc = EncValue::encrypt(secret_hash.as_ref())?
+            .into_bytes()
+            .to_vec();
 
         let access_bytes = bincode::serialize(&access)?;
-        let access_enc =
-            encrypt(&access_bytes, enc_key).expect("Encryption Keys not set up correctly");
+        let access_enc = EncValue::encrypt(&access_bytes)?.into_bytes().to_vec();
+
+        let enc_key_active = &EncKeys::get_static().enc_key_active;
 
         query!(
             r#"INSERT INTO
@@ -48,7 +48,7 @@ impl ApiKeyEntity {
             secret_enc,
             created,
             expires,
-            data.enc_key_active,
+            enc_key_active,
             access_enc,
         )
         .execute(&data.db)
@@ -86,24 +86,23 @@ impl ApiKeyEntity {
         name: &str,
     ) -> Result<String, ErrorResponse> {
         let entity = ApiKeyEntity::find(data, name).await?;
-        let api_key = entity.into_api_key(data)?;
-
-        let enc_key = data.enc_keys.get(&data.enc_key_active).unwrap();
+        let api_key = entity.into_api_key()?;
 
         // generate a new secret
         let secret_plain = get_rand(API_KEY_LENGTH);
         let hash = digest::digest(&digest::SHA256, secret_plain.as_bytes());
-        let secret_enc = encrypt(hash.as_ref(), enc_key).unwrap();
+        let secret_enc = EncValue::encrypt(hash.as_ref())?.into_bytes().to_vec();
 
         // re-encrypt access rights with possibly new active key as well
         let access_bytes = bincode::serialize(&api_key.access)?;
-        let access_enc =
-            encrypt(&access_bytes, enc_key).expect("Encryption Keys not set up correctly");
+        let access_enc = EncValue::encrypt(&access_bytes)?.into_bytes().to_vec();
+
+        let enc_key_active = &EncKeys::get_static().enc_key_active;
 
         query!(
             "UPDATE api_keys SET secret = $1, enc_key_id = $2, access = $3 WHERE name = $4",
             secret_enc,
-            data.enc_key_active,
+            enc_key_active,
             access_enc,
             name,
         )
@@ -124,15 +123,14 @@ impl ApiKeyEntity {
         access: Vec<ApiKeyAccess>,
     ) -> Result<(), ErrorResponse> {
         let entity = ApiKeyEntity::find(data, name).await?;
-        let api_key = entity.into_api_key(data)?;
+        let api_key = entity.into_api_key()?;
 
-        let enc_key = data.enc_keys.get(&data.enc_key_active).unwrap();
-
-        let secret_enc = encrypt(&api_key.secret, enc_key).unwrap();
+        let secret_enc = EncValue::encrypt(&api_key.secret)?.into_bytes().to_vec();
 
         let access_bytes = bincode::serialize(&access)?;
-        let access_enc =
-            encrypt(&access_bytes, enc_key).expect("Encryption Keys not set up correctly");
+        let access_enc = EncValue::encrypt(&access_bytes)?.into_bytes().to_vec();
+
+        let enc_key_active = &EncKeys::get_static().enc_key_active;
 
         query!(
             r#"UPDATE
@@ -140,7 +138,7 @@ impl ApiKeyEntity {
             WHERE name = $5"#,
             secret_enc,
             expires,
-            data.enc_key_active,
+            enc_key_active,
             access_enc,
             name,
         )
@@ -213,7 +211,7 @@ impl ApiKeyEntity {
         {
             key
         } else {
-            let key = Self::find(data, name).await?.into_api_key(data)?;
+            let key = Self::find(data, name).await?.into_api_key()?;
             cache_put(
                 CACHE_NAME_12HR.to_string(),
                 idx,
@@ -229,18 +227,9 @@ impl ApiKeyEntity {
         Ok(api_key)
     }
 
-    pub fn into_api_key(self, data: &web::Data<AppState>) -> Result<ApiKey, ErrorResponse> {
-        let enc_key = data.enc_keys.get(&self.enc_key_id).ok_or_else(|| {
-            error!("Cannot get encryption key {} from config", self.enc_key_id);
-            ErrorResponse::new(
-                ErrorResponseType::Internal,
-                "Cannot decrypt API-Key".to_string(),
-            )
-        })?;
-
-        let secret = decrypt(self.secret.as_slice(), enc_key.as_slice())?;
-
-        let access_dec = decrypt(self.access.as_slice(), enc_key.as_slice())?;
+    pub fn into_api_key(self) -> Result<ApiKey, ErrorResponse> {
+        let secret = EncValue::try_from(self.secret)?.decrypt()?.to_vec();
+        let access_dec = EncValue::try_from(self.access)?.decrypt()?.to_vec();
         let access = bincode::deserialize::<Vec<ApiKeyAccess>>(&access_dec)?;
 
         Ok(ApiKey {

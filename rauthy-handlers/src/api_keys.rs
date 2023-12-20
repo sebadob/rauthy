@@ -32,7 +32,7 @@ pub async fn get_api_keys(
     let entities = ApiKeyEntity::find_all(&data).await?;
     let mut keys = Vec::with_capacity(entities.len());
     for entity in entities {
-        let key = entity.into_api_key(&data)?;
+        let key = entity.into_api_key()?;
         keys.push(ApiKeyResponse::from(key));
     }
 
