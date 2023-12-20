@@ -92,7 +92,8 @@
                 || event.typ === 'RauthyHealthy'
                 || event.typ === 'RauthyUnhealthy'
             }
-                <div class="col-typ">{event.typ}</div>
+                <div class="col-typ">IpBlacklistRemoved</div>
+<!--                <div class="col-typ">{event.typ}</div>-->
                 <div class="col-ip"></div>
                 <div class="col-text">{event.text}</div>
 
@@ -174,7 +175,8 @@
     }
 
     .col-typ {
-        width: 9rem;
+        width: 9.5rem;
+        border: 1px solid red;
     }
 
     .col-ip {

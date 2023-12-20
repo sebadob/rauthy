@@ -134,7 +134,7 @@
 
                 <Button
                         on:click={sendTestEvent}
-                        level=3
+                        level={3}
                 >
                     TEST
                 </Button>
