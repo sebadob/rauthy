@@ -7,6 +7,7 @@ use actix_web::http::header::{
 };
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
+use cryptr::CryptrError;
 use css_color::ParseColorError;
 use derive_more::Display;
 use redhac::CacheError;
@@ -30,6 +31,7 @@ pub enum ErrorResponseType {
     // These String could be optimized in the future with borrowing
     // -> just not going down that rabbit hole for now
     DPoP(Option<String>),
+    Encryption,
     UseDpopNonce((Option<String>, String)),
     Forbidden,
     Internal,
@@ -368,5 +370,11 @@ impl From<oxiri::IriParseError> for ErrorResponse {
             ErrorResponseType::BadRequest,
             format!("Invalid iri given: {:?}", value),
         )
+    }
+}
+
+impl From<CryptrError> for ErrorResponse {
+    fn from(value: CryptrError) -> Self {
+        ErrorResponse::new(ErrorResponseType::Encryption, value.to_string())
     }
 }
