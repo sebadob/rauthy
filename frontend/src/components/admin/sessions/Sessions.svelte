@@ -17,7 +17,7 @@
 
     let searchOptions = [
         {
-            label: ' User ID',
+            label: 'User ID',
             callback: (item, search) => item.user_id?.toLowerCase().includes(search.toLowerCase()),
         },
         {
