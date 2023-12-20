@@ -21,8 +21,9 @@ pub fn build_csp_header(nonce: &str) -> (&str, String) {
     ("content-security-policy", value)
 }
 
+#[deprecated]
 // Decrypts a `&Vec<u8>` which was [encrypted](encrypt) before with the same key.
-pub fn decrypt(ciphertext: &[u8], key: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
+pub fn decrypt_legacy(ciphertext: &[u8], key: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
     use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
 
     let k = Key::from_slice(key);
@@ -34,8 +35,9 @@ pub fn decrypt(ciphertext: &[u8], key: &[u8]) -> Result<Vec<u8>, ErrorResponse> 
     Ok(plaintext)
 }
 
+#[deprecated]
 // TODO do encryption and decryption on a dedicated thread?
-pub fn encrypt(plain: &[u8], key: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
+pub fn encrypt_legacy(plain: &[u8], key: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
     use chacha20poly1305::{
         aead::{AeadCore, OsRng},
         ChaCha20Poly1305, Key,
@@ -204,10 +206,10 @@ mod tests {
         let plain = text.as_bytes();
         let key = b"9dJsZiqfgxoCABYziGMW2UHq7C44jvdp";
 
-        let enc = encrypt(plain, key).unwrap();
+        let enc = encrypt_legacy(plain, key).unwrap();
         assert_ne!(&enc, plain);
 
-        let dec = decrypt(enc.as_slice(), key).unwrap();
+        let dec = decrypt_legacy(enc.as_slice(), key).unwrap();
         assert_ne!(enc, dec);
         assert_eq!(&dec, plain);
 
