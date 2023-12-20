@@ -1,6 +1,6 @@
 use crate::entity::api_keys::ApiKeyAccess;
 use crate::entity::jwk::JwkKeyPairAlg;
-use crate::events::event::EventLevel;
+use crate::events::event::{EventLevel, EventType};
 use crate::language::Language;
 use actix_web::http::header;
 use actix_web::HttpRequest;
@@ -182,6 +182,18 @@ pub struct EventsListenParams {
     #[validate(range(min = 0, max = 1000))]
     pub latest: Option<u16>,
     pub level: Option<EventLevel>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct EventsRequest {
+    /// Unix timestamp in seconds
+    #[validate(range(min = 1672527600, max = 4070905200))]
+    pub from: i64,
+    /// Unix timestamp in seconds
+    #[validate(range(min = 1672527600, max = 4070905200))]
+    pub until: Option<i64>,
+    pub level: EventLevel,
+    pub typ: Option<EventType>,
 }
 
 fn default_scope() -> String {
