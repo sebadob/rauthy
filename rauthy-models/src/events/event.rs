@@ -121,7 +121,7 @@ impl EventLevel {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum EventType {
     InvalidLogins,
     IpBlacklisted,
@@ -138,6 +138,13 @@ pub enum EventType {
     UserEmailChange,
     UserPasswordReset,
     Test,
+}
+
+impl Default for EventType {
+    fn default() -> Self {
+        // InvalidLogins is always the lowest int value -> needed for DB queries
+        Self::InvalidLogins
+    }
 }
 
 impl Display for EventType {
@@ -371,6 +378,46 @@ impl Event {
         .execute(db)
         .await?;
         Ok(())
+    }
+
+    pub async fn find_all(
+        db: &DbPool,
+        from: i64,
+        until: i64,
+        level: EventLevel,
+        typ: Option<EventType>,
+    ) -> Result<Vec<Self>, ErrorResponse> {
+        let level = level.value();
+
+        let res = if let Some(typ) = typ {
+            let typ = typ.value();
+            query_as!(
+                Self,
+                r#"SELECT * FROM events
+                WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3 AND typ = $4
+                ORDER BY timestamp DESC"#,
+                from,
+                until,
+                level,
+                typ,
+            )
+            .fetch_all(db)
+            .await
+        } else {
+            query_as!(
+                Self,
+                r#"SELECT * FROM events
+                WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3
+                ORDER BY timestamp DESC"#,
+                from,
+                until,
+                level,
+            )
+            .fetch_all(db)
+            .await
+        }?;
+
+        Ok(res)
     }
 
     pub async fn find_latest(db: &DbPool, limit: i64) -> Result<Vec<Self>, ErrorResponse> {
