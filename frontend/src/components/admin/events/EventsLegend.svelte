@@ -1,6 +1,6 @@
 <script>
-    export let eventColor = () => {
-    };
+    import {eventColor} from "../../../utils/helpers.js";
+
     export let wide;
 </script>
 

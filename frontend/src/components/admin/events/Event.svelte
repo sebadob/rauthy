@@ -1,10 +1,8 @@
 <script>
-    import {formatDateFromTs} from "../../../utils/helpers.js";
+    import {formatDateFromTs, eventColor} from "../../../utils/helpers.js";
     import {onMount} from "svelte";
 
     export let event;
-    export let eventColor = () => {
-    };
     export let collapsed = true;
     export let wide;
 
@@ -92,8 +90,7 @@
                 || event.typ === 'RauthyHealthy'
                 || event.typ === 'RauthyUnhealthy'
             }
-                <div class="col-typ">IpBlacklistRemoved</div>
-<!--                <div class="col-typ">{event.typ}</div>-->
+                <div class="col-typ">{event.typ}</div>
                 <div class="col-ip"></div>
                 <div class="col-text">{event.text}</div>
 
@@ -176,7 +173,6 @@
 
     .col-typ {
         width: 9.5rem;
-        border: 1px solid red;
     }
 
     .col-ip {
