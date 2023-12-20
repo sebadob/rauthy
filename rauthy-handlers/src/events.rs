@@ -12,7 +12,6 @@ use rauthy_models::events::listener::EventRouterMsg;
 use rauthy_models::request::{EventsListenParams, EventsRequest};
 use std::time::Duration;
 use tokio::sync::mpsc;
-use tracing::debug;
 use validator::Validate;
 
 /// Get events
