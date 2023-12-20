@@ -386,6 +386,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         .service(blacklist::get_blacklist)
                         .service(blacklist::post_blacklist)
                         .service(blacklist::delete_blacklist)
+                        .service(events::get_events)
                         .service(events::sse_events)
                         .service(events::post_event_test)
                         .service(generic::get_index)
