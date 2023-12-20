@@ -32,6 +32,23 @@ export const EVENT_LEVELS = [
 	'Warning',
 	'Critical'
 ]
+export const EVENT_TYPES = [
+	'InvalidLogins',
+	'IpBlacklisted',
+	'IpBlacklistRemoved',
+	'JwksRotated',
+	'NewUserRegistered',
+	'NewRauthyAdmin',
+	'NewRauthyVersion',
+	'PossibleBruteForce',
+	'RauthyStarted',
+	'RauthyHealthy',
+	'RauthyUnhealthy',
+	'SecretsMigrated',
+	'UserEmailChange',
+	'UserPasswordReset',
+	'Test',
+]
 export const LANGUAGES = ['DE', 'EN'];
 export const TOKEN_ALGS = [
 	'RS256',

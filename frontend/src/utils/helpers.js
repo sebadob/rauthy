@@ -108,9 +108,25 @@ export const computePow = (powChallenge) => {
 	};
 }
 
+export function eventColor(level) {
+	switch (level) {
+		case 'test':
+			return '#b2b2b2';
+		case 'info':
+			return '#388c51';
+		case 'notice':
+			return '#3d5d99';
+		case 'warning':
+			return '#c29a4f';
+		case 'critical':
+			return '#993d49';
+	}
+}
+
 
 export const formatDateToDateInput = date => {
-	return date.toISOString().split('.')[0];
+	return date.toISOString().slice(0, 16);
+	// return date.toISOString().split('.')[0];
 }
 
 export const formatUtcTsFromDateInput = inputDate => {
