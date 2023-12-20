@@ -382,12 +382,17 @@ impl Event {
 
     pub async fn find_all(
         db: &DbPool,
-        from: i64,
-        until: i64,
+        mut from: i64,
+        mut until: i64,
         level: EventLevel,
         typ: Option<EventType>,
     ) -> Result<Vec<Self>, ErrorResponse> {
         let level = level.value();
+
+        // Events are special inside Rauthy -> they use ms precision.
+        // To keep the API internally the same, we expect timestamps in seconds though.
+        from *= 1000;
+        until *= 1000;
 
         let res = if let Some(typ) = typ {
             let typ = typ.value();
