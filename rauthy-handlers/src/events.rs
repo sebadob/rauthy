@@ -12,11 +12,12 @@ use rauthy_models::events::listener::EventRouterMsg;
 use rauthy_models::request::{EventsListenParams, EventsRequest};
 use std::time::Duration;
 use tokio::sync::mpsc;
+use tracing::debug;
 use validator::Validate;
 
 /// Get events
 #[utoipa::path(
-    get,
+    post,
     path = "/events",
     tag = "events",
     responses(
@@ -26,23 +27,23 @@ use validator::Validate;
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
 )]
-#[get("/events")]
-pub async fn get_events(
+#[post("/events")]
+pub async fn post_events(
     data: web::Data<AppState>,
     principal: ReqPrincipal,
-    params: Json<EventsRequest>,
+    payload: Json<EventsRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Events, AccessRights::Read)?;
 
-    params.validate()?;
-    let params = params.into_inner();
+    payload.validate()?;
+    let payload = payload.into_inner();
 
     let events = Event::find_all(
         &data.db,
-        params.from,
-        params.until.unwrap_or_else(|| Utc::now().timestamp()),
-        params.level,
-        params.typ,
+        payload.from,
+        payload.until.unwrap_or_else(|| Utc::now().timestamp()),
+        payload.level,
+        payload.typ,
     )
     .await?;
 
