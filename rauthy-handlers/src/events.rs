@@ -1,16 +1,53 @@
 use crate::{real_ip_from_req, ReqPrincipal};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use actix_web_lab::sse;
+use actix_web_validator::Json;
+use chrono::Utc;
 use rauthy_common::constants::SSE_KEEP_ALIVE;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::events::event::Event;
 use rauthy_models::events::listener::EventRouterMsg;
-use rauthy_models::request::EventsListenParams;
+use rauthy_models::request::{EventsListenParams, EventsRequest};
 use std::time::Duration;
 use tokio::sync::mpsc;
 use validator::Validate;
+
+/// Get events
+#[utoipa::path(
+    get,
+    path = "/events",
+    tag = "events",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[get("/events")]
+pub async fn get_events(
+    data: web::Data<AppState>,
+    principal: ReqPrincipal,
+    params: Json<EventsRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_api_key_or_admin_session(AccessGroup::Events, AccessRights::Read)?;
+
+    params.validate()?;
+    let params = params.into_inner();
+
+    let events = Event::find_all(
+        &data.db,
+        params.from,
+        params.until.unwrap_or_else(|| Utc::now().timestamp()),
+        params.level,
+        params.typ,
+    )
+    .await?;
+
+    Ok(HttpResponse::Ok().json(events))
+}
 
 /// Listen to the Events SSE stream
 #[utoipa::path(
