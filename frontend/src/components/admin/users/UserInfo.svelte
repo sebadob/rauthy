@@ -227,10 +227,10 @@
         <Input
                 type="datetime-local"
                 step="60"
-                width="18rem"
+                width="16rem"
                 bind:value={userExpires}
                 on:input={validateForm}
-                min={new Date().toISOString().split('.')[0]}
+                min={formatDateToDateInput(new Date())}
                 max="2099-01-01T00:00"
         >
             USER EXPIRES
