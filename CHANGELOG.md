@@ -9,6 +9,12 @@
 - new admin UI section to fetch and filter archived events.
 [ece73bb](https://github.com/sebadob/rauthy/commit/ece73bb38878d8d189d52855845c63fa729cae2a)
 - backend + frontend dependencies have been updated to the latest versions everywhere
+- The internal encryption handling has been changed to a new project of mine called [cryptr](https://github.com/sebadob/cryptr)
+This makes the whole value encryption way easier, more stable and future proof, because values have their own
+tiny header data with the minimal amount of information needed. This makes not only encryption key rotations,
+but also even encryption algorithm encryptions really easy in the future.
+[d6c224e](https://github.com/sebadob/rauthy/commit/d6c224e98198c155d7df83c25edc5c97ab590d2a)
+[c3df3ce](https://github.com/sebadob/rauthy/commit/c3df3cedbdff4a2a9dd592aac65ae21e5cd67385)
 
 ### Bugfixes
 
