@@ -1468,6 +1468,8 @@ dependencies = [
 [[package]]
 name = "cryptr"
 version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "522a911a7f4b3e91d01c54cd72e1f4b0a6b64dee009ba50f43d179f283735acc"
 dependencies = [
  "argon2",
  "async-stream",
