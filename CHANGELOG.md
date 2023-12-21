@@ -1,5 +1,21 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+- new POST `/events` API endpoint which serves archived events
+[d5d4b01](https://github.com/sebadob/rauthy/commit/d5d4b0145768982f20ebc1dbbfc568a73d7937bd)
+- new admin UI section to fetch and filter archived events.
+[ece73bb](https://github.com/sebadob/rauthy/commit/ece73bb38878d8d189d52855845c63fa729cae2a)
+- backend + frontend dependencies have been updated to the latest versions everywhere
+
+### Bugfixes
+
+- A visual bugfix appeared on Apple systems because of the slightly bigger font size. This made
+the live events look a bit ugly and characters jumping in a line where they should never end up.
+[3b56b50](https://github.com/sebadob/rauthy/commit/3b56b50f4f24b7707c522934f9c03714703c64ad)
+
 ## v0.19.2
 
 ### Changes

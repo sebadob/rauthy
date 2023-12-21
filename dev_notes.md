@@ -2,13 +2,21 @@
 
 ## CURRENT WORK
 
+- integrate `cryptr` and migrate all old ENC_KEYS in:
+    - [ ] db_migrate 
+    - [ ] api_keys 
+    - [ ] jwk 
+    - [ ] clients
+- adopt Webauthn cookies to cryptr and check compatibility
+- move auth::rotate_jwks into Jwk Entity and adopt encryption
+
 ## Stage 1 - essentials
 
 [x] finished
 
 ## Stage 2 - features - do before v1.0.0
 
-- admin ui: fetch archived events from defined time-frames for better auditing and investigations
+- auto-apply DB backups from S3 (SQLite)
 - auto-encrypted backups + backups to remote locations (ssh, nfs, s3, ...) -> postponed - should be applied to sqlite only
 since postgres has pg_backrest and a lot of well established tooling anyway
 - admin ui: template button for client branding: default-light + default-dark ?

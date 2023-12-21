@@ -1,12 +1,22 @@
-use std::str::FromStr;
-use std::sync::OnceLock;
-use std::time::Duration;
-
+use crate::app_state::{AppState, DbTxn};
+use crate::entity::jwk::JwkKeyPairAlg;
+use crate::entity::scopes::Scope;
+use crate::entity::users::User;
+use crate::request::{EphemeralClientRequest, NewClientRequest};
+use crate::ListenScheme;
 use actix_multipart::Multipart;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest};
+use cryptr::{utils, EncValue};
 use futures_util::StreamExt;
+use rauthy_common::constants::{
+    APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_EPHEMERAL_CLIENTS, ENABLE_EPHEMERAL_CLIENTS,
+    EPHEMERAL_CLIENTS_ALLOWED_FLOWS, EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA,
+    IDX_CLIENTS, IDX_CLIENT_LOGO, PROXY_MODE, RAUTHY_VERSION,
+};
+use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::{cache_entry_client, get_client_ip};
 use redhac::{
     cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, cache_put, cache_remove,
     AckLevel,
@@ -15,25 +25,12 @@ use reqwest::header::CONTENT_TYPE;
 use reqwest::{tls, Url};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
+use std::str::FromStr;
+use std::sync::OnceLock;
+use std::time::Duration;
 use tracing::{debug, error, warn};
 use utoipa::ToSchema;
 use validator::Validate;
-
-use rauthy_common::constants::{
-    APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_EPHEMERAL_CLIENTS, ENABLE_EPHEMERAL_CLIENTS,
-    EPHEMERAL_CLIENTS_ALLOWED_FLOWS, EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA,
-    IDX_CLIENTS, IDX_CLIENT_LOGO, PROXY_MODE, RAUTHY_VERSION,
-};
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::{cache_entry_client, get_client_ip, get_rand};
-use rauthy_common::utils::{decrypt, encrypt};
-
-use crate::app_state::{AppState, DbTxn};
-use crate::entity::jwk::JwkKeyPairAlg;
-use crate::entity::scopes::Scope;
-use crate::entity::users::User;
-use crate::request::{EphemeralClientRequest, NewClientRequest};
-use crate::ListenScheme;
 
 const RAUTHY_DEFAULT_LOGO: &str = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+Cjxzdmcgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgdmlld0JveD0iMCAwIDUxMiAxMzgiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSIgeG1sbnM6c2VyaWY9Imh0dHA6Ly93d3cuc2VyaWYuY29tLyIgc3R5bGU9ImZpbGwtcnVsZTpldmVub2RkO2NsaXAtcnVsZTpldmVub2RkO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxLjU7Ij4KICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDEsMCwwLDEsMCwtMTEpIj4KICAgICAgICA8ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLDAsMCwxLDAsLTE3NikiPgogICAgICAgICAgICA8ZyB0cmFuc2Zvcm09Im1hdHJpeCgwLjkyMDMyNSwwLDAsMS44NDE1MSw0NS45Mjc5LDI2LjQ1OSkiPgogICAgICAgICAgICAgICAgPHJlY3QgeD0iMjcuNzQxIiB5PSIxNTEuNTciIHdpZHRoPSIyMDAuNTE3IiBoZWlnaHQ9IjEwLjE0OCIgc3R5bGU9ImZpbGw6cmdiKDQsNywxMSk7Ii8+CiAgICAgICAgICAgIDwvZz4KICAgICAgICAgICAgPGcgdHJhbnNmb3JtPSJtYXRyaXgoMS45MzQ3MiwwLDAsMS44MjczMiw4LjM1NjE4LDI4Ljc1MzMpIj4KICAgICAgICAgICAgICAgIDxyZWN0IHg9IjMzLjMwNyIgeT0iOTcuMTUiIHdpZHRoPSI5NC42OTMiIGhlaWdodD0iNTQuNDIiIHN0eWxlPSJmaWxsOnJnYig0LDcsMTEpO3N0cm9rZTpyZ2IoNCw3LDExKTtzdHJva2Utd2lkdGg6MS4wNnB4OyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDEuODI3MzIsMCwwLDEuODI3MzIsLTE2MC44MjIsNzAuMTgwNikiPgogICAgICAgICAgICAgICAgPGcgdHJhbnNmb3JtPSJtYXRyaXgoNzIsMCwwLDcyLDIyNy4xNzQsMTIzLjQxNykiPgogICAgICAgICAgICAgICAgPC9nPgogICAgICAgICAgICAgICAgPHRleHQgeD0iMTI4Ljk4MnB4IiB5PSIxMjMuNDE3cHgiIHN0eWxlPSJmb250LWZhbWlseTonQ2FsaWJyaS1Cb2xkJywgJ0NhbGlicmknLCBzYW5zLXNlcmlmO2ZvbnQtd2VpZ2h0OjcwMDtmb250LXNpemU6NzJweDtmaWxsOndoaXRlOyI+cjx0c3BhbiB4PSIxNTIuOTk0cHggMTg4LjUzN3B4ICIgeT0iMTIzLjQxN3B4IDEyMy40MTdweCAiPmF1PC90c3Bhbj48L3RleHQ+CiAgICAgICAgICAgIDwvZz4KICAgICAgICAgICAgPGcgdHJhbnNmb3JtPSJtYXRyaXgoMSwwLDAsMS4wMTYxNywtMS40MjEwOWUtMTQsLTUuMjQ0OTIpIj4KICAgICAgICAgICAgICAgIDxwYXRoIGQ9Ik00NDAuOTM2LDMyMi42NDNMNDM5LjIwNCwzMjQuMjY2TDI1NS40ODIsMzI0LjI2NkwyNTUuNDgyLDMwNS43MjFMNDQwLjkzNiwzMDUuNzIxTDQ0MC45MzYsMzIyLjY0M1oiIHN0eWxlPSJmaWxsOnVybCgjX0xpbmVhcjEpOyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDAuOTIwMTkxLDAsMCwxLjg0MTIxLDQ2LjI0NjQsLTkxLjMzODMpIj4KICAgICAgICAgICAgICAgIDxyZWN0IHg9IjI3Ljc0MSIgeT0iMTUxLjU3IiB3aWR0aD0iMjAwLjUxNyIgaGVpZ2h0PSIxMC4xNDgiIHN0eWxlPSJmaWxsOnVybCgjX0xpbmVhcjIpOyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDEuOTc1OTgsMCwwLDEuODQ2MTksMTkwLjE4NywyNi4wNjIpIj4KICAgICAgICAgICAgICAgIDxyZWN0IHg9IjMzLjMwNyIgeT0iOTcuMTUiIHdpZHRoPSI5NC42OTMiIGhlaWdodD0iNTQuNDIiIHN0eWxlPSJmaWxsOnJnYig0Myw2NSwxMDcpOyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik00MzkuMjA0LDE4Ny43MzRMNDQwLjU1NywxODkuMDA3TDQ0MC41NTcsMjA2LjI3OUwyNTYsMjA2LjI3OUwyNTYsMTg3LjczNEw0MzkuMjA0LDE4Ny43MzRaIiBzdHlsZT0iZmlsbDpyZ2IoNDMsNjUsMTA3KTsiLz4KICAgICAgICAgICAgPGcgdHJhbnNmb3JtPSJtYXRyaXgoMS44MjczMiwwLDAsMS44MjczMiwtMTU0LjY2MSw3MC4xODA2KSI+CiAgICAgICAgICAgICAgICA8ZyB0cmFuc2Zvcm09Im1hdHJpeCg3MiwwLDAsNzIsMzIzLjA0NSwxMjMuNDE3KSI+CiAgICAgICAgICAgICAgICA8L2c+CiAgICAgICAgICAgICAgICA8dGV4dCB4PSIyMjYuNjQ2cHgiIHk9IjEyMy40MTdweCIgc3R5bGU9ImZvbnQtZmFtaWx5OidDYWxpYnJpLUJvbGQnLCAnQ2FsaWJyaScsIHNhbnMtc2VyaWY7Zm9udC13ZWlnaHQ6NzAwO2ZvbnQtc2l6ZTo3MnB4O2ZpbGw6d2hpdGU7Ij50aDx0c3BhbiB4PSIyODguOTQzcHggIiB5PSIxMjMuNDE3cHggIj55PC90c3Bhbj48L3RleHQ+CiAgICAgICAgICAgIDwvZz4KICAgICAgICAgICAgPGcgdHJhbnNmb3JtPSJtYXRyaXgoMiwwLDAsMiwwLDApIj4KICAgICAgICAgICAgICAgIDxwYXRoIGQ9Ik0yMTkuNjAyLDkzLjg2N0wyNTYsMTI4TDIxOS42MDIsMTYyLjEzM0wyMTkuNjAyLDkzLjg2N1oiIHN0eWxlPSJmaWxsOnJnYig0Myw2NSwxMDcpOyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDIsMCwwLDEuOTU3MzksMCwzLjk5OTk3KSI+CiAgICAgICAgICAgICAgICA8cGF0aCBkPSJNMzYuMzk4LDkzLjg2N0wwLDkzLjg2N0wzNS45MDgsMTI4LjUyNEwwLDE2My42MTlMMzYuMzk4LDE2My42MTkiIHN0eWxlPSJmaWxsOnJnYig0LDcsMTEpOyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgPC9nPgogICAgPC9nPgogICAgPGRlZnM+CiAgICAgICAgPGxpbmVhckdyYWRpZW50IGlkPSJfTGluZWFyMSIgeDE9IjAiIHkxPSIwIiB4Mj0iMSIgeTI9IjAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiBncmFkaWVudFRyYW5zZm9ybT0ibWF0cml4KDE4NS40NTQsMCwwLDE4LjU0NDMsMjU1LjQ4MiwzMTQuOTk0KSI+PHN0b3Agb2Zmc2V0PSIwIiBzdHlsZT0ic3RvcC1jb2xvcjpyZ2IoNCw3LDExKTtzdG9wLW9wYWNpdHk6MSIvPjxzdG9wIG9mZnNldD0iMSIgc3R5bGU9InN0b3AtY29sb3I6cmdiKDQzLDY1LDEwNyk7c3RvcC1vcGFjaXR5OjEiLz48L2xpbmVhckdyYWRpZW50PgogICAgICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iX0xpbmVhcjIiIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgZ3JhZGllbnRUcmFuc2Zvcm09Im1hdHJpeCgyMDAuNTE3LDAsMCwxMC4xNDgzLDI3Ljc0MTQsMTU2LjY0NSkiPjxzdG9wIG9mZnNldD0iMCIgc3R5bGU9InN0b3AtY29sb3I6cmdiKDQsNywxMSk7c3RvcC1vcGFjaXR5OjEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0eWxlPSJzdG9wLWNvbG9yOnJnYig0Myw2NSwxMDcpO3N0b3Atb3BhY2l0eToxIi8+PC9saW5lYXJHcmFkaWVudD4KICAgIDwvZGVmcz4KPC9zdmc+Cg==";
 
@@ -86,11 +83,15 @@ impl Client {
         data: &web::Data<AppState>,
         mut client_req: NewClientRequest,
     ) -> Result<Self, ErrorResponse> {
-        if client_req.confidential {
-            let (_, enc) = Self::generate_new_secret(data)?;
+        let kid = if client_req.confidential {
+            let (key_id, enc) = Self::generate_new_secret()?;
             client_req.secret = Some(enc);
-        }
-        let client = Client::from(client_req);
+            Some(key_id)
+        } else {
+            None
+        };
+        let mut client = Client::from(client_req);
+        client.secret_kid = kid;
 
         let rows =  sqlx::query!(
             r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
@@ -483,18 +484,14 @@ impl Client {
     /// # Panics
     /// The decryption depends on correctly set up `ENC_KEYS` and `ENC_KEY_ACTIVE` environment
     /// variables and panics, if this is not the case.
-    pub fn generate_new_secret(
-        state: &web::Data<AppState>,
-    ) -> Result<(String, Vec<u8>), ErrorResponse> {
-        let rnd = get_rand(64);
-        let key = state
-            .enc_keys
-            .get(&state.enc_key_active)
-            .expect("Encryption Key config is broken");
-        let rnd_enc = encrypt(rnd.as_bytes(), key)?;
+    #[inline]
+    pub fn generate_new_secret() -> Result<(String, Vec<u8>), ErrorResponse> {
+        let rnd = utils::secure_random_alnum(64);
+        let rnd_enc = EncValue::encrypt(rnd.as_bytes())?.into_bytes().to_vec();
         Ok((rnd, rnd_enc))
     }
 
+    #[inline]
     pub fn get_access_token_alg(&self) -> Result<JwkKeyPairAlg, ErrorResponse> {
         JwkKeyPairAlg::from_str(self.access_token_alg.as_str())
     }
@@ -523,17 +520,10 @@ impl Client {
     }
 
     /// Decrypts the client secret (if it exists) and then returns it as clear text.
-    pub fn get_secret_cleartext(
-        &self,
-        state: &web::Data<AppState>,
-    ) -> Result<Option<String>, ErrorResponse> {
+    pub fn get_secret_cleartext(&self) -> Result<Option<String>, ErrorResponse> {
         if let Some(secret) = self.secret.as_ref() {
-            let key = state
-                .enc_keys
-                .get(&state.enc_key_active)
-                .expect("Encryption Key config is broken");
-            let bytes = decrypt(secret, key)?;
-            let cleartext = String::from_utf8_lossy(&bytes).to_string();
+            let bytes = EncValue::try_from(secret.clone())?.decrypt()?;
+            let cleartext = String::from_utf8_lossy(bytes.as_ref()).to_string();
             Ok(Some(cleartext))
         } else {
             Ok(None)
@@ -788,12 +778,7 @@ impl Client {
         Ok(())
     }
 
-    pub fn validate_secret(
-        &self,
-        state: &web::Data<AppState>,
-        secret: &str,
-        req: &HttpRequest,
-    ) -> Result<(), ErrorResponse> {
+    pub fn validate_secret(&self, secret: &str, req: &HttpRequest) -> Result<(), ErrorResponse> {
         if !self.confidential {
             error!("Cannot validate 'client_secret' for public client");
             return Err(ErrorResponse::new(
@@ -808,14 +793,10 @@ impl Client {
                 format!("'{}' has no secret while being confidential", &self.id),
             )
         })?;
-        let key = state
-            .enc_keys
-            .get(&state.enc_key_active)
-            .expect("Encryption Key config is broken");
-        let bytes = decrypt(secret_enc, key)?;
-        let cleartext = String::from_utf8_lossy(&bytes);
+        let cleartext = EncValue::try_from(secret_enc.clone())?.decrypt()?;
 
-        if cleartext.as_ref() != secret {
+        if cleartext.as_ref() != secret.as_bytes() {
+            drop(cleartext);
             warn!(
                 "Invalid login for client '{}' from '{}'",
                 self.id,

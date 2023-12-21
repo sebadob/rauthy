@@ -3,8 +3,10 @@
 #![forbid(unsafe_code)]
 
 use actix_web::rt::System;
+use actix_web::web::Data;
 use actix_web::{middleware, web, App, HttpServer};
 use actix_web_prom::PrometheusMetricsBuilder;
+use cryptr::{EncKeys, EncValue};
 use prometheus::Registry;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_DPOP_NONCES, CACHE_NAME_EPHEMERAL_CLIENTS,
@@ -12,7 +14,9 @@ use rauthy_common::constants::{
     CACHE_NAME_WEBAUTHN_DATA, DPOP_NONCE_EXP, EPHEMERAL_CLIENTS_CACHE_LIFETIME, POW_EXP,
     RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
+use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::password_hasher;
+use rauthy_common::utils::decrypt_legacy;
 use rauthy_handlers::middleware::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
 use rauthy_handlers::middleware::principal::RauthyPrincipalMiddleware;
@@ -22,12 +26,16 @@ use rauthy_handlers::{
 };
 use rauthy_models::app_state::{AppState, Caches};
 use rauthy_models::email::EMail;
+use rauthy_models::entity::api_keys::ApiKeyEntity;
+use rauthy_models::entity::clients::Client;
+use rauthy_models::entity::jwk::Jwk;
 use rauthy_models::events::event::Event;
 use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::listener::EventListener;
 use rauthy_models::events::notifier::EventNotifier;
 use rauthy_models::events::{init_event_vars, ip_blacklist_handler};
 use rauthy_models::{email, ListenScheme};
+use sqlx::query;
 use std::error::Error;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
@@ -166,6 +174,94 @@ async fn main() -> Result<(), Box<dyn Error>> {
         ha_cache_config: cache_config.clone(),
     };
 
+    //     if let Err(err) = cryptr::EncKeys::from_env() {
+    //         error!(
+    //             r#"
+    //
+    // If you are migrating from an earlier version, you must convert your `ENC_KEYS` before starting
+    // any version v0.20+
+    //
+    // To do this, you need to:
+    //
+    // 1. Install cryptr - https://github.com/sebadob/cryptr
+    // If you have Rust available on your system, just execute:
+    //
+    // cargo install cryptr --features cli --locked
+    //
+    // Otherwise, pre-built binaries do exist for either Linux or Windows: https://github.com/sebadob/cryptr/tree/main/out
+    //
+    // 2. Execute:
+    //
+    // cryptr keys convert legacy-string
+    //
+    // 3. Paste your current ENC_KEYS into the command line.
+    //
+    // For instance, if you have
+    // ENC_KEYS="bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA"
+    // in your config, paste
+    // bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA
+    //
+    // If you provide your ENC_KEYS via a Kubernetes secret, you need to do a base64 decode first.
+    // For instance, if your secret looks something like this
+    // ENC_KEYS: YlZDeVRzR2FnZ1Z5NXlxUS9TOW43b0NlbjUzeFNKTHpjc21mZG5CRHZOcnFRNjNyNCBxNnUyNm9uUnZYVkc0NDI3LzNDRUM4UkpXQmNNa3JCTWtSWGd4NjVBbUpzTlRnaFNB
+    // Then decode via shell or any tool your like:
+    // echo -n YlZDeVRzR2FnZ1Z5NXlxUS9TOW43b0NlbjUzeFNKTHpjc21mZG5CRHZOcnFRNjNyNCBxNnUyNm9uUnZYVkc0NDI3LzNDRUM4UkpXQmNNa3JCTWtSWGd4NjVBbUpzTlRnaFNB | base64 -d
+    // ... and paste the decoded value into cryptr
+    //
+    // 4. cryptr will output the correct format for either usage in config or as kubernetes secret again
+    //
+    // 5. Paste the new format into your Rauthy config / secret and restart.
+    //
+    // "#
+    //         );
+    //         panic!("{}", err);
+    //     }
+    match EncKeys::from_env() {
+        Ok(keys) => keys.init().unwrap(),
+        Err(err) => {
+            error!(
+                r#"
+
+    If you are migrating from an earlier version, you must convert your `ENC_KEYS` before starting
+    any version v0.20+
+
+    To do this, you need to:
+
+    1. Install cryptr - https://github.com/sebadob/cryptr
+    If you have Rust available on your system, just execute:
+
+    cargo install cryptr --features cli --locked
+
+    Otherwise, pre-built binaries do exist for either Linux or Windows: https://github.com/sebadob/cryptr/tree/main/out
+
+    2. Execute:
+
+    cryptr keys convert legacy-string
+
+    3. Paste your current ENC_KEYS into the command line.
+
+    For instance, if you have
+    ENC_KEYS="bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA"
+    in your config, paste
+    bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA
+
+    If you provide your ENC_KEYS via a Kubernetes secret, you need to do a base64 decode first.
+    For instance, if your secret looks something like this
+    ENC_KEYS: YlZDeVRzR2FnZ1Z5NXlxUS9TOW43b0NlbjUzeFNKTHpjc21mZG5CRHZOcnFRNjNyNCBxNnUyNm9uUnZYVkc0NDI3LzNDRUM4UkpXQmNNa3JCTWtSWGd4NjVBbUpzTlRnaFNB
+    Then decode via shell or any tool your like:
+    echo -n YlZDeVRzR2FnZ1Z5NXlxUS9TOW43b0NlbjUzeFNKTHpjc21mZG5CRHZOcnFRNjNyNCBxNnUyNm9uUnZYVkc0NDI3LzNDRUM4UkpXQmNNa3JCTWtSWGd4NjVBbUpzTlRnaFNB | base64 -d
+    ... and paste the decoded value into cryptr
+
+    4. cryptr will output the correct format for either usage in config or as kubernetes secret again
+
+    5. Paste the new format into your Rauthy config / secret and restart.
+
+    "#
+            );
+            panic!("{}", err);
+        }
+    }
+
     let (tx_events, rx_events) = flume::unbounded();
     let (tx_events_router, rx_events_router) = flume::unbounded();
     let (tx_ip_blacklist, rx_ip_blacklist) = flume::unbounded();
@@ -200,6 +296,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // spawn remote cache notification service
     tokio::spawn(handle_notify(app_state.clone(), rx_notify));
+
+    // TODO remove with v0.21
+    // migrate existing encrypted values to `cryptr`
+    V20_migrate_to_cryptr(&app_state)
+        .await
+        .expect("TEMP_migrate_to_cryptr to succeed");
 
     // spawn health watcher
     tokio::spawn(watch_health(
@@ -546,4 +648,102 @@ fn get_https_port() -> String {
     let port = env::var("LISTEN_PORT_HTTPS").unwrap_or_else(|_| "8443".to_string());
     info!("HTTPS listen port: {}", port);
     port
+}
+
+// TODO remove with v0.21
+async fn V20_migrate_to_cryptr(app_state: &Data<AppState>) -> Result<(), ErrorResponse> {
+    // check `config` table if the migration has been done already
+    let db_id = "cryptr_migration";
+    if sqlx::query!("SELECT * FROM config WHERE id = $1", db_id)
+        .fetch_one(&app_state.db)
+        .await
+        .is_ok()
+    {
+        debug!("Secrets have already been migrated - skipping");
+        return Ok(());
+    }
+
+    info!("Starting secrets migration");
+
+    let keys = EncKeys::get_static();
+    let active_key = &keys.enc_key_active;
+
+    // if not, migrate values wrapped in a transaction to not screw up something
+    let mut txn = app_state.db.begin().await?;
+
+    // migrate clients
+    let clients = Client::find_all(app_state).await?;
+    for mut client in clients {
+        if !client.confidential {
+            continue;
+        }
+
+        let kid = client.secret_kid.as_ref().unwrap();
+        let key = keys.get_key(kid)?;
+
+        let dec = decrypt_legacy(client.secret.as_ref().unwrap(), key)?;
+        let enc = EncValue::encrypt(dec.as_slice())?.into_bytes().to_vec();
+
+        client.secret = Some(enc);
+        client.secret_kid = Some(active_key.clone());
+        client.save(app_state, Some(&mut txn)).await?;
+    }
+
+    // migrate Jwks
+    let jwks = sqlx::query_as!(Jwk, "select * from jwks")
+        .fetch_all(&app_state.db)
+        .await?;
+    for jwk in jwks {
+        let key = keys.get_key(&jwk.enc_key_id)?;
+        let dec = decrypt_legacy(jwk.jwk.as_slice(), key)?;
+        let enc = EncValue::encrypt(dec.as_slice())?.into_bytes().to_vec();
+
+        sqlx::query!(
+            "update jwks set enc_key_id = $1, jwk = $2 where kid = $3",
+            active_key,
+            enc,
+            jwk.kid,
+        )
+        .execute(&mut *txn)
+        .await?;
+    }
+
+    // migrate ApiKey's
+    let api_keys = ApiKeyEntity::find_all(app_state).await?;
+    for mut api_key in api_keys {
+        // secret
+        let key = keys.get_key(&api_key.enc_key_id)?;
+        let dec = decrypt_legacy(api_key.secret.as_slice(), key)?;
+        api_key.secret = EncValue::encrypt(dec.as_slice())?.into_bytes().to_vec();
+
+        // access rights
+        let dec = decrypt_legacy(api_key.access.as_slice(), key)?;
+        api_key.access = EncValue::encrypt(dec.as_slice())?.into_bytes().to_vec();
+
+        query!(
+            r#"UPDATE api_keys
+            SET secret = $1, expires = $2, enc_key_id = $3, access = $4
+            WHERE name = $5"#,
+            api_key.secret,
+            api_key.expires,
+            active_key,
+            api_key.access,
+            api_key.name,
+        )
+        .execute(&mut *txn)
+        .await?;
+    }
+
+    // save the state in `config` table to only do all this once
+    sqlx::query!("INSERT INTO config (id, data) VALUES ($1, $2)", db_id, 1)
+        .execute(&mut *txn)
+        .await?;
+
+    txn.commit().await?;
+
+    info!("Secrets migration successful");
+
+    // TODO maybe encrypt webauthn data while we are doing it already anyway?
+
+    Ok(())
 }

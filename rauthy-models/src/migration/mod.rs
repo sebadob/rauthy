@@ -5,7 +5,7 @@ use std::env;
 use std::path::Path;
 use time::OffsetDateTime;
 use tokio::time::Instant;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 pub mod db_migrate;
 pub mod db_migrate_dev;
@@ -25,38 +25,20 @@ pub async fn backup_db(db: &DbPool) -> Result<(), ErrorResponse> {
         )
     })?;
 
+    let backup_file_path = format!("{}/rauthy.db", path_base);
     if DATABASE_URL.starts_with("sqlite:") {
-        let q = format!("vacuum main into '{}/rauthy.db'", path_base);
+        let q = format!("VACUUM main INTO '{}'", backup_file_path);
         sqlx::query(&q)
             .execute(db)
             .await
             .expect("VACUUM INTO sqlite");
     } else if DATABASE_URL.starts_with("postgresql://") {
-        warn!("Running on a Postgres database - automatic backups are not yet implemented");
+        debug!("Running on a Postgres database - use native tools to handle backups");
+        return Ok(());
     } else {
         panic!("Unknown DATABASE_URL");
     }
 
-    // TODO when native backups are implemented, remove this approach -> not consistent
-    // // iterate over all Cfs and store each into its own file
-    // for cf in Cf::iter() {
-    //     let res = DATA_STORE.scan_cf(cf.clone()).await?;
-    //     let bytes = bincode::serialize(&res)?;
-    //     let file = cf.as_str();
-    //
-    //     let path_str = format!("{}{}", path_base, file);
-    //     let path = Path::new(&path_str);
-    //     match tokio::fs::write(path, bytes).await {
-    //         Ok(_) => debug!("Backup saved successfully to {}", path_str),
-    //         Err(err) => {
-    //             let msg = format!("Error saving backup to file {}: {}", path_str, err);
-    //             error!("{}", msg);
-    //             return Err(ErrorResponse::new(ErrorResponseType::Internal, msg));
-    //         }
-    //     }
-    // }
-
-    // TODO rename into metadata and provide information about the used database driver at that time
     // when everything was successful, store a version information
     let path_str = format!("{}RAUTHY_VERSION.txt", path_base);
     let path = Path::new(&path_str);
@@ -68,6 +50,8 @@ pub async fn backup_db(db: &DbPool) -> Result<(), ErrorResponse> {
             return Err(ErrorResponse::new(ErrorResponseType::Internal, msg));
         }
     }
+
+    // TODO encrypt and push backup to S3 storage
 
     // cleanup old backups
     let path_base = "data/backup/";
@@ -81,16 +65,13 @@ pub async fn backup_db(db: &DbPool) -> Result<(), ErrorResponse> {
 
     let ts_low = 1670000000u32;
     let ts_high = 3000000000u32;
-    let retention = match env::var("BACKUP_RETENTION_LOCAL")
+    let retention = env::var("BACKUP_RETENTION_LOCAL")
         .unwrap_or_else(|_| "720".to_string())
         .parse::<u32>()
-    {
-        Ok(v) => v,
-        Err(_) => {
+        .unwrap_or_else(|_| {
             error!("Error parsing BACKUP_RETENTION_LOCAL to u64, using default of 720 hours");
             720
-        }
-    };
+        });
     let ts_now = now as u32;
     let max_diff = retention * 60 * 60;
 

@@ -1,6 +1,7 @@
 use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
+use cryptr::{EncKeys, EncValue};
 use jwt_simple::algorithms::{
     Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
 };
@@ -11,7 +12,7 @@ use tracing::{debug, info};
 
 use rauthy_common::constants::{ADMIN_FORCE_MFA, DB_TYPE, DEV_MODE};
 use rauthy_common::error_response::ErrorResponse;
-use rauthy_common::utils::{encrypt, get_rand};
+use rauthy_common::utils::get_rand;
 use rauthy_common::DbType;
 
 use crate::app_state::DbPool;
@@ -134,8 +135,6 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
 /// Initializes an empty production database for a new deployment
 pub async fn migrate_init_prod(
     db: &DbPool,
-    enc_key_active: String,
-    enc_key: &[u8],
     argon2_params: Params,
     issuer: &str,
 ) -> Result<(), ErrorResponse> {
@@ -190,6 +189,8 @@ pub async fn migrate_init_prod(
         .execute(db)
         .await?;
 
+        let enc_key_active = &EncKeys::get_static().enc_key_active;
+
         // generate JWKs
         info!("Generating new JWKs - this might take a few seconds");
         let mut entities = Vec::with_capacity(4);
@@ -201,7 +202,9 @@ pub async fn migrate_init_prod(
                 .with_key_id(&get_rand(24))
         })
         .await?;
-        let jwk = encrypt(jwk_plain.to_der().unwrap().as_slice(), enc_key)?;
+        let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
+            .into_bytes()
+            .to_vec();
         entities.push(Jwk {
             kid: jwk_plain.key_id().as_ref().unwrap().clone(),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
@@ -217,7 +220,9 @@ pub async fn migrate_init_prod(
                 .with_key_id(&get_rand(24))
         })
         .await?;
-        let jwk = encrypt(jwk_plain.to_der().unwrap().as_slice(), enc_key)?;
+        let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
+            .into_bytes()
+            .to_vec();
         entities.push(Jwk {
             kid: jwk_plain.key_id().as_ref().unwrap().clone(),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
@@ -233,7 +238,9 @@ pub async fn migrate_init_prod(
                 .with_key_id(&get_rand(24))
         })
         .await?;
-        let jwk = encrypt(jwk_plain.to_der().unwrap().as_slice(), enc_key)?;
+        let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
+            .into_bytes()
+            .to_vec();
         entities.push(Jwk {
             kid: jwk_plain.key_id().as_ref().unwrap().clone(),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
@@ -245,12 +252,14 @@ pub async fn migrate_init_prod(
         // Ed25519
         let jwk_plain =
             web::block(|| Ed25519KeyPair::generate().with_key_id(&get_rand(24))).await?;
-        let jwk = encrypt(jwk_plain.to_der().as_slice(), enc_key)?;
+        let jwk = EncValue::encrypt(jwk_plain.to_der().as_slice())?
+            .into_bytes()
+            .to_vec();
         entities.push(Jwk {
             kid: jwk_plain.key_id().as_ref().unwrap().clone(),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::EdDSA,
-            enc_key_id: enc_key_active,
+            enc_key_id: enc_key_active.clone(),
             jwk,
         });
 

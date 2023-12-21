@@ -11,7 +11,7 @@ members = [
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.19.2"
+version = "0.20.0-20231220"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -39,6 +39,8 @@ async-trait = "0.1.74"
 bincode = "1"
 chacha20poly1305 = { version = "0.10", features = ["std"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
+cryptr = { path = "../cryptr", features = ["s3", "streaming"] }
+#cryptr = { version = "0.1.1", features = ["s3", "streaming"] }
 css-color = "0.2"
 derive_more = "0.99"
 dotenvy = "0.15"
@@ -70,7 +72,7 @@ tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "tracing"] }
 tokio = { version = "1", features = ["full"] }
 utoipa = { version = "4", features = ["actix_extras", "chrono", "openapi_extensions"] }
-utoipa-swagger-ui = { version = "4", features = ["actix-web"] }
+utoipa-swagger-ui = { version = "5", features = ["actix-web"] }
 validator = { version = "0.16", features = ["derive"] }
 webauthn-rs = { version = "0.4", features = [
     "danger-allow-state-serialisation", "danger-credential-internals", "resident-key-support"

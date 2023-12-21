@@ -1466,6 +1466,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "cryptr"
+version = "0.2.0"
+dependencies = [
+ "argon2",
+ "async-stream",
+ "async-trait",
+ "base64 0.21.5",
+ "bincode",
+ "bytes",
+ "chacha20poly1305",
+ "dotenvy",
+ "flume",
+ "futures",
+ "lazy_static",
+ "rand",
+ "regex",
+ "reqwest",
+ "rusty-s3",
+ "serde",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
 name = "css-color"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3958,6 +3986,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "quick-xml"
+version = "0.30.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eff6510e86862b57b210fd8cbe8ed3f0d7d600b9c2863cd4549a2e033c66e956"
+dependencies = [
+ "memchr",
+ "serde",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4013,13 +4051,14 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.19.2"
+version = "0.20.0-20231220"
 dependencies = [
  "actix-service",
  "actix-web",
  "actix-web-prom",
  "chrono",
  "cron",
+ "cryptr",
  "dotenvy",
  "ed25519-compact",
  "flume",
@@ -4052,7 +4091,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.19.2"
+version = "0.20.0-20231220"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4061,6 +4100,7 @@ dependencies = [
  "bincode",
  "chacha20poly1305",
  "chrono",
+ "cryptr",
  "css-color",
  "derive_more",
  "flume",
@@ -4089,7 +4129,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.19.2"
+version = "0.20.0-20231220"
 dependencies = [
  "actix",
  "actix-multipart",
@@ -4098,6 +4138,7 @@ dependencies = [
  "actix-web-lab",
  "actix-web-validator",
  "chrono",
+ "cryptr",
  "futures",
  "lazy_static",
  "mime_guess",
@@ -4121,7 +4162,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.19.2"
+version = "0.20.0-20231220"
 dependencies = [
  "accept-language",
  "actix",
@@ -4138,6 +4179,7 @@ dependencies = [
  "bincode",
  "cached",
  "chrono",
+ "cryptr",
  "css-color",
  "derive_more",
  "dotenvy",
@@ -4184,7 +4226,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.19.2"
+version = "0.20.0-20231220"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4202,7 +4244,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.19.2"
+version = "0.20.0-20231220"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4210,6 +4252,7 @@ dependencies = [
  "askama_actix",
  "chacha20poly1305",
  "chrono",
+ "cryptr",
  "derive_more",
  "jwt-simple",
  "openssl-sys",
@@ -4767,6 +4810,25 @@ name = "rustversion"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ffc183a10b4478d04cbbbfc96d0873219d962dd5accaff2ffbd4ceb7df837f4"
+
+[[package]]
+name = "rusty-s3"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31aa883f1b986a5249641e574ca0e11ac4fb9970b009c6fbb96fedaf4fa78db8"
+dependencies = [
+ "base64 0.21.5",
+ "hmac",
+ "md-5",
+ "percent-encoding",
+ "quick-xml",
+ "serde",
+ "serde_json",
+ "sha2",
+ "time",
+ "url",
+ "zeroize",
+]
 
 [[package]]
 name = "ryu"
@@ -5560,8 +5622,12 @@ checksum = "5419f34732d9eb6ee4c3578b7989078579b7f039cbbb9ca2c4da015749371e15"
 dependencies = [
  "bytes",
  "futures-core",
+ "futures-io",
  "futures-sink",
+ "futures-util",
+ "hashbrown 0.14.3",
  "pin-project-lite",
+ "slab",
  "tokio",
  "tracing",
 ]
@@ -5895,9 +5961,9 @@ dependencies = [
 
 [[package]]
 name = "utoipa-swagger-ui"
-version = "4.0.0"
+version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "154517adf0d0b6e22e8e1f385628f14fcaa3db43531dc74303d3edef89d6dfe5"
+checksum = "f839caa8e09dddc3ff1c3112a91ef7da0601075ba5025d9f33ae99c4cb9b6e51"
 dependencies = [
  "actix-web",
  "mime_guess",

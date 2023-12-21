@@ -5,8 +5,7 @@
 use actix_web::dev::ServiceRequest;
 use actix_web::{web, HttpRequest, HttpResponse};
 use rauthy_common::constants::{COOKIE_MFA, PROXY_MODE};
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_models::app_state::AppState;
+use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::entity::api_keys::ApiKey;
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::Session;
@@ -39,7 +38,6 @@ pub type ReqSession = web::ReqData<Option<Session>>;
 struct Assets;
 
 pub async fn map_auth_step(
-    data: &web::Data<AppState>,
     auth_step: AuthStep,
     req: &HttpRequest,
     // the bool for Ok() is true is the password has been hashed
@@ -72,16 +70,12 @@ pub async fn map_auth_step(
             }
 
             // if there is no mfa_cookie present, set a new one
-            if let Ok(mfa_cookie) =
-                WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA), &data.enc_keys)
-            {
+            if let Ok(mfa_cookie) = WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA)) {
                 if mfa_cookie.email != res.email {
-                    add_req_mfa_cookie(data, &mut resp, res.email.clone())
-                        .map_err(|err| (err, true))?;
+                    add_req_mfa_cookie(&mut resp, res.email.clone()).map_err(|err| (err, true))?;
                 }
             } else {
-                add_req_mfa_cookie(data, &mut resp, res.email.clone())
-                    .map_err(|err| (err, true))?;
+                add_req_mfa_cookie(&mut resp, res.email.clone()).map_err(|err| (err, true))?;
             }
 
             Ok((resp, res.has_password_been_hashed))
@@ -90,19 +84,9 @@ pub async fn map_auth_step(
 }
 
 #[inline]
-fn add_req_mfa_cookie(
-    data: &web::Data<AppState>,
-    resp: &mut HttpResponse,
-    email: String,
-) -> Result<(), ErrorResponse> {
-    let mfa_cookie = WebauthnCookie::new(email);
-    let secret = data.enc_keys.get(&data.enc_key_active).ok_or_else(|| {
-        ErrorResponse::new(
-            ErrorResponseType::Internal,
-            "Internal Error with the ENC_KEYS config".to_string(),
-        )
-    })?;
-    let cookie = mfa_cookie.build(&data.enc_key_active, secret.as_ref())?;
+fn add_req_mfa_cookie(resp: &mut HttpResponse, email: String) -> Result<(), ErrorResponse> {
+    let binding = WebauthnCookie::new(email);
+    let cookie = binding.build()?;
 
     if let Err(err) = resp.add_cookie(&cookie) {
         error!("Error adding mfa cookie in 'map_auth_step' : {}", err);

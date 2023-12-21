@@ -12,6 +12,7 @@ askama = { workspace = true }
 askama_actix = { workspace = true }
 chacha20poly1305 = { workspace = true }
 chrono = { workspace = true }
+cryptr = { workspace = true }
 derive_more = { workspace = true }
 jwt-simple = { workspace = true }
 ## Add openssl-sys as a direct dependency so it can be cross compiled to

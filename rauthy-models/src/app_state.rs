@@ -11,10 +11,8 @@ use anyhow::Context;
 use argon2::Params;
 use rauthy_common::constants::{DATABASE_URL, DB_TYPE, DEV_MODE, HA_MODE, PROXY_MODE};
 use rauthy_common::DbType;
-use regex::Regex;
 use sqlx::pool::PoolOptions;
 use sqlx::ConnectOptions;
-use std::collections::HashMap;
 use std::env;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -41,8 +39,6 @@ pub struct AppState {
     pub db: DbPool,
     pub public_url: String,
     pub argon2_params: Argon2Params,
-    pub enc_keys: HashMap<String, Vec<u8>>,
-    pub enc_key_active: String,
     pub issuer: String,
     pub listen_addr: String,
     pub listen_scheme: ListenScheme,
@@ -127,12 +123,6 @@ impl AppState {
             .parse::<u32>()
             .expect("Could not parse REFRESH_TOKEN_GRACE_TIME");
 
-        let enc_key_active = env::var("ENC_KEY_ACTIVE").expect("ENC_KEY_ACTIVE not set");
-        let enc_keys = AppState::get_enc_keys();
-        if enc_keys.get(&enc_key_active).is_none() {
-            panic!("ENC_KEY_ACTIVE not found in ENC_KEYS");
-        }
-
         let issuer_scheme = if matches!(
             listen_scheme,
             ListenScheme::HttpHttps | ListenScheme::Https
@@ -177,20 +167,12 @@ impl AppState {
             .rp_name(&rp_name);
         let webauthn = Arc::new(builder.build().expect("Invalid configuration"));
 
-        let db = Self::new_db_pool(
-            &enc_key_active,
-            enc_keys.get(&enc_key_active).unwrap(),
-            &argon2_params.params,
-            &issuer,
-        )
-        .await?;
+        let db = Self::new_db_pool(&argon2_params.params, &issuer).await?;
 
         Ok(Self {
             db,
             public_url,
             argon2_params,
-            enc_keys,
-            enc_key_active,
             issuer,
             listen_addr,
             listen_scheme,
@@ -208,47 +190,7 @@ impl AppState {
         })
     }
 
-    pub fn get_enc_keys() -> HashMap<String, Vec<u8>> {
-        let raw_enc_keys = env::var("ENC_KEYS").expect("ENC_KEYS is not set");
-        let mut enc_keys: HashMap<String, Vec<u8>> = HashMap::new();
-
-        // we need to validate the key ids, since otherwise the parsing might fail from a webauthn cookie
-        let re = Regex::new(r"^[a-zA-Z0-9]{2,20}$").unwrap();
-
-        raw_enc_keys.split(' ').for_each(|k| {
-            if k.ne("") {
-                let t: (&str, &str) = k.split_once('/').expect("Incorrect format for ENC_KEYS");
-                let id = t.0.trim();
-                let key = t.1.trim();
-
-                if id.eq("") || key.eq("") {
-                    panic!("ENC_KEYS must not be empty. Format: \"<id>/<key> <id>/<key>\"");
-                }
-
-                if key.len() != 32 {
-                    panic!(
-                        "Encryption Key for Enc Key Id '{}' is not 32 characters long",
-                        id
-                    );
-                }
-
-                if !re.is_match(id) {
-                    panic!("The IDs for ENC_KEYS must match '^[a-zA-Z0-9]{{2,20}}$'");
-                }
-
-                enc_keys.insert(String::from(id), Vec::from(key));
-            }
-        });
-
-        enc_keys
-    }
-
-    pub async fn new_db_pool(
-        enc_key_active: &str,
-        enc_key: &[u8],
-        argon2_params: &Params,
-        issuer: &str,
-    ) -> anyhow::Result<DbPool> {
+    pub async fn new_db_pool(argon2_params: &Params, issuer: &str) -> anyhow::Result<DbPool> {
         let db_max_conn = env::var("DATABASE_MAX_CONN")
             .unwrap_or_else(|_| String::from("5"))
             .parse::<u32>()
@@ -306,15 +248,9 @@ impl AppState {
 
         // migrate DB data
         if !*DEV_MODE {
-            migrate_init_prod(
-                &pool,
-                enc_key_active.to_string(),
-                enc_key,
-                argon2_params.clone(),
-                issuer,
-            )
-            .await
-            .map_err(|err| anyhow::Error::msg(err.message))?;
+            migrate_init_prod(&pool, argon2_params.clone(), issuer)
+                .await
+                .map_err(|err| anyhow::Error::msg(err.message))?;
         }
 
         if let Ok(from) = env::var("MIGRATE_DB_FROM") {

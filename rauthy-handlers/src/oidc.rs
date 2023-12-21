@@ -104,8 +104,7 @@ pub async fn get_authorize(
 
     let mut action = FrontendAction::None;
 
-    if let Ok(mfa_cookie) = WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA), &data.enc_keys)
-    {
+    if let Ok(mfa_cookie) = WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA)) {
         if let Ok(user) = User::find_by_email(&data, mfa_cookie.email.clone()).await {
             // we need to check this, because a user could deactivate MFA in another browser or
             // be deleted while still having existing mfa cookies somewhere else
@@ -176,7 +175,7 @@ pub async fn post_authorize(
 
     let session = principal.get_session()?;
     let res = match auth::authorize(&data, &req, req_data.into_inner(), session.clone()).await {
-        Ok(auth_step) => map_auth_step(&data, auth_step, &req).await,
+        Ok(auth_step) => map_auth_step(auth_step, &req).await,
         Err(err) => Err(err),
     };
 
@@ -222,7 +221,7 @@ pub async fn post_authorize_refresh(
     let auth_step =
         auth::authorize_refresh(&data, session, client, header_origin, req_data.into_inner())
             .await?;
-    map_auth_step(&data, auth_step, &req)
+    map_auth_step(auth_step, &req)
         .await
         .map(|res| res.0)
         .map_err(|err| err.0)

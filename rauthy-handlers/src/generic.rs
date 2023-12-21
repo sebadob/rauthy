@@ -3,6 +3,7 @@ use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::{header, StatusCode};
 use actix_web::web::Json;
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
+use cryptr::EncKeys;
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_NAME_LOGIN_DELAY, HEADER_HTML, IDX_LOGIN_TIME, RAUTHY_VERSION,
 };
@@ -335,17 +336,16 @@ pub async fn get_auth_check_admin(principal: ReqPrincipal) -> Result<HttpRespons
     ),
 )]
 #[get("/encryption/keys")]
-pub async fn get_enc_keys(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_enc_keys(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Read)?;
 
-    let active = &data.enc_key_active;
-    let mut keys = Vec::with_capacity(data.enc_keys.len());
-    for key in data.enc_keys.keys() {
-        keys.push(key.as_str());
-    }
+    let enc_keys = EncKeys::get_static();
+    let active = &enc_keys.enc_key_active;
+    let keys = enc_keys
+        .enc_keys
+        .iter()
+        .map(|(id, _)| id.as_str())
+        .collect::<Vec<&str>>();
 
     let resp = EncKeysResponse { active, keys };
     Ok(HttpResponse::Ok().json(resp))

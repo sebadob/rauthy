@@ -29,11 +29,6 @@
             label: 'IP',
             callback: (item, search) => item.ip?.includes(search),
         },
-        // {
-        //     label: 'Content',
-        //     callback: (item, search) => item.data?.includes(search)
-        //         || item.text?.toLowerCase()?.contains(search.toLowerCase()),
-        // },
         {
             label: 'Content',
             callback: (item, search) => item.text?.toLowerCase()?.includes(search.toLowerCase()),
