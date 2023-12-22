@@ -735,6 +735,11 @@ async fn V20_migrate_to_cryptr(app_state: &Data<AppState>) -> Result<(), ErrorRe
     }
 
     // save the state in `config` table to only do all this once
+    #[cfg(not(feature = "sqlite"))]
+    sqlx::query!("INSERT INTO config (id, data) VALUES ($1, $2)", db_id, &[])
+        .execute(&mut *txn)
+        .await?;
+    #[cfg(feature = "sqlite")]
     sqlx::query!("INSERT INTO config (id, data) VALUES ($1, $2)", db_id, 1)
         .execute(&mut *txn)
         .await?;
