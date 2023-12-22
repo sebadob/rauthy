@@ -1,17 +1,20 @@
 use crate::app_state::DbPool;
 use chrono::Utc;
 use cryptr::stream::writer::s3_writer::{Bucket, Credentials, UrlStyle};
-use cryptr::{EncValue, FileReader, S3Writer, StreamReader, StreamWriter};
+use cryptr::{EncValue, FileReader, FileWriter, S3Reader, S3Writer, StreamReader, StreamWriter};
 use rauthy_common::constants::{DATABASE_URL, DB_TYPE, RAUTHY_VERSION};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::DbType;
 use rusty_s3::actions::ListObjectsV2;
 use rusty_s3::S3Action;
+use sqlx::pool::PoolOptions;
 use std::env;
 use std::path::Path;
+use std::str::FromStr;
 use std::sync::OnceLock;
 use std::time::Duration;
 use time::OffsetDateTime;
+use tokio::fs;
 use tokio::time::Instant;
 use tracing::{debug, error, info, warn};
 
@@ -125,7 +128,7 @@ async fn s3_backup(file_path: &str) -> Result<(), ErrorResponse> {
     // execute backup
     let reader = StreamReader::File(FileReader {
         path: file_path,
-        print_progress: false,
+        print_progress: true,
     });
 
     let object = format!(
@@ -151,7 +154,13 @@ async fn s3_backup(file_path: &str) -> Result<(), ErrorResponse> {
 /// This will panic if anything is not configured correctly to avoid unexpected behavior at runtime.
 pub async fn s3_backup_init_test() {
     let s3_url = match env::var("S3_URL") {
-        Ok(url) => url,
+        Ok(url) => {
+            if url.is_empty() && *DB_TYPE == DbType::Sqlite {
+                info!("S3 backups are not configured, 'S3_URL' is empty");
+                return;
+            }
+            url
+        }
         Err(_) => {
             if *DB_TYPE == DbType::Sqlite {
                 info!("S3 backups are not configured, 'S3_URL' not found");
@@ -224,85 +233,126 @@ pub async fn s3_backup_init_test() {
     }
 
     // save values for backups
-    BUCKET.set(bucket).expect("to set BUCKET only once");
-    CREDENTIALS
-        .set(credentials)
-        .expect("to set CREDENTIALS only once");
-    ACCEPT_INVALID_CERTS
-        .set(danger_accept_invalid_certs)
-        .expect("to set ACCEPT_INVALID_CERTS only once");
+    let _ = BUCKET.set(bucket);
+    let _ = CREDENTIALS.set(credentials);
+    let _ = ACCEPT_INVALID_CERTS.set(danger_accept_invalid_certs);
 }
 
-// Important: This must be executed BEFORE the rauthy store has been opened in `main`
-pub async fn restore_local_backup() -> Result<(), ErrorResponse> {
-    error!("Backup restores are not yet adopted for the new database drivers - exiting");
+/// Important: Must be executed BEFORE any database connection has been opened
+pub async fn check_restore_backup() -> Result<(), ErrorResponse> {
+    let backup_name = match env::var("RESTORE_BACKUP").ok() {
+        None => return Ok(()),
+        Some(name) => {
+            if name.is_empty() {
+                return Ok(());
+            }
+            name
+        }
+    };
 
-    // let start = Instant::now();
-    //
-    // debug!("Checking for backups to apply");
-    // let path_base = "data/backup/APPLY";
-    // let apply_path = Path::new(path_base);
-    // let apply_res = tokio::fs::read_to_string(apply_path).await;
-    // if apply_res.is_err() {
-    //     debug!("No backups to apply");
-    //     return Ok(());
-    // }
-    // let apply = apply_res.unwrap();
-    // let backup_folder = apply.trim();
-    //
-    // let path_base = format!("data/backup/{}/", backup_folder);
-    // info!(
-    //     "Starting full store restore from local backup: {}",
-    //     path_base
-    // );
-    //
-    // // check the rauthy version from the backup for compatibility
-    // let path_str = format!("{}RAUTHY_VERSION.txt", path_base);
-    // let path = Path::new(&path_str);
-    // let version = tokio::fs::read_to_string(path).await.map_err(|err| {
-    //     ErrorResponse::new(
-    //         ErrorResponseType::Internal,
-    //         format!("Could not read in the {}: {}", path_str, err),
-    //     )
-    // })?;
-    //
-    // let regex = Regex::new(r"^0.[10-999].*$").unwrap();
-    // if !regex.is_match(&version) {
-    //     return Err(ErrorResponse::new(
-    //         ErrorResponseType::BadRequest,
-    //         "The backup was created with an incompatible version of rauthy".to_string(),
-    //     ));
-    // }
-    //
-    // // we are good to go - purge everything
-    // purge_store().await;
-    //
-    // // apply base migration to have all necessary Cfs created again
-    // Migrations::migrate_internal(StoreMode::Prod).await;
-    //
-    // // read in all files and PUT them into the store
-    // for cf in Cf::iter() {
-    //     let path_str = format!("{}{}", path_base, cf.as_str());
-    //     let path = Path::new(&path_str);
-    //     let bytes = tokio::fs::read(path).await.map_err(|err| {
-    //         ErrorResponse::new(
-    //             ErrorResponseType::Internal,
-    //             format!("Error reading file {}: {}", path_str, err),
-    //         )
-    //     })?;
-    //
-    //     let columns = bincode::deserialize::<Vec<(String, Vec<u8>)>>(&bytes)?;
-    //     for (k, v) in columns {
-    //         DATA_STORE.put(cf.clone(), k, v).await?;
-    //     }
-    // }
-    //
-    // // delete the APPLY file to not do the same at the next restart
-    // let _ = tokio::fs::remove_file(apply_path).await;
-    //
-    // info!(
-    //     "Full store restore finished in {} ms",
-    //     start.elapsed().as_millis()
-    // );
+    if *DB_TYPE == DbType::Postgres {
+        error!(
+            r#"
+
+Found a backup which should be restored: {}
+You are using a Postgres database - this only works when using SQLite!
+Please use Postgres-native tooling like `pgbackrest` for Postgres.
+"#,
+            backup_name
+        );
+        panic!();
+    }
+
+    warn!(
+        r#"
+
+Found a backup which should be restored: {}
+This will override any existing database!
+Proceeding in 10 seconds ...
+"#,
+        backup_name
+    );
+    tokio::time::sleep(Duration::from_secs(10)).await;
+
+    // mv current DB file
+    let db_url = DATABASE_URL.as_str()[7..].to_string();
+    let restore_path = format!("{}.restore", &db_url);
+
+    // copy backup in place
+    if let Some(folder) = backup_name.strip_prefix("file:") {
+        let backup_path = format!("data/backup/{}/rauthy.db", folder.trim_end());
+        fs::copy(&backup_path, &restore_path).await?;
+    } else if let Some(object) = backup_name.strip_prefix("s3:") {
+        s3_backup_init_test().await;
+
+        let reader = StreamReader::S3(S3Reader {
+            credentials: Some(CREDENTIALS.get().unwrap()),
+            bucket: BUCKET.get().unwrap(),
+            object: object.trim_end(),
+            danger_accept_invalid_certs: *ACCEPT_INVALID_CERTS.get().unwrap(),
+            print_progress: true,
+        });
+        let writer = StreamWriter::File(FileWriter {
+            path: &restore_path,
+            overwrite_target: true,
+        });
+        EncValue::decrypt_stream(reader, writer).await?;
+    } else {
+        error!("\nInvalid format for RESTORE_BACKUP. Please check the documentation.\n");
+        panic!();
+    }
+
+    // move the current file out of the way and store it temp
+    let current_bkp = format!("{}.bkp", db_url);
+    let _ = fs::copy(&db_url, &current_bkp).await;
+    let current_shm = format!("{}-shm", db_url);
+    let current_shm_bkp = format!("{}.bkp", current_shm);
+    let _ = fs::copy(&current_shm, &current_shm_bkp).await;
+    let current_wal = format!("{}-wal", db_url);
+    let current_wal_bkp = format!("{}.bkp", current_wal);
+    let _ = fs::copy(&current_wal, &current_wal_bkp).await;
+
+    let _ = fs::remove_file(&db_url).await;
+    let _ = fs::remove_file(&current_shm).await;
+    let _ = fs::remove_file(&current_wal).await;
+
+    // switch places with the restored file
+    fs::copy(restore_path, &db_url).await?;
+
+    // check file integrity and try to open DB
+    let opts = sqlx::sqlite::SqliteConnectOptions::from_str(DATABASE_URL.as_str())?
+        .foreign_keys(true)
+        .auto_vacuum(sqlx::sqlite::SqliteAutoVacuum::Incremental)
+        .synchronous(sqlx::sqlite::SqliteSynchronous::Normal)
+        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal);
+    match PoolOptions::<sqlx::Sqlite>::new()
+        .acquire_timeout(Duration::from_secs(10))
+        .connect_with(opts)
+        .await
+    {
+        Ok(_pool) => {
+            info!("Successfully connected to restored backup database");
+        }
+        Err(err) => {
+            error!(
+                "Error connecting to restored backup database:\n{}\n\nRestoring original file ...",
+                err
+            );
+            // copy back the original file
+            fs::copy(current_bkp, &db_url).await?;
+            fs::copy(current_shm_bkp, current_shm).await?;
+            fs::copy(current_wal_bkp, current_wal).await?;
+            panic!();
+        }
+    }
+
+    // when the restored file is in place - rm old DB file
+    info!("Cleaning up after backup restore");
+    let _ = fs::remove_file(&current_bkp).await;
+    let _ = fs::remove_file(&current_shm_bkp).await;
+    let _ = fs::remove_file(&current_wal_bkp).await;
+
+    info!("Database backup has been restored successfully");
+
     Ok(())
 }

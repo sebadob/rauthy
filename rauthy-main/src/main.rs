@@ -34,6 +34,7 @@ use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::listener::EventListener;
 use rauthy_models::events::notifier::EventNotifier;
 use rauthy_models::events::{init_event_vars, ip_blacklist_handler};
+use rauthy_models::migration::check_restore_backup;
 use rauthy_models::{email, ListenScheme};
 use sqlx::query;
 use std::error::Error;
@@ -90,6 +91,58 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("Log Level set to '{}'", log_level);
     if test_mode {
         info!("Application started in Integration Test Mode");
+    }
+
+    match EncKeys::from_env() {
+        Ok(keys) => keys.init().unwrap(),
+        Err(err) => {
+            error!(
+                r#"
+
+    If you are migrating from an earlier version, you must convert your `ENC_KEYS` before starting
+    any version v0.20+
+
+    To do this, you need to:
+
+    1. Install cryptr - https://github.com/sebadob/cryptr
+    If you have Rust available on your system, just execute:
+
+    cargo install cryptr --features cli --locked
+
+    Otherwise, pre-built binaries do exist for either Linux or Windows: https://github.com/sebadob/cryptr/tree/main/out
+
+    2. Execute:
+
+    cryptr keys convert legacy-string
+
+    3. Paste your current ENC_KEYS into the command line.
+
+    For instance, if you have
+    ENC_KEYS="bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA"
+    in your config, paste
+    bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA
+
+    If you provide your ENC_KEYS via a Kubernetes secret, you need to do a base64 decode first.
+    For instance, if your secret looks something like this
+    ENC_KEYS: YlZDeVRzR2FnZ1Z5NXlxUS9TOW43b0NlbjUzeFNKTHpjc21mZG5CRHZOcnFRNjNyNCBxNnUyNm9uUnZYVkc0NDI3LzNDRUM4UkpXQmNNa3JCTWtSWGd4NjVBbUpzTlRnaFNB
+    Then decode via shell or any tool your like:
+    echo -n YlZDeVRzR2FnZ1Z5NXlxUS9TOW43b0NlbjUzeFNKTHpjc21mZG5CRHZOcnFRNjNyNCBxNnUyNm9uUnZYVkc0NDI3LzNDRUM4UkpXQmNNa3JCTWtSWGd4NjVBbUpzTlRnaFNB | base64 -d
+    ... and paste the decoded value into cryptr
+
+    4. cryptr will output the correct format for either usage in config or as kubernetes secret again
+
+    5. Paste the new format into your Rauthy config / secret and restart.
+
+    "#
+            );
+            panic!("{}", err);
+        }
+    }
+
+    // check if a backup should be restored
+    if let Err(err) = check_restore_backup().await {
+        error!("\nError restoring backup:\n\n{}\n", err.message);
+        panic!("{:?}", err);
     }
 
     // caches
@@ -173,94 +226,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let caches = Caches {
         ha_cache_config: cache_config.clone(),
     };
-
-    //     if let Err(err) = cryptr::EncKeys::from_env() {
-    //         error!(
-    //             r#"
-    //
-    // If you are migrating from an earlier version, you must convert your `ENC_KEYS` before starting
-    // any version v0.20+
-    //
-    // To do this, you need to:
-    //
-    // 1. Install cryptr - https://github.com/sebadob/cryptr
-    // If you have Rust available on your system, just execute:
-    //
-    // cargo install cryptr --features cli --locked
-    //
-    // Otherwise, pre-built binaries do exist for either Linux or Windows: https://github.com/sebadob/cryptr/tree/main/out
-    //
-    // 2. Execute:
-    //
-    // cryptr keys convert legacy-string
-    //
-    // 3. Paste your current ENC_KEYS into the command line.
-    //
-    // For instance, if you have
-    // ENC_KEYS="bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA"
-    // in your config, paste
-    // bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA
-    //
-    // If you provide your ENC_KEYS via a Kubernetes secret, you need to do a base64 decode first.
-    // For instance, if your secret looks something like this
-    // ENC_KEYS: YlZDeVRzR2FnZ1Z5NXlxUS9TOW43b0NlbjUzeFNKTHpjc21mZG5CRHZOcnFRNjNyNCBxNnUyNm9uUnZYVkc0NDI3LzNDRUM4UkpXQmNNa3JCTWtSWGd4NjVBbUpzTlRnaFNB
-    // Then decode via shell or any tool your like:
-    // echo -n YlZDeVRzR2FnZ1Z5NXlxUS9TOW43b0NlbjUzeFNKTHpjc21mZG5CRHZOcnFRNjNyNCBxNnUyNm9uUnZYVkc0NDI3LzNDRUM4UkpXQmNNa3JCTWtSWGd4NjVBbUpzTlRnaFNB | base64 -d
-    // ... and paste the decoded value into cryptr
-    //
-    // 4. cryptr will output the correct format for either usage in config or as kubernetes secret again
-    //
-    // 5. Paste the new format into your Rauthy config / secret and restart.
-    //
-    // "#
-    //         );
-    //         panic!("{}", err);
-    //     }
-    match EncKeys::from_env() {
-        Ok(keys) => keys.init().unwrap(),
-        Err(err) => {
-            error!(
-                r#"
-
-    If you are migrating from an earlier version, you must convert your `ENC_KEYS` before starting
-    any version v0.20+
-
-    To do this, you need to:
-
-    1. Install cryptr - https://github.com/sebadob/cryptr
-    If you have Rust available on your system, just execute:
-
-    cargo install cryptr --features cli --locked
-
-    Otherwise, pre-built binaries do exist for either Linux or Windows: https://github.com/sebadob/cryptr/tree/main/out
-
-    2. Execute:
-
-    cryptr keys convert legacy-string
-
-    3. Paste your current ENC_KEYS into the command line.
-
-    For instance, if you have
-    ENC_KEYS="bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA"
-    in your config, paste
-    bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA
-
-    If you provide your ENC_KEYS via a Kubernetes secret, you need to do a base64 decode first.
-    For instance, if your secret looks something like this
-    ENC_KEYS: YlZDeVRzR2FnZ1Z5NXlxUS9TOW43b0NlbjUzeFNKTHpjc21mZG5CRHZOcnFRNjNyNCBxNnUyNm9uUnZYVkc0NDI3LzNDRUM4UkpXQmNNa3JCTWtSWGd4NjVBbUpzTlRnaFNB
-    Then decode via shell or any tool your like:
-    echo -n YlZDeVRzR2FnZ1Z5NXlxUS9TOW43b0NlbjUzeFNKTHpjc21mZG5CRHZOcnFRNjNyNCBxNnUyNm9uUnZYVkc0NDI3LzNDRUM4UkpXQmNNa3JCTWtSWGd4NjVBbUpzTlRnaFNB | base64 -d
-    ... and paste the decoded value into cryptr
-
-    4. cryptr will output the correct format for either usage in config or as kubernetes secret again
-
-    5. Paste the new format into your Rauthy config / secret and restart.
-
-    "#
-            );
-            panic!("{}", err);
-        }
-    }
 
     let (tx_events, rx_events) = flume::unbounded();
     let (tx_events_router, rx_events_router) = flume::unbounded();
