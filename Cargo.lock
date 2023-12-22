@@ -4210,6 +4210,7 @@ dependencies = [
  "rio_turtle",
  "rsa",
  "rstest",
+ "rusty-s3",
  "semver",
  "serde",
  "serde_json",

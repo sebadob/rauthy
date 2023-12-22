@@ -62,6 +62,7 @@ reqwest = { version = "0.11", default-features = false, features = ["json", "rus
 ring = "0.17"
 rio_api = "0.8.4"
 rio_turtle = "0.8.4"
+rusty-s3 = "0.5.0"
 semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
