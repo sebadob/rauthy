@@ -83,6 +83,50 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # automatically (default: 720)
 #BACKUP_RETENTION_LOCAL=720
 
+# The following section will only be taken into account, when
+# SQLite is used as the main database. If you use Postgres, you
+# should use Postgres native tooling like for instance `pgbackrest`
+# to manage your backups.
+# If S3 access is configured, your SQLite backups will be encrypted
+# and pushed into the configured bucket.
+#S3_URL=
+#S3_REGION=
+#S3_PATH_STYLE=false
+#S3_BUCKET=my_s3_bucket_name
+#S3_ACCESS_KEY=
+#S3_ACCESS_SECRET=
+#S3_DANGER_ACCEPT_INVALID_CERTS=false
+
+# Restores the given backup
+#
+# CAUTION: Be very careful with this option - it will overwrite
+# any existing database! The best way to use this option is to
+# provide it as an environment variable for a single start up
+# and then remove it directly after success.
+#
+# This only works when you are using a SQLite database!
+# If you are running on Postgres, you must use Postgres-native
+# tooling to handle your backups.
+#
+# You can either restore a local backup, or an encrypted one
+# from S3 storage.
+#
+# For restoring from a local backup, provide the folder name
+# of the backup you want to restore. Local SQLite backups are
+# always in `./data/backup/rauthy-backup-TIMESTAMP/` folders.
+# You only provide the backup folder name itself, in this case
+# it would be `rauthy-backup-TIMESTAMP` like this:
+# RESTORE_BACKUP=file:rauthy-backup-TIMESTAMP
+#
+# If you want to restore an encrypted backup from S3 storage,
+# you must provide the object name in the configured bucket.
+# For instance, let's say we have an object named
+# `rauthy-0.20.0-1703243039.cryptr` in our bucket, then the
+# format would be:
+# RESTORE_BACKUP=s3:rauthy-0.20.0-1703243039.cryptr
+#
+#RESTORE_BACKUP=
+
 #####################################
 ############## CACHE ################
 #####################################
@@ -182,20 +226,6 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 
 # Disables the housekeeping schedulers (default: false)
 #SCHED_DISABLE=true
-
-# The following section will only be taken into account, when
-# SQLite is used as the main database. If you use Postgres, you
-# should use Postgres native tooling like for instance `pgbackrest`
-# to manage your backups.
-# If S3 access is configured, your SQLite backups will be encrypted
-# and pushed into the configured bucket.
-#S3_URL=
-#S3_REGION=
-#S3_PATH_STYLE=false
-#S3_BUCKET=my_s3_bucket_name
-#S3_ACCESS_KEY=
-#S3_ACCESS_SECRET=
-#S3_DANGER_ACCEPT_INVALID_CERTS=false
 
 #####################################
 ############# E-MAIL ################
