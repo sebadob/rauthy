@@ -1,14 +1,26 @@
 use crate::app_state::DbPool;
-use rauthy_common::constants::{DATABASE_URL, RAUTHY_VERSION};
+use chrono::Utc;
+use cryptr::stream::writer::s3_writer::{Bucket, Credentials, UrlStyle};
+use cryptr::{EncValue, FileReader, S3Writer, StreamReader, StreamWriter};
+use rauthy_common::constants::{DATABASE_URL, DB_TYPE, RAUTHY_VERSION};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::DbType;
+use rusty_s3::actions::ListObjectsV2;
+use rusty_s3::S3Action;
 use std::env;
 use std::path::Path;
+use std::sync::OnceLock;
+use std::time::Duration;
 use time::OffsetDateTime;
 use tokio::time::Instant;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 pub mod db_migrate;
 pub mod db_migrate_dev;
+
+static BUCKET: OnceLock<Bucket> = OnceLock::new();
+static CREDENTIALS: OnceLock<Credentials> = OnceLock::new();
+static ACCEPT_INVALID_CERTS: OnceLock<bool> = OnceLock::new();
 
 pub async fn backup_db(db: &DbPool) -> Result<(), ErrorResponse> {
     let start = Instant::now();
@@ -52,6 +64,7 @@ pub async fn backup_db(db: &DbPool) -> Result<(), ErrorResponse> {
     }
 
     // TODO encrypt and push backup to S3 storage
+    s3_backup(&backup_file_path).await?;
 
     // cleanup old backups
     let path_base = "data/backup/";
@@ -93,6 +106,131 @@ pub async fn backup_db(db: &DbPool) -> Result<(), ErrorResponse> {
         start.elapsed().as_millis()
     );
     Ok(())
+}
+
+async fn s3_backup(file_path: &str) -> Result<(), ErrorResponse> {
+    let bucket = match BUCKET.get() {
+        None => {
+            return Ok(());
+        }
+        Some(b) => b,
+    };
+    let credentials = CREDENTIALS
+        .get()
+        .expect("CREDENTIALS to be set up correctly");
+    let danger_accept_invalid_certs = ACCEPT_INVALID_CERTS
+        .get()
+        .expect("ACCEPT_INVALID_CERTS to be set up correctly");
+
+    // execute backup
+    let reader = StreamReader::File(FileReader {
+        path: file_path,
+        print_progress: false,
+    });
+
+    let object = format!(
+        "rauthy-{}-{}.cryptr",
+        RAUTHY_VERSION,
+        Utc::now().timestamp()
+    );
+    let writer = StreamWriter::S3(S3Writer {
+        credentials: Some(credentials),
+        bucket,
+        object: &object,
+        danger_accept_invalid_certs: *danger_accept_invalid_certs,
+    });
+
+    info!("Pushing backup to S3 storage {}", bucket.region());
+    EncValue::encrypt_stream(reader, writer).await?;
+    info!("S3 backup push successful");
+
+    Ok(())
+}
+
+/// Initializes and tests the connection for S3 backups, if configured.
+/// This will panic if anything is not configured correctly to avoid unexpected behavior at runtime.
+pub async fn s3_backup_init_test() {
+    let s3_url = match env::var("S3_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            if *DB_TYPE == DbType::Sqlite {
+                info!("S3 backups are not configured, 'S3_URL' not found");
+            }
+            return;
+        }
+    };
+    if *DB_TYPE == DbType::Postgres {
+        warn!(
+            r#"
+
+    Found S3 config. This will be ignored, since you are using a Postgres.
+    Postgres backups must be managed in a Postgres-native way with proper tooling like for instance pgbackrest
+    "#
+        );
+        return;
+    }
+
+    // read env vars
+    let region = env::var("S3_REGION").expect("Found S3_URL but no S3_REGION\n");
+    let use_path_style = env::var("S3_PATH_STYLE")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .expect("Cannot parse S3_PATH_STYLE to bool\n");
+    let bucket = env::var("S3_BUCKET").expect("Found S3_URL but no S3_BUCKET\n");
+    let access_key = env::var("S3_ACCESS_KEY").expect("Found S3_URL but no S3_ACCESS_KEY\n");
+    let secret = env::var("S3_ACCESS_SECRET").expect("Found S3_URL but no S3_ACCESS_SECRET\n");
+    let danger_accept_invalid_certs = env::var("S3_DANGER_ACCEPT_INVALID_CERTS")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .expect("Cannot parse S3_DANGER_ACCEPT_INVALID_CERTS to bool\n");
+
+    let credentials = Credentials::new(access_key, secret);
+    let path_style = if use_path_style {
+        UrlStyle::Path
+    } else {
+        UrlStyle::VirtualHost
+    };
+    info!("S3 backups are configured for '{}'", region);
+    let bucket = Bucket::new(
+        s3_url.parse().expect("Invalid format for S3_URL"),
+        path_style,
+        bucket,
+        region,
+    )
+    .expect("Cannot build S3 Bucket object from given configuration");
+
+    // test the connection to be able to panic early
+    let action = ListObjectsV2::new(&bucket, Some(&credentials)).sign(Duration::from_secs(10));
+    let client = if danger_accept_invalid_certs {
+        cryptr::stream::http_client_insecure()
+    } else {
+        cryptr::stream::http_client()
+    };
+    match client.get(action).send().await {
+        Ok(resp) => {
+            if resp.status().is_success() {
+                info!("S3 connection test was successful");
+            } else {
+                let body = resp.text().await.unwrap_or_default();
+                panic!(
+                    "\nCannot connect to S3 storage - check your configuration and access rights\n\n{}\n",
+                    body
+                );
+            }
+        }
+        Err(err) => {
+            panic!("Cannot connect to S3 storage: {}", err);
+        }
+    }
+
+    // save values for backups
+    BUCKET.set(bucket).expect("to set BUCKET only once");
+    CREDENTIALS
+        .set(credentials)
+        .expect("to set CREDENTIALS only once");
+    ACCEPT_INVALID_CERTS
+        .set(danger_accept_invalid_certs)
+        .expect("to set ACCEPT_INVALID_CERTS only once");
 }
 
 // Important: This must be executed BEFORE the rauthy store has been opened in `main`

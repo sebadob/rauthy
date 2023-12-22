@@ -13,7 +13,7 @@ use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
-use rauthy_models::migration::backup_db;
+use rauthy_models::migration::{backup_db, s3_backup_init_test};
 use rauthy_service::auth;
 use redhac::{cache_del, QuorumHealthState, QuorumState};
 use semver::Version;
@@ -30,6 +30,9 @@ pub async fn scheduler_main(data: web::Data<AppState>) {
     info!("Starting schedulers");
 
     let rx_health = data.caches.ha_cache_config.rx_health_state.clone();
+
+    // initialize and possibly panic early if anything is mis-configured regarding the s3 storage
+    s3_backup_init_test().await;
 
     tokio::spawn(db_backup(data.db.clone()));
     tokio::spawn(events_cleanup(data.db.clone(), rx_health.clone()));
@@ -53,14 +56,14 @@ pub async fn db_backup(db: DbPool) {
     let mut cron_task = env::var("BACKUP_TASK").unwrap_or_else(|_| "0 0 4 * * * *".to_string());
 
     // sec min hour day_of_month month day_of_week year
-    let schedule = match cron::Schedule::from_str(&cron_task) {
-        Ok(sched) => sched,
-        Err(err) => {
-            error!("Error creating a cron scheduler with the given BACKUP_TASK input: {} - using default \"0 0 4 * * * *\": {}", cron_task, err);
-            cron_task = "0 0 4 * * * *".to_string();
-            cron::Schedule::from_str(&cron_task).unwrap()
-        }
-    };
+    let schedule = cron::Schedule::from_str(&cron_task).unwrap_or_else(|err| {
+        error!(
+            "Error creating a cron scheduler with the given BACKUP_TASK input: {} - using default \"0 0 4 * * * *\": {}",
+            cron_task, err
+        );
+        cron_task = "0 0 4 * * * *".to_string();
+        cron::Schedule::from_str(&cron_task).unwrap()
+    });
 
     info!("Database backups are scheduled for: {}", cron_task);
 

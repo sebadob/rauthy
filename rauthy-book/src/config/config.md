@@ -183,6 +183,20 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # Disables the housekeeping schedulers (default: false)
 #SCHED_DISABLE=true
 
+# The following section will only be taken into account, when
+# SQLite is used as the main database. If you use Postgres, you
+# should use Postgres native tooling like for instance `pgbackrest`
+# to manage your backups.
+# If S3 access is configured, your SQLite backups will be encrypted
+# and pushed into the configured bucket.
+#S3_URL=
+#S3_REGION=
+#S3_PATH_STYLE=false
+#S3_BUCKET=my_s3_bucket_name
+#S3_ACCESS_KEY=
+#S3_ACCESS_SECRET=
+#S3_DANGER_ACCEPT_INVALID_CERTS=false
+
 #####################################
 ############# E-MAIL ################
 #####################################
