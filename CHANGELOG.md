@@ -2,6 +2,29 @@
 
 ## UNRELEASED
 
+### Encrypted SQLite backups to S3 storage
+
+Rauthy can now push encrypted SQLite backups to a configured S3 bucket.
+The local backups to `data/backups/` do still exist. If configured, Rauthy will now push backups from SQLite
+to an S3 storage and encrypt them on the fly. All this happens with the help of [cryptr](https://github.com/sebadob/cryptr)
+which is a new crate of mine. Resource usage is minimal, even if the SQLite file would be multiple GB's big.
+The whole operation is done with streaming.
+
+### Auto-Restore SQLite backups
+
+Rauthy can now automatically restore SQLite backups either from a backup inside `data/backups/` locally, or
+fetch an encrypted backup from an S3 bucket. You only need to set the new `RESTORE_BACKUP` environment vairable
+at startup and Rauthy will do the rest. No manually copying files around.  
+For instance, a local backup can be restored with setting `RESTORE_BACKUP=file:rauthy-backup-1703243039` and an
+S3 backup with `RESTORE_BACKUP=s3:rauthy-0.20.0-1703243039.cryptr`.
+
+### Test S3 config at startup
+
+To not show unexpected behavior at runtime, Rauthy will initialize and test a configured S3 connection
+at startup. If anything is not configured correctly, it will panic early. This way, when Rauthy starts 
+and the tests are successful, you know it will be working during the backup process at night as well, and
+it will not crash and throw errors all night long, if you just had a typo somewhere.
+
 ### Changes
 
 - new POST `/events` API endpoint which serves archived events
@@ -15,6 +38,12 @@ tiny header data with the minimal amount of information needed. This makes not o
 but also even encryption algorithm encryptions really easy in the future.
 [d6c224e](https://github.com/sebadob/rauthy/commit/d6c224e98198c155d7df83c25edc5c97ab590d2a)
 [c3df3ce](https://github.com/sebadob/rauthy/commit/c3df3cedbdff4a2a9dd592aac65ae21e5cd67385)
+- Push encrypted SQLite backups to S3 storage
+[fa0e496](https://github.com/sebadob/rauthy/commit/fa0e496956769f995e22bc6e388a8cd2a88a34d3)
+- S3 connection and config test at startup
+[701c785](https://github.com/sebadob/rauthy/commit/701c7851dd872c337e89227d56a3e46f2a05ac3e)
+- Auto-Restore SQLite backups either from file or S3
+[65bbfea](https://github.com/sebadob/rauthy/commit/65bbfea5a1a3b23735b82f3eb05a415ce7c51013)
 
 ### Bugfixes
 
