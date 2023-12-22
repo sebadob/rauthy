@@ -57,6 +57,7 @@ ring = { workspace = true }
 rio_api = { workspace = true }
 rio_turtle = { workspace = true }
 rsa = { version = "0.9.3", features = ["serde", "sha2"] }
+rusty-s3 = { workspace = true }
 semver = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
