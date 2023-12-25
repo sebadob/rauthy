@@ -25,6 +25,15 @@ at startup. If anything is not configured correctly, it will panic early. This w
 and the tests are successful, you know it will be working during the backup process at night as well, and
 it will not crash and throw errors all night long, if you just had a typo somewhere.
 
+### Migration to `spow`
+
+The old (very naive) Proof-of-Work (PoW) mechanism for bot and spam protection has been migrated to make use
+of the [spow](https://github.com/sebadob/spow) crate, which is another new project of mine.
+With this implementation, the difficulty for PoW's a client must solve can be scaled up almost infinitely,
+while the time is takes to verify a PoW on the server side will always be `O(1)`, no matter hoch high the
+difficulty was. `spow` uses a modified version of the popular Hashcat PoW algorithm, which is also being used
+in the Bitcoin blockchain.
+
 ### Changes
 
 - new POST `/events` API endpoint which serves archived events
@@ -44,6 +53,8 @@ but also even encryption algorithm encryptions really easy in the future.
 [701c785](https://github.com/sebadob/rauthy/commit/701c7851dd872c337e89227d56a3e46f2a05ac3e)
 - Auto-Restore SQLite backups either from file or S3
 [65bbfea](https://github.com/sebadob/rauthy/commit/65bbfea5a1a3b23735b82f3eb05a415ce7c51013)
+- Migrate to [spow](https://github.com/sebadob/spow)
+[ff579f6](https://github.com/sebadob/rauthy/commit/ff579f60414cb529d727ae27fd83e9506ad770d5)
 
 ### Bugfixes
 
