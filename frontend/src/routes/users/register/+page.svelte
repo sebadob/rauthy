@@ -1,6 +1,6 @@
 <script>
     import * as yup from "yup";
-    import {computePow, extractFormErrors} from "../../../utils/helpers.js";
+    import {extractFormErrors} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
     import {REGEX_NAME} from "../../../utils/constants.js";
     import {getPow, registerUser} from "../../../utils/dataFetching.js";
@@ -9,6 +9,7 @@
     import BrowserCheck from "../../../components/BrowserCheck.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
     import LangSelector from "$lib/LangSelector.svelte";
+    import {pow_work_wasm} from "../../../spow/spow-wasm";
 
     let t;
     let restrictedDomain;
@@ -65,9 +66,10 @@
 
         // compute PoW
         const powRes = await getPow();
-        let powChallenge = await powRes.json();
+        let powChallenge = await powRes.text();
         let start = new Date().getUTCMilliseconds();
-        const pow = computePow(powChallenge);
+        // Ryzen 5600G - difficulty 20 -> ~925 ms median
+        let pow = await pow_work_wasm(powChallenge);
         let diff = new Date().getUTCMilliseconds() - start;
         console.log('pow computation took ' + diff + ' ms');
 
@@ -85,7 +87,11 @@
             success = true;
         } else {
             const body = await res.json();
-            err = body.message;
+            if (body.message.includes("UNIQUE constraint")) {
+                err = 'E-Mail is already registered';
+            } else {
+                err = body.message;
+            }
         }
 
         isLoading = false;
