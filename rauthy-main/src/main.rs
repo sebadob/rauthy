@@ -36,6 +36,7 @@ use rauthy_models::events::notifier::EventNotifier;
 use rauthy_models::events::{init_event_vars, ip_blacklist_handler};
 use rauthy_models::migration::check_restore_backup;
 use rauthy_models::{email, ListenScheme};
+use spow::pow::Pow;
 use sqlx::query;
 use std::error::Error;
 use std::net::Ipv4Addr;
@@ -93,8 +94,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
         info!("Application started in Integration Test Mode");
     }
 
+    // init encryption keys and pow secrets
     match EncKeys::from_env() {
-        Ok(keys) => keys.init().unwrap(),
+        Ok(keys) => {
+            // for the PoWs, we just use our active keys as b64
+            Pow::init_bytes(keys.get_key(&keys.enc_key_active).unwrap());
+
+            keys.init().unwrap()
+        }
         Err(err) => {
             error!(
                 r#"
@@ -191,7 +198,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // PoWs
     cache_config.spawn_cache(
         CACHE_NAME_POW.to_string(),
-        redhac::TimedCache::with_lifespan(*POW_EXP),
+        redhac::TimedCache::with_lifespan(*POW_EXP as u64),
         Some(16),
     );
 
@@ -428,7 +435,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                     .add(("x-robots-tag", "none"))
                     .add((
                         "content-security-policy",
-                        "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
+                        "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
                     ))
                     .add(("cache-control", "no-store"))
                     .add(("pragma", "no-cache")),
