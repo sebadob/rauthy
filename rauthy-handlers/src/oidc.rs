@@ -9,7 +9,6 @@ use tracing::debug;
 
 use rauthy_common::constants::{APPLICATION_JSON, COOKIE_MFA, HEADER_HTML, SESSION_LIFETIME};
 use rauthy_common::error_response::ErrorResponse;
-use rauthy_common::utils::build_csp_header;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::colors::ColorEntity;
@@ -71,14 +70,14 @@ pub async fn get_authorize(
         Ok(res) => res,
         Err(err) => {
             let status = err.status_code();
-            let (body, nonce) = Error1Html::build(&colors, &lang, status, Some(err.message));
-            return Ok(ErrorHtml::response(body, nonce, status));
+            let body = Error1Html::build(&colors, &lang, status, Some(err.message));
+            return Ok(ErrorHtml::response(body, status));
         }
     };
 
     if principal.validate_session_auth().is_ok() {
         let csrf = principal.get_session_csrf_token()?;
-        let (body, nonce) =
+        let body =
             AuthorizeHtml::build(&client.name, csrf, FrontendAction::Refresh, &colors, &lang);
 
         // TODO make this prettier - append header conditionally easier?
@@ -86,20 +85,16 @@ pub async fn get_authorize(
             return Ok(HttpResponse::Ok()
                 .insert_header(o)
                 .insert_header(HEADER_HTML)
-                .insert_header(build_csp_header(&nonce))
                 .body(body));
         }
-        return Ok(HttpResponse::Ok()
-            .append_header(HEADER_HTML)
-            .append_header(build_csp_header(&nonce))
-            .body(body));
+        return Ok(HttpResponse::Ok().append_header(HEADER_HTML).body(body));
     }
 
     let session = Session::new(*SESSION_LIFETIME, real_ip_from_req(&req));
     if let Err(err) = session.save(&data).await {
         let status = err.status_code();
-        let (body, nonce) = Error1Html::build(&colors, &lang, status, Some(err.message));
-        return Ok(ErrorHtml::response(body, nonce, status));
+        let body = Error1Html::build(&colors, &lang, status, Some(err.message));
+        return Ok(ErrorHtml::response(body, status));
     }
 
     let mut action = FrontendAction::None;
@@ -118,8 +113,7 @@ pub async fn get_authorize(
     //     action = FrontendAction::MfaLogin(mfa_cookie.value().to_string())
     // }
 
-    let (body, nonce) =
-        AuthorizeHtml::build(&client.name, &session.csrf_token, action, &colors, &lang);
+    let body = AuthorizeHtml::build(&client.name, &session.csrf_token, action, &colors, &lang);
 
     let cookie = session.client_cookie();
     if let Some(o) = origin_header {
@@ -128,13 +122,11 @@ pub async fn get_authorize(
             .cookie(cookie)
             .insert_header(o)
             .insert_header(HEADER_HTML)
-            .insert_header(build_csp_header(&nonce))
             .body(body));
     }
     Ok(HttpResponse::build(StatusCode::OK)
         .cookie(cookie)
         .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
         .body(body))
 }
 
@@ -241,12 +233,9 @@ pub async fn get_callback_html(
     );
 
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let (body, nonce) = CallbackHtml::build(&colors);
+    let body = CallbackHtml::build(&colors);
 
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
-        .body(body))
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
 /// JWT Token public JWKS
@@ -323,7 +312,7 @@ pub async fn get_logout(
     };
 
     let lang = Language::try_from(&req).unwrap_or_default();
-    let (body, nonce) = match auth::logout(req_data.into_inner(), session, &data, &lang).await {
+    let body = match auth::logout(req_data.into_inner(), session, &data, &lang).await {
         Ok(t) => t,
         Err(_) => {
             return HttpResponse::build(StatusCode::from_u16(302).unwrap())
@@ -334,7 +323,6 @@ pub async fn get_logout(
 
     return HttpResponse::build(StatusCode::OK)
         .append_header(HEADER_HTML)
-        .append_header(build_csp_header(&nonce))
         .body(body);
 }
 

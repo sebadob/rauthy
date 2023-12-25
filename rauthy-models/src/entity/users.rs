@@ -806,7 +806,7 @@ impl User {
         req: HttpRequest,
         user_id: String,
         confirm_id: String,
-    ) -> Result<(String, String), ErrorResponse> {
+    ) -> Result<String, ErrorResponse> {
         let mut ml = MagicLink::find(data, &confirm_id).await?;
         ml.validate(&user_id, &req, false)?;
 
@@ -827,8 +827,7 @@ impl User {
         // build response HTML
         let colors = ColorEntity::find_rauthy(data).await?;
         let lang = Language::try_from(&req).unwrap_or_default();
-        let (html, nonce) =
-            UserEmailChangeConfirmHtml::build(&colors, &lang, &user.email, &new_email);
+        let html = UserEmailChangeConfirmHtml::build(&colors, &lang, &user.email, &new_email);
 
         // save data
         let old_email = user.email;
@@ -851,7 +850,7 @@ impl User {
             .await
             .unwrap();
 
-        Ok((html, nonce))
+        Ok(html)
     }
 
     pub fn delete_group(&mut self, group: &str) {

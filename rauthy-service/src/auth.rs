@@ -1321,7 +1321,7 @@ pub async fn logout(
     session: &Session,
     data: &web::Data<AppState>,
     lang: &Language,
-) -> Result<(String, String), ErrorResponse> {
+) -> Result<String, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(data).await?;
 
     if logout_request.id_token_hint.is_none() {

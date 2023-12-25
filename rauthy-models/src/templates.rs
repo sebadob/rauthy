@@ -14,7 +14,6 @@ use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, HttpResponseBuilder};
 use askama_actix::Template;
 use rauthy_common::constants::{HEADER_HTML, OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION};
-use rauthy_common::utils::{build_csp_header, get_rand};
 use std::fmt::Debug;
 
 #[derive(Debug, Clone)]
@@ -54,14 +53,11 @@ pub struct IndexHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl IndexHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language) -> (String, String) {
-        let nonce = nonce();
-
+    pub fn build(colors: &Colors, lang: &Language) -> String {
         let res = IndexHtml {
             lang: lang.as_str(),
             csrf_token: "",
@@ -79,12 +75,11 @@ impl IndexHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             i18n: I18nIndex::build(lang).as_json(),
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -108,14 +103,11 @@ pub struct AccountHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl AccountHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language) -> (String, String) {
-        let nonce = nonce();
-
+    pub fn build(colors: &Colors, lang: &Language) -> String {
         let res = AccountHtml {
             lang: lang.as_str(),
             col_act1: &colors.act1,
@@ -131,11 +123,10 @@ impl AccountHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             i18n: I18nAccount::build(lang).as_json(),
             ..Default::default()
         };
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -159,14 +150,11 @@ pub struct AdminHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl AdminHtml<'_> {
-    pub fn build(colors: &Colors) -> (String, String) {
-        let nonce = nonce();
-
+    pub fn build(colors: &Colors) -> String {
         let res = AdminHtml {
             lang: "en",
             col_act1: &colors.act1,
@@ -182,11 +170,10 @@ impl AdminHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -210,7 +197,6 @@ pub struct ErrorHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
@@ -220,9 +206,7 @@ impl ErrorHtml<'_> {
         lang: &Language,
         status_code: StatusCode,
         details_text: Option<String>,
-    ) -> (String, String) {
-        let nonce = nonce();
-
+    ) -> String {
         let res = ErrorHtml {
             lang: lang.as_str(),
             col_act1: &colors.act1,
@@ -238,43 +222,18 @@ impl ErrorHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             i18n: I18nError::build_with(lang, status_code, details_text).as_json(),
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 
-    pub fn response(
-        body: String,
-        nonce: String,
-        // colors: &Colors,
-        // lang: &Language,
-        status_code: StatusCode,
-        // details_text: Option<String>,
-    ) -> HttpResponse {
-        // let (body, nonce) = Self::build(colors, lang, status_code, details_text);
+    pub fn response(body: String, status_code: StatusCode) -> HttpResponse {
         HttpResponseBuilder::new(status_code)
             .insert_header(HEADER_HTML)
-            .insert_header(build_csp_header(&nonce))
             .body(body)
     }
-
-    // pub fn response_from_err(
-    //     body: String,
-    //     nonce: String,
-    //     colors: &Colors,
-    //     lang: &Language,
-    //     error: ErrorResponse,
-    // ) -> HttpResponse {
-    //     let status = error.status_code();
-    //     let (body, nonce) = Self::build(colors, lang, status, Some(error.message));
-    //     HttpResponseBuilder::new(status)
-    //         .insert_header(HEADER_HTML)
-    //         .insert_header(build_csp_header(&nonce))
-    //         .body(body)
-    // }
 }
 
 // The error template is defined 3 more times.
@@ -303,7 +262,6 @@ pub struct Error1Html<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
@@ -313,9 +271,7 @@ impl Error1Html<'_> {
         lang: &Language,
         status_code: StatusCode,
         details_text: Option<String>,
-    ) -> (String, String) {
-        let nonce = nonce();
-
+    ) -> String {
         let res = Error1Html {
             lang: lang.as_str(),
             col_act1: &colors.act1,
@@ -331,12 +287,11 @@ impl Error1Html<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             i18n: I18nError::build_with(lang, status_code, details_text).as_json(),
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -360,7 +315,6 @@ pub struct Error2Html<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
@@ -370,9 +324,7 @@ impl Error2Html<'_> {
         lang: &Language,
         status_code: StatusCode,
         details_text: Option<String>,
-    ) -> (String, String) {
-        let nonce = nonce();
-
+    ) -> String {
         let res = Error2Html {
             lang: lang.as_str(),
             col_act1: &colors.act1,
@@ -388,12 +340,11 @@ impl Error2Html<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             i18n: I18nError::build_with(lang, status_code, details_text).as_json(),
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -417,7 +368,6 @@ pub struct Error3Html<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
@@ -427,9 +377,7 @@ impl Error3Html<'_> {
         lang: &Language,
         status_code: StatusCode,
         details_text: Option<String>,
-    ) -> (String, String) {
-        let nonce = nonce();
-
+    ) -> String {
         let res = Error3Html {
             lang: lang.as_str(),
             col_act1: &colors.act1,
@@ -445,12 +393,11 @@ impl Error3Html<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             i18n: I18nError::build_with(lang, status_code, details_text).as_json(),
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -474,14 +421,11 @@ pub struct AdminApiKeysHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl AdminApiKeysHtml<'_> {
-    pub fn build(colors: &Colors) -> (String, String) {
-        let nonce = nonce();
-
+    pub fn build(colors: &Colors) -> String {
         let res = AdminApiKeysHtml {
             lang: "en",
             col_act1: &colors.act1,
@@ -497,11 +441,10 @@ impl AdminApiKeysHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -525,14 +468,11 @@ pub struct AdminAttributesHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl AdminAttributesHtml<'_> {
-    pub fn build(colors: &Colors) -> (String, String) {
-        let nonce = nonce();
-
+    pub fn build(colors: &Colors) -> String {
         let res = AdminAttributesHtml {
             lang: "en",
             col_act1: &colors.act1,
@@ -548,11 +488,10 @@ impl AdminAttributesHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -576,14 +515,11 @@ pub struct AdminBlacklistHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl AdminBlacklistHtml<'_> {
-    pub fn build(colors: &Colors) -> (String, String) {
-        let nonce = nonce();
-
+    pub fn build(colors: &Colors) -> String {
         let res = AdminBlacklistHtml {
             lang: "en",
             col_act1: &colors.act1,
@@ -599,11 +535,10 @@ impl AdminBlacklistHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -627,14 +562,11 @@ pub struct AdminClientsHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl AdminClientsHtml<'_> {
-    pub fn build(colors: &Colors) -> (String, String) {
-        let nonce = nonce();
-
+    pub fn build(colors: &Colors) -> String {
         let res = AdminClientsHtml {
             lang: "en",
             col_act1: &colors.act1,
@@ -650,11 +582,10 @@ impl AdminClientsHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -678,14 +609,11 @@ pub struct AdminConfigHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl AdminConfigHtml<'_> {
-    pub fn build(colors: &Colors) -> (String, String) {
-        let nonce = nonce();
-
+    pub fn build(colors: &Colors) -> String {
         let res = AdminConfigHtml {
             lang: "en",
             col_act1: &colors.act1,
@@ -701,11 +629,10 @@ impl AdminConfigHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -729,14 +656,11 @@ pub struct AdminDocsHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl AdminDocsHtml<'_> {
-    pub fn build(colors: &Colors) -> (String, String) {
-        let nonce = nonce();
-
+    pub fn build(colors: &Colors) -> String {
         let res = AdminDocsHtml {
             lang: "en",
             col_act1: &colors.act1,
@@ -752,11 +676,10 @@ impl AdminDocsHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -780,14 +703,11 @@ pub struct AdminGroupsHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl AdminGroupsHtml<'_> {
-    pub fn build(colors: &Colors) -> (String, String) {
-        let nonce = nonce();
-
+    pub fn build(colors: &Colors) -> String {
         let res = AdminGroupsHtml {
             lang: "en",
             col_act1: &colors.act1,
@@ -803,11 +723,10 @@ impl AdminGroupsHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -831,14 +750,11 @@ pub struct AdminRolesHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl AdminRolesHtml<'_> {
-    pub fn build(colors: &Colors) -> (String, String) {
-        let nonce = nonce();
-
+    pub fn build(colors: &Colors) -> String {
         let res = AdminRolesHtml {
             lang: "en",
             col_act1: &colors.act1,
@@ -854,11 +770,10 @@ impl AdminRolesHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -882,14 +797,11 @@ pub struct AdminScopesHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl AdminScopesHtml<'_> {
-    pub fn build(colors: &Colors) -> (String, String) {
-        let nonce = nonce();
-
+    pub fn build(colors: &Colors) -> String {
         let res = AdminScopesHtml {
             lang: "en",
             col_act1: &colors.act1,
@@ -905,11 +817,10 @@ impl AdminScopesHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -933,14 +844,11 @@ pub struct AdminSessionsHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl AdminSessionsHtml<'_> {
-    pub fn build(colors: &Colors) -> (String, String) {
-        let nonce = nonce();
-
+    pub fn build(colors: &Colors) -> String {
         let res = AdminSessionsHtml {
             lang: "en",
             col_act1: &colors.act1,
@@ -956,11 +864,10 @@ impl AdminSessionsHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -984,14 +891,11 @@ pub struct AdminUsersHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl AdminUsersHtml<'_> {
-    pub fn build(colors: &Colors) -> (String, String) {
-        let nonce = nonce();
-
+    pub fn build(colors: &Colors) -> String {
         let res = AdminUsersHtml {
             lang: "en",
             col_act1: &colors.act1,
@@ -1007,11 +911,10 @@ impl AdminUsersHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -1035,7 +938,6 @@ pub struct AuthorizeHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
@@ -1046,9 +948,7 @@ impl AuthorizeHtml<'_> {
         action: FrontendAction,
         colors: &Colors,
         lang: &Language,
-    ) -> (String, String) {
-        let nonce = nonce();
-
+    ) -> String {
         let mut res = AuthorizeHtml {
             lang: lang.as_str(),
             csrf_token,
@@ -1066,7 +966,6 @@ impl AuthorizeHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             i18n: I18nAuthorize::build(lang).as_json(),
             ..Default::default()
         };
@@ -1074,7 +973,7 @@ impl AuthorizeHtml<'_> {
             res.data = client_name.as_ref().unwrap();
         }
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -1098,14 +997,11 @@ pub struct CallbackHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl CallbackHtml<'_> {
-    pub fn build(colors: &Colors) -> (String, String) {
-        let nonce = nonce();
-
+    pub fn build(colors: &Colors) -> String {
         let res = CallbackHtml {
             lang: "en",
             col_act1: &colors.act1,
@@ -1121,11 +1017,10 @@ impl CallbackHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -1149,19 +1044,11 @@ pub struct LogoutHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl LogoutHtml<'_> {
-    pub fn build(
-        csrf_token: &str,
-        set_logout: bool,
-        colors: &Colors,
-        lang: &Language,
-    ) -> (String, String) {
-        let nonce = nonce();
-
+    pub fn build(csrf_token: &str, set_logout: bool, colors: &Colors, lang: &Language) -> String {
         let res = LogoutHtml {
             lang: lang.as_str(),
             csrf_token,
@@ -1179,12 +1066,11 @@ impl LogoutHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             i18n: I18nLogout::build(lang).as_json(),
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -1208,7 +1094,6 @@ pub struct PwdResetHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
@@ -1221,9 +1106,7 @@ impl PwdResetHtml<'_> {
         email: Option<&String>,
         colors: &Colors,
         lang: &Language,
-    ) -> (String, String) {
-        let nonce = nonce();
-
+    ) -> String {
         let mail = if let Some(e) = email { e } else { "undefined" };
         let data = format!(
             "{},{},{},{},{},{},{},{}",
@@ -1254,12 +1137,11 @@ impl PwdResetHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             i18n: I18nPasswordReset::build(lang).as_json(),
             ..Default::default()
         };
 
-        (res.render().unwrap(), nonce)
+        res.render().unwrap()
     }
 }
 
@@ -1296,21 +1178,14 @@ pub struct UserEmailChangeConfirmHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl UserEmailChangeConfirmHtml<'_> {
-    pub fn build(
-        colors: &Colors,
-        lang: &Language,
-        email_old: &str,
-        email_new: &str,
-    ) -> (String, String) {
-        let nonce = nonce();
+    pub fn build(colors: &Colors, lang: &Language, email_old: &str, email_new: &str) -> String {
         let data = format!("{},{}", email_old, email_new,);
 
-        let body = UserEmailChangeConfirmHtml {
+        UserEmailChangeConfirmHtml {
             lang: lang.as_str(),
             data: &data,
             col_act1: &colors.act1,
@@ -1326,14 +1201,11 @@ impl UserEmailChangeConfirmHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             i18n: I18nEmailConfirmChangeHtml::build(lang).as_json(),
             ..Default::default()
         }
         .render()
-        .expect("rendering email_confirm.html");
-
-        (body, nonce)
+        .expect("rendering email_confirm.html")
     }
 }
 
@@ -1357,15 +1229,12 @@ pub struct UserRegisterHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub nonce: &'a str,
     pub i18n: String,
 }
 
 impl UserRegisterHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language) -> (String, String) {
-        let nonce = nonce();
-
-        let body = UserRegisterHtml {
+    pub fn build(colors: &Colors, lang: &Language) -> String {
+        UserRegisterHtml {
             lang: lang.as_str(),
             data: USER_REG_DOMAIN_RESTRICTION
                 .as_ref()
@@ -1384,17 +1253,10 @@ impl UserRegisterHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            nonce: &nonce,
             i18n: I18nRegister::build(lang).as_json(),
             ..Default::default()
         }
         .render()
-        .expect("rendering register.html");
-
-        (body, nonce)
+        .expect("rendering register.html")
     }
-}
-
-fn nonce() -> String {
-    get_rand(24)
 }
