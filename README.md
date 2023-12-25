@@ -117,7 +117,7 @@ Keycloak was a rough inspiration in certain places and if something is working w
 - [x] Auto-IP blacklisting for login endpoints
 - [x] Argon2ID with config helper UI utility
 - [x] Housekeeping schedulers and cron jobs
-- [x] JSON Web Key Set (JWKS) auto-rotation feature
+- [x] JSON Web Key Set (JWKS) autorotation feature
 - [x] Optional open user registration
 - [x] Optional user registration domain restriction
 - [x] App version update checker
@@ -134,6 +134,7 @@ This is a non-exhaustive list of currently open TODO's
 - [x] ~~auto-encrypted backups (SQLite)~~ **UNRELEASED**
 - [x] ~~pushing SQLite backups to S3 storage~~ **UNRELEASED**
 - [x] ~~auto-restore SQLite backups from file and s3~~ **UNRELEASED**
+- [x] ~~migrate to the way more efficient [spow](https://github.com/sebadob/spow) crate~~ **UNRELEASED**
 - [ ] Benchmarks and Optimizations
 - [ ] Maybe get a nicer Rauthy Logo
 - [ ] experimental implementation of [dilithium](https://pq-crystals.org/dilithium/) singing algorithm to become

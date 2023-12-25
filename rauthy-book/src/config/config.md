@@ -556,14 +556,16 @@ EVENT_LEVEL_FAILED_LOGIN=info
 ############## POW  #################
 #####################################
 
-## Proof of Work (PoW) configuration for Client Endpoints like
-# User Registration. The iteration count for the PoW calculation
-# (default: 1000000)
-#POW_IT=1000000
+# The difficulty for a Proof-of-Work (PoW).
+# The default is 20, which is reasonable for modern processors.
+# This is currently only used for the user registration via UI.
+# The value must be between 10 and 99.
+# default: 20
+POW_DIFFICULTY=20
 
-# The expiration duration in seconds when a saved PoW should be
-# cleaned up (default: 300)
-#POW_EXP=300
+# The expiration duration in seconds for a PoW
+# default: 30
+POW_EXP=30
 
 #####################################
 ############# SERVER ################
