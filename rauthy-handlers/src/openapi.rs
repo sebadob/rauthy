@@ -166,7 +166,6 @@ use utoipa::{openapi, OpenApi};
             request::RequestResetRequest,
             request::NewUserRequest,
             request::NewUserRegistrationRequest,
-            request::PowRequest,
             request::NewRoleRequest,
             request::ScopeRequest,
             request::TokenRequest,

@@ -15,7 +15,7 @@ use rauthy_models::entity::app_version::LatestAppVersion;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::is_db_alive;
 use rauthy_models::entity::password::{PasswordHashTimes, PasswordPolicy};
-use rauthy_models::entity::pow::Pow;
+use rauthy_models::entity::pow::PowEntity;
 use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
 use rauthy_models::i18n::account::I18nAccount;
@@ -538,8 +538,8 @@ pub async fn ping() -> impl Responder {
 #[get("/pow")]
 pub async fn get_pow(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
     // TODO request at least a session in init state or something like that?
-    let pow = Pow::create(&data).await?;
-    Ok(HttpResponse::Ok().json(pow))
+    let pow = PowEntity::create(&data).await?;
+    Ok(HttpResponse::Ok().body(pow.to_string()))
 }
 
 /// Updates the language for the logged in principal depending on the `locale` cookie

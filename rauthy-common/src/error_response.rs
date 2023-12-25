@@ -14,6 +14,7 @@ use redhac::CacheError;
 use rio_turtle::TurtleError;
 use serde::{Deserialize, Serialize};
 use serde_json::Error;
+use spow::pow::PowError;
 use std::fmt::{Display, Formatter};
 use std::string::FromUtf8Error;
 use time::OffsetDateTime;
@@ -376,5 +377,11 @@ impl From<oxiri::IriParseError> for ErrorResponse {
 impl From<CryptrError> for ErrorResponse {
     fn from(value: CryptrError) -> Self {
         ErrorResponse::new(ErrorResponseType::Encryption, value.to_string())
+    }
+}
+
+impl From<PowError> for ErrorResponse {
+    fn from(value: PowError) -> Self {
+        ErrorResponse::new(ErrorResponseType::Forbidden, value.to_string())
     }
 }

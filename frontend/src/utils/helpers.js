@@ -94,20 +94,6 @@ export function base64UrlSafeToArrBuf(base64url) {
 	return decode(base64);
 }
 
-export const computePow = (powChallenge) => {
-	let verifier = powChallenge.challenge;
-	for (let i = 0; i < powChallenge.it; i++) {
-		const myBitArray = sjcl.hash.sha256.hash(verifier);
-		verifier = sjcl.codec.hex.fromBits(myBitArray);
-	}
-
-	return {
-		challenge: powChallenge.challenge,
-		it: powChallenge.it,
-		verifier,
-	};
-}
-
 export function eventColor(level) {
 	switch (level) {
 		case 'test':

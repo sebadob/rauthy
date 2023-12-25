@@ -6,8 +6,8 @@ use actix_web::http::header;
 use actix_web::HttpRequest;
 use css_color::Srgb;
 use rauthy_common::constants::{
-    RE_ALNUM, RE_ALNUM_24, RE_ALNUM_48, RE_ALNUM_64, RE_ALNUM_SPACE, RE_API_KEY, RE_APP_ID,
-    RE_ATTR, RE_ATTR_DESC, RE_CHALLENGE, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE,
+    RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_ALNUM_SPACE, RE_API_KEY, RE_APP_ID, RE_ATTR,
+    RE_ATTR_DESC, RE_CHALLENGE, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE,
     RE_CODE_VERIFIER, RE_FLOWS, RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE, RE_LOWERCASE_SPACE,
     RE_MFA_CODE, RE_URI, RE_USER_NAME,
 };
@@ -431,26 +431,10 @@ pub struct NewUserRegistrationRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,32}`
     #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,32}"))]
     pub given_name: String,
-    pub pow: PowRequest,
+    /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]
+    pub pow: String,
 }
-
-#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
-pub struct PowRequest {
-    /// Validation: `[a-zA-Z0-9]{24}`
-    #[validate(regex(path = "RE_ALNUM_24", code = "[a-zA-Z0-9]{24}"))]
-    pub challenge: String,
-    pub it: u64,
-    /// Validation: `[a-zA-Z0-9]{64}`
-    #[validate(regex(path = "RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
-    pub verifier: String,
-}
-
-// #[derive(Deserialize, Validate, ToSchema)]
-// pub struct RefreshTokenRequest {
-//     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-//     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
-//     pub refresh_token: String,
-// }
 
 #[derive(Serialize, Deserialize, Validate, ToSchema)]
 pub struct NewRoleRequest {

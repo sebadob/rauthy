@@ -5,7 +5,6 @@ use crate::entity::groups::Group;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::password::RecentPasswordsEntity;
-use crate::entity::pow::Pow;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
@@ -126,10 +125,6 @@ impl User {
         req_data: NewUserRegistrationRequest,
         lang: Language,
     ) -> Result<User, ErrorResponse> {
-        let pow = Pow::find(data, &req_data.pow.challenge).await?;
-        pow.validate(&req_data.pow.verifier).await?;
-        pow.delete(data).await?;
-
         let mut new_user = User::from_reg_req(req_data);
         new_user.language = lang;
         let new_user = User::create(data, new_user).await?;

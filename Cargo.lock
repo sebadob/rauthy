@@ -1254,8 +1254,10 @@ checksum = "7f2c685bad3eb3d45a01354cedb7d5faa66194d1d58ba6e267a8de788f79db38"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
+ "js-sys",
  "num-traits",
  "serde",
+ "wasm-bindgen",
  "windows-targets 0.48.5",
 ]
 
@@ -4079,6 +4081,7 @@ dependencies = [
  "rustls-pemfile",
  "semver",
  "serde_json",
+ "spow",
  "sqlx",
  "time",
  "tokio",
@@ -4120,6 +4123,7 @@ dependencies = [
  "rio_turtle",
  "serde",
  "serde_json",
+ "spow",
  "sqlx",
  "time",
  "tokio",
@@ -4153,6 +4157,7 @@ dependencies = [
  "rust-embed",
  "semver",
  "serde_json",
+ "spow",
  "time",
  "tokio",
  "tokio-test",
@@ -4214,6 +4219,7 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
+ "spow",
  "sqlx",
  "time",
  "tokio",
@@ -5025,6 +5031,16 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "digest",
+ "sha2-asm",
+]
+
+[[package]]
+name = "sha2-asm"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f27ba7066011e3fb30d808b51affff34f0a66d3a03a58edd787c6e420e40e44e"
+dependencies = [
+ "cc",
 ]
 
 [[package]]
@@ -5128,6 +5144,21 @@ checksum = "d91ed6c858b01f942cd56b37a94b3e0a1798290327d1236e4d9cf4eaca44d29d"
 dependencies = [
  "base64ct",
  "der",
+]
+
+[[package]]
+name = "spow"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a33d19caa42297b681c88a844ace448357a2b107e723a9d26239338c8d37aa58"
+dependencies = [
+ "base64 0.21.5",
+ "chrono",
+ "getrandom",
+ "nom",
+ "serde",
+ "sha2",
+ "thiserror",
 ]
 
 [[package]]

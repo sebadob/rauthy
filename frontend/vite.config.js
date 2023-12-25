@@ -1,8 +1,11 @@
 import { sveltekit } from '@sveltejs/kit/vite';
+import wasm from "vite-plugin-wasm";
+import topLevelAwait from "vite-plugin-top-level-await";
+
 
 /** @type {import('vite').UserConfig} */
 const config = {
-	plugins: [sveltekit()],
+	plugins: [wasm(), topLevelAwait(), sveltekit()],
 	server: {
 		proxy: {
 			'/auth/v1/_app': 'http://127.0.0.1:8080',
@@ -24,6 +27,7 @@ const config = {
 			'/auth/v1/encryption/migrate': 'http://127.0.0.1:8080',
 			'/auth/v1/login_time': 'http://127.0.0.1:8080',
 			'/auth/v1/users': 'http://127.0.0.1:8080',
+			'/auth/v1/pow': 'http://127.0.0.1:8080',
 			'/auth/v1/roles': 'http://127.0.0.1:8080',
 			'/auth/v1/groups': 'http://127.0.0.1:8080',
 			'/auth/v1/password_hash_times': 'http://127.0.0.1:8080',

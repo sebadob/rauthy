@@ -29,6 +29,7 @@ rio_api = { workspace = true }
 rio_turtle = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+spow = { workspace = true }
 sqlx = { workspace = true }
 time = { workspace = true }
 tracing = { workspace = true }

@@ -47,7 +47,6 @@ ed25519-compact = { version = "2.0.4", features = ["ed25519"] }
 flume = "0.11"
 gethostname = "0.4"
 itertools = "0.12"
-#jwt-simple = { path = "../rust-jwt-simple", default-features = false, features = ["pure-rust"] }
 jwt-simple = { version = "0.12.6", default-features = false, features = ["pure-rust"] }
 lazy_static = "1"
 num_cpus = "1"
@@ -66,6 +65,7 @@ rusty-s3 = "0.5.0"
 semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+spow = "0.2"
 sqlx = { version = "0.7", features = ["macros", "migrate", "postgres", "runtime-tokio", "sqlite", "tls-rustls", "uuid"] }
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
 tracing = { version = "0.1", features = ["attributes"] }
