@@ -1,5 +1,4 @@
 use crate::constants::{APPLICATION_JSON, HEADER_DPOP_NONCE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE};
-use crate::utils::build_csp_header;
 use actix_multipart::MultipartError;
 use actix_web::error::BlockingError;
 use actix_web::http::header::{
@@ -75,10 +74,9 @@ impl ErrorResponse {
         }
     }
 
-    pub fn error_response_html(&self, body: String, nonce: &str) -> HttpResponse {
+    pub fn error_response_html(&self, body: String) -> HttpResponse {
         HttpResponseBuilder::new(self.status_code())
             .append_header(HEADER_HTML)
-            .append_header(build_csp_header(nonce))
             .body(body)
     }
 }

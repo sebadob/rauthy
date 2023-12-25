@@ -8,7 +8,6 @@ use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_NAME_LOGIN_DELAY, HEADER_HTML, IDX_LOGIN_TIME, RAUTHY_VERSION,
 };
 use rauthy_common::error_response::ErrorResponse;
-use rauthy_common::utils::build_csp_header;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::app_version::LatestAppVersion;
@@ -55,12 +54,9 @@ pub async fn get_index(
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
     let lang = Language::try_from(&req).unwrap_or_default();
-    let (body, nonce) = IndexHtml::build(&colors, &lang);
+    let body = IndexHtml::build(&colors, &lang);
 
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
-        .body(body))
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
 #[get("/{_:.*}")]
@@ -127,23 +123,17 @@ pub async fn get_account_html(
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
     let lang = Language::try_from(&req).unwrap_or_default();
-    let (body, nonce) = AccountHtml::build(&colors, &lang);
+    let body = AccountHtml::build(&colors, &lang);
 
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
-        .body(body))
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
 #[get("/admin")]
 pub async fn get_admin_html(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let (body, nonce) = AdminHtml::build(&colors);
+    let body = AdminHtml::build(&colors);
 
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
-        .body(body))
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
 #[get("/admin/api_keys")]
@@ -151,23 +141,17 @@ pub async fn get_admin_api_keys_html(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let (body, nonce) = AdminApiKeysHtml::build(&colors);
+    let body = AdminApiKeysHtml::build(&colors);
 
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
-        .body(body))
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
 #[get("/admin/attributes")]
 pub async fn get_admin_attr_html(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let (body, nonce) = AdminAttributesHtml::build(&colors);
+    let body = AdminAttributesHtml::build(&colors);
 
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
-        .body(body))
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
 #[get("/admin/blacklist")]
@@ -175,12 +159,9 @@ pub async fn get_admin_blacklist_html(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let (body, nonce) = AdminBlacklistHtml::build(&colors);
+    let body = AdminBlacklistHtml::build(&colors);
 
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
-        .body(body))
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
 #[get("/admin/clients")]
@@ -188,12 +169,9 @@ pub async fn get_admin_clients_html(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let (body, nonce) = AdminClientsHtml::build(&colors);
+    let body = AdminClientsHtml::build(&colors);
 
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
-        .body(body))
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
 #[get("/admin/config")]
@@ -201,23 +179,17 @@ pub async fn get_admin_config_html(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let (body, nonce) = AdminConfigHtml::build(&colors);
+    let body = AdminConfigHtml::build(&colors);
 
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
-        .body(body))
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
 #[get("/admin/docs")]
 pub async fn get_admin_docs_html(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let (body, nonce) = AdminDocsHtml::build(&colors);
+    let body = AdminDocsHtml::build(&colors);
 
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
-        .body(body))
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
 #[get("/admin/groups")]
@@ -225,12 +197,9 @@ pub async fn get_admin_groups_html(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let (body, nonce) = AdminGroupsHtml::build(&colors);
+    let body = AdminGroupsHtml::build(&colors);
 
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
-        .body(body))
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
 #[get("/admin/roles")]
@@ -238,12 +207,9 @@ pub async fn get_admin_roles_html(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let (body, nonce) = AdminRolesHtml::build(&colors);
+    let body = AdminRolesHtml::build(&colors);
 
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
-        .body(body))
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
 #[get("/admin/scopes")]
@@ -251,12 +217,9 @@ pub async fn get_admin_scopes_html(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let (body, nonce) = AdminScopesHtml::build(&colors);
+    let body = AdminScopesHtml::build(&colors);
 
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
-        .body(body))
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
 #[get("/admin/sessions")]
@@ -264,12 +227,9 @@ pub async fn get_admin_sessions_html(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let (body, nonce) = AdminSessionsHtml::build(&colors);
+    let body = AdminSessionsHtml::build(&colors);
 
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
-        .body(body))
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
 #[get("/admin/users")]
@@ -277,12 +237,9 @@ pub async fn get_admin_users_html(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let (body, nonce) = AdminUsersHtml::build(&colors);
+    let body = AdminUsersHtml::build(&colors);
 
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
-        .body(body))
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
 /// Check if the current session is valid

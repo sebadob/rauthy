@@ -225,8 +225,8 @@ build-ui:
           sed -i 's/#383838;/{{{{ col_text }};/g' "$html"
           sed -i 's/#f7f7f7;/{{{{ col_bg }};/g' "$html"
           # for the nonce in the CSP for script files
-          sed -i 's/<link /<link nonce="{{{{ nonce }}" /g' "$html"
-          sed -i 's/<script>/<script nonce="{{{{ nonce }}">/g' "$html"
+          #sed -i 's/<link /<link nonce="{{{{ nonce }}" /g' "$html"
+          #sed -i 's/<script>/<script nonce="{{{{ nonce }}">/g' "$html"
         done;
     done
 

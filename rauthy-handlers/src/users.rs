@@ -7,7 +7,6 @@ use rauthy_common::constants::{
     USER_REG_DOMAIN_RESTRICTION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::build_csp_header;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::colors::ColorEntity;
@@ -230,20 +229,17 @@ pub async fn get_users_register(
 
     if !*OPEN_USER_REG {
         let status = StatusCode::NOT_FOUND;
-        let (body, nonce) = Error1Html::build(
+        let body = Error1Html::build(
             &colors,
             &lang,
             status,
             Some("Open User Registration is disabled".to_string()),
         );
-        return Ok(ErrorHtml::response(body, nonce, status));
+        return Ok(ErrorHtml::response(body, status));
     }
 
-    let (body, nonce) = UserRegisterHtml::build(&colors, &lang);
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_HTML)
-        .insert_header(build_csp_header(&nonce))
-        .body(body))
+    let body = UserRegisterHtml::build(&colors, &lang);
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
 /// Creates a new user with almost all values set to default
@@ -411,15 +407,12 @@ pub async fn get_user_email_confirm(
     let lang = Language::try_from(&req).unwrap_or_default();
     let (user_id, confirm_id) = path.into_inner();
     match User::confirm_email_address(&data, req, user_id, confirm_id).await {
-        Ok((html, nonce)) => HttpResponse::Ok()
-            .insert_header(HEADER_HTML)
-            .insert_header(build_csp_header(&nonce))
-            .body(html),
+        Ok(html) => HttpResponse::Ok().insert_header(HEADER_HTML).body(html),
         Err(err) => {
             let colors = ColorEntity::find_rauthy(&data).await.unwrap_or_default();
             let status = err.status_code();
-            let (body, nonce) = Error3Html::build(&colors, &lang, status, Some(err.message));
-            ErrorHtml::response(body, nonce, status)
+            let body = Error3Html::build(&colors, &lang, status, Some(err.message));
+            ErrorHtml::response(body, status)
         }
     }
 }
@@ -447,16 +440,15 @@ pub async fn get_user_password_reset(
     let lang = Language::try_from(&req).unwrap_or_default();
     let (user_id, reset_id) = path.into_inner();
     match password_reset::handle_get_pwd_reset(&data, req, user_id, reset_id).await {
-        Ok((html, nonce, cookie)) => HttpResponse::Ok()
+        Ok((html, cookie)) => HttpResponse::Ok()
             .cookie(cookie)
             .insert_header(HEADER_HTML)
-            .insert_header(build_csp_header(&nonce))
             .body(html),
         Err(err) => {
             let colors = ColorEntity::find_rauthy(&data).await.unwrap_or_default();
             let status = err.status_code();
-            let (body, nonce) = Error3Html::build(&colors, &lang, status, Some(err.message));
-            ErrorHtml::response(body, nonce, status)
+            let body = Error3Html::build(&colors, &lang, status, Some(err.message));
+            ErrorHtml::response(body, status)
         }
     }
 }
