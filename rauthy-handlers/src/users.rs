@@ -12,6 +12,7 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::password::PasswordPolicy;
+use rauthy_models::entity::pow::PowEntity;
 use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
@@ -31,6 +32,7 @@ use rauthy_models::response::{
 };
 use rauthy_models::templates::{Error1Html, Error3Html, ErrorHtml, UserRegisterHtml};
 use rauthy_service::password_reset;
+use spow::pow::Pow;
 use std::ops::Add;
 use time::OffsetDateTime;
 use tracing::{error, warn};
@@ -282,6 +284,10 @@ pub async fn post_users_register(
             ));
         }
     }
+
+    // validate the PoW
+    let challenge = Pow::validate(&req_data.pow)?;
+    PowEntity::check_prevent_reuse(&data, challenge.to_string()).await?;
 
     let lang = Language::try_from(&req).unwrap_or_default();
     let user = User::create_from_reg(&data, req_data.into_inner(), lang).await?;
