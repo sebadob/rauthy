@@ -427,6 +427,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                     .add(("x-frame-options", "SAMEORIGIN"))
                     .add(("x-xss-protection", "1;mode=block"))
                     .add(("x-content-type-options", "nosniff"))
+                    .add(("X-Robots-Tag", "noindex, nofollow"))
                     .add((
                         "strict-transport-security",
                         "max-age=31536000;includeSubDomains",
@@ -436,7 +437,6 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                     .add((
                         "content-security-policy",
                         "frame-ancestors 'none'; object-src 'none';",
-                        // "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:;",
                     ))
                     .add(("cache-control", "no-store"))
                     .add(("pragma", "no-cache")),
