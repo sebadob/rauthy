@@ -180,15 +180,14 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("1000000"))
         .parse::<u64>()
         .expect("POW_IT cannot be parsed to u64 - bad format");
-    pub static ref POW_EXP: u64 = env::var("POW_EXP")
-        .unwrap_or_else(|_| String::from("300"))
-        .parse::<u64>()
-        .expect("POW_EXP cannot be parsed to u64 - bad format");
-    pub static ref POW_EXP_DUR: time::Duration = if *POW_EXP > i64::MAX as u64 {
-        time::Duration::seconds(i64::MAX)
-    } else {
-        time::Duration::seconds(*POW_EXP as i64)
-    };
+    pub static ref POW_EXP: u32 = env::var("POW_EXP")
+        .unwrap_or_else(|_| String::from("30"))
+        .parse::<u32>()
+        .expect("POW_EXP cannot be parsed to u32 - bad format");
+    pub static ref POW_DIFFICULTY: u8 = env::var("POW_DIFFICULTY")
+            .unwrap_or_else(|_| String::from("20"))
+            .parse::<u8>()
+            .expect("POW_DIFFICULTY cannot be parsed to u8 - bad format");
 
     // Offline Token lifetime in seconds
     pub static ref OFFLINE_TOKEN_LT: i64 = {

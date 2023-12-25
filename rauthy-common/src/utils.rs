@@ -14,8 +14,8 @@ const B64_STD: engine::GeneralPurpose = general_purpose::STANDARD;
 
 pub fn build_csp_header(nonce: &str) -> (&str, String) {
     let value = format!(
-        "default-src 'self'; script-src 'strict-dynamic' 'nonce-{}'; style-src 'self' 'unsafe-inline'; \
-        frame-ancestors 'none'; object-src 'none'; img-src 'self' data:;",
+        "default-src 'self'; script-src 'strict-dynamic' 'nonce-{}' 'wasm-unsafe-eval'; \
+        style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data:;",
         nonce,
     );
     ("content-security-policy", value)
