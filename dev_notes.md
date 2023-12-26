@@ -2,8 +2,15 @@
 
 ## CURRENT WORK
 
+## Leftover TODO's for v0.20.0
+
 - migrate all exising user emails to lowercase in the DB and only save lowercase ever again
-- change the login and always convert given users emails to lowercase only to avoid conflicts
+- change the login endpoint and only accepts users emails with lowercase only to avoid conflicts
+- adopt UI login form to always convert emails to lowercase
+- adopt user registration to always convert email to lowercase
+- add additional user values for self-modify in the accounts view
+- add more default claims for users https://openid.net/specs/openid-connect-core-1_0.html#ScopeClaims
+- add DB migration for the new user values
 
 ## Stage 1 - essentials
 
@@ -11,11 +18,7 @@
 
 ## Stage 2 - features - do before v1.0.0
 
-- auto-apply DB backups from S3 (SQLite)
-- auto-encrypted backups + backups to remote locations (ssh, nfs, s3, ...) -> postponed - should be applied to sqlite only
-since postgres has pg_backrest and a lot of well established tooling anyway
 - admin ui: template button for client branding: default-light + default-dark ?
-- add all default claims for users https://openid.net/specs/openid-connect-core-1_0.html#ScopeClaims
 - double check against https://openid.net/specs/openid-connect-core-1_0.html that everything is implemented correctly one more time
 - benchmarks and performance tuning
 - maybe get a nicer logo

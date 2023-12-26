@@ -13,7 +13,7 @@ The whole operation is done with streaming.
 ### Auto-Restore SQLite backups
 
 Rauthy can now automatically restore SQLite backups either from a backup inside `data/backups/` locally, or
-fetch an encrypted backup from an S3 bucket. You only need to set the new `RESTORE_BACKUP` environment vairable
+fetch an encrypted backup from an S3 bucket. You only need to set the new `RESTORE_BACKUP` environment variable
 at startup and Rauthy will do the rest. No manually copying files around.  
 For instance, a local backup can be restored with setting `RESTORE_BACKUP=file:rauthy-backup-1703243039` and an
 S3 backup with `RESTORE_BACKUP=s3:rauthy-0.20.0-1703243039.cryptr`.
@@ -33,6 +33,25 @@ With this implementation, the difficulty for PoW's a client must solve can be sc
 while the time is takes to verify a PoW on the server side will always be `O(1)`, no matter hoch high the
 difficulty was. `spow` uses a modified version of the popular Hashcat PoW algorithm, which is also being used
 in the Bitcoin blockchain.
+
+### Separate users cache
+
+A typical Rauthy deployment will have a finite amount of clients, roles, groups, scopes, and so on.
+The only thing that might scale endlessly are the users. Because of this, the users are now being cached
+inside their own separate cache, which can be configured and customized to fit the deployment's needs.
+You can now set the upper limit and the lifespan for cached user's. This is one of the first upcoming
+optimizations, since Rauthy gets closer to the first v1.0.0 release:
+
+```
+# The max cache size for users. If you can afford it memory-wise,
+# make it possible to fit all active users inside the cache.
+# default: 100
+CACHE_USERS_SIZE=100
+# The lifespan of the users cache in seconds. Cache eviction on
+# updates will be handled automatically.
+# default: 28800
+CACHE_USERS_LIFESPAN=28800
+```
 
 ### Changes
 
@@ -59,6 +78,8 @@ but also even encryption algorithm encryptions really easy in the future.
 [8fd2c99](https://github.com/sebadob/rauthy/commit/8fd2c99d25aea2f307e0197f6f91a585b4408dce)
 - `noindex, nofollow` globally via headers and meta tag -> Rauthy as an Auth provider should never be indexed
 [38a2a52](https://github.com/sebadob/rauthy/commit/38a2a52fe6530cf4efdedfe96d2b3041959fcd3d)
+- push users into their own, separate, configurable cache
+[3137927](https://github.com/sebadob/rauthy/commit/31379278440ec6ddaf1a2288ba3950ab60994963)
 
 ### Bugfixes
 
