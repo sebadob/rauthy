@@ -10,9 +10,10 @@ use cryptr::{EncKeys, EncValue};
 use prometheus::Registry;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_DPOP_NONCES, CACHE_NAME_EPHEMERAL_CLIENTS,
-    CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW, CACHE_NAME_SESSIONS, CACHE_NAME_WEBAUTHN,
-    CACHE_NAME_WEBAUTHN_DATA, DPOP_NONCE_EXP, EPHEMERAL_CLIENTS_CACHE_LIFETIME, POW_EXP,
-    RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
+    CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW, CACHE_NAME_SESSIONS, CACHE_NAME_USERS,
+    CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, DPOP_NONCE_EXP,
+    EPHEMERAL_CLIENTS_CACHE_LIFETIME, POW_EXP, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL,
+    SWAGGER_UI_INTERNAL, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::password_hasher;
@@ -205,7 +206,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Users
     cache_config.spawn_cache(
-        CACHE_NAME_POW.to_string(),
+        CACHE_NAME_USERS.to_string(),
         redhac::TimedCache::with_lifespan_and_capacity(
             env::var("CACHE_USERS_LIFESPAN")
                 .unwrap_or_else(|_| String::from("28800"))
