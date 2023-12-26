@@ -56,9 +56,9 @@ but also even encryption algorithm encryptions really easy in the future.
 - Migrate to [spow](https://github.com/sebadob/spow)
 [ff579f6](https://github.com/sebadob/rauthy/commit/ff579f60414cb529d727ae27fd83e9506ad770d5)
 - Pre-Compute CSP's for all HTML content at build-time and get rid of the per-request nonce computation
-[]()
+[8fd2c99](https://github.com/sebadob/rauthy/commit/8fd2c99d25aea2f307e0197f6f91a585b4408dce)
 - `noindex, nofollow` globally via headers and meta tag -> Rauthy as an Auth provider should never be indexed
-[]()
+[38a2a52](https://github.com/sebadob/rauthy/commit/38a2a52fe6530cf4efdedfe96d2b3041959fcd3d)
 
 ### Bugfixes
 
