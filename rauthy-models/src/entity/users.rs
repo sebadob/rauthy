@@ -19,7 +19,7 @@ use crate::templates::UserEmailChangeConfirmHtml;
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, IDX_USERS, RAUTHY_ADMIN_ROLE, WEBAUTHN_NO_PASSWORD_EXPIRY,
+    CACHE_NAME_USERS, IDX_USERS, RAUTHY_ADMIN_ROLE, WEBAUTHN_NO_PASSWORD_EXPIRY,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
@@ -99,7 +99,7 @@ impl User {
         let mut users = User::find_all(data).await?;
         users.push(new_user.clone());
         cache_insert(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             IDX_USERS.to_string(),
             &data.caches.ha_cache_config,
             &users,
@@ -150,7 +150,7 @@ impl User {
             .collect::<Vec<Self>>();
 
         cache_insert(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             IDX_USERS.to_string(),
             &data.caches.ha_cache_config,
             &users,
@@ -160,7 +160,7 @@ impl User {
 
         let idx = format!("{}_{}", IDX_USERS, &self.id);
         cache_remove(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             idx,
             &data.caches.ha_cache_config,
             AckLevel::Quorum,
@@ -169,7 +169,7 @@ impl User {
 
         let idx = format!("{}_{}", IDX_USERS, &self.email);
         cache_remove(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             idx,
             &data.caches.ha_cache_config,
             AckLevel::Quorum,
@@ -184,7 +184,7 @@ impl User {
         let idx = format!("{}_{}", IDX_USERS, id);
         let user_opt = cache_get!(
             User,
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             idx.to_string(),
             &data.caches.ha_cache_config,
             false
@@ -206,7 +206,7 @@ impl User {
         let idx = format!("{}_{}", IDX_USERS, id);
         let user_opt = cache_get!(
             User,
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             idx.to_string(),
             &data.caches.ha_cache_config,
             false
@@ -223,7 +223,7 @@ impl User {
             .await?;
 
         cache_insert(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             idx,
             &data.caches.ha_cache_config,
             &user,
@@ -241,7 +241,7 @@ impl User {
         let idx = format!("{}_{}", IDX_USERS, email);
         let user_opt = cache_get!(
             User,
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             idx.clone(),
             &data.caches.ha_cache_config,
             false
@@ -257,7 +257,7 @@ impl User {
             .await?;
 
         cache_insert(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             idx,
             &data.caches.ha_cache_config,
             &user,
@@ -269,30 +269,30 @@ impl User {
 
     // Returns all existing users
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        let users = cache_get!(
-            Vec<User>,
-            CACHE_NAME_12HR.to_string(),
-            IDX_USERS.to_string(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(users) = users {
-            return Ok(users);
-        }
+        // let users = cache_get!(
+        //     Vec<User>,
+        //     CACHE_NAME_USERS.to_string(),
+        //     IDX_USERS.to_string(),
+        //     &data.caches.ha_cache_config,
+        //     false
+        // )
+        // .await?;
+        // if let Some(users) = users {
+        //     return Ok(users);
+        // }
 
         let res = sqlx::query_as::<_, Self>("select * from users")
             .fetch_all(&data.db)
             .await?;
 
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_USERS.to_string(),
-            &data.caches.ha_cache_config,
-            &res,
-            AckLevel::Quorum,
-        )
-        .await?;
+        // cache_insert(
+        //     CACHE_NAME_12HR.to_string(),
+        //     IDX_USERS.to_string(),
+        //     &data.caches.ha_cache_config,
+        //     &res,
+        //     AckLevel::Quorum,
+        // )
+        // .await?;
         Ok(res)
     }
 
@@ -373,7 +373,7 @@ impl User {
         if let Some(email) = old_email {
             let idx = format!("{}_{}", IDX_USERS, email);
             cache_del(
-                CACHE_NAME_12HR.to_string(),
+                CACHE_NAME_USERS.to_string(),
                 idx,
                 &data.caches.ha_cache_config,
             )
@@ -381,7 +381,7 @@ impl User {
         }
 
         cache_insert(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             IDX_USERS.to_string(),
             &data.caches.ha_cache_config,
             &users,
@@ -391,7 +391,7 @@ impl User {
 
         let idx = format!("{}_{}", IDX_USERS, &self.id);
         cache_insert(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             idx,
             &data.caches.ha_cache_config,
             &self,
@@ -401,7 +401,7 @@ impl User {
 
         let idx = format!("{}_{}", IDX_USERS, &self.email);
         cache_insert(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             idx,
             &data.caches.ha_cache_config,
             &self,
