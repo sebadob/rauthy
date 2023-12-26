@@ -38,6 +38,7 @@ pub const CACHE_NAME_EPHEMERAL_CLIENTS: &str = "ephemeral-clients";
 pub const CACHE_NAME_LOGIN_DELAY: &str = "login-dly";
 pub const CACHE_NAME_SESSIONS: &str = "sessions";
 pub const CACHE_NAME_POW: &str = "pow";
+pub const CACHE_NAME_USERS: &str = "users";
 pub const CACHE_NAME_WEBAUTHN: &str = "webauthn";
 pub const CACHE_NAME_WEBAUTHN_DATA: &str = "webauthn-data";
 

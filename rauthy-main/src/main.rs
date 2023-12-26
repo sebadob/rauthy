@@ -184,14 +184,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
 
     // sessions
-    let session_lifetime = env::var("SESSION_LIFETIME")
-        .unwrap_or_else(|_| String::from("14400"))
-        .trim()
-        .parse::<u32>()
-        .expect("SESSION_LIFETIME cannot be parsed to u32 - bad format");
     cache_config.spawn_cache(
         CACHE_NAME_SESSIONS.to_string(),
-        redhac::TimedCache::with_lifespan(session_lifetime as u64),
+        redhac::TimedCache::with_lifespan(
+            env::var("SESSION_LIFETIME")
+                .unwrap_or_else(|_| String::from("14400"))
+                .trim()
+                .parse::<u64>()
+                .expect("SESSION_LIFETIME cannot be parsed to u64 - bad format"),
+        ),
         Some(64),
     );
 
@@ -199,6 +200,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
     cache_config.spawn_cache(
         CACHE_NAME_POW.to_string(),
         redhac::TimedCache::with_lifespan(*POW_EXP as u64),
+        Some(16),
+    );
+
+    // Users
+    cache_config.spawn_cache(
+        CACHE_NAME_POW.to_string(),
+        redhac::TimedCache::with_lifespan_and_capacity(
+            env::var("CACHE_USERS_LIFESPAN")
+                .unwrap_or_else(|_| String::from("28800"))
+                .trim()
+                .parse::<u64>()
+                .expect("CACHE_USERS_LIFESPAN cannot be parsed to u64 - bad format"),
+            env::var("CACHE_USERS_SIZE")
+                .unwrap_or_else(|_| String::from("100"))
+                .trim()
+                .parse::<usize>()
+                .expect("CACHE_USERS_SIZE cannot be parsed to usize - bad format"),
+        ),
         Some(16),
     );
 
@@ -722,6 +741,9 @@ async fn V20_migrate_to_cryptr(app_state: &Data<AppState>) -> Result<(), ErrorRe
     info!("Secrets migration successful");
 
     // TODO maybe encrypt webauthn data while we are doing it already anyway?
+
+    // TODO check the user's database and convert all existing emails to lowercase only to avoid
+    // duplicate issues if a user is added more than once just with an uppercase character
 
     Ok(())
 }
