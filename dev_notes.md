@@ -2,13 +2,8 @@
 
 ## CURRENT WORK
 
-- integrate `cryptr` and migrate all old ENC_KEYS in:
-    - [ ] db_migrate 
-    - [ ] api_keys 
-    - [ ] jwk 
-    - [ ] clients
-- adopt Webauthn cookies to cryptr and check compatibility
-- move auth::rotate_jwks into Jwk Entity and adopt encryption
+- migrate all exising user emails to lowercase in the DB and only save lowercase ever again
+- change the login and always convert given users emails to lowercase only to avoid conflicts
 
 ## Stage 1 - essentials
 
