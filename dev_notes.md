@@ -4,10 +4,6 @@
 
 ## Leftover TODO's for v0.20.0
 
-- migrate all exising user emails to lowercase in the DB and only save lowercase ever again
-- change the login endpoint and only accepts users emails with lowercase only to avoid conflicts
-- adopt UI login form to always convert emails to lowercase
-- adopt user registration to always convert email to lowercase
 - add additional user values for self-modify in the accounts view
 - add more default claims for users https://openid.net/specs/openid-connect-core-1_0.html#ScopeClaims
 - add DB migration for the new user values

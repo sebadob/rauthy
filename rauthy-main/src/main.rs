@@ -30,6 +30,7 @@ use rauthy_models::email::EMail;
 use rauthy_models::entity::api_keys::ApiKeyEntity;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::jwk::Jwk;
+use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
 use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::listener::EventListener;
@@ -291,9 +292,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // TODO remove with v0.21
     // migrate existing encrypted values to `cryptr`
-    V20_migrate_to_cryptr(&app_state)
+    v20_migrate_to_cryptr(&app_state)
         .await
         .expect("TEMP_migrate_to_cryptr to succeed");
+
+    // TODO remove with v0.21
+    // make sure all old emails are lowercase only in the db
+    v20_migrate_emails_lowercase(&app_state)
+        .await
+        .expect("no conflicts when converting E-Mails to lowercase -> duplicate entries?");
 
     // spawn health watcher
     tokio::spawn(watch_health(
@@ -644,7 +651,8 @@ fn get_https_port() -> String {
 }
 
 // TODO remove with v0.21
-async fn V20_migrate_to_cryptr(app_state: &Data<AppState>) -> Result<(), ErrorResponse> {
+#[deprecated]
+async fn v20_migrate_to_cryptr(app_state: &Data<AppState>) -> Result<(), ErrorResponse> {
     // check `config` table if the migration has been done already
     let db_id = "cryptr_migration";
     if sqlx::query!("SELECT * FROM config WHERE id = $1", db_id)
@@ -746,5 +754,36 @@ async fn V20_migrate_to_cryptr(app_state: &Data<AppState>) -> Result<(), ErrorRe
     // TODO check the user's database and convert all existing emails to lowercase only to avoid
     // duplicate issues if a user is added more than once just with an uppercase character
 
+    Ok(())
+}
+
+// TODO remove with v0.21
+#[deprecated]
+async fn v20_migrate_emails_lowercase(app_state: &Data<AppState>) -> Result<(), ErrorResponse> {
+    let users = User::find_all(app_state).await?;
+    for user in users {
+        for char in user.email.chars() {
+            if char.is_uppercase() {
+                if let Err(err) = sqlx::query("update users set email = $1 where id = $2")
+                    .bind(user.email.to_lowercase())
+                    .bind(user.id)
+                    .execute(&app_state.db)
+                    .await
+                {
+                    error!(
+                        r#"
+
+Cannot save lowercase converted E-Mail in database because of a duplicate.
+You need to solve this issue manually.
+
+{:?}
+"#,
+                        err
+                    )
+                }
+                break;
+            }
+        }
+    }
     Ok(())
 }
