@@ -96,16 +96,16 @@ impl User {
         .await?;
         send_pwd_reset(data, &magic_link, &new_user).await;
 
-        let mut users = User::find_all(data).await?;
-        users.push(new_user.clone());
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            IDX_USERS.to_string(),
-            &data.caches.ha_cache_config,
-            &users,
-            AckLevel::Quorum,
-        )
-        .await?;
+        // let mut users = User::find_all(data).await?;
+        // users.push(new_user.clone());
+        // cache_insert(
+        //     CACHE_NAME_USERS.to_string(),
+        //     IDX_USERS.to_string(),
+        //     &data.caches.ha_cache_config,
+        //     &users,
+        //     AckLevel::Quorum,
+        // )
+        // .await?;
 
         Ok(new_user)
     }
@@ -143,20 +143,20 @@ impl User {
             .await?;
 
         // Now clean up all caches
-        let users = User::find_all(data)
-            .await?
-            .into_iter()
-            .filter(|u| u.id != self.id)
-            .collect::<Vec<Self>>();
-
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            IDX_USERS.to_string(),
-            &data.caches.ha_cache_config,
-            &users,
-            AckLevel::Quorum,
-        )
-        .await?;
+        // let users = User::find_all(data)
+        //     .await?
+        //     .into_iter()
+        //     .filter(|u| u.id != self.id)
+        //     .collect::<Vec<Self>>();
+        //
+        // cache_insert(
+        //     CACHE_NAME_USERS.to_string(),
+        //     IDX_USERS.to_string(),
+        //     &data.caches.ha_cache_config,
+        //     &users,
+        //     AckLevel::Quorum,
+        // )
+        // .await?;
 
         let idx = format!("{}_{}", IDX_USERS, &self.id);
         cache_remove(
@@ -359,16 +359,16 @@ impl User {
         }
 
         // TODO think about a good way to catch a possibly failing transaction -> cache invalidation
-        let users = User::find_all(data)
-            .await?
-            .into_iter()
-            .map(|mut u| {
-                if u.id == self.id {
-                    u = self.clone();
-                }
-                u
-            })
-            .collect::<Vec<Self>>();
+        // let users = User::find_all(data)
+        //     .await?
+        //     .into_iter()
+        //     .map(|mut u| {
+        //         if u.id == self.id {
+        //             u = self.clone();
+        //         }
+        //         u
+        //     })
+        //     .collect::<Vec<Self>>();
 
         if let Some(email) = old_email {
             let idx = format!("{}_{}", IDX_USERS, email);
@@ -380,14 +380,14 @@ impl User {
             .await?;
         }
 
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            IDX_USERS.to_string(),
-            &data.caches.ha_cache_config,
-            &users,
-            AckLevel::Quorum,
-        )
-        .await?;
+        // cache_insert(
+        //     CACHE_NAME_USERS.to_string(),
+        //     IDX_USERS.to_string(),
+        //     &data.caches.ha_cache_config,
+        //     &users,
+        //     AckLevel::Quorum,
+        // )
+        // .await?;
 
         let idx = format!("{}_{}", IDX_USERS, &self.id);
         cache_insert(
@@ -416,13 +416,14 @@ impl User {
     pub async fn update(
         data: &web::Data<AppState>,
         id: String,
-        upd_user: UpdateUserRequest,
+        mut upd_user: UpdateUserRequest,
         user: Option<User>,
     ) -> Result<(User, bool), ErrorResponse> {
         let mut user = match user {
             None => User::find(data, id).await?,
             Some(user) => user,
         };
+        upd_user.email = upd_user.email.to_lowercase();
         let old_email = if user.email != upd_user.email {
             Some(user.email.clone())
         } else {
@@ -526,7 +527,7 @@ impl User {
             password = Some(pwd_new);
         }
 
-        let email_updated = if let Some(email) = upd_user.email {
+        let email_updated = if let Some(email) = upd_user.email.map(|email| email.to_lowercase()) {
             // if the email should be updated, we do not do it directly -> send out confirmation
             // email to old AND new address
             if email != user.email {
@@ -917,7 +918,7 @@ impl User {
         let groups = Group::sanitize(data, new_user.groups).await?;
 
         let user = Self {
-            email: new_user.email,
+            email: new_user.email.to_lowercase(),
             email_verified: false,
             given_name: new_user.given_name,
             family_name: new_user.family_name,
@@ -933,7 +934,7 @@ impl User {
 
     pub fn from_reg_req(new_user: NewUserRegistrationRequest) -> Self {
         Self {
-            email: new_user.email,
+            email: new_user.email.to_lowercase(),
             given_name: new_user.given_name,
             family_name: new_user.family_name,
             ..Default::default()
