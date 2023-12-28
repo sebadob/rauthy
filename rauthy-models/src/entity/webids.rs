@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
 use actix_web::web;
-use rauthy_common::constants::{CACHE_NAME_12HR, PUB_URL_WITH_SCHEME};
+use rauthy_common::constants::{CACHE_NAME_USERS, PUB_URL_WITH_SCHEME};
 use rauthy_common::error_response::ErrorResponse;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use rio_api::formatter::TriplesFormatter;
@@ -33,7 +33,7 @@ impl WebId {
     pub async fn find(data: &web::Data<AppState>, user_id: String) -> Result<Self, ErrorResponse> {
         if let Some(web_id) = cache_get!(
             Self,
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             Self::cache_idx(&user_id),
             &data.caches.ha_cache_config,
             false
@@ -59,7 +59,7 @@ impl WebId {
         };
 
         cache_insert(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             Self::cache_idx(&slf.user_id),
             &data.caches.ha_cache_config,
             &slf,
@@ -89,7 +89,7 @@ impl WebId {
         q.execute(&data.db).await?;
 
         cache_insert(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             Self::cache_idx(&web_id.user_id),
             &data.caches.ha_cache_config,
             &web_id,

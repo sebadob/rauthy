@@ -3,7 +3,7 @@ use crate::entity::scopes::Scope;
 use crate::entity::users::User;
 use crate::request::{UserAttrConfigRequest, UserAttrValuesUpdateRequest};
 use actix_web::web;
-use rauthy_common::constants::{CACHE_NAME_12HR, IDX_USER_ATTR_CONFIG};
+use rauthy_common::constants::{CACHE_NAME_USERS, IDX_USER_ATTR_CONFIG};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
@@ -58,7 +58,7 @@ impl UserAttrConfigEntity {
         };
         attrs.push(slf.clone());
         cache_insert(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             IDX_USER_ATTR_CONFIG.to_string(),
             &data.caches.ha_cache_config,
             &attrs,
@@ -125,7 +125,7 @@ impl UserAttrConfigEntity {
         }
 
         cache_remove(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             name.clone(),
             &data.caches.ha_cache_config,
             AckLevel::Quorum,
@@ -146,7 +146,7 @@ impl UserAttrConfigEntity {
             .filter(|a| a.name != name)
             .collect::<Vec<Self>>();
         cache_insert(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             IDX_USER_ATTR_CONFIG.to_string(),
             &data.caches.ha_cache_config,
             &attrs,
@@ -160,7 +160,7 @@ impl UserAttrConfigEntity {
     pub async fn find(data: &web::Data<AppState>, name: String) -> Result<Self, ErrorResponse> {
         let attr_opt = cache_get!(
             Self,
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             name.clone(),
             &data.caches.ha_cache_config,
             false
@@ -175,7 +175,7 @@ impl UserAttrConfigEntity {
             .await?;
 
         cache_insert(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             name,
             &data.caches.ha_cache_config,
             &attr,
@@ -188,7 +188,7 @@ impl UserAttrConfigEntity {
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
         let attrs = cache_get!(
             Vec<Self>,
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             IDX_USER_ATTR_CONFIG.to_string(),
             &data.caches.ha_cache_config,
             false
@@ -203,7 +203,7 @@ impl UserAttrConfigEntity {
             .await?;
 
         cache_insert(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             IDX_USER_ATTR_CONFIG.to_string(),
             &data.caches.ha_cache_config,
             &res,
@@ -319,7 +319,7 @@ impl UserAttrConfigEntity {
             .collect::<Vec<Self>>();
 
         cache_insert(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             IDX_USER_ATTR_CONFIG.to_string(),
             &data.caches.ha_cache_config,
             &attrs,
@@ -330,7 +330,7 @@ impl UserAttrConfigEntity {
         if let Some(idxs) = cache_idxs {
             for idx in idxs {
                 cache_remove(
-                    CACHE_NAME_12HR.to_string(),
+                    CACHE_NAME_USERS.to_string(),
                     idx,
                     &data.caches.ha_cache_config,
                     AckLevel::Quorum,
@@ -391,7 +391,7 @@ impl UserAttrValueEntity {
 
         for idx in cache_idxs {
             cache_remove(
-                CACHE_NAME_12HR.to_string(),
+                CACHE_NAME_USERS.to_string(),
                 idx,
                 &data.caches.ha_cache_config,
                 AckLevel::Quorum,
@@ -413,7 +413,7 @@ impl UserAttrValueEntity {
         let idx = Self::cache_idx(user_id);
         let attrs = cache_get!(
             Vec<Self>,
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             idx.clone(),
             &data.caches.ha_cache_config,
             false
@@ -432,7 +432,7 @@ impl UserAttrValueEntity {
         .await?;
 
         cache_insert(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             idx,
             &data.caches.ha_cache_config,
             &res,
@@ -504,7 +504,7 @@ impl UserAttrValueEntity {
 
         let idx = Self::cache_idx(user_id);
         cache_insert(
-            CACHE_NAME_12HR.to_string(),
+            CACHE_NAME_USERS.to_string(),
             idx,
             &data.caches.ha_cache_config,
             &res,
