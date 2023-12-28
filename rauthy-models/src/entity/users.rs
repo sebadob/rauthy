@@ -238,6 +238,8 @@ impl User {
         data: &web::Data<AppState>,
         email: String,
     ) -> Result<User, ErrorResponse> {
+        let email = email.to_lowercase();
+
         let idx = format!("{}_{}", IDX_USERS, email);
         let user_opt = cache_get!(
             User,

@@ -2,6 +2,14 @@
 
 ## UNRELEASED
 
+### Breaking
+
+This update is not backwards-compatible with any previous version. It will modify the database under the hood
+which makes it incompatible with any previous version. If you need to downgrade for whatever reason, you will
+only be able to do this by applying a database backup from an older version.
+
+TODO: Add guide how to convert ENC_KEYS with cryptr
+
 ### Encrypted SQLite backups to S3 storage
 
 Rauthy can now push encrypted SQLite backups to a configured S3 bucket.
