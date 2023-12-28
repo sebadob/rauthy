@@ -156,11 +156,17 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # operations (default: 128)
 #CACHE_BUF_CLIENT=128
 
-# The max cache size for users. If you can afford it memory-wise, make it possible to fit
-# all active users inside the cache.
+# The max cache size for users. If you can afford it memory-wise,
+# make it possible to fit all active users inside the cache.
+# The cache size you provide here should roughly match the
+# amount of users you want to be able to cache actively. Depending
+# on your setup (WebIDs, custom attributes, ...), this number
+# will be multiplied internally  by 3 or 4 to create multiple cache
+# entries for each user.
 # default: 100
 CACHE_USERS_SIZE=100
-# The lifespan of the users cache in seconds. Cache eviction on updates will be handled automatically.
+# The lifespan of the users cache in seconds. Cache eviction on
+# updates will be handled automatically.
 # default: 28800
 CACHE_USERS_LIFESPAN=28800
 
