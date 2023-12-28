@@ -173,6 +173,7 @@ use utoipa::{openapi, OpenApi};
             request::UpdateClientRequest,
             request::UpdateUserRequest,
             request::UpdateUserSelfRequest,
+            request::UserValuesRequest,
             request::UserAttrConfigRequest,
             request::UserAttrValueRequest,
             request::UserAttrValuesUpdateRequest,
