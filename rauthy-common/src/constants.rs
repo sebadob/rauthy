@@ -58,6 +58,7 @@ pub const IDX_SCOPES: &str = "scopes_";
 pub const IDX_SESSION: &str = "session_";
 pub const IDX_SESSIONS: &str = "sessions";
 pub const IDX_USERS: &str = "users_";
+pub const IDX_USERS_VALUES: &str = "users_values_";
 pub const IDX_USER_ATTR_CONFIG: &str = "user_attrs_";
 pub const IDX_WEBAUTHN: &str = "webauthn_";
 
@@ -88,16 +89,20 @@ lazy_static! {
     pub static ref RE_APP_ID: Regex = Regex::new(r"^[a-zA-Z0-9]{12}$").unwrap();
     pub static ref RE_BASE64: Regex = Regex::new(r"^[a-zA-Z0-9+/=]{4}$").unwrap();
     pub static ref RE_CHALLENGE: Regex = Regex::new(r"^(plain|S256)$").unwrap();
+    pub static ref RE_CITY: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-]{0,48}$").unwrap();
     pub static ref RE_CLIENT_ID_EPHEMERAL: Regex = Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$").unwrap();
     pub static ref RE_CLIENT_NAME: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-\s]{2,128}$").unwrap();
     pub static ref RE_CODE_CHALLENGE: Regex = Regex::new(r"^[a-zA-Z0-9-\._~]{43,128}$").unwrap();
     pub static ref RE_CODE_VERIFIER: Regex = Regex::new(r"^[a-zA-Z0-9-\._~+/=]+$").unwrap();
+    pub static ref RE_DATE_STR: Regex = Regex::new(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$").unwrap();
     pub static ref RE_FLOWS: Regex = Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap();
     pub static ref RE_GRANT_TYPES: Regex = Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap();
     pub static ref RE_LOWERCASE: Regex = Regex::new(r"^[a-z0-9-_/]{2,128}$").unwrap();
     pub static ref RE_LOWERCASE_SPACE: Regex = Regex::new(r"^[a-z0-9-_/\s]{2,128}$").unwrap();
     pub static ref RE_GROUPS: Regex = Regex::new(r"^[a-z0-9-_/,]{2,32}$").unwrap();
     pub static ref RE_MFA_CODE: Regex = Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap();
+    pub static ref RE_PHONE: Regex = Regex::new(r"^\+[0-9]{0,32}$").unwrap();
+    pub static ref RE_STREET: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-\s]{0,48}$").unwrap();
     pub static ref RE_URI: Regex = Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+$").unwrap();
     pub static ref RE_USER_NAME: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-\s]{2,32}$").unwrap();
     pub static ref RE_TOKEN_68: Regex = Regex::new(r"^[a-zA-Z0-9-._~+/]+=*$").unwrap();
