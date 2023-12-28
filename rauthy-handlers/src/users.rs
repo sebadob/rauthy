@@ -61,6 +61,7 @@ pub async fn get_users(
     let mut res = Vec::new();
     users
         .into_iter()
+        // TODO return a simplified version to decrease payload
         .for_each(|u| res.push(UserResponse::from(u)));
 
     Ok(HttpResponse::Ok().json(res))
