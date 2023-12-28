@@ -8,6 +8,7 @@ use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
+use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
 use crate::events::event::Event;
 use crate::language::Language;
@@ -302,12 +303,10 @@ impl User {
         let now = OffsetDateTime::now_utc()
             .add(time::Duration::seconds(10))
             .unix_timestamp();
-        tracing::debug!("User::find_expired - now: {}", now);
         let res = sqlx::query_as::<_, Self>("select * from users where user_expires < $1")
             .bind(now)
             .fetch_all(&data.db)
             .await?;
-        tracing::debug!("User::find_expired - users: {:?}", res);
         Ok(res)
     }
 
@@ -484,6 +483,12 @@ impl User {
         }
 
         let is_new_admin = !is_admin_before_update && user.is_admin();
+
+        // finally, update the custom users values
+        if let Some(values) = upd_user.user_values {
+            UserValues::upsert(data, user.id.clone(), values).await?;
+        }
+
         Ok((user, is_new_admin))
     }
 
@@ -579,6 +584,7 @@ impl User {
             enabled: user.enabled,
             email_verified: user.email_verified,
             user_expires: user.user_expires,
+            user_values: upd_user.user_values,
         };
 
         // a user cannot become a new admin from a self-req
