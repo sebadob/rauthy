@@ -79,7 +79,7 @@ impl TryFrom<&HttpRequest> for Language {
                 accept_language::intersection(accept_as_str, &Language::all_available());
             debug!("common_languages: {:?}", common_languages);
             if !common_languages.is_empty() {
-                return Ok(Language::from(common_languages.get(0).unwrap().as_str()));
+                return Ok(Language::from(common_languages.first().unwrap().as_str()));
             }
         }
 
