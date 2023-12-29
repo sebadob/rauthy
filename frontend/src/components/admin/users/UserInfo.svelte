@@ -4,7 +4,7 @@
         extractFormErrors,
         formatDateFromTs,
         formatDateToDateInput,
-        formatUtcTsFromDateInput
+        formatUtcTsFromDateInput, redirectToLogin
     } from "../../../utils/helpers.js";
     import Switch from "$lib/Switch.svelte";
     import {globalGroupsNames, globalRolesNames} from "../../../stores/admin.js";
@@ -20,7 +20,6 @@
     export let user = {};
     export let onSave;
 
-    let isLoading = false;
     let err = '';
     let success = false;
     let timer;
@@ -45,15 +44,15 @@
         }, 3000);
     }
 
-    onMount(() => {
-        return () => clearTimeout(timer);
-    });
-
     let formErrors = {};
     const schema = yup.object().shape({
         email: yup.string().required('E-Mail is required').email("Bad E-Mail format"),
         given_name: yup.string().trim().required('Given Name is required').matches(REGEX_NAME, 'Invalid characters'),
         family_name: yup.string().trim().required('Family Name is required').matches(REGEX_NAME, 'Invalid characters'),
+    });
+
+    onMount(() => {
+        return () => clearTimeout(timer);
     });
 
     function handleKeyPress(event) {

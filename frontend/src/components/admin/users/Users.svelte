@@ -95,7 +95,7 @@
     <div id="users">
         {#each resUsersPaginated as user (user.id)}
             <div>
-                <UserTile bind:user onSave={onSave}/>
+                <UserTile userId={user.id} userEmail={user.email} onSave={onSave}/>
             </div>
         {/each}
     </div>
