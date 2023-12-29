@@ -36,7 +36,6 @@ use spow::pow::Pow;
 use std::ops::Add;
 use time::OffsetDateTime;
 use tracing::{error, warn};
-use validator::Validate;
 
 /// Returns all existing users
 ///
