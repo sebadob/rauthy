@@ -6,6 +6,7 @@ use crate::entity::scopes::Scope;
 use crate::entity::sessions::SessionState;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::users::{AccountType, User};
+use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::language::Language;
@@ -418,11 +419,12 @@ pub struct UserResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_expires: Option<i64>,
     pub account_type: UserAccountTypeResponse,
-    pub webauthn_user_id: Option<String>,
+    pub webauthn_user_id: Option<String>, // TODO get rid of the webauthn user id ? Not needed at all?
+    pub users_values: Option<UserValuesResponse>,
 }
 
-impl From<User> for UserResponse {
-    fn from(u: User) -> Self {
+impl UserResponse {
+    pub fn build(u: User, v: Option<UserValues>) -> Self {
         let roles = u.get_roles();
         let groups = if u.groups.is_some() {
             Some(u.get_groups())
@@ -449,6 +451,45 @@ impl From<User> for UserResponse {
             user_expires: u.user_expires,
             account_type,
             webauthn_user_id: u.webauthn_user_id,
+            users_values: v.map(UserValuesResponse::from),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+pub struct UserResponseSimple {
+    pub id: String,
+    pub email: String,
+}
+
+impl From<User> for UserResponseSimple {
+    fn from(value: User) -> Self {
+        Self {
+            id: value.id,
+            email: value.email,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UserValuesResponse {
+    pub birthdate: Option<String>,
+    pub phone: Option<String>,
+    pub street: Option<String>,
+    pub zip: Option<i32>,
+    pub city: Option<String>,
+    pub country: Option<String>,
+}
+
+impl From<UserValues> for UserValuesResponse {
+    fn from(value: UserValues) -> Self {
+        Self {
+            birthdate: value.birthdate,
+            phone: value.phone,
+            street: value.street,
+            zip: value.zip,
+            city: value.city,
+            country: value.country,
         }
     }
 }

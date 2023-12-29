@@ -203,6 +203,7 @@ use utoipa::{openapi, OpenApi};
             response::UserAttrValueResponse,
             response::UserAttrValuesResponse,
             response::Userinfo,
+            response::UserValuesResponse,
             response::UserAccountTypeResponse,
             response::UserResponse,
             response::WebauthnAuthStartResponse,
