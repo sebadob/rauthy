@@ -27,6 +27,7 @@ use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::scopes::Scope;
 use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::users::{AccountType, User};
+use rauthy_models::entity::users_values::UserValues;
 use rauthy_models::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
 use rauthy_models::entity::webids::WebId;
 use rauthy_models::events::event::Event;
@@ -36,8 +37,9 @@ use rauthy_models::request::{LoginRefreshRequest, LoginRequest, LogoutRequest, T
 use rauthy_models::response::{TokenInfo, Userinfo};
 use rauthy_models::templates::{LogoutHtml, TooManyRequestsHtml};
 use rauthy_models::{
-    sign_jwt, validate_jwt, AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn, JktClaim,
-    JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtRefreshClaims, JwtTokenType,
+    sign_jwt, validate_jwt, AddressClaim, AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn,
+    JktClaim, JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtRefreshClaims,
+    JwtTokenType,
 };
 use redhac::cache_del;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
@@ -483,12 +485,20 @@ pub async fn build_id_token(
         email_verified: None,
         given_name: None,
         family_name: None,
+        address: None,
+        birthdate: None,
+        locale: None,
+        phone: None,
         roles: user.get_roles(),
         groups: None,
         cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt }),
         custom: None,
         webid,
     };
+
+    // let user_values = UserValues::find(data, &user.id).await?;
+    let mut user_values = None;
+    let mut user_values_fetched = false;
 
     if scope.contains("email") {
         custom_claims.email = Some(user.email.clone());
@@ -498,6 +508,40 @@ pub async fn build_id_token(
     if scope.contains("profile") {
         custom_claims.given_name = Some(user.given_name.clone());
         custom_claims.family_name = Some(user.family_name.clone());
+        custom_claims.locale = Some(user.language.to_string());
+
+        user_values = UserValues::find(data, &user.id).await?;
+        user_values_fetched = true;
+
+        if let Some(values) = &user_values {
+            if let Some(birthdate) = &values.birthdate {
+                custom_claims.birthdate = Some(birthdate.clone());
+            }
+        }
+    }
+
+    if scope.contains("address") {
+        if !user_values_fetched {
+            user_values = UserValues::find(data, &user.id).await?;
+            user_values_fetched = true;
+        }
+
+        if let Some(values) = &user_values {
+            custom_claims.address = AddressClaim::try_build(&user, values);
+        }
+    }
+
+    if scope.contains("phone") {
+        if !user_values_fetched {
+            user_values = UserValues::find(data, &user.id).await?;
+            // user_values_fetched = true;
+        }
+
+        if let Some(values) = &user_values {
+            if let Some(phone) = &values.phone {
+                custom_claims.phone = Some(phone.clone());
+            }
+        }
     }
 
     if scope.contains("groups") {
