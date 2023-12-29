@@ -419,7 +419,7 @@ impl User {
         id: String,
         mut upd_user: UpdateUserRequest,
         user: Option<User>,
-    ) -> Result<(User, bool), ErrorResponse> {
+    ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
         let mut user = match user {
             None => User::find(data, id).await?,
             Some(user) => user,
@@ -485,11 +485,13 @@ impl User {
         let is_new_admin = !is_admin_before_update && user.is_admin();
 
         // finally, update the custom users values
-        if let Some(values) = upd_user.user_values {
-            UserValues::upsert(data, user.id.clone(), values).await?;
-        }
+        let user_values = if let Some(values) = upd_user.user_values {
+            UserValues::upsert(data, user.id.clone(), values).await?
+        } else {
+            None
+        };
 
-        Ok((user, is_new_admin))
+        Ok((user, user_values, is_new_admin))
     }
 
     pub async fn update_language(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
@@ -509,7 +511,7 @@ impl User {
         data: &web::Data<AppState>,
         id: String,
         upd_user: UpdateUserSelfRequest,
-    ) -> Result<(User, bool), ErrorResponse> {
+    ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
         let user = User::find(data, id.clone()).await?;
 
         let mut password = None;
@@ -588,8 +590,8 @@ impl User {
         };
 
         // a user cannot become a new admin from a self-req
-        let (user, _is_new_admin) = User::update(data, id, req, Some(user)).await?;
-        Ok((user, email_updated))
+        let (user, user_values, _is_new_admin) = User::update(data, id, req, Some(user)).await?;
+        Ok((user, user_values, email_updated))
     }
 
     /// Converts a user account from as password account type to passkey only with all necessary

@@ -57,7 +57,7 @@ impl UserValues {
         data: &web::Data<AppState>,
         user_id: String,
         values: UserValuesRequest,
-    ) -> Result<(), ErrorResponse> {
+    ) -> Result<Option<Self>, ErrorResponse> {
         #[cfg(feature = "sqlite")]
         let q = sqlx::query!(
             r#"INSERT OR REPLACE INTO
@@ -108,6 +108,6 @@ impl UserValues {
         )
         .await?;
 
-        Ok(())
+        Ok(slf)
     }
 }

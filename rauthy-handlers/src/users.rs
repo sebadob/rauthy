@@ -14,6 +14,7 @@ use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::pow::PowEntity;
 use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use rauthy_models::entity::users::User;
+use rauthy_models::entity::users_values::UserValues;
 use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::PasskeyEntity;
 use rauthy_models::entity::webids::WebId;
@@ -27,7 +28,7 @@ use rauthy_models::request::{
 };
 use rauthy_models::response::{
     PasskeyResponse, UserAttrConfigResponse, UserAttrValueResponse, UserAttrValuesResponse,
-    UserResponse, WebIdResponse,
+    UserResponse, UserResponseSimple, WebIdResponse,
 };
 use rauthy_models::templates::{Error1Html, Error3Html, ErrorHtml, UserRegisterHtml};
 use rauthy_service::password_reset;
@@ -61,8 +62,8 @@ pub async fn get_users(
     let mut res = Vec::new();
     users
         .into_iter()
-        // TODO return a simplified version to decrease payload
-        .for_each(|u| res.push(UserResponse::from(u)));
+        // return a simplified version to decrease payload for big deployments
+        .for_each(|u| res.push(UserResponseSimple::from(u)));
 
     Ok(HttpResponse::Ok().json(res))
 }
@@ -107,7 +108,7 @@ pub async fn post_users(
             .unwrap();
     }
 
-    Ok(HttpResponse::Ok().json(UserResponse::from(user)))
+    Ok(HttpResponse::Ok().json(UserResponse::build(user, None)))
 }
 
 /// Get the configured / allowed additional custom user attribute
@@ -324,9 +325,10 @@ pub async fn get_user_by_id(
         principal.is_user(&id)?;
     }
 
-    User::find(&data, id)
-        .await
-        .map(|user| HttpResponse::Ok().json(UserResponse::from(user)))
+    let user = User::find(&data, id).await?;
+    let values = UserValues::find(&data, &user.id).await?;
+
+    Ok(HttpResponse::Ok().json(UserResponse::build(user, values)))
 }
 
 /// Returns the additional custom attributes for the given user id
@@ -1005,9 +1007,10 @@ pub async fn get_user_by_email(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
 
-    User::find_by_email(&data, path.into_inner())
-        .await
-        .map(|user| HttpResponse::Ok().json(UserResponse::from(user)))
+    let user = User::find_by_email(&data, path.into_inner()).await?;
+    let values = UserValues::find(&data, &user.id).await?;
+
+    Ok(HttpResponse::Ok().json(UserResponse::build(user, values)))
 }
 
 /// Modifies a user
@@ -1035,7 +1038,7 @@ pub async fn put_user_by_id(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
 
-    let (user, is_new_admin) =
+    let (user, user_values, is_new_admin) =
         User::update(&data, id.into_inner(), user.into_inner(), None).await?;
 
     if is_new_admin {
@@ -1048,7 +1051,7 @@ pub async fn put_user_by_id(
             .unwrap();
     }
 
-    Ok(HttpResponse::Ok().json(UserResponse::from(user)))
+    Ok(HttpResponse::Ok().json(UserResponse::build(user, user_values)))
 }
 
 /// Allows modification of specific user values from the user himself
@@ -1079,11 +1082,12 @@ pub async fn put_user_self(
     let id = id.into_inner();
     principal.is_user(&id)?;
 
-    let (user, email_updated) = User::update_self_req(&data, id, user.into_inner()).await?;
+    let (user, user_values, email_updated) =
+        User::update_self_req(&data, id, user.into_inner()).await?;
     if email_updated {
-        Ok(HttpResponse::Accepted().json(UserResponse::from(user)))
+        Ok(HttpResponse::Accepted().json(UserResponse::build(user, user_values)))
     } else {
-        Ok(HttpResponse::Ok().json(UserResponse::from(user)))
+        Ok(HttpResponse::Ok().json(UserResponse::build(user, user_values)))
     }
 }
 
