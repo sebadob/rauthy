@@ -26,7 +26,6 @@
 		"oauth-pkce": "^0.0.6",
 		"prettier": "^3.0.0",
 		"prettier-plugin-svelte": "^3.0.0",
-		"sjcl": "^1.0.8",
 		"svelte": "^4.0.0",
 		"svelte-check": "^3.4.3",
 		"typescript": "^5.0.0",
