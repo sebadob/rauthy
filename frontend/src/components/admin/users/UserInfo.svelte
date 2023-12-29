@@ -56,13 +56,16 @@
         email: yup.string().required('E-Mail is required').email("Bad E-Mail format"),
         given_name: yup.string().trim().required('Given Name is required').matches(REGEX_NAME, 'Invalid characters'),
         family_name: yup.string().trim().required('Family Name is required').matches(REGEX_NAME, 'Invalid characters'),
+    });
 
-        birthdate: yup.string().trim().matches(REGEX_BIRTHDATE, 'Invalid characters'),
-        phone: yup.string().trim().matches(REGEX_PHONE, 'Format: +49...'),
-        street: yup.string().trim().matches(REGEX_STREET, 'Invalid characters'),
-        zip: yup.number().min(1000).max(999999),
-        city: yup.string().trim().matches(REGEX_CITY, 'Invalid characters'),
-        country: yup.string().trim().matches(REGEX_CITY, 'Invalid characters'),
+    let formErrorsValues = {};
+    const schemaValues = yup.object().shape({
+        birthdate: yup.string().nullable().trim().matches(REGEX_BIRTHDATE, 'Invalid characters'),
+        phone: yup.string().nullable().trim().matches(REGEX_PHONE, 'Format: +49...'),
+        street: yup.string().nullable().trim().matches(REGEX_STREET, 'Invalid characters'),
+        zip: yup.number().nullable().min(1000).max(999999),
+        city: yup.string().nullable().trim().matches(REGEX_CITY, 'Invalid characters'),
+        country: yup.string().nullable().trim().matches(REGEX_CITY, 'Invalid characters'),
     });
 
     onMount(() => {
@@ -120,14 +123,25 @@
     }
 
     async function validateForm() {
+        let isOk = true;
+
         try {
             await schema.validate(user, {abortEarly: false});
             formErrors = {};
-            return true;
         } catch (err) {
             formErrors = extractFormErrors(err);
-            return false;
+            isOk = false;
         }
+
+        try {
+            await schemaValues.validate(user.user_values, {abortEarly: false});
+            formErrorsValues = {};
+        } catch (err) {
+            formErrorsValues = extractFormErrors(err);
+            isOk = false;
+        }
+
+        return isOk;
     }
 </script>
 
@@ -168,6 +182,7 @@
     <Input
             type="email"
             bind:value={user.email}
+            bind:error={formErrors.email}
             autocomplete="off"
             placeholder="E-Mail"
             on:keypress={handleKeyPress}
@@ -179,6 +194,7 @@
     <!-- Given Name-->
     <Input
             bind:value={user.given_name}
+            bind:error={formErrors.given_name}
             autocomplete="off"
             placeholder="Given Name"
             on:keypress={handleKeyPress}
@@ -190,6 +206,7 @@
     <!-- Family Name-->
     <Input
             bind:value={user.family_name}
+            bind:error={formErrors.family_name}
             autocomplete="off"
             placeholder="Family Name"
             on:keypress={handleKeyPress}
@@ -211,6 +228,7 @@
     <!-- Street-->
     <Input
             bind:value={user.user_values.street}
+            bind:error={formErrorsValues.street}
             autocomplete="off"
             placeholder="Street"
             on:keypress={handleKeyPress}
@@ -223,6 +241,7 @@
     <Input
             type="number"
             bind:value={user.user_values.zip}
+            bind:error={formErrorsValues.zip}
             autocomplete="off"
             placeholder="ZIP"
             min={1000}
@@ -236,6 +255,7 @@
     <!-- City-->
     <Input
             bind:value={user.user_values.city}
+            bind:error={formErrorsValues.city}
             autocomplete="off"
             placeholder="City"
             on:keypress={handleKeyPress}
@@ -247,6 +267,7 @@
     <!-- Country-->
     <Input
             bind:value={user.user_values.country}
+            bind:error={formErrorsValues.country}
             autocomplete="off"
             placeholder="Country"
             on:keypress={handleKeyPress}
@@ -258,6 +279,7 @@
     <!-- Phone-->
     <Input
             bind:value={user.user_values.phone}
+            bind:error={formErrorsValues.phone}
             autocomplete="off"
             placeholder="Phone"
             on:keypress={handleKeyPress}
@@ -266,11 +288,11 @@
         PHONE
     </Input>
 
-    <!-- TODO change to date input-->
     <!-- Birthdate-->
     <Input
             type="date"
             bind:value={user.user_values.birthdate}
+            bind:error={formErrorsValues.birthdate}
             autocomplete="off"
             placeholder="Birthdate"
             on:keypress={handleKeyPress}

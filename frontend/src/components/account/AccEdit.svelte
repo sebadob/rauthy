@@ -1,7 +1,7 @@
 <script>
     import * as yup from "yup";
     import {extractFormErrors} from "../../utils/helpers.js";
-    import {REGEX_NAME} from "../../utils/constants.js";
+    import {REGEX_BIRTHDATE, REGEX_CITY, REGEX_NAME, REGEX_PHONE, REGEX_STREET} from "../../utils/constants.js";
     import Button from "$lib/Button.svelte";
     import {fade} from 'svelte/transition';
     import {putUserSelf} from "../../utils/dataFetching.js";
@@ -27,15 +27,20 @@
     let formErrors = {};
 
     const schema = yup.object().shape({
-        email: yup.string()
-            .required(t.validEmail)
-            .email(t.validEmail),
-        givenName: yup.string()
-            .required(t.validGivenName)
-            .matches(REGEX_NAME, t.validGivenName),
-        familyName: yup.string()
-            .required(t.validFamilyName)
-            .matches(REGEX_NAME, t.validFamilyName),
+        email: yup.string().required(t.validEmail).email(t.validEmail),
+        givenName: yup.string().required(t.validGivenName).matches(REGEX_NAME, t.validGivenName),
+        familyName: yup.string().required(t.validFamilyName).matches(REGEX_NAME, t.validFamilyName),
+    });
+
+    let formErrorsValues = {};
+    const schemaValues = yup.object().shape({
+        // TODO translations
+        birthdate: yup.string().nullable().trim().matches(REGEX_BIRTHDATE, 'Invalid characters'),
+        phone: yup.string().nullable().trim().matches(REGEX_PHONE, 'Format: +49...'),
+        street: yup.string().nullable().trim().matches(REGEX_STREET, 'Invalid characters'),
+        zip: yup.number().nullable().min(1000).max(999999),
+        city: yup.string().nullable().trim().matches(REGEX_CITY, 'Invalid characters'),
+        country: yup.string().nullable().trim().matches(REGEX_CITY, 'Invalid characters'),
     });
 
     function handleKeyPress(event) {
@@ -57,7 +62,12 @@
             email: formValues.email,
             given_name: formValues.givenName,
             family_name: formValues.familyName,
+            user_values: user.user_values,
         };
+
+        if (data.user_values.zip) {
+            data.user_values.zip = Number.parseInt(data.user_values.zip);
+        }
 
         let res = await putUserSelf(user.id, data);
         if (res.ok) {
@@ -78,14 +88,25 @@
     }
 
     async function validateForm() {
+        let isOk = true;
+
         try {
-            await schema.validate(formValues, {abortEarly: false});
+            await schema.validate(user, {abortEarly: false});
             formErrors = {};
-            return true;
         } catch (err) {
             formErrors = extractFormErrors(err);
-            return false;
+            isOk = false;
         }
+
+        try {
+            await schemaValues.validate(user.user_values, {abortEarly: false});
+            formErrorsValues = {};
+        } catch (err) {
+            formErrorsValues = extractFormErrors(err);
+            isOk = false;
+        }
+
+        return isOk;
     }
 
 </script>
@@ -121,6 +142,92 @@
                 width={inputWidth}
         >
             {t.familyName.toUpperCase()}
+        </Input>
+
+        <div style:margin=".5rem">
+            TODO TRANSLATE Optional Values
+        </div>
+
+        <!-- Street-->
+        <Input
+                bind:value={user.user_values.street}
+                bind:error={formErrorsValues.street}
+                autocomplete="street-address"
+                placeholder="Street"
+                on:keypress={handleKeyPress}
+                on:input={validateForm}
+                width={inputWidth}
+        >
+            STREET
+        </Input>
+
+        <!-- ZIP-->
+        <Input
+                type="number"
+                bind:value={user.user_values.zip}
+                bind:error={formErrorsValues.zip}
+                autocomplete="postal-code"
+                placeholder="ZIP"
+                min={1000}
+                max={999999}
+                on:keypress={handleKeyPress}
+                on:input={validateForm}
+                width={inputWidth}
+        >
+            ZIP
+        </Input>
+
+        <!-- City-->
+        <Input
+                bind:value={user.user_values.city}
+                bind:error={formErrorsValues.city}
+                autocomplete="adress-level2"
+                placeholder="City"
+                on:keypress={handleKeyPress}
+                on:input={validateForm}
+                width={inputWidth}
+        >
+            CITY
+        </Input>
+
+        <!-- Country-->
+        <Input
+                bind:value={user.user_values.country}
+                bind:error={formErrorsValues.country}
+                autocomplete="country"
+                placeholder="Country"
+                on:keypress={handleKeyPress}
+                on:input={validateForm}
+                width={inputWidth}
+        >
+            COUNTRY
+        </Input>
+
+        <!-- Phone-->
+        <Input
+                bind:value={user.user_values.phone}
+                bind:error={formErrorsValues.phone}
+                autocomplete="tel"
+                placeholder="Phone"
+                on:keypress={handleKeyPress}
+                on:input={validateForm}
+                width={inputWidth}
+        >
+            PHONE
+        </Input>
+
+        <!-- Birthdate-->
+        <Input
+                type="date"
+                bind:value={user.user_values.birthdate}
+                bind:error={formErrorsValues.birthdate}
+                autocomplete="bday"
+                placeholder="Birthdate"
+                on:keypress={handleKeyPress}
+                on:input={validateForm}
+                width={inputWidth}
+        >
+            BIRTHDATE
         </Input>
 
         <Button width={btnWidth} on:click={onSubmit} level={1} bind:isLoading>
