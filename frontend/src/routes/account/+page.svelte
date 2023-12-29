@@ -26,7 +26,6 @@
             }
 
             res = await getUserWebIdData(sessionInfo.user_id);
-            console.log(res.status);
             if (res.ok) {
                 webIdData = await res.json();
             } else if (res.status === 404) {

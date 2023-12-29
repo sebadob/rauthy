@@ -1,7 +1,7 @@
 <script>
     import * as yup from "yup";
     import {extractFormErrors} from "../../utils/helpers.js";
-    import {REGEX_NAME} from "../../utils/constants.js";
+    import {REGEX_BIRTHDATE, REGEX_CITY, REGEX_NAME, REGEX_PHONE, REGEX_STREET} from "../../utils/constants.js";
     import Button from "$lib/Button.svelte";
     import {fade} from 'svelte/transition';
     import {putUserSelf} from "../../utils/dataFetching.js";
@@ -12,7 +12,7 @@
     export let viewModePhone = false;
     $: inputWidth = viewModePhone ? 'calc(100vw - 1.5rem)' : '300px';
 
-    const btnWidth = "12rem";
+    const btnWidth = "8rem";
 
     let isLoading = false;
     let err = '';
@@ -27,15 +27,20 @@
     let formErrors = {};
 
     const schema = yup.object().shape({
-        email: yup.string()
-            .required(t.validEmail)
-            .email(t.validEmail),
-        givenName: yup.string()
-            .required(t.validGivenName)
-            .matches(REGEX_NAME, t.validGivenName),
-        familyName: yup.string()
-            .required(t.validFamilyName)
-            .matches(REGEX_NAME, t.validFamilyName),
+        email: yup.string().required(t.validEmail).email(t.validEmail),
+        givenName: yup.string().required(t.validGivenName).matches(REGEX_NAME, t.validGivenName),
+        familyName: yup.string().required(t.validFamilyName).matches(REGEX_NAME, t.validFamilyName),
+    });
+
+    let formErrorsValues = {};
+    const schemaValues = yup.object().shape({
+        // TODO translations
+        birthdate: yup.string().nullable().trim().matches(REGEX_BIRTHDATE, t.invalidInput),
+        phone: yup.string().nullable().trim().matches(REGEX_PHONE, '+...'),
+        street: yup.string().nullable().trim().matches(REGEX_STREET, t.invalidInput),
+        zip: yup.number().nullable().min(1000).max(999999),
+        city: yup.string().nullable().trim().matches(REGEX_CITY, t.invalidInput),
+        country: yup.string().nullable().trim().matches(REGEX_CITY, t.invalidInput),
     });
 
     function handleKeyPress(event) {
@@ -57,7 +62,15 @@
             email: formValues.email,
             given_name: formValues.givenName,
             family_name: formValues.familyName,
+            user_values: user.user_values,
         };
+
+        if (data.user_values.phone) {
+            data.user_values.phone = data.user_values.phone.replaceAll(' ', '');
+        }
+        if (data.user_values.zip) {
+            data.user_values.zip = Number.parseInt(data.user_values.zip);
+        }
 
         let res = await putUserSelf(user.id, data);
         if (res.ok) {
@@ -78,14 +91,25 @@
     }
 
     async function validateForm() {
+        let isOk = true;
+
         try {
             await schema.validate(formValues, {abortEarly: false});
             formErrors = {};
-            return true;
         } catch (err) {
             formErrors = extractFormErrors(err);
-            return false;
+            isOk = false;
         }
+
+        try {
+            await schemaValues.validate(user.user_values, {abortEarly: false});
+            formErrorsValues = {};
+        } catch (err) {
+            formErrorsValues = extractFormErrors(err);
+            isOk = false;
+        }
+
+        return isOk;
     }
 
 </script>
@@ -121,6 +145,92 @@
                 width={inputWidth}
         >
             {t.familyName.toUpperCase()}
+        </Input>
+
+        <div style:margin=".5rem">
+            {t.optionalValues}
+        </div>
+
+        <!-- Street-->
+        <Input
+                bind:value={user.user_values.street}
+                bind:error={formErrorsValues.street}
+                autocomplete="street-address"
+                placeholder={t.street}
+                on:keypress={handleKeyPress}
+                on:input={validateForm}
+                width={inputWidth}
+        >
+            {t.street.toUpperCase()}
+        </Input>
+
+        <!-- ZIP-->
+        <Input
+                type="number"
+                bind:value={user.user_values.zip}
+                bind:error={formErrorsValues.zip}
+                autocomplete="postal-code"
+                placeholder={t.zip}
+                min={1000}
+                max={999999}
+                on:keypress={handleKeyPress}
+                on:input={validateForm}
+                width={inputWidth}
+        >
+            {t.zip.toUpperCase()}
+        </Input>
+
+        <!-- City-->
+        <Input
+                bind:value={user.user_values.city}
+                bind:error={formErrorsValues.city}
+                autocomplete="adress-level2"
+                placeholder={t.city}
+                on:keypress={handleKeyPress}
+                on:input={validateForm}
+                width={inputWidth}
+        >
+            {t.city.toUpperCase()}
+        </Input>
+
+        <!-- Country-->
+        <Input
+                bind:value={user.user_values.country}
+                bind:error={formErrorsValues.country}
+                autocomplete="country"
+                placeholder={t.country}
+                on:keypress={handleKeyPress}
+                on:input={validateForm}
+                width={inputWidth}
+        >
+            {t.country.toUpperCase()}
+        </Input>
+
+        <!-- Phone-->
+        <Input
+                bind:value={user.user_values.phone}
+                bind:error={formErrorsValues.phone}
+                autocomplete="tel"
+                placeholder={t.phone}
+                on:keypress={handleKeyPress}
+                on:input={validateForm}
+                width={inputWidth}
+        >
+            {t.phone.toUpperCase()}
+        </Input>
+
+        <!-- Birthdate-->
+        <Input
+                type="date"
+                bind:value={user.user_values.birthdate}
+                bind:error={formErrorsValues.birthdate}
+                autocomplete="bday"
+                placeholder={t.birthdate}
+                on:keypress={handleKeyPress}
+                on:input={validateForm}
+                width={inputWidth}
+        >
+            {t.birthdate.toUpperCase()}
         </Input>
 
         <Button width={btnWidth} on:click={onSubmit} level={1} bind:isLoading>

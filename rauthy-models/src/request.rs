@@ -7,9 +7,9 @@ use actix_web::HttpRequest;
 use css_color::Srgb;
 use rauthy_common::constants::{
     RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_ALNUM_SPACE, RE_API_KEY, RE_APP_ID, RE_ATTR,
-    RE_ATTR_DESC, RE_CHALLENGE, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE,
-    RE_CODE_VERIFIER, RE_FLOWS, RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE, RE_LOWERCASE_SPACE,
-    RE_MFA_CODE, RE_URI, RE_USER_NAME,
+    RE_ATTR_DESC, RE_CHALLENGE, RE_CITY, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE,
+    RE_CODE_VERIFIER, RE_DATE_STR, RE_FLOWS, RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE,
+    RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_PHONE, RE_STREET, RE_URI, RE_USER_NAME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::base64_decode;
@@ -593,7 +593,6 @@ pub struct UpdateUserRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
     #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
     pub family_name: String,
-    // optional to not break the public API and need a new major release
     pub language: Option<Language>,
     /// Validation: Applies password policy
     pub password: Option<String>,
@@ -607,6 +606,8 @@ pub struct UpdateUserRequest {
     pub email_verified: bool,
     #[validate(range(min = 1672527600, max = 4070905200))]
     pub user_expires: Option<i64>,
+    #[validate]
+    pub user_values: Option<UserValuesRequest>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
@@ -620,12 +621,34 @@ pub struct UpdateUserSelfRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
     #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
     pub family_name: Option<String>,
-    // optional to not break the public API and need a new major release
     pub language: Option<Language>,
     pub password_current: Option<String>,
     pub mfa_code: Option<String>,
     /// Validation: Applies password policy
     pub password_new: Option<String>,
+    #[validate]
+    pub user_values: Option<UserValuesRequest>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+pub struct UserValuesRequest {
+    /// Validation: `[0-9]{4}-[0-9]{2}-[0-9]{2}`
+    #[validate(regex(path = "RE_DATE_STR", code = "[0-9]{4}-[0-9]{2}-[0-9]{2}"))]
+    pub birthdate: Option<String>,
+    /// Validation: `+[0-9]{0,32}`
+    #[validate(regex(path = "RE_PHONE", code = "+[0-9]{0,32}"))]
+    pub phone: Option<String>,
+    /// Validation: `[a-zA-Z0-9À-ÿ-.\s]{0,48}`
+    #[validate(regex(path = "RE_STREET", code = "[a-zA-Z0-9À-ÿ-.\\s]{0,48}"))]
+    pub street: Option<String>,
+    #[validate(range(min = 1000, max = 9999999))]
+    pub zip: Option<i32>,
+    /// Validation: `[a-zA-Z0-9À-ÿ-]{0,48}`
+    #[validate(regex(path = "RE_CITY", code = "[a-zA-Z0-9À-ÿ-]{0,48}"))]
+    pub city: Option<String>,
+    /// Validation: `[a-zA-Z0-9À-ÿ-]{0,48}`
+    #[validate(regex(path = "RE_CITY", code = "[a-zA-Z0-9À-ÿ-]{0,48}"))]
+    pub country: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
@@ -648,6 +671,7 @@ pub struct UserAttrValueRequest {
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct UserAttrValuesUpdateRequest {
+    #[validate]
     pub values: Vec<UserAttrValueRequest>,
 }
 

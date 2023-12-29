@@ -4,12 +4,19 @@
         extractFormErrors,
         formatDateFromTs,
         formatDateToDateInput,
-        formatUtcTsFromDateInput
+        formatUtcTsFromDateInput, redirectToLogin
     } from "../../../utils/helpers.js";
     import Switch from "$lib/Switch.svelte";
     import {globalGroupsNames, globalRolesNames} from "../../../stores/admin.js";
     import Button from "$lib/Button.svelte";
-    import {LANGUAGES, REGEX_NAME} from "../../../utils/constants.js";
+    import {
+        LANGUAGES,
+        REGEX_BIRTHDATE,
+        REGEX_CITY,
+        REGEX_NAME,
+        REGEX_PHONE,
+        REGEX_STREET
+    } from "../../../utils/constants.js";
     import {putUser} from "../../../utils/dataFetchingAdmin.js";
     import {onMount} from "svelte";
     import CheckIcon from "$lib/CheckIcon.svelte";
@@ -20,7 +27,6 @@
     export let user = {};
     export let onSave;
 
-    let isLoading = false;
     let err = '';
     let success = false;
     let timer;
@@ -45,15 +51,25 @@
         }, 3000);
     }
 
-    onMount(() => {
-        return () => clearTimeout(timer);
-    });
-
     let formErrors = {};
     const schema = yup.object().shape({
         email: yup.string().required('E-Mail is required').email("Bad E-Mail format"),
         given_name: yup.string().trim().required('Given Name is required').matches(REGEX_NAME, 'Invalid characters'),
         family_name: yup.string().trim().required('Family Name is required').matches(REGEX_NAME, 'Invalid characters'),
+    });
+
+    let formErrorsValues = {};
+    const schemaValues = yup.object().shape({
+        birthdate: yup.string().nullable().trim().matches(REGEX_BIRTHDATE, 'Invalid characters'),
+        phone: yup.string().nullable().trim().matches(REGEX_PHONE, 'Format: +...'),
+        street: yup.string().nullable().trim().matches(REGEX_STREET, 'Invalid characters'),
+        zip: yup.number().nullable().min(1000).max(999999),
+        city: yup.string().nullable().trim().matches(REGEX_CITY, 'Invalid characters'),
+        country: yup.string().nullable().trim().matches(REGEX_CITY, 'Invalid characters'),
+    });
+
+    onMount(() => {
+        return () => clearTimeout(timer);
     });
 
     function handleKeyPress(event) {
@@ -62,14 +78,15 @@
         }
     }
 
+    // TODO update submit
     async function onSubmit() {
         const valid = await validateForm();
         if (!valid) {
             return;
         }
         err = '';
-        isLoading = true;
 
+        console.log(user.user_values);
         const req = {
             email: user.email,
             given_name: user.given_name,
@@ -80,7 +97,15 @@
             enabled: user.enabled,
             email_verified: user.email_verified,
             user_expires: null,
+            user_values: user.user_values,
         };
+
+        if (req.user_values.phone) {
+            req.user_values.phone = req.user_values.phone.replaceAll(' ', '');
+        }
+        if (req.user_values.zip) {
+            req.user_values.zip = Number.parseInt(req.user_values.zip);
+        }
 
         if (limitLifetime) {
             let d = formatUtcTsFromDateInput(userExpires);
@@ -98,18 +123,28 @@
             let body = await res.json();
             err = body.message;
         }
-        isLoading = false;
     }
 
     async function validateForm() {
+        let isOk = true;
+
         try {
             await schema.validate(user, {abortEarly: false});
             formErrors = {};
-            return true;
         } catch (err) {
             formErrors = extractFormErrors(err);
-            return false;
+            isOk = false;
         }
+
+        try {
+            await schemaValues.validate(user.user_values, {abortEarly: false});
+            formErrorsValues = {};
+        } catch (err) {
+            formErrorsValues = extractFormErrors(err);
+            isOk = false;
+        }
+
+        return isOk;
     }
 </script>
 
@@ -150,6 +185,7 @@
     <Input
             type="email"
             bind:value={user.email}
+            bind:error={formErrors.email}
             autocomplete="off"
             placeholder="E-Mail"
             on:keypress={handleKeyPress}
@@ -161,6 +197,7 @@
     <!-- Given Name-->
     <Input
             bind:value={user.given_name}
+            bind:error={formErrors.given_name}
             autocomplete="off"
             placeholder="Given Name"
             on:keypress={handleKeyPress}
@@ -172,6 +209,7 @@
     <!-- Family Name-->
     <Input
             bind:value={user.family_name}
+            bind:error={formErrors.family_name}
             autocomplete="off"
             placeholder="Family Name"
             on:keypress={handleKeyPress}
@@ -189,6 +227,82 @@
             <OptionSelect bind:value={language} options={LANGUAGES} />
         </div>
     </div>
+
+    <!-- Street-->
+    <Input
+            bind:value={user.user_values.street}
+            bind:error={formErrorsValues.street}
+            autocomplete="off"
+            placeholder="Street"
+            on:keypress={handleKeyPress}
+            on:input={validateForm}
+    >
+        STREET
+    </Input>
+
+    <!-- ZIP-->
+    <Input
+            type="number"
+            bind:value={user.user_values.zip}
+            bind:error={formErrorsValues.zip}
+            autocomplete="off"
+            placeholder="ZIP"
+            min={1000}
+            max={999999}
+            on:keypress={handleKeyPress}
+            on:input={validateForm}
+    >
+        ZIP
+    </Input>
+
+    <!-- City-->
+    <Input
+            bind:value={user.user_values.city}
+            bind:error={formErrorsValues.city}
+            autocomplete="off"
+            placeholder="City"
+            on:keypress={handleKeyPress}
+            on:input={validateForm}
+    >
+        CITY
+    </Input>
+
+    <!-- Country-->
+    <Input
+            bind:value={user.user_values.country}
+            bind:error={formErrorsValues.country}
+            autocomplete="off"
+            placeholder="Country"
+            on:keypress={handleKeyPress}
+            on:input={validateForm}
+    >
+        COUNTRY
+    </Input>
+
+    <!-- Phone-->
+    <Input
+            bind:value={user.user_values.phone}
+            bind:error={formErrorsValues.phone}
+            autocomplete="off"
+            placeholder="Phone"
+            on:keypress={handleKeyPress}
+            on:input={validateForm}
+    >
+        PHONE
+    </Input>
+
+    <!-- Birthdate-->
+    <Input
+            type="date"
+            bind:value={user.user_values.birthdate}
+            bind:error={formErrorsValues.birthdate}
+            autocomplete="off"
+            placeholder="Birthdate"
+            on:keypress={handleKeyPress}
+            on:input={validateForm}
+    >
+        BIRTHDATE
+    </Input>
 
     <!-- Roles-->
     <div class="unit" style:margin-top="-3px">

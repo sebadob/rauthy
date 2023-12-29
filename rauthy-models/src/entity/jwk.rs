@@ -536,7 +536,7 @@ impl JwkKeyPair {
             panic!("No latest JWK found - database corrupted?");
         }
 
-        let jwk = JwkKeyPair::decrypt(jwks.get(0).unwrap(), key_pair_type)?;
+        let jwk = JwkKeyPair::decrypt(jwks.first().unwrap(), key_pair_type)?;
 
         cache_put(
             CACHE_NAME_12HR.to_string(),

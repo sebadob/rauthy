@@ -111,6 +111,7 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         enabled: true,
         email_verified: false,
         user_expires: None,
+        user_values: None,
     };
     let user_url = format!("{}/{}", url, user.id);
     let mut res = reqwest::Client::new()

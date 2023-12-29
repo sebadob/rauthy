@@ -8,6 +8,7 @@ use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
+use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
 use crate::events::event::Event;
 use crate::language::Language;
@@ -302,12 +303,10 @@ impl User {
         let now = OffsetDateTime::now_utc()
             .add(time::Duration::seconds(10))
             .unix_timestamp();
-        tracing::debug!("User::find_expired - now: {}", now);
         let res = sqlx::query_as::<_, Self>("select * from users where user_expires < $1")
             .bind(now)
             .fetch_all(&data.db)
             .await?;
-        tracing::debug!("User::find_expired - users: {:?}", res);
         Ok(res)
     }
 
@@ -420,7 +419,7 @@ impl User {
         id: String,
         mut upd_user: UpdateUserRequest,
         user: Option<User>,
-    ) -> Result<(User, bool), ErrorResponse> {
+    ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
         let mut user = match user {
             None => User::find(data, id).await?,
             Some(user) => user,
@@ -484,7 +483,15 @@ impl User {
         }
 
         let is_new_admin = !is_admin_before_update && user.is_admin();
-        Ok((user, is_new_admin))
+
+        // finally, update the custom users values
+        let user_values = if let Some(values) = upd_user.user_values {
+            UserValues::upsert(data, user.id.clone(), values).await?
+        } else {
+            None
+        };
+
+        Ok((user, user_values, is_new_admin))
     }
 
     pub async fn update_language(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
@@ -504,7 +511,7 @@ impl User {
         data: &web::Data<AppState>,
         id: String,
         upd_user: UpdateUserSelfRequest,
-    ) -> Result<(User, bool), ErrorResponse> {
+    ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
         let user = User::find(data, id.clone()).await?;
 
         let mut password = None;
@@ -579,11 +586,12 @@ impl User {
             enabled: user.enabled,
             email_verified: user.email_verified,
             user_expires: user.user_expires,
+            user_values: upd_user.user_values,
         };
 
         // a user cannot become a new admin from a self-req
-        let (user, _is_new_admin) = User::update(data, id, req, Some(user)).await?;
-        Ok((user, email_updated))
+        let (user, user_values, _is_new_admin) = User::update(data, id, req, Some(user)).await?;
+        Ok((user, user_values, email_updated))
     }
 
     /// Converts a user account from as password account type to passkey only with all necessary

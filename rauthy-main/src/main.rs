@@ -11,7 +11,7 @@ use prometheus::Registry;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_DPOP_NONCES, CACHE_NAME_EPHEMERAL_CLIENTS,
     CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW, CACHE_NAME_SESSIONS, CACHE_NAME_USERS,
-    CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, DPOP_NONCE_EXP,
+    CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, DPOP_NONCE_EXP, ENABLE_WEB_ID,
     EPHEMERAL_CLIENTS_CACHE_LIFETIME, POW_EXP, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL,
     SWAGGER_UI_INTERNAL, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
@@ -186,15 +186,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
 
     // sessions
+    let sessions_lifetime = env::var("SESSION_LIFETIME")
+        .unwrap_or_else(|_| String::from("14400"))
+        .trim()
+        .parse::<u64>()
+        .expect("SESSION_LIFETIME cannot be parsed to u64 - bad format");
     cache_config.spawn_cache(
         CACHE_NAME_SESSIONS.to_string(),
-        redhac::TimedCache::with_lifespan(
-            env::var("SESSION_LIFETIME")
-                .unwrap_or_else(|_| String::from("14400"))
-                .trim()
-                .parse::<u64>()
-                .expect("SESSION_LIFETIME cannot be parsed to u64 - bad format"),
-        ),
+        redhac::TimedCache::with_lifespan(sessions_lifetime),
         Some(64),
     );
 
@@ -206,20 +205,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
 
     // Users
+    let users_lifespan = env::var("CACHE_USERS_LIFESPAN")
+        .unwrap_or_else(|_| String::from("28800"))
+        .trim()
+        .parse::<u64>()
+        .expect("CACHE_USERS_LIFESPAN cannot be parsed to u64 - bad format");
+    let users_size = env::var("CACHE_USERS_SIZE")
+        .unwrap_or_else(|_| String::from("100"))
+        .trim()
+        .parse::<usize>()
+        .expect("CACHE_USERS_SIZE cannot be parsed to usize - bad format");
+    // We need to multiply the possible cache entries here, since not only user entities will
+    // be saved inside this cache, but also custom attributes, web_id's and custom users_values
+    let users_size_adjust = if *ENABLE_WEB_ID {
+        users_size * 4
+    } else {
+        users_size * 3
+    };
     cache_config.spawn_cache(
         CACHE_NAME_USERS.to_string(),
-        redhac::TimedCache::with_lifespan_and_capacity(
-            env::var("CACHE_USERS_LIFESPAN")
-                .unwrap_or_else(|_| String::from("28800"))
-                .trim()
-                .parse::<u64>()
-                .expect("CACHE_USERS_LIFESPAN cannot be parsed to u64 - bad format"),
-            env::var("CACHE_USERS_SIZE")
-                .unwrap_or_else(|_| String::from("100"))
-                .trim()
-                .parse::<usize>()
-                .expect("CACHE_USERS_SIZE cannot be parsed to usize - bad format"),
-        ),
+        redhac::TimedCache::with_lifespan_and_capacity(users_lifespan, users_size_adjust),
         Some(16),
     );
 

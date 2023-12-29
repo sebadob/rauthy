@@ -2,7 +2,7 @@ use crate::common::{get_auth_headers, get_backend_url};
 use pretty_assertions::assert_eq;
 use rauthy_models::language::Language;
 use rauthy_models::request::NewUserRequest;
-use rauthy_models::response::UserResponse;
+use rauthy_models::response::{UserResponse, UserResponseSimple};
 use std::error::Error;
 
 mod common;
@@ -20,7 +20,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
 
-    let users = res.json::<Vec<UserResponse>>().await?;
+    let users = res.json::<Vec<UserResponseSimple>>().await?;
     assert_eq!(users.len(), 3);
 
     // post a new user
@@ -109,7 +109,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
 
-    let users = res.json::<Vec<UserResponse>>().await?;
+    let users = res.json::<Vec<UserResponseSimple>>().await?;
     assert_eq!(users.len(), 3);
 
     Ok(())

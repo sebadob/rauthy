@@ -22,6 +22,7 @@ pub mod scopes;
 pub mod sessions;
 pub mod user_attr;
 pub mod users;
+pub mod users_values;
 pub mod webauthn;
 pub mod webids;
 pub mod well_known;
