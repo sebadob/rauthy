@@ -10,7 +10,6 @@ import {
 	POST_LOGOUT_REDIRECT_URI,
 	REDIRECT_URI
 } from "./constants.js";
-import sjcl from "sjcl";
 import { decode, encode } from "base64-arraybuffer";
 
 export function buidlWebIdUri(userId) {
