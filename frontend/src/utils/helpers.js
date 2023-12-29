@@ -23,7 +23,8 @@ export function extractFormErrors(err) {
 }
 
 export function isDefaultScope(name) {
-	return name === 'openid' || name === 'profile' || name === 'email' || name === 'groups';
+	return name === 'openid' || name === 'profile' || name === 'email' || name === 'groups'
+		|| name === 'address' || name === 'phone';
 }
 
 export const redirectToLogin = (state) => {

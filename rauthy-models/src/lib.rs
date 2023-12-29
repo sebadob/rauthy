@@ -3,12 +3,15 @@
 #![forbid(unsafe_code)]
 
 use crate::entity::sessions::Session;
+use crate::entity::users::User;
+use crate::entity::users_values::UserValues;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::HttpRequest;
 use rauthy_common::constants::PROXY_MODE;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt::Write;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use utoipa::ToSchema;
@@ -85,6 +88,63 @@ pub struct JktClaim {
     pub jkt: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct AddressClaim {
+    pub formatted: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub street_address: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub locality: Option<String>,
+    // pub region: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub postal_code: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub country: Option<String>,
+}
+
+impl AddressClaim {
+    pub fn try_build(user: &User, values: &UserValues) -> Option<Self> {
+        let mut slf = Self {
+            formatted: format!("{} {}\n", user.given_name, user.family_name),
+            street_address: None,
+            locality: None,
+            postal_code: None,
+            country: None,
+        };
+
+        if let Some(street) = &values.street {
+            writeln!(slf.formatted, "{}", street).expect("AddressClaim to build");
+            slf.street_address = Some(street.clone());
+        }
+
+        if let Some(zip) = values.zip {
+            slf.postal_code = Some(zip);
+
+            if let Some(city) = &values.city {
+                writeln!(slf.formatted, "{}, {}", zip, city).expect("AddressClaim to build");
+                slf.locality = Some(city.clone());
+            } else {
+                writeln!(slf.formatted, "{}", zip).expect("AddressClaim to build");
+            }
+        }
+
+        if let Some(country) = &values.country {
+            writeln!(slf.formatted, "{}", country).expect("AddressClaim to build");
+            slf.country = Some(country.clone());
+        }
+
+        if slf.street_address.is_some()
+            || slf.locality.is_some()
+            || slf.postal_code.is_some()
+            || slf.country.is_some()
+        {
+            Some(slf)
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JwtAccessClaims {
     pub typ: JwtTokenType,
@@ -120,6 +180,14 @@ pub struct JwtIdClaims {
     pub given_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub family_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address: Option<AddressClaim>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub birthdate: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub locale: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone: Option<String>,
     pub roles: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub groups: Option<Vec<String>>,

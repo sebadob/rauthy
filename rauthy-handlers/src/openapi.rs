@@ -211,6 +211,7 @@ use utoipa::{openapi, OpenApi};
             response::WebauthnLoginResponse,
             response::WebIdResponse,
 
+            rauthy_models::AddressClaim,
             rauthy_models::JktClaim,
             token_set::TokenSet,
         ),

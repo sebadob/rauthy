@@ -51,15 +51,30 @@ You can now set the upper limit and the lifespan for cached user's. This is one 
 optimizations, since Rauthy gets closer to the first v1.0.0 release:
 
 ```
-# The max cache size for users. If you can afford it memory-wise,
-# make it possible to fit all active users inside the cache.
+# The max cache size for users. If you can afford it memory-wise, make it possible to fit
+# all active users inside the cache.
+# The cache size you provide here should roughly match the amount of users you want to be able
+# to cache actively. Depending on your setup (WebIDs, custom attributes, ...), this number
+# will be multiplied internally  by 3 or 4 to create multiple cache entries for each user.
 # default: 100
 CACHE_USERS_SIZE=100
-# The lifespan of the users cache in seconds. Cache eviction on
-# updates will be handled automatically.
+
+# The lifespan of the users cache in seconds. Cache eviction on updates will be handled automatically.
 # default: 28800
 CACHE_USERS_LIFESPAN=28800
 ```
+
+### Additional claims available in ID tokens
+
+The scope `profile` now additionally adds the following claims to the ID token (if they exist for the user):
+- `locale`
+- `birthdate`
+
+The new scope `address` adds:
+- `address` in JSON format
+
+  The new scope `phone` adds:
+- `phone`
 
 ### Changes
 
@@ -88,12 +103,16 @@ but also even encryption algorithm encryptions really easy in the future.
 [38a2a52](https://github.com/sebadob/rauthy/commit/38a2a52fe6530cf4efdedfe96d2b3041959fcd3d)
 - push users into their own, separate, configurable cache
 [3137927](https://github.com/sebadob/rauthy/commit/31379278440ec6ddaf1a2288ba3950ab60994963)
+- add additional user values matching OIDC default claims
+[fca0c13](https://github.com/sebadob/rauthy/commit/fca0c1306624bdffa112ad8239e381064cb0b843)
 
 ### Bugfixes
 
 - A visual bugfix appeared on Apple systems because of the slightly bigger font size. This made
 the live events look a bit ugly and characters jumping in a line where they should never end up.
 [3b56b50](https://github.com/sebadob/rauthy/commit/3b56b50f4f24b7707c522934f9c03714703c64ad)
+- An incorrect URL has been returned for the `end_session_endpoint` in the OIDC metadata
+[]()
 
 ## v0.19.2
 
