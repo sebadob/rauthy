@@ -94,7 +94,7 @@ impl WellKnown {
         let token_endpoint = format!("{}/oidc/token", issuer);
         let introspection_endpoint = format!("{}/oidc/tokenInfo", issuer);
         let userinfo_endpoint = format!("{}/oidc/userinfo", issuer);
-        let end_session_endpoint = format!("{}/oidc/userinfo", issuer);
+        let end_session_endpoint = format!("{}/oidc/logout", issuer);
         let jwks_uri = format!("{}/oidc/certs", issuer);
         let grant_types_supported = vec![
             "authorization_code".to_string(),
