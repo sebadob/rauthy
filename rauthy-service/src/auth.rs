@@ -677,7 +677,6 @@ fn get_bearer_token_from_header(headers: &HeaderMap) -> Result<String, ErrorResp
 }
 
 /// Returns the 'userInfo' for the [/oidc/userinfo endpoint](crate::handlers::get_userinfo)<br>
-/// **Important: This function does NOT validate the token again!**
 pub async fn get_userinfo(
     data: &web::Data<AppState>,
     req: HttpRequest,
@@ -685,7 +684,6 @@ pub async fn get_userinfo(
     // get bearer token
     let bearer = get_bearer_token_from_header(req.headers())?;
 
-    // token should already be validated in the permission extractor
     let claims = validate_token::<JwtCommonClaims>(data, &bearer).await?;
 
     let email = claims.subject.ok_or_else(|| {
