@@ -420,7 +420,7 @@ pub struct UserResponse {
     pub user_expires: Option<i64>,
     pub account_type: UserAccountTypeResponse,
     pub webauthn_user_id: Option<String>, // TODO get rid of the webauthn user id ? Not needed at all?
-    pub users_values: Option<UserValuesResponse>,
+    pub user_values: UserValuesResponse,
 }
 
 impl UserResponse {
@@ -451,7 +451,7 @@ impl UserResponse {
             user_expires: u.user_expires,
             account_type,
             webauthn_user_id: u.webauthn_user_id,
-            users_values: v.map(UserValuesResponse::from),
+            user_values: v.map(UserValuesResponse::from).unwrap_or_default(),
         }
     }
 }
@@ -471,7 +471,7 @@ impl From<User> for UserResponseSimple {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
 pub struct UserValuesResponse {
     pub birthdate: Option<String>,
     pub phone: Option<String>,

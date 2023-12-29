@@ -9,7 +9,14 @@
     import Switch from "$lib/Switch.svelte";
     import {globalGroupsNames, globalRolesNames} from "../../../stores/admin.js";
     import Button from "$lib/Button.svelte";
-    import {LANGUAGES, REGEX_NAME} from "../../../utils/constants.js";
+    import {
+        LANGUAGES,
+        REGEX_BIRTHDATE,
+        REGEX_CITY,
+        REGEX_NAME,
+        REGEX_PHONE,
+        REGEX_STREET
+    } from "../../../utils/constants.js";
     import {putUser} from "../../../utils/dataFetchingAdmin.js";
     import {onMount} from "svelte";
     import CheckIcon from "$lib/CheckIcon.svelte";
@@ -49,6 +56,13 @@
         email: yup.string().required('E-Mail is required').email("Bad E-Mail format"),
         given_name: yup.string().trim().required('Given Name is required').matches(REGEX_NAME, 'Invalid characters'),
         family_name: yup.string().trim().required('Family Name is required').matches(REGEX_NAME, 'Invalid characters'),
+
+        birthdate: yup.string().trim().matches(REGEX_BIRTHDATE, 'Invalid characters'),
+        phone: yup.string().trim().matches(REGEX_PHONE, 'Format: +49...'),
+        street: yup.string().trim().matches(REGEX_STREET, 'Invalid characters'),
+        zip: yup.number().min(1000).max(999999),
+        city: yup.string().trim().matches(REGEX_CITY, 'Invalid characters'),
+        country: yup.string().trim().matches(REGEX_CITY, 'Invalid characters'),
     });
 
     onMount(() => {
@@ -61,14 +75,15 @@
         }
     }
 
+    // TODO update submit
     async function onSubmit() {
         const valid = await validateForm();
         if (!valid) {
             return;
         }
         err = '';
-        isLoading = true;
 
+        console.log(user.user_values);
         const req = {
             email: user.email,
             given_name: user.given_name,
@@ -79,7 +94,12 @@
             enabled: user.enabled,
             email_verified: user.email_verified,
             user_expires: null,
+            user_values: user.user_values,
         };
+
+        if (req.user_values.zip) {
+            req.user_values.zip = Number.parseInt(req.user_values.zip);
+        }
 
         if (limitLifetime) {
             let d = formatUtcTsFromDateInput(userExpires);
@@ -97,7 +117,6 @@
             let body = await res.json();
             err = body.message;
         }
-        isLoading = false;
     }
 
     async function validateForm() {
@@ -188,6 +207,77 @@
             <OptionSelect bind:value={language} options={LANGUAGES} />
         </div>
     </div>
+
+    <!-- Street-->
+    <Input
+            bind:value={user.user_values.street}
+            autocomplete="off"
+            placeholder="Street"
+            on:keypress={handleKeyPress}
+            on:input={validateForm}
+    >
+        STREET
+    </Input>
+
+    <!-- ZIP-->
+    <Input
+            type="number"
+            bind:value={user.user_values.zip}
+            autocomplete="off"
+            placeholder="ZIP"
+            min={1000}
+            max={999999}
+            on:keypress={handleKeyPress}
+            on:input={validateForm}
+    >
+        ZIP
+    </Input>
+
+    <!-- City-->
+    <Input
+            bind:value={user.user_values.city}
+            autocomplete="off"
+            placeholder="City"
+            on:keypress={handleKeyPress}
+            on:input={validateForm}
+    >
+        CITY
+    </Input>
+
+    <!-- Country-->
+    <Input
+            bind:value={user.user_values.country}
+            autocomplete="off"
+            placeholder="Country"
+            on:keypress={handleKeyPress}
+            on:input={validateForm}
+    >
+        COUNTRY
+    </Input>
+
+    <!-- Phone-->
+    <Input
+            bind:value={user.user_values.phone}
+            autocomplete="off"
+            placeholder="Phone"
+            on:keypress={handleKeyPress}
+            on:input={validateForm}
+    >
+        PHONE
+    </Input>
+
+    <!-- TODO change to date input-->
+    <!-- Birthdate-->
+    <Input
+            type="date"
+            bind:value={user.user_values.birthdate}
+            autocomplete="off"
+            placeholder="Birthdate"
+            on:keypress={handleKeyPress}
+            on:input={validateForm}
+    >
+        BIRTHDATE
+    </Input>
 
     <!-- Roles-->
     <div class="unit" style:margin-top="-3px">
