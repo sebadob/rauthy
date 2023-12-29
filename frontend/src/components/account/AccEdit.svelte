@@ -12,7 +12,7 @@
     export let viewModePhone = false;
     $: inputWidth = viewModePhone ? 'calc(100vw - 1.5rem)' : '300px';
 
-    const btnWidth = "12rem";
+    const btnWidth = "8rem";
 
     let isLoading = false;
     let err = '';
@@ -35,12 +35,12 @@
     let formErrorsValues = {};
     const schemaValues = yup.object().shape({
         // TODO translations
-        birthdate: yup.string().nullable().trim().matches(REGEX_BIRTHDATE, 'Invalid characters'),
-        phone: yup.string().nullable().trim().matches(REGEX_PHONE, 'Format: +49...'),
-        street: yup.string().nullable().trim().matches(REGEX_STREET, 'Invalid characters'),
+        birthdate: yup.string().nullable().trim().matches(REGEX_BIRTHDATE, t.invalidInput),
+        phone: yup.string().nullable().trim().matches(REGEX_PHONE, '+...'),
+        street: yup.string().nullable().trim().matches(REGEX_STREET, t.invalidInput),
         zip: yup.number().nullable().min(1000).max(999999),
-        city: yup.string().nullable().trim().matches(REGEX_CITY, 'Invalid characters'),
-        country: yup.string().nullable().trim().matches(REGEX_CITY, 'Invalid characters'),
+        city: yup.string().nullable().trim().matches(REGEX_CITY, t.invalidInput),
+        country: yup.string().nullable().trim().matches(REGEX_CITY, t.invalidInput),
     });
 
     function handleKeyPress(event) {
@@ -65,6 +65,9 @@
             user_values: user.user_values,
         };
 
+        if (data.user_values.phone) {
+            data.user_values.phone = data.user_values.phone.replaceAll(' ', '');
+        }
         if (data.user_values.zip) {
             data.user_values.zip = Number.parseInt(data.user_values.zip);
         }
@@ -91,7 +94,7 @@
         let isOk = true;
 
         try {
-            await schema.validate(user, {abortEarly: false});
+            await schema.validate(formValues, {abortEarly: false});
             formErrors = {};
         } catch (err) {
             formErrors = extractFormErrors(err);
@@ -145,7 +148,7 @@
         </Input>
 
         <div style:margin=".5rem">
-            TODO TRANSLATE Optional Values
+            {t.optionalValues}
         </div>
 
         <!-- Street-->
@@ -153,12 +156,12 @@
                 bind:value={user.user_values.street}
                 bind:error={formErrorsValues.street}
                 autocomplete="street-address"
-                placeholder="Street"
+                placeholder={t.street}
                 on:keypress={handleKeyPress}
                 on:input={validateForm}
                 width={inputWidth}
         >
-            STREET
+            {t.street.toUpperCase()}
         </Input>
 
         <!-- ZIP-->
@@ -167,14 +170,14 @@
                 bind:value={user.user_values.zip}
                 bind:error={formErrorsValues.zip}
                 autocomplete="postal-code"
-                placeholder="ZIP"
+                placeholder={t.zip}
                 min={1000}
                 max={999999}
                 on:keypress={handleKeyPress}
                 on:input={validateForm}
                 width={inputWidth}
         >
-            ZIP
+            {t.zip.toUpperCase()}
         </Input>
 
         <!-- City-->
@@ -182,12 +185,12 @@
                 bind:value={user.user_values.city}
                 bind:error={formErrorsValues.city}
                 autocomplete="adress-level2"
-                placeholder="City"
+                placeholder={t.city}
                 on:keypress={handleKeyPress}
                 on:input={validateForm}
                 width={inputWidth}
         >
-            CITY
+            {t.city.toUpperCase()}
         </Input>
 
         <!-- Country-->
@@ -195,12 +198,12 @@
                 bind:value={user.user_values.country}
                 bind:error={formErrorsValues.country}
                 autocomplete="country"
-                placeholder="Country"
+                placeholder={t.country}
                 on:keypress={handleKeyPress}
                 on:input={validateForm}
                 width={inputWidth}
         >
-            COUNTRY
+            {t.country.toUpperCase()}
         </Input>
 
         <!-- Phone-->
@@ -208,12 +211,12 @@
                 bind:value={user.user_values.phone}
                 bind:error={formErrorsValues.phone}
                 autocomplete="tel"
-                placeholder="Phone"
+                placeholder={t.phone}
                 on:keypress={handleKeyPress}
                 on:input={validateForm}
                 width={inputWidth}
         >
-            PHONE
+            {t.phone.toUpperCase()}
         </Input>
 
         <!-- Birthdate-->
@@ -222,12 +225,12 @@
                 bind:value={user.user_values.birthdate}
                 bind:error={formErrorsValues.birthdate}
                 autocomplete="bday"
-                placeholder="Birthdate"
+                placeholder={t.birthdate}
                 on:keypress={handleKeyPress}
                 on:input={validateForm}
                 width={inputWidth}
         >
-            BIRTHDATE
+            {t.birthdate.toUpperCase()}
         </Input>
 
         <Button width={btnWidth} on:click={onSubmit} level={1} bind:isLoading>

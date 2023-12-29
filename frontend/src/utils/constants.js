@@ -12,8 +12,8 @@ export const REDIRECT_URI_SUCCESS_ACC = '/auth/v1/account';
 export const POST_LOGOUT_REDIRECT_URI = '/auth/v1/';
 
 export const REGEX_BIRTHDATE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/gm;
-export const REGEX_PHONE = /^\+[0-9]{0,32}$/gm;
-export const REGEX_STREET = /^[a-zA-Z0-9À-ÿ-\s]{0,48}$/gm;
+export const REGEX_PHONE = /^\+[0-9\s]{0,32}$/gm;
+export const REGEX_STREET = /^[a-zA-Z0-9À-ÿ-.\s]{0,48}$/gm;
 export const REGEX_CITY = /^[a-zA-Z0-9À-ÿ-]{0,48}$/gm;
 export const REGEX_API_KEY = /^[a-zA-Z0-9_/-]{2,24}$/gm;
 export const REGEX_NAME = /^[\w\sÀ-ÿ\-]{0,32}$/gm;

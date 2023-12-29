@@ -61,7 +61,7 @@
     let formErrorsValues = {};
     const schemaValues = yup.object().shape({
         birthdate: yup.string().nullable().trim().matches(REGEX_BIRTHDATE, 'Invalid characters'),
-        phone: yup.string().nullable().trim().matches(REGEX_PHONE, 'Format: +49...'),
+        phone: yup.string().nullable().trim().matches(REGEX_PHONE, 'Format: +...'),
         street: yup.string().nullable().trim().matches(REGEX_STREET, 'Invalid characters'),
         zip: yup.number().nullable().min(1000).max(999999),
         city: yup.string().nullable().trim().matches(REGEX_CITY, 'Invalid characters'),
@@ -100,6 +100,9 @@
             user_values: user.user_values,
         };
 
+        if (req.user_values.phone) {
+            req.user_values.phone = req.user_values.phone.replaceAll(' ', '');
+        }
         if (req.user_values.zip) {
             req.user_values.zip = Number.parseInt(req.user_values.zip);
         }

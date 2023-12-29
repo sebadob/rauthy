@@ -606,6 +606,7 @@ pub struct UpdateUserRequest {
     pub email_verified: bool,
     #[validate(range(min = 1672527600, max = 4070905200))]
     pub user_expires: Option<i64>,
+    #[validate]
     pub user_values: Option<UserValuesRequest>,
 }
 
@@ -625,6 +626,7 @@ pub struct UpdateUserSelfRequest {
     pub mfa_code: Option<String>,
     /// Validation: Applies password policy
     pub password_new: Option<String>,
+    #[validate]
     pub user_values: Option<UserValuesRequest>,
 }
 
@@ -636,8 +638,8 @@ pub struct UserValuesRequest {
     /// Validation: `+[0-9]{0,32}`
     #[validate(regex(path = "RE_PHONE", code = "+[0-9]{0,32}"))]
     pub phone: Option<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\s]{0,48}`
-    #[validate(regex(path = "RE_STREET", code = "[a-zA-Z0-9À-ÿ-\\s]{0,48}"))]
+    /// Validation: `[a-zA-Z0-9À-ÿ-.\s]{0,48}`
+    #[validate(regex(path = "RE_STREET", code = "[a-zA-Z0-9À-ÿ-.\\s]{0,48}"))]
     pub street: Option<String>,
     #[validate(range(min = 1000, max = 9999999))]
     pub zip: Option<i32>,
@@ -669,6 +671,7 @@ pub struct UserAttrValueRequest {
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct UserAttrValuesUpdateRequest {
+    #[validate]
     pub values: Vec<UserAttrValueRequest>,
 }
 
