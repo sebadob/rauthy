@@ -11,10 +11,13 @@ pub struct I18nAccount<'a> {
     acc_type_passkey_text_1: &'a str,
     acc_type_passkey_text_2: &'a str,
     acc_type_passkey_text_3: &'a str,
+    birthdate: &'a str,
     cancel: &'a str,
+    city: &'a str,
     change_password: &'a str,
     convert_account: &'a str,
     convert_account_p_1: &'a str,
+    country: &'a str,
     created: &'a str,
     email: &'a str,
     email_update_confirm: &'a str,
@@ -36,6 +39,7 @@ pub struct I18nAccount<'a> {
     nav_password: &'a str,
     nav_logout: &'a str,
     never: &'a str,
+    optional_values: &'a str,
     password_confirm: &'a str,
     password_curr: &'a str,
     password_curr_req: &'a str,
@@ -45,8 +49,10 @@ pub struct I18nAccount<'a> {
     password_expiry: &'a str,
     password_policy: I18nPasswordPolicy<'a>,
     password_policy_follow: &'a str,
+    phone: &'a str,
     roles: &'a str,
     save: &'a str,
+    street: &'a str,
     user: &'a str,
     user_expiry: &'a str,
     user_verified_tooltip: &'a str,
@@ -56,6 +62,7 @@ pub struct I18nAccount<'a> {
     web_id_desc: &'a str,
     web_id_desc_data: &'a str,
     web_id_expert_mode: &'a str,
+    zip: &'a str,
 }
 
 impl SsrJson for I18nAccount<'_> {
@@ -83,7 +90,9 @@ in mind, that this implies, that you need to verify each new device with the pas
 You then cannot just log in on any device, where you have not entered the password beforehand at
 least once."#,
             acc_type_passkey_text_3: "Do you want to convert your account and add a password?",
+            birthdate: "Birthdate",
             cancel: "Cancel",
+            city: "City",
             change_password: "Change Password",
             convert_account: "Convert Account",
             convert_account_p_1: r#"You can convert your account to a Passkey-Only account.
@@ -91,6 +100,7 @@ This conversion deletes your password and you can and must only ever login with 
 passkeys. Keep in mind, that only passkeys with the additional User Verification will be accepted.
 If you passkeys support this, you will find a small symbol behind the name of the key on the 'MFA'
 page."#,
+            country: "Country",
             created: "created",
             email: "E-Mail",
             email_update_confirm: r#"The E-Mail address has not been updated yet. A message has been
@@ -114,6 +124,7 @@ confirmed, your new address will be updated."#,
             nav_password: "Password",
             nav_logout: "Logout",
             never: "Never",
+            optional_values: "Optional Values",
             password_confirm: "Confirm Password",
             password_curr: "Current Password",
             password_curr_req: "Current password is required",
@@ -123,8 +134,10 @@ confirmed, your new address will be updated."#,
             password_expiry: "Password expiry",
             password_policy: I18nPasswordPolicy::build_en(),
             password_policy_follow: "You must follow the password policy",
+            phone: "Phone",
             roles: "Roles",
             save: "Save",
+            street: "Street",
             user: "User",
             user_expiry: "User Expires",
             user_verified_tooltip: "Secured with fingerprint or PIN",
@@ -136,6 +149,7 @@ This is a feature used by some networks for decentralized logins. If you do not 
 you most probably do not need it."#,
             web_id_desc_data: "You can add custom data fields to your WebID in valid turtle",
             web_id_expert_mode: "Enable Expert Mode",
+            zip: "ZIP",
         }
     }
 
@@ -150,13 +164,16 @@ werden. Das würde allerdings bedeuten, dass ein Login auf einem neuen Gerät oh
 einmalige zusätzliche Verifizierung des Passwortes nicht mehr möglich sein wird."#,
             acc_type_passkey_text_3:
                 "Soll dieser Account gewandelt und ein Passwort hinzugefügt werden?",
+            birthdate: "Geburtsdatum",
             cancel: "Abbrechen",
+            city: "Stadt",
             change_password: "Passwort wechseln",
             convert_account: "Account Umwandeln",
             convert_account_p_1: r#"Dieser Account kann in einen Passkey-Only Account umgewandelt
 werden. Diese Umwandling löscht das Passwort und erlaubt den alleinigen Login mit den registrieren
 Passkeys. Nur Passkeys mit zusätzlicher Benutzerverifizierung werden akzeptiert. Diese sind auf der
 'MFA' Seite durch das zusätzliche Symbol hinter dem Passkey Namen gekennzeichnet."#,
+            country: "Land",
             created: "erstellt",
             email: "E-Mail",
             email_update_confirm: r#"Die E-Mail Adresse wurde noch nicht aktualisiert. Eine Nachricht
@@ -180,6 +197,7 @@ enthaltenen Link bestätigt werden. Nach der Bestätigung wird die neue Adresse 
             nav_password: "Passwort",
             nav_logout: "Logout",
             never: "Niemals",
+            optional_values: "Optionale Angaben",
             password_confirm: "Passwort bestätigen",
             password_curr: "Derzeitiges Passwort",
             password_curr_req: "Derzeitiges Passwort ist notwendig",
@@ -189,8 +207,10 @@ enthaltenen Link bestätigt werden. Nach der Bestätigung wird die neue Adresse 
             password_expiry: "Passwort Ablauf",
             password_policy: I18nPasswordPolicy::build_de(),
             password_policy_follow: "Befolgen Sie die Passwort Regeln",
+            phone: "Telefon",
             roles: "Rollen",
             save: "Speichern",
+            street: "Straße",
             user: "Benutzer",
             user_expiry: "Benutzer Ablauf",
             user_verified_tooltip: "Abgesichert durch Fingerabdruck oder PIN",
@@ -203,6 +223,7 @@ Sollten Sie nicht wissen, was die WebID ist, brauchen Sie sie höchstwahrscheinl
             web_id_desc_data: r#"Sie können eigene Daten zu Ihrer WebID in gültigem FOAF Vokabular
 hinzufügen:"#,
             web_id_expert_mode: "Expertenmodus aktivieren",
+            zip: "PLZ",
         }
     }
 }
