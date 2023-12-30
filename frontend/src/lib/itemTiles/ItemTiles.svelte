@@ -50,5 +50,7 @@
 <style>
     .container {
         display: flex;
+        flex-wrap: wrap;
+        gap: .5rem 0;
     }
 </style>
