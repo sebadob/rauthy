@@ -118,7 +118,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     cargo install cryptr --features cli --locked
 
-    Otherwise, pre-built binaries do exist for either Linux or Windows: https://github.com/sebadob/cryptr/tree/main/out
+    Otherwise, pre-built binaries do exist for either Linux or Windows:
+    https://github.com/sebadob/cryptr/tree/main/out
 
     2. Execute:
 
