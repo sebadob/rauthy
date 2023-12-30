@@ -14,6 +14,10 @@ flume = { workspace = true }
 matrix-sdk = { git = "https://github.com/sebadob/matrix-rust-sdk", branch = "rauthy-v0.17.0", default-features = false, features = [
     "e2e-encryption", "markdown", "rustls-tls"
 ] }
+# not selected -> produces libsqlite conflicts, which should not be pulled in by matrix-sdk in the first place
+#matrix-sdk = { git = "https://github.com/sebadob/matrix-rust-sdk", branch = "rauthy-v0.20.0", default-features = false, features = [
+#    "e2e-encryption", "markdown", "rustls-tls"
+#] }
 rauthy-common = { path = "../rauthy-common" }
 reqwest = { workspace = true }
 serde = { workspace = true }

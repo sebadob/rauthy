@@ -6,6 +6,7 @@
 
 - update the Encryption section in the book
 - update Getting started section in the book for generating ENC_KEYS -> use `cryptr` 
+- Update the Matrix repo
 
 ## Stage 1 - essentials
 
