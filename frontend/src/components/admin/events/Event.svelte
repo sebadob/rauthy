@@ -1,5 +1,5 @@
 <script>
-    import {formatDateFromTs, eventColor} from "../../../utils/helpers.js";
+    import {eventColor, formatDateFromTs} from "../../../utils/helpers.js";
     import {onMount} from "svelte";
 
     export let event;
@@ -76,7 +76,11 @@
                 <div class="col-typ">{event.typ}</div>
                 <div class="col-ip">{event.ip || ''}</div>
 
-            {:else if event.typ === 'NewRauthyAdmin' || event.typ === 'NewUserRegistered'}
+            {:else if event.typ === 'NewRauthyAdmin'
+                    || event.typ === 'NewUserRegistered'
+                    || event.typ === 'UserPasswordReset'
+                    || event.typ === 'UserEmailChange'
+            }
                 <div class="col-typ">{event.typ}</div>
                 <div class="col-ip">{event.ip || ''}</div>
                 <div class="col-text">{@html event.text.replace('@', '<wbr/>@')}</div>
@@ -87,8 +91,8 @@
                 <div class="col-text">{`Expires: ${formatDateFromTs(event.data)}`}</div>
 
             {:else if event.typ === 'RauthyStarted'
-                || event.typ === 'RauthyHealthy'
-                || event.typ === 'RauthyUnhealthy'
+            || event.typ === 'RauthyHealthy'
+            || event.typ === 'RauthyUnhealthy'
             }
                 <div class="col-typ">{event.typ}</div>
                 <div class="col-ip"></div>
@@ -120,7 +124,7 @@
             {event.ip}
 
         {:else if event.typ === 'NewRauthyAdmin'
-            || event.typ === 'NewUserRegistered'
+        || event.typ === 'NewUserRegistered'
         }
             <br/>
             {event.ip || ''}
@@ -134,8 +138,8 @@
             {formatDateFromTs(event.data)}
 
         {:else if event.typ === 'RauthyStarted'
-            || event.typ === 'RauthyHealthy'
-            || event.typ === 'RauthyUnhealthy'
+        || event.typ === 'RauthyHealthy'
+        || event.typ === 'RauthyUnhealthy'
         }
             <br/>
             {event.text}
