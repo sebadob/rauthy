@@ -105,6 +105,8 @@ but also even encryption algorithm encryptions really easy in the future.
 [3137927](https://github.com/sebadob/rauthy/commit/31379278440ec6ddaf1a2288ba3950ab60994963)
 - add additional user values matching OIDC default claims
 [fca0c13](https://github.com/sebadob/rauthy/commit/fca0c1306624bdffa112ad8239e381064cb0b843)
+- add `address` and `phone` default OIDC scopes and additional values for `profile`
+[3d497a2](https://github.com/sebadob/rauthy/commit/3d497a2fb7d91952d82d6d0efaea891a8088f523)
 
 ### Bugfixes
 
@@ -112,7 +114,11 @@ but also even encryption algorithm encryptions really easy in the future.
 the live events look a bit ugly and characters jumping in a line where they should never end up.
 [3b56b50](https://github.com/sebadob/rauthy/commit/3b56b50f4f24b7707c522934f9c03714703c64ad)
 - An incorrect URL has been returned for the `end_session_endpoint` in the OIDC metadata
-[]()
+[3caabc9](https://github.com/sebadob/rauthy/commit/3caabc98b24893ecadcd2f9219783a202c12f730)
+- Make the `ItemTiles` UI componend used for roles, groups, and so on, wrap nicely on smaller screens
+[6f83e4a](https://github.com/sebadob/rauthy/commit/6f83e4a917ffd4eaec9b543b66170dc5ea76ed6e)
+- Show the corresponding E-Mail address for `UserPasswordReset` and `UserEmailChange` events in the UI
+[7dc4794](https://github.com/sebadob/rauthy/commit/7dc47945ec3fdd335ed486465f98cdbb4734d653)
 
 ## v0.19.2
 

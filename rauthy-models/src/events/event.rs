@@ -660,6 +660,7 @@ impl Event {
                     self.text.as_deref().unwrap_or_default()
                 )
             }
+            // PossibleBruteForce is not yet implemented / recognized
             EventType::PossibleBruteForce => String::default(),
             EventType::RauthyStarted => self.text.clone().unwrap(),
             EventType::RauthyHealthy => self.text.clone().unwrap(),

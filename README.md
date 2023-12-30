@@ -130,15 +130,14 @@ Keycloak was a rough inspiration in certain places and if something is working w
 This is a non-exhaustive list of currently open TODO's
 
 - [x] ~~Admin UI component for archived / persisted events~~ **UNRELEASED**
-- [ ] Add more values for each user (and therefore more OIDC default claims)
+- [ ] ~~Add more values for each user (and therefore more OIDC default claims)~~ **UNRELEASED**
 - [x] ~~auto-encrypted backups (SQLite)~~ **UNRELEASED**
 - [x] ~~pushing SQLite backups to S3 storage~~ **UNRELEASED**
 - [x] ~~auto-restore SQLite backups from file and s3~~ **UNRELEASED**
 - [x] ~~migrate to the way more efficient [spow](https://github.com/sebadob/spow) crate~~ **UNRELEASED**
 - [ ] Benchmarks and Optimizations
 - [ ] Maybe get a nicer Rauthy Logo
-- [ ] experimental implementation of [dilithium](https://pq-crystals.org/dilithium/) singing algorithm to become
-quantum safe
+- [ ] experimental implementation of [dilithium](https://pq-crystals.org/dilithium/) singing algorithm to become quantum safe
 - [ ] maybe something like a `rauthy-migrate` project to make migrating an existing user's DB easier
 
 ## Getting Started
