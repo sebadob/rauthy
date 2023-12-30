@@ -8,7 +8,7 @@ use actix_multipart::Multipart;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest};
-use cryptr::{utils, EncValue};
+use cryptr::{utils, EncKeys, EncValue};
 use futures_util::StreamExt;
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_EPHEMERAL_CLIENTS, ENABLE_EPHEMERAL_CLIENTS,
@@ -84,9 +84,9 @@ impl Client {
         mut client_req: NewClientRequest,
     ) -> Result<Self, ErrorResponse> {
         let kid = if client_req.confidential {
-            let (key_id, enc) = Self::generate_new_secret()?;
+            let (_cleartext, enc) = Self::generate_new_secret()?;
             client_req.secret = Some(enc);
-            Some(key_id)
+            Some(EncKeys::get_static().enc_key_active.clone())
         } else {
             None
         };
@@ -487,10 +487,8 @@ impl Client {
     #[inline]
     pub fn generate_new_secret() -> Result<(String, Vec<u8>), ErrorResponse> {
         let rnd = utils::secure_random_alnum(64);
-        let enc_value = EncValue::encrypt(rnd.as_bytes())?;
-        let kid = enc_value.header.enc_key_id.clone();
-        let enc = enc_value.into_bytes().to_vec();
-        Ok((kid, enc))
+        let enc = EncValue::encrypt(rnd.as_bytes())?.into_bytes().to_vec();
+        Ok((rnd, enc))
     }
 
     #[inline]
