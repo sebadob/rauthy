@@ -2,6 +2,11 @@
 
 ## CURRENT WORK
 
+## TODO before v0.20.0
+
+- update the Encryption section in the book
+- update Getting started section in the book for generating ENC_KEYS -> use `cryptr` 
+
 ## Stage 1 - essentials
 
 [x] finished
