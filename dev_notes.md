@@ -2,24 +2,16 @@
 
 ## CURRENT WORK
 
-## Leftover TODO's for v0.20.0
-
-- UI: fix ItemTiles component flex-wrap
-- UI: new version event shows `NewRauthyAdmin` instead of `NewRauthyVersion`
-- UI: event `UserPasswordReset` could additionally show the corresponding E-Mail
-- UI: event `UserEmailChange` could additionally show the corresponding E-Mail
-- UI: event `NewRauthyVersion` should wrap the release link in `<a>`
-
 ## Stage 1 - essentials
 
 [x] finished
 
 ## Stage 2 - features - do before v1.0.0
 
-- impl oidc metadata `check_session_iframe`
 - impl leftovers on `/userinfo` endpoint
+- impl oidc metadata `check_session_iframe` ?
 - admin ui: template button for client branding: default-light + default-dark ?
-- double check against https://openid.net/specs/openid-connect-core-1_0.html that everything is implemented correctly one more time
+- double check against https://openid.net/specs/openid-connect-core-1_0.html that everything is implemented correctly
 - benchmarks and performance tuning
 - maybe get a nicer logo
 

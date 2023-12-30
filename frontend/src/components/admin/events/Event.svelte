@@ -91,8 +91,8 @@
                 <div class="col-text">{`Expires: ${formatDateFromTs(event.data)}`}</div>
 
             {:else if event.typ === 'RauthyStarted'
-            || event.typ === 'RauthyHealthy'
-            || event.typ === 'RauthyUnhealthy'
+                    || event.typ === 'RauthyHealthy'
+                    || event.typ === 'RauthyUnhealthy'
             }
                 <div class="col-typ">{event.typ}</div>
                 <div class="col-ip"></div>
@@ -124,7 +124,9 @@
             {event.ip}
 
         {:else if event.typ === 'NewRauthyAdmin'
-        || event.typ === 'NewUserRegistered'
+                || event.typ === 'NewUserRegistered'
+                || event.typ === 'UserPasswordReset'
+                || event.typ === 'UserEmailChange'
         }
             <br/>
             {event.ip || ''}
@@ -138,8 +140,8 @@
             {formatDateFromTs(event.data)}
 
         {:else if event.typ === 'RauthyStarted'
-        || event.typ === 'RauthyHealthy'
-        || event.typ === 'RauthyUnhealthy'
+                || event.typ === 'RauthyHealthy'
+                || event.typ === 'RauthyUnhealthy'
         }
             <br/>
             {event.text}

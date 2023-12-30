@@ -332,6 +332,20 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # operations (default: 128)
 #CACHE_BUF_CLIENT=128
 
+# The max cache size for users. If you can afford it memory-wise,
+# make it possible to fit all active users inside the cache.
+# The cache size you provide here should roughly match the
+# amount of users you want to be able to cache actively. Depending
+# on your setup (WebIDs, custom attributes, ...), this number
+# will be multiplied internally  by 3 or 4 to create multiple cache
+# entries for each user.
+# default: 100
+CACHE_USERS_SIZE=100
+# The lifespan of the users cache in seconds. Cache eviction on
+# updates will be handled automatically.
+# default: 28800
+CACHE_USERS_LIFESPAN=28800
+
 # Secret token, which is used to authenticate the cache members
 #CACHE_AUTH_TOKEN=SomeSuperSecretAndVerySafeToken1337
 
@@ -732,14 +746,16 @@ EVENT_LEVEL_FAILED_LOGIN=info
 ############## POW  #################
 #####################################
 
-## Proof of Work (PoW) configuration for Client Endpoints like
-# User Registration. The iteration count for the PoW calculation
-# (default: 1000000)
-#POW_IT=1000000
+# The difficulty for a Proof-of-Work (PoW).
+# The default is 20, which is reasonable for modern processors.
+# This is currently only used for the user registration via UI.
+# The value must be between 10 and 99.
+# default: 20
+POW_DIFFICULTY=20
 
-# The expiration duration in seconds when a saved PoW should be
-# cleaned up (default: 300)
-#POW_EXP=300
+# The expiration duration in seconds for a PoW
+# default: 30
+POW_EXP=30
 
 #####################################
 ############# SERVER ################
