@@ -506,6 +506,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(generic::get_admin_clients_html)
                             .service(generic::get_admin_config_html)
                             .service(generic::get_admin_docs_html)
+                            .service(generic::get_admin_events_html)
                             .service(generic::get_admin_groups_html)
                             .service(generic::get_admin_roles_html)
                             .service(generic::get_admin_scopes_html)
@@ -685,7 +686,7 @@ async fn v20_migrate_to_cryptr(app_state: &Data<AppState>) -> Result<(), ErrorRe
             continue;
         }
 
-        let kid = client.secret_kid.as_ref().unwrap();
+        let kid = client.secret_kid.as_ref().unwrap_or(&keys.enc_key_active);
         let key = keys.get_key(kid)?;
 
         let dec = decrypt_legacy(client.secret.as_ref().unwrap(), key)?;
