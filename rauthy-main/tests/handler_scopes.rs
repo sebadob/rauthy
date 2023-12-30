@@ -20,7 +20,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
 
     let scopes = res.json::<Vec<Scope>>().await?;
-    assert_eq!(scopes.len(), 4);
+    assert_eq!(scopes.len(), 6);
 
     // add a scope
     let new_scope = ScopeRequest {
@@ -75,7 +75,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
 
     let scopes = res.json::<Vec<Scope>>().await?;
-    assert_eq!(scopes.len(), 4);
+    assert_eq!(scopes.len(), 6);
 
     Ok(())
 }

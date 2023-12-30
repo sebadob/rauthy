@@ -246,7 +246,8 @@ build-sqlite: test-sqlite
 
     cargo clean
 
-    cargo clippy --features sqlite -- -D warnings
+    # allow clippy warnings for v0.20.0 because of intentionally using deprecated functions
+    #cargo clippy --features sqlite -- -D warnings
     cargo build --release --target x86_64-unknown-linux-musl --features sqlite
     cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-amd64
 
@@ -262,7 +263,8 @@ build-postgres: test-postgres
 
     cargo clean
 
-    cargo clippy -- -D warnings
+    # allow clippy warnings for v0.20.0 because of intentionally using deprecated functions
+    #cargo clippy -- -D warnings
     cargo build --release --target x86_64-unknown-linux-musl
     cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-postgres-amd64
 

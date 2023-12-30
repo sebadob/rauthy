@@ -43,7 +43,7 @@ itertools = { workspace = true }
 jwt-simple = { workspace = true }
 lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls", "tracing"] }
 num_cpus = { workspace = true }
-## Add openssl-sys as a direct dependency so it can be cross compiled to
+## Add openssl-sys as a direct dependency, so it can be cross compiled to
 ## x86_64-unknown-linux-musl using the "vendored" feature below
 openssl-sys = { workspace = true }
 rand = { workspace = true }
