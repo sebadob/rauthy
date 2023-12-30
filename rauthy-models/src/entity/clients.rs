@@ -487,8 +487,10 @@ impl Client {
     #[inline]
     pub fn generate_new_secret() -> Result<(String, Vec<u8>), ErrorResponse> {
         let rnd = utils::secure_random_alnum(64);
-        let rnd_enc = EncValue::encrypt(rnd.as_bytes())?.into_bytes().to_vec();
-        Ok((rnd, rnd_enc))
+        let enc_value = EncValue::encrypt(rnd.as_bytes())?;
+        let kid = enc_value.header.enc_key_id.clone();
+        let enc = enc_value.into_bytes().to_vec();
+        Ok((kid, enc))
     }
 
     #[inline]

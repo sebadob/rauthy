@@ -723,12 +723,12 @@ pub struct WebIdRequest {
     pub expose_email: bool,
 }
 
-#[derive(Debug, Deserialize, Validate, IntoParams)]
+#[derive(Debug, Deserialize, Validate, IntoParams, ToSchema)]
 pub struct WhoamiRequestParams {
     pub typ: Option<WhoamiRequestParam>,
 }
 
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, PartialEq, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum WhoamiRequestParam {
     Ip,

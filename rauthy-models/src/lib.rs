@@ -208,7 +208,7 @@ pub struct JwtRefreshClaims {
     pub cnf: Option<JktClaim>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum JwtTokenType {
     Bearer,
     DPoP,
