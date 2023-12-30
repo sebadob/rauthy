@@ -527,7 +527,7 @@ pub async fn build_id_token(
         }
 
         if let Some(values) = &user_values {
-            custom_claims.address = AddressClaim::try_build(&user, values);
+            custom_claims.address = AddressClaim::try_build(user, values);
         }
     }
 
