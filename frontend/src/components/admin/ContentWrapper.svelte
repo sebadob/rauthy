@@ -3,8 +3,6 @@
 
     export let eventsCollapsed = true;
     export let eventsWide = false;
-
-    const tDur = 100;
 </script>
 
 <div
@@ -12,8 +10,6 @@
         class:mr={!eventsCollapsed && !eventsWide}
         class:mrCollapsed={eventsCollapsed && !eventsWide}
         class:mrWide={!eventsCollapsed && eventsWide}
-        in:fade={{delay: tDur * 2, duration: tDur}}
-        out:fade={{duration: tDur}}
 >
     <slot></slot>
 </div>
