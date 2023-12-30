@@ -192,6 +192,16 @@ pub async fn get_admin_docs_html(data: web::Data<AppState>) -> Result<HttpRespon
     Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
+#[get("/admin/events")]
+pub async fn get_admin_events_html(
+    data: web::Data<AppState>,
+) -> Result<HttpResponse, ErrorResponse> {
+    let colors = ColorEntity::find_rauthy(&data).await?;
+    let body = AdminUsersHtml::build(&colors);
+
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
+}
+
 #[get("/admin/groups")]
 pub async fn get_admin_groups_html(
     data: web::Data<AppState>,
