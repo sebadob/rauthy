@@ -104,14 +104,14 @@ echo 'sqlite:data/rauthy.db' | base64
 Generate a new encryption key with ID in the correct format.
 
 ```
-echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c32)" | base64
+echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)"  | base64
 ```
 
 Paste the base64 String in the secrets for `ENC_KEYS`.  
 To extract the `ENC_KEY_ID`, which needs to be added to the config from Step 2:
 
 ```
-echo PasteTheGeneratedBase64Here | base64 -d | cut -d/ -f1
+echo -n PasteTheGeneratedBase64Here | base64 -d | cut -d/ -f1
 ```
 
 And finally, the `SMTP_PASSWORD`
