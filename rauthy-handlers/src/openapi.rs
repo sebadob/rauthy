@@ -182,7 +182,11 @@ use utoipa::{openapi, OpenApi};
             request::WebauthnAuthStartRequest,
             request::WebauthnAuthFinishRequest,
             request::WebIdRequest,
+            request::WhoamiRequestParam,
+            request::WhoamiRequestParams,
 
+            response::ApiKeyResponse,
+            response::ApiKeysResponse,
             response::AppVersionResponse,
             response::BlacklistResponse,
             response::BlacklistedIp,
@@ -213,6 +217,7 @@ use utoipa::{openapi, OpenApi};
 
             rauthy_models::AddressClaim,
             rauthy_models::JktClaim,
+            rauthy_models::JwtTokenType,
             token_set::TokenSet,
         ),
     ),
