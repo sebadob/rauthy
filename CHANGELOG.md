@@ -7,8 +7,67 @@
 This update is not backwards-compatible with any previous version. It will modify the database under the hood
 which makes it incompatible with any previous version. If you need to downgrade for whatever reason, you will
 only be able to do this by applying a database backup from an older version.
+Testing has been done and everything was fine in tests. However, if you are using Rauthy in production, I recommend
+taking a database backup, since any version <= v0.19 will not be working with a v0.20+ database.
 
-TODO: Add guide how to convert ENC_KEYS with cryptr
+### IMPORTANT Upgrade Notes 
+
+If you are upgrading from any earlier version, there is a manual action you need to perform, before you can
+start v0.20.0. If this has not been done, it will simply panic early and not start up. Nothing will get damaged.
+
+The internal encryption of certain values has been changed. Rauthy now uses [cryptr](https://github.com/sebadob/cryptr) to handle these things,
+like mentioned below as well.
+
+However, to make working with encryption keys easier and provide higher entropy, the format has changed.
+You need to convert your currently used `ENC_KEYS` to the new format:
+
+
+**1. Install cryptr - https://github.com/sebadob/cryptr**
+
+If you have Rust available on your system, just execute:
+
+  ```
+  cargo install cryptr --features cli --locked
+  ```
+ 
+  Otherwise, pre-built binaries do exist:
+
+  Linux: https://github.com/sebadob/cryptr/raw/main/out/cryptr_0.2.2
+
+  Windows: https://github.com/sebadob/cryptr/raw/main/out/cryptr_0.2.2.exe
+
+**2. Execute:**
+
+  ```
+  cryptr keys convert legacy-string
+  ```
+
+**3. Paste your current ENC_KEYS into the command line.**
+
+  For instance, if you have
+  ```
+  ENC_KEYS="bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA"
+  ```
+  in your config, paste
+  ```
+  bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA
+  ```
+
+  If you provide your ENC_KEYS via a Kubernetes secret, you need to do a base64 decode first.
+  For instance, if your secret looks something like this
+  ```
+  ENC_KEYS: YlZDeVRzR2FnZ1Z5NXlxUS9TOW43b0NlbjUzeFNKTHpjc21mZG5CRHZOcnFRNjNyNCBxNnUyNm9uUnZYVkc0NDI3LzNDRUM4UkpXQmNNa3JCTWtSWGd4NjVBbUpzTlRnaFNB
+  ```
+  Then decode via shell or any tool your like:
+  ```
+  echo -n YlZDeVRzR2FnZ1Z5NXlxUS9TOW43b0NlbjUzeFNKTHpjc21mZG5CRHZOcnFRNjNyNCBxNnUyNm9uUnZYVkc0NDI3LzNDRUM4UkpXQmNNa3JCTWtSWGd4NjVBbUpzTlRnaFNB | base64 -d
+  ```
+  ... and paste the decoded value into cryptr
+
+**4. cryptr will output the correct format for either usage in config or as kubernetes secret again**
+
+**5. Paste the new format into your Rauthy config / secret and restart.**
+
 
 ### Encrypted SQLite backups to S3 storage
 
@@ -83,9 +142,9 @@ The new scope `address` adds:
 - new admin UI section to fetch and filter archived events.
 [ece73bb](https://github.com/sebadob/rauthy/commit/ece73bb38878d8d189d52855845c63fa729cae2a)
 - backend + frontend dependencies have been updated to the latest versions everywhere
-- The internal encryption handling has been changed to a new project of mine called [cryptr](https://github.com/sebadob/cryptr)
+- The internal encryption handling has been changed to a new project of mine called [cryptr](https://github.com/sebadob/cryptr).  
 This makes the whole value encryption way easier, more stable and future proof, because values have their own
-tiny header data with the minimal amount of information needed. This makes not only encryption key rotations,
+tiny header data with the minimal amount of information needed. It not only simplifies encryption key rotations,
 but also even encryption algorithm encryptions really easy in the future.
 [d6c224e](https://github.com/sebadob/rauthy/commit/d6c224e98198c155d7df83c25edc5c97ab590d2a)
 [c3df3ce](https://github.com/sebadob/rauthy/commit/c3df3cedbdff4a2a9dd592aac65ae21e5cd67385)
