@@ -21,6 +21,7 @@ like mentioned below as well.
 However, to make working with encryption keys easier and provide higher entropy, the format has changed.
 You need to convert your currently used `ENC_KEYS` to the new format:
 
+#### Option 1: Use `cryptr` CLI
 
 **1. Install cryptr - https://github.com/sebadob/cryptr**
 
@@ -68,6 +69,43 @@ If you have Rust available on your system, just execute:
 
 **5. Paste the new format into your Rauthy config / secret and restart.**
 
+#### Option 2: Manual
+
+Rauthy expects the `ENC_KEYS` now base64 encoded, and instead of separated by whitespace it expects them to
+be separated by `\n` instead.  
+If you don't want to use `cryptr` you need to convert your current keys manually.
+
+For instance, if you have
+```
+ENC_KEYS="bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA"
+```
+in your config, you need to convert the enc key itself, the value after the `/`, to base64, and then separate
+them with `\n`.
+
+For instance, to convert `bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4`, split off the enc key part
+`S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4` and encode it with base64:
+
+```
+echo -n 'S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4' | base64
+```
+
+Then combine the result with the key id again to:
+
+```
+bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
+```
+
+Do this for every key you have. The `ENC_KEYS` should then look like this in the end:
+
+```
+ENC_KEYS="
+bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
+q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
+"
+```
+
+**Important:**  
+Make sure to not add any newline characters or spaces when copying values around when doing the bas64 encoding!
 
 ### Encrypted SQLite backups to S3 storage
 
