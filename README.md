@@ -130,7 +130,7 @@ Keycloak was a rough inspiration in certain places and if something is working w
 This is a non-exhaustive list of currently open TODO's
 
 - [x] ~~Admin UI component for archived / persisted events~~ **UNRELEASED**
-- [ ] ~~Add more values for each user (and therefore more OIDC default claims)~~ **UNRELEASED**
+- [x] ~~Add more values for each user (and therefore more OIDC default claims)~~ **UNRELEASED**
 - [x] ~~auto-encrypted backups (SQLite)~~ **UNRELEASED**
 - [x] ~~pushing SQLite backups to S3 storage~~ **UNRELEASED**
 - [x] ~~auto-restore SQLite backups from file and s3~~ **UNRELEASED**
