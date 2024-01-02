@@ -191,12 +191,20 @@ If the old key is gone, the migration will fail.</p>
 </div>
 </div>
 <p><strong>2. Generate a new key + id</strong></p>
-<pre><code>echo &quot;$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c32)&quot;
+<pre><code>echo &quot;$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)&quot;
 </code></pre>
+<p>The part before the first <code>/</code> is the <code>ENC_KEY_ID</code> and the part afterwards is the key base64 encoded.
+You might set the new <code>ENC_KEY_ACTIVE</code> to the newly generated key ID.</p>
 <p>Keep in mind, you need to ADD this to your existing keys and not just replace them! If you just replace them, almost
 all things will break and fall apart.</p>
 <p>The final format of the <code>ENC_KEYS</code> should look something like this, for instance:</p>
-<pre><code>ENC_KEYS=&quot;bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA&quot;
+<pre><code>ENC_KEYS=&quot;
+Wx1zrbLF/5vTaB7LdUSg1aTecmqHJOu2+RnU6zgTwNkDQU52Y3JM=
+6uf5QebA/9DsKMoq8A+Gn2WQrTcSpz5sg751yYs3IJlkw3dn0rII=
+&quot;
+</code></pre>
+<p>In this example, if the first key should be the new active default, set your <code>ENC_KEY</code>ACTIVE` to</p>
+<pre><code>ENC_KEY_ACTIVE=Wx1zrbLF
 </code></pre>
 <div id="admonition-help" class="admonition question">
 <div class="admonition-title">
