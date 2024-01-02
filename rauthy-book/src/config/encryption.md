@@ -20,8 +20,11 @@ If the old key is gone, the migration will fail.
 **2. Generate a new key + id**
 
 ```
-echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c32)"
+echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)"
 ```
+
+The part before the first `/` is the `ENC_KEY_ID` and the part afterwards is the key base64 encoded.
+You might set the new `ENC_KEY_ACTIVE` to the newly generated key ID.
 
 Keep in mind, you need to ADD this to your existing keys and not just replace them! If you just replace them, almost
 all things will break and fall apart.
@@ -29,7 +32,16 @@ all things will break and fall apart.
 The final format of the `ENC_KEYS` should look something like this, for instance:
 
 ```
-ENC_KEYS="bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA"
+ENC_KEYS="
+Wx1zrbLF/5vTaB7LdUSg1aTecmqHJOu2+RnU6zgTwNkDQU52Y3JM=
+6uf5QebA/9DsKMoq8A+Gn2WQrTcSpz5sg751yYs3IJlkw3dn0rII=
+"
+```
+
+In this example, if the first key should be the new active default, set your `ENC_KEY`ACTIVE` to
+
+```
+ENC_KEY_ACTIVE=Wx1zrbLF
 ```
 
 ```admonish help

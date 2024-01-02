@@ -104,10 +104,14 @@ Keycloak was a rough inspiration in certain places and if something is working w
 - [x] Events and alerting system
 - [x] Optional event notifications via: E-Mail, Matrix, Slack
 - [x] Optional event persistence
+- [x] Admin UI component for archived / persisted events
 - [x] Optional Force MFA for the Admin UI
 - [x] Optional Force MFA for each individual client
 - [x] Additional encryption inside the database for the most critical entries
 - [x] Automatic database backups with configurable retention and auto-cleanup (SQLite only)
+- [x] auto-encrypted backups (SQLite)
+- [x] pushing SQLite backups to S3 storage
+- [x] auto-restore SQLite backups from file and s3
 - [x] High-Availability
 - [x] HA cache layer with its own (optional) mTLS connection
 - [x] Username enumeration prevention
@@ -129,12 +133,6 @@ Keycloak was a rough inspiration in certain places and if something is working w
 
 This is a non-exhaustive list of currently open TODO's
 
-- [x] ~~Admin UI component for archived / persisted events~~ **UNRELEASED**
-- [x] ~~Add more values for each user (and therefore more OIDC default claims)~~ **UNRELEASED**
-- [x] ~~auto-encrypted backups (SQLite)~~ **UNRELEASED**
-- [x] ~~pushing SQLite backups to S3 storage~~ **UNRELEASED**
-- [x] ~~auto-restore SQLite backups from file and s3~~ **UNRELEASED**
-- [x] ~~migrate to the way more efficient [spow](https://github.com/sebadob/spow) crate~~ **UNRELEASED**
 - [ ] Benchmarks and Optimizations
 - [ ] Maybe get a nicer Rauthy Logo
 - [ ] experimental implementation of [dilithium](https://pq-crystals.org/dilithium/) singing algorithm to become quantum safe
@@ -146,7 +144,7 @@ Either just take a look at the [Rauthy Book](https://sebadob.github.io/rauthy/),
 the application yourself with docker on your localhost:
 
 ```
-docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.19.2-lite
+docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.20.0-lite
 ```
 
 ## Contributing

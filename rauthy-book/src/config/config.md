@@ -241,6 +241,35 @@ CACHE_USERS_LIFESPAN=28800
 # Disables the housekeeping schedulers (default: false)
 #SCHED_DISABLE=true
 
+# The interval in minutes in which the scheduler for expired 
+# users should run. If this finds expired users, it invalidates 
+# all existing sessions and refresh tokens for this user.
+# default: 60
+#SCHED_USER_EXP_MINS=60
+
+# The threshold in minutes after which time the user expiry 
+# scheduler should automatically clean up expired users.
+# If not set at all, expired users will never be cleaned up 
+# automatically.
+# default: disabled / not set
+#SCHED_USER_EXP_DELETE_MINS=7200
+
+#####################################
+############## DPOP #################
+#####################################
+
+# May be set to 'false' to disable forcing the usage of 
+# DPoP nonce's.
+# default: true
+DPOP_FORCE_NONCE=true
+
+# Lifetime in seconds for DPoP nonces. These are used to 
+# limit the lifetime of a client's DPoP proof. Do not set
+# lower than 30 seconds to avoid too many failed client 
+# token requests.
+# default: 900
+DPOP_NONCE_EXP=900
+
 #####################################
 ############# E-MAIL ################
 #####################################
@@ -261,13 +290,45 @@ SMTP_FROM=
 ###### ENCRYPTION / HASHING #########
 #####################################
 
-# Format: "key_id/enc_key another_key_id/another_enc_key" - the
-# enc_key itself must be exactly 32 characters long and and
-# should not contain special characters.
+# You need to define at least one valid encryption key.
+# These keys are used in various places, like for instance
+# encrypting confidential client secrets in the database, or
+# encryption cookies, and so on.
+#
+# The format must match:
+# ENC_KEYS="
+# q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
+# bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
+# "
+#
+# The first part until the first `/` is the key ID.
 # The ID must match '[a-zA-Z0-9]{2,20}'
-#ENC_KEYS="bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA"
+#
+# The key itself begins after the first `/` has been found.
+# The key must be exactly 32 bytes long, encoded as base64.
+# 
+# You can find a more detailed explanation on how to generate
+# keys in the documentation:
+# 1. https://sebadob.github.io/rauthy/getting_started/k8s.html#create-and-apply-secrets
+# 2. https://sebadob.github.io/rauthy/config/encryption.html
+#
+# You can provide multiple keys to make things like key 
+# rotation work. Be careful with removing old keys. Make sure
+# that all secrets have been migrated beforehand.
+# You can find a utility in the Admin UI to do this for you.
+#
+#ENC_KEYS="
+#q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
+#bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
+#"
+
+# This identifies the key ID from the `ENC_KEYS` list, that
+# should actively be used for new encryptions.
 ENC_KEY_ACTIVE=bVCyTsGaggVy5yqQ
 
+# Argon2ID hashing parameters. Take a look at the documention
+# for more information:
+# https://sebadob.github.io/rauthy/config/argon2.html
 # M_COST should never be below 32768 in production
 ARGON2_M_COST=32768
 # T_COST should never be below 1 in production
@@ -279,6 +340,7 @@ ARGON2_P_COST=2
 # the exact same time to never exceed system memory while
 # still allowing a good amount of memory for the argon2id
 # algorithm (default: 2)
+#
 # CAUTION: You must make sure, that you have at least
 # (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + ~30 MB of memory
 # available.
@@ -525,12 +587,6 @@ EVENT_LEVEL_FAILED_LOGIN=info
 # setting the initial password. (default: 4320)
 #ML_LT_PWD_FIRST=4320
 
-# The interval in seconds in which keep-alives should be sent to SSE clients.
-# Depending on your network setup, proxy timeouts, ...
-# you may adjust this value to fit your needs.
-# default: 30
-#SSE_KEEP_ALIVE=30
-
 #####################################
 ############# LOGGING ###############
 #####################################
@@ -555,7 +611,7 @@ EVENT_LEVEL_FAILED_LOGIN=info
 # - Modifying
 #   Logs only requests to modifying endpoints and skips all GET
 # - Off
-# (default: Modifying)
+# default: Modifying
 #LOG_LEVEL_ACCESS=Basic
 
 #####################################
@@ -586,7 +642,7 @@ POW_EXP=30
 #####################################
 
 # The server address to listen on. Can bind to a specific IP.
-# (default: 0.0.0.0)
+# default: 0.0.0.0
 #LISTEN_ADDRESS=0.0.0.0
 
 # The listen ports for HTTP / HTTPS, depending on the
@@ -611,7 +667,7 @@ PUB_URL=localhost:8080
 #HTTP_WORKERS=1
 
 # When rauthy is running behind a reverse proxy, set to true
-# (default: false)
+# default: false
 PROXY_MODE=false
 
 # To enable or disable the additional HTTP server to expose the /metrics endpoint
@@ -631,7 +687,7 @@ PROXY_MODE=false
 # If the Swagger UI should be served together with the /metrics route on the internal
 # server. It it then reachable via:
 # http://METRICS_ADDR:METRICS_PORT/docs/v1/swagger-ui/
-# (default: true)
+# default: true
 #SWAGGER_UI_INTERNAL=true
 
 # If the Swagger UI should be served externally as well. This makes the link in the
@@ -640,8 +696,14 @@ PROXY_MODE=false
 # CAUTION: The Swagger UI is open and does not require any login to be seen!
 # Rauthy is open source, which means anyone could just download it and see on their
 # own, but it may be a security concern to just expose less information.
-# (default: false)
+# default: false
 #SWAGGER_UI_EXTERNAL=false
+
+# The interval in seconds in which keep-alives should be sent to SSE clients.
+# Depending on your network setup, proxy timeouts, ...
+# you may adjust this value to fit your needs.
+# default: 30
+#SSE_KEEP_ALIVE=30
 
 #####################################
 ############### TLS #################

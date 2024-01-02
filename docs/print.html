@@ -201,26 +201,26 @@ It tries to be as secure as possible by default while still providing all the op
 older systems. For instance, if you create a new OIDC client, it activates <code>ed25519</code> as the default algorithm for
 token signing and S256 PKCE flow. This will not work with old clients, which do not support it, but you can of course
 deactivate this to your liking.</p>
-<p><strong>MFA and Passwordless Login</strong><br />
+<p><strong>MFA and Passwordless Login</strong></p>
+<ol>
+<li>Option: Password + Security Key (without User Verification):<br />
 Rauthy provides FIDO 2 / Webauthn login flows. If you once logged in on a new client with your username + password, you
 will get an encrypted cookie which will allow you to log in without a password from that moment on. You only need to
-have a FIDO  compliant Passkey being registered for your account.<br />
-The reason why it requests your password on a new host at least once is pretty simple. Even though most browsers have
-full support even for user verification, it is possible that in some scenarios a set PIN oder biometric fingerprint
-reader will just be ignored by some browsers, which would reduce the strong MFA login to only a single factor again.
-As long as the full support does not exist on every device out there, Rauthy will not allow a &quot;Passkey only Login flow&quot;
-for security reasons.<br />
-An Example for a not correctly working combination would be Firefox on Mac OS, Firefox pre v114 on Linux, or almost
-every browser on Android.</p>
+have a FIDO  compliant Passkey being registered for your account.</li>
+<li>Option: Passkey-Only Accounts:<br />
+Since v0.16, Rauthy supports Passkey-Only-Accounts. You basically just provide your E-Mail address and log in with your
+FIDO 2 Passkey. Your account will not even have / need a password. This login flow is restricted though to only those
+passkeys, that can provide User Verification (UV) to always have at least 2FA security.</li>
+</ol>
 <p><strong>Fast and efficient</strong><br />
 The main goal was to provide an SSO solution like Keycloak and others while using a way lower footprint
-and being more efficient with resources. For instance, Rauthy can easily run a fully blown SSO provider on just a 
+and being more efficient with resources. For instance, Rauthy can easily run a fully blown SSO provider on just a
 Raspberry Pi. It makes extensive use of caching to be as fast as possible in cases where your database is further
-away or just a bit slower, because it is maybe running on an SBC from an SD card. Most things are even cached 
+away or just a bit slower, because it is maybe running on an SBC from an SD card. Most things are even cached
 for several hours (config options will come in the future) and special care has been taken into account in case of cache
 eviction and invalidation.<br />
 A Rauthy deployment with the embedded SQLite, filled caches and a small set of clients and users configured typically
-only uses <strong>between 15 and 20 MB of memory</strong>! This is pretty awesome when comparing it to other existing solutions
+only uses <strong>between 17 and 22 MB of memory</strong>! This is pretty awesome when comparing it to other existing solutions
 out there. If a password from a login is hashed, the memory consumption will of course go up way higher than this
 depending on your configured Argon2ID parameters, which you got fully under control. If you use it with an external
 Postgres, the memory consumption of Rauthy itself will even be a bit lower, since it does not need to care about SQLite.
@@ -231,29 +231,129 @@ touched again.</p>
 <p><strong>Highly Available</strong><br />
 Even though it makes extensive use of caching, you can run it in HA mode. It uses its own embedded distributed HA cache
 called <a href="https://crates.io/crates/redhac">redhac</a>, which cares about cache eviction on remote hosts.
-You can choose between a <em>SQLite</em> for single instance deployments and a <em>Postgres</em>, if you need HA. MySQL support might 
+You can choose between a <em>SQLite</em> for single instance deployments and a <em>Postgres</em>, if you need HA. MySQL support might
 come in the future.</p>
+<p><strong>Nice UI</strong><br />
+Unlike many other options, <code>rauthy</code> does have a nice Admin UI which can be used to basically do almost any operation you
+might need to administrate the whole application and its users. Some Screenshots and further introduction will follow
+in the future.</p>
 <p><strong>Client Branding</strong><br />
 You have a simple way to create some kind of branding or stylized look for the Login page for each client.<br />
 The whole color theme can be changed and each client can have its own custom logo.<br />
 Additionally, if you modify the branding for the default <code>rauthy</code> client, it will not only change the look for the Login
 page, but also for the Account and Admin page.</p>
+<p><strong>Events and Auditing</strong><br />
+Since v0.17, Rauthy implements an Event-System. Events are generated in all kinds of scenarios. They can be sent via
+E-Mail, Matrix or Slack, depending on the severity and the configured level. You will see them in the Admin UI in real
+time, or you can subscribe to the events stream and externally handle them depending on your own business logic.</p>
+<p><strong>Brute-Force and basic DoS protection</strong><br />
+Rauthy has brute force and basic DoS protection for the login endpoint. Your timeout will be artificially delayed after
+enough invalid logins. It does auto-balacklist IP's that exceeded too many invalid logins, with automatic
+expiry of the blacklisting. You can, if you like, manually blacklist certain IP's as well via the Admin UI.</p>
 <p><strong>Already in production</strong><br />
-Rauthy is already being used in production, and it works with all typical OIDC clients (so far). It was just not an 
+Rauthy is already being used in production, and it works with all typical OIDC clients (so far). It was just not an
 open source project for quite some time.<br />
 Keycloak was a rough inspiration in certain places and if something is working with Keycloak, it does with <code>rauthy</code> too
 (again, so far).</p>
-<h2 id="what-it-is-not-yet"><a class="header" href="#what-it-is-not-yet">What it is not (yet?)</a></h2>
-<p>Since Rauthy is currently pre v1.0, it might be missing some nice to have features. Some of them will never be
-implemented (see below), while others might come or are even planned already.</p>
-<p>Currently missing features:</p>
-<p><strong>Rauthy Authenticator MFA App</strong><br />
-Even though things like OTP codes will never be implemented, it is not set in stone yet that there will never be Rauthy's
-own Authenticator App, which then basically acts as a Webauthn Software Authenticator. There are already existing 
-solutions out there to serve this purpose.</p>
-<p><strong>OIDC Client</strong><br />
-Rauthy will most probably have the option to be an OIDC Client itself as well. With this feature, you would be able
-to do things like &quot;Login with Github&quot; to Rauthy and then use Rauthy for the extended management and features.</p>
+<h3 id="features-list"><a class="header" href="#features-list">Features List</a></h3>
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+Fully working OIDC provider</li>
+<li><input disabled="" type="checkbox" checked=""/>
+SQLite or Postgres as database</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Fast and efficient with minimal footprint</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Highly configurable</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Secure default values</li>
+<li><input disabled="" type="checkbox" checked=""/>
+True passwordless accounts with E-Mail + Magic Link + Passkey</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Account conversions between traditional password and Passkey only</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Supports DPoP tokens for decentralized login flows</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Supports ephemeral, dynamic clients for decentralized login flows</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Can serve a basic <code>webid</code> document for decentralized logins</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Admin UI</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Account UI for each user with self-service</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Simple per client branding for the login page</li>
+<li><input disabled="" type="checkbox" checked=""/>
+All End-User facing sites support i18n server-side translation</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Custom roles</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Custom groups</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Custom scopes</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Custom user attributes</li>
+<li><input disabled="" type="checkbox" checked=""/>
+User attribute binding to custom scopes</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Configurable password policy</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Admin API Keys with fine-grained access rights</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Events and alerting system</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Optional event notifications via: E-Mail, Matrix, Slack</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Optional event persistence</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Admin UI component for archived / persisted events</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Optional Force MFA for the Admin UI</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Optional Force MFA for each individual client</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Additional encryption inside the database for the most critical entries</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Automatic database backups with configurable retention and auto-cleanup (SQLite only)</li>
+<li><input disabled="" type="checkbox" checked=""/>
+auto-encrypted backups (SQLite)</li>
+<li><input disabled="" type="checkbox" checked=""/>
+pushing SQLite backups to S3 storage</li>
+<li><input disabled="" type="checkbox" checked=""/>
+auto-restore SQLite backups from file and s3</li>
+<li><input disabled="" type="checkbox" checked=""/>
+High-Availability</li>
+<li><input disabled="" type="checkbox" checked=""/>
+HA cache layer with its own (optional) mTLS connection</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Username enumeration prevention</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Login / Password hashing rate limiting</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Session client peer IP binding</li>
+<li><input disabled="" type="checkbox" checked=""/>
+IP blacklisting feature</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Auto-IP blacklisting for login endpoints</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Argon2ID with config helper UI utility</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Housekeeping schedulers and cron jobs</li>
+<li><input disabled="" type="checkbox" checked=""/>
+JSON Web Key Set (JWKS) autorotation feature</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Optional open user registration</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Optional user registration domain restriction</li>
+<li><input disabled="" type="checkbox" checked=""/>
+App version update checker</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Prometheus <code>/metrics</code> endpoint on separate port</li>
+<li><input disabled="" type="checkbox" checked=""/>
+SwaggerUI documentation</li>
+<li><input disabled="" type="checkbox" checked=""/>
+No-Setup migrations between different databases (Yes, even between SQLite and Postgres)</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
 <div id="admonition-hint" class="admonition tip">
 <div class="admonition-title">
@@ -290,7 +390,7 @@ The image contains a basic default config which is sufficient for local testing.
 <pre><code>docker run --rm \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.19.2-lite
+    ghcr.io/sebadob/rauthy:0.20.0-lite
 </code></pre>
 <p>This will start the container in interactive mode with an in-memory SQLite database. Just take a look at the log at the
 logs to see the URL and first password.</p>
@@ -299,7 +399,7 @@ logs to see the URL and first password.</p>
     -e DATABASE_URL=sqlite:data/rauthy.db \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.19.2-lite
+    ghcr.io/sebadob/rauthy:0.20.0-lite
 </code></pre>
 <div id="admonition-note" class="admonition note">
 <div class="admonition-title">
@@ -384,7 +484,7 @@ Make sure to adjust the volume mount for the sqlite directory in step 5, if it d
     -v $(pwd)/rauthy/data:/app/data \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.19.2-lite
+    ghcr.io/sebadob/rauthy:0.20.0-lite
 </code></pre>
 <p><strong>6. Restrict DB files access even more</strong><br />
 After rauthy has done the first start, you could harden the access rights of the SQLite files even more.<br />
@@ -477,11 +577,11 @@ create it as a secret anyway to have an easier optional migration to postgres la
 <pre><code>echo 'sqlite:data/rauthy.db' | base64
 </code></pre>
 <p>Generate a new encryption key with ID in the correct format.</p>
-<pre><code>echo &quot;$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c32)&quot; | base64
+<pre><code>echo &quot;$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)&quot;  | base64
 </code></pre>
 <p>Paste the base64 String in the secrets for <code>ENC_KEYS</code>.<br />
 To extract the <code>ENC_KEY_ID</code>, which needs to be added to the config from Step 2:</p>
-<pre><code>echo PasteTheGeneratedBase64Here | base64 -d | cut -d/ -f1
+<pre><code>echo -n PasteTheGeneratedBase64Here | base64 -d | cut -d/ -f1
 </code></pre>
 <p>And finally, the <code>SMTP_PASSWORD</code></p>
 <pre><code>echo 'PasteYourSMTPPasswordHere' | base64
@@ -539,7 +639,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.19.2-lite
+          image: ghcr.io/sebadob/rauthy:0.20.0-lite
           imagePullPolicy: IfNotPresent
           securityContext:
             # User ID 10001 is actually built into the container at the creation for
@@ -949,12 +1049,20 @@ If the old key is gone, the migration will fail.</p>
 </div>
 </div>
 <p><strong>2. Generate a new key + id</strong></p>
-<pre><code>echo &quot;$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c32)&quot;
+<pre><code>echo &quot;$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)&quot;
 </code></pre>
+<p>The part before the first <code>/</code> is the <code>ENC_KEY_ID</code> and the part afterwards is the key base64 encoded.
+You might set the new <code>ENC_KEY_ACTIVE</code> to the newly generated key ID.</p>
 <p>Keep in mind, you need to ADD this to your existing keys and not just replace them! If you just replace them, almost
 all things will break and fall apart.</p>
 <p>The final format of the <code>ENC_KEYS</code> should look something like this, for instance:</p>
-<pre><code>ENC_KEYS=&quot;bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA&quot;
+<pre><code>ENC_KEYS=&quot;
+Wx1zrbLF/5vTaB7LdUSg1aTecmqHJOu2+RnU6zgTwNkDQU52Y3JM=
+6uf5QebA/9DsKMoq8A+Gn2WQrTcSpz5sg751yYs3IJlkw3dn0rII=
+&quot;
+</code></pre>
+<p>In this example, if the first key should be the new active default, set your <code>ENC_KEY</code>ACTIVE` to</p>
+<pre><code>ENC_KEY_ACTIVE=Wx1zrbLF
 </code></pre>
 <div id="admonition-help" class="admonition question">
 <div class="admonition-title">
@@ -1553,6 +1661,35 @@ CACHE_USERS_LIFESPAN=28800
 # Disables the housekeeping schedulers (default: false)
 #SCHED_DISABLE=true
 
+# The interval in minutes in which the scheduler for expired 
+# users should run. If this finds expired users, it invalidates 
+# all existing sessions and refresh tokens for this user.
+# default: 60
+#SCHED_USER_EXP_MINS=60
+
+# The threshold in minutes after which time the user expiry 
+# scheduler should automatically clean up expired users.
+# If not set at all, expired users will never be cleaned up 
+# automatically.
+# default: disabled / not set
+#SCHED_USER_EXP_DELETE_MINS=7200
+
+#####################################
+############## DPOP #################
+#####################################
+
+# May be set to 'false' to disable forcing the usage of 
+# DPoP nonce's.
+# default: true
+DPOP_FORCE_NONCE=true
+
+# Lifetime in seconds for DPoP nonces. These are used to 
+# limit the lifetime of a client's DPoP proof. Do not set
+# lower than 30 seconds to avoid too many failed client 
+# token requests.
+# default: 900
+DPOP_NONCE_EXP=900
+
 #####################################
 ############# E-MAIL ################
 #####################################
@@ -1573,13 +1710,45 @@ SMTP_FROM=
 ###### ENCRYPTION / HASHING #########
 #####################################
 
-# Format: &quot;key_id/enc_key another_key_id/another_enc_key&quot; - the
-# enc_key itself must be exactly 32 characters long and and
-# should not contain special characters.
+# You need to define at least one valid encryption key.
+# These keys are used in various places, like for instance
+# encrypting confidential client secrets in the database, or
+# encryption cookies, and so on.
+#
+# The format must match:
+# ENC_KEYS=&quot;
+# q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
+# bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
+# &quot;
+#
+# The first part until the first `/` is the key ID.
 # The ID must match '[a-zA-Z0-9]{2,20}'
-#ENC_KEYS=&quot;bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA&quot;
+#
+# The key itself begins after the first `/` has been found.
+# The key must be exactly 32 bytes long, encoded as base64.
+# 
+# You can find a more detailed explanation on how to generate
+# keys in the documentation:
+# 1. https://sebadob.github.io/rauthy/getting_started/k8s.html#create-and-apply-secrets
+# 2. https://sebadob.github.io/rauthy/config/encryption.html
+#
+# You can provide multiple keys to make things like key 
+# rotation work. Be careful with removing old keys. Make sure
+# that all secrets have been migrated beforehand.
+# You can find a utility in the Admin UI to do this for you.
+#
+#ENC_KEYS=&quot;
+#q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
+#bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
+#&quot;
+
+# This identifies the key ID from the `ENC_KEYS` list, that
+# should actively be used for new encryptions.
 ENC_KEY_ACTIVE=bVCyTsGaggVy5yqQ
 
+# Argon2ID hashing parameters. Take a look at the documention
+# for more information:
+# https://sebadob.github.io/rauthy/config/argon2.html
 # M_COST should never be below 32768 in production
 ARGON2_M_COST=32768
 # T_COST should never be below 1 in production
@@ -1591,6 +1760,7 @@ ARGON2_P_COST=2
 # the exact same time to never exceed system memory while
 # still allowing a good amount of memory for the argon2id
 # algorithm (default: 2)
+#
 # CAUTION: You must make sure, that you have at least
 # (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + ~30 MB of memory
 # available.
@@ -1837,12 +2007,6 @@ EVENT_LEVEL_FAILED_LOGIN=info
 # setting the initial password. (default: 4320)
 #ML_LT_PWD_FIRST=4320
 
-# The interval in seconds in which keep-alives should be sent to SSE clients.
-# Depending on your network setup, proxy timeouts, ...
-# you may adjust this value to fit your needs.
-# default: 30
-#SSE_KEEP_ALIVE=30
-
 #####################################
 ############# LOGGING ###############
 #####################################
@@ -1867,7 +2031,7 @@ EVENT_LEVEL_FAILED_LOGIN=info
 # - Modifying
 #   Logs only requests to modifying endpoints and skips all GET
 # - Off
-# (default: Modifying)
+# default: Modifying
 #LOG_LEVEL_ACCESS=Basic
 
 #####################################
@@ -1898,7 +2062,7 @@ POW_EXP=30
 #####################################
 
 # The server address to listen on. Can bind to a specific IP.
-# (default: 0.0.0.0)
+# default: 0.0.0.0
 #LISTEN_ADDRESS=0.0.0.0
 
 # The listen ports for HTTP / HTTPS, depending on the
@@ -1923,7 +2087,7 @@ PUB_URL=localhost:8080
 #HTTP_WORKERS=1
 
 # When rauthy is running behind a reverse proxy, set to true
-# (default: false)
+# default: false
 PROXY_MODE=false
 
 # To enable or disable the additional HTTP server to expose the /metrics endpoint
@@ -1943,7 +2107,7 @@ PROXY_MODE=false
 # If the Swagger UI should be served together with the /metrics route on the internal
 # server. It it then reachable via:
 # http://METRICS_ADDR:METRICS_PORT/docs/v1/swagger-ui/
-# (default: true)
+# default: true
 #SWAGGER_UI_INTERNAL=true
 
 # If the Swagger UI should be served externally as well. This makes the link in the
@@ -1952,8 +2116,14 @@ PROXY_MODE=false
 # CAUTION: The Swagger UI is open and does not require any login to be seen!
 # Rauthy is open source, which means anyone could just download it and see on their
 # own, but it may be a security concern to just expose less information.
-# (default: false)
+# default: false
 #SWAGGER_UI_EXTERNAL=false
+
+# The interval in seconds in which keep-alives should be sent to SSE clients.
+# Depending on your network setup, proxy timeouts, ...
+# you may adjust this value to fit your needs.
+# default: 30
+#SSE_KEEP_ALIVE=30
 
 #####################################
 ############### TLS #################

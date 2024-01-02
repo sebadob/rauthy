@@ -256,11 +256,11 @@ create it as a secret anyway to have an easier optional migration to postgres la
 <pre><code>echo 'sqlite:data/rauthy.db' | base64
 </code></pre>
 <p>Generate a new encryption key with ID in the correct format.</p>
-<pre><code>echo &quot;$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c32)&quot; | base64
+<pre><code>echo &quot;$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)&quot;  | base64
 </code></pre>
 <p>Paste the base64 String in the secrets for <code>ENC_KEYS</code>.<br />
 To extract the <code>ENC_KEY_ID</code>, which needs to be added to the config from Step 2:</p>
-<pre><code>echo PasteTheGeneratedBase64Here | base64 -d | cut -d/ -f1
+<pre><code>echo -n PasteTheGeneratedBase64Here | base64 -d | cut -d/ -f1
 </code></pre>
 <p>And finally, the <code>SMTP_PASSWORD</code></p>
 <pre><code>echo 'PasteYourSMTPPasswordHere' | base64
@@ -318,7 +318,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.19.2-lite
+          image: ghcr.io/sebadob/rauthy:0.20.0-lite
           imagePullPolicy: IfNotPresent
           securityContext:
             # User ID 10001 is actually built into the container at the creation for

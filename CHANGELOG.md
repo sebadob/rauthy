@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.20.0
 
 ### Breaking
 
@@ -21,6 +21,7 @@ like mentioned below as well.
 However, to make working with encryption keys easier and provide higher entropy, the format has changed.
 You need to convert your currently used `ENC_KEYS` to the new format:
 
+#### Option 1: Use `cryptr` CLI
 
 **1. Install cryptr - https://github.com/sebadob/cryptr**
 
@@ -68,6 +69,43 @@ If you have Rust available on your system, just execute:
 
 **5. Paste the new format into your Rauthy config / secret and restart.**
 
+#### Option 2: Manual
+
+Rauthy expects the `ENC_KEYS` now base64 encoded, and instead of separated by whitespace it expects them to
+be separated by `\n` instead.  
+If you don't want to use `cryptr` you need to convert your current keys manually.
+
+For instance, if you have
+```
+ENC_KEYS="bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA"
+```
+in your config, you need to convert the enc key itself, the value after the `/`, to base64, and then separate
+them with `\n`.
+
+For instance, to convert `bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4`, split off the enc key part
+`S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4` and encode it with base64:
+
+```
+echo -n 'S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4' | base64
+```
+
+Then combine the result with the key id again to:
+
+```
+bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
+```
+
+Do this for every key you have. The `ENC_KEYS` should then look like this in the end:
+
+```
+ENC_KEYS="
+bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
+q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
+"
+```
+
+**Important:**  
+Make sure to not add any newline characters or spaces when copying values around when doing the bas64 encoding!
 
 ### Encrypted SQLite backups to S3 storage
 
@@ -109,6 +147,15 @@ inside their own separate cache, which can be configured and customized to fit t
 You can now set the upper limit and the lifespan for cached user's. This is one of the first upcoming
 optimizations, since Rauthy gets closer to the first v1.0.0 release:
 
+### E-Mails as lowercase only
+
+Up until now, it was possible to register the same E-Mail address multiple times with using uppercase characters.
+E-Mail is case-insensitive by definition though. This version does a migration of all currently existing E-Mail addresses
+in the database to lowercase only characters. From that point on, it will always convert any address to lowercase only
+characters to avoid confusion and conflicts.  
+This means, if you currently have the same address in your database with different casing, you need to resolve this
+issue manually. The migration function will throw an error in the console at startup, if it finds such a conflict.
+
 ```
 # The max cache size for users. If you can afford it memory-wise, make it possible to fit
 # all active users inside the cache.
@@ -143,7 +190,7 @@ The new scope `address` adds:
 [ece73bb](https://github.com/sebadob/rauthy/commit/ece73bb38878d8d189d52855845c63fa729cae2a)
 - backend + frontend dependencies have been updated to the latest versions everywhere
 - The internal encryption handling has been changed to a new project of mine called [cryptr](https://github.com/sebadob/cryptr).  
-This makes the whole value encryption way easier, more stable and future proof, because values have their own
+This makes the whole value encryption way easier, more stable and future-proof, because values have their own
 tiny header data with the minimal amount of information needed. It not only simplifies encryption key rotations,
 but also even encryption algorithm encryptions really easy in the future.
 [d6c224e](https://github.com/sebadob/rauthy/commit/d6c224e98198c155d7df83c25edc5c97ab590d2a)
@@ -162,6 +209,9 @@ but also even encryption algorithm encryptions really easy in the future.
 [38a2a52](https://github.com/sebadob/rauthy/commit/38a2a52fe6530cf4efdedfe96d2b3041959fcd3d)
 - push users into their own, separate, configurable cache
 [3137927](https://github.com/sebadob/rauthy/commit/31379278440ec6ddaf1a2288ba3950ab60994963)
+- Convert to lowercase E-Mail addresses, always, everywhere
+[a137e96](https://github.com/sebadob/rauthy/commit/a137e963d2c409749b65240ebd9f5b0587c96938)
+[2467227](https://github.com/sebadob/rauthy/commit/24672277e58694d9b23ce12da932ba515eb8674e)
 - add additional user values matching OIDC default claims
 [fca0c13](https://github.com/sebadob/rauthy/commit/fca0c1306624bdffa112ad8239e381064cb0b843)
 - add `address` and `phone` default OIDC scopes and additional values for `profile`
