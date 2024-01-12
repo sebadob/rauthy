@@ -47,7 +47,7 @@ use std::time::Duration;
 use std::{env, thread};
 use tokio::sync::mpsc;
 use tokio::time;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::cache_notify::handle_notify;
@@ -688,9 +688,16 @@ async fn v20_migrate_to_cryptr(app_state: &Data<AppState>) -> Result<(), ErrorRe
 
         let kid = client.secret_kid.as_ref().unwrap_or(&keys.enc_key_active);
         let key = keys.get_key(kid)?;
-
-        let dec = decrypt_legacy(client.secret.as_ref().unwrap(), key)?;
-        let enc = EncValue::encrypt(dec.as_slice())?.into_bytes().to_vec();
+        let enc = match decrypt_legacy(client.secret.as_ref().unwrap(), key) {
+            Ok(dec) => EncValue::encrypt(dec.as_slice())?.into_bytes().to_vec(),
+            Err(err) => {
+                // if we get here, it means this was a fresh install with v0.20
+                // In that case, the Clients are being created in the new format already
+                // -> no need to migrate them
+                warn!("Error decrypting client secret in v20_migrate_to_cryptr: {:?}\n\nIf this is a fresh install, you can ignore this\n", err);
+                break;
+            }
+        };
 
         client.secret = Some(enc);
         client.secret_kid = Some(active_key.clone());
@@ -703,8 +710,16 @@ async fn v20_migrate_to_cryptr(app_state: &Data<AppState>) -> Result<(), ErrorRe
         .await?;
     for jwk in jwks {
         let key = keys.get_key(&jwk.enc_key_id)?;
-        let dec = decrypt_legacy(jwk.jwk.as_slice(), key)?;
-        let enc = EncValue::encrypt(dec.as_slice())?.into_bytes().to_vec();
+        let enc = match decrypt_legacy(jwk.jwk.as_slice(), key) {
+            Ok(dec) => EncValue::encrypt(dec.as_slice())?.into_bytes().to_vec(),
+            Err(err) => {
+                // if we get here, it means this was a fresh install with v0.20
+                // In that case, the JWKS are being created in the new format already
+                // -> no need to migrate them
+                warn!("Error decrypting JWK in v20_migrate_to_cryptr: {:?}\n\nIf this is a fresh install, you can ignore this\n", err);
+                break;
+            }
+        };
 
         sqlx::query!(
             "update jwks set enc_key_id = $1, jwk = $2 where kid = $3",
@@ -721,6 +736,8 @@ async fn v20_migrate_to_cryptr(app_state: &Data<AppState>) -> Result<(), ErrorRe
     for mut api_key in api_keys {
         // secret
         let key = keys.get_key(&api_key.enc_key_id)?;
+        // In case of API Keys, we don't need to do the error check from above.
+        // They can never exist on a fresh install anyway.
         let dec = decrypt_legacy(api_key.secret.as_slice(), key)?;
         api_key.secret = EncValue::encrypt(dec.as_slice())?.into_bytes().to_vec();
 
@@ -755,11 +772,6 @@ async fn v20_migrate_to_cryptr(app_state: &Data<AppState>) -> Result<(), ErrorRe
     txn.commit().await?;
 
     info!("Secrets migration successful");
-
-    // TODO maybe encrypt webauthn data while we are doing it already anyway?
-
-    // TODO check the user's database and convert all existing emails to lowercase only to avoid
-    // duplicate issues if a user is added more than once just with an uppercase character
 
     Ok(())
 }
