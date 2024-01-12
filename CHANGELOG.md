@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.20.1
+
+This is a small bugfix release.  
+The temp migrations which exist for v0.20 only to migrate existing database secrets to
+[cryptr](https://github.com/sebadob/cryptr) were causing a crash at startup for a fresh installation. This is the only thing that has been fixed
+with this version. They are now simply ignored and a warning is logged into the console at the very first startup.
+
 ## v0.20.0
 
 ### Breaking
