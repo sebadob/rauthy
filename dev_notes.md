@@ -8,7 +8,6 @@
 
 ## Stage 2 - features - do before v1.0.0
 
-- impl leftovers on `/userinfo` endpoint
 - impl oidc metadata `check_session_iframe` ?
 - admin ui: template button for client branding: default-light + default-dark ?
 - double check against https://openid.net/specs/openid-connect-core-1_0.html that everything is implemented correctly
