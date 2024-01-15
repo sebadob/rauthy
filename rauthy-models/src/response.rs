@@ -10,7 +10,7 @@ use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::language::Language;
-use crate::JktClaim;
+use crate::{AddressClaim, JktClaim};
 use rauthy_common::error_response::ErrorResponse;
 use rio_api::formatter::TriplesFormatter;
 use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
@@ -362,14 +362,42 @@ pub struct UserAttrValuesResponse {
 pub struct Userinfo {
     pub id: String,
     pub sub: String,
-    pub email: String,
-    pub email_verified: bool,
     pub name: String,
     pub roles: Vec<String>,
-    pub groups: Vec<String>,
-    pub preferred_username: String,
-    pub given_name: String,
-    pub family_name: String,
+
+    // scope: address
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address: Option<AddressClaim>,
+
+    // scope: email
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email_verified: Option<bool>,
+
+    // scope: groups
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub groups: Option<Vec<String>>,
+
+    // scope: profile
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preferred_username: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub given_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub family_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub birthdate: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub locale: Option<String>,
+
+    // scope: phone
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone: Option<String>,
+
+    // scope: webid
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub webid: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
