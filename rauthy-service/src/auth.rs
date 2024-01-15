@@ -470,11 +470,8 @@ pub async fn build_id_token(
         false => JwtAmrValue::Pwd.to_string(),
     };
 
-    let webid = if *ENABLE_WEB_ID && scope.contains("webid") {
-        Some(WebId::resolve_webid_uri(&user.id))
-    } else {
-        None
-    };
+    let webid =
+        (*ENABLE_WEB_ID && scope.contains("webid")).then(|| WebId::resolve_webid_uri(&user.id));
 
     let mut custom_claims = JwtIdClaims {
         azp: client.id.clone(),
@@ -496,7 +493,6 @@ pub async fn build_id_token(
         webid,
     };
 
-    // let user_values = UserValues::find(data, &user.id).await?;
     let mut user_values = None;
     let mut user_values_fetched = false;
 
@@ -685,6 +681,7 @@ pub async fn get_userinfo(
     let bearer = get_bearer_token_from_header(req.headers())?;
 
     let claims = validate_token::<JwtCommonClaims>(data, &bearer).await?;
+    let scope = claims.custom.scope.unwrap_or_else(|| "openid".to_string());
 
     let email = claims.subject.ok_or_else(|| {
         ErrorResponse::new(
@@ -695,19 +692,87 @@ pub async fn get_userinfo(
     let user = User::find_by_email(data, email).await?;
 
     let roles = user.get_roles();
-    let groups = user.get_groups();
-    let userinfo = Userinfo {
-        id: user.id,
+    let groups = scope.contains("groups").then(|| user.get_groups());
+    let webid =
+        (*ENABLE_WEB_ID && scope.contains("webid")).then(|| WebId::resolve_webid_uri(&user.id));
+
+    let mut userinfo = Userinfo {
+        id: user.id.clone(),
         sub: user.email.clone(),
-        email: user.email.clone(),
-        email_verified: user.email_verified,
         name: format!("{} {}", &user.given_name, &user.family_name),
         roles,
+
+        // scope: address
+        address: None,
+
+        // scope: email
+        email: None,
+        email_verified: None,
+
+        // scope: groups
         groups,
-        preferred_username: user.email,
-        given_name: user.given_name,
-        family_name: user.family_name,
+
+        // scope: profile
+        preferred_username: None,
+        given_name: None,
+        family_name: None,
+        locale: None,
+        birthdate: None,
+
+        // scope: phone
+        phone: None,
+
+        // scope: webid
+        webid,
     };
+
+    if scope.contains("email") {
+        userinfo.email = Some(user.email.clone());
+        userinfo.email_verified = Some(user.email_verified);
+    }
+
+    let mut user_values = None;
+    let mut user_values_fetched = false;
+
+    if scope.contains("profile") {
+        userinfo.preferred_username = Some(user.email.clone());
+        userinfo.given_name = Some(user.given_name.clone());
+        userinfo.family_name = Some(user.family_name.clone());
+        userinfo.locale = Some(user.language.to_string());
+
+        user_values = UserValues::find(data, &user.id).await?;
+        user_values_fetched = true;
+
+        if let Some(values) = &user_values {
+            if let Some(birthdate) = &values.birthdate {
+                userinfo.birthdate = Some(birthdate.clone());
+            }
+        }
+    }
+
+    if scope.contains("address") {
+        if !user_values_fetched {
+            user_values = UserValues::find(data, &user.id).await?;
+            user_values_fetched = true;
+        }
+
+        if let Some(values) = &user_values {
+            userinfo.address = AddressClaim::try_build(&user, values);
+        }
+    }
+
+    if scope.contains("phone") {
+        if !user_values_fetched {
+            user_values = UserValues::find(data, &user.id).await?;
+            // user_values_fetched = true;
+        }
+
+        if let Some(values) = &user_values {
+            if let Some(phone) = &values.phone {
+                userinfo.phone = Some(phone.clone());
+            }
+        }
+    }
 
     Ok(userinfo)
 }
