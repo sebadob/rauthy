@@ -1,6 +1,6 @@
 <script>
     import CheckIcon from "$lib/CheckIcon.svelte";
-    import {buidlWebIdUri, formatDateFromTs} from "../../utils/helpers.js";
+    import {buildWebIdUri, formatDateFromTs} from "../../utils/helpers.js";
 
     export let t;
     export let user = {};
@@ -90,8 +90,8 @@
         <div class={classRow}>
             <div class={classLabel}><b>WebID:</b></div>
             <span class="value">
-                <a href={buidlWebIdUri(user.id)} target="_blank">
-                    {@html buidlWebIdUri(user.id).replace('/auth/', '/auth/<wbr/>')}
+                <a href={buildWebIdUri(user.id)} target="_blank">
+                    {@html buildWebIdUri(user.id).replace('/auth/', '/auth/<wbr/>')}
                 </a>
             </span>
         </div>

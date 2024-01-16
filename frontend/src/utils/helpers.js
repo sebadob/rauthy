@@ -12,7 +12,7 @@ import {
 } from "./constants.js";
 import { decode, encode } from "base64-arraybuffer";
 
-export function buidlWebIdUri(userId) {
+export function buildWebIdUri(userId) {
 	return `${window.location.origin}/auth/${userId}/profile#me`
 }
 
