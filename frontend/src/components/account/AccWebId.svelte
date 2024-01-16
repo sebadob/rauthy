@@ -3,7 +3,7 @@
     import {fade, slide} from 'svelte/transition';
     import {putUserWebIdData} from "../../utils/dataFetching.js";
     import Switch from "$lib/Switch.svelte";
-    import {buidlWebIdUri} from "../../utils/helpers.js";
+    import {buildWebIdUri} from "../../utils/helpers.js";
 
     export let t;
     export let webIdData;
@@ -13,7 +13,7 @@
     let err = '';
     let success = false;
     let expertMode = !!webIdData.custom_triples;
-    let webIdLink = buidlWebIdUri(webIdData.user_id);
+    let webIdLink = buildWebIdUri(webIdData.user_id);
 
     // do not set any value here - will be bound to validate function in <AccWebIdEntries/>
     let getData;

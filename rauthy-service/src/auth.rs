@@ -11,8 +11,8 @@ use jwt_simple::claims;
 use jwt_simple::prelude::*;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, ENABLE_SOLID_AUD, ENABLE_WEB_ID,
-    HEADER_DPOP_NONCE, IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME, SESSION_RENEW_MFA, TOKEN_BEARER,
-    WEBAUTHN_REQ_EXP,
+    HEADER_DPOP_NONCE, IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME, SESSION_LIFETIME,
+    SESSION_RENEW_MFA, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::HashPassword;
@@ -459,15 +459,35 @@ pub async fn build_id_token(
     scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
     is_auth_code_flow: bool,
 ) -> Result<String, ErrorResponse> {
-    let amr = match user.has_webauthn_enabled() {
+    let now_ts = Utc::now().timestamp();
+    let (amr, auth_time) = match user.has_webauthn_enabled() {
         true => {
             if is_auth_code_flow {
-                JwtAmrValue::Mfa.to_string()
+                // With active MFA, the auth_time is always 'now', because it must be re-validated each time
+                (JwtAmrValue::Mfa.to_string(), now_ts)
             } else {
-                JwtAmrValue::Pwd.to_string()
+                // TODO to get this 100% correct, we would need to do a DB migration with a new version and update
+                // something like a `last_auth` field in the DB each time. Not implemented now to not being forced into
+                // a new minor version just because of this small thing -> do in the future.
+                (
+                    JwtAmrValue::Pwd.to_string(),
+                    now_ts - *SESSION_LIFETIME as i64,
+                )
             }
         }
-        false => JwtAmrValue::Pwd.to_string(),
+        false => {
+            if is_auth_code_flow {
+                // TODO this is a bit inaccurate at this time as well -> improve with DB migration in future minor version
+                // it might be the case, that this was initiated with a direct refresh
+                (JwtAmrValue::Pwd.to_string(), now_ts)
+            } else {
+                // TODO make more accurate with future DB migration
+                (
+                    JwtAmrValue::Pwd.to_string(),
+                    now_ts - *SESSION_LIFETIME as i64,
+                )
+            }
+        }
     };
 
     let webid =
@@ -477,6 +497,7 @@ pub async fn build_id_token(
         azp: client.id.clone(),
         typ: JwtTokenType::Id,
         amr: vec![amr],
+        auth_time,
         preferred_username: user.email.clone(),
         email: None,
         email_verified: None,
