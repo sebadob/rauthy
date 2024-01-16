@@ -5,6 +5,7 @@ use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::{header, StatusCode};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError};
+use chrono::Utc;
 use tracing::debug;
 
 use rauthy_common::constants::{APPLICATION_JSON, COOKIE_MFA, HEADER_HTML, SESSION_LIFETIME};
@@ -75,12 +76,40 @@ pub async fn get_authorize(
         }
     };
 
-    if principal.validate_session_auth().is_ok() {
+    // check max_age and possibly force a new session
+    let mut force_new_session = if let Some(max_age) = req_data.max_age {
+        if let Some(session) = &principal.session {
+            let session_created = session.exp - *SESSION_LIFETIME as i64;
+            Utc::now().timestamp() > session_created + max_age
+        } else {
+            true
+        }
+    } else {
+        false
+    };
+
+    // check if the user needs to do the Webauthn login each time
+    let mut action = FrontendAction::None;
+    if let Ok(mfa_cookie) = WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA)) {
+        if let Ok(user) = User::find_by_email(&data, mfa_cookie.email.clone()).await {
+            // we need to check this, because a user could deactivate MFA in another browser or
+            // be deleted while still having existing mfa cookies somewhere else
+            if user.has_webauthn_enabled() {
+                action = FrontendAction::MfaLogin(mfa_cookie.email);
+
+                // if the user must do another MFA login anyway, we do never force a new session creation,
+                // because the authentication happens each time anyway
+                force_new_session = false;
+            }
+        }
+    }
+
+    // if the user is still authenticated and everything is valid -> immediate refresh
+    if !force_new_session && principal.validate_session_auth().is_ok() {
         let csrf = principal.get_session_csrf_token()?;
         let body =
             AuthorizeHtml::build(&client.name, csrf, FrontendAction::Refresh, &colors, &lang);
 
-        // TODO make this prettier - append header conditionally easier?
         if let Some(o) = origin_header {
             return Ok(HttpResponse::Ok()
                 .insert_header(o)
@@ -96,22 +125,6 @@ pub async fn get_authorize(
         let body = Error1Html::build(&colors, &lang, status, Some(err.message));
         return Ok(ErrorHtml::response(body, status));
     }
-
-    let mut action = FrontendAction::None;
-
-    if let Ok(mfa_cookie) = WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA)) {
-        if let Ok(user) = User::find_by_email(&data, mfa_cookie.email.clone()).await {
-            // we need to check this, because a user could deactivate MFA in another browser or
-            // be deleted while still having existing mfa cookies somewhere else
-            if user.has_webauthn_enabled() {
-                action = FrontendAction::MfaLogin(mfa_cookie.email);
-            }
-        }
-    }
-
-    // if let Some(mfa_cookie) = req.cookie(COOKIE_MFA) {
-    //     action = FrontendAction::MfaLogin(mfa_cookie.value().to_string())
-    // }
 
     let body = AuthorizeHtml::build(&client.name, &session.csrf_token, action, &colors, &lang);
 
