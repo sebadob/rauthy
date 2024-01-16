@@ -87,6 +87,7 @@ pub struct AuthRequest {
     /// Validation: `[a-zA-Z0-9]`
     #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub code_challenge_method: Option<String>,
+    pub max_age: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
