@@ -171,6 +171,7 @@ pub struct JwtIdClaims {
     pub azp: String,
     pub typ: JwtTokenType,
     pub amr: Vec<String>,
+    pub auth_time: i64,
     pub preferred_username: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,

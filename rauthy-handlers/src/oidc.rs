@@ -1,13 +1,9 @@
-use std::ops::Add;
-use std::time::{SystemTime, UNIX_EPOCH};
-
+use crate::{map_auth_step, real_ip_from_req, ReqPrincipal};
 use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::{header, StatusCode};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError};
 use chrono::Utc;
-use tracing::debug;
-
 use rauthy_common::constants::{APPLICATION_JSON, COOKIE_MFA, HEADER_HTML, SESSION_LIFETIME};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::app_state::AppState;
@@ -29,8 +25,9 @@ use rauthy_models::templates::{
 };
 use rauthy_models::JwtCommonClaims;
 use rauthy_service::auth;
-
-use crate::{map_auth_step, real_ip_from_req, ReqPrincipal};
+use std::ops::Add;
+use std::time::{SystemTime, UNIX_EPOCH};
+use tracing::debug;
 
 /// OIDC Authorization HTML
 ///
