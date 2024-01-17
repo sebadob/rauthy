@@ -73,8 +73,15 @@ pub async fn get_authorize(
         }
     };
 
-    // check max_age and possibly force a new session
-    let mut force_new_session = if let Some(max_age) = req_data.max_age {
+    // check prompt and max_age to possibly force a new session
+    let mut force_new_session = if req_data
+        .prompt
+        .as_ref()
+        .map(|p| p.as_str() == "login")
+        .unwrap_or(false)
+    {
+        true
+    } else if let Some(max_age) = req_data.max_age {
         if let Some(session) = &principal.session {
             let session_created = session.exp - *SESSION_LIFETIME as i64;
             Utc::now().timestamp() > session_created + max_age
@@ -99,6 +106,19 @@ pub async fn get_authorize(
                 force_new_session = false;
             }
         }
+    }
+
+    // check for no-prompt
+    if !force_new_session
+        && req_data
+            .prompt
+            .as_ref()
+            .map(|p| p.as_str() == "none")
+            .unwrap_or(false)
+    {
+        let status = StatusCode::UNAUTHORIZED;
+        let body = Error1Html::build(&colors, &lang, status, Some("login_required".to_string()));
+        return Ok(ErrorHtml::response(body, status));
     }
 
     // if the user is still authenticated and everything is valid -> immediate refresh
