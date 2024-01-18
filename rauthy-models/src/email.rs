@@ -17,6 +17,7 @@ use rauthy_common::constants::{
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::Notification;
+use std::env;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Receiver;
@@ -415,18 +416,32 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
     let smtp_url = SMTP_URL.as_deref().unwrap();
     let mailer = {
         let mut retries = 0;
+        let retries_max = env::var("SMTP_CONNECT_RETRIES")
+            .unwrap_or_else(|_| "3".to_string())
+            .trim()
+            .parse::<u16>()
+            .expect("Cannot parse SMTP_CONNECT_RETRIES to u16");
 
-        let mut conn = connect_test_smtp(smtp_url).await;
+        let mut conn = if smtp_url == "localhost" {
+            conn_test_smtp_localhost().await
+        } else {
+            connect_test_smtp(smtp_url).await
+        };
+
         while let Err(err) = conn {
             error!("{:?}", err);
 
-            if retries >= 3 {
+            if retries >= retries_max {
                 panic!("SMTP connection retries exceeded");
             }
             retries += 1;
             tokio::time::sleep(Duration::from_secs(5)).await;
 
-            conn = connect_test_smtp(smtp_url).await;
+            conn = if smtp_url == "localhost" {
+                conn_test_smtp_localhost().await
+            } else {
+                connect_test_smtp(smtp_url).await
+            }
         }
         conn.unwrap()
     };
@@ -522,6 +537,35 @@ async fn connect_test_smtp(
     }
 
     Ok(conn)
+}
+
+async fn conn_test_smtp_localhost(
+) -> Result<AsyncSmtpTransport<lettre::Tokio1Executor>, ErrorResponse> {
+    let port = env::var("SMTP_LOCALHOST_PORT")
+        .unwrap_or_else(|_| "1025".to_string())
+        .trim()
+        .parse::<u16>()
+        .expect("Cannot parse SMTP_LOCALHOST_PORT to u16");
+
+    let conn = AsyncSmtpTransport::<lettre::Tokio1Executor>::builder_dangerous("localhost")
+        .port(port)
+        .build();
+    match conn.test_connection().await {
+        Ok(true) => {
+            info!(
+                "Successfully connected to localhost SMTP relay on port {}",
+                port
+            );
+            Ok(conn)
+        }
+        Ok(false) | Err(_) => {
+            error!("Could not connect to localhost SMTP relay on port {}", port);
+            Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                "Could not connect to localhost SMTP relay".to_string(),
+            ))
+        }
+    }
 }
 
 /// Prettifies unix timestamps for E-Mails in a better readable format for end users
