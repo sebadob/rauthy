@@ -61,6 +61,17 @@ The rest works just the same and as expected: http://localhost:5173/auth/v1/inde
 As long as you don't use passkeys, it should work right away. If you however want to test passkeys with the local
 dev ui, you need to adjust the port for `RP_ORIGIN` in the `rauthy.cfg`.
 
+### Local SMTP Relay
+
+If you want to use a local SMTP relay for testing E-Mails, there are just recipes for [maildev](https://github.com/maildev/maildev):
+
+`just maildev-start` will start the docker container for `maildev`. The UI will be available via http://localhost:1080
+You need to set in the config:
+- `SMTP_URL=localhost`
+- `SMTP_DANGER_INSECURE=true`
+
+You can stop the container with `just maildev-stop`.
+
 ## Before Submitting a PR
 
 This project does not have any actions and automatic pipelines set up yet.  
