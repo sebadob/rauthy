@@ -7,9 +7,6 @@
 https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation -> 15.1
 These are mandatory and will come with the next PR's.
 
-- respect `prompt` on `/authorize` (mandatory: `none` + `login`)
-- respect `max_age` on `/authorize`
-- add `auth_time` claim to the ID token
 - double check `redirect_uri` during final token request with auth code
 
 ## TODO next features
