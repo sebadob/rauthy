@@ -63,14 +63,14 @@ dev ui, you need to adjust the port for `RP_ORIGIN` in the `rauthy.cfg`.
 
 ### Local SMTP Relay
 
-If you want to use a local SMTP relay for testing E-Mails, there are just recipes for [maildev](https://github.com/maildev/maildev):
+If you want to use a local SMTP relay for testing E-Mails, there are just recipes for [mailcrab](https://github.com/tweedegolf/mailcrab/):
 
-`just maildev-start` will start the docker container for `maildev`. The UI will be available via http://localhost:1080
+`just mailcrab-start` will start the docker container for `mailcrab`. The UI will be available via http://localhost:1080
 You need to set in the config:
 - `SMTP_URL=localhost`
 - `SMTP_DANGER_INSECURE=true`
 
-You can stop the container with `just maildev-stop`.
+You can stop the container with `just mailcrab-stop`.
 
 ## Before Submitting a PR
 
