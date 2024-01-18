@@ -1,5 +1,24 @@
 # Changelog
 
+## UNRELEASED
+
+This is about implementing the last leftover things to make Rauthy compliant with the mandatory part
+of the OIDC spec. A lot of additional things were already implemented many versions ago. There were just
+some minor parts missing.
+
+### Changes
+
+- The `/userinfo` endpoint now correctly respects the `scope` claim from withing the given `Bearer` token
+and provides more information. Depending on the `scope`, it will show the additional user values that were
+introduced with v0.20
+[49dd553](https://github.com/sebadob/rauthy/commit/49dd553e1df072f6a0db3b1cfaa130f7146aaf25)
+- respect `max_age` during GET `/authorize` and add `auth_time` to the ID token
+[9ca6970](https://github.com/sebadob/rauthy/commit/9ca697091eba2a6297c289162f426a92b28385f4)
+- correctly work with `prompt=none` and `prompt=login` during GET `/authorize`
+[9964fa4](https://github.com/sebadob/rauthy/commit/9964fa4aed7fdb6428b518a13dc18cc2761606f3)
+- Make it possible to use an insecure SMTP connection
+[ef46414](https://github.com/sebadob/rauthy/commit/ef464145d5ed7f8ffe97fc24667a74485f94c2f1)
+
 ## v0.20.1
 
 This is a small bugfix release.  
