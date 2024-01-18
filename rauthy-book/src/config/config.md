@@ -280,36 +280,38 @@ DPOP_NONCE_EXP=900
 # default: "Rauthy IAM"
 EMAIL_SUB_PREFIX="Rauthy IAM"
 
-# You can set `SMTP_URL=localhost` to connect to a locally running
-# SMTP relay. On localhost, `SMTP_USERNAME` and `SMTP_PASSWORD` 
-# will be ignored and the connection will be done without TLS. 
-# You might set `SMTP_LOCALHOST_PORT` to change to a custom port.
-#
-# Any other URL set here will force TLS and try a downgrade to 
-# STARTTLS, if TLS fails. It will never allow an unencrypted 
-# connection with any server other than 'localhost'.
+# Rauthy will force TLS and try a downgrade to STARTTLS, if
+# TLS fails. It will never allow an unencrypted connection.
+# You might want to set `SMTP_DANGER_INSECURE=true` if you
+# need this for local dev.
 #SMTP_URL=
+#SMTP_USERNAME=
+#SMTP_PASSWORD=
 # Format: "Rauthy <rauthy@localhost.de>"
 #SMTP_FROM=
 
-# `SMTP_USERNAME` and `SMTP_PASSWORD` must be set if `SMTP_URL`
-# is any other than 'localhost'.
-#SMTP_USERNAME=
-#SMTP_PASSWORD=
-
 # The number of retries that should be done for connecting to
 # the given SMTP_URL.
-# When these retries are exceeded without success, Rauthy will 
+# When these retries are exceeded without success, Rauthy will
 # panic and exit, so no E-Mail can get lost silently because of
 # a missing SMTP connection.
 # default: 3
 #SMTP_CONNECT_RETRIES=3
 
-# The port for an SMTP relay running on localhost.
+# You can set this to `true` to allow an unencrypted and
+# unauthenticated SMTP connection to an SMTP relay on your localhost
+# or for development purposes.
+# When set to `true`, `SMTP_USERNAME` and `SMTP_PASSWORD` will be
+# ignored and you can modify the target port with
+# `SMTP_DANGER_INSECURE_PORT`.
+# default: false
+#SMTP_DANGER_INSECURE=false
+
+# The port for an insecure SMTP relay.
 # This will most likely be used for testing only.
-# It will only be taken into account if `SMTP_URL=localhost` is set.
+# It will only be taken into account if `SMTP_DANGER_INSECURE=true` is set.
 # default: 1025
-#SMTP_LOCALHOST_PORT=1025
+#SMTP_DANGER_INSECURE_PORT=1025
 
 #####################################
 ###### ENCRYPTION / HASHING #########

@@ -413,8 +413,13 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
         }
     }
 
-    let smtp_url = SMTP_URL.as_deref().unwrap();
     let mailer = {
+        let smtp_url = SMTP_URL.as_deref().unwrap();
+        let smtp_insecure = env::var("SMTP_DANGER_INSECURE")
+            .unwrap_or_else(|_| "false".to_string())
+            .parse::<bool>()
+            .expect("Cannot parse SMTP_DANGER_INSECURE to bool");
+
         let mut retries = 0;
         let retries_max = env::var("SMTP_CONNECT_RETRIES")
             .unwrap_or_else(|_| "3".to_string())
@@ -422,7 +427,7 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
             .parse::<u16>()
             .expect("Cannot parse SMTP_CONNECT_RETRIES to u16");
 
-        let mut conn = if smtp_url == "localhost" {
+        let mut conn = if smtp_insecure {
             conn_test_smtp_localhost().await
         } else {
             connect_test_smtp(smtp_url).await
@@ -437,7 +442,7 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
             retries += 1;
             tokio::time::sleep(Duration::from_secs(5)).await;
 
-            conn = if smtp_url == "localhost" {
+            conn = if smtp_insecure {
                 conn_test_smtp_localhost().await
             } else {
                 connect_test_smtp(smtp_url).await
@@ -541,11 +546,11 @@ async fn connect_test_smtp(
 
 async fn conn_test_smtp_localhost(
 ) -> Result<AsyncSmtpTransport<lettre::Tokio1Executor>, ErrorResponse> {
-    let port = env::var("SMTP_LOCALHOST_PORT")
+    let port = env::var("SMTP_DANGER_INSECURE_PORT")
         .unwrap_or_else(|_| "1025".to_string())
         .trim()
         .parse::<u16>()
-        .expect("Cannot parse SMTP_LOCALHOST_PORT to u16");
+        .expect("Cannot parse SMTP_DANGER_INSECURE_PORT to u16");
 
     let conn = AsyncSmtpTransport::<lettre::Tokio1Executor>::builder_dangerous("localhost")
         .port(port)
