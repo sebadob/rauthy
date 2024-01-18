@@ -64,6 +64,18 @@ docker-buildx-setup:
     docker buildx inspect rauthy_builder
 
 
+# Starts maildev (https://github.com/maildev/maildev) on your localhost for E-Mail testing
+maildev-start:
+    #!/usr/bin/env bash
+    docker run -d --rm -p 1080:1080 -p 1025:1025 --name maildev maildev/maildev
+
+
+# Stops maildev
+maildev-stop:
+    #!/usr/bin/env bash
+    docker stop maildev
+
+
 # Just uses `cargo fmt --all`
 fmt:
     #!/usr/bin/env bash
