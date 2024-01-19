@@ -428,7 +428,7 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
             .expect("Cannot parse SMTP_CONNECT_RETRIES to u16");
 
         let mut conn = if smtp_insecure {
-            conn_test_smtp_localhost().await
+            conn_test_smtp_insecure(smtp_url).await
         } else {
             connect_test_smtp(smtp_url).await
         };
@@ -443,7 +443,7 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
             tokio::time::sleep(Duration::from_secs(5)).await;
 
             conn = if smtp_insecure {
-                conn_test_smtp_localhost().await
+                conn_test_smtp_insecure(smtp_url).await
             } else {
                 connect_test_smtp(smtp_url).await
             }
@@ -544,7 +544,8 @@ async fn connect_test_smtp(
     Ok(conn)
 }
 
-async fn conn_test_smtp_localhost(
+async fn conn_test_smtp_insecure(
+    smtp_url: &str,
 ) -> Result<AsyncSmtpTransport<lettre::Tokio1Executor>, ErrorResponse> {
     let port = env::var("SMTP_DANGER_INSECURE_PORT")
         .unwrap_or_else(|_| "1025".to_string())
@@ -552,19 +553,22 @@ async fn conn_test_smtp_localhost(
         .parse::<u16>()
         .expect("Cannot parse SMTP_DANGER_INSECURE_PORT to u16");
 
-    let conn = AsyncSmtpTransport::<lettre::Tokio1Executor>::builder_dangerous("localhost")
+    let conn = AsyncSmtpTransport::<lettre::Tokio1Executor>::builder_dangerous(smtp_url)
         .port(port)
         .build();
     match conn.test_connection().await {
         Ok(true) => {
-            info!(
-                "Successfully connected to localhost SMTP relay on port {}",
-                port
+            warn!(
+                "Successfully connected to INSECURE SMTP relay {}:{}",
+                smtp_url, port
             );
             Ok(conn)
         }
         Ok(false) | Err(_) => {
-            error!("Could not connect to localhost SMTP relay on port {}", port);
+            error!(
+                "Could not connect to insecure SMTP relay on {}:{}",
+                smtp_url, port
+            );
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
                 "Could not connect to localhost SMTP relay".to_string(),
