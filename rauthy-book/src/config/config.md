@@ -288,6 +288,7 @@ EMAIL_SUB_PREFIX="Rauthy IAM"
 #SMTP_USERNAME=
 #SMTP_PASSWORD=
 # Format: "Rauthy <rauthy@localhost.de>"
+# default: "Rauthy <rauthy@localhost.de>"
 #SMTP_FROM=
 
 # The number of retries that should be done for connecting to
@@ -430,7 +431,6 @@ MAX_HASH_THREADS=1
 #####################################
 
 # The E-Mail address event notifications should be sent to.
-# If left empty, no messages will be sent to Slack.
 #EVENT_EMAIL=admin@localhost.de
 
 # Matrix variables for event notifications.

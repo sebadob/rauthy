@@ -251,7 +251,7 @@ lazy_static! {
         .ok()
         .map(|url| url.trim().to_string());
     pub static ref SMTP_FROM: String = env::var("SMTP_FROM")
-        .expect("SMTP_FROM is not set")
+        .unwrap_or_else(|_| "Rauthy <rauthy@localhost.de>".to_string())
         .trim()
         .to_string();
 
