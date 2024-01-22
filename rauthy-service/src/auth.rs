@@ -867,11 +867,6 @@ async fn grant_type_code(
         ));
     }
 
-    // TODO another redirect_uri check? Add to AuthCode? Any security benefit?
-    // let redirect_uri = if let Some(uri) = req_data.redirect_uri {
-    //     if uri != code.
-    // }
-
     // check the client for external origin and auth flow
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
     let client = Client::find_maybe_ephemeral(data, client_id.clone())
@@ -968,6 +963,15 @@ async fn grant_type_code(
             }
         }
     }
+    // We will not perform another `redirect_uri` check at this point, like stated in the RFC.
+    // It is just unnecessary because of the way Rauthy handles the flow init during GET /authorize.
+    //
+    // It is impossible to trick a client to be redirected to another `redirect_uri` than the allowed ones,
+    // which are all in control by the original client. The `redirect_uri` for Rauthy in the client config
+    // is not optional like mentioned in the RFC, but actually mandatory. It is already checked and validated
+    // carefully before the user would even see the login prompt.
+    //
+    // An additional check at this point does not provide any security benefit but only uses resources.
 
     let user = User::find(data, code.user_id.clone()).await?;
 
@@ -1502,139 +1506,6 @@ pub async fn logout(
 
     Ok(LogoutHtml::build(&session.csrf_token, true, &colors, lang))
 }
-
-// /// The permission extractor for the `GrantsMiddleware`
-// pub async fn permission_extractor(req: &ServiceRequest) -> Result<Vec<String>, Error> {
-//     let mut res = vec!["all".to_string()];
-//     // let mut principal = None;
-//     //
-//     // // check session
-//     // {
-//     //     let ext = req.extensions();
-//     //     // this unwrap would panic, if no rauthy session middleware would be injected
-//     //     let session_opt = ext
-//     //         .get::<Option<Session>>()
-//     //         .expect("No Option<Session> from ReqData - Rauthy Session Middleware missing?");
-//     //     if session_opt.is_some() {
-//     //         let session = session_opt.as_ref().unwrap();
-//     //
-//     //         let perm = match session.state {
-//     //             SessionState::Init => "session-init",
-//     //             SessionState::Auth => "session-auth",
-//     //             _ => "session-anon",
-//     //         };
-//     //         res.push(String::from(perm));
-//     //
-//     //         if session.state == SessionState::Auth {
-//     //             // TODO we could modify the Session in the cache to already have the roles vec precomputed
-//     //             let roles = session.roles_as_vec()?;
-//     //             roles.iter().for_each(|r| res.push(r.clone()));
-//     //
-//     //             principal = Some(Principal {
-//     //                 user_id: session
-//     //                     .user_id
-//     //                     .as_ref()
-//     //                     .expect("No user_id for authenticated session")
-//     //                     .clone(),
-//     //                 email: None,
-//     //                 has_mfa_active: session.is_mfa,
-//     //                 has_session: true,
-//     //                 has_token: false,
-//     //                 roles,
-//     //             });
-//     //         }
-//     //     }
-//     // }
-//
-//     // // the Authorization header may contain either an 'API-Key' or a 'Bearer' token
-//     // // only one of them may exist
-//     // let mut api_key: Option<ApiKey> = None;
-//     // if let Some(api_key_token) = get_api_key_token_from_header(req.headers()) {
-//     //     let data = req
-//     //         .app_data::<web::Data<AppState>>()
-//     //         .expect("Error getting AppData inside permission extractor");
-//     //
-//     //     if let Ok(key) = ApiKeyEntity::api_key_from_token_validated(data, api_key_token).await {
-//     //         res.push(String::from("api-key"));
-//     //         api_key = Some(key);
-//     //     }
-//     // }
-//     // req.extensions_mut().insert(api_key);
-//
-//     // let bearer = get_bearer_token_from_header(req.headers());
-//     // if bearer.is_err() {
-//     //     req.extensions_mut().insert(principal);
-//     //     return Ok(res);
-//     // }
-//     //
-//     // let data = req
-//     //     .app_data::<web::Data<AppState>>()
-//     //     .expect("Could not get AppState");
-//     //
-//     // let claims = validate_token::<JwtAccessClaims>(data, bearer.unwrap().as_str()).await?;
-//     //
-//     // // roles
-//     // claims
-//     //     .custom
-//     //     .roles
-//     //     .as_ref()
-//     //     .ok_or_else(|| {
-//     //         ErrorResponse::new(
-//     //             ErrorResponseType::Internal,
-//     //             "Malformed JWT Token - roles missing".to_string(),
-//     //         )
-//     //     })?
-//     //     .iter()
-//     //     .for_each(|role| res.push(format!("ROLE_{}", role)));
-//     //
-//     // // user_id
-//     // if claims.custom.uid.is_some() {
-//     //     let uid = claims.custom.uid.unwrap();
-//     //     let sub = claims.subject.ok_or_else(|| {
-//     //         ErrorResponse::new(
-//     //             ErrorResponseType::Unauthorized,
-//     //             "Malformed JWT Token".to_string(),
-//     //         )
-//     //     })?;
-//     //     if principal.is_some() {
-//     //         let mut p = principal.unwrap();
-//     //         if p.user_id != uid {
-//     //             error!("Request with different user id's for JWT token and session - not going on with adding token roles / groups");
-//     //             req.extensions_mut().insert(Some(p));
-//     //             return Ok(res);
-//     //         }
-//     //
-//     //         p.email = Some(sub);
-//     //         p.has_token = true;
-//     //         // TODO can this be skipped?
-//     //         principal = Some(p);
-//     //     } else {
-//     //         // unwrap is safe here, Error would have returned already otherwise
-//     //         let roles = claims
-//     //             .custom
-//     //             .roles
-//     //             .unwrap()
-//     //             .into_iter()
-//     //             .map(|r| format!("ROLE_{}", r))
-//     //             .collect::<Vec<String>>();
-//     //
-//     //         principal = Some(Principal {
-//     //             user_id: uid,
-//     //             email: Some(sub),
-//     //             // If we just have a JWT token, we cannot know if it was retrieved with MFA.
-//     //             // The 'amr' claim is in the ID token.
-//     //             has_mfa_active: false,
-//     //             has_session: false,
-//     //             has_token: true,
-//     //             roles,
-//     //         });
-//     //     }
-//     // }
-//     //
-//     // req.extensions_mut().insert(principal);
-//     res.push(String::from("token-auth"));
-//     Ok(res)
-// }
 
 // TODO move into entity
 /// Rotates and generates a whole new Set of JWKs for signing JWT Tokens

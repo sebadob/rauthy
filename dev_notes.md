@@ -2,13 +2,6 @@
 
 ## CURRENT WORK
 
-## TODO leftover mandatory to implement features for OIDC compliance
-
-https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation -> 15.1
-These are mandatory and will come with the next PR's.
-
-- double check `redirect_uri` during final token request with auth code
-
 ## TODO next features
 
 - respect `login_hint` in the authorize ui
