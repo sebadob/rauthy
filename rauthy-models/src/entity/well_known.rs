@@ -17,17 +17,22 @@ pub struct WellKnown {
     pub userinfo_endpoint: String,
     pub end_session_endpoint: String,
     pub jwks_uri: String,
-    // #[serde(skip_serializing_if = "Option::is_none")]
-    // pub registration_endpoint: Option<String>,
-    // pub check_session_iframe: String,
     pub grant_types_supported: Vec<String>,
     pub response_types_supported: Vec<String>,
+    pub subject_types_supported: Vec<String>,
     pub id_token_signing_alg_values_supported: Vec<String>,
+    pub token_endpoint_auth_methods_supported: Vec<String>,
     pub token_endpoint_auth_signing_alg_values_supported: Vec<String>,
     pub claims_supported: Vec<String>,
+    pub claim_types_supported: Vec<String>,
     pub scopes_supported: Vec<String>,
     pub code_challenge_methods_supported: Vec<String>,
     pub dpop_signing_alg_values_supported: Vec<String>,
+    pub service_documentation: String,
+    pub ui_locales_supported: Vec<String>,
+    pub claims_parameter_supported: bool,
+    // TODO with dynamic client registration
+    // pub registration_endpoint: String,
 }
 
 const IDX: &str = ".well-known";
@@ -103,11 +108,16 @@ impl WellKnown {
             "refresh_token".to_string(),
         ];
         let response_types_supported = vec!["code".to_string()];
+        let subject_types_supported = vec!["public".to_string()];
         let id_token_signing_alg_values_supported = vec![
             "RS256".to_string(),
             "RS384".to_string(),
             "RS512".to_string(),
             "EdDSA".to_string(),
+        ];
+        let token_endpoint_auth_methods_supported = vec![
+            "client_secret_post".to_string(),
+            "client_secret_basic".to_string(),
         ];
         let token_endpoint_auth_signing_alg_values_supported = vec![
             "RS256".to_string(),
@@ -129,6 +139,11 @@ impl WellKnown {
             "groups".to_string(),
             "custom".to_string(),
         ];
+        let claim_types_supported = vec![
+            "normal".to_string(),
+            "aggregated".to_string(),
+            "distributed".to_string(),
+        ];
         // TODO to not confuse users when static clients will not be able to use the scope,
         // `webid` should be added manually in the UI to make it fully work for ephemeral as
         // well as for static clients.
@@ -143,6 +158,9 @@ impl WellKnown {
             "EdDSA".to_string(),
         ];
 
+        let service_documentation = "https://sebadob.github.io/rauthy/".to_string();
+        let ui_locales_supported = vec!["de".to_string(), "en".to_string()];
+
         WellKnown {
             issuer: String::from(issuer),
             authorization_endpoint,
@@ -153,12 +171,18 @@ impl WellKnown {
             jwks_uri,
             grant_types_supported,
             response_types_supported,
+            subject_types_supported,
             id_token_signing_alg_values_supported,
+            token_endpoint_auth_methods_supported,
             token_endpoint_auth_signing_alg_values_supported,
             claims_supported,
+            claim_types_supported,
             scopes_supported,
             code_challenge_methods_supported,
             dpop_signing_alg_values_supported,
+            service_documentation,
+            ui_locales_supported,
+            claims_parameter_supported: true,
         }
     }
 }
