@@ -337,6 +337,63 @@ pub struct NewClientRequest {
     pub post_logout_redirect_uris: Option<Vec<String>>,
 }
 
+// https://openid.net/specs/openid-connect-registration-1_0.html#ClientMetadata
+#[derive(Debug, Validate, Serialize, Deserialize, ToSchema)]
+pub struct NewDynamicClientRequest {
+    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
+    #[validate(custom(function = "validate_vec_uri"))]
+    pub redirect_uris: Vec<String>,
+    /// Validation: `Vec<^(authorization_code|client_credentials|password|refresh_token)$>`
+    #[validate(custom(function = "validate_vec_flows"))]
+    pub grant_types: Vec<String>,
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
+    #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
+    pub client_name: Option<String>,
+    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
+    pub id_token_signed_response_alg: Option<JwkKeyPairAlg>,
+    /// Validation: `^(client_secret_post|client_secret_basic|none)$`
+    #[validate(regex(
+        path = "RE_TOKEN_ENDPOINT_AUTH_METHOD",
+        code = "client_secret_post|client_secret_basic|none"
+    ))]
+    pub token_endpoint_auth_method: Option<String>,
+    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
+    pub token_endpoint_auth_signing_alg: Option<JwkKeyPairAlg>,
+    // Rauthy will only accept the following defaults
+    // `response_type=code`
+    // `subject_type=public`
+    // `require_auth_time=true` (always added by Rauthy anyway)
+    //
+    // The following must never be accepted for security reasons,
+    // because the registration may be unauthenticated:
+    // - logo_uri
+    // - client_uri
+    // - policy_uri
+    // - tos_uri
+    //
+    // Unsupported values:
+    // - application_type (may come in the future)
+    // - contacts (may come in the future)
+    // - jwks_uri
+    // - jwks
+    // - sector_identifier_uri
+    // - id_token_encrypted_response_alg
+    // - id_token_encrypted_response_enc
+    // - userinfo_signed_response_alg
+    // - userinfo_encrypted_response_alg
+    // - userinfo_encrypted_response_enc
+    // - request_object_signing_alg
+    // - request_object_encryption_alg
+    // - request_object_encryption_enc
+    // - default_max_age (can be specified during auth init with `max_age`)
+    // - default_acr_values
+    // - initiate_login_uri
+    // - request_uris (may come in the future with `request_uri` during login)
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub post_logout_redirect_uri: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Validate, ToSchema)]
 pub struct NewGroupRequest {
     /// Validation: `^[a-z0-9-_/,]{2,32}$`
