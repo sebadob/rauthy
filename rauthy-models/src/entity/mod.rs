@@ -5,6 +5,7 @@ pub mod api_keys;
 pub mod app_version;
 pub mod auth_codes;
 pub mod clients;
+pub mod clients_dyn;
 pub mod colors;
 pub mod config;
 pub mod db_version;

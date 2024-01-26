@@ -8,7 +8,7 @@ create table clients_dyn
             on update cascade on delete cascade,
     created            integer not null,
     last_used          integer,
-    registration_token text    not null
+    registration_token blob    not null
 );
 
 create index clients_dyn_last_used_index
