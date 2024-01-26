@@ -121,6 +121,37 @@ impl From<Client> for ClientResponse {
     }
 }
 
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct DynamicClientResponse {
+    pub client_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_name: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_secret: Option<String>,
+    // TODO can we "trust" in a client doing a PUT on Self before en expiry to
+    // implement proper forced secret rotation from time to time? -> not mentioned in RFC
+    pub client_secret_expires_at: i64,
+
+    pub redirect_uris: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_logout_redirect_uri: Option<String>,
+
+    // only Some(_) after new token has been issued
+    // TODO rotate on PUT
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub registration_access_token: Option<String>,
+    // This is the uri for PUT requests from Self -> only provide if `registration_access_token`
+    // has been updated as well
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub registration_client_uri: Option<String>,
+
+    pub grant_types: Vec<String>,
+    pub id_token_signed_response_alg: String,
+    pub token_endpoint_auth_method: String,
+    pub token_endpoint_auth_signing_alg: String,
+}
+
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct ClientSecretResponse {
     pub id: String,

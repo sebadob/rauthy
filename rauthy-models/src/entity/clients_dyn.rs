@@ -12,18 +12,26 @@ pub struct ClientDyn {
     pub created: i64,
     pub last_used: Option<i64>,
     pub registration_token: Vec<u8>,
+    pub token_endpoint_auth_method: String,
 }
 
 impl ClientDyn {
-    pub async fn create(data: &web::Data<AppState>, id: String) -> Result<String, ErrorResponse> {
+    pub async fn create(
+        data: &web::Data<AppState>,
+        id: String,
+        token_endpoint_auth_method: String,
+    ) -> Result<String, ErrorResponse> {
         let (secret_plain, registration_token) = Client::generate_new_secret()?;
         let created = Utc::now().timestamp();
 
         query!(
-            "INSERT INTO clients_dyn (id, created, registration_token) VALUES ($1, $2, $3)",
+            r#"INSERT INTO
+            clients_dyn (id, created, registration_token, token_endpoint_auth_method)
+            VALUES ($1, $2, $3, $4)"#,
             id,
             created,
             registration_token,
+            token_endpoint_auth_method,
         )
         .execute(&data.db)
         .await?;
