@@ -8,12 +8,12 @@ https://openid.net/specs/openid-connect-registration-1_0.html
 
 - [x] define new POST request registration object by RFC
 - [ ] implement registration endpoint
-- [ ] config variable for token-protected dynamic registration
-- [ ] DB migrations and create `clients_dyn` table with all necessary information 
+- [x] config variable for token-protected dynamic registration
+- [x] DB migrations and create `clients_dyn` table with all necessary information 
 - [ ] implement an efficient way to auto-delete unused clients to prevent spam and bots
 - [ ] config var for an auto-cleanup cron job for dyn clients
 - [ ] implement a GET endpoint specific for dynamic clients in the correct format by RFC
-- [ ] issue `registration_token`s 
+- [x] issue `registration_token`s 
 - [ ] implement a PUT endpoint for clients to self-modify
 - [ ] some kind of rate-limiting for an open dyn client reg endpoint
 - [ ] add `ClientDyn` to secret migrations task to properly migrate `registration_token`s
