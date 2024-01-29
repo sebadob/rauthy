@@ -132,6 +132,10 @@ lazy_static! {
         .parse::<bool>()
         .expect("ENABLE_DYN_CLIENT_REG cannot be parsed to bool - bad format");
     pub static ref DYN_CLIENT_REG_TOKEN: Option<String> = env::var("DYN_CLIENT_REG_TOKEN").ok();
+    pub static ref DYN_CLIENT_DEFAULT_TOKEN_LIFETIME: i32 = env::var("DYN_CLIENT_DEFAULT_TOKEN_LIFETIME")
+        .unwrap_or_else(|_| String::from("1800"))
+        .parse::<i32>()
+        .expect("DYN_CLIENT_DEFAULT_TOKEN_LIFETIME cannot be parsed to i64 - bad format");
 
     pub static ref ENABLE_EPHEMERAL_CLIENTS: bool = env::var("ENABLE_EPHEMERAL_CLIENTS")
         .unwrap_or_else(|_| String::from("false"))
