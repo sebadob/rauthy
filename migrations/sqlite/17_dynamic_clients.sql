@@ -9,7 +9,7 @@ create table clients_dyn
     created                    integer not null,
     last_used                  integer,
     registration_token         blob    not null,
-    token_endpoint_auth_method text
+    token_endpoint_auth_method text    not null
 );
 
 create index clients_dyn_last_used_index

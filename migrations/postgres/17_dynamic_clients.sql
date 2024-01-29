@@ -9,7 +9,7 @@ create table clients_dyn
     created                    bigint  not null,
     last_used                  bigint,
     registration_token         bytea   not null,
-    token_endpoint_auth_method varchar
+    token_endpoint_auth_method varchar not null
 );
 
 create index clients_dyn_last_used_index
