@@ -45,6 +45,7 @@ pub enum ErrorResponseType {
     SessionTimeout,
     TooManyRequests(i64),
     Unauthorized,
+    WWWAuthenticate(String),
 }
 
 impl Display for ErrorResponseType {
@@ -96,7 +97,8 @@ impl ResponseError for ErrorResponse {
             | ErrorResponseType::PasswordExpired
             | ErrorResponseType::SessionExpired
             | ErrorResponseType::SessionTimeout
-            | ErrorResponseType::Unauthorized => StatusCode::UNAUTHORIZED,
+            | ErrorResponseType::Unauthorized
+            | ErrorResponseType::WWWAuthenticate(_) => StatusCode::UNAUTHORIZED,
             ErrorResponseType::TooManyRequests(_not_before_timestamp) => {
                 StatusCode::TOO_MANY_REQUESTS
             }
@@ -149,6 +151,11 @@ impl ResponseError for ErrorResponse {
                         .body(serde_json::to_string(&self).unwrap())
                 }
             }
+
+            ErrorResponseType::WWWAuthenticate(msg) => HttpResponseBuilder::new(status)
+                .insert_header((WWW_AUTHENTICATE, msg.as_str()))
+                .content_type(APPLICATION_JSON)
+                .body(serde_json::to_string(self).unwrap()),
 
             _ => {
                 if status == StatusCode::UNAUTHORIZED {
