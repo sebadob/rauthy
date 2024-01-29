@@ -159,7 +159,7 @@ use utoipa::{openapi, OpenApi};
             request::MfaAwaitRequest,
             request::MfaPurpose,
             request::NewClientRequest,
-            request::NewDynamicClientRequest,
+            request::DynamicClientRequest,
             request::NewGroupRequest,
             request::PasswordHashTimesRequest,
             request::PasswordPolicyRequest,

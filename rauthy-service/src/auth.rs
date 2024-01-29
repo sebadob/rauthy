@@ -654,7 +654,7 @@ pub async fn build_refresh_token(
 }
 
 #[inline(always)]
-fn get_bearer_token_from_header(headers: &HeaderMap) -> Result<String, ErrorResponse> {
+pub fn get_bearer_token_from_header(headers: &HeaderMap) -> Result<String, ErrorResponse> {
     let bearer = headers.get("Authorization").ok_or_else(|| {
         ErrorResponse::new(
             ErrorResponseType::Unauthorized,

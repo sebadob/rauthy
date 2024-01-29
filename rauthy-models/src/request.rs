@@ -340,7 +340,7 @@ pub struct NewClientRequest {
 
 // https://openid.net/specs/openid-connect-registration-1_0.html#ClientMetadata
 #[derive(Debug, Validate, Serialize, Deserialize, ToSchema)]
-pub struct NewDynamicClientRequest {
+pub struct DynamicClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub redirect_uris: Vec<String>,
