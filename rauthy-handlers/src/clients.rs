@@ -1,12 +1,18 @@
 use crate::ReqPrincipal;
-use actix_web::{delete, get, post, put, web, HttpResponse};
+use actix_web::http::header::{ACCESS_CONTROL_ALLOW_ORIGIN, WWW_AUTHENTICATE};
+use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
+use rauthy_common::constants::{DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::clients::Client;
+use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::colors::ColorEntity;
-use rauthy_models::request::{ColorsRequest, NewClientRequest, UpdateClientRequest};
-use rauthy_models::response::ClientResponse;
+use rauthy_models::request::{
+    ColorsRequest, DynamicClientRequest, NewClientRequest, UpdateClientRequest,
+};
+use rauthy_models::response::{ClientResponse, DynamicClientResponse};
+use rauthy_service::auth::get_bearer_token_from_header;
 use rauthy_service::client;
 
 /// Returns all existing OIDC clients with all their information, except for the client secrets.
@@ -129,6 +135,117 @@ pub async fn post_clients(
     Client::create(&data, client.into_inner())
         .await
         .map(|r| HttpResponse::Ok().json(ClientResponse::from(r)))
+}
+
+/// OIDC Dynamic Client Registration (if enabled)
+#[utoipa::path(
+    post,
+    path = "/clients_dyn",
+    tag = "clients",
+    request_body = DynamicClientRequest,
+    responses(
+        (status = 201, description = "Created", body = DynamicClientResponse),
+        (status = 400, description = "BadRequest"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "NotFound"),
+    ),
+)]
+#[post("/clients_dyn")]
+pub async fn post_clients_dyn(
+    data: web::Data<AppState>,
+    payload: actix_web_validator::Json<DynamicClientRequest>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    if !*ENABLE_DYN_CLIENT_REG {
+        return Ok(HttpResponse::NotFound().finish());
+    }
+
+    if let Some(token) = &*DYN_CLIENT_REG_TOKEN {
+        let bearer = get_bearer_token_from_header(req.headers())?;
+        if token != &bearer {
+            return Ok(HttpResponse::Unauthorized()
+                .insert_header((
+                    WWW_AUTHENTICATE,
+                    r#"error="invalid_token",
+                    error_description="Invalid registration access token"#,
+                ))
+                .finish());
+        }
+    }
+
+    Client::create_dynamic(&data, payload.into_inner())
+        .await
+        .map(|resp| {
+            HttpResponse::Created()
+                // The registration should be possible from another Web UI by RFC
+                .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
+                .json(resp)
+        })
+}
+
+/// GET a dynamic OIDC client
+#[utoipa::path(
+    get,
+    path = "/clients_dyn/{id}",
+    tag = "clients",
+    responses(
+        (status = 200, description = "Ok", body = DynamicClientResponse),
+        (status = 400, description = "BadRequest"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "NotFound"),
+    ),
+)]
+#[get("/clients_dyn/{id}")]
+pub async fn get_clients_dyn(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    if !*ENABLE_DYN_CLIENT_REG {
+        return Ok(HttpResponse::NotFound().finish());
+    }
+
+    let bearer = get_bearer_token_from_header(req.headers())?;
+    let id = id.into_inner();
+    let client_dyn = ClientDyn::find(&data, id.clone()).await?;
+    client_dyn.validate_token(&bearer)?;
+
+    let client = Client::find(&data, id).await?;
+    let resp = DynamicClientResponse::build(&data, client, client_dyn, false);
+    Ok(HttpResponse::Ok().json(resp))
+}
+
+/// Update a dynamic OIDC client
+#[utoipa::path(
+    put,
+    path = "/clients_dyn/{id}",
+    tag = "clients",
+    request_body = DynamicClientRequest,
+    responses(
+        (status = 200, description = "Ok", body = DynamicClientResponse),
+        (status = 400, description = "BadRequest"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "NotFound"),
+    ),
+)]
+#[put("/clients_dyn/{id}")]
+pub async fn put_clients_dyn(
+    data: web::Data<AppState>,
+    payload: actix_web_validator::Json<DynamicClientRequest>,
+    id: web::Path<String>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    if !*ENABLE_DYN_CLIENT_REG {
+        return Ok(HttpResponse::NotFound().finish());
+    }
+
+    let bearer = get_bearer_token_from_header(req.headers())?;
+    let id = id.into_inner();
+    let client_dyn = ClientDyn::find(&data, id.clone()).await?;
+    client_dyn.validate_token(&bearer)?;
+
+    let resp = Client::update_dynamic(&data, payload.into_inner(), client_dyn).await?;
+    Ok(HttpResponse::Ok().json(resp))
 }
 
 /// Modifies an OIDC client

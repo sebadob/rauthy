@@ -9,7 +9,8 @@ use rauthy_common::constants::{
     RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_ALNUM_SPACE, RE_API_KEY, RE_APP_ID, RE_ATTR,
     RE_ATTR_DESC, RE_CHALLENGE, RE_CITY, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE,
     RE_CODE_VERIFIER, RE_DATE_STR, RE_FLOWS, RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE,
-    RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_PHONE, RE_STREET, RE_URI, RE_USER_NAME,
+    RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_PHONE, RE_STREET, RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
+    RE_USER_NAME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::base64_decode;
@@ -335,6 +336,63 @@ pub struct NewClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub post_logout_redirect_uris: Option<Vec<String>>,
+}
+
+// https://openid.net/specs/openid-connect-registration-1_0.html#ClientMetadata
+#[derive(Debug, Validate, Serialize, Deserialize, ToSchema)]
+pub struct DynamicClientRequest {
+    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
+    #[validate(custom(function = "validate_vec_uri"))]
+    pub redirect_uris: Vec<String>,
+    /// Validation: `Vec<^(authorization_code|client_credentials|password|refresh_token)$>`
+    #[validate(custom(function = "validate_vec_flows"))]
+    pub grant_types: Vec<String>,
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
+    #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
+    pub client_name: Option<String>,
+    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
+    pub id_token_signed_response_alg: Option<JwkKeyPairAlg>,
+    /// Validation: `^(client_secret_post|client_secret_basic|none)$`
+    #[validate(regex(
+        path = "RE_TOKEN_ENDPOINT_AUTH_METHOD",
+        code = "client_secret_post|client_secret_basic|none"
+    ))]
+    pub token_endpoint_auth_method: Option<String>,
+    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
+    pub token_endpoint_auth_signing_alg: Option<JwkKeyPairAlg>,
+    // Rauthy will only accept the following defaults
+    // `response_type=code`
+    // `subject_type=public`
+    // `require_auth_time=true` (always added by Rauthy anyway)
+    //
+    // The following must never be accepted for security reasons,
+    // because the registration may be unauthenticated:
+    // - logo_uri
+    // - client_uri
+    // - policy_uri
+    // - tos_uri
+    //
+    // Unsupported values:
+    // - application_type (may come in the future)
+    // - contacts (may come in the future)
+    // - jwks_uri
+    // - jwks
+    // - sector_identifier_uri
+    // - id_token_encrypted_response_alg
+    // - id_token_encrypted_response_enc
+    // - userinfo_signed_response_alg
+    // - userinfo_encrypted_response_alg
+    // - userinfo_encrypted_response_enc
+    // - request_object_signing_alg
+    // - request_object_encryption_alg
+    // - request_object_encryption_enc
+    // - default_max_age (can be specified during auth init with `max_age`)
+    // - default_acr_values
+    // - initiate_login_uri
+    // - request_uris (may come in the future with `request_uri` during login)
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub post_logout_redirect_uri: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Validate, ToSchema)]

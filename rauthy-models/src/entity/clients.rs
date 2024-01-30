@@ -1,8 +1,10 @@
 use crate::app_state::{AppState, DbTxn};
+use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::jwk::JwkKeyPairAlg;
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
-use crate::request::{EphemeralClientRequest, NewClientRequest};
+use crate::request::{DynamicClientRequest, EphemeralClientRequest, NewClientRequest};
+use crate::response::DynamicClientResponse;
 use crate::ListenScheme;
 use actix_multipart::Multipart;
 use actix_web::http::header;
@@ -11,12 +13,13 @@ use actix_web::{web, HttpRequest};
 use cryptr::{utils, EncKeys, EncValue};
 use futures_util::StreamExt;
 use rauthy_common::constants::{
-    APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_EPHEMERAL_CLIENTS, ENABLE_EPHEMERAL_CLIENTS,
+    APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_EPHEMERAL_CLIENTS,
+    DYN_CLIENT_DEFAULT_TOKEN_LIFETIME, DYN_CLIENT_SECRET_AUTO_ROTATE, ENABLE_EPHEMERAL_CLIENTS,
     EPHEMERAL_CLIENTS_ALLOWED_FLOWS, EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA,
     IDX_CLIENTS, IDX_CLIENT_LOGO, PROXY_MODE, RAUTHY_VERSION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::{cache_entry_client, get_client_ip};
+use rauthy_common::utils::{cache_entry_client, get_client_ip, get_rand};
 use redhac::{
     cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, cache_put, cache_remove,
     AckLevel,
@@ -127,6 +130,7 @@ impl Client {
             error!("Error inserting client - no rows affected");
         }
 
+        // TODO remove all clients cache fully? -> admin UI only?
         let mut clients = Client::find_all(data).await?;
         clients.push(client.clone());
         cache_insert(
@@ -139,6 +143,71 @@ impl Client {
         .await?;
 
         Ok(client)
+    }
+
+    pub async fn create_dynamic(
+        data: &web::Data<AppState>,
+        client_req: DynamicClientRequest,
+    ) -> Result<DynamicClientResponse, ErrorResponse> {
+        let token_endpoint_auth_method = client_req
+            .token_endpoint_auth_method
+            .clone()
+            .unwrap_or_else(|| "client_secret_basic".to_string());
+
+        let client = Self::try_from_dyn_reg(client_req)?;
+
+        let mut txn = data.db.begin().await?;
+
+        sqlx::query!(
+            r#"INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid,
+            redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg,
+            id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
+            challenge, force_mfa)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#,
+            client.id,
+            client.name,
+            client.enabled,
+            client.confidential,
+            client.secret,
+            client.secret_kid,
+            client.redirect_uris,
+            client.post_logout_redirect_uris,
+            client.allowed_origins,
+            client.flows_enabled,
+            client.access_token_alg,
+            client.id_token_alg,
+            client.refresh_token,
+            client.auth_code_lifetime,
+            client.access_token_lifetime,
+            client.scopes,
+            client.default_scopes,
+            client.challenge,
+            client.force_mfa,
+        )
+            .execute(&mut *txn)
+            .await?;
+
+        let client_dyn = ClientDyn::create(
+            &mut txn,
+            client.id.clone(),
+            token_endpoint_auth_method.clone(),
+        )
+        .await?;
+
+        txn.commit().await?;
+
+        let mut clients = Client::find_all(data).await?;
+        clients.push(client.clone());
+        cache_insert(
+            CACHE_NAME_12HR.to_string(),
+            IDX_CLIENTS.to_string(),
+            &data.caches.ha_cache_config,
+            &clients,
+            AckLevel::Leader,
+        )
+        .await?;
+
+        DynamicClientResponse::build(data, client, client_dyn, true)
     }
 
     // Deletes a client
@@ -426,6 +495,41 @@ impl Client {
 
         Ok(())
     }
+
+    pub async fn update_dynamic(
+        data: &web::Data<AppState>,
+        client_req: DynamicClientRequest,
+        mut client_dyn: ClientDyn,
+    ) -> Result<DynamicClientResponse, ErrorResponse> {
+        let token_endpoint_auth_method = client_req
+            .token_endpoint_auth_method
+            .clone()
+            .unwrap_or_else(|| "client_secret_basic".to_string());
+
+        let mut new_client = Self::try_from_dyn_reg(client_req)?;
+        let current = Self::find(data, client_dyn.id.clone()).await?;
+        if !current.is_dynamic() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Invalid request for non-dynamic client".to_string(),
+            ));
+        }
+
+        // we need to keep some old and possibly user-modified values
+        new_client.id = current.id;
+        new_client.force_mfa = current.force_mfa;
+        new_client.scopes = current.scopes;
+        new_client.default_scopes = current.default_scopes;
+
+        let mut txn = data.db.begin().await?;
+        new_client.save(data, Some(&mut txn)).await?;
+        client_dyn
+            .update(&mut txn, token_endpoint_auth_method)
+            .await?;
+        txn.commit().await?;
+
+        DynamicClientResponse::build(data, new_client, client_dyn, *DYN_CLIENT_SECRET_AUTO_ROTATE)
+    }
 }
 
 impl Client {
@@ -580,6 +684,10 @@ impl Client {
 
     pub fn get_scope_as_str(&self) -> String {
         self.scopes.replace(',', " ")
+    }
+
+    pub fn is_dynamic(&self) -> bool {
+        self.id.starts_with("dyn$")
     }
 
     pub fn is_ephemeral(&self) -> bool {
@@ -961,6 +1069,59 @@ impl From<NewClientRequest> for Client {
             post_logout_redirect_uris,
             ..Default::default()
         }
+    }
+}
+
+impl Client {
+    fn try_from_dyn_reg(req: DynamicClientRequest) -> Result<Self, ErrorResponse> {
+        let id = format!("dyn${}", get_rand(16));
+
+        let confidential = req.token_endpoint_auth_method.as_deref() != Some("none");
+        let (secret, secret_kid, _secret_plain) = if confidential {
+            let (plain, enc) = Self::generate_new_secret()?;
+            (
+                Some(enc),
+                Some(EncKeys::get_static().enc_key_active.clone()),
+                Some(plain),
+            )
+        } else {
+            (None, None, None)
+        };
+
+        let access_token_alg = req
+            .token_endpoint_auth_signing_alg
+            .unwrap_or_default()
+            .to_string();
+        let id_token_alg = req
+            .id_token_signed_response_alg
+            .unwrap_or_default()
+            .to_string();
+        let refresh_token = req
+            .grant_types
+            .iter()
+            .map(|t| t.as_str())
+            .collect::<Vec<&str>>()
+            .contains(&"refresh_token");
+
+        Ok(Self {
+            id,
+            name: req.client_name,
+            enabled: true,
+            confidential,
+            secret,
+            secret_kid,
+            redirect_uris: req.redirect_uris.join(","),
+            post_logout_redirect_uris: req.post_logout_redirect_uri,
+            allowed_origins: None,
+            flows_enabled: req.grant_types.join(","),
+            access_token_alg,
+            id_token_alg,
+            refresh_token,
+            access_token_lifetime: *DYN_CLIENT_DEFAULT_TOKEN_LIFETIME,
+            challenge: confidential.then_some("S256".to_string()),
+            force_mfa: false,
+            ..Default::default()
+        })
     }
 }
 

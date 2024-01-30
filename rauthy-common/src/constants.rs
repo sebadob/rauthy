@@ -106,6 +106,7 @@ lazy_static! {
     pub static ref RE_URI: Regex = Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+$").unwrap();
     pub static ref RE_USER_NAME: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-\s]{2,32}$").unwrap();
     pub static ref RE_TOKEN_68: Regex = Regex::new(r"^[a-zA-Z0-9-._~+/]+=*$").unwrap();
+    pub static ref RE_TOKEN_ENDPOINT_AUTH_METHOD: Regex = Regex::new(r"^(client_secret_post|client_secret_basic|none)$").unwrap();
 
     pub static ref PUB_URL: String = env::var("PUB_URL").expect("PUB_URL env var is not set");
     pub static ref PUB_URL_WITH_SCHEME: String = {
@@ -125,6 +126,20 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("true"))
         .parse::<bool>()
         .unwrap_or(true);
+
+    pub static ref ENABLE_DYN_CLIENT_REG: bool = env::var("ENABLE_DYN_CLIENT_REG")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("ENABLE_DYN_CLIENT_REG cannot be parsed to bool - bad format");
+    pub static ref DYN_CLIENT_REG_TOKEN: Option<String> = env::var("DYN_CLIENT_REG_TOKEN").ok();
+    pub static ref DYN_CLIENT_DEFAULT_TOKEN_LIFETIME: i32 = env::var("DYN_CLIENT_DEFAULT_TOKEN_LIFETIME")
+        .unwrap_or_else(|_| String::from("1800"))
+        .parse::<i32>()
+        .expect("DYN_CLIENT_DEFAULT_TOKEN_LIFETIME cannot be parsed to i64 - bad format");
+    pub static ref DYN_CLIENT_SECRET_AUTO_ROTATE: bool = env::var("DYN_CLIENT_SECRET_AUTO_ROTATE")
+        .unwrap_or_else(|_| String::from("true"))
+        .parse::<bool>()
+        .expect("DYN_CLIENT_SECRET_AUTO_ROTATE cannot be parsed to bool - bad format");
 
     pub static ref ENABLE_EPHEMERAL_CLIENTS: bool = env::var("ENABLE_EPHEMERAL_CLIENTS")
         .unwrap_or_else(|_| String::from("false"))

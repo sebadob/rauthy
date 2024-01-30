@@ -1,5 +1,7 @@
+use crate::app_state::AppState;
 use crate::entity::api_keys::{ApiKey, ApiKeyAccess};
 use crate::entity::clients::Client;
+use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType, JWKS};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::scopes::Scope;
@@ -11,6 +13,7 @@ use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::language::Language;
 use crate::{AddressClaim, JktClaim};
+use actix_web::web;
 use rauthy_common::error_response::ErrorResponse;
 use rio_api::formatter::TriplesFormatter;
 use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
@@ -118,6 +121,76 @@ impl From<Client> for ClientResponse {
             challenges,
             force_mfa: client.force_mfa,
         }
+    }
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct DynamicClientResponse {
+    pub client_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_name: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_secret: Option<String>,
+    // TODO can we "trust" in a client doing a PUT on Self before en expiry to
+    // implement proper forced secret rotation from time to time? -> not mentioned in RFC
+    pub client_secret_expires_at: i64,
+
+    pub redirect_uris: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_logout_redirect_uri: Option<String>,
+
+    // only Some(_) after new token has been issued
+    // TODO rotate on PUT
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub registration_access_token: Option<String>,
+    // This is the uri for PUT requests from Self -> only provide if `registration_access_token`
+    // has been updated as well
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub registration_client_uri: Option<String>,
+
+    pub grant_types: Vec<String>,
+    pub id_token_signed_response_alg: String,
+    pub token_endpoint_auth_method: String,
+    pub token_endpoint_auth_signing_alg: String,
+}
+
+impl DynamicClientResponse {
+    pub fn build(
+        data: &web::Data<AppState>,
+        client: Client,
+        client_dyn: ClientDyn,
+        map_registration_client_uri: bool,
+    ) -> Result<Self, ErrorResponse> {
+        let redirect_uris = client.get_redirect_uris();
+        let grant_types = client.get_flows();
+        let post_logout_redirect_uri = client.get_redirect_uris().first().cloned();
+
+        let client_secret = client.get_secret_cleartext()?;
+        let (registration_access_token, registration_client_uri) = if map_registration_client_uri {
+            (
+                Some(client_dyn.registration_token_plain()?),
+                Some(ClientDyn::registration_client_uri(data, &client_dyn.id)),
+            )
+        } else {
+            (None, None)
+        };
+
+        Ok(Self {
+            client_id: client.id,
+            client_name: client.name,
+            client_secret,
+            // TODO check if we can make sure that a client will renew the secret properly -> let it expire then
+            client_secret_expires_at: 0,
+            redirect_uris,
+            post_logout_redirect_uri,
+            registration_access_token,
+            registration_client_uri,
+            grant_types,
+            id_token_signed_response_alg: client.id_token_alg,
+            token_endpoint_auth_method: client_dyn.token_endpoint_auth_method,
+            token_endpoint_auth_signing_alg: client.access_token_alg,
+        })
     }
 }
 
