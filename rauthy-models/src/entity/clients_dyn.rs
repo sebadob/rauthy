@@ -3,7 +3,7 @@ use crate::entity::clients::Client;
 use actix_web::web;
 use chrono::Utc;
 use cryptr::EncValue;
-use rauthy_common::constants::CACHE_NAME_12HR;
+use rauthy_common::constants::{CACHE_NAME_12HR, DYN_CLIENT_SECRET_AUTO_ROTATE};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::cache_entry_client;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
@@ -76,6 +76,34 @@ impl ClientDyn {
         .await?;
 
         Ok(slf)
+    }
+
+    pub async fn update(
+        &mut self,
+        txn: &mut DbTxn<'_>,
+        token_endpoint_auth_method: String,
+    ) -> Result<(), ErrorResponse> {
+        self.token_endpoint_auth_method = token_endpoint_auth_method;
+        self.last_used = Some(Utc::now().timestamp());
+
+        if *DYN_CLIENT_SECRET_AUTO_ROTATE {
+            let (_secret_plain, registration_token) = Client::generate_new_secret()?;
+            self.registration_token = registration_token;
+        }
+
+        query!(
+            r#"UPDATE clients_dyn
+            SET registration_token = $1, token_endpoint_auth_method = $2, last_used = $3
+            WHERE id = $4"#,
+            self.registration_token,
+            self.token_endpoint_auth_method,
+            self.last_used,
+            self.id,
+        )
+        .execute(&mut **txn)
+        .await?;
+
+        Ok(())
     }
 
     pub async fn update_used(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
