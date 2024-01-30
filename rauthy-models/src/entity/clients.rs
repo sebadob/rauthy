@@ -27,7 +27,7 @@ use redhac::{
 use reqwest::header::CONTENT_TYPE;
 use reqwest::{tls, Url};
 use serde::{Deserialize, Serialize};
-use sqlx::{query, FromRow, Row};
+use sqlx::{FromRow, Row};
 use std::str::FromStr;
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -1077,7 +1077,7 @@ impl Client {
         let id = format!("dyn${}", get_rand(16));
 
         let confidential = req.token_endpoint_auth_method.as_deref() != Some("none");
-        let (secret, secret_kid, secret_plain) = if confidential {
+        let (secret, secret_kid, _secret_plain) = if confidential {
             let (plain, enc) = Self::generate_new_secret()?;
             (
                 Some(enc),
