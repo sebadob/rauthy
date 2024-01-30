@@ -14,11 +14,14 @@ https://openid.net/specs/openid-connect-registration-1_0.html
 - [ ] config var for an auto-cleanup cron job for dyn clients
 - [x] implement a GET endpoint specific for dynamic clients in the correct format by RFC
 - [x] issue `registration_token`s 
-- [ ] implement a PUT endpoint for clients to self-modify
+- [x] implement a PUT endpoint for clients to self-modify
 - [ ] some kind of rate-limiting for an open dyn client reg endpoint
-- [ ] add `ClientDyn` to secret migrations task to properly migrate `registration_token`s
+- [x] add `ClientDyn` to secret migrations task to properly migrate `registration_token`s
 - [ ] check for dynamic client during final token creation and efficiently update `last_used` in `clients_dyn`
 with internal rate limiting
+- [ ] change the GET `/clients` to:
+    - not cache the result -> only used in Admin UI and may grow very big because of dyn client reg
+    - return a "Simple" response like the `/users` does to not get into issues with many clients 
 
 ## TODO next features
 
