@@ -231,7 +231,7 @@ pub async fn get_clients_dyn(
 #[put("/clients_dyn/{id}")]
 pub async fn put_clients_dyn(
     data: web::Data<AppState>,
-    _payload: actix_web_validator::Json<DynamicClientRequest>,
+    payload: actix_web_validator::Json<DynamicClientRequest>,
     id: web::Path<String>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -244,14 +244,7 @@ pub async fn put_clients_dyn(
     let client_dyn = ClientDyn::find(&data, id.clone()).await?;
     client_dyn.validate_token(&bearer)?;
 
-    let client = Client::find(&data, id).await?;
-
-    // TODO UPDATE PROCESS
-
-    // TODO rotate secret on PUT ? Maybe behind config var?
-    // let registration_client_uri = Some(ClientDyn::registration_client_uri(&data, &client.id));
-
-    let resp = DynamicClientResponse::build(&data, client, client_dyn, false);
+    let resp = Client::update_dynamic(&data, payload.into_inner(), client_dyn).await?;
     Ok(HttpResponse::Ok().json(resp))
 }
 
