@@ -14,9 +14,9 @@ use cryptr::{utils, EncKeys, EncValue};
 use futures_util::StreamExt;
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_EPHEMERAL_CLIENTS,
-    DYN_CLIENT_DEFAULT_TOKEN_LIFETIME, ENABLE_EPHEMERAL_CLIENTS, EPHEMERAL_CLIENTS_ALLOWED_FLOWS,
-    EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA, IDX_CLIENTS, IDX_CLIENT_LOGO,
-    PROXY_MODE, RAUTHY_VERSION,
+    DYN_CLIENT_DEFAULT_TOKEN_LIFETIME, DYN_CLIENT_SECRET_AUTO_ROTATE, ENABLE_EPHEMERAL_CLIENTS,
+    EPHEMERAL_CLIENTS_ALLOWED_FLOWS, EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA,
+    IDX_CLIENTS, IDX_CLIENT_LOGO, PROXY_MODE, RAUTHY_VERSION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{cache_entry_client, get_client_ip, get_rand};
@@ -27,7 +27,7 @@ use redhac::{
 use reqwest::header::CONTENT_TYPE;
 use reqwest::{tls, Url};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, Row};
+use sqlx::{query, FromRow, Row};
 use std::str::FromStr;
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -154,7 +154,7 @@ impl Client {
             .clone()
             .unwrap_or_else(|| "client_secret_basic".to_string());
 
-        let (client, _client_secret) = Self::try_from_dyn_reg(client_req)?;
+        let client = Self::try_from_dyn_reg(client_req)?;
 
         let mut txn = data.db.begin().await?;
 
@@ -495,6 +495,41 @@ impl Client {
 
         Ok(())
     }
+
+    pub async fn update_dynamic(
+        data: &web::Data<AppState>,
+        client_req: DynamicClientRequest,
+        mut client_dyn: ClientDyn,
+    ) -> Result<DynamicClientResponse, ErrorResponse> {
+        let token_endpoint_auth_method = client_req
+            .token_endpoint_auth_method
+            .clone()
+            .unwrap_or_else(|| "client_secret_basic".to_string());
+
+        let mut new_client = Self::try_from_dyn_reg(client_req)?;
+        let current = Self::find(data, client_dyn.id.clone()).await?;
+        if !current.is_dynamic() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Invalid request for non-dynamic client".to_string(),
+            ));
+        }
+
+        // we need to keep some old and possibly user-modified values
+        new_client.id = current.id;
+        new_client.force_mfa = current.force_mfa;
+        new_client.scopes = current.scopes;
+        new_client.default_scopes = current.default_scopes;
+
+        let mut txn = data.db.begin().await?;
+        new_client.save(data, Some(&mut txn)).await?;
+        client_dyn
+            .update(&mut txn, token_endpoint_auth_method)
+            .await?;
+        txn.commit().await?;
+
+        DynamicClientResponse::build(data, new_client, client_dyn, *DYN_CLIENT_SECRET_AUTO_ROTATE)
+    }
 }
 
 impl Client {
@@ -649,6 +684,10 @@ impl Client {
 
     pub fn get_scope_as_str(&self) -> String {
         self.scopes.replace(',', " ")
+    }
+
+    pub fn is_dynamic(&self) -> bool {
+        self.id.starts_with("dyn$")
     }
 
     pub fn is_ephemeral(&self) -> bool {
@@ -1034,9 +1073,7 @@ impl From<NewClientRequest> for Client {
 }
 
 impl Client {
-    fn try_from_dyn_reg(
-        req: DynamicClientRequest,
-    ) -> Result<(Self, Option<String>), ErrorResponse> {
+    fn try_from_dyn_reg(req: DynamicClientRequest) -> Result<Self, ErrorResponse> {
         let id = format!("dyn${}", get_rand(16));
 
         let confidential = req.token_endpoint_auth_method.as_deref() != Some("none");
@@ -1066,28 +1103,25 @@ impl Client {
             .collect::<Vec<&str>>()
             .contains(&"refresh_token");
 
-        Ok((
-            Self {
-                id,
-                name: req.client_name,
-                enabled: true,
-                confidential,
-                secret,
-                secret_kid,
-                redirect_uris: req.redirect_uris.join(","),
-                post_logout_redirect_uris: req.post_logout_redirect_uri,
-                allowed_origins: None,
-                flows_enabled: req.grant_types.join(","),
-                access_token_alg,
-                id_token_alg,
-                refresh_token,
-                access_token_lifetime: *DYN_CLIENT_DEFAULT_TOKEN_LIFETIME,
-                challenge: confidential.then_some("S256".to_string()),
-                force_mfa: false,
-                ..Default::default()
-            },
-            secret_plain,
-        ))
+        Ok(Self {
+            id,
+            name: req.client_name,
+            enabled: true,
+            confidential,
+            secret,
+            secret_kid,
+            redirect_uris: req.redirect_uris.join(","),
+            post_logout_redirect_uris: req.post_logout_redirect_uri,
+            allowed_origins: None,
+            flows_enabled: req.grant_types.join(","),
+            access_token_alg,
+            id_token_alg,
+            refresh_token,
+            access_token_lifetime: *DYN_CLIENT_DEFAULT_TOKEN_LIFETIME,
+            challenge: confidential.then_some("S256".to_string()),
+            force_mfa: false,
+            ..Default::default()
+        })
     }
 }
 
