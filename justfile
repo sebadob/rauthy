@@ -67,13 +67,14 @@ docker-buildx-setup:
 # Starts maildev (https://github.com/maildev/maildev) on your localhost for E-Mail testing
 mailcrab-start:
     #!/usr/bin/env bash
-    docker run -d --rm -p 1080:1080 -p 1025:1025 --name mailcrab marlonb/mailcrab
+    docker run -d -p 1080:1080 -p 1025:1025 --name mailcrab --restart unless-stopped marlonb/mailcrab
 
 
 # Stops maildev
 mailcrab-stop:
     #!/usr/bin/env bash
     docker stop mailcrab
+    docker rm mailcrab
 
 
 # Just uses `cargo fmt --all`
