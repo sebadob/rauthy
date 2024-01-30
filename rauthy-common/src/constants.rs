@@ -136,6 +136,10 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("1800"))
         .parse::<i32>()
         .expect("DYN_CLIENT_DEFAULT_TOKEN_LIFETIME cannot be parsed to i64 - bad format");
+    pub static ref DYN_CLIENT_SECRET_AUTO_ROTATE: bool = env::var("DYN_CLIENT_SECRET_AUTO_ROTATE")
+        .unwrap_or_else(|_| String::from("true"))
+        .parse::<bool>()
+        .expect("DYN_CLIENT_SECRET_AUTO_ROTATE cannot be parsed to bool - bad format");
 
     pub static ref ENABLE_EPHEMERAL_CLIENTS: bool = env::var("ENABLE_EPHEMERAL_CLIENTS")
         .unwrap_or_else(|_| String::from("false"))
