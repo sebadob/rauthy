@@ -6,7 +6,7 @@ use cryptr::EncValue;
 use rauthy_common::constants::{CACHE_NAME_12HR, DYN_CLIENT_SECRET_AUTO_ROTATE};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::cache_entry_client;
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
+use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, FromRow};
 
@@ -47,6 +47,23 @@ impl ClientDyn {
             registration_token,
             token_endpoint_auth_method,
         })
+    }
+
+    /// This only deletes a `ClientDyn` from the cache.
+    /// The deletion at database level happens via the foreign key cascade.
+    pub async fn delete_from_cache(
+        data: &web::Data<AppState>,
+        id: &str,
+    ) -> Result<(), ErrorResponse> {
+        cache_remove(
+            CACHE_NAME_12HR.to_string(),
+            Client::get_cache_entry(id),
+            &data.caches.ha_cache_config,
+            AckLevel::Leader,
+        )
+        .await?;
+
+        Ok(())
     }
 
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {

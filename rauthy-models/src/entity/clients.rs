@@ -238,6 +238,11 @@ impl Client {
         )
         .await?;
 
+        // We only clean up the cache. The database uses foreign key a cascade.
+        if self.is_dynamic() {
+            ClientDyn::delete_from_cache(data, &self.id).await?;
+        }
+
         Ok(())
     }
 
