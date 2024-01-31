@@ -3,7 +3,9 @@ use crate::entity::clients::Client;
 use actix_web::web;
 use chrono::Utc;
 use cryptr::EncValue;
-use rauthy_common::constants::{CACHE_NAME_12HR, DYN_CLIENT_SECRET_AUTO_ROTATE};
+use rauthy_common::constants::{
+    CACHE_NAME_12HR, CACHE_NAME_CLIENTS_DYN, DYN_CLIENT_SECRET_AUTO_ROTATE,
+};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::cache_entry_client;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
@@ -139,6 +141,40 @@ impl ClientDyn {
 }
 
 impl ClientDyn {
+    /// Returns an Err(_) if the IP is currently existing inside the cache.
+    /// If not, the IP will be cached with an Ok(()).
+    pub async fn rate_limit_ip(
+        data: &web::Data<AppState>,
+        ip: String,
+    ) -> Result<(), ErrorResponse> {
+        if let Some(ts) = cache_get!(
+            i64,
+            CACHE_NAME_CLIENTS_DYN.to_string(),
+            ip.clone(),
+            &data.caches.ha_cache_config,
+            true
+        )
+        .await?
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::TooManyRequests(ts),
+                format!("You hit a rate limit. You may try again at: {}", ts),
+            ));
+        } else {
+            let now = Utc::now().timestamp();
+            cache_insert(
+                CACHE_NAME_CLIENTS_DYN.to_string(),
+                ip,
+                &data.caches.ha_cache_config,
+                &now,
+                AckLevel::Once,
+            )
+            .await?;
+        }
+
+        Ok(())
+    }
+
     pub fn registration_client_uri(data: &web::Data<AppState>, id: &str) -> String {
         format!("{}/clients_dyn/{}", data.issuer, id)
     }

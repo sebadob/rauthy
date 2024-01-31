@@ -14,10 +14,11 @@ https://openid.net/specs/openid-connect-registration-1_0.html
 - [x] issue `registration_token`s 
 - [x] implement a PUT endpoint for clients to self-modify
 - [x] add `ClientDyn` to secret migrations task to properly migrate `registration_token`s
-- [ ] check for dynamic client during final token creation and efficiently update `last_used` in `clients_dyn`
-- [ ] some kind of rate-limiting for an open dyn client reg endpoint
-- [ ] implement an efficient way to auto-delete unused clients to prevent spam and bots
-- [ ] config var for an auto-cleanup cron job for dyn clients with internal rate limiting
+- [x] check for dynamic client during final token creation and efficiently update `last_used` in `clients_dyn`
+- [x] implement an efficient way to auto-delete unused clients to prevent spam and bots
+- [x] make sure ClientDyn cache is cleaned up properly on Client::delete()
+- [x] config var for an auto-cleanup cron job for dyn clients
+- [x] some kind of rate-limiting for an open dyn client reg endpoint
 - [ ] change the GET `/clients` to:
     - not cache the result -> only used in Admin UI and may grow very big because of dyn client reg
     - return a "Simple" response like the `/users` does to not get into issues with many clients 
