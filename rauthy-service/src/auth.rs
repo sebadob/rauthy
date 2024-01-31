@@ -20,6 +20,7 @@ use rauthy_common::utils::{base64_url_encode, get_client_ip, get_rand};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
+use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::dpop_proof::DPoPProof;
 use rauthy_models::entity::jwk::{Jwk, JwkKeyPair, JwkKeyPairAlg};
@@ -974,7 +975,6 @@ async fn grant_type_code(
     // An additional check at this point does not provide any security benefit but only uses resources.
 
     let user = User::find(data, code.user_id.clone()).await?;
-
     let token_set = TokenSet::from_user(
         &user,
         data,
@@ -986,6 +986,7 @@ async fn grant_type_code(
     )
     .await?;
 
+    // update session metadata
     if code.session_id.is_some() {
         let sid = code.session_id.as_ref().unwrap().clone();
         let mut session = Session::find(data, sid).await?;
@@ -1003,6 +1004,11 @@ async fn grant_type_code(
         session.save(data).await?;
     }
     code.delete(data).await?;
+
+    // update timestamp if it is a dynamic client
+    if client.is_dynamic() {
+        ClientDyn::update_used(data, &client.id).await?;
+    }
 
     Ok((token_set, headers))
 }
@@ -1058,8 +1064,13 @@ async fn grant_type_credentials(
         } else {
             None
         };
-    // We do not push the origin header, because client credentials should never used from
+    // We do not push the origin header, because client credentials should never be used from
     // any browser at all
+
+    // update timestamp if it is a dynamic client
+    if client.is_dynamic() {
+        ClientDyn::update_used(data, &client.id).await?;
+    }
 
     let ts = TokenSet::for_client_credentials(data, &client, dpop_fingerprint).await?;
     Ok((ts, headers))
@@ -1153,6 +1164,11 @@ async fn grant_type_password(
             }
 
             user.save(data, None, None).await?;
+
+            // update timestamp if it is a dynamic client
+            if client.is_dynamic() {
+                ClientDyn::update_used(data, &client.id).await?;
+            }
 
             let ts = TokenSet::from_user(&user, data, &client, dpop_fingerprint, None, None, false)
                 .await?;
