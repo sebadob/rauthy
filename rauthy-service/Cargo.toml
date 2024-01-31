@@ -15,7 +15,7 @@ chrono = { workspace = true }
 cryptr = { workspace = true }
 derive_more = { workspace = true }
 jwt-simple = { workspace = true }
-## Add openssl-sys as a direct dependency so it can be cross compiled to
+## Add openssl-sys as a direct dependency, so it can be cross compiled to
 ## x86_64-unknown-linux-musl using the "vendored" feature below
 openssl-sys = { workspace = true }
 rand = { workspace = true }

@@ -1,4 +1,4 @@
-// Copyright 2023 Sebastian Dobe <sebastiandobe@mailbox.org>
+// Copyright 2024 Sebastian Dobe <sebastiandobe@mailbox.org>
 
 #![forbid(unsafe_code)]
 
@@ -9,9 +9,10 @@ use actix_web_prom::PrometheusMetricsBuilder;
 use cryptr::{EncKeys, EncValue};
 use prometheus::Registry;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_DPOP_NONCES, CACHE_NAME_EPHEMERAL_CLIENTS,
-    CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW, CACHE_NAME_SESSIONS, CACHE_NAME_USERS,
-    CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, DPOP_NONCE_EXP, ENABLE_WEB_ID,
+    CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_CLIENTS_DYN, CACHE_NAME_DPOP_NONCES,
+    CACHE_NAME_EPHEMERAL_CLIENTS, CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW, CACHE_NAME_SESSIONS,
+    CACHE_NAME_USERS, CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, DPOP_NONCE_EXP,
+    DYN_CLIENT_RATE_LIMIT_SEC, DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG, ENABLE_WEB_ID,
     EPHEMERAL_CLIENTS_CACHE_LIFETIME, POW_EXP, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL,
     SWAGGER_UI_INTERNAL, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
@@ -171,6 +172,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
         redhac::TimedCache::with_lifespan(300 + *WEBAUTHN_REQ_EXP),
         Some(64),
     );
+
+    // dynamic clients
+    if *ENABLE_DYN_CLIENT_REG && DYN_CLIENT_REG_TOKEN.is_none() {
+        cache_config.spawn_cache(
+            CACHE_NAME_CLIENTS_DYN.to_string(),
+            redhac::TimedCache::with_lifespan(*DYN_CLIENT_RATE_LIMIT_SEC),
+            None,
+        );
+    }
 
     // DPoP nonces
     cache_config.spawn_cache(
