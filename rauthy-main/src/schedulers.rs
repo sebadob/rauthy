@@ -3,7 +3,7 @@ use actix_web::web;
 use chrono::Utc;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, DB_TYPE, DYN_CLIENT_CLEANUP_INTERVAL, DYN_CLIENT_CLEANUP_MINUTES,
-    ENABLE_DYN_CLIENT_REG, IDX_JWK_KID, OFFLINE_TOKEN_LT, RAUTHY_VERSION,
+    DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG, IDX_JWK_KID, OFFLINE_TOKEN_LT, RAUTHY_VERSION,
 };
 use rauthy_common::DbType;
 use rauthy_models::app_state::{AppState, DbPool};
@@ -89,7 +89,13 @@ pub async fn dynamic_client_cleanup(
     rx_health: Receiver<Option<QuorumHealthState>>,
 ) {
     if !*ENABLE_DYN_CLIENT_REG {
-        info!("Dynamic client registration is not enabled - exiting scheduler");
+        info!(
+            "Dynamic client registration is not enabled - exiting dynamic_client_cleanup scheduler"
+        );
+        return;
+    }
+    if DYN_CLIENT_REG_TOKEN.is_some() {
+        info!("Dynamic client registration is private - exiting dynamic_client_cleanup scheduler");
         return;
     }
 
