@@ -1,8 +1,6 @@
 use crate::error_response::{ErrorResponse, ErrorResponseType};
 use actix_web::HttpRequest;
 use base64::{engine, engine::general_purpose, Engine as _};
-use chacha20poly1305::aead::Aead;
-use chacha20poly1305::KeyInit;
 use gethostname::gethostname;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
@@ -11,38 +9,6 @@ use tracing::error;
 const B64_URL_SAFE: engine::GeneralPurpose = general_purpose::URL_SAFE;
 const B64_URL_SAFE_NO_PAD: engine::GeneralPurpose = general_purpose::URL_SAFE_NO_PAD;
 const B64_STD: engine::GeneralPurpose = general_purpose::STANDARD;
-
-#[deprecated]
-// Decrypts a `&Vec<u8>` which was [encrypted](encrypt) before with the same key.
-pub fn decrypt_legacy(ciphertext: &[u8], key: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
-    use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
-
-    let k = Key::from_slice(key);
-    let cipher = ChaCha20Poly1305::new(k);
-    // 96 bits nonce is always the first bytes, if the `encrypt()` was used before
-    let (n, text) = ciphertext.split_at(12);
-    let nonce = Nonce::from_slice(n);
-    let plaintext = cipher.decrypt(nonce, text)?;
-    Ok(plaintext)
-}
-
-#[deprecated]
-// TODO do encryption and decryption on a dedicated thread?
-pub fn encrypt_legacy(plain: &[u8], key: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
-    use chacha20poly1305::{
-        aead::{AeadCore, OsRng},
-        ChaCha20Poly1305, Key,
-    };
-
-    let k = Key::from_slice(key);
-    let cipher = ChaCha20Poly1305::new(k);
-    let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
-    let ciphertext = cipher.encrypt(&nonce, plain)?;
-
-    let mut res = nonce.to_vec();
-    res.extend(ciphertext);
-    Ok(res)
-}
 
 // Returns the cache key for a given client
 pub fn cache_entry_client(id: &str) -> String {

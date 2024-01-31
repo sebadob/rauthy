@@ -629,25 +629,6 @@ pub async fn migrate_from_sqlite(
             .await?;
     }
 
-    // // PASSKEYS
-    // let before = sqlx::query_as::<_, PasskeyEntity>("select * from passkeys")
-    //     .fetch_all(&db_from)
-    //     .await?;
-    // sqlx::query("delete from webauthn").execute(db_to).await?;
-    // for b in before {
-    //     sqlx::query(
-    //         r#"insert into passkeys (user_id, name, passkey, registered, last_used)
-    //         values ($1, $2, $3, $4, $5)"#,
-    //     )
-    //     .bind(b.user_id)
-    //     .bind(b.name)
-    //     .bind(b.passkey)
-    //     .bind(b.registered)
-    //     .bind(b.last_used)
-    //     .execute(db_to)
-    //     .await?;
-    // }
-
     Ok(())
 }
 
@@ -1006,25 +987,6 @@ pub async fn migrate_from_postgres(
             .execute(db_to)
             .await?;
     }
-
-    // // PASSKEYS
-    // let before = sqlx::query_as::<_, PasskeyEntity>("select * from passkeys")
-    //     .fetch_all(&db_from)
-    //     .await?;
-    // sqlx::query("delete from passkeys").execute(db_to).await?;
-    // for b in before {
-    //     sqlx::query(
-    //         r#"insert into passkeys (user_id, name, passkey, registered, last_used)
-    //         values ($1, $2, $3, $4, $5)"#,
-    //     )
-    //     .bind(b.user_id)
-    //     .bind(b.name)
-    //     .bind(b.passkey)
-    //     .bind(b.registered)
-    //     .bind(b.last_used)
-    //     .execute(db_to)
-    //     .await?;
-    // }
 
     Ok(())
 }

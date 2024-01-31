@@ -93,9 +93,9 @@ impl DbVersion {
         app_version: &Version,
         db_version: Option<&Version>,
     ) -> Result<(), ErrorResponse> {
-        // this check panics on purpose and it is there to never forget to adjust this
+        // this check panics on purpose, and it is there to never forget to adjust this
         // version check before doing any major or minor release
-        if app_version.major != 0 || app_version.minor != 20 {
+        if app_version.major != 0 || app_version.minor != 21 {
             panic!(
                 "\nDbVersion::check_app_version needs adjustment for the new RAUTHY_VERSION: {}",
                 RAUTHY_VERSION
@@ -112,7 +112,7 @@ impl DbVersion {
 
         // check for the lowest DB version we can use with this App Version
         if let Some(db_version) = db_version {
-            let lowest_compatible_version = Version::parse("0.16.0").unwrap();
+            let lowest_compatible_version = Version::parse("0.20.0").unwrap();
 
             if db_version < &lowest_compatible_version {
                 panic!(
