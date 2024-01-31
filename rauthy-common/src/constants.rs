@@ -135,11 +135,19 @@ lazy_static! {
     pub static ref DYN_CLIENT_DEFAULT_TOKEN_LIFETIME: i32 = env::var("DYN_CLIENT_DEFAULT_TOKEN_LIFETIME")
         .unwrap_or_else(|_| String::from("1800"))
         .parse::<i32>()
-        .expect("DYN_CLIENT_DEFAULT_TOKEN_LIFETIME cannot be parsed to i64 - bad format");
+        .expect("DYN_CLIENT_DEFAULT_TOKEN_LIFETIME cannot be parsed to i32 - bad format");
     pub static ref DYN_CLIENT_SECRET_AUTO_ROTATE: bool = env::var("DYN_CLIENT_SECRET_AUTO_ROTATE")
         .unwrap_or_else(|_| String::from("true"))
         .parse::<bool>()
         .expect("DYN_CLIENT_SECRET_AUTO_ROTATE cannot be parsed to bool - bad format");
+    pub static ref DYN_CLIENT_CLEANUP_INTERVAL: u64 = env::var("DYN_CLIENT_CLEANUP_INTERVAL")
+        .unwrap_or_else(|_| String::from("60"))
+        .parse::<u64>()
+        .expect("DYN_CLIENT_CLEANUP_INTERVAL cannot be parsed to u64 - bad format");
+    pub static ref DYN_CLIENT_CLEANUP_MINUTES: i64 = env::var("DYN_CLIENT_CLEANUP_MINUTES")
+        .unwrap_or_else(|_| String::from("60"))
+        .parse::<i64>()
+        .expect("DYN_CLIENT_CLEANUP_MINUTES cannot be parsed to i64 - bad format");
 
     pub static ref ENABLE_EPHEMERAL_CLIENTS: bool = env::var("ENABLE_EPHEMERAL_CLIENTS")
         .unwrap_or_else(|_| String::from("false"))
