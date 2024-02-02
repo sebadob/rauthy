@@ -157,25 +157,6 @@ mod tests {
     use pretty_assertions::assert_eq;
     use std::string::String;
 
-    #[tokio::test]
-    async fn test_encryption() -> Result<(), Box<dyn std::error::Error>> {
-        let text = "PlainText";
-        let plain = text.as_bytes();
-        let key = b"9dJsZiqfgxoCABYziGMW2UHq7C44jvdp";
-
-        let enc = encrypt_legacy(plain, key).unwrap();
-        assert_ne!(&enc, plain);
-
-        let dec = decrypt_legacy(enc.as_slice(), key).unwrap();
-        assert_ne!(enc, dec);
-        assert_eq!(&dec, plain);
-
-        let dec_text = String::from_utf8_lossy(&dec);
-        assert_eq!(dec_text, "PlainText");
-
-        Ok(())
-    }
-
     #[test]
     fn test_json_arr_to_vec() {
         let arr = String::from("[\"one\",\"two\",\"three\"]");
