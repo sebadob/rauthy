@@ -7,7 +7,6 @@ use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_CLIENTS_DYN, DYN_CLIENT_SECRET_AUTO_ROTATE,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::cache_entry_client;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, FromRow};
@@ -59,7 +58,7 @@ impl ClientDyn {
     ) -> Result<(), ErrorResponse> {
         cache_remove(
             CACHE_NAME_12HR.to_string(),
-            Client::get_cache_entry(id),
+            ClientDyn::get_cache_entry(id),
             &data.caches.ha_cache_config,
             AckLevel::Leader,
         )
@@ -72,7 +71,7 @@ impl ClientDyn {
         if let Some(slf) = cache_get!(
             Self,
             CACHE_NAME_12HR.to_string(),
-            cache_entry_client(&id),
+            ClientDyn::get_cache_entry(&id),
             &data.caches.ha_cache_config,
             false
         )
@@ -87,7 +86,7 @@ impl ClientDyn {
 
         cache_insert(
             CACHE_NAME_12HR.to_string(),
-            Client::get_cache_entry(&slf.id),
+            ClientDyn::get_cache_entry(&slf.id),
             &data.caches.ha_cache_config,
             &slf,
             AckLevel::Leader,
@@ -99,6 +98,7 @@ impl ClientDyn {
 
     pub async fn update(
         &mut self,
+        data: &web::Data<AppState>,
         txn: &mut DbTxn<'_>,
         token_endpoint_auth_method: String,
     ) -> Result<(), ErrorResponse> {
@@ -122,6 +122,15 @@ impl ClientDyn {
         .execute(&mut **txn)
         .await?;
 
+        cache_insert(
+            CACHE_NAME_12HR.to_string(),
+            ClientDyn::get_cache_entry(&self.id),
+            &data.caches.ha_cache_config,
+            &self,
+            AckLevel::Leader,
+        )
+        .await?;
+
         Ok(())
     }
 
@@ -141,6 +150,10 @@ impl ClientDyn {
 }
 
 impl ClientDyn {
+    pub fn get_cache_entry(id: &str) -> String {
+        format!("client_dyn_{}", id)
+    }
+
     /// Returns an Err(_) if the IP is currently existing inside the cache.
     /// If not, the IP will be cached with an Ok(()).
     pub async fn rate_limit_ip(
@@ -187,11 +200,7 @@ impl ClientDyn {
     pub fn validate_token(&self, bearer: &str) -> Result<(), ErrorResponse> {
         if self.registration_token_plain()? != bearer {
             Err(ErrorResponse::new(
-                ErrorResponseType::WWWAuthenticate(
-                    r#"error="invalid_token",
-                    error_description="Invalid registration_token"#
-                        .to_string(),
-                ),
+                ErrorResponseType::WWWAuthenticate("invalid_token".to_string()),
                 "Invalid registration_token".to_string(),
             ))
         } else {
