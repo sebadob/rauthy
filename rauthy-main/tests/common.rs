@@ -20,7 +20,7 @@ macro_rules! aw {
 static SESSION_HEADERS: OnceLock<HeaderMap> = OnceLock::new();
 
 pub const CLIENT_ID: &str = "init_client";
-pub const CLIENT_SECRET: &str = "UBDkjwRc1ogGYXZzvB8bPzqSsIuS4QwYUb4F0vD1Lca2Mhq9Aqz9KWokCSbMq4q3";
+pub const CLIENT_SECRET: &str = "LjERi0WSEz1E9OY9KFJaMjlwV1Uf3nuIuOUnJnoJQNm2i7YMjTDMy4PbAKnYRgFy";
 pub const USERNAME: &str = "init_admin@localhost.de";
 pub const PASSWORD: &str = "123SuperSafe";
 

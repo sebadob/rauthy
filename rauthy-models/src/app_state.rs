@@ -240,7 +240,7 @@ impl AppState {
             pool
         };
 
-        // before we do any db migrations, we need to check the current DB version for
+        // before we do any db migrations, we need to check the current DB version
         // for compatibility
         let db_version = DbVersion::check_app_version(&pool)
             .await
