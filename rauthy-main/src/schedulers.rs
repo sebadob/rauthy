@@ -2,12 +2,15 @@ use ::time::OffsetDateTime;
 use actix_web::web;
 use chrono::Utc;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, DB_TYPE, IDX_JWK_KID, OFFLINE_TOKEN_LT, RAUTHY_VERSION,
+    CACHE_NAME_12HR, DB_TYPE, DYN_CLIENT_CLEANUP_INTERVAL, DYN_CLIENT_CLEANUP_MINUTES,
+    DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG, IDX_JWK_KID, OFFLINE_TOKEN_LT, RAUTHY_VERSION,
 };
 use rauthy_common::DbType;
 use rauthy_models::app_state::{AppState, DbPool};
 use rauthy_models::email::send_pwd_reset_info;
 use rauthy_models::entity::app_version::LatestAppVersion;
+use rauthy_models::entity::clients::Client;
+use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::jwk::Jwk;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
@@ -17,6 +20,7 @@ use rauthy_models::migration::{backup_db, s3_backup_init_test};
 use rauthy_service::auth;
 use redhac::{cache_del, QuorumHealthState, QuorumState};
 use semver::Version;
+use sqlx::query_as;
 use std::collections::HashSet;
 use std::env;
 use std::ops::{Add, Sub};
@@ -35,6 +39,7 @@ pub async fn scheduler_main(data: web::Data<AppState>) {
     s3_backup_init_test().await;
 
     tokio::spawn(db_backup(data.db.clone()));
+    tokio::spawn(dynamic_client_cleanup(data.clone(), rx_health.clone()));
     tokio::spawn(events_cleanup(data.db.clone(), rx_health.clone()));
     tokio::spawn(magic_link_cleanup(data.db.clone(), rx_health.clone()));
     tokio::spawn(refresh_tokens_cleanup(data.db.clone(), rx_health.clone()));
@@ -75,6 +80,82 @@ pub async fn db_backup(db: DbPool) {
 
         if let Err(err) = backup_db(&db).await {
             error!("{}", err.message);
+        }
+    }
+}
+
+pub async fn dynamic_client_cleanup(
+    data: web::Data<AppState>,
+    rx_health: Receiver<Option<QuorumHealthState>>,
+) {
+    if !*ENABLE_DYN_CLIENT_REG {
+        info!(
+            "Dynamic client registration is not enabled - exiting dynamic_client_cleanup scheduler"
+        );
+        return;
+    }
+    if DYN_CLIENT_REG_TOKEN.is_some() {
+        info!("Dynamic client registration is private - exiting dynamic_client_cleanup scheduler");
+        return;
+    }
+
+    let mut interval = time::interval(Duration::from_secs(
+        DYN_CLIENT_CLEANUP_INTERVAL.saturating_mul(60),
+    ));
+
+    loop {
+        interval.tick().await;
+
+        // will return None in a non-HA deployment
+        if let Some(is_ha_leader) = is_ha_leader(&rx_health) {
+            if !is_ha_leader {
+                debug!(
+                    "Running HA mode without being the leader - skipping dynamic_client_cleanup scheduler"
+                );
+                continue;
+            }
+        }
+        debug!("Running dynamic_client_cleanup scheduler");
+
+        let clients: Vec<ClientDyn> = match query_as!(
+            ClientDyn,
+            "SELECT * FROM clients_dyn WHERE last_used = null"
+        )
+        .fetch_all(&data.db)
+        .await
+        {
+            Ok(c) => c,
+            Err(err) => {
+                error!("{:?}", err);
+                continue;
+            }
+        };
+
+        let threshold = Utc::now().timestamp() - *DYN_CLIENT_CLEANUP_MINUTES;
+        let mut cleaned_up = 0;
+        for client in clients {
+            if client.created < threshold {
+                info!("Cleaning up unused dynamic client {}", client.id);
+                match Client::find(&data, client.id).await {
+                    Ok(c) => {
+                        if let Err(err) = c.delete(&data).await {
+                            error!("Error deleting unused client: {:?}", err);
+                            continue;
+                        }
+
+                        cleaned_up += 1;
+                    }
+                    Err(err) => {
+                        error!("Client does not exist for ClientDyn when it should. This should never happen.\
+                        Please report this issue: {:?}", err);
+                        continue;
+                    }
+                }
+            }
+        }
+
+        if cleaned_up > 0 {
+            info!("Cleaned up {} unused dynamic clients", cleaned_up);
         }
     }
 }

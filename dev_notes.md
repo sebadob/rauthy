@@ -2,44 +2,12 @@
 
 ## CURRENT WORK
 
-### Dynamic Client Registration TODO
-
-https://openid.net/specs/openid-connect-registration-1_0.html
-
-- [x] define new POST request registration object by RFC
-- [x] implement registration endpoint
-- [x] config variable for token-protected dynamic registration
-- [x] DB migrations and create `clients_dyn` table with all necessary information 
-- [ ] implement an efficient way to auto-delete unused clients to prevent spam and bots
-- [ ] config var for an auto-cleanup cron job for dyn clients
-- [x] implement a GET endpoint specific for dynamic clients in the correct format by RFC
-- [x] issue `registration_token`s 
-- [x] implement a PUT endpoint for clients to self-modify
-- [ ] some kind of rate-limiting for an open dyn client reg endpoint
-- [x] add `ClientDyn` to secret migrations task to properly migrate `registration_token`s
-- [ ] check for dynamic client during final token creation and efficiently update `last_used` in `clients_dyn`
-with internal rate limiting
-- [ ] change the GET `/clients` to:
-    - not cache the result -> only used in Admin UI and may grow very big because of dyn client reg
-    - return a "Simple" response like the `/users` does to not get into issues with many clients 
-
-## TODO next features
+## TODO next
 
 - respect `login_hint` in the authorize ui
 - add `at_hash` claim to the ID token
-- does it make sense for Rauthy to impl `acr_values` ?
-
-## TODO leftovers for full dynamic compliance (impl all of it?)
-
-https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation -> 15.2
-
-Not completely sure if / when these will come.
-Both hybrid flow + real good dynamic registration would require a lot of work.  
-The `request_uri` however is kind of halfway implemented because of the `webid` support.
-
-- fully implement and support the hybrid flow
-- impl dynamic client registration
 - respect `request_uri` during auth
+- fix broken link build in Admin UI if a new version is available
 
 ## Stage 1 - essentials
 

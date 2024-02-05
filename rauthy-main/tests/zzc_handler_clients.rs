@@ -12,7 +12,6 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
     let backend_url = get_backend_url();
 
-    // get all users and check the admin user
     let url = format!("{}/clients", backend_url);
     let res = reqwest::Client::new()
         .get(&url)
@@ -26,7 +25,6 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
 
     let mut client = clients.get(0).unwrap();
     if client.id == "init_client" {
-        // when doing diesel migration, sometimes one is faster than the other
         client = clients.get(1).unwrap();
     }
     assert_eq!(client.id, "rauthy");

@@ -8,6 +8,7 @@ use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::colors::ColorEntity;
+use rauthy_models::real_ip_from_req;
 use rauthy_models::request::{
     ColorsRequest, DynamicClientRequest, NewClientRequest, UpdateClientRequest,
 };
@@ -171,6 +172,9 @@ pub async fn post_clients_dyn(
                 ))
                 .finish());
         }
+    } else {
+        let ip = real_ip_from_req(&req).unwrap_or_default();
+        ClientDyn::rate_limit_ip(&data, ip).await?;
     }
 
     Client::create_dynamic(&data, payload.into_inner())
@@ -211,7 +215,7 @@ pub async fn get_clients_dyn(
     client_dyn.validate_token(&bearer)?;
 
     let client = Client::find(&data, id).await?;
-    let resp = DynamicClientResponse::build(&data, client, client_dyn, false);
+    let resp = DynamicClientResponse::build(&data, client, client_dyn, false)?;
     Ok(HttpResponse::Ok().json(resp))
 }
 

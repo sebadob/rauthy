@@ -156,6 +156,7 @@ test-sqlite test="": migrate-sqlite prepare-sqlite
 
     DATABASE_URL={{db_url_sqlite}} cargo build --features sqlite
     DATABASE_URL={{db_url_sqlite}} ./target/debug/rauthy test &
+    #DATABASE_URL=sqlite:data/rauthy.db ./target/debug/rauthy test &
     sleep 1
     PID=$(echo "$!")
     echo "PID: $PID"
@@ -305,7 +306,7 @@ release:
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # TODO the checkec-in sqlx preparations seem to bug this
+    # TODO the check-in sqlx preparations seem to bug this
     # make sure git is clean
     #git diff --quiet || exit 1
 

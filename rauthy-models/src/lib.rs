@@ -1,4 +1,4 @@
-// Copyright 2023 Sebastian Dobe <sebastiandobe@mailbox.org>
+// Copyright 2024 Sebastian Dobe <sebastiandobe@mailbox.org>
 
 #![forbid(unsafe_code)]
 

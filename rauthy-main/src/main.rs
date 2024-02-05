@@ -1,23 +1,21 @@
-// Copyright 2023 Sebastian Dobe <sebastiandobe@mailbox.org>
+// Copyright 2024 Sebastian Dobe <sebastiandobe@mailbox.org>
 
 #![forbid(unsafe_code)]
 
 use actix_web::rt::System;
-use actix_web::web::Data;
 use actix_web::{middleware, web, App, HttpServer};
 use actix_web_prom::PrometheusMetricsBuilder;
-use cryptr::{EncKeys, EncValue};
+use cryptr::EncKeys;
 use prometheus::Registry;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_DPOP_NONCES, CACHE_NAME_EPHEMERAL_CLIENTS,
-    CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW, CACHE_NAME_SESSIONS, CACHE_NAME_USERS,
-    CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, DPOP_NONCE_EXP, ENABLE_WEB_ID,
+    CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_CLIENTS_DYN, CACHE_NAME_DPOP_NONCES,
+    CACHE_NAME_EPHEMERAL_CLIENTS, CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW, CACHE_NAME_SESSIONS,
+    CACHE_NAME_USERS, CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, DPOP_NONCE_EXP,
+    DYN_CLIENT_RATE_LIMIT_SEC, DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG, ENABLE_WEB_ID,
     EPHEMERAL_CLIENTS_CACHE_LIFETIME, POW_EXP, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL,
     SWAGGER_UI_INTERNAL, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
-use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::password_hasher;
-use rauthy_common::utils::decrypt_legacy;
 use rauthy_handlers::middleware::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
 use rauthy_handlers::middleware::principal::RauthyPrincipalMiddleware;
@@ -27,10 +25,6 @@ use rauthy_handlers::{
 };
 use rauthy_models::app_state::{AppState, Caches};
 use rauthy_models::email::EMail;
-use rauthy_models::entity::api_keys::ApiKeyEntity;
-use rauthy_models::entity::clients::Client;
-use rauthy_models::entity::jwk::Jwk;
-use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
 use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::listener::EventListener;
@@ -39,7 +33,6 @@ use rauthy_models::events::{init_event_vars, ip_blacklist_handler};
 use rauthy_models::migration::check_restore_backup;
 use rauthy_models::{email, ListenScheme};
 use spow::pow::Pow;
-use sqlx::query;
 use std::error::Error;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
@@ -47,7 +40,7 @@ use std::time::Duration;
 use std::{env, thread};
 use tokio::sync::mpsc;
 use tokio::time;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::cache_notify::handle_notify;
@@ -172,6 +165,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Some(64),
     );
 
+    // dynamic clients
+    if *ENABLE_DYN_CLIENT_REG && DYN_CLIENT_REG_TOKEN.is_none() {
+        cache_config.spawn_cache(
+            CACHE_NAME_CLIENTS_DYN.to_string(),
+            redhac::TimedCache::with_lifespan(*DYN_CLIENT_RATE_LIMIT_SEC),
+            None,
+        );
+    }
+
     // DPoP nonces
     cache_config.spawn_cache(
         CACHE_NAME_DPOP_NONCES.to_string(),
@@ -295,18 +297,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // spawn remote cache notification service
     tokio::spawn(handle_notify(app_state.clone(), rx_notify));
-
-    // TODO remove with v0.21
-    // migrate existing encrypted values to `cryptr`
-    v20_migrate_to_cryptr(&app_state)
-        .await
-        .expect("TEMP_migrate_to_cryptr to succeed");
-
-    // TODO remove with v0.21
-    // make sure all old emails are lowercase only in the db
-    v20_migrate_emails_lowercase(&app_state)
-        .await
-        .expect("no conflicts when converting E-Mails to lowercase -> duplicate entries?");
 
     // spawn health watcher
     tokio::spawn(watch_health(
@@ -658,154 +648,4 @@ fn get_https_port() -> String {
     let port = env::var("LISTEN_PORT_HTTPS").unwrap_or_else(|_| "8443".to_string());
     info!("HTTPS listen port: {}", port);
     port
-}
-
-// TODO remove with v0.21
-#[deprecated]
-async fn v20_migrate_to_cryptr(app_state: &Data<AppState>) -> Result<(), ErrorResponse> {
-    // check `config` table if the migration has been done already
-    let db_id = "cryptr_migration";
-    if sqlx::query!("SELECT * FROM config WHERE id = $1", db_id)
-        .fetch_one(&app_state.db)
-        .await
-        .is_ok()
-    {
-        debug!("Secrets have already been migrated - skipping");
-        return Ok(());
-    }
-
-    info!("Starting secrets migration");
-
-    let keys = EncKeys::get_static();
-    let active_key = &keys.enc_key_active;
-
-    // if not, migrate values wrapped in a transaction to not screw up something
-    let mut txn = app_state.db.begin().await?;
-
-    // migrate clients
-    let clients = Client::find_all(app_state).await?;
-    for mut client in clients {
-        if !client.confidential {
-            continue;
-        }
-
-        let kid = client.secret_kid.as_ref().unwrap_or(&keys.enc_key_active);
-        let key = keys.get_key(kid)?;
-        let enc = match decrypt_legacy(client.secret.as_ref().unwrap(), key) {
-            Ok(dec) => EncValue::encrypt(dec.as_slice())?.into_bytes().to_vec(),
-            Err(err) => {
-                // if we get here, it means this was a fresh install with v0.20
-                // In that case, the Clients are being created in the new format already
-                // -> no need to migrate them
-                warn!("Error decrypting client secret in v20_migrate_to_cryptr: {:?}\n\nIf this is a fresh install, you can ignore this\n", err);
-                break;
-            }
-        };
-
-        client.secret = Some(enc);
-        client.secret_kid = Some(active_key.clone());
-        client.save(app_state, Some(&mut txn)).await?;
-    }
-
-    // migrate Jwks
-    let jwks = sqlx::query_as!(Jwk, "select * from jwks")
-        .fetch_all(&app_state.db)
-        .await?;
-    for jwk in jwks {
-        let key = keys.get_key(&jwk.enc_key_id)?;
-        let enc = match decrypt_legacy(jwk.jwk.as_slice(), key) {
-            Ok(dec) => EncValue::encrypt(dec.as_slice())?.into_bytes().to_vec(),
-            Err(err) => {
-                // if we get here, it means this was a fresh install with v0.20
-                // In that case, the JWKS are being created in the new format already
-                // -> no need to migrate them
-                warn!("Error decrypting JWK in v20_migrate_to_cryptr: {:?}\n\nIf this is a fresh install, you can ignore this\n", err);
-                break;
-            }
-        };
-
-        sqlx::query!(
-            "update jwks set enc_key_id = $1, jwk = $2 where kid = $3",
-            active_key,
-            enc,
-            jwk.kid,
-        )
-        .execute(&mut *txn)
-        .await?;
-    }
-
-    // migrate ApiKey's
-    let api_keys = ApiKeyEntity::find_all(app_state).await?;
-    for mut api_key in api_keys {
-        // secret
-        let key = keys.get_key(&api_key.enc_key_id)?;
-        // In case of API Keys, we don't need to do the error check from above.
-        // They can never exist on a fresh install anyway.
-        let dec = decrypt_legacy(api_key.secret.as_slice(), key)?;
-        api_key.secret = EncValue::encrypt(dec.as_slice())?.into_bytes().to_vec();
-
-        // access rights
-        let dec = decrypt_legacy(api_key.access.as_slice(), key)?;
-        api_key.access = EncValue::encrypt(dec.as_slice())?.into_bytes().to_vec();
-
-        query!(
-            r#"UPDATE api_keys
-            SET secret = $1, expires = $2, enc_key_id = $3, access = $4
-            WHERE name = $5"#,
-            api_key.secret,
-            api_key.expires,
-            active_key,
-            api_key.access,
-            api_key.name,
-        )
-        .execute(&mut *txn)
-        .await?;
-    }
-
-    // save the state in `config` table to only do all this once
-    #[cfg(not(feature = "sqlite"))]
-    sqlx::query!("INSERT INTO config (id, data) VALUES ($1, $2)", db_id, &[])
-        .execute(&mut *txn)
-        .await?;
-    #[cfg(feature = "sqlite")]
-    sqlx::query!("INSERT INTO config (id, data) VALUES ($1, $2)", db_id, 1)
-        .execute(&mut *txn)
-        .await?;
-
-    txn.commit().await?;
-
-    info!("Secrets migration successful");
-
-    Ok(())
-}
-
-// TODO remove with v0.21
-#[deprecated]
-async fn v20_migrate_emails_lowercase(app_state: &Data<AppState>) -> Result<(), ErrorResponse> {
-    let users = User::find_all(app_state).await?;
-    for user in users {
-        for char in user.email.chars() {
-            if char.is_uppercase() {
-                if let Err(err) = sqlx::query("update users set email = $1 where id = $2")
-                    .bind(user.email.to_lowercase())
-                    .bind(user.id)
-                    .execute(&app_state.db)
-                    .await
-                {
-                    error!(
-                        r#"
-
-Cannot save lowercase converted E-Mail in database because of a duplicate.
-You need to solve this issue manually.
-
-{:?}
-"#,
-                        err
-                    )
-                }
-                break;
-            }
-        }
-    }
-    Ok(())
 }

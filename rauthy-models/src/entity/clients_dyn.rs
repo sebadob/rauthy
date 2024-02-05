@@ -3,10 +3,11 @@ use crate::entity::clients::Client;
 use actix_web::web;
 use chrono::Utc;
 use cryptr::EncValue;
-use rauthy_common::constants::{CACHE_NAME_12HR, DYN_CLIENT_SECRET_AUTO_ROTATE};
+use rauthy_common::constants::{
+    CACHE_NAME_12HR, CACHE_NAME_CLIENTS_DYN, DYN_CLIENT_SECRET_AUTO_ROTATE,
+};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::cache_entry_client;
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
+use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, FromRow};
 
@@ -49,11 +50,28 @@ impl ClientDyn {
         })
     }
 
+    /// This only deletes a `ClientDyn` from the cache.
+    /// The deletion at database level happens via the foreign key cascade.
+    pub async fn delete_from_cache(
+        data: &web::Data<AppState>,
+        id: &str,
+    ) -> Result<(), ErrorResponse> {
+        cache_remove(
+            CACHE_NAME_12HR.to_string(),
+            ClientDyn::get_cache_entry(id),
+            &data.caches.ha_cache_config,
+            AckLevel::Leader,
+        )
+        .await?;
+
+        Ok(())
+    }
+
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
         if let Some(slf) = cache_get!(
             Self,
             CACHE_NAME_12HR.to_string(),
-            cache_entry_client(&id),
+            ClientDyn::get_cache_entry(&id),
             &data.caches.ha_cache_config,
             false
         )
@@ -68,7 +86,7 @@ impl ClientDyn {
 
         cache_insert(
             CACHE_NAME_12HR.to_string(),
-            Client::get_cache_entry(&slf.id),
+            ClientDyn::get_cache_entry(&slf.id),
             &data.caches.ha_cache_config,
             &slf,
             AckLevel::Leader,
@@ -80,6 +98,7 @@ impl ClientDyn {
 
     pub async fn update(
         &mut self,
+        data: &web::Data<AppState>,
         txn: &mut DbTxn<'_>,
         token_endpoint_auth_method: String,
     ) -> Result<(), ErrorResponse> {
@@ -103,6 +122,15 @@ impl ClientDyn {
         .execute(&mut **txn)
         .await?;
 
+        cache_insert(
+            CACHE_NAME_12HR.to_string(),
+            ClientDyn::get_cache_entry(&self.id),
+            &data.caches.ha_cache_config,
+            &self,
+            AckLevel::Leader,
+        )
+        .await?;
+
         Ok(())
     }
 
@@ -122,6 +150,44 @@ impl ClientDyn {
 }
 
 impl ClientDyn {
+    pub fn get_cache_entry(id: &str) -> String {
+        format!("client_dyn_{}", id)
+    }
+
+    /// Returns an Err(_) if the IP is currently existing inside the cache.
+    /// If not, the IP will be cached with an Ok(()).
+    pub async fn rate_limit_ip(
+        data: &web::Data<AppState>,
+        ip: String,
+    ) -> Result<(), ErrorResponse> {
+        if let Some(ts) = cache_get!(
+            i64,
+            CACHE_NAME_CLIENTS_DYN.to_string(),
+            ip.clone(),
+            &data.caches.ha_cache_config,
+            true
+        )
+        .await?
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::TooManyRequests(ts),
+                format!("You hit a rate limit. You may try again at: {}", ts),
+            ));
+        } else {
+            let now = Utc::now().timestamp();
+            cache_insert(
+                CACHE_NAME_CLIENTS_DYN.to_string(),
+                ip,
+                &data.caches.ha_cache_config,
+                &now,
+                AckLevel::Once,
+            )
+            .await?;
+        }
+
+        Ok(())
+    }
+
     pub fn registration_client_uri(data: &web::Data<AppState>, id: &str) -> String {
         format!("{}/clients_dyn/{}", data.issuer, id)
     }
@@ -134,11 +200,7 @@ impl ClientDyn {
     pub fn validate_token(&self, bearer: &str) -> Result<(), ErrorResponse> {
         if self.registration_token_plain()? != bearer {
             Err(ErrorResponse::new(
-                ErrorResponseType::WWWAuthenticate(
-                    r#"error="invalid_token",
-                    error_description="Invalid registration_token"#
-                        .to_string(),
-                ),
+                ErrorResponseType::WWWAuthenticate("invalid_token".to_string()),
                 "Invalid registration_token".to_string(),
             ))
         } else {

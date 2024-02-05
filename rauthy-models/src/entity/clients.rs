@@ -131,16 +131,16 @@ impl Client {
         }
 
         // TODO remove all clients cache fully? -> admin UI only?
-        let mut clients = Client::find_all(data).await?;
-        clients.push(client.clone());
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_CLIENTS.to_string(),
-            &data.caches.ha_cache_config,
-            &clients,
-            AckLevel::Leader,
-        )
-        .await?;
+        // let mut clients = Client::find_all(data).await?;
+        // clients.push(client.clone());
+        // cache_insert(
+        //     CACHE_NAME_12HR.to_string(),
+        //     IDX_CLIENTS.to_string(),
+        //     &data.caches.ha_cache_config,
+        //     &clients,
+        //     AckLevel::Leader,
+        // )
+        // .await?;
 
         Ok(client)
     }
@@ -196,16 +196,16 @@ impl Client {
 
         txn.commit().await?;
 
-        let mut clients = Client::find_all(data).await?;
-        clients.push(client.clone());
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_CLIENTS.to_string(),
-            &data.caches.ha_cache_config,
-            &clients,
-            AckLevel::Leader,
-        )
-        .await?;
+        // let mut clients = Client::find_all(data).await?;
+        // clients.push(client.clone());
+        // cache_insert(
+        //     CACHE_NAME_12HR.to_string(),
+        //     IDX_CLIENTS.to_string(),
+        //     &data.caches.ha_cache_config,
+        //     &clients,
+        //     AckLevel::Leader,
+        // )
+        // .await?;
 
         DynamicClientResponse::build(data, client, client_dyn, true)
     }
@@ -216,20 +216,20 @@ impl Client {
             .execute(&data.db)
             .await?;
 
-        let clients = Client::find_all(data)
-            .await?
-            .into_iter()
-            .filter(|c| c.id != self.id)
-            .collect::<Vec<Self>>();
-
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_CLIENTS.to_string(),
-            &data.caches.ha_cache_config,
-            &clients,
-            AckLevel::Quorum,
-        )
-        .await?;
+        // let clients = Client::find_all(data)
+        //     .await?
+        //     .into_iter()
+        //     .filter(|c| c.id != self.id)
+        //     .collect::<Vec<Self>>();
+        //
+        // cache_insert(
+        //     CACHE_NAME_12HR.to_string(),
+        //     IDX_CLIENTS.to_string(),
+        //     &data.caches.ha_cache_config,
+        //     &clients,
+        //     AckLevel::Quorum,
+        // )
+        // .await?;
         cache_remove(
             CACHE_NAME_12HR.to_string(),
             Client::get_cache_entry(&self.id),
@@ -237,6 +237,11 @@ impl Client {
             AckLevel::Leader,
         )
         .await?;
+
+        // We only clean up the cache. The database uses foreign key a cascade.
+        if self.is_dynamic() {
+            ClientDyn::delete_from_cache(data, &self.id).await?;
+        }
 
         Ok(())
     }
@@ -274,30 +279,30 @@ impl Client {
 
     // Returns all existing clients with the secrets.
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        let clients = cache_get!(
-            Vec<Client>,
-            CACHE_NAME_12HR.to_string(),
-            IDX_CLIENTS.to_string(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(clients) = clients {
-            return Ok(clients);
-        }
+        // let clients = cache_get!(
+        //     Vec<Client>,
+        //     CACHE_NAME_12HR.to_string(),
+        //     IDX_CLIENTS.to_string(),
+        //     &data.caches.ha_cache_config,
+        //     false
+        // )
+        // .await?;
+        // if let Some(clients) = clients {
+        //     return Ok(clients);
+        // }
 
         let clients = sqlx::query_as("select * from clients")
             .fetch_all(&data.db)
             .await?;
 
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_CLIENTS.to_string(),
-            &data.caches.ha_cache_config,
-            &clients,
-            AckLevel::Leader,
-        )
-        .await?;
+        // cache_insert(
+        //     CACHE_NAME_12HR.to_string(),
+        //     IDX_CLIENTS.to_string(),
+        //     &data.caches.ha_cache_config,
+        //     &clients,
+        //     AckLevel::Leader,
+        // )
+        // .await?;
 
         Ok(clients)
     }
@@ -524,7 +529,7 @@ impl Client {
         let mut txn = data.db.begin().await?;
         new_client.save(data, Some(&mut txn)).await?;
         client_dyn
-            .update(&mut txn, token_endpoint_auth_method)
+            .update(data, &mut txn, token_endpoint_auth_method)
             .await?;
         txn.commit().await?;
 
