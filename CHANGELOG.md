@@ -6,6 +6,90 @@ This is about implementing the last leftover things to make Rauthy compliant wit
 of the OIDC spec. A lot of additional things were already implemented many versions ago. There were just
 some minor parts missing.
 
+### Features
+
+#### OpenID Connect Dynamic Client Registration
+
+Rauthy now supports Dynamic Client registration as defined [here](https://openid.net/specs/openid-connect-registration-1_0.html).
+
+There is a whole new section in the config, which should (hopefully) be self-explanatory:
+
+```
+#####################################
+########## DYNAMIC CLIENTS ##########
+#####################################
+
+# If set to `true`, dynamic client registration will be enabled.
+# Only activate this, if you really need it and you know, what
+# you are doing. The dynamic client registration without further
+# restriction will allow anyone to register new clients, even
+# bots and spammers, and this may create security issues, if not
+# handled properly and your users just login blindly to any client
+# they get redirected to.
+# default: false
+#ENABLE_DYN_CLIENT_REG=false
+
+# If specified, this secret token will be expected during
+# dynamic client registrations to be given as a
+# `Bearer <DYN_CLIENT_REG_TOKEN>` token. Needs to be communicated
+# in advance.
+# default: <empty>
+#DYN_CLIENT_REG_TOKEN=
+
+# The default token lifetime in seconds for a dynamic client,
+# that will be set during the registration.
+# This value can be modified manually after registration via
+# the Admin UI like for any other client.
+# default: 1800
+#DYN_CLIENT_DEFAULT_TOKEN_LIFETIME=1800
+
+# If set to 'true', client secret and registration token will be
+# automatically rotated each time a dynamic client updates itself
+# via the PUT endpoint. This is the only way that secret rotation
+# could be automated safely.
+# However, this is not mandatory by RFC and it may lead to errors,
+# if the dynamic clients are not implemented properly to check for
+# and update their secrets after they have done a request.
+# If you get into secret-problems with dynamic clients, you should
+# update the client to check for new secrets, if this is under your
+# control. If you cannot do anything about it, you might set this
+# value to 'false' to disable secret rotation.
+# default: true
+#DYN_CLIENT_SECRET_AUTO_ROTATE=true
+
+# This scheduler will be running in the background, if
+# `ENABLE_DYN_CLIENT_REG=true`. It will auto-delete dynamic clients,
+# that have been registered and not been used in the following
+# `DYN_CLIENT_CLEANUP_THRES` hours.
+# Since a dynamic client should be used right away, this should never
+# be a problem with "real" clients, that are not bots or spammers.
+#
+# The interval is specified in minutes.
+# default: 60
+#DYN_CLIENT_CLEANUP_INTERVAL=60
+
+# The threshold for newly registered dynamic clients cleanup, if
+# not being used within this timeframe. This is a helper to keep
+# the database clean, if you are not using any `DYN_CLIENT_REG_TOKEN`.
+# The threshold should be specified in minutes. Any client, that has
+# not been used within this time after the registration will be
+# automatically deleted.
+#
+# Note: This scheduler will only run, if you have not set any
+# `DYN_CLIENT_REG_TOKEN`.
+#
+# default: 60
+#DYN_CLIENT_CLEANUP_MINUTES=60
+
+# The rate-limiter timeout for dynamic client registration.
+# This is the timeout in seconds which will prevent an IP from
+# registering another dynamic client, if no `DYN_CLIENT_REG_TOKEN`
+# is set. With a `DYN_CLIENT_REG_TOKEN`, the rate-limiter will not
+# be applied.
+# default: 60
+#DYN_CLIENT_RATE_LIMIT_SEC=60
+```
+
 ### Changes
 
 - The `/userinfo` endpoint now correctly respects the `scope` claim from withing the given `Bearer` token
