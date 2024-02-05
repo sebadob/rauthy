@@ -15,6 +15,7 @@ use rauthy_models::request::{
 use rauthy_models::response::{ClientResponse, DynamicClientResponse};
 use rauthy_service::auth::get_bearer_token_from_header;
 use rauthy_service::client;
+use tracing::debug;
 
 /// Returns all existing OIDC clients with all their information, except for the client secrets.
 ///
@@ -215,7 +216,7 @@ pub async fn get_clients_dyn(
     client_dyn.validate_token(&bearer)?;
 
     let client = Client::find(&data, id).await?;
-    let resp = DynamicClientResponse::build(&data, client, client_dyn, false);
+    let resp = DynamicClientResponse::build(&data, client, client_dyn, false)?;
     Ok(HttpResponse::Ok().json(resp))
 }
 

@@ -529,7 +529,7 @@ impl Client {
         let mut txn = data.db.begin().await?;
         new_client.save(data, Some(&mut txn)).await?;
         client_dyn
-            .update(&mut txn, token_endpoint_auth_method)
+            .update(data, &mut txn, token_endpoint_auth_method)
             .await?;
         txn.commit().await?;
 

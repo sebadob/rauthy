@@ -124,7 +124,7 @@ impl From<Client> for ClientResponse {
     }
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct DynamicClientResponse {
     pub client_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
