@@ -12,7 +12,34 @@ some minor parts missing.
 
 Rauthy now supports Dynamic Client registration as defined [here](https://openid.net/specs/openid-connect-registration-1_0.html).
 
-There is a whole new section in the config, which should (hopefully) be self-explanatory:
+Dynamic clients will always get a random ID, starting with `dyn$`, followed by a random alphanumeric string,
+so you can distinguish easily between them in the Admin UI.  
+Whenever a dynamic client does a `PUT` on its own modification endpoint with the `registration_token` it
+received from the registration, the `client_secret` and the `registration_token` will be rotated and the
+response will contain new ones, even if no other value has been modified. This is the only "safe" way to
+rotate secrets for dynamic clients in a fully automated manner. The secret expiration is not set on purpose,
+because this could easily cause troubles, if not implemented properly on the client side.  
+If you have a
+badly implemented client that does not catch the secret rotation and only if you cannot fix this on the
+client side, maybe because it's not under your control, you may deactivate the auto rotation with 
+`DYN_CLIENT_SECRET_AUTO_ROTATE=false`. Keep in mind, that this reduces the security level of all dynamic
+clients.
+
+Bot and spam protection is built-in as well in the best way I could think of. This is disabled, if you set
+the registration endpoint to need a `DYN_CLIENT_REG_TOKEN`. Even though this option exists for completeness,
+it does not really make sense to me though. If you need to communicate a token beforehand, you could just
+register the client directly. Dynamic clients are a tiny bit less performant than static ones, because we
+need one extra database round trip on successful token creation to make the spam protection work.  
+However, if you do not set a `DYN_CLIENT_REG_TOKEN`, the registration endpoint would be just open to anyone.
+To me, this is the only configuration for dynamic client registration, that makes sense, because only that
+is truly dynamic. The problem then are of course bots and spammers, because they can easily fill your
+database with junk clients. To counter this, Rauthy includes two mechanisms:
+- hard rate limiting - After a dynamic client has been registered, another one can only be registered
+after 60 seconds (default, can be set with `DYN_CLIENT_RATE_LIMIT_SEC`) from the same public IP.
+- auto-cleanup of unused clients - All clients, that have been registered but never used, will be deleted
+automatically 60 minutes after the registration (default, can be set with `DYN_CLIENT_CLEANUP_MINUTES`).
+
+There is a whole new section in the config:
 
 ```
 #####################################
@@ -102,6 +129,14 @@ introduced with v0.20
 [9964fa4](https://github.com/sebadob/rauthy/commit/9964fa4aed7fdb6428b518a13dc18cc2761606f3)
 - Make it possible to use an insecure SMTP connection
 [ef46414](https://github.com/sebadob/rauthy/commit/ef464145d5ed7f8ffe97fc24667a74485f94c2f1)
+- Implement OpenID Connect Dynamic Client Registration
+[b48552e](https://github.com/sebadob/rauthy/commit/b48552e79f2a3aca0c5cefcc25ef7d9f7c21c6d4)
+[12179c9](https://github.com/sebadob/rauthy/commit/12179c9898126e5e78a80a3b49df6ca5a501ff81)
+
+### Bugfixes
+
+- Fix the link to the latest version release notes in the UI, if an update is available
+[e66e496](https://github.com/sebadob/rauthy/commit/e66e4962631620ad762a80181e085d3e477ad8d4)
 
 ## v0.20.1
 
