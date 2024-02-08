@@ -600,7 +600,7 @@ pub async fn app_version_check(
     let mut last_version_notification = None;
 
     // do a first check shortly after startup to not wait hours on a fresh install
-    // tokio::time::sleep(Duration::from_secs(10)).await;
+    // tokio::time::sleep(Duration::from_secs(3)).await;
     tokio::time::sleep(Duration::from_secs(120)).await;
     check_app_version(&data, &rx_health, &mut last_version_notification).await;
 
@@ -636,7 +636,7 @@ async fn check_app_version(
                 error!("Inserting LatestAppVersion into database: {:?}", err);
             }
 
-            let this_version = semver::Version::parse(RAUTHY_VERSION).unwrap();
+            let this_version = Version::parse(RAUTHY_VERSION).unwrap();
 
             if latest_version > this_version && latest_version.pre.is_empty() {
                 if last_version_notification.as_ref() == Some(&latest_version) {
@@ -646,17 +646,15 @@ async fn check_app_version(
                     );
                 } else {
                     info!("A new Rauthy App Version is available: {}", latest_version);
-                    let version_url = format!("v{} -> {}", latest_version, url);
 
                     if let Err(err) =
-                        LatestAppVersion::upsert(data, latest_version.clone(), version_url.clone())
-                            .await
+                        LatestAppVersion::upsert(data, latest_version.clone(), url.clone()).await
                     {
                         error!("Saving LatestAppVersion into DB: {:?}", err);
                     }
 
                     data.tx_events
-                        .send_async(Event::new_rauthy_version(version_url))
+                        .send_async(Event::new_rauthy_version(url))
                         .await
                         .unwrap();
 
