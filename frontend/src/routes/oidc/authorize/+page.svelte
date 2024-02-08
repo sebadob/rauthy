@@ -39,7 +39,6 @@
 
     let isLoading = false;
     let err = '';
-    let isReady = false;
     let needsPassword = false;
     let clientMfaForce = false;
     let showReset = false;
@@ -116,7 +115,9 @@
         challenge = params.code_challenge;
         challengeMethod = params.code_challenge_method;
 
-        isReady = true
+        if (params.login_hint) {
+            formValues.email = params.login_hint;
+        }
     })
 
     async function fetchClientLogo(id) {
