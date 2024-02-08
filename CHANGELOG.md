@@ -117,6 +117,13 @@ There is a whole new section in the config:
 #DYN_CLIENT_RATE_LIMIT_SEC=60
 ```
 
+#### Better UX with respecting `login_hint`
+
+This is a small UX improvement in some situations. If a downstream client needs a user to log in, and it knows
+the users E-Mail address somehow, maybe because of an external initial registration, It may append the correct
+value with appending the `login_hint` to the login redirect. If this is present, the login UI will pre-fill the
+E-Mail input field with the given value, which make it one less step for the user to log in.
+
 ### Changes
 
 - The `/userinfo` endpoint now correctly respects the `scope` claim from withing the given `Bearer` token
@@ -132,6 +139,8 @@ introduced with v0.20
 - Implement OpenID Connect Dynamic Client Registration
 [b48552e](https://github.com/sebadob/rauthy/commit/b48552e79f2a3aca0c5cefcc25ef7d9f7c21c6d4)
 [12179c9](https://github.com/sebadob/rauthy/commit/12179c9898126e5e78a80a3b49df6ca5a501ff81)
+- respect `login_hint` during GET `/authorize`
+[]()
 
 ### Bugfixes
 

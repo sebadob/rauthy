@@ -4,10 +4,6 @@
 
 ## TODO next
 
-- respect `login_hint` in the authorize ui
-- add `at_hash` claim to the ID token
-- respect `request_uri` during auth
-- fix broken link build in Admin UI if a new version is available
 
 ## Stage 1 - essentials
 
@@ -15,6 +11,7 @@
 
 ## Stage 2 - features - do before v1.0.0
 
+- add `at_hash` claim to the ID token
 - impl oidc metadata `check_session_iframe` ?
 - remove `offline_access` everywhere, because its overhead to manage and not really beneficial with webauthn?
 - admin ui: template button for client branding: default-light + default-dark ?
