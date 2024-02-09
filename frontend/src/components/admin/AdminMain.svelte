@@ -255,32 +255,6 @@
             <ContentWrapper bind:eventsWide bind:eventsCollapsed>
                 <Documentation/>
             </ContentWrapper>
-        {:else}
-            <ContentWrapper bind:selected>
-                <h1>ADMIN PAGE</h1>
-                <div>
-                    <h3>Info:</h3>
-                    {#if sessionInfo}
-                        <div>
-                            {sessionInfo.id}
-                        </div>
-                        <div>
-                            {sessionInfo.user_id}
-                        </div>
-                        <div>
-                            {sessionInfo.roles}
-                        </div>
-                        <div>
-                            {sessionInfo.groups}
-                        </div>
-                        <div>
-                            {sessionInfo.exp}
-                        </div>
-                    {/if}
-
-                    <Button on:click={redirectToLogout}>Logout</Button>
-                </div>
-            </ContentWrapper>
         {/if}
 
         {#if innerWidth !== undefined }
