@@ -381,18 +381,12 @@ pub async fn build_access_token(
     scope: Option<String>,
     scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
 ) -> Result<String, ErrorResponse> {
-    let scope = if let Some(s) = scope {
-        s
-    } else {
-        client.default_scopes.clone().replace(',', " ")
-    };
-
     let mut custom_claims = JwtAccessClaims {
         typ: JwtTokenType::Bearer,
         azp: client.id.to_string(),
-        scope,
+        scope: scope.unwrap_or_else(|| client.default_scopes.clone().replace(',', " ")),
         allowed_origins: None,
-        uid: None,
+        email: None,
         preferred_username: None,
         roles: None,
         groups: None,
@@ -401,17 +395,22 @@ pub async fn build_access_token(
     };
 
     // add user specific claims if available
-    let mut sub = None;
-    if let Some(user) = user {
-        sub = Some(user.email.clone());
+    let sub = if let Some(user) = user {
         custom_claims.preferred_username = Some(user.email.clone());
-        custom_claims.uid = Some(user.id.clone());
         custom_claims.roles = Some(user.get_roles());
+
+        if custom_claims.scope.contains("email") {
+            custom_claims.email = Some(user.email.clone());
+        }
 
         if custom_claims.scope.contains("groups") {
             custom_claims.groups = Some(user.get_groups());
         }
-    }
+
+        Some(&user.id)
+    } else {
+        None
+    };
 
     if let Some((cust, user_attrs)) = scope_customs {
         let user_attrs = user_attrs.as_ref().unwrap();
