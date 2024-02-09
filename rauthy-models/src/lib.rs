@@ -153,7 +153,8 @@ pub struct JwtAccessClaims {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub allowed_origins: Option<Vec<String>>,
     // user part
-    pub uid: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub preferred_username: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
