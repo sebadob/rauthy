@@ -2,11 +2,22 @@
 
 ## UNRELEASED
 
-This is about implementing the last leftover things to make Rauthy compliant with the mandatory part
-of the OIDC spec. A lot of additional things were already implemented many versions ago. There were just
-some minor parts missing.
+### Breaking
+
+The access token's `sub` claim had the email as value beforehand. This was actually a bug.  
+The `sub` of access token and id token must be the exact same value. `sub` now correctly contains the user ID,
+which is 100% stable, even if the user changes his email address.  
+This means, if you used the `sub` from the access token before to get the users email, you need to pay attention now.
+The `uid` from the access token has been dropped, because this value is now in `sub`. Additionally, since many
+applications need the email anyway, it makes sense to have it inside the access token. For this purpose, if `email`
+is in the requested `scope`, it will be mapped to the `email` claim in the access token.
 
 ### Features
+
+#### OpenID Core Compatibility
+
+Rauthy should now be compliant with the mandatory part of the OIDC spec.
+A lot of additional things were already implemented many versions ago. There were just some minor parts missing.
 
 #### OpenID Connect Dynamic Client Registration
 
@@ -140,12 +151,16 @@ introduced with v0.20
 [b48552e](https://github.com/sebadob/rauthy/commit/b48552e79f2a3aca0c5cefcc25ef7d9f7c21c6d4)
 [12179c9](https://github.com/sebadob/rauthy/commit/12179c9898126e5e78a80a3b49df6ca5a501ff81)
 - respect `login_hint` during GET `/authorize`
-[]()
+[963644c](https://github.com/sebadob/rauthy/commit/963644c36466c5eb9d0ad4d2411198ea71753d59)
 
 ### Bugfixes
 
 - Fix the link to the latest version release notes in the UI, if an update is available
 [e66e496](https://github.com/sebadob/rauthy/commit/e66e4962631620ad762a80181e085d3e477ad8d4)
+- Fix the access token `sub` claim (see breaking changes above)
+[29dbe26](https://github.com/sebadob/rauthy/commit/29dbe26a5c8f76d9a61931078811192ac2fb782d)
+- Fix a short route fallback flash during Admin UI logout
+[6787261](https://github.com/sebadob/rauthy/commit/67872618949bc3b13e95d144d9c434f97174b395)
 
 ## v0.20.1
 
