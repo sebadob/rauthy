@@ -87,6 +87,7 @@ fmt:
 pull-latest-cross:
     #!/usr/bin/env bash
     docker pull ghcr.io/cross-rs/aarch64-unknown-linux-musl:main
+    docker pull ghcr.io/cross-rs/x86_64-unknown-linux-musl:main
 
 
 # clippy with sqlite features
@@ -114,17 +115,14 @@ migrate-postgres:
     DATABASE_URL={{db_url_postgres}} sqlx migrate run --source migrations/postgres
 
 
-# runs the application with sqlite feature with musl target
+# runs the application with sqlite feature
 run-sqlite:
-    DATABASE_URL={{db_url_sqlite}} cargo run --target x86_64-unknown-linux-musl --features sqlite
-
-# runs the application with sqlite feature with native target
-run-sqlite-native:
     DATABASE_URL={{db_url_sqlite}} cargo run --features sqlite
 
-# runs the application with postgres feature with musl target
+
+# runs the application with postgres feature
 run-postgres:
-    DATABASE_URL={{db_url_postgres}} cargo run --target x86_64-unknown-linux-musl
+    DATABASE_URL={{db_url_postgres}} cargo run
 
 
 # runs the UI in development mode
@@ -261,9 +259,8 @@ build-sqlite: test-sqlite
 
     cargo clean
 
-    # allow clippy warnings for v0.20.0 because of intentionally using deprecated functions
-    #cargo clippy --features sqlite -- -D warnings
-    cargo build --release --target x86_64-unknown-linux-musl --features sqlite
+    cargo clippy --features sqlite -- -D warnings
+    cross build --release --target x86_64-unknown-linux-musl --features sqlite
     cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-amd64
 
     cargo clean
@@ -278,9 +275,8 @@ build-postgres: test-postgres
 
     cargo clean
 
-    # allow clippy warnings for v0.20.0 because of intentionally using deprecated functions
-    #cargo clippy -- -D warnings
-    cargo build --release --target x86_64-unknown-linux-musl
+    cargo clippy -- -D warnings
+    cross build --release --target x86_64-unknown-linux-musl
     cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-postgres-amd64
 
     cargo clean
