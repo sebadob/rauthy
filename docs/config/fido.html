@@ -91,7 +91,9 @@
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html" class="active"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">10.</strong> Reference Config</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -190,54 +192,31 @@ one Passkey with additional UV registered.</p>
 <li>no need to satisfy password policies</li>
 <li>no need to reset your password after it has been expired</li>
 </ul>
-<div id="admonition-caution" class="admonition warning">
-<div class="admonition-title">
-<p>Caution</p>
-<p><a class="admonition-anchor-link" href="#admonition-caution"></a></p>
-</div>
-<div>
-<p>Passkey only accounts cannot use the traditional password reset E-Mails.</p>
-<p>This is a drawback and a benefit at the same time:<br />
+<pre><code class="language-admonish caution">Passkey only accounts cannot use the traditional password reset E-Mails.
+
+This is a drawback and a benefit at the same time:  
 No way to take over an account if the E-Mail account has been compromised, but at the same time the user
-relies on an Admin to reset the MFA devices, if no backup exists or all are lost.</p>
-</div>
-</div>
-<div id="admonition-info" class="admonition info">
-<div class="admonition-title">
-<p>Info</p>
-<p><a class="admonition-anchor-link" href="#admonition-info"></a></p>
-</div>
-<div>
-<p>Android has finally added support for biometric UV in September 2023.<br />
-This has made is possible to implement this feature into Rauthy without sacrificing security.</p>
-<p>However, at the time of writing (09.10.2023), only biometric UV is supported and PIN UV is about to come
-in the near future.</p>
-</div>
-</div>
-<div id="admonition-tip" class="admonition tip">
-<div class="admonition-title">
-<p>Tip</p>
-<p><a class="admonition-anchor-link" href="#admonition-tip"></a></p>
-</div>
-<div>
-<p>If you want to register an Android device for a Passkey only account, but you are using for instance Yubikeys
-with PIN UV, you can do the following trick to get it done (works only with the latest Play store version):</p>
-<ul>
-<li>Create a password for your account, if it does not exist yet</li>
-<li>Remove all registered passkeys</li>
-<li>Log in to your account view on your Android device and another device that works with your Yubikey</li>
-<li>With both devices logged in at the same time:
-<ul>
-<li>Register a new passkey with Android and choose &quot;this device&quot;, which will create a Passkey flow with your fingerprint</li>
-<li>Register the Yubikey on the other device</li>
-</ul>
-</li>
-<li>You should now have 2 Passkeys: Android + Yubikey</li>
-<li>Navigate to the Password page inside your account on any device and convert it to Passkey only</li>
-<li>You should now be able to log in on your Android device with Passkey only and with your Yubikey</li>
-</ul>
-</div>
-</div>
+relies on an Admin to reset the MFA devices, if no backup exists or all are lost.
+</code></pre>
+<pre><code class="language-admonish info">Android has finally added support for biometric UV in September 2023.  
+This has made is possible to implement this feature into Rauthy without sacrificing security.
+
+However, at the time of writing (09.10.2023), only biometric UV is supported and PIN UV is about to come
+in the near future.
+</code></pre>
+<pre><code class="language-admonish tip">If you want to register an Android device for a Passkey only account, but you are using for instance Yubikeys
+with PIN UV, you can do the following trick to get it done (works only with the latest Play store version):
+
+- Create a password for your account, if it does not exist yet
+- Remove all registered passkeys
+- Log in to your account view on your Android device and another device that works with your Yubikey
+- With both devices logged in at the same time:
+    - Register a new passkey with Android and choose "this device", which will create a Passkey flow with your fingerprint
+    - Register the Yubikey on the other device
+- You should now have 2 Passkeys: Android + Yubikey
+- Navigate to the Password page inside your account on any device and convert it to Passkey only
+- You should now be able to log in on your Android device with Passkey only and with your Yubikey
+</code></pre>
 <h2 id="config"><a class="header" href="#config">Config</a></h2>
 <p>You should use FIDO 2 in production for 2FA / MFA.
 To make sure it works, you need to check your the config.</p>
@@ -247,34 +226,20 @@ To make sure it works, you need to check your the config.</p>
 For the above example, since our application is available under 'auth.example.com', this should also be:</p>
 <pre><code>RP_ID=auth.example.com
 </code></pre>
-<div id="admonition-caution-1" class="admonition warning">
-<div class="admonition-title">
-<p>Caution</p>
-<p><a class="admonition-anchor-link" href="#admonition-caution-1"></a></p>
-</div>
-<div>
-<p>When the <code>RP_ID</code> changes, already registered devices will stop working and users cannot log in anymore!
-Be very careful, if you want / need to do this in production.</p>
-</div>
-</div>
+<pre><code class="language-admonish caution">When the `RP_ID` changes, already registered devices will stop working and users cannot log in anymore!
+Be very careful, if you want / need to do this in production.
+</code></pre>
 <h3 id="rp_origin"><a class="header" href="#rp_origin"><code>RP_ORIGIN</code></a></h3>
 <p>The seconds important variable for FIDO 2 is the <code>RP_ORIGIN</code>. This needs to be set to the URL containing the effective
 domain name.</p>
-<div id="admonition-caution-2" class="admonition warning">
-<div class="admonition-title">
-<p>Caution</p>
-<p><a class="admonition-anchor-link" href="#admonition-caution-2"></a></p>
-</div>
-<div>
-<p>The <code>RP_ORIGIN</code> must always include the port number, even it is just the default 443 for HTTPS.</p>
-</div>
-</div>
+<pre><code class="language-admonish caution">The `RP_ORIGIN` must always include the port number, even it is just the default 443 for HTTPS.
+</code></pre>
 <p>In this example, assuming rauthy will be available at port 443, correct would be:</p>
 <pre><code>RP_ORIGIN=https://auth.example.com:443
 </code></pre>
 <h3 id="rp_name"><a class="header" href="#rp_name"><code>RP_NAME</code></a></h3>
-<p>This variable can be set to anything &quot;nice&quot;.
-This may be shown to the user in a way like &quot;<code>RP_BNAE</code> requests your security key ...&quot;. If this is shown depends on the
+<p>This variable can be set to anything "nice".
+This may be shown to the user in a way like "<code>RP_BNAE</code> requests your security key ...". If this is shown depends on the
 OS and the browser the client uses. Firefox, for instance, does not show this at the time of writing.</p>
 <p>You can change the <code>RP_NAME</code> later on without affecting the validation of already registered keys.</p>
 <h3 id="webauthn_renew_exp"><a class="header" href="#webauthn_renew_exp"><code>WEBAUTHN_RENEW_EXP</code></a></h3>
@@ -283,7 +248,7 @@ passkeys. The keys are used either as a strong second factor, when they do not w
 login to real MFA, if the OS / Browser / Key does support this.</p>
 <p>When a user as logged in successfully on a new device and active 2FA / MFA, he will get an encrypted cookie.<br />
 The lifetime of this cookie can be configured with <code>WEBAUTHN_RENEW_EXP</code>.<br />
-The <strong>default</strong> of this value is <strong>2160 hours</strong>. </p>
+The <strong>default</strong> of this value is <strong>2160 hours</strong>.</p>
 <p>As long as this cookie is present and can be decrypted by the backend, the user can log in from this very
 device with his FIDO 2 key only, which makes a very good user experience for the whole login flow. The E-Mail will
 already be filled automatically and only a single click on the login button is necessary.</p>
