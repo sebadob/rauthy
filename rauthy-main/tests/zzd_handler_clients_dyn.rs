@@ -49,7 +49,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
 
     let res = client.get(&url).send().await?;
     // we did not add any registration token.
-    assert_eq!(res.status(), 400);
+    assert_eq!(res.status(), 401);
 
     let res = client
         .get(&url)
