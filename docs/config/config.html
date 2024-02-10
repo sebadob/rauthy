@@ -91,7 +91,9 @@
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/config.html" class="active"><strong aria-hidden="true">10.</strong> Reference Config</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -174,17 +176,10 @@
                     <main>
                         <h1 id="reference-config"><a class="header" href="#reference-config">Reference Config</a></h1>
 <p>This shows a full example config with (hopefully) every value nicely described.</p>
-<div id="admonition-caution" class="admonition warning">
-<div class="admonition-title">
-<p>Caution</p>
-<p><a class="admonition-anchor-link" href="#admonition-caution"></a></p>
-</div>
-<div>
-<p>When you go into production, make sure that you provide the included secrets / sensistive information in this
+<pre><code class="language-admonish caution">When you go into production, make sure that you provide the included secrets / sensistive information in this
 file in an appropriate way. With docker, you can leave them inside this file, but when deploying with Kubernetes,
-extract these values, create Kubernetes Secrets and provide them as environment variables.</p>
-</div>
-</div>
+extract these values, create Kubernetes Secrets and provide them as environment variables.
+</code></pre>
 <pre><code>#####################################
 ############## ACCESS ###############
 #####################################
@@ -233,7 +228,7 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # account takeovers during a password reset.
 #
 # The problem however are companies (e.g. Microsoft) who scan their customers
-# E-Mails and even follow links and so on. They call it a &quot;feature&quot;. The
+# E-Mails and even follow links and so on. They call it a "feature". The
 # problem is, that their servers get this binding cookie and the user will be
 # unable to use this link himself. The usage of this config option is highly
 # discouraged, but since everything moves very slow in big enterprises and
@@ -247,13 +242,13 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 ############# BACKUPS ###############
 #####################################
 
-# Cron job for automatic data store backups (default: &quot;0 0 4 * * * *&quot;)
+# Cron job for automatic data store backups (default: "0 0 4 * * * *")
 # sec min hour day_of_month month day_of_week year
-#BACKUP_TASK=&quot;0 0 4 * * * *&quot;
+#BACKUP_TASK="0 0 4 * * * *"
 
 # The name for the data store backups. The current timestamp
 # will always be appended automatically. (default: rauthy-backup-)
-#BACKUP_NAME=&quot;rauthy-backup-&quot;
+#BACKUP_NAME="rauthy-backup-"
 
 # All backups older than the specified hours will be cleaned up
 # automatically (default: 720)
@@ -314,12 +309,12 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # The connection strings (with hostnames) of the HA instances
 # as a CSV.
 # Format: 'scheme://hostname:port'
-#HA_HOSTS=&quot;http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000&quot;
+#HA_HOSTS="http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000"
 
 # Overwrite the hostname which is used to identify each cache member.
 # Useful in scenarios, where for instance all members are on the same host with
 # different ports or for testing.
-#HOSTNAME_OVERWRITE=&quot;rauthy-0.rauthy:8080&quot;
+#HOSTNAME_OVERWRITE="rauthy-0.rauthy:8080"
 
 ## Define buffer sizes for channels between the components
 # Buffer for client requests on the incoming stream - server
@@ -447,14 +442,88 @@ DPOP_FORCE_NONCE=true
 DPOP_NONCE_EXP=900
 
 #####################################
+########## DYNAMIC CLIENTS ##########
+#####################################
+
+# If set to `true`, dynamic client registration will be enabled.
+# Only activate this, if you really need it and you know, what
+# you are doing. The dynamic client registration without further
+# restriction will allow anyone to register new clients, even
+# bots and spammers, and this may create security issues, if not
+# handled properly and your users just login blindly to any client
+# they get redirected to.
+# default: false
+#ENABLE_DYN_CLIENT_REG=false
+
+# If specified, this secret token will be expected during
+# dynamic client registrations to be given as a
+# `Bearer &lt;DYN_CLIENT_REG_TOKEN&gt;` token. Needs to be communicated
+# in advance.
+# default: &lt;empty&gt;
+#DYN_CLIENT_REG_TOKEN=
+
+# The default token lifetime in seconds for a dynamic client,
+# that will be set during the registration.
+# This value can be modified manually after registration via
+# the Admin UI like for any other client.
+# default: 1800
+#DYN_CLIENT_DEFAULT_TOKEN_LIFETIME=1800
+
+# If set to 'true', client secret and registration token will be
+# automatically rotated each time a dynamic client updates itself
+# via the PUT endpoint. This is the only way that secret rotation
+# could be automated safely.
+# However, this is not mandatory by RFC and it may lead to errors,
+# if the dynamic clients are not implemented properly to check for
+# and update their secrets after they have done a request.
+# If you get into secret-problems with dynamic clients, you should
+# update the client to check for new secrets, if this is under your
+# control. If you cannot do anything about it, you might set this
+# value to 'false' to disable secret rotation.
+# default: true
+#DYN_CLIENT_SECRET_AUTO_ROTATE=true
+
+# This scheduler will be running in the background, if
+# `ENABLE_DYN_CLIENT_REG=true`. It will auto-delete dynamic clients,
+# that have been registered and not been used in the following
+# `DYN_CLIENT_CLEANUP_THRES` hours.
+# Since a dynamic client should be used right away, this should never
+# be a problem with "real" clients, that are not bots or spammers.
+#
+# The interval is specified in minutes.
+# default: 60
+#DYN_CLIENT_CLEANUP_INTERVAL=60
+
+# The threshold for newly registered dynamic clients cleanup, if
+# not being used within this timeframe. This is a helper to keep
+# the database clean, if you are not using any `DYN_CLIENT_REG_TOKEN`.
+# The threshold should be specified in minutes. Any client, that has
+# not been used within this time after the registration will be
+# automatically deleted.
+#
+# Note: This scheduler will only run, if you have not set any
+# `DYN_CLIENT_REG_TOKEN`.
+#
+# default: 60
+#DYN_CLIENT_CLEANUP_MINUTES=60
+
+# The rate-limiter timeout for dynamic client registration.
+# This is the timeout in seconds which will prevent an IP from
+# registering another dynamic client, if no `DYN_CLIENT_REG_TOKEN`
+# is set. With a `DYN_CLIENT_REG_TOKEN`, the rate-limiter will not
+# be applied.
+# default: 60
+#DYN_CLIENT_RATE_LIMIT_SEC=60
+
+#####################################
 ############# E-MAIL ################
 #####################################
 
 # Will be used as the prefix for the E-Mail subject for each E-Mail 
 # that will be sent out to a client.
 # This can be used to further customize your deployment.
-# default: &quot;Rauthy IAM&quot;
-EMAIL_SUB_PREFIX=&quot;Rauthy IAM&quot;
+# default: "Rauthy IAM"
+EMAIL_SUB_PREFIX="Rauthy IAM"
 
 # Rauthy will force TLS and try a downgrade to STARTTLS, if
 # TLS fails. It will never allow an unencrypted connection.
@@ -463,8 +532,8 @@ EMAIL_SUB_PREFIX=&quot;Rauthy IAM&quot;
 #SMTP_URL=
 #SMTP_USERNAME=
 #SMTP_PASSWORD=
-# Format: &quot;Rauthy &lt;rauthy@localhost.de&gt;&quot;
-# default: &quot;Rauthy &lt;rauthy@localhost.de&gt;&quot;
+# Format: "Rauthy &lt;rauthy@localhost.de&gt;"
+# default: "Rauthy &lt;rauthy@localhost.de&gt;"
 #SMTP_FROM=
 
 # The number of retries that should be done for connecting to
@@ -500,10 +569,10 @@ EMAIL_SUB_PREFIX=&quot;Rauthy IAM&quot;
 # encryption cookies, and so on.
 #
 # The format must match:
-# ENC_KEYS=&quot;
+# ENC_KEYS="
 # q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
 # bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
-# &quot;
+# "
 #
 # The first part until the first `/` is the key ID.
 # The ID must match '[a-zA-Z0-9]{2,20}'
@@ -521,10 +590,10 @@ EMAIL_SUB_PREFIX=&quot;Rauthy IAM&quot;
 # that all secrets have been migrated beforehand.
 # You can find a utility in the Admin UI to do this for you.
 #
-#ENC_KEYS=&quot;
+#ENC_KEYS="
 #q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
 #bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
-#&quot;
+#"
 
 # This identifies the key ID from the `ENC_KEYS` list, that
 # should actively be used for new encryptions.
@@ -563,9 +632,9 @@ MAX_HASH_THREADS=1
 # you cannot fully disable it.
 # In a HA deployment, this job will only be executed on the 
 # current cache leader at that time.
-# Format: &quot;sec min hour day_of_month month day_of_week year&quot;
-# default: &quot;0 30 3 1 * * *&quot;
-#JWK_AUTOROTATE_CRON=&quot;0 30 3 1 * * *&quot;
+# Format: "sec min hour day_of_month month day_of_week year"
+# default: "0 30 3 1 * * *"
+#JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
 
 #####################################
 ####### EPHEMERAL CLIENTS ###########
@@ -591,12 +660,12 @@ MAX_HASH_THREADS=1
 #EPHEMERAL_CLIENTS_FORCE_MFA=false
 
 # The allowed flows separated by ' ' for ephemeral clients.
-# default: &quot;authorization_code&quot;
-#EPHEMERAL_CLIENTS_ALLOWED_FLOWS=&quot;authorization_code refresh_token&quot;
+# default: "authorization_code"
+#EPHEMERAL_CLIENTS_ALLOWED_FLOWS="authorization_code refresh_token"
 
 # The allowed scopes separated by ' ' for ephemeral clients.
-# default: &quot;openid profile email webid&quot;
-#EPHEMERAL_CLIENTS_ALLOWED_SCOPES=&quot;openid profile email webid&quot;
+# default: "openid profile email webid"
+#EPHEMERAL_CLIENTS_ALLOWED_SCOPES="openid profile email webid"
 
 # The lifetime in seconds ephemeral clients will be kept inside the cache.
 # default: 3600
@@ -960,7 +1029,7 @@ CACHE_TLS_CLIENT_VALIDATE_DOMAIN=redhac.local
 # Can be used if you need to overwrite the SNI when the
 # client connects to the server, for instance if you are
 # behind a loadbalancer which combines multiple certificates.
-# default: &quot;&quot;
+# default: ""
 #CACHE_TLS_SNI_OVERWRITE=
 
 #####################################

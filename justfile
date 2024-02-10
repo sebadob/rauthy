@@ -156,7 +156,8 @@ test-sqlite test="": migrate-sqlite prepare-sqlite
 
     DATABASE_URL={{db_url_sqlite}} cargo build --features sqlite
     DATABASE_URL={{db_url_sqlite}} ./target/debug/rauthy test &
-    #DATABASE_URL=sqlite:data/rauthy.db ./target/debug/rauthy test &
+    #just migrate-sqlite && DATABASE_URL=sqlite:data/rauthy.db cargo run --features sqlite test
+    #cargo test --features sqlite test_userinfo
     sleep 1
     PID=$(echo "$!")
     echo "PID: $PID"

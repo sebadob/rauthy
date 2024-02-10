@@ -1,8 +1,9 @@
-use crate::common::{get_auth_headers, get_backend_url};
+use crate::common::{get_auth_headers, get_backend_url, get_token_set};
 use pretty_assertions::assert_eq;
 use rauthy_models::language::Language;
 use rauthy_models::request::NewUserRequest;
 use rauthy_models::response::{UserResponse, UserResponseSimple};
+use reqwest::header::AUTHORIZATION;
 use std::error::Error;
 
 mod common;
@@ -111,6 +112,27 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
 
     let users = res.json::<Vec<UserResponseSimple>>().await?;
     assert_eq!(users.len(), 3);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_userinfo() -> Result<(), Box<dyn Error>> {
+    let url = format!("{}/oidc/userinfo", get_backend_url());
+    let client = reqwest::Client::new();
+
+    // Unauthorized without a Bearer
+    let res = client.get(&url).send().await?;
+    assert_eq!(res.status(), 401);
+
+    // This should be good
+    let ts = get_token_set().await;
+    let res = client
+        .get(&url)
+        .header(AUTHORIZATION, format!("Bearer {}", ts.access_token))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
 
     Ok(())
 }

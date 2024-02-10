@@ -663,7 +663,7 @@ pub fn get_bearer_token_from_header(headers: &HeaderMap) -> Result<String, Error
     });
     if bearer.is_err() {
         return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
+            ErrorResponseType::Unauthorized,
             String::from("Authorization header missing"),
         ));
     }
@@ -704,13 +704,18 @@ pub async fn get_userinfo(
     let claims = validate_token::<JwtCommonClaims>(data, &bearer).await?;
     let scope = claims.custom.scope.unwrap_or_else(|| "openid".to_string());
 
-    let email = claims.subject.ok_or_else(|| {
+    let uid = claims.subject.ok_or_else(|| {
         ErrorResponse::new(
             ErrorResponseType::Internal,
             String::from("Token without 'sub' - could not extract the Principal"),
         )
     })?;
-    let user = User::find_by_email(data, email).await?;
+    let user = User::find(data, uid).await.map_err(|_| {
+        ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("user-not-found".to_string()),
+            "The user has not been found".to_string(),
+        )
+    })?;
 
     let roles = user.get_roles();
     let groups = scope.contains("groups").then(|| user.get_groups());
