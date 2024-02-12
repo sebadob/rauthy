@@ -13,3 +13,4 @@ frontend/out
 static/v1
 templates/html/
 rauthy-book/book
+out/
