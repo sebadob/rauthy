@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.21.0
 
 ### Breaking
 
@@ -17,7 +17,8 @@ is in the requested `scope`, it will be mapped to the `email` claim in the acces
 #### OpenID Core Compatibility
 
 Rauthy should now be compliant with the mandatory part of the OIDC spec.
-A lot of additional things were already implemented many versions ago. There were just some minor parts missing.
+A lot of additional things were already implemented many versions ago.
+The missing thing was respecting some additional params during GET `/authorize`. 
 
 #### OpenID Connect Dynamic Client Registration
 
