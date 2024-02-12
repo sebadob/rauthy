@@ -724,7 +724,7 @@ pub async fn get_userinfo(
 
     let mut userinfo = Userinfo {
         id: user.id.clone(),
-        sub: user.email.clone(),
+        sub: user.id.clone(),
         name: format!("{} {}", &user.given_name, &user.family_name),
         roles,
 
