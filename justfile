@@ -31,6 +31,7 @@ create-root-ca:
 
 
 # Create a new End Entity TLS certificate for development and testing
+# Intermediate CA DEV password: 123SuperMegaSafe
 create-end-entity-tls:
     # create the new certificate
     docker run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
