@@ -1,7 +1,7 @@
 use crate::app_state::AppState;
 use crate::entity::scopes::Scope;
 use actix_web::web;
-use rauthy_common::constants::CACHE_NAME_12HR;
+use rauthy_common::constants::{CACHE_NAME_12HR, ENABLE_DYN_CLIENT_REG};
 use rauthy_common::error_response::ErrorResponse;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
@@ -16,6 +16,8 @@ pub struct WellKnown {
     pub introspection_endpoint: String,
     pub userinfo_endpoint: String,
     pub end_session_endpoint: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub registration_endpoint: Option<String>,
     pub jwks_uri: String,
     pub grant_types_supported: Vec<String>,
     pub response_types_supported: Vec<String>,
@@ -31,8 +33,6 @@ pub struct WellKnown {
     pub service_documentation: String,
     pub ui_locales_supported: Vec<String>,
     pub claims_parameter_supported: bool,
-    // TODO with dynamic client registration
-    // pub registration_endpoint: String,
 }
 
 const IDX: &str = ".well-known";
@@ -99,6 +99,8 @@ impl WellKnown {
         let token_endpoint = format!("{}/oidc/token", issuer);
         let introspection_endpoint = format!("{}/oidc/tokenInfo", issuer);
         let userinfo_endpoint = format!("{}/oidc/userinfo", issuer);
+        let registration_endpoint =
+            ENABLE_DYN_CLIENT_REG.then_some(format!("{}/clients_dyn", issuer));
         let end_session_endpoint = format!("{}/oidc/logout", issuer);
         let jwks_uri = format!("{}/oidc/certs", issuer);
         let grant_types_supported = vec![
@@ -168,6 +170,7 @@ impl WellKnown {
             introspection_endpoint,
             userinfo_endpoint,
             end_session_endpoint,
+            registration_endpoint,
             jwks_uri,
             grant_types_supported,
             response_types_supported,
