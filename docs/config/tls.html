@@ -91,9 +91,7 @@
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html" class="active"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">10.</strong> Reference Config</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
-                <div class="sidebar-resize-indicator"></div>
-            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -177,9 +175,16 @@
                         <h1 id="tls"><a class="header" href="#tls">TLS</a></h1>
 <p>If you do have TLS certificates from another source already, skip directly to <a href="#config">Config</a>.</p>
 <h2 id="generating-certificates"><a class="header" href="#generating-certificates">Generating Certificates</a></h2>
-<pre><code class="language-admonish hint">We are using another project of mine called [Nioca](https://github.com/sebadob/nioca) for an easy creation of a
-fully functioning and production ready private Root Certificate Authority (CA).
-</code></pre>
+<div id="admonition-hint" class="admonition tip">
+<div class="admonition-title">
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="#admonition-hint"></a></p>
+</div>
+<div>
+<p>We are using another project of mine called <a href="https://github.com/sebadob/nioca">Nioca</a> for an easy creation of a
+fully functioning and production ready private Root Certificate Authority (CA).</p>
+</div>
+</div>
 <p>I suggest to use <code>docker</code> for this task. Otherwise, you can use the <code>nioca</code> binary directly on any linux machine.
 If you want a permanent way of generating certificates for yourself, take a look at Rauthy's <code>justfile</code> and copy
 and adjust the recipes <code>create-root-ca</code> and <code>create-end-entity-tls</code> to your liking.<br />
@@ -257,12 +262,12 @@ CACHE_TLS_CA_CLIENT=tls/ca-chain.pem
 CACHE_TLS_CLIENT_VALIDATE_DOMAIN=redhac.local
 
 # Can be used, if you need to overwrite the SNI when the client connects to the server, for instance if you are behind
-# a loadbalancer which combines multiple certificates. (default: "")
+# a loadbalancer which combines multiple certificates. (default: &quot;&quot;)
 #CACHE_TLS_SNI_OVERWRITE=
 </code></pre>
 <h3 id="server"><a class="header" href="#server">Server</a></h3>
 <p>The TLS configuration for the REST API is much simpler.<br />
-By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and <code>/app/tls/tls.crt</code>, which is the
+By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and <code>/app/tls/tls.crt</code>, which is the 
 default naming for a Kubernetes TLS secret. The expected format is PEM, but you could provide the key in DER format too,
 if you rename the file-ending to <code>*.der</code>.</p>
 <p>You can change the default path for the files with the config variables <code>TLS_CERT</code> and <code>TLS_KEY</code>.</p>
@@ -270,15 +275,22 @@ if you rename the file-ending to <code>*.der</code>.</p>
 <p>If you did not follow the above procedure to generate the CA and certificates, you may need to rename the files in the
 following command, to create the Kubernetes secrets.</p>
 <p><strong>Secrets - REST API</strong></p>
-<pre><code>kubectl -n rauthy create secret tls rauthy-tls --key="key.pem" --cert="cert-chain.pem"
+<pre><code>kubectl -n rauthy create secret tls rauthy-tls --key=&quot;key.pem&quot; --cert=&quot;cert-chain.pem&quot;
 </code></pre>
 <p><strong>Secrets - <code>redhac</code> cache</strong></p>
-<pre><code>kubectl -n rauthy create secret tls redhac-tls-server --key="key.pem" --cert="cert-chain.pem" &amp;&amp; \
+<pre><code>kubectl -n rauthy create secret tls redhac-tls-server --key=&quot;key.pem&quot; --cert=&quot;cert-chain.pem&quot; &amp;&amp; \
 kubectl -n rauthy create secret generic redhac-server-ca --from-file ca-chain.pem
 </code></pre>
-<pre><code class="language-admonish notice">We create the `redhac-tls-server` here with the exact same values. If you really want to harden your setup in production,
-you should provide a different set of certificates for the internal mTLS connection.
-</code></pre>
+<div id="admonition-note" class="admonition note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note"></a></p>
+</div>
+<div>
+<p>We create the <code>redhac-tls-server</code> here with the exact same values. If you really want to harden your setup in production,
+you should provide a different set of certificates for the internal mTLS connection.</p>
+</div>
+</div>
 <h4 id="config-adjustments---rest-api"><a class="header" href="#config-adjustments---rest-api">Config Adjustments - REST API</a></h4>
 <p>We need to configure the newly created Kubernetes secrets in the <code>std.yaml</code> from the
 <a href="../getting_started/k8s.html#create-and-apply-the-stateful-set">Kubernetes</a> setup.</p>

@@ -91,9 +91,7 @@
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html" class="active"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">10.</strong> Reference Config</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
-                <div class="sidebar-resize-indicator"></div>
-            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -189,17 +187,37 @@ The way it works is the following:</p>
 <li>Close the connection to <code>MIGRATE_DB_FROM</code></li>
 <li>Use the <code>DATABASE_URL</code> as the new database and start normal operation</li>
 </ol>
-<pre><code class="language-admonish danger">`MIGRATE_DB_FROM` overwrites any data in the target database! Be very careful with this option.
-
-If you do not remove the `MIGRATE_DB_FROM` after the migration has been done, it will overwrite the target again with
-the next restart of the application. Remove the config variable immediately after the migration has finished.
-</code></pre>
-<pre><code class="language-admonish info">**v0.14 and beyond:** if you want to migrate to a different database, for instance from SQLite to Postgres, you need to
-switch to the correct rauthy image as well. Rauthy v0.14 and beyond has different container images for the databases.
-</code></pre>
-<pre><code class="language-admonish hint">The easiest to do is to just set `MIGRATE_DB_FROM` as an environmant variable, which is easier and quicker to remove 
-again afterwards. 
-</code></pre>
+<div id="admonition-danger" class="admonition danger">
+<div class="admonition-title">
+<p>Danger</p>
+<p><a class="admonition-anchor-link" href="#admonition-danger"></a></p>
+</div>
+<div>
+<p><code>MIGRATE_DB_FROM</code> overwrites any data in the target database! Be very careful with this option.</p>
+<p>If you do not remove the <code>MIGRATE_DB_FROM</code> after the migration has been done, it will overwrite the target again with
+the next restart of the application. Remove the config variable immediately after the migration has finished.</p>
+</div>
+</div>
+<div id="admonition-info" class="admonition info">
+<div class="admonition-title">
+<p>Info</p>
+<p><a class="admonition-anchor-link" href="#admonition-info"></a></p>
+</div>
+<div>
+<p><strong>v0.14 and beyond:</strong> if you want to migrate to a different database, for instance from SQLite to Postgres, you need to
+switch to the correct rauthy image as well. Rauthy v0.14 and beyond has different container images for the databases.</p>
+</div>
+</div>
+<div id="admonition-hint" class="admonition tip">
+<div class="admonition-title">
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="#admonition-hint"></a></p>
+</div>
+<div>
+<p>The easiest to do is to just set <code>MIGRATE_DB_FROM</code> as an environmant variable, which is easier and quicker to remove 
+again afterwards.</p>
+</div>
+</div>
 
                     </main>
 

@@ -91,9 +91,7 @@
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html" class="active"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">10.</strong> Reference Config</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
-                <div class="sidebar-resize-indicator"></div>
-            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -182,31 +180,45 @@ multiple keys, if you want to rotate them at some point without breaking the dec
 encryptions performed by the backend will use the key with the given ID.</p>
 <h2 id="key-rotation"><a class="header" href="#key-rotation">Key Rotation</a></h2>
 <p><strong>1. Add a new key to the <code>ENC_KEYS</code> in you secrets</strong></p>
-<pre><code class="language-admonish fail">You must not remove a current key, before the migration has been done via the UI.  
-If the old key is gone, the migration will fail.
-</code></pre>
+<div id="admonition-fail" class="admonition failure">
+<div class="admonition-title">
+<p>Fail</p>
+<p><a class="admonition-anchor-link" href="#admonition-fail"></a></p>
+</div>
+<div>
+<p>You must not remove a current key, before the migration has been done via the UI.<br />
+If the old key is gone, the migration will fail.</p>
+</div>
+</div>
 <p><strong>2. Generate a new key + id</strong></p>
-<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)"
+<pre><code>echo &quot;$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)&quot;
 </code></pre>
 <p>The part before the first <code>/</code> is the <code>ENC_KEY_ID</code> and the part afterwards is the key base64 encoded.
 You might set the new <code>ENC_KEY_ACTIVE</code> to the newly generated key ID.</p>
 <p>Keep in mind, you need to ADD this to your existing keys and not just replace them! If you just replace them, almost
 all things will break and fall apart.</p>
 <p>The final format of the <code>ENC_KEYS</code> should look something like this, for instance:</p>
-<pre><code>ENC_KEYS="
+<pre><code>ENC_KEYS=&quot;
 Wx1zrbLF/5vTaB7LdUSg1aTecmqHJOu2+RnU6zgTwNkDQU52Y3JM=
 6uf5QebA/9DsKMoq8A+Gn2WQrTcSpz5sg751yYs3IJlkw3dn0rII=
-"
+&quot;
 </code></pre>
 <p>In this example, if the first key should be the new active default, set your <code>ENC_KEY</code>ACTIVE` to</p>
 <pre><code>ENC_KEY_ACTIVE=Wx1zrbLF
 </code></pre>
-<pre><code class="language-admonish help">If you are inside Kubernetes and (hopefully) use a Kubernetes secret for this, you need to base64 encode the whole
-value: `echo 'PutTheWholeValueHere' | base64`
-</code></pre>
+<div id="admonition-help" class="admonition question">
+<div class="admonition-title">
+<p>Help</p>
+<p><a class="admonition-anchor-link" href="#admonition-help"></a></p>
+</div>
+<div>
+<p>If you are inside Kubernetes and (hopefully) use a Kubernetes secret for this, you need to base64 encode the whole
+value: <code>echo 'PutTheWholeValueHere' | base64</code></p>
+</div>
+</div>
 <p><strong>3. Set the <code>ENC_KEY_ACTIVE</code> to the ID of your newly generated key</strong></p>
-<p>This will make sure, that all new encryptions will use the new key. If you do not care about removing the old keys,
-because you maybe just want to rotate because its good practice, the secrets will migrate "by themselves" over time.
+<p>This will make sure, that all new encryptions will use the new key. If you do not care about removing the old keys, 
+because you maybe just want to rotate because its good practice, the secrets will migrate &quot;by themselves&quot; over time.
 If Rauthy finds any secrets during its normal operation, that have been encrypted with an older key than the current
 <code>ENC_KEY_ACTIVE</code>, it will re-encrypt these secrets and update the values.<br />
 This means, you may just stop at this point, if this is good enough for you.</p>
@@ -221,10 +233,17 @@ This will migrate all encrypted data for existing OIDC clients and all JWKs used
 key.</p>
 <p><strong>5. Remove old keys</strong></p>
 <p>After a successful migration via the UI tool, you may remove old keys from the <code>ENC_KEYS</code> value.</p>
-<pre><code class="language-admonish caution">The MFA cookies, which are set for a client with an active security after a successful login, are encrypted with the
-`ENC_KEY_ACTIVE` too. This means, if you remove something from the `ENC_KEYS` which was used to encrypt one of these
-MFA cookies, the user will be prompted for the password again, even if the cookie has not expired yet. 
-</code></pre>
+<div id="admonition-caution" class="admonition warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="#admonition-caution"></a></p>
+</div>
+<div>
+<p>The MFA cookies, which are set for a client with an active security after a successful login, are encrypted with the
+<code>ENC_KEY_ACTIVE</code> too. This means, if you remove something from the <code>ENC_KEYS</code> which was used to encrypt one of these
+MFA cookies, the user will be prompted for the password again, even if the cookie has not expired yet.</p>
+</div>
+</div>
 
                     </main>
 
