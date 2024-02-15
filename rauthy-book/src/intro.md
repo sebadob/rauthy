@@ -92,6 +92,7 @@ Keycloak was a rough inspiration in certain places and if something is working w
 - [x] Supports DPoP tokens for decentralized login flows
 - [x] Supports ephemeral, dynamic clients for decentralized login flows
 - [x] Can serve a basic `webid` document for decentralized logins
+- [x] OpenID Connect Dynamic Client Registration
 - [x] Admin UI
 - [x] Account UI for each user with self-service
 - [x] Simple per client branding for the login page
