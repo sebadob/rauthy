@@ -91,9 +91,7 @@
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html" class="active"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">10.</strong> Reference Config</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
-                <div class="sidebar-resize-indicator"></div>
-            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -177,13 +175,13 @@
                         <h1 id="backups"><a class="header" href="#backups">Backups</a></h1>
 <h2 id="sqlite"><a class="header" href="#sqlite">SQLite</a></h2>
 <p>If Rauthy is using a SQLite, it does automatic backups, which can be configured with:</p>
-<pre><code># Cron job for automatic data store backups (default: "0 0 4 * * * *")
+<pre><code># Cron job for automatic data store backups (default: &quot;0 0 4 * * * *&quot;)
 # sec min hour day_of_month month day_of_week year
-BACKUP_TASK="0 0 4 * * * *"
+BACKUP_TASK=&quot;0 0 4 * * * *&quot;
 
 # The name for the data store backups. The current timestamp will always be appended automatically.
 # default: rauthy-backup-
-BACKUP_NAME="rauthy-backup-"
+BACKUP_NAME=&quot;rauthy-backup-&quot;
 
 # All backups older than the specified hours will be cleaned up automatically (default: 720)
 BACKUP_RETENTION_LOCAL=24
@@ -193,9 +191,16 @@ The database itself will be saved in <code>/app/data</code> by default.</p>
 <p>This difference makes it possible, that you could add a second volume mount to the container.<br />
 You then have the database itself on a different disk than the backups, which is the most simple and straight forward
 approach to have a basic backup strategy.</p>
-<pre><code class="language-admonish info">The SQLite backups are done with `VACUUM`, which means you can just use the backups as a normal database again.
-This makes it possible, to just use the [Database Migration](./db_migration.md) feature to apply backups very easily.
-</code></pre>
+<div id="admonition-info" class="admonition info">
+<div class="admonition-title">
+<p>Info</p>
+<p><a class="admonition-anchor-link" href="#admonition-info"></a></p>
+</div>
+<div>
+<p>The SQLite backups are done with <code>VACUUM</code>, which means you can just use the backups as a normal database again.
+This makes it possible, to just use the <a href="./db_migration.html">Database Migration</a> feature to apply backups very easily.</p>
+</div>
+</div>
 <h2 id="postgres"><a class="header" href="#postgres">Postgres</a></h2>
 <p>If you are using Postgres as the main database, Rauthy does not do any backups.<br />
 There are a lot of way better tools out there to handle this task.</p>

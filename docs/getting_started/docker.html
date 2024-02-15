@@ -91,9 +91,7 @@
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html" class="active"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">10.</strong> Reference Config</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
-                <div class="sidebar-resize-indicator"></div>
-            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -177,7 +175,7 @@
                         <h1 id="docker"><a class="header" href="#docker">Docker</a></h1>
 <h2 id="testing--local-evaluation"><a class="header" href="#testing--local-evaluation">Testing / Local Evaluation</a></h2>
 <p>For getting a first look at rauthy, you can start it with docker (or any other container runtime) on your localhost.
-The image contains a basic default config which is sufficient for local testing.</p>
+The image contains a basic default config which is sufficient for local testing. </p>
 <pre><code>docker run --rm \
     -p 8080:8080 \
     --name rauthy \
@@ -192,10 +190,17 @@ logs to see the URL and first password.</p>
     --name rauthy \
     ghcr.io/sebadob/rauthy:0.21.0-lite
 </code></pre>
-<pre><code class="language-admonish note">The second command does not start in interactive mode and it does not delete the container on exit.  
+<div id="admonition-note" class="admonition note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note"></a></p>
+</div>
+<div>
+<p>The second command does not start in interactive mode and it does not delete the container on exit.<br />
 This means the data will be persisted, as long as the container itself is no erased and you can shutdown and
-restart to your liking without using test data.
-</code></pre>
+restart to your liking without using test data.</p>
+</div>
+</div>
 <p>To see the logs and the new admin password, take a look with</p>
 <pre><code>docker logs -f rauthy
 </code></pre>
@@ -211,10 +216,17 @@ The second thing is to provide a more custom config.</p>
 You can add environment variables to the startup command with the <code>-e</code> option, like shown in the on-disk SQLite
 command.<br />
 A better approach, when you have a bigger config file, would be to have all of them in a config file.</p>
-<pre><code class="language-admonish note">The following commands will work on Linux and Mac OS (even though not tested on Mac OS). If you are on Windows,
-you might replace the `pwd` command and just paste in the path directly. Since I am no Windows user myself, I
-cannot provide tested commands in this case.
-</code></pre>
+<div id="admonition-note-1" class="admonition note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note-1"></a></p>
+</div>
+<div>
+<p>The following commands will work on Linux and Mac OS (even though not tested on Mac OS). If you are on Windows,
+you might replace the <code>pwd</code> command and just paste in the path directly. Since I am no Windows user myself, I
+cannot provide tested commands in this case.</p>
+</div>
+</div>
 <p><strong>1. We want to create a new directory for rauthy's persistent data</strong></p>
 <pre><code>mkdir rauthy
 </code></pre>
@@ -242,10 +254,17 @@ sudo chown -R 10001:10001 rauthy
 </code></pre>
 <p>This will make the directory writeable for everyone, so rauthy can create the database files inside the container
 with 10001:10001 again.</p>
-<pre><code class="language-admonish note">The safest approach would be to change the owner and group for these files on the host system. This needs `sudo`
+<div id="admonition-note-2" class="admonition note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note-2"></a></p>
+</div>
+<div>
+<p>The safest approach would be to change the owner and group for these files on the host system. This needs <code>sudo</code>
 to edit the config, which may be a bit annoying, but at the same time it makes sure, that you can only read
-the secrets inside it with `sudo` too.
-</code></pre>
+the secrets inside it with <code>sudo</code> too.</p>
+</div>
+</div>
 <p><strong>4. Adopt the config to your liking.</strong><br />
 Make sure to adjust the volume mount for the sqlite directory in step 5, if it differs from <code>sqlite:data/rauthy.db</code></p>
 <p><strong>5. Start the container with volume mounts</strong></p>
