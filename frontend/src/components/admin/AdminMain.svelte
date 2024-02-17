@@ -1,5 +1,4 @@
 <script>
-    import Button from "$lib/Button.svelte";
     import {redirectToLogout} from "../../utils/helpers.js";
     import Nav from "$lib/nav/Nav.svelte";
     import NavEntry from "$lib/nav/NavEntry.svelte";
@@ -32,7 +31,6 @@
     import EventsArchive from "./events/EventsArchive.svelte";
     import IconBellAlert from "$lib/icons/IconBellAlert.svelte";
 
-    export let sessionInfo = {};
     export let selected = 'Users';
 
     let title = 'Rauthy Admin';

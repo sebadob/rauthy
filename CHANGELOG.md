@@ -1,6 +1,11 @@
 # Changelog
 
-## UNRELEASED
+## v0.21.1
+
+### Changes
+
+- host `.well-known additionally` on root `/`
+[3c594f4](https://github.com/sebadob/rauthy/commit/3c594f4628c8d301ed1556d5dd3ea5a004afdcac)
 
 ### Bugfix
 
