@@ -428,6 +428,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                     .add(("pragma", "no-cache")),
             )
             .wrap(pub_metrics.clone())
+            .service(oidc::get_well_known)
             .service(generic::redirect)
             // Important: Do not move this middleware do need the least amount of computing
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
