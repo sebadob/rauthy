@@ -145,7 +145,7 @@ Either just take a look at the [Rauthy Book](https://sebadob.github.io/rauthy/),
 the application yourself with docker on your localhost:
 
 ```
-docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.21.0-lite
+docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.21.1-lite
 ```
 
 ## Contributing
