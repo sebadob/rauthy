@@ -14,7 +14,6 @@
 - impl oidc metadata `check_session_iframe` ?
 - remove `offline_access` everywhere, because its overhead to manage and not really beneficial with webauthn?
 - admin ui: template button for client branding: default-light + default-dark ?
-- double check against https://openid.net/specs/openid-connect-core-1_0.html that everything is implemented correctly
 - benchmarks and performance tuning
 - maybe get a nicer logo
 

@@ -68,7 +68,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     "#
     );
     // This sleep is just a test. On some terminals, the banner gets mixed up with the first other
-    // logs. We dont care about rauthy's startup time being 1ms longer.
+    // logs. We don't care about Rauthys startup time being 1ms longer.
     time::sleep(Duration::from_millis(1)).await;
 
     // setup logging
@@ -94,49 +94,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Ok(keys) => {
             // for the PoWs, we just use our active keys as b64
             Pow::init_bytes(keys.get_key(&keys.enc_key_active).unwrap());
-
             keys.init().unwrap()
         }
         Err(err) => {
             error!(
-                r#"
-
-    If you are migrating from an earlier version, you must convert your `ENC_KEYS` before starting
-    any version v0.20+
-
-    To do this, you need to:
-
-    1. Install cryptr - https://github.com/sebadob/cryptr
-    If you have Rust available on your system, just execute:
-
-    cargo install cryptr --features cli --locked
-
-    Otherwise, pre-built binaries do exist for either Linux or Windows:
-    https://github.com/sebadob/cryptr/tree/main/out
-
-    2. Execute:
-
-    cryptr keys convert legacy-string
-
-    3. Paste your current ENC_KEYS into the command line.
-
-    For instance, if you have
-    ENC_KEYS="bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA"
-    in your config, paste
-    bVCyTsGaggVy5yqQ/S9n7oCen53xSJLzcsmfdnBDvNrqQ63r4 q6u26onRvXVG4427/3CEC8RJWBcMkrBMkRXgx65AmJsNTghSA
-
-    If you provide your ENC_KEYS via a Kubernetes secret, you need to do a base64 decode first.
-    For instance, if your secret looks something like this
-    ENC_KEYS: YlZDeVRzR2FnZ1Z5NXlxUS9TOW43b0NlbjUzeFNKTHpjc21mZG5CRHZOcnFRNjNyNCBxNnUyNm9uUnZYVkc0NDI3LzNDRUM4UkpXQmNNa3JCTWtSWGd4NjVBbUpzTlRnaFNB
-    Then decode via shell or any tool your like:
-    echo -n YlZDeVRzR2FnZ1Z5NXlxUS9TOW43b0NlbjUzeFNKTHpjc21mZG5CRHZOcnFRNjNyNCBxNnUyNm9uUnZYVkc0NDI3LzNDRUM4UkpXQmNNa3JCTWtSWGd4NjVBbUpzTlRnaFNB | base64 -d
-    ... and paste the decoded value into cryptr
-
-    4. cryptr will output the correct format for either usage in config or as kubernetes secret again
-
-    5. Paste the new format into your Rauthy config / secret and restart.
-
-    "#
+                r#"The `ENC_KEYS`are not correctly set up. Please take a look at the documentation:
+https://sebadob.github.io/rauthy/getting_started/main.html"#
             );
             panic!("{}", err);
         }
