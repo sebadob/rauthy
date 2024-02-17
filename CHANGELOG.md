@@ -1,5 +1,13 @@
 # Changelog
 
+## UNRELEASED
+
+### Bugfix
+
+- Correctly show the `registration_endpoint` for dynamic client registration in the `openid-configuration`
+if it is enabled.
+[424fdd1](https://github.com/sebadob/rauthy/commit/424fdd10e57639c1d60dde61f551462e67ff4934)
+
 ## v0.21.0
 
 ### Breaking
