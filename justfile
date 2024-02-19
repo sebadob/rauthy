@@ -223,21 +223,21 @@ build-ui:
     for folder in "${PAGES[@]}"; do
         for html in $folder; do
           # set correct document language
-          sed -i 's/lang="en"/lang="{{{{ lang }}"/g' "$html"
+          sd 'lang="en"' 'lang="{{{{ lang }}"' $html
           # for pre-rendering colors
-          sed -i 's/#6b3d99;/{{{{ col_act1 }};/g' "$html"
-          sed -i 's/#714d99;/{{{{ col_act1a }};/g' "$html"
-          sed -i 's/#388c51;/{{{{ col_act2 }};/g' "$html"
-          sed -i 's/#4d8c62;/{{{{ col_act2a }};/g' "$html"
-          sed -i 's/#3d5d99;/{{{{ col_acnt }};/g' "$html"
-          sed -i 's/#36486b;/{{{{ col_acnta }};/g' "$html"
-          sed -i 's/#43993d;/{{{{ col_ok }};/g' "$html"
-          sed -i 's/#993d49;/{{{{ col_err }};/g' "$html"
-          sed -i 's/#545454;/{{{{ col_glow }};/g' "$html"
-          sed -i 's/#b2b2b2;/{{{{ col_gmid }};/g' "$html"
-          sed -i 's/#f2f2f2;/{{{{ col_ghigh }};/g' "$html"
-          sed -i 's/#383838;/{{{{ col_text }};/g' "$html"
-          sed -i 's/#f7f7f7;/{{{{ col_bg }};/g' "$html"
+          sd '#6b3d99;' '{{{{ col_act1 }};' $html
+          sd '#714d99;' '{{{{ col_act1a }};' "$html"
+          sd '#388c51;' '{{{{ col_act2 }};' "$html"
+          sd '#4d8c62;' '{{{{ col_act2a }};' "$html"
+          sd '#3d5d99;' '{{{{ col_acnt }};' "$html"
+          sd '#36486b;' '{{{{ col_acnta }};' "$html"
+          sd '#43993d;' '{{{{ col_ok }};' "$html"
+          sd '#993d49;' '{{{{ col_err }};' "$html"
+          sd '#545454;' '{{{{ col_glow }};' "$html"
+          sd '#b2b2b2;' '{{{{ col_gmid }};' "$html"
+          sd '#f2f2f2;' '{{{{ col_ghigh }};' "$html"
+          sd '#383838;' '{{{{ col_text }};' "$html"
+          sd '#f7f7f7;' '{{{{ col_bg }};' "$html"
           # for the nonce in the CSP for script files
           #sed -i 's/<link /<link nonce="{{{{ nonce }}" /g' "$html"
           #sed -i 's/<script>/<script nonce="{{{{ nonce }}">/g' "$html"
