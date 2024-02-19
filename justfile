@@ -208,9 +208,6 @@ build-ui:
     npm run build
     cd ..
 
-    # Install sd since sed on mac and linux differ.
-    cargo install sd
-
     # set correct values in html outputs for pre-rendering
     PAGES=(
     "templates/html/*.html"
