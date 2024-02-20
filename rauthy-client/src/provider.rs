@@ -151,7 +151,6 @@ impl OidcProvider {
             .danger_accept_invalid_certs(danger_accept_invalid_certs.bool())
             .user_agent(format!("Rauthy OIDC Client v{}", VERSION))
             .brotli(true)
-            .http2_prior_knowledge()
             .timeout(Duration::from_secs(10));
 
         if let Some(root) = root_certificate {
