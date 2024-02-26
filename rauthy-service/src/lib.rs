@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 pub mod auth;
+pub mod auth_provider;
 pub mod client;
 pub mod encryption;
 pub mod password_reset;
