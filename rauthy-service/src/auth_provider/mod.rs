@@ -38,7 +38,7 @@
 /// there are a lot of things that can go wrong during the flow with external providers. If everything
 /// was good, we could just show a loading spinner for now.
 /// - [ ] Define mandatory mechanisms and features, that external providers must support to make
-/// everything working and secure and write these down in the Rauthy book (new section).
+/// everything working securely and write these down in the Rauthy book (new section).
 /// - [ ] It should be possible to add custom Root CA's for each providers independently.
 /// - [ ] It should be possible for internal networks and testing that insecure TLS connections
 /// are opt-in for each provider independently.
