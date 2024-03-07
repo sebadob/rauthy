@@ -33,6 +33,7 @@ The most important thing to compile the code is obviously `rust` and `cargo`. Th
 - `docker` available, if you want to build images
 - [just](https://github.com/casey/just) installed
 - BASH (no cmd.exe or powershell) - when you are on windows, you can use something like Git BASH
+- For building the UI `just build-ui`, you need [sd](https://crates.io/crates/sd): `cargo install sd`
 
 ### Get it up and running
 
