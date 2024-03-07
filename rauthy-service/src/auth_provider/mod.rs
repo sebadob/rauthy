@@ -22,6 +22,10 @@
 ///     - [ ] Either, enter the ISS URL and Rauthy will try to do an auto-lookup and config
 ///     - [ ] Or, provide an options list in the UI with templated values for the most known out there
 /// - [ ] The amount of configurable providers should not be limited
+/// - [ ] !!! Do not link a user to multiple providers to reduce attack surface. This "feature" would
+/// not really be a quality of life improvement, but actually just support the lazyness of users.
+/// If they want to use an external provider, they should simply choose the correct one for their
+/// account.
 /// - [ ] Providers will be stored in a new table with all the necessary information, as well as some
 /// UX things like a logo and nice to read name.
 /// - [ ] The providers must be connected to a user account on creation with something like a
