@@ -100,3 +100,5 @@
 /// endpoints. This means lees maintenance in the future.
 /// If the auto-lookup fails, maybe provide a small text for helping out with finding the correct
 /// issuer, which should have the .well-known correctly linked.
+///
+/// 7. If necessary, have a final cleanup PR.
