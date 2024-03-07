@@ -52,3 +52,47 @@
 ///    - Simply always federate it and only use values that Rauthy does not have?
 ///    - Should it be possible to "un-federate" an account on Rauthy and basically remove the link?
 ///    - At the same time, should it be possible to federate it on purpose via account page?
+///
+///
+/// Rough timeline for the implementation (multiple PRs makes sense):
+/// 1. Implement API Endpoint for provider metadata lookup and try to build a valid config from that.
+/// Return that validated config to the Admin UI with all the necessary data filled out and insert
+/// into (non-editable) input fields.
+/// 2. API Endpoint for creating an auth provider with values from the Admin UI (eventually pre-filled
+/// out from step 1). Do another lookup to that URL and re-validate the config, throw errors if needed.
+/// Create DB migrations for the new table to save all necessary data for this provider. At the same
+/// time, create migrations for the users and the federation tables to possibly link a user to the
+/// newly registered provider. Complete the DB in that step as well so everything makes sense.
+/// 3. API Endpoint for the `/providers/callback` with all strings attached. This needs setting either
+/// cookies or local storage before doing the redirect and validating these on the callback. Create
+/// a new HTML for that which shows at least a loading spinner to give feedback to the user that
+/// something is happening, because a lot of these providers are not the fastest. This means
+/// issuing the HTML first and on the client side, extract all values and make the final request to
+/// the backend manually, which gives more control over the UI part while only loosing a couple of
+/// ms.
+/// The UI / API should handle all kinds of errors with i18n even to create a good UX. On success
+/// though, proceed as if the user had been logging in to Rauthy directly. This needs additionally
+/// cached values in the backend for the whole verification -> new data structure (cache only, no DB).
+/// 4. Modify the Login page to actually get a button for logging in with an external provider. This
+/// will need modifications to the HTML pre-rendering on the server after a DB / Cache lookup for
+/// possible providers and pre-build the redirect URI for each rendering. Another solution could be
+/// to just show the mandatory values and fetch additional metadata on the client side, since a user
+/// needs at least a second to click a button. Find the best solution for that.
+///
+/// 5. Steps 1 - 4 should make the basic process work. Additionally, we need to implement a solution
+/// for conflict solving, if for instance an E-Mail address already exists but has been referenced
+/// by the external provider. If that user already existed inside Rauthys DB, we must not "just link
+/// them", which could possibly lead to account takeover, since we cannot know, if the external
+/// user was valid, even though the same email has been used.
+/// For this purpose, we need a way to connect / disconnect an already existing user with external
+/// auth providers in the account view for each user. This can re-use a lot of steps 1 - 4, but needs
+/// an additional option for the callback page to only use the request to link to an existing account.
+/// The disconnect though should simply be a single click for the user after having checked, that
+/// at least a password or passkey do exist to not get into a locked out situation.
+///
+/// 6. Quality of Life improvements - if an external provider does not provide the metadata lookup
+/// for auto-discovery, make it able for the user to insert all values manually. Templates for "the
+/// big ones" like Github, Google, ..., should not be necessary, since they all provide the metadata
+/// endpoints. This means lees maintenance in the future.
+/// If the auto-lookup fails, maybe provide a small text for helping out with finding the correct
+/// issuer, which should have the .well-known correctly linked.
