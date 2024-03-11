@@ -13,10 +13,6 @@
     let isAdmin = false;
     let mfaReqErr = false;
 
-    $: console.log(sessionInfo);
-    $: console.log('isAdmin: ' + isAdmin);
-    $: console.log('mfaReqErr: ' + mfaReqErr);
-
     onMount(async () => {
         let res = await getSessionInfo();
         if (res.ok) {
