@@ -13,6 +13,10 @@
     let isAdmin = false;
     let mfaReqErr = false;
 
+    $: console.log(sessionInfo);
+    $: console.log('isAdmin: ' + isAdmin);
+    $: console.log('mfaReqErr: ' + mfaReqErr);
+
     onMount(async () => {
         let res = await getSessionInfo();
         if (res.ok) {
@@ -22,7 +26,7 @@
             if (resAdmin.ok) {
                 sessionInfo = body;
                 isAdmin = true;
-            } else if (resAdmin.status === 406 ) {
+            } else if (resAdmin.status === 406) {
                 mfaReqErr = true;
                 sessionInfo = {};
             } else {
@@ -60,7 +64,7 @@
             <Button on:click={() => window.location.href = '/auth/v1/'}>GO BACK</Button>
         </div>
     {:else}
-        <AdminMain bind:sessionInfo bind:selected/>
+        <AdminMain bind:selected/>
     {/if}
 </BrowserCheck>
 
