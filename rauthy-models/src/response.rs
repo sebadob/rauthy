@@ -326,6 +326,15 @@ impl From<PasswordPolicy> for PasswordPolicyResponse {
     }
 }
 
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct ProviderLookupResponse {
+    pub issuer: String,
+    pub authorization_endpoint: String,
+    pub token_endpoint: String,
+    pub userinfo_endpoint: String,
+    pub use_pkce: bool,
+}
+
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct ScopeResponse {
     pub id: String,
