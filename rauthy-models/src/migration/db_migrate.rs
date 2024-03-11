@@ -10,7 +10,7 @@ use sqlx::Row;
 use time::OffsetDateTime;
 use tracing::{debug, info};
 
-use rauthy_common::constants::{ADMIN_FORCE_MFA, DB_TYPE, DEV_MODE};
+use rauthy_common::constants::{ADMIN_FORCE_MFA, DB_TYPE, DEV_MODE, PUB_URL};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::get_rand;
 use rauthy_common::DbType;
@@ -36,9 +36,19 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
     debug!("Executing anti_lockout_check");
 
     let (redirect_uris, allowed_origins) = if *DEV_MODE {
+        let (ip, _) = PUB_URL.split_once(':').unwrap();
+        let origin = if ip != "localhost" {
+            format!("https://{}:5173", ip)
+        } else {
+            "http://localhost:5173".to_string()
+        };
+
         (
-            format!("{issuer}/oidc/*,http://localhost:5173/*"),
-            Some("http://localhost:5173".to_string()),
+            format!(
+                "{issuer}/oidc/*,http://localhost:5173/*,https://{}:5173/*",
+                ip
+            ),
+            Some(origin),
         )
     } else {
         (format!("{issuer}/*"), None)
