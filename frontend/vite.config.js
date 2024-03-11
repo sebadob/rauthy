@@ -8,11 +8,12 @@ const config = {
     plugins: [wasm(), topLevelAwait(), sveltekit()],
     server: {
         // If you want to run with dev TLS certificates, for instance when you use a remote host, uncomment the following
-        // lines. Do not forget to adjust the `PUB_URL` in `rauthy.cfg` accordingly to allow the `redirect_uri`.
-        https: {
-            key: fs.readFileSync(`${__dirname}/../tls/key.pem`),
-            cert: fs.readFileSync(`${__dirname}/../tls/cert-chain.pem`)
-        },
+        // lines. Do not forget to adjust the `PUB_URL` in `rauthy.cfg` accordingly to allow the `redirect_uri`, for instance:
+        // `PUB_URL=your_remote_host_ip:8443`
+        // https: {
+        //     key: fs.readFileSync(`${__dirname}/../tls/key.pem`),
+        //     cert: fs.readFileSync(`${__dirname}/../tls/cert-chain.pem`)
+        // },
         proxy: {
             '/auth/v1/_app': 'http://127.0.0.1:8080',
             '/auth/v1/book/': 'http://127.0.0.1:8080',
