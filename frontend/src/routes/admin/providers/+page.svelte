@@ -2,4 +2,4 @@
     import AdminMainPre from "../../../components/admin/AdminMainPre.svelte";
 </script>
 
-<AdminMainPre selected="Federation"/>
+<AdminMainPre selected="Providers"/>

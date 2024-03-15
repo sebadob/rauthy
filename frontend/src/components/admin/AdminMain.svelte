@@ -31,7 +31,7 @@
     import EventsArchive from "./events/EventsArchive.svelte";
     import IconBellAlert from "$lib/icons/IconBellAlert.svelte";
     import IconCloud from "$lib/icons/IconCloud.svelte";
-    import Federation from "./federation/Federation.svelte";
+    import Providers from "./providers/Providers.svelte";
 
     export let selected = 'Users';
 
@@ -99,9 +99,9 @@
                 title = 'ApiKeys';
                 break;
             }
-            case 'Federation': {
-                window.history.pushState('Federation', '', '/auth/v1/admin/federation');
-                title = 'Federation';
+            case 'Providers': {
+                window.history.pushState('Providers', '', '/auth/v1/admin/providers');
+                title = 'Providers';
                 break;
             }
             case 'Config': {
@@ -198,7 +198,7 @@
                 <IconKey/>
             </NavEntry>
 
-            <NavEntry label="Federation">
+            <NavEntry label="Providers">
                 <IconCloud/>
             </NavEntry>
 
@@ -257,9 +257,9 @@
             <ContentWrapper bind:eventsWide bind:eventsCollapsed>
                 <ApiKeys/>
             </ContentWrapper>
-        {:else if 'Federation' === selected}
+        {:else if 'Providers' === selected}
             <ContentWrapper bind:eventsWide bind:eventsCollapsed>
-                <Federation/>
+                <Providers/>
             </ContentWrapper>
         {:else if 'Config' === selected}
             <ContentWrapper bind:eventsWide bind:eventsCollapsed>

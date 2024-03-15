@@ -1,5 +1,6 @@
 <script>
     import {onMount} from "svelte";
+    import FederationTileAddNew from "./ProviderTileAddNew.svelte";
 
     let err = '';
     let providers = [];
@@ -28,9 +29,11 @@
 {err}
 
 <div class="content">
-    <!--    <GroupTileAddNew onSave={onSave}/>-->
+    <b id="caution">
+        CAUTION: This page is for testing only and is not yet fully operational!
+    </b>
 
-    <h1>TODO</h1>
+    <FederationTileAddNew onSave={onSave}/>
 
     <div id="federation">
         {#each providers as provider (provider.id)}
@@ -46,5 +49,9 @@
 <style>
     #federation div:nth-of-type(2n + 1) {
         background: linear-gradient(90deg, var(--col-ghigh) 35rem, var(--col-bg) 50rem);
+    }
+
+    #caution {
+        color: red;
     }
 </style>
