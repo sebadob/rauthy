@@ -107,7 +107,7 @@
                 in:fade={{ delay: 500, duration: 200 }}
                 out:fade={{ duration: 100 }}
         >
-            <AppVersion />
+            <AppVersion/>
         </div>
     {/if}
 

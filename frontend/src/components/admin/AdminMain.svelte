@@ -30,6 +30,8 @@
     import ApiKeys from "./api_keys/ApiKeys.svelte";
     import EventsArchive from "./events/EventsArchive.svelte";
     import IconBellAlert from "$lib/icons/IconBellAlert.svelte";
+    import IconCloud from "$lib/icons/IconCloud.svelte";
+    import Providers from "./providers/Providers.svelte";
 
     export let selected = 'Users';
 
@@ -97,6 +99,11 @@
                 title = 'ApiKeys';
                 break;
             }
+            case 'Providers': {
+                window.history.pushState('Providers', '', '/auth/v1/admin/providers');
+                title = 'Providers';
+                break;
+            }
             case 'Config': {
                 window.history.pushState('Config', '', '/auth/v1/admin/config');
                 title = 'Config';
@@ -114,19 +121,20 @@
     }
 
     onMount(() => {
-        window.addEventListener('popstate', (event) => {
-            selected = event.state;
-        });
-
+        window.addEventListener('popstate', setSelected);
         calcWidths(window.innerWidth);
 
-        return () => window.removeEventListener('popstate');
+        return () => window.removeEventListener('popstate', setSelected);
     });
 
     function calcWidths(innerWidth) {
         isExpanded = innerWidth > 1050;
         eventsCollapsed = innerWidth < 1050;
         eventsWide = innerWidth > 1450;
+    }
+
+    function setSelected(event) {
+        selected = event.state;
     }
 
 </script>
@@ -183,11 +191,15 @@
             </NavEntry>
 
             <NavEntry label="Blacklist">
-                <IconStop width={24} />
+                <IconStop width={24}/>
             </NavEntry>
 
             <NavEntry label="ApiKeys">
-                <IconKey />
+                <IconKey/>
+            </NavEntry>
+
+            <NavEntry label="Providers">
+                <IconCloud/>
             </NavEntry>
 
             <NavEntry label="Config">
@@ -245,6 +257,10 @@
             <ContentWrapper bind:eventsWide bind:eventsCollapsed>
                 <ApiKeys/>
             </ContentWrapper>
+        {:else if 'Providers' === selected}
+            <ContentWrapper bind:eventsWide bind:eventsCollapsed>
+                <Providers/>
+            </ContentWrapper>
         {:else if 'Config' === selected}
             <ContentWrapper bind:eventsWide bind:eventsCollapsed>
                 <Config/>
@@ -256,7 +272,7 @@
         {/if}
 
         {#if innerWidth !== undefined }
-            <Events collapsed={eventsCollapsed} wide={eventsWide} />
+            <Events collapsed={eventsCollapsed} wide={eventsWide}/>
         {/if}
     </div>
 </main>

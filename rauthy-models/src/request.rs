@@ -455,6 +455,15 @@ pub struct PasswordResetRequest {
     pub mfa_code: Option<String>,
 }
 
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct ProviderLookupRequest {
+    /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
+    pub issuer: String,
+    pub danger_allow_http: Option<bool>,
+    pub danger_allow_insecure: Option<bool>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct RequestResetRequest {
     /// Validation: `email`

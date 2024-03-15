@@ -16,6 +16,7 @@ use rust_embed::RustEmbed;
 use tracing::error;
 
 pub mod api_keys;
+pub mod auth_providers;
 pub mod blacklist;
 pub mod clients;
 pub mod events;
