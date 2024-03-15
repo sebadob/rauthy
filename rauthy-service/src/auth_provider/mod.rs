@@ -51,7 +51,7 @@
 // be used for the initial setup only and use Rauthy's advanced security mechanisms afterwards.
 // - [ ] Think about a solution for the case, that a user is already registered with Rauthy, does
 // an external login flow and we find out, that the exact same E-Mail is used:
-//    - Update this user with the external federation data or reject it?
+//    - Update this user with the external providers data or reject it?
 //    - We cannot know, which values should have the priority in case of conflicts.
 //    - Simply always federate it and only use values that Rauthy does not have?
 //    - Should it be possible to "un-federate" an account on Rauthy and basically remove the link?
@@ -65,7 +65,7 @@
 // 2. API Endpoint for creating an auth provider with values from the Admin UI (eventually pre-filled
 // out from step 1). Do another lookup to that URL and re-validate the config, throw errors if needed.
 // Create DB migrations for the new table to save all necessary data for this provider. At the same
-// time, create migrations for the users and the federation tables to possibly link a user to the
+// time, create migrations for the users and the providers tables to possibly link a user to the
 // newly registered provider. Complete the DB in that step as well so everything makes sense.
 // 3. API Endpoint for the `/providers/callback` with all strings attached. This needs setting either
 // cookies or local storage before doing the redirect and validating these on the callback. Create
