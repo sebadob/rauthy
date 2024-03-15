@@ -23,6 +23,7 @@
         danger_allow_insecure: false,
     };
     let config = {
+        // fixed values after lookup
         issuer: '',
         danger_allow_http: false,
         danger_allow_insecure: false,
@@ -30,6 +31,11 @@
         token_endpoint: '',
         userinfo_endpoint: '',
         use_pkce: '',
+        // user defined values
+        client_id: '',
+        client_name: '',
+        client_secret: '',
+        // maybe additional ones in the future like client_logo
     }
 
     let isLoading = false;
