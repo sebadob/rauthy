@@ -333,6 +333,8 @@ pub struct ProviderLookupResponse {
     pub token_endpoint: String,
     pub userinfo_endpoint: String,
     pub use_pkce: bool,
+    pub danger_allow_http: bool,
+    pub danger_allow_insecure: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]

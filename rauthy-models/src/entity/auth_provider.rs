@@ -46,11 +46,11 @@ impl AuthProvider {
             .danger_accept_invalid_certs(danger_allow_insecure)
             .build()?;
 
-        let issuer_url = if !issuer.starts_with("http://") && issuer.starts_with("https://") {
+        let issuer_url = if issuer.starts_with("http://") || issuer.starts_with("https://") {
+            issuer.to_string()
+        } else {
             // we always assume https connections, if the scheme is not given
             format!("https://{}", issuer)
-        } else {
-            issuer.to_string()
         };
         // for now, we only support the default openid-configuration location
         let config_url = if issuer_url.ends_with('/') {
@@ -96,6 +96,8 @@ impl AuthProvider {
                 .code_challenge_methods_supported
                 .iter()
                 .any(|c| c == "S256"),
+            danger_allow_http,
+            danger_allow_insecure,
             // TODO add `scopes_supported` Vec and make them selectable with checkboxes in the UI
             // instead of typing them in?
         })
