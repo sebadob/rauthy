@@ -21,17 +21,17 @@
 // - [ ] Providers should be configurable over the Admin UI:
 //     - [ ] Either, enter the ISS URL and Rauthy will try to do an auto-lookup and config
 //     - [ ] Or, provide an options list in the UI with templated values for the most known out there
-// - [ ] The amount of configurable providers should not be limited
-// - [ ] !!! Do not link a user to multiple providers to reduce attack surface. This "feature" would
+// - [x] The amount of configurable providers should not be limited
+// - [x] !!! Do not link a user to multiple providers to reduce attack surface. This "feature" would
 // not really be a quality of life improvement, but actually just support the lazyness of users.
 // If they want to use an external provider, they should simply choose the correct one for their
 // account.
-// - [ ] Providers will be stored in a new table with all the necessary information, as well as some
+// - [x] Providers will be stored in a new table with all the necessary information, as well as some
 // UX things like a logo and nice to read name.
-// - [ ] The providers must be connected to a user account on creation with something like a
+// - [x] The providers must be connected to a user account on creation with something like a
 // `federation_id`, which will be a DB FK to a new table with additional data for this user from
 // the provider (provider id, external uid, ...).
-// - [ ] When the migrations on the `users` table will be done, add another (not related to this feature)
+// - [x] When the migrations on the `users` table will be done, add another (not related to this feature)
 // column named `last_login` (Needed feature - makes sense to do just one migration and not multiple).
 // - We don't really need to care about JWKs and validation of external providers' tokens, because
 // we will only use them once after Rauthy has changed them for the `code` on the callback. At this
@@ -44,7 +44,7 @@
 // - [ ] Define mandatory mechanisms and features, that external providers must support to make
 // everything working securely and write these down in the Rauthy book (new section).
 // - [ ] It should be possible to add custom Root CA's for each providers independently.
-// - [ ] It should be possible for internal networks and testing that insecure TLS connections
+// - [x] It should be possible for internal networks and testing that insecure TLS connections
 // are opt-in for each provider independently.
 // - [ ] Show additional information in each users account page, if it is a federated account.
 // - [ ] Make it possible to create a Password / Passkey for federated accounts, so this flow may
