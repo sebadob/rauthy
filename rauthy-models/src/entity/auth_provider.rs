@@ -21,7 +21,7 @@ pub struct AuthProvider {
     pub secret: Option<String>,
     pub scope: Vec<String>,
 
-    pub token_auth_method: String,
+    pub token_auth_method_basic: bool,
     pub use_pkce: bool,
 
     pub root_pem: Option<String>,
