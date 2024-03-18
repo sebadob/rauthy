@@ -327,11 +327,34 @@ impl From<PasswordPolicy> for PasswordPolicyResponse {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct ProviderResponse {
+    pub id: String,
+    pub name: String,
+
+    pub issuer: String,
+    pub authorization_endpoint: String,
+    pub token_endpoint: String,
+    pub userinfo_endpoint: String,
+
+    pub client_id: String,
+    pub secret: Option<String>,
+    pub scope: String,
+
+    pub token_auth_method_basic: bool,
+    pub use_pkce: bool,
+
+    pub root_pem: Option<String>,
+    // pub logo: Option<Vec<u8>>,
+    // pub logo_type: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct ProviderLookupResponse {
     pub issuer: String,
     pub authorization_endpoint: String,
     pub token_endpoint: String,
     pub userinfo_endpoint: String,
+    pub token_auth_method_basic: bool,
     pub use_pkce: bool,
     pub danger_allow_http: bool,
     pub danger_allow_insecure: bool,

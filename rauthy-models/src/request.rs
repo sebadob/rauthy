@@ -9,8 +9,8 @@ use rauthy_common::constants::{
     RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_ALNUM_SPACE, RE_API_KEY, RE_APP_ID, RE_ATTR,
     RE_ATTR_DESC, RE_CHALLENGE, RE_CITY, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE,
     RE_CODE_VERIFIER, RE_DATE_STR, RE_FLOWS, RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE,
-    RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_PHONE, RE_STREET, RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
-    RE_USER_NAME,
+    RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_PEM, RE_PHONE, RE_STREET, RE_TOKEN_ENDPOINT_AUTH_METHOD,
+    RE_URI, RE_USER_NAME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::base64_decode;
@@ -453,6 +453,52 @@ pub struct PasswordResetRequest {
     /// Validation: `[a-zA-Z0-9]{48}`
     #[validate(regex(path = "RE_ALNUM_48", code = "[a-zA-Z0-9]{48}"))]
     pub mfa_code: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct ProviderRequest {
+    /// Validation: `[a-zA-Z0-9À-ÿ-\s]{2,128}]`
+    #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
+    pub name: String,
+
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
+    pub issuer: String,
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
+    pub authorization_endpoint: String,
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
+    pub token_endpoint: String,
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
+    pub userinfo_endpoint: String,
+
+    pub danger_allow_http: Option<bool>,
+    pub danger_allow_insecure: Option<bool>,
+    pub token_auth_method_basic: bool,
+    pub use_pkce: bool,
+
+    // This validation is pretty loose, but if we make it too strict,
+    // we will most probably get into compatibility issues.
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
+    pub client_id: String,
+    /// Validation: max length is 256
+    #[validate(length(max = 256))]
+    pub secret: Option<String>,
+    /// Validation: `Vec<^[a-z0-9-_/]{2,128}$>`
+    #[validate(custom(function = "validate_vec_lowercase"))]
+    pub scope: Vec<String>,
+    /// Validation: `(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)`
+    #[validate(regex(
+        path = "RE_PEM",
+        code = "(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)"
+    ))]
+    pub root_pem: Option<String>,
+    // TODO implement
+    // pub logo: Option<Vec<u8>>,
+    // pub logo_type: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
