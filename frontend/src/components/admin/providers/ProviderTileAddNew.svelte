@@ -9,13 +9,20 @@
     import Input from "$lib/inputs/Input.svelte";
     import Switch from "$lib/Switch.svelte";
     import CheckIcon from "$lib/CheckIcon.svelte";
+    import OptionSelect from "$lib/OptionSelect.svelte";
+    import PasswordInput from "$lib/inputs/PasswordInput.svelte";
 
     export let idx = -1;
     export let onSave;
 
     const inputWidth = '25rem';
 
-    let expandContainer;
+    // let expandContainer;
+    let expandContainer = true;
+    let isLoading = false;
+    let err = '';
+    let success = false;
+    let timer;
 
     let configLookup = {
         issuer: '',
@@ -32,18 +39,18 @@
         userinfo_endpoint: '',
         use_pkce: '',
         // user defined values
+        name: '',
         client_id: '',
-        client_name: '',
         client_secret: '',
         // maybe additional ones in the future like client_logo
     }
+    // TODO add "the big ones" as templates in the future
+    let modes = ['Auto', 'Custom'];
+    let mode = modes[1]; // TODO switch back - just for testing
+    // let mode = modes[0];
+    $: isAuto = mode === modes[0];
 
-    let isLoading = false;
-    let err = '';
-    let success = false;
-    let timer;
     let formErrors = {};
-
     const schemaConfig = yup.object().shape({
         issuer: yup.string().url(),
     });
@@ -55,8 +62,8 @@
         timer = setTimeout(() => {
             onSave();
             success = false;
-            group = {group: ''};
             expandContainer = false;
+            resetValues();
         }, 1500);
     }
 
@@ -162,7 +169,14 @@
     </div>
 
     <div class="container" slot="body">
-        {#if !config.authorization_endpoint}
+        <div class="header">
+            Setup
+        </div>
+        <div class="ml mb">
+            <OptionSelect bind:value={mode} options={modes}/>
+        </div>
+
+        {#if !config.authorization_endpoint && isAuto}
             <Input
                     bind:value={configLookup.issuer}
                     bind:error={formErrors.issuer}
@@ -184,7 +198,7 @@
             <div class="header">
                 Allow insecure TLS certificates
             </div>
-            <div class="ml">
+            <div class="ml mb">
                 <Switch bind:selected={configLookup.danger_allow_insecure}/>
             </div>
 
@@ -192,74 +206,184 @@
                 LOOKUP
             </Button>
         {:else}
+            {#if isAuto}
+                <Input
+                        bind:value={config.issuer}
+                        bind:error={formErrors.issuer}
+                        autocomplete="off"
+                        placeholder="Issuer URL"
+                        on:input={validateFormLookup}
+                        width={inputWidth}
+                        disabled
+                >
+                    ISSUER URL
+                </Input>
+
+                <div class="header">
+                    Allow unencrypted HTTP lookup
+                </div>
+                <div class="ml">
+                    <CheckIcon bind:check={config.danger_allow_http}/>
+                </div>
+
+                <div class="header">
+                    Allow insecure TLS certificates
+                </div>
+                <div class="ml mb">
+                    <CheckIcon bind:check={config.danger_allow_insecure}/>
+                </div>
+
+                <Input
+                        bind:value={config.authorization_endpoint}
+                        bind:error={formErrors.authorization_endpoint}
+                        autocomplete="off"
+                        placeholder="Authorization Endpoint"
+                        on:input={validateFormLookup}
+                        width={inputWidth}
+                        disabled
+                >
+                    AUTHORIZATION ENDPOINT
+                </Input>
+
+                <Input
+                        bind:value={config.token_endpoint}
+                        bind:error={formErrors.token_endpoint}
+                        autocomplete="off"
+                        placeholder="Token Endpoint"
+                        on:input={validateFormLookup}
+                        width={inputWidth}
+                        disabled
+                >
+                    TOKEN ENDPOINT
+                </Input>
+
+                <Input
+                        bind:value={config.userinfo_endpoint}
+                        bind:error={formErrors.userinfo_endpoint}
+                        autocomplete="off"
+                        placeholder="Userinfo Endpoint"
+                        on:input={validateFormLookup}
+                        width={inputWidth}
+                        disabled
+                >
+                    USERINFO ENDPOINT
+                </Input>
+
+                <div class="header">
+                    Use PKCE
+                </div>
+                <div class="ml">
+                    <CheckIcon bind:check={config.use_pkce}/>
+                </div>
+            {:else}
+                <Input
+                        bind:value={config.issuer}
+                        bind:error={formErrors.issuer}
+                        autocomplete="off"
+                        placeholder="Issuer URL"
+                        on:input={validateFormLookup}
+                        width={inputWidth}
+                >
+                    ISSUER URL
+                </Input>
+
+                <div class="header">
+                    Allow unencrypted HTTP lookup
+                </div>
+                <div class="ml">
+                    <Switch bind:selected={config.danger_allow_http}/>
+                </div>
+
+                <div class="header">
+                    Allow insecure TLS certificates
+                </div>
+                <div class="ml mb">
+                    <Switch bind:selected={config.danger_allow_insecure}/>
+                </div>
+
+                <Input
+                        bind:value={config.authorization_endpoint}
+                        bind:error={formErrors.authorization_endpoint}
+                        autocomplete="off"
+                        placeholder="Authorization Endpoint"
+                        on:input={validateFormLookup}
+                        width={inputWidth}
+                >
+                    AUTHORIZATION ENDPOINT
+                </Input>
+
+                <Input
+                        bind:value={config.token_endpoint}
+                        bind:error={formErrors.token_endpoint}
+                        autocomplete="off"
+                        placeholder="Token Endpoint"
+                        on:input={validateFormLookup}
+                        width={inputWidth}
+                >
+                    TOKEN ENDPOINT
+                </Input>
+
+                <Input
+                        bind:value={config.userinfo_endpoint}
+                        bind:error={formErrors.userinfo_endpoint}
+                        autocomplete="off"
+                        placeholder="Userinfo Endpoint"
+                        on:input={validateFormLookup}
+                        width={inputWidth}
+                >
+                    USERINFO ENDPOINT
+                </Input>
+
+                <div class="header">
+                    Use PKCE
+                </div>
+                <div class="ml mb">
+                    <Switch bind:selected={config.use_pkce}/>
+                </div>
+            {/if}
+
+            <div class="desc">
+                Client name for the Rauthy login form
+            </div>
             <Input
-                    bind:value={config.issuer}
-                    bind:error={formErrors.issuer}
+                    bind:value={config.name}
+                    bind:error={formErrors.name}
                     autocomplete="off"
-                    placeholder="Issuer URL"
+                    placeholder="Client Name"
                     on:input={validateFormLookup}
                     width={inputWidth}
-                    disabled
             >
-                ISSUER URL
+                CLIENT NAME
             </Input>
 
-            <div class="header">
-                Allow unencrypted HTTP lookup
+            <div class="desc">
+                Client ID given by the auth provider
             </div>
-            <div class="ml">
-                <CheckIcon bind:check={config.danger_allow_http}/>
-            </div>
-
-            <div class="header">
-                Allow insecure TLS certificates
-            </div>
-            <div class="ml">
-                <CheckIcon bind:check={config.danger_allow_insecure}/>
-            </div>
-
             <Input
-                    bind:value={config.authorization_endpoint}
-                    bind:error={formErrors.authorization_endpoint}
+                    bind:value={config.client_id}
+                    bind:error={formErrors.client_id}
                     autocomplete="off"
-                    placeholder="Authorization Endpoint"
+                    placeholder="Client ID"
                     on:input={validateFormLookup}
                     width={inputWidth}
-                    disabled
             >
-                AUTHORIZATION ENDPOINT
+                CLIENT ID
             </Input>
 
-            <Input
-                    bind:value={config.token_endpoint}
-                    bind:error={formErrors.token_endpoint}
+            <div class="desc">
+                Client Secret given by the auth provider.<br>
+                At least a client secret or PKCE is required.
+            </div>
+            <PasswordInput
+                    bind:value={config.client_id}
+                    bind:error={formErrors.client_id}
                     autocomplete="off"
-                    placeholder="Token Endpoint"
+                    placeholder="Client Secret"
                     on:input={validateFormLookup}
                     width={inputWidth}
-                    disabled
             >
-                TOKEN ENDPOINT
-            </Input>
-
-            <Input
-                    bind:value={config.userinfo_endpoint}
-                    bind:error={formErrors.userinfo_endpoint}
-                    autocomplete="off"
-                    placeholder="Userinfo Endpoint"
-                    on:input={validateFormLookup}
-                    width={inputWidth}
-                    disabled
-            >
-                USERINFO ENDPOINT
-            </Input>
-
-            <div class="header">
-                Use PKCE
-            </div>
-            <div class="ml">
-                <CheckIcon bind:check={config.use_pkce}/>
-            </div>
+                CLIENT SECRET
+            </PasswordInput>
 
             <Button on:click={onSubmitConfig} bind:isLoading level={1} width="6rem">
                 SAVE
@@ -289,6 +413,11 @@
         padding: 10px;
     }
 
+    .desc {
+        display: flex;
+        margin: .5rem .5rem .25rem .5rem;
+    }
+
     .err {
         color: var(--col-err);
     }
@@ -305,6 +434,10 @@
 
     .ml {
         margin-left: .5rem;
+    }
+
+    .mb {
+        margin-bottom: .5rem;
     }
 
     .success {

@@ -32,13 +32,13 @@ pub async fn post_provider(
     let provider = AuthProvider::create(&data, payload.into_inner()).await?;
     Ok(HttpResponse::Ok().json(ProviderResponse {
         id: provider.id,
-        name: provider.name,
         issuer: provider.issuer,
         authorization_endpoint: provider.authorization_endpoint,
         token_endpoint: provider.token_endpoint,
         userinfo_endpoint: provider.userinfo_endpoint,
         client_id: provider.client_id,
         secret: provider.secret,
+        name: provider.name,
         scope: provider.scope,
         use_pkce: provider.use_pkce,
         token_auth_method_basic: provider.token_auth_method_basic,
