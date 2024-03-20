@@ -42,8 +42,9 @@ impl AuthProvider {
         let id = new_store_id();
         let scope = payload
             .scope
-            .iter()
-            .map(|s| s.trim())
+            .split(' ')
+            // filter this way to catch multiple spaces in a row
+            .filter_map(|s| if !s.is_empty() { Some(s.trim()) } else { None })
             .collect::<Vec<&str>>()
             .join("+");
 
@@ -158,6 +159,22 @@ impl AuthProvider {
             )
         })?;
 
+        let scopes_supported = well_known
+            .scopes_supported
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<&str>>();
+        let mut scope = String::with_capacity(24);
+        if scopes_supported.contains(&"openid") {
+            scope.push_str("openid ");
+        }
+        if scopes_supported.contains(&"profile") {
+            scope.push_str("profile ");
+        }
+        if scopes_supported.contains(&"email") {
+            scope.push_str("email ");
+        }
+
         Ok(ProviderLookupResponse {
             issuer: well_known.issuer,
             // TODO optimization (and possibly security enhancement): strip issuer url from all of these?
@@ -175,6 +192,7 @@ impl AuthProvider {
                 .any(|c| c == "S256"),
             danger_allow_http,
             danger_allow_insecure,
+            scope,
             // TODO add `scopes_supported` Vec and make them selectable with checkboxes in the UI
             // instead of typing them in?
         })

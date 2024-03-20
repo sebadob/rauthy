@@ -354,6 +354,7 @@ pub struct ProviderLookupResponse {
     pub authorization_endpoint: String,
     pub token_endpoint: String,
     pub userinfo_endpoint: String,
+    pub scope: String,
     pub token_auth_method_basic: bool,
     pub use_pkce: bool,
     pub danger_allow_http: bool,

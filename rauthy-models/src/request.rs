@@ -487,9 +487,9 @@ pub struct ProviderRequest {
     /// Validation: max length is 256
     #[validate(length(max = 256))]
     pub secret: Option<String>,
-    /// Validation: `Vec<^[a-z0-9-_/]{2,128}$>`
-    #[validate(custom(function = "validate_vec_lowercase"))]
-    pub scope: Vec<String>,
+    /// Validation: `[a-z0-9-_/\s]{2,128}`
+    #[validate(regex(path = "RE_LOWERCASE_SPACE", code = "[a-z0-9-_/\\s]{2,128}"))]
+    pub scope: String,
     /// Validation: `(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)`
     #[validate(regex(
         path = "RE_PEM",
