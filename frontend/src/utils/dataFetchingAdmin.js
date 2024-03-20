@@ -235,6 +235,14 @@ export async function postPasswordResetRequest(data) {
     return await checkRedirectForbidden(res);
 }
 
+export async function postProvider(data) {
+    return await fetch('/auth/v1/providers', {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+}
+
 export async function postProviderLookup(data) {
     return await fetch('/auth/v1/providers/lookup', {
         method: 'POST',

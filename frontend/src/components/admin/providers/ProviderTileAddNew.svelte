@@ -1,11 +1,10 @@
 <script>
     import ExpandContainer from "$lib/ExpandContainer.svelte";
     import * as yup from "yup";
-    import {REGEX_ROLES} from "../../../utils/constants.js";
     import {extractFormErrors} from "../../../utils/helpers.js";
     import {onMount} from "svelte";
     import Button from "$lib/Button.svelte";
-    import {postProviderLookup} from "../../../utils/dataFetchingAdmin.js";
+    import {postProviderLookup, postProvider} from "../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";
     import Switch from "$lib/Switch.svelte";
     import CheckIcon from "$lib/CheckIcon.svelte";
@@ -36,23 +35,33 @@
         danger_allow_insecure: false,
         authorization_endpoint: '',
         token_endpoint: '',
+        token_auth_method_basic: false,
         userinfo_endpoint: '',
-        use_pkce: '',
+        use_pkce: true,
         // user defined values
         name: '',
         client_id: '',
         client_secret: '',
+        scope: '',
         // maybe additional ones in the future like client_logo
     }
     // TODO add "the big ones" as templates in the future
     let modes = ['Auto', 'Custom'];
-    let mode = modes[1]; // TODO switch back - just for testing
-    // let mode = modes[0];
+    let mode = modes[0];
     $: isAuto = mode === modes[0];
 
     let formErrors = {};
     const schemaConfig = yup.object().shape({
         issuer: yup.string().url(),
+        authorization_endpoint: yup.string().url(),
+        token_endpoint: yup.string().url(),
+        userinfo_endpoint: yup.string().url(),
+
+        // TODO
+        name: yup.string(),
+        client_id: yup.string(),
+        client_secret: yup.string(),
+        scope: yup.string(),
     });
     const schemaLookup = yup.object().shape({
         issuer: yup.string().url(),
@@ -81,18 +90,18 @@
         err = '';
         isLoading = true;
 
-        // let res = await postProviderLookup(configLookup);
-        // if (res.ok) {
-        //     config = await res.json();
-        //     success = true;
-        // } else {
-        //     let body = await res.json();
-        //     if (body.message.includes('InvalidCertificate')) {
-        //         err = 'Insecure connection not allowed';
-        //     } else {
-        //         err = body.message;
-        //     }
-        // }
+        config.scope = config.scope.trim();
+        let res = await postProvider(config);
+        if (res.ok) {
+            success = true;
+        } else {
+            let body = await res.json();
+            if (body.message.includes('InvalidCertificate')) {
+                err = 'Insecure connection not allowed';
+            } else {
+                err = body.message;
+            }
+        }
 
         isLoading = false;
     }
@@ -109,7 +118,16 @@
 
         let res = await postProviderLookup(configLookup);
         if (res.ok) {
-            config = await res.json();
+            const body = await res.json();
+            config.issuer = body.issuer;
+            config.authorization_endpoint = body.authorization_endpoint;
+            config.danger_allow_http = body.danger_allow_http;
+            config.danger_allow_insecure = body.danger_allow_insecure;
+            config.token_endpoint = body.token_endpoint;
+            config.userinfo_endpoint = body.userinfo_endpoint;
+            config.token_auth_method_basic = body.token_auth_method_basic;
+            config.use_pkce = body.use_pkce;
+            config.scope = body.scope;
         } else {
             let body = await res.json();
             if (body.message.includes('InvalidCertificate')) {
@@ -135,7 +153,8 @@
             authorization_endpoint: '',
             token_endpoint: '',
             userinfo_endpoint: '',
-            use_pkce: '',
+            use_pkce: true,
+            scope: '',
         }
     }
 
@@ -342,6 +361,17 @@
                 </div>
             {/if}
 
+            <Input
+                    bind:value={config.scope}
+                    bind:error={formErrors.scope}
+                    autocomplete="off"
+                    placeholder="openid profile email"
+                    on:input={validateFormLookup}
+                    width={inputWidth}
+            >
+                SCOPE
+            </Input>
+
             <div class="desc">
                 Client name for the Rauthy login form
             </div>
@@ -375,8 +405,8 @@
                 At least a client secret or PKCE is required.
             </div>
             <PasswordInput
-                    bind:value={config.client_id}
-                    bind:error={formErrors.client_id}
+                    bind:value={config.client_secret}
+                    bind:error={formErrors.client_secret}
                     autocomplete="off"
                     placeholder="Client Secret"
                     on:input={validateFormLookup}
