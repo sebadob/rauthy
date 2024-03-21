@@ -11,7 +11,7 @@ create table auth_providers
     token_endpoint          varchar not null,
     userinfo_endpoint       varchar not null,
     client_id               varchar not null,
-    secret                  varchar,
+    secret                  bytea,
     scope                   varchar not null,
     token_auth_method_basic bool    not null,
     use_pkce                bool    not null,

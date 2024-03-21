@@ -3,6 +3,7 @@ use crate::entity::well_known::WellKnown;
 use crate::request::ProviderRequest;
 use crate::response::ProviderLookupResponse;
 use actix_web::web;
+use cryptr::EncValue;
 use rauthy_common::constants::{CACHE_NAME_12HR, IDX_AUTH_PROVIDER, RAUTHY_VERSION};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::new_store_id;
@@ -24,7 +25,7 @@ pub struct AuthProvider {
     pub userinfo_endpoint: String,
 
     pub client_id: String,
-    pub secret: Option<String>,
+    pub secret: Option<Vec<u8>>,
     pub scope: String,
 
     pub token_auth_method_basic: bool,
@@ -41,13 +42,8 @@ impl AuthProvider {
         payload: ProviderRequest,
     ) -> Result<Self, ErrorResponse> {
         let id = new_store_id();
-        let scope = payload
-            .scope
-            .split(' ')
-            // filter this way to catch multiple spaces in a row
-            .filter_map(|s| if !s.is_empty() { Some(s.trim()) } else { None })
-            .collect::<Vec<&str>>()
-            .join("+");
+        let scope = Self::cleanup_scope(&payload.scope);
+        let secret = Self::secret_encrypted(&payload.client_secret)?;
 
         let slf = Self {
             id,
@@ -57,7 +53,7 @@ impl AuthProvider {
             token_endpoint: payload.token_endpoint,
             userinfo_endpoint: payload.userinfo_endpoint,
             client_id: payload.client_id,
-            secret: payload.secret,
+            secret,
             scope,
             token_auth_method_basic: payload.token_auth_method_basic,
             use_pkce: payload.use_pkce,
@@ -101,15 +97,6 @@ impl AuthProvider {
         )
         .await?;
 
-        // cache_insert(
-        //     CACHE_NAME_12HR.to_string(),
-        //     Self::cache_idx(&slf.id),
-        //     &data.caches.ha_cache_config,
-        //     &slf,
-        //     AckLevel::Quorum,
-        // )
-        // .await?;
-
         Ok(slf)
     }
 
@@ -148,7 +135,43 @@ impl AuthProvider {
         id: String,
         payload: ProviderRequest,
     ) -> Result<(), ErrorResponse> {
-        // TODO
+        let scope = Self::cleanup_scope(&payload.scope);
+        let secret = Self::secret_encrypted(&payload.client_secret)?;
+
+        // TODO when implemented: logo = $12, logo_type = $13
+        query!(
+            r#"UPDATE auth_providers
+            SET name = $1, issuer = $2, authorization_endpoint = $3, token_endpoint = $4,
+            userinfo_endpoint = $5, client_id = $6, secret = $7, scope = $8,
+            token_auth_method_basic = $9, use_pkce = $10, root_pem = $11
+            WHERE id = $12"#,
+            payload.name,
+            payload.issuer,
+            payload.authorization_endpoint,
+            payload.token_endpoint,
+            payload.userinfo_endpoint,
+            payload.client_id,
+            secret,
+            scope,
+            payload.token_auth_method_basic,
+            payload.use_pkce,
+            payload.root_pem,
+            // payload.logo,
+            // payload.logo_type,
+            id,
+        )
+        .execute(&data.db)
+        .await?;
+
+        // just invalidating the cache instead of updating it manually is fine
+        // because providers are not updated often
+        cache_del(
+            CACHE_NAME_12HR.to_string(),
+            Self::cache_idx("all"),
+            &data.caches.ha_cache_config,
+        )
+        .await?;
+
         Ok(())
     }
 }
@@ -156,6 +179,15 @@ impl AuthProvider {
 impl AuthProvider {
     fn cache_idx(id: &str) -> String {
         format!("{}_{}", IDX_AUTH_PROVIDER, id)
+    }
+
+    fn cleanup_scope(scope: &str) -> String {
+        scope
+            .split(' ')
+            // filter this way to catch multiple spaces in a row
+            .filter_map(|s| if !s.is_empty() { Some(s.trim()) } else { None })
+            .collect::<Vec<&str>>()
+            .join("+")
     }
 
     pub async fn lookup_config(
@@ -250,5 +282,25 @@ impl AuthProvider {
             // TODO add `scopes_supported` Vec and make them selectable with checkboxes in the UI
             // instead of typing them in?
         })
+    }
+
+    fn secret_encrypted(secret: &Option<String>) -> Result<Option<Vec<u8>>, ErrorResponse> {
+        if let Some(secret) = &secret {
+            Ok(Some(
+                EncValue::encrypt(secret.as_bytes())?.into_bytes().to_vec(),
+            ))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn get_secret_cleartext(&self) -> Result<Option<String>, ErrorResponse> {
+        if let Some(secret) = &self.secret {
+            let bytes = EncValue::try_from(secret.clone())?.decrypt()?;
+            let cleartext = String::from_utf8_lossy(bytes.as_ref()).to_string();
+            Ok(Some(cleartext))
+        } else {
+            Ok(None)
+        }
     }
 }
