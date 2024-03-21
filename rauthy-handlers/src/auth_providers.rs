@@ -1,11 +1,40 @@
 use crate::ReqPrincipal;
-use actix_web::{post, web, HttpResponse};
+use actix_web::{get, post, web, HttpResponse};
 use actix_web_validator::Json;
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_provider::AuthProvider;
 use rauthy_models::request::{ProviderLookupRequest, ProviderRequest};
 use rauthy_models::response::ProviderResponse;
+
+/// GET all upstream auth providers
+///
+/// **Permissions**
+/// - `rauthy_admin`
+#[utoipa::path(
+    get,
+    path = "/providers",
+    tag = "providers",
+    responses(
+        (status = 200, description = "OK", body = ProviderResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[get("/providers")]
+pub async fn get_providers(
+    data: web::Data<AppState>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    let resp = AuthProvider::find_all(&data)
+        .await?
+        .into_iter()
+        .map(ProviderResponse::from)
+        .collect::<Vec<ProviderResponse>>();
+    Ok(HttpResponse::Ok().json(resp))
+}
 
 /// POST create a new upstream auth provider
 ///
@@ -30,20 +59,7 @@ pub async fn post_provider(
     principal.validate_admin_session()?;
 
     let provider = AuthProvider::create(&data, payload.into_inner()).await?;
-    Ok(HttpResponse::Ok().json(ProviderResponse {
-        id: provider.id,
-        issuer: provider.issuer,
-        authorization_endpoint: provider.authorization_endpoint,
-        token_endpoint: provider.token_endpoint,
-        userinfo_endpoint: provider.userinfo_endpoint,
-        client_id: provider.client_id,
-        secret: provider.secret,
-        name: provider.name,
-        scope: provider.scope,
-        use_pkce: provider.use_pkce,
-        token_auth_method_basic: provider.token_auth_method_basic,
-        root_pem: provider.root_pem,
-    }))
+    Ok(HttpResponse::Ok().json(ProviderResponse::from(provider)))
 }
 
 /// POST possible upstream auth provider config lookup

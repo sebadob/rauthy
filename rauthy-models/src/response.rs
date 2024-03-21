@@ -1,5 +1,6 @@
 use crate::app_state::AppState;
 use crate::entity::api_keys::{ApiKey, ApiKeyAccess};
+use crate::entity::auth_provider::AuthProvider;
 use crate::entity::clients::Client;
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType, JWKS};
@@ -346,6 +347,25 @@ pub struct ProviderResponse {
     pub root_pem: Option<String>,
     // pub logo: Option<Vec<u8>>,
     // pub logo_type: Option<String>,
+}
+
+impl From<AuthProvider> for ProviderResponse {
+    fn from(value: AuthProvider) -> Self {
+        Self {
+            id: value.id,
+            name: value.name,
+            issuer: value.issuer,
+            authorization_endpoint: value.authorization_endpoint,
+            token_endpoint: value.token_endpoint,
+            userinfo_endpoint: value.userinfo_endpoint,
+            client_id: value.client_id,
+            secret: value.secret,
+            scope: value.scope,
+            token_auth_method_basic: value.token_auth_method_basic,
+            use_pkce: value.use_pkce,
+            root_pem: value.root_pem,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]

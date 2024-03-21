@@ -6,9 +6,10 @@ use actix_web::web;
 use rauthy_common::constants::{CACHE_NAME_12HR, IDX_AUTH_PROVIDER, RAUTHY_VERSION};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::new_store_id;
-use redhac::{cache_insert, AckLevel};
+use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use reqwest::tls;
 use serde::{Deserialize, Serialize};
+use sqlx::{query, query_as};
 use std::time::Duration;
 use tracing::debug;
 
@@ -67,7 +68,7 @@ impl AuthProvider {
             logo_type: None,
         };
 
-        sqlx::query!(
+        query!(
             r#"
             INSERT INTO
             auth_providers (id, name, issuer, authorization_endpoint, token_endpoint, userinfo_endpoint,
@@ -91,17 +92,61 @@ impl AuthProvider {
         .execute(&data.db)
         .await?;
 
-        // TODO
+        // just invalidating the cache instead of updating it manually is fine
+        // because providers are not updated often
+        cache_del(
+            CACHE_NAME_12HR.to_string(),
+            Self::cache_idx("all"),
+            &data.caches.ha_cache_config,
+        )
+        .await?;
+
+        // cache_insert(
+        //     CACHE_NAME_12HR.to_string(),
+        //     Self::cache_idx(&slf.id),
+        //     &data.caches.ha_cache_config,
+        //     &slf,
+        //     AckLevel::Quorum,
+        // )
+        // .await?;
+
+        Ok(slf)
+    }
+
+    pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
+        if let Some(res) = cache_get!(
+            Vec<Self>,
+            CACHE_NAME_12HR.to_string(),
+            Self::cache_idx("all"),
+            &data.caches.ha_cache_config,
+            false
+        )
+        .await?
+        {
+            return Ok(res);
+        }
+
+        let res = query_as!(Self, "SELECT * FROM auth_providers")
+            .fetch_all(&data.db)
+            .await?;
+
+        // needed for rendering each single login page -> always cache this
         cache_insert(
             CACHE_NAME_12HR.to_string(),
-            IDX_AUTH_PROVIDER.to_string(),
+            Self::cache_idx("all"),
             &data.caches.ha_cache_config,
-            &slf,
+            &res,
             AckLevel::Quorum,
         )
         .await?;
 
-        Ok(slf)
+        Ok(res)
+    }
+}
+
+impl AuthProvider {
+    fn cache_idx(id: &str) -> String {
+        format!("{}_{}", IDX_AUTH_PROVIDER, id)
     }
 
     pub async fn lookup_config(
