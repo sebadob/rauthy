@@ -10,6 +10,7 @@
     import CheckIcon from "$lib/CheckIcon.svelte";
     import OptionSelect from "$lib/OptionSelect.svelte";
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
+    import {REGEX_CLIENT_NAME, REGEX_LOWERCASE_SPACE, REGEX_ROLES, REGEX_URI} from "../../../utils/constants.js";
 
     export let idx = -1;
     export let onSave;
@@ -17,14 +18,15 @@
     const inputWidth = '25rem';
 
     // let expandContainer;
-    let expandContainer = true;
+    let expandContainer = false;
     let isLoading = false;
     let err = '';
     let success = false;
     let timer;
 
     let configLookup = {
-        issuer: '',
+        issuer: 'https://iam.sebastiandobe.de', //TODO cleanup
+        // issuer: '',
         danger_allow_http: false,
         danger_allow_insecure: false,
     };
@@ -52,19 +54,18 @@
 
     let formErrors = {};
     const schemaConfig = yup.object().shape({
-        issuer: yup.string().url(),
+        issuer: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         authorization_endpoint: yup.string().url(),
         token_endpoint: yup.string().url(),
         userinfo_endpoint: yup.string().url(),
 
-        // TODO
-        name: yup.string(),
-        client_id: yup.string(),
-        client_secret: yup.string(),
-        scope: yup.string(),
+        name: yup.string().trim().matches(REGEX_CLIENT_NAME, "Can only contain: 'a-zA-Z0-9À-ÿ- ', length max: 128"),
+        client_id: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
+        client_secret: yup.string().trim().max(256, "Max 256 characters"),
+        scope: yup.string().trim().matches(REGEX_LOWERCASE_SPACE, "Can only contain: 'a-zA-Z0-9-_/ ', length max: 128"),
     });
     const schemaLookup = yup.object().shape({
-        issuer: yup.string().url(),
+        issuer: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
     });
 
     $: if (success) {
@@ -77,7 +78,10 @@
     }
 
     onMount(() => {
-        return () => clearTimeout(timer);
+        return () => {
+            expandContainer = false;
+            clearTimeout(timer);
+        }
     });
 
     async function onSubmitConfig() {
@@ -160,7 +164,7 @@
 
     async function validateFormConfig() {
         try {
-            await schemaLookup.validate(config, {abortEarly: false});
+            await schemaConfig.validate(config, {abortEarly: false});
             formErrors = {};
             return true;
         } catch (err) {
@@ -361,6 +365,10 @@
                 </div>
             {/if}
 
+            <div class="desc">
+                The scope the client should use when redirecting to the login.<br>
+                Provide the values separated by space.
+            </div>
             <Input
                     bind:value={config.scope}
                     bind:error={formErrors.scope}
