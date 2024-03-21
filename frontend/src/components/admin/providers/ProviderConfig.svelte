@@ -1,11 +1,10 @@
 <script>
     import * as yup from "yup";
-    import {extractFormErrors, isDefaultScope} from "../../../utils/helpers.js";
+    import {extractFormErrors} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
-    import {REGEX_CLIENT_NAME, REGEX_LOWERCASE_SPACE, REGEX_ROLES, REGEX_URI} from "../../../utils/constants.js";
+    import {REGEX_CLIENT_NAME, REGEX_LOWERCASE_SPACE, REGEX_URI} from "../../../utils/constants.js";
     import {onMount} from "svelte";
-    import {putScope} from "../../../utils/dataFetchingAdmin.js";
-    import ItemTiles from "$lib/itemTiles/ItemTiles.svelte";
+    import {putProvider} from "../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";
     import Switch from "$lib/Switch.svelte";
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
@@ -28,8 +27,11 @@
         }, 2000);
     }
 
-    onMount(() => {
+    $: if (provider.scope) {
         provider.scope = provider.scope.replaceAll('+', ' ');
+    }
+
+    onMount(() => {
         console.log(provider);
         return () => clearTimeout(timer);
     });
@@ -60,7 +62,7 @@
             return;
         }
 
-        if (!provider.use_pkce && !provider.secret) {
+        if (!provider.use_pkce && !provider.client_secret) {
             err = 'Must at least be a confidential client or use PKCE';
             return;
         }
@@ -68,13 +70,13 @@
         err = '';
         isLoading = true;
 
-        // let res = await putScope(scope.id, req);
-        // if (res.ok) {
-        //     success = true;
-        // } else {
-        //     let body = await res.json();
-        //     err = body.message;
-        // }
+        let res = await putProvider(provider.id, provider);
+        if (res.ok) {
+            success = true;
+        } else {
+            let body = await res.json();
+            err = body.message;
+        }
 
         isLoading = false;
     }

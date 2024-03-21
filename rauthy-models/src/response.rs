@@ -338,7 +338,7 @@ pub struct ProviderResponse {
     pub userinfo_endpoint: String,
 
     pub client_id: String,
-    pub secret: Option<String>,
+    pub client_secret: Option<String>,
     pub scope: String,
 
     pub token_auth_method_basic: bool,
@@ -349,9 +349,12 @@ pub struct ProviderResponse {
     // pub logo_type: Option<String>,
 }
 
-impl From<AuthProvider> for ProviderResponse {
-    fn from(value: AuthProvider) -> Self {
-        Self {
+impl TryFrom<AuthProvider> for ProviderResponse {
+    type Error = ErrorResponse;
+
+    fn try_from(value: AuthProvider) -> Result<Self, Self::Error> {
+        let secret = value.get_secret_cleartext()?;
+        Ok(Self {
             id: value.id,
             name: value.name,
             issuer: value.issuer,
@@ -359,12 +362,12 @@ impl From<AuthProvider> for ProviderResponse {
             token_endpoint: value.token_endpoint,
             userinfo_endpoint: value.userinfo_endpoint,
             client_id: value.client_id,
-            secret: value.secret,
+            client_secret: secret,
             scope: value.scope,
             token_auth_method_basic: value.token_auth_method_basic,
             use_pkce: value.use_pkce,
             root_pem: value.root_pem,
-        }
+        })
     }
 }
 

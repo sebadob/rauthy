@@ -250,6 +250,14 @@ export async function postProvider(data) {
     });
 }
 
+export async function putProvider(id, data) {
+    return await fetch(`/auth/v1/providers/${id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+}
+
 export async function postProviderLookup(data) {
     return await fetch('/auth/v1/providers/lookup', {
         method: 'POST',

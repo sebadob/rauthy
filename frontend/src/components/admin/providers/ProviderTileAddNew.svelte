@@ -91,7 +91,7 @@
             return;
         }
 
-        if (!provider.use_pkce && !provider.secret) {
+        if (!config.use_pkce && !config.client_secret) {
             err = 'Must at least be a confidential client or use PKCE';
             return;
         }

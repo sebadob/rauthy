@@ -28,11 +28,12 @@ pub async fn get_providers(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
-    let resp = AuthProvider::find_all(&data)
-        .await?
-        .into_iter()
-        .map(ProviderResponse::from)
-        .collect::<Vec<ProviderResponse>>();
+    let providers = AuthProvider::find_all(&data).await?;
+    let mut resp = Vec::with_capacity(providers.len());
+    for provider in providers {
+        resp.push(ProviderResponse::try_from(provider)?);
+    }
+
     Ok(HttpResponse::Ok().json(resp))
 }
 
@@ -58,7 +59,7 @@ pub async fn post_provider(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
-    if !payload.use_pkce && payload.secret.is_none() {
+    if !payload.use_pkce && payload.client_secret.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "Must at least be a confidential client or use PKCE".to_string(),
@@ -66,7 +67,7 @@ pub async fn post_provider(
     }
 
     let provider = AuthProvider::create(&data, payload.into_inner()).await?;
-    Ok(HttpResponse::Ok().json(ProviderResponse::from(provider)))
+    Ok(HttpResponse::Ok().json(ProviderResponse::try_from(provider)?))
 }
 
 /// POST possible upstream auth provider config lookup
@@ -126,7 +127,7 @@ pub async fn put_provider(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
-    if !payload.use_pkce && payload.secret.is_none() {
+    if !payload.use_pkce && payload.client_secret.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "Must at least be a confidential client or use PKCE".to_string(),
