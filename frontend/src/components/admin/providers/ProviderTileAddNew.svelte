@@ -91,6 +91,11 @@
             return;
         }
 
+        if (!provider.use_pkce && !provider.secret) {
+            err = 'Must at least be a confidential client or use PKCE';
+            return;
+        }
+
         err = '';
         isLoading = true;
 
@@ -304,7 +309,7 @@
                         bind:error={formErrors.issuer}
                         autocomplete="off"
                         placeholder="Issuer URL"
-                        on:input={validateFormLookup}
+                        on:input={validateFormConfig}
                         width={inputWidth}
                 >
                     ISSUER URL
@@ -329,7 +334,7 @@
                         bind:error={formErrors.authorization_endpoint}
                         autocomplete="off"
                         placeholder="Authorization Endpoint"
-                        on:input={validateFormLookup}
+                        on:input={validateFormConfig}
                         width={inputWidth}
                 >
                     AUTHORIZATION ENDPOINT
@@ -340,7 +345,7 @@
                         bind:error={formErrors.token_endpoint}
                         autocomplete="off"
                         placeholder="Token Endpoint"
-                        on:input={validateFormLookup}
+                        on:input={validateFormConfig}
                         width={inputWidth}
                 >
                     TOKEN ENDPOINT
@@ -351,7 +356,7 @@
                         bind:error={formErrors.userinfo_endpoint}
                         autocomplete="off"
                         placeholder="Userinfo Endpoint"
-                        on:input={validateFormLookup}
+                        on:input={validateFormConfig}
                         width={inputWidth}
                 >
                     USERINFO ENDPOINT
@@ -374,7 +379,7 @@
                     bind:error={formErrors.scope}
                     autocomplete="off"
                     placeholder="openid profile email"
-                    on:input={validateFormLookup}
+                    on:input={validateFormConfig}
                     width={inputWidth}
             >
                 SCOPE
@@ -388,7 +393,7 @@
                     bind:error={formErrors.name}
                     autocomplete="off"
                     placeholder="Client Name"
-                    on:input={validateFormLookup}
+                    on:input={validateFormConfig}
                     width={inputWidth}
             >
                 CLIENT NAME
@@ -402,7 +407,7 @@
                     bind:error={formErrors.client_id}
                     autocomplete="off"
                     placeholder="Client ID"
-                    on:input={validateFormLookup}
+                    on:input={validateFormConfig}
                     width={inputWidth}
             >
                 CLIENT ID
@@ -417,7 +422,7 @@
                     bind:error={formErrors.client_secret}
                     autocomplete="off"
                     placeholder="Client Secret"
-                    on:input={validateFormLookup}
+                    on:input={validateFormConfig}
                     width={inputWidth}
             >
                 CLIENT SECRET

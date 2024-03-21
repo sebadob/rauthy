@@ -1,7 +1,7 @@
 use crate::ReqPrincipal;
-use actix_web::{get, post, web, HttpResponse};
+use actix_web::{delete, get, post, put, web, HttpResponse};
 use actix_web_validator::Json;
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_provider::AuthProvider;
 use rauthy_models::request::{ProviderLookupRequest, ProviderRequest};
@@ -58,6 +58,13 @@ pub async fn post_provider(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
+    if !payload.use_pkce && payload.secret.is_none() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Must at least be a confidential client or use PKCE".to_string(),
+        ));
+    }
+
     let provider = AuthProvider::create(&data, payload.into_inner()).await?;
     Ok(HttpResponse::Ok().json(ProviderResponse::from(provider)))
 }
@@ -95,4 +102,63 @@ pub async fn post_provider_lookup(
     .await?;
 
     Ok(HttpResponse::Ok().json(resp))
+}
+
+/// PUT update an upstream auth provider
+///
+/// **Permissions**
+/// - `rauthy_admin`
+#[utoipa::path(
+    put,
+    path = "/providers",
+    tag = "providers",
+    responses(
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[put("/providers/{id}")]
+pub async fn put_provider(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+    payload: Json<ProviderRequest>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    if !payload.use_pkce && payload.secret.is_none() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Must at least be a confidential client or use PKCE".to_string(),
+        ));
+    }
+
+    todo!()
+    // let provider = AuthProvider::create(&data, payload.into_inner()).await?;
+    // Ok(HttpResponse::Ok().json(ProviderResponse::from(provider)))
+}
+
+/// DELETE update an upstream auth provider
+///
+/// **Permissions**
+/// - `rauthy_admin`
+#[utoipa::path(
+    delete,
+    path = "/providers",
+    tag = "providers",
+    responses(
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[delete("/providers/{id}")]
+pub async fn delete_provider(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    todo!()
+    // let provider = AuthProvider::create(&data, payload.into_inner()).await?;
+    // Ok(HttpResponse::Ok().json(ProviderResponse::from(provider)))
 }
