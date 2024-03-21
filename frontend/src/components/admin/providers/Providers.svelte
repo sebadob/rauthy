@@ -1,6 +1,8 @@
 <script>
     import {onMount} from "svelte";
     import FederationTileAddNew from "./ProviderTileAddNew.svelte";
+    import ProviderTile from "./ProviderTile.svelte";
+    import {getProviders} from "../../../utils/dataFetchingAdmin.js";
 
     let err = '';
     let providers = [];
@@ -10,14 +12,13 @@
     });
 
     async function fetchData() {
-        console.error("GET providers not yet implemented");
-        // let res = await getGroups();
-        // let body = await res.json();
-        // if (res.ok) {
-        //     providers = [...body];
-        // } else {
-        //     err = body.message;
-        // }
+        let res = await getProviders();
+        let body = await res.json();
+        if (res.ok) {
+            providers = [...body];
+        } else {
+            err = body.message;
+        }
     }
 
     function onSave() {
@@ -38,7 +39,7 @@
     <div id="federation">
         {#each providers as provider (provider.id)}
             <div>
-                <!--                <GroupTile bind:group onSave={onSave}/>-->
+                <ProviderTile bind:provider onSave={onSave}/>
             </div>
         {/each}
     </div>

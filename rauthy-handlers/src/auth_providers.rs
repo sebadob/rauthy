@@ -133,9 +133,8 @@ pub async fn put_provider(
         ));
     }
 
-    todo!()
-    // let provider = AuthProvider::create(&data, payload.into_inner()).await?;
-    // Ok(HttpResponse::Ok().json(ProviderResponse::from(provider)))
+    AuthProvider::update(&data, id.into_inner(), payload.into_inner()).await?;
+    Ok(HttpResponse::Ok().finish())
 }
 
 /// DELETE update an upstream auth provider

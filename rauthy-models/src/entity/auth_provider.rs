@@ -142,6 +142,15 @@ impl AuthProvider {
 
         Ok(res)
     }
+
+    pub async fn update(
+        data: &web::Data<AppState>,
+        id: String,
+        payload: ProviderRequest,
+    ) -> Result<(), ErrorResponse> {
+        // TODO
+        Ok(())
+    }
 }
 
 impl AuthProvider {
