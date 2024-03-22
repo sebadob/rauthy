@@ -42,27 +42,28 @@ impl AuthProvider {
         payload: ProviderRequest,
     ) -> Result<Self, ErrorResponse> {
         let id = new_store_id();
-        let scope = Self::cleanup_scope(&payload.scope);
-        let secret = Self::secret_encrypted(&payload.client_secret)?;
-
-        let slf = Self {
-            id,
-            name: payload.name,
-            issuer: payload.issuer,
-            authorization_endpoint: payload.authorization_endpoint,
-            token_endpoint: payload.token_endpoint,
-            userinfo_endpoint: payload.userinfo_endpoint,
-            client_id: payload.client_id,
-            secret,
-            scope,
-            token_auth_method_basic: payload.token_auth_method_basic,
-            use_pkce: payload.use_pkce,
-            root_pem: payload.root_pem,
-
-            // TODO when implemented
-            logo: None,
-            logo_type: None,
-        };
+        // let scope = Self::cleanup_scope(&payload.scope);
+        // let secret = Self::secret_encrypted(&payload.client_secret)?;
+        //
+        // let slf = Self {
+        //     id,
+        //     name: payload.name,
+        //     issuer: payload.issuer,
+        //     authorization_endpoint: payload.authorization_endpoint,
+        //     token_endpoint: payload.token_endpoint,
+        //     userinfo_endpoint: payload.userinfo_endpoint,
+        //     client_id: payload.client_id,
+        //     secret,
+        //     scope,
+        //     token_auth_method_basic: payload.token_auth_method_basic,
+        //     use_pkce: payload.use_pkce,
+        //     root_pem: payload.root_pem,
+        //
+        //     // TODO when implemented
+        //     logo: None,
+        //     logo_type: None,
+        // };
+        let slf = Self::try_from_id_req(id, payload)?;
 
         query!(
             r#"
@@ -138,9 +139,36 @@ impl AuthProvider {
         id: String,
         payload: ProviderRequest,
     ) -> Result<(), ErrorResponse> {
-        let scope = Self::cleanup_scope(&payload.scope);
-        let secret = Self::secret_encrypted(&payload.client_secret)?;
+        // let scope = Self::cleanup_scope(&payload.scope);
+        // let secret = Self::secret_encrypted(&payload.client_secret)?;
+        //
+        // Self {
+        //     id,
+        //     name: payload.name,
+        //     issuer: payload.issuer,
+        //     authorization_endpoint: payload.authorization_endpoint,
+        //     token_endpoint: payload.token_endpoint,
+        //     userinfo_endpoint: payload.userinfo_endpoint,
+        //     client_id: payload.client_id,
+        //     secret,
+        //     scope,
+        //     token_auth_method_basic: payload.token_auth_method_basic,
+        //     use_pkce: payload.use_pkce,
+        //     root_pem: payload.root_pem,
+        //
+        //     logo: None,
+        //     logo_type: None,
+        //     // TODO when implemented in the UI
+        //     // logo: payload.,
+        //     // logo_type: payload.use_pkce,
+        // }
+        // .save(data)
+        // .await
 
+        Self::try_from_id_req(id, payload)?.save(data).await
+    }
+
+    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         // TODO when implemented: logo = $12, logo_type = $13
         query!(
             r#"UPDATE auth_providers
@@ -148,20 +176,20 @@ impl AuthProvider {
             userinfo_endpoint = $5, client_id = $6, secret = $7, scope = $8,
             token_auth_method_basic = $9, use_pkce = $10, root_pem = $11
             WHERE id = $12"#,
-            payload.name,
-            payload.issuer,
-            payload.authorization_endpoint,
-            payload.token_endpoint,
-            payload.userinfo_endpoint,
-            payload.client_id,
-            secret,
-            scope,
-            payload.token_auth_method_basic,
-            payload.use_pkce,
-            payload.root_pem,
-            // payload.logo,
-            // payload.logo_type,
-            id,
+            self.name,
+            self.issuer,
+            self.authorization_endpoint,
+            self.token_endpoint,
+            self.userinfo_endpoint,
+            self.client_id,
+            self.secret,
+            self.scope,
+            self.token_auth_method_basic,
+            self.use_pkce,
+            self.root_pem,
+            // self.logo,
+            // self.logo_type,
+            self.id,
         )
         .execute(&data.db)
         .await?;
@@ -186,6 +214,32 @@ impl AuthProvider {
             .filter_map(|s| if !s.is_empty() { Some(s.trim()) } else { None })
             .collect::<Vec<&str>>()
             .join("+")
+    }
+
+    fn try_from_id_req(id: String, req: ProviderRequest) -> Result<Self, ErrorResponse> {
+        let scope = Self::cleanup_scope(&req.scope);
+        let secret = Self::secret_encrypted(&req.client_secret)?;
+
+        Ok(Self {
+            id,
+            name: req.name,
+            issuer: req.issuer,
+            authorization_endpoint: req.authorization_endpoint,
+            token_endpoint: req.token_endpoint,
+            userinfo_endpoint: req.userinfo_endpoint,
+            client_id: req.client_id,
+            secret,
+            scope,
+            token_auth_method_basic: req.token_auth_method_basic,
+            use_pkce: req.use_pkce,
+            root_pem: req.root_pem,
+
+            logo: None,
+            logo_type: None,
+            // TODO when implemented in the UI
+            // logo: payload.,
+            // logo_type: payload.use_pkce,
+        })
     }
 
     async fn invalidate_cache(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
