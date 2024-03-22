@@ -44,6 +44,7 @@ pub const CACHE_NAME_WEBAUTHN: &str = "webauthn";
 pub const CACHE_NAME_WEBAUTHN_DATA: &str = "webauthn-data";
 
 pub const IDX_APP_VERSION: &str = "rauthy_app_version";
+pub const IDX_AUTH_PROVIDER: &str = "auth_provider_";
 pub const IDX_CLIENTS: &str = "clients_";
 pub const IDX_CLIENT_LOGO: &str = "client_logo_";
 pub const IDX_GROUPS: &str = "groups_";
@@ -102,6 +103,7 @@ lazy_static! {
     pub static ref RE_LOWERCASE_SPACE: Regex = Regex::new(r"^[a-z0-9-_/\s]{2,128}$").unwrap();
     pub static ref RE_GROUPS: Regex = Regex::new(r"^[a-z0-9-_/,]{2,32}$").unwrap();
     pub static ref RE_MFA_CODE: Regex = Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap();
+    pub static ref RE_PEM: Regex = Regex::new(r"^(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)$").unwrap();
     pub static ref RE_PHONE: Regex = Regex::new(r"^\+[0-9]{0,32}$").unwrap();
     pub static ref RE_STREET: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-.\s]{0,48}$").unwrap();
     pub static ref RE_URI: Regex = Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+$").unwrap();

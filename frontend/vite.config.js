@@ -41,7 +41,7 @@ const config = {
             '/auth/v1/groups': backend,
             '/auth/v1/password_hash_times': backend,
             '/auth/v1/password_policy': backend,
-            '/auth/v1/providers/lookup': backend,
+            '/auth/v1/providers': backend,
             '/auth/v1/scopes': backend,
             '/auth/v1/sessions': backend,
             '/auth/v1/update_language': backend,

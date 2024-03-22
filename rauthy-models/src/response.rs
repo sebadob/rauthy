@@ -1,5 +1,6 @@
 use crate::app_state::AppState;
 use crate::entity::api_keys::{ApiKey, ApiKeyAccess};
+use crate::entity::auth_provider::AuthProvider;
 use crate::entity::clients::Client;
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType, JWKS};
@@ -327,11 +328,57 @@ impl From<PasswordPolicy> for PasswordPolicyResponse {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct ProviderResponse {
+    pub id: String,
+    pub name: String,
+
+    pub issuer: String,
+    pub authorization_endpoint: String,
+    pub token_endpoint: String,
+    pub userinfo_endpoint: String,
+
+    pub client_id: String,
+    pub client_secret: Option<String>,
+    pub scope: String,
+
+    pub token_auth_method_basic: bool,
+    pub use_pkce: bool,
+
+    pub root_pem: Option<String>,
+    // pub logo: Option<Vec<u8>>,
+    // pub logo_type: Option<String>,
+}
+
+impl TryFrom<AuthProvider> for ProviderResponse {
+    type Error = ErrorResponse;
+
+    fn try_from(value: AuthProvider) -> Result<Self, Self::Error> {
+        let secret = value.get_secret_cleartext()?;
+        Ok(Self {
+            id: value.id,
+            name: value.name,
+            issuer: value.issuer,
+            authorization_endpoint: value.authorization_endpoint,
+            token_endpoint: value.token_endpoint,
+            userinfo_endpoint: value.userinfo_endpoint,
+            client_id: value.client_id,
+            client_secret: secret,
+            scope: value.scope,
+            token_auth_method_basic: value.token_auth_method_basic,
+            use_pkce: value.use_pkce,
+            root_pem: value.root_pem,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct ProviderLookupResponse {
     pub issuer: String,
     pub authorization_endpoint: String,
     pub token_endpoint: String,
     pub userinfo_endpoint: String,
+    pub scope: String,
+    pub token_auth_method_basic: bool,
     pub use_pkce: bool,
     pub danger_allow_http: bool,
     pub danger_allow_insecure: bool,

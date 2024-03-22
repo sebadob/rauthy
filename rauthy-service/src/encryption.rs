@@ -3,6 +3,7 @@ use cryptr::{EncKeys, EncValue};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::ApiKeyEntity;
+use rauthy_models::entity::auth_provider::AuthProvider;
 use rauthy_models::entity::clients::Client;
 use tracing::info;
 
@@ -75,6 +76,25 @@ pub async fn migrate_encryption_alg(
         modified += 1;
     }
     info!("Finished ApiKeys migration to key id: {}", new_kid);
+
+    // migrate auth providers
+    let providers = AuthProvider::find_all(data).await?;
+    for mut provider in providers {
+        if let Some(plaintext) = provider.get_secret_cleartext()? {
+            provider.secret = Some(
+                EncValue::encrypt_with_key_id(plaintext.as_ref(), new_kid.to_string())?
+                    .into_bytes()
+                    .to_vec(),
+            );
+            provider.save(data).await?;
+
+            modified += 1;
+        };
+    }
+    info!(
+        "Finished auth provider secrets migration to key id: {}",
+        new_kid
+    );
 
     info!(
         "Finished secrets migration to key id: {} after {} ms. Modified {} encryption's",

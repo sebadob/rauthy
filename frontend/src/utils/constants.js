@@ -21,6 +21,7 @@ export const REGEX_ATTR_DESC = /^[a-zA-Z0-9\-_/\s]{0,128}$/gm;
 export const REGEX_ATTR_KEY = /^[a-zA-Z0-9\-_/]{2,32}$/gm;
 export const REGEX_CLIENT_ID = /^[a-zA-Z0-9\-_/]{2,128}$/gm;
 export const REGEX_CLIENT_NAME = /^[a-zA-Z0-9À-ÿ\-\s]{0,128}$/gm;
+export const REGEX_LOWERCASE_SPACE = /^[a-z0-9-_\/\s]{2,128}$/gm;
 export const REGEX_ROLES = /^[a-z0-9\-_/]{2,128}$/gm;
 export const REGEX_URI = /^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+$/gm;
 export const REGEX_URI_SPACE = /^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%\s]+$/m;
@@ -31,60 +32,60 @@ export const REGEX_CSS_COLOR = /(#(?:[0-9a-f]{2}){2,4}$|(#[0-9a-f]{3}$)|(rgb|hsl
 
 
 export const EVENT_LEVELS = [
-	'Info',
-	'Notice',
-	'Warning',
-	'Critical'
+    'Info',
+    'Notice',
+    'Warning',
+    'Critical'
 ]
 export const EVENT_TYPES = [
-	'InvalidLogins',
-	'IpBlacklisted',
-	'IpBlacklistRemoved',
-	'JwksRotated',
-	'NewUserRegistered',
-	'NewRauthyAdmin',
-	'NewRauthyVersion',
-	'PossibleBruteForce',
-	'RauthyStarted',
-	'RauthyHealthy',
-	'RauthyUnhealthy',
-	'SecretsMigrated',
-	'UserEmailChange',
-	'UserPasswordReset',
-	'Test',
+    'InvalidLogins',
+    'IpBlacklisted',
+    'IpBlacklistRemoved',
+    'JwksRotated',
+    'NewUserRegistered',
+    'NewRauthyAdmin',
+    'NewRauthyVersion',
+    'PossibleBruteForce',
+    'RauthyStarted',
+    'RauthyHealthy',
+    'RauthyUnhealthy',
+    'SecretsMigrated',
+    'UserEmailChange',
+    'UserPasswordReset',
+    'Test',
 ]
 export const LANGUAGES = ['DE', 'EN'];
 export const TOKEN_ALGS = [
-	'RS256',
-	'RS384',
-	'RS512',
-	'EdDSA'
+    'RS256',
+    'RS384',
+    'RS512',
+    'EdDSA'
 ]
 
 export const FLOWS = [{
-		label: 'authorization_code',
-		value: false,
-	},
-	{
-		label: 'client_credentials',
-		value: false,
-	},
-	{
-		label: 'password',
-		value: false,
-	},
-	{
-		label: 'refresh_token',
-		value: false,
-	},
+    label: 'authorization_code',
+    value: false,
+},
+    {
+        label: 'client_credentials',
+        value: false,
+    },
+    {
+        label: 'password',
+        value: false,
+    },
+    {
+        label: 'refresh_token',
+        value: false,
+    },
 ];
 
 export const PKCE_CHALLENGES = [{
-		label: 'S256',
-		value: false,
-	},
-	{
-		label: 'plain',
-		value: false,
-	},
+    label: 'S256',
+    value: false,
+},
+    {
+        label: 'plain',
+        value: false,
+    },
 ];
