@@ -4,11 +4,11 @@
     import TabBar from "$lib/TabBar.svelte";
     import {slide} from 'svelte/transition';
     import ProviderConfig from "./ProviderConfig.svelte";
+    import ProviderDelete from "./ProviderDelete.svelte";
 
     export let provider = {};
     export let onSave;
 
-    let isLoading = false;
     let expandContainer;
 
     const tabBarItems = [
@@ -51,7 +51,7 @@
 
         {:else if selected === 'DELETE'}
             <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
-                <!--                <ScopeDelete bind:scope onSave={onDelete}/>-->
+                <ProviderDelete bind:provider bind:onSave/>
             </div>
         {/if}
     </div>

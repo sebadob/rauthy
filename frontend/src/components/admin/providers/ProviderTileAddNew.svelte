@@ -17,7 +17,6 @@
 
     const inputWidth = '25rem';
 
-    // let expandContainer;
     let expandContainer = false;
     let isLoading = false;
     let err = '';
@@ -25,8 +24,7 @@
     let timer;
 
     let configLookup = {
-        issuer: 'https://iam.sebastiandobe.de', //TODO cleanup
-        // issuer: '',
+        issuer: '',
         danger_allow_http: false,
         danger_allow_insecure: false,
     };
