@@ -88,14 +88,7 @@ impl AuthProvider {
         .execute(&data.db)
         .await?;
 
-        // just invalidating the cache instead of updating it manually is fine
-        // because providers are not updated often
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            Self::cache_idx("all"),
-            &data.caches.ha_cache_config,
-        )
-        .await?;
+        Self::invalidate_cache(data).await?;
 
         Ok(slf)
     }
@@ -128,6 +121,16 @@ impl AuthProvider {
         .await?;
 
         Ok(res)
+    }
+
+    pub async fn delete(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
+        query!("DELETE FROM auth_providers WHERE id = $1", id)
+            .execute(&data.db)
+            .await?;
+
+        Self::invalidate_cache(data).await?;
+
+        Ok(())
     }
 
     pub async fn update(
@@ -165,12 +168,7 @@ impl AuthProvider {
 
         // just invalidating the cache instead of updating it manually is fine
         // because providers are not updated often
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            Self::cache_idx("all"),
-            &data.caches.ha_cache_config,
-        )
-        .await?;
+        Self::invalidate_cache(data).await?;
 
         Ok(())
     }
@@ -188,6 +186,16 @@ impl AuthProvider {
             .filter_map(|s| if !s.is_empty() { Some(s.trim()) } else { None })
             .collect::<Vec<&str>>()
             .join("+")
+    }
+
+    async fn invalidate_cache(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        cache_del(
+            CACHE_NAME_12HR.to_string(),
+            Self::cache_idx("all"),
+            &data.caches.ha_cache_config,
+        )
+        .await?;
+        Ok(())
     }
 
     pub async fn lookup_config(

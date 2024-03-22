@@ -111,7 +111,7 @@ pub async fn post_provider_lookup(
 /// - `rauthy_admin`
 #[utoipa::path(
     put,
-    path = "/providers",
+    path = "/providers/{id}",
     tag = "providers",
     responses(
         (status = 400, description = "BadRequest", body = ErrorResponse),
@@ -144,7 +144,7 @@ pub async fn put_provider(
 /// - `rauthy_admin`
 #[utoipa::path(
     delete,
-    path = "/providers",
+    path = "/providers/{id}",
     tag = "providers",
     responses(
         (status = 404, description = "NotFound", body = ErrorResponse),
@@ -158,7 +158,6 @@ pub async fn delete_provider(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
-    todo!()
-    // let provider = AuthProvider::create(&data, payload.into_inner()).await?;
-    // Ok(HttpResponse::Ok().json(ProviderResponse::from(provider)))
+    AuthProvider::delete(&data, &id.into_inner()).await?;
+    Ok(HttpResponse::Ok().finish())
 }
