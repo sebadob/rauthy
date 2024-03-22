@@ -18,10 +18,10 @@
 // directly via the `/authorization` page and delete the cookie data.
 //
 // Notes and TODO:
-// - [ ] Providers should be configurable over the Admin UI:
+// - [x] Providers should be configurable over the Admin UI:
 //     - [x] Either, enter the ISS URL and Rauthy will try to do an auto-lookup and config
 //     - [x] Or, provide an options list in the UI with templated values for the most known out there
-//     - [ ] Update and Delete for providers
+//     - [x] Update and Delete for providers
 // - [x] The amount of configurable providers should not be limited
 // - [x] !!! Do not link a user to multiple providers to reduce attack surface. This "feature" would
 // not really be a quality of life improvement, but actually just support the lazyness of users.
@@ -57,8 +57,8 @@
 //    - Simply always federate it and only use values that Rauthy does not have?
 //    - Should it be possible to "un-federate" an account on Rauthy and basically remove the link?
 //    - At the same time, should it be possible to federate it on purpose via account page?
-// - [ ] Save upstream provider secrets only encrypted
-// - [ ] include provider secrets in secrets migration task
+// - [x] Save upstream provider secrets only encrypted
+// - [x] include provider secrets in secrets migration task
 // - [x] custom validation check for providers to either be confidential or support pkce
 //
 //
