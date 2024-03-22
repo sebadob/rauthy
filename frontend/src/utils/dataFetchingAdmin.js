@@ -258,6 +258,13 @@ export async function putProvider(id, data) {
     });
 }
 
+export async function deleteProvider(id) {
+    return await fetch(`/auth/v1/providers/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+    });
+}
+
 export async function postProviderLookup(data) {
     return await fetch('/auth/v1/providers/lookup', {
         method: 'POST',
