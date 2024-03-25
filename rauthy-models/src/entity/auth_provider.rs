@@ -4,7 +4,9 @@ use crate::request::ProviderRequest;
 use crate::response::ProviderLookupResponse;
 use actix_web::web;
 use cryptr::EncValue;
-use rauthy_common::constants::{CACHE_NAME_12HR, IDX_AUTH_PROVIDER, RAUTHY_VERSION};
+use rauthy_common::constants::{
+    CACHE_NAME_12HR, IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, RAUTHY_VERSION,
+};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::new_store_id;
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
@@ -249,6 +251,7 @@ impl AuthProvider {
             &data.caches.ha_cache_config,
         )
         .await?;
+        AuthProviderTemplate::invalidate_cache(data).await?;
         Ok(())
     }
 
@@ -364,5 +367,66 @@ impl AuthProvider {
         } else {
             Ok(None)
         }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthProviderTemplate {
+    pub id: String,
+    pub name: String,
+    // pub logo: Option<Vec<u8>>,
+    // pub logo_type: Option<String>,
+}
+
+impl AuthProviderTemplate {
+    async fn invalidate_cache(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        cache_del(
+            CACHE_NAME_12HR.to_string(),
+            IDX_AUTH_PROVIDER_TEMPLATE.to_string(),
+            &data.caches.ha_cache_config,
+        )
+        .await?;
+        Ok(())
+    }
+
+    pub async fn get_all_json_template(
+        data: &web::Data<AppState>,
+    ) -> Result<Option<String>, ErrorResponse> {
+        if let Some(res) = cache_get!(
+            Option<String>,
+            CACHE_NAME_12HR.to_string(),
+            IDX_AUTH_PROVIDER_TEMPLATE.to_string(),
+            &data.caches.ha_cache_config,
+            false
+        )
+        .await?
+        {
+            return Ok(res);
+        }
+
+        let providers = AuthProvider::find_all(data)
+            .await?
+            .into_iter()
+            .map(|p| Self {
+                id: p.id,
+                name: p.name,
+            })
+            .collect::<Vec<Self>>();
+
+        let json = if providers.is_empty() {
+            None
+        } else {
+            Some(serde_json::to_string(&providers)?)
+        };
+        cache_insert(
+            CACHE_NAME_12HR.to_string(),
+            IDX_AUTH_PROVIDER_TEMPLATE.to_string(),
+            &data.caches.ha_cache_config,
+            &json,
+            AckLevel::Quorum,
+        )
+        .await?;
+
+        Ok(json)
     }
 }
