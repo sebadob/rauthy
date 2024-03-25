@@ -28,6 +28,7 @@
     let csrf = '';
     let refresh = false;
     let existingMfaUser;
+    let providers = [];
     // let webauthnData = {
     // 	code: "asdjknfasdjklfnasdlkjf",
     //   header_csrf: "askjdfgnsdfjklgn",
@@ -105,6 +106,10 @@
 
         csrf = window.document.getElementsByName('rauthy-csrf-token')[0].id
         saveCsrfToken(csrf);
+
+        // demo value for testing
+        // providers = JSON.parse('[{"id": "z6rC5VvymQOev50Pwq0oL0KD", "name": "dev-test"},{"id": "z6rC5VvymQOev50Pwq0oL0Kd", "name": "dev-test2"}]');
+        providers = JSON.parse(document.getElementsByTagName('template').namedItem('auth_providers').innerHTML);
 
         const params = getQueryParams();
         clientId = params.client_id;
@@ -185,8 +190,8 @@
             clientMfaForce = true;
         } else if (res.status === 429) {
             // 429 -> too many failed logins
-            let notBefore =  Number.parseInt(res.headers.get('x-retry-not-before'));
-            let nbfDate =  formatDateFromTs(notBefore);
+            let notBefore = Number.parseInt(res.headers.get('x-retry-not-before'));
+            let nbfDate = formatDateFromTs(notBefore);
             let diff = notBefore * 1000 - new Date().getTime();
 
             tooManyRequests = true;
@@ -220,6 +225,10 @@
             formValues.password = '';
             err = '';
         }
+    }
+
+    async function providerLogin(id) {
+        console.error('TODO - providerLogin - id: ' + id);
     }
 
     function onWebauthnError() {
@@ -338,19 +347,29 @@
 
                 {#if !tooManyRequests && !clientMfaForce}
                     {#if showReset}
-                        <div class="btn">
+                        <div class="btn flex-col">
                             <Button on:click={requestReset}>
                                 {t.passwordRequest?.toUpperCase()}
                             </Button>
                         </div>
                     {:else}
-                        <div class="btn">
+                        <div class="btn flex-col">
                             <Button on:click={onSubmit} bind:isLoading>
                                 {t.login?.toUpperCase()}
                             </Button>
                         </div>
                     {/if}
                 {/if}
+            {/if}
+
+            {#if providers}
+                <div class="providers flex-col">
+                    {#each providers as provider (provider.id)}
+                        <Button on:click={() => providerLogin(provider.id)} level={3}>
+                            {provider.name}
+                        </Button>
+                    {/each}
+                </div>
             {/if}
 
             {#if err}
@@ -366,7 +385,7 @@
             {/if}
 
             {#if clientMfaForce}
-                <div class="btn">
+                <div class="btn flex-col">
                     <Button on:click={() => window.location.href = '/auth/v1/account'}>
                         ACCOUNT LOGIN
                     </Button>
@@ -381,6 +400,7 @@
 <style>
     .btn {
         margin: 5px 0;
+        display: flex;
     }
 
     .container {
@@ -398,6 +418,11 @@
         max-width: 15rem;
         margin: -5px 10px 0 5px;
         color: var(--col-err)
+    }
+
+    .flex-col {
+        display: flex;
+        flex-direction: column;
     }
 
     .forgotten {
@@ -422,6 +447,10 @@
     .logo {
         width: 84px;
         height: 84px;
+    }
+
+    .providers {
+        margin-top: .66rem;
     }
 
     .success {
