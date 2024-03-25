@@ -16,7 +16,7 @@ create table auth_providers
     token_auth_method_basic bool    not null,
     use_pkce                bool    not null,
     root_pem                varchar,
-    logo                    bytea,
+    logo                    blob,
     logo_type               varchar
 );
 
