@@ -54,6 +54,7 @@ pub struct IndexHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl IndexHtml<'_> {
@@ -104,6 +105,7 @@ pub struct AccountHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl AccountHtml<'_> {
@@ -151,6 +153,7 @@ pub struct AdminHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl AdminHtml<'_> {
@@ -198,6 +201,7 @@ pub struct ErrorHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl ErrorHtml<'_> {
@@ -263,6 +267,7 @@ pub struct Error1Html<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl Error1Html<'_> {
@@ -316,6 +321,7 @@ pub struct Error2Html<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl Error2Html<'_> {
@@ -369,6 +375,7 @@ pub struct Error3Html<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl Error3Html<'_> {
@@ -422,6 +429,7 @@ pub struct AdminApiKeysHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl AdminApiKeysHtml<'_> {
@@ -469,6 +477,7 @@ pub struct AdminAttributesHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl AdminAttributesHtml<'_> {
@@ -516,6 +525,7 @@ pub struct AdminBlacklistHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl AdminBlacklistHtml<'_> {
@@ -563,6 +573,7 @@ pub struct AdminClientsHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl AdminClientsHtml<'_> {
@@ -610,6 +621,7 @@ pub struct AdminConfigHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl AdminConfigHtml<'_> {
@@ -657,6 +669,7 @@ pub struct AdminDocsHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl AdminDocsHtml<'_> {
@@ -704,6 +717,7 @@ pub struct AdminEventsHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl AdminEventsHtml<'_> {
@@ -751,6 +765,7 @@ pub struct AdminGroupsHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl AdminGroupsHtml<'_> {
@@ -798,6 +813,7 @@ pub struct AdminRolesHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl AdminRolesHtml<'_> {
@@ -845,6 +861,7 @@ pub struct AdminScopesHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl AdminScopesHtml<'_> {
@@ -892,6 +909,7 @@ pub struct AdminSessionsHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl AdminSessionsHtml<'_> {
@@ -939,6 +957,7 @@ pub struct AdminUsersHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl AdminUsersHtml<'_> {
@@ -986,6 +1005,7 @@ pub struct AuthorizeHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: String,
 }
 
 impl AuthorizeHtml<'_> {
@@ -995,6 +1015,7 @@ impl AuthorizeHtml<'_> {
         action: FrontendAction,
         colors: &Colors,
         lang: &Language,
+        auth_providers_json: Option<String>,
     ) -> String {
         let mut res = AuthorizeHtml {
             lang: lang.as_str(),
@@ -1014,8 +1035,10 @@ impl AuthorizeHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             i18n: I18nAuthorize::build(lang).as_json(),
+            auth_providers: auth_providers_json.unwrap_or_default(),
             ..Default::default()
         };
+
         if client_name.is_some() {
             res.data = client_name.as_ref().unwrap();
         }
@@ -1045,6 +1068,7 @@ pub struct CallbackHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl CallbackHtml<'_> {
@@ -1092,6 +1116,7 @@ pub struct LogoutHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl LogoutHtml<'_> {
@@ -1142,6 +1167,7 @@ pub struct PwdResetHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl PwdResetHtml<'_> {
@@ -1226,6 +1252,7 @@ pub struct UserEmailChangeConfirmHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl UserEmailChangeConfirmHtml<'_> {
@@ -1277,6 +1304,7 @@ pub struct UserRegisterHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
+    pub auth_providers: &'a str,
 }
 
 impl UserRegisterHtml<'_> {
