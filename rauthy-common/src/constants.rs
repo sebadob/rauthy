@@ -21,6 +21,7 @@ pub const TOKEN_DPOP_NONCE: &str = "DPoP-nonce";
 pub const COOKIE_SESSION: &str = "rauthy-session";
 pub const COOKIE_MFA: &str = "rauthy-mfa";
 pub const COOKIE_LOCALE: &str = "locale";
+pub const COOKIE_UPSTREAM_CALLBACK: &str = "upstream_auth_callback";
 pub const PWD_RESET_COOKIE: &str = "rauthy-pwd-reset";
 pub const APP_ID_HEADER: &str = "mfa-app-id";
 pub const CSRF_HEADER: &str = "csrf-token";
@@ -30,9 +31,11 @@ pub const ARGON2ID_M_COST_MIN: u32 = 32768;
 pub const ARGON2ID_T_COST_MIN: u32 = 1;
 pub const API_KEY_LENGTH: usize = 64;
 pub const EVENTS_LATEST_LIMIT: u16 = 100;
+pub const UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS: u16 = 300;
 
 pub const CACHE_NAME_12HR: &str = "12hr";
 pub const CACHE_NAME_AUTH_CODES: &str = "auth-codes";
+pub const CACHE_NAME_AUTH_PROVIDER_CALLBACK: &str = "auth-provider-callback";
 pub const CACHE_NAME_CLIENTS_DYN: &str = "clients-dyn";
 pub const CACHE_NAME_DPOP_NONCES: &str = "dpop-nonces";
 pub const CACHE_NAME_EPHEMERAL_CLIENTS: &str = "ephemeral-clients";
@@ -120,6 +123,14 @@ lazy_static! {
             "https"
         };
         format!("{}://{}", scheme, *PUB_URL)
+    };
+    pub static ref PUB_URL_WITH_SCHEME_ENCODED: String = {
+        let scheme = if env::var("LISTEN_SCHEME").as_deref() == Ok("http") && !*PROXY_MODE {
+            "http"
+        } else {
+            "https"
+        };
+        format!("{}%3A%2F%2F{}", scheme, *PUB_URL)
     };
     pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
         let scheme = if *DEV_MODE && *DEV_DPOP_HTTP { "http" } else { "https" };

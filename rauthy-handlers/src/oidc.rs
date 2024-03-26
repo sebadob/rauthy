@@ -187,6 +187,7 @@ pub async fn get_authorize(
 ///
 /// **Permissions**
 /// - `session-init`
+/// - `session-auth`
 #[utoipa::path(
     post,
     path = "/oidc/authorize",

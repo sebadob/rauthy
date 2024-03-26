@@ -8,12 +8,13 @@ use actix_web_prom::PrometheusMetricsBuilder;
 use cryptr::EncKeys;
 use prometheus::Registry;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_CLIENTS_DYN, CACHE_NAME_DPOP_NONCES,
-    CACHE_NAME_EPHEMERAL_CLIENTS, CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW, CACHE_NAME_SESSIONS,
-    CACHE_NAME_USERS, CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, DPOP_NONCE_EXP,
-    DYN_CLIENT_RATE_LIMIT_SEC, DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG, ENABLE_WEB_ID,
-    EPHEMERAL_CLIENTS_CACHE_LIFETIME, POW_EXP, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL,
-    SWAGGER_UI_INTERNAL, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
+    CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_AUTH_PROVIDER_CALLBACK,
+    CACHE_NAME_CLIENTS_DYN, CACHE_NAME_DPOP_NONCES, CACHE_NAME_EPHEMERAL_CLIENTS,
+    CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW, CACHE_NAME_SESSIONS, CACHE_NAME_USERS,
+    CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, DPOP_NONCE_EXP, DYN_CLIENT_RATE_LIMIT_SEC,
+    DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG, ENABLE_WEB_ID, EPHEMERAL_CLIENTS_CACHE_LIFETIME,
+    POW_EXP, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
+    UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::password_hasher;
 use rauthy_handlers::middleware::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -126,6 +127,13 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
     cache_config.spawn_cache(
         CACHE_NAME_AUTH_CODES.to_string(),
         redhac::TimedCache::with_lifespan(300 + *WEBAUTHN_REQ_EXP),
+        Some(64),
+    );
+
+    // auth provider callbacks
+    cache_config.spawn_cache(
+        CACHE_NAME_AUTH_PROVIDER_CALLBACK.to_string(),
+        redhac::TimedCache::with_lifespan(UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as u64),
         Some(64),
     );
 
@@ -448,6 +456,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(api_keys::put_api_key_secret)
                             .service(auth_providers::get_providers)
                             .service(auth_providers::post_provider)
+                            .service(auth_providers::post_provider_login)
                             .service(auth_providers::post_provider_lookup)
                             .service(auth_providers::put_provider)
                             .service(auth_providers::delete_provider)
