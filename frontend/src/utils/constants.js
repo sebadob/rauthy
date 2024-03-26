@@ -2,6 +2,7 @@ export const PKCE_VERIFIER = 'pkce_verifier';
 export const CSRF_TOKEN = 'csrf_token';
 export const ACCESS_TOKEN = 'access_token';
 export const ID_TOKEN = 'id_token';
+export const PROVIDER_TOKEN = 'provider_token';
 
 export const AUTH_ENDPOINT = '/auth/v1/oidc/authorize';
 export const CLIENT_ID = 'rauthy';

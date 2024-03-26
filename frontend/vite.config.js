@@ -24,7 +24,7 @@ const config = {
             '/auth/v1/blacklist': backend,
             '/auth/v1/events': backend,
             '/auth/v1/i18n': backend,
-            '/auth/v1/oidc/authorize': backend,
+            // '/auth/v1/oidc/authorize': backend,
             '/auth/v1/oidc/callback': backend,
             '/auth/v1/oidc/certs': backend,
             '/auth/v1/oidc/logout': backend,

@@ -133,6 +133,14 @@ export async function postPasswordResetRequest(data) {
     });
 }
 
+export async function postProviderLogin(data) {
+    return await fetch('/auth/v1/providers/login', {
+        method: 'POST',
+        headers: getCsrfHeaders(),
+        body: JSON.stringify(data),
+    });
+}
+
 export async function postTestEvent() {
     return await fetch('/auth/v1/events/test', {
         method: 'POST',
