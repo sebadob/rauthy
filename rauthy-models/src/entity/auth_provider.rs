@@ -1,21 +1,29 @@
 use crate::app_state::AppState;
+use crate::entity::clients::Client;
 use crate::entity::well_known::WellKnown;
-use crate::request::ProviderRequest;
+use crate::request::{ProviderLoginRequest, ProviderRequest};
 use crate::response::ProviderLookupResponse;
-use actix_web::web;
+use actix_web::cookie::Cookie;
+use actix_web::http::header::HeaderValue;
+use actix_web::{cookie, web};
+use cryptr::utils::secure_random_alnum;
 use cryptr::EncValue;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, RAUTHY_VERSION,
+    CACHE_NAME_12HR, CACHE_NAME_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
+    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PUB_URL_WITH_SCHEME_ENCODED, RAUTHY_VERSION,
+    UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::new_store_id;
+use rauthy_common::utils::{base64_encode, new_store_id};
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use reqwest::tls;
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
+use std::fmt::Write;
 use std::time::Duration;
 use tracing::debug;
 
+/// Upstream Auth Provider for upstream logins without a local Rauthy account
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthProvider {
     pub id: String,
@@ -91,7 +99,45 @@ impl AuthProvider {
         .execute(&data.db)
         .await?;
 
-        Self::invalidate_cache(data).await?;
+        cache_insert(
+            CACHE_NAME_12HR.to_string(),
+            Self::cache_idx(&slf.id),
+            &data.caches.ha_cache_config,
+            &slf,
+            AckLevel::Quorum,
+        )
+        .await?;
+
+        Self::invalidate_cache_all(data).await?;
+
+        Ok(slf)
+    }
+
+    pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
+        if let Some(res) = cache_get!(
+            Self,
+            CACHE_NAME_12HR.to_string(),
+            Self::cache_idx(&id),
+            &data.caches.ha_cache_config,
+            false
+        )
+        .await?
+        {
+            return Ok(res);
+        }
+
+        let slf = query_as!(Self, "SELECT * FROM auth_providers WHERE id = $1", id)
+            .fetch_one(&data.db)
+            .await?;
+
+        cache_insert(
+            CACHE_NAME_12HR.to_string(),
+            Self::cache_idx(id),
+            &data.caches.ha_cache_config,
+            &slf,
+            AckLevel::Quorum,
+        )
+        .await?;
 
         Ok(slf)
     }
@@ -131,7 +177,13 @@ impl AuthProvider {
             .execute(&data.db)
             .await?;
 
-        Self::invalidate_cache(data).await?;
+        Self::invalidate_cache_all(data).await?;
+        cache_del(
+            CACHE_NAME_12HR.to_string(),
+            Self::cache_idx(id),
+            &data.caches.ha_cache_config,
+        )
+        .await?;
 
         Ok(())
     }
@@ -196,9 +248,16 @@ impl AuthProvider {
         .execute(&data.db)
         .await?;
 
-        // just invalidating the cache instead of updating it manually is fine
-        // because providers are not updated often
-        Self::invalidate_cache(data).await?;
+        Self::invalidate_cache_all(data).await?;
+
+        cache_insert(
+            CACHE_NAME_12HR.to_string(),
+            Self::cache_idx(&self.id),
+            &data.caches.ha_cache_config,
+            &self,
+            AckLevel::Quorum,
+        )
+        .await?;
 
         Ok(())
     }
@@ -244,7 +303,7 @@ impl AuthProvider {
         })
     }
 
-    async fn invalidate_cache(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    async fn invalidate_cache_all(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         cache_del(
             CACHE_NAME_12HR.to_string(),
             Self::cache_idx("all"),
@@ -370,10 +429,188 @@ impl AuthProvider {
     }
 }
 
+/// Will be created to start a new upstream login and afterward validate a callback.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthProviderCallback {
+    pub callback_id: String,
+    pub xsrf_token: String,
+
+    pub client_id: String,
+    pub client_scope: Vec<String>,
+    pub client_force_mfa: bool,
+    pub client_redirect_uri: String,
+    pub client_state: Option<String>,
+    pub client_nonce: Option<String>,
+    pub client_code_challenge: Option<String>,
+    pub client_code_challenge_method: Option<String>,
+
+    pub provider_issuer: String,
+    pub provider_token_endpoint: String,
+    // pub userinfo_endpoint: String,
+    pub provider_client_id: String,
+    pub provider_secret: Option<Vec<u8>>,
+    pub token_auth_method_basic: bool,
+    pub use_pkce: bool,
+    pub root_pem: Option<String>,
+    // TODO add a nonce upstream as well? -> improvement?
+    pub pkce_challenge: String,
+}
+
+impl AuthProviderCallback {
+    /// returns (encrypted cookie, xsrf token, location header, optional allowed origins)
+    pub async fn login_start(
+        data: &web::Data<AppState>,
+        payload: ProviderLoginRequest,
+    ) -> Result<(Cookie, String, HeaderValue, Option<Vec<String>>), ErrorResponse> {
+        let provider = AuthProvider::find(data, &payload.provider_id).await?;
+
+        let client = Client::find(data, payload.client_id).await?;
+        let client_scope = client.sanitize_login_scopes(&payload.scopes)?;
+        let allowed_origins = client.get_allowed_origins();
+
+        let slf = Self {
+            callback_id: secure_random_alnum(32),
+            xsrf_token: secure_random_alnum(32),
+
+            client_id: client.id,
+            client_scope,
+            client_force_mfa: client.force_mfa,
+            client_redirect_uri: payload.redirect_uri,
+            client_state: payload.state,
+            client_nonce: payload.nonce,
+            client_code_challenge: payload.code_challenge,
+            client_code_challenge_method: payload.code_challenge_method,
+
+            provider_issuer: provider.issuer,
+            provider_token_endpoint: provider.token_endpoint,
+            provider_client_id: provider.client_id,
+            provider_secret: provider.secret,
+            token_auth_method_basic: provider.token_auth_method_basic,
+            use_pkce: provider.use_pkce,
+            root_pem: provider.root_pem,
+
+            pkce_challenge: payload.pkce_challenge,
+        };
+
+        let callback_uri = format!(
+            "{}%2Fauth%2Fv1%2Fproviders%2Fcallback",
+            *PUB_URL_WITH_SCHEME_ENCODED
+        );
+        let mut location = format!(
+            "{}?client_id={}&redirect_uri={}&response_type=code&scope={}&state={}",
+            provider.authorization_endpoint,
+            slf.provider_client_id,
+            callback_uri,
+            provider.scope,
+            slf.callback_id
+        );
+        if provider.use_pkce {
+            write!(
+                location,
+                "&code_challenge={}&code_challenge_method=S256",
+                slf.pkce_challenge
+            )
+            .expect("write to always succeed");
+        }
+
+        let id_enc = EncValue::encrypt(slf.callback_id.as_bytes())?;
+        let id_b64 = base64_encode(id_enc.into_bytes().as_ref());
+        let cookie = cookie::Cookie::build(COOKIE_UPSTREAM_CALLBACK, id_b64)
+            .secure(true)
+            .http_only(true)
+            .same_site(cookie::SameSite::Lax)
+            .max_age(cookie::time::Duration::seconds(
+                UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as i64,
+            ))
+            .path("/auth")
+            .finish();
+
+        slf.save(data).await?;
+
+        Ok((
+            cookie,
+            slf.xsrf_token,
+            HeaderValue::from_str(&location).expect("Location HeaderValue to be correct"),
+            allowed_origins,
+        ))
+    }
+
+    pub async fn login_finish(
+        _web: &web::Data<AppState>,
+        _cookie: &str,
+        _xsrf_token: &str,
+        _pkce_verifier: String,
+    ) -> Result<Self, ErrorResponse> {
+        // validate values for Self
+
+        // fetch token for the user
+
+        // check if user exists locally
+        // - if yes, compare values and make sure it is already federated, block otherwise
+        // - if not, create a new user
+
+        // check mfa force for the client + user setup and return data accordingly
+
+        // create delete cookie
+        let cookie = cookie::Cookie::build(COOKIE_UPSTREAM_CALLBACK, "")
+            .secure(true)
+            .http_only(true)
+            .same_site(cookie::SameSite::Lax)
+            .max_age(cookie::time::Duration::ZERO)
+            .path("/auth")
+            .finish();
+
+        todo!()
+    }
+
+    async fn delete(data: &web::Data<AppState>, callback_id: String) -> Result<(), ErrorResponse> {
+        cache_del(
+            CACHE_NAME_AUTH_PROVIDER_CALLBACK.to_string(),
+            callback_id,
+            &data.caches.ha_cache_config,
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn find(data: &web::Data<AppState>, callback_id: String) -> Result<Self, ErrorResponse> {
+        match cache_get!(
+            Self,
+            CACHE_NAME_AUTH_PROVIDER_CALLBACK.to_string(),
+            callback_id,
+            &data.caches.ha_cache_config,
+            true
+        )
+        .await?
+        {
+            None => Err(ErrorResponse::new(
+                ErrorResponseType::NotFound,
+                "Callback Code not found - timeout reached?".to_string(),
+            )),
+            Some(slf) => Ok(slf),
+        }
+    }
+
+    async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        cache_insert(
+            CACHE_NAME_AUTH_PROVIDER_CALLBACK.to_string(),
+            self.callback_id.clone(),
+            &data.caches.ha_cache_config,
+            &self,
+            // Once is good enough and faster -> random ID each time cannot produce conflicts
+            AckLevel::Once,
+        )
+        .await?;
+        Ok(())
+    }
+}
+
+/// Auth Provider as template value for SSR of the Login page
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthProviderTemplate {
     pub id: String,
     pub name: String,
+    pub use_pkce: bool,
     // pub logo: Option<Vec<u8>>,
     // pub logo_type: Option<String>,
 }
@@ -410,6 +647,7 @@ impl AuthProviderTemplate {
             .map(|p| Self {
                 id: p.id,
                 name: p.name,
+                use_pkce: p.use_pkce,
             })
             .collect::<Vec<Self>>();
 
