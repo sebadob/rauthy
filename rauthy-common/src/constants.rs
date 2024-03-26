@@ -124,13 +124,13 @@ lazy_static! {
         };
         format!("{}://{}", scheme, *PUB_URL)
     };
-    pub static ref PUB_URL_WITH_SCHEME_ENCODED: String = {
+    pub static ref PROVIDER_CALLBACK_URI: String = {
         let scheme = if env::var("LISTEN_SCHEME").as_deref() == Ok("http") && !*PROXY_MODE {
             "http"
         } else {
             "https"
         };
-        format!("{}%3A%2F%2F{}", scheme, *PUB_URL)
+        format!("{}%3A%2F%2F{}%2Fauth%2Fv1%2Fproviders%2Fcallback", scheme, *PUB_URL)
     };
     pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
         let scheme = if *DEV_MODE && *DEV_DPOP_HTTP { "http" } else { "https" };

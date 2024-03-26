@@ -10,7 +10,7 @@ use cryptr::utils::secure_random_alnum;
 use cryptr::EncValue;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
-    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PUB_URL_WITH_SCHEME_ENCODED, RAUTHY_VERSION,
+    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_CALLBACK_URI, RAUTHY_VERSION,
     UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
@@ -492,15 +492,11 @@ impl AuthProviderCallback {
             pkce_challenge: payload.pkce_challenge,
         };
 
-        let callback_uri = format!(
-            "{}%2Fauth%2Fv1%2Fproviders%2Fcallback",
-            *PUB_URL_WITH_SCHEME_ENCODED
-        );
         let mut location = format!(
             "{}?client_id={}&redirect_uri={}&response_type=code&scope={}&state={}",
             provider.authorization_endpoint,
             slf.provider_client_id,
-            callback_uri,
+            *PROVIDER_CALLBACK_URI,
             provider.scope,
             slf.callback_id
         );
