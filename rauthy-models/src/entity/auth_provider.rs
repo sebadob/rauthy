@@ -673,15 +673,15 @@ impl AuthProviderCallback {
         let client =
             AuthProvider::build_client(slf.allow_insecure_requests, slf.root_pem.as_deref())?;
         let res = client
-            .get(slf.provider_token_endpoint)
+            .post(&slf.provider_token_endpoint)
             .basic_auth(
                 &slf.provider_client_id,
                 AuthProvider::get_secret_cleartext(&slf.provider_secret)?,
             )
-            .json(&OidcCodeRequestParams {
+            .form(&OidcCodeRequestParams {
                 client_id: &slf.provider_client_id,
                 client_secret: AuthProvider::get_secret_cleartext(&slf.provider_secret)?,
-                code: slf.use_pkce.then_some(&payload.code),
+                code: &payload.code,
                 code_verifier: slf.use_pkce.then_some(&payload.pkce_verifier),
                 grant_type: "authorization_code",
                 redirect_uri: &*PROVIDER_CALLBACK_URI,
@@ -693,12 +693,12 @@ impl AuthProviderCallback {
             let status = res.status().as_u16();
             let err = match res.text().await {
                 Ok(body) => format!(
-                    "HTTP {} during GET /token for upstream auth provider '{}':\n{}",
-                    status, slf.provider_client_id, body
+                    "HTTP {} during POST {} for upstream auth provider '{}'\n{}",
+                    status, slf.provider_token_endpoint, slf.provider_client_id, body
                 ),
                 Err(_) => format!(
-                    "HTTP {} during GET /token for upstream auth provider '{}' without any body",
-                    status, slf.provider_client_id
+                    "HTTP {} during POST {} for upstream auth provider '{}' without any body",
+                    status, slf.provider_token_endpoint, slf.provider_client_id
                 ),
             };
             error!("{}", err);
@@ -841,7 +841,7 @@ impl AuthProviderTemplate {
 struct OidcCodeRequestParams<'a> {
     client_id: &'a str,
     client_secret: Option<String>,
-    code: Option<&'a str>,
+    code: &'a str,
     code_verifier: Option<&'a str>,
     grant_type: &'static str,
     redirect_uri: &'a str,
