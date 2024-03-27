@@ -531,11 +531,14 @@ pub struct Userinfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum UserAccountTypeResponse {
     New,
     Password,
     Passkey,
+    Federated,
+    FederatedPasskey,
+    FederatedPassword,
 }
 
 impl From<AccountType> for UserAccountTypeResponse {
@@ -544,6 +547,9 @@ impl From<AccountType> for UserAccountTypeResponse {
             AccountType::New => Self::New,
             AccountType::Password => Self::Password,
             AccountType::Passkey => Self::Passkey,
+            AccountType::Federated => Self::Federated,
+            AccountType::FederatedPasskey => Self::FederatedPasskey,
+            AccountType::FederatedPassword => Self::FederatedPassword,
         }
     }
 }

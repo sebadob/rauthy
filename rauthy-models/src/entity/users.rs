@@ -40,6 +40,11 @@ pub enum AccountType {
     New,
     Password,
     Passkey,
+    Federated,
+    /// Federated + Local Password
+    FederatedPassword,
+    /// Federated + Local Passkey
+    FederatedPasskey,
 }
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -69,27 +74,6 @@ pub struct User {
 impl User {
     // Inserts a user into the database
     pub async fn create(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
-        // let lang = new_user.language.as_str();
-        // sqlx::query!(
-        //     r#"insert into users
-        //     (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-        //     language, user_expires)
-        //     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"#,
-        //     new_user.id,
-        //     new_user.email,
-        //     new_user.given_name,
-        //     new_user.family_name,
-        //     new_user.roles,
-        //     new_user.groups,
-        //     new_user.enabled,
-        //     new_user.email_verified,
-        //     new_user.created_at,
-        //     lang,
-        //     new_user.user_expires,
-        // )
-        // .execute(&data.db)
-        // .await?;
-
         let slf = Self::insert(data, new_user).await?;
 
         let magic_link = MagicLink::create(
@@ -621,7 +605,13 @@ impl User {
 impl User {
     #[inline]
     pub fn account_type(&self) -> AccountType {
-        if self.password.is_some() {
+        if self.federation_uid.is_some() && self.password.is_some() {
+            AccountType::FederatedPassword
+        } else if self.federation_uid.is_some() && self.has_webauthn_enabled() {
+            AccountType::FederatedPasskey
+        } else if self.federation_uid.is_some() {
+            AccountType::Federated
+        } else if self.password.is_some() {
             AccountType::Password
         } else if self.has_webauthn_enabled() {
             AccountType::Passkey

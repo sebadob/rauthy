@@ -757,6 +757,8 @@ impl AuthProviderCallback {
             // a proper message, that this needs to be added in the account overview.
             //
             // If the user has a passkey, request it here
+            let account_type = user.account_type();
+
             todo!();
         }
 
