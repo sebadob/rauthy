@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
 use crate::entity::api_keys::{ApiKey, ApiKeyAccess};
-use crate::entity::auth_provider::AuthProvider;
+use crate::entity::auth_provider::{AuthProvider, AuthProviderCallback};
 use crate::entity::clients::Client;
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType, JWKS};
@@ -341,7 +341,7 @@ pub struct ProviderResponse {
     pub client_secret: Option<String>,
     pub scope: String,
 
-    pub token_auth_method_basic: bool,
+    pub danger_allow_insecure: bool,
     pub use_pkce: bool,
 
     pub root_pem: Option<String>,
@@ -353,7 +353,7 @@ impl TryFrom<AuthProvider> for ProviderResponse {
     type Error = ErrorResponse;
 
     fn try_from(value: AuthProvider) -> Result<Self, Self::Error> {
-        let secret = value.get_secret_cleartext()?;
+        let secret = AuthProvider::get_secret_cleartext(&value.secret)?;
         Ok(Self {
             id: value.id,
             name: value.name,
@@ -364,7 +364,7 @@ impl TryFrom<AuthProvider> for ProviderResponse {
             client_id: value.client_id,
             client_secret: secret,
             scope: value.scope,
-            token_auth_method_basic: value.token_auth_method_basic,
+            danger_allow_insecure: value.allow_insecure_requests,
             use_pkce: value.use_pkce,
             root_pem: value.root_pem,
         })
@@ -380,7 +380,6 @@ pub struct ProviderLookupResponse {
     pub scope: String,
     pub token_auth_method_basic: bool,
     pub use_pkce: bool,
-    pub danger_allow_http: bool,
     pub danger_allow_insecure: bool,
 }
 

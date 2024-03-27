@@ -474,9 +474,7 @@ pub struct ProviderRequest {
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
     pub userinfo_endpoint: String,
 
-    pub danger_allow_http: Option<bool>,
     pub danger_allow_insecure: Option<bool>,
-    pub token_auth_method_basic: bool,
     pub use_pkce: bool,
 
     // This validation is pretty loose, but if we make it too strict,
@@ -562,8 +560,9 @@ pub struct ProviderLookupRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
     pub issuer: String,
-    pub danger_allow_http: Option<bool>,
     pub danger_allow_insecure: Option<bool>,
+    // no validation since it will throw an error later if not correctly formed
+    pub root_pem: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]

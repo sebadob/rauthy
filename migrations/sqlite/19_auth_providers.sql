@@ -14,7 +14,7 @@ create table auth_providers
     client_id               varchar not null,
     secret                  blob,
     scope                   varchar not null,
-    token_auth_method_basic bool    not null,
+    allow_insecure_requests bool    not null,
     use_pkce                bool    not null,
     root_pem                varchar,
     logo                    blob,
