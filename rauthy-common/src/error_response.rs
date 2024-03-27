@@ -2,7 +2,7 @@ use crate::constants::{APPLICATION_JSON, HEADER_DPOP_NONCE, HEADER_HTML, HEADER_
 use actix_multipart::MultipartError;
 use actix_web::error::BlockingError;
 use actix_web::http::header::{
-    ToStrError, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS, WWW_AUTHENTICATE,
+    ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS, WWW_AUTHENTICATE,
 };
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};

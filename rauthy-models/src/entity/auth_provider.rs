@@ -1,40 +1,41 @@
 use crate::app_state::AppState;
+use crate::entity::auth_codes::AuthCode;
 use crate::entity::clients::Client;
+use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
+use crate::entity::webauthn::WebauthnLoginReq;
 use crate::entity::well_known::WellKnown;
 use crate::language::Language;
 use crate::request::{
     ProviderCallbackRequest, ProviderLoginRequest, ProviderRequest, UserValuesRequest,
 };
 use crate::response::ProviderLookupResponse;
-use crate::{AddressClaim, JktClaim, JwtTokenType};
+use crate::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
 use actix_web::cookie::Cookie;
+use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
-use actix_web::{cookie, web};
+use actix_web::{cookie, web, HttpRequest};
 use cryptr::utils::secure_random_alnum;
 use cryptr::EncValue;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
     IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_CALLBACK_URI, RAUTHY_VERSION,
-    UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
+    UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::{base64_decode, base64_encode, base64_url_encode, new_store_id};
+use rauthy_common::utils::{
+    base64_decode, base64_encode, base64_url_encode, get_rand, new_store_id,
+};
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use reqwest::tls;
 use ring::digest;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use serde_json_path::{ExactlyOneError, JsonPath};
 use sqlx::{query, query_as};
-use std::collections::HashMap;
 use std::fmt::Write;
-use std::net::ToSocketAddrs;
-use std::str::FromStr;
 use std::time::Duration;
 use time::OffsetDateTime;
-use tracing::{debug, error, warn};
+use tracing::{debug, error};
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -173,7 +174,7 @@ impl AuthProvider {
         if let Some(res) = cache_get!(
             Self,
             CACHE_NAME_12HR.to_string(),
-            Self::cache_idx(&id),
+            Self::cache_idx(id),
             &data.caches.ha_cache_config,
             false
         )
@@ -490,24 +491,24 @@ pub struct AuthProviderCallback {
     pub xsrf_token: String,
     pub typ: AuthProviderType,
 
-    pub client_id: String,
-    pub client_scope: Vec<String>,
-    pub client_force_mfa: bool,
-    pub client_redirect_uri: String,
-    pub client_state: Option<String>,
-    pub client_nonce: Option<String>,
-    pub client_code_challenge: Option<String>,
-    pub client_code_challenge_method: Option<String>,
+    pub req_client_id: String,
+    pub req_scopes: Option<Vec<String>>,
+    pub req_redirect_uri: String,
+    pub req_state: Option<String>,
+    pub req_nonce: Option<String>,
+    pub req_code_challenge: Option<String>,
+    pub req_code_challenge_method: Option<String>,
 
     pub provider_id: String,
-    pub provider_issuer: String,
-    pub provider_token_endpoint: String,
-    // pub userinfo_endpoint: String,
-    pub provider_client_id: String,
-    pub provider_secret: Option<Vec<u8>>,
-    pub allow_insecure_requests: bool,
-    pub use_pkce: bool,
-    pub root_pem: Option<String>,
+    // pub provider_issuer: String,
+    // pub provider_token_endpoint: String,
+    // // pub userinfo_endpoint: String,
+    // pub provider_client_id: String,
+    // pub provider_secret: Option<Vec<u8>>,
+    // pub allow_insecure_requests: bool,
+    // pub use_pkce: bool,
+    // pub root_pem: Option<String>,
+
     // TODO add a nonce upstream as well? -> improvement?
     pub pkce_challenge: String,
 }
@@ -564,43 +565,38 @@ impl AuthProviderCallback {
     pub async fn login_start(
         data: &web::Data<AppState>,
         payload: ProviderLoginRequest,
-    ) -> Result<(Cookie, String, HeaderValue, Option<Vec<String>>), ErrorResponse> {
+    ) -> Result<(Cookie, String, HeaderValue), ErrorResponse> {
         let provider = AuthProvider::find(data, &payload.provider_id).await?;
-
         let client = Client::find(data, payload.client_id).await?;
-        let client_scope = client.sanitize_login_scopes(&payload.scopes)?;
-        let allowed_origins = client.get_allowed_origins();
 
         let slf = Self {
             callback_id: secure_random_alnum(32),
             xsrf_token: secure_random_alnum(32),
             typ: provider.typ,
 
-            client_id: client.id,
-            client_scope,
-            client_force_mfa: client.force_mfa,
-            client_redirect_uri: payload.redirect_uri,
-            client_state: payload.state,
-            client_nonce: payload.nonce,
-            client_code_challenge: payload.code_challenge,
-            client_code_challenge_method: payload.code_challenge_method,
+            req_client_id: client.id,
+            req_scopes: payload.scopes,
+            req_redirect_uri: payload.redirect_uri,
+            req_state: payload.state,
+            req_nonce: payload.nonce,
+            req_code_challenge: payload.code_challenge,
+            req_code_challenge_method: payload.code_challenge_method,
 
             provider_id: provider.id,
-            provider_issuer: provider.issuer,
-            provider_token_endpoint: provider.token_endpoint,
-            provider_client_id: provider.client_id,
-            provider_secret: provider.secret,
-            allow_insecure_requests: provider.allow_insecure_requests,
-            use_pkce: provider.use_pkce,
-            root_pem: provider.root_pem,
-
+            // provider_issuer: provider.issuer,
+            // provider_token_endpoint: provider.token_endpoint,
+            // provider_client_id: provider.client_id,
+            // provider_secret: provider.secret,
+            // allow_insecure_requests: provider.allow_insecure_requests,
+            // use_pkce: provider.use_pkce,
+            // root_pem: provider.root_pem,
             pkce_challenge: payload.pkce_challenge,
         };
 
         let mut location = format!(
             "{}?client_id={}&redirect_uri={}&response_type=code&scope={}&state={}",
             provider.authorization_endpoint,
-            slf.provider_client_id,
+            provider.client_id,
             *PROVIDER_CALLBACK_URI,
             provider.scope,
             slf.callback_id
@@ -632,17 +628,23 @@ impl AuthProviderCallback {
             cookie,
             slf.xsrf_token,
             HeaderValue::from_str(&location).expect("Location HeaderValue to be correct"),
-            allowed_origins,
         ))
     }
 
     /// In case of any error, the callback code will be fully deleted for security reasons.
-    pub async fn login_finish(
-        data: &web::Data<AppState>,
-        cookie: Cookie<'_>,
-        payload: &ProviderCallbackRequest,
-    ) -> Result<Self, ErrorResponse> {
+    pub async fn login_finish<'a>(
+        data: &'a web::Data<AppState>,
+        req: &'a HttpRequest,
+        payload: &'a ProviderCallbackRequest,
+        mut session: Session,
+    ) -> Result<(AuthStep, Cookie<'a>), ErrorResponse> {
         // the callback id for the cache should be inside the encrypted cookie
+        let cookie = req.cookie(COOKIE_UPSTREAM_CALLBACK).ok_or_else(|| {
+            ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Missing encrypted callback cookie".to_string(),
+            )
+        })?;
         let bytes = base64_decode(cookie.value())?;
         let plain = EncValue::try_from(bytes)?.decrypt()?;
         let callback_id = String::from_utf8_lossy(plain.as_ref()).to_string();
@@ -684,21 +686,24 @@ impl AuthProviderCallback {
         }
 
         // request is valid -> fetch token for the user
-        let client =
-            AuthProvider::build_client(slf.allow_insecure_requests, slf.root_pem.as_deref())?;
+        let provider = AuthProvider::find(data, &slf.provider_id).await?;
+        let client = AuthProvider::build_client(
+            provider.allow_insecure_requests,
+            provider.root_pem.as_deref(),
+        )?;
         let res = client
-            .post(&slf.provider_token_endpoint)
+            .post(&provider.token_endpoint)
             .basic_auth(
-                &slf.provider_client_id,
-                AuthProvider::get_secret_cleartext(&slf.provider_secret)?,
+                &provider.client_id,
+                AuthProvider::get_secret_cleartext(&provider.secret)?,
             )
             .form(&OidcCodeRequestParams {
-                client_id: &slf.provider_client_id,
-                client_secret: AuthProvider::get_secret_cleartext(&slf.provider_secret)?,
+                client_id: &provider.client_id,
+                client_secret: AuthProvider::get_secret_cleartext(&provider.secret)?,
                 code: &payload.code,
-                code_verifier: slf.use_pkce.then_some(&payload.pkce_verifier),
+                code_verifier: provider.use_pkce.then_some(&payload.pkce_verifier),
                 grant_type: "authorization_code",
-                redirect_uri: &*PROVIDER_CALLBACK_URI,
+                redirect_uri: &PROVIDER_CALLBACK_URI,
             })
             .send()
             .await?;
@@ -708,11 +713,11 @@ impl AuthProviderCallback {
             let err = match res.text().await {
                 Ok(body) => format!(
                     "HTTP {} during POST {} for upstream auth provider '{}'\n{}",
-                    status, slf.provider_token_endpoint, slf.provider_client_id, body
+                    status, provider.token_endpoint, provider.client_id, body
                 ),
                 Err(_) => format!(
                     "HTTP {} during POST {} for upstream auth provider '{}' without any body",
-                    status, slf.provider_token_endpoint, slf.provider_client_id
+                    status, provider.token_endpoint, provider.client_id
                 ),
             };
             error!("{}", err);
@@ -725,7 +730,7 @@ impl AuthProviderCallback {
                 if ts.id_token.is_none() {
                     let err = format!(
                         "Did not receive an ID token from {} when one was expected",
-                        slf.provider_issuer,
+                        provider.issuer,
                     );
                     error!("{}", err);
                     return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
@@ -740,38 +745,100 @@ impl AuthProviderCallback {
             Err(err) => {
                 let err = format!(
                     "Deserializing /token response from auth provider {}: {}",
-                    slf.provider_client_id, err
+                    provider.client_id, err
                 );
                 error!("{}", err);
                 return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
             }
         };
 
-        // if we get here, everything was valid and the user has possibly been
-        // updated on our side as well
+        user.check_enabled()?;
+        user.check_expired()?;
 
-        // update + upgrade the session
+        let client = Client::find_maybe_ephemeral(data, slf.req_client_id).await?;
 
-        if slf.client_force_mfa {
-            // If the client needs forced mfa and our user has no passkey, return
-            // a proper message, that this needs to be added in the account overview.
-            //
-            // If the user has a passkey, request it here
-            let account_type = user.account_type();
+        // validate client values
+        client.validate_mfa(&user)?;
+        client.validate_redirect_uri(&slf.req_redirect_uri)?;
+        client.validate_code_challenge(&slf.req_code_challenge, &slf.req_code_challenge_method)?;
+        let header_origin = client.validate_origin(req, &data.listen_scheme, &data.public_url)?;
 
-            todo!();
-        }
+        // ##########
+        // all good, we can generate an auth code and upgrade the session
+        // ##########
 
-        // create delete cookie
-        // let cookie = cookie::Cookie::build(COOKIE_UPSTREAM_CALLBACK, "")
-        //     .secure(true)
-        //     .http_only(true)
-        //     .same_site(cookie::SameSite::Lax)
-        //     .max_age(cookie::time::Duration::ZERO)
-        //     .path("/auth")
-        //     .finish();
+        // build authorization code
+        let code_lifetime = if client.force_mfa && user.has_webauthn_enabled() {
+            client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
+        } else {
+            client.auth_code_lifetime
+        };
+        let scopes = client.sanitize_login_scopes(&slf.req_scopes)?;
+        let code = AuthCode::new(
+            user.id.clone(),
+            client.id,
+            Some(session.id.clone()),
+            slf.req_code_challenge,
+            slf.req_code_challenge_method,
+            slf.req_nonce,
+            scopes,
+            code_lifetime,
+        );
+        code.save(data).await?;
 
-        todo!()
+        // build location header
+        let mut loc = format!("{}?code={}", slf.req_redirect_uri, code.id);
+        if let Some(state) = slf.req_state {
+            loc = format!("{}&state={}", loc, state);
+        };
+
+        let auth_step = if client.force_mfa {
+            session.set_mfa(data, true).await?;
+
+            let step = AuthStepAwaitWebauthn {
+                has_password_been_hashed: false,
+                code: get_rand(48),
+                header_csrf: Session::get_csrf_header(&session.csrf_token),
+                header_origin,
+                user_id: user.id.clone(),
+                email: user.email,
+                exp: *WEBAUTHN_REQ_EXP,
+                session,
+            };
+
+            WebauthnLoginReq {
+                code: step.code.clone(),
+                user_id: user.id,
+                header_loc: loc,
+                header_origin: step
+                    .header_origin
+                    .as_ref()
+                    .map(|h| h.1.to_str().unwrap().to_string()),
+            }
+            .save(data)
+            .await?;
+
+            AuthStep::AwaitWebauthn(step)
+        } else {
+            AuthStep::LoggedIn(AuthStepLoggedIn {
+                has_password_been_hashed: false,
+                email: user.email,
+                header_loc: (header::LOCATION, HeaderValue::from_str(&loc).unwrap()),
+                header_csrf: Session::get_csrf_header(&session.csrf_token),
+                header_origin,
+            })
+        };
+
+        // callback data deletion cookie
+        let cookie = cookie::Cookie::build(COOKIE_UPSTREAM_CALLBACK, "")
+            .secure(true)
+            .http_only(true)
+            .same_site(cookie::SameSite::Lax)
+            .max_age(cookie::time::Duration::ZERO)
+            .path("/auth")
+            .finish();
+
+        Ok((auth_step, cookie))
     }
 }
 
@@ -873,7 +940,7 @@ impl AuthProviderIdClaims<'_> {
         token: &str,
         auth_provider_id: &str,
     ) -> Result<User, ErrorResponse> {
-        let mut parts = token.split(".");
+        let mut parts = token.split('.');
         let _header = parts.next().ok_or_else(|| {
             ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -908,7 +975,7 @@ impl AuthProviderIdClaims<'_> {
                 // if we were unable to find the user, we need to make another lookup
                 // and search by federation uid on the remote system to not end up with
                 // duplicate users in case of a remote email update
-                User::find_by_federation_uid(data, &slf.sub).await?
+                User::find_by_federation_uid(data, slf.sub).await?
             }
         };
 

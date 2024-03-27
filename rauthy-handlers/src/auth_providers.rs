@@ -1,9 +1,8 @@
-use crate::ReqPrincipal;
-use actix_web::http::header::{LOCATION, SET_COOKIE};
-use actix_web::http::StatusCode;
+use crate::{map_auth_step, ReqPrincipal};
+use actix_web::http::header::LOCATION;
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_validator::Json;
-use rauthy_common::constants::{COOKIE_UPSTREAM_CALLBACK, HEADER_HTML};
+use rauthy_common::constants::HEADER_HTML;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_provider::{AuthProvider, AuthProviderCallback};
@@ -12,8 +11,7 @@ use rauthy_models::request::{
     ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
 };
 use rauthy_models::response::ProviderResponse;
-use rauthy_models::templates::{AdminUsersHtml, ProviderCallbackHtml};
-use tracing::error;
+use rauthy_models::templates::ProviderCallbackHtml;
 
 /// GET all upstream auth providers
 ///
@@ -142,9 +140,7 @@ pub async fn post_provider_login(
     principal.validate_session_auth_or_init()?;
 
     let payload = payload.into_inner();
-    // TODO can we get rid of allowed origins here? Do we even need it?
-    let (cookie, xsrf_token, location, allowed_origins) =
-        AuthProviderCallback::login_start(&data, payload).await?;
+    let (cookie, xsrf_token, location) = AuthProviderCallback::login_start(&data, payload).await?;
 
     Ok(HttpResponse::Accepted()
         .insert_header((LOCATION, location))
@@ -190,20 +186,21 @@ pub async fn post_provider_callback(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
 
-    let cookie = req.cookie(COOKIE_UPSTREAM_CALLBACK).ok_or_else(|| {
+    let payload = payload.into_inner();
+    let session = principal.get_session()?;
+    let (auth_step, cookie) =
+        AuthProviderCallback::login_finish(&data, &req, &payload, session.clone()).await?;
+
+    let (mut resp, _) = map_auth_step(auth_step, &req)
+        .await
+        .map_err(|(err, _)| err)?;
+    resp.add_cookie(&cookie).map_err(|err| {
         ErrorResponse::new(
-            ErrorResponseType::Forbidden,
-            "Missing encrypted callback cookie".to_string(),
+            ErrorResponseType::Internal,
+            format!("Error adding cookie after map_auth_step: {}", err),
         )
     })?;
-    let payload = payload.into_inner();
-    let res = AuthProviderCallback::login_finish(&data, cookie, &payload).await?;
-
-    todo!()
-    // Ok(HttpResponse::Accepted()
-    //     .insert_header((LOCATION, location))
-    //     .cookie(cookie)
-    //     .body(xsrf_token))
+    Ok(resp)
 }
 
 /// PUT update an upstream auth provider

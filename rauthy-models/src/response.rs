@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
 use crate::entity::api_keys::{ApiKey, ApiKeyAccess};
-use crate::entity::auth_provider::{AuthProvider, AuthProviderCallback};
+use crate::entity::auth_provider::AuthProvider;
 use crate::entity::clients::Client;
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType, JWKS};
