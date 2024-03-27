@@ -502,6 +502,22 @@ pub struct ProviderRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
+pub struct ProviderCallbackRequest {
+    /// Validation: `[a-zA-Z0-9]`
+    #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    pub state: String,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub code: String,
+    /// Validation: `[a-zA-Z0-9]`
+    #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    pub xsrf_token: String,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub pkce_verifier: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
 pub struct ProviderLoginRequest {
     // values for the downstream client
     /// Validation: `email`
