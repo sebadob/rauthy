@@ -6,6 +6,7 @@ create table auth_providers
         constraint auth_providers_pk
             primary key,
     name                    varchar not null,
+    typ                     varchar not null,
     issuer                  varchar not null,
     authorization_endpoint  varchar not null,
     token_endpoint          varchar not null,

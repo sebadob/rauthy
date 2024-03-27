@@ -23,11 +23,51 @@ use std::fmt::Write;
 use std::time::Duration;
 use tracing::debug;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AuthProviderType {
+    OIDC,
+    // this can be extended in the future tu support special providers that do not
+    // work with the oidc standards
+}
+
+impl AuthProviderType {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::OIDC => "oidc",
+        }
+    }
+}
+
+impl TryFrom<&str> for AuthProviderType {
+    type Error = ErrorResponse;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let slf = match value {
+            "oidc" => Self::OIDC,
+            _ => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "Invalid AuthProviderType".to_string(),
+                ))
+            }
+        };
+        Ok(slf)
+    }
+}
+
+impl From<String> for AuthProviderType {
+    /// Defaults to Self::OIDC in case of an error
+    fn from(value: String) -> Self {
+        Self::try_from(value.as_str()).unwrap_or(Self::OIDC)
+    }
+}
+
 /// Upstream Auth Provider for upstream logins without a local Rauthy account
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthProvider {
     pub id: String,
     pub name: String,
+    pub typ: AuthProviderType,
 
     pub issuer: String,
     pub authorization_endpoint: String,
@@ -78,11 +118,13 @@ impl AuthProvider {
         query!(
             r#"
             INSERT INTO
-            auth_providers (id, name, issuer, authorization_endpoint, token_endpoint, userinfo_endpoint,
-            client_id, secret, scope, token_auth_method_basic, use_pkce, root_pem, logo, logo_type)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
+            auth_providers (id, name, typ, issuer, authorization_endpoint, token_endpoint,
+            userinfo_endpoint, client_id, secret, scope, token_auth_method_basic, use_pkce,
+            root_pem, logo, logo_type)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
             slf.id,
             slf.name,
+            slf.typ.as_str(),
             slf.issuer,
             slf.authorization_endpoint,
             slf.token_endpoint,
@@ -226,12 +268,13 @@ impl AuthProvider {
         // TODO when implemented: logo = $12, logo_type = $13
         query!(
             r#"UPDATE auth_providers
-            SET name = $1, issuer = $2, authorization_endpoint = $3, token_endpoint = $4,
-            userinfo_endpoint = $5, client_id = $6, secret = $7, scope = $8,
-            token_auth_method_basic = $9, use_pkce = $10, root_pem = $11
-            WHERE id = $12"#,
+            SET name = $1, issuer = $2, typ = $3, authorization_endpoint = $4, token_endpoint = $5,
+            userinfo_endpoint = $6, client_id = $7, secret = $8, scope = $9,
+            token_auth_method_basic = $10, use_pkce = $11, root_pem = $12
+            WHERE id = $13"#,
             self.name,
             self.issuer,
+            self.typ.as_str(),
             self.authorization_endpoint,
             self.token_endpoint,
             self.userinfo_endpoint,
@@ -284,6 +327,9 @@ impl AuthProvider {
         Ok(Self {
             id,
             name: req.name,
+            // for now, this will always be OIDC
+            // preparation for future special providers
+            typ: AuthProviderType::OIDC,
             issuer: req.issuer,
             authorization_endpoint: req.authorization_endpoint,
             token_endpoint: req.token_endpoint,
