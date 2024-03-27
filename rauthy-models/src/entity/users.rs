@@ -61,54 +61,54 @@ pub struct User {
     pub language: Language,
     pub webauthn_user_id: Option<String>,
     pub user_expires: Option<i64>,
+    pub auth_provider_id: Option<String>,
+    pub federation_uid: Option<String>,
 }
 
 // CRUD
 impl User {
     // Inserts a user into the database
     pub async fn create(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
-        let lang = new_user.language.as_str();
-        sqlx::query!(
-            r#"insert into users
-            (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-            language, user_expires)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"#,
-            new_user.id,
-            new_user.email,
-            new_user.given_name,
-            new_user.family_name,
-            new_user.roles,
-            new_user.groups,
-            new_user.enabled,
-            new_user.email_verified,
-            new_user.created_at,
-            lang,
-            new_user.user_expires,
-        )
-        .execute(&data.db)
-        .await?;
+        // let lang = new_user.language.as_str();
+        // sqlx::query!(
+        //     r#"insert into users
+        //     (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
+        //     language, user_expires)
+        //     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"#,
+        //     new_user.id,
+        //     new_user.email,
+        //     new_user.given_name,
+        //     new_user.family_name,
+        //     new_user.roles,
+        //     new_user.groups,
+        //     new_user.enabled,
+        //     new_user.email_verified,
+        //     new_user.created_at,
+        //     lang,
+        //     new_user.user_expires,
+        // )
+        // .execute(&data.db)
+        // .await?;
+
+        let slf = Self::insert(data, new_user).await?;
 
         let magic_link = MagicLink::create(
             data,
-            new_user.id.clone(),
+            slf.id.clone(),
             data.ml_lt_pwd_first as i64,
             MagicLinkUsage::NewUser,
         )
         .await?;
-        send_pwd_reset(data, &magic_link, &new_user).await;
+        send_pwd_reset(data, &magic_link, &slf).await;
 
-        // let mut users = User::find_all(data).await?;
-        // users.push(new_user.clone());
-        // cache_insert(
-        //     CACHE_NAME_USERS.to_string(),
-        //     IDX_USERS.to_string(),
-        //     &data.caches.ha_cache_config,
-        //     &users,
-        //     AckLevel::Quorum,
-        // )
-        // .await?;
+        Ok(slf)
+    }
 
-        Ok(new_user)
+    pub async fn create_federated(
+        data: &web::Data<AppState>,
+        new_user: User,
+    ) -> Result<Self, ErrorResponse> {
+        Self::insert(data, new_user).await
     }
 
     // Inserts a user into the database
@@ -142,22 +142,6 @@ impl User {
         sqlx::query!("DELETE FROM users WHERE id = $1", self.id)
             .execute(&data.db)
             .await?;
-
-        // Now clean up all caches
-        // let users = User::find_all(data)
-        //     .await?
-        //     .into_iter()
-        //     .filter(|u| u.id != self.id)
-        //     .collect::<Vec<Self>>();
-        //
-        // cache_insert(
-        //     CACHE_NAME_USERS.to_string(),
-        //     IDX_USERS.to_string(),
-        //     &data.caches.ha_cache_config,
-        //     &users,
-        //     AckLevel::Quorum,
-        // )
-        // .await?;
 
         let idx = format!("{}_{}", IDX_USERS, &self.id);
         cache_remove(
@@ -270,32 +254,22 @@ impl User {
         Ok(user)
     }
 
+    pub async fn find_by_federation_uid(
+        data: &web::Data<AppState>,
+        federation_uid: &str,
+    ) -> Result<Option<User>, ErrorResponse> {
+        let user = sqlx::query_as::<_, Self>("select * from users where federation_uid = $1")
+            .bind(federation_uid)
+            .fetch_optional(&data.db)
+            .await?;
+        Ok(user)
+    }
+
     // Returns all existing users
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        // let users = cache_get!(
-        //     Vec<User>,
-        //     CACHE_NAME_USERS.to_string(),
-        //     IDX_USERS.to_string(),
-        //     &data.caches.ha_cache_config,
-        //     false
-        // )
-        // .await?;
-        // if let Some(users) = users {
-        //     return Ok(users);
-        // }
-
         let res = sqlx::query_as::<_, Self>("select * from users")
             .fetch_all(&data.db)
             .await?;
-
-        // cache_insert(
-        //     CACHE_NAME_12HR.to_string(),
-        //     IDX_USERS.to_string(),
-        //     &data.caches.ha_cache_config,
-        //     &res,
-        //     AckLevel::Quorum,
-        // )
-        // .await?;
         Ok(res)
     }
 
@@ -308,6 +282,31 @@ impl User {
             .fetch_all(&data.db)
             .await?;
         Ok(res)
+    }
+
+    async fn insert(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
+        let lang = new_user.language.as_str();
+        sqlx::query!(
+            r#"insert into users
+            (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
+            language, user_expires)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"#,
+            new_user.id,
+            new_user.email,
+            new_user.given_name,
+            new_user.family_name,
+            new_user.roles,
+            new_user.groups,
+            new_user.enabled,
+            new_user.email_verified,
+            new_user.created_at,
+            lang,
+            new_user.user_expires,
+        )
+        .execute(&data.db)
+        .await?;
+
+        Ok(new_user)
     }
 
     // Saves a user
@@ -327,8 +326,8 @@ impl User {
             email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6,
             enabled = $7, email_verified = $8, password_expires = $9, last_login = $10,
             last_failed_login = $11, failed_login_attempts = $12, language = $13,
-            webauthn_user_id = $14, user_expires = $15
-            where id = $16"#,
+            webauthn_user_id = $14, user_expires = $15, auth_provider_id = $16, federation_uid = $17
+            where id = $18"#,
         )
         .bind(&self.email)
         .bind(&self.given_name)
@@ -345,6 +344,8 @@ impl User {
         .bind(lang)
         .bind(self.webauthn_user_id.clone())
         .bind(self.user_expires)
+        .bind(&self.auth_provider_id)
+        .bind(&self.federation_uid)
         .bind(&self.id);
 
         if let Some(txn) = txn {
@@ -359,18 +360,6 @@ impl User {
             RefreshToken::invalidate_for_user(data, &self.id).await?;
         }
 
-        // TODO think about a good way to catch a possibly failing transaction -> cache invalidation
-        // let users = User::find_all(data)
-        //     .await?
-        //     .into_iter()
-        //     .map(|mut u| {
-        //         if u.id == self.id {
-        //             u = self.clone();
-        //         }
-        //         u
-        //     })
-        //     .collect::<Vec<Self>>();
-
         if let Some(email) = old_email {
             let idx = format!("{}_{}", IDX_USERS, email);
             cache_del(
@@ -380,15 +369,6 @@ impl User {
             )
             .await?;
         }
-
-        // cache_insert(
-        //     CACHE_NAME_USERS.to_string(),
-        //     IDX_USERS.to_string(),
-        //     &data.caches.ha_cache_config,
-        //     &users,
-        //     AckLevel::Quorum,
-        // )
-        // .await?;
 
         let idx = format!("{}_{}", IDX_USERS, &self.id);
         cache_insert(
@@ -413,6 +393,7 @@ impl User {
         Ok(())
     }
 
+    // TODO should we include a "unlink federation" for admins here?
     // Updates a user
     pub async fn update(
         data: &web::Data<AppState>,
@@ -1159,6 +1140,8 @@ impl Default for User {
             language: Language::En,
             webauthn_user_id: None,
             user_expires: None,
+            auth_provider_id: None,
+            federation_uid: None,
         }
     }
 }

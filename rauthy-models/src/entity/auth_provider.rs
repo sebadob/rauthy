@@ -1,8 +1,14 @@
 use crate::app_state::AppState;
 use crate::entity::clients::Client;
+use crate::entity::users::User;
+use crate::entity::users_values::UserValues;
 use crate::entity::well_known::WellKnown;
-use crate::request::{ProviderCallbackRequest, ProviderLoginRequest, ProviderRequest};
+use crate::language::Language;
+use crate::request::{
+    ProviderCallbackRequest, ProviderLoginRequest, ProviderRequest, UserValuesRequest,
+};
 use crate::response::ProviderLookupResponse;
+use crate::{AddressClaim, JktClaim, JwtTokenType};
 use actix_web::cookie::Cookie;
 use actix_web::http::header::HeaderValue;
 use actix_web::{cookie, web};
@@ -19,11 +25,17 @@ use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert
 use reqwest::tls;
 use ring::digest;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use serde_json_path::{ExactlyOneError, JsonPath};
 use sqlx::{query, query_as};
+use std::collections::HashMap;
 use std::fmt::Write;
 use std::net::ToSocketAddrs;
+use std::str::FromStr;
 use std::time::Duration;
+use time::OffsetDateTime;
 use tracing::{debug, error, warn};
+use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuthProviderType {
@@ -487,6 +499,7 @@ pub struct AuthProviderCallback {
     pub client_code_challenge: Option<String>,
     pub client_code_challenge_method: Option<String>,
 
+    pub provider_id: String,
     pub provider_issuer: String,
     pub provider_token_endpoint: String,
     // pub userinfo_endpoint: String,
@@ -572,6 +585,7 @@ impl AuthProviderCallback {
             client_code_challenge: payload.code_challenge,
             client_code_challenge_method: payload.code_challenge_method,
 
+            provider_id: provider.id,
             provider_issuer: provider.issuer,
             provider_token_endpoint: provider.token_endpoint,
             provider_client_id: provider.client_id,
@@ -705,38 +719,23 @@ impl AuthProviderCallback {
             return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
         }
 
-        match res.json::<AuthProviderTokenSet>().await {
+        let user = match res.json::<AuthProviderTokenSet>().await {
             Ok(ts) => {
-                // At this point, we should have all the tokens.
-                // We cannot do any strict validation or deserialization, because upstream
-                // providers differ a lot.
-                // That's why we will try it via a dynamic approach. This it of course slower
-                // than strict deserialization, but it is more versatile and will provide
-                // better compatibility with a broader ranger of providers.
-
-                warn!("\n\n{:?}\n", ts);
-                todo!();
-
-                // // validate access token
-                // let _access_claims =
-                //     JwtAccessClaims::from_token_validated(&ts.access_token).await?;
-                //
-                // // validate id token
-                // if ts.id_token.is_none() {
-                //     return Err(anyhow::Error::msg("ID token is missing"));
-                // }
-                // let id_claims = JwtIdClaims::from_token_validated(
-                //     ts.id_token.as_deref().unwrap(),
-                //     &cookie_state.nonce,
-                // )
-                // .await?;
-                //
-                // // reset STATE_COOKIE
-                // let cookie = build_lax_cookie_300(
-                //     OIDC_STATE_COOKIE,
-                //     "",
-                //     insecure == OidcCookieInsecure::Yes,
-                // );
+                // in case of a standard OIDC provider, we only care about the ID token
+                if ts.id_token.is_none() {
+                    let err = format!(
+                        "Did not receive an ID token from {} when one was expected",
+                        slf.provider_issuer,
+                    );
+                    error!("{}", err);
+                    return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
+                }
+                AuthProviderIdClaims::validate_update_user(
+                    data,
+                    ts.id_token.as_deref().unwrap(),
+                    &slf.provider_id,
+                )
+                .await?
             }
             Err(err) => {
                 let err = format!(
@@ -746,19 +745,20 @@ impl AuthProviderCallback {
                 error!("{}", err);
                 return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
             }
+        };
+
+        // if we get here, everything was valid and the user has possibly been
+        // updated on our side as well
+
+        // update + upgrade the session
+
+        if slf.client_force_mfa {
+            // If the client needs forced mfa and our user has no passkey, return
+            // a proper message, that this needs to be added in the account overview.
+            //
+            // If the user has a passkey, request it here
+            todo!();
         }
-
-        // let res = client.get(&slf.provider_token_endpoint)
-        //         .basic_auth(slf.provider_client_id, slf.provider_secret)
-        //     .json()
-
-        todo!();
-
-        // check if user exists locally
-        // - if yes, compare values and make sure it is already federated, block otherwise
-        // - if not, create a new user
-
-        // check mfa force for the client + user setup and return data accordingly
 
         // create delete cookie
         // let cookie = cookie::Cookie::build(COOKIE_UPSTREAM_CALLBACK, "")
@@ -837,6 +837,214 @@ impl AuthProviderTemplate {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct AuthProviderAddressClaims<'a> {
+    pub formatted: Option<&'a str>,
+    pub street_address: Option<&'a str>,
+    pub locality: Option<&'a str>,
+    pub postal_code: Option<i32>,
+    pub country: Option<&'a str>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AuthProviderIdClaims<'a> {
+    pub iss: &'a str,
+    pub sub: &'a str,
+    pub aud: Option<&'a str>,
+    pub azp: Option<&'a str>,
+    pub amr: Option<Vec<&'a str>>,
+    // even though `email` is mandatory, we set it to optional for the deserialization
+    // to have more control over the error message being returned
+    pub email: Option<&'a str>,
+    pub email_verified: Option<bool>,
+    pub given_name: Option<&'a str>,
+    pub family_name: Option<&'a str>,
+    pub address: Option<AuthProviderAddressClaims<'a>>,
+    pub birthdate: Option<&'a str>,
+    pub locale: Option<&'a str>,
+    pub phone: Option<&'a str>,
+}
+
+impl AuthProviderIdClaims<'_> {
+    pub async fn validate_update_user(
+        data: &web::Data<AppState>,
+        token: &str,
+        auth_provider_id: &str,
+    ) -> Result<User, ErrorResponse> {
+        let mut parts = token.split(".");
+        let _header = parts.next().ok_or_else(|| {
+            ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "incorrect ID did not contain claims".to_string(),
+            )
+        })?;
+        let claims = parts.next().ok_or_else(|| {
+            ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "ID token was unsigned".to_string(),
+            )
+        })?;
+        let bytes = base64_decode(claims)?;
+        let slf = serde_json::from_slice::<AuthProviderIdClaims>(&bytes)?;
+
+        if slf.email.is_none() {
+            let err = "No `email` in ID token claims. This is a mandatory claim";
+            error!("{}", err);
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                err.to_string(),
+            ));
+        }
+
+        // We need to search for the user on our side in 2 ways:
+        // 1. by email to make sure there are no conflicts
+        // 2. by provider uid in case the email has been changed remotely, if the first
+        // lookup produced any error
+        let user_opt = match User::find_by_email(data, slf.email.unwrap().to_string()).await {
+            Ok(user) => Some(user),
+            Err(_) => {
+                // if we were unable to find the user, we need to make another lookup
+                // and search by federation uid on the remote system to not end up with
+                // duplicate users in case of a remote email update
+                User::find_by_federation_uid(data, &slf.sub).await?
+            }
+        };
+
+        let now = OffsetDateTime::now_utc().unix_timestamp();
+        let user = if let Some(mut user) = user_opt {
+            let mut old_email = None;
+            let mut forbidden_error = None;
+
+            // validate federation_uid
+            // we must reject any upstream login, if a non-federated local user with the same email
+            // exists, as it could lead to an account takeover
+            if user.federation_uid.is_none() || user.federation_uid.as_deref() != Some(slf.sub) {
+                forbidden_error = Some("non-federated user or ID mismatch");
+            }
+
+            // validate auth_provider_id
+            if user.auth_provider_id.as_deref() != Some(auth_provider_id) {
+                forbidden_error = Some("invalid login from wrong auth provider");
+            }
+
+            if let Some(err) = forbidden_error {
+                user.last_failed_login = Some(now);
+                user.failed_login_attempts =
+                    Some(user.failed_login_attempts.unwrap_or_default() + 1);
+                user.save(data, old_email, None).await?;
+
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    err.to_string(),
+                ));
+            }
+
+            // check / update email
+            if Some(user.email.as_str()) != slf.email {
+                old_email = Some(user.email);
+                user.email = slf.email.unwrap().to_string();
+            }
+
+            // check other existing values and possibly update them
+            if let Some(given_name) = slf.given_name {
+                if user.given_name.as_str() != given_name {
+                    user.given_name = given_name.to_string();
+                }
+            }
+            if let Some(family_name) = slf.family_name {
+                if user.family_name.as_str() != family_name {
+                    user.family_name = family_name.to_string();
+                }
+            }
+
+            // TODO role check update depending on some upstream claim?
+
+            // update the user on our side
+            user.last_login = Some(now);
+            user.last_failed_login = None;
+            user.failed_login_attempts = None;
+
+            user.save(data, old_email, None).await?;
+            user
+        } else {
+            // Create a new federated user
+            let new_user = User {
+                email: slf.email.unwrap().to_string(),
+                given_name: slf.given_name.unwrap_or("N/A").to_string(),
+                family_name: slf.family_name.unwrap_or("N/A").to_string(),
+                // TODO `rauthy_admin` role mapping by config? json path lookup?
+                // roles: "".to_string(),
+                enabled: true,
+                email_verified: slf.email_verified.unwrap_or(false),
+                last_login: Some(now),
+                language: slf
+                    .locale
+                    .map(Language::from)
+                    .unwrap_or(Language::default()),
+                auth_provider_id: Some(auth_provider_id.to_string()),
+                federation_uid: Some(slf.sub.to_string()),
+                ..Default::default()
+            };
+            User::create_federated(data, new_user).await?
+        };
+
+        // check if we got additional values from the token
+        let mut found_values = false;
+        let mut user_values = match UserValues::find(data, &user.id).await? {
+            Some(values) => UserValuesRequest {
+                birthdate: values.birthdate,
+                phone: values.phone,
+                street: values.street,
+                zip: values.zip,
+                city: values.city,
+                country: values.country,
+            },
+            None => UserValuesRequest {
+                birthdate: None,
+                phone: None,
+                street: None,
+                zip: None,
+                city: None,
+                country: None,
+            },
+        };
+        if let Some(bday) = slf.birthdate {
+            user_values.birthdate = Some(bday.to_string());
+            found_values = true;
+        }
+        if let Some(phone) = slf.phone {
+            user_values.phone = Some(phone.to_string());
+            found_values = true;
+        }
+        if let Some(addr) = slf.address {
+            if let Some(street) = addr.street_address {
+                user_values.street = Some(street.to_string());
+            }
+            if let Some(country) = addr.country {
+                user_values.country = Some(country.to_string());
+            }
+            if let Some(zip) = addr.postal_code {
+                user_values.zip = Some(zip);
+            }
+            found_values = true;
+        }
+        if found_values {
+            UserValues::upsert(data, user.id.clone(), user_values).await?;
+        }
+
+        Ok(user)
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AuthProviderTokenSet {
+    pub access_token: String,
+    pub token_type: Option<String>,
+    pub id_token: Option<String>,
+    pub expires_in: i32,
+    pub refresh_token: Option<String>,
+}
+
 #[derive(Debug, Serialize)]
 struct OidcCodeRequestParams<'a> {
     client_id: &'a str,
@@ -845,13 +1053,4 @@ struct OidcCodeRequestParams<'a> {
     code_verifier: Option<&'a str>,
     grant_type: &'static str,
     redirect_uri: &'a str,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AuthProviderTokenSet {
-    pub access_token: String,
-    pub token_type: Option<String>,
-    pub id_token: Option<String>,
-    pub expires_in: i32,
-    pub refresh_token: Option<String>,
 }
