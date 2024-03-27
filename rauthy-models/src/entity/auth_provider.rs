@@ -1,7 +1,7 @@
 use crate::app_state::AppState;
 use crate::entity::clients::Client;
 use crate::entity::well_known::WellKnown;
-use crate::request::{ProviderLoginRequest, ProviderRequest};
+use crate::request::{ProviderCallbackRequest, ProviderLoginRequest, ProviderRequest};
 use crate::response::ProviderLookupResponse;
 use actix_web::cookie::Cookie;
 use actix_web::http::header::HeaderValue;
@@ -14,12 +14,14 @@ use rauthy_common::constants::{
     UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::{base64_encode, new_store_id};
+use rauthy_common::utils::{base64_decode, base64_encode, new_store_id};
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use reqwest::tls;
+use ring::digest;
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
 use std::fmt::Write;
+use std::net::ToSocketAddrs;
 use std::time::Duration;
 use tracing::debug;
 
@@ -235,32 +237,6 @@ impl AuthProvider {
         id: String,
         payload: ProviderRequest,
     ) -> Result<(), ErrorResponse> {
-        // let scope = Self::cleanup_scope(&payload.scope);
-        // let secret = Self::secret_encrypted(&payload.client_secret)?;
-        //
-        // Self {
-        //     id,
-        //     name: payload.name,
-        //     issuer: payload.issuer,
-        //     authorization_endpoint: payload.authorization_endpoint,
-        //     token_endpoint: payload.token_endpoint,
-        //     userinfo_endpoint: payload.userinfo_endpoint,
-        //     client_id: payload.client_id,
-        //     secret,
-        //     scope,
-        //     token_auth_method_basic: payload.token_auth_method_basic,
-        //     use_pkce: payload.use_pkce,
-        //     root_pem: payload.root_pem,
-        //
-        //     logo: None,
-        //     logo_type: None,
-        //     // TODO when implemented in the UI
-        //     // logo: payload.,
-        //     // logo_type: payload.use_pkce,
-        // }
-        // .save(data)
-        // .await
-
         Self::try_from_id_req(id, payload)?.save(data).await
     }
 
@@ -480,6 +456,7 @@ impl AuthProvider {
 pub struct AuthProviderCallback {
     pub callback_id: String,
     pub xsrf_token: String,
+    pub typ: AuthProviderType,
 
     pub client_id: String,
     pub client_scope: Vec<String>,
@@ -502,6 +479,53 @@ pub struct AuthProviderCallback {
     pub pkce_challenge: String,
 }
 
+// CRUD
+impl AuthProviderCallback {
+    pub async fn delete(
+        data: &web::Data<AppState>,
+        callback_id: String,
+    ) -> Result<(), ErrorResponse> {
+        cache_del(
+            CACHE_NAME_AUTH_PROVIDER_CALLBACK.to_string(),
+            callback_id,
+            &data.caches.ha_cache_config,
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn find(data: &web::Data<AppState>, callback_id: String) -> Result<Self, ErrorResponse> {
+        match cache_get!(
+            Self,
+            CACHE_NAME_AUTH_PROVIDER_CALLBACK.to_string(),
+            callback_id,
+            &data.caches.ha_cache_config,
+            true
+        )
+        .await?
+        {
+            None => Err(ErrorResponse::new(
+                ErrorResponseType::NotFound,
+                "Callback Code not found - timeout reached?".to_string(),
+            )),
+            Some(slf) => Ok(slf),
+        }
+    }
+
+    async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        cache_insert(
+            CACHE_NAME_AUTH_PROVIDER_CALLBACK.to_string(),
+            self.callback_id.clone(),
+            &data.caches.ha_cache_config,
+            &self,
+            // Once is good enough and faster -> random ID each time cannot produce conflicts
+            AckLevel::Once,
+        )
+        .await?;
+        Ok(())
+    }
+}
+
 impl AuthProviderCallback {
     /// returns (encrypted cookie, xsrf token, location header, optional allowed origins)
     pub async fn login_start(
@@ -517,6 +541,7 @@ impl AuthProviderCallback {
         let slf = Self {
             callback_id: secure_random_alnum(32),
             xsrf_token: secure_random_alnum(32),
+            typ: provider.typ,
 
             client_id: client.id,
             client_scope,
@@ -577,15 +602,48 @@ impl AuthProviderCallback {
         ))
     }
 
+    /// In case of any error, the callback code will be fully deleted for security reasons.
     pub async fn login_finish(
-        _web: &web::Data<AppState>,
-        _cookie: &str,
-        _xsrf_token: &str,
-        _pkce_verifier: String,
+        data: &web::Data<AppState>,
+        cookie: Cookie<'_>,
+        payload: &ProviderCallbackRequest,
     ) -> Result<Self, ErrorResponse> {
-        // validate values for Self
+        // the callback id for the cache should be inside the encrypted cookie
+        let bytes = base64_decode(cookie.value())?;
+        let plain = EncValue::try_from(bytes)?.decrypt()?;
+        let callback_id = String::from_utf8_lossy(plain.as_ref()).to_string();
 
-        // fetch token for the user
+        // validate state
+        if callback_id != payload.state {
+            Self::delete(data, callback_id).await?;
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "`state` does not match".to_string(),
+            ));
+        }
+
+        // validate csrf token
+        let slf = Self::find(data, callback_id).await?;
+        if slf.xsrf_token != payload.xsrf_token {
+            Self::delete(data, slf.callback_id).await?;
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "invalid CSRF token".to_string(),
+            ));
+        }
+
+        // validate PKCE verifier
+        let hash = digest::digest(&digest::SHA256, slf.pkce_challenge.as_bytes());
+        if hash.as_ref() != payload.pkce_verifier.as_bytes() {
+            Self::delete(data, slf.callback_id).await?;
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "invalid PKCE verifier".to_string(),
+            ));
+        }
+
+        // request is valid -> fetch token for the user
+        todo!()
 
         // check if user exists locally
         // - if yes, compare values and make sure it is already federated, block otherwise
@@ -594,56 +652,15 @@ impl AuthProviderCallback {
         // check mfa force for the client + user setup and return data accordingly
 
         // create delete cookie
-        let cookie = cookie::Cookie::build(COOKIE_UPSTREAM_CALLBACK, "")
-            .secure(true)
-            .http_only(true)
-            .same_site(cookie::SameSite::Lax)
-            .max_age(cookie::time::Duration::ZERO)
-            .path("/auth")
-            .finish();
+        // let cookie = cookie::Cookie::build(COOKIE_UPSTREAM_CALLBACK, "")
+        //     .secure(true)
+        //     .http_only(true)
+        //     .same_site(cookie::SameSite::Lax)
+        //     .max_age(cookie::time::Duration::ZERO)
+        //     .path("/auth")
+        //     .finish();
 
         todo!()
-    }
-
-    async fn delete(data: &web::Data<AppState>, callback_id: String) -> Result<(), ErrorResponse> {
-        cache_del(
-            CACHE_NAME_AUTH_PROVIDER_CALLBACK.to_string(),
-            callback_id,
-            &data.caches.ha_cache_config,
-        )
-        .await?;
-        Ok(())
-    }
-
-    async fn find(data: &web::Data<AppState>, callback_id: String) -> Result<Self, ErrorResponse> {
-        match cache_get!(
-            Self,
-            CACHE_NAME_AUTH_PROVIDER_CALLBACK.to_string(),
-            callback_id,
-            &data.caches.ha_cache_config,
-            true
-        )
-        .await?
-        {
-            None => Err(ErrorResponse::new(
-                ErrorResponseType::NotFound,
-                "Callback Code not found - timeout reached?".to_string(),
-            )),
-            Some(slf) => Ok(slf),
-        }
-    }
-
-    async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_insert(
-            CACHE_NAME_AUTH_PROVIDER_CALLBACK.to_string(),
-            self.callback_id.clone(),
-            &data.caches.ha_cache_config,
-            &self,
-            // Once is good enough and faster -> random ID each time cannot produce conflicts
-            AckLevel::Once,
-        )
-        .await?;
-        Ok(())
     }
 }
 
