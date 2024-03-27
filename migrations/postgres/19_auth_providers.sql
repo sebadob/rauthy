@@ -29,6 +29,13 @@ alter table users
     add auth_provider_id varchar;
 
 alter table users
+    add federation_uid varchar;
+
+alter table users
+    add constraint users_federation_key
+        unique (auth_provider_id, federation_uid);
+
+alter table users
     add constraint users_auth_providers_id_fk
-        foreign key (auth_provider_id) references auth_providers (id)
+        foreign key (auth_provider_id) references auth_providers
             on update cascade on delete set null;

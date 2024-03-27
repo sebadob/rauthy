@@ -54,9 +54,11 @@ create table users
     user_expires          int,
     auth_provider_id      varchar
         constraint users_auth_providers_id_fk
-            references auth_providers (id)
-            on delete set null
-            on update cascade
+            references auth_providers
+            on update cascade on delete set null,
+    federation_uid        varchar,
+    constraint users_federation_key
+        unique (auth_provider_id, federation_uid)
 );
 
 create unique index users_email_uindex
