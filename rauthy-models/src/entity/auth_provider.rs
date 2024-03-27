@@ -14,7 +14,7 @@ use rauthy_common::constants::{
     UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::{base64_decode, base64_encode, new_store_id};
+use rauthy_common::utils::{base64_decode, base64_encode, base64_url_encode, new_store_id};
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use reqwest::tls;
 use ring::digest;
@@ -23,7 +23,7 @@ use sqlx::{query, query_as};
 use std::fmt::Write;
 use std::net::ToSocketAddrs;
 use std::time::Duration;
-use tracing::debug;
+use tracing::{debug, error, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuthProviderType {
@@ -80,7 +80,7 @@ pub struct AuthProvider {
     pub secret: Option<Vec<u8>>,
     pub scope: String,
 
-    pub token_auth_method_basic: bool,
+    pub allow_insecure_requests: bool,
     pub use_pkce: bool,
 
     pub root_pem: Option<String>,
@@ -121,8 +121,8 @@ impl AuthProvider {
             r#"
             INSERT INTO
             auth_providers (id, name, typ, issuer, authorization_endpoint, token_endpoint,
-            userinfo_endpoint, client_id, secret, scope, token_auth_method_basic, use_pkce,
-            root_pem, logo, logo_type)
+            userinfo_endpoint, client_id, secret, scope, allow_insecure_requests,
+            use_pkce, root_pem, logo, logo_type)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
             slf.id,
             slf.name,
@@ -134,7 +134,7 @@ impl AuthProvider {
             slf.client_id,
             slf.secret,
             slf.scope,
-            slf.token_auth_method_basic,
+            slf.allow_insecure_requests,
             slf.use_pkce,
             slf.root_pem,
             slf.logo,
@@ -246,7 +246,7 @@ impl AuthProvider {
             r#"UPDATE auth_providers
             SET name = $1, issuer = $2, typ = $3, authorization_endpoint = $4, token_endpoint = $5,
             userinfo_endpoint = $6, client_id = $7, secret = $8, scope = $9,
-            token_auth_method_basic = $10, use_pkce = $11, root_pem = $12
+            allow_insecure_requests = $10, use_pkce = $11, root_pem = $12
             WHERE id = $13"#,
             self.name,
             self.issuer,
@@ -257,7 +257,7 @@ impl AuthProvider {
             self.client_id,
             self.secret,
             self.scope,
-            self.token_auth_method_basic,
+            self.allow_insecure_requests,
             self.use_pkce,
             self.root_pem,
             // self.logo,
@@ -296,6 +296,36 @@ impl AuthProvider {
             .join("+")
     }
 
+    fn build_client(
+        danger_allow_insecure: bool,
+        root_pem: Option<&str>,
+    ) -> Result<reqwest::Client, ErrorResponse> {
+        let client = if danger_allow_insecure {
+            reqwest::Client::builder()
+                .timeout(Duration::from_secs(10))
+                .connect_timeout(Duration::from_secs(10))
+                .user_agent(format!("Rauthy Auth Provider Client v{}", RAUTHY_VERSION))
+                .https_only(false)
+                .danger_accept_invalid_certs(true)
+                .build()?
+        } else {
+            let mut builder = reqwest::Client::builder()
+                .timeout(Duration::from_secs(10))
+                .connect_timeout(Duration::from_secs(10))
+                .min_tls_version(tls::Version::TLS_1_3)
+                .tls_built_in_root_certs(true)
+                .user_agent(format!("Rauthy Auth Provider Client v{}", RAUTHY_VERSION))
+                .https_only(true);
+            if let Some(pem) = root_pem {
+                let root_cert = reqwest::tls::Certificate::from_pem(pem.as_bytes())?;
+                builder = builder.add_root_certificate(root_cert);
+            }
+            builder.build()?
+        };
+
+        Ok(client)
+    }
+
     fn try_from_id_req(id: String, req: ProviderRequest) -> Result<Self, ErrorResponse> {
         let scope = Self::cleanup_scope(&req.scope);
         let secret = Self::secret_encrypted(&req.client_secret)?;
@@ -313,7 +343,7 @@ impl AuthProvider {
             client_id: req.client_id,
             secret,
             scope,
-            token_auth_method_basic: req.token_auth_method_basic,
+            allow_insecure_requests: req.danger_allow_insecure.unwrap_or(false),
             use_pkce: req.use_pkce,
             root_pem: req.root_pem,
 
@@ -338,19 +368,10 @@ impl AuthProvider {
 
     pub async fn lookup_config(
         issuer: &str,
-        danger_allow_http: bool,
         danger_allow_insecure: bool,
+        root_pem: Option<&str>,
     ) -> Result<ProviderLookupResponse, ErrorResponse> {
-        let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(10))
-            .connect_timeout(Duration::from_secs(10))
-            .min_tls_version(tls::Version::TLS_1_3)
-            .tls_built_in_root_certs(true)
-            .user_agent(format!("Rauthy Auth Provider Client v{}", RAUTHY_VERSION))
-            // if necessary, make insecure connections work for local dev, testing, internal networks, ...
-            .https_only(!danger_allow_http)
-            .danger_accept_invalid_certs(danger_allow_insecure)
-            .build()?;
+        let client = Self::build_client(danger_allow_insecure, root_pem)?;
 
         let issuer_url = if issuer.starts_with("http://") || issuer.starts_with("https://") {
             issuer.to_string()
@@ -422,7 +443,6 @@ impl AuthProvider {
                 .code_challenge_methods_supported
                 .iter()
                 .any(|c| c == "S256"),
-            danger_allow_http,
             danger_allow_insecure,
             scope,
             // TODO add `scopes_supported` Vec and make them selectable with checkboxes in the UI
@@ -440,8 +460,8 @@ impl AuthProvider {
         }
     }
 
-    pub fn get_secret_cleartext(&self) -> Result<Option<String>, ErrorResponse> {
-        if let Some(secret) = &self.secret {
+    pub fn get_secret_cleartext(secret: &Option<Vec<u8>>) -> Result<Option<String>, ErrorResponse> {
+        if let Some(secret) = &secret {
             let bytes = EncValue::try_from(secret.clone())?.decrypt()?;
             let cleartext = String::from_utf8_lossy(bytes.as_ref()).to_string();
             Ok(Some(cleartext))
@@ -472,7 +492,7 @@ pub struct AuthProviderCallback {
     // pub userinfo_endpoint: String,
     pub provider_client_id: String,
     pub provider_secret: Option<Vec<u8>>,
-    pub token_auth_method_basic: bool,
+    pub allow_insecure_requests: bool,
     pub use_pkce: bool,
     pub root_pem: Option<String>,
     // TODO add a nonce upstream as well? -> improvement?
@@ -556,7 +576,7 @@ impl AuthProviderCallback {
             provider_token_endpoint: provider.token_endpoint,
             provider_client_id: provider.client_id,
             provider_secret: provider.secret,
-            token_auth_method_basic: provider.token_auth_method_basic,
+            allow_insecure_requests: provider.allow_insecure_requests,
             use_pkce: provider.use_pkce,
             root_pem: provider.root_pem,
 
@@ -616,6 +636,8 @@ impl AuthProviderCallback {
         // validate state
         if callback_id != payload.state {
             Self::delete(data, callback_id).await?;
+
+            error!("`state` does not match");
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "`state` does not match".to_string(),
@@ -626,6 +648,8 @@ impl AuthProviderCallback {
         let slf = Self::find(data, callback_id).await?;
         if slf.xsrf_token != payload.xsrf_token {
             Self::delete(data, slf.callback_id).await?;
+
+            error!("invalid CSRF token");
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 "invalid CSRF token".to_string(),
@@ -633,9 +657,12 @@ impl AuthProviderCallback {
         }
 
         // validate PKCE verifier
-        let hash = digest::digest(&digest::SHA256, slf.pkce_challenge.as_bytes());
-        if hash.as_ref() != payload.pkce_verifier.as_bytes() {
+        let hash = digest::digest(&digest::SHA256, payload.pkce_verifier.as_bytes());
+        let hash_base64 = base64_url_encode(hash.as_ref());
+        if slf.pkce_challenge != hash_base64 {
             Self::delete(data, slf.callback_id).await?;
+
+            error!("invalid PKCE verifier");
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 "invalid PKCE verifier".to_string(),
@@ -643,7 +670,89 @@ impl AuthProviderCallback {
         }
 
         // request is valid -> fetch token for the user
-        todo!()
+        let client =
+            AuthProvider::build_client(slf.allow_insecure_requests, slf.root_pem.as_deref())?;
+        let res = client
+            .get(slf.provider_token_endpoint)
+            .basic_auth(
+                &slf.provider_client_id,
+                AuthProvider::get_secret_cleartext(&slf.provider_secret)?,
+            )
+            .json(&OidcCodeRequestParams {
+                client_id: &slf.provider_client_id,
+                client_secret: AuthProvider::get_secret_cleartext(&slf.provider_secret)?,
+                code: slf.use_pkce.then_some(&payload.code),
+                code_verifier: slf.use_pkce.then_some(&payload.pkce_verifier),
+                grant_type: "authorization_code",
+                redirect_uri: &*PROVIDER_CALLBACK_URI,
+            })
+            .send()
+            .await?;
+
+        if !res.status().is_success() {
+            let status = res.status().as_u16();
+            let err = match res.text().await {
+                Ok(body) => format!(
+                    "HTTP {} during GET /token for upstream auth provider '{}':\n{}",
+                    status, slf.provider_client_id, body
+                ),
+                Err(_) => format!(
+                    "HTTP {} during GET /token for upstream auth provider '{}' without any body",
+                    status, slf.provider_client_id
+                ),
+            };
+            error!("{}", err);
+            return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
+        }
+
+        match res.json::<AuthProviderTokenSet>().await {
+            Ok(ts) => {
+                // At this point, we should have all the tokens.
+                // We cannot do any strict validation or deserialization, because upstream
+                // providers differ a lot.
+                // That's why we will try it via a dynamic approach. This it of course slower
+                // than strict deserialization, but it is more versatile and will provide
+                // better compatibility with a broader ranger of providers.
+
+                warn!("\n\n{:?}\n", ts);
+                todo!();
+
+                // // validate access token
+                // let _access_claims =
+                //     JwtAccessClaims::from_token_validated(&ts.access_token).await?;
+                //
+                // // validate id token
+                // if ts.id_token.is_none() {
+                //     return Err(anyhow::Error::msg("ID token is missing"));
+                // }
+                // let id_claims = JwtIdClaims::from_token_validated(
+                //     ts.id_token.as_deref().unwrap(),
+                //     &cookie_state.nonce,
+                // )
+                // .await?;
+                //
+                // // reset STATE_COOKIE
+                // let cookie = build_lax_cookie_300(
+                //     OIDC_STATE_COOKIE,
+                //     "",
+                //     insecure == OidcCookieInsecure::Yes,
+                // );
+            }
+            Err(err) => {
+                let err = format!(
+                    "Deserializing /token response from auth provider {}: {}",
+                    slf.provider_client_id, err
+                );
+                error!("{}", err);
+                return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
+            }
+        }
+
+        // let res = client.get(&slf.provider_token_endpoint)
+        //         .basic_auth(slf.provider_client_id, slf.provider_secret)
+        //     .json()
+
+        todo!();
 
         // check if user exists locally
         // - if yes, compare values and make sure it is already federated, block otherwise
@@ -726,4 +835,23 @@ impl AuthProviderTemplate {
 
         Ok(json)
     }
+}
+
+#[derive(Debug, Serialize)]
+struct OidcCodeRequestParams<'a> {
+    client_id: &'a str,
+    client_secret: Option<String>,
+    code: Option<&'a str>,
+    code_verifier: Option<&'a str>,
+    grant_type: &'static str,
+    redirect_uri: &'a str,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthProviderTokenSet {
+    pub access_token: String,
+    pub token_type: Option<String>,
+    pub id_token: Option<String>,
+    pub expires_in: i32,
+    pub refresh_token: Option<String>,
 }

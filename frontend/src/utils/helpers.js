@@ -84,6 +84,7 @@ export const purgeStorage = () => {
     localStorage.removeItem(ID_TOKEN);
     localStorage.removeItem(ACCESS_TOKEN);
     localStorage.removeItem(PKCE_VERIFIER);
+    localStorage.removeItem(PROVIDER_TOKEN);
 }
 
 export function arrBufToBase64UrlSafe(buffer) {

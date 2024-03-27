@@ -3,11 +3,17 @@ use actix_web::http::header::{LOCATION, SET_COOKIE};
 use actix_web::http::StatusCode;
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_validator::Json;
+use rauthy_common::constants::{COOKIE_UPSTREAM_CALLBACK, HEADER_HTML};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_provider::{AuthProvider, AuthProviderCallback};
-use rauthy_models::request::{ProviderLoginRequest, ProviderLookupRequest, ProviderRequest};
+use rauthy_models::entity::colors::ColorEntity;
+use rauthy_models::request::{
+    ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
+};
 use rauthy_models::response::ProviderResponse;
+use rauthy_models::templates::{AdminUsersHtml, ProviderCallbackHtml};
+use tracing::error;
 
 /// GET all upstream auth providers
 ///
@@ -89,6 +95,10 @@ pub async fn post_provider(
     ),
 )]
 #[post("/providers/lookup")]
+#[tracing::instrument(
+    name = "post_provider_lookup",
+    skip_all, fields(issuer = payload.issuer)
+)]
 pub async fn post_provider_lookup(
     // data: web::Data<AppState>,
     payload: Json<ProviderLookupRequest>,
@@ -99,8 +109,8 @@ pub async fn post_provider_lookup(
     let payload = payload.into_inner();
     let resp = AuthProvider::lookup_config(
         &payload.issuer,
-        payload.danger_allow_http.unwrap_or(false),
         payload.danger_allow_insecure.unwrap_or(false),
+        payload.root_pem.as_deref(),
     )
     .await?;
 
@@ -117,7 +127,7 @@ pub async fn post_provider_lookup(
     path = "/providers/login",
     tag = "providers",
     responses(
-        (status = 200, description = "OK", body = ProviderLookupResponse),
+        (status = 202, description = "Accepted"),
         (status = 400, description = "BadRequest", body = ErrorResponse),
         (status = 404, description = "NotFound", body = ErrorResponse),
     ),
@@ -132,14 +142,68 @@ pub async fn post_provider_login(
     principal.validate_session_auth_or_init()?;
 
     let payload = payload.into_inner();
+    // TODO can we get rid of allowed origins here? Do we even need it?
     let (cookie, xsrf_token, location, allowed_origins) =
         AuthProviderCallback::login_start(&data, payload).await?;
 
-    // Ok(HttpResponse::build(StatusCode::from_u16(302).unwrap())
     Ok(HttpResponse::Accepted()
         .insert_header((LOCATION, location))
         .cookie(cookie)
         .body(xsrf_token))
+}
+
+#[get("/providers/callback")]
+pub async fn get_provider_callback_html(
+    data: web::Data<AppState>,
+) -> Result<HttpResponse, ErrorResponse> {
+    let colors = ColorEntity::find_rauthy(&data).await?;
+    let body = ProviderCallbackHtml::build(&colors);
+
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
+}
+
+/// Callback for an upstream auth provider login
+///
+/// **Permissions**
+/// - `session-init`
+/// - `session-auth`
+#[utoipa::path(
+    post,
+    path = "/providers/callback",
+    tag = "providers",
+    responses(
+        (status = 200, description = "OK", body = ProviderLookupResponse),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[post("/providers/callback")]
+#[tracing::instrument(
+    name = "post_provider_callback",
+    skip_all, fields(callback_id = payload.state)
+)]
+pub async fn post_provider_callback(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+    payload: Json<ProviderCallbackRequest>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth_or_init()?;
+
+    let cookie = req.cookie(COOKIE_UPSTREAM_CALLBACK).ok_or_else(|| {
+        ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Missing encrypted callback cookie".to_string(),
+        )
+    })?;
+    let payload = payload.into_inner();
+    let res = AuthProviderCallback::login_finish(&data, cookie, &payload).await?;
+
+    todo!()
+    // Ok(HttpResponse::Accepted()
+    //     .insert_header((LOCATION, location))
+    //     .cookie(cookie)
+    //     .body(xsrf_token))
 }
 
 /// PUT update an upstream auth provider

@@ -1,28 +1,38 @@
 <script>
     import Loading from "$lib/Loading.svelte";
     import {
-        deleteVerifierFromStorage,
         getQueryParams,
         getVerifierFromStorage,
-        saveAccessToken,
-        saveCsrfToken,
-        saveIdToken
+        getProviderToken,
     } from "../../../utils/helpers.js";
+    import {postProviderCallback} from "../../../utils/dataFetching.js";
     import {onMount} from "svelte";
-    import {CLIENT_ID, REDIRECT_URI_SUCCESS, REDIRECT_URI_SUCCESS_ACC} from "../../../utils/constants.js";
-    import {getSessionInfoXsrf, getToken} from "../../../utils/dataFetching.js";
+
+    let error = '';
 
     onMount(async () => {
         const query = getQueryParams();
-
-        const state = query.state;
-        const code = query.code;
 
         // TODO instead of the normal callback, we do not want to get a token,
         // but actually finish the provider login flow, which then will start with
         // Rauthy's default login flow.
 
-        console.error('TODO implement callback logic');
+        let data = {
+            state: query.state,
+            code: query.code,
+            pkce_verifier: getVerifierFromStorage(),
+            xsrf_token: getProviderToken(),
+        };
+        console.log(data);
+        let res = await postProviderCallback(data);
+        let body = await res.json();
+        if (res.ok) {
+            console.log(body);
+        } else {
+            error = body.message;
+        }
+
+        console.error('TODO finish implementing callback logic');
         return;
 
         // const data = new URLSearchParams();
@@ -63,6 +73,9 @@
     <title>Callback</title>
 </svelte:head>
 
-<Loading/>
-
+{#if error}
+    {error}
+{:else}
+    <Loading/>
+{/if}
 <!-- Placeholder for SSR of provider callback errors -->

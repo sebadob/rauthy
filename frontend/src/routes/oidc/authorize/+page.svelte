@@ -10,10 +10,11 @@
     import * as yup from 'yup';
     import {
         extractFormErrors,
-        formatDateFromTs, getKey,
+        formatDateFromTs,
         getQueryParams,
         saveCsrfToken,
-        saveProviderToken
+        saveProviderToken,
+        getProviderToken,
     } from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
     import WebauthnRequest from "../../../components/webauthn/WebauthnRequest.svelte";
@@ -270,9 +271,12 @@
         if (res.ok) {
             const xsrfToken = await res.text();
             saveProviderToken(xsrfToken);
+
             const loc = res.headers.get('location');
+
             console.log(loc);
-            await sleepAwait(5000);
+            await sleepAwait(10000);
+
             window.location.href = loc;
         } else {
             let body = await res.json();
