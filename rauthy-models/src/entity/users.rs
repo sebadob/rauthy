@@ -170,7 +170,6 @@ impl User {
         Ok(())
     }
 
-    // Returns a user by its id
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
         let idx = format!("{}_{}", IDX_USERS, id);
         let user_opt = cache_get!(
@@ -202,7 +201,6 @@ impl User {
         Ok(user)
     }
 
-    // Returns a user by its email
     pub async fn find_by_email(
         data: &web::Data<AppState>,
         email: String,
@@ -249,7 +247,6 @@ impl User {
         Ok(user)
     }
 
-    // Returns all existing users
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
         let res = sqlx::query_as::<_, Self>("select * from users")
             .fetch_all(&data.db)
@@ -271,10 +268,10 @@ impl User {
     async fn insert(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
         let lang = new_user.language.as_str();
         sqlx::query!(
-            r#"insert into users
+            r#"INSERT INTO USERS
             (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-            language, user_expires)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"#,
+            language, user_expires, auth_provider_id, federation_uid)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"#,
             new_user.id,
             new_user.email,
             new_user.given_name,
@@ -286,6 +283,8 @@ impl User {
             new_user.created_at,
             lang,
             new_user.user_expires,
+            new_user.auth_provider_id,
+            new_user.federation_uid,
         )
         .execute(&data.db)
         .await?;
@@ -293,7 +292,6 @@ impl User {
         Ok(new_user)
     }
 
-    // Saves a user
     pub async fn save(
         &self,
         data: &web::Data<AppState>,
@@ -378,7 +376,6 @@ impl User {
     }
 
     // TODO should we include a "unlink federation" for admins here?
-    // Updates a user
     pub async fn update(
         data: &web::Data<AppState>,
         id: String,
@@ -408,11 +405,8 @@ impl User {
             user.apply_password_rules(data, password).await?;
         }
 
-        // sanitize roles
         let is_admin_before_update = user.is_admin();
         user.roles = Role::sanitize(data, upd_user.roles).await?;
-
-        // sanitize groups
         user.groups = Group::sanitize(data, upd_user.groups).await?;
 
         user.enabled = upd_user.enabled;
