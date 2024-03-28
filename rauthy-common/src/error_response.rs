@@ -2,7 +2,7 @@ use crate::constants::{APPLICATION_JSON, HEADER_DPOP_NONCE, HEADER_HTML, HEADER_
 use actix_multipart::MultipartError;
 use actix_web::error::BlockingError;
 use actix_web::http::header::{
-    ToStrError, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS, WWW_AUTHENTICATE,
+    ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS, WWW_AUTHENTICATE,
 };
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
@@ -13,6 +13,7 @@ use redhac::CacheError;
 use rio_turtle::TurtleError;
 use serde::{Deserialize, Serialize};
 use serde_json::Error;
+use serde_json_path::ParseError;
 use spow::pow::PowError;
 use std::fmt::{Display, Formatter};
 use std::string::FromUtf8Error;
@@ -341,7 +342,7 @@ impl From<serde_json::Error> for ErrorResponse {
     }
 }
 impl From<reqwest::header::ToStrError> for ErrorResponse {
-    fn from(value: ToStrError) -> Self {
+    fn from(value: reqwest::header::ToStrError) -> Self {
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!(
@@ -388,5 +389,14 @@ impl From<CryptrError> for ErrorResponse {
 impl From<PowError> for ErrorResponse {
     fn from(value: PowError) -> Self {
         ErrorResponse::new(ErrorResponseType::Forbidden, value.to_string())
+    }
+}
+
+impl From<serde_json_path::ParseError> for ErrorResponse {
+    fn from(value: ParseError) -> Self {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("JsonPath error: {}", value),
+        )
     }
 }

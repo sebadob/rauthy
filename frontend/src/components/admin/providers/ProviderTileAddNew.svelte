@@ -25,13 +25,11 @@
 
     let configLookup = {
         issuer: '',
-        danger_allow_http: false,
         danger_allow_insecure: false,
     };
     let config = {
         // fixed values after lookup
         issuer: '',
-        danger_allow_http: false,
         danger_allow_insecure: false,
         authorization_endpoint: '',
         token_endpoint: '',
@@ -43,6 +41,8 @@
         client_id: '',
         client_secret: '',
         scope: '',
+        admin_claim_path: null,
+        admin_claim_value: null,
         // maybe additional ones in the future like client_logo
     }
     // TODO add "the big ones" as templates in the future
@@ -61,6 +61,9 @@
         client_id: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         client_secret: yup.string().trim().max(256, "Max 256 characters"),
         scope: yup.string().trim().matches(REGEX_LOWERCASE_SPACE, "Can only contain: 'a-zA-Z0-9-_/ ', length max: 128"),
+
+        admin_claim_path: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
+        admin_claim_value: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
     });
     const schemaLookup = yup.object().shape({
         issuer: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
@@ -128,7 +131,6 @@
             const body = await res.json();
             config.issuer = body.issuer;
             config.authorization_endpoint = body.authorization_endpoint;
-            config.danger_allow_http = body.danger_allow_http;
             config.danger_allow_insecure = body.danger_allow_insecure;
             config.token_endpoint = body.token_endpoint;
             config.userinfo_endpoint = body.userinfo_endpoint;
@@ -150,18 +152,18 @@
     function resetValues() {
         configLookup = {
             issuer: '',
-            danger_allow_http: false,
             danger_allow_insecure: false,
         };
         config = {
             issuer: '',
-            danger_allow_http: false,
             danger_allow_insecure: false,
             authorization_endpoint: '',
             token_endpoint: '',
             userinfo_endpoint: '',
             use_pkce: true,
             scope: '',
+            admin_claim_path: '',
+            admin_claim_value: '',
         }
     }
 
@@ -210,16 +212,10 @@
                     placeholder="Issuer URL"
                     on:input={validateFormLookup}
                     width={inputWidth}
+                    on:enter={onSubmitLookup}
             >
                 ISSUER URL
             </Input>
-
-            <div class="header">
-                Allow unencrypted HTTP lookup
-            </div>
-            <div class="ml">
-                <Switch bind:selected={configLookup.danger_allow_http}/>
-            </div>
 
             <div class="header">
                 Allow insecure TLS certificates
@@ -244,13 +240,6 @@
                 >
                     ISSUER URL
                 </Input>
-
-                <div class="header">
-                    Allow unencrypted HTTP lookup
-                </div>
-                <div class="ml">
-                    <CheckIcon bind:check={config.danger_allow_http}/>
-                </div>
 
                 <div class="header">
                     Allow insecure TLS certificates
@@ -312,13 +301,6 @@
                 >
                     ISSUER URL
                 </Input>
-
-                <div class="header">
-                    Allow unencrypted HTTP lookup
-                </div>
-                <div class="ml">
-                    <Switch bind:selected={config.danger_allow_http}/>
-                </div>
 
                 <div class="header">
                     Allow insecure TLS certificates
@@ -425,6 +407,32 @@
             >
                 CLIENT SECRET
             </PasswordInput>
+
+            <div class="desc">
+                Rauthy Admin mapping.<br>
+                If the user logging in should be mapped automatically to the rauthy_admin role,<br>
+                specify the json path and expected value here.
+            </div>
+            <Input
+                    bind:value={config.admin_claim_path}
+                    bind:error={formErrors.admin_claim_path}
+                    autocomplete="off"
+                    placeholder="Admin Claim Path"
+                    on:input={validateFormConfig}
+                    width={inputWidth}
+            >
+                ADMIN CLAIM PATH
+            </Input>
+            <Input
+                    bind:value={config.admin_claim_value}
+                    bind:error={formErrors.admin_claim_value}
+                    autocomplete="off"
+                    placeholder="Admin Claim Value"
+                    on:input={validateFormConfig}
+                    width={inputWidth}
+            >
+                ADMIN CLAIM VALUE
+            </Input>
 
             <Button on:click={onSubmitConfig} bind:isLoading level={1} width="6rem">
                 SAVE

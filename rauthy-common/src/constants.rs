@@ -21,6 +21,7 @@ pub const TOKEN_DPOP_NONCE: &str = "DPoP-nonce";
 pub const COOKIE_SESSION: &str = "rauthy-session";
 pub const COOKIE_MFA: &str = "rauthy-mfa";
 pub const COOKIE_LOCALE: &str = "locale";
+pub const COOKIE_UPSTREAM_CALLBACK: &str = "upstream_auth_callback";
 pub const PWD_RESET_COOKIE: &str = "rauthy-pwd-reset";
 pub const APP_ID_HEADER: &str = "mfa-app-id";
 pub const CSRF_HEADER: &str = "csrf-token";
@@ -30,9 +31,11 @@ pub const ARGON2ID_M_COST_MIN: u32 = 32768;
 pub const ARGON2ID_T_COST_MIN: u32 = 1;
 pub const API_KEY_LENGTH: usize = 64;
 pub const EVENTS_LATEST_LIMIT: u16 = 100;
+pub const UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS: u16 = 300;
 
 pub const CACHE_NAME_12HR: &str = "12hr";
 pub const CACHE_NAME_AUTH_CODES: &str = "auth-codes";
+pub const CACHE_NAME_AUTH_PROVIDER_CALLBACK: &str = "auth-provider-callback";
 pub const CACHE_NAME_CLIENTS_DYN: &str = "clients-dyn";
 pub const CACHE_NAME_DPOP_NONCES: &str = "dpop-nonces";
 pub const CACHE_NAME_EPHEMERAL_CLIENTS: &str = "ephemeral-clients";
@@ -45,6 +48,7 @@ pub const CACHE_NAME_WEBAUTHN_DATA: &str = "webauthn-data";
 
 pub const IDX_APP_VERSION: &str = "rauthy_app_version";
 pub const IDX_AUTH_PROVIDER: &str = "auth_provider_";
+pub const IDX_AUTH_PROVIDER_TEMPLATE: &str = "provider_json_tpl";
 pub const IDX_CLIENTS: &str = "clients_";
 pub const IDX_CLIENT_LOGO: &str = "client_logo_";
 pub const IDX_GROUPS: &str = "groups_";
@@ -119,6 +123,14 @@ lazy_static! {
             "https"
         };
         format!("{}://{}", scheme, *PUB_URL)
+    };
+    pub static ref PROVIDER_CALLBACK_URI: String = {
+        let scheme = if env::var("LISTEN_SCHEME").as_deref() == Ok("http") && !*PROXY_MODE {
+            "http"
+        } else {
+            "https"
+        };
+        format!("{}%3A%2F%2F{}%2Fauth%2Fv1%2Fproviders%2Fcallback", scheme, *PUB_URL)
     };
     pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
         let scheme = if *DEV_MODE && *DEV_DPOP_HTTP { "http" } else { "https" };

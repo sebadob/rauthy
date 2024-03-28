@@ -5,7 +5,7 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::ApiKeyEntity;
 use rauthy_models::entity::auth_provider::AuthProvider;
 use rauthy_models::entity::clients::Client;
-use tracing::info;
+use tracing::{error, info};
 
 /// Migrates encrypted data in the backend to a new key.
 /// JWKS's are just rotated and a new set will be created.
@@ -80,16 +80,26 @@ pub async fn migrate_encryption_alg(
     // migrate auth providers
     let providers = AuthProvider::find_all(data).await?;
     for mut provider in providers {
-        if let Some(plaintext) = provider.get_secret_cleartext()? {
-            provider.secret = Some(
-                EncValue::encrypt_with_key_id(plaintext.as_ref(), new_kid.to_string())?
-                    .into_bytes()
-                    .to_vec(),
-            );
-            provider.save(data).await?;
+        match AuthProvider::get_secret_cleartext(&provider.secret) {
+            Ok(plaintext_opt) => {
+                if let Some(plaintext) = plaintext_opt {
+                    provider.secret = Some(
+                        EncValue::encrypt_with_key_id(plaintext.as_ref(), new_kid.to_string())?
+                            .into_bytes()
+                            .to_vec(),
+                    );
+                    provider.save(data).await?;
 
-            modified += 1;
-        };
+                    modified += 1;
+                };
+            }
+            Err(err) => {
+                error!(
+                    "Error decryption AuthProvider secret, this should never happen!\n{:?}",
+                    err
+                );
+            }
+        }
     }
     info!(
         "Finished auth provider secrets migration to key id: {}",

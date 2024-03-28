@@ -865,17 +865,93 @@ impl Client {
         )))
     }
 
-    pub fn validate_challenge_method(&self, c: &str) -> Result<(), ErrorResponse> {
+    pub fn validate_redirect_uri(&self, redirect_uri: &str) -> Result<(), ErrorResponse> {
+        let matching_uris = self
+            .get_redirect_uris()
+            .iter()
+            .filter(|uri| {
+                (uri.ends_with('*') && redirect_uri.starts_with(uri.split_once('*').unwrap().0))
+                    || uri.as_str().eq(redirect_uri)
+                // if (uri.ends_with('*') && redirect_uri.starts_with(uri.split_once('*').unwrap().0))
+                //     || uri.eq(redirect_uri)
+                // {
+                //     return true;
+                // }
+                // false
+            })
+            .count();
+        if matching_uris == 0 {
+            Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                String::from("Invalid redirect uri"),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn validate_code_challenge(
+        &self,
+        code_challenge: &Option<String>,
+        code_challenge_method: &Option<String>,
+    ) -> Result<(), ErrorResponse> {
+        if self.challenge.is_some() {
+            if code_challenge.is_none() {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    String::from("'code_challenge' is missing"),
+                ));
+            }
+
+            if code_challenge_method.is_none() {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    String::from("'code_challenge_method' is missing"),
+                ));
+            }
+
+            let method = code_challenge_method.as_ref().unwrap();
+            if !self.challenge.as_ref().unwrap().contains(method) {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!("code_challenge_method '{}' is not allowed", method),
+                ))
+            } else {
+                Ok(())
+            }
+        } else if code_challenge.is_some() || code_challenge_method.is_some() {
+            Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'code_challenge' not enabled for this client".to_string(),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn validate_challenge_method(
+        &self,
+        code_challenge_method: &str,
+    ) -> Result<(), ErrorResponse> {
         if self.challenge.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 String::from("'code_challenge' not allowed"),
             ));
         }
-        if c.is_empty() || !self.challenge.as_ref().unwrap().contains(c) {
+        if code_challenge_method.is_empty()
+            || !self
+                .challenge
+                .as_ref()
+                .unwrap()
+                .contains(code_challenge_method)
+        {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                format!("code_challenge_method '{}' is not allowed", c),
+                format!(
+                    "code_challenge_method '{}' is not allowed",
+                    code_challenge_method
+                ),
             ));
         }
         Ok(())

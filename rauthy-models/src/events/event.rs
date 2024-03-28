@@ -7,7 +7,7 @@ use crate::events::{
     EVENT_LEVEL_RAUTHY_START, EVENT_LEVEL_RAUTHY_UNHEALTHY, EVENT_LEVEL_SECRETS_MIGRATED,
     EVENT_LEVEL_USER_EMAIL_CHANGE, EVENT_LEVEL_USER_PASSWORD_RESET,
 };
-use chrono::{DateTime, NaiveDateTime, Timelike, Utc};
+use chrono::{DateTime, Timelike, Utc};
 use rauthy_common::constants::EMAIL_SUB_PREFIX;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{get_local_hostname, get_rand};
@@ -343,11 +343,11 @@ impl From<&Event> for Notification {
 
 impl Display for Event {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let ts = NaiveDateTime::from_timestamp_millis(self.timestamp).unwrap_or_default();
+        let ts = DateTime::from_timestamp_millis(self.timestamp).unwrap_or_default();
         write!(
             f,
             "EVENT {} {}:{}:{} {} {} {} {}",
-            ts.date(),
+            ts.date_naive(),
             ts.hour(),
             ts.minute(),
             ts.second(),

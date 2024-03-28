@@ -52,10 +52,12 @@ pub fn get_rand(count: usize) -> String {
         .collect::<String>()
 }
 
+#[inline(always)]
 pub fn base64_encode(input: &[u8]) -> String {
     B64_STD.encode(input)
 }
 
+#[inline(always)]
 pub fn base64_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
     B64_STD.decode(b64).map_err(|_| {
         ErrorResponse::new(
@@ -66,6 +68,7 @@ pub fn base64_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
 }
 
 // Returns the given input as a base64 URL Encoded String
+#[inline(always)]
 pub fn base64_url_encode(input: &[u8]) -> String {
     let b64 = B64_STD.encode(input);
     b64.chars()
@@ -78,10 +81,12 @@ pub fn base64_url_encode(input: &[u8]) -> String {
         .collect()
 }
 
+#[inline(always)]
 pub fn base64_url_no_pad_encode(input: &[u8]) -> String {
     B64_URL_SAFE_NO_PAD.encode(input)
 }
 
+#[inline(always)]
 pub fn base64_url_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
     B64_URL_SAFE.decode(b64).map_err(|_| {
         ErrorResponse::new(
@@ -91,6 +96,7 @@ pub fn base64_url_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
     })
 }
 
+#[inline(always)]
 pub fn base64_url_no_pad_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
     B64_URL_SAFE_NO_PAD.decode(b64).map_err(|_| {
         ErrorResponse::new(

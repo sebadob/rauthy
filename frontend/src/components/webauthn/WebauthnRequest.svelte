@@ -13,7 +13,7 @@
     };
     export let data;
     export let purpose = 'Login';
-    export let onError = () => {
+    export let onError = (error) => {
     };
     export let onSuccess = (resBody) => {
     };
@@ -55,7 +55,7 @@
             console.error(err);
             res.err = true;
             res.msg = 'Timeout';
-            onError();
+            onError('Passkey Error');
         }
 
         err = res.err;

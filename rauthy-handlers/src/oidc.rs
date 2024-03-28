@@ -8,6 +8,7 @@ use rauthy_common::constants::{APPLICATION_JSON, COOKIE_MFA, HEADER_HTML, SESSIO
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_models::entity::auth_provider::AuthProviderTemplate;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JWKS};
 use rauthy_models::entity::sessions::Session;
@@ -121,11 +122,19 @@ pub async fn get_authorize(
         return Ok(ErrorHtml::response(body, status));
     }
 
+    let auth_providers_json = AuthProviderTemplate::get_all_json_template(&data).await?;
+
     // if the user is still authenticated and everything is valid -> immediate refresh
     if !force_new_session && principal.validate_session_auth().is_ok() {
         let csrf = principal.get_session_csrf_token()?;
-        let body =
-            AuthorizeHtml::build(&client.name, csrf, FrontendAction::Refresh, &colors, &lang);
+        let body = AuthorizeHtml::build(
+            &client.name,
+            csrf,
+            FrontendAction::Refresh,
+            &colors,
+            &lang,
+            auth_providers_json,
+        );
 
         if let Some(o) = origin_header {
             return Ok(HttpResponse::Ok()
@@ -143,7 +152,14 @@ pub async fn get_authorize(
         return Ok(ErrorHtml::response(body, status));
     }
 
-    let body = AuthorizeHtml::build(&client.name, &session.csrf_token, action, &colors, &lang);
+    let body = AuthorizeHtml::build(
+        &client.name,
+        &session.csrf_token,
+        action,
+        &colors,
+        &lang,
+        auth_providers_json,
+    );
 
     let cookie = session.client_cookie();
     if let Some(o) = origin_header {
@@ -171,6 +187,7 @@ pub async fn get_authorize(
 ///
 /// **Permissions**
 /// - `session-init`
+/// - `session-auth`
 #[utoipa::path(
     post,
     path = "/oidc/authorize",

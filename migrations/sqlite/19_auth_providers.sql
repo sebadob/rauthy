@@ -5,7 +5,9 @@ create table auth_providers
     id                      varchar not null
         constraint auth_providers_pk
             primary key,
+    enabled                 bool    not null,
     name                    varchar not null,
+    typ                     varchar not null,
     issuer                  varchar not null,
     authorization_endpoint  varchar not null,
     token_endpoint          varchar not null,
@@ -13,10 +15,14 @@ create table auth_providers
     client_id               varchar not null,
     secret                  blob,
     scope                   varchar not null,
-    token_auth_method_basic bool    not null,
+    admin_claim_path        varchar,
+    admin_claim_value       varchar,
+    mfa_claim_path          varchar,
+    mfa_claim_value         varchar,
+    allow_insecure_requests bool    not null,
     use_pkce                bool    not null,
     root_pem                varchar,
-    logo                    bytea,
+    logo                    blob,
     logo_type               varchar
 );
 
@@ -53,9 +59,11 @@ create table users
     user_expires          int,
     auth_provider_id      varchar
         constraint users_auth_providers_id_fk
-            references auth_providers (id)
-            on delete set null
-            on update cascade
+            references auth_providers
+            on update cascade on delete set null,
+    federation_uid        varchar,
+    constraint users_federation_key
+        unique (auth_provider_id, federation_uid)
 );
 
 create unique index users_email_uindex

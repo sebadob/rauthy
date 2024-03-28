@@ -144,78 +144,78 @@ pub async fn authorize(
         false
     };
 
+    // client validations
     let client = Client::find_maybe_ephemeral(data, req_data.client_id)
         .await
         .map_err(|err| (err, !user_must_provide_password))?;
 
-    // check force mfa
     client
         .validate_mfa(&user)
         .map_err(|err| (err, has_password_been_hashed))?;
-
-    // check allowed origin
+    client
+        .validate_redirect_uri(&req_data.redirect_uri)
+        .map_err(|err| (err, !user_must_provide_password))?;
+    client
+        .validate_code_challenge(&req_data.code_challenge, &req_data.code_challenge_method)
+        .map_err(|err| (err, !user_must_provide_password))?;
     let header_origin = client
         .validate_origin(req, &data.listen_scheme, &data.public_url)
         .map_err(|err| (err, !user_must_provide_password))?;
+    // let challenge: Option<String> = req_data.code_challenge.clone();
+    // let mut challenge_method: Option<String> = None;
+    // // TODO would it be possible to omit a code challenge and skip it, even if the client should request it?
+    // // TODO -> double check, if the client has set code challenge? -> revert this logic and validate from client -> request
+    // if req_data.code_challenge.is_some() {
+    //     if client.challenge.is_none() {
+    //         return Err((
+    //             ErrorResponse::new(
+    //                 ErrorResponseType::BadRequest,
+    //                 String::from("no 'code_challenge_method' allowed for this client"),
+    //             ),
+    //             false,
+    //         ));
+    //     }
+    //
+    //     let method: String;
+    //     if req_data.code_challenge_method.is_none() {
+    //         method = String::from("plain");
+    //     } else {
+    //         match req_data.code_challenge_method.as_ref().unwrap().as_str() {
+    //             "S256" => method = String::from("S256"),
+    //             "plain" => method = String::from("plain"),
+    //             _ => {
+    //                 return Err((
+    //                     ErrorResponse::new(
+    //                         ErrorResponseType::BadRequest,
+    //                         String::from("invalid 'code_challenge_method"),
+    //                     ),
+    //                     false,
+    //                 ))
+    //             }
+    //         }
+    //     }
+    //
+    //     if !client.challenge.as_ref().unwrap().contains(&method) {
+    //         return Err((
+    //             ErrorResponse::new(
+    //                 ErrorResponseType::BadRequest,
+    //                 format!(
+    //                     "'code_challenge_method' '{}' is not allowed for this client",
+    //                     method,
+    //                 ),
+    //             ),
+    //             false,
+    //         ));
+    //     }
+    //     challenge_method = Some(method);
+    // }
 
-    // check requested challenge
-    let challenge: Option<String> = req_data.code_challenge.clone();
-    let mut challenge_method: Option<String> = None;
-    // TODO would it be possible to omit a code challenge and skip it, even if the client should request it?
-    // TODO -> double check, if the client has set code challenge? -> revert this logic and validate from client -> request
-    if req_data.code_challenge.is_some() {
-        if client.challenge.is_none() {
-            return Err((
-                ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    String::from("no 'code_challenge_method' allowed for this client"),
-                ),
-                false,
-            ));
-        }
-
-        let method: String;
-        if req_data.code_challenge_method.is_none() {
-            method = String::from("plain");
-        } else {
-            match req_data.code_challenge_method.as_ref().unwrap().as_str() {
-                "S256" => method = String::from("S256"),
-                "plain" => method = String::from("plain"),
-                _ => {
-                    return Err((
-                        ErrorResponse::new(
-                            ErrorResponseType::BadRequest,
-                            String::from("invalid 'code_challenge_method"),
-                        ),
-                        false,
-                    ))
-                }
-            }
-        }
-
-        if !client.challenge.as_ref().unwrap().contains(&method) {
-            return Err((
-                ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    format!(
-                        "'code_challenge_method' '{}' is not allowed for this client",
-                        method,
-                    ),
-                ),
-                false,
-            ));
-        }
-        challenge_method = Some(method);
-    }
-
-    // add the timeout for mfa verification to the auth code lifetime
+    // build authorization code
     let code_lifetime = if user.has_webauthn_enabled() {
         client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
     } else {
         client.auth_code_lifetime
     };
-
-    // build authorization code
     let scopes = client
         .sanitize_login_scopes(&req_data.scopes)
         .map_err(|err| (err, !user_must_provide_password))?;
@@ -223,8 +223,8 @@ pub async fn authorize(
         user.id.clone(),
         client.id,
         Some(session.id.clone()),
-        challenge,
-        challenge_method,
+        req_data.code_challenge,
+        req_data.code_challenge_method,
         req_data.nonce,
         scopes,
         code_lifetime,
@@ -259,7 +259,7 @@ pub async fn authorize(
             session,
         };
 
-        let login_req = WebauthnLoginReq {
+        WebauthnLoginReq {
             code: step.code.clone(),
             user_id: user.id,
             header_loc: loc,
@@ -267,11 +267,10 @@ pub async fn authorize(
                 .header_origin
                 .as_ref()
                 .map(|h| h.1.to_str().unwrap().to_string()),
-        };
-        login_req
-            .save(data)
-            .await
-            .map_err(|err| (err, !user_must_provide_password))?;
+        }
+        .save(data)
+        .await
+        .map_err(|err| (err, !user_must_provide_password))?;
 
         Ok(AuthStep::AwaitWebauthn(step))
     } else {
@@ -1699,24 +1698,7 @@ pub async fn validate_auth_req_param(
     let header = client.validate_origin(req, &data.listen_scheme, &data.public_url)?;
 
     // allowed redirect uris
-    let uris = client
-        .get_redirect_uris()
-        .iter()
-        .filter(|uri| {
-            if (uri.ends_with('*') && redirect_uri.starts_with(uri.split_once('*').unwrap().0))
-                || uri.eq(&redirect_uri)
-            {
-                return true;
-            }
-            false
-        })
-        .count();
-    if uris == 0 {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            String::from("Invalid redirect uri"),
-        ));
-    }
+    client.validate_redirect_uri(redirect_uri)?;
 
     // code challenge + method
     if client.challenge.is_some() {
