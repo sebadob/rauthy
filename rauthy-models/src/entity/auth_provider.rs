@@ -18,8 +18,9 @@ use actix_web::http::header::HeaderValue;
 use actix_web::{cookie, web, HttpRequest};
 use cryptr::utils::secure_random_alnum;
 use cryptr::EncValue;
+use itertools::Itertools;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
+    ADMIN_FORCE_MFA, CACHE_NAME_12HR, CACHE_NAME_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
     IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_CALLBACK_URI, RAUTHY_VERSION,
     UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_REQ_EXP,
 };
@@ -32,8 +33,11 @@ use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert
 use reqwest::tls;
 use ring::digest;
 use serde::{Deserialize, Serialize};
+use serde_json::{json, value};
+use serde_json_path::{JsonPath, ParseError};
 use sqlx::{query, query_as};
 use std::fmt::Write;
+use std::str::FromStr;
 use std::time::Duration;
 use time::OffsetDateTime;
 use tracing::{debug, error};
@@ -94,6 +98,9 @@ pub struct AuthProvider {
     pub secret: Option<Vec<u8>>,
     pub scope: String,
 
+    pub admin_claim_path: Option<String>,
+    pub admin_claim_value: Option<String>,
+
     pub allow_insecure_requests: bool,
     pub use_pkce: bool,
 
@@ -135,9 +142,9 @@ impl AuthProvider {
             r#"
             INSERT INTO
             auth_providers (id, name, typ, issuer, authorization_endpoint, token_endpoint,
-            userinfo_endpoint, client_id, secret, scope, allow_insecure_requests,
-            use_pkce, root_pem, logo, logo_type)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
+            userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
+            allow_insecure_requests, use_pkce, root_pem, logo, logo_type)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)"#,
             slf.id,
             slf.name,
             slf.typ.as_str(),
@@ -148,6 +155,8 @@ impl AuthProvider {
             slf.client_id,
             slf.secret,
             slf.scope,
+            slf.admin_claim_path,
+            slf.admin_claim_value,
             slf.allow_insecure_requests,
             slf.use_pkce,
             slf.root_pem,
@@ -259,9 +268,9 @@ impl AuthProvider {
         query!(
             r#"UPDATE auth_providers
             SET name = $1, issuer = $2, typ = $3, authorization_endpoint = $4, token_endpoint = $5,
-            userinfo_endpoint = $6, client_id = $7, secret = $8, scope = $9,
-            allow_insecure_requests = $10, use_pkce = $11, root_pem = $12
-            WHERE id = $13"#,
+            userinfo_endpoint = $6, client_id = $7, secret = $8, scope = $9, admin_claim_path = $10,
+            admin_claim_value = $11, allow_insecure_requests = $12, use_pkce = $13, root_pem = $14
+            WHERE id = $15"#,
             self.name,
             self.issuer,
             self.typ.as_str(),
@@ -271,6 +280,8 @@ impl AuthProvider {
             self.client_id,
             self.secret,
             self.scope,
+            self.admin_claim_path,
+            self.admin_claim_value,
             self.allow_insecure_requests,
             self.use_pkce,
             self.root_pem,
@@ -354,9 +365,14 @@ impl AuthProvider {
             authorization_endpoint: req.authorization_endpoint,
             token_endpoint: req.token_endpoint,
             userinfo_endpoint: req.userinfo_endpoint,
+
             client_id: req.client_id,
             secret,
             scope,
+
+            admin_claim_path: req.admin_claim_path,
+            admin_claim_value: req.admin_claim_value,
+
             allow_insecure_requests: req.danger_allow_insecure.unwrap_or(false),
             use_pkce: req.use_pkce,
             root_pem: req.root_pem,
@@ -745,8 +761,7 @@ impl AuthProviderCallback {
                 AuthProviderIdClaims::validate_update_user(
                     data,
                     ts.id_token.as_deref().unwrap(),
-                    &provider.id,
-                    &provider.client_id,
+                    &provider,
                 )
                 .await?
             }
@@ -775,8 +790,10 @@ impl AuthProviderCallback {
         // all good, we can generate an auth code and upgrade the session
         // ##########
 
+        let force_mfa = client.force_mfa && client.id == "rauthy" && *ADMIN_FORCE_MFA;
+
         // build authorization code
-        let code_lifetime = if client.force_mfa && user.has_webauthn_enabled() {
+        let code_lifetime = if force_mfa && user.has_webauthn_enabled() {
             client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
         } else {
             client.auth_code_lifetime
@@ -800,7 +817,7 @@ impl AuthProviderCallback {
             loc = format!("{}&state={}", loc, state);
         };
 
-        let auth_step = if client.force_mfa {
+        let auth_step = if force_mfa {
             session.set_mfa(data, true).await?;
 
             let step = AuthStepAwaitWebauthn {
@@ -946,8 +963,7 @@ impl AuthProviderIdClaims<'_> {
     pub async fn validate_update_user(
         data: &web::Data<AppState>,
         token: &str,
-        auth_provider_id: &str,
-        auth_provider_client_id: &str,
+        provider: &AuthProvider,
     ) -> Result<User, ErrorResponse> {
         let mut parts = token.split('.');
         let _header = parts.next().ok_or_else(|| {
@@ -963,15 +979,15 @@ impl AuthProviderIdClaims<'_> {
             )
         })?;
         debug!("upstream ID token claims:\n{}", claims);
-        let bytes = base64_url_no_pad_decode(claims)?;
-        let slf = serde_json::from_slice::<AuthProviderIdClaims>(&bytes)?;
+        let json_bytes = base64_url_no_pad_decode(claims)?;
+        let slf = serde_json::from_slice::<AuthProviderIdClaims>(&json_bytes)?;
 
         // validate either `aud` or `azp`
         if let Some(azp) = slf.azp {
-            if azp != auth_provider_client_id {
+            if azp != provider.client_id {
                 let err = format!(
                     "`azp` claim '{}' from ID token does not match out client_id '{}'",
-                    azp, auth_provider_client_id
+                    azp, provider.client_id,
                 );
                 error!("{}", err);
                 return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
@@ -979,10 +995,10 @@ impl AuthProviderIdClaims<'_> {
         } else if let Some(aud) = slf.aud {
             // TODO this may produce an error, since `aud` is allowed to be a single string
             // or actually a json array by RFC -> do more testing!
-            if !aud.to_string().contains(auth_provider_client_id) {
+            if !aud.to_string().contains(&provider.client_id) {
                 let err = format!(
                     "`aud` claim '{}' from ID token does not match out client_id '{}'",
-                    aud, auth_provider_client_id
+                    aud, provider.client_id,
                 );
                 error!("{}", err);
                 return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
@@ -1023,6 +1039,59 @@ impl AuthProviderIdClaims<'_> {
             }
         };
         debug!("user_opt:\n{:?}", user_opt);
+        debug!("\n\n\n");
+
+        let mut should_be_rauthy_admin = false;
+        if let Some(path) = &provider.admin_claim_path {
+            if provider.admin_claim_value.is_none() {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Internal,
+                    "Misconfigured Auth Provider - admin claim path without value".to_string(),
+                ));
+            }
+
+            // let path = JsonPath::parse("$.foo.bar")?;
+            debug!("try validating path: {:?}", path);
+            match JsonPath::parse(path) {
+                Ok(path) => {
+                    let json_str = String::from_utf8_lossy(&json_bytes);
+                    // TODO the `json` and `admin_value` here need to have exactly this parsing
+                    // combination. As soon as we change one of them, the lookup fails.
+                    // Try to find out why the serde_json_path hast a problem with the lookup
+                    // and add test cases for this to make sure it works with every release.
+                    let json =
+                        value::Value::from_str(json_str.as_ref()).expect("json to build fine");
+                    // let json = value::Value::from(json_str.as_ref());
+                    let admin_value =
+                        value::Value::from(provider.admin_claim_value.as_deref().unwrap());
+                    // let admin_value =
+                    //     value::Value::from_str(provider.admin_claim_value.as_deref().unwrap())
+                    //         .expect("json value to build fine");
+
+                    let all = path.query(&json).all();
+                    debug!("all: {:?}", all);
+                    for value in path.query(&json).all() {
+                        debug!("value in admin mapping check: {}", value,);
+                        if *value == admin_value {
+                            should_be_rauthy_admin = true;
+                            break;
+                        }
+                    }
+                }
+                Err(err) => {
+                    error!("Error parsing JsonPath from: '{}\nError: {}", path, err);
+                }
+            }
+            // let path = JsonPath::parse(path)?;
+            // let json_str = String::from_utf8_lossy(&json_bytes);
+            // for value in path.query(&json!(json_str)).all() {
+            //     if value.as_str() == provider.admin_claim_value.as_deref() {
+            //         should_be_rauthy_admin = true;
+            //         break;
+            //     }
+            // }
+        }
+        debug!("\n\n\n");
 
         let now = OffsetDateTime::now_utc().unix_timestamp();
         let user = if let Some(mut user) = user_opt {
@@ -1037,7 +1106,7 @@ impl AuthProviderIdClaims<'_> {
             }
 
             // validate auth_provider_id
-            if user.auth_provider_id.as_deref() != Some(auth_provider_id) {
+            if user.auth_provider_id.as_deref() != Some(&provider.id) {
                 forbidden_error = Some("invalid login from wrong auth provider");
             }
 
@@ -1071,7 +1140,25 @@ impl AuthProviderIdClaims<'_> {
                 }
             }
 
-            // TODO role check update depending on some upstream claim?
+            // should this user be a rauthy admin?
+            let roles = user.get_roles();
+            let roles_str = roles.iter().map(|r| r.as_str()).collect::<Vec<&str>>();
+            if should_be_rauthy_admin {
+                if !roles_str.contains(&"rauthy_admin") {
+                    let mut new_roles = Vec::with_capacity(roles.len() + 1);
+                    new_roles.push("rauthy_admin".to_string());
+                    roles.into_iter().for_each(|r| new_roles.push(r));
+                    user.roles = new_roles.join(",");
+                }
+            } else {
+                if roles_str.contains(&"rauthy_admin") {
+                    if roles.len() == 1 {
+                        user.roles = "".to_string();
+                    } else {
+                        user.roles = roles.into_iter().filter(|r| r != "rauthy_admin").join(",");
+                    }
+                }
+            }
 
             // update the user on our side
             user.last_login = Some(now);
@@ -1095,7 +1182,7 @@ impl AuthProviderIdClaims<'_> {
                     .locale
                     .map(Language::from)
                     .unwrap_or(Language::default()),
-                auth_provider_id: Some(auth_provider_id.to_string()),
+                auth_provider_id: Some(provider.id.clone()),
                 federation_uid: Some(slf.sub.to_string()),
                 ..Default::default()
             };
@@ -1167,4 +1254,57 @@ struct OidcCodeRequestParams<'a> {
     code_verifier: Option<&'a str>,
     grant_type: &'static str,
     redirect_uri: &'a str,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ... just to understand the query syntax
+    #[test]
+    fn test_json_path() {
+        let value = json!({
+            "foo": {
+                "bar": ["baz", "bop", 23],
+                "bor": "yes"
+            },
+            "bor": "yup"
+        });
+
+        let path = JsonPath::parse("$.foo.bar[*]").unwrap();
+        let nodes = path.query(&value).all();
+        assert_eq!(nodes.get(0).unwrap().as_str(), Some("baz"));
+        assert_eq!(nodes.get(1).unwrap().as_str(), Some("bop"));
+        assert_eq!(
+            nodes.get(2).unwrap().as_number(),
+            Some(&serde_json::Number::from(23))
+        );
+
+        let path = JsonPath::parse("$.foo.*").unwrap();
+        let nodes = path.query(&value).all();
+        assert_eq!(nodes.len(), 2);
+
+        // works in the same way (in this case -> array) as `$.foo.bar[*]`
+        let path = JsonPath::parse("$.foo.bar.*").unwrap();
+        let nodes = path.query(&value).all();
+        assert_eq!(nodes.len(), 3);
+        assert_eq!(nodes.get(1).unwrap().as_str(), Some("bop"));
+
+        let path = JsonPath::parse("$.foo.bor").unwrap();
+        let nodes = path.query(&value).all();
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes.get(0).unwrap().as_str(), Some("yes"));
+
+        // we cannot query for single values with the wildcard in the end
+        // -> add 2 possible cases in the checking code for best UX
+        let path = JsonPath::parse("$.foo.bor.*").unwrap();
+        let nodes = path.query(&value).all();
+        assert_eq!(nodes.len(), 0);
+
+        // wildcards work in the front as well
+        let path = JsonPath::parse("$.*.bor").unwrap();
+        let nodes = path.query(&value).all();
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes.get(0).unwrap().as_str(), Some("yes"));
+    }
 }

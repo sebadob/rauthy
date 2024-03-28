@@ -123,8 +123,10 @@
 
         // demo value for testing - only un-comment in local dev, not for production build
         // const provider_tpl = document.getElementsByTagName('template').namedItem('auth_providers').innerHTML || '[{"id": "z6rC5VvymQOev50Pwq0oL0KD", "name": "dev-test", "use_pkce": true}]';
-        const provider_tpl = document.getElementsByTagName('template').namedItem('auth_providers').innerHTML;
-        providers = JSON.parse(provider_tpl);
+        const providerTpl = document.getElementsByTagName('template').namedItem('auth_providers').innerHTML;
+        if (providerTpl) {
+            providers = JSON.parse(providerTpl);
+        }
 
         const params = getQueryParams();
         clientId = params.client_id;

@@ -1161,6 +1161,8 @@ mod tests {
                     .sub(::time::Duration::seconds(2))
                     .unix_timestamp(),
             ),
+            auth_provider_id: None,
+            federation_uid: None,
         };
         let session = Session::try_new(&user, 1, None);
         assert!(session.is_err());
@@ -1217,6 +1219,8 @@ mod tests {
             language: Language::En,
             webauthn_user_id: None,
             user_expires: None,
+            auth_provider_id: None,
+            federation_uid: None,
         };
 
         // enabled

@@ -341,6 +341,9 @@ pub struct ProviderResponse {
     pub client_secret: Option<String>,
     pub scope: String,
 
+    pub admin_claim_path: Option<String>,
+    pub admin_claim_value: Option<String>,
+
     pub danger_allow_insecure: bool,
     pub use_pkce: bool,
 
@@ -364,6 +367,8 @@ impl TryFrom<AuthProvider> for ProviderResponse {
             client_id: value.client_id,
             client_secret: secret,
             scope: value.scope,
+            admin_claim_path: value.admin_claim_path,
+            admin_claim_value: value.admin_claim_value,
             danger_allow_insecure: value.allow_insecure_requests,
             use_pkce: value.use_pkce,
             root_pem: value.root_pem,

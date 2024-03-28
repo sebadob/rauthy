@@ -47,6 +47,9 @@
         client_id: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         client_secret: yup.string().trim().max(256, "Max 256 characters"),
         scope: yup.string().trim().matches(REGEX_LOWERCASE_SPACE, "Can only contain: 'a-zA-Z0-9-_/ ', length max: 128"),
+
+        admin_claim_path: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
+        admin_claim_value: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
     });
 
     function handleKeyPress(event) {
@@ -128,13 +131,6 @@
     >
         ISSUER URL
     </Input>
-
-    <div class="header">
-        Allow unencrypted HTTP lookup
-    </div>
-    <div class="ml">
-        <Switch bind:selected={provider.danger_allow_http}/>
-    </div>
 
     <div class="header">
         Allow insecure TLS certificates
@@ -240,6 +236,32 @@
     >
         CLIENT SECRET
     </PasswordInput>
+
+    <div class="desc">
+        Rauthy Admin mapping.<br>
+        If the user logging in should be mapped automatically to the rauthy_admin role,<br>
+        specify the json path and expected value here.
+    </div>
+    <Input
+            bind:value={provider.admin_claim_path}
+            bind:error={formErrors.admin_claim_path}
+            autocomplete="off"
+            placeholder="Admin Claim Path"
+            on:input={validateForm}
+            width={inputWidth}
+    >
+        ADMIN CLAIM PATH
+    </Input>
+    <Input
+            bind:value={provider.admin_claim_value}
+            bind:error={formErrors.admin_claim_value}
+            autocomplete="off"
+            placeholder="Admin Claim Value"
+            on:input={validateForm}
+            width={inputWidth}
+    >
+        ADMIN CLAIM VALUE
+    </Input>
 
     {#if !isDefault}
         <Button on:click={onSubmit} level={1} width="4rem">SAVE</Button>

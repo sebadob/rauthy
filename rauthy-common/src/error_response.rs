@@ -13,6 +13,7 @@ use redhac::CacheError;
 use rio_turtle::TurtleError;
 use serde::{Deserialize, Serialize};
 use serde_json::Error;
+use serde_json_path::ParseError;
 use spow::pow::PowError;
 use std::fmt::{Display, Formatter};
 use std::string::FromUtf8Error;
@@ -388,5 +389,14 @@ impl From<CryptrError> for ErrorResponse {
 impl From<PowError> for ErrorResponse {
     fn from(value: PowError) -> Self {
         ErrorResponse::new(ErrorResponseType::Forbidden, value.to_string())
+    }
+}
+
+impl From<serde_json_path::ParseError> for ErrorResponse {
+    fn from(value: ParseError) -> Self {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("JsonPath error: {}", value),
+        )
     }
 }
