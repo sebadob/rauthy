@@ -87,6 +87,7 @@ impl From<String> for AuthProviderType {
 pub struct AuthProvider {
     pub id: String,
     pub name: String,
+    pub enabled: bool,
     pub typ: AuthProviderType,
 
     pub issuer: String,
@@ -100,6 +101,8 @@ pub struct AuthProvider {
 
     pub admin_claim_path: Option<String>,
     pub admin_claim_value: Option<String>,
+    pub mfa_claim_path: Option<String>,
+    pub mfa_claim_value: Option<String>,
 
     pub allow_insecure_requests: bool,
     pub use_pkce: bool,
@@ -141,12 +144,15 @@ impl AuthProvider {
         query!(
             r#"
             INSERT INTO
-            auth_providers (id, name, typ, issuer, authorization_endpoint, token_endpoint,
+            auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
             userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
-            allow_insecure_requests, use_pkce, root_pem, logo, logo_type)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)"#,
+            mfa_claim_path, mfa_claim_value,allow_insecure_requests, use_pkce, root_pem, logo,
+            logo_type)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+            $18, $19, $20)"#,
             slf.id,
             slf.name,
+            slf.enabled,
             slf.typ.as_str(),
             slf.issuer,
             slf.authorization_endpoint,
@@ -157,6 +163,8 @@ impl AuthProvider {
             slf.scope,
             slf.admin_claim_path,
             slf.admin_claim_value,
+            slf.mfa_claim_path,
+            slf.mfa_claim_value,
             slf.allow_insecure_requests,
             slf.use_pkce,
             slf.root_pem,
@@ -267,11 +275,13 @@ impl AuthProvider {
         // TODO when implemented: logo = $12, logo_type = $13
         query!(
             r#"UPDATE auth_providers
-            SET name = $1, issuer = $2, typ = $3, authorization_endpoint = $4, token_endpoint = $5,
-            userinfo_endpoint = $6, client_id = $7, secret = $8, scope = $9, admin_claim_path = $10,
-            admin_claim_value = $11, allow_insecure_requests = $12, use_pkce = $13, root_pem = $14
-            WHERE id = $15"#,
+            SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
+            token_endpoint = $6, userinfo_endpoint = $7, client_id = $8, secret = $9, scope = $10,
+            admin_claim_path = $11, admin_claim_value = $12, mfa_claim_path = $13,
+            mfa_claim_value = $14, allow_insecure_requests = $15, use_pkce = $16, root_pem = $17
+            WHERE id = $18"#,
             self.name,
+            self.enabled,
             self.issuer,
             self.typ.as_str(),
             self.authorization_endpoint,
@@ -282,6 +292,8 @@ impl AuthProvider {
             self.scope,
             self.admin_claim_path,
             self.admin_claim_value,
+            self.mfa_claim_path,
+            self.mfa_claim_value,
             self.allow_insecure_requests,
             self.use_pkce,
             self.root_pem,
@@ -358,6 +370,7 @@ impl AuthProvider {
         Ok(Self {
             id,
             name: req.name,
+            enabled: true,
             // for now, this will always be OIDC
             // preparation for future special providers
             typ: AuthProviderType::OIDC,
@@ -372,6 +385,8 @@ impl AuthProvider {
 
             admin_claim_path: req.admin_claim_path,
             admin_claim_value: req.admin_claim_value,
+            mfa_claim_path: req.mfa_claim_path,
+            mfa_claim_value: req.mfa_claim_value,
 
             allow_insecure_requests: req.danger_allow_insecure.unwrap_or(false),
             use_pkce: req.use_pkce,

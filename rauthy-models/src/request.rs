@@ -501,6 +501,12 @@ pub struct ProviderRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
     pub admin_claim_value: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
+    pub mfa_claim_path: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
+    pub mfa_claim_value: Option<String>,
     // TODO implement
     // pub logo: Option<Vec<u8>>,
     // pub logo_type: Option<String>,

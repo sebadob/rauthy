@@ -4182,6 +4182,7 @@ dependencies = [
  "rio_turtle",
  "serde",
  "serde_json",
+ "serde_json_path",
  "spow",
  "sqlx",
  "time",

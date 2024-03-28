@@ -5,7 +5,7 @@ create table auth_providers
     id                      varchar not null
         constraint auth_providers_pk
             primary key,
-    enabled                 bool not null,
+    enabled                 bool    not null,
     name                    varchar not null,
     typ                     varchar not null,
     issuer                  varchar not null,
@@ -26,7 +26,8 @@ create table auth_providers
     logo_type               varchar
 );
 
-comment on column auth_providers.secret is 'may be null and would still be safe, if pkce is being used';
+comment
+on column auth_providers.secret is 'may be null and would still be safe, if pkce is being used';
 
 -- modify users table with fk to auth_providers
 
