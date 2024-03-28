@@ -14,6 +14,8 @@ create table auth_providers
     client_id               varchar not null,
     secret                  bytea,
     scope                   varchar not null,
+    admin_claim_path        varchar,
+    admin_claim_value       varchar,
     allow_insecure_requests bool    not null,
     use_pkce                bool    not null,
     root_pem                varchar,
