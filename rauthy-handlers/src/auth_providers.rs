@@ -7,6 +7,7 @@ use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_provider::{AuthProvider, AuthProviderCallback};
 use rauthy_models::entity::colors::ColorEntity;
+use rauthy_models::language::Language;
 use rauthy_models::request::{
     ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
 };
@@ -151,9 +152,11 @@ pub async fn post_provider_login(
 #[get("/providers/callback")]
 pub async fn get_provider_callback_html(
     data: web::Data<AppState>,
+    req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
-    let body = ProviderCallbackHtml::build(&colors);
+    let lang = Language::try_from(&req).unwrap_or_default();
+    let body = ProviderCallbackHtml::build(&colors, &lang);
 
     Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }

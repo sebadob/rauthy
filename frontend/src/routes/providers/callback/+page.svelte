@@ -1,81 +1,173 @@
 <script>
-    import Loading from "$lib/Loading.svelte";
     import {
         getQueryParams,
-        getVerifierFromStorage,
         getProviderToken,
+        getVerifierUpstreamFromStorage,
     } from "../../../utils/helpers.js";
     import {postProviderCallback} from "../../../utils/dataFetching.js";
     import {onMount} from "svelte";
+    import WebauthnRequest from "../../../components/webauthn/WebauthnRequest.svelte";
+    import BrowserCheck from "../../../components/BrowserCheck.svelte";
+    import WithI18n from "$lib/WithI18n.svelte";
+    import LangSelector from "$lib/LangSelector.svelte";
+    import Button from "$lib/Button.svelte";
+    import {sleepAwait} from "$lib/utils/helpers.js";
 
+    // will contain the same translations as /oidc/authorize
+    let t = {};
+    let clientMfaForce = false;
     let error = '';
+    let webauthnData;
 
     onMount(async () => {
         const query = getQueryParams();
-
-        // TODO instead of the normal callback, we do not want to get a token,
-        // but actually finish the provider login flow, which then will start with
-        // Rauthy's default login flow.
-
         let data = {
             state: query.state,
             code: query.code,
-            pkce_verifier: getVerifierFromStorage(),
+            pkce_verifier: getVerifierUpstreamFromStorage(),
             xsrf_token: getProviderToken(),
         };
-        console.log(data);
         let res = await postProviderCallback(data);
-        let body = await res.json();
-        if (res.ok) {
-            console.log(body);
-        } else {
+
+        if (res.status === 202) {
+            // -> all good
+            window.location.replace(res.headers.get('location'));
+        } else if (res.status === 200) {
+            // -> all good, but needs additional passkey validation
+            error = '';
+            webauthnData = await res.json();
+        } else if (res.status === 403) {
+            let body = await res.json();
+            console.error(body);
             error = body.message;
+        } else if (res.status === 406) {
+            // 406 -> client forces MFA while the user has none
+            error = t.clientForceMfa;
+            clientMfaForce = true;
+            // TODO it should not be possible to get a 429 here - right?
+            // } else if (res.status === 429) {
+            //     // 429 -> too many failed logins
+            //     let notBefore = Number.parseInt(res.headers.get('x-retry-not-before'));
+            //     let nbfDate = formatDateFromTs(notBefore);
+            //     let diff = notBefore * 1000 - new Date().getTime();
+            //
+            //     tooManyRequests = true;
+            //     error = `${t.http429} ${nbfDate}`;
+            //
+            //     // formValues.email = '';
+            //     // formValues.password = '';
+            //     // needsPassword = false;
+            //
+            //     setTimeout(() => {
+            //         tooManyRequests = false;
+            //         error = '';
+            //     }, diff);
+        } else {
+            error = `Uncovered HTTP return status '${res.status}'. This should never happen, please report this bug.`;
         }
-
-        console.error('TODO finish implementing callback logic');
-        return;
-
-        // const data = new URLSearchParams();
-        // let redirectUri = REDIRECT_URI_SUCCESS;
-        // if (query.state && query.state === 'account') {
-        //     redirectUri = REDIRECT_URI_SUCCESS_ACC;
-        // }
-        //
-        // data.append('grant_type', 'authorization_code');
-        // data.append('code', query.code);
-        // data.append('redirect_uri', redirectUri);
-        // data.append('client_id', CLIENT_ID);
-        // data.append('code_verifier', getVerifierFromStorage());
-        //
-        // // get and save the tokens
-        // let res = await getToken(data);
-        // let body = await res.json();
-        // // Save the access token in case we need to fetch a fresh CSRF token
-        // saveAccessToken(body.access_token);
-        // // ID Token is saved for the automatic logout with 'token_hint'
-        // saveIdToken(body.id_token);
-        //
-        // res = await getSessionInfoXsrf(body.access_token);
-        // body = await res.json();
-        // saveCsrfToken(body.csrf_token);
-        //
-        // // clean up
-        // deleteVerifierFromStorage();
-        //
-        // // all good -> redirect now
-        // window.location.href = redirectUri;
     });
 
-    //
+    function onWebauthnError(err) {
+        error = err || 'ERROR';
+        webauthnData = undefined;
+    }
+
+    function onWebauthnSuccess(res) {
+        if (res) {
+            window.location.replace(res.loc);
+        }
+    }
+
 </script>
 
 <svelte:head>
     <title>Callback</title>
 </svelte:head>
 
-{#if error}
-    {error}
-{:else}
-    <Loading/>
-{/if}
-<!-- Placeholder for SSR of provider callback errors -->
+<BrowserCheck>
+    <WithI18n bind:t content="authorize">
+        {#if webauthnData}
+            <WebauthnRequest
+                    bind:t
+                    bind:data={webauthnData}
+                    onSuccess={onWebauthnSuccess}
+                    onError={onWebauthnError}
+            />
+        {:else if clientMfaForce}
+            <div class="btn flex-col">
+                <Button on:click={() => window.location.href = '/auth/v1/account'}>
+                    ACCOUNT LOGIN
+                </Button>
+            </div>
+        {:else if error}
+            <div class="error">
+                {error}
+            </div>
+            <!--{:else}-->
+            <!--            <Loading/>-->
+        {/if}
+
+        <LangSelector absolute/>
+    </WithI18n>
+</BrowserCheck>
+
+<style>
+    .btn {
+        margin: 5px 0;
+        display: flex;
+    }
+
+    /*.container {*/
+    /*    display: flex;*/
+    /*    flex-direction: column;*/
+    /*    justify-content: center;*/
+    /*    max-width: 19rem;*/
+    /*    padding: 20px;*/
+    /*    border: 1px solid var(--col-gmid);*/
+    /*    border-radius: 5px;*/
+    /*    box-shadow: 5px 5px 5px rgba(128, 128, 128, .1);*/
+    /*}*/
+
+    .error {
+        /*    max-width: 15rem;*/
+        /*    margin: -5px 10px 0 5px;*/
+        color: var(--col-err)
+    }
+
+    .flex-col {
+        display: flex;
+        flex-direction: column;
+    }
+
+    /*.forgotten {*/
+    /*    margin: 0 5px;*/
+    /*    cursor: pointer;*/
+    /*}*/
+
+    /*.forgotten:hover {*/
+    /*    color: var(--col-ok);*/
+    /*}*/
+
+    /*.head {*/
+    /*    display: flex;*/
+    /*    justify-content: space-between;*/
+    /*    padding-right: 35px;*/
+    /*}*/
+
+    /*.name {*/
+    /*    margin: -10px 5px 0 5px;*/
+    /*}*/
+
+    /*.logo {*/
+    /*    width: 84px;*/
+    /*    height: 84px;*/
+    /*}*/
+
+    /*.providers {*/
+    /*    margin-top: .66rem;*/
+    /*}*/
+
+    /*.success {*/
+    /*    color: var(--col-ok);*/
+    /*}*/
+</style>

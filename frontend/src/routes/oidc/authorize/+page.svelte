@@ -14,7 +14,6 @@
         getQueryParams,
         saveCsrfToken,
         saveProviderToken,
-        getProviderToken,
     } from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
     import WebauthnRequest from "../../../components/webauthn/WebauthnRequest.svelte";
@@ -24,9 +23,8 @@
     import BrowserCheck from "../../../components/BrowserCheck.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
     import LangSelector from "$lib/LangSelector.svelte";
-    import {sleepAwait} from "$lib/utils/helpers.js";
     import getPkce from "oauth-pkce";
-    import {AUTH_ENDPOINT, CLIENT_ID, PKCE_VERIFIER, REDIRECT_URI} from "../../../utils/constants.js";
+    import {PKCE_VERIFIER, PKCE_VERIFIER_UPSTREAM} from "../../../utils/constants.js";
 
     let t = {};
 
@@ -124,8 +122,8 @@
         saveCsrfToken(csrf);
 
         // demo value for testing - only un-comment in local dev, not for production build
-        const provider_tpl = document.getElementsByTagName('template').namedItem('auth_providers').innerHTML || '[{"id": "z6rC5VvymQOev50Pwq0oL0KD", "name": "dev-test", "use_pkce": true}]';
-        // const provider_tpl = document.getElementsByTagName('template').namedItem('auth_providers').innerHTML;
+        // const provider_tpl = document.getElementsByTagName('template').namedItem('auth_providers').innerHTML || '[{"id": "z6rC5VvymQOev50Pwq0oL0KD", "name": "dev-test", "use_pkce": true}]';
+        const provider_tpl = document.getElementsByTagName('template').namedItem('auth_providers').innerHTML;
         providers = JSON.parse(provider_tpl);
 
         const params = getQueryParams();
@@ -245,9 +243,9 @@
     }
 
     function providerLogin(id) {
-        getPkce(43, (error, {challenge, verifier}) => {
+        getPkce(64, (error, {challenge, verifier}) => {
             if (!error) {
-                localStorage.setItem(PKCE_VERIFIER, verifier);
+                localStorage.setItem(PKCE_VERIFIER_UPSTREAM, verifier);
                 providerLoginPkce(id, challenge);
             }
         });
@@ -272,12 +270,7 @@
             const xsrfToken = await res.text();
             saveProviderToken(xsrfToken);
 
-            const loc = res.headers.get('location');
-
-            console.log(loc);
-            await sleepAwait(10000);
-
-            window.location.href = loc;
+            window.location.href = res.headers.get('location');
         } else {
             let body = await res.json();
             err = body.message;

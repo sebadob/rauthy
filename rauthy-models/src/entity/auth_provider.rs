@@ -25,7 +25,8 @@ use rauthy_common::constants::{
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{
-    base64_decode, base64_encode, base64_url_encode, get_rand, new_store_id,
+    base64_decode, base64_encode, base64_url_encode, base64_url_no_pad_decode, get_rand,
+    new_store_id,
 };
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use reqwest::tls;
@@ -648,6 +649,7 @@ impl AuthProviderCallback {
         let bytes = base64_decode(cookie.value())?;
         let plain = EncValue::try_from(bytes)?.decrypt()?;
         let callback_id = String::from_utf8_lossy(plain.as_ref()).to_string();
+        debug!("callback_id from encrypted cookie: {}", callback_id);
 
         // validate state
         if callback_id != payload.state {
@@ -659,6 +661,7 @@ impl AuthProviderCallback {
                 "`state` does not match".to_string(),
             ));
         }
+        debug!("callback state is valid");
 
         // validate csrf token
         let slf = Self::find(data, callback_id).await?;
@@ -671,6 +674,7 @@ impl AuthProviderCallback {
                 "invalid CSRF token".to_string(),
             ));
         }
+        debug!("callback csrf token is valid");
 
         // validate PKCE verifier
         let hash = digest::digest(&digest::SHA256, payload.pkce_verifier.as_bytes());
@@ -684,6 +688,7 @@ impl AuthProviderCallback {
                 "invalid PKCE verifier".to_string(),
             ));
         }
+        debug!("callback pkce verifier is valid");
 
         // request is valid -> fetch token for the user
         let provider = AuthProvider::find(data, &slf.provider_id).await?;
@@ -708,8 +713,10 @@ impl AuthProviderCallback {
             .send()
             .await?;
 
+        let status = res.status().as_u16();
+        debug!("POST /token auth provider status: {}", status);
+
         if !res.status().is_success() {
-            let status = res.status().as_u16();
             let err = match res.text().await {
                 Ok(body) => format!(
                     "HTTP {} during POST {} for upstream auth provider '{}'\n{}",
@@ -738,7 +745,8 @@ impl AuthProviderCallback {
                 AuthProviderIdClaims::validate_update_user(
                     data,
                     ts.id_token.as_deref().unwrap(),
-                    &slf.provider_id,
+                    &provider.id,
+                    &provider.client_id,
                 )
                 .await?
             }
@@ -919,7 +927,7 @@ pub struct AuthProviderAddressClaims<'a> {
 pub struct AuthProviderIdClaims<'a> {
     pub iss: &'a str,
     pub sub: &'a str,
-    pub aud: Option<&'a str>,
+    pub aud: Option<serde_json::Value>,
     pub azp: Option<&'a str>,
     pub amr: Option<Vec<&'a str>>,
     // even though `email` is mandatory, we set it to optional for the deserialization
@@ -939,6 +947,7 @@ impl AuthProviderIdClaims<'_> {
         data: &web::Data<AppState>,
         token: &str,
         auth_provider_id: &str,
+        auth_provider_client_id: &str,
     ) -> Result<User, ErrorResponse> {
         let mut parts = token.split('.');
         let _header = parts.next().ok_or_else(|| {
@@ -953,8 +962,39 @@ impl AuthProviderIdClaims<'_> {
                 "ID token was unsigned".to_string(),
             )
         })?;
-        let bytes = base64_decode(claims)?;
+        debug!("upstream ID token claims:\n{}", claims);
+        let bytes = base64_url_no_pad_decode(claims)?;
         let slf = serde_json::from_slice::<AuthProviderIdClaims>(&bytes)?;
+
+        // validate either `aud` or `azp`
+        if let Some(azp) = slf.azp {
+            if azp != auth_provider_client_id {
+                let err = format!(
+                    "`azp` claim '{}' from ID token does not match out client_id '{}'",
+                    azp, auth_provider_client_id
+                );
+                error!("{}", err);
+                return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
+            }
+        } else if let Some(aud) = slf.aud {
+            // TODO this may produce an error, since `aud` is allowed to be a single string
+            // or actually a json array by RFC -> do more testing!
+            if !aud.to_string().contains(auth_provider_client_id) {
+                let err = format!(
+                    "`aud` claim '{}' from ID token does not match out client_id '{}'",
+                    aud, auth_provider_client_id
+                );
+                error!("{}", err);
+                return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
+            }
+        } else {
+            let err = "neither `azp` nor `aud` claim exists in ID token ";
+            error!("{}", err);
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                err.to_string(),
+            ));
+        }
 
         if slf.email.is_none() {
             let err = "No `email` in ID token claims. This is a mandatory claim";
@@ -970,14 +1010,19 @@ impl AuthProviderIdClaims<'_> {
         // 2. by provider uid in case the email has been changed remotely, if the first
         // lookup produced any error
         let user_opt = match User::find_by_email(data, slf.email.unwrap().to_string()).await {
-            Ok(user) => Some(user),
+            Ok(user) => {
+                debug!("found already existing user by email lookup: {:?}", user);
+                Some(user)
+            }
             Err(_) => {
+                debug!("did NOT find already existing user by email lookup - trying via fed id");
                 // if we were unable to find the user, we need to make another lookup
                 // and search by federation uid on the remote system to not end up with
                 // duplicate users in case of a remote email update
                 User::find_by_federation_uid(data, slf.sub).await?
             }
         };
+        debug!("user_opt:\n{:?}", user_opt);
 
         let now = OffsetDateTime::now_utc().unix_timestamp();
         let user = if let Some(mut user) = user_opt {
