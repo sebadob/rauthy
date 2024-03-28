@@ -6,7 +6,7 @@ import {
     CSRF_TOKEN,
     ID_TOKEN,
     LOGOUT_URL,
-    PKCE_VERIFIER,
+    PKCE_VERIFIER, PKCE_VERIFIER_UPSTREAM,
     POST_LOGOUT_REDIRECT_URI, PROVIDER_TOKEN,
     REDIRECT_URI
 } from "./constants.js";
@@ -28,7 +28,7 @@ export function isDefaultScope(name) {
 }
 
 export const redirectToLogin = (state) => {
-    getPkce(43, (error, {challenge, verifier}) => {
+    getPkce(64, (error, {challenge, verifier}) => {
         if (!error) {
             localStorage.setItem(PKCE_VERIFIER, verifier);
             const nonce = getKey(24);
@@ -75,6 +75,10 @@ export const getVerifierFromStorage = () => {
     return localStorage.getItem(PKCE_VERIFIER) || '';
 };
 
+export const getVerifierUpstreamFromStorage = () => {
+    return localStorage.getItem(PKCE_VERIFIER_UPSTREAM) || '';
+};
+
 export const deleteVerifierFromStorage = () => {
     localStorage.removeItem(PKCE_VERIFIER);
 };
@@ -84,6 +88,7 @@ export const purgeStorage = () => {
     localStorage.removeItem(ID_TOKEN);
     localStorage.removeItem(ACCESS_TOKEN);
     localStorage.removeItem(PKCE_VERIFIER);
+    localStorage.removeItem(PKCE_VERIFIER_UPSTREAM);
     localStorage.removeItem(PROVIDER_TOKEN);
 }
 
