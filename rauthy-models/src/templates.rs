@@ -1120,9 +1120,9 @@ pub struct ProviderCallbackHtml<'a> {
 }
 
 impl ProviderCallbackHtml<'_> {
-    pub fn build(colors: &Colors) -> String {
+    pub fn build(colors: &Colors, lang: &Language) -> String {
         let res = ProviderCallbackHtml {
-            lang: "en",
+            lang: lang.as_str(),
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1136,6 +1136,7 @@ impl ProviderCallbackHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            i18n: I18nAuthorize::build(lang).as_json(),
             ..Default::default()
         };
 
