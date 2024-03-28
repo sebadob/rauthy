@@ -33,8 +33,8 @@ use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert
 use reqwest::tls;
 use ring::digest;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, value};
-use serde_json_path::{JsonPath, ParseError};
+use serde_json::value;
+use serde_json_path::JsonPath;
 use sqlx::{query, query_as};
 use std::fmt::Write;
 use std::str::FromStr;
@@ -117,29 +117,7 @@ impl AuthProvider {
         data: &web::Data<AppState>,
         payload: ProviderRequest,
     ) -> Result<Self, ErrorResponse> {
-        let id = new_store_id();
-        // let scope = Self::cleanup_scope(&payload.scope);
-        // let secret = Self::secret_encrypted(&payload.client_secret)?;
-        //
-        // let slf = Self {
-        //     id,
-        //     name: payload.name,
-        //     issuer: payload.issuer,
-        //     authorization_endpoint: payload.authorization_endpoint,
-        //     token_endpoint: payload.token_endpoint,
-        //     userinfo_endpoint: payload.userinfo_endpoint,
-        //     client_id: payload.client_id,
-        //     secret,
-        //     scope,
-        //     token_auth_method_basic: payload.token_auth_method_basic,
-        //     use_pkce: payload.use_pkce,
-        //     root_pem: payload.root_pem,
-        //
-        //     // TODO when implemented
-        //     logo: None,
-        //     logo_type: None,
-        // };
-        let slf = Self::try_from_id_req(id, payload)?;
+        let slf = Self::try_from_id_req(new_store_id(), payload)?;
 
         query!(
             r#"
@@ -148,8 +126,9 @@ impl AuthProvider {
             userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
             mfa_claim_path, mfa_claim_value,allow_insecure_requests, use_pkce, root_pem, logo,
             logo_type)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-            $18, $19, $20)"#,
+            VALUES
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
+            $20)"#,
             slf.id,
             slf.name,
             slf.enabled,
@@ -174,6 +153,7 @@ impl AuthProvider {
         .execute(&data.db)
         .await?;
 
+        Self::invalidate_cache_all(data).await?;
         cache_insert(
             CACHE_NAME_12HR.to_string(),
             Self::cache_idx(&slf.id),
@@ -182,8 +162,6 @@ impl AuthProvider {
             AckLevel::Quorum,
         )
         .await?;
-
-        Self::invalidate_cache_all(data).await?;
 
         Ok(slf)
     }
@@ -272,7 +250,7 @@ impl AuthProvider {
     }
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        // TODO when implemented: logo = $12, logo_type = $13
+        // TODO when implemented: logo + logo_type
         query!(
             r#"UPDATE auth_providers
             SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
@@ -532,14 +510,6 @@ pub struct AuthProviderCallback {
     pub req_code_challenge_method: Option<String>,
 
     pub provider_id: String,
-    // pub provider_issuer: String,
-    // pub provider_token_endpoint: String,
-    // // pub userinfo_endpoint: String,
-    // pub provider_client_id: String,
-    // pub provider_secret: Option<Vec<u8>>,
-    // pub allow_insecure_requests: bool,
-    // pub use_pkce: bool,
-    // pub root_pem: Option<String>,
 
     // TODO add a nonce upstream as well? -> improvement?
     pub pkce_challenge: String,
@@ -615,13 +585,7 @@ impl AuthProviderCallback {
             req_code_challenge_method: payload.code_challenge_method,
 
             provider_id: provider.id,
-            // provider_issuer: provider.issuer,
-            // provider_token_endpoint: provider.token_endpoint,
-            // provider_client_id: provider.client_id,
-            // provider_secret: provider.secret,
-            // allow_insecure_requests: provider.allow_insecure_requests,
-            // use_pkce: provider.use_pkce,
-            // root_pem: provider.root_pem,
+
             pkce_challenge: payload.pkce_challenge,
         };
 
@@ -1097,14 +1061,6 @@ impl AuthProviderIdClaims<'_> {
                     error!("Error parsing JsonPath from: '{}\nError: {}", path, err);
                 }
             }
-            // let path = JsonPath::parse(path)?;
-            // let json_str = String::from_utf8_lossy(&json_bytes);
-            // for value in path.query(&json!(json_str)).all() {
-            //     if value.as_str() == provider.admin_claim_value.as_deref() {
-            //         should_be_rauthy_admin = true;
-            //         break;
-            //     }
-            // }
         }
         debug!("\n\n\n");
 
@@ -1188,8 +1144,11 @@ impl AuthProviderIdClaims<'_> {
                 email: slf.email.unwrap().to_string(),
                 given_name: slf.given_name.unwrap_or("N/A").to_string(),
                 family_name: slf.family_name.unwrap_or("N/A").to_string(),
-                // TODO `rauthy_admin` role mapping by config? json path lookup?
-                // roles: "".to_string(),
+                roles: if should_be_rauthy_admin {
+                    "rauthy_admin".to_string()
+                } else {
+                    String::default()
+                },
                 enabled: true,
                 email_verified: slf.email_verified.unwrap_or(false),
                 last_login: Some(now),
