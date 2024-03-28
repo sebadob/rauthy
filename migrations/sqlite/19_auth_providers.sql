@@ -5,6 +5,7 @@ create table auth_providers
     id                      varchar not null
         constraint auth_providers_pk
             primary key,
+    enabled                 bool    not null,
     name                    varchar not null,
     typ                     varchar not null,
     issuer                  varchar not null,
@@ -16,6 +17,8 @@ create table auth_providers
     scope                   varchar not null,
     admin_claim_path        varchar,
     admin_claim_value       varchar,
+    mfa_claim_path          varchar,
+    mfa_claim_value         varchar,
     allow_insecure_requests bool    not null,
     use_pkce                bool    not null,
     root_pem                varchar,
