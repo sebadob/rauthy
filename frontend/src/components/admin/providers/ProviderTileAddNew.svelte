@@ -10,8 +10,14 @@
     import CheckIcon from "$lib/CheckIcon.svelte";
     import OptionSelect from "$lib/OptionSelect.svelte";
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
-    import {REGEX_CLIENT_NAME, REGEX_LOWERCASE_SPACE, REGEX_ROLES, REGEX_URI} from "../../../utils/constants.js";
+    import {
+        REGEX_CLIENT_NAME,
+        REGEX_LOWERCASE_SPACE,
+        REGEX_PEM,
+        REGEX_URI
+    } from "../../../utils/constants.js";
     import JsonPathDesc from "./JsonPathDesc.svelte";
+    import Textarea from "$lib/inputs/Textarea.svelte";
 
     export let idx = -1;
     export let onSave;
@@ -24,9 +30,12 @@
     let success = false;
     let timer;
 
+    let showRootPem = false;
+
     let configLookup = {
         issuer: '',
         danger_allow_insecure: false,
+        root_pem: null,
     };
     let config = {
         enabled: true,
@@ -45,6 +54,7 @@
         client_id: '',
         client_secret: '',
         scope: '',
+        root_pem: null,
 
         admin_claim_path: null,
         admin_claim_value: null,
@@ -68,6 +78,7 @@
         client_id: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         client_secret: yup.string().trim().max(256, "Max 256 characters"),
         scope: yup.string().trim().matches(REGEX_LOWERCASE_SPACE, "Can only contain: 'a-zA-Z0-9-_/ ', length max: 128"),
+        root_pem: yup.string().trim().nullable().matches(REGEX_PEM, "Invalid PEM certificate"),
 
         admin_claim_path: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         admin_claim_value: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
@@ -76,6 +87,7 @@
     });
     const schemaLookup = yup.object().shape({
         issuer: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
+        root_pem: yup.string().trim().nullable().matches(REGEX_PEM, "Valid PEM certificate"),
     });
 
     $: if (success) {
@@ -86,6 +98,8 @@
             resetValues();
         }, 1500);
     }
+
+    $: disableAfterLookup = config.authorization_endpoint && isAuto;
 
     onMount(() => {
         return () => {
@@ -108,6 +122,12 @@
 
         err = '';
         isLoading = true;
+
+        if (config.root_pem) {
+            // make sure we reset to false, which is what a user would expect
+            config.danger_allow_insecure = false;
+            config.root_pem = config.root_pem.trim();
+        }
 
         config.scope = config.scope.trim();
         let res = await postProvider(config);
@@ -146,6 +166,7 @@
             config.token_auth_method_basic = body.token_auth_method_basic;
             config.use_pkce = body.use_pkce;
             config.scope = body.scope;
+            config.root_pem = body.root_pem;
         } else {
             let body = await res.json();
             if (body.message.includes('InvalidCertificate')) {
@@ -162,6 +183,7 @@
         configLookup = {
             issuer: '',
             danger_allow_insecure: false,
+            root_pem: null,
         };
         config = {
             enabled: true,
@@ -172,11 +194,13 @@
             userinfo_endpoint: '',
             use_pkce: true,
             scope: '',
+            root_pem: null,
             admin_claim_path: null,
             admin_claim_value: null,
             mfa_claim_path: null,
             mfa_claim_value: null,
         }
+        showRootPem = false;
     }
 
     async function validateFormConfig() {
@@ -218,11 +242,31 @@
 
         {#if !config.authorization_endpoint && isAuto}
             <div class="header">
-                Allow insecure TLS certificates
+                Custom Root CA PEM
             </div>
             <div class="ml mb">
-                <Switch bind:selected={configLookup.danger_allow_insecure}/>
+                <Switch bind:selected={showRootPem}/>
             </div>
+
+            {#if showRootPem}
+                <Textarea
+                        rows={17}
+                        name="rootPem"
+                        placeholder="-----BEGIN CERTIFICATE-----
+-----END CERTIFICATE-----"
+                        bind:value={configLookup.root_pem}
+                        bind:error={formErrors.root_pem}
+                >
+                    Root Certificate in PEM format
+                </Textarea>
+            {:else}
+                <div class="header">
+                    Allow insecure TLS certificates
+                </div>
+                <div class="ml mb">
+                    <Switch bind:selected={configLookup.danger_allow_insecure}/>
+                </div>
+            {/if}
 
             <Input
                     bind:value={configLookup.issuer}
@@ -240,127 +284,89 @@
                 LOOKUP
             </Button>
         {:else}
-            {#if isAuto}
-                <div class="header">
-                    Allow insecure TLS certificates
-                </div>
-                <div class="ml mb">
-                    <CheckIcon bind:check={config.danger_allow_insecure}/>
-                </div>
-
-                <Input
-                        bind:value={config.issuer}
-                        bind:error={formErrors.issuer}
-                        autocomplete="off"
-                        placeholder="Issuer URL"
-                        on:input={validateFormLookup}
-                        width={inputWidth}
-                        disabled
+            {#if showRootPem}
+                <Textarea
+                        rows={17}
+                        name="rootPem"
+                        placeholder="-----BEGIN CERTIFICATE-----
+-----END CERTIFICATE-----"
+                        bind:value={config.root_pem}
+                        bind:error={formErrors.root_pem}
+                        disabled={disableAfterLookup}
                 >
-                    ISSUER URL
-                </Input>
-
-                <Input
-                        bind:value={config.authorization_endpoint}
-                        bind:error={formErrors.authorization_endpoint}
-                        autocomplete="off"
-                        placeholder="Authorization Endpoint"
-                        on:input={validateFormLookup}
-                        width={inputWidth}
-                        disabled
-                >
-                    AUTHORIZATION ENDPOINT
-                </Input>
-
-                <Input
-                        bind:value={config.token_endpoint}
-                        bind:error={formErrors.token_endpoint}
-                        autocomplete="off"
-                        placeholder="Token Endpoint"
-                        on:input={validateFormLookup}
-                        width={inputWidth}
-                        disabled
-                >
-                    TOKEN ENDPOINT
-                </Input>
-
-                <Input
-                        bind:value={config.userinfo_endpoint}
-                        bind:error={formErrors.userinfo_endpoint}
-                        autocomplete="off"
-                        placeholder="Userinfo Endpoint"
-                        on:input={validateFormLookup}
-                        width={inputWidth}
-                        disabled
-                >
-                    USERINFO ENDPOINT
-                </Input>
-
-                <div class="header">
-                    Use PKCE
-                </div>
-                <div class="ml">
-                    <CheckIcon bind:check={config.use_pkce}/>
-                </div>
+                    Root Certificate in PEM format
+                </Textarea>
             {:else}
                 <div class="header">
                     Allow insecure TLS certificates
                 </div>
                 <div class="ml mb">
-                    <Switch bind:selected={config.danger_allow_insecure}/>
-                </div>
-
-                <Input
-                        bind:value={config.issuer}
-                        bind:error={formErrors.issuer}
-                        autocomplete="off"
-                        placeholder="Issuer URL"
-                        on:input={validateFormConfig}
-                        width={inputWidth}
-                >
-                    ISSUER URL
-                </Input>
-
-                <Input
-                        bind:value={config.authorization_endpoint}
-                        bind:error={formErrors.authorization_endpoint}
-                        autocomplete="off"
-                        placeholder="Authorization Endpoint"
-                        on:input={validateFormConfig}
-                        width={inputWidth}
-                >
-                    AUTHORIZATION ENDPOINT
-                </Input>
-
-                <Input
-                        bind:value={config.token_endpoint}
-                        bind:error={formErrors.token_endpoint}
-                        autocomplete="off"
-                        placeholder="Token Endpoint"
-                        on:input={validateFormConfig}
-                        width={inputWidth}
-                >
-                    TOKEN ENDPOINT
-                </Input>
-
-                <Input
-                        bind:value={config.userinfo_endpoint}
-                        bind:error={formErrors.userinfo_endpoint}
-                        autocomplete="off"
-                        placeholder="Userinfo Endpoint"
-                        on:input={validateFormConfig}
-                        width={inputWidth}
-                >
-                    USERINFO ENDPOINT
-                </Input>
-
-                <div class="header">
-                    Use PKCE
-                </div>
-                <div class="ml mb">
-                    <Switch bind:selected={config.use_pkce}/>
+                    {#if disableAfterLookup}
+                        <CheckIcon bind:check={config.danger_allow_insecure}/>
+                    {:else}
+                        <Switch bind:selected={config.danger_allow_insecure}/>
+                    {/if}
                 </div>
             {/if}
+
+            <Input
+                    bind:value={config.issuer}
+                    bind:error={formErrors.issuer}
+                    autocomplete="off"
+                    placeholder="Issuer URL"
+                    on:input={validateFormLookup}
+                    width={inputWidth}
+                    disabled={disableAfterLookup}
+            >
+                ISSUER URL
+            </Input>
+
+            <Input
+                    bind:value={config.authorization_endpoint}
+                    bind:error={formErrors.authorization_endpoint}
+                    autocomplete="off"
+                    placeholder="Authorization Endpoint"
+                    on:input={validateFormLookup}
+                    width={inputWidth}
+                    disabled={disableAfterLookup}
+            >
+                AUTHORIZATION ENDPOINT
+            </Input>
+
+            <Input
+                    bind:value={config.token_endpoint}
+                    bind:error={formErrors.token_endpoint}
+                    autocomplete="off"
+                    placeholder="Token Endpoint"
+                    on:input={validateFormLookup}
+                    width={inputWidth}
+                    disabled={disableAfterLookup}
+            >
+                TOKEN ENDPOINT
+            </Input>
+
+            <Input
+                    bind:value={config.userinfo_endpoint}
+                    bind:error={formErrors.userinfo_endpoint}
+                    autocomplete="off"
+                    placeholder="Userinfo Endpoint"
+                    on:input={validateFormLookup}
+                    width={inputWidth}
+                    disabled={disableAfterLookup}
+            >
+                USERINFO ENDPOINT
+            </Input>
+
+            <div class="header">
+                Use PKCE
+            </div>
+            <div class="ml">
+                {#if disableAfterLookup}
+                    <CheckIcon bind:check={config.use_pkce}/>
+                {:else}
+                    <Switch bind:selected={config.use_pkce}/>
+                {/if}
+            </div>
 
             <div class="desc">
                 The scope the client should use when redirecting to the login.<br>

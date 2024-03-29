@@ -2,13 +2,14 @@
     import * as yup from "yup";
     import {extractFormErrors} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
-    import {REGEX_CLIENT_NAME, REGEX_LOWERCASE_SPACE, REGEX_URI} from "../../../utils/constants.js";
+    import {REGEX_CLIENT_NAME, REGEX_LOWERCASE_SPACE, REGEX_URI, REGEX_PEM} from "../../../utils/constants.js";
     import {onMount} from "svelte";
     import {putProvider} from "../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";
     import Switch from "$lib/Switch.svelte";
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import JsonPathDesc from "./JsonPathDesc.svelte";
+    import Textarea from "$lib/inputs/Textarea.svelte";
 
     export let provider = {};
     export let onSave;
@@ -20,6 +21,7 @@
     let success = false;
     let timer;
     let isDefault = false;
+    let showRootPem = provider.root_pem;
 
     $: if (success) {
         timer = setTimeout(() => {
@@ -47,6 +49,7 @@
         client_id: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         client_secret: yup.string().trim().max(256, "Max 256 characters"),
         scope: yup.string().trim().matches(REGEX_LOWERCASE_SPACE, "Can only contain: 'a-zA-Z0-9-_/ ', length max: 128"),
+        root_pem: yup.string().trim().nullable().matches(REGEX_PEM, "Invalid PEM certificate"),
 
         admin_claim_path: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         admin_claim_value: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
@@ -74,6 +77,12 @@
 
         err = '';
         isLoading = true;
+
+        if (provider.root_pem) {
+            // make sure we reset to false, which is what a user would expect
+            provider.danger_allow_insecure = false;
+            provider.root_pem = provider.root_pem.trim();
+        }
 
         let res = await putProvider(provider.id, provider);
         if (res.ok) {
@@ -109,17 +118,6 @@
         </div>
     </div>
 
-    <!--    <Input-->
-    <!--            bind:value={scope.name}-->
-    <!--            bind:error={formErrors.name}-->
-    <!--            autocomplete="off"-->
-    <!--            placeholder="Scope Name"-->
-    <!--            on:input={validateForm}-->
-    <!--            disabled={isDefault}-->
-    <!--    >-->
-    <!--        SCOPE NAME-->
-    <!--    </Input>-->
-
     <!-- Mappings -->
     <div class="separator"></div>
 
@@ -131,11 +129,31 @@
     </div>
 
     <div class="header">
-        Allow insecure TLS certificates
+        Custom Root CA PEM
     </div>
     <div class="ml mb">
-        <Switch bind:selected={provider.danger_allow_insecure}/>
+        <Switch bind:selected={showRootPem}/>
     </div>
+
+    {#if showRootPem}
+         <Textarea
+                 rows={17}
+                 name="rootPem"
+                 placeholder="-----BEGIN CERTIFICATE-----
+-----END CERTIFICATE-----"
+                 bind:value={provider.root_pem}
+                 bind:error={formErrors.root_pem}
+         >
+            Root Certificate in PEM format
+        </Textarea>
+    {:else}
+        <div class="header">
+            Allow insecure TLS certificates
+        </div>
+        <div class="ml mb">
+            <Switch bind:selected={provider.danger_allow_insecure}/>
+        </div>
+    {/if}
 
     <Input
             bind:value={provider.issuer}
