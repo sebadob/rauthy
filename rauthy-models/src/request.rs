@@ -460,6 +460,7 @@ pub struct ProviderRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\s]{2,128}]`
     #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
     pub name: String,
+    pub enabled: bool,
 
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]

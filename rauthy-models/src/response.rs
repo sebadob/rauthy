@@ -331,6 +331,7 @@ impl From<PasswordPolicy> for PasswordPolicyResponse {
 pub struct ProviderResponse {
     pub id: String,
     pub name: String,
+    pub enabled: bool,
 
     pub issuer: String,
     pub authorization_endpoint: String,
@@ -343,6 +344,8 @@ pub struct ProviderResponse {
 
     pub admin_claim_path: Option<String>,
     pub admin_claim_value: Option<String>,
+    pub mfa_claim_path: Option<String>,
+    pub mfa_claim_value: Option<String>,
 
     pub danger_allow_insecure: bool,
     pub use_pkce: bool,
@@ -360,6 +363,7 @@ impl TryFrom<AuthProvider> for ProviderResponse {
         Ok(Self {
             id: value.id,
             name: value.name,
+            enabled: value.enabled,
             issuer: value.issuer,
             authorization_endpoint: value.authorization_endpoint,
             token_endpoint: value.token_endpoint,
@@ -369,6 +373,8 @@ impl TryFrom<AuthProvider> for ProviderResponse {
             scope: value.scope,
             admin_claim_path: value.admin_claim_path,
             admin_claim_value: value.admin_claim_value,
+            mfa_claim_path: value.mfa_claim_path,
+            mfa_claim_value: value.mfa_claim_value,
             danger_allow_insecure: value.allow_insecure_requests,
             use_pkce: value.use_pkce,
             root_pem: value.root_pem,
