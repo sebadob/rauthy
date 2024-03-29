@@ -348,7 +348,7 @@ impl AuthProvider {
         Ok(Self {
             id,
             name: req.name,
-            enabled: true,
+            enabled: req.enabled,
             // for now, this will always be OIDC
             // preparation for future special providers
             typ: AuthProviderType::OIDC,

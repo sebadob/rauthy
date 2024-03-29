@@ -8,6 +8,7 @@
     import Input from "$lib/inputs/Input.svelte";
     import Switch from "$lib/Switch.svelte";
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
+    import JsonPathDesc from "./JsonPathDesc.svelte";
 
     export let provider = {};
     export let onSave;
@@ -32,7 +33,6 @@
     }
 
     onMount(() => {
-        console.log(provider);
         return () => clearTimeout(timer);
     });
 
@@ -50,6 +50,8 @@
 
         admin_claim_path: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         admin_claim_value: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
+        mfa_claim_path: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
+        mfa_claim_value: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
     });
 
     function handleKeyPress(event) {
@@ -121,6 +123,20 @@
     <!-- Mappings -->
     <div class="separator"></div>
 
+    <div class="header">
+        Enabled
+    </div>
+    <div class="ml mb">
+        <Switch bind:selected={provider.enabled}/>
+    </div>
+
+    <div class="header">
+        Allow insecure TLS certificates
+    </div>
+    <div class="ml mb">
+        <Switch bind:selected={provider.danger_allow_insecure}/>
+    </div>
+
     <Input
             bind:value={provider.issuer}
             bind:error={formErrors.issuer}
@@ -131,13 +147,6 @@
     >
         ISSUER URL
     </Input>
-
-    <div class="header">
-        Allow insecure TLS certificates
-    </div>
-    <div class="ml mb">
-        <Switch bind:selected={provider.danger_allow_insecure}/>
-    </div>
 
     <Input
             bind:value={provider.authorization_endpoint}
@@ -237,10 +246,11 @@
         CLIENT SECRET
     </PasswordInput>
 
+    <JsonPathDesc/>
     <div class="desc">
-        Rauthy Admin mapping.<br>
-        If the user logging in should be mapped automatically to the rauthy_admin role,<br>
-        specify the json path and expected value here.
+        <p>
+            You can map a user to be a rauthy admin depending on an upstream ID claim.
+        </p>
     </div>
     <Input
             bind:value={provider.admin_claim_path}
@@ -261,6 +271,33 @@
             width={inputWidth}
     >
         ADMIN CLAIM VALUE
+    </Input>
+
+    <div class="desc">
+        <p>
+            If your provider issues a claim indicating that the user has used at least 2FA during
+            login, you can specify the mfa claim path.
+        </p>
+    </div>
+    <Input
+            bind:value={provider.mfa_claim_path}
+            bind:error={formErrors.mfa_claim_path}
+            autocomplete="off"
+            placeholder="$.amr.*"
+            on:input={validateForm}
+            width={inputWidth}
+    >
+        MFA CLAIM PATH
+    </Input>
+    <Input
+            bind:value={provider.mfa_claim_value}
+            bind:error={formErrors.mfa_claim_value}
+            autocomplete="off"
+            placeholder="mfa"
+            on:input={validateForm}
+            width={inputWidth}
+    >
+        MFA CLAIM VALUE
     </Input>
 
     {#if !isDefault}
@@ -287,7 +324,11 @@
 
     .desc {
         display: flex;
-        margin: .5rem .5rem .25rem .5rem;
+        margin: .5rem;
+    }
+
+    .desc > p {
+        margin: .2rem 0;
     }
 
     .err {

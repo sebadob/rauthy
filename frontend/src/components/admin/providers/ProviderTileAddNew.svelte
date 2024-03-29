@@ -11,6 +11,7 @@
     import OptionSelect from "$lib/OptionSelect.svelte";
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import {REGEX_CLIENT_NAME, REGEX_LOWERCASE_SPACE, REGEX_ROLES, REGEX_URI} from "../../../utils/constants.js";
+    import JsonPathDesc from "./JsonPathDesc.svelte";
 
     export let idx = -1;
     export let onSave;
@@ -28,6 +29,8 @@
         danger_allow_insecure: false,
     };
     let config = {
+        enabled: true,
+
         // fixed values after lookup
         issuer: '',
         danger_allow_insecure: false,
@@ -36,17 +39,21 @@
         token_auth_method_basic: false,
         userinfo_endpoint: '',
         use_pkce: true,
+
         // user defined values
         name: '',
         client_id: '',
         client_secret: '',
         scope: '',
+
         admin_claim_path: null,
         admin_claim_value: null,
+        mfa_claim_path: null,
+        mfa_claim_value: null,
         // maybe additional ones in the future like client_logo
     }
     // TODO add "the big ones" as templates in the future
-    let modes = ['Auto', 'Custom'];
+    let modes = ['OIDC', 'Custom'];
     let mode = modes[0];
     $: isAuto = mode === modes[0];
 
@@ -64,6 +71,8 @@
 
         admin_claim_path: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         admin_claim_value: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
+        mfa_claim_path: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
+        mfa_claim_value: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
     });
     const schemaLookup = yup.object().shape({
         issuer: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
@@ -155,6 +164,7 @@
             danger_allow_insecure: false,
         };
         config = {
+            enabled: true,
             issuer: '',
             danger_allow_insecure: false,
             authorization_endpoint: '',
@@ -162,8 +172,10 @@
             userinfo_endpoint: '',
             use_pkce: true,
             scope: '',
-            admin_claim_path: '',
-            admin_claim_value: '',
+            admin_claim_path: null,
+            admin_claim_value: null,
+            mfa_claim_path: null,
+            mfa_claim_value: null,
         }
     }
 
@@ -198,13 +210,20 @@
 
     <div class="container" slot="body">
         <div class="header">
-            Setup
+            Type
         </div>
         <div class="ml mb">
             <OptionSelect bind:value={mode} options={modes}/>
         </div>
 
         {#if !config.authorization_endpoint && isAuto}
+            <div class="header">
+                Allow insecure TLS certificates
+            </div>
+            <div class="ml mb">
+                <Switch bind:selected={configLookup.danger_allow_insecure}/>
+            </div>
+
             <Input
                     bind:value={configLookup.issuer}
                     bind:error={formErrors.issuer}
@@ -217,18 +236,18 @@
                 ISSUER URL
             </Input>
 
-            <div class="header">
-                Allow insecure TLS certificates
-            </div>
-            <div class="ml mb">
-                <Switch bind:selected={configLookup.danger_allow_insecure}/>
-            </div>
-
             <Button on:click={onSubmitLookup} bind:isLoading level={1} width="6rem">
                 LOOKUP
             </Button>
         {:else}
             {#if isAuto}
+                <div class="header">
+                    Allow insecure TLS certificates
+                </div>
+                <div class="ml mb">
+                    <CheckIcon bind:check={config.danger_allow_insecure}/>
+                </div>
+
                 <Input
                         bind:value={config.issuer}
                         bind:error={formErrors.issuer}
@@ -240,13 +259,6 @@
                 >
                     ISSUER URL
                 </Input>
-
-                <div class="header">
-                    Allow insecure TLS certificates
-                </div>
-                <div class="ml mb">
-                    <CheckIcon bind:check={config.danger_allow_insecure}/>
-                </div>
 
                 <Input
                         bind:value={config.authorization_endpoint}
@@ -291,6 +303,13 @@
                     <CheckIcon bind:check={config.use_pkce}/>
                 </div>
             {:else}
+                <div class="header">
+                    Allow insecure TLS certificates
+                </div>
+                <div class="ml mb">
+                    <Switch bind:selected={config.danger_allow_insecure}/>
+                </div>
+
                 <Input
                         bind:value={config.issuer}
                         bind:error={formErrors.issuer}
@@ -301,13 +320,6 @@
                 >
                     ISSUER URL
                 </Input>
-
-                <div class="header">
-                    Allow insecure TLS certificates
-                </div>
-                <div class="ml mb">
-                    <Switch bind:selected={config.danger_allow_insecure}/>
-                </div>
 
                 <Input
                         bind:value={config.authorization_endpoint}
@@ -408,16 +420,17 @@
                 CLIENT SECRET
             </PasswordInput>
 
+            <JsonPathDesc/>
             <div class="desc">
-                Rauthy Admin mapping.<br>
-                If the user logging in should be mapped automatically to the rauthy_admin role,<br>
-                specify the json path and expected value here.
+                <p>
+                    You can map a user to be a rauthy admin depending on an upstream ID claim.
+                </p>
             </div>
             <Input
                     bind:value={config.admin_claim_path}
                     bind:error={formErrors.admin_claim_path}
                     autocomplete="off"
-                    placeholder="Admin Claim Path"
+                    placeholder="$.roles.*"
                     on:input={validateFormConfig}
                     width={inputWidth}
             >
@@ -427,11 +440,38 @@
                     bind:value={config.admin_claim_value}
                     bind:error={formErrors.admin_claim_value}
                     autocomplete="off"
-                    placeholder="Admin Claim Value"
+                    placeholder="rauthy_admin"
                     on:input={validateFormConfig}
                     width={inputWidth}
             >
                 ADMIN CLAIM VALUE
+            </Input>
+
+            <div class="desc">
+                <p>
+                    If your provider issues a claim indicating that the user has used at least 2FA during
+                    login, you can specify the mfa claim path.
+                </p>
+            </div>
+            <Input
+                    bind:value={config.mfa_claim_path}
+                    bind:error={formErrors.mfa_claim_path}
+                    autocomplete="off"
+                    placeholder="$.amr.*"
+                    on:input={validateFormConfig}
+                    width={inputWidth}
+            >
+                MFA CLAIM PATH
+            </Input>
+            <Input
+                    bind:value={config.mfa_claim_value}
+                    bind:error={formErrors.mfa_claim_value}
+                    autocomplete="off"
+                    placeholder="mfa"
+                    on:input={validateFormConfig}
+                    width={inputWidth}
+            >
+                MFA CLAIM VALUE
             </Input>
 
             <Button on:click={onSubmitConfig} bind:isLoading level={1} width="6rem">
@@ -464,7 +504,12 @@
 
     .desc {
         display: flex;
-        margin: .5rem .5rem .25rem .5rem;
+        flex-direction: column;
+        margin: .5rem;
+    }
+
+    .desc > p {
+        margin: .2rem 0;
     }
 
     .err {
