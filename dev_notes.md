@@ -17,6 +17,10 @@
 
     -> may cause an extraction error in the UI, because no error body is being returned
 
+- UI: client cannot be saved multiple times after saving without reloading -> locked somewhere
+
++ client name input can contain `undefined` after modifying when it was left empty
+
 - make it possible to define a custom header to extract peer IP's (e.g. CDN headers)
 - BUG: when webauthn key in `../finish` is not accepted -> HTTP 401 -> no error message -> improve UX in UI
 - improve the book with all the new features

@@ -10,7 +10,14 @@
     import CheckIcon from "$lib/CheckIcon.svelte";
     import OptionSelect from "$lib/OptionSelect.svelte";
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
-    import {REGEX_CLIENT_NAME, REGEX_LOWERCASE_SPACE, REGEX_ROLES, REGEX_URI} from "../../../utils/constants.js";
+    import {
+        REGEX_CLIENT_NAME,
+        REGEX_LOWERCASE_SPACE,
+        REGEX_PEM,
+        REGEX_URI
+    } from "../../../utils/constants.js";
+    import JsonPathDesc from "./JsonPathDesc.svelte";
+    import Textarea from "$lib/inputs/Textarea.svelte";
 
     export let idx = -1;
     export let onSave;
@@ -23,30 +30,40 @@
     let success = false;
     let timer;
 
+    let showRootPem = false;
+
     let configLookup = {
         issuer: '',
-        danger_allow_http: false,
         danger_allow_insecure: false,
+        root_pem: null,
     };
     let config = {
+        enabled: true,
+
         // fixed values after lookup
         issuer: '',
-        danger_allow_http: false,
         danger_allow_insecure: false,
         authorization_endpoint: '',
         token_endpoint: '',
         token_auth_method_basic: false,
         userinfo_endpoint: '',
         use_pkce: true,
+
         // user defined values
         name: '',
         client_id: '',
         client_secret: '',
         scope: '',
+        root_pem: null,
+
+        admin_claim_path: null,
+        admin_claim_value: null,
+        mfa_claim_path: null,
+        mfa_claim_value: null,
         // maybe additional ones in the future like client_logo
     }
     // TODO add "the big ones" as templates in the future
-    let modes = ['Auto', 'Custom'];
+    let modes = ['OIDC', 'Custom'];
     let mode = modes[0];
     $: isAuto = mode === modes[0];
 
@@ -61,9 +78,16 @@
         client_id: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         client_secret: yup.string().trim().max(256, "Max 256 characters"),
         scope: yup.string().trim().matches(REGEX_LOWERCASE_SPACE, "Can only contain: 'a-zA-Z0-9-_/ ', length max: 128"),
+        root_pem: yup.string().trim().nullable().matches(REGEX_PEM, "Invalid PEM certificate"),
+
+        admin_claim_path: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
+        admin_claim_value: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
+        mfa_claim_path: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
+        mfa_claim_value: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
     });
     const schemaLookup = yup.object().shape({
         issuer: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
+        root_pem: yup.string().trim().nullable().matches(REGEX_PEM, "Valid PEM certificate"),
     });
 
     $: if (success) {
@@ -74,6 +98,8 @@
             resetValues();
         }, 1500);
     }
+
+    $: disableAfterLookup = config.authorization_endpoint && isAuto;
 
     onMount(() => {
         return () => {
@@ -96,6 +122,12 @@
 
         err = '';
         isLoading = true;
+
+        if (config.root_pem) {
+            // make sure we reset to false, which is what a user would expect
+            config.danger_allow_insecure = false;
+            config.root_pem = config.root_pem.trim();
+        }
 
         config.scope = config.scope.trim();
         let res = await postProvider(config);
@@ -128,13 +160,13 @@
             const body = await res.json();
             config.issuer = body.issuer;
             config.authorization_endpoint = body.authorization_endpoint;
-            config.danger_allow_http = body.danger_allow_http;
             config.danger_allow_insecure = body.danger_allow_insecure;
             config.token_endpoint = body.token_endpoint;
             config.userinfo_endpoint = body.userinfo_endpoint;
             config.token_auth_method_basic = body.token_auth_method_basic;
             config.use_pkce = body.use_pkce;
             config.scope = body.scope;
+            config.root_pem = body.root_pem;
         } else {
             let body = await res.json();
             if (body.message.includes('InvalidCertificate')) {
@@ -150,19 +182,25 @@
     function resetValues() {
         configLookup = {
             issuer: '',
-            danger_allow_http: false,
             danger_allow_insecure: false,
+            root_pem: null,
         };
         config = {
+            enabled: true,
             issuer: '',
-            danger_allow_http: false,
             danger_allow_insecure: false,
             authorization_endpoint: '',
             token_endpoint: '',
             userinfo_endpoint: '',
             use_pkce: true,
             scope: '',
+            root_pem: null,
+            admin_claim_path: null,
+            admin_claim_value: null,
+            mfa_claim_path: null,
+            mfa_claim_value: null,
         }
+        showRootPem = false;
     }
 
     async function validateFormConfig() {
@@ -196,13 +234,40 @@
 
     <div class="container" slot="body">
         <div class="header">
-            Setup
+            Type
         </div>
         <div class="ml mb">
             <OptionSelect bind:value={mode} options={modes}/>
         </div>
 
         {#if !config.authorization_endpoint && isAuto}
+            <div class="header">
+                Custom Root CA PEM
+            </div>
+            <div class="ml mb">
+                <Switch bind:selected={showRootPem}/>
+            </div>
+
+            {#if showRootPem}
+                <Textarea
+                        rows={17}
+                        name="rootPem"
+                        placeholder="-----BEGIN CERTIFICATE-----
+-----END CERTIFICATE-----"
+                        bind:value={configLookup.root_pem}
+                        bind:error={formErrors.root_pem}
+                >
+                    Root Certificate in PEM format
+                </Textarea>
+            {:else}
+                <div class="header">
+                    Allow insecure TLS certificates
+                </div>
+                <div class="ml mb">
+                    <Switch bind:selected={configLookup.danger_allow_insecure}/>
+                </div>
+            {/if}
+
             <Input
                     bind:value={configLookup.issuer}
                     bind:error={formErrors.issuer}
@@ -210,163 +275,98 @@
                     placeholder="Issuer URL"
                     on:input={validateFormLookup}
                     width={inputWidth}
+                    on:enter={onSubmitLookup}
             >
                 ISSUER URL
             </Input>
-
-            <div class="header">
-                Allow unencrypted HTTP lookup
-            </div>
-            <div class="ml">
-                <Switch bind:selected={configLookup.danger_allow_http}/>
-            </div>
-
-            <div class="header">
-                Allow insecure TLS certificates
-            </div>
-            <div class="ml mb">
-                <Switch bind:selected={configLookup.danger_allow_insecure}/>
-            </div>
 
             <Button on:click={onSubmitLookup} bind:isLoading level={1} width="6rem">
                 LOOKUP
             </Button>
         {:else}
-            {#if isAuto}
-                <Input
-                        bind:value={config.issuer}
-                        bind:error={formErrors.issuer}
-                        autocomplete="off"
-                        placeholder="Issuer URL"
-                        on:input={validateFormLookup}
-                        width={inputWidth}
-                        disabled
+            {#if showRootPem}
+                <Textarea
+                        rows={17}
+                        name="rootPem"
+                        placeholder="-----BEGIN CERTIFICATE-----
+-----END CERTIFICATE-----"
+                        bind:value={config.root_pem}
+                        bind:error={formErrors.root_pem}
+                        disabled={disableAfterLookup}
                 >
-                    ISSUER URL
-                </Input>
-
-                <div class="header">
-                    Allow unencrypted HTTP lookup
-                </div>
-                <div class="ml">
-                    <CheckIcon bind:check={config.danger_allow_http}/>
-                </div>
-
-                <div class="header">
-                    Allow insecure TLS certificates
-                </div>
-                <div class="ml mb">
-                    <CheckIcon bind:check={config.danger_allow_insecure}/>
-                </div>
-
-                <Input
-                        bind:value={config.authorization_endpoint}
-                        bind:error={formErrors.authorization_endpoint}
-                        autocomplete="off"
-                        placeholder="Authorization Endpoint"
-                        on:input={validateFormLookup}
-                        width={inputWidth}
-                        disabled
-                >
-                    AUTHORIZATION ENDPOINT
-                </Input>
-
-                <Input
-                        bind:value={config.token_endpoint}
-                        bind:error={formErrors.token_endpoint}
-                        autocomplete="off"
-                        placeholder="Token Endpoint"
-                        on:input={validateFormLookup}
-                        width={inputWidth}
-                        disabled
-                >
-                    TOKEN ENDPOINT
-                </Input>
-
-                <Input
-                        bind:value={config.userinfo_endpoint}
-                        bind:error={formErrors.userinfo_endpoint}
-                        autocomplete="off"
-                        placeholder="Userinfo Endpoint"
-                        on:input={validateFormLookup}
-                        width={inputWidth}
-                        disabled
-                >
-                    USERINFO ENDPOINT
-                </Input>
-
-                <div class="header">
-                    Use PKCE
-                </div>
-                <div class="ml">
-                    <CheckIcon bind:check={config.use_pkce}/>
-                </div>
+                    Root Certificate in PEM format
+                </Textarea>
             {:else}
-                <Input
-                        bind:value={config.issuer}
-                        bind:error={formErrors.issuer}
-                        autocomplete="off"
-                        placeholder="Issuer URL"
-                        on:input={validateFormConfig}
-                        width={inputWidth}
-                >
-                    ISSUER URL
-                </Input>
-
-                <div class="header">
-                    Allow unencrypted HTTP lookup
-                </div>
-                <div class="ml">
-                    <Switch bind:selected={config.danger_allow_http}/>
-                </div>
-
                 <div class="header">
                     Allow insecure TLS certificates
                 </div>
                 <div class="ml mb">
-                    <Switch bind:selected={config.danger_allow_insecure}/>
-                </div>
-
-                <Input
-                        bind:value={config.authorization_endpoint}
-                        bind:error={formErrors.authorization_endpoint}
-                        autocomplete="off"
-                        placeholder="Authorization Endpoint"
-                        on:input={validateFormConfig}
-                        width={inputWidth}
-                >
-                    AUTHORIZATION ENDPOINT
-                </Input>
-
-                <Input
-                        bind:value={config.token_endpoint}
-                        bind:error={formErrors.token_endpoint}
-                        autocomplete="off"
-                        placeholder="Token Endpoint"
-                        on:input={validateFormConfig}
-                        width={inputWidth}
-                >
-                    TOKEN ENDPOINT
-                </Input>
-
-                <Input
-                        bind:value={config.userinfo_endpoint}
-                        bind:error={formErrors.userinfo_endpoint}
-                        autocomplete="off"
-                        placeholder="Userinfo Endpoint"
-                        on:input={validateFormConfig}
-                        width={inputWidth}
-                >
-                    USERINFO ENDPOINT
-                </Input>
-
-                <div class="header">
-                    Use PKCE
-                </div>
-                <div class="ml mb">
-                    <Switch bind:selected={config.use_pkce}/>
+                    {#if disableAfterLookup}
+                        <CheckIcon bind:check={config.danger_allow_insecure}/>
+                    {:else}
+                        <Switch bind:selected={config.danger_allow_insecure}/>
+                    {/if}
                 </div>
             {/if}
+
+            <Input
+                    bind:value={config.issuer}
+                    bind:error={formErrors.issuer}
+                    autocomplete="off"
+                    placeholder="Issuer URL"
+                    on:input={validateFormLookup}
+                    width={inputWidth}
+                    disabled={disableAfterLookup}
+            >
+                ISSUER URL
+            </Input>
+
+            <Input
+                    bind:value={config.authorization_endpoint}
+                    bind:error={formErrors.authorization_endpoint}
+                    autocomplete="off"
+                    placeholder="Authorization Endpoint"
+                    on:input={validateFormLookup}
+                    width={inputWidth}
+                    disabled={disableAfterLookup}
+            >
+                AUTHORIZATION ENDPOINT
+            </Input>
+
+            <Input
+                    bind:value={config.token_endpoint}
+                    bind:error={formErrors.token_endpoint}
+                    autocomplete="off"
+                    placeholder="Token Endpoint"
+                    on:input={validateFormLookup}
+                    width={inputWidth}
+                    disabled={disableAfterLookup}
+            >
+                TOKEN ENDPOINT
+            </Input>
+
+            <Input
+                    bind:value={config.userinfo_endpoint}
+                    bind:error={formErrors.userinfo_endpoint}
+                    autocomplete="off"
+                    placeholder="Userinfo Endpoint"
+                    on:input={validateFormLookup}
+                    width={inputWidth}
+                    disabled={disableAfterLookup}
+            >
+                USERINFO ENDPOINT
+            </Input>
+
+            <div class="header">
+                Use PKCE
+            </div>
+            <div class="ml">
+                {#if disableAfterLookup}
+                    <CheckIcon bind:check={config.use_pkce}/>
+                {:else}
+                    <Switch bind:selected={config.use_pkce}/>
+                {/if}
+            </div>
 
             <div class="desc">
                 The scope the client should use when redirecting to the login.<br>
@@ -426,6 +426,60 @@
                 CLIENT SECRET
             </PasswordInput>
 
+            <JsonPathDesc/>
+            <div class="desc">
+                <p>
+                    You can map a user to be a rauthy admin depending on an upstream ID claim.
+                </p>
+            </div>
+            <Input
+                    bind:value={config.admin_claim_path}
+                    bind:error={formErrors.admin_claim_path}
+                    autocomplete="off"
+                    placeholder="$.roles.*"
+                    on:input={validateFormConfig}
+                    width={inputWidth}
+            >
+                ADMIN CLAIM PATH
+            </Input>
+            <Input
+                    bind:value={config.admin_claim_value}
+                    bind:error={formErrors.admin_claim_value}
+                    autocomplete="off"
+                    placeholder="rauthy_admin"
+                    on:input={validateFormConfig}
+                    width={inputWidth}
+            >
+                ADMIN CLAIM VALUE
+            </Input>
+
+            <div class="desc">
+                <p>
+                    If your provider issues a claim indicating that the user has used at least 2FA during
+                    login, you can specify the mfa claim path.
+                </p>
+            </div>
+            <Input
+                    bind:value={config.mfa_claim_path}
+                    bind:error={formErrors.mfa_claim_path}
+                    autocomplete="off"
+                    placeholder="$.amr.*"
+                    on:input={validateFormConfig}
+                    width={inputWidth}
+            >
+                MFA CLAIM PATH
+            </Input>
+            <Input
+                    bind:value={config.mfa_claim_value}
+                    bind:error={formErrors.mfa_claim_value}
+                    autocomplete="off"
+                    placeholder="mfa"
+                    on:input={validateFormConfig}
+                    width={inputWidth}
+            >
+                MFA CLAIM VALUE
+            </Input>
+
             <Button on:click={onSubmitConfig} bind:isLoading level={1} width="6rem">
                 SAVE
             </Button>
@@ -456,7 +510,12 @@
 
     .desc {
         display: flex;
-        margin: .5rem .5rem .25rem .5rem;
+        flex-direction: column;
+        margin: .5rem;
+    }
+
+    .desc > p {
+        margin: .2rem 0;
     }
 
     .err {

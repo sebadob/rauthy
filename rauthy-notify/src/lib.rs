@@ -73,7 +73,7 @@ impl Notification {
             .user_agent(format!("Rauthy v{} Notifier", RAUTHY_VERSION))
             .min_tls_version(tls::Version::TLS_1_2)
             .pool_idle_timeout(Duration::from_secs(600))
-            .http2_keep_alive_while_idle(true);
+            .danger_accept_invalid_certs(disable_tls_validation);
 
         if disable_tls_validation {
             builder = builder.danger_accept_invalid_certs(true);

@@ -331,6 +331,7 @@ impl From<PasswordPolicy> for PasswordPolicyResponse {
 pub struct ProviderResponse {
     pub id: String,
     pub name: String,
+    pub enabled: bool,
 
     pub issuer: String,
     pub authorization_endpoint: String,
@@ -341,7 +342,12 @@ pub struct ProviderResponse {
     pub client_secret: Option<String>,
     pub scope: String,
 
-    pub token_auth_method_basic: bool,
+    pub admin_claim_path: Option<String>,
+    pub admin_claim_value: Option<String>,
+    pub mfa_claim_path: Option<String>,
+    pub mfa_claim_value: Option<String>,
+
+    pub danger_allow_insecure: bool,
     pub use_pkce: bool,
 
     pub root_pem: Option<String>,
@@ -353,10 +359,11 @@ impl TryFrom<AuthProvider> for ProviderResponse {
     type Error = ErrorResponse;
 
     fn try_from(value: AuthProvider) -> Result<Self, Self::Error> {
-        let secret = value.get_secret_cleartext()?;
+        let secret = AuthProvider::get_secret_cleartext(&value.secret)?;
         Ok(Self {
             id: value.id,
             name: value.name,
+            enabled: value.enabled,
             issuer: value.issuer,
             authorization_endpoint: value.authorization_endpoint,
             token_endpoint: value.token_endpoint,
@@ -364,7 +371,11 @@ impl TryFrom<AuthProvider> for ProviderResponse {
             client_id: value.client_id,
             client_secret: secret,
             scope: value.scope,
-            token_auth_method_basic: value.token_auth_method_basic,
+            admin_claim_path: value.admin_claim_path,
+            admin_claim_value: value.admin_claim_value,
+            mfa_claim_path: value.mfa_claim_path,
+            mfa_claim_value: value.mfa_claim_value,
+            danger_allow_insecure: value.allow_insecure_requests,
             use_pkce: value.use_pkce,
             root_pem: value.root_pem,
         })
@@ -378,9 +389,8 @@ pub struct ProviderLookupResponse {
     pub token_endpoint: String,
     pub userinfo_endpoint: String,
     pub scope: String,
-    pub token_auth_method_basic: bool,
+    pub root_pem: Option<String>,
     pub use_pkce: bool,
-    pub danger_allow_http: bool,
     pub danger_allow_insecure: bool,
 }
 
@@ -532,11 +542,14 @@ pub struct Userinfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum UserAccountTypeResponse {
     New,
     Password,
     Passkey,
+    Federated,
+    FederatedPasskey,
+    FederatedPassword,
 }
 
 impl From<AccountType> for UserAccountTypeResponse {
@@ -545,6 +558,9 @@ impl From<AccountType> for UserAccountTypeResponse {
             AccountType::New => Self::New,
             AccountType::Password => Self::Password,
             AccountType::Passkey => Self::Passkey,
+            AccountType::Federated => Self::Federated,
+            AccountType::FederatedPasskey => Self::FederatedPasskey,
+            AccountType::FederatedPassword => Self::FederatedPassword,
         }
     }
 }

@@ -1,7 +1,9 @@
 export const PKCE_VERIFIER = 'pkce_verifier';
+export const PKCE_VERIFIER_UPSTREAM = 'pkce_verifier_upstream';
 export const CSRF_TOKEN = 'csrf_token';
 export const ACCESS_TOKEN = 'access_token';
 export const ID_TOKEN = 'id_token';
+export const PROVIDER_TOKEN = 'provider_token';
 
 export const AUTH_ENDPOINT = '/auth/v1/oidc/authorize';
 export const CLIENT_ID = 'rauthy';
@@ -22,6 +24,7 @@ export const REGEX_ATTR_KEY = /^[a-zA-Z0-9\-_/]{2,32}$/gm;
 export const REGEX_CLIENT_ID = /^[a-zA-Z0-9\-_/]{2,128}$/gm;
 export const REGEX_CLIENT_NAME = /^[a-zA-Z0-9À-ÿ\-\s]{0,128}$/gm;
 export const REGEX_LOWERCASE_SPACE = /^[a-z0-9-_\/\s]{2,128}$/gm;
+export const REGEX_PEM = /^(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)$/gm;
 export const REGEX_ROLES = /^[a-z0-9\-_/]{2,128}$/gm;
 export const REGEX_URI = /^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+$/gm;
 export const REGEX_URI_SPACE = /^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%\s]+$/m;

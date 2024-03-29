@@ -13,7 +13,7 @@ use actix_web::{web, HttpRequest};
 use cryptr::{utils, EncKeys, EncValue};
 use futures_util::StreamExt;
 use rauthy_common::constants::{
-    APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_EPHEMERAL_CLIENTS,
+    ADMIN_FORCE_MFA, APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_EPHEMERAL_CLIENTS,
     DYN_CLIENT_DEFAULT_TOKEN_LIFETIME, DYN_CLIENT_SECRET_AUTO_ROTATE, ENABLE_EPHEMERAL_CLIENTS,
     EPHEMERAL_CLIENTS_ALLOWED_FLOWS, EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA,
     IDX_CLIENTS, IDX_CLIENT_LOGO, PROXY_MODE, RAUTHY_VERSION,
@@ -588,19 +588,24 @@ impl Client {
         }
     }
 
+    #[inline(always)]
+    pub fn force_mfa(&self) -> bool {
+        self.force_mfa || self.id == "rauthy" && *ADMIN_FORCE_MFA
+    }
+
     // Generates a new random 64 character long client secret and returns the cleartext and
     /// encrypted version
     /// # Panics
     /// The decryption depends on correctly set up `ENC_KEYS` and `ENC_KEY_ACTIVE` environment
     /// variables and panics, if this is not the case.
-    #[inline]
+    #[inline(always)]
     pub fn generate_new_secret() -> Result<(String, Vec<u8>), ErrorResponse> {
         let rnd = utils::secure_random_alnum(64);
         let enc = EncValue::encrypt(rnd.as_bytes())?.into_bytes().to_vec();
         Ok((rnd, enc))
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn get_access_token_alg(&self) -> Result<JwkKeyPairAlg, ErrorResponse> {
         JwkKeyPairAlg::from_str(self.access_token_alg.as_str())
     }
@@ -865,17 +870,93 @@ impl Client {
         )))
     }
 
-    pub fn validate_challenge_method(&self, c: &str) -> Result<(), ErrorResponse> {
+    pub fn validate_redirect_uri(&self, redirect_uri: &str) -> Result<(), ErrorResponse> {
+        let matching_uris = self
+            .get_redirect_uris()
+            .iter()
+            .filter(|uri| {
+                (uri.ends_with('*') && redirect_uri.starts_with(uri.split_once('*').unwrap().0))
+                    || uri.as_str().eq(redirect_uri)
+                // if (uri.ends_with('*') && redirect_uri.starts_with(uri.split_once('*').unwrap().0))
+                //     || uri.eq(redirect_uri)
+                // {
+                //     return true;
+                // }
+                // false
+            })
+            .count();
+        if matching_uris == 0 {
+            Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                String::from("Invalid redirect uri"),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn validate_code_challenge(
+        &self,
+        code_challenge: &Option<String>,
+        code_challenge_method: &Option<String>,
+    ) -> Result<(), ErrorResponse> {
+        if self.challenge.is_some() {
+            if code_challenge.is_none() {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    String::from("'code_challenge' is missing"),
+                ));
+            }
+
+            if code_challenge_method.is_none() {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    String::from("'code_challenge_method' is missing"),
+                ));
+            }
+
+            let method = code_challenge_method.as_ref().unwrap();
+            if !self.challenge.as_ref().unwrap().contains(method) {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!("code_challenge_method '{}' is not allowed", method),
+                ))
+            } else {
+                Ok(())
+            }
+        } else if code_challenge.is_some() || code_challenge_method.is_some() {
+            Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'code_challenge' not enabled for this client".to_string(),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn validate_challenge_method(
+        &self,
+        code_challenge_method: &str,
+    ) -> Result<(), ErrorResponse> {
         if self.challenge.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 String::from("'code_challenge' not allowed"),
             ));
         }
-        if c.is_empty() || !self.challenge.as_ref().unwrap().contains(c) {
+        if code_challenge_method.is_empty()
+            || !self
+                .challenge
+                .as_ref()
+                .unwrap()
+                .contains(code_challenge_method)
+        {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                format!("code_challenge_method '{}' is not allowed", c),
+                format!(
+                    "code_challenge_method '{}' is not allowed",
+                    code_challenge_method
+                ),
             ));
         }
         Ok(())

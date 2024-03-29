@@ -10,7 +10,8 @@
     // static translation
     onMount(async () => {
         if ('production' === import.meta.env.MODE) {
-            t = JSON.parse(document.querySelector("#i18n").innerHTML);
+            t = JSON.parse(document.getElementsByTagName('template').namedItem('i18n').innerHTML);
+            // t = JSON.parse(document.querySelector("#i18n").innerHTML);
         } else {
             const res = await fetchI18nStatic(content);
             t = await res.json();

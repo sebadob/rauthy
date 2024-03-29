@@ -165,6 +165,7 @@ use utoipa::{openapi, OpenApi};
             request::PasswordPolicyRequest,
             request::PasswordResetRequest,
             request::ProviderRequest,
+            request::ProviderLoginRequest,
             request::ProviderLookupRequest,
             request::RequestResetRequest,
             request::NewUserRequest,

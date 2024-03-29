@@ -40,6 +40,11 @@ pub enum AccountType {
     New,
     Password,
     Passkey,
+    Federated,
+    /// Federated + Local Password
+    FederatedPassword,
+    /// Federated + Local Passkey
+    FederatedPasskey,
 }
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -61,54 +66,33 @@ pub struct User {
     pub language: Language,
     pub webauthn_user_id: Option<String>,
     pub user_expires: Option<i64>,
+    pub auth_provider_id: Option<String>,
+    pub federation_uid: Option<String>,
 }
 
 // CRUD
 impl User {
     // Inserts a user into the database
     pub async fn create(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
-        let lang = new_user.language.as_str();
-        sqlx::query!(
-            r#"insert into users
-            (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-            language, user_expires)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"#,
-            new_user.id,
-            new_user.email,
-            new_user.given_name,
-            new_user.family_name,
-            new_user.roles,
-            new_user.groups,
-            new_user.enabled,
-            new_user.email_verified,
-            new_user.created_at,
-            lang,
-            new_user.user_expires,
-        )
-        .execute(&data.db)
-        .await?;
+        let slf = Self::insert(data, new_user).await?;
 
         let magic_link = MagicLink::create(
             data,
-            new_user.id.clone(),
+            slf.id.clone(),
             data.ml_lt_pwd_first as i64,
             MagicLinkUsage::NewUser,
         )
         .await?;
-        send_pwd_reset(data, &magic_link, &new_user).await;
+        send_pwd_reset(data, &magic_link, &slf).await;
 
-        // let mut users = User::find_all(data).await?;
-        // users.push(new_user.clone());
-        // cache_insert(
-        //     CACHE_NAME_USERS.to_string(),
-        //     IDX_USERS.to_string(),
-        //     &data.caches.ha_cache_config,
-        //     &users,
-        //     AckLevel::Quorum,
-        // )
-        // .await?;
+        Ok(slf)
+    }
 
-        Ok(new_user)
+    pub async fn create_federated(
+        data: &web::Data<AppState>,
+        new_user: User,
+    ) -> Result<Self, ErrorResponse> {
+        Self::insert(data, new_user).await
     }
 
     // Inserts a user into the database
@@ -142,22 +126,6 @@ impl User {
         sqlx::query!("DELETE FROM users WHERE id = $1", self.id)
             .execute(&data.db)
             .await?;
-
-        // Now clean up all caches
-        // let users = User::find_all(data)
-        //     .await?
-        //     .into_iter()
-        //     .filter(|u| u.id != self.id)
-        //     .collect::<Vec<Self>>();
-        //
-        // cache_insert(
-        //     CACHE_NAME_USERS.to_string(),
-        //     IDX_USERS.to_string(),
-        //     &data.caches.ha_cache_config,
-        //     &users,
-        //     AckLevel::Quorum,
-        // )
-        // .await?;
 
         let idx = format!("{}_{}", IDX_USERS, &self.id);
         cache_remove(
@@ -202,7 +170,6 @@ impl User {
         Ok(())
     }
 
-    // Returns a user by its id
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
         let idx = format!("{}_{}", IDX_USERS, id);
         let user_opt = cache_get!(
@@ -234,7 +201,6 @@ impl User {
         Ok(user)
     }
 
-    // Returns a user by its email
     pub async fn find_by_email(
         data: &web::Data<AppState>,
         email: String,
@@ -270,32 +236,25 @@ impl User {
         Ok(user)
     }
 
-    // Returns all existing users
-    pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        // let users = cache_get!(
-        //     Vec<User>,
-        //     CACHE_NAME_USERS.to_string(),
-        //     IDX_USERS.to_string(),
-        //     &data.caches.ha_cache_config,
-        //     false
-        // )
-        // .await?;
-        // if let Some(users) = users {
-        //     return Ok(users);
-        // }
+    pub async fn find_by_federation(
+        data: &web::Data<AppState>,
+        auth_provider_id: &str,
+        federation_uid: &str,
+    ) -> Result<Self, ErrorResponse> {
+        let user = sqlx::query_as::<_, Self>(
+            "select * from users where auth_provider_id = $1 and federation_uid = $2",
+        )
+        .bind(auth_provider_id)
+        .bind(federation_uid)
+        .fetch_one(&data.db)
+        .await?;
+        Ok(user)
+    }
 
+    pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
         let res = sqlx::query_as::<_, Self>("select * from users")
             .fetch_all(&data.db)
             .await?;
-
-        // cache_insert(
-        //     CACHE_NAME_12HR.to_string(),
-        //     IDX_USERS.to_string(),
-        //     &data.caches.ha_cache_config,
-        //     &res,
-        //     AckLevel::Quorum,
-        // )
-        // .await?;
         Ok(res)
     }
 
@@ -310,7 +269,33 @@ impl User {
         Ok(res)
     }
 
-    // Saves a user
+    async fn insert(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
+        let lang = new_user.language.as_str();
+        sqlx::query!(
+            r#"INSERT INTO USERS
+            (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
+            language, user_expires, auth_provider_id, federation_uid)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"#,
+            new_user.id,
+            new_user.email,
+            new_user.given_name,
+            new_user.family_name,
+            new_user.roles,
+            new_user.groups,
+            new_user.enabled,
+            new_user.email_verified,
+            new_user.created_at,
+            lang,
+            new_user.user_expires,
+            new_user.auth_provider_id,
+            new_user.federation_uid,
+        )
+        .execute(&data.db)
+        .await?;
+
+        Ok(new_user)
+    }
+
     pub async fn save(
         &self,
         data: &web::Data<AppState>,
@@ -327,8 +312,8 @@ impl User {
             email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6,
             enabled = $7, email_verified = $8, password_expires = $9, last_login = $10,
             last_failed_login = $11, failed_login_attempts = $12, language = $13,
-            webauthn_user_id = $14, user_expires = $15
-            where id = $16"#,
+            webauthn_user_id = $14, user_expires = $15, auth_provider_id = $16, federation_uid = $17
+            where id = $18"#,
         )
         .bind(&self.email)
         .bind(&self.given_name)
@@ -345,6 +330,8 @@ impl User {
         .bind(lang)
         .bind(self.webauthn_user_id.clone())
         .bind(self.user_expires)
+        .bind(&self.auth_provider_id)
+        .bind(&self.federation_uid)
         .bind(&self.id);
 
         if let Some(txn) = txn {
@@ -359,18 +346,6 @@ impl User {
             RefreshToken::invalidate_for_user(data, &self.id).await?;
         }
 
-        // TODO think about a good way to catch a possibly failing transaction -> cache invalidation
-        // let users = User::find_all(data)
-        //     .await?
-        //     .into_iter()
-        //     .map(|mut u| {
-        //         if u.id == self.id {
-        //             u = self.clone();
-        //         }
-        //         u
-        //     })
-        //     .collect::<Vec<Self>>();
-
         if let Some(email) = old_email {
             let idx = format!("{}_{}", IDX_USERS, email);
             cache_del(
@@ -380,15 +355,6 @@ impl User {
             )
             .await?;
         }
-
-        // cache_insert(
-        //     CACHE_NAME_USERS.to_string(),
-        //     IDX_USERS.to_string(),
-        //     &data.caches.ha_cache_config,
-        //     &users,
-        //     AckLevel::Quorum,
-        // )
-        // .await?;
 
         let idx = format!("{}_{}", IDX_USERS, &self.id);
         cache_insert(
@@ -413,7 +379,7 @@ impl User {
         Ok(())
     }
 
-    // Updates a user
+    // TODO should we include a "unlink federation" for admins here?
     pub async fn update(
         data: &web::Data<AppState>,
         id: String,
@@ -443,11 +409,8 @@ impl User {
             user.apply_password_rules(data, password).await?;
         }
 
-        // sanitize roles
         let is_admin_before_update = user.is_admin();
         user.roles = Role::sanitize(data, upd_user.roles).await?;
-
-        // sanitize groups
         user.groups = Group::sanitize(data, upd_user.groups).await?;
 
         user.enabled = upd_user.enabled;
@@ -640,7 +603,13 @@ impl User {
 impl User {
     #[inline]
     pub fn account_type(&self) -> AccountType {
-        if self.password.is_some() {
+        if self.federation_uid.is_some() && self.password.is_some() {
+            AccountType::FederatedPassword
+        } else if self.federation_uid.is_some() && self.has_webauthn_enabled() {
+            AccountType::FederatedPasskey
+        } else if self.federation_uid.is_some() {
+            AccountType::Federated
+        } else if self.password.is_some() {
             AccountType::Password
         } else if self.has_webauthn_enabled() {
             AccountType::Passkey
@@ -973,7 +942,7 @@ impl User {
         res
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn has_webauthn_enabled(&self) -> bool {
         self.webauthn_user_id.is_some()
     }
@@ -1082,6 +1051,40 @@ impl User {
         Ok(())
     }
 
+    // pub fn validate_auth_provider(&self, provider_id: &str) -> Result<(), ErrorResponse> {
+    //     // We must never accept failed logins here!
+    //     // This could lead to account takeover, since we cannot know, that the values from
+    //     // the provider on the other side have actually been validated by the same user.
+    //     if self.auth_provider_id.as_deref() != Some(provider_id) {
+    //         let err = format!(
+    //             "User with email '{}' already exists but is not linked to this provider.",
+    //             self.email
+    //         );
+    //         error!("{}", err);
+    //         return Err(ErrorResponse::new(ErrorResponseType::Forbidden, err));
+    //     }
+    //
+    //     Ok(())
+    // }
+    //
+    // pub fn validate_federation_uid(&self, id_token_uid: &str) -> Result<(), ErrorResponse> {
+    //     // We must never accept failed logins here!
+    //     // This could lead to account takeover, since we cannot know, that the values from
+    //     // the provider on the other side have actually been validated by the same user.
+    //     if self.federation_uid.as_deref() != Some(id_token_uid) {
+    //         error!(
+    //             "Received an invalid User ID from the remote provider. expected: {}\treceived: {}",
+    //             self.id, id_token_uid
+    //         );
+    //         return Err(ErrorResponse::new(
+    //             ErrorResponseType::Forbidden,
+    //             "Received an invalid User ID from the remote provider".to_string(),
+    //         ));
+    //     }
+    //
+    //     Ok(())
+    // }
+
     pub async fn validate_password(
         &self,
         data: &web::Data<AppState>,
@@ -1159,6 +1162,8 @@ impl Default for User {
             language: Language::En,
             webauthn_user_id: None,
             user_expires: None,
+            auth_provider_id: None,
+            federation_uid: None,
         }
     }
 }
@@ -1194,6 +1199,8 @@ mod tests {
                     .sub(::time::Duration::seconds(2))
                     .unix_timestamp(),
             ),
+            auth_provider_id: None,
+            federation_uid: None,
         };
         let session = Session::try_new(&user, 1, None);
         assert!(session.is_err());
@@ -1250,6 +1257,8 @@ mod tests {
             language: Language::En,
             webauthn_user_id: None,
             user_expires: None,
+            auth_provider_id: None,
+            federation_uid: None,
         };
 
         // enabled

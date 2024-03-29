@@ -1,8 +1,20 @@
 <script>
     import {onMount, tick} from "svelte";
-    import {authorize, authorizeRefresh, getClientLogo, postPasswordResetRequest} from "../../../utils/dataFetching.js";
+    import {
+        authorize,
+        authorizeRefresh,
+        getClientLogo,
+        postPasswordResetRequest,
+        postProviderLogin
+    } from "../../../utils/dataFetching.js";
     import * as yup from 'yup';
-    import {extractFormErrors, formatDateFromTs, getQueryParams, saveCsrfToken} from "../../../utils/helpers.js";
+    import {
+        extractFormErrors,
+        formatDateFromTs,
+        getQueryParams,
+        saveCsrfToken,
+        saveProviderToken,
+    } from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
     import WebauthnRequest from "../../../components/webauthn/WebauthnRequest.svelte";
     import {scale} from 'svelte/transition';
@@ -11,6 +23,8 @@
     import BrowserCheck from "../../../components/BrowserCheck.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
     import LangSelector from "$lib/LangSelector.svelte";
+    import getPkce from "oauth-pkce";
+    import {PKCE_VERIFIER, PKCE_VERIFIER_UPSTREAM} from "../../../utils/constants.js";
 
     let t = {};
 
@@ -28,6 +42,7 @@
     let csrf = '';
     let refresh = false;
     let existingMfaUser;
+    let providers = [];
     // let webauthnData = {
     // 	code: "asdjknfasdjklfnasdlkjf",
     //   header_csrf: "askjdfgnsdfjklgn",
@@ -105,6 +120,13 @@
 
         csrf = window.document.getElementsByName('rauthy-csrf-token')[0].id
         saveCsrfToken(csrf);
+
+        // demo value for testing - only un-comment in local dev, not for production build
+        // const provider_tpl = document.getElementsByTagName('template').namedItem('auth_providers').innerHTML || '[{"id": "z6rC5VvymQOev50Pwq0oL0KD", "name": "dev-test", "use_pkce": true}]';
+        const providerTpl = document.getElementsByTagName('template').namedItem('auth_providers').innerHTML;
+        if (providerTpl) {
+            providers = JSON.parse(providerTpl);
+        }
 
         const params = getQueryParams();
         clientId = params.client_id;
@@ -185,8 +207,8 @@
             clientMfaForce = true;
         } else if (res.status === 429) {
             // 429 -> too many failed logins
-            let notBefore =  Number.parseInt(res.headers.get('x-retry-not-before'));
-            let nbfDate =  formatDateFromTs(notBefore);
+            let notBefore = Number.parseInt(res.headers.get('x-retry-not-before'));
+            let nbfDate = formatDateFromTs(notBefore);
             let diff = notBefore * 1000 - new Date().getTime();
 
             tooManyRequests = true;
@@ -219,6 +241,41 @@
             needsPassword = false;
             formValues.password = '';
             err = '';
+        }
+    }
+
+    function providerLogin(id) {
+        getPkce(64, (error, {challenge, verifier}) => {
+            if (!error) {
+                localStorage.setItem(PKCE_VERIFIER_UPSTREAM, verifier);
+                providerLoginPkce(id, challenge);
+            }
+        });
+    }
+
+    async function providerLoginPkce(id, pkce_challenge) {
+        let data = {
+            email: formValues.email || null,
+            client_id: clientId,
+            redirect_uri: redirectUri,
+            scopes: scopes,
+            state: state,
+            nonce: nonce,
+            code_challenge: challenge,
+            code_challenge_method: challengeMethod,
+            provider_id: id,
+            pkce_challenge,
+        };
+        console.log(data);
+        let res = await postProviderLogin(data);
+        if (res.ok) {
+            const xsrfToken = await res.text();
+            saveProviderToken(xsrfToken);
+
+            window.location.href = res.headers.get('location');
+        } else {
+            let body = await res.json();
+            err = body.message;
         }
     }
 
@@ -338,19 +395,29 @@
 
                 {#if !tooManyRequests && !clientMfaForce}
                     {#if showReset}
-                        <div class="btn">
+                        <div class="btn flex-col">
                             <Button on:click={requestReset}>
                                 {t.passwordRequest?.toUpperCase()}
                             </Button>
                         </div>
                     {:else}
-                        <div class="btn">
+                        <div class="btn flex-col">
                             <Button on:click={onSubmit} bind:isLoading>
                                 {t.login?.toUpperCase()}
                             </Button>
                         </div>
                     {/if}
                 {/if}
+            {/if}
+
+            {#if providers}
+                <div class="providers flex-col">
+                    {#each providers as provider (provider.id)}
+                        <Button on:click={() => providerLogin(provider.id)} level={3}>
+                            {provider.name}
+                        </Button>
+                    {/each}
+                </div>
             {/if}
 
             {#if err}
@@ -366,7 +433,7 @@
             {/if}
 
             {#if clientMfaForce}
-                <div class="btn">
+                <div class="btn flex-col">
                     <Button on:click={() => window.location.href = '/auth/v1/account'}>
                         ACCOUNT LOGIN
                     </Button>
@@ -381,6 +448,7 @@
 <style>
     .btn {
         margin: 5px 0;
+        display: flex;
     }
 
     .container {
@@ -398,6 +466,11 @@
         max-width: 15rem;
         margin: -5px 10px 0 5px;
         color: var(--col-err)
+    }
+
+    .flex-col {
+        display: flex;
+        flex-direction: column;
     }
 
     .forgotten {
@@ -422,6 +495,10 @@
     .logo {
         width: 84px;
         height: 84px;
+    }
+
+    .providers {
+        margin-top: .66rem;
     }
 
     .success {

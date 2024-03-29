@@ -38,19 +38,19 @@
 // we will only use them once after Rauthy has changed them for the `code` on the callback. At this
 // point, there is no need to validate the tokens, since they just came from the external provider
 // over an encrypted connection. This simplifies this module and means we don't need caching.
-// - [ ] Implement all necessary additional API endpoints in `rauthy-handlers`
+// - [x] Implement all necessary additional API endpoints in `rauthy-handlers`
 // - [ ] Create a nice looking callback page for the user with maybe additional information, because
 // there are a lot of things that can go wrong during the flow with external providers. If everything
 // was good, we could just show a loading spinner for now.
 // - [ ] Define mandatory mechanisms and features, that external providers must support to make
 // everything working securely and write these down in the Rauthy book (new section).
-// - [ ] It should be possible to add custom Root CA's for each providers independently.
+// - [x] It should be possible to add custom Root CA's for each providers independently.
 // - [x] It should be possible for internal networks and testing that insecure TLS connections
 // are opt-in for each provider independently.
 // - [ ] Show additional information in each users account page, if it is a federated account.
 // - [ ] Make it possible to create a Password / Passkey for federated accounts, so this flow may
 // be used for the initial setup only and use Rauthy's advanced security mechanisms afterwards.
-// - [ ] Think about a solution for the case, that a user is already registered with Rauthy, does
+// - [x] Think about a solution for the case, that a user is already registered with Rauthy, does
 // an external login flow and we find out, that the exact same E-Mail is used:
 //    - Update this user with the external providers data or reject it?
 //    - We cannot know, which values should have the priority in case of conflicts.
@@ -81,28 +81,24 @@
 // The UI / API should handle all kinds of errors with i18n even to create a good UX. On success
 // though, proceed as if the user had been logging in to Rauthy directly. This needs additionally
 // cached values in the backend for the whole verification -> new data structure (cache only, no DB).
-// 4. Modify the Login page to actually get a button for logging in with an external provider. This
+//
+// Modify the Login page to actually get a button for logging in with an external provider. This
 // will need modifications to the HTML pre-rendering on the server after a DB / Cache lookup for
 // possible providers and pre-build the redirect URI for each rendering. Another solution could be
 // to just show the mandatory values and fetch additional metadata on the client side, since a user
 // needs at least a second to click a button. Find the best solution for that.
 //
-// 5. Steps 1 - 4 should make the basic process work. Additionally, we need to implement a solution
-// for conflict solving, if for instance an E-Mail address already exists but has been referenced
-// by the external provider. If that user already existed inside Rauthys DB, we must not "just link
-// them", which could possibly lead to account takeover, since we cannot know, if the external
-// user was valid, even though the same email has been used.
-// For this purpose, we need a way to connect / disconnect an already existing user with external
-// auth providers in the account view for each user. This can re-use a lot of steps 1 - 4, but needs
-// an additional option for the callback page to only use the request to link to an existing account.
-// The disconnect though should simply be a single click for the user after having checked, that
-// at least a password or passkey do exist to not get into a locked out situation.
+// 4. We should have the basic stuff working now.
+// We need to solve bugs that came up by now being able to logged into the account without any
+// prior setup like setting a password or a passkey (possibly null / unbedinged recences in the UI).
+// We also need to modify the account page and show additional information in case of a federated
+// user. We should also include the ability to unlink (and maybe even link later?) a federation, if
+// the user has been set up on our side properly beforehand.
 //
-// 6. Quality of Life improvements - if an external provider does not provide the metadata lookup
-// for auto-discovery, make it able for the user to insert all values manually. Templates for "the
-// big ones" like Github, Google, ..., should not be necessary, since they all provide the metadata
-// endpoints. This means lees maintenance in the future.
+// 5. Cleanup and quality of life improvements - if an external provider does not provide the
+// metadata lookup for auto-discovery, make it able for the user to insert all values manually.
+// Templates for "the big ones" like Github, Google, ..., should not be necessary, since they all
+// provide the metadata endpoints. This means lees maintenance in the future.
 // If the auto-lookup fails, maybe provide a small text for helping out with finding the correct
 // issuer, which should have the .well-known correctly linked.
-//
-// 7. If necessary, have a final cleanup PR.
+// Resolve all left over TODO's from above as well.
