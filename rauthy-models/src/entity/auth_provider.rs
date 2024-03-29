@@ -965,10 +965,10 @@ impl AuthProviderIdClaims<'_> {
         })?;
         debug!("upstream ID token claims:\n{}", claims);
         let json_bytes = base64_url_no_pad_decode(claims)?;
-        let slf = serde_json::from_slice::<AuthProviderIdClaims>(&json_bytes)?;
+        let claims = serde_json::from_slice::<AuthProviderIdClaims>(&json_bytes)?;
 
         // validate either `aud` or `azp`
-        if let Some(azp) = slf.azp {
+        if let Some(azp) = claims.azp {
             if azp != provider.client_id {
                 let err = format!(
                     "`azp` claim '{}' from ID token does not match out client_id '{}'",
@@ -977,7 +977,7 @@ impl AuthProviderIdClaims<'_> {
                 error!("{}", err);
                 return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
             }
-        } else if let Some(aud) = slf.aud {
+        } else if let Some(aud) = claims.aud {
             // TODO this may produce an error, since `aud` is allowed to be a single string
             // or actually a json array by RFC -> do more testing!
             if !aud.to_string().contains(&provider.client_id) {
@@ -997,7 +997,7 @@ impl AuthProviderIdClaims<'_> {
             ));
         }
 
-        if slf.email.is_none() {
+        if claims.email.is_none() {
             let err = "No `email` in ID token claims. This is a mandatory claim";
             error!("{}", err);
             return Err(ErrorResponse::new(
@@ -1006,24 +1006,53 @@ impl AuthProviderIdClaims<'_> {
             ));
         }
 
-        // We need to search for the user on our side in 2 ways:
-        // 1. by email to make sure there are no conflicts
-        // 2. by provider uid in case the email has been changed remotely, if the first
-        // lookup produced any error
-        let user_opt = match User::find_by_email(data, slf.email.unwrap().to_string()).await {
+        let user_opt = match User::find_by_federation(data, &provider.id, claims.sub).await {
             Ok(user) => {
-                debug!("found already existing user by email lookup: {:?}", user);
+                debug!(
+                    "found already existing user by federation lookup: {:?}",
+                    user
+                );
                 Some(user)
             }
             Err(_) => {
-                debug!("did NOT find already existing user by email lookup - trying via fed id");
-                // if we were unable to find the user, we need to make another lookup
-                // and search by federation uid on the remote system to not end up with
-                // duplicate users in case of a remote email update
-                User::find_by_federation_uid(data, slf.sub).await?
+                debug!("did not find already existing user by federation lookup - making sure email does not exist");
+                // If a federated user with this information does not exist, we will create
+                // a new one in the following code, but we should make sure, that the email,
+                // which is a key value for Rauthy, does not yet exist for another user.
+                // On conflict, the DB would return an error anyway, but the error message is
+                // rather cryptic for a normal user.
+                if let Ok(user) = User::find_by_email(data, claims.email.unwrap().to_string()).await
+                {
+                    let err = format!(
+                        "User with email '{}' already exists but is not linked to this provider.",
+                        user.email
+                    );
+                    error!("{}", err);
+                    debug!("{:?}", user);
+                    return Err(ErrorResponse::new(ErrorResponseType::Forbidden, err));
+                }
+
+                None
             }
         };
         debug!("user_opt:\n{:?}", user_opt);
+        // let user_opt = match User::find_by_email(data, claims.email.unwrap().to_string()).await {
+        //     Ok(user) => {
+        //         debug!("found already existing user by email lookup: {:?}", user);
+        //         user.validate_auth_provider(&provider.id)?;
+        //         user.validate_federation_uid(&claims.sub)?;
+        //         Some(user)
+        //     }
+        //     Err(_) => {
+        //         debug!("did NOT find already existing user by email lookup - trying via fed id");
+        //         // if we were unable to find the user, we need to make another lookup
+        //         // and search by federation uid on the remote system to not end up with
+        //         // duplicate users in case of a remote email update
+        //         let user = User::find_by_federation(data, &provider.id, &claims.sub).await?;
+        //         Some(user)
+        //     }
+        // };
+        // debug!("user_opt:\n{:?}", user_opt);
 
         // `rauthy_admin` role mapping by upstream claim
         let mut should_be_rauthy_admin = false;
@@ -1035,7 +1064,6 @@ impl AuthProviderIdClaims<'_> {
                 ));
             }
 
-            // let path = JsonPath::parse("$.foo.bar")?;
             debug!("try validating admin_claim_path: {:?}", path);
             match JsonPath::parse(path) {
                 Ok(path) => {
@@ -1052,9 +1080,6 @@ impl AuthProviderIdClaims<'_> {
                     // let admin_value =
                     //     value::Value::from_str(provider.admin_claim_value.as_deref().unwrap())
                     //         .expect("json value to build fine");
-
-                    // let all = path.query(&json).all();
-                    // debug!("all: {:?}", all);
                     for value in path.query(&json).all() {
                         debug!("value in admin mapping check: {}", value,);
                         if *value == admin_value {
@@ -1068,7 +1093,6 @@ impl AuthProviderIdClaims<'_> {
                 }
             }
         }
-        // debug!("\n\n\n");
 
         // check if mfa has been used by upstream claim
         let mut provider_mfa_login = ProviderMfaLogin::No;
@@ -1095,9 +1119,6 @@ impl AuthProviderIdClaims<'_> {
                     // let admin_value =
                     //     value::Value::from_str(provider.admin_claim_value.as_deref().unwrap())
                     //         .expect("json value to build fine");
-
-                    // let all = path.query(&json).all();
-                    // debug!("all: {:?}", all);
                     for value in path.query(&json).all() {
                         debug!("value in mfa mapping check: {}", value,);
                         if *value == mfa_value {
@@ -1111,7 +1132,6 @@ impl AuthProviderIdClaims<'_> {
                 }
             }
         }
-        // debug!("\n\n\n");
 
         let now = OffsetDateTime::now_utc().unix_timestamp();
         let user = if let Some(mut user) = user_opt {
@@ -1121,7 +1141,7 @@ impl AuthProviderIdClaims<'_> {
             // validate federation_uid
             // we must reject any upstream login, if a non-federated local user with the same email
             // exists, as it could lead to an account takeover
-            if user.federation_uid.is_none() || user.federation_uid.as_deref() != Some(slf.sub) {
+            if user.federation_uid.is_none() || user.federation_uid.as_deref() != Some(claims.sub) {
                 forbidden_error = Some("non-federated user or ID mismatch");
             }
 
@@ -1143,18 +1163,18 @@ impl AuthProviderIdClaims<'_> {
             }
 
             // check / update email
-            if Some(user.email.as_str()) != slf.email {
+            if Some(user.email.as_str()) != claims.email {
                 old_email = Some(user.email);
-                user.email = slf.email.unwrap().to_string();
+                user.email = claims.email.unwrap().to_string();
             }
 
             // check other existing values and possibly update them
-            if let Some(given_name) = slf.given_name {
+            if let Some(given_name) = claims.given_name {
                 if user.given_name.as_str() != given_name {
                     user.given_name = given_name.to_string();
                 }
             }
-            if let Some(family_name) = slf.family_name {
+            if let Some(family_name) = claims.family_name {
                 if user.family_name.as_str() != family_name {
                     user.family_name = family_name.to_string();
                 }
@@ -1188,23 +1208,23 @@ impl AuthProviderIdClaims<'_> {
         } else {
             // Create a new federated user
             let new_user = User {
-                email: slf.email.unwrap().to_string(),
-                given_name: slf.given_name.unwrap_or("N/A").to_string(),
-                family_name: slf.family_name.unwrap_or("N/A").to_string(),
+                email: claims.email.unwrap().to_string(),
+                given_name: claims.given_name.unwrap_or("N/A").to_string(),
+                family_name: claims.family_name.unwrap_or("N/A").to_string(),
                 roles: if should_be_rauthy_admin {
                     "rauthy_admin".to_string()
                 } else {
                     String::default()
                 },
                 enabled: true,
-                email_verified: slf.email_verified.unwrap_or(false),
+                email_verified: claims.email_verified.unwrap_or(false),
                 last_login: Some(now),
-                language: slf
+                language: claims
                     .locale
                     .map(Language::from)
                     .unwrap_or(Language::default()),
                 auth_provider_id: Some(provider.id.clone()),
-                federation_uid: Some(slf.sub.to_string()),
+                federation_uid: Some(claims.sub.to_string()),
                 ..Default::default()
             };
             User::create_federated(data, new_user).await?
@@ -1230,15 +1250,15 @@ impl AuthProviderIdClaims<'_> {
                 country: None,
             },
         };
-        if let Some(bday) = slf.birthdate {
+        if let Some(bday) = claims.birthdate {
             user_values.birthdate = Some(bday.to_string());
             found_values = true;
         }
-        if let Some(phone) = slf.phone {
+        if let Some(phone) = claims.phone {
             user_values.phone = Some(phone.to_string());
             found_values = true;
         }
-        if let Some(addr) = slf.address {
+        if let Some(addr) = claims.address {
             if let Some(street) = addr.street_address {
                 user_values.street = Some(street.to_string());
             }

@@ -37,6 +37,9 @@
             error = '';
             webauthnData = await res.json();
         } else if (res.status === 403) {
+            // TODO we will get a forbidden if for instance the user already exists but without
+            // any upstream provider link (or the wrong one)
+            // TODO add i18n for these cases
             let body = await res.json();
             console.error(body);
             error = body.message;
@@ -44,24 +47,6 @@
             // 406 -> client forces MFA while the user has none
             error = t.clientForceMfa;
             clientMfaForce = true;
-            // TODO it should not be possible to get a 429 here - right?
-            // } else if (res.status === 429) {
-            //     // 429 -> too many failed logins
-            //     let notBefore = Number.parseInt(res.headers.get('x-retry-not-before'));
-            //     let nbfDate = formatDateFromTs(notBefore);
-            //     let diff = notBefore * 1000 - new Date().getTime();
-            //
-            //     tooManyRequests = true;
-            //     error = `${t.http429} ${nbfDate}`;
-            //
-            //     // formValues.email = '';
-            //     // formValues.password = '';
-            //     // needsPassword = false;
-            //
-            //     setTimeout(() => {
-            //         tooManyRequests = false;
-            //         error = '';
-            //     }, diff);
         } else {
             error = `Uncovered HTTP return status '${res.status}'. This should never happen, please report this bug.`;
         }

@@ -236,14 +236,18 @@ impl User {
         Ok(user)
     }
 
-    pub async fn find_by_federation_uid(
+    pub async fn find_by_federation(
         data: &web::Data<AppState>,
+        auth_provider_id: &str,
         federation_uid: &str,
-    ) -> Result<Option<User>, ErrorResponse> {
-        let user = sqlx::query_as::<_, Self>("select * from users where federation_uid = $1")
-            .bind(federation_uid)
-            .fetch_optional(&data.db)
-            .await?;
+    ) -> Result<Self, ErrorResponse> {
+        let user = sqlx::query_as::<_, Self>(
+            "select * from users where auth_provider_id = $1 and federation_uid = $2",
+        )
+        .bind(auth_provider_id)
+        .bind(federation_uid)
+        .fetch_one(&data.db)
+        .await?;
         Ok(user)
     }
 
@@ -1046,6 +1050,40 @@ impl User {
 
         Ok(())
     }
+
+    // pub fn validate_auth_provider(&self, provider_id: &str) -> Result<(), ErrorResponse> {
+    //     // We must never accept failed logins here!
+    //     // This could lead to account takeover, since we cannot know, that the values from
+    //     // the provider on the other side have actually been validated by the same user.
+    //     if self.auth_provider_id.as_deref() != Some(provider_id) {
+    //         let err = format!(
+    //             "User with email '{}' already exists but is not linked to this provider.",
+    //             self.email
+    //         );
+    //         error!("{}", err);
+    //         return Err(ErrorResponse::new(ErrorResponseType::Forbidden, err));
+    //     }
+    //
+    //     Ok(())
+    // }
+    //
+    // pub fn validate_federation_uid(&self, id_token_uid: &str) -> Result<(), ErrorResponse> {
+    //     // We must never accept failed logins here!
+    //     // This could lead to account takeover, since we cannot know, that the values from
+    //     // the provider on the other side have actually been validated by the same user.
+    //     if self.federation_uid.as_deref() != Some(id_token_uid) {
+    //         error!(
+    //             "Received an invalid User ID from the remote provider. expected: {}\treceived: {}",
+    //             self.id, id_token_uid
+    //         );
+    //         return Err(ErrorResponse::new(
+    //             ErrorResponseType::Forbidden,
+    //             "Received an invalid User ID from the remote provider".to_string(),
+    //         ));
+    //     }
+    //
+    //     Ok(())
+    // }
 
     pub async fn validate_password(
         &self,
