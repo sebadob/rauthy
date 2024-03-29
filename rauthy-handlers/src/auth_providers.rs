@@ -109,7 +109,7 @@ pub async fn post_provider_lookup(
     let resp = AuthProvider::lookup_config(
         &payload.issuer,
         payload.danger_allow_insecure.unwrap_or(false),
-        payload.root_pem.as_deref(),
+        payload.root_pem,
     )
     .await?;
 

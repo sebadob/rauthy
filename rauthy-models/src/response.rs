@@ -389,7 +389,7 @@ pub struct ProviderLookupResponse {
     pub token_endpoint: String,
     pub userinfo_endpoint: String,
     pub scope: String,
-    pub token_auth_method_basic: bool,
+    pub root_pem: Option<String>,
     pub use_pkce: bool,
     pub danger_allow_insecure: bool,
 }

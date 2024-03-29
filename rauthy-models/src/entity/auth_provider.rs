@@ -392,9 +392,9 @@ impl AuthProvider {
     pub async fn lookup_config(
         issuer: &str,
         danger_allow_insecure: bool,
-        root_pem: Option<&str>,
+        root_pem: Option<String>,
     ) -> Result<ProviderLookupResponse, ErrorResponse> {
-        let client = Self::build_client(danger_allow_insecure, root_pem)?;
+        let client = Self::build_client(danger_allow_insecure, root_pem.as_deref())?;
 
         let issuer_url = if issuer.starts_with("http://") || issuer.starts_with("https://") {
             issuer.to_string()
@@ -458,10 +458,7 @@ impl AuthProvider {
             authorization_endpoint: well_known.authorization_endpoint,
             token_endpoint: well_known.token_endpoint,
             userinfo_endpoint: well_known.userinfo_endpoint,
-            token_auth_method_basic: !well_known
-                .token_endpoint_auth_methods_supported
-                .iter()
-                .any(|m| m == "client_secret_post"),
+            root_pem,
             use_pkce: well_known
                 .code_challenge_methods_supported
                 .iter()
@@ -1173,13 +1170,11 @@ impl AuthProviderIdClaims<'_> {
                     roles.into_iter().for_each(|r| new_roles.push(r));
                     user.roles = new_roles.join(",");
                 }
-            } else {
-                if roles_str.contains(&"rauthy_admin") {
-                    if roles.len() == 1 {
-                        user.roles = "".to_string();
-                    } else {
-                        user.roles = roles.into_iter().filter(|r| r != "rauthy_admin").join(",");
-                    }
+            } else if roles_str.contains(&"rauthy_admin") {
+                if roles.len() == 1 {
+                    user.roles = "".to_string();
+                } else {
+                    user.roles = roles.into_iter().filter(|r| r != "rauthy_admin").join(",");
                 }
             }
 
