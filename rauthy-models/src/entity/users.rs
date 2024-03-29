@@ -938,7 +938,7 @@ impl User {
         res
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn has_webauthn_enabled(&self) -> bool {
         self.webauthn_user_id.is_some()
     }

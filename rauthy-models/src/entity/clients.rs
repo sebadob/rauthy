@@ -13,7 +13,7 @@ use actix_web::{web, HttpRequest};
 use cryptr::{utils, EncKeys, EncValue};
 use futures_util::StreamExt;
 use rauthy_common::constants::{
-    APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_EPHEMERAL_CLIENTS,
+    ADMIN_FORCE_MFA, APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_EPHEMERAL_CLIENTS,
     DYN_CLIENT_DEFAULT_TOKEN_LIFETIME, DYN_CLIENT_SECRET_AUTO_ROTATE, ENABLE_EPHEMERAL_CLIENTS,
     EPHEMERAL_CLIENTS_ALLOWED_FLOWS, EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA,
     IDX_CLIENTS, IDX_CLIENT_LOGO, PROXY_MODE, RAUTHY_VERSION,
@@ -588,19 +588,24 @@ impl Client {
         }
     }
 
+    #[inline(always)]
+    pub fn force_mfa(&self) -> bool {
+        self.force_mfa || self.id == "rauthy" && *ADMIN_FORCE_MFA
+    }
+
     // Generates a new random 64 character long client secret and returns the cleartext and
     /// encrypted version
     /// # Panics
     /// The decryption depends on correctly set up `ENC_KEYS` and `ENC_KEY_ACTIVE` environment
     /// variables and panics, if this is not the case.
-    #[inline]
+    #[inline(always)]
     pub fn generate_new_secret() -> Result<(String, Vec<u8>), ErrorResponse> {
         let rnd = utils::secure_random_alnum(64);
         let enc = EncValue::encrypt(rnd.as_bytes())?.into_bytes().to_vec();
         Ok((rnd, enc))
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn get_access_token_alg(&self) -> Result<JwkKeyPairAlg, ErrorResponse> {
         JwkKeyPairAlg::from_str(self.access_token_alg.as_str())
     }

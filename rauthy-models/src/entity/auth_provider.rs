@@ -20,7 +20,7 @@ use cryptr::utils::secure_random_alnum;
 use cryptr::EncValue;
 use itertools::Itertools;
 use rauthy_common::constants::{
-    ADMIN_FORCE_MFA, CACHE_NAME_12HR, CACHE_NAME_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
+    CACHE_NAME_12HR, CACHE_NAME_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
     IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_CALLBACK_URI, RAUTHY_VERSION,
     UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_REQ_EXP,
 };
@@ -726,7 +726,7 @@ impl AuthProviderCallback {
             return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
         }
 
-        let user = match res.json::<AuthProviderTokenSet>().await {
+        let (user, provider_mfa_login) = match res.json::<AuthProviderTokenSet>().await {
             Ok(ts) => {
                 // in case of a standard OIDC provider, we only care about the ID token
                 if ts.id_token.is_none() {
@@ -757,21 +757,26 @@ impl AuthProviderCallback {
         user.check_enabled()?;
         user.check_expired()?;
 
-        let client = Client::find_maybe_ephemeral(data, slf.req_client_id).await?;
-
         // validate client values
-        client.validate_mfa(&user)?;
+        let client = Client::find_maybe_ephemeral(data, slf.req_client_id).await?;
+        let force_mfa = client.force_mfa();
+        if force_mfa {
+            if provider_mfa_login == ProviderMfaLogin::No && !user.has_webauthn_enabled() {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::MfaRequired,
+                    "MFA is required for this client".to_string(),
+                ));
+            }
+            session.set_mfa(data, true).await?;
+        }
         client.validate_redirect_uri(&slf.req_redirect_uri)?;
         client.validate_code_challenge(&slf.req_code_challenge, &slf.req_code_challenge_method)?;
         let header_origin = client.validate_origin(req, &data.listen_scheme, &data.public_url)?;
 
-        // ##########
-        // all good, we can generate an auth code and upgrade the session
-        // ##########
+        // ######################################
+        // all good, we can generate an auth code
 
-        let force_mfa = client.force_mfa && client.id == "rauthy" && *ADMIN_FORCE_MFA;
-
-        // build authorization code
+        // authorization code
         let code_lifetime = if force_mfa && user.has_webauthn_enabled() {
             client.auth_code_lifetime + *WEBAUTHN_REQ_EXP as i32
         } else {
@@ -790,15 +795,13 @@ impl AuthProviderCallback {
         );
         code.save(data).await?;
 
-        // build location header
+        // location header
         let mut loc = format!("{}?code={}", slf.req_redirect_uri, code.id);
         if let Some(state) = slf.req_state {
             loc = format!("{}&state={}", loc, state);
         };
 
-        let auth_step = if force_mfa {
-            session.set_mfa(data, true).await?;
-
+        let auth_step = if user.has_webauthn_enabled() {
             let step = AuthStepAwaitWebauthn {
                 has_password_been_hashed: false,
                 code: get_rand(48),
@@ -919,6 +922,12 @@ pub struct AuthProviderAddressClaims<'a> {
     pub country: Option<&'a str>,
 }
 
+#[derive(Debug, PartialEq)]
+enum ProviderMfaLogin {
+    Yes,
+    No,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct AuthProviderIdClaims<'a> {
     pub iss: &'a str,
@@ -939,11 +948,11 @@ pub struct AuthProviderIdClaims<'a> {
 }
 
 impl AuthProviderIdClaims<'_> {
-    pub async fn validate_update_user(
+    async fn validate_update_user(
         data: &web::Data<AppState>,
         token: &str,
         provider: &AuthProvider,
-    ) -> Result<User, ErrorResponse> {
+    ) -> Result<(User, ProviderMfaLogin), ErrorResponse> {
         let mut parts = token.split('.');
         let _header = parts.next().ok_or_else(|| {
             ErrorResponse::new(
@@ -1018,8 +1027,8 @@ impl AuthProviderIdClaims<'_> {
             }
         };
         debug!("user_opt:\n{:?}", user_opt);
-        debug!("\n\n\n");
 
+        // `rauthy_admin` role mapping by upstream claim
         let mut should_be_rauthy_admin = false;
         if let Some(path) = &provider.admin_claim_path {
             if provider.admin_claim_value.is_none() {
@@ -1030,7 +1039,7 @@ impl AuthProviderIdClaims<'_> {
             }
 
             // let path = JsonPath::parse("$.foo.bar")?;
-            debug!("try validating path: {:?}", path);
+            debug!("try validating admin_claim_path: {:?}", path);
             match JsonPath::parse(path) {
                 Ok(path) => {
                     let json_str = String::from_utf8_lossy(&json_bytes);
@@ -1047,8 +1056,8 @@ impl AuthProviderIdClaims<'_> {
                     //     value::Value::from_str(provider.admin_claim_value.as_deref().unwrap())
                     //         .expect("json value to build fine");
 
-                    let all = path.query(&json).all();
-                    debug!("all: {:?}", all);
+                    // let all = path.query(&json).all();
+                    // debug!("all: {:?}", all);
                     for value in path.query(&json).all() {
                         debug!("value in admin mapping check: {}", value,);
                         if *value == admin_value {
@@ -1062,7 +1071,50 @@ impl AuthProviderIdClaims<'_> {
                 }
             }
         }
-        debug!("\n\n\n");
+        // debug!("\n\n\n");
+
+        // check if mfa has been used by upstream claim
+        let mut provider_mfa_login = ProviderMfaLogin::No;
+        if let Some(path) = &provider.mfa_claim_path {
+            if provider.mfa_claim_value.is_none() {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Internal,
+                    "Misconfigured Auth Provider - mfa claim path without value".to_string(),
+                ));
+            }
+
+            // let path = JsonPath::parse("$.foo.bar")?;
+            debug!("try validating mfa_claim_path: {:?}", path);
+            match JsonPath::parse(path) {
+                Ok(path) => {
+                    let json_str = String::from_utf8_lossy(&json_bytes);
+                    // TODO the same restrictions as above -> add CI tests to always validate
+                    // between updates
+                    let json =
+                        value::Value::from_str(json_str.as_ref()).expect("json to build fine");
+                    // let json = value::Value::from(json_str.as_ref());
+                    let mfa_value =
+                        value::Value::from(provider.admin_claim_value.as_deref().unwrap());
+                    // let admin_value =
+                    //     value::Value::from_str(provider.admin_claim_value.as_deref().unwrap())
+                    //         .expect("json value to build fine");
+
+                    // let all = path.query(&json).all();
+                    // debug!("all: {:?}", all);
+                    for value in path.query(&json).all() {
+                        debug!("value in mfa mapping check: {}", value,);
+                        if *value == mfa_value {
+                            provider_mfa_login = ProviderMfaLogin::Yes;
+                            break;
+                        }
+                    }
+                }
+                Err(err) => {
+                    error!("Error parsing JsonPath from: '{}\nError: {}", path, err);
+                }
+            }
+        }
+        // debug!("\n\n\n");
 
         let now = OffsetDateTime::now_utc().unix_timestamp();
         let user = if let Some(mut user) = user_opt {
@@ -1207,7 +1259,7 @@ impl AuthProviderIdClaims<'_> {
             UserValues::upsert(data, user.id.clone(), user_values).await?;
         }
 
-        Ok(user)
+        Ok((user, provider_mfa_login))
     }
 }
 
