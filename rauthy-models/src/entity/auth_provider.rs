@@ -385,7 +385,11 @@ impl AuthProvider {
             &data.caches.ha_cache_config,
         )
         .await?;
-        AuthProviderTemplate::invalidate_cache(data).await?;
+
+        // Directly update the template cache preemptively.
+        // This is needed all the time anyway.
+        AuthProviderTemplate::update_cache(data).await?;
+
         Ok(())
     }
 
@@ -857,16 +861,6 @@ pub struct AuthProviderTemplate {
 }
 
 impl AuthProviderTemplate {
-    async fn invalidate_cache(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            IDX_AUTH_PROVIDER_TEMPLATE.to_string(),
-            &data.caches.ha_cache_config,
-        )
-        .await?;
-        Ok(())
-    }
-
     pub async fn get_all_json_template(
         data: &web::Data<AppState>,
     ) -> Result<Option<String>, ErrorResponse> {
@@ -885,12 +879,14 @@ impl AuthProviderTemplate {
         let providers = AuthProvider::find_all(data)
             .await?
             .into_iter()
+            // We don't want to even show disabled providers
+            .filter(|p| p.enabled)
             .map(|p| Self {
                 id: p.id,
                 name: p.name,
                 use_pkce: p.use_pkce,
             })
-            .collect::<Vec<Self>>();
+            .collect::<Vec<Self>>()
 
         let json = if providers.is_empty() {
             None
@@ -907,6 +903,22 @@ impl AuthProviderTemplate {
         .await?;
 
         Ok(json)
+    }
+
+    async fn invalidate_cache(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        cache_del(
+            CACHE_NAME_12HR.to_string(),
+            IDX_AUTH_PROVIDER_TEMPLATE.to_string(),
+            &data.caches.ha_cache_config,
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn update_cache(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        Self::invalidate_cache(data).await?;
+        Self::get_all_json_template(data).await?;
+        Ok(())
     }
 }
 
