@@ -455,6 +455,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(api_keys::get_api_key_test)
                             .service(api_keys::put_api_key_secret)
                             .service(auth_providers::get_providers)
+                            .service(auth_providers::get_providers_minimal)
                             .service(auth_providers::post_provider)
                             .service(auth_providers::post_provider_login)
                             .service(auth_providers::post_provider_lookup)

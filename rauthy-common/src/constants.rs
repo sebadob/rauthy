@@ -10,6 +10,7 @@ pub const RAUTHY_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub const HEADER_DPOP_NONCE: &str = "DPoP-Nonce";
 pub const HEADER_HTML: (&str, &str) = ("content-type", "text/html;charset=utf-8");
+pub const HEADER_JSON: (&str, &str) = ("content-type", "application/json");
 pub const HEADER_RETRY_NOT_BEFORE: &str = "x-retry-not-before";
 pub const APPLICATION_JSON: &str = "application/json";
 pub const TEXT_TURTLE: &str = "text/turtle";

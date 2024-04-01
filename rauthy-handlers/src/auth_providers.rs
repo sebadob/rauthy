@@ -2,10 +2,12 @@ use crate::{map_auth_step, ReqPrincipal};
 use actix_web::http::header::LOCATION;
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_validator::Json;
-use rauthy_common::constants::HEADER_HTML;
+use rauthy_common::constants::{HEADER_HTML, HEADER_JSON};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
-use rauthy_models::entity::auth_provider::{AuthProvider, AuthProviderCallback};
+use rauthy_models::entity::auth_provider::{
+    AuthProvider, AuthProviderCallback, AuthProviderTemplate,
+};
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
@@ -204,6 +206,32 @@ pub async fn post_provider_callback(
         )
     })?;
     Ok(resp)
+}
+
+/// GET all upstream auth providers as templated minimal JSON
+///
+/// This returns the same version of the auth providers as used in the templated `/authorize`
+/// page which is inserted during SSR.
+#[utoipa::path(
+    get,
+    path = "/providers/minimal",
+    tag = "providers",
+    responses(
+        (status = 200, description = "OK", body = ProviderResponse),
+    ),
+)]
+#[get("/providers/minimal")]
+pub async fn get_providers_minimal(
+    data: web::Data<AppState>,
+) -> Result<HttpResponse, ErrorResponse> {
+    // unauthorized - does not leak any sensitive information other than shown in the
+    // default login page anyway
+
+    let json_tpl = AuthProviderTemplate::get_all_json_template(&data)
+        .await?
+        .unwrap_or_else(|| String::default());
+
+    Ok(HttpResponse::Ok().insert_header(HEADER_JSON).body(json_tpl))
 }
 
 /// PUT update an upstream auth provider
