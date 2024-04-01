@@ -105,11 +105,11 @@ pub struct AccountHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub i18n: String,
-    pub auth_providers: &'a str,
+    pub auth_providers: String,
 }
 
 impl AccountHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language) -> String {
+    pub fn build(colors: &Colors, lang: &Language, auth_providers_json: Option<String>) -> String {
         let res = AccountHtml {
             lang: lang.as_str(),
             col_act1: &colors.act1,
@@ -126,6 +126,7 @@ impl AccountHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             i18n: I18nAccount::build(lang).as_json(),
+            auth_providers: auth_providers_json.unwrap_or_default(),
             ..Default::default()
         };
         res.render().unwrap()
