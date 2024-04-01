@@ -130,7 +130,13 @@ lazy_static! {
         } else {
             "https"
         };
-        format!("{}%3A%2F%2F{}%2Fauth%2Fv1%2Fproviders%2Fcallback", scheme, *PUB_URL)
+        let pub_url = if *DEV_MODE {
+            env::var("DEV_MODE_PROVIDER_CALLBACK_URL").unwrap_or_else(|_| PUB_URL.to_string())
+        } else {
+            PUB_URL.to_string()
+        };
+        // format!("{}%3A%2F%2F{}%2Fauth%2Fv1%2Fproviders%2Fcallback", scheme, *PUB_URL)
+        format!("{}%3A%2F%2F{}%2Fauth%2Fv1%2Fproviders%2Fcallback", scheme, pub_url)
     };
     pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
         let scheme = if *DEV_MODE && *DEV_DPOP_HTTP { "http" } else { "https" };
