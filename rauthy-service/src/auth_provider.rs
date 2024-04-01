@@ -57,10 +57,10 @@
 // - [x] custom validation check for providers to either be confidential or support pkce
 //
 // TODO:
+// - [ ] Show additional information in each users account page, if it is a federated account
 // - [ ] i18n for the auth provider callback page, especially the different error cases
 // - [ ] Define mandatory mechanisms and features, that external providers must support to make
 // everything working securely and write these down in the Rauthy book (new section)
-// - [ ] Show additional information in each users account page, if it is a federated account
 // - [ ] Fix the new UI bug in the account page if the account does not have any password + passkey
 // -> page is not rendering currently
 // - [ ] Make it possible to create a Password / Passkey for federated accounts, so this flow may

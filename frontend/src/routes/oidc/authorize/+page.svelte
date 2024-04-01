@@ -24,7 +24,7 @@
     import WithI18n from "$lib/WithI18n.svelte";
     import LangSelector from "$lib/LangSelector.svelte";
     import getPkce from "oauth-pkce";
-    import {PKCE_VERIFIER, PKCE_VERIFIER_UPSTREAM} from "../../../utils/constants.js";
+    import {PKCE_VERIFIER_UPSTREAM} from "../../../utils/constants.js";
 
     let t = {};
 

@@ -886,7 +886,7 @@ impl AuthProviderTemplate {
                 name: p.name,
                 use_pkce: p.use_pkce,
             })
-            .collect::<Vec<Self>>()
+            .collect::<Vec<Self>>();
 
         let json = if providers.is_empty() {
             None
