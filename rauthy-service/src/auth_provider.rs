@@ -73,6 +73,8 @@
 // client logos as well instead of sending back the `data:` image url for the login page
 // -> more safe CSP, since we could remove the allowance of `data:` for `img` urls, but requires
 // more work.
+// - change GET `/providers` to POST to introduce an additional CSRF check in the backend because
+// of the very sensitive `client_secret`
 //
 //
 // Rough timeline for the implementation (multiple PRs makes sense):
