@@ -1,6 +1,8 @@
 <script>
     import CheckIcon from "$lib/CheckIcon.svelte";
     import {buildWebIdUri, formatDateFromTs} from "../../utils/helpers.js";
+    import {onMount} from "svelte";
+    import {getAuthProvidersTemplate} from "../../utils/helpers.js";
 
     export let t;
     export let user = {};
@@ -8,8 +10,14 @@
     export let webIdData;
     export let viewModePhone = false;
 
+    let providers;
+
     $: classRow = viewModePhone ? 'rowPhone' : 'row';
     $: classLabel = viewModePhone ? 'labelPhone' : 'label';
+
+    onMount(async () => {
+        providers = await getAuthProvidersTemplate();
+    });
 
 </script>
 

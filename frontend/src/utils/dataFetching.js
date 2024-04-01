@@ -107,6 +107,13 @@ export async function getPasswordPolicy() {
     });
 }
 
+export async function getProvidersTemplate() {
+    return await fetch('/auth/v1/providers/minimal', {
+        method: 'GET',
+        headers: HEADERS.json,
+    });
+}
+
 export async function getPow() {
     return await fetch('/auth/v1/pow', {
         method: 'GET',
