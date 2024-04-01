@@ -855,7 +855,7 @@ impl AuthProviderCallback {
 pub struct AuthProviderTemplate {
     pub id: String,
     pub name: String,
-    pub use_pkce: bool,
+    // pub use_pkce: bool,
     // pub logo: Option<Vec<u8>>,
     // pub logo_type: Option<String>,
 }
@@ -884,7 +884,7 @@ impl AuthProviderTemplate {
             .map(|p| Self {
                 id: p.id,
                 name: p.name,
-                use_pkce: p.use_pkce,
+                // use_pkce: p.use_pkce,
             })
             .collect::<Vec<Self>>();
 
