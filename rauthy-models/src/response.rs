@@ -596,6 +596,8 @@ pub struct UserResponse {
     pub account_type: UserAccountTypeResponse,
     pub webauthn_user_id: Option<String>, // TODO get rid of the webauthn user id ? Not needed at all?
     pub user_values: UserValuesResponse,
+    pub auth_provider_id: Option<String>,
+    pub federation_uid: Option<String>,
 }
 
 impl UserResponse {
@@ -627,6 +629,8 @@ impl UserResponse {
             account_type,
             webauthn_user_id: u.webauthn_user_id,
             user_values: v.map(UserValuesResponse::from).unwrap_or_default(),
+            auth_provider_id: u.auth_provider_id,
+            federation_uid: u.federation_uid,
         }
     }
 }

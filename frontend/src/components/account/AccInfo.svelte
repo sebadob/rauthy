@@ -10,10 +10,18 @@
     export let webIdData;
     export let viewModePhone = false;
 
+    let accType = user.account_type;
     let providers;
 
     $: classRow = viewModePhone ? 'rowPhone' : 'row';
     $: classLabel = viewModePhone ? 'labelPhone' : 'label';
+
+    $: if (providers) {
+        if (user.account_type.startsWith('federated')) {
+            let provider = providers.filter(p => p.id === user.auth_provider_id)[0];
+            accType = `${user.account_type}: ${provider.name}`;
+        }
+    }
 
     onMount(async () => {
         providers = await getAuthProvidersTemplate();
@@ -44,7 +52,7 @@
 
     <div class={classRow}>
         <div class={classLabel}><b>{t.accType}:</b></div>
-        <span class="value">{user.account_type}</span>
+        <span class="value">{accType}</span>
     </div>
 
     <div class={classRow}>
