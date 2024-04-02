@@ -43,6 +43,7 @@
     let refresh = false;
     let existingMfaUser;
     let providers = [];
+    // dummy data for testing
     // let webauthnData = {
     // 	code: "asdjknfasdjklfnasdlkjf",
     //   header_csrf: "askjdfgnsdfjklgn",

@@ -7,25 +7,14 @@
     export let t;
     export let user = {};
     // webIdData will stay undefined if it is not enabled in the backend
+    export let authProvider;
     export let webIdData;
     export let viewModePhone = false;
 
-    let accType = user.account_type;
-    let providers;
+    $: accType = user.account_type.startsWith('federated') ? `${user.account_type}: ${authProvider?.name || ''}` : user.account_type;
 
     $: classRow = viewModePhone ? 'rowPhone' : 'row';
     $: classLabel = viewModePhone ? 'labelPhone' : 'label';
-
-    $: if (providers) {
-        if (user.account_type.startsWith('federated')) {
-            let provider = providers.filter(p => p.id === user.auth_provider_id)[0];
-            accType = `${user.account_type}: ${provider.name}`;
-        }
-    }
-
-    onMount(async () => {
-        providers = await getAuthProvidersTemplate();
-    });
 
 </script>
 
