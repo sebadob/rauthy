@@ -64,11 +64,13 @@
 // - [x] change GET `/providers` to POST to introduce an additional CSRF check in the backend because
 // of the very sensitive `client_secret`
 // - [x] i18n for the auth provider callback page, especially the different error cases
+// - [x] Define mandatory mechanisms and features, that external providers must support to make
+// everything working securely and write these down in the Rauthy book (new section)
+//     - `email` is a mandatory claim to be present in the `id_token`
+//     - currently, only OIDC providers are supported
 
 // TODO:
 // - [ ] Unlink an account from federation
-// - [ ] Define mandatory mechanisms and features, that external providers must support to make
-// everything working securely and write these down in the Rauthy book (new section)
 // - [ ] Make it possible to upload a small logo or icon for providers?
 // What about the image size? Should Rauthy actually process and optimize it or "just take it" and
 // then show it on the login page? What about max size recommendations or simply grabbing a
