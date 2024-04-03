@@ -5,7 +5,6 @@ use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::WebauthnLoginReq;
-use crate::entity::well_known::WellKnown;
 use crate::language::Language;
 use crate::request::{
     ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
@@ -82,6 +81,34 @@ impl From<String> for AuthProviderType {
     fn from(value: String) -> Self {
         Self::try_from(value.as_str()).unwrap_or(Self::OIDC)
     }
+}
+
+/// Minimal version of the OpenID metadata. This is used for upstream oauth2 lookup.
+/// Only includes the data we care about when doing a config lookup.
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+pub struct WellKnownLookup {
+    pub issuer: String,
+    pub authorization_endpoint: String,
+    pub token_endpoint: String,
+    // pub introspection_endpoint: String,
+    pub userinfo_endpoint: String,
+    // pub end_session_endpoint: String,
+    // pub registration_endpoint: Option<String>,
+    pub jwks_uri: String,
+    // pub grant_types_supported: Vec<String>,
+    // pub response_types_supported: Vec<String>,
+    // pub subject_types_supported: Vec<String>,
+    // pub id_token_signing_alg_values_supported: Vec<String>,
+    // pub token_endpoint_auth_methods_supported: Vec<String>,
+    // pub token_endpoint_auth_signing_alg_values_supported: Vec<String>,
+    // pub claims_supported: Vec<String>,
+    // pub claim_types_supported: Vec<String>,
+    pub scopes_supported: Vec<String>,
+    pub code_challenge_methods_supported: Vec<String>,
+    // pub dpop_signing_alg_values_supported: Vec<String>,
+    // pub service_documentation: String,
+    // pub ui_locales_supported: Vec<String>,
+    // pub claims_parameter_supported: bool,
 }
 
 /// Upstream Auth Provider for upstream logins without a local Rauthy account
@@ -439,7 +466,7 @@ impl AuthProvider {
             ));
         }
 
-        let well_known = res.json::<WellKnown>().await.map_err(|err| {
+        let well_known = res.json::<WellKnownLookup>().await.map_err(|err| {
             ErrorResponse::new(
                 // TODO we could make this more UX friendly in the future and return a link to the
                 // docs, when they exist
