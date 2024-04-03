@@ -61,9 +61,11 @@
 // -> page is not rendering currently
 // - [x] Make it possible to create a Password / Passkey for federated accounts, so this flow may
 // be used for the initial setup only and use Rauthy's advanced security mechanisms afterwards.
+// - [x] change GET `/providers` to POST to introduce an additional CSRF check in the backend because
+// of the very sensitive `client_secret`
+// - [x] i18n for the auth provider callback page, especially the different error cases
 
 // TODO:
-// - [ ] i18n for the auth provider callback page, especially the different error cases
 // - [ ] Unlink an account from federation
 // - [ ] Define mandatory mechanisms and features, that external providers must support to make
 // everything working securely and write these down in the Rauthy book (new section)
@@ -75,8 +77,6 @@
 // client logos as well instead of sending back the `data:` image url for the login page
 // -> more safe CSP, since we could remove the allowance of `data:` for `img` urls, but requires
 // more work.
-// - change GET `/providers` to POST to introduce an additional CSRF check in the backend because
-// of the very sensitive `client_secret`
 //
 //
 // Rough timeline for the implementation (multiple PRs makes sense):
