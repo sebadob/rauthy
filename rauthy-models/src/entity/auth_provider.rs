@@ -799,7 +799,7 @@ impl AuthProviderCallback {
         // location header
         let mut loc = format!("{}?code={}", slf.req_redirect_uri, code.id);
         if let Some(state) = slf.req_state {
-            loc = format!("{}&state={}", loc, state);
+            write!(loc, "&state={}", state).expect("`write!` to succeed");
         };
 
         let auth_step = if user.has_webauthn_enabled() {
@@ -855,7 +855,6 @@ impl AuthProviderCallback {
 pub struct AuthProviderTemplate {
     pub id: String,
     pub name: String,
-    // pub use_pkce: bool,
     // pub logo: Option<Vec<u8>>,
     // pub logo_type: Option<String>,
 }
@@ -884,7 +883,6 @@ impl AuthProviderTemplate {
             .map(|p| Self {
                 id: p.id,
                 name: p.name,
-                // use_pkce: p.use_pkce,
             })
             .collect::<Vec<Self>>();
 
@@ -941,11 +939,12 @@ enum ProviderMfaLogin {
 pub struct AuthProviderIdClaims<'a> {
     pub iss: &'a str,
     pub sub: &'a str,
+    // JsonValue instead of just &str because `aud` can be a single value or an array
     pub aud: Option<serde_json::Value>,
     pub azp: Option<&'a str>,
     pub amr: Option<Vec<&'a str>>,
-    // even though `email` is mandatory, we set it to optional for the deserialization
-    // to have more control over the error message being returned
+    // even though `email` is mandatory for Rauthy, we set it to optional for
+    // the deserialization to have more control over the error message being returned
     pub email: Option<&'a str>,
     pub email_verified: Option<bool>,
     pub given_name: Option<&'a str>,
@@ -990,8 +989,6 @@ impl AuthProviderIdClaims<'_> {
                 return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
             }
         } else if let Some(aud) = claims.aud {
-            // TODO this may produce an error, since `aud` is allowed to be a single string
-            // or actually a json array by RFC -> do more testing!
             if !aud.to_string().contains(&provider.client_id) {
                 let err = format!(
                     "`aud` claim '{}' from ID token does not match out client_id '{}'",
@@ -1048,23 +1045,6 @@ impl AuthProviderIdClaims<'_> {
             }
         };
         debug!("user_opt:\n{:?}", user_opt);
-        // let user_opt = match User::find_by_email(data, claims.email.unwrap().to_string()).await {
-        //     Ok(user) => {
-        //         debug!("found already existing user by email lookup: {:?}", user);
-        //         user.validate_auth_provider(&provider.id)?;
-        //         user.validate_federation_uid(&claims.sub)?;
-        //         Some(user)
-        //     }
-        //     Err(_) => {
-        //         debug!("did NOT find already existing user by email lookup - trying via fed id");
-        //         // if we were unable to find the user, we need to make another lookup
-        //         // and search by federation uid on the remote system to not end up with
-        //         // duplicate users in case of a remote email update
-        //         let user = User::find_by_federation(data, &provider.id, &claims.sub).await?;
-        //         Some(user)
-        //     }
-        // };
-        // debug!("user_opt:\n{:?}", user_opt);
 
         // `rauthy_admin` role mapping by upstream claim
         let mut should_be_rauthy_admin = false;
