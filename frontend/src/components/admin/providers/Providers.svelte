@@ -2,7 +2,7 @@
     import {onMount} from "svelte";
     import FederationTileAddNew from "./ProviderTileAddNew.svelte";
     import ProviderTile from "./ProviderTile.svelte";
-    import {getProviders} from "../../../utils/dataFetchingAdmin.js";
+    import {postProviders} from "../../../utils/dataFetchingAdmin.js";
 
     let err = '';
     let providers = [];
@@ -12,7 +12,7 @@
     });
 
     async function fetchData() {
-        let res = await getProviders();
+        let res = await postProviders();
         let body = await res.json();
         if (res.ok) {
             providers = [...body];

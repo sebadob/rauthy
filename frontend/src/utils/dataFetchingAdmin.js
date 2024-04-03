@@ -235,9 +235,9 @@ export async function postPasswordResetRequest(data) {
     return await checkRedirectForbidden(res);
 }
 
-export async function getProviders() {
+export async function postProviders() {
     return await fetch('/auth/v1/providers', {
-        method: 'GET',
+        method: 'POST',
         headers: getHeaders(),
     });
 }

@@ -56,15 +56,17 @@
 // - [x] include provider secrets in secrets migration task
 // - [x] custom validation check for providers to either be confidential or support pkce
 //
-// TODO:
 // - [x] Show additional information in each users account page, if it is a federated account
-// - [ ] i18n for the auth provider callback page, especially the different error cases
-// - [ ] Define mandatory mechanisms and features, that external providers must support to make
-// everything working securely and write these down in the Rauthy book (new section)
 // - [x] Fix the new UI bug in the account page if the account does not have any password + passkey
 // -> page is not rendering currently
 // - [x] Make it possible to create a Password / Passkey for federated accounts, so this flow may
 // be used for the initial setup only and use Rauthy's advanced security mechanisms afterwards.
+
+// TODO:
+// - [ ] i18n for the auth provider callback page, especially the different error cases
+// - [ ] Unlink an account from federation
+// - [ ] Define mandatory mechanisms and features, that external providers must support to make
+// everything working securely and write these down in the Rauthy book (new section)
 // - [ ] Make it possible to upload a small logo or icon for providers?
 // What about the image size? Should Rauthy actually process and optimize it or "just take it" and
 // then show it on the login page? What about max size recommendations or simply grabbing a

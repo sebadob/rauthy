@@ -21,7 +21,7 @@ use rauthy_models::templates::ProviderCallbackHtml;
 /// **Permissions**
 /// - `rauthy_admin`
 #[utoipa::path(
-    get,
+    post,
     path = "/providers",
     tag = "providers",
     responses(
@@ -30,8 +30,8 @@ use rauthy_models::templates::ProviderCallbackHtml;
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
 )]
-#[get("/providers")]
-pub async fn get_providers(
+#[post("/providers")]
+pub async fn post_providers(
     data: web::Data<AppState>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
