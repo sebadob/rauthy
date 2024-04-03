@@ -37,9 +37,8 @@
             error = '';
             webauthnData = await res.json();
         } else if (res.status === 403) {
-            // TODO we will get a forbidden if for instance the user already exists but without
+            // we will get a forbidden if for instance the user already exists but without
             // any upstream provider link (or the wrong one)
-            // TODO add i18n for these cases
             let body = await res.json();
             console.error(body);
             error = body.message;
