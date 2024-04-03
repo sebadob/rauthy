@@ -383,13 +383,13 @@ impl TryFrom<AuthProvider> for ProviderResponse {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
-pub struct ProviderLookupResponse {
+pub struct ProviderLookupResponse<'a> {
     pub issuer: String,
     pub authorization_endpoint: String,
     pub token_endpoint: String,
     pub userinfo_endpoint: String,
     pub scope: String,
-    pub root_pem: Option<String>,
+    pub root_pem: &'a Option<String>,
     pub use_pkce: bool,
     pub danger_allow_insecure: bool,
 }

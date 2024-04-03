@@ -8,7 +8,8 @@ use crate::entity::webauthn::WebauthnLoginReq;
 use crate::entity::well_known::WellKnown;
 use crate::language::Language;
 use crate::request::{
-    ProviderCallbackRequest, ProviderLoginRequest, ProviderRequest, UserValuesRequest,
+    ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
+    UserValuesRequest,
 };
 use crate::response::ProviderLookupResponse;
 use crate::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
@@ -36,6 +37,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::value;
 use serde_json_path::JsonPath;
 use sqlx::{query, query_as};
+use std::borrow::Cow;
 use std::fmt::Write;
 use std::str::FromStr;
 use std::time::Duration;
@@ -394,27 +396,37 @@ impl AuthProvider {
     }
 
     pub async fn lookup_config(
-        issuer: &str,
-        danger_allow_insecure: bool,
-        root_pem: Option<String>,
+        payload: &ProviderLookupRequest,
     ) -> Result<ProviderLookupResponse, ErrorResponse> {
-        let client = Self::build_client(danger_allow_insecure, root_pem.as_deref())?;
+        let client = Self::build_client(
+            payload.danger_allow_insecure.unwrap_or(false),
+            payload.root_pem.as_deref(),
+        )?;
 
-        let issuer_url = if issuer.starts_with("http://") || issuer.starts_with("https://") {
-            issuer.to_string()
+        let config_url = if let Some(url) = &payload.metadata_url {
+            Cow::from(url)
+        } else if let Some(issuer) = &payload.issuer {
+            let issuer_url = if issuer.starts_with("http://") || issuer.starts_with("https://") {
+                issuer.to_string()
+            } else {
+                // we always assume https connections, if the scheme is not given
+                format!("https://{}", issuer)
+            };
+            let url = if issuer_url.ends_with('/') {
+                format!("{}.well-known/openid-configuration", issuer_url)
+            } else {
+                format!("{}/.well-known/openid-configuration", issuer_url)
+            };
+            Cow::from(url)
         } else {
-            // we always assume https connections, if the scheme is not given
-            format!("https://{}", issuer)
-        };
-        // for now, we only support the default openid-configuration location
-        let config_url = if issuer_url.ends_with('/') {
-            format!("{}.well-known/openid-configuration", issuer_url)
-        } else {
-            format!("{}/.well-known/openid-configuration", issuer_url)
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "either `metadata_url` or `issuer` must be given".to_string(),
+            ));
         };
 
         debug!("AuthProvider lookup to {}", config_url);
-        let res = client.get(&config_url).send().await?;
+        let res = client.get(config_url.as_ref()).send().await?;
         let status = res.status();
         if !status.is_success() {
             let body = res.text().await?;
@@ -462,12 +474,12 @@ impl AuthProvider {
             authorization_endpoint: well_known.authorization_endpoint,
             token_endpoint: well_known.token_endpoint,
             userinfo_endpoint: well_known.userinfo_endpoint,
-            root_pem,
+            root_pem: &payload.root_pem,
             use_pkce: well_known
                 .code_challenge_methods_supported
                 .iter()
                 .any(|c| c == "S256"),
-            danger_allow_insecure,
+            danger_allow_insecure: payload.danger_allow_insecure.unwrap_or(false),
             scope,
             // TODO add `scopes_supported` Vec and make them selectable with checkboxes in the UI
             // instead of typing them in?

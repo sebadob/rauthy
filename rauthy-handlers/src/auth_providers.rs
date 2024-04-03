@@ -108,12 +108,7 @@ pub async fn post_provider_lookup(
     principal.validate_admin_session()?;
 
     let payload = payload.into_inner();
-    let resp = AuthProvider::lookup_config(
-        &payload.issuer,
-        payload.danger_allow_insecure.unwrap_or(false),
-        payload.root_pem,
-    )
-    .await?;
+    let resp = AuthProvider::lookup_config(&payload).await?;
 
     Ok(HttpResponse::Ok().json(resp))
 }
