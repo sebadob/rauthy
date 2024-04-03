@@ -1,7 +1,11 @@
 use crate::{map_auth_step, ReqPrincipal};
+use actix_web::body::BoxBody;
+use actix_web::http::header::DispositionType::FormData;
 use actix_web::http::header::LOCATION;
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
+use actix_web_lab::__reexports::futures_util::StreamExt;
 use actix_web_validator::Json;
+use image::imageops::FilterType;
 use rauthy_common::constants::{HEADER_HTML, HEADER_JSON};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
@@ -15,6 +19,7 @@ use rauthy_models::request::{
 };
 use rauthy_models::response::ProviderResponse;
 use rauthy_models::templates::ProviderCallbackHtml;
+use tracing::{debug, error};
 
 /// GET all upstream auth providers
 ///
@@ -283,5 +288,69 @@ pub async fn delete_provider(
     principal.validate_admin_session()?;
 
     AuthProvider::delete(&data, &id.into_inner()).await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
+/// PUT upload an image / icon for an auth provider
+///
+/// The image can only be max 10MB in size and will be minified automatically.
+///
+/// **Permissions**
+/// - `rauthy_admin`
+#[utoipa::path(
+    put,
+    path = "/providers/{id}/img",
+    tag = "providers",
+    responses(
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[put("/providers/{id}/img")]
+pub async fn put_provider_img(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+    mut payload: actix_multipart::Multipart,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    let id = id.into_inner();
+
+    // keeping the whole image in memory is no issue, these should be small anyway
+    let mut buf: Vec<u8> = Vec::with_capacity(1024 * 1024);
+
+    // we only accept a single field from the Multipart upload -> no looping here
+    if let Some(part) = payload.next().await {
+        let mut field = part?;
+        debug!("{:?}", field);
+
+        // TODO do not try to parse when `"content-type": "image/svg+xml"` -> serve directly
+        let content_type = field.content_disposition();
+        debug!("content_type: {:?}", content_type);
+
+        let mut parts = 0;
+
+        while let Some(chunk) = field.next().await {
+            parts += 1;
+            let bytes = chunk?;
+            buf.extend(bytes);
+        }
+
+        debug!("field parts: {}", parts);
+    }
+
+    debug!("buf len: {}", buf.len());
+    let img = image::load_from_memory(&buf).expect("image to build - TODO");
+    debug!("width: {}, height: {}", img.width(), img.height());
+    let resized = img.resize_to_fill(24, 24, FilterType::Lanczos3);
+    debug!(
+        "resized width: {}, height: {}",
+        resized.width(),
+        resized.height()
+    );
+
+    // TODO parse the image and save it into the DB
+    // AuthProvider::update(&data, id.into_inner(), payload.into_inner()).await?;
     Ok(HttpResponse::Ok().finish())
 }

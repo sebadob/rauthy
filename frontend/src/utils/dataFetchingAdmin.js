@@ -265,6 +265,20 @@ export async function deleteProvider(id) {
     });
 }
 
+export async function putProviderLogo(id, data) {
+    const formData = new FormData();
+    formData.append("logo", data);
+
+    const res = await fetch(`/auth/v1/providers/${id}/img`, {
+        method: 'PUT',
+        headers: {
+            'csrf-token': getCsrfToken(),
+        },
+        body: formData,
+    });
+    return await checkRedirectForbidden(res);
+}
+
 export async function postProviderLookup(data) {
     return await fetch('/auth/v1/providers/lookup', {
         method: 'POST',

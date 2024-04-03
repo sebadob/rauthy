@@ -4,12 +4,13 @@
     import Button from "$lib/Button.svelte";
     import {REGEX_CLIENT_NAME, REGEX_LOWERCASE_SPACE, REGEX_URI, REGEX_PEM} from "../../../utils/constants.js";
     import {onMount} from "svelte";
-    import {putProvider} from "../../../utils/dataFetchingAdmin.js";
+    import {putProvider, putProviderLogo} from "../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";
     import Switch from "$lib/Switch.svelte";
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import JsonPathDesc from "./JsonPathDesc.svelte";
     import Textarea from "$lib/inputs/Textarea.svelte";
+    import ImageUploadRaw from "../../ImageUploadRaw.svelte";
 
     export let provider = {};
     export let onSave;
@@ -22,6 +23,7 @@
     let timer;
     let isDefault = false;
     let showRootPem = provider.root_pem;
+    let logo;
 
     $: if (success) {
         timer = setTimeout(() => {
@@ -32,6 +34,11 @@
 
     $: if (provider.scope) {
         provider.scope = provider.scope.replaceAll('+', ' ');
+    }
+
+    // This will trigger when the upload image button has been clicked
+    $: if (logo) {
+        uploadLogo(logo);
     }
 
     onMount(() => {
@@ -93,6 +100,18 @@
         }
 
         isLoading = false;
+    }
+
+    async function uploadLogo(payload) {
+        console.log('in uploadLogo');
+        console.log(payload);
+        let res = await putProviderLogo(provider.id, payload);
+        if (res.ok) {
+            // TODO re-fetch provider with all info
+        } else {
+            let body = await res.json();
+            console.error(body.message);
+        }
     }
 
     async function validateForm() {
@@ -318,6 +337,13 @@
         MFA CLAIM VALUE
     </Input>
 
+    <div class="logo">
+        <ImageUploadRaw bind:image={logo}/>
+        {#if provider.logo}
+            <img class="logo" src="{provider.logo}" alt="Custom Logo"/>
+        {/if}
+    </div>
+
     {#if !isDefault}
         <Button on:click={onSubmit} level={1} width="4rem">SAVE</Button>
 
@@ -366,6 +392,10 @@
     .label {
         margin: 5px 5px 0 5px;
         font-size: .9rem;
+    }
+
+    .logo {
+        margin: 1rem .25rem;
     }
 
     .ml {

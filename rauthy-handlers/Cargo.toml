@@ -15,6 +15,7 @@ actix-web-validator = "5"
 chrono = { workspace = true }
 cryptr = { workspace = true }
 futures = "0.3"
+image = { workspace = true }
 lazy_static = { workspace = true }
 mime_guess = "2"
 num_cpus = { workspace = true }
