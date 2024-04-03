@@ -326,18 +326,13 @@ pub async fn put_provider_img(
         debug!("{:?}", field);
 
         // TODO do not try to parse when `"content-type": "image/svg+xml"` -> serve directly
-        let content_type = field.content_disposition();
+        let content_type = field.content_type();
         debug!("content_type: {:?}", content_type);
 
-        let mut parts = 0;
-
         while let Some(chunk) = field.next().await {
-            parts += 1;
             let bytes = chunk?;
             buf.extend(bytes);
         }
-
-        debug!("field parts: {}", parts);
     }
 
     debug!("buf len: {}", buf.len());
@@ -349,6 +344,7 @@ pub async fn put_provider_img(
         resized.width(),
         resized.height()
     );
+    debug!("image size resized: {}", resized.as_bytes().len());
 
     // TODO parse the image and save it into the DB
     // AuthProvider::update(&data, id.into_inner(), payload.into_inner()).await?;
