@@ -90,25 +90,10 @@ pub struct WellKnownLookup {
     pub issuer: String,
     pub authorization_endpoint: String,
     pub token_endpoint: String,
-    // pub introspection_endpoint: String,
     pub userinfo_endpoint: String,
-    // pub end_session_endpoint: String,
-    // pub registration_endpoint: Option<String>,
     pub jwks_uri: String,
-    // pub grant_types_supported: Vec<String>,
-    // pub response_types_supported: Vec<String>,
-    // pub subject_types_supported: Vec<String>,
-    // pub id_token_signing_alg_values_supported: Vec<String>,
-    // pub token_endpoint_auth_methods_supported: Vec<String>,
-    // pub token_endpoint_auth_signing_alg_values_supported: Vec<String>,
-    // pub claims_supported: Vec<String>,
-    // pub claim_types_supported: Vec<String>,
     pub scopes_supported: Vec<String>,
     pub code_challenge_methods_supported: Vec<String>,
-    // pub dpop_signing_alg_values_supported: Vec<String>,
-    // pub service_documentation: String,
-    // pub ui_locales_supported: Vec<String>,
-    // pub claims_parameter_supported: bool,
 }
 
 /// Upstream Auth Provider for upstream logins without a local Rauthy account
@@ -430,19 +415,34 @@ impl AuthProvider {
             payload.root_pem.as_deref(),
         )?;
 
-        let config_url = if let Some(url) = &payload.metadata_url {
+        // let config_url = if let Some(url) = &payload.metadata_url {
+        //     Cow::from(url)
+        // } else if let Some(issuer) = &payload.issuer {
+        //     let issuer_url = if issuer.starts_with("http://") || issuer.starts_with("https://") {
+        //         issuer.to_string()
+        //     } else {
+        //         // we always assume https connections, if the scheme is not given
+        //         format!("https://{}", issuer)
+        //     };
+        //     let url = if issuer_url.ends_with('/') {
+        //         format!("{}.well-known/openid-configuration", issuer_url)
+        //     } else {
+        //         format!("{}/.well-known/openid-configuration", issuer_url)
+        //     };
+        //     Cow::from(url)
+        // } else {
+        //     return Err(ErrorResponse::new(
+        //         ErrorResponseType::BadRequest,
+        //         "either `metadata_url` or `issuer` must be given".to_string(),
+        //     ));
+        // };
+        let url = if let Some(url) = &payload.metadata_url {
             Cow::from(url)
-        } else if let Some(issuer) = &payload.issuer {
-            let issuer_url = if issuer.starts_with("http://") || issuer.starts_with("https://") {
-                issuer.to_string()
+        } else if let Some(iss) = &payload.issuer {
+            let url = if iss.ends_with('/') {
+                format!("{}.well-known/openid-configuration", iss)
             } else {
-                // we always assume https connections, if the scheme is not given
-                format!("https://{}", issuer)
-            };
-            let url = if issuer_url.ends_with('/') {
-                format!("{}.well-known/openid-configuration", issuer_url)
-            } else {
-                format!("{}/.well-known/openid-configuration", issuer_url)
+                format!("{}/.well-known/openid-configuration", iss)
             };
             Cow::from(url)
         } else {
@@ -450,6 +450,12 @@ impl AuthProvider {
                 ErrorResponseType::BadRequest,
                 "either `metadata_url` or `issuer` must be given".to_string(),
             ));
+        };
+        let config_url = if url.starts_with("http://") || url.starts_with("https://") {
+            url
+        } else {
+            // we always assume https connections, if the scheme is not given
+            Cow::from(format!("https://{}", url))
         };
 
         debug!("AuthProvider lookup to {}", config_url);
