@@ -11,6 +11,7 @@ use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::app_version::LatestAppVersion;
+use rauthy_models::entity::auth_provider::AuthProviderTemplate;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::is_db_alive;
 use rauthy_models::entity::password::{PasswordHashTimes, PasswordPolicy};
@@ -123,7 +124,8 @@ pub async fn get_account_html(
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
     let lang = Language::try_from(&req).unwrap_or_default();
-    let body = AccountHtml::build(&colors, &lang);
+    let providers = AuthProviderTemplate::get_all_json_template(&data).await?;
+    let body = AccountHtml::build(&colors, &lang, providers);
 
     Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }

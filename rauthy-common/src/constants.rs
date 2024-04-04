@@ -8,8 +8,10 @@ use std::string::ToString;
 
 pub const RAUTHY_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+pub const CONTENT_TYPE_WEBP: &str = "image/webp";
 pub const HEADER_DPOP_NONCE: &str = "DPoP-Nonce";
 pub const HEADER_HTML: (&str, &str) = ("content-type", "text/html;charset=utf-8");
+pub const HEADER_JSON: (&str, &str) = ("content-type", "application/json");
 pub const HEADER_RETRY_NOT_BEFORE: &str = "x-retry-not-before";
 pub const APPLICATION_JSON: &str = "application/json";
 pub const TEXT_TURTLE: &str = "text/turtle";
@@ -48,6 +50,7 @@ pub const CACHE_NAME_WEBAUTHN_DATA: &str = "webauthn-data";
 
 pub const IDX_APP_VERSION: &str = "rauthy_app_version";
 pub const IDX_AUTH_PROVIDER: &str = "auth_provider_";
+pub const IDX_AUTH_PROVIDER_LOGO: &str = "auth_provider_logo_";
 pub const IDX_AUTH_PROVIDER_TEMPLATE: &str = "provider_json_tpl";
 pub const IDX_CLIENTS: &str = "clients_";
 pub const IDX_CLIENT_LOGO: &str = "client_logo_";
@@ -130,7 +133,13 @@ lazy_static! {
         } else {
             "https"
         };
-        format!("{}%3A%2F%2F{}%2Fauth%2Fv1%2Fproviders%2Fcallback", scheme, *PUB_URL)
+        let pub_url = if *DEV_MODE {
+            env::var("DEV_MODE_PROVIDER_CALLBACK_URL").unwrap_or_else(|_| PUB_URL.to_string())
+        } else {
+            PUB_URL.to_string()
+        };
+        // format!("{}%3A%2F%2F{}%2Fauth%2Fv1%2Fproviders%2Fcallback", scheme, *PUB_URL)
+        format!("{}%3A%2F%2F{}%2Fauth%2Fv1%2Fproviders%2Fcallback", scheme, pub_url)
     };
     pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
         let scheme = if *DEV_MODE && *DEV_DPOP_HTTP { "http" } else { "https" };

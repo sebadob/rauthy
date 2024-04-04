@@ -1,11 +1,15 @@
 use crate::{map_auth_step, ReqPrincipal};
-use actix_web::http::header::LOCATION;
+use actix_web::http::header::{CONTENT_TYPE, LOCATION};
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
+use actix_web_lab::__reexports::futures_util::StreamExt;
 use actix_web_validator::Json;
-use rauthy_common::constants::HEADER_HTML;
+use rauthy_common::constants::{HEADER_HTML, HEADER_JSON};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
-use rauthy_models::entity::auth_provider::{AuthProvider, AuthProviderCallback};
+use rauthy_models::entity::auth_provider::{
+    AuthProvider, AuthProviderCallback, AuthProviderTemplate,
+};
+use rauthy_models::entity::auth_provider_logo::AuthProviderLogo;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
@@ -13,13 +17,14 @@ use rauthy_models::request::{
 };
 use rauthy_models::response::ProviderResponse;
 use rauthy_models::templates::ProviderCallbackHtml;
+use tracing::debug;
 
 /// GET all upstream auth providers
 ///
 /// **Permissions**
 /// - `rauthy_admin`
 #[utoipa::path(
-    get,
+    post,
     path = "/providers",
     tag = "providers",
     responses(
@@ -28,8 +33,8 @@ use rauthy_models::templates::ProviderCallbackHtml;
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
 )]
-#[get("/providers")]
-pub async fn get_providers(
+#[post("/providers")]
+pub async fn post_providers(
     data: web::Data<AppState>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -50,7 +55,7 @@ pub async fn get_providers(
 /// - `rauthy_admin`
 #[utoipa::path(
     post,
-    path = "/providers",
+    path = "/providers/create",
     tag = "providers",
     responses(
         (status = 200, description = "OK", body = ProviderResponse),
@@ -58,7 +63,7 @@ pub async fn get_providers(
         (status = 404, description = "NotFound", body = ErrorResponse),
     ),
 )]
-#[post("/providers")]
+#[post("/providers/create")]
 pub async fn post_provider(
     data: web::Data<AppState>,
     payload: Json<ProviderRequest>,
@@ -106,12 +111,7 @@ pub async fn post_provider_lookup(
     principal.validate_admin_session()?;
 
     let payload = payload.into_inner();
-    let resp = AuthProvider::lookup_config(
-        &payload.issuer,
-        payload.danger_allow_insecure.unwrap_or(false),
-        payload.root_pem,
-    )
-    .await?;
+    let resp = AuthProvider::lookup_config(&payload).await?;
 
     Ok(HttpResponse::Ok().json(resp))
 }
@@ -206,6 +206,32 @@ pub async fn post_provider_callback(
     Ok(resp)
 }
 
+/// GET all upstream auth providers as templated minimal JSON
+///
+/// This returns the same version of the auth providers as used in the templated `/authorize`
+/// page which is inserted during SSR.
+#[utoipa::path(
+    get,
+    path = "/providers/minimal",
+    tag = "providers",
+    responses(
+        (status = 200, description = "OK", body = ProviderResponse),
+    ),
+)]
+#[get("/providers/minimal")]
+pub async fn get_providers_minimal(
+    data: web::Data<AppState>,
+) -> Result<HttpResponse, ErrorResponse> {
+    // unauthorized - does not leak any sensitive information other than shown in the
+    // default login page anyway
+
+    let json_tpl = AuthProviderTemplate::get_all_json_template(&data)
+        .await?
+        .unwrap_or_else(String::default);
+
+    Ok(HttpResponse::Ok().insert_header(HEADER_JSON).body(json_tpl))
+}
+
 /// PUT update an upstream auth provider
 ///
 /// **Permissions**
@@ -260,5 +286,87 @@ pub async fn delete_provider(
     principal.validate_admin_session()?;
 
     AuthProvider::delete(&data, &id.into_inner()).await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
+/// PUT upload an image / icon for an auth provider
+///
+/// The image can only be max 10MB in size and will be minified automatically.
+///
+/// **Permissions**
+/// - `rauthy_admin`
+#[utoipa::path(
+    get,
+    path = "/providers/{id}/img",
+    tag = "providers",
+    responses(
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[get("/providers/{id}/img")]
+pub async fn get_provider_img(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+) -> Result<HttpResponse, ErrorResponse> {
+    let id = id.into_inner();
+    let logo = AuthProviderLogo::find_cached(&data, &id).await?;
+
+    Ok(HttpResponse::Ok()
+        .insert_header((CONTENT_TYPE, logo.content_type))
+        .body(logo.data))
+}
+
+/// PUT upload an image / icon for an auth provider
+///
+/// The image can only be max 10MB in size and will be minified automatically.
+///
+/// **Permissions**
+/// - `rauthy_admin`
+#[utoipa::path(
+    put,
+    path = "/providers/{id}/img",
+    tag = "providers",
+    responses(
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[put("/providers/{id}/img")]
+pub async fn put_provider_img(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+    mut payload: actix_multipart::Multipart,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    // we only accept a single field from the Multipart upload -> no looping here
+    let mut buf: Vec<u8> = Vec::with_capacity(128 * 1024);
+    let mut content_type = None;
+    if let Some(part) = payload.next().await {
+        let mut field = part?;
+
+        match field.content_type() {
+            Some(mime) => {
+                debug!("content_type: {:?}", mime);
+                content_type = Some(mime.clone());
+            }
+            None => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "content_type is missing".to_string(),
+                ));
+            }
+        }
+
+        while let Some(chunk) = field.next().await {
+            let bytes = chunk?;
+            buf.extend(bytes);
+        }
+    }
+
+    // content_type unwrap cannot panic -> checked above
+    AuthProviderLogo::upsert(&data, id.into_inner(), buf, content_type.unwrap()).await?;
+
     Ok(HttpResponse::Ok().finish())
 }

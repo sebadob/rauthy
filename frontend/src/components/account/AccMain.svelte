@@ -1,5 +1,5 @@
 <script>
-    import {redirectToLogout} from "../../utils/helpers.js";
+    import {getAuthProvidersTemplate, redirectToLogout} from "../../utils/helpers.js";
     import AccInfo from "./AccInfo.svelte";
     import AccNav from "./AccNav.svelte";
     import AccEdit from "./AccEdit.svelte";
@@ -8,6 +8,7 @@
     import LangSelector from "$lib/LangSelector.svelte";
     import AccPassword from "./AccPassword.svelte";
     import AccWebId from "./AccWebId.svelte";
+    import {onMount} from "svelte";
 
     export let t;
 
@@ -17,6 +18,9 @@
     export let webIdData;
 
     let innerWidth;
+    let providers;
+    let authProvider;
+
     $: viewModePhone = innerWidth < 500;
 
     let op = tweened(1.0, {
@@ -33,6 +37,16 @@
     $: if (selected === t.navLogout) {
         redirectToLogout();
     }
+
+    $: if (providers) {
+        if (user.account_type.startsWith('federated')) {
+            authProvider = providers.filter(p => p.id === user.auth_provider_id)[0];
+        }
+    }
+
+    onMount(async () => {
+        providers = await getAuthProvidersTemplate();
+    });
 
     function animate() {
         op.set(0)
@@ -57,11 +71,11 @@
             <div class="innerPhone">
                 <div style="opacity: {$op}">
                     {#if content === t.navInfo}
-                        <AccInfo bind:t bind:user bind:webIdData viewModePhone />
+                        <AccInfo bind:t bind:user bind:webIdData viewModePhone bind:authProvider />
                     {:else if content === t.navEdit}
                         <AccEdit bind:t bind:user viewModePhone />
                     {:else if content === t.navPassword}
-                        <AccPassword bind:t bind:user viewModePhone />
+                        <AccPassword bind:t bind:user bind:authProvider viewModePhone />
                     {:else if content === t.navMfa}
                         <AccMFA bind:t bind:sessionInfo bind:user/>
                     {:else if content === 'WebID'}
@@ -85,11 +99,11 @@
             <div class="inner">
                 <div style="opacity: {$op}">
                     {#if content === t.navInfo}
-                        <AccInfo bind:t bind:user bind:webIdData />
+                        <AccInfo bind:t bind:user bind:webIdData bind:authProvider />
                     {:else if content === t.navEdit}
                         <AccEdit bind:t bind:user />
                     {:else if content === t.navPassword}
-                        <AccPassword bind:t bind:user />
+                        <AccPassword bind:t bind:user bind:authProvider />
                     {:else if content === t.navMfa}
                         <AccMFA bind:t bind:sessionInfo bind:user />
                     {:else if content === 'WebID'}

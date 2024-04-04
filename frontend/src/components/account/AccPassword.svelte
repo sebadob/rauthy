@@ -3,16 +3,18 @@
     import {blur, fade} from 'svelte/transition';
     import AccModPwd from "./AccModPwd.svelte";
     import {
-        getUserPasskeys,
+        getUserPasskeys, postPasswordResetRequest,
         postUserSelfConvertPasskey,
         putUserSelf,
         webauthnAuthStart
     } from "../../utils/dataFetching.js";
     import WebauthnRequest from "../webauthn/WebauthnRequest.svelte";
     import {onMount} from "svelte";
+    import CheckIcon from "$lib/CheckIcon.svelte";
 
     export let t;
     export let user = {};
+    export let authProvider;
     export let viewModePhone = false;
     $: inputWidth = viewModePhone ? 'calc(100vw - 1.5rem)' : '300px';
 
@@ -119,6 +121,18 @@
         }
     }
 
+    async function requestPasswordReset() {
+        let res = await postPasswordResetRequest({
+            email: user.email,
+        });
+        if (res.ok) {
+            success = true;
+        } else {
+            let body = await res.json();
+            err = body.message;
+        }
+    }
+
 </script>
 
 <div class="wrapper">
@@ -132,7 +146,27 @@
             />
         {/if}
 
-        {#if accType === "passkey" && !convertAccount}
+        {#if accType === 'federated'}
+            <div class="m-05">
+                <p>{t.federatedConvertPassword1}</p>
+                <p><b>{authProvider.name || 'UNKNOWN'}</b></p>
+                <p>{t.federatedConvertPassword2}</p>
+                {#if success}
+                    <CheckIcon check/>
+                {:else}
+                    <Button
+                            width={btnWidth}
+                            on:click={requestPasswordReset}
+                            level={3}
+                            isDisabled={!success}
+                    >
+                        {t.passwordReset.toUpperCase()}
+                    </Button>
+                {/if}
+            </div>
+        {/if}
+
+        {#if (accType === "passkey" || accType === "federated_passkey") && !convertAccount}
             <p>{t.accTypePasskeyText1}</p>
             <p>{t.accTypePasskeyText2}</p>
             <p>{t.accTypePasskeyText3}</p>
@@ -145,7 +179,7 @@
             </Button>
         {/if}
 
-        {#if accType === "password" || convertAccount}
+        {#if accType === "password" || accType === "federated_password" || convertAccount}
             <div in:blur={{ duration: 350 }}>
                 <AccModPwd
                         bind:t
@@ -206,6 +240,10 @@
 <style>
     p {
         margin: .5rem 0;
+    }
+
+    .m-05 {
+        margin: .5rem;
     }
 
     .wrapper {

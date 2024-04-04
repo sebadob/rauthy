@@ -573,7 +573,10 @@ pub struct ProviderLoginRequest {
 pub struct ProviderLookupRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
-    pub issuer: String,
+    pub issuer: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
+    pub metadata_url: Option<String>,
     pub danger_allow_insecure: Option<bool>,
     // no validation since it will throw an error later if not correctly formed
     pub root_pem: Option<String>,

@@ -27,13 +27,15 @@
     let expandContainer = false;
     let isLoading = false;
     let err = '';
+    let lookupSuccess = false;
     let success = false;
     let timer;
 
     let showRootPem = false;
 
     let configLookup = {
-        issuer: '',
+        issuer: null,
+        metadata_url: null,
         danger_allow_insecure: false,
         root_pem: null,
     };
@@ -63,9 +65,26 @@
         // maybe additional ones in the future like client_logo
     }
     // TODO add "the big ones" as templates in the future
-    let modes = ['OIDC', 'Custom'];
+    let modes = ['OIDC', 'Auto', 'Custom', 'Google'];
     let mode = modes[0];
-    $: isAuto = mode === modes[0];
+    $: isAuto = mode === modes[1];
+    $: isCustom = mode === modes[2];
+    $: isOidc = mode === modes[0];
+
+    // hook for templated values
+    $: if (!isAuto && !isCustom && !isOidc) {
+        if (mode === 'Google') {
+            configLookup = {
+                issuer: 'accounts.google.com',
+                metadata_url: null,
+                danger_allow_insecure: false,
+                root_pem: null,
+            }
+            onSubmitLookup();
+        }
+
+        // TODO add more templates for logins like Github and so on...
+    }
 
     let formErrors = {};
     const schemaConfig = yup.object().shape({
@@ -86,7 +105,8 @@
         mfa_claim_value: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
     });
     const schemaLookup = yup.object().shape({
-        issuer: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
+        issuer: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
+        metadata_url: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         root_pem: yup.string().trim().nullable().matches(REGEX_PEM, "Valid PEM certificate"),
     });
 
@@ -98,8 +118,6 @@
             resetValues();
         }, 1500);
     }
-
-    $: disableAfterLookup = config.authorization_endpoint && isAuto;
 
     onMount(() => {
         return () => {
@@ -167,6 +185,8 @@
             config.use_pkce = body.use_pkce;
             config.scope = body.scope;
             config.root_pem = body.root_pem;
+
+            lookupSuccess = true;
         } else {
             let body = await res.json();
             if (body.message.includes('InvalidCertificate')) {
@@ -181,7 +201,8 @@
 
     function resetValues() {
         configLookup = {
-            issuer: '',
+            issuer: null,
+            metadata_url: null,
             danger_allow_insecure: false,
             root_pem: null,
         };
@@ -200,6 +221,7 @@
             mfa_claim_path: null,
             mfa_claim_value: null,
         }
+        lookupSuccess = false;
         showRootPem = false;
     }
 
@@ -240,7 +262,7 @@
             <OptionSelect bind:value={mode} options={modes}/>
         </div>
 
-        {#if !config.authorization_endpoint && isAuto}
+        {#if !lookupSuccess}
             <div class="header">
                 Custom Root CA PEM
             </div>
@@ -267,7 +289,9 @@
                     <Switch bind:selected={configLookup.danger_allow_insecure}/>
                 </div>
             {/if}
+        {/if}
 
+        {#if isOidc && !lookupSuccess}
             <Input
                     bind:value={configLookup.issuer}
                     bind:error={formErrors.issuer}
@@ -283,7 +307,23 @@
             <Button on:click={onSubmitLookup} bind:isLoading level={1} width="6rem">
                 LOOKUP
             </Button>
-        {:else}
+        {:else if isAuto && !lookupSuccess}
+            <Input
+                    bind:value={configLookup.metadata_url}
+                    bind:error={formErrors.metadata_url}
+                    autocomplete="off"
+                    placeholder=".../.well-known/openid-configuration"
+                    on:input={validateFormLookup}
+                    width={inputWidth}
+                    on:enter={onSubmitLookup}
+            >
+                METADATA URL
+            </Input>
+
+            <Button on:click={onSubmitLookup} bind:isLoading level={1} width="6rem">
+                LOOKUP
+            </Button>
+        {:else if isCustom || lookupSuccess}
             {#if showRootPem}
                 <Textarea
                         rows={17}
@@ -292,7 +332,7 @@
 -----END CERTIFICATE-----"
                         bind:value={config.root_pem}
                         bind:error={formErrors.root_pem}
-                        disabled={disableAfterLookup}
+                        disabled={lookupSuccess}
                 >
                     Root Certificate in PEM format
                 </Textarea>
@@ -301,7 +341,7 @@
                     Allow insecure TLS certificates
                 </div>
                 <div class="ml mb">
-                    {#if disableAfterLookup}
+                    {#if lookupSuccess}
                         <CheckIcon bind:check={config.danger_allow_insecure}/>
                     {:else}
                         <Switch bind:selected={config.danger_allow_insecure}/>
@@ -316,7 +356,7 @@
                     placeholder="Issuer URL"
                     on:input={validateFormLookup}
                     width={inputWidth}
-                    disabled={disableAfterLookup}
+                    disabled={lookupSuccess}
             >
                 ISSUER URL
             </Input>
@@ -328,7 +368,7 @@
                     placeholder="Authorization Endpoint"
                     on:input={validateFormLookup}
                     width={inputWidth}
-                    disabled={disableAfterLookup}
+                    disabled={lookupSuccess}
             >
                 AUTHORIZATION ENDPOINT
             </Input>
@@ -340,7 +380,7 @@
                     placeholder="Token Endpoint"
                     on:input={validateFormLookup}
                     width={inputWidth}
-                    disabled={disableAfterLookup}
+                    disabled={lookupSuccess}
             >
                 TOKEN ENDPOINT
             </Input>
@@ -352,7 +392,7 @@
                     placeholder="Userinfo Endpoint"
                     on:input={validateFormLookup}
                     width={inputWidth}
-                    disabled={disableAfterLookup}
+                    disabled={lookupSuccess}
             >
                 USERINFO ENDPOINT
             </Input>
@@ -361,7 +401,7 @@
                 Use PKCE
             </div>
             <div class="ml">
-                {#if disableAfterLookup}
+                {#if lookupSuccess}
                     <CheckIcon bind:check={config.use_pkce}/>
                 {:else}
                     <Switch bind:selected={config.use_pkce}/>

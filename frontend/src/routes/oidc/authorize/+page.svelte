@@ -24,7 +24,7 @@
     import WithI18n from "$lib/WithI18n.svelte";
     import LangSelector from "$lib/LangSelector.svelte";
     import getPkce from "oauth-pkce";
-    import {PKCE_VERIFIER, PKCE_VERIFIER_UPSTREAM} from "../../../utils/constants.js";
+    import {PKCE_VERIFIER_UPSTREAM} from "../../../utils/constants.js";
 
     let t = {};
 
@@ -43,6 +43,7 @@
     let refresh = false;
     let existingMfaUser;
     let providers = [];
+    // dummy data for testing
     // let webauthnData = {
     // 	code: "asdjknfasdjklfnasdlkjf",
     //   header_csrf: "askjdfgnsdfjklgn",
@@ -414,7 +415,11 @@
                 <div class="providers flex-col">
                     {#each providers as provider (provider.id)}
                         <Button on:click={() => providerLogin(provider.id)} level={3}>
-                            {provider.name}
+                            <div class="flex-inline">
+                                <img src="{`/auth/v1/providers/${provider.id}/img`}" alt="" width="20" height="20"/>
+                                <!--                            <img class="logo" src="{`/auth/v1/providers/${provider.id}/img`}" alt=""/>-->
+                                {provider.name}
+                            </div>
                         </Button>
                     {/each}
                 </div>
@@ -471,6 +476,12 @@
     .flex-col {
         display: flex;
         flex-direction: column;
+    }
+
+    .flex-inline {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
     }
 
     .forgotten {

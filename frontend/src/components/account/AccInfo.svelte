@@ -1,12 +1,17 @@
 <script>
     import CheckIcon from "$lib/CheckIcon.svelte";
     import {buildWebIdUri, formatDateFromTs} from "../../utils/helpers.js";
+    import {onMount} from "svelte";
+    import {getAuthProvidersTemplate} from "../../utils/helpers.js";
 
     export let t;
     export let user = {};
     // webIdData will stay undefined if it is not enabled in the backend
+    export let authProvider;
     export let webIdData;
     export let viewModePhone = false;
+
+    $: accType = user.account_type.startsWith('federated') ? `${user.account_type}: ${authProvider?.name || ''}` : user.account_type;
 
     $: classRow = viewModePhone ? 'rowPhone' : 'row';
     $: classLabel = viewModePhone ? 'labelPhone' : 'label';
@@ -36,7 +41,7 @@
 
     <div class={classRow}>
         <div class={classLabel}><b>{t.accType}:</b></div>
-        <span class="value">{user.account_type}</span>
+        <span class="value">{accType}</span>
     </div>
 
     <div class={classRow}>

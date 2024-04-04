@@ -4,12 +4,13 @@
     import Button from "$lib/Button.svelte";
     import {REGEX_CLIENT_NAME, REGEX_LOWERCASE_SPACE, REGEX_URI, REGEX_PEM} from "../../../utils/constants.js";
     import {onMount} from "svelte";
-    import {putProvider} from "../../../utils/dataFetchingAdmin.js";
+    import {putProvider, putProviderLogo} from "../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";
     import Switch from "$lib/Switch.svelte";
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import JsonPathDesc from "./JsonPathDesc.svelte";
     import Textarea from "$lib/inputs/Textarea.svelte";
+    import ImageUploadRaw from "../../ImageUploadRaw.svelte";
 
     export let provider = {};
     export let onSave;
@@ -22,6 +23,7 @@
     let timer;
     let isDefault = false;
     let showRootPem = provider.root_pem;
+    let logo;
 
     $: if (success) {
         timer = setTimeout(() => {
@@ -32,6 +34,11 @@
 
     $: if (provider.scope) {
         provider.scope = provider.scope.replaceAll('+', ' ');
+    }
+
+    // This will trigger when the upload image button has been clicked
+    $: if (logo) {
+        uploadLogo(logo);
     }
 
     onMount(() => {
@@ -90,6 +97,20 @@
         } else {
             let body = await res.json();
             err = body.message;
+        }
+
+        isLoading = false;
+    }
+
+    async function uploadLogo(payload) {
+        isLoading = true;
+
+        let res = await putProviderLogo(provider.id, payload);
+        if (res.ok) {
+            // TODO re-fetch provider with all info
+        } else {
+            let body = await res.json();
+            console.error(body.message);
         }
 
         isLoading = false;
@@ -274,7 +295,7 @@
             bind:value={provider.admin_claim_path}
             bind:error={formErrors.admin_claim_path}
             autocomplete="off"
-            placeholder="Admin Claim Path"
+            placeholder="$.roles.*"
             on:input={validateForm}
             width={inputWidth}
     >
@@ -284,7 +305,7 @@
             bind:value={provider.admin_claim_value}
             bind:error={formErrors.admin_claim_value}
             autocomplete="off"
-            placeholder="Admin Claim Value"
+            placeholder="rauthy_admin"
             on:input={validateForm}
             width={inputWidth}
     >
@@ -318,8 +339,15 @@
         MFA CLAIM VALUE
     </Input>
 
+    <div class="logo">
+        <ImageUploadRaw bind:image={logo}/>
+        {#if !isLoading}
+            <img class="logo" src="{`/auth/v1/providers/${provider.id}/img`}" alt="No Logo Available"/>
+        {/if}
+    </div>
+
     {#if !isDefault}
-        <Button on:click={onSubmit} level={1} width="4rem">SAVE</Button>
+        <Button on:click={onSubmit} level={1} width="4rem" bind:isLoading>SAVE</Button>
 
         {#if success}
             <div class="success">
@@ -366,6 +394,10 @@
     .label {
         margin: 5px 5px 0 5px;
         font-size: .9rem;
+    }
+
+    .logo {
+        margin: 1rem .25rem;
     }
 
     .ml {

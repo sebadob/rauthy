@@ -101,7 +101,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         state: None,
         nonce: Some(nonce.to_owned()),
         code_challenge: Some(challenge_plain.to_owned()),
-        code_challenge_method: None,
+        code_challenge_method: Some("plain".to_string()),
     };
     let res = reqwest::Client::new()
         .post(&url_auth)

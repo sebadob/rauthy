@@ -1,4 +1,4 @@
-import {getCsrfToken, redirectToLogin} from "./helpers.js";
+import {getCsrfToken} from "./helpers.js";
 import {sleepAwait} from "$lib/utils/helpers.js";
 
 const HEADERS = {
@@ -235,15 +235,15 @@ export async function postPasswordResetRequest(data) {
     return await checkRedirectForbidden(res);
 }
 
-export async function getProviders() {
+export async function postProviders() {
     return await fetch('/auth/v1/providers', {
-        method: 'GET',
+        method: 'POST',
         headers: getHeaders(),
     });
 }
 
 export async function postProvider(data) {
-    return await fetch('/auth/v1/providers', {
+    return await fetch('/auth/v1/providers/create', {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(data),
@@ -263,6 +263,20 @@ export async function deleteProvider(id) {
         method: 'DELETE',
         headers: getHeaders(),
     });
+}
+
+export async function putProviderLogo(id, data) {
+    const formData = new FormData();
+    formData.append("logo", data);
+
+    const res = await fetch(`/auth/v1/providers/${id}/img`, {
+        method: 'PUT',
+        headers: {
+            'csrf-token': getCsrfToken(),
+        },
+        body: formData,
+    });
+    return await checkRedirectForbidden(res);
 }
 
 export async function postProviderLookup(data) {

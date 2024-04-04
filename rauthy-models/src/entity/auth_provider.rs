@@ -5,10 +5,10 @@ use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::WebauthnLoginReq;
-use crate::entity::well_known::WellKnown;
 use crate::language::Language;
 use crate::request::{
-    ProviderCallbackRequest, ProviderLoginRequest, ProviderRequest, UserValuesRequest,
+    ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
+    UserValuesRequest,
 };
 use crate::response::ProviderLookupResponse;
 use crate::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
@@ -36,6 +36,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::value;
 use serde_json_path::JsonPath;
 use sqlx::{query, query_as};
+use std::borrow::Cow;
 use std::fmt::Write;
 use std::str::FromStr;
 use std::time::Duration;
@@ -82,6 +83,19 @@ impl From<String> for AuthProviderType {
     }
 }
 
+/// Minimal version of the OpenID metadata. This is used for upstream oauth2 lookup.
+/// Only includes the data we care about when doing a config lookup.
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+pub struct WellKnownLookup {
+    pub issuer: String,
+    pub authorization_endpoint: String,
+    pub token_endpoint: String,
+    pub userinfo_endpoint: String,
+    pub jwks_uri: String,
+    pub scopes_supported: Vec<String>,
+    pub code_challenge_methods_supported: Vec<String>,
+}
+
 /// Upstream Auth Provider for upstream logins without a local Rauthy account
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthProvider {
@@ -108,8 +122,6 @@ pub struct AuthProvider {
     pub use_pkce: bool,
 
     pub root_pem: Option<String>,
-    pub logo: Option<Vec<u8>>,
-    pub logo_type: Option<String>,
 }
 
 impl AuthProvider {
@@ -118,21 +130,20 @@ impl AuthProvider {
         payload: ProviderRequest,
     ) -> Result<Self, ErrorResponse> {
         let slf = Self::try_from_id_req(new_store_id(), payload)?;
+        let typ = slf.typ.as_str();
 
         query!(
             r#"
             INSERT INTO
             auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
             userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
-            mfa_claim_path, mfa_claim_value,allow_insecure_requests, use_pkce, root_pem, logo,
-            logo_type)
+            mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem)
             VALUES
-            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
-            $20)"#,
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#,
             slf.id,
             slf.name,
             slf.enabled,
-            slf.typ.as_str(),
+            typ,
             slf.issuer,
             slf.authorization_endpoint,
             slf.token_endpoint,
@@ -147,8 +158,6 @@ impl AuthProvider {
             slf.allow_insecure_requests,
             slf.use_pkce,
             slf.root_pem,
-            slf.logo,
-            slf.logo_type,
         )
         .execute(&data.db)
         .await?;
@@ -250,7 +259,7 @@ impl AuthProvider {
     }
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        // TODO when implemented: logo + logo_type
+        let typ = self.typ.as_str();
         query!(
             r#"UPDATE auth_providers
             SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
@@ -261,7 +270,7 @@ impl AuthProvider {
             self.name,
             self.enabled,
             self.issuer,
-            self.typ.as_str(),
+            typ,
             self.authorization_endpoint,
             self.token_endpoint,
             self.userinfo_endpoint,
@@ -275,8 +284,6 @@ impl AuthProvider {
             self.allow_insecure_requests,
             self.use_pkce,
             self.root_pem,
-            // self.logo,
-            // self.logo_type,
             self.id,
         )
         .execute(&data.db)
@@ -369,12 +376,6 @@ impl AuthProvider {
             allow_insecure_requests: req.danger_allow_insecure.unwrap_or(false),
             use_pkce: req.use_pkce,
             root_pem: req.root_pem,
-
-            logo: None,
-            logo_type: None,
-            // TODO when implemented in the UI
-            // logo: payload.,
-            // logo_type: payload.use_pkce,
         })
     }
 
@@ -385,32 +386,67 @@ impl AuthProvider {
             &data.caches.ha_cache_config,
         )
         .await?;
-        AuthProviderTemplate::invalidate_cache(data).await?;
+
+        // Directly update the template cache preemptively.
+        // This is needed all the time anyway.
+        AuthProviderTemplate::update_cache(data).await?;
+
         Ok(())
     }
 
     pub async fn lookup_config(
-        issuer: &str,
-        danger_allow_insecure: bool,
-        root_pem: Option<String>,
+        payload: &ProviderLookupRequest,
     ) -> Result<ProviderLookupResponse, ErrorResponse> {
-        let client = Self::build_client(danger_allow_insecure, root_pem.as_deref())?;
+        let client = Self::build_client(
+            payload.danger_allow_insecure.unwrap_or(false),
+            payload.root_pem.as_deref(),
+        )?;
 
-        let issuer_url = if issuer.starts_with("http://") || issuer.starts_with("https://") {
-            issuer.to_string()
+        // let config_url = if let Some(url) = &payload.metadata_url {
+        //     Cow::from(url)
+        // } else if let Some(issuer) = &payload.issuer {
+        //     let issuer_url = if issuer.starts_with("http://") || issuer.starts_with("https://") {
+        //         issuer.to_string()
+        //     } else {
+        //         // we always assume https connections, if the scheme is not given
+        //         format!("https://{}", issuer)
+        //     };
+        //     let url = if issuer_url.ends_with('/') {
+        //         format!("{}.well-known/openid-configuration", issuer_url)
+        //     } else {
+        //         format!("{}/.well-known/openid-configuration", issuer_url)
+        //     };
+        //     Cow::from(url)
+        // } else {
+        //     return Err(ErrorResponse::new(
+        //         ErrorResponseType::BadRequest,
+        //         "either `metadata_url` or `issuer` must be given".to_string(),
+        //     ));
+        // };
+        let url = if let Some(url) = &payload.metadata_url {
+            Cow::from(url)
+        } else if let Some(iss) = &payload.issuer {
+            let url = if iss.ends_with('/') {
+                format!("{}.well-known/openid-configuration", iss)
+            } else {
+                format!("{}/.well-known/openid-configuration", iss)
+            };
+            Cow::from(url)
+        } else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "either `metadata_url` or `issuer` must be given".to_string(),
+            ));
+        };
+        let config_url = if url.starts_with("http://") || url.starts_with("https://") {
+            url
         } else {
             // we always assume https connections, if the scheme is not given
-            format!("https://{}", issuer)
-        };
-        // for now, we only support the default openid-configuration location
-        let config_url = if issuer_url.ends_with('/') {
-            format!("{}.well-known/openid-configuration", issuer_url)
-        } else {
-            format!("{}/.well-known/openid-configuration", issuer_url)
+            Cow::from(format!("https://{}", url))
         };
 
         debug!("AuthProvider lookup to {}", config_url);
-        let res = client.get(&config_url).send().await?;
+        let res = client.get(config_url.as_ref()).send().await?;
         let status = res.status();
         if !status.is_success() {
             let body = res.text().await?;
@@ -423,7 +459,7 @@ impl AuthProvider {
             ));
         }
 
-        let well_known = res.json::<WellKnown>().await.map_err(|err| {
+        let well_known = res.json::<WellKnownLookup>().await.map_err(|err| {
             ErrorResponse::new(
                 // TODO we could make this more UX friendly in the future and return a link to the
                 // docs, when they exist
@@ -458,12 +494,12 @@ impl AuthProvider {
             authorization_endpoint: well_known.authorization_endpoint,
             token_endpoint: well_known.token_endpoint,
             userinfo_endpoint: well_known.userinfo_endpoint,
-            root_pem,
+            root_pem: &payload.root_pem,
             use_pkce: well_known
                 .code_challenge_methods_supported
                 .iter()
                 .any(|c| c == "S256"),
-            danger_allow_insecure,
+            danger_allow_insecure: payload.danger_allow_insecure.unwrap_or(false),
             scope,
             // TODO add `scopes_supported` Vec and make them selectable with checkboxes in the UI
             // instead of typing them in?
@@ -795,7 +831,7 @@ impl AuthProviderCallback {
         // location header
         let mut loc = format!("{}?code={}", slf.req_redirect_uri, code.id);
         if let Some(state) = slf.req_state {
-            loc = format!("{}&state={}", loc, state);
+            write!(loc, "&state={}", state).expect("`write!` to succeed");
         };
 
         let auth_step = if user.has_webauthn_enabled() {
@@ -851,22 +887,11 @@ impl AuthProviderCallback {
 pub struct AuthProviderTemplate {
     pub id: String,
     pub name: String,
-    pub use_pkce: bool,
     // pub logo: Option<Vec<u8>>,
     // pub logo_type: Option<String>,
 }
 
 impl AuthProviderTemplate {
-    async fn invalidate_cache(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            IDX_AUTH_PROVIDER_TEMPLATE.to_string(),
-            &data.caches.ha_cache_config,
-        )
-        .await?;
-        Ok(())
-    }
-
     pub async fn get_all_json_template(
         data: &web::Data<AppState>,
     ) -> Result<Option<String>, ErrorResponse> {
@@ -885,10 +910,11 @@ impl AuthProviderTemplate {
         let providers = AuthProvider::find_all(data)
             .await?
             .into_iter()
+            // We don't want to even show disabled providers
+            .filter(|p| p.enabled)
             .map(|p| Self {
                 id: p.id,
                 name: p.name,
-                use_pkce: p.use_pkce,
             })
             .collect::<Vec<Self>>();
 
@@ -907,6 +933,22 @@ impl AuthProviderTemplate {
         .await?;
 
         Ok(json)
+    }
+
+    async fn invalidate_cache(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        cache_del(
+            CACHE_NAME_12HR.to_string(),
+            IDX_AUTH_PROVIDER_TEMPLATE.to_string(),
+            &data.caches.ha_cache_config,
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn update_cache(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        Self::invalidate_cache(data).await?;
+        Self::get_all_json_template(data).await?;
+        Ok(())
     }
 }
 
@@ -929,11 +971,12 @@ enum ProviderMfaLogin {
 pub struct AuthProviderIdClaims<'a> {
     pub iss: &'a str,
     pub sub: &'a str,
+    // JsonValue instead of just &str because `aud` can be a single value or an array
     pub aud: Option<serde_json::Value>,
     pub azp: Option<&'a str>,
     pub amr: Option<Vec<&'a str>>,
-    // even though `email` is mandatory, we set it to optional for the deserialization
-    // to have more control over the error message being returned
+    // even though `email` is mandatory for Rauthy, we set it to optional for
+    // the deserialization to have more control over the error message being returned
     pub email: Option<&'a str>,
     pub email_verified: Option<bool>,
     pub given_name: Option<&'a str>,
@@ -978,8 +1021,6 @@ impl AuthProviderIdClaims<'_> {
                 return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
             }
         } else if let Some(aud) = claims.aud {
-            // TODO this may produce an error, since `aud` is allowed to be a single string
-            // or actually a json array by RFC -> do more testing!
             if !aud.to_string().contains(&provider.client_id) {
                 let err = format!(
                     "`aud` claim '{}' from ID token does not match out client_id '{}'",
@@ -1036,23 +1077,6 @@ impl AuthProviderIdClaims<'_> {
             }
         };
         debug!("user_opt:\n{:?}", user_opt);
-        // let user_opt = match User::find_by_email(data, claims.email.unwrap().to_string()).await {
-        //     Ok(user) => {
-        //         debug!("found already existing user by email lookup: {:?}", user);
-        //         user.validate_auth_provider(&provider.id)?;
-        //         user.validate_federation_uid(&claims.sub)?;
-        //         Some(user)
-        //     }
-        //     Err(_) => {
-        //         debug!("did NOT find already existing user by email lookup - trying via fed id");
-        //         // if we were unable to find the user, we need to make another lookup
-        //         // and search by federation uid on the remote system to not end up with
-        //         // duplicate users in case of a remote email update
-        //         let user = User::find_by_federation(data, &provider.id, &claims.sub).await?;
-        //         Some(user)
-        //     }
-        // };
-        // debug!("user_opt:\n{:?}", user_opt);
 
         // `rauthy_admin` role mapping by upstream claim
         let mut should_be_rauthy_admin = false;
@@ -1304,7 +1328,7 @@ mod tests {
     // ... just to understand the query syntax
     #[test]
     fn test_json_path() {
-        let value = json!({
+        let value = serde_json::json!({
             "foo": {
                 "bar": ["baz", "bop", 23],
                 "bor": "yes"

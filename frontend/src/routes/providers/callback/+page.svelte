@@ -37,9 +37,8 @@
             error = '';
             webauthnData = await res.json();
         } else if (res.status === 403) {
-            // TODO we will get a forbidden if for instance the user already exists but without
+            // we will get a forbidden if for instance the user already exists but without
             // any upstream provider link (or the wrong one)
-            // TODO add i18n for these cases
             let body = await res.json();
             console.error(body);
             error = body.message;
@@ -102,20 +101,7 @@
         display: flex;
     }
 
-    /*.container {*/
-    /*    display: flex;*/
-    /*    flex-direction: column;*/
-    /*    justify-content: center;*/
-    /*    max-width: 19rem;*/
-    /*    padding: 20px;*/
-    /*    border: 1px solid var(--col-gmid);*/
-    /*    border-radius: 5px;*/
-    /*    box-shadow: 5px 5px 5px rgba(128, 128, 128, .1);*/
-    /*}*/
-
     .error {
-        /*    max-width: 15rem;*/
-        /*    margin: -5px 10px 0 5px;*/
         color: var(--col-err)
     }
 
@@ -123,36 +109,4 @@
         display: flex;
         flex-direction: column;
     }
-
-    /*.forgotten {*/
-    /*    margin: 0 5px;*/
-    /*    cursor: pointer;*/
-    /*}*/
-
-    /*.forgotten:hover {*/
-    /*    color: var(--col-ok);*/
-    /*}*/
-
-    /*.head {*/
-    /*    display: flex;*/
-    /*    justify-content: space-between;*/
-    /*    padding-right: 35px;*/
-    /*}*/
-
-    /*.name {*/
-    /*    margin: -10px 5px 0 5px;*/
-    /*}*/
-
-    /*.logo {*/
-    /*    width: 84px;*/
-    /*    height: 84px;*/
-    /*}*/
-
-    /*.providers {*/
-    /*    margin-top: .66rem;*/
-    /*}*/
-
-    /*.success {*/
-    /*    color: var(--col-ok);*/
-    /*}*/
 </style>

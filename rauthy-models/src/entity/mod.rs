@@ -5,6 +5,7 @@ pub mod api_keys;
 pub mod app_version;
 pub mod auth_codes;
 pub mod auth_provider;
+pub mod auth_provider_logo;
 pub mod clients;
 pub mod clients_dyn;
 pub mod colors;

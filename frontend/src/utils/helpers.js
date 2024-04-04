@@ -11,6 +11,7 @@ import {
     REDIRECT_URI
 } from "./constants.js";
 import {decode, encode} from "base64-arraybuffer";
+import {getProvidersTemplate} from "./dataFetching.js";
 
 export function buildWebIdUri(userId) {
     return `${window.location.origin}/auth/${userId}/profile#me`
@@ -25,6 +26,27 @@ export function extractFormErrors(err) {
 export function isDefaultScope(name) {
     return name === 'openid' || name === 'profile' || name === 'email' || name === 'groups'
         || name === 'address' || name === 'phone';
+}
+
+/*
+ Returns the auth providers minimal template.
+ When in dev mode, fetches the providers via additional GET,
+ when in prod mode, extracts the value from the SSR template element.
+ */
+export async function getAuthProvidersTemplate() {
+    if ('production' === import.meta.env.MODE) {
+        const providerTpl = document.getElementsByTagName('template').namedItem('auth_providers').innerHTML;
+        if (providerTpl) {
+            return JSON.parse(providerTpl);
+        }
+        return undefined;
+    } else {
+        const res = await getProvidersTemplate();
+        if (res.ok) {
+            return await res.json();
+        }
+        return undefined;
+    }
 }
 
 export const redirectToLogin = (state) => {

@@ -18,15 +18,18 @@ older systems. For instance, if you create a new OIDC client, it activates `ed25
 token signing and S256 PKCE flow. This will not work with old clients, which do not support it, but you can of course
 deactivate this to your liking.
 
-**MFA and Passwordless Login**  
+**MFA and Passwordless Login**
+
 1. Option: Password + Security Key (without User Verification):  
-Rauthy provides FIDO 2 / Webauthn login flows. If you once logged in on a new client with your username + password, you
-will get an encrypted cookie which will allow you to log in without a password from that moment on. You only need to
-have a FIDO  compliant Passkey being registered for your account.
+   Rauthy provides FIDO 2 / Webauthn login flows. If you once logged in on a new client with your username + password,
+   you
+   will get an encrypted cookie which will allow you to log in without a password from that moment on. You only need to
+   have a FIDO compliant Passkey being registered for your account.
 2. Option: Passkey-Only Accounts:  
-Since v0.16, Rauthy supports Passkey-Only-Accounts. You basically just provide your E-Mail address and log in with your
-FIDO 2 Passkey. Your account will not even have / need a password. This login flow is restricted though to only those
-passkeys, that can provide User Verification (UV) to always have at least 2FA security.  
+   Since v0.16, Rauthy supports Passkey-Only-Accounts. You basically just provide your E-Mail address and log in with
+   your
+   FIDO 2 Passkey. Your account will not even have / need a password. This login flow is restricted though to only those
+   passkeys, that can provide User Verification (UV) to always have at least 2FA security.
 
 **Fast and efficient**  
 The main goal was to provide an SSO solution like Keycloak and others while using a way lower footprint
@@ -64,7 +67,7 @@ page, but also for the Account and Admin page.
 
 **Events and Auditing**  
 Since v0.17, Rauthy implements an Event-System. Events are generated in all kinds of scenarios. They can be sent via
-E-Mail, Matrix or Slack, depending on the severity and the configured level. You will see them in the Admin UI in real 
+E-Mail, Matrix or Slack, depending on the severity and the configured level. You will see them in the Admin UI in real
 time, or you can subscribe to the events stream and externally handle them depending on your own business logic.
 
 **Brute-Force and basic DoS protection**  
@@ -136,8 +139,10 @@ This is a non-exhaustive list of currently open TODO's
 
 - [ ] Benchmarks and Optimizations
 - [ ] Maybe get a nicer Rauthy Logo
-- [ ] experimental implementation of [dilithium](https://pq-crystals.org/dilithium/) singing algorithm to become quantum safe
+- [ ] experimental implementation of [dilithium](https://pq-crystals.org/dilithium/) singing algorithm to become quantum
+  safe
 - [ ] maybe something like a `rauthy-migrate` project to make migrating an existing user's DB easier
+- [ ] UI overhaul to make it "prettier" in certain places
 
 ## Getting Started
 
