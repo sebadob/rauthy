@@ -8,6 +8,7 @@ use std::string::ToString;
 
 pub const RAUTHY_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+pub const CONTENT_TYPE_WEBP: &str = "image/webp";
 pub const HEADER_DPOP_NONCE: &str = "DPoP-Nonce";
 pub const HEADER_HTML: (&str, &str) = ("content-type", "text/html;charset=utf-8");
 pub const HEADER_JSON: (&str, &str) = ("content-type", "application/json");
