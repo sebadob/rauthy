@@ -52,6 +52,7 @@ image = "0.25.1"
 itertools = "0.12"
 jwt-simple = { version = "0.12.6", default-features = false, features = ["pure-rust"] }
 lazy_static = "1"
+mime_guess = "2"
 num_cpus = "1"
 ## Add openssl-sys as a direct dependency, so it can be cross compiled to
 ## x86_64-unknown-linux-musl using the "vendored" feature below
