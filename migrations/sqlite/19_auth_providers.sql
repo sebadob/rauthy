@@ -21,9 +21,7 @@ create table auth_providers
     mfa_claim_value         varchar,
     allow_insecure_requests bool    not null,
     use_pkce                bool    not null,
-    root_pem                varchar,
-    logo                    blob,
-    logo_type               varchar
+    root_pem                varchar
 );
 
 -- modify users table with fk to auth_providers

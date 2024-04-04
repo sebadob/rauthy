@@ -317,16 +317,15 @@ pub async fn put_provider_img(
 
     let id = id.into_inner();
 
-    // keeping the whole image in memory is no issue, these should be small anyway
-    let mut buf: Vec<u8> = Vec::with_capacity(1024 * 1024);
-
     // we only accept a single field from the Multipart upload -> no looping here
+    let mut buf: Vec<u8> = Vec::with_capacity(128 * 1024);
+    let mut content_type = None;
     if let Some(part) = payload.next().await {
         let mut field = part?;
         debug!("{:?}", field);
 
         // TODO do not try to parse when `"content-type": "image/svg+xml"` -> serve directly
-        let content_type = field.content_type();
+        content_type = field.content_type();
         debug!("content_type: {:?}", content_type);
 
         while let Some(chunk) = field.next().await {

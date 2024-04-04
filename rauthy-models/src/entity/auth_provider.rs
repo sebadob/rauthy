@@ -122,8 +122,6 @@ pub struct AuthProvider {
     pub use_pkce: bool,
 
     pub root_pem: Option<String>,
-    pub logo: Option<Vec<u8>>,
-    pub logo_type: Option<String>,
 }
 
 impl AuthProvider {
@@ -138,11 +136,9 @@ impl AuthProvider {
             INSERT INTO
             auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
             userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
-            mfa_claim_path, mfa_claim_value,allow_insecure_requests, use_pkce, root_pem, logo,
-            logo_type)
+            mfa_claim_path, mfa_claim_value,allow_insecure_requests, use_pkce, root_pem)
             VALUES
-            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
-            $20)"#,
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#,
             slf.id,
             slf.name,
             slf.enabled,
@@ -161,8 +157,6 @@ impl AuthProvider {
             slf.allow_insecure_requests,
             slf.use_pkce,
             slf.root_pem,
-            slf.logo,
-            slf.logo_type,
         )
         .execute(&data.db)
         .await?;
@@ -264,7 +258,6 @@ impl AuthProvider {
     }
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        // TODO when implemented: logo + logo_type
         query!(
             r#"UPDATE auth_providers
             SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
@@ -289,8 +282,6 @@ impl AuthProvider {
             self.allow_insecure_requests,
             self.use_pkce,
             self.root_pem,
-            // self.logo,
-            // self.logo_type,
             self.id,
         )
         .execute(&data.db)
@@ -383,12 +374,6 @@ impl AuthProvider {
             allow_insecure_requests: req.danger_allow_insecure.unwrap_or(false),
             use_pkce: req.use_pkce,
             root_pem: req.root_pem,
-
-            logo: None,
-            logo_type: None,
-            // TODO when implemented in the UI
-            // logo: payload.,
-            // logo_type: payload.use_pkce,
         })
     }
 
