@@ -9,6 +9,7 @@ use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
 use cryptr::CryptrError;
 use css_color::ParseColorError;
 use derive_more::Display;
+use image::ImageError;
 use redhac::CacheError;
 use rio_turtle::TurtleError;
 use serde::{Deserialize, Serialize};
@@ -397,6 +398,15 @@ impl From<serde_json_path::ParseError> for ErrorResponse {
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("JsonPath error: {}", value),
+        )
+    }
+}
+
+impl From<ImageError> for ErrorResponse {
+    fn from(value: ImageError) -> Self {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("Cannot parse the image data: {}", value),
         )
     }
 }
