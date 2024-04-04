@@ -243,7 +243,7 @@ export async function postProviders() {
 }
 
 export async function postProvider(data) {
-    return await fetch('/auth/v1/providers', {
+    return await fetch('/auth/v1/providers/create', {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(data),
