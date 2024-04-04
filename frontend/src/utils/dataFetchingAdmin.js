@@ -1,4 +1,4 @@
-import {getCsrfToken, redirectToLogin} from "./helpers.js";
+import {getCsrfToken} from "./helpers.js";
 import {sleepAwait} from "$lib/utils/helpers.js";
 
 const HEADERS = {

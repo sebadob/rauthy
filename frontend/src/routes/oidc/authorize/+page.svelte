@@ -415,7 +415,11 @@
                 <div class="providers flex-col">
                     {#each providers as provider (provider.id)}
                         <Button on:click={() => providerLogin(provider.id)} level={3}>
-                            {provider.name}
+                            <div class="flex-inline">
+                                <img src="{`/auth/v1/providers/${provider.id}/img`}" alt="" width="20" height="20"/>
+                                <!--                            <img class="logo" src="{`/auth/v1/providers/${provider.id}/img`}" alt=""/>-->
+                                {provider.name}
+                            </div>
                         </Button>
                     {/each}
                 </div>
@@ -472,6 +476,12 @@
     .flex-col {
         display: flex;
         flex-direction: column;
+    }
+
+    .flex-inline {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
     }
 
     .forgotten {

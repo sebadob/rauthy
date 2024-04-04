@@ -341,8 +341,8 @@
 
     <div class="logo">
         <ImageUploadRaw bind:image={logo}/>
-        {#if provider.logo}
-            <img class="logo" src="{provider.logo}" alt="Custom Logo"/>
+        {#if !isLoading}
+            <img class="logo" src="{`/auth/v1/providers/${provider.id}/img`}" alt="No Logo Available"/>
         {/if}
     </div>
 
