@@ -68,10 +68,7 @@
 // everything working securely and write these down in the Rauthy book (new section)
 //     - `email` is a mandatory claim to be present in the `id_token`
 //     - currently, only OIDC providers are supported
-
-// TODO:
-// - [ ] Unlink an account from federation
-// - [ ] Make it possible to upload a small logo or icon for providers?
+// - [x] Make it possible to upload a small logo or icon for providers?
 // What about the image size? Should Rauthy actually process and optimize it or "just take it" and
 // then show it on the login page? What about max size recommendations or simply grabbing a
 // favicon from the remote URL?
@@ -79,7 +76,7 @@
 // client logos as well instead of sending back the `data:` image url for the login page
 // -> more safe CSP, since we could remove the allowance of `data:` for `img` urls, but requires
 // more work.
-//
+
 //
 // Rough timeline for the implementation (multiple PRs makes sense):
 // 1. Implement API Endpoint for provider metadata lookup and try to build a valid config from that.
