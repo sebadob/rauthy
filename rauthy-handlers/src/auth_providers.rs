@@ -1,7 +1,7 @@
 use crate::{map_auth_step, ReqPrincipal};
 use actix_web::body::BoxBody;
 use actix_web::http::header::DispositionType::FormData;
-use actix_web::http::header::LOCATION;
+use actix_web::http::header::{CONTENT_TYPE, LOCATION};
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use actix_web_validator::Json;
@@ -12,7 +12,7 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_provider::{
     AuthProvider, AuthProviderCallback, AuthProviderTemplate,
 };
-use rauthy_models::entity::auth_provider_logo::AuthProviderLogo;
+use rauthy_models::entity::auth_provider_logo::{AuthProviderLogo, AuthProviderLogoRes};
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
@@ -299,6 +299,33 @@ pub async fn delete_provider(
 /// **Permissions**
 /// - `rauthy_admin`
 #[utoipa::path(
+    get,
+    path = "/providers/{id}/img",
+    tag = "providers",
+    responses(
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[get("/providers/{id}/img")]
+pub async fn get_provider_img(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+) -> Result<HttpResponse, ErrorResponse> {
+    let id = id.into_inner();
+    let logo = AuthProviderLogo::find_cached(&data, &id).await?;
+
+    Ok(HttpResponse::Ok()
+        .insert_header((CONTENT_TYPE, logo.content_type))
+        .body(logo.data))
+}
+
+/// PUT upload an image / icon for an auth provider
+///
+/// The image can only be max 10MB in size and will be minified automatically.
+///
+/// **Permissions**
+/// - `rauthy_admin`
+#[utoipa::path(
     put,
     path = "/providers/{id}/img",
     tag = "providers",
@@ -316,20 +343,16 @@ pub async fn put_provider_img(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
-    let id = id.into_inner();
-
     // we only accept a single field from the Multipart upload -> no looping here
     let mut buf: Vec<u8> = Vec::with_capacity(128 * 1024);
     let mut content_type = None;
     if let Some(part) = payload.next().await {
         let mut field = part?;
-        debug!("{:?}", field);
 
-        // TODO do not try to parse when `"content-type": "image/svg+xml"` -> serve directly
         match field.content_type() {
             Some(mime) => {
-                content_type = Some(field.content_type().unwrap().clone());
-                debug!("content_type: {:?}", content_type);
+                debug!("content_type: {:?}", mime);
+                content_type = Some(mime.clone());
             }
             None => {
                 return Err(ErrorResponse::new(
@@ -346,7 +369,7 @@ pub async fn put_provider_img(
     }
 
     // content_type unwrap cannot panic -> checked above
-    AuthProviderLogo::upsert(&data, id, buf, content_type.unwrap()).await?;
+    AuthProviderLogo::upsert(&data, id.into_inner(), buf, content_type.unwrap()).await?;
 
     Ok(HttpResponse::Ok().finish())
 }

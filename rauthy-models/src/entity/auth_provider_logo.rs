@@ -2,11 +2,15 @@ use crate::app_state::AppState;
 use crate::entity::auth_provider::AuthProvider;
 use actix_web::web;
 use image::imageops::FilterType;
+use image::ImageFormat;
 use jwt_simple::prelude::{Deserialize, Serialize};
-use rauthy_common::constants::{CACHE_NAME_12HR, IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_LOGO};
+use rauthy_common::constants::{
+    CACHE_NAME_12HR, CONTENT_TYPE_WEBP, IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_LOGO,
+};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use sqlx::{query, query_as};
+use std::io::Cursor;
 use std::str::FromStr;
 use tracing::debug;
 
@@ -91,7 +95,7 @@ impl AuthProviderLogo {
         match content_type.as_ref() {
             "image/svg+xml" => Self::upsert_svg(data, id, logo, content_type.to_string()).await,
             "image/jpeg" | "image/png" => {
-                Self::upsert_jpg_png(data, id, logo, content_type.to_string()).await
+                Self::upsert_jpg_png(data.clone(), id, logo, content_type.to_string()).await
             }
             _ => Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -118,12 +122,12 @@ impl AuthProviderLogo {
     }
 
     async fn upsert_jpg_png(
-        data: &web::Data<AppState>,
+        data: web::Data<AppState>,
         auth_provider_id: String,
         logo: Vec<u8>,
         content_type: String,
     ) -> Result<(), ErrorResponse> {
-        Self::delete(data, &auth_provider_id).await?;
+        Self::delete(&data, &auth_provider_id).await?;
 
         // we will save jpg / png in 2 downscaled and optimized resolutions:
         // - 256px for possible later use
@@ -135,23 +139,36 @@ impl AuthProviderLogo {
             img.height()
         );
 
-        let image_medium = img.resize_to_fill(256, 256, FilterType::Lanczos3);
-        let slf_medium = Self {
-            auth_provider_id,
-            res: AuthProviderLogoRes::Medium,
-            content_type,
-            data: image_medium.as_bytes().to_vec(),
-        };
-        slf_medium.upsert_self(data, false).await?;
+        // image resizing can be expensive -> do not block main thread
+        web::block(move || async move {
+            let image_medium = img.resize_to_fill(256, 256, FilterType::Lanczos3);
+            // 256x256 will be ~90 - 95 kB
+            let mut buf = Cursor::new(Vec::with_capacity(96 * 1024));
+            image_medium.write_to(&mut buf, ImageFormat::WebP)?;
+            let slf_medium = Self {
+                auth_provider_id,
+                res: AuthProviderLogoRes::Medium,
+                content_type: CONTENT_TYPE_WEBP.to_string(),
+                data: buf.into_inner(),
+            };
+            slf_medium.upsert_self(&data, false).await?;
 
-        let img_small = image_medium.resize_to_fill(20, 20, FilterType::Lanczos3);
-        let slf_small = Self {
-            auth_provider_id: slf_medium.auth_provider_id,
-            res: AuthProviderLogoRes::Small,
-            content_type: slf_medium.content_type,
-            data: img_small.as_bytes().to_vec(),
-        };
-        slf_small.upsert_self(data, true).await?;
+            let img_small = image_medium.resize_to_fill(20, 20, FilterType::Lanczos3);
+            let mut buf = Cursor::new(Vec::with_capacity(2 * 1024));
+            img_small.write_to(&mut buf, ImageFormat::WebP)?;
+            Self {
+                auth_provider_id: slf_medium.auth_provider_id,
+                res: AuthProviderLogoRes::Small,
+                content_type: slf_medium.content_type,
+                data: buf.into_inner(),
+            }
+            .upsert_self(&data, true)
+            .await?;
+
+            Ok::<(), ErrorResponse>(())
+        })
+        .await?
+        .await?;
 
         Ok(())
     }
@@ -199,8 +216,29 @@ impl AuthProviderLogo {
         Ok(())
     }
 
+    pub async fn find(
+        data: &web::Data<AppState>,
+        id: &str,
+        res: AuthProviderLogoRes,
+    ) -> Result<Self, ErrorResponse> {
+        let res = res.as_str();
+        let res_svg = AuthProviderLogoRes::Svg.as_str();
+        let slf = query_as!(
+            Self,
+            r#"SELECT * FROM auth_provider_logos
+            WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
+            id,
+            res,
+            res_svg,
+        )
+        .fetch_one(&data.db)
+        .await?;
+
+        Ok(slf)
+    }
+
     // special fn because we would only cache the small logos
-    pub async fn find_small(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
+    pub async fn find_cached(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
         if let Some(res) = cache_get!(
             Self,
             CACHE_NAME_12HR.to_string(),
