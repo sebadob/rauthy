@@ -350,3 +350,18 @@ drop table webids_old;
 -- finally drop the old users table
 
 drop table users_old;
+
+-- auth_provider_logos table
+
+create table auth_provider_logos
+(
+    auth_provider_id varchar not null
+        constraint auth_provider_logos_auth_providers_id_fk
+            references auth_providers
+            on update cascade on delete cascade,
+    res              varchar not null,
+    content_type     varchar not null,
+    data             blob    not null,
+    constraint auth_provider_logos_pk
+        primary key (auth_provider_id, res)
+);
