@@ -12,6 +12,7 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_provider::{
     AuthProvider, AuthProviderCallback, AuthProviderTemplate,
 };
+use rauthy_models::entity::auth_provider_logo::AuthProviderLogo;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
@@ -57,7 +58,7 @@ pub async fn post_providers(
 /// - `rauthy_admin`
 #[utoipa::path(
     post,
-    path = "/providers",
+    path = "/providers/create",
     tag = "providers",
     responses(
         (status = 200, description = "OK", body = ProviderResponse),
@@ -65,7 +66,7 @@ pub async fn post_providers(
         (status = 404, description = "NotFound", body = ErrorResponse),
     ),
 )]
-#[post("/providers")]
+#[post("/providers/create")]
 pub async fn post_provider(
     data: web::Data<AppState>,
     payload: Json<ProviderRequest>,
@@ -325,8 +326,18 @@ pub async fn put_provider_img(
         debug!("{:?}", field);
 
         // TODO do not try to parse when `"content-type": "image/svg+xml"` -> serve directly
-        content_type = field.content_type();
-        debug!("content_type: {:?}", content_type);
+        match field.content_type() {
+            Some(mime) => {
+                content_type = Some(field.content_type().unwrap().clone());
+                debug!("content_type: {:?}", content_type);
+            }
+            None => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "content_type is missing".to_string(),
+                ));
+            }
+        }
 
         while let Some(chunk) = field.next().await {
             let bytes = chunk?;
@@ -334,18 +345,8 @@ pub async fn put_provider_img(
         }
     }
 
-    debug!("buf len: {}", buf.len());
-    let img = image::load_from_memory(&buf).expect("image to build - TODO");
-    debug!("width: {}, height: {}", img.width(), img.height());
-    let resized = img.resize_to_fill(24, 24, FilterType::Lanczos3);
-    debug!(
-        "resized width: {}, height: {}",
-        resized.width(),
-        resized.height()
-    );
-    debug!("image size resized: {}", resized.as_bytes().len());
+    // content_type unwrap cannot panic -> checked above
+    AuthProviderLogo::upsert(&data, id, buf, content_type.unwrap()).await?;
 
-    // TODO parse the image and save it into the DB
-    // AuthProvider::update(&data, id.into_inner(), payload.into_inner()).await?;
     Ok(HttpResponse::Ok().finish())
 }

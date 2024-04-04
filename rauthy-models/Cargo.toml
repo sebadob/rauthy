@@ -73,6 +73,8 @@ uuid = { version = "1", features = ["serde", "v4"] }
 validator = { workspace = true }
 webauthn-rs = { workspace = true }
 webauthn-rs-proto = { workspace = true }
+image = "0.25.1"
+mime = "0.3.17"
 
 [dev-dependencies]
 pretty_assertions = "1"

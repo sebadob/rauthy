@@ -130,19 +130,20 @@ impl AuthProvider {
         payload: ProviderRequest,
     ) -> Result<Self, ErrorResponse> {
         let slf = Self::try_from_id_req(new_store_id(), payload)?;
+        let typ = slf.typ.as_str();
 
         query!(
             r#"
             INSERT INTO
             auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
             userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
-            mfa_claim_path, mfa_claim_value,allow_insecure_requests, use_pkce, root_pem)
+            mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem)
             VALUES
             ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#,
             slf.id,
             slf.name,
             slf.enabled,
-            slf.typ.as_str(),
+            typ,
             slf.issuer,
             slf.authorization_endpoint,
             slf.token_endpoint,
@@ -258,6 +259,7 @@ impl AuthProvider {
     }
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        let typ = self.typ.as_str();
         query!(
             r#"UPDATE auth_providers
             SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
@@ -268,7 +270,7 @@ impl AuthProvider {
             self.name,
             self.enabled,
             self.issuer,
-            self.typ.as_str(),
+            typ,
             self.authorization_endpoint,
             self.token_endpoint,
             self.userinfo_endpoint,

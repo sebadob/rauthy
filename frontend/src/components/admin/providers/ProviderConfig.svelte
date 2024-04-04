@@ -103,8 +103,8 @@
     }
 
     async function uploadLogo(payload) {
-        console.log('in uploadLogo');
-        console.log(payload);
+        isLoading = true;
+
         let res = await putProviderLogo(provider.id, payload);
         if (res.ok) {
             // TODO re-fetch provider with all info
@@ -112,6 +112,8 @@
             let body = await res.json();
             console.error(body.message);
         }
+
+        isLoading = false;
     }
 
     async function validateForm() {
@@ -293,7 +295,7 @@
             bind:value={provider.admin_claim_path}
             bind:error={formErrors.admin_claim_path}
             autocomplete="off"
-            placeholder="Admin Claim Path"
+            placeholder="$.roles.*"
             on:input={validateForm}
             width={inputWidth}
     >
@@ -303,7 +305,7 @@
             bind:value={provider.admin_claim_value}
             bind:error={formErrors.admin_claim_value}
             autocomplete="off"
-            placeholder="Admin Claim Value"
+            placeholder="rauthy_admin"
             on:input={validateForm}
             width={inputWidth}
     >
@@ -345,7 +347,7 @@
     </div>
 
     {#if !isDefault}
-        <Button on:click={onSubmit} level={1} width="4rem">SAVE</Button>
+        <Button on:click={onSubmit} level={1} width="4rem" bind:isLoading>SAVE</Button>
 
         {#if success}
             <div class="success">

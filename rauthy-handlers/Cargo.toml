@@ -17,7 +17,7 @@ cryptr = { workspace = true }
 futures = "0.3"
 image = { workspace = true }
 lazy_static = { workspace = true }
-mime_guess = "2"
+mime_guess = { workspace = true }
 num_cpus = { workspace = true }
 rauthy-common = { path = "../rauthy-common" }
 rauthy-models = { path = "../rauthy-models" }
