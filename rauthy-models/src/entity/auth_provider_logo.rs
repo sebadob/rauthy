@@ -1,17 +1,13 @@
 use crate::app_state::AppState;
-use crate::entity::auth_provider::AuthProvider;
 use actix_web::web;
 use image::imageops::FilterType;
 use image::ImageFormat;
 use jwt_simple::prelude::{Deserialize, Serialize};
-use rauthy_common::constants::{
-    CACHE_NAME_12HR, CONTENT_TYPE_WEBP, IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_LOGO,
-};
+use rauthy_common::constants::{CACHE_NAME_12HR, CONTENT_TYPE_WEBP, IDX_AUTH_PROVIDER_LOGO};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use sqlx::{query, query_as};
 use std::io::Cursor;
-use std::str::FromStr;
 use tracing::debug;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -94,9 +90,7 @@ impl AuthProviderLogo {
 
         match content_type.as_ref() {
             "image/svg+xml" => Self::upsert_svg(data, id, logo, content_type.to_string()).await,
-            "image/jpeg" | "image/png" => {
-                Self::upsert_jpg_png(data.clone(), id, logo, content_type.to_string()).await
-            }
+            "image/jpeg" | "image/png" => Self::upsert_jpg_png(data.clone(), id, logo).await,
             _ => Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Invalid mime type for auth provider logo".to_string(),
@@ -125,7 +119,6 @@ impl AuthProviderLogo {
         data: web::Data<AppState>,
         auth_provider_id: String,
         logo: Vec<u8>,
-        content_type: String,
     ) -> Result<(), ErrorResponse> {
         Self::delete(&data, &auth_provider_id).await?;
 

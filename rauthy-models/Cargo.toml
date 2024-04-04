@@ -39,9 +39,11 @@ hex = { version = "0.4", features = ["serde"] }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
 http-serde = { workspace = true }
+image = { workspace = true }
 itertools = { workspace = true }
 jwt-simple = { workspace = true }
 lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls", "tracing"] }
+mime = { workspace = true }
 num_cpus = { workspace = true }
 ## Add openssl-sys as a direct dependency, so it can be cross compiled to
 ## x86_64-unknown-linux-musl using the "vendored" feature below
@@ -73,8 +75,6 @@ uuid = { version = "1", features = ["serde", "v4"] }
 validator = { workspace = true }
 webauthn-rs = { workspace = true }
 webauthn-rs-proto = { workspace = true }
-image = "0.25.1"
-mime = "0.3.17"
 
 [dev-dependencies]
 pretty_assertions = "1"

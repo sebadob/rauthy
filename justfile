@@ -147,6 +147,25 @@ prepare-postgres: migrate-postgres
     DATABASE_URL={{db_url_postgres}} cargo sqlx prepare --workspace
 
 
+# only starts the backend in test mode with sqlite database for easier test debugging
+test-backend-sqlite test="": migrate-sqlite prepare-sqlite
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    clear
+
+    DATABASE_URL={{db_url_sqlite}} cargo build --features sqlite
+    DATABASE_URL={{db_url_sqlite}} ./target/debug/rauthy test
+
+
+# runs a single test with sqlite - needs the backend being started manually
+test-single-sqlite test="":
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    clear
+
+    DATABASE_URL={{db_url_sqlite}} cargo test --features sqlite {{test}}
+
+
 # runs the full set of tests with in-memory sqlite
 test-sqlite test="": migrate-sqlite prepare-sqlite
     #!/usr/bin/env bash

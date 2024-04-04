@@ -1,18 +1,15 @@
 use crate::{map_auth_step, ReqPrincipal};
-use actix_web::body::BoxBody;
-use actix_web::http::header::DispositionType::FormData;
 use actix_web::http::header::{CONTENT_TYPE, LOCATION};
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use actix_web_validator::Json;
-use image::imageops::FilterType;
 use rauthy_common::constants::{HEADER_HTML, HEADER_JSON};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_provider::{
     AuthProvider, AuthProviderCallback, AuthProviderTemplate,
 };
-use rauthy_models::entity::auth_provider_logo::{AuthProviderLogo, AuthProviderLogoRes};
+use rauthy_models::entity::auth_provider_logo::AuthProviderLogo;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
@@ -20,7 +17,7 @@ use rauthy_models::request::{
 };
 use rauthy_models::response::ProviderResponse;
 use rauthy_models::templates::ProviderCallbackHtml;
-use tracing::{debug, error};
+use tracing::debug;
 
 /// GET all upstream auth providers
 ///
@@ -230,7 +227,7 @@ pub async fn get_providers_minimal(
 
     let json_tpl = AuthProviderTemplate::get_all_json_template(&data)
         .await?
-        .unwrap_or_else(|| String::default());
+        .unwrap_or_else(String::default);
 
     Ok(HttpResponse::Ok().insert_header(HEADER_JSON).body(json_tpl))
 }

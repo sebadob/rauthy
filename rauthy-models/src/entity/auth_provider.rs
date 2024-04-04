@@ -1328,7 +1328,7 @@ mod tests {
     // ... just to understand the query syntax
     #[test]
     fn test_json_path() {
-        let value = json!({
+        let value = serde_json::json!({
             "foo": {
                 "bar": ["baz", "bop", 23],
                 "bor": "yes"

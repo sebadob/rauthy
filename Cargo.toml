@@ -11,7 +11,7 @@ members = [
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.22.0-240318"
+version = "0.22.0-240404"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -52,6 +52,7 @@ image = "0.25.1"
 itertools = "0.12"
 jwt-simple = { version = "0.12.6", default-features = false, features = ["pure-rust"] }
 lazy_static = "1"
+mime = "0.3.17"
 mime_guess = "2"
 num_cpus = "1"
 ## Add openssl-sys as a direct dependency, so it can be cross compiled to
