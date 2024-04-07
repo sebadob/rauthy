@@ -764,20 +764,29 @@ impl AuthProviderCallback {
         let (user, provider_mfa_login) = match res.json::<AuthProviderTokenSet>().await {
             Ok(ts) => {
                 // in case of a standard OIDC provider, we only care about the ID token
-                if ts.id_token.is_none() {
-                    let err = format!(
-                        "Did not receive an ID token from {} when one was expected",
-                        provider.issuer,
-                    );
-                    error!("{}", err);
-                    return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
+                if let Some(id_token) = &ts.id_token {
+                    AuthProviderIdClaims::validate_update_user(data, id_token, &provider).await?
+                } else {
+                    // TODO the id_token only exists, if we actually have an OIDC provider.
+                    // If we only get an access token, we need to do another request to the
+                    // userinfo endpoint
+                    todo!("additional request to /userinfo -> did not receive an id_token");
                 }
-                AuthProviderIdClaims::validate_update_user(
-                    data,
-                    ts.id_token.as_deref().unwrap(),
-                    &provider,
-                )
-                .await?
+
+                // if ts.id_token.is_none() {
+                //     let err = format!(
+                //         "Did not receive an ID token from {} when one was expected",
+                //         provider.issuer,
+                //     );
+                //     error!("{}", err);
+                //     return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
+                // }
+                // AuthProviderIdClaims::validate_update_user(
+                //     data,
+                //     ts.id_token.as_deref().unwrap(),
+                //     &provider,
+                // )
+                // .await?
             }
             Err(err) => {
                 let err = format!(
