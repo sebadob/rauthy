@@ -18,8 +18,7 @@
     -> may cause an extraction error in the UI, because no error body is being returned
 
 - BUG: wrong path in the default Dockerfile which points to the DEV TLS certificates
-  -> Should work fine when we just get rid of the `/app` path in the Dockerfile -> test!
-  -> Fix to `Dockerfile` has been done - check with next nightly release
+  -> Fix has been pushed - test and validate with next nightly or beta image build
 - make it possible to define a custom header to extract peer IP's (e.g. CDN headers)
 - BUG: when webauthn key in `../finish` is not accepted -> HTTP 401 -> no error message -> improve UX in UI
 - improve the book with all the new features
