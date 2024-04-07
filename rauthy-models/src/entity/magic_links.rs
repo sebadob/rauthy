@@ -1,9 +1,8 @@
 use crate::app_state::AppState;
-use crate::real_ip_from_req;
 use actix_web::{web, HttpRequest};
 use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE, UNSAFE_NO_RESET_BINDING};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::get_rand;
+use rauthy_common::utils::{get_rand, real_ip_from_req};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use time::OffsetDateTime;

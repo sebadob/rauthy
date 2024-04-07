@@ -67,6 +67,15 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # default: false
 #UNSAFE_NO_RESET_BINDING=false
 
+# Can be set to extract the remote client peer IP from a custom header name
+# instead of the default mechanisms. This is needed when you are running 
+# behind a proxy which does not set the `X-REAL-IP` or `X-FORWARDED-FOR` headers
+# correctly, or for instance when you proxy your requests through a CDN like
+# Cloudflare, which adds custom headers in this case.
+# For instance, if your requests are proxied through cloudflare, your would 
+# set `CF-Connecting-IP`.
+PEER_IP_HEADER_NAME="CF-Connecting-IP"
+
 #####################################
 ############# BACKUPS ###############
 #####################################

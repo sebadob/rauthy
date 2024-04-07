@@ -2,7 +2,7 @@ use actix_web::cookie::SameSite;
 use actix_web::{cookie, web, HttpRequest, HttpResponse};
 use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_common::utils::get_rand;
+use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::magic_links::{MagicLink, MagicLinkUsage};
@@ -13,7 +13,6 @@ use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::WebauthnServiceReq;
 use rauthy_models::events::event::Event;
 use rauthy_models::language::Language;
-use rauthy_models::real_ip_from_req;
 use rauthy_models::request::{
     PasswordResetRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };

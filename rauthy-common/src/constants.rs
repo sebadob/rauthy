@@ -233,6 +233,8 @@ lazy_static! {
         }
     };
 
+    pub static ref PEER_IP_HEADER_NAME: Option<String> = env::var("PEER_IP_HEADER_NAME").ok();
+
     pub static ref POW_IT: u64 = env::var("POW_IT")
         .unwrap_or_else(|_| String::from("1000000"))
         .parse::<u64>()

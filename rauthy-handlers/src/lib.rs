@@ -2,9 +2,8 @@
 
 #![forbid(unsafe_code)]
 
-use actix_web::dev::ServiceRequest;
 use actix_web::{web, HttpRequest, HttpResponse};
-use rauthy_common::constants::{COOKIE_MFA, PROXY_MODE};
+use rauthy_common::constants::COOKIE_MFA;
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::entity::api_keys::ApiKey;
 use rauthy_models::entity::principal::Principal;
@@ -94,26 +93,4 @@ fn add_req_mfa_cookie(resp: &mut HttpResponse, email: String) -> Result<(), Erro
     }
 
     Ok(())
-}
-
-pub fn real_ip_from_req(req: &HttpRequest) -> Option<String> {
-    if *PROXY_MODE {
-        // TODO maybe make this configurable and extract headers in user-configured order?
-        req.connection_info()
-            .realip_remote_addr()
-            .map(|ip| ip.to_string())
-    } else {
-        req.connection_info().peer_addr().map(|ip| ip.to_string())
-    }
-}
-
-pub fn real_ip_from_svc_req(req: &ServiceRequest) -> Option<String> {
-    if *PROXY_MODE {
-        // TODO maybe make this configurable and extract headers in user-configured order?
-        req.connection_info()
-            .realip_remote_addr()
-            .map(|ip| ip.to_string())
-    } else {
-        req.connection_info().peer_addr().map(|ip| ip.to_string())
-    }
 }

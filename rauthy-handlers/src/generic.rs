@@ -1,4 +1,4 @@
-use crate::{real_ip_from_req, Assets, ReqPrincipal};
+use crate::{Assets, ReqPrincipal};
 use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::{header, StatusCode};
 use actix_web::web::Json;
@@ -8,6 +8,7 @@ use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_NAME_LOGIN_DELAY, HEADER_HTML, IDX_LOGIN_TIME, RAUTHY_VERSION,
 };
 use rauthy_common::error_response::ErrorResponse;
+use rauthy_common::utils::real_ip_from_req;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::app_version::LatestAppVersion;

@@ -12,7 +12,6 @@ use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
 use crate::events::event::Event;
 use crate::language::Language;
-use crate::real_ip_from_req;
 use crate::request::{
     NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
 };
@@ -24,7 +23,7 @@ use rauthy_common::constants::{
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
-use rauthy_common::utils::{get_client_ip, new_store_id};
+use rauthy_common::utils::{get_client_ip, new_store_id, real_ip_from_req};
 use redhac::{
     cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel,
 };
