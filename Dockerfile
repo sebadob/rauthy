@@ -27,7 +27,7 @@ ARG DB
 
 USER 10001:10001
 
-WORKDIR /app
+#WORKDIR /app
 
 COPY --chown=10001:10001 /out/rauthy-"$DB"-"$TARGETARCH" ./rauthy
 COPY --chown=10001:10001 --from=builderBackend /work/data ./data
