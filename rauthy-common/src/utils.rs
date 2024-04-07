@@ -1,4 +1,7 @@
+use crate::constants::{PEER_IP_HEADER_NAME, PROXY_MODE};
 use crate::error_response::{ErrorResponse, ErrorResponseType};
+use actix_web::dev::ServiceRequest;
+use actix_web::http::header::HeaderMap;
 use actix_web::HttpRequest;
 use base64::{engine, engine::general_purpose, Engine as _};
 use gethostname::gethostname;
@@ -155,6 +158,49 @@ where
     };
 
     Ok(claims)
+}
+
+// TODO unify real_ip_from_req and real_ip_from_svc_req by using an impl Trait
+#[inline(always)]
+pub fn real_ip_from_req(req: &HttpRequest) -> Option<String> {
+    if let Some(ip) = ip_from_cust_header(req.headers()) {
+        Some(ip)
+    } else if *PROXY_MODE {
+        req.connection_info()
+            .realip_remote_addr()
+            .map(|ip| ip.to_string())
+    } else {
+        req.connection_info().peer_addr().map(|ip| ip.to_string())
+    }
+}
+
+#[inline(always)]
+pub fn real_ip_from_svc_req(req: &ServiceRequest) -> Option<String> {
+    if let Some(ip) = ip_from_cust_header(req.headers()) {
+        Some(ip)
+    } else if *PROXY_MODE {
+        req.connection_info()
+            .realip_remote_addr()
+            .map(|ip| ip.to_string())
+    } else {
+        req.connection_info().peer_addr().map(|ip| ip.to_string())
+    }
+}
+
+#[inline(always)]
+fn ip_from_cust_header(headers: &HeaderMap) -> Option<String> {
+    // If a custom override has been set, try this first and use the default as fallback
+    if let Some(header_name) = &*PEER_IP_HEADER_NAME {
+        if let Some(Ok(value)) = headers.get(header_name).map(|s| s.to_str()) {
+            return Some(value.to_string());
+        }
+        error!(
+            "Was unable to extract the PEER IP from PEER_IP_HEADER_NAME: {} - using fallback",
+            header_name
+        );
+    }
+
+    None
 }
 
 #[cfg(test)]
