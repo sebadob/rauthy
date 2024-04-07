@@ -3,12 +3,12 @@ use actix_web::http::header::{ACCESS_CONTROL_ALLOW_ORIGIN, WWW_AUTHENTICATE};
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use rauthy_common::constants::{DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG};
 use rauthy_common::error_response::ErrorResponse;
+use rauthy_common::utils::real_ip_from_req;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::colors::ColorEntity;
-use rauthy_models::real_ip_from_req;
 use rauthy_models::request::{
     ColorsRequest, DynamicClientRequest, NewClientRequest, UpdateClientRequest,
 };

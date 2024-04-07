@@ -1,4 +1,4 @@
-use crate::{real_ip_from_req, ReqPrincipal};
+use crate::ReqPrincipal;
 use actix_web::http::StatusCode;
 use actix_web::{cookie, delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
 use actix_web_validator::Json;
@@ -7,6 +7,7 @@ use rauthy_common::constants::{
     USER_REG_DOMAIN_RESTRICTION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::real_ip_from_req;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::colors::ColorEntity;

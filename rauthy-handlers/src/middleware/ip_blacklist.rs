@@ -1,4 +1,3 @@
-use crate::real_ip_from_svc_req;
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     web, Error,
@@ -6,6 +5,7 @@ use actix_web::{
 use chrono::Utc;
 use futures::future::LocalBoxFuture;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::real_ip_from_svc_req;
 use rauthy_models::app_state::AppState;
 use rauthy_models::events::ip_blacklist_handler::{IpBlacklistCheck, IpBlacklistReq};
 use rauthy_models::templates::TooManyRequestsHtml;

@@ -1,4 +1,3 @@
-use crate::real_ip_from_svc_req;
 use actix_web::http::header::HeaderValue;
 use actix_web::http::{Method, Uri};
 use actix_web::{
@@ -8,6 +7,7 @@ use actix_web::{
 use futures::future::LocalBoxFuture;
 use lazy_static::lazy_static;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::real_ip_from_svc_req;
 use std::env;
 use std::future::{ready, Ready};
 use std::rc::Rc;
