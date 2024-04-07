@@ -10,6 +10,7 @@
 - BUG: wrong path in the default Dockerfile which points to the DEV TLS certificates
   -> Fix has been pushed - test and validate with next nightly or beta image build
 - create and test a "Login with Github" flow and add documentation about it in the book
+- after matrix-sdk has been fixed / updated, update all deps
 
 ## Stage 1 - essentials
 
