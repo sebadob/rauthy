@@ -20,7 +20,7 @@ use cryptr::utils::secure_random_alnum;
 use cryptr::EncValue;
 use itertools::Itertools;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
+    APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
     IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_CALLBACK_URI, RAUTHY_VERSION,
     UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_REQ_EXP,
 };
@@ -30,6 +30,7 @@ use rauthy_common::utils::{
     new_store_id,
 };
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
+use reqwest::header::ACCEPT;
 use reqwest::tls;
 use ring::digest;
 use serde::{Deserialize, Serialize};
@@ -726,6 +727,7 @@ impl AuthProviderCallback {
         )?;
         let res = client
             .post(&provider.token_endpoint)
+            .header(ACCEPT, APPLICATION_JSON)
             .basic_auth(
                 &provider.client_id,
                 AuthProvider::get_secret_cleartext(&provider.secret)?,
