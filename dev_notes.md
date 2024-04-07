@@ -8,7 +8,7 @@
 
 ## Stage 2 - features - do before v1.0.0
 
-- BUG with Bitwarden Passkey implementation:
+- BUG with Bitwarden Passkey implementation - app bug and Rauthy cannot do anythign about it? -> investigate:
 
 ```
 2024-03-21T09:56:04.903993Z ERROR webauthn_rs_core::core: Credential indicates it is backed up, but has not declared valid backup elligibility
@@ -17,12 +17,8 @@
 
     -> may cause an extraction error in the UI, because no error body is being returned
 
-- UI: client cannot be saved multiple times after saving without reloading -> locked somewhere
-
-+ client name input can contain `undefined` after modifying when it was left empty
-
 - BUG: wrong path in the default Dockerfile which points to the DEV TLS certificates
-  -> Should work fine when we just get rid of the `/app` path in the Dockerfile -> test!
+  -> Fix has been pushed - test and validate with next nightly or beta image build
 - make it possible to define a custom header to extract peer IP's (e.g. CDN headers)
 - BUG: when webauthn key in `../finish` is not accepted -> HTTP 401 -> no error message -> improve UX in UI
 - improve the book with all the new features
