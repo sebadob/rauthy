@@ -37,8 +37,8 @@
 <div class="container" style:width="calc({width} + 12px)">
     <div class="label">
         <div
-            class="labelInner font-label noselect"
-            style:background={disabled ? 'var(--col-gmid)' : 'var(--col-bg)'}
+                class="labelInner font-label noselect"
+                style:background={disabled ? 'var(--col-gmid)' : 'var(--col-bg)'}
         >
             <label for={name}>
                 <slot></slot>
@@ -60,9 +60,9 @@
 
     {#if error}
         <div
-            class="err font-label"
-            style:width={width}
-            transition:slide|global={{ duration: 250 }}
+                class="err font-label"
+                style:width={width}
+                transition:slide|global={{ duration: 250 }}
         >
             {error}
         </div>

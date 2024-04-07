@@ -43,6 +43,12 @@
     let validateRedirectUris;
     let validatePostLogoutUris;
 
+    // This hook is needed to not show `undefined` in inputs after some
+    // values have been emptied manually
+    $: if (client.id) {
+        checkUndefinedValues();
+    }
+
     $: if (success) {
         timer = setTimeout(() => {
             success = false;
@@ -51,6 +57,16 @@
     }
 
     onMount(() => {
+        return () => clearTimeout(timer);
+    });
+
+    let formErrors = {};
+    const schema = yup.object().shape({
+        name: yup.string().trim().matches(REGEX_CLIENT_NAME, "Can only contain characters, numbers and '-'"),
+        access_token_lifetime: yup.number().required('Token Lifetime is required').min(60, 'Cannot be lower than 60').max(86400, 'Cannot be higher than 86400'),
+    });
+
+    function checkUndefinedValues() {
         if (client.redirect_uris[0] === '') {
             client.redirect_uris = [];
         }
@@ -60,14 +76,7 @@
         if (!client.name) {
             client.name = '';
         }
-        return () => clearTimeout(timer);
-    });
-
-    let formErrors = {};
-    const schema = yup.object().shape({
-        name: yup.string().trim().matches(REGEX_CLIENT_NAME, "Can only contain characters, numbers and '-'"),
-        access_token_lifetime: yup.number().required('Token Lifetime is required').min(60, 'Cannot be lower than 60').max(86400, 'Cannot be higher than 86400'),
-    });
+    }
 
     function handleKeyPress(event) {
         if (event.code === 'Enter') {
