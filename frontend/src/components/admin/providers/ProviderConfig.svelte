@@ -2,7 +2,13 @@
     import * as yup from "yup";
     import {extractFormErrors} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
-    import {REGEX_CLIENT_NAME, REGEX_LOWERCASE_SPACE, REGEX_URI, REGEX_PEM} from "../../../utils/constants.js";
+    import {
+        REGEX_CLIENT_NAME,
+        REGEX_LOWERCASE_SPACE,
+        REGEX_URI,
+        REGEX_PEM,
+        REGEX_PROVIDER_SCOPE
+    } from "../../../utils/constants.js";
     import {onMount} from "svelte";
     import {putProvider, putProviderLogo} from "../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";
@@ -55,7 +61,7 @@
         name: yup.string().trim().matches(REGEX_CLIENT_NAME, "Can only contain: 'a-zA-Z0-9À-ÿ- ', length max: 128"),
         client_id: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         client_secret: yup.string().trim().max(256, "Max 256 characters"),
-        scope: yup.string().trim().matches(REGEX_LOWERCASE_SPACE, "Can only contain: 'a-zA-Z0-9-_/ ', length max: 128"),
+        scope: yup.string().trim().matches(REGEX_PROVIDER_SCOPE, "Can only contain: 'a-zA-Z0-9-_/ ', length max: 128"),
         root_pem: yup.string().trim().nullable().matches(REGEX_PEM, "Invalid PEM certificate"),
 
         admin_claim_path: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),

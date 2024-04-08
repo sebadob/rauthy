@@ -13,7 +13,7 @@
     import {
         REGEX_CLIENT_NAME,
         REGEX_LOWERCASE_SPACE,
-        REGEX_PEM,
+        REGEX_PEM, REGEX_PROVIDER_SCOPE,
         REGEX_URI
     } from "../../../utils/constants.js";
     import JsonPathDesc from "./JsonPathDesc.svelte";
@@ -65,7 +65,7 @@
         // maybe additional ones in the future like client_logo
     }
     // TODO add "the big ones" as templates in the future
-    let modes = ['OIDC', 'Auto', 'Custom', 'Google'];
+    let modes = ['OIDC', 'Auto', 'Custom', 'Github', 'Google'];
     let mode = modes[0];
     $: isAuto = mode === modes[1];
     $: isCustom = mode === modes[2];
@@ -73,6 +73,34 @@
 
     // hook for templated values
     $: if (!isAuto && !isCustom && !isOidc) {
+        if (mode === 'Github') {
+            config = {
+                enabled: true,
+
+                // fixed values after lookup
+                issuer: 'github.com',
+                danger_allow_insecure: false,
+                authorization_endpoint: 'https://github.com/login/oauth/authorize',
+                token_endpoint: 'https://github.com/login/oauth/access_token',
+                token_auth_method_basic: false,
+                userinfo_endpoint: 'https://api.github.com/user',
+                use_pkce: false,
+
+                // user defined values
+                name: 'Github',
+                client_id: '',
+                client_secret: '',
+                scope: 'read:user user:email',
+                root_pem: null,
+
+                admin_claim_path: null,
+                admin_claim_value: null,
+                mfa_claim_path: '$.two_factor_authentication',
+                mfa_claim_value: 'true',
+                // maybe additional ones in the future like client_logo
+            }
+        }
+
         if (mode === 'Google') {
             configLookup = {
                 issuer: 'accounts.google.com',
@@ -96,7 +124,7 @@
         name: yup.string().trim().matches(REGEX_CLIENT_NAME, "Can only contain: 'a-zA-Z0-9À-ÿ- ', length max: 128"),
         client_id: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         client_secret: yup.string().trim().max(256, "Max 256 characters"),
-        scope: yup.string().trim().matches(REGEX_LOWERCASE_SPACE, "Can only contain: 'a-zA-Z0-9-_/ ', length max: 128"),
+        scope: yup.string().trim().matches(REGEX_PROVIDER_SCOPE, "Can only contain: 'a-zA-Z0-9-_/ ', length max: 128"),
         root_pem: yup.string().trim().nullable().matches(REGEX_PEM, "Invalid PEM certificate"),
 
         admin_claim_path: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
