@@ -138,8 +138,10 @@ lazy_static! {
         } else {
             PUB_URL.to_string()
         };
-        // format!("{}%3A%2F%2F{}%2Fauth%2Fv1%2Fproviders%2Fcallback", scheme, *PUB_URL)
-        format!("{}%3A%2F%2F{}%2Fauth%2Fv1%2Fproviders%2Fcallback", scheme, pub_url)
+        format!("{}://{}/auth/v1/providers/callback", scheme, pub_url)
+    };
+    pub static ref PROVIDER_CALLBACK_URI_ENCODED: String = {
+        PROVIDER_CALLBACK_URI.replace(':', "%3A").replace('/', "%2F")
     };
     pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
         let scheme = if *DEV_MODE && *DEV_DPOP_HTTP { "http" } else { "https" };
