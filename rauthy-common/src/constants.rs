@@ -89,6 +89,7 @@ lazy_static! {
 
     pub static ref RE_ATTR: Regex = Regex::new(r"^[a-zA-Z0-9-_/]{2,32}$").unwrap();
     pub static ref RE_ATTR_DESC: Regex = Regex::new(r"^[a-zA-Z0-9-_/\s]{0,128}$").unwrap();
+    pub static ref RE_AUTH_PROVIDER_SCOPE: Regex = Regex::new(r"^[a-z0-9-_/:\s]{0,128}$").unwrap();
     pub static ref RE_ALNUM: Regex = Regex::new(r"^[a-zA-Z0-9]+$").unwrap();
     pub static ref RE_ALNUM_24: Regex = Regex::new(r"^[a-zA-Z0-9]{24}$").unwrap();
     pub static ref RE_ALNUM_48: Regex = Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap();

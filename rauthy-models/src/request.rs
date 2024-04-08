@@ -486,8 +486,8 @@ pub struct ProviderRequest {
     /// Validation: max length is 256
     #[validate(length(max = 256))]
     pub client_secret: Option<String>,
-    /// Validation: `[a-z0-9-_/\s]{2,128}`
-    #[validate(regex(path = "RE_LOWERCASE_SPACE", code = "[a-z0-9-_/\\s]{2,128}"))]
+    /// Validation: `[a-z0-9-_/:\s]{0,128}`
+    #[validate(regex(path = "RE_AUTH_PROVIDER_SCOPE", code = "[a-z0-9-_/:\\s]{0,128}"))]
     pub scope: String,
     /// Validation: `(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)`
     #[validate(regex(
@@ -508,9 +508,6 @@ pub struct ProviderRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
     pub mfa_claim_value: Option<String>,
-    // TODO implement
-    // pub logo: Option<Vec<u8>>,
-    // pub logo_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
