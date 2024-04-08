@@ -1,5 +1,6 @@
 use crate::{
-    api_keys, blacklist, clients, events, generic, groups, oidc, roles, scopes, sessions, users,
+    api_keys, auth_providers, blacklist, clients, events, generic, groups, oidc, roles, scopes,
+    sessions, users,
 };
 use actix_web::web;
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
@@ -22,6 +23,8 @@ use utoipa::{openapi, OpenApi};
         api_keys::delete_api_key,
         api_keys::get_api_key_test,
         api_keys::put_api_key_secret,
+
+        auth_providers::AuthProviderType,
 
         blacklist::get_blacklist,
         blacklist::post_blacklist,

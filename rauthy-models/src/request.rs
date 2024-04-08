@@ -1,4 +1,5 @@
 use crate::entity::api_keys::ApiKeyAccess;
+use crate::entity::auth_provider::AuthProviderType;
 use crate::entity::jwk::JwkKeyPairAlg;
 use crate::events::event::{EventLevel, EventType};
 use crate::language::Language;
@@ -460,6 +461,7 @@ pub struct ProviderRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\s]{2,128}]`
     #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
     pub name: String,
+    pub typ: AuthProviderType,
     pub enabled: bool,
 
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`

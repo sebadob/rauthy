@@ -47,16 +47,21 @@ use time::OffsetDateTime;
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
 pub enum AuthProviderType {
+    Custom,
+    Github,
+    Google,
     OIDC,
-    // this can be extended in the future tu support special providers that do not
-    // work with the oidc standards
 }
 
 impl AuthProviderType {
     pub fn as_str(&self) -> &str {
         match self {
+            Self::Custom => "custom",
+            Self::Github => "github",
+            Self::Google => "google",
             Self::OIDC => "oidc",
         }
     }
@@ -67,6 +72,9 @@ impl TryFrom<&str> for AuthProviderType {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let slf = match value {
+            "custom" => Self::Custom,
+            "github" => Self::Github,
+            "google" => Self::Google,
             "oidc" => Self::OIDC,
             _ => {
                 return Err(ErrorResponse::new(
@@ -82,7 +90,7 @@ impl TryFrom<&str> for AuthProviderType {
 impl From<String> for AuthProviderType {
     /// Defaults to Self::OIDC in case of an error
     fn from(value: String) -> Self {
-        Self::try_from(value.as_str()).unwrap_or(Self::OIDC)
+        Self::try_from(value.as_str()).unwrap_or(Self::Custom)
     }
 }
 
