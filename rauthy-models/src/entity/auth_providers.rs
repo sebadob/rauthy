@@ -1132,7 +1132,7 @@ impl AuthProviderIdClaims<'_> {
         debug!("user_opt:\n{:?}", user_opt);
 
         // `rauthy_admin` role mapping by upstream claim
-        let mut should_be_rauthy_admin = false;
+        let mut should_be_rauthy_admin = None;
         if let Some(path) = &provider.admin_claim_path {
             if provider.admin_claim_value.is_none() {
                 return Err(ErrorResponse::new(
@@ -1157,10 +1157,11 @@ impl AuthProviderIdClaims<'_> {
                     // let admin_value =
                     //     value::Value::from_str(provider.admin_claim_value.as_deref().unwrap())
                     //         .expect("json value to build fine");
+                    should_be_rauthy_admin = Some(false);
                     for value in path.query(&json).all() {
                         debug!("value in admin mapping check: {}", value,);
                         if *value == admin_value {
-                            should_be_rauthy_admin = true;
+                            should_be_rauthy_admin = Some(true);
                             break;
                         }
                     }
@@ -1260,18 +1261,24 @@ impl AuthProviderIdClaims<'_> {
             // should this user be a rauthy admin?
             let roles = user.get_roles();
             let roles_str = roles.iter().map(|r| r.as_str()).collect::<Vec<&str>>();
-            if should_be_rauthy_admin {
-                if !roles_str.contains(&"rauthy_admin") {
-                    let mut new_roles = Vec::with_capacity(roles.len() + 1);
-                    new_roles.push("rauthy_admin".to_string());
-                    roles.into_iter().for_each(|r| new_roles.push(r));
-                    user.roles = new_roles.join(",");
-                }
-            } else if roles_str.contains(&"rauthy_admin") {
-                if roles.len() == 1 {
-                    user.roles = "".to_string();
-                } else {
-                    user.roles = roles.into_iter().filter(|r| r != "rauthy_admin").join(",");
+
+            // We will only re-map the rauthy_admin role if the claim mapping is configured.
+            // Otherwise, we would remove an admin role from a user it has been manually added for,
+            // which would not be the expected outcome.
+            if let Some(should_be_admin) = should_be_rauthy_admin {
+                if should_be_admin {
+                    if !roles_str.contains(&"rauthy_admin") {
+                        let mut new_roles = Vec::with_capacity(roles.len() + 1);
+                        new_roles.push("rauthy_admin".to_string());
+                        roles.into_iter().for_each(|r| new_roles.push(r));
+                        user.roles = new_roles.join(",");
+                    }
+                } else if roles_str.contains(&"rauthy_admin") {
+                    if roles.len() == 1 {
+                        user.roles = "".to_string();
+                    } else {
+                        user.roles = roles.into_iter().filter(|r| r != "rauthy_admin").join(",");
+                    }
                 }
             }
 
