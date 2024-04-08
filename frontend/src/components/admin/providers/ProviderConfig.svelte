@@ -348,7 +348,7 @@
     <div class="logo">
         <ImageUploadRaw bind:image={logo}/>
         {#if !isLoading}
-            <img class="logo" src="{`/auth/v1/providers/${provider.id}/img`}" alt="No Logo Available"/>
+            <img src="{`/auth/v1/providers/${provider.id}/img`}" alt="No Logo Available"/>
         {/if}
     </div>
 
@@ -404,6 +404,10 @@
 
     .logo {
         margin: 1rem .25rem;
+    }
+
+    .logo > img {
+        max-height: 32px;
     }
 
     .ml {

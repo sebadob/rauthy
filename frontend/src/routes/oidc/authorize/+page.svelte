@@ -267,7 +267,6 @@
             provider_id: id,
             pkce_challenge,
         };
-        console.log(data);
         let res = await postProviderLogin(data);
         if (res.ok) {
             const xsrfToken = await res.text();
