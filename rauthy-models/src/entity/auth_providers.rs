@@ -369,9 +369,7 @@ impl AuthProvider {
             id,
             name: req.name,
             enabled: req.enabled,
-            // for now, this will always be OIDC
-            // preparation for future special providers
-            typ: AuthProviderType::OIDC,
+            typ: req.typ,
             issuer: req.issuer,
             authorization_endpoint: req.authorization_endpoint,
             token_endpoint: req.token_endpoint,
@@ -1182,7 +1180,6 @@ impl AuthProviderIdClaims<'_> {
                 ));
             }
 
-            // let path = JsonPath::parse("$.foo.bar")?;
             debug!("try validating mfa_claim_path: {:?}", path);
             match JsonPath::parse(path) {
                 Ok(path) => {
@@ -1191,14 +1188,10 @@ impl AuthProviderIdClaims<'_> {
                     // between updates
                     let json =
                         value::Value::from_str(json_str.as_ref()).expect("json to build fine");
-                    // let json = value::Value::from(json_str.as_ref());
                     let mfa_value =
                         value::Value::from(provider.mfa_claim_value.as_deref().unwrap());
-                    // let mfa_value =
-                    //     value::Value::from_str(provider.mfa_claim_value.as_deref().unwrap())
-                    //         .expect("json value to build fine");
                     for value in path.query(&json).all() {
-                        debug!("value in mfa mapping check: {}", value,);
+                        debug!("value in mfa mapping check: {}", value);
                         if *value == mfa_value {
                             provider_mfa_login = ProviderMfaLogin::Yes;
                             break;
@@ -1295,11 +1288,15 @@ impl AuthProviderIdClaims<'_> {
                 email: self.email.unwrap().to_string(),
                 given_name: self.given_name().to_string(),
                 family_name: self.family_name().to_string(),
-                roles: if should_be_rauthy_admin {
-                    "rauthy_admin".to_string()
-                } else {
-                    String::default()
-                },
+                roles: should_be_rauthy_admin
+                    .map(|should_be_admin| {
+                        if should_be_admin {
+                            "rauthy_admin".to_string()
+                        } else {
+                            String::default()
+                        }
+                    })
+                    .unwrap_or_default(),
                 enabled: true,
                 email_verified: self.email_verified.unwrap_or(false),
                 last_login: Some(now),
