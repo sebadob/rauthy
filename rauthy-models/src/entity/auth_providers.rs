@@ -10,7 +10,7 @@ use crate::request::{
     ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
     UserValuesRequest,
 };
-use crate::response::ProviderLookupResponse;
+use crate::response::{ProviderLinkedUserResponse, ProviderLookupResponse};
 use crate::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
 use actix_web::cookie::Cookie;
 use actix_web::http::header;
@@ -243,6 +243,21 @@ impl AuthProvider {
         .await?;
 
         Ok(res)
+    }
+
+    pub async fn find_linked_users(
+        data: &web::Data<AppState>,
+        id: &str,
+    ) -> Result<Vec<ProviderLinkedUserResponse>, ErrorResponse> {
+        let users = query_as!(
+            ProviderLinkedUserResponse,
+            "SELECT id, email FROM users WHERE auth_provider_id = $1",
+            id
+        )
+        .fetch_all(&data.db)
+        .await?;
+
+        Ok(users)
     }
 
     pub async fn delete(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {

@@ -289,6 +289,36 @@ pub async fn delete_provider(
     Ok(HttpResponse::Ok().finish())
 }
 
+/// GET information if it's safe to delete this provider
+///
+/// This will check if existing users are linked to this provider.
+///
+/// **Permissions**
+/// - `rauthy_admin`
+#[utoipa::path(
+    get,
+    path = "/providers/{id}/delete_safe",
+    tag = "providers",
+    responses(
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[get("/providers/{id}/delete_safe")]
+pub async fn get_provider_delete_safe(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    let linked_users = AuthProvider::find_linked_users(&data, &id.into_inner()).await?;
+    if linked_users.is_empty() {
+        Ok(HttpResponse::Ok().json(linked_users))
+    } else {
+        Ok(HttpResponse::NotAcceptable().json(linked_users))
+    }
+}
+
 /// PUT upload an image / icon for an auth provider
 ///
 /// The image can only be max 10MB in size and will be minified automatically.

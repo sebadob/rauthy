@@ -383,6 +383,12 @@ impl TryFrom<AuthProvider> for ProviderResponse {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct ProviderLinkedUserResponse {
+    pub id: String,
+    pub email: String,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct ProviderLookupResponse<'a> {
     pub issuer: String,
     pub authorization_endpoint: String,

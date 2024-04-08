@@ -206,6 +206,7 @@ use utoipa::{openapi, OpenApi};
             response::Argon2ParamsResponse,
             response::PasswordPolicyResponse,
             response::ProviderResponse,
+            response::ProviderLinkedUserResponse,
             response::ProviderLookupResponse,
             response::ScopeResponse,
             response::SessionResponse,

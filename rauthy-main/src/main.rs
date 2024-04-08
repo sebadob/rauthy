@@ -458,6 +458,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(auth_providers::get_providers_minimal)
                             .service(auth_providers::post_provider)
                             .service(auth_providers::post_provider_login)
+                            .service(auth_providers::get_provider_delete_safe)
                             .service(auth_providers::post_provider_lookup)
                             .service(auth_providers::get_provider_callback_html)
                             .service(auth_providers::post_provider_callback)
