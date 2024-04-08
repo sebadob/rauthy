@@ -40,7 +40,6 @@ use serde_json::value;
 use serde_json_path::JsonPath;
 use sqlx::{query, query_as};
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::fmt::Write;
 use std::str::FromStr;
 use std::time::Duration;
@@ -766,7 +765,6 @@ impl AuthProviderCallback {
                     let claims_bytes = AuthProviderIdClaims::self_as_bytes_from_token(&id_token)?;
                     let claims = AuthProviderIdClaims::try_from(claims_bytes.as_slice())?;
                     claims.validate_update_user(data, &provider).await?
-                // AuthProviderIdClaims::validate_update_user(data, &id_token, &provider).await?
                 } else if let Some(access_token) = ts.access_token {
                     // the id_token only exists, if we actually have an OIDC provider.
                     // If we only get an access token, we need to do another request to the
@@ -802,43 +800,6 @@ impl AuthProviderCallback {
                 return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
             }
         };
-
-        // let (user, provider_mfa_login) = match res.json::<AuthProviderTokenSet>().await {
-        //     Ok(ts) => {
-        //         // in case of a standard OIDC provider, we only care about the ID token
-        //         if let Some(id_token) = &ts.id_token {
-        //             AuthProviderIdClaims::validate_update_user(data, id_token, &provider).await?
-        //         } else {
-        //             // TODO the id_token only exists, if we actually have an OIDC provider.
-        //             // If we only get an access token, we need to do another request to the
-        //             // userinfo endpoint
-        //             todo!("additional request to /userinfo -> did not receive an id_token");
-        //         }
-        //
-        //         // if ts.id_token.is_none() {
-        //         //     let err = format!(
-        //         //         "Did not receive an ID token from {} when one was expected",
-        //         //         provider.issuer,
-        //         //     );
-        //         //     error!("{}", err);
-        //         //     return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
-        //         // }
-        //         // AuthProviderIdClaims::validate_update_user(
-        //         //     data,
-        //         //     ts.id_token.as_deref().unwrap(),
-        //         //     &provider,
-        //         // )
-        //         // .await?
-        //     }
-        //     Err(err) => {
-        //         let err = format!(
-        //             "Deserializing /token response from auth provider {}: {}",
-        //             provider.client_id, err
-        //         );
-        //         error!("{}", err);
-        //         return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
-        //     }
-        // };
 
         user.check_enabled()?;
         user.check_expired()?;
@@ -1020,30 +981,6 @@ enum ProviderMfaLogin {
     No,
 }
 
-// #[derive(Debug, Deserialize)]
-// pub struct AuthProviderIdClaims<'a> {
-//     // pub iss: &'a str,
-//     pub sub: Option<&'a str>,
-//     pub id: Option<&'a str>,
-//     pub uid: Option<&'a str>,
-//
-//     // JsonValue instead of just &str because `aud` can be a single value or an array
-//     pub aud: Option<serde_json::Value>,
-//     pub azp: Option<&'a str>,
-//     pub amr: Option<Vec<&'a str>>,
-//     // even though `email` is mandatory for Rauthy, we set it to optional for
-//     // the deserialization to have more control over the error message being returned
-//     pub email: Option<&'a str>,
-//     pub email_verified: Option<bool>,
-//     pub given_name: Option<&'a str>,
-//     pub family_name: Option<&'a str>,
-//     pub address: Option<AuthProviderAddressClaims<'a>>,
-//     pub birthdate: Option<&'a str>,
-//     pub locale: Option<&'a str>,
-//     pub phone: Option<&'a str>,
-//
-//     json_bytes: Option<&'a [u8]>,
-// }
 #[derive(Debug, Deserialize)]
 struct AuthProviderIdClaims<'a> {
     // pub iss: &'a str,
@@ -1055,7 +992,6 @@ struct AuthProviderIdClaims<'a> {
     // aud / azp is not being validated, because it works with OIDC only anyway
     // aud: Option<&'a str>,
     // azp: Option<&'a str>,
-    amr: Option<Vec<&'a str>>,
     // even though `email` is mandatory for Rauthy, we set it to optional for
     // the deserialization to have more control over the error message being returned
     email: Option<&'a str>,
@@ -1200,7 +1136,7 @@ impl AuthProviderIdClaims<'_> {
             debug!("try validating admin_claim_path: {:?}", path);
             match JsonPath::parse(path) {
                 Ok(path) => {
-                    let json_str = String::from_utf8_lossy(self.json_bytes.as_deref().unwrap());
+                    let json_str = String::from_utf8_lossy(self.json_bytes.unwrap());
                     // TODO the `json` and `admin_value` here need to have exactly this parsing
                     // combination. As soon as we change one of them, the lookup fails.
                     // Try to find out why the serde_json_path hast a problem with the lookup
@@ -1241,7 +1177,7 @@ impl AuthProviderIdClaims<'_> {
             debug!("try validating mfa_claim_path: {:?}", path);
             match JsonPath::parse(path) {
                 Ok(path) => {
-                    let json_str = String::from_utf8_lossy(self.json_bytes.as_deref().unwrap());
+                    let json_str = String::from_utf8_lossy(self.json_bytes.unwrap());
                     // TODO the same restrictions as above -> add CI tests to always validate
                     // between updates
                     let json =
@@ -1352,10 +1288,7 @@ impl AuthProviderIdClaims<'_> {
                 enabled: true,
                 email_verified: self.email_verified.unwrap_or(false),
                 last_login: Some(now),
-                language: self
-                    .locale
-                    .map(Language::from)
-                    .unwrap_or(Language::default()),
+                language: self.locale.map(Language::from).unwrap_or_default(),
                 auth_provider_id: Some(provider.id.clone()),
                 federation_uid: Some(claims_user_id.to_string()),
                 ..Default::default()
@@ -1414,11 +1347,8 @@ impl AuthProviderIdClaims<'_> {
 #[derive(Debug, Deserialize)]
 struct AuthProviderTokenSet {
     pub access_token: Option<String>,
-    pub token_type: Option<String>,
+    // pub token_type: Option<String>,
     pub id_token: Option<String>,
-    // pub expires_in: i32,
-    pub refresh_token: Option<String>,
-
     pub error: Option<String>,
     pub error_description: Option<String>,
 }
