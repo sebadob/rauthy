@@ -9,7 +9,7 @@ use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
-use rauthy_models::entity::auth_provider::AuthProviderTemplate;
+use rauthy_models::entity::auth_providers::AuthProviderTemplate;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JWKS};
 use rauthy_models::entity::sessions::Session;

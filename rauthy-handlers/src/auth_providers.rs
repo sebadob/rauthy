@@ -6,10 +6,10 @@ use actix_web_validator::Json;
 use rauthy_common::constants::{HEADER_HTML, HEADER_JSON};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
-use rauthy_models::entity::auth_provider::{
+use rauthy_models::entity::auth_provider_logo::AuthProviderLogo;
+use rauthy_models::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderTemplate,
 };
-use rauthy_models::entity::auth_provider_logo::AuthProviderLogo;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::language::Language;
 use rauthy_models::request::{

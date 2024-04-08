@@ -1,5 +1,5 @@
 use crate::entity::api_keys::ApiKeyAccess;
-use crate::entity::auth_provider::AuthProviderType;
+use crate::entity::auth_providers::AuthProviderType;
 use crate::entity::jwk::JwkKeyPairAlg;
 use crate::events::event::{EventLevel, EventType};
 use crate::language::Language;
@@ -8,10 +8,10 @@ use actix_web::HttpRequest;
 use css_color::Srgb;
 use rauthy_common::constants::{
     RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_ALNUM_SPACE, RE_API_KEY, RE_APP_ID, RE_ATTR,
-    RE_ATTR_DESC, RE_CHALLENGE, RE_CITY, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE,
-    RE_CODE_VERIFIER, RE_DATE_STR, RE_FLOWS, RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE,
-    RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_PEM, RE_PHONE, RE_STREET, RE_TOKEN_ENDPOINT_AUTH_METHOD,
-    RE_URI, RE_USER_NAME,
+    RE_ATTR_DESC, RE_AUTH_PROVIDER_SCOPE, RE_CHALLENGE, RE_CITY, RE_CLIENT_ID_EPHEMERAL,
+    RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_CODE_VERIFIER, RE_DATE_STR, RE_FLOWS, RE_GRANT_TYPES,
+    RE_GROUPS, RE_LOWERCASE, RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_PEM, RE_PHONE, RE_STREET,
+    RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI, RE_USER_NAME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::base64_decode;

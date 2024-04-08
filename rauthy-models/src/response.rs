@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
 use crate::entity::api_keys::{ApiKey, ApiKeyAccess};
-use crate::entity::auth_provider::AuthProvider;
+use crate::entity::auth_providers::{AuthProvider, AuthProviderType};
 use crate::entity::clients::Client;
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType, JWKS};
@@ -331,6 +331,7 @@ impl From<PasswordPolicy> for PasswordPolicyResponse {
 pub struct ProviderResponse {
     pub id: String,
     pub name: String,
+    pub typ: AuthProviderType,
     pub enabled: bool,
 
     pub issuer: String,
@@ -351,8 +352,6 @@ pub struct ProviderResponse {
     pub use_pkce: bool,
 
     pub root_pem: Option<String>,
-    // pub logo: Option<Vec<u8>>,
-    // pub logo_type: Option<String>,
 }
 
 impl TryFrom<AuthProvider> for ProviderResponse {
@@ -363,6 +362,7 @@ impl TryFrom<AuthProvider> for ProviderResponse {
         Ok(Self {
             id: value.id,
             name: value.name,
+            typ: value.typ,
             enabled: value.enabled,
             issuer: value.issuer,
             authorization_endpoint: value.authorization_endpoint,

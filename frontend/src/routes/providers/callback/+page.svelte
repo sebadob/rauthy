@@ -93,8 +93,6 @@
             <div class="error">
                 {error}
             </div>
-            <!--{:else}-->
-            <!--            <Loading/>-->
         {/if}
 
         <LangSelector absolute/>

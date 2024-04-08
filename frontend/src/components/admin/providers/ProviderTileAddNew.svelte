@@ -41,6 +41,7 @@
     };
     let config = {
         enabled: true,
+        typ: 'oidc',
 
         // fixed values after lookup
         issuer: '',
@@ -70,10 +71,12 @@
     $: isAuto = mode === modes[1];
     $: isCustom = mode === modes[2];
     $: isOidc = mode === modes[0];
+    $: isSpecial = !isAuto && !isCustom && !isOidc;
 
     // hook for templated values
     $: if (!isAuto && !isCustom && !isOidc) {
         if (mode === 'Github') {
+            // Github does not implement metadata lookup -> configure manually
             config = {
                 enabled: true,
 
@@ -99,9 +102,8 @@
                 mfa_claim_value: 'true',
                 // maybe additional ones in the future like client_logo
             }
-        }
-
-        if (mode === 'Google') {
+        } else if (mode === 'Google') {
+            // Google supports oidc metadata lookup
             configLookup = {
                 issuer: 'accounts.google.com',
                 metadata_url: null,
@@ -110,8 +112,6 @@
             }
             onSubmitLookup();
         }
-
-        // TODO add more templates for logins like Github and so on...
     }
 
     let formErrors = {};
@@ -175,7 +175,13 @@
             config.root_pem = config.root_pem.trim();
         }
 
+        if (isAuto) {
+            config.typ = 'custom';
+        } else {
+            config.typ = mode.toLowerCase();
+        }
         config.scope = config.scope.trim();
+
         let res = await postProvider(config);
         if (res.ok) {
             success = true;
@@ -351,7 +357,7 @@
             <Button on:click={onSubmitLookup} bind:isLoading level={1} width="6rem">
                 LOOKUP
             </Button>
-        {:else if isCustom || lookupSuccess}
+        {:else if isSpecial || isCustom || lookupSuccess}
             {#if showRootPem}
                 <Textarea
                         rows={17}
