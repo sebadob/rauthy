@@ -273,8 +273,8 @@ impl User {
         sqlx::query!(
             r#"INSERT INTO USERS
             (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-            language, user_expires, auth_provider_id, federation_uid)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"#,
+            last_login, language, user_expires, auth_provider_id, federation_uid)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
             new_user.id,
             new_user.email,
             new_user.given_name,
@@ -284,6 +284,7 @@ impl User {
             new_user.enabled,
             new_user.email_verified,
             new_user.created_at,
+            new_user.last_login,
             lang,
             new_user.user_expires,
             new_user.auth_provider_id,

@@ -3,7 +3,7 @@ use cryptr::{EncKeys, EncValue};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::ApiKeyEntity;
-use rauthy_models::entity::auth_provider::AuthProvider;
+use rauthy_models::entity::auth_providers::AuthProvider;
 use rauthy_models::entity::clients::Client;
 use tracing::{error, info};
 

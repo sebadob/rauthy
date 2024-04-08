@@ -89,6 +89,7 @@ lazy_static! {
 
     pub static ref RE_ATTR: Regex = Regex::new(r"^[a-zA-Z0-9-_/]{2,32}$").unwrap();
     pub static ref RE_ATTR_DESC: Regex = Regex::new(r"^[a-zA-Z0-9-_/\s]{0,128}$").unwrap();
+    pub static ref RE_AUTH_PROVIDER_SCOPE: Regex = Regex::new(r"^[a-z0-9-_/:\s]{0,128}$").unwrap();
     pub static ref RE_ALNUM: Regex = Regex::new(r"^[a-zA-Z0-9]+$").unwrap();
     pub static ref RE_ALNUM_24: Regex = Regex::new(r"^[a-zA-Z0-9]{24}$").unwrap();
     pub static ref RE_ALNUM_48: Regex = Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap();
@@ -138,8 +139,10 @@ lazy_static! {
         } else {
             PUB_URL.to_string()
         };
-        // format!("{}%3A%2F%2F{}%2Fauth%2Fv1%2Fproviders%2Fcallback", scheme, *PUB_URL)
-        format!("{}%3A%2F%2F{}%2Fauth%2Fv1%2Fproviders%2Fcallback", scheme, pub_url)
+        format!("{}://{}/auth/v1/providers/callback", scheme, pub_url)
+    };
+    pub static ref PROVIDER_CALLBACK_URI_ENCODED: String = {
+        PROVIDER_CALLBACK_URI.replace(':', "%3A").replace('/', "%2F")
     };
     pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
         let scheme = if *DEV_MODE && *DEV_DPOP_HTTP { "http" } else { "https" };

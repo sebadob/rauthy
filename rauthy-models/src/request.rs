@@ -1,4 +1,5 @@
 use crate::entity::api_keys::ApiKeyAccess;
+use crate::entity::auth_providers::AuthProviderType;
 use crate::entity::jwk::JwkKeyPairAlg;
 use crate::events::event::{EventLevel, EventType};
 use crate::language::Language;
@@ -7,10 +8,10 @@ use actix_web::HttpRequest;
 use css_color::Srgb;
 use rauthy_common::constants::{
     RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_ALNUM_SPACE, RE_API_KEY, RE_APP_ID, RE_ATTR,
-    RE_ATTR_DESC, RE_CHALLENGE, RE_CITY, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE,
-    RE_CODE_VERIFIER, RE_DATE_STR, RE_FLOWS, RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE,
-    RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_PEM, RE_PHONE, RE_STREET, RE_TOKEN_ENDPOINT_AUTH_METHOD,
-    RE_URI, RE_USER_NAME,
+    RE_ATTR_DESC, RE_AUTH_PROVIDER_SCOPE, RE_CHALLENGE, RE_CITY, RE_CLIENT_ID_EPHEMERAL,
+    RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_CODE_VERIFIER, RE_DATE_STR, RE_FLOWS, RE_GRANT_TYPES,
+    RE_GROUPS, RE_LOWERCASE, RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_PEM, RE_PHONE, RE_STREET,
+    RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI, RE_USER_NAME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::base64_decode;
@@ -460,6 +461,7 @@ pub struct ProviderRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\s]{2,128}]`
     #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
     pub name: String,
+    pub typ: AuthProviderType,
     pub enabled: bool,
 
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
@@ -486,8 +488,8 @@ pub struct ProviderRequest {
     /// Validation: max length is 256
     #[validate(length(max = 256))]
     pub client_secret: Option<String>,
-    /// Validation: `[a-z0-9-_/\s]{2,128}`
-    #[validate(regex(path = "RE_LOWERCASE_SPACE", code = "[a-z0-9-_/\\s]{2,128}"))]
+    /// Validation: `[a-z0-9-_/:\s]{0,128}`
+    #[validate(regex(path = "RE_AUTH_PROVIDER_SCOPE", code = "[a-z0-9-_/:\\s]{0,128}"))]
     pub scope: String,
     /// Validation: `(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)`
     #[validate(regex(
@@ -508,9 +510,6 @@ pub struct ProviderRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
     pub mfa_claim_value: Option<String>,
-    // TODO implement
-    // pub logo: Option<Vec<u8>>,
-    // pub logo_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]

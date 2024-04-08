@@ -30,10 +30,6 @@
 {err}
 
 <div class="content">
-    <b id="caution">
-        CAUTION: This page is for testing only and is not yet fully operational!
-    </b>
-
     <FederationTileAddNew onSave={onSave}/>
 
     <div id="federation">
@@ -50,9 +46,5 @@
 <style>
     #federation div:nth-of-type(2n + 1) {
         background: linear-gradient(90deg, var(--col-ghigh) 35rem, var(--col-bg) 50rem);
-    }
-
-    #caution {
-        color: red;
     }
 </style>

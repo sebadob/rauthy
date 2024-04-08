@@ -21,6 +21,12 @@
 
     onMount(async () => {
         const query = getQueryParams();
+        if (query.error) {
+            // if we have any error, do not proceed like normal and only show the error
+            error = `${query.error}: ${query.error_description}`;
+            return;
+        }
+
         let data = {
             state: query.state,
             code: query.code,
@@ -87,8 +93,6 @@
             <div class="error">
                 {error}
             </div>
-            <!--{:else}-->
-            <!--            <Loading/>-->
         {/if}
 
         <LangSelector absolute/>

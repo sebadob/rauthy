@@ -265,6 +265,13 @@ export async function deleteProvider(id) {
     });
 }
 
+export async function getProviderDeleteSafe(id) {
+    return await fetch(`/auth/v1/providers/${id}/delete_safe`, {
+        method: 'GET',
+        headers: getHeaders(),
+    });
+}
+
 export async function putProviderLogo(id, data) {
     const formData = new FormData();
     formData.append("logo", data);

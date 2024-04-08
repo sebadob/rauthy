@@ -10,7 +10,7 @@ use crate::request::{
     ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
     UserValuesRequest,
 };
-use crate::response::ProviderLookupResponse;
+use crate::response::{ProviderLinkedUserResponse, ProviderLookupResponse};
 use crate::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
 use actix_web::cookie::Cookie;
 use actix_web::http::header;
@@ -18,11 +18,13 @@ use actix_web::http::header::HeaderValue;
 use actix_web::{cookie, web, HttpRequest};
 use cryptr::utils::secure_random_alnum;
 use cryptr::EncValue;
+use image::EncodableLayout;
 use itertools::Itertools;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
-    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_CALLBACK_URI, RAUTHY_VERSION,
-    UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_REQ_EXP,
+    APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
+    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_CALLBACK_URI,
+    PROVIDER_CALLBACK_URI_ENCODED, RAUTHY_VERSION, UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
+    WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{
@@ -30,6 +32,7 @@ use rauthy_common::utils::{
     new_store_id,
 };
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
+use reqwest::header::{ACCEPT, AUTHORIZATION};
 use reqwest::tls;
 use ring::digest;
 use serde::{Deserialize, Serialize};
@@ -44,16 +47,21 @@ use time::OffsetDateTime;
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
 pub enum AuthProviderType {
+    Custom,
+    Github,
+    Google,
     OIDC,
-    // this can be extended in the future tu support special providers that do not
-    // work with the oidc standards
 }
 
 impl AuthProviderType {
     pub fn as_str(&self) -> &str {
         match self {
+            Self::Custom => "custom",
+            Self::Github => "github",
+            Self::Google => "google",
             Self::OIDC => "oidc",
         }
     }
@@ -64,6 +72,9 @@ impl TryFrom<&str> for AuthProviderType {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let slf = match value {
+            "custom" => Self::Custom,
+            "github" => Self::Github,
+            "google" => Self::Google,
             "oidc" => Self::OIDC,
             _ => {
                 return Err(ErrorResponse::new(
@@ -79,7 +90,7 @@ impl TryFrom<&str> for AuthProviderType {
 impl From<String> for AuthProviderType {
     /// Defaults to Self::OIDC in case of an error
     fn from(value: String) -> Self {
-        Self::try_from(value.as_str()).unwrap_or(Self::OIDC)
+        Self::try_from(value.as_str()).unwrap_or(Self::Custom)
     }
 }
 
@@ -234,6 +245,21 @@ impl AuthProvider {
         Ok(res)
     }
 
+    pub async fn find_linked_users(
+        data: &web::Data<AppState>,
+        id: &str,
+    ) -> Result<Vec<ProviderLinkedUserResponse>, ErrorResponse> {
+        let users = query_as!(
+            ProviderLinkedUserResponse,
+            "SELECT id, email FROM users WHERE auth_provider_id = $1",
+            id
+        )
+        .fetch_all(&data.db)
+        .await?;
+
+        Ok(users)
+    }
+
     pub async fn delete(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
         query!("DELETE FROM auth_providers WHERE id = $1", id)
             .execute(&data.db)
@@ -326,6 +352,7 @@ impl AuthProvider {
             reqwest::Client::builder()
                 .timeout(Duration::from_secs(10))
                 .connect_timeout(Duration::from_secs(10))
+                .http2_keep_alive_timeout(Duration::from_secs(30))
                 .user_agent(format!("Rauthy Auth Provider Client v{}", RAUTHY_VERSION))
                 .https_only(false)
                 .danger_accept_invalid_certs(true)
@@ -334,6 +361,7 @@ impl AuthProvider {
             let mut builder = reqwest::Client::builder()
                 .timeout(Duration::from_secs(10))
                 .connect_timeout(Duration::from_secs(10))
+                .http2_keep_alive_timeout(Duration::from_secs(30))
                 .min_tls_version(tls::Version::TLS_1_3)
                 .tls_built_in_root_certs(true)
                 .user_agent(format!("Rauthy Auth Provider Client v{}", RAUTHY_VERSION))
@@ -356,9 +384,7 @@ impl AuthProvider {
             id,
             name: req.name,
             enabled: req.enabled,
-            // for now, this will always be OIDC
-            // preparation for future special providers
-            typ: AuthProviderType::OIDC,
+            typ: req.typ,
             issuer: req.issuer,
             authorization_endpoint: req.authorization_endpoint,
             token_endpoint: req.token_endpoint,
@@ -402,27 +428,6 @@ impl AuthProvider {
             payload.root_pem.as_deref(),
         )?;
 
-        // let config_url = if let Some(url) = &payload.metadata_url {
-        //     Cow::from(url)
-        // } else if let Some(issuer) = &payload.issuer {
-        //     let issuer_url = if issuer.starts_with("http://") || issuer.starts_with("https://") {
-        //         issuer.to_string()
-        //     } else {
-        //         // we always assume https connections, if the scheme is not given
-        //         format!("https://{}", issuer)
-        //     };
-        //     let url = if issuer_url.ends_with('/') {
-        //         format!("{}.well-known/openid-configuration", issuer_url)
-        //     } else {
-        //         format!("{}/.well-known/openid-configuration", issuer_url)
-        //     };
-        //     Cow::from(url)
-        // } else {
-        //     return Err(ErrorResponse::new(
-        //         ErrorResponseType::BadRequest,
-        //         "either `metadata_url` or `issuer` must be given".to_string(),
-        //     ));
-        // };
         let url = if let Some(url) = &payload.metadata_url {
             Cow::from(url)
         } else if let Some(iss) = &payload.issuer {
@@ -626,10 +631,11 @@ impl AuthProviderCallback {
             "{}?client_id={}&redirect_uri={}&response_type=code&scope={}&state={}",
             provider.authorization_endpoint,
             provider.client_id,
-            *PROVIDER_CALLBACK_URI,
+            *PROVIDER_CALLBACK_URI_ENCODED,
             provider.scope,
             slf.callback_id
         );
+        debug!("location header for provider login:\n{}", location);
         if provider.use_pkce {
             write!(
                 location,
@@ -724,26 +730,29 @@ impl AuthProviderCallback {
             provider.allow_insecure_requests,
             provider.root_pem.as_deref(),
         )?;
+        let payload = OidcCodeRequestParams {
+            client_id: &provider.client_id,
+            client_secret: AuthProvider::get_secret_cleartext(&provider.secret)?,
+            code: &payload.code,
+            code_verifier: provider.use_pkce.then_some(&payload.pkce_verifier),
+            grant_type: "authorization_code",
+            redirect_uri: &PROVIDER_CALLBACK_URI,
+        };
         let res = client
             .post(&provider.token_endpoint)
+            .header(ACCEPT, APPLICATION_JSON)
             .basic_auth(
                 &provider.client_id,
                 AuthProvider::get_secret_cleartext(&provider.secret)?,
             )
-            .form(&OidcCodeRequestParams {
-                client_id: &provider.client_id,
-                client_secret: AuthProvider::get_secret_cleartext(&provider.secret)?,
-                code: &payload.code,
-                code_verifier: provider.use_pkce.then_some(&payload.pkce_verifier),
-                grant_type: "authorization_code",
-                redirect_uri: &PROVIDER_CALLBACK_URI,
-            })
+            .form(&payload)
             .send()
             .await?;
 
         let status = res.status().as_u16();
         debug!("POST /token auth provider status: {}", status);
 
+        // return early if we got any error
         if !res.status().is_success() {
             let err = match res.text().await {
                 Ok(body) => format!(
@@ -759,23 +768,49 @@ impl AuthProviderCallback {
             return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
         }
 
+        // deserialize payload and validate the information
         let (user, provider_mfa_login) = match res.json::<AuthProviderTokenSet>().await {
             Ok(ts) => {
-                // in case of a standard OIDC provider, we only care about the ID token
-                if ts.id_token.is_none() {
-                    let err = format!(
-                        "Did not receive an ID token from {} when one was expected",
-                        provider.issuer,
+                if let Some(err) = ts.error {
+                    let msg = format!(
+                        "/token request error: {}: {}",
+                        err,
+                        ts.error_description.unwrap_or_default()
                     );
-                    error!("{}", err);
-                    return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
+                    error!("{}", msg);
+                    return Err(ErrorResponse::new(ErrorResponseType::Internal, msg));
                 }
-                AuthProviderIdClaims::validate_update_user(
-                    data,
-                    ts.id_token.as_deref().unwrap(),
-                    &provider,
-                )
-                .await?
+
+                // in case of a standard OIDC provider, we only care about the ID token
+                if let Some(id_token) = ts.id_token {
+                    let claims_bytes = AuthProviderIdClaims::self_as_bytes_from_token(&id_token)?;
+                    let claims = AuthProviderIdClaims::try_from(claims_bytes.as_slice())?;
+                    claims.validate_update_user(data, &provider).await?
+                } else if let Some(access_token) = ts.access_token {
+                    // the id_token only exists, if we actually have an OIDC provider.
+                    // If we only get an access token, we need to do another request to the
+                    // userinfo endpoint
+                    let res = client
+                        .get(&provider.userinfo_endpoint)
+                        .header(AUTHORIZATION, format!("Bearer {}", access_token))
+                        .header(ACCEPT, APPLICATION_JSON)
+                        .send()
+                        .await?;
+
+                    let status = res.status().as_u16();
+                    debug!("GET /userinfo auth provider status: {}", status);
+
+                    let res_bytes = res.bytes().await?;
+                    let claims = AuthProviderIdClaims::try_from(res_bytes.as_bytes())?;
+                    claims.validate_update_user(data, &provider).await?
+                } else {
+                    let err = "Neither `access_token` nor `id_token` existed";
+                    error!("{}", err);
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        err.to_string(),
+                    ));
+                }
             }
             Err(err) => {
                 let err = format!(
@@ -968,31 +1003,67 @@ enum ProviderMfaLogin {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct AuthProviderIdClaims<'a> {
-    pub iss: &'a str,
-    pub sub: &'a str,
-    // JsonValue instead of just &str because `aud` can be a single value or an array
-    pub aud: Option<serde_json::Value>,
-    pub azp: Option<&'a str>,
-    pub amr: Option<Vec<&'a str>>,
+struct AuthProviderIdClaims<'a> {
+    // pub iss: &'a str,
+    // json values because some providers provide String, some int
+    sub: Option<serde_json::Value>,
+    id: Option<serde_json::Value>,
+    uid: Option<serde_json::Value>,
+
+    // aud / azp is not being validated, because it works with OIDC only anyway
+    // aud: Option<&'a str>,
+    // azp: Option<&'a str>,
     // even though `email` is mandatory for Rauthy, we set it to optional for
     // the deserialization to have more control over the error message being returned
-    pub email: Option<&'a str>,
-    pub email_verified: Option<bool>,
-    pub given_name: Option<&'a str>,
-    pub family_name: Option<&'a str>,
-    pub address: Option<AuthProviderAddressClaims<'a>>,
-    pub birthdate: Option<&'a str>,
-    pub locale: Option<&'a str>,
-    pub phone: Option<&'a str>,
+    email: Option<&'a str>,
+    email_verified: Option<bool>,
+
+    name: Option<&'a str>,
+    given_name: Option<&'a str>,
+    family_name: Option<&'a str>,
+
+    address: Option<AuthProviderAddressClaims<'a>>,
+    birthdate: Option<&'a str>,
+    locale: Option<&'a str>,
+    phone: Option<&'a str>,
+
+    json_bytes: Option<&'a [u8]>,
+}
+
+impl<'a> TryFrom<&'a [u8]> for AuthProviderIdClaims<'a> {
+    type Error = ErrorResponse;
+
+    fn try_from(value: &'a [u8]) -> Result<Self, Self::Error> {
+        let mut slf = serde_json::from_slice::<AuthProviderIdClaims>(value)?;
+        slf.json_bytes = Some(value);
+        Ok(slf)
+    }
 }
 
 impl AuthProviderIdClaims<'_> {
-    async fn validate_update_user(
-        data: &web::Data<AppState>,
-        token: &str,
-        provider: &AuthProvider,
-    ) -> Result<(User, ProviderMfaLogin), ErrorResponse> {
+    fn given_name(&self) -> &str {
+        if let Some(given_name) = self.given_name {
+            given_name
+        } else if let Some(name) = self.name {
+            let (given_name, _) = name.split_once(' ').unwrap_or(("N/A", "N/A"));
+            given_name
+        } else {
+            "N/A"
+        }
+    }
+
+    fn family_name(&self) -> &str {
+        if let Some(family_name) = self.family_name {
+            family_name
+        } else if let Some(name) = self.name {
+            let (_, family_name) = name.split_once(' ').unwrap_or(("N/A", "N/A"));
+            family_name
+        } else {
+            "N/A"
+        }
+    }
+
+    fn self_as_bytes_from_token(token: &str) -> Result<Vec<u8>, ErrorResponse> {
         let mut parts = token.split('.');
         let _header = parts.next().ok_or_else(|| {
             ErrorResponse::new(
@@ -1008,37 +1079,15 @@ impl AuthProviderIdClaims<'_> {
         })?;
         debug!("upstream ID token claims:\n{}", claims);
         let json_bytes = base64_url_no_pad_decode(claims)?;
-        let claims = serde_json::from_slice::<AuthProviderIdClaims>(&json_bytes)?;
+        Ok(json_bytes)
+    }
 
-        // validate either `aud` or `azp`
-        if let Some(azp) = claims.azp {
-            if azp != provider.client_id {
-                let err = format!(
-                    "`azp` claim '{}' from ID token does not match out client_id '{}'",
-                    azp, provider.client_id,
-                );
-                error!("{}", err);
-                return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
-            }
-        } else if let Some(aud) = claims.aud {
-            if !aud.to_string().contains(&provider.client_id) {
-                let err = format!(
-                    "`aud` claim '{}' from ID token does not match out client_id '{}'",
-                    aud, provider.client_id,
-                );
-                error!("{}", err);
-                return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
-            }
-        } else {
-            let err = "neither `azp` nor `aud` claim exists in ID token ";
-            error!("{}", err);
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                err.to_string(),
-            ));
-        }
-
-        if claims.email.is_none() {
+    async fn validate_update_user(
+        &self,
+        data: &web::Data<AppState>,
+        provider: &AuthProvider,
+    ) -> Result<(User, ProviderMfaLogin), ErrorResponse> {
+        if self.email.is_none() {
             let err = "No `email` in ID token claims. This is a mandatory claim";
             error!("{}", err);
             return Err(ErrorResponse::new(
@@ -1047,7 +1096,25 @@ impl AuthProviderIdClaims<'_> {
             ));
         }
 
-        let user_opt = match User::find_by_federation(data, &provider.id, claims.sub).await {
+        let claims_user_id = if let Some(sub) = &self.sub {
+            sub
+        } else if let Some(id) = &self.id {
+            id
+        } else if let Some(uid) = &self.uid {
+            uid
+        } else {
+            let err = "Cannot find any user id in the response";
+            error!("{}", err);
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                err.to_string(),
+            ));
+        }
+        // We need to create a real string here, since we don't know what json type we get.
+        // Any json number would become a String too, which is what we need for compatibility.
+        .to_string();
+
+        let user_opt = match User::find_by_federation(data, &provider.id, &claims_user_id).await {
             Ok(user) => {
                 debug!(
                     "found already existing user by federation lookup: {:?}",
@@ -1062,8 +1129,7 @@ impl AuthProviderIdClaims<'_> {
                 // which is a key value for Rauthy, does not yet exist for another user.
                 // On conflict, the DB would return an error anyway, but the error message is
                 // rather cryptic for a normal user.
-                if let Ok(user) = User::find_by_email(data, claims.email.unwrap().to_string()).await
-                {
+                if let Ok(user) = User::find_by_email(data, self.email.unwrap().to_string()).await {
                     let err = format!(
                         "User with email '{}' already exists but is not linked to this provider.",
                         user.email
@@ -1079,7 +1145,7 @@ impl AuthProviderIdClaims<'_> {
         debug!("user_opt:\n{:?}", user_opt);
 
         // `rauthy_admin` role mapping by upstream claim
-        let mut should_be_rauthy_admin = false;
+        let mut should_be_rauthy_admin = None;
         if let Some(path) = &provider.admin_claim_path {
             if provider.admin_claim_value.is_none() {
                 return Err(ErrorResponse::new(
@@ -1091,7 +1157,7 @@ impl AuthProviderIdClaims<'_> {
             debug!("try validating admin_claim_path: {:?}", path);
             match JsonPath::parse(path) {
                 Ok(path) => {
-                    let json_str = String::from_utf8_lossy(&json_bytes);
+                    let json_str = String::from_utf8_lossy(self.json_bytes.unwrap());
                     // TODO the `json` and `admin_value` here need to have exactly this parsing
                     // combination. As soon as we change one of them, the lookup fails.
                     // Try to find out why the serde_json_path hast a problem with the lookup
@@ -1104,10 +1170,11 @@ impl AuthProviderIdClaims<'_> {
                     // let admin_value =
                     //     value::Value::from_str(provider.admin_claim_value.as_deref().unwrap())
                     //         .expect("json value to build fine");
+                    should_be_rauthy_admin = Some(false);
                     for value in path.query(&json).all() {
                         debug!("value in admin mapping check: {}", value,);
                         if *value == admin_value {
-                            should_be_rauthy_admin = true;
+                            should_be_rauthy_admin = Some(true);
                             break;
                         }
                     }
@@ -1128,23 +1195,18 @@ impl AuthProviderIdClaims<'_> {
                 ));
             }
 
-            // let path = JsonPath::parse("$.foo.bar")?;
             debug!("try validating mfa_claim_path: {:?}", path);
             match JsonPath::parse(path) {
                 Ok(path) => {
-                    let json_str = String::from_utf8_lossy(&json_bytes);
+                    let json_str = String::from_utf8_lossy(self.json_bytes.unwrap());
                     // TODO the same restrictions as above -> add CI tests to always validate
                     // between updates
                     let json =
                         value::Value::from_str(json_str.as_ref()).expect("json to build fine");
-                    // let json = value::Value::from(json_str.as_ref());
                     let mfa_value =
-                        value::Value::from(provider.admin_claim_value.as_deref().unwrap());
-                    // let admin_value =
-                    //     value::Value::from_str(provider.admin_claim_value.as_deref().unwrap())
-                    //         .expect("json value to build fine");
+                        value::Value::from(provider.mfa_claim_value.as_deref().unwrap());
                     for value in path.query(&json).all() {
-                        debug!("value in mfa mapping check: {}", value,);
+                        debug!("value in mfa mapping check: {}", value);
                         if *value == mfa_value {
                             provider_mfa_login = ProviderMfaLogin::Yes;
                             break;
@@ -1165,7 +1227,9 @@ impl AuthProviderIdClaims<'_> {
             // validate federation_uid
             // we must reject any upstream login, if a non-federated local user with the same email
             // exists, as it could lead to an account takeover
-            if user.federation_uid.is_none() || user.federation_uid.as_deref() != Some(claims.sub) {
+            if user.federation_uid.is_none()
+                || user.federation_uid.as_deref() != Some(&claims_user_id)
+            {
                 forbidden_error = Some("non-federated user or ID mismatch");
             }
 
@@ -1187,38 +1251,42 @@ impl AuthProviderIdClaims<'_> {
             }
 
             // check / update email
-            if Some(user.email.as_str()) != claims.email {
+            if Some(user.email.as_str()) != self.email {
                 old_email = Some(user.email);
-                user.email = claims.email.unwrap().to_string();
+                user.email = self.email.unwrap().to_string();
             }
 
             // check other existing values and possibly update them
-            if let Some(given_name) = claims.given_name {
-                if user.given_name.as_str() != given_name {
-                    user.given_name = given_name.to_string();
-                }
+            let given_name = self.given_name();
+            if user.given_name.as_str() != given_name {
+                user.given_name = given_name.to_string();
             }
-            if let Some(family_name) = claims.family_name {
-                if user.family_name.as_str() != family_name {
-                    user.family_name = family_name.to_string();
-                }
+            let family_name = self.family_name();
+            if user.family_name.as_str() != family_name {
+                user.family_name = family_name.to_string();
             }
 
             // should this user be a rauthy admin?
             let roles = user.get_roles();
             let roles_str = roles.iter().map(|r| r.as_str()).collect::<Vec<&str>>();
-            if should_be_rauthy_admin {
-                if !roles_str.contains(&"rauthy_admin") {
-                    let mut new_roles = Vec::with_capacity(roles.len() + 1);
-                    new_roles.push("rauthy_admin".to_string());
-                    roles.into_iter().for_each(|r| new_roles.push(r));
-                    user.roles = new_roles.join(",");
-                }
-            } else if roles_str.contains(&"rauthy_admin") {
-                if roles.len() == 1 {
-                    user.roles = "".to_string();
-                } else {
-                    user.roles = roles.into_iter().filter(|r| r != "rauthy_admin").join(",");
+
+            // We will only re-map the rauthy_admin role if the claim mapping is configured.
+            // Otherwise, we would remove an admin role from a user it has been manually added for,
+            // which would not be the expected outcome.
+            if let Some(should_be_admin) = should_be_rauthy_admin {
+                if should_be_admin {
+                    if !roles_str.contains(&"rauthy_admin") {
+                        let mut new_roles = Vec::with_capacity(roles.len() + 1);
+                        new_roles.push("rauthy_admin".to_string());
+                        roles.into_iter().for_each(|r| new_roles.push(r));
+                        user.roles = new_roles.join(",");
+                    }
+                } else if roles_str.contains(&"rauthy_admin") {
+                    if roles.len() == 1 {
+                        user.roles = "".to_string();
+                    } else {
+                        user.roles = roles.into_iter().filter(|r| r != "rauthy_admin").join(",");
+                    }
                 }
             }
 
@@ -1232,23 +1300,24 @@ impl AuthProviderIdClaims<'_> {
         } else {
             // Create a new federated user
             let new_user = User {
-                email: claims.email.unwrap().to_string(),
-                given_name: claims.given_name.unwrap_or("N/A").to_string(),
-                family_name: claims.family_name.unwrap_or("N/A").to_string(),
-                roles: if should_be_rauthy_admin {
-                    "rauthy_admin".to_string()
-                } else {
-                    String::default()
-                },
+                email: self.email.unwrap().to_string(),
+                given_name: self.given_name().to_string(),
+                family_name: self.family_name().to_string(),
+                roles: should_be_rauthy_admin
+                    .map(|should_be_admin| {
+                        if should_be_admin {
+                            "rauthy_admin".to_string()
+                        } else {
+                            String::default()
+                        }
+                    })
+                    .unwrap_or_default(),
                 enabled: true,
-                email_verified: claims.email_verified.unwrap_or(false),
+                email_verified: self.email_verified.unwrap_or(false),
                 last_login: Some(now),
-                language: claims
-                    .locale
-                    .map(Language::from)
-                    .unwrap_or(Language::default()),
+                language: self.locale.map(Language::from).unwrap_or_default(),
                 auth_provider_id: Some(provider.id.clone()),
-                federation_uid: Some(claims.sub.to_string()),
+                federation_uid: Some(claims_user_id.to_string()),
                 ..Default::default()
             };
             User::create_federated(data, new_user).await?
@@ -1274,15 +1343,15 @@ impl AuthProviderIdClaims<'_> {
                 country: None,
             },
         };
-        if let Some(bday) = claims.birthdate {
+        if let Some(bday) = self.birthdate {
             user_values.birthdate = Some(bday.to_string());
             found_values = true;
         }
-        if let Some(phone) = claims.phone {
+        if let Some(phone) = self.phone {
             user_values.phone = Some(phone.to_string());
             found_values = true;
         }
-        if let Some(addr) = claims.address {
+        if let Some(addr) = &self.address {
             if let Some(street) = addr.street_address {
                 user_values.street = Some(street.to_string());
             }
@@ -1303,12 +1372,12 @@ impl AuthProviderIdClaims<'_> {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct AuthProviderTokenSet {
-    pub access_token: String,
-    pub token_type: Option<String>,
+struct AuthProviderTokenSet {
+    pub access_token: Option<String>,
+    // pub token_type: Option<String>,
     pub id_token: Option<String>,
-    pub expires_in: i32,
-    pub refresh_token: Option<String>,
+    pub error: Option<String>,
+    pub error_description: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

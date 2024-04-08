@@ -6,10 +6,10 @@ use actix_web_validator::Json;
 use rauthy_common::constants::{HEADER_HTML, HEADER_JSON};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
-use rauthy_models::entity::auth_provider::{
+use rauthy_models::entity::auth_provider_logo::AuthProviderLogo;
+use rauthy_models::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderTemplate,
 };
-use rauthy_models::entity::auth_provider_logo::AuthProviderLogo;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
@@ -287,6 +287,36 @@ pub async fn delete_provider(
 
     AuthProvider::delete(&data, &id.into_inner()).await?;
     Ok(HttpResponse::Ok().finish())
+}
+
+/// GET information if it's safe to delete this provider
+///
+/// This will check if existing users are linked to this provider.
+///
+/// **Permissions**
+/// - `rauthy_admin`
+#[utoipa::path(
+    get,
+    path = "/providers/{id}/delete_safe",
+    tag = "providers",
+    responses(
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[get("/providers/{id}/delete_safe")]
+pub async fn get_provider_delete_safe(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    let linked_users = AuthProvider::find_linked_users(&data, &id.into_inner()).await?;
+    if linked_users.is_empty() {
+        Ok(HttpResponse::Ok().json(linked_users))
+    } else {
+        Ok(HttpResponse::NotAcceptable().json(linked_users))
+    }
 }
 
 /// PUT upload an image / icon for an auth provider
