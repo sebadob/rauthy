@@ -12,8 +12,6 @@
     let forceDelete = false;
     let linkedUsers = [];
 
-    $: console.log(linkedUsers);
-
     onMount(async () => {
         let res = await getProviderDeleteSafe(provider.id);
         let body = await res.json();
