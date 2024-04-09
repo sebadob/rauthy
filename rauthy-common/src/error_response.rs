@@ -410,3 +410,15 @@ impl From<ImageError> for ErrorResponse {
         )
     }
 }
+
+impl From<actix_web::http::header::ToStrError> for ErrorResponse {
+    fn from(value: actix_web::http::header::ToStrError) -> Self {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!(
+                "Request headers contained non ASCII characters: {:?}",
+                value
+            ),
+        )
+    }
+}
