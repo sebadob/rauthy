@@ -70,15 +70,30 @@ impl JwtAccessClaims {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddressClaim {
+    pub formatted: String,
+    pub street_address: Option<String>,
+    pub locality: Option<String>,
+    pub postal_code: Option<i32>,
+    pub country: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JwtIdClaims {
+    pub sub: Option<String>,
     pub azp: String,
     pub typ: JwtTokenType,
     pub amr: Vec<String>,
+    pub auth_time: i64,
     pub preferred_username: String,
     pub email: Option<String>,
     pub email_verified: Option<bool>,
     pub given_name: Option<String>,
     pub family_name: Option<String>,
+    pub address: Option<AddressClaim>,
+    pub birthdate: Option<String>,
+    pub locale: Option<String>,
+    pub phone: Option<String>,
     pub roles: Vec<String>,
     pub groups: Option<Vec<String>>,
     pub cnf: Option<JktClaim>,
@@ -94,7 +109,9 @@ impl JwtIdClaims {
         let claims: claims::JWTClaims<Self> =
             validate_jwt!(Self, pubkey, token, config.verification_options.clone())?;
 
-        let slf = claims.custom;
+        let mut slf = claims.custom;
+        slf.sub = claims.subject;
+
         if slf.typ != JwtTokenType::Id {
             return Err(anyhow::Error::msg("Must provide an id token"));
         }

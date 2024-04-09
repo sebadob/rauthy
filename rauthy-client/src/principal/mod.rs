@@ -12,14 +12,12 @@ mod axum;
 /// The AuthorizedUser making requests to the API
 #[derive(Debug)]
 pub struct PrincipalOidc {
-    /// Matches the `uid` token claim
+    /// Matches the `sub` token claim
     pub id: String,
     /// Matches the `expires_at` token claim -> UNIX timestamp in seconds
     pub expires_at_ts: Option<u64>,
     /// Rauthy always set's the users email as the `preferred_username`
     pub preferred_username: Option<String>,
-    /// Matches the `sub` token claim
-    pub sub: String,
     /// Matches the `roles` token claim
     pub roles: Vec<String>,
     /// Matches the `groups` token claim
@@ -44,9 +42,6 @@ impl PrincipalOidc {
         let config = OidcProvider::config()?;
 
         let id = claims
-            .uid
-            .ok_or_else(|| anyhow::Error::msg("'uid' claim is mandatory"))?;
-        let sub = claims
             .sub
             .ok_or_else(|| anyhow::Error::msg("'sub' claim is mandatory"))?;
         let roles = claims.roles.unwrap_or_default();
@@ -69,7 +64,6 @@ impl PrincipalOidc {
             id,
             expires_at_ts: claims.expires_at_ts,
             preferred_username: claims.preferred_username,
-            sub,
             roles,
             groups,
             scope: claims.scope,
@@ -84,8 +78,8 @@ impl Display for PrincipalOidc {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Id: {}\nSubject: {}\nUsername: {:?}\nRoles: {:?}\nGroups: {:?}\nScope: {}",
-            self.id, self.sub, self.preferred_username, self.roles, self.groups, self.scope,
+            "Id: {}\nUsername: {:?}\nRoles: {:?}\nGroups: {:?}\nScope: {}",
+            self.id, self.preferred_username, self.roles, self.groups, self.scope,
         )
     }
 }
