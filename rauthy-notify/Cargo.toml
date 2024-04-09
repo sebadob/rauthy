@@ -11,7 +11,10 @@ chrono = { workspace = true }
 flume = { workspace = true }
 # we currently need to use the git version to resolve a conflict on zeroize
 # switch back to stable as soon as a new version comes out
-matrix-sdk = { git = "https://github.com/sebadob/matrix-rust-sdk", branch = "rauthy-v0.17.0", default-features = false, features = [
+#matrix-sdk = { git = "https://github.com/sebadob/matrix-rust-sdk", branch = "rauthy-v0.17.0", default-features = false, features = [
+#    "e2e-encryption", "markdown", "rustls-tls"
+#] }
+matrix-sdk = { version = "0.7.1", default-features = false, features = [
     "e2e-encryption", "markdown", "rustls-tls"
 ] }
 # not selected -> produces libsqlite conflicts, which should not be pulled in by matrix-sdk in the first place

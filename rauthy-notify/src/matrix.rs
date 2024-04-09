@@ -51,7 +51,8 @@ impl NotifierMatrix {
         let rauthy_notifier = format!("Rauthy v{} Notifier", RAUTHY_VERSION);
         let device_id = OwnedDeviceId::from(rauthy_notifier.as_str());
 
-        let http_client = Notification::build_client(disable_tls_validation, root_ca_path).await;
+        let http_client =
+            Notification::build_client_matrix(disable_tls_validation, root_ca_path).await;
         let client = Client::builder()
             .server_name(user_id.server_name())
             .user_agent(rauthy_notifier)
@@ -210,7 +211,7 @@ impl Notify for NotifierMatrix {
         };
 
         if let Some(room) = self.client.get_room(&self.room_id) {
-            if let Err(err) = room.send(build_msg(), None).await {
+            if let Err(err) = room.send(build_msg()).await {
                 error!("Sending Matrix Notification: {:?} - retrying once", err);
 
                 tokio::time::sleep(Duration::from_secs(1)).await;
@@ -224,7 +225,7 @@ impl Notify for NotifierMatrix {
                         error!("Unable to log back in again to Matrix: {:?}", err)
                     } else {
                         let _ = self.logged_in_check_sync().await;
-                        room.send(build_msg(), None).await.map_err(|err| {
+                        room.send(build_msg()).await.map_err(|err| {
                             ErrorResponse::new(
                                 ErrorResponseType::Connection,
                                 format!("Matrix connection error: {:?}", err),
