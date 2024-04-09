@@ -49,7 +49,7 @@ pub async fn validate_redirect_principal(
         let cookie = build_lax_cookie_300(
             OIDC_STATE_COOKIE,
             &value,
-            insecure == OidcCookieInsecure::Yes,
+            insecure,
         );
 
         if set_redirect_status == OidcSetRedirectStatus::Yes {

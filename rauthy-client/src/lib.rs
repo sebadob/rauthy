@@ -22,6 +22,7 @@ use tracing::{error, warn};
 
 use crate::jwks::jwks_handler;
 pub use reqwest::Certificate as RootCertificate;
+use crate::handler::OidcCookieInsecure;
 
 /// Handles the encrypted OIDC state cookie for the login flow
 pub mod cookie_state;
@@ -76,8 +77,8 @@ pub(crate) fn base64_url_no_pad_decode(b64: &str) -> anyhow::Result<Vec<u8>> {
 
 #[inline]
 #[allow(dead_code)]
-fn build_lax_cookie_300(name: &str, value: &str, secure: bool) -> String {
-    if secure {
+fn build_lax_cookie_300(name: &str, value: &str, insecure: OidcCookieInsecure) -> String {
+    if insecure != OidcCookieInsecure::Yes {
         format!(
             "{}={}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=300",
             name, value

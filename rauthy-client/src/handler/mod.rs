@@ -101,7 +101,7 @@ pub async fn validate_principal_generic(
         let cookie = build_lax_cookie_300(
             OIDC_STATE_COOKIE,
             &value,
-            insecure == OidcCookieInsecure::Yes,
+            insecure,
         );
 
         Err(Some((loc, cookie)))
@@ -159,7 +159,7 @@ pub async fn oidc_callback(
         match res.json::<OidcTokenSet>().await {
             Ok(ts) => {
                 // validate access token
-                let _access_claims =
+                let access_claims =
                     JwtAccessClaims::from_token_validated(&ts.access_token).await?;
 
                 // validate id token
@@ -172,11 +172,16 @@ pub async fn oidc_callback(
                 )
                 .await?;
 
+                // make sure the `sub` claims match
+                if access_claims.sub.is_none() || access_claims.sub != id_claims.sub {
+                    return Err(anyhow::Error::msg("Invalid `sub` claims"));
+                }
+
                 // reset STATE_COOKIE
                 let cookie = build_lax_cookie_300(
                     OIDC_STATE_COOKIE,
                     "",
-                    insecure == OidcCookieInsecure::Yes,
+                    insecure,
                 );
 
                 Ok((cookie, ts, id_claims))
