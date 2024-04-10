@@ -213,11 +213,11 @@ dependencies = [
  "futures-core",
  "impl-more",
  "pin-project-lite",
+ "rustls-pki-types",
  "tokio",
- "tokio-rustls 0.24.1",
+ "tokio-rustls 0.25.0",
  "tokio-util",
  "tracing",
- "webpki-roots 0.25.4",
 ]
 
 [[package]]
@@ -352,15 +352,17 @@ dependencies = [
 
 [[package]]
 name = "actix-web-prom"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f23f332a652836b8f3a6876103c70c9ed436d0e69fa779ab5d7f57b1d5c8d488"
+checksum = "76743e67d4e7efa9fc2ac7123de0dd7b2ca592668e19334f1d81a3b077afc6ac"
 dependencies = [
  "actix-web",
  "futures-core",
+ "log",
  "pin-project-lite",
  "prometheus",
  "regex",
+ "strfmt",
 ]
 
 [[package]]
@@ -1421,14 +1423,14 @@ dependencies = [
 
 [[package]]
 name = "cryptr"
-version = "0.2.2"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ee35808698e0d570fbee1693ea20cd52f82654bc297a72fcd0ab489da967589"
+checksum = "d708350415f1db3143f4e6d6bfbfca4f6a6c3732197faf932595d50db8edd2b1"
 dependencies = [
  "argon2",
  "async-stream",
  "async-trait",
- "base64 0.21.7",
+ "base64 0.22.0",
  "bincode",
  "bytes",
  "chacha20poly1305",
@@ -1438,7 +1440,7 @@ dependencies = [
  "lazy_static",
  "rand",
  "regex",
- "reqwest 0.11.27",
+ "reqwest 0.12.3",
  "rusty-s3",
  "serde",
  "thiserror",
@@ -4286,8 +4288,9 @@ dependencies = [
  "redhac",
  "reqwest 0.12.3",
  "ring",
- "rustls 0.21.10",
- "rustls-pemfile 1.0.4",
+ "rustls 0.22.3",
+ "rustls-pemfile 2.1.2",
+ "rustls-pki-types",
  "semver",
  "serde_json",
  "spow",
@@ -4310,7 +4313,7 @@ dependencies = [
  "actix-multipart",
  "actix-web",
  "argon2",
- "base64 0.21.7",
+ "base64 0.22.0",
  "bincode",
  "chacha20poly1305",
  "chrono",
@@ -4743,10 +4746,12 @@ dependencies = [
  "sync_wrapper",
  "tokio",
  "tokio-rustls 0.25.0",
+ "tokio-util",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "wasm-streams",
  "web-sys",
  "webpki-roots 0.26.1",
  "winreg 0.52.0",
@@ -5792,6 +5797,12 @@ dependencies = [
  "psm",
  "winapi",
 ]
+
+[[package]]
+name = "strfmt"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a8348af2d9fc3258c8733b8d9d8db2e56f54b2363a4b5b81585c7875ed65e65"
 
 [[package]]
 name = "stringprep"

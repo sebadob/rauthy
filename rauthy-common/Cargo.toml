@@ -9,7 +9,7 @@ license.workspace = true
 actix-multipart = { workspace = true }
 actix-web = { workspace = true }
 argon2 = { workspace = true }
-base64 = "0.21"
+base64 = { workspace = true }
 bincode = { workspace = true }
 chacha20poly1305 = { workspace = true }
 chrono = { workspace = true }
@@ -18,7 +18,7 @@ cryptr = { workspace = true }
 derive_more = { workspace = true }
 flume = { workspace = true }
 gethostname = { workspace = true }
-image = { workspcae = true }
+image = { workspace = true }
 lazy_static = { workspace = true }
 once_cell = "1"
 rand = { workspace = true }
@@ -38,7 +38,7 @@ tracing = { workspace = true }
 tokio = { workspace = true }
 utoipa = { workspace = true }
 validator = { workspace = true }
-oxiri = "0.2.2"
+oxiri = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = "1"

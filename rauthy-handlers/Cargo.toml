@@ -11,10 +11,10 @@ actix-multipart = { workspace = true }
 actix-web = { workspace = true }
 actix-web-actors = { workspace = true }
 actix-web-lab = { workspace = true }
-actix-web-validator = "5"
+actix-web-validator = { workspace = true }
 chrono = { workspace = true }
 cryptr = { workspace = true }
-futures = "0.3"
+futures = { workspace = true }
 image = { workspace = true }
 lazy_static = { workspace = true }
 mime_guess = { workspace = true }
