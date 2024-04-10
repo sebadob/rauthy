@@ -602,7 +602,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
 
         ListenScheme::Https => {
             server
-                .bind_rustls_021(
+                .bind_rustls_0_22(
                     format!("{}:{}", &listen_addr, get_https_port()),
                     tls::load_tls().await,
                 )?
@@ -613,7 +613,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
         ListenScheme::HttpHttps => {
             server
                 .bind(format!("{}:{}", &listen_addr, get_http_port()))?
-                .bind_rustls_021(
+                .bind_rustls_0_22(
                     format!("{}:{}", &listen_addr, get_https_port()),
                     tls::load_tls().await,
                 )?

@@ -95,6 +95,42 @@ impl Notification {
 
         builder.build().unwrap()
     }
+
+    // Unfortunately, the matrix-sdk uses reqwest v0.11 which is not compatible, so we need to
+    // build a special one just for Matrix connections.
+    // TODO check again in the future, if we can just use the general one from above.
+    pub async fn build_client_matrix(
+        disable_tls_validation: bool,
+        root_ca_path: Option<&str>,
+    ) -> matrix_sdk::reqwest::Client {
+        let mut builder = matrix_sdk::reqwest::Client::builder()
+            .connect_timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(10))
+            .user_agent(format!("Rauthy v{} Notifier", RAUTHY_VERSION))
+            .min_tls_version(matrix_sdk::reqwest::tls::Version::TLS_1_2)
+            .pool_idle_timeout(Duration::from_secs(600))
+            .danger_accept_invalid_certs(disable_tls_validation);
+
+        if disable_tls_validation {
+            builder = builder.danger_accept_invalid_certs(true);
+        }
+
+        if let Some(path) = root_ca_path {
+            let pem_file = tokio::fs::read(path)
+                .await
+                .expect("Cannot read Event Notifier Root CA PEM file");
+            let root_cert = matrix_sdk::reqwest::tls::Certificate::from_pem(pem_file.as_slice())
+                .expect("Cannot build Root TLS from Event Notifier Root CA PEM file");
+            builder = builder.add_root_certificate(root_cert);
+
+            info!(
+                "Custom Root CA from {} was added to the Event Notifier Client",
+                path
+            );
+        }
+
+        builder.build().unwrap()
+    }
 }
 
 #[async_trait]

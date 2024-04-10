@@ -1,7 +1,6 @@
 use crate::app_state::AppState;
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg};
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::http::Uri;
 use actix_web::{http, web, HttpRequest};
 use chrono::{DateTime, Utc};
 use rauthy_common::constants::{
@@ -128,12 +127,10 @@ pub struct DPoPClaims {
     pub jti: String,
     /// The value of the HTTP method (Section 9.1 of [RFC9110]) of the
     /// request to which the JWT is attached.
-    #[serde(with = "http_serde::method")]
-    pub htm: http::Method,
+    pub htm: String,
     /// The HTTP target URI (Section 7.1 of [RFC9110]) of the request
     /// to which the JWT is attached, without query and fragment parts.
-    #[serde(with = "http_serde::uri")]
-    pub htu: Uri,
+    pub htu: String,
     /// Creation timestamp of the JWT (Section 4.1.6 of [RFC7519]).
     pub iat: i64,
     // The 'ath' claim does not apply to Rauthy, only used by resource servers.
@@ -299,13 +296,13 @@ impl DPoPProof {
         // TODO ?
 
         // 8. The htm claim matches the HTTP method of the current request.
-        if self.claims.htm != http::Method::POST {
+        if self.claims.htm.as_str() != http::Method::POST.as_str() {
             return Err("The 'htm' claim from the DPoP header != POST".to_string());
         }
 
         // 9. The htu claim matches the HTTP URI value for the HTTP request in
         // which the JWT was received, ignoring any query and fragment parts.
-        if self.claims.htu != *DPOP_TOKEN_ENDPOINT {
+        if self.claims.htu != DPOP_TOKEN_ENDPOINT.to_string() {
             return Err("Invalid 'htu' claim".to_string());
         }
 

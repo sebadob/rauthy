@@ -4,13 +4,8 @@
 
 ## TODO before v0.22
 
-- update matrix SDK dependencies to be able to update all deps to the latest versions
-  -> maybe drop matrix-sdk in favor of ruma-client because of huge dependencies and the full sdk is
-  not needed at all? we actually only need the client to post events
-- BUG: wrong path in the default Dockerfile which points to the DEV TLS certificates
-  -> Fix has been pushed - test and validate with next nightly or beta image build
-- create and test a "Login with Github" flow and add documentation about it in the book
-- after matrix-sdk has been fixed / updated, update all deps
+- maybe migrate the old client logos handling to the new optimized webp flow?
+- document "Login with Github" guide
 
 ## Stage 1 - essentials
 

@@ -10,22 +10,23 @@ sqlite = []
 
 [dependencies]
 actix-web = { workspace = true }
-actix-web-prom = "0.7.0"
+actix-web-prom = { workspace = true }
 actix-service = { workspace = true }
 chrono = { workspace = true }
-cron = "0.12"
+cron = { workspace = true }
 cryptr = { workspace = true }
 dotenvy = { workspace = true }
 flume = { workspace = true }
 num_cpus = { workspace = true }
-prometheus = "0.13.3"
+prometheus = { workspace = true }
 rauthy-common = { path = "../rauthy-common" }
 rauthy-handlers = { path = "../rauthy-handlers" }
 rauthy-models = { path = "../rauthy-models" }
 rauthy-service = { path = "../rauthy-service" }
 redhac = { workspace = true }
-rustls = "0.21"
-rustls-pemfile = "1"
+rustls = { workspace = true }
+rustls-pki-types = { workspace = true }
+rustls-pemfile = { workspace = true }
 semver = { workspace = true }
 serde_json = { workspace = true }
 spow = { workspace = true }

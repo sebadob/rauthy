@@ -13,14 +13,14 @@ doctest = false
 sqlite = []
 
 [dependencies]
-accept-language = "3"
+accept-language = { workspace = true }
 actix = { workspace = true }
 actix-multipart = { workspace = true }
 actix-web = { workspace = true }
 actix-web-actors = { workspace = true }
 actix-web-lab = { workspace = true }
 actix-service = { workspace = true }
-anyhow = "1"
+anyhow = { workspace = true }
 argon2 = { workspace = true }
 askama = { workspace = true }
 askama_actix = { workspace = true }
@@ -34,15 +34,14 @@ derive_more = { workspace = true }
 dotenvy = { workspace = true }
 ed25519-compact = { workspace = true }
 flume = { workspace = true }
-futures-util = "0.3"
-hex = { version = "0.4", features = ["serde"] }
-hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
-hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
-http-serde = { workspace = true }
+futures-util = { workspace = true }
+hex = { workspace = true }
+hmac-sha256 = { workspace = true }
+hmac-sha512 = { workspace = true }
 image = { workspace = true }
 itertools = { workspace = true }
 jwt-simple = { workspace = true }
-lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls", "tracing"] }
+lettre = { workspace = true }
 mime = { workspace = true }
 num_cpus = { workspace = true }
 ## Add openssl-sys as a direct dependency, so it can be cross compiled to
@@ -58,7 +57,7 @@ reqwest = { workspace = true }
 ring = { workspace = true }
 rio_api = { workspace = true }
 rio_turtle = { workspace = true }
-rsa = { version = "0.9.3", features = ["serde", "sha2"] }
+rsa = { workspace = true }
 rusty-s3 = { workspace = true }
 semver = { workspace = true }
 serde = { workspace = true }
@@ -71,7 +70,7 @@ tracing = { workspace = true }
 tokio = { workspace = true }
 utoipa = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
-uuid = { version = "1", features = ["serde", "v4"] }
+uuid = { workspace = true }
 validator = { workspace = true }
 webauthn-rs = { workspace = true }
 webauthn-rs-proto = { workspace = true }
