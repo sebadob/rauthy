@@ -44,7 +44,7 @@ use std::fmt::Write;
 use std::str::FromStr;
 use std::time::Duration;
 use time::OffsetDateTime;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -1158,22 +1158,22 @@ impl AuthProviderIdClaims<'_> {
             match JsonPath::parse(path) {
                 Ok(path) => {
                     let json_str = String::from_utf8_lossy(self.json_bytes.unwrap());
-                    // TODO the `json` and `admin_value` here need to have exactly this parsing
-                    // combination. As soon as we change one of them, the lookup fails.
-                    // Try to find out why the serde_json_path hast a problem with the lookup
-                    // and add test cases for this to make sure it works with every release.
                     let json =
                         value::Value::from_str(json_str.as_ref()).expect("json to build fine");
-                    // let json = value::Value::from(json_str.as_ref());
                     let admin_value =
-                        value::Value::from(provider.admin_claim_value.as_deref().unwrap());
-                    // let admin_value =
-                    //     value::Value::from_str(provider.admin_claim_value.as_deref().unwrap())
-                    //         .expect("json value to build fine");
+                        value::Value::from(provider.admin_claim_value.as_deref().unwrap())
+                            .to_string();
                     should_be_rauthy_admin = Some(false);
                     for value in path.query(&json).all() {
-                        debug!("value in admin mapping check: {}", value,);
-                        if *value == admin_value {
+                        // We actually need this allocation to String to get bigger compatibility.
+                        // This way, we can accept not only string, but we would for instance
+                        // also interpret a given bool as string.
+                        let value = if !value.is_string() {
+                            format!("\"{}\"", value)
+                        } else {
+                            value.to_string()
+                        };
+                        if value == admin_value {
                             should_be_rauthy_admin = Some(true);
                             break;
                         }
@@ -1199,15 +1199,22 @@ impl AuthProviderIdClaims<'_> {
             match JsonPath::parse(path) {
                 Ok(path) => {
                     let json_str = String::from_utf8_lossy(self.json_bytes.unwrap());
-                    // TODO the same restrictions as above -> add CI tests to always validate
-                    // between updates
                     let json =
                         value::Value::from_str(json_str.as_ref()).expect("json to build fine");
                     let mfa_value =
-                        value::Value::from(provider.mfa_claim_value.as_deref().unwrap());
+                        value::Value::from(provider.mfa_claim_value.as_deref().unwrap())
+                            .to_string();
+
                     for value in path.query(&json).all() {
-                        debug!("value in mfa mapping check: {}", value);
-                        if *value == mfa_value {
+                        // We actually need this allocation to String to get bigger compatibility.
+                        // This way, we can accept not only string, but we would for instance
+                        // also interpret a given bool as string.
+                        let value = if !value.is_string() {
+                            format!("\"{}\"", value)
+                        } else {
+                            value.to_string()
+                        };
+                        if value == mfa_value {
                             provider_mfa_login = ProviderMfaLogin::Yes;
                             break;
                         }

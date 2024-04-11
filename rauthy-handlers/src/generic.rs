@@ -40,7 +40,7 @@ use rauthy_models::response::{
 use rauthy_models::templates::{
     AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
     AdminConfigHtml, AdminDocsHtml, AdminGroupsHtml, AdminHtml, AdminRolesHtml, AdminScopesHtml,
-    AdminSessionsHtml, AdminUsersHtml, IndexHtml,
+    AdminSessionsHtml, AdminUsersHtml, IndexHtml, ProvidersHtml,
 };
 use rauthy_service::encryption;
 use redhac::{cache_get, cache_get_from, cache_get_value, QuorumHealth, QuorumState};
@@ -211,6 +211,16 @@ pub async fn get_admin_groups_html(
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
     let body = AdminGroupsHtml::build(&colors);
+
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
+}
+
+#[get("/admin/providers")]
+pub async fn get_admin_providers_html(
+    data: web::Data<AppState>,
+) -> Result<HttpResponse, ErrorResponse> {
+    let colors = ColorEntity::find_rauthy(&data).await?;
+    let body = ProvidersHtml::build(&colors);
 
     Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }

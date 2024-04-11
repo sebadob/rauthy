@@ -93,7 +93,7 @@
                 name: 'Github',
                 client_id: '',
                 client_secret: '',
-                scope: 'read:user user:email',
+                scope: 'read:user',
                 root_pem: null,
 
                 admin_claim_path: null,
