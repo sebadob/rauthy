@@ -787,8 +787,6 @@ impl AuthProviderCallback {
                     let claims = AuthProviderIdClaims::try_from(claims_bytes.as_slice())?;
                     claims.validate_update_user(data, &provider).await?
                 } else if let Some(access_token) = ts.access_token {
-                    warn!("\n\nREMOVE AFTER TESTING\n{}\n\n", access_token);
-
                     // the id_token only exists, if we actually have an OIDC provider.
                     // If we only get an access token, we need to do another request to the
                     // userinfo endpoint
@@ -823,8 +821,6 @@ impl AuthProviderCallback {
                 return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
             }
         };
-
-        debug!("\n\nprovider_mfa_login: {:?}\n\n", provider_mfa_login);
 
         user.check_enabled()?;
         user.check_expired()?;
