@@ -1,6 +1,7 @@
 use crate::app_state::{AppState, DbTxn};
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::jwk::JwkKeyPairAlg;
+use crate::entity::logos::Logo;
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
 use crate::request::{DynamicClientRequest, EphemeralClientRequest, NewClientRequest};
@@ -350,90 +351,90 @@ impl Client {
         Ok(client)
     }
 
-    // TODO needs full re-write to webp logic
-    pub async fn find_logo(data: &web::Data<AppState>, id: &str) -> Result<String, ErrorResponse> {
-        let idx = format!("{}{}", IDX_CLIENT_LOGO, id);
-        let logo = cache_get!(
-            String,
-            CACHE_NAME_12HR.to_string(),
-            idx.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(logo) = logo {
-            return Ok(logo);
-        }
-
-        let logo_opt = sqlx::query("select data from logos where client_id = $1")
-            .bind(id)
-            .fetch_optional(&data.db)
-            .await?;
-
-        let logo = match logo_opt {
-            None => RAUTHY_DEFAULT_LOGO.to_string(),
-            Some(row) => row.get("data"),
-        };
-
-        cache_put(
-            CACHE_NAME_12HR.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &logo,
-        )
-        .await?;
-
-        Ok(logo)
-    }
-
-    pub async fn save_logo(
-        data: &web::Data<AppState>,
-        id: &str,
-        logo: String,
-    ) -> Result<(), ErrorResponse> {
-        #[cfg(feature = "sqlite")]
-        let q = sqlx::query!(
-            "insert or replace into logos (client_id, data) values ($1, $2)",
-            id,
-            logo
-        );
-        #[cfg(not(feature = "sqlite"))]
-        let q = sqlx::query!(
-            r#"insert into logos (client_id, data) values ($1, $2)
-                on conflict(client_id) do update set data = $2"#,
-            id,
-            logo
-        );
-
-        q.execute(&data.db).await?;
-
-        let idx = format!("{}{}", IDX_CLIENT_LOGO, id);
-        cache_put(
-            CACHE_NAME_12HR.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &logo,
-        )
-        .await?;
-
-        Ok(())
-    }
-
-    pub async fn delete_logo(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
-        let idx = format!("{}{}", IDX_CLIENT_LOGO, id);
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-        )
-        .await?;
-
-        sqlx::query!("delete from logos where client_id = $1", id)
-            .execute(&data.db)
-            .await?;
-
-        Ok(())
-    }
+    // // TODO needs full re-write to webp logic
+    // pub async fn find_logo(data: &web::Data<AppState>, id: &str) -> Result<String, ErrorResponse> {
+    //     let idx = format!("{}{}", IDX_CLIENT_LOGO, id);
+    //     let logo = cache_get!(
+    //         String,
+    //         CACHE_NAME_12HR.to_string(),
+    //         idx.clone(),
+    //         &data.caches.ha_cache_config,
+    //         false
+    //     )
+    //     .await?;
+    //     if let Some(logo) = logo {
+    //         return Ok(logo);
+    //     }
+    //
+    //     let logo_opt = sqlx::query("select data from logos where client_id = $1")
+    //         .bind(id)
+    //         .fetch_optional(&data.db)
+    //         .await?;
+    //
+    //     let logo = match logo_opt {
+    //         None => RAUTHY_DEFAULT_LOGO.to_string(),
+    //         Some(row) => row.get("data"),
+    //     };
+    //
+    //     cache_put(
+    //         CACHE_NAME_12HR.to_string(),
+    //         idx,
+    //         &data.caches.ha_cache_config,
+    //         &logo,
+    //     )
+    //     .await?;
+    //
+    //     Ok(logo)
+    // }
+    //
+    // pub async fn save_logo(
+    //     data: &web::Data<AppState>,
+    //     id: &str,
+    //     logo: String,
+    // ) -> Result<(), ErrorResponse> {
+    //     #[cfg(feature = "sqlite")]
+    //     let q = sqlx::query!(
+    //         "insert or replace into logos (client_id, data) values ($1, $2)",
+    //         id,
+    //         logo
+    //     );
+    //     #[cfg(not(feature = "sqlite"))]
+    //     let q = sqlx::query!(
+    //         r#"insert into logos (client_id, data) values ($1, $2)
+    //             on conflict(client_id) do update set data = $2"#,
+    //         id,
+    //         logo
+    //     );
+    //
+    //     q.execute(&data.db).await?;
+    //
+    //     let idx = format!("{}{}", IDX_CLIENT_LOGO, id);
+    //     cache_put(
+    //         CACHE_NAME_12HR.to_string(),
+    //         idx,
+    //         &data.caches.ha_cache_config,
+    //         &logo,
+    //     )
+    //     .await?;
+    //
+    //     Ok(())
+    // }
+    //
+    // pub async fn delete_logo(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
+    //     let idx = format!("{}{}", IDX_CLIENT_LOGO, id);
+    //     cache_del(
+    //         CACHE_NAME_12HR.to_string(),
+    //         idx,
+    //         &data.caches.ha_cache_config,
+    //     )
+    //     .await?;
+    //
+    //     sqlx::query!("delete from logos where client_id = $1", id)
+    //         .execute(&data.db)
+    //         .await?;
+    //
+    //     Ok(())
+    // }
 
     pub async fn save(
         &self,
@@ -787,37 +788,37 @@ impl Client {
         Ok(res)
     }
 
-    pub async fn upload_logo(
-        data: &web::Data<AppState>,
-        client_id: &str,
-        mut payload: Multipart,
-    ) -> Result<(), ErrorResponse> {
-        let mut buf: Vec<u8> = Vec::with_capacity(1024);
-
-        while let Some(item) = payload.next().await {
-            let mut field = item?;
-            // let content_type = field.content_disposition();
-
-            while let Some(chunk) = field.next().await {
-                let bytes = chunk?;
-                buf.extend(bytes);
-            }
-        }
-
-        let logo_str = match String::from_utf8(buf) {
-            Ok(l) => l,
-            Err(err) => {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    format!("Cannot parse logo: {:?}", err),
-                ));
-            }
-        };
-
-        Self::save_logo(data, client_id, logo_str).await?;
-
-        Ok(())
-    }
+    // pub async fn upload_logo(
+    //     data: &web::Data<AppState>,
+    //     client_id: &str,
+    //     mut payload: Multipart,
+    // ) -> Result<(), ErrorResponse> {
+    //     let mut buf: Vec<u8> = Vec::with_capacity(1024);
+    //
+    //     while let Some(item) = payload.next().await {
+    //         let mut field = item?;
+    //         // let content_type = field.content_disposition();
+    //
+    //         while let Some(chunk) = field.next().await {
+    //             let bytes = chunk?;
+    //             buf.extend(bytes);
+    //         }
+    //     }
+    //
+    //     let logo_str = match String::from_utf8(buf) {
+    //         Ok(l) => l,
+    //         Err(err) => {
+    //             return Err(ErrorResponse::new(
+    //                 ErrorResponseType::BadRequest,
+    //                 format!("Cannot parse logo: {:?}", err),
+    //             ));
+    //         }
+    //     };
+    //
+    //     Self::save_logo(data, client_id, logo_str).await?;
+    //
+    //     Ok(())
+    // }
 
     /// Validates the User's access to this client depending on the `force_mfa` setting.
     /// Do this check after a possible password hash to not leak information to unauthenticated users!
