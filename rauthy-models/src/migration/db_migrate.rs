@@ -18,13 +18,13 @@ use rauthy_common::DbType;
 
 use crate::app_state::DbPool;
 use crate::entity::api_keys::ApiKeyEntity;
-use crate::entity::auth_provider_logo::AuthProviderLogo;
 use crate::entity::auth_providers::AuthProvider;
 use crate::entity::clients::Client;
 use crate::entity::colors::ColorEntity;
 use crate::entity::config::ConfigEntity;
 use crate::entity::groups::Group;
 use crate::entity::jwk::{Jwk, JwkKeyPairAlg};
+use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::refresh_tokens::RefreshToken;
@@ -376,22 +376,30 @@ pub async fn migrate_from_sqlite(
     }
 
     // AUTH PROVIDER LOGOS
-    let before = sqlx::query_as::<_, AuthProviderLogo>("select * from auth_provider_logos")
-        .fetch_all(&db_from)
-        .await?;
+    let before = sqlx::query(
+        "select auth_provider_id as id, res, content_type, data from auth_provider_logos",
+    )
+    .fetch_all(&db_from)
+    .await?;
     sqlx::query("delete from auth_provider_logos")
         .execute(db_to)
         .await?;
     for b in before {
+        let id: String = b.get("id");
+        let res: String = b.get("res");
+        let content_type: String = b.get("content_type");
+        let data: Vec<u8> = b.get("data");
+
         sqlx::query(
             r#"INSERT OR REPLACE INTO
             auth_provider_logos (auth_provider_id, res, content_type, data)
             VALUES ($1, $2, $3, $4)"#,
         )
-        .bind(b.auth_provider_id)
-        .bind(b.res)
-        .bind(b.content_type)
-        .bind(b.data)
+        .bind(id)
+        .bind(res)
+        .bind(content_type)
+        .bind(data)
+        .execute(db_to)
         .await?;
     }
 
@@ -500,19 +508,28 @@ pub async fn migrate_from_sqlite(
             .await?;
     }
 
-    // LOGOS
-    let before = sqlx::query("select * from logos")
+    // CLIENT LOGOS
+    let before = sqlx::query("select * from client_logos")
         .fetch_all(&db_from)
         .await?;
-    sqlx::query("delete from logos").execute(db_to).await?;
+    sqlx::query("delete from client_logos")
+        .execute(db_to)
+        .await?;
     for b in before {
         let id: String = b.get("client_id");
-        let data: String = b.get("data");
-        sqlx::query("insert into logos (client_id, data) values ($1, $2)")
-            .bind(id)
-            .bind(data)
-            .execute(db_to)
-            .await?;
+        let res: String = b.get("res");
+        let content_type: String = b.get("content_type");
+        let data: Vec<u8> = b.get("data");
+        sqlx::query(
+            r#"insert into client_logos (client_id, res, content_type, data)
+            values ($1, $2, $3, $4s)"#,
+        )
+        .bind(id)
+        .bind(res)
+        .bind(content_type)
+        .bind(data)
+        .execute(db_to)
+        .await?;
     }
 
     // GROUPS
@@ -755,7 +772,7 @@ pub async fn migrate_from_postgres(
 
     // The users table has a FK to auth_providers - the order is important here!
     // AUTH PROVIDERS
-    let before = sqlx::query_as::<_, AuthProvider>("select * from auth_providers")
+    let before = sqlx::query_as::<_, AuthProvider>("select * from rauthy.auth_providers")
         .fetch_all(&db_from)
         .await?;
     sqlx::query("delete from auth_providers")
@@ -793,22 +810,30 @@ pub async fn migrate_from_postgres(
     }
 
     // AUTH PROVIDER LOGOS
-    let before = sqlx::query_as::<_, AuthProviderLogo>("select * from auth_provider_logos")
-        .fetch_all(&db_from)
-        .await?;
+    let before = sqlx::query(
+        "select auth_provider_id as id, res, content_type, data from rauthy.auth_provider_logos",
+    )
+    .fetch_all(&db_from)
+    .await?;
     sqlx::query("delete from auth_provider_logos")
         .execute(db_to)
         .await?;
     for b in before {
+        let id: String = b.get("id");
+        let res: String = b.get("res");
+        let content_type: String = b.get("content_type");
+        let data: Vec<u8> = b.get("data");
+
         sqlx::query(
             r#"INSERT OR REPLACE INTO
             auth_provider_logos (auth_provider_id, res, content_type, data)
             VALUES ($1, $2, $3, $4)"#,
         )
-        .bind(b.auth_provider_id)
-        .bind(b.res)
-        .bind(b.content_type)
-        .bind(b.data)
+        .bind(id)
+        .bind(res)
+        .bind(content_type)
+        .bind(data)
+        .execute(db_to)
         .await?;
     }
 
@@ -917,19 +942,28 @@ pub async fn migrate_from_postgres(
             .await?;
     }
 
-    // LOGOS
-    let before = sqlx::query("select * from rauthy.logos")
+    // CLIENT LOGOS
+    let before = sqlx::query("select * from rauthy.client_logos")
         .fetch_all(&db_from)
         .await?;
-    sqlx::query("delete from logos").execute(db_to).await?;
+    sqlx::query("delete from client_logos")
+        .execute(db_to)
+        .await?;
     for b in before {
         let id: String = b.get("client_id");
-        let data: String = b.get("data");
-        sqlx::query("insert into logos (client_id, data) values ($1, $2)")
-            .bind(id)
-            .bind(data)
-            .execute(db_to)
-            .await?;
+        let res: String = b.get("res");
+        let content_type: String = b.get("content_type");
+        let data: Vec<u8> = b.get("data");
+        sqlx::query(
+            r#"insert into client_logos (client_id, res, content_type, data)
+            values ($1, $2, $3, $4s)"#,
+        )
+        .bind(id)
+        .bind(res)
+        .bind(content_type)
+        .bind(data)
+        .execute(db_to)
+        .await?;
     }
 
     // GROUPS

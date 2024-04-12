@@ -38,7 +38,7 @@ use ring::digest;
 use serde::{Deserialize, Serialize};
 use serde_json::value;
 use serde_json_path::JsonPath;
-use sqlx::{query, query_as};
+use sqlx::{query, query_as, FromRow};
 use std::borrow::Cow;
 use std::fmt::Write;
 use std::str::FromStr;
@@ -47,7 +47,9 @@ use time::OffsetDateTime;
 use tracing::{debug, error, warn};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, ToSchema)]
+#[sqlx(type_name = "varchar")]
+#[sqlx(rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum AuthProviderType {
     Custom,
@@ -108,7 +110,7 @@ pub struct WellKnownLookup {
 }
 
 /// Upstream Auth Provider for upstream logins without a local Rauthy account
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AuthProvider {
     pub id: String,
     pub name: String,
