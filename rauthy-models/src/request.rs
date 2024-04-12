@@ -160,6 +160,12 @@ pub struct EphemeralClientRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
     #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
     pub client_name: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub client_uri: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub contacts: Option<Vec<String>>,
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub redirect_uris: Vec<String>,
@@ -351,6 +357,12 @@ pub struct DynamicClientRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
     #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
     pub client_name: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub client_uri: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub contacts: Option<Vec<String>>,
     /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub id_token_signed_response_alg: Option<JwkKeyPairAlg>,
     /// Validation: `^(client_secret_post|client_secret_basic|none)$`
@@ -769,6 +781,12 @@ pub struct UpdateClientRequest {
     #[validate(custom(function = "validate_vec_challenge"))]
     pub challenges: Option<Vec<String>>,
     pub force_mfa: bool,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub client_uri: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub contacts: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]

@@ -144,8 +144,7 @@ impl AuthProvider {
         let typ = slf.typ.as_str();
 
         query!(
-            r#"
-            INSERT INTO
+            r#"INSERT INTO
             auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
             userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
             mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem)

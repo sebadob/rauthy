@@ -176,12 +176,16 @@ impl AuthProviderLogo {
         // SVGs don't have a resolution -> just save one version
         #[cfg(feature = "sqlite")]
         query!(
-            r#"INSERT OR REPLACE INTO auth_provider_logos (auth_provider_id, res, content_type, data)
+            r#"INSERT OR REPLACE INTO
+            auth_provider_logos (auth_provider_id, res, content_type, data)
             VALUES ($1, $2, $3, $4)"#,
-            self.auth_provider_id, res, self.content_type, self.data,
+            self.auth_provider_id,
+            res,
+            self.content_type,
+            self.data,
         )
-            .execute(&data.db)
-            .await?;
+        .execute(&data.db)
+        .await?;
         #[cfg(not(feature = "sqlite"))]
         query!(
             r#"INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data)

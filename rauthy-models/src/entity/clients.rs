@@ -55,17 +55,15 @@ pub struct Client {
     pub name: Option<String>,
     pub enabled: bool,
     pub confidential: bool,
-    // The client secrets is saved as encrypted bytes and can only be decrypted inside this
-    // application itself with the `ENC_KEYS` and `ENC_KEY_ACTIVE` environment variables.
     pub secret: Option<Vec<u8>>,
     pub secret_kid: Option<String>,
     pub redirect_uris: String,
     pub post_logout_redirect_uris: Option<String>,
     pub allowed_origins: Option<String>,
     pub flows_enabled: String,
-    // Currently supported Algorithms: RS 256, 384, 512 and ES 256, 384, 512
+    // Currently supported Algorithms: RS 256, 384, 512 and EdDSA
     pub access_token_alg: String,
-    // Currently supported Algorithms: RS 256, 384, 512 and ES 256, 384, 512
+    // Currently supported Algorithms: RS 256, 384, 512 and EdDSA
     pub id_token_alg: String,
     pub refresh_token: bool,
     pub auth_code_lifetime: i32,
@@ -74,6 +72,8 @@ pub struct Client {
     pub default_scopes: String,
     pub challenge: Option<String>,
     pub force_mfa: bool,
+    pub client_uri: Option<String>,
+    pub contacts: Option<String>,
 }
 
 // CRUD
@@ -100,8 +100,9 @@ impl Client {
             r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
             redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg,
             id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
-            challenge, force_mfa)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#,
+            challenge, force_mfa, client_uri, contacts)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+            $18, $19, $20, $21)"#,
             client.id,
             client.name,
             client.enabled,
@@ -121,6 +122,8 @@ impl Client {
             client.default_scopes,
             client.challenge,
             client.force_mfa,
+            client.client_uri,
+            client.contacts,
         )
             .execute(&data.db)
             .await?
@@ -160,10 +163,11 @@ impl Client {
 
         sqlx::query!(
             r#"INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid,
-            redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg,
-            id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
-            challenge, force_mfa)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#,
+            redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled,
+            access_token_alg, id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime,
+            scopes, default_scopes, challenge, force_mfa, client_uri, contacts)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+            $18, $19, $20, $21)"#,
             client.id,
             client.name,
             client.enabled,
@@ -183,6 +187,8 @@ impl Client {
             client.default_scopes,
             client.challenge,
             client.force_mfa,
+            client.client_uri,
+            client.contacts,
         )
             .execute(&mut *txn)
             .await?;
@@ -344,6 +350,7 @@ impl Client {
         Ok(client)
     }
 
+    // TODO needs full re-write to webp logic
     pub async fn find_logo(data: &web::Data<AppState>, id: &str) -> Result<String, ErrorResponse> {
         let idx = format!("{}{}", IDX_CLIENT_LOGO, id);
         let logo = cache_get!(
@@ -438,7 +445,8 @@ impl Client {
             secret_kid = $5, redirect_uris = $6, post_logout_redirect_uris = $7, allowed_origins = $8,
             flows_enabled = $9, access_token_alg = $10, id_token_alg = $11, refresh_token = $12,
             auth_code_lifetime = $13, access_token_lifetime = $14, scopes = $15, default_scopes = $16,
-            challenge = $17, force_mfa= $18 where id = $19"#,
+            challenge = $17, force_mfa= $18, client_uri = $19, contacts = $20
+            where id = $21"#,
             self.name,
             self.enabled,
             self.confidential,
@@ -457,6 +465,8 @@ impl Client {
             self.default_scopes,
             self.challenge,
             self.force_mfa,
+            self.client_uri,
+            self.contacts,
             self.id,
         );
 
@@ -631,6 +641,18 @@ impl Client {
             .split(',')
             .for_each(|c| res.push(c.trim().to_owned()));
         Some(res)
+    }
+
+    pub fn get_contacts(&self) -> Option<Vec<String>> {
+        if let Some(contacts) = &self.contacts {
+            let mut res = Vec::new();
+            for c in contacts.split(',') {
+                res.push(c.to_string());
+            }
+            Some(res)
+        } else {
+            None
+        }
     }
 
     /// Decrypts the client secret (if it exists) and then returns it as clear text.
@@ -1101,6 +1123,8 @@ impl From<EphemeralClientRequest> for Client {
             default_scopes: scopes,
             challenge: Some("S256".to_string()),
             force_mfa: *EPHEMERAL_CLIENTS_FORCE_MFA,
+            client_uri: value.client_uri,
+            contacts: value.contacts.map(|c| c.join(",")),
         }
     }
 }
@@ -1137,6 +1161,8 @@ impl Default for Client {
             default_scopes: "openid".to_string(),
             challenge: Some("S256".to_string()),
             force_mfa: false,
+            client_uri: None,
+            contacts: None,
         }
     }
 }
@@ -1206,6 +1232,8 @@ impl Client {
             access_token_lifetime: *DYN_CLIENT_DEFAULT_TOKEN_LIFETIME,
             challenge: confidential.then_some("S256".to_string()),
             force_mfa: false,
+            client_uri: req.client_uri,
+            contacts: req.contacts.map(|c| c.join(",")),
             ..Default::default()
         })
     }
@@ -1298,6 +1326,8 @@ mod tests {
             default_scopes: "openid,email,profile,groups".to_string(),
             challenge: Some("S256,plain".to_string()),
             force_mfa: false,
+            client_uri: Some("http://localhost:1337".to_string()),
+            contacts: Some("batman@localhost.de,alfred@localhost.de".to_string()),
         };
 
         assert_eq!(client.get_access_token_alg().unwrap(), JwkKeyPairAlg::EdDSA);
@@ -1379,6 +1409,15 @@ mod tests {
         assert_eq!(client.validate_flow("password"), Ok(()));
         assert!(client.validate_flow("blabla").is_err());
         assert!(client.validate_flow("").is_err());
+
+        // contacts
+        assert_eq!(
+            client.get_contacts(),
+            vec![
+                "batman@localhost.de".to_string(),
+                "alfred@localhost.de".to_string(),
+            ]
+        );
 
         // validate origin
         let listen_scheme = ListenScheme::Http;
