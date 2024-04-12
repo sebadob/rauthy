@@ -7,6 +7,7 @@ use jwt_simple::algorithms::{
 };
 use rand_core::OsRng;
 use sqlx::Row;
+use std::env;
 use time::OffsetDateTime;
 use tracing::{debug, info};
 
@@ -17,6 +18,8 @@ use rauthy_common::DbType;
 
 use crate::app_state::DbPool;
 use crate::entity::api_keys::ApiKeyEntity;
+use crate::entity::auth_provider_logo::AuthProviderLogo;
+use crate::entity::auth_providers::AuthProvider;
 use crate::entity::clients::Client;
 use crate::entity::colors::ColorEntity;
 use crate::entity::config::ConfigEntity;
@@ -74,6 +77,8 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         default_scopes: "openid".to_string(),
         challenge: Some("S256".to_string()),
         force_mfa: *ADMIN_FORCE_MFA,
+        client_uri: None,
+        contacts: env::var("RAUTHY_ADMIN_EMAIL").ok(),
     };
 
     #[cfg(feature = "sqlite")]
@@ -81,8 +86,9 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         r#"insert or replace into clients (id, name, enabled, confidential,
         secret, secret_kid, redirect_uris, post_logout_redirect_uris, allowed_origins,
         flows_enabled, access_token_alg, id_token_alg, refresh_token, auth_code_lifetime,
-        access_token_lifetime, scopes, default_scopes, challenge, force_mfa)
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#,
+        access_token_lifetime, scopes, default_scopes, challenge, force_mfa, client_uri, contacts)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
+        $19, $20, $21)"#,
         rauthy.id,
         rauthy.name,
         rauthy.enabled,
@@ -102,6 +108,8 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         rauthy.default_scopes,
         rauthy.challenge,
         rauthy.force_mfa,
+        rauthy.client_uri,
+        rauthy.contacts,
     );
 
     #[cfg(not(feature = "sqlite"))]
@@ -115,7 +123,7 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         secret_kid = $6, redirect_uris = $7, post_logout_redirect_uris = $8, allowed_origins = $9,
         flows_enabled = $10, access_token_alg = $11, id_token_alg = $12, refresh_token = $13,
         auth_code_lifetime = $14, access_token_lifetime = $15, scopes = $16, default_scopes = $17,
-        challenge = $18, force_mfa = $19"#,
+        challenge = $18, force_mfa = $19, client_uri = $20, contacts = $21"#,
         rauthy.id,
         rauthy.name,
         rauthy.enabled,
@@ -135,6 +143,8 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         rauthy.default_scopes,
         rauthy.challenge,
         rauthy.force_mfa,
+        rauthy.client_uri,
+        rauthy.contacts,
     );
 
     q.execute(db).await?;
@@ -323,6 +333,65 @@ pub async fn migrate_from_sqlite(
         .bind(b.enc_key_id)
         .bind(b.access)
         .execute(db_to)
+        .await?;
+    }
+
+    // The users table has a FK to auth_providers - the order is important here!
+    // AUTH PROVIDERS
+    let before = sqlx::query_as::<_, AuthProvider>("select * from auth_providers")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from auth_providers")
+        .execute(db_to)
+        .await?;
+    for b in before {
+        sqlx::query(
+            r#"INSERT INTO
+            auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
+            userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
+            mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem)
+            VALUES
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#,
+        )
+        .bind(b.id)
+        .bind(b.enabled)
+        .bind(b.name)
+        .bind(b.typ.as_str())
+        .bind(b.issuer)
+        .bind(b.authorization_endpoint)
+        .bind(b.token_endpoint)
+        .bind(b.userinfo_endpoint)
+        .bind(b.client_id)
+        .bind(b.secret)
+        .bind(b.scope)
+        .bind(b.admin_claim_path)
+        .bind(b.admin_claim_value)
+        .bind(b.mfa_claim_path)
+        .bind(b.mfa_claim_value)
+        .bind(b.allow_insecure_requests)
+        .bind(b.use_pkce)
+        .bind(b.root_pem)
+        .execute(db_to)
+        .await?;
+    }
+
+    // AUTH PROVIDER LOGOS
+    let before = sqlx::query_as::<_, AuthProviderLogo>("select * from auth_provider_logos")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from auth_provider_logos")
+        .execute(db_to)
+        .await?;
+    for b in before {
+        sqlx::query(
+            r#"INSERT OR REPLACE INTO
+            auth_provider_logos (auth_provider_id, res, content_type, data)
+            VALUES ($1, $2, $3, $4)"#,
+        )
+        .bind(b.auth_provider_id)
+        .bind(b.res)
+        .bind(b.content_type)
+        .bind(b.data)
         .await?;
     }
 
@@ -681,6 +750,65 @@ pub async fn migrate_from_postgres(
         .bind(b.enc_key_id)
         .bind(b.access)
         .execute(db_to)
+        .await?;
+    }
+
+    // The users table has a FK to auth_providers - the order is important here!
+    // AUTH PROVIDERS
+    let before = sqlx::query_as::<_, AuthProvider>("select * from auth_providers")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from auth_providers")
+        .execute(db_to)
+        .await?;
+    for b in before {
+        sqlx::query(
+            r#"INSERT INTO
+            auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
+            userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
+            mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem)
+            VALUES
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#,
+        )
+        .bind(b.id)
+        .bind(b.enabled)
+        .bind(b.name)
+        .bind(b.typ.as_str())
+        .bind(b.issuer)
+        .bind(b.authorization_endpoint)
+        .bind(b.token_endpoint)
+        .bind(b.userinfo_endpoint)
+        .bind(b.client_id)
+        .bind(b.secret)
+        .bind(b.scope)
+        .bind(b.admin_claim_path)
+        .bind(b.admin_claim_value)
+        .bind(b.mfa_claim_path)
+        .bind(b.mfa_claim_value)
+        .bind(b.allow_insecure_requests)
+        .bind(b.use_pkce)
+        .bind(b.root_pem)
+        .execute(db_to)
+        .await?;
+    }
+
+    // AUTH PROVIDER LOGOS
+    let before = sqlx::query_as::<_, AuthProviderLogo>("select * from auth_provider_logos")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from auth_provider_logos")
+        .execute(db_to)
+        .await?;
+    for b in before {
+        sqlx::query(
+            r#"INSERT OR REPLACE INTO
+            auth_provider_logos (auth_provider_id, res, content_type, data)
+            VALUES ($1, $2, $3, $4)"#,
+        )
+        .bind(b.auth_provider_id)
+        .bind(b.res)
+        .bind(b.content_type)
+        .bind(b.data)
         .await?;
     }
 
