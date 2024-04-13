@@ -24,7 +24,6 @@ use crate::entity::colors::ColorEntity;
 use crate::entity::config::ConfigEntity;
 use crate::entity::groups::Group;
 use crate::entity::jwk::{Jwk, JwkKeyPairAlg};
-use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::refresh_tokens::RefreshToken;
