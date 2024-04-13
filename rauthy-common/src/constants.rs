@@ -104,6 +104,7 @@ lazy_static! {
     pub static ref RE_CLIENT_NAME: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-\s]{2,128}$").unwrap();
     pub static ref RE_CODE_CHALLENGE: Regex = Regex::new(r"^[a-zA-Z0-9-\._~]{43,128}$").unwrap();
     pub static ref RE_CODE_VERIFIER: Regex = Regex::new(r"^[a-zA-Z0-9-\._~+/=]+$").unwrap();
+    pub static ref RE_CONTACT: Regex = Regex::new(r"^[a-zA-Z0-9\+.@/:]{0,48}$").unwrap();
     pub static ref RE_DATE_STR: Regex = Regex::new(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$").unwrap();
     pub static ref RE_FLOWS: Regex = Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap();
     pub static ref RE_GRANT_TYPES: Regex = Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap();

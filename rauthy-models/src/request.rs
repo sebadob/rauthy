@@ -9,9 +9,9 @@ use css_color::Srgb;
 use rauthy_common::constants::{
     RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_ALNUM_SPACE, RE_API_KEY, RE_APP_ID, RE_ATTR,
     RE_ATTR_DESC, RE_AUTH_PROVIDER_SCOPE, RE_CHALLENGE, RE_CITY, RE_CLIENT_ID_EPHEMERAL,
-    RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_CODE_VERIFIER, RE_DATE_STR, RE_FLOWS, RE_GRANT_TYPES,
-    RE_GROUPS, RE_LOWERCASE, RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_PEM, RE_PHONE, RE_STREET,
-    RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI, RE_USER_NAME,
+    RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_CODE_VERIFIER, RE_CONTACT, RE_DATE_STR, RE_FLOWS,
+    RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE, RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_PEM, RE_PHONE,
+    RE_STREET, RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI, RE_USER_NAME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::base64_decode;
@@ -163,8 +163,8 @@ pub struct EphemeralClientRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub client_uri: Option<String>,
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
-    #[validate(custom(function = "validate_vec_uri"))]
+    /// Validation: `Vec<^[a-zA-Z0-9\+.@/]{0,48}$>`
+    #[validate(custom(function = "validate_vec_contact"))]
     pub contacts: Option<Vec<String>>,
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
     #[validate(custom(function = "validate_vec_uri"))]
@@ -360,8 +360,8 @@ pub struct DynamicClientRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub client_uri: Option<String>,
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
-    #[validate(custom(function = "validate_vec_uri"))]
+    /// Validation: `Vec<^[a-zA-Z0-9\+.@/]{0,48}$>`
+    #[validate(custom(function = "validate_vec_contact"))]
     pub contacts: Option<Vec<String>>,
     /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub id_token_signed_response_alg: Option<JwkKeyPairAlg>,
@@ -784,8 +784,8 @@ pub struct UpdateClientRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub client_uri: Option<String>,
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
-    #[validate(custom(function = "validate_vec_uri"))]
+    /// Validation: `Vec<^[a-zA-Z0-9\+.@/]{0,48}$>`
+    #[validate(custom(function = "validate_vec_contact"))]
     pub contacts: Option<Vec<String>>,
 }
 
@@ -975,6 +975,19 @@ fn validate_vec_challenge(value: &[String]) -> Result<(), ValidationError> {
         });
     }
 
+    if let Some(e) = err {
+        return Err(ValidationError::new(e));
+    }
+    Ok(())
+}
+
+fn validate_vec_contact(value: &[String]) -> Result<(), ValidationError> {
+    let mut err = None;
+    value.iter().for_each(|v| {
+        if !RE_CONTACT.is_match(v) {
+            err = Some("^[a-zA-Z0-9\\+.@/]{0,48}$");
+        }
+    });
     if let Some(e) = err {
         return Err(ValidationError::new(e));
     }
