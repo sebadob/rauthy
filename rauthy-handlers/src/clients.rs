@@ -1,5 +1,7 @@
 use crate::ReqPrincipal;
-use actix_web::http::header::{ACCESS_CONTROL_ALLOW_ORIGIN, CONTENT_TYPE, WWW_AUTHENTICATE};
+use actix_web::http::header::{
+    ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE, WWW_AUTHENTICATE,
+};
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use rauthy_common::constants::{DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG};
@@ -403,6 +405,10 @@ pub async fn get_client_logo(
 
     Ok(HttpResponse::Ok()
         .insert_header((CONTENT_TYPE, logo.content_type))
+        // clients should cache the logos for 12 hours
+        // this means if a logo has been updated, they receive the new one 12 hours
+        // later in the worst case
+        .insert_header((CACHE_CONTROL, "max-age=43200"))
         .body(logo.data))
 }
 
