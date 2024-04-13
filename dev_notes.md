@@ -4,8 +4,6 @@
 
 ## TODO before v0.22
 
-- validate `db_migrate` is formed correctly after all the new migrations
-  sqlite -> postgres -> sqlite again
 - document "Login with Github" guide
 
 ## Stage 1 - essentials
