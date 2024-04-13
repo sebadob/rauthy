@@ -7,14 +7,14 @@
         putClientColors,
         putClientLogo
     } from "../../../utils/dataFetchingAdmin.js";
-    import {onDestroy, onMount} from "svelte";
+    import {onDestroy, onMount, tick} from "svelte";
     import ClientBrandingPreview from "./ClientBrandingPreview.svelte";
     import Input from "$lib/inputs/Input.svelte";
     import {extractFormErrors} from "../../../utils/helpers.js";
     import * as yup from "yup";
     import {REGEX_CSS_COLOR} from "../../../utils/constants.js";
-    import ImageUpload from "../../ImageUpload.svelte";
-    import {getClientLogo} from "../../../utils/dataFetching.js";
+    import ImageUploadRaw from "../../ImageUploadRaw.svelte";
+    import ClientLogo from "../../ClientLogo.svelte";
 
     export let client = {};
     let colors;
@@ -49,9 +49,12 @@
         }, 3000);
     }
 
+    $: if (clientLogo) {
+        uploadLogo(clientLogo);
+    }
+
     onMount(async () => {
         await getColors();
-        await getLogo();
     });
 
     onDestroy(() => {
@@ -72,16 +75,6 @@
         }
     }
 
-    async function getLogo() {
-        let res = await getClientLogo(client.id);
-        if (res.ok) {
-            clientLogo = await res.text();
-        } else {
-            let body = await res.json();
-            err = body.message;
-        }
-    }
-
     async function onSubmit() {
         err = '';
         isLoading = true;
@@ -93,17 +86,7 @@
 
         let res = await putClientColors(client.id, formValues);
         if (res.ok) {
-            if (clientLogo) {
-                let resLogo = await putClientLogo(client.id, clientLogo);
-                if (resLogo.ok) {
-                    success = true;
-                } else {
-                    let body = await res.json();
-                    err = `Logo upload: ${body.message}`;
-                }
-            } else {
-                success = true;
-            }
+            success = true;
         } else {
             let body = await res.json();
             err = body.message;
@@ -120,11 +103,29 @@
         if (res.ok) {
             await deleteClientLogo(client.id);
             await getColors();
-            await getLogo();
             success = true;
         } else {
             let body = await res.json();
             err = body.message;
+        }
+
+        isLoading = false;
+    }
+
+    async function uploadLogo(payload) {
+        isLoading = true;
+        // we need to make 100% sure, that `isLoading` has been set to avoid
+        // errors in case of too fast uploads
+        await tick();
+
+        let res = await putClientLogo(client.id, payload);
+        if (res.ok) {
+            // We don't need to do anything in that case.
+            // A reload of the logo in the body below will be done depending
+            // on state changes of `isLoading`.
+        } else {
+            let body = await res.json();
+            console.error(body.message);
         }
 
         isLoading = false;
@@ -155,229 +156,229 @@
 
     <div class="inner">
         {#if formValues}
-                <div class="col1 colors">
-                    <div class="row">
-                        <Input
-                                bind:value={formValues.act1}
-                                bind:error={formErrors.act1}
-                                autocomplete="off"
-                                placeholder="act1"
-                                on:input={validateForm}
-                        >
-                            act1
-                        </Input>
-                        <div class="colInputWrap">
-                            <input type="color" class="colInput" bind:value={formValues.act1} />
-                            <div class="colorBlock" style:background={formValues.act1}></div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <Input
-                                bind:value={formValues.act1a}
-                                bind:error={formErrors.act1a}
-                                autocomplete="off"
-                                placeholder="act1a"
-                                on:input={validateForm}
-                        >
-                            act1a
-                        </Input>
-                        <div class="colInputWrap">
-                            <input type="color" class="colInput" bind:value={formValues.act1a} />
-                            <div class="colorBlock" style:background={formValues.act1a}></div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <Input
-                                bind:value={formValues.act2}
-                                bind:error={formErrors.act2}
-                                autocomplete="off"
-                                placeholder="act2"
-                                on:input={validateForm}
-                        >
-                            act2
-                        </Input>
-                        <div class="colInputWrap">
-                            <input type="color" class="colInput" bind:value={formValues.act2} />
-                            <div class="colorBlock" style:background={formValues.act2}></div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <Input
-                                bind:value={formValues.act2a}
-                                bind:error={formErrors.act2a}
-                                autocomplete="off"
-                                placeholder="act2a"
-                                on:input={validateForm}
-                        >
-                            act2a
-                        </Input>
-                        <div class="colInputWrap">
-                            <input type="color" class="colInput" bind:value={formValues.act2a} />
-                            <div class="colorBlock" style:background={formValues.act2a}></div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <Input
-                                bind:value={formValues.acnt}
-                                bind:error={formErrors.acnt}
-                                autocomplete="off"
-                                placeholder="acnt"
-                                on:input={validateForm}
-                        >
-                            acnt
-                        </Input>
-                        <div class="colInputWrap">
-                            <input type="color" class="colInput" bind:value={formValues.acnt} />
-                            <div class="colorBlock" style:background={formValues.acnt}></div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <Input
-                                bind:value={formValues.acnta}
-                                bind:error={formErrors.acnta}
-                                autocomplete="off"
-                                placeholder="acnta"
-                                on:input={validateForm}
-                        >
-                            acnta
-                        </Input>
-                        <div class="colInputWrap">
-                            <input type="color" class="colInput" bind:value={formValues.acnta} />
-                            <div class="colorBlock" style:background={formValues.acnta}></div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <Input
-                                bind:value={formValues.ok}
-                                bind:error={formErrors.ok}
-                                autocomplete="off"
-                                placeholder="ok"
-                                on:input={validateForm}
-                        >
-                            ok
-                        </Input>
-                        <div class="colInputWrap">
-                            <input type="color" class="colInput" bind:value={formValues.ok} />
-                            <div class="colorBlock" style:background={formValues.ok}></div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <Input
-                                bind:value={formValues.err}
-                                bind:error={formErrors.err}
-                                autocomplete="off"
-                                placeholder="err"
-                                on:input={validateForm}
-                        >
-                            err
-                        </Input>
-                        <div class="colInputWrap">
-                            <input type="color" class="colInput" bind:value={formValues.err} />
-                            <div class="colorBlock" style:background={formValues.err}></div>
-                        </div>
+            <div class="col1 colors">
+                <div class="row">
+                    <Input
+                            bind:value={formValues.act1}
+                            bind:error={formErrors.act1}
+                            autocomplete="off"
+                            placeholder="act1"
+                            on:input={validateForm}
+                    >
+                        act1
+                    </Input>
+                    <div class="colInputWrap">
+                        <input type="color" class="colInput" bind:value={formValues.act1}/>
+                        <div class="colorBlock" style:background={formValues.act1}></div>
                     </div>
                 </div>
 
-                <div class="col2 colors">
-                    <div class="row">
-                        <Input
-                                bind:value={formValues.glow}
-                                bind:error={formErrors.glow}
-                                autocomplete="off"
-                                placeholder="glow"
-                                on:input={validateForm}
-                        >
-                            glow
-                        </Input>
-                        <div class="colInputWrap">
-                            <input type="color" class="colInput" bind:value={formValues.glow} />
-                            <div class="colorBlock" style:background={formValues.glow}></div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <Input
-                                bind:value={formValues.gmid}
-                                bind:error={formErrors.gmid}
-                                autocomplete="off"
-                                placeholder="gmid"
-                                on:input={validateForm}
-                        >
-                            gmid
-                        </Input>
-                        <div class="colInputWrap">
-                            <input type="color" class="colInput" bind:value={formValues.gmid} />
-                            <div class="colorBlock" style:background={formValues.gmid}></div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <Input
-                                bind:value={formValues.ghigh}
-                                bind:error={formErrors.ghigh}
-                                autocomplete="off"
-                                placeholder="ghigh"
-                                on:input={validateForm}
-                        >
-                            ghigh
-                        </Input>
-                        <div class="colInputWrap">
-                            <input type="color" class="colInput" bind:value={formValues.ghigh} />
-                            <div class="colorBlock" style:background={formValues.ghigh}></div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <Input
-                                bind:value={formValues.text}
-                                bind:error={formErrors.text}
-                                autocomplete="off"
-                                placeholder="text"
-                                on:input={validateForm}
-                        >
-                            text
-                        </Input>
-                        <div class="colInputWrap">
-                            <input type="color" class="colInput" bind:value={formValues.text} />
-                            <div class="colorBlock" style:background={formValues.text}></div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <Input
-                                bind:value={formValues.bg}
-                                bind:error={formErrors.bg}
-                                autocomplete="off"
-                                placeholder="bg"
-                                on:input={validateForm}
-                        >
-                            bg
-                        </Input>
-                        <div class="colInputWrap">
-                            <input type="color" class="colInput" bind:value={formValues.bg} />
-                            <div class="colorBlock" style:background={formValues.bg}></div>
-                        </div>
-                    </div>
-
-                    <div class="upload">
-                        <ImageUpload bind:image={clientLogo}/>
-                        {#if clientLogo}
-                            <img class="logo" src="{clientLogo}" alt="Custom Logo"/>
-                        {/if}
+                <div class="row">
+                    <Input
+                            bind:value={formValues.act1a}
+                            bind:error={formErrors.act1a}
+                            autocomplete="off"
+                            placeholder="act1a"
+                            on:input={validateForm}
+                    >
+                        act1a
+                    </Input>
+                    <div class="colInputWrap">
+                        <input type="color" class="colInput" bind:value={formValues.act1a}/>
+                        <div class="colorBlock" style:background={formValues.act1a}></div>
                     </div>
                 </div>
+
+                <div class="row">
+                    <Input
+                            bind:value={formValues.act2}
+                            bind:error={formErrors.act2}
+                            autocomplete="off"
+                            placeholder="act2"
+                            on:input={validateForm}
+                    >
+                        act2
+                    </Input>
+                    <div class="colInputWrap">
+                        <input type="color" class="colInput" bind:value={formValues.act2}/>
+                        <div class="colorBlock" style:background={formValues.act2}></div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <Input
+                            bind:value={formValues.act2a}
+                            bind:error={formErrors.act2a}
+                            autocomplete="off"
+                            placeholder="act2a"
+                            on:input={validateForm}
+                    >
+                        act2a
+                    </Input>
+                    <div class="colInputWrap">
+                        <input type="color" class="colInput" bind:value={formValues.act2a}/>
+                        <div class="colorBlock" style:background={formValues.act2a}></div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <Input
+                            bind:value={formValues.acnt}
+                            bind:error={formErrors.acnt}
+                            autocomplete="off"
+                            placeholder="acnt"
+                            on:input={validateForm}
+                    >
+                        acnt
+                    </Input>
+                    <div class="colInputWrap">
+                        <input type="color" class="colInput" bind:value={formValues.acnt}/>
+                        <div class="colorBlock" style:background={formValues.acnt}></div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <Input
+                            bind:value={formValues.acnta}
+                            bind:error={formErrors.acnta}
+                            autocomplete="off"
+                            placeholder="acnta"
+                            on:input={validateForm}
+                    >
+                        acnta
+                    </Input>
+                    <div class="colInputWrap">
+                        <input type="color" class="colInput" bind:value={formValues.acnta}/>
+                        <div class="colorBlock" style:background={formValues.acnta}></div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <Input
+                            bind:value={formValues.ok}
+                            bind:error={formErrors.ok}
+                            autocomplete="off"
+                            placeholder="ok"
+                            on:input={validateForm}
+                    >
+                        ok
+                    </Input>
+                    <div class="colInputWrap">
+                        <input type="color" class="colInput" bind:value={formValues.ok}/>
+                        <div class="colorBlock" style:background={formValues.ok}></div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <Input
+                            bind:value={formValues.err}
+                            bind:error={formErrors.err}
+                            autocomplete="off"
+                            placeholder="err"
+                            on:input={validateForm}
+                    >
+                        err
+                    </Input>
+                    <div class="colInputWrap">
+                        <input type="color" class="colInput" bind:value={formValues.err}/>
+                        <div class="colorBlock" style:background={formValues.err}></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col2 colors">
+                <div class="row">
+                    <Input
+                            bind:value={formValues.glow}
+                            bind:error={formErrors.glow}
+                            autocomplete="off"
+                            placeholder="glow"
+                            on:input={validateForm}
+                    >
+                        glow
+                    </Input>
+                    <div class="colInputWrap">
+                        <input type="color" class="colInput" bind:value={formValues.glow}/>
+                        <div class="colorBlock" style:background={formValues.glow}></div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <Input
+                            bind:value={formValues.gmid}
+                            bind:error={formErrors.gmid}
+                            autocomplete="off"
+                            placeholder="gmid"
+                            on:input={validateForm}
+                    >
+                        gmid
+                    </Input>
+                    <div class="colInputWrap">
+                        <input type="color" class="colInput" bind:value={formValues.gmid}/>
+                        <div class="colorBlock" style:background={formValues.gmid}></div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <Input
+                            bind:value={formValues.ghigh}
+                            bind:error={formErrors.ghigh}
+                            autocomplete="off"
+                            placeholder="ghigh"
+                            on:input={validateForm}
+                    >
+                        ghigh
+                    </Input>
+                    <div class="colInputWrap">
+                        <input type="color" class="colInput" bind:value={formValues.ghigh}/>
+                        <div class="colorBlock" style:background={formValues.ghigh}></div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <Input
+                            bind:value={formValues.text}
+                            bind:error={formErrors.text}
+                            autocomplete="off"
+                            placeholder="text"
+                            on:input={validateForm}
+                    >
+                        text
+                    </Input>
+                    <div class="colInputWrap">
+                        <input type="color" class="colInput" bind:value={formValues.text}/>
+                        <div class="colorBlock" style:background={formValues.text}></div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <Input
+                            bind:value={formValues.bg}
+                            bind:error={formErrors.bg}
+                            autocomplete="off"
+                            placeholder="bg"
+                            on:input={validateForm}
+                    >
+                        bg
+                    </Input>
+                    <div class="colInputWrap">
+                        <input type="color" class="colInput" bind:value={formValues.bg}/>
+                        <div class="colorBlock" style:background={formValues.bg}></div>
+                    </div>
+                </div>
+
+                <div class="logo">
+                    <ImageUploadRaw bind:image={clientLogo}/>
+                    {#if !isLoading}
+                        <ClientLogo clientId={client.id}/>
+                    {/if}
+                </div>
+            </div>
         {/if}
 
         {#if colors}
             <div class="preview">
-                <ClientBrandingPreview bind:colors bind:clientLogo/>
+                <ClientBrandingPreview bind:colors clientId={client.id} bind:isLoading/>
             </div>
         {/if}
     </div>

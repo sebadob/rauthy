@@ -17,6 +17,7 @@
     import JsonPathDesc from "./JsonPathDesc.svelte";
     import Textarea from "$lib/inputs/Textarea.svelte";
     import ImageUploadRaw from "../../ImageUploadRaw.svelte";
+    import ProviderLogo from "../../ProviderLogo.svelte";
 
     export let provider = {};
     export let onSave;
@@ -113,7 +114,9 @@
 
         let res = await putProviderLogo(provider.id, payload);
         if (res.ok) {
-            // TODO re-fetch provider with all info
+            // We don't need to do anything in that case.
+            // A reload of the logo in the body below will be done depending
+            // on state changes of `isLoading`.
         } else {
             let body = await res.json();
             console.error(body.message);
@@ -348,7 +351,7 @@
     <div class="logo">
         <ImageUploadRaw bind:image={logo}/>
         {#if !isLoading}
-            <img src="{`/auth/v1/providers/${provider.id}/img`}" alt="No Logo Available"/>
+            <ProviderLogo providerId={provider.id}/>
         {/if}
     </div>
 
