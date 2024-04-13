@@ -75,7 +75,7 @@
         padding: 5px 10px;
         background: var(--col-bg);
         border: 1px solid var(--col-glow);
-        border-radius: 7px;
+        border-radius: 3px;
         color: var(--col-text);
         font-size: 1.05rem;
         outline: none;
