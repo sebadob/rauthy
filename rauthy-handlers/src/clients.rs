@@ -495,7 +495,12 @@ pub async fn delete_client_logo(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Delete)?;
 
-    Logo::delete(&data, id.as_str(), &LogoType::Client).await?;
+    if id.as_str() == "rauthy" {
+        Logo::upsert_rauthy_default(&data).await?;
+    } else {
+        Logo::delete(&data, id.as_str(), &LogoType::Client).await?;
+    }
+
     Ok(HttpResponse::Ok().finish())
 }
 
