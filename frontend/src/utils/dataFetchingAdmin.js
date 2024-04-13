@@ -107,9 +107,6 @@ export async function putClientLogo(id, data) {
         method: 'PUT',
         headers: {
             'csrf-token': getCsrfToken(),
-            'content-disposition': 'form-data; name="file_param"; filename="fn.txt"',
-            // 'content-disposition': 'form-data; name="text"',
-            // 'Content-Type': 'multipart/form-data',
         },
         body: formData,
     });

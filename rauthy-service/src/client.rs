@@ -57,6 +57,9 @@ pub async fn update_client(
     client.challenge = client_req.challenges.map(|c| c.join(","));
     client.force_mfa = client_req.force_mfa;
 
+    client.contacts = client_req.contacts.map(|c| c.join(","));
+    client.client_uri = client_req.client_uri;
+
     client.save(data, None).await?;
     Ok(client)
 }

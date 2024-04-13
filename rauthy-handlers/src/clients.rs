@@ -1,20 +1,23 @@
 use crate::ReqPrincipal;
-use actix_web::http::header::{ACCESS_CONTROL_ALLOW_ORIGIN, WWW_AUTHENTICATE};
+use actix_web::http::header::{ACCESS_CONTROL_ALLOW_ORIGIN, CONTENT_TYPE, WWW_AUTHENTICATE};
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
+use actix_web_lab::__reexports::futures_util::StreamExt;
 use rauthy_common::constants::{DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG};
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::colors::ColorEntity;
+use rauthy_models::entity::logos::{Logo, LogoType};
 use rauthy_models::request::{
     ColorsRequest, DynamicClientRequest, NewClientRequest, UpdateClientRequest,
 };
 use rauthy_models::response::{ClientResponse, DynamicClientResponse};
 use rauthy_service::auth::get_bearer_token_from_header;
 use rauthy_service::client;
+use tracing::debug;
 
 /// Returns all existing OIDC clients with all their information, except for the client secrets.
 ///
@@ -387,8 +390,19 @@ pub async fn get_client_logo(
     id: web::Path<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let id = id.into_inner();
-    let logo = Client::find_logo(&data, &id).await?;
-    Ok(HttpResponse::Ok().body(logo))
+    debug!("Looking up client logo for id {}", id);
+    let logo = match Logo::find_cached(&data, &id, &LogoType::Client).await {
+        Ok(logo) => logo,
+        Err(_) => {
+            debug!("no specific logo for id {} - using Rauthy default", id);
+            // If this client does not have a custom logo, we will always serve
+            // Rauthy's logo as default
+            Logo::find_cached(&data, "rauthy", &LogoType::Client).await?
+        }
+    };
+    Ok(HttpResponse::Ok()
+        .insert_header((CONTENT_TYPE, logo.content_type))
+        .body(logo.data))
 }
 
 /// Upload a custom logo for the login page for this client
@@ -411,13 +425,44 @@ pub async fn put_client_logo(
     data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
-    payload: actix_multipart::Multipart,
+    mut payload: actix_multipart::Multipart,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Update)?;
 
-    let id = id.into_inner();
-    Client::upload_logo(&data, &id, payload).await?;
+    // we only accept a single field from the Multipart upload -> no looping here
+    let mut buf: Vec<u8> = Vec::with_capacity(128 * 1024);
+    let mut content_type = None;
+    if let Some(part) = payload.next().await {
+        let mut field = part?;
 
+        match field.content_type() {
+            Some(mime) => {
+                debug!("content_type: {:?}", mime);
+                content_type = Some(mime.clone());
+            }
+            None => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "content_type is missing".to_string(),
+                ));
+            }
+        }
+
+        while let Some(chunk) = field.next().await {
+            let bytes = chunk?;
+            buf.extend(bytes);
+        }
+    }
+
+    // content_type unwrap cannot panic -> checked above
+    Logo::upsert(
+        &data,
+        id.into_inner(),
+        buf,
+        content_type.unwrap(),
+        LogoType::Client,
+    )
+    .await?;
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -443,9 +488,7 @@ pub async fn delete_client_logo(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Delete)?;
 
-    let id = id.into_inner();
-    Client::delete_logo(&data, &id).await?;
-
+    Logo::delete(&data, id.as_str(), &LogoType::Client).await?;
     Ok(HttpResponse::Ok().finish())
 }
 

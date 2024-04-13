@@ -6,36 +6,31 @@ use crate::entity::users::User;
 use crate::request::{DynamicClientRequest, EphemeralClientRequest, NewClientRequest};
 use crate::response::DynamicClientResponse;
 use crate::ListenScheme;
-use actix_multipart::Multipart;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest};
 use cryptr::{utils, EncKeys, EncValue};
-use futures_util::StreamExt;
 use rauthy_common::constants::{
     ADMIN_FORCE_MFA, APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_EPHEMERAL_CLIENTS,
     DYN_CLIENT_DEFAULT_TOKEN_LIFETIME, DYN_CLIENT_SECRET_AUTO_ROTATE, ENABLE_EPHEMERAL_CLIENTS,
     EPHEMERAL_CLIENTS_ALLOWED_FLOWS, EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA,
-    IDX_CLIENTS, IDX_CLIENT_LOGO, PROXY_MODE, RAUTHY_VERSION,
+    IDX_CLIENTS, PROXY_MODE, RAUTHY_VERSION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{cache_entry_client, get_client_ip, get_rand};
 use redhac::{
-    cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, cache_put, cache_remove,
-    AckLevel,
+    cache_get, cache_get_from, cache_get_value, cache_insert, cache_put, cache_remove, AckLevel,
 };
 use reqwest::header::CONTENT_TYPE;
 use reqwest::{tls, Url};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, Row};
+use sqlx::FromRow;
 use std::str::FromStr;
 use std::sync::OnceLock;
 use std::time::Duration;
 use tracing::{debug, error, warn};
 use utoipa::ToSchema;
 use validator::Validate;
-
-const RAUTHY_DEFAULT_LOGO: &str = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+Cjxzdmcgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgdmlld0JveD0iMCAwIDUxMiAxMzgiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSIgeG1sbnM6c2VyaWY9Imh0dHA6Ly93d3cuc2VyaWYuY29tLyIgc3R5bGU9ImZpbGwtcnVsZTpldmVub2RkO2NsaXAtcnVsZTpldmVub2RkO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxLjU7Ij4KICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDEsMCwwLDEsMCwtMTEpIj4KICAgICAgICA8ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLDAsMCwxLDAsLTE3NikiPgogICAgICAgICAgICA8ZyB0cmFuc2Zvcm09Im1hdHJpeCgwLjkyMDMyNSwwLDAsMS44NDE1MSw0NS45Mjc5LDI2LjQ1OSkiPgogICAgICAgICAgICAgICAgPHJlY3QgeD0iMjcuNzQxIiB5PSIxNTEuNTciIHdpZHRoPSIyMDAuNTE3IiBoZWlnaHQ9IjEwLjE0OCIgc3R5bGU9ImZpbGw6cmdiKDQsNywxMSk7Ii8+CiAgICAgICAgICAgIDwvZz4KICAgICAgICAgICAgPGcgdHJhbnNmb3JtPSJtYXRyaXgoMS45MzQ3MiwwLDAsMS44MjczMiw4LjM1NjE4LDI4Ljc1MzMpIj4KICAgICAgICAgICAgICAgIDxyZWN0IHg9IjMzLjMwNyIgeT0iOTcuMTUiIHdpZHRoPSI5NC42OTMiIGhlaWdodD0iNTQuNDIiIHN0eWxlPSJmaWxsOnJnYig0LDcsMTEpO3N0cm9rZTpyZ2IoNCw3LDExKTtzdHJva2Utd2lkdGg6MS4wNnB4OyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDEuODI3MzIsMCwwLDEuODI3MzIsLTE2MC44MjIsNzAuMTgwNikiPgogICAgICAgICAgICAgICAgPGcgdHJhbnNmb3JtPSJtYXRyaXgoNzIsMCwwLDcyLDIyNy4xNzQsMTIzLjQxNykiPgogICAgICAgICAgICAgICAgPC9nPgogICAgICAgICAgICAgICAgPHRleHQgeD0iMTI4Ljk4MnB4IiB5PSIxMjMuNDE3cHgiIHN0eWxlPSJmb250LWZhbWlseTonQ2FsaWJyaS1Cb2xkJywgJ0NhbGlicmknLCBzYW5zLXNlcmlmO2ZvbnQtd2VpZ2h0OjcwMDtmb250LXNpemU6NzJweDtmaWxsOndoaXRlOyI+cjx0c3BhbiB4PSIxNTIuOTk0cHggMTg4LjUzN3B4ICIgeT0iMTIzLjQxN3B4IDEyMy40MTdweCAiPmF1PC90c3Bhbj48L3RleHQ+CiAgICAgICAgICAgIDwvZz4KICAgICAgICAgICAgPGcgdHJhbnNmb3JtPSJtYXRyaXgoMSwwLDAsMS4wMTYxNywtMS40MjEwOWUtMTQsLTUuMjQ0OTIpIj4KICAgICAgICAgICAgICAgIDxwYXRoIGQ9Ik00NDAuOTM2LDMyMi42NDNMNDM5LjIwNCwzMjQuMjY2TDI1NS40ODIsMzI0LjI2NkwyNTUuNDgyLDMwNS43MjFMNDQwLjkzNiwzMDUuNzIxTDQ0MC45MzYsMzIyLjY0M1oiIHN0eWxlPSJmaWxsOnVybCgjX0xpbmVhcjEpOyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDAuOTIwMTkxLDAsMCwxLjg0MTIxLDQ2LjI0NjQsLTkxLjMzODMpIj4KICAgICAgICAgICAgICAgIDxyZWN0IHg9IjI3Ljc0MSIgeT0iMTUxLjU3IiB3aWR0aD0iMjAwLjUxNyIgaGVpZ2h0PSIxMC4xNDgiIHN0eWxlPSJmaWxsOnVybCgjX0xpbmVhcjIpOyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDEuOTc1OTgsMCwwLDEuODQ2MTksMTkwLjE4NywyNi4wNjIpIj4KICAgICAgICAgICAgICAgIDxyZWN0IHg9IjMzLjMwNyIgeT0iOTcuMTUiIHdpZHRoPSI5NC42OTMiIGhlaWdodD0iNTQuNDIiIHN0eWxlPSJmaWxsOnJnYig0Myw2NSwxMDcpOyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik00MzkuMjA0LDE4Ny43MzRMNDQwLjU1NywxODkuMDA3TDQ0MC41NTcsMjA2LjI3OUwyNTYsMjA2LjI3OUwyNTYsMTg3LjczNEw0MzkuMjA0LDE4Ny43MzRaIiBzdHlsZT0iZmlsbDpyZ2IoNDMsNjUsMTA3KTsiLz4KICAgICAgICAgICAgPGcgdHJhbnNmb3JtPSJtYXRyaXgoMS44MjczMiwwLDAsMS44MjczMiwtMTU0LjY2MSw3MC4xODA2KSI+CiAgICAgICAgICAgICAgICA8ZyB0cmFuc2Zvcm09Im1hdHJpeCg3MiwwLDAsNzIsMzIzLjA0NSwxMjMuNDE3KSI+CiAgICAgICAgICAgICAgICA8L2c+CiAgICAgICAgICAgICAgICA8dGV4dCB4PSIyMjYuNjQ2cHgiIHk9IjEyMy40MTdweCIgc3R5bGU9ImZvbnQtZmFtaWx5OidDYWxpYnJpLUJvbGQnLCAnQ2FsaWJyaScsIHNhbnMtc2VyaWY7Zm9udC13ZWlnaHQ6NzAwO2ZvbnQtc2l6ZTo3MnB4O2ZpbGw6d2hpdGU7Ij50aDx0c3BhbiB4PSIyODguOTQzcHggIiB5PSIxMjMuNDE3cHggIj55PC90c3Bhbj48L3RleHQ+CiAgICAgICAgICAgIDwvZz4KICAgICAgICAgICAgPGcgdHJhbnNmb3JtPSJtYXRyaXgoMiwwLDAsMiwwLDApIj4KICAgICAgICAgICAgICAgIDxwYXRoIGQ9Ik0yMTkuNjAyLDkzLjg2N0wyNTYsMTI4TDIxOS42MDIsMTYyLjEzM0wyMTkuNjAyLDkzLjg2N1oiIHN0eWxlPSJmaWxsOnJnYig0Myw2NSwxMDcpOyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDIsMCwwLDEuOTU3MzksMCwzLjk5OTk3KSI+CiAgICAgICAgICAgICAgICA8cGF0aCBkPSJNMzYuMzk4LDkzLjg2N0wwLDkzLjg2N0wzNS45MDgsMTI4LjUyNEwwLDE2My42MTlMMzYuMzk4LDE2My42MTkiIHN0eWxlPSJmaWxsOnJnYig0LDcsMTEpOyIvPgogICAgICAgICAgICA8L2c+CiAgICAgICAgPC9nPgogICAgPC9nPgogICAgPGRlZnM+CiAgICAgICAgPGxpbmVhckdyYWRpZW50IGlkPSJfTGluZWFyMSIgeDE9IjAiIHkxPSIwIiB4Mj0iMSIgeTI9IjAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiBncmFkaWVudFRyYW5zZm9ybT0ibWF0cml4KDE4NS40NTQsMCwwLDE4LjU0NDMsMjU1LjQ4MiwzMTQuOTk0KSI+PHN0b3Agb2Zmc2V0PSIwIiBzdHlsZT0ic3RvcC1jb2xvcjpyZ2IoNCw3LDExKTtzdG9wLW9wYWNpdHk6MSIvPjxzdG9wIG9mZnNldD0iMSIgc3R5bGU9InN0b3AtY29sb3I6cmdiKDQzLDY1LDEwNyk7c3RvcC1vcGFjaXR5OjEiLz48L2xpbmVhckdyYWRpZW50PgogICAgICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iX0xpbmVhcjIiIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgZ3JhZGllbnRUcmFuc2Zvcm09Im1hdHJpeCgyMDAuNTE3LDAsMCwxMC4xNDgzLDI3Ljc0MTQsMTU2LjY0NSkiPjxzdG9wIG9mZnNldD0iMCIgc3R5bGU9InN0b3AtY29sb3I6cmdiKDQsNywxMSk7c3RvcC1vcGFjaXR5OjEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0eWxlPSJzdG9wLWNvbG9yOnJnYig0Myw2NSwxMDcpO3N0b3Atb3BhY2l0eToxIi8+PC9saW5lYXJHcmFkaWVudD4KICAgIDwvZGVmcz4KPC9zdmc+Cg==";
 
 static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 
@@ -55,17 +50,15 @@ pub struct Client {
     pub name: Option<String>,
     pub enabled: bool,
     pub confidential: bool,
-    // The client secrets is saved as encrypted bytes and can only be decrypted inside this
-    // application itself with the `ENC_KEYS` and `ENC_KEY_ACTIVE` environment variables.
     pub secret: Option<Vec<u8>>,
     pub secret_kid: Option<String>,
     pub redirect_uris: String,
     pub post_logout_redirect_uris: Option<String>,
     pub allowed_origins: Option<String>,
     pub flows_enabled: String,
-    // Currently supported Algorithms: RS 256, 384, 512 and ES 256, 384, 512
+    // Currently supported Algorithms: RS 256, 384, 512 and EdDSA
     pub access_token_alg: String,
-    // Currently supported Algorithms: RS 256, 384, 512 and ES 256, 384, 512
+    // Currently supported Algorithms: RS 256, 384, 512 and EdDSA
     pub id_token_alg: String,
     pub refresh_token: bool,
     pub auth_code_lifetime: i32,
@@ -74,6 +67,8 @@ pub struct Client {
     pub default_scopes: String,
     pub challenge: Option<String>,
     pub force_mfa: bool,
+    pub client_uri: Option<String>,
+    pub contacts: Option<String>,
 }
 
 // CRUD
@@ -100,8 +95,9 @@ impl Client {
             r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
             redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg,
             id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
-            challenge, force_mfa)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#,
+            challenge, force_mfa, client_uri, contacts)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+            $18, $19, $20, $21)"#,
             client.id,
             client.name,
             client.enabled,
@@ -121,6 +117,8 @@ impl Client {
             client.default_scopes,
             client.challenge,
             client.force_mfa,
+            client.client_uri,
+            client.contacts,
         )
             .execute(&data.db)
             .await?
@@ -160,10 +158,11 @@ impl Client {
 
         sqlx::query!(
             r#"INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid,
-            redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg,
-            id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
-            challenge, force_mfa)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#,
+            redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled,
+            access_token_alg, id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime,
+            scopes, default_scopes, challenge, force_mfa, client_uri, contacts)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+            $18, $19, $20, $21)"#,
             client.id,
             client.name,
             client.enabled,
@@ -183,6 +182,8 @@ impl Client {
             client.default_scopes,
             client.challenge,
             client.force_mfa,
+            client.client_uri,
+            client.contacts,
         )
             .execute(&mut *txn)
             .await?;
@@ -344,89 +345,90 @@ impl Client {
         Ok(client)
     }
 
-    pub async fn find_logo(data: &web::Data<AppState>, id: &str) -> Result<String, ErrorResponse> {
-        let idx = format!("{}{}", IDX_CLIENT_LOGO, id);
-        let logo = cache_get!(
-            String,
-            CACHE_NAME_12HR.to_string(),
-            idx.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(logo) = logo {
-            return Ok(logo);
-        }
-
-        let logo_opt = sqlx::query("select data from logos where client_id = $1")
-            .bind(id)
-            .fetch_optional(&data.db)
-            .await?;
-
-        let logo = match logo_opt {
-            None => RAUTHY_DEFAULT_LOGO.to_string(),
-            Some(row) => row.get("data"),
-        };
-
-        cache_put(
-            CACHE_NAME_12HR.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &logo,
-        )
-        .await?;
-
-        Ok(logo)
-    }
-
-    pub async fn save_logo(
-        data: &web::Data<AppState>,
-        id: &str,
-        logo: String,
-    ) -> Result<(), ErrorResponse> {
-        #[cfg(feature = "sqlite")]
-        let q = sqlx::query!(
-            "insert or replace into logos (client_id, data) values ($1, $2)",
-            id,
-            logo
-        );
-        #[cfg(not(feature = "sqlite"))]
-        let q = sqlx::query!(
-            r#"insert into logos (client_id, data) values ($1, $2)
-                on conflict(client_id) do update set data = $2"#,
-            id,
-            logo
-        );
-
-        q.execute(&data.db).await?;
-
-        let idx = format!("{}{}", IDX_CLIENT_LOGO, id);
-        cache_put(
-            CACHE_NAME_12HR.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &logo,
-        )
-        .await?;
-
-        Ok(())
-    }
-
-    pub async fn delete_logo(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
-        let idx = format!("{}{}", IDX_CLIENT_LOGO, id);
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-        )
-        .await?;
-
-        sqlx::query!("delete from logos where client_id = $1", id)
-            .execute(&data.db)
-            .await?;
-
-        Ok(())
-    }
+    // // TODO needs full re-write to webp logic
+    // pub async fn find_logo(data: &web::Data<AppState>, id: &str) -> Result<String, ErrorResponse> {
+    //     let idx = format!("{}{}", IDX_CLIENT_LOGO, id);
+    //     let logo = cache_get!(
+    //         String,
+    //         CACHE_NAME_12HR.to_string(),
+    //         idx.clone(),
+    //         &data.caches.ha_cache_config,
+    //         false
+    //     )
+    //     .await?;
+    //     if let Some(logo) = logo {
+    //         return Ok(logo);
+    //     }
+    //
+    //     let logo_opt = sqlx::query("select data from logos where client_id = $1")
+    //         .bind(id)
+    //         .fetch_optional(&data.db)
+    //         .await?;
+    //
+    //     let logo = match logo_opt {
+    //         None => RAUTHY_DEFAULT_LOGO.to_string(),
+    //         Some(row) => row.get("data"),
+    //     };
+    //
+    //     cache_put(
+    //         CACHE_NAME_12HR.to_string(),
+    //         idx,
+    //         &data.caches.ha_cache_config,
+    //         &logo,
+    //     )
+    //     .await?;
+    //
+    //     Ok(logo)
+    // }
+    //
+    // pub async fn save_logo(
+    //     data: &web::Data<AppState>,
+    //     id: &str,
+    //     logo: String,
+    // ) -> Result<(), ErrorResponse> {
+    //     #[cfg(feature = "sqlite")]
+    //     let q = sqlx::query!(
+    //         "insert or replace into logos (client_id, data) values ($1, $2)",
+    //         id,
+    //         logo
+    //     );
+    //     #[cfg(not(feature = "sqlite"))]
+    //     let q = sqlx::query!(
+    //         r#"insert into logos (client_id, data) values ($1, $2)
+    //             on conflict(client_id) do update set data = $2"#,
+    //         id,
+    //         logo
+    //     );
+    //
+    //     q.execute(&data.db).await?;
+    //
+    //     let idx = format!("{}{}", IDX_CLIENT_LOGO, id);
+    //     cache_put(
+    //         CACHE_NAME_12HR.to_string(),
+    //         idx,
+    //         &data.caches.ha_cache_config,
+    //         &logo,
+    //     )
+    //     .await?;
+    //
+    //     Ok(())
+    // }
+    //
+    // pub async fn delete_logo(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
+    //     let idx = format!("{}{}", IDX_CLIENT_LOGO, id);
+    //     cache_del(
+    //         CACHE_NAME_12HR.to_string(),
+    //         idx,
+    //         &data.caches.ha_cache_config,
+    //     )
+    //     .await?;
+    //
+    //     sqlx::query!("delete from logos where client_id = $1", id)
+    //         .execute(&data.db)
+    //         .await?;
+    //
+    //     Ok(())
+    // }
 
     pub async fn save(
         &self,
@@ -438,7 +440,8 @@ impl Client {
             secret_kid = $5, redirect_uris = $6, post_logout_redirect_uris = $7, allowed_origins = $8,
             flows_enabled = $9, access_token_alg = $10, id_token_alg = $11, refresh_token = $12,
             auth_code_lifetime = $13, access_token_lifetime = $14, scopes = $15, default_scopes = $16,
-            challenge = $17, force_mfa= $18 where id = $19"#,
+            challenge = $17, force_mfa= $18, client_uri = $19, contacts = $20
+            where id = $21"#,
             self.name,
             self.enabled,
             self.confidential,
@@ -457,6 +460,8 @@ impl Client {
             self.default_scopes,
             self.challenge,
             self.force_mfa,
+            self.client_uri,
+            self.contacts,
             self.id,
         );
 
@@ -633,6 +638,18 @@ impl Client {
         Some(res)
     }
 
+    pub fn get_contacts(&self) -> Option<Vec<String>> {
+        if let Some(contacts) = &self.contacts {
+            let mut res = Vec::new();
+            for c in contacts.split(',') {
+                res.push(c.to_string());
+            }
+            Some(res)
+        } else {
+            None
+        }
+    }
+
     /// Decrypts the client secret (if it exists) and then returns it as clear text.
     pub fn get_secret_cleartext(&self) -> Result<Option<String>, ErrorResponse> {
         if let Some(secret) = self.secret.as_ref() {
@@ -765,37 +782,37 @@ impl Client {
         Ok(res)
     }
 
-    pub async fn upload_logo(
-        data: &web::Data<AppState>,
-        client_id: &str,
-        mut payload: Multipart,
-    ) -> Result<(), ErrorResponse> {
-        let mut buf: Vec<u8> = Vec::with_capacity(1024);
-
-        while let Some(item) = payload.next().await {
-            let mut field = item?;
-            // let content_type = field.content_disposition();
-
-            while let Some(chunk) = field.next().await {
-                let bytes = chunk?;
-                buf.extend(bytes);
-            }
-        }
-
-        let logo_str = match String::from_utf8(buf) {
-            Ok(l) => l,
-            Err(err) => {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    format!("Cannot parse logo: {:?}", err),
-                ));
-            }
-        };
-
-        Self::save_logo(data, client_id, logo_str).await?;
-
-        Ok(())
-    }
+    // pub async fn upload_logo(
+    //     data: &web::Data<AppState>,
+    //     client_id: &str,
+    //     mut payload: Multipart,
+    // ) -> Result<(), ErrorResponse> {
+    //     let mut buf: Vec<u8> = Vec::with_capacity(1024);
+    //
+    //     while let Some(item) = payload.next().await {
+    //         let mut field = item?;
+    //         // let content_type = field.content_disposition();
+    //
+    //         while let Some(chunk) = field.next().await {
+    //             let bytes = chunk?;
+    //             buf.extend(bytes);
+    //         }
+    //     }
+    //
+    //     let logo_str = match String::from_utf8(buf) {
+    //         Ok(l) => l,
+    //         Err(err) => {
+    //             return Err(ErrorResponse::new(
+    //                 ErrorResponseType::BadRequest,
+    //                 format!("Cannot parse logo: {:?}", err),
+    //             ));
+    //         }
+    //     };
+    //
+    //     Self::save_logo(data, client_id, logo_str).await?;
+    //
+    //     Ok(())
+    // }
 
     /// Validates the User's access to this client depending on the `force_mfa` setting.
     /// Do this check after a possible password hash to not leak information to unauthenticated users!
@@ -1101,6 +1118,8 @@ impl From<EphemeralClientRequest> for Client {
             default_scopes: scopes,
             challenge: Some("S256".to_string()),
             force_mfa: *EPHEMERAL_CLIENTS_FORCE_MFA,
+            client_uri: value.client_uri,
+            contacts: value.contacts.map(|c| c.join(",")),
         }
     }
 }
@@ -1137,6 +1156,8 @@ impl Default for Client {
             default_scopes: "openid".to_string(),
             challenge: Some("S256".to_string()),
             force_mfa: false,
+            client_uri: None,
+            contacts: None,
         }
     }
 }
@@ -1206,6 +1227,8 @@ impl Client {
             access_token_lifetime: *DYN_CLIENT_DEFAULT_TOKEN_LIFETIME,
             challenge: confidential.then_some("S256".to_string()),
             force_mfa: false,
+            client_uri: req.client_uri,
+            contacts: req.contacts.map(|c| c.join(",")),
             ..Default::default()
         })
     }
@@ -1298,6 +1321,8 @@ mod tests {
             default_scopes: "openid,email,profile,groups".to_string(),
             challenge: Some("S256,plain".to_string()),
             force_mfa: false,
+            client_uri: Some("http://localhost:1337".to_string()),
+            contacts: Some("batman@localhost.de,alfred@localhost.de".to_string()),
         };
 
         assert_eq!(client.get_access_token_alg().unwrap(), JwkKeyPairAlg::EdDSA);
@@ -1379,6 +1404,15 @@ mod tests {
         assert_eq!(client.validate_flow("password"), Ok(()));
         assert!(client.validate_flow("blabla").is_err());
         assert!(client.validate_flow("").is_err());
+
+        // contacts
+        assert_eq!(
+            client.get_contacts(),
+            vec![
+                "batman@localhost.de".to_string(),
+                "alfred@localhost.de".to_string(),
+            ]
+        );
 
         // validate origin
         let listen_scheme = ListenScheme::Http;

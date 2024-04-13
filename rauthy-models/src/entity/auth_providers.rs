@@ -38,16 +38,18 @@ use ring::digest;
 use serde::{Deserialize, Serialize};
 use serde_json::value;
 use serde_json_path::JsonPath;
-use sqlx::{query, query_as};
+use sqlx::{query, query_as, FromRow};
 use std::borrow::Cow;
 use std::fmt::Write;
 use std::str::FromStr;
 use std::time::Duration;
 use time::OffsetDateTime;
-use tracing::{debug, error, warn};
+use tracing::{debug, error};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, ToSchema)]
+#[sqlx(type_name = "varchar")]
+#[sqlx(rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum AuthProviderType {
     Custom,
@@ -108,7 +110,7 @@ pub struct WellKnownLookup {
 }
 
 /// Upstream Auth Provider for upstream logins without a local Rauthy account
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AuthProvider {
     pub id: String,
     pub name: String,
@@ -144,8 +146,7 @@ impl AuthProvider {
         let typ = slf.typ.as_str();
 
         query!(
-            r#"
-            INSERT INTO
+            r#"INSERT INTO
             auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
             userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
             mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem)

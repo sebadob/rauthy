@@ -3,7 +3,6 @@
     import {
         authorize,
         authorizeRefresh,
-        getClientLogo,
         postPasswordResetRequest,
         postProviderLogin
     } from "../../../utils/dataFetching.js";
@@ -29,7 +28,6 @@
     let t = {};
 
     let clientId;
-    let clientLogo;
     let clientName = '';
     let redirectUri = '';
     let nonce = '';
@@ -101,10 +99,6 @@
         }, 3000);
     }
 
-    $: if (clientId) {
-        fetchClientLogo(clientId);
-    }
-
     $: if (passwordInput) {
         passwordInput.focus();
     }
@@ -142,16 +136,6 @@
             formValues.email = params.login_hint;
         }
     })
-
-    async function fetchClientLogo(id) {
-        let res = await getClientLogo(id);
-        if (res.ok) {
-            clientLogo = await res.text();
-        } else {
-            let body = await res.json();
-            err = body.message;
-        }
-    }
 
     function handleShowReset() {
         err = '';
@@ -331,8 +315,8 @@
         <div class="container">
             <div class="head">
                 <div class="logo">
-                    {#if clientLogo}
-                        <img class="logo" src="{clientLogo}" alt="Client Logo"/>
+                    {#if clientId}
+                        <img src="{`/auth/v1/clients/${clientId}/logo`}" alt="No Logo Available"/>
                     {/if}
                 </div>
             </div>
@@ -416,7 +400,6 @@
                         <Button on:click={() => providerLogin(provider.id)} level={3}>
                             <div class="flex-inline">
                                 <img src="{`/auth/v1/providers/${provider.id}/img`}" alt="" width="20" height="20"/>
-                                <!--                            <img class="logo" src="{`/auth/v1/providers/${provider.id}/img`}" alt=""/>-->
                                 {provider.name}
                             </div>
                         </Button>
@@ -503,6 +486,7 @@
     }
 
     .logo {
+        margin: 0 .25rem;
         width: 84px;
         height: 84px;
     }

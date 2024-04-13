@@ -1,14 +1,14 @@
 <script>
-    import RauthyLogo from "$lib/icons/RauthyLogo.svelte";
     import ClientBrandingPreviewBtn from "./ClientBrandingPreviewBtn.svelte";
     import ClientBrandingPreviewInput from "./ClientBrandingPreviewInput.svelte";
+    import ClientLogo from "../../ClientLogo.svelte";
 
-    export let clientLogo;
+    export let clientId;
     export let colors;
+    export let isLoading;
 
     let errEmail = 'This is an E-Mail error';
     let errPwd = 'This is a password error';
-    let isLoading = false;
 
 </script>
 
@@ -23,10 +23,8 @@
 >
     <div class="head">
         <div class="logo">
-            {#if clientLogo}
-                <img class="logo" src="{clientLogo}" alt="Custom Logo"/>
-            {:else}
-                <RauthyLogo/>
+            {#if !isLoading}
+                <ClientLogo bind:clientId/>
             {/if}
         </div>
     </div>

@@ -91,6 +91,8 @@ pub struct ClientResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub challenges: Option<Vec<String>>,
     pub force_mfa: bool,
+    pub client_uri: Option<String>,
+    pub contacts: Option<Vec<String>>,
 }
 
 impl From<Client> for ClientResponse {
@@ -102,6 +104,7 @@ impl From<Client> for ClientResponse {
         let scopes = client.get_scopes();
         let default_scopes = client.get_default_scopes();
         let challenges = client.get_challenges();
+        let contacts = client.get_contacts();
 
         Self {
             id: client.id,
@@ -121,6 +124,8 @@ impl From<Client> for ClientResponse {
             default_scopes,
             challenges,
             force_mfa: client.force_mfa,
+            client_uri: client.client_uri,
+            contacts,
         }
     }
 }
@@ -130,6 +135,10 @@ pub struct DynamicClientResponse {
     pub client_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contacts: Option<Vec<String>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client_secret: Option<String>,
@@ -163,6 +172,8 @@ impl DynamicClientResponse {
         client_dyn: ClientDyn,
         map_registration_client_uri: bool,
     ) -> Result<Self, ErrorResponse> {
+        let contacts = client.get_contacts();
+
         let redirect_uris = client.get_redirect_uris();
         let grant_types = client.get_flows();
         let post_logout_redirect_uri = client.get_redirect_uris().first().cloned();
@@ -180,6 +191,8 @@ impl DynamicClientResponse {
         Ok(Self {
             client_id: client.id,
             client_name: client.name,
+            client_uri: client.client_uri,
+            contacts,
             client_secret,
             // TODO check if we can make sure that a client will renew the secret properly -> let it expire then
             client_secret_expires_at: 0,

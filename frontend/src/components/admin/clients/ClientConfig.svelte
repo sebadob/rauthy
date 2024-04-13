@@ -4,7 +4,14 @@
     import Switch from "$lib/Switch.svelte";
     import ItemTiles from "$lib/itemTiles/ItemTiles.svelte";
     import Button from "$lib/Button.svelte";
-    import {FLOWS, PKCE_CHALLENGES, REGEX_CLIENT_NAME, REGEX_URI, TOKEN_ALGS} from "../../../utils/constants.js";
+    import {
+        FLOWS,
+        PKCE_CHALLENGES,
+        REGEX_CLIENT_NAME,
+        REGEX_CONTACT,
+        REGEX_URI,
+        TOKEN_ALGS
+    } from "../../../utils/constants.js";
     import {onMount} from "svelte";
     import {globalScopesNames} from "../../../stores/admin.js";
     import OptionSelect from "$lib/OptionSelect.svelte";
@@ -39,6 +46,7 @@
         return c;
     });
 
+    let validateContacts;
     let validateAllowedOrigins;
     let validateRedirectUris;
     let validatePostLogoutUris;
@@ -63,6 +71,7 @@
     let formErrors = {};
     const schema = yup.object().shape({
         name: yup.string().trim().matches(REGEX_CLIENT_NAME, "Can only contain characters, numbers and '-'"),
+        client_uri: yup.string().trim().matches(REGEX_URI, "Invalid URI"),
         access_token_lifetime: yup.number().required('Token Lifetime is required').min(60, 'Cannot be lower than 60').max(86400, 'Cannot be higher than 86400'),
     });
 
@@ -89,7 +98,11 @@
         isLoading = true;
 
         const valid = await validateForm();
-        if (!valid || !validateAllowedOrigins() || !validateRedirectUris() || !validatePostLogoutUris()) {
+        if (!valid
+            || !validateAllowedOrigins()
+            || !validateRedirectUris()
+            || !validatePostLogoutUris()
+            || !validateContacts()) {
             err = 'Invalid input';
             return;
         }
@@ -124,6 +137,8 @@
         if (data.allowed_origins.length > 0 && !data.allowed_origins[0]) {
             data.allowed_origins = [];
         }
+
+        console.log(data);
 
         let res = await putClient(data);
         if (res.ok) {
@@ -172,10 +187,51 @@
             placeholder="Client Name"
             on:keypress={handleKeyPress}
             on:input={validateForm}
+            width={urlInputWidth}
     >
         CLIENT NAME
     </Input>
 
+    <div class="desc">
+        <p>
+            Information about this client's URI and some contacts.
+            Client URI and Contacts might be shown to users on the login page.
+        </p>
+    </div>
+    <!-- Client URI -->
+    <Input
+            bind:value={client.client_uri}
+            autocomplete="off"
+            placeholder="Client URI"
+            on:keypress={handleKeyPress}
+            on:input={validateForm}
+            width={urlInputWidth}
+    >
+        CLIENT URI
+    </Input>
+
+    <!-- Contacts -->
+    <ExpandableInput
+            style="width: {urlInputWidth}"
+            validation={{
+            required: false,
+            regex: REGEX_CONTACT,
+            errMsg: "Only URL safe values: a-zA-Z0-9,.:/_-&?=~#!$'()*+%",
+        }}
+            bind:values={client.contacts}
+            bind:validate={validateContacts}
+            autocomplete="off"
+            placeholder="Contact"
+            optional
+    >
+        CONTACT
+    </ExpandableInput>
+
+    <div class="desc">
+        <p>
+            Client configuration
+        </p>
+    </div>
     <div class="row" style:margin-top="-5px">
         <!-- Enabled -->
         <div class="unit" style:width="138px">
