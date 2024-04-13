@@ -20,6 +20,7 @@ use crate::app_state::DbPool;
 use crate::entity::api_keys::ApiKeyEntity;
 use crate::entity::auth_providers::AuthProvider;
 use crate::entity::clients::Client;
+use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::colors::ColorEntity;
 use crate::entity::config::ConfigEntity;
 use crate::entity::groups::Group;
@@ -32,7 +33,9 @@ use crate::entity::scopes::Scope;
 use crate::entity::sessions::Session;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::users::User;
+use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::PasskeyEntity;
+use crate::entity::webids::WebId;
 
 pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse> {
     debug!("Executing anti_lockout_check");
@@ -268,6 +271,7 @@ pub async fn migrate_from_sqlite(
     info!("Starting migration to another DB");
 
     // CONFIG
+    debug!("Migrating table: config");
     let before = sqlx::query_as::<_, ConfigEntity>("SELECT * FROM config")
         .fetch_all(&db_from)
         .await?;
@@ -283,6 +287,7 @@ pub async fn migrate_from_sqlite(
     }
 
     // API KEYS
+    debug!("Migrating table: api_keys");
     let before = sqlx::query_as::<_, ApiKeyEntity>("SELECT * FROM api_keys")
         .fetch_all(&db_from)
         .await?;
@@ -305,6 +310,7 @@ pub async fn migrate_from_sqlite(
 
     // The users table has a FK to auth_providers - the order is important here!
     // AUTH PROVIDERS
+    debug!("Migrating table: auth_providers");
     let before = sqlx::query_as::<_, AuthProvider>("select * from auth_providers")
         .fetch_all(&db_from)
         .await?;
@@ -314,7 +320,7 @@ pub async fn migrate_from_sqlite(
     for b in before {
         sqlx::query(
             r#"INSERT INTO
-            auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
+            auth_providers (id, enabled, name, typ, issuer, authorization_endpoint, token_endpoint,
             userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
             mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem)
             VALUES
@@ -343,6 +349,7 @@ pub async fn migrate_from_sqlite(
     }
 
     // AUTH PROVIDER LOGOS
+    debug!("Migrating table: auth_provider_logos");
     let before = sqlx::query(
         "select auth_provider_id as id, res, content_type, data from auth_provider_logos",
     )
@@ -358,9 +365,9 @@ pub async fn migrate_from_sqlite(
         let data: Vec<u8> = b.get("data");
 
         sqlx::query(
-            r#"INSERT OR REPLACE INTO
-            auth_provider_logos (auth_provider_id, res, content_type, data)
-            VALUES ($1, $2, $3, $4)"#,
+            r#"INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT(auth_provider_id, res) DO UPDATE SET content_type = $3, data = $4"#,
         )
         .bind(id)
         .bind(res)
@@ -371,6 +378,7 @@ pub async fn migrate_from_sqlite(
     }
 
     // USERS
+    debug!("Migrating table: users");
     let before = sqlx::query_as::<_, User>("select * from users")
         .fetch_all(&db_from)
         .await?;
@@ -380,8 +388,9 @@ pub async fn migrate_from_sqlite(
             r#"insert into users
             (id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
             password_expires, created_at, last_login, last_failed_login, failed_login_attempts,
-            language, webauthn_user_id, user_expires)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)"#,
+            language, webauthn_user_id, user_expires, auth_provider_id, federation_uid)
+            values
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#,
         )
         .bind(b.id)
         .bind(b.email)
@@ -400,11 +409,14 @@ pub async fn migrate_from_sqlite(
         .bind(b.language)
         .bind(b.webauthn_user_id)
         .bind(b.user_expires)
+        .bind(b.auth_provider_id)
+        .bind(b.federation_uid)
         .execute(db_to)
         .await?;
     }
 
     // PASSKEYS
+    debug!("Migrating table: passkeys");
     let before = sqlx::query_as::<_, PasskeyEntity>("SELECT * FROM passkeys")
         .fetch_all(&db_from)
         .await?;
@@ -427,7 +439,9 @@ pub async fn migrate_from_sqlite(
             .await?;
     }
 
+    // Do not change the order - tables below have FKs to clients
     // CLIENTS
+    debug!("Migrating table: clients");
     let before = sqlx::query_as::<_, Client>("select * from clients")
         .fetch_all(&db_from)
         .await?;
@@ -437,8 +451,10 @@ pub async fn migrate_from_sqlite(
             r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
             redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg,
             id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
-            challenge, force_mfa)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#)
+            challenge, force_mfa, client_uri, contacts)
+            values
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
+            $20, $21)"#)
             .bind(&b.id)
             .bind(&b.name)
             .bind(b.enabled)
@@ -458,11 +474,62 @@ pub async fn migrate_from_sqlite(
             .bind(&b.default_scopes)
             .bind(&b.challenge)
             .bind(b.force_mfa)
+            .bind(b.client_uri)
+            .bind(b.contacts)
             .execute(db_to)
             .await?;
     }
 
+    // CLIENTS DYN
+    debug!("Migrating table: clients_dyn");
+    let before = sqlx::query_as::<_, ClientDyn>("select * from clients_dyn")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from clients_dyn")
+        .execute(db_to)
+        .await?;
+    for b in before {
+        sqlx::query(
+            r#"INSERT INTO
+            clients_dyn (id, created, registration_token, token_endpoint_auth_method)
+            VALUES ($1, $2, $3, $4)"#,
+        )
+        .bind(&b.id)
+        .bind(&b.created)
+        .bind(&b.registration_token)
+        .bind(&b.token_endpoint_auth_method)
+        .execute(db_to)
+        .await?;
+    }
+
+    // CLIENT LOGOS
+    debug!("Migrating table: client_logos");
+    let before = sqlx::query("select * from client_logos")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from client_logos")
+        .execute(db_to)
+        .await?;
+    for b in before {
+        let id: String = b.get("client_id");
+        let res: String = b.get("res");
+        let content_type: String = b.get("content_type");
+        let data: Vec<u8> = b.get("data");
+
+        sqlx::query(
+            r#"INSERT INTO client_logos (client_id, res, content_type, data)
+                VALUES ($1, $2, $3, $4)"#,
+        )
+        .bind(id)
+        .bind(res)
+        .bind(content_type)
+        .bind(data)
+        .execute(db_to)
+        .await?;
+    }
+
     // COLORS
+    debug!("Migrating table: colors");
     let before = sqlx::query_as::<_, ColorEntity>("select * from colors")
         .fetch_all(&db_from)
         .await?;
@@ -475,31 +542,8 @@ pub async fn migrate_from_sqlite(
             .await?;
     }
 
-    // CLIENT LOGOS
-    let before = sqlx::query("select * from client_logos")
-        .fetch_all(&db_from)
-        .await?;
-    sqlx::query("delete from client_logos")
-        .execute(db_to)
-        .await?;
-    for b in before {
-        let id: String = b.get("client_id");
-        let res: String = b.get("res");
-        let content_type: String = b.get("content_type");
-        let data: Vec<u8> = b.get("data");
-        sqlx::query(
-            r#"insert into client_logos (client_id, res, content_type, data)
-            values ($1, $2, $3, $4s)"#,
-        )
-        .bind(id)
-        .bind(res)
-        .bind(content_type)
-        .bind(data)
-        .execute(db_to)
-        .await?;
-    }
-
     // GROUPS
+    debug!("Migrating table: groups");
     let before = sqlx::query_as::<_, Group>("select * from groups")
         .fetch_all(&db_from)
         .await?;
@@ -513,6 +557,7 @@ pub async fn migrate_from_sqlite(
     }
 
     // JWKS
+    debug!("Migrating table: jwks");
     let before = sqlx::query_as::<_, Jwk>("select * from jwks")
         .fetch_all(&db_from)
         .await?;
@@ -532,6 +577,7 @@ pub async fn migrate_from_sqlite(
     }
 
     // MAGIC LINKS
+    debug!("Migrating table: magic_links");
     let before = sqlx::query_as::<_, MagicLink>("select * from magic_links")
         .fetch_all(&db_from)
         .await?;
@@ -556,6 +602,7 @@ pub async fn migrate_from_sqlite(
     }
 
     // PASSWORD POLICY
+    debug!("Migrating table: password_policy");
     let res = sqlx::query("select data from config where id = 'password_policy'")
         .fetch_one(&db_from)
         .await?;
@@ -566,6 +613,7 @@ pub async fn migrate_from_sqlite(
         .await?;
 
     // REFRESH TOKENS
+    debug!("Migrating table: refresh_tokens");
     let before = sqlx::query_as::<_, RefreshToken>("select * from refresh_tokens")
         .fetch_all(&db_from)
         .await?;
@@ -587,6 +635,7 @@ pub async fn migrate_from_sqlite(
     }
 
     // ROLES
+    debug!("Migrating table: roles");
     let before = sqlx::query_as::<_, Role>("select * from roles")
         .fetch_all(&db_from)
         .await?;
@@ -600,6 +649,7 @@ pub async fn migrate_from_sqlite(
     }
 
     // SCOPES
+    debug!("Migrating table: scopes");
     let before = sqlx::query_as::<_, Scope>("select * from scopes")
         .fetch_all(&db_from)
         .await?;
@@ -611,11 +661,43 @@ pub async fn migrate_from_sqlite(
         )
         .bind(b.id)
         .bind(b.name)
+        .bind(b.attr_include_access)
+        .bind(b.attr_include_id)
+        .execute(db_to)
+        .await?;
+    }
+
+    // EVENTS
+    let before = sqlx::query("select * from events")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from events").execute(db_to).await?;
+    for b in before {
+        let id: String = b.get("id");
+        let timestamp: i64 = b.get("timestamp");
+        let level: i16 = b.get("level");
+        let typ: i16 = b.get("typ");
+        let ip: Option<String> = b.get("ip");
+        let data: Option<i64> = b.get("data");
+        let text: Option<String> = b.get("text");
+
+        sqlx::query(
+            r#"INSERT INTO events (id, timestamp, level, typ, ip, data, text)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+        )
+        .bind(id)
+        .bind(timestamp)
+        .bind(level)
+        .bind(typ)
+        .bind(ip)
+        .bind(data)
+        .bind(text)
         .execute(db_to)
         .await?;
     }
 
     // USER ATTR CONFIG
+    debug!("Migrating table: user_attr_config");
     let before = sqlx::query_as::<_, UserAttrConfigEntity>("select * from user_attr_config")
         .fetch_all(&db_from)
         .await?;
@@ -638,6 +720,7 @@ pub async fn migrate_from_sqlite(
     }
 
     // USER ATTR VALUES
+    debug!("Migrating table: user_attr_values");
     let before = sqlx::query_as::<_, UserAttrValueEntity>("select * from user_attr_values")
         .fetch_all(&db_from)
         .await?;
@@ -653,7 +736,33 @@ pub async fn migrate_from_sqlite(
             .await?;
     }
 
+    // USERS VALUES
+    debug!("Migrating table: users_values");
+    let before = sqlx::query_as::<_, UserValues>("select * from users_values")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from users_values")
+        .execute(db_to)
+        .await?;
+    for b in before {
+        sqlx::query(
+            r#"INSERT INTO
+            users_values (id, birthdate, phone, street, zip, city, country)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+        )
+        .bind(b.id)
+        .bind(b.birthdate)
+        .bind(b.phone)
+        .bind(b.street)
+        .bind(b.zip)
+        .bind(b.city)
+        .bind(b.country)
+        .execute(db_to)
+        .await?;
+    }
+
     // SESSIONS
+    debug!("Migrating table: sessions");
     let before = sqlx::query_as::<_, Session>("select * from sessions")
         .fetch_all(&db_from)
         .await?;
@@ -678,6 +787,7 @@ pub async fn migrate_from_sqlite(
     }
 
     // RECENT PASSWORDS
+    debug!("Migrating table: recent_passwords");
     let before = sqlx::query_as::<_, RecentPasswordsEntity>("select * from recent_passwords")
         .fetch_all(&db_from)
         .await?;
@@ -692,6 +802,23 @@ pub async fn migrate_from_sqlite(
             .await?;
     }
 
+    // WEBIDS
+    debug!("Migrating table: webids");
+    let before = sqlx::query_as::<_, WebId>("select * from webids")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from webids").execute(db_to).await?;
+    for b in before {
+        sqlx::query(
+            "INSERT INTO webids (user_id, custom_triples, expose_email) VALUES ($1, $2, $3)",
+        )
+        .bind(b.user_id)
+        .bind(b.custom_triples)
+        .bind(b.expose_email)
+        .execute(db_to)
+        .await?;
+    }
+
     Ok(())
 }
 
@@ -702,6 +829,7 @@ pub async fn migrate_from_postgres(
     info!("Starting migration to another DB");
 
     // CONFIG
+    debug!("Migrating table: config");
     let before = sqlx::query_as::<_, ConfigEntity>("SELECT id, data FROM rauthy.config")
         .fetch_all(&db_from)
         .await?;
@@ -717,6 +845,7 @@ pub async fn migrate_from_postgres(
     }
 
     // API KEYS
+    debug!("Migrating table: api_keys");
     let before = sqlx::query_as::<_, ApiKeyEntity>("SELECT * FROM api_keys")
         .fetch_all(&db_from)
         .await?;
@@ -739,6 +868,7 @@ pub async fn migrate_from_postgres(
 
     // The users table has a FK to auth_providers - the order is important here!
     // AUTH PROVIDERS
+    debug!("Migrating table: auth_providers");
     let before = sqlx::query_as::<_, AuthProvider>("select * from rauthy.auth_providers")
         .fetch_all(&db_from)
         .await?;
@@ -748,7 +878,7 @@ pub async fn migrate_from_postgres(
     for b in before {
         sqlx::query(
             r#"INSERT INTO
-            auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
+            auth_providers (id, enabled, name, typ, issuer, authorization_endpoint, token_endpoint,
             userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
             mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem)
             VALUES
@@ -777,6 +907,7 @@ pub async fn migrate_from_postgres(
     }
 
     // AUTH PROVIDER LOGOS
+    debug!("Migrating table: auth_provider_logos");
     let before = sqlx::query(
         "select auth_provider_id as id, res, content_type, data from rauthy.auth_provider_logos",
     )
@@ -805,6 +936,7 @@ pub async fn migrate_from_postgres(
     }
 
     // USERS
+    debug!("Migrating table: users");
     let before = sqlx::query_as::<_, User>("select * from rauthy.users")
         .fetch_all(&db_from)
         .await?;
@@ -814,8 +946,9 @@ pub async fn migrate_from_postgres(
             r#"insert into users
             (id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
             password_expires, created_at, last_login, last_failed_login, failed_login_attempts,
-            language, webauthn_user_id, user_expires)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)"#,
+            language, webauthn_user_id, user_expires, auth_provider_id, federation_uid)
+            values
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#,
         )
         .bind(b.id)
         .bind(b.email)
@@ -834,11 +967,14 @@ pub async fn migrate_from_postgres(
         .bind(b.language)
         .bind(b.webauthn_user_id)
         .bind(b.user_expires)
+        .bind(b.auth_provider_id)
+        .bind(b.federation_uid)
         .execute(db_to)
         .await?;
     }
 
     // PASSKEYS
+    debug!("Migrating table: passkeys");
     let before = sqlx::query_as::<_, PasskeyEntity>("SELECT * FROM rauthy.passkeys")
         .fetch_all(&db_from)
         .await?;
@@ -861,7 +997,9 @@ pub async fn migrate_from_postgres(
             .await?;
     }
 
+    // Do not change the order - tables below have FKs to clients
     // CLIENTS
+    debug!("Migrating table: clients");
     let before = sqlx::query_as::<_, Client>("select * from rauthy.clients")
         .fetch_all(&db_from)
         .await?;
@@ -871,8 +1009,10 @@ pub async fn migrate_from_postgres(
             r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
             redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg,
             id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
-            challenge, force_mfa)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#)
+            challenge, force_mfa, client_uri, contacts)
+            values
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
+            $20, $21)"#)
             .bind(&b.id)
             .bind(&b.name)
             .bind(b.enabled)
@@ -892,21 +1032,32 @@ pub async fn migrate_from_postgres(
             .bind(&b.default_scopes)
             .bind(&b.challenge)
             .bind(b.force_mfa)
+            .bind(b.client_uri)
+            .bind(b.contacts)
             .execute(db_to)
             .await?;
     }
 
-    // COLORS
-    let before = sqlx::query_as::<_, ColorEntity>("select * from rauthy.colors")
+    // CLIENTS DYN
+    debug!("Migrating table: clients_dyn");
+    let before = sqlx::query_as::<_, ClientDyn>("select * from rauthy.clients_dyn")
         .fetch_all(&db_from)
         .await?;
-    sqlx::query("delete from colors").execute(db_to).await?;
+    sqlx::query("delete from clients_dyn")
+        .execute(db_to)
+        .await?;
     for b in before {
-        sqlx::query("insert into colors (client_id, data) values ($1, $2)")
-            .bind(b.client_id)
-            .bind(b.data)
-            .execute(db_to)
-            .await?;
+        sqlx::query(
+            r#"INSERT INTO
+            clients_dyn (id, created, registration_token, token_endpoint_auth_method)
+            VALUES ($1, $2, $3, $4)"#,
+        )
+        .bind(&b.id)
+        .bind(&b.created)
+        .bind(&b.registration_token)
+        .bind(&b.token_endpoint_auth_method)
+        .execute(db_to)
+        .await?;
     }
 
     // CLIENT LOGOS
@@ -921,9 +1072,10 @@ pub async fn migrate_from_postgres(
         let res: String = b.get("res");
         let content_type: String = b.get("content_type");
         let data: Vec<u8> = b.get("data");
+
         sqlx::query(
-            r#"insert into client_logos (client_id, res, content_type, data)
-            values ($1, $2, $3, $4s)"#,
+            r#"INSERT INTO client_logos (client_id, res, content_type, data)
+                VALUES ($1, $2, $3, $4)"#,
         )
         .bind(id)
         .bind(res)
@@ -931,6 +1083,19 @@ pub async fn migrate_from_postgres(
         .bind(data)
         .execute(db_to)
         .await?;
+    }
+
+    // COLORS
+    let before = sqlx::query_as::<_, ColorEntity>("select * from rauthy.colors")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from colors").execute(db_to).await?;
+    for b in before {
+        sqlx::query("insert into colors (client_id, data) values ($1, $2)")
+            .bind(b.client_id)
+            .bind(b.data)
+            .execute(db_to)
+            .await?;
     }
 
     // GROUPS
@@ -1045,6 +1210,37 @@ pub async fn migrate_from_postgres(
         )
         .bind(b.id)
         .bind(b.name)
+        .bind(b.attr_include_access)
+        .bind(b.attr_include_id)
+        .execute(db_to)
+        .await?;
+    }
+
+    // EVENTS
+    let before = sqlx::query("select * from rauthy.events")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from events").execute(db_to).await?;
+    for b in before {
+        let id: String = b.get("id");
+        let timestamp: i64 = b.get("timestamp");
+        let level: i16 = b.get("level");
+        let typ: i16 = b.get("typ");
+        let ip: Option<String> = b.get("ip");
+        let data: Option<i64> = b.get("data");
+        let text: Option<String> = b.get("text");
+
+        sqlx::query(
+            r#"INSERT INTO events (id, timestamp, level, typ, ip, data, text)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+        )
+        .bind(id)
+        .bind(timestamp)
+        .bind(level)
+        .bind(typ)
+        .bind(ip)
+        .bind(data)
+        .bind(text)
         .execute(db_to)
         .await?;
     }
@@ -1087,6 +1283,31 @@ pub async fn migrate_from_postgres(
             .await?;
     }
 
+    // USERS VALUES
+    debug!("Migrating table: users_values");
+    let before = sqlx::query_as::<_, UserValues>("select * from rauthy.users_values")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from users_values")
+        .execute(db_to)
+        .await?;
+    for b in before {
+        sqlx::query(
+            r#"INSERT OR REPLACE INTO
+            users_values (id, birthdate, phone, street, zip, city, country)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+        )
+        .bind(b.id)
+        .bind(b.birthdate)
+        .bind(b.phone)
+        .bind(b.street)
+        .bind(b.zip)
+        .bind(b.city)
+        .bind(b.country)
+        .execute(db_to)
+        .await?;
+    }
+
     // SESSIONS
     let before = sqlx::query_as::<_, Session>("select * from rauthy.sessions")
         .fetch_all(&db_from)
@@ -1125,6 +1346,23 @@ pub async fn migrate_from_postgres(
             .bind(b.passwords)
             .execute(db_to)
             .await?;
+    }
+
+    // WEBIDS
+    debug!("Migrating table: webids");
+    let before = sqlx::query_as::<_, WebId>("select * from rauthy.webids")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from webids").execute(db_to).await?;
+    for b in before {
+        sqlx::query(
+            "INSERT INTO webids (user_id, custom_triples, expose_email) VALUES ($1, $2, $3)",
+        )
+        .bind(b.user_id)
+        .bind(b.custom_triples)
+        .bind(b.expose_email)
+        .execute(db_to)
+        .await?;
     }
 
     Ok(())

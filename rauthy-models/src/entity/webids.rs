@@ -11,11 +11,11 @@ use sqlx::{query, query_as};
 use std::fmt::Debug;
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, sqlx::FromRow)]
 pub struct WebId {
     pub user_id: String,
     pub expose_email: bool,
-    custom_triples: Option<String>,
+    pub custom_triples: Option<String>,
 }
 
 impl WebId {
