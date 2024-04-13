@@ -118,40 +118,28 @@ impl Logo {
         id: &str,
         typ: &LogoType,
     ) -> Result<(), ErrorResponse> {
-        if id == "rauthy" && typ == &LogoType::Client {
-            // In case of the rauthy client itself, we should never delete, only
-            // upsert with the default logo
-            let slf = Self {
-                id: id.to_string(),
-                res: LogoRes::Svg,
-                content_type: mime::IMAGE_SVG.to_string(),
-                data: RAUTHY_DEFAULT_SVG.as_bytes().to_vec(),
-            };
-            slf.upsert_self(data, typ, true).await?;
-        } else {
-            match typ {
-                LogoType::Client => {
-                    query!("DELETE FROM client_logos WHERE client_id = $1", id)
-                        .execute(&data.db)
-                        .await?
-                }
-                LogoType::AuthProvider => {
-                    query!(
-                        "DELETE FROM auth_provider_logos WHERE auth_provider_id = $1",
-                        id
-                    )
+        match typ {
+            LogoType::Client => {
+                query!("DELETE FROM client_logos WHERE client_id = $1", id)
                     .execute(&data.db)
                     .await?
-                }
-            };
+            }
+            LogoType::AuthProvider => {
+                query!(
+                    "DELETE FROM auth_provider_logos WHERE auth_provider_id = $1",
+                    id
+                )
+                .execute(&data.db)
+                .await?
+            }
+        };
 
-            cache_del(
-                CACHE_NAME_12HR.to_string(),
-                Self::cache_idx(typ, id),
-                &data.caches.ha_cache_config,
-            )
-            .await?;
-        }
+        cache_del(
+            CACHE_NAME_12HR.to_string(),
+            Self::cache_idx(typ, id),
+            &data.caches.ha_cache_config,
+        )
+        .await?;
 
         Ok(())
     }
@@ -172,6 +160,7 @@ impl Logo {
         // To make the upsert not fail if a switch between svg and jpg/png happens, we will
         // technically not do an upsert, but actually delete + insert.
 
+        tracing::debug!("\n\ncontent_type: {}\n", content_type.as_ref());
         match content_type.as_ref() {
             "image/svg+xml" => {
                 Self::upsert_svg(data, id, logo, content_type.to_string(), &typ).await
@@ -274,6 +263,21 @@ impl Logo {
         .await?;
 
         Ok(())
+    }
+
+    /// Overwrites the logo for the `rauthy` client with the default logo
+    pub async fn upsert_rauthy_default(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        // make sure to delete any possibly existing webp image before inserting the svg
+        Self::delete(data, "rauthy", &LogoType::Client).await?;
+
+        Self {
+            id: "rauthy".to_string(),
+            res: LogoRes::Svg,
+            content_type: mime::IMAGE_SVG.to_string(),
+            data: RAUTHY_DEFAULT_SVG.as_bytes().to_vec(),
+        }
+        .upsert_self(data, &LogoType::Client, true)
+        .await
     }
 
     async fn upsert_self(

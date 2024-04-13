@@ -71,7 +71,7 @@
     let formErrors = {};
     const schema = yup.object().shape({
         name: yup.string().trim().matches(REGEX_CLIENT_NAME, "Can only contain characters, numbers and '-'"),
-        client_uri: yup.string().trim().matches(REGEX_URI, "Invalid URI"),
+        client_uri: yup.string().trim().nullable().matches(REGEX_URI, "Invalid URI"),
         access_token_lifetime: yup.number().required('Token Lifetime is required').min(60, 'Cannot be lower than 60').max(86400, 'Cannot be higher than 86400'),
     });
 
@@ -88,6 +88,9 @@
         if (!client.contacts || client.contacts[0] === '') {
             client.contacts = [];
         }
+        if (!client.client_uri) {
+            client.client_uri = null;
+        }
     }
 
     function handleKeyPress(event) {
@@ -101,11 +104,23 @@
         isLoading = true;
 
         const valid = await validateForm();
-        if (!valid
-            || !validateAllowedOrigins()
-            || !validateRedirectUris()
-            || !validatePostLogoutUris()
-            || !validateContacts()) {
+        if (!validateAllowedOrigins()) {
+            err = 'Invalid Allowed Origin';
+            return;
+        }
+        if (!validateRedirectUris()) {
+            err = 'Invalid Redirect URIs';
+            return;
+        }
+        if (!validatePostLogoutUris()) {
+            err = 'Invalid Post Logout URIs';
+            return;
+        }
+        if (!validateContacts()) {
+            err = 'Invalid Contacts';
+            return;
+        }
+        if (!valid) {
             err = 'Invalid input';
             return;
         }
@@ -140,8 +155,6 @@
         if (data.allowed_origins.length > 0 && !data.allowed_origins[0]) {
             data.allowed_origins = [];
         }
-
-        console.log(data);
 
         let res = await putClient(data);
         if (res.ok) {
@@ -186,6 +199,7 @@
     </div>
     <Input
             bind:value={client.name}
+            bind:error={formErrors.name}
             autocomplete="off"
             placeholder="Client Name"
             on:keypress={handleKeyPress}
@@ -204,6 +218,7 @@
     <!-- Client URI -->
     <Input
             bind:value={client.client_uri}
+            bind:error={formErrors.client_uri}
             autocomplete="off"
             placeholder="Client URI"
             on:keypress={handleKeyPress}
