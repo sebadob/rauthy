@@ -11,7 +11,7 @@ use std::env;
 use time::OffsetDateTime;
 use tracing::{debug, info};
 
-use rauthy_common::constants::{ADMIN_FORCE_MFA, DB_TYPE, DEV_MODE, PUB_URL};
+use rauthy_common::constants::{ADMIN_FORCE_MFA, DB_TYPE, DEV_MODE, PUB_URL, PUB_URL_WITH_SCHEME};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::get_rand;
 use rauthy_common::DbType;
@@ -56,9 +56,10 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         (format!("{issuer}/*"), None)
     };
 
+    // we will actually skip non-mandatory values in the query below
     let rauthy = Client {
         id: "rauthy".to_string(),
-        name: Some("Rauthy".to_string()),
+        name: None,
         enabled: true,
         confidential: false,
         secret: None,
@@ -66,34 +67,35 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         redirect_uris: redirect_uris.clone(),
         post_logout_redirect_uris: Some(redirect_uris),
         allowed_origins,
-        flows_enabled: "authorization_code,password".to_string(),
+        flows_enabled: "authorization_code".to_string(),
         access_token_alg: "EdDSA".to_string(),
         id_token_alg: "EdDSA".to_string(),
         refresh_token: false,
-        auth_code_lifetime: 60,
-        access_token_lifetime: 1800,
+        auth_code_lifetime: 10,
+        access_token_lifetime: 10, // The token is actually not used for the Admin UI -> session only
         scopes: "openid".to_string(),
         default_scopes: "openid".to_string(),
         challenge: Some("S256".to_string()),
         force_mfa: *ADMIN_FORCE_MFA,
-        client_uri: None,
+        client_uri: Some(PUB_URL_WITH_SCHEME.to_string()),
         contacts: env::var("RAUTHY_ADMIN_EMAIL").ok(),
     };
 
-    #[cfg(feature = "sqlite")]
-    let q = sqlx::query!(
-        r#"insert or replace into clients (id, name, enabled, confidential,
-        secret, secret_kid, redirect_uris, post_logout_redirect_uris, allowed_origins,
-        flows_enabled, access_token_alg, id_token_alg, refresh_token, auth_code_lifetime,
-        access_token_lifetime, scopes, default_scopes, challenge, force_mfa, client_uri, contacts)
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
-        $19, $20, $21)"#,
-        rauthy.id,
-        rauthy.name,
+    // MUST NOT use `insert or replace` syntax
+    // -> SQLite basically re-creates this under the hood, which means the FK restriction
+    // from `client_logos` -> `clients` will actually delete the client logo that was
+    // saved for `rauthy` before.
+    // Update only here and prevent `rauthy` deletion as a special check on DELETE /client
+
+    sqlx::query!(
+        r#"update clients set enabled = $1, confidential = $2, redirect_uris = $3,
+        post_logout_redirect_uris = $4, allowed_origins = $5, flows_enabled = $6,
+        access_token_alg = $7, id_token_alg = $8, refresh_token = $9, auth_code_lifetime = $10,
+        access_token_lifetime = $11, scopes = $12, default_scopes = $13, challenge = $14,
+        force_mfa= $15, client_uri = $16, contacts = $17
+        where id = $18"#,
         rauthy.enabled,
         rauthy.confidential,
-        rauthy.secret,
-        rauthy.secret_kid,
         rauthy.redirect_uris,
         rauthy.post_logout_redirect_uris,
         rauthy.allowed_origins,
@@ -109,44 +111,10 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         rauthy.force_mfa,
         rauthy.client_uri,
         rauthy.contacts,
-    );
-
-    #[cfg(not(feature = "sqlite"))]
-    let q = sqlx::query!(
-        r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
-        redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled,
-        access_token_alg, id_token_alg, refresh_token, auth_code_lifetime,
-        access_token_lifetime, scopes, default_scopes, challenge, force_mfa)
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
-        on conflict(id) do update set name = $2, enabled = $3, confidential = $4, secret = $5,
-        secret_kid = $6, redirect_uris = $7, post_logout_redirect_uris = $8, allowed_origins = $9,
-        flows_enabled = $10, access_token_alg = $11, id_token_alg = $12, refresh_token = $13,
-        auth_code_lifetime = $14, access_token_lifetime = $15, scopes = $16, default_scopes = $17,
-        challenge = $18, force_mfa = $19, client_uri = $20, contacts = $21"#,
         rauthy.id,
-        rauthy.name,
-        rauthy.enabled,
-        rauthy.confidential,
-        rauthy.secret,
-        rauthy.secret_kid,
-        rauthy.redirect_uris,
-        rauthy.post_logout_redirect_uris,
-        rauthy.allowed_origins,
-        rauthy.flows_enabled,
-        rauthy.access_token_alg,
-        rauthy.id_token_alg,
-        rauthy.refresh_token,
-        rauthy.auth_code_lifetime,
-        rauthy.access_token_lifetime,
-        rauthy.scopes,
-        rauthy.default_scopes,
-        rauthy.challenge,
-        rauthy.force_mfa,
-        rauthy.client_uri,
-        rauthy.contacts,
-    );
-
-    q.execute(db).await?;
+    )
+    .execute(db)
+    .await?;
 
     Ok(())
 }
