@@ -10,7 +10,7 @@ use rauthy_models::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderTemplate,
 };
 use rauthy_models::entity::colors::ColorEntity;
-use rauthy_models::entity::logos::Logo;
+use rauthy_models::entity::logos::{Logo, LogoType};
 use rauthy_models::language::Language;
 use rauthy_models::request::{
     ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
@@ -339,7 +339,7 @@ pub async fn get_provider_img(
     id: web::Path<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let id = id.into_inner();
-    let logo = Logo::find_cached(&data, &id).await?;
+    let logo = Logo::find_cached(&data, &id, &LogoType::AuthProvider).await?;
 
     Ok(HttpResponse::Ok()
         .insert_header((CONTENT_TYPE, logo.content_type))
@@ -396,7 +396,14 @@ pub async fn put_provider_img(
     }
 
     // content_type unwrap cannot panic -> checked above
-    Logo::upsert(&data, id.into_inner(), buf, content_type.unwrap()).await?;
+    Logo::upsert(
+        &data,
+        id.into_inner(),
+        buf,
+        content_type.unwrap(),
+        LogoType::AuthProvider,
+    )
+    .await?;
 
     Ok(HttpResponse::Ok().finish())
 }

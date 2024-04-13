@@ -44,7 +44,7 @@ use std::fmt::Write;
 use std::str::FromStr;
 use std::time::Duration;
 use time::OffsetDateTime;
-use tracing::{debug, error, warn};
+use tracing::{debug, error};
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, ToSchema)]
