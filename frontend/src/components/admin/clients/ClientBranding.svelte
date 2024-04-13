@@ -490,8 +490,4 @@
     .success {
         color: var(--col-ok);
     }
-
-    .upload {
-        margin: .9rem .3rem;
-    }
 </style>

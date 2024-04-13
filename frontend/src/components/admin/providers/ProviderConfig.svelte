@@ -409,10 +409,6 @@
         margin: 1rem .25rem;
     }
 
-    .logo > img {
-        max-height: 32px;
-    }
-
     .ml {
         margin-left: .5rem;
     }
