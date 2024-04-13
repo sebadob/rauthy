@@ -17,6 +17,8 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         redirect_uris: vec!["http://localhost:8080/*".to_string()],
         grant_types: vec!["authorization_code".to_string()],
         client_name: Some("Dyn Test Client 123".to_string()),
+        client_uri: None,
+        contacts: None,
         id_token_signed_response_alg: None,
         token_endpoint_auth_method: Some("none".to_string()),
         token_endpoint_auth_signing_alg: None,
@@ -110,6 +112,11 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     payload.grant_types.push("client_credentials".to_string());
     payload.grant_types.push("refresh_token".to_string());
     payload.token_endpoint_auth_method = Some("client_secret_post".to_string());
+    payload.contacts = Some(vec![
+        "batman@localhost.de".to_string(),
+        "@alfred:matrix.org".to_string(),
+    ]);
+    payload.client_uri = Some("dyn.rauthy.io".to_string());
     let res = client
         .put(&url)
         .header(AUTHORIZATION, &token)
@@ -125,6 +132,13 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     assert_eq!(resp.client_name, payload.client_name);
     assert!(resp.grant_types.contains(&"client_credentials".to_string()));
     assert!(resp.grant_types.contains(&"refresh_token".to_string()));
+    let contacts = resp.contacts.expect("contacts to be set");
+    assert!(contacts.contains(&"batman@localhost.de".to_string()));
+    assert!(contacts.contains(&"@alfred:matrix.org".to_string()));
+    assert_eq!(
+        &resp.client_uri.expect("client_uri to be set"),
+        "dyn.rauthy.io"
+    );
 
     // make sure the old registration token does not work anymore
     let res = client

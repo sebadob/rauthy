@@ -1322,7 +1322,7 @@ mod tests {
             challenge: Some("S256,plain".to_string()),
             force_mfa: false,
             client_uri: Some("http://localhost:1337".to_string()),
-            contacts: Some("batman@localhost.de,alfred@localhost.de".to_string()),
+            contacts: Some("batman@localhost.de,@alfred:matrix.org".to_string()),
         };
 
         assert_eq!(client.get_access_token_alg().unwrap(), JwkKeyPairAlg::EdDSA);
@@ -1407,10 +1407,10 @@ mod tests {
 
         // contacts
         assert_eq!(
-            client.get_contacts(),
+            client.get_contacts().expect("contacts to be set"),
             vec![
                 "batman@localhost.de".to_string(),
-                "alfred@localhost.de".to_string(),
+                "@alfred:matrix.org".to_string(),
             ]
         );
 
