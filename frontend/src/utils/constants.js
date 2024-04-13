@@ -23,6 +23,7 @@ export const REGEX_ATTR_DESC = /^[a-zA-Z0-9\-_/\s]{0,128}$/gm;
 export const REGEX_ATTR_KEY = /^[a-zA-Z0-9\-_/]{2,32}$/gm;
 export const REGEX_CLIENT_ID = /^[a-zA-Z0-9\-_/]{2,128}$/gm;
 export const REGEX_CLIENT_NAME = /^[a-zA-Z0-9À-ÿ\-\s]{0,128}$/gm;
+export const REGEX_CONTACT = /^[a-zA-Z0-9+.@/:]{0,48}$/gm;
 export const REGEX_LOWERCASE_SPACE = /^[a-z0-9-_\/\s]{2,128}$/gm;
 export const REGEX_PROVIDER_SCOPE = /^[a-z0-9-_\/:\s]{0,128}$/gm;
 export const REGEX_PEM = /^(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)$/gm;
