@@ -1,5 +1,5 @@
 use crate::{map_auth_step, ReqPrincipal};
-use actix_web::http::header::{CONTENT_TYPE, LOCATION};
+use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE, LOCATION};
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use actix_web_validator::Json;
@@ -343,6 +343,10 @@ pub async fn get_provider_img(
 
     Ok(HttpResponse::Ok()
         .insert_header((CONTENT_TYPE, logo.content_type))
+        // clients should cache the logos for 12 hours
+        // this means if a logo has been updated, they receive the new one 12 hours
+        // later in the worst case
+        .insert_header((CACHE_CONTROL, "max-age=43200"))
         .body(logo.data))
 }
 

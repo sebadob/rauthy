@@ -489,6 +489,9 @@
         margin: 0 .25rem;
         width: 84px;
         height: 84px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
 
     .providers {

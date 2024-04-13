@@ -85,6 +85,9 @@
         if (!client.name) {
             client.name = '';
         }
+        if (!client.contacts || client.contacts[0] === '') {
+            client.contacts = [];
+        }
     }
 
     function handleKeyPress(event) {

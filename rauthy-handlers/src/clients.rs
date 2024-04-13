@@ -1,5 +1,7 @@
 use crate::ReqPrincipal;
-use actix_web::http::header::{ACCESS_CONTROL_ALLOW_ORIGIN, CONTENT_TYPE, WWW_AUTHENTICATE};
+use actix_web::http::header::{
+    ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE, WWW_AUTHENTICATE,
+};
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use rauthy_common::constants::{DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG};
@@ -400,8 +402,13 @@ pub async fn get_client_logo(
             Logo::find_cached(&data, "rauthy", &LogoType::Client).await?
         }
     };
+
     Ok(HttpResponse::Ok()
         .insert_header((CONTENT_TYPE, logo.content_type))
+        // clients should cache the logos for 12 hours
+        // this means if a logo has been updated, they receive the new one 12 hours
+        // later in the worst case
+        .insert_header((CACHE_CONTROL, "max-age=43200"))
         .body(logo.data))
 }
 
@@ -543,12 +550,21 @@ pub async fn put_generate_client_secret(
 #[delete("/clients/{id}")]
 pub async fn delete_client(
     data: web::Data<AppState>,
-    path: web::Path<String>,
+    id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Delete)?;
 
-    let client = Client::find(&data, path.into_inner()).await?;
+    let id = id.into_inner();
+
+    if &id == "rauthy" {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "The `rauthy` client must not be deleted".to_string(),
+        ));
+    }
+
+    let client = Client::find(&data, id).await?;
     client.delete(&data).await?;
     Ok(HttpResponse::Ok().finish())
 }

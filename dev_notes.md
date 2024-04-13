@@ -6,10 +6,7 @@
 
 - validate `db_migrate` is formed correctly after all the new migrations
   sqlite -> postgres -> sqlite again
-- maybe migrate the old client logos handling to the new optimized webp flow?
-- add `contact` and `application_url` to the `clients` table for future features
 - document "Login with Github" guide
-- specifically set cache headers on client logos
 
 ## Stage 1 - essentials
 

@@ -71,7 +71,7 @@
     textarea {
         padding: 10px;
         border: 1px solid var(--col-gmid);
-        border-radius: 5px;
+        border-radius: 3px;
         outline: none;
     }
 

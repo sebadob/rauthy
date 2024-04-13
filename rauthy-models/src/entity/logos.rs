@@ -65,6 +65,7 @@ const RAUTHY_DEFAULT_SVG: &str = r#"<?xml version="1.0" encoding="UTF-8" standal
 </svg>"#;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum LogoRes {
     Small,
     Medium,
@@ -76,9 +77,9 @@ pub enum LogoRes {
 impl From<String> for LogoRes {
     fn from(value: String) -> Self {
         match value.as_str() {
-            "s" => Self::Small,
-            "m" => Self::Medium,
-            "l" => Self::Large,
+            "small" => Self::Small,
+            "medium" => Self::Medium,
+            "large" => Self::Large,
             "svg" => Self::Svg,
             _ => Self::Custom,
         }
@@ -88,11 +89,11 @@ impl From<String> for LogoRes {
 impl LogoRes {
     pub fn as_str(&self) -> &str {
         match self {
-            LogoRes::Small => "s",
-            LogoRes::Medium => "m",
-            LogoRes::Large => "l",
+            LogoRes::Small => "small",
+            LogoRes::Medium => "medium",
+            LogoRes::Large => "large",
             LogoRes::Svg => "svg",
-            LogoRes::Custom => "cust",
+            LogoRes::Custom => "custom",
         }
     }
 }

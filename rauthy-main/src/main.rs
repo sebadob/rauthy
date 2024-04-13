@@ -433,8 +433,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         "content-security-policy",
                         "frame-ancestors 'none'; object-src 'none';",
                     ))
-                    .add(("cache-control", "no-store"))
-                    .add(("pragma", "no-cache")),
+                    .add(("cache-control", "no-store")),
             )
             .wrap(pub_metrics.clone())
             .service(oidc::get_well_known)
