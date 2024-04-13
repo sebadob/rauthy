@@ -278,6 +278,8 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         default_scopes: vec!["openid".to_string(), "email".to_string()],
         challenges: None,
         force_mfa: false,
+        client_uri: None,
+        contacts: None,
     };
     let url_client = format!("{}/clients/{}", backend_url, CLIENT_ID);
     let auth_headers = get_auth_headers().await?;
@@ -591,8 +593,8 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
     };
     let mut claims = DPoPClaims {
         jti: "-BwC3ESc6acc2lTc".to_string(),
-        htm: http::Method::POST,
-        htu: DPOP_TOKEN_ENDPOINT.clone(),
+        htm: http::Method::POST.to_string(),
+        htu: DPOP_TOKEN_ENDPOINT.clone().to_string(),
         iat: Utc::now().timestamp(),
         // ath: None,
         nonce: None,

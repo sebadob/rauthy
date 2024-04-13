@@ -398,8 +398,8 @@ mod tests {
 
         let claims = DPoPClaims {
             jti: "-BwC3ESc6acc2lTc".to_string(),
-            htm: http::Method::POST,
-            htu: DPOP_TOKEN_ENDPOINT.clone(),
+            htm: http::Method::POST.to_string(),
+            htu: DPOP_TOKEN_ENDPOINT.clone().to_string(),
             iat: Utc::now().timestamp(),
             nonce: None,
         };
@@ -451,8 +451,8 @@ mod tests {
 
         let claims = DPoPClaims {
             jti: "-BwC3ESc6acc2lTc".to_string(),
-            htm: http::Method::POST,
-            htu: DPOP_TOKEN_ENDPOINT.clone(),
+            htm: http::Method::POST.to_string(),
+            htu: DPOP_TOKEN_ENDPOINT.clone().to_string(),
             iat: Utc::now().timestamp(),
             nonce: None,
         };

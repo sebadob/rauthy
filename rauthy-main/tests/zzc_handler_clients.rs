@@ -114,6 +114,11 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         ],
         challenges: Some(vec!["S256".to_string(), "plain".to_string()]),
         force_mfa: false,
+        client_uri: Some("rauthy.io".to_string()),
+        contacts: Some(vec![
+            "batman@localhost.de".to_string(),
+            "@alfred:matrix.org".to_string(),
+        ]),
     };
 
     let url_id = format!("{}/clients/{}", backend_url, client.id);
@@ -153,6 +158,10 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     let challenges = client.challenges.clone().unwrap();
     assert!(challenges.contains(&"S256".to_string()));
     assert!(challenges.contains(&"plain".to_string()));
+    assert_eq!(client.client_uri, Some("rauthy.io".to_string()));
+    let contacts = client.contacts.expect("contacts to exist");
+    assert!(contacts.contains(&"batman@localhost.de".to_string()));
+    assert!(contacts.contains(&"@alfred:matrix.org".to_string()));
 
     // delete the client again
     let res = reqwest::Client::new()
