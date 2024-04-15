@@ -72,7 +72,7 @@
     const schema = yup.object().shape({
         name: yup.string().trim().matches(REGEX_CLIENT_NAME, "Can only contain characters, numbers and '-'"),
         client_uri: yup.string().trim().nullable().matches(REGEX_URI, "Invalid URI"),
-        access_token_lifetime: yup.number().required('Token Lifetime is required').min(60, 'Cannot be lower than 60').max(86400, 'Cannot be higher than 86400'),
+        access_token_lifetime: yup.number().required('Token Lifetime is required').min(10, 'Cannot be lower than 10').max(86400, 'Cannot be higher than 86400'),
     });
 
     function checkUndefinedValues() {
