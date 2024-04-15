@@ -22,7 +22,7 @@
     import WebauthnRequest from "../../../../../components/webauthn/WebauthnRequest.svelte";
     import BrowserCheck from "../../../../../components/BrowserCheck.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
-    import { slide } from "svelte/transition";
+    import {slide} from "svelte/transition";
     import LangSelector from "$lib/LangSelector.svelte";
     import {REGEX_NAME} from "../../../../../utils/constants.js";
 
@@ -43,6 +43,7 @@
     let requestType = "password_reset"
     let accountTypeNew = '';
     let magicLinkId = '';
+    let redirectUri;
     let success = false;
     let accepted = false;
     let showCopy = false;
@@ -78,7 +79,11 @@
 
     $: if (success) {
         setTimeout(() => {
-            navigateToAccount();
+            if (redirectUri) {
+                window.location.replace(redirectUri);
+            } else {
+                navigateToAccount();
+            }
         }, 5000);
     }
 
@@ -299,6 +304,8 @@
                 password: '',
                 passwordConfirm: '',
             };
+            redirectUri = res.headers.get('Location');
+            console.log('redirectUri: ' + redirectUri);
             success = true;
         } else {
             const body = await res.json();
@@ -334,7 +341,7 @@
 
     <WithI18n bind:t content="passwordReset">
         <div class="container">
-            {#if requestType === "new_user"}
+            {#if requestType.startsWith('new_user')}
                 {#if webauthnData}
                     <WebauthnRequest
                             bind:data={webauthnData}
@@ -534,7 +541,7 @@
                         <br>
                         {t.success3}
                         <br>
-                        <a href="/auth/v1/account">Account Login</a>
+                        <a href={redirectUri || '/auth/v1/account'}>Link</a>
                     </div>
                 {/if}
             {/if}
@@ -546,7 +553,7 @@
             {/if}
         </div>
 
-        <LangSelector absolute />
+        <LangSelector absolute/>
     </WithI18n>
 </BrowserCheck>
 
