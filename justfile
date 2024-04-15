@@ -275,7 +275,7 @@ build-docs:
 
 
 # builds the whole application in release mode
-build: test
+build: test-full
     #!/usr/bin/env bash
     set -euxo pipefail
 
