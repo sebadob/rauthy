@@ -1,6 +1,6 @@
 <script>
     import * as yup from "yup";
-    import {extractFormErrors} from "../../../utils/helpers.js";
+    import {extractFormErrors, getQueryParams} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
     import {REGEX_NAME} from "../../../utils/constants.js";
     import {getPow, registerUser} from "../../../utils/dataFetching.js";
@@ -13,11 +13,12 @@
 
     let t;
     let restrictedDomain;
+    let redirectUri;
     let isLoading = false;
     let err = '';
     let success = false;
 
-    let formValues = { email: '', givenName: '', familyName: '' };
+    let formValues = {email: '', givenName: '', familyName: ''};
     let formErrors = {};
 
     let schema = {};
@@ -35,6 +36,9 @@
 
     onMount(() => {
         restrictedDomain = window.document.getElementsByName('rauthy-data')[0].id;
+
+        const params = getQueryParams();
+        redirectUri = params.redirect_uri;
     });
 
     function handleKeyPress(event) {
@@ -80,6 +84,11 @@
             family_name: formValues.familyName,
             pow,
         };
+
+        // this allows to redirect the client to a custom URI after a successful password set
+        if (redirectUri) {
+            data.redirect_uri = redirectUri;
+        }
 
         const res = await registerUser(data);
         if (res.ok) {
@@ -156,7 +165,7 @@
             {/if}
         </div>
 
-        <LangSelector absolute />
+        <LangSelector absolute/>
     </WithI18n>
 </BrowserCheck>
 
