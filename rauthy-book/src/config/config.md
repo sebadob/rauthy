@@ -357,6 +357,10 @@ DPOP_NONCE_EXP=900
 ############# E-MAIL ################
 #####################################
 
+# This contact information will be added to the `rauthy`client
+# within the anti lockout rule with each new restart.
+RAUTHY_ADMIN_EMAIL="admin@localhost.de"
+
 # Will be used as the prefix for the E-Mail subject for each E-Mail 
 # that will be sent out to a client.
 # This can be used to further customize your deployment.
