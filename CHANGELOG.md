@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.22.0-beta1
+## v0.22.0-beta2
 
 ### Breaking
 
@@ -13,9 +13,6 @@ Apart from this, quite a few small internal improvements have been made to make 
 contributors. These changes are not listed in the release notes.
 
 ### Changes
-
-A lot has changed since the last release, but the list of changes can be kept pretty small, since it is mostly one very
-big feature: Support for Upstream Auth Providers
 
 #### Upstream Auth Providers
 
@@ -116,8 +113,70 @@ anti lockout rule. You can specify the contact via a new config variable:
 RAUTHY_ADMIN_EMAIL="admin@localhost.de"
 ```
 
-These values work with dynamic and ephemeral clients as well.  
 [6ccc541](https://github.com/sebadob/rauthy/commit/6ccc541b0e6d155024aa9ba4d832dcb01f135528)
+
+#### Custom `redirect_uri` During User Registration
+
+If you want to initiate a user registration from a downstream app, you might not want your users to be redirected
+to their Rauthy Account page after they have initially set the password. To encounter this, you can redirect them
+to the registration page and append a `?redirect_uri=https%3A%2F%2Frauthy.example.com` query param. This will be
+saved in the backend state and the user will be redirected to this URL instead of their account after they have set
+their password.
+
+#### Password E-Mail Tempalte Overwrites
+
+You can not overwrite the template i18n translations for the NewPassword and ResetPassword E-Mail templates.  
+There is a whole nwe section in the config and it can be easily done with environment variables:
+
+```
+#####################################
+############ TEMPLATES ##############
+#####################################
+
+# You can overwrite some default email templating values here.
+# If you want to modify the basic templates themselves, this is
+# currently only possible with a custom build from source.
+# The content however can mostly be set here.
+# If the below values are not set, the default will be taken.
+
+# New Password E-Mail
+#TPL_EN_PASSWORD_NEW_SUBJECT="New Password"
+#TPL_EN_PASSWORD_NEW_HEADER="New password for"
+#TPL_EN_PASSWORD_NEW_TEXT=""
+#TPL_EN_PASSWORD_NEW_CLICK_LINK="Click the link below to get forwarded to the password form."
+#TPL_EN_PASSWORD_NEW_VALIDITY="This link is only valid for a short period of time for security reasons."
+#TPL_EN_PASSWORD_NEW_EXPIRES="Link expires:"
+#TPL_EN_PASSWORD_NEW_BUTTON="Set Password"
+#TPL_EN_PASSWORD_NEW_FOOTER=""
+
+#TPL_DE_PASSWORD_NEW_SUBJECT="Passwort Reset angefordert"
+#TPL_DE_PASSWORD_NEW_HEADER="Passwort Reset angefordert für"
+#TPL_DE_PASSWORD_NEW_TEXT=""
+#TPL_DE_PASSWORD_NEW_CLICK_LINK="Klicken Sie auf den unten stehenden Link für den Passwort Reset."
+#TPL_DE_PASSWORD_NEW_VALIDITY="Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
+#TPL_DE_PASSWORD_NEW_EXPIRES="Link gültig bis:"
+#TPL_DE_PASSWORD_NEW_BUTTON="Passwort Setzen"
+#TPL_DE_PASSWORD_NEW_FOOTER=""
+
+# Password Reset E-Mail
+#TPL_EN_RESET_SUBJECT="Neues Passwort"
+#TPL_EN_RESET_HEADER="Neues Passwort für"
+#TPL_EN_RESET_TEXT=""
+#TPL_EN_RESET_CLICK_LINK="Klicken Sie auf den unten stehenden Link um ein neues Passwort zu setzen."
+#TPL_EN_RESET_VALIDITY="This link is only valid for a short period of time for security reasons."
+#TPL_EN_RESET_EXPIRES="Link expires:"
+#TPL_EN_RESET_BUTTON="Reset Password"
+#TPL_EN_RESET_FOOTER=""
+
+#TPL_DE_RESET_SUBJECT="Passwort Reset angefordert"
+#TPL_DE_RESET_HEADER="Passwort Reset angefordert für"
+#TPL_DE_RESET_TEXT=""
+#TPL_DE_RESET_CLICK_LINK="Klicken Sie auf den unten stehenden Link für den Passwort Reset."
+#TPL_DE_RESET_VALIDITY="Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
+#TPL_DE_RESET_EXPIRES="Link gültig bis:"
+#TPL_DE_RESET_BUTTON="Passwort Zurücksetzen"
+#TPL_DE_RESET_FOOTER=""
+```
 
 ### Bugfix
 
@@ -131,6 +190,8 @@ These values work with dynamic and ephemeral clients as well.
   which made Rauthy complain because of not RFC-compliant requests during Passkey sign in. This error cannot really be
   reproduced. However, Rauthy tries to show more error information to the user in such a case.
   [b7f94ff](https://github.com/sebadob/rauthy/commit/b7f94ff8ad3cd9aad61baf3710e4f9788c498ca6)
+- Don't use the reset password template text for "new-password emails"
+  [45b4160](https://github.com/sebadob/rauthy/commit/45b41604b1e0c0c9af423be65021953116b88150)
 
 ## v0.21.1
 
