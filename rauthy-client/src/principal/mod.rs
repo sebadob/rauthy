@@ -1,4 +1,3 @@
-use crate::oidc_config::JwtClaimTyp;
 use crate::provider::OidcProvider;
 use crate::token_set::JwtAccessClaims;
 use std::collections::HashMap;
@@ -47,18 +46,8 @@ impl PrincipalOidc {
         let roles = claims.roles.unwrap_or_default();
         let groups = claims.groups.unwrap_or_default();
 
-        let is_admin = if let Some(claim) = &config.admin_claim {
-            match claim.typ {
-                JwtClaimTyp::Roles => roles.contains(&claim.value),
-                JwtClaimTyp::Groups => groups.contains(&claim.value),
-            }
-        } else {
-            false
-        };
-        let is_user = match config.user_claim.typ {
-            JwtClaimTyp::Roles => roles.contains(&config.user_claim.value),
-            JwtClaimTyp::Groups => groups.contains(&config.user_claim.value),
-        };
+        let is_admin = config.admin_claim.matches(&roles, &groups);
+        let is_user = config.user_claim.matches(&roles, &groups);
 
         Ok(Self {
             id,
