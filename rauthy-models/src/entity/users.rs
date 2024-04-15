@@ -72,14 +72,18 @@ pub struct User {
 // CRUD
 impl User {
     // Inserts a user into the database
-    pub async fn create(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
+    pub async fn create(
+        data: &web::Data<AppState>,
+        new_user: User,
+        post_reset_redirect_uri: Option<String>,
+    ) -> Result<Self, ErrorResponse> {
         let slf = Self::insert(data, new_user).await?;
 
         let magic_link = MagicLink::create(
             data,
             slf.id.clone(),
             data.ml_lt_pwd_first as i64,
-            MagicLinkUsage::NewUser,
+            MagicLinkUsage::NewUser(post_reset_redirect_uri),
         )
         .await?;
         send_pwd_reset(data, &magic_link, &slf).await;
@@ -100,7 +104,7 @@ impl User {
         new_user_req: NewUserRequest,
     ) -> Result<User, ErrorResponse> {
         let new_user = User::from_new_user_req(data, new_user_req).await?;
-        User::create(data, new_user).await
+        User::create(data, new_user, None).await
     }
 
     // Inserts a user from the open registration endpoint into the database
@@ -109,9 +113,14 @@ impl User {
         req_data: NewUserRegistrationRequest,
         lang: Language,
     ) -> Result<User, ErrorResponse> {
-        let mut new_user = User::from_reg_req(req_data);
+        let mut new_user = Self {
+            email: req_data.email.to_lowercase(),
+            given_name: req_data.given_name,
+            family_name: req_data.family_name,
+            ..Default::default()
+        };
         new_user.language = lang;
-        let new_user = User::create(data, new_user).await?;
+        let new_user = User::create(data, new_user, req_data.redirect_uri).await?;
 
         Ok(new_user)
     }
@@ -792,7 +801,7 @@ impl User {
 
         let usage = MagicLinkUsage::try_from(&ml.usage)?;
         let new_email = match usage {
-            MagicLinkUsage::NewUser | MagicLinkUsage::PasswordReset => {
+            MagicLinkUsage::NewUser(_) | MagicLinkUsage::PasswordReset => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "The Magic Link is not meant to be used to confirm an E-Mail address"
@@ -911,14 +920,14 @@ impl User {
         Ok(user)
     }
 
-    pub fn from_reg_req(new_user: NewUserRegistrationRequest) -> Self {
-        Self {
-            email: new_user.email.to_lowercase(),
-            given_name: new_user.given_name,
-            family_name: new_user.family_name,
-            ..Default::default()
-        }
-    }
+    // pub fn from_reg_req(new_user: NewUserRegistrationRequest) -> Self {
+    //     Self {
+    //         email: new_user.email.to_lowercase(),
+    //         given_name: new_user.given_name,
+    //         family_name: new_user.family_name,
+    //         ..Default::default()
+    //     }
+    // }
 
     pub fn get_groups(&self) -> Vec<String> {
         let mut res = Vec::new();
@@ -1040,7 +1049,7 @@ impl User {
         }
 
         let usage = if self.password.is_none() && !self.has_webauthn_enabled() {
-            MagicLinkUsage::NewUser
+            MagicLinkUsage::NewUser(None)
         } else {
             MagicLinkUsage::PasswordReset
         };

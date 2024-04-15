@@ -13,7 +13,7 @@ use tracing::warn;
 pub enum MagicLinkUsage {
     EmailChange(String),
     PasswordReset,
-    NewUser,
+    NewUser(Option<String>),
 }
 
 impl TryFrom<&String> for MagicLinkUsage {
@@ -31,7 +31,13 @@ impl TryFrom<&str> for MagicLinkUsage {
         let (ty, v) = value.split_once('$').unwrap_or((value, ""));
         let slf = match ty {
             "password_reset" => MagicLinkUsage::PasswordReset,
-            "new_user" => MagicLinkUsage::NewUser,
+            "new_user" => {
+                if !v.is_empty() {
+                    MagicLinkUsage::NewUser(Some(v.to_string()))
+                } else {
+                    MagicLinkUsage::NewUser(None)
+                }
+            }
             "email_change" => MagicLinkUsage::EmailChange(v.to_string()),
             _ => {
                 return Err(ErrorResponse::new(
@@ -51,7 +57,13 @@ impl ToString for MagicLinkUsage {
     fn to_string(&self) -> String {
         match self {
             MagicLinkUsage::PasswordReset => "password_reset".to_string(),
-            MagicLinkUsage::NewUser => "new_user".to_string(),
+            MagicLinkUsage::NewUser(redirect_uri) => {
+                if let Some(uri) = redirect_uri {
+                    format!("new_user${}", uri)
+                } else {
+                    "new_user".to_string()
+                }
+            }
             MagicLinkUsage::EmailChange(email) => format!("email_change${}", email),
         }
     }

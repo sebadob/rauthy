@@ -1,4 +1,5 @@
 use crate::ReqPrincipal;
+use actix_web::http::header::LOCATION;
 use actix_web::http::StatusCode;
 use actix_web::{cookie, delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
 use actix_web_validator::Json;
@@ -491,11 +492,19 @@ pub async fn put_user_password_reset(
         req_data.into_inner(),
     )
     .await
-    .map(|cookie| {
-        HttpResponse::Ok()
-            .cookie(cookie)
-            .status(StatusCode::ACCEPTED)
-            .finish()
+    .map(|(cookie, location)| {
+        if let Some(loc) = location {
+            HttpResponse::Ok()
+                .insert_header((LOCATION, loc))
+                .cookie(cookie)
+                .status(StatusCode::ACCEPTED)
+                .finish()
+        } else {
+            HttpResponse::Ok()
+                .cookie(cookie)
+                .status(StatusCode::ACCEPTED)
+                .finish()
+        }
     })
 }
 
