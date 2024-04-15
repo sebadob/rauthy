@@ -139,10 +139,12 @@ version:
     echo "v$TAG"
 
 
+# prepare DB migrations for SQLite for compile-time checked queries
 prepare: migrate
     DATABASE_URL={{db_url_sqlite}} cargo sqlx prepare --workspace -- --features sqlite
 
 
+# prepare DB migrations for Postgres for compile-time checked queries
 prepare-postgres: migrate-postgres
     DATABASE_URL={{db_url_postgres}} cargo sqlx prepare --workspace
 
