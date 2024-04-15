@@ -4417,6 +4417,7 @@ dependencies = [
  "lettre",
  "mime",
  "num_cpus",
+ "once_cell",
  "openssl-sys",
  "pretty_assertions",
  "rand",

@@ -104,9 +104,11 @@ pub struct EMailResetHtml<'a> {
     // i18n
     pub header: &'a str,
     pub click_link: &'a str,
+    pub text: &'a str,
     pub validity: &'a str,
     pub expires: &'a str,
     pub button_text: &'a str,
+    pub footer: &'a str,
 }
 
 #[derive(Default, Template)]
@@ -118,8 +120,10 @@ pub struct EmailResetTxt<'a> {
     // i18n
     pub header: &'a str,
     pub click_link: &'a str,
+    pub text: &'a str,
     pub validity: &'a str,
     pub expires: &'a str,
+    pub footer: &'a str,
 }
 
 #[derive(Default, Template)]
@@ -307,8 +311,10 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
             exp: &exp,
             header: i18n.header,
             click_link: i18n.click_link,
+            text: i18n.text.unwrap_or_default(),
             validity: i18n.validity,
             expires: i18n.expires,
+            footer: i18n.text.unwrap_or_default(),
         };
 
         let html = EMailResetHtml {
@@ -317,9 +323,11 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
             exp: &exp,
             header: i18n.header,
             click_link: i18n.click_link,
+            text: i18n.text.unwrap_or_default(),
             validity: i18n.validity,
             expires: i18n.expires,
             button_text: i18n.button_text,
+            footer: i18n.text.unwrap_or_default(),
         };
 
         (i18n.subject, text, html)
@@ -331,8 +339,10 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
             exp: &exp,
             header: i18n.header,
             click_link: i18n.click_link,
+            text: i18n.text.unwrap_or_default(),
             validity: i18n.validity,
             expires: i18n.expires,
+            footer: i18n.text.unwrap_or_default(),
         };
 
         let html = EMailResetHtml {
@@ -341,9 +351,11 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
             exp: &exp,
             header: i18n.header,
             click_link: i18n.click_link,
+            text: i18n.text.unwrap_or_default(),
             validity: i18n.validity,
             expires: i18n.expires,
             button_text: i18n.button_text,
+            footer: i18n.text.unwrap_or_default(),
         };
 
         (i18n.subject, text, html)

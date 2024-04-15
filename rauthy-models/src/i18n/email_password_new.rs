@@ -1,15 +1,53 @@
 use crate::i18n::SsrJson;
 use crate::language::Language;
+use once_cell::sync::Lazy;
 use serde::Serialize;
+use std::env;
+
+static TPL_EN_PASSWORD_NEW_SUBJECT: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_EN_PASSWORD_NEW_SUBJECT").ok());
+static TPL_EN_PASSWORD_NEW_HEADER: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_EN_PASSWORD_NEW_HEADER").ok());
+static TPL_EN_PASSWORD_NEW_TEXT: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_EN_PASSWORD_NEW_TEXT").ok());
+static TPL_EN_PASSWORD_NEW_CLICK_LINK: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_EN_PASSWORD_NEW_CLICK_LINK").ok());
+static TPL_EN_PASSWORD_NEW_VALIDITY: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_EN_PASSWORD_NEW_VALIDITY").ok());
+static TPL_EN_PASSWORD_NEW_EXPIRES: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_EN_PASSWORD_NEW_EXPIRES").ok());
+static TPL_EN_PASSWORD_NEW_BUTTON: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_EN_PASSWORD_NEW_BUTTON").ok());
+static TPL_EN_PASSWORD_NEW_FOOTER: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_EN_PASSWORD_NEW_FOOTER").ok());
+
+static TPL_DE_PASSWORD_NEW_SUBJECT: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_DE_PASSWORD_NEW_SUBJECT").ok());
+static TPL_DE_PASSWORD_NEW_HEADER: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_DE_PASSWORD_NEW_HEADER").ok());
+static TPL_DE_PASSWORD_NEW_TEXT: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_DE_PASSWORD_NEW_TEXT").ok());
+static TPL_DE_PASSWORD_NEW_CLICK_LINK: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_DE_PASSWORD_NEW_CLICK_LINK").ok());
+static TPL_DE_PASSWORD_NEW_VALIDITY: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_DE_PASSWORD_NEW_VALIDITY").ok());
+static TPL_DE_PASSWORD_NEW_EXPIRES: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_DE_PASSWORD_NEW_EXPIRES").ok());
+static TPL_DE_PASSWORD_NEW_BUTTON: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_DE_PASSWORD_NEW_BUTTON").ok());
+static TPL_DE_PASSWORD_NEW_FOOTER: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_DE_PASSWORD_NEW_FOOTER").ok());
 
 #[derive(Debug, Serialize)]
 pub struct I18nEmailPasswordNew<'a> {
     pub subject: &'a str,
     pub header: &'a str,
+    pub text: Option<&'a str>,
     pub click_link: &'a str,
     pub validity: &'a str,
     pub expires: &'a str,
     pub button_text: &'a str,
+    pub footer: Option<&'a str>,
 }
 
 impl SsrJson for I18nEmailPasswordNew<'_> {
@@ -28,23 +66,51 @@ impl SsrJson for I18nEmailPasswordNew<'_> {
 impl I18nEmailPasswordNew<'_> {
     fn build_en() -> Self {
         Self {
-            subject: "New Password",
-            header: "New password for",
-            click_link: "Click the link below to get forwarded to the password form.",
-            validity: "This link is only valid for a short period of time for security reasons.",
-            expires: "Link expires:",
-            button_text: "Set Password",
+            subject: TPL_EN_PASSWORD_NEW_SUBJECT
+                .as_deref()
+                .unwrap_or("New Password"),
+            header: TPL_EN_PASSWORD_NEW_HEADER
+                .as_deref()
+                .unwrap_or("New password for"),
+            text: TPL_EN_PASSWORD_NEW_TEXT.as_deref(),
+            click_link: TPL_EN_PASSWORD_NEW_CLICK_LINK
+                .as_deref()
+                .unwrap_or("Click the link below to get forwarded to the password form."),
+            validity: TPL_EN_PASSWORD_NEW_VALIDITY.as_deref().unwrap_or(
+                "This link is only valid for a short period of time for security reasons.",
+            ),
+            expires: TPL_EN_PASSWORD_NEW_EXPIRES
+                .as_deref()
+                .unwrap_or("Link expires:"),
+            button_text: TPL_EN_PASSWORD_NEW_BUTTON
+                .as_deref()
+                .unwrap_or("Set Password"),
+            footer: TPL_EN_PASSWORD_NEW_FOOTER.as_deref(),
         }
     }
 
     fn build_de() -> Self {
         Self {
-            subject: "Neues Passwort",
-            header: "Neues Passwort für",
-            click_link: "Klicken Sie auf den unten stehenden Link um ein neues Passwort zu setzen.",
-            validity: "Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig.",
-            expires: "Link gültig bis:",
-            button_text: "Passwort Setzen",
+            subject: TPL_DE_PASSWORD_NEW_SUBJECT
+                .as_deref()
+                .unwrap_or("Neues Passwort"),
+            header: TPL_DE_PASSWORD_NEW_HEADER
+                .as_deref()
+                .unwrap_or("Neues Passwort für"),
+            text: TPL_DE_PASSWORD_NEW_TEXT.as_deref(),
+            click_link: TPL_DE_PASSWORD_NEW_CLICK_LINK.as_deref().unwrap_or(
+                "Klicken Sie auf den unten stehenden Link um ein neues Passwort zu setzen.",
+            ),
+            validity: TPL_DE_PASSWORD_NEW_VALIDITY
+                .as_deref()
+                .unwrap_or("Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."),
+            expires: TPL_DE_PASSWORD_NEW_EXPIRES
+                .as_deref()
+                .unwrap_or("Link gültig bis:"),
+            button_text: TPL_DE_PASSWORD_NEW_BUTTON
+                .as_deref()
+                .unwrap_or("Passwort Setzen"),
+            footer: TPL_DE_PASSWORD_NEW_FOOTER.as_deref(),
         }
     }
 }

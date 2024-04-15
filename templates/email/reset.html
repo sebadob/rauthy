@@ -30,6 +30,10 @@
         color: white;
     }
 
+    footer {
+        margin-top: 2rem;
+    }
+
     .wrapper {
         display: flex;
         align-items: center;
@@ -46,7 +50,7 @@
     }
 
     .submitButtonWrapper {
-        margin-top: 2.75em;
+        margin-top: 1.5rem;
     }
 
     .submitButton {
@@ -70,6 +74,7 @@
 <div class="container">
     <h3 class="header">{{ header }} {{ email_sub_prefix }}</h3>
     <div style="text-align: left">
+        <p>{{ text }}</p>
         <div style="margin-bottom: .35em;">{{ click_link }}</div>
         <div>{{ validity }}</div>
         <div>{{ expires }} <b>{{ exp }}</b></div>
@@ -77,6 +82,7 @@
     <div class="submitButtonWrapper">
         <a href="{{ link }}" class="submitButton">{{ button_text }}</a>
     </div>
+    <footer>{{ footer }}</footer>
     <br/>
 </div>
 </body>
