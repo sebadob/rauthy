@@ -92,7 +92,7 @@ pull-latest-cross:
 
 
 # clippy with sqlite features
-clippy-sqlite:
+clippy:
     clear
     DATABASE_URL={{db_url_sqlite}} cargo clippy --features sqlite
 
@@ -104,7 +104,7 @@ clippy-postgres:
 
 
 # re-create and migrate the sqlite database with sqlx
-migrate-sqlite:
+migrate:
     mkdir -p data/
     rm -f data/rauthy.db*
     DATABASE_URL={{db_url_sqlite}} sqlx database create
@@ -117,7 +117,7 @@ migrate-postgres:
 
 
 # runs the application with sqlite feature
-run-sqlite:
+run:
     DATABASE_URL={{db_url_sqlite}} cargo run --features sqlite
 
 
@@ -139,7 +139,7 @@ version:
     echo "v$TAG"
 
 
-prepare-sqlite: migrate-sqlite
+prepare: migrate
     DATABASE_URL={{db_url_sqlite}} cargo sqlx prepare --workspace -- --features sqlite
 
 
@@ -148,7 +148,7 @@ prepare-postgres: migrate-postgres
 
 
 # only starts the backend in test mode with sqlite database for easier test debugging
-test-backend-sqlite: migrate-sqlite prepare-sqlite
+test-backend: migrate prepare
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
@@ -158,7 +158,7 @@ test-backend-sqlite: migrate-sqlite prepare-sqlite
 
 
 # runs a single test with sqlite - needs the backend being started manually
-test-single-sqlite test="":
+test test="":
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
@@ -167,7 +167,7 @@ test-single-sqlite test="":
 
 
 # runs the full set of tests with in-memory sqlite
-test-sqlite test="": migrate-sqlite prepare-sqlite
+test-full test="": migrate prepare
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
@@ -273,7 +273,7 @@ build-docs:
 
 
 # builds the whole application in release mode
-build-sqlite: test-sqlite
+build: test
     #!/usr/bin/env bash
     set -euxo pipefail
 
@@ -332,7 +332,7 @@ release:
 
 
 # publishes the application images - full pipeline incl clippy and testing
-publish: pull-latest-cross build-docs build-ui fmt build-sqlite build-postgres
+publish: pull-latest-cross build-docs build-ui fmt build build-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
