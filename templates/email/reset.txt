@@ -1,8 +1,12 @@
 {{ header }} {{ email_sub_prefix }}
 
+{{ text }}
+
 {{ click_link }}
 
 {{ validity }}
 {{ expires }} {{ exp }}
 
 {{ link }}
+
+{{ footer }}
