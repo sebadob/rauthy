@@ -920,15 +920,6 @@ impl User {
         Ok(user)
     }
 
-    // pub fn from_reg_req(new_user: NewUserRegistrationRequest) -> Self {
-    //     Self {
-    //         email: new_user.email.to_lowercase(),
-    //         given_name: new_user.given_name,
-    //         family_name: new_user.family_name,
-    //         ..Default::default()
-    //     }
-    // }
-
     pub fn get_groups(&self) -> Vec<String> {
         let mut res = Vec::new();
         if self.groups.is_some() {
@@ -1059,40 +1050,6 @@ impl User {
 
         Ok(())
     }
-
-    // pub fn validate_auth_provider(&self, provider_id: &str) -> Result<(), ErrorResponse> {
-    //     // We must never accept failed logins here!
-    //     // This could lead to account takeover, since we cannot know, that the values from
-    //     // the provider on the other side have actually been validated by the same user.
-    //     if self.auth_provider_id.as_deref() != Some(provider_id) {
-    //         let err = format!(
-    //             "User with email '{}' already exists but is not linked to this provider.",
-    //             self.email
-    //         );
-    //         error!("{}", err);
-    //         return Err(ErrorResponse::new(ErrorResponseType::Forbidden, err));
-    //     }
-    //
-    //     Ok(())
-    // }
-    //
-    // pub fn validate_federation_uid(&self, id_token_uid: &str) -> Result<(), ErrorResponse> {
-    //     // We must never accept failed logins here!
-    //     // This could lead to account takeover, since we cannot know, that the values from
-    //     // the provider on the other side have actually been validated by the same user.
-    //     if self.federation_uid.as_deref() != Some(id_token_uid) {
-    //         error!(
-    //             "Received an invalid User ID from the remote provider. expected: {}\treceived: {}",
-    //             self.id, id_token_uid
-    //         );
-    //         return Err(ErrorResponse::new(
-    //             ErrorResponseType::Forbidden,
-    //             "Received an invalid User ID from the remote provider".to_string(),
-    //         ));
-    //     }
-    //
-    //     Ok(())
-    // }
 
     pub async fn validate_password(
         &self,
