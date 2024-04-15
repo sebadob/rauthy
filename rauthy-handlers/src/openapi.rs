@@ -11,7 +11,7 @@ use rauthy_models::language;
 use rauthy_models::ListenScheme;
 use rauthy_models::{entity, request, response};
 use rauthy_service::token_set;
-use utoipa::openapi::{Contact, Server};
+use utoipa::openapi::Server;
 use utoipa::{openapi, OpenApi};
 
 #[derive(OpenApi)]
