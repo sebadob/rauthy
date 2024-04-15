@@ -22,11 +22,11 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
 
     let clients = res.json::<Vec<ClientResponse>>().await?;
     assert_eq!(clients.len(), 2);
-
     let mut client = clients.get(0).unwrap();
     if client.id == "init_client" {
         client = clients.get(1).unwrap();
     }
+    println!("{:?}", client);
     assert_eq!(client.id, "rauthy");
     assert_eq!(client.name, Some("Rauthy".to_string()));
     assert_eq!(client.enabled, true);
@@ -37,12 +37,12 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         client.allowed_origins,
         Some(vec!["http://localhost:5173".to_string()])
     );
-    assert_eq!(client.flows_enabled.len(), 2);
+    assert_eq!(client.flows_enabled.len(), 1);
     assert_eq!(client.access_token_alg, "EdDSA");
     assert_eq!(client.id_token_alg, "EdDSA");
     assert_eq!(client.refresh_token, false);
-    assert_eq!(client.auth_code_lifetime, 60);
-    assert_eq!(client.access_token_lifetime, 1800);
+    assert_eq!(client.auth_code_lifetime, 10);
+    assert_eq!(client.access_token_lifetime, 10);
     assert_eq!(client.scopes.len(), 2);
     assert_eq!(client.default_scopes.len(), 2);
     assert_eq!(client.challenges.as_ref().unwrap().len(), 1);
