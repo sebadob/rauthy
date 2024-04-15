@@ -3,6 +3,7 @@ use crate::entity::magic_links::MagicLink;
 use crate::entity::users::User;
 use crate::i18n::email_change_info_new::I18nEmailChangeInfoNew;
 use crate::i18n::email_confirm_change::I18nEmailConfirmChange;
+use crate::i18n::email_password_new::I18nEmailPasswordNew;
 use crate::i18n::email_reset::I18nEmailReset;
 use crate::i18n::email_reset_info::I18nEmailResetInfo;
 use crate::i18n::SsrJson;
@@ -298,31 +299,59 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
     );
     let exp = email_ts_prettify(magic_link.exp);
 
-    let i18n = I18nEmailReset::build(&user.language);
-    let text = EmailResetTxt {
-        email_sub_prefix: &EMAIL_SUB_PREFIX,
-        link: &link,
-        exp: &exp,
-        header: i18n.header,
-        click_link: i18n.click_link,
-        validity: i18n.validity,
-        expires: i18n.expires,
-    };
+    let (subject, text, html) = if user.password.is_none() {
+        let i18n = I18nEmailPasswordNew::build(&user.language);
+        let text = EmailResetTxt {
+            email_sub_prefix: &EMAIL_SUB_PREFIX,
+            link: &link,
+            exp: &exp,
+            header: i18n.header,
+            click_link: i18n.click_link,
+            validity: i18n.validity,
+            expires: i18n.expires,
+        };
 
-    let html = EMailResetHtml {
-        email_sub_prefix: &EMAIL_SUB_PREFIX,
-        link: &link,
-        exp: &exp,
-        header: i18n.header,
-        click_link: i18n.click_link,
-        validity: i18n.validity,
-        expires: i18n.expires,
-        button_text: i18n.button_text,
+        let html = EMailResetHtml {
+            email_sub_prefix: &EMAIL_SUB_PREFIX,
+            link: &link,
+            exp: &exp,
+            header: i18n.header,
+            click_link: i18n.click_link,
+            validity: i18n.validity,
+            expires: i18n.expires,
+            button_text: i18n.button_text,
+        };
+
+        (i18n.subject, text, html)
+    } else {
+        let i18n = I18nEmailReset::build(&user.language);
+        let text = EmailResetTxt {
+            email_sub_prefix: &EMAIL_SUB_PREFIX,
+            link: &link,
+            exp: &exp,
+            header: i18n.header,
+            click_link: i18n.click_link,
+            validity: i18n.validity,
+            expires: i18n.expires,
+        };
+
+        let html = EMailResetHtml {
+            email_sub_prefix: &EMAIL_SUB_PREFIX,
+            link: &link,
+            exp: &exp,
+            header: i18n.header,
+            click_link: i18n.click_link,
+            validity: i18n.validity,
+            expires: i18n.expires,
+            button_text: i18n.button_text,
+        };
+
+        (i18n.subject, text, html)
     };
 
     let req = EMail {
         address: user.email.to_string(),
-        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
+        subject: format!("{} - {}", *EMAIL_SUB_PREFIX, subject),
         text: text.render().expect("Template rendering: EmailResetTxt"),
         html: Some(html.render().expect("Template rendering: EmailResetHtml")),
     };

@@ -6,6 +6,7 @@ pub mod email_change_info_new;
 pub mod email_change_info_old;
 pub mod email_confirm_change;
 pub mod email_confirm_change_html;
+pub mod email_password_new;
 pub mod email_reset;
 pub mod email_reset_info;
 pub mod error;
