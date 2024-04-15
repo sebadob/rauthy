@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.22.0-beta1
+## v0.22.0-beta2
 
 ### Breaking
 
