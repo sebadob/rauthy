@@ -635,6 +635,9 @@ pub struct NewUserRegistrationRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]
     pub pow: String,
+    /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]
+    pub redirect_uri: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Validate, ToSchema)]

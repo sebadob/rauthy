@@ -85,12 +85,14 @@ pub async fn handle_put_user_passkey_start<'a>(
     ml.validate(&user.id, &req, true)?;
 
     // if we register a new passkey, we need to make sure that the magic link is for a new user
-    let usage = MagicLinkUsage::try_from(&ml.usage)?;
-    if usage != MagicLinkUsage::NewUser {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
-            "You cannot register a new passkey here for an existing user".to_string(),
-        ));
+    match MagicLinkUsage::try_from(&ml.usage)? {
+        MagicLinkUsage::NewUser(_) => {}
+        _ => {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "You cannot register a new passkey here for an existing user".to_string(),
+            ));
+        }
     }
 
     webauthn::reg_start(data, user.id, req_data)
