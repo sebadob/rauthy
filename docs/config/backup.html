@@ -193,9 +193,16 @@ The database itself will be saved in <code>/app/data</code> by default.</p>
 <p>This difference makes it possible, that you could add a second volume mount to the container.<br />
 You then have the database itself on a different disk than the backups, which is the most simple and straight forward
 approach to have a basic backup strategy.</p>
-<pre><code class="language-admonish info">The SQLite backups are done with `VACUUM`, which means you can just use the backups as a normal database again.
-This makes it possible, to just use the [Database Migration](./db_migration.md) feature to apply backups very easily.
-</code></pre>
+<div id="admonition-info" class="admonition admonish-info">
+<div class="admonition-title">
+<p>Info</p>
+<p><a class="admonition-anchor-link" href="#admonition-info"></a></p>
+</div>
+<div>
+<p>The SQLite backups are done with <code>VACUUM</code>, which means you can just use the backups as a normal database again.
+This makes it possible, to just use the <a href="./db_migration.html">Database Migration</a> feature to apply backups very easily.</p>
+</div>
+</div>
 <h2 id="postgres"><a class="header" href="#postgres">Postgres</a></h2>
 <p>If you are using Postgres as the main database, Rauthy does not do any backups.<br />
 There are a lot of way better tools out there to handle this task.</p>

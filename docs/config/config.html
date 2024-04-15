@@ -176,10 +176,17 @@
                     <main>
                         <h1 id="reference-config"><a class="header" href="#reference-config">Reference Config</a></h1>
 <p>This shows a full example config with (hopefully) every value nicely described.</p>
-<pre><code class="language-admonish caution">When you go into production, make sure that you provide the included secrets / sensistive information in this
+<div id="admonition-caution" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="#admonition-caution"></a></p>
+</div>
+<div>
+<p>When you go into production, make sure that you provide the included secrets / sensistive information in this
 file in an appropriate way. With docker, you can leave them inside this file, but when deploying with Kubernetes,
-extract these values, create Kubernetes Secrets and provide them as environment variables.
-</code></pre>
+extract these values, create Kubernetes Secrets and provide them as environment variables.</p>
+</div>
+</div>
 <pre><code>#####################################
 ############## ACCESS ###############
 #####################################
