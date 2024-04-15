@@ -153,13 +153,14 @@ pub async fn handle_put_user_passkey_finish<'a>(
     Ok(HttpResponse::Created().cookie(cookie).finish())
 }
 
+/// Returns (magic link deletion cookie, optional custom redirect uri)
 #[tracing::instrument(level = "debug", skip_all, fields(email = req_data.email))]
 pub async fn handle_put_user_password_reset<'a>(
     data: &web::Data<AppState>,
     req: HttpRequest,
     user_id: String,
     req_data: PasswordResetRequest,
-) -> Result<cookie::Cookie<'a>, ErrorResponse> {
+) -> Result<(cookie::Cookie<'a>, Option<String>), ErrorResponse> {
     // validate user_id / given email address
     let mut user = User::find(data, user_id).await?;
     if user.email != req_data.email {
@@ -223,6 +224,12 @@ pub async fn handle_put_user_password_reset<'a>(
     // delete all existing user sessions to have a clean flow
     Session::invalidate_for_user(data, &user.id).await?;
 
+    // check if we got a custom `redirect_uri` during registration
+    let redirect_uri = match MagicLinkUsage::try_from(&ml.usage)? {
+        MagicLinkUsage::NewUser(redirect_uri) => redirect_uri,
+        _ => None,
+    };
+
     // delete the cookie
     let cookie = cookie::Cookie::build(PWD_RESET_COOKIE, "")
         .secure(true)
@@ -231,5 +238,5 @@ pub async fn handle_put_user_password_reset<'a>(
         .max_age(cookie::time::Duration::ZERO)
         .path("/auth")
         .finish();
-    Ok(cookie)
+    Ok((cookie, redirect_uri))
 }
