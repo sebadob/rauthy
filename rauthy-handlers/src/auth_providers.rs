@@ -104,7 +104,6 @@ pub async fn post_provider(
     skip_all, fields(issuer = payload.issuer)
 )]
 pub async fn post_provider_lookup(
-    // data: web::Data<AppState>,
     payload: Json<ProviderLookupRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {

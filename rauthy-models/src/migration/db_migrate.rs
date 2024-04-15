@@ -495,7 +495,7 @@ pub async fn migrate_from_sqlite(
             VALUES ($1, $2, $3, $4)"#,
         )
         .bind(&b.id)
-        .bind(&b.created)
+        .bind(b.created)
         .bind(&b.registration_token)
         .bind(&b.token_endpoint_auth_method)
         .execute(db_to)
@@ -1053,7 +1053,7 @@ pub async fn migrate_from_postgres(
             VALUES ($1, $2, $3, $4)"#,
         )
         .bind(&b.id)
-        .bind(&b.created)
+        .bind(b.created)
         .bind(&b.registration_token)
         .bind(&b.token_endpoint_auth_method)
         .execute(db_to)
