@@ -209,11 +209,18 @@ data:
 </code></pre>
 <p>Open the config with your favorite editor and paste the <a href="../config/config.html">reference config</a> in place.<br />
 Make sure to watch the indentation.</p>
-<pre><code class="language-admonish caution">Do not include sensitive information like for instance the ENC_KEYS inside the normal Config.
-Use the secrets from the next step for this.  
+<div id="admonition-caution" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="#admonition-caution"></a></p>
+</div>
+<div>
+<p>Do not include sensitive information like for instance the ENC_KEYS inside the normal Config.
+Use the secrets from the next step for this.<br />
 If you use SQLite, you can include the DATABASE_URL in the config, since it does not contain a password, but
-never do this for Postgres!
-</code></pre>
+never do this for Postgres!</p>
+</div>
+</div>
 <h3 id="create-and-apply-secrets"><a class="header" href="#create-and-apply-secrets">Create and apply secrets</a></h3>
 <pre><code>touch secrets.yaml
 </code></pre>

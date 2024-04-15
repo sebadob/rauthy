@@ -192,10 +192,17 @@ logs to see the URL and first password.</p>
     --name rauthy \
     ghcr.io/sebadob/rauthy:0.21.1-lite
 </code></pre>
-<pre><code class="language-admonish note">The second command does not start in interactive mode and it does not delete the container on exit.  
+<div id="admonition-note" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note"></a></p>
+</div>
+<div>
+<p>The second command does not start in interactive mode and it does not delete the container on exit.<br />
 This means the data will be persisted, as long as the container itself is no erased and you can shutdown and
-restart to your liking without using test data.
-</code></pre>
+restart to your liking without using test data.</p>
+</div>
+</div>
 <p>To see the logs and the new admin password, take a look with</p>
 <pre><code>docker logs -f rauthy
 </code></pre>
@@ -211,10 +218,17 @@ The second thing is to provide a more custom config.</p>
 You can add environment variables to the startup command with the <code>-e</code> option, like shown in the on-disk SQLite
 command.<br />
 A better approach, when you have a bigger config file, would be to have all of them in a config file.</p>
-<pre><code class="language-admonish note">The following commands will work on Linux and Mac OS (even though not tested on Mac OS). If you are on Windows,
-you might replace the `pwd` command and just paste in the path directly. Since I am no Windows user myself, I
-cannot provide tested commands in this case.
-</code></pre>
+<div id="admonition-note-1" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note-1"></a></p>
+</div>
+<div>
+<p>The following commands will work on Linux and Mac OS (even though not tested on Mac OS). If you are on Windows,
+you might replace the <code>pwd</code> command and just paste in the path directly. Since I am no Windows user myself, I
+cannot provide tested commands in this case.</p>
+</div>
+</div>
 <p><strong>1. We want to create a new directory for rauthy's persistent data</strong></p>
 <pre><code>mkdir rauthy
 </code></pre>
@@ -242,10 +256,17 @@ sudo chown -R 10001:10001 rauthy
 </code></pre>
 <p>This will make the directory writeable for everyone, so rauthy can create the database files inside the container
 with 10001:10001 again.</p>
-<pre><code class="language-admonish note">The safest approach would be to change the owner and group for these files on the host system. This needs `sudo`
+<div id="admonition-note-2" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note-2"></a></p>
+</div>
+<div>
+<p>The safest approach would be to change the owner and group for these files on the host system. This needs <code>sudo</code>
 to edit the config, which may be a bit annoying, but at the same time it makes sure, that you can only read
-the secrets inside it with `sudo` too.
-</code></pre>
+the secrets inside it with <code>sudo</code> too.</p>
+</div>
+</div>
 <p><strong>4. Adopt the config to your liking.</strong><br />
 Make sure to adjust the volume mount for the sqlite directory in step 5, if it differs from <code>sqlite:data/rauthy.db</code></p>
 <p><strong>5. Start the container with volume mounts</strong></p>

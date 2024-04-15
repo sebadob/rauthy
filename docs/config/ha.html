@@ -226,10 +226,17 @@ This happens for security reasons to provide cache inconsistencies. Better inval
 fresh from the DB or other cache members than working with possibly invalid values, which is especially true in an
 authn / authz situation.</li>
 </ol>
-<pre><code class="language-admonish hint">If you are in an environment where the described mechanism with extracting the hostname would not work, for instance
-you want a HA deployment with just different docker hosts, you can set the `HOSTNAME_OVERWRITE` for each instance to
-match one of the `HA_HOSTS` entries.
-</code></pre>
+<div id="admonition-hint" class="admonition admonish-tip">
+<div class="admonition-title">
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="#admonition-hint"></a></p>
+</div>
+<div>
+<p>If you are in an environment where the described mechanism with extracting the hostname would not work, for instance
+you want a HA deployment with just different docker hosts, you can set the <code>HOSTNAME_OVERWRITE</code> for each instance to
+match one of the <code>HA_HOSTS</code> entries.</p>
+</div>
+</div>
 <h3 id="cache_auth_token"><a class="header" href="#cache_auth_token"><code>CACHE_AUTH_TOKEN</code></a></h3>
 <p>You need to set a secret for the <code>CACHE_AUTH_TOKEN</code> which was left out in the
 <a href="../getting_started/k8s.html#create-and-apply-secrets">Getting Started</a></p>

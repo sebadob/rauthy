@@ -192,31 +192,54 @@ one Passkey with additional UV registered.</p>
 <li>no need to satisfy password policies</li>
 <li>no need to reset your password after it has been expired</li>
 </ul>
-<pre><code class="language-admonish caution">Passkey only accounts cannot use the traditional password reset E-Mails.
-
-This is a drawback and a benefit at the same time:  
+<div id="admonition-caution" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="#admonition-caution"></a></p>
+</div>
+<div>
+<p>Passkey only accounts cannot use the traditional password reset E-Mails.</p>
+<p>This is a drawback and a benefit at the same time:<br />
 No way to take over an account if the E-Mail account has been compromised, but at the same time the user
-relies on an Admin to reset the MFA devices, if no backup exists or all are lost.
-</code></pre>
-<pre><code class="language-admonish info">Android has finally added support for biometric UV in September 2023.  
-This has made is possible to implement this feature into Rauthy without sacrificing security.
-
-However, at the time of writing (09.10.2023), only biometric UV is supported and PIN UV is about to come
-in the near future.
-</code></pre>
-<pre><code class="language-admonish tip">If you want to register an Android device for a Passkey only account, but you are using for instance Yubikeys
-with PIN UV, you can do the following trick to get it done (works only with the latest Play store version):
-
-- Create a password for your account, if it does not exist yet
-- Remove all registered passkeys
-- Log in to your account view on your Android device and another device that works with your Yubikey
-- With both devices logged in at the same time:
-    - Register a new passkey with Android and choose "this device", which will create a Passkey flow with your fingerprint
-    - Register the Yubikey on the other device
-- You should now have 2 Passkeys: Android + Yubikey
-- Navigate to the Password page inside your account on any device and convert it to Passkey only
-- You should now be able to log in on your Android device with Passkey only and with your Yubikey
-</code></pre>
+relies on an Admin to reset the MFA devices, if no backup exists or all are lost.</p>
+</div>
+</div>
+<div id="admonition-info" class="admonition admonish-info">
+<div class="admonition-title">
+<p>Info</p>
+<p><a class="admonition-anchor-link" href="#admonition-info"></a></p>
+</div>
+<div>
+<p>Android has finally added support for biometric UV in September 2023.<br />
+This has made is possible to implement this feature into Rauthy without sacrificing security.</p>
+<p>However, at the time of writing (09.10.2023), only biometric UV is supported and PIN UV is about to come
+in the near future.</p>
+</div>
+</div>
+<div id="admonition-tip" class="admonition admonish-tip">
+<div class="admonition-title">
+<p>Tip</p>
+<p><a class="admonition-anchor-link" href="#admonition-tip"></a></p>
+</div>
+<div>
+<p>If you want to register an Android device for a Passkey only account, but you are using for instance Yubikeys
+with PIN UV, you can do the following trick to get it done (works only with the latest Play store version):</p>
+<ul>
+<li>Create a password for your account, if it does not exist yet</li>
+<li>Remove all registered passkeys</li>
+<li>Log in to your account view on your Android device and another device that works with your Yubikey</li>
+<li>With both devices logged in at the same time:
+<ul>
+<li>Register a new passkey with Android and choose "this device", which will create a Passkey flow with your fingerprint</li>
+<li>Register the Yubikey on the other device</li>
+</ul>
+</li>
+<li>You should now have 2 Passkeys: Android + Yubikey</li>
+<li>Navigate to the Password page inside your account on any device and convert it to Passkey only</li>
+<li>You should now be able to log in on your Android device with Passkey only and with your Yubikey</li>
+</ul>
+</div>
+</div>
 <h2 id="config"><a class="header" href="#config">Config</a></h2>
 <p>You should use FIDO 2 in production for 2FA / MFA.
 To make sure it works, you need to check your the config.</p>
@@ -226,14 +249,28 @@ To make sure it works, you need to check your the config.</p>
 For the above example, since our application is available under 'auth.example.com', this should also be:</p>
 <pre><code>RP_ID=auth.example.com
 </code></pre>
-<pre><code class="language-admonish caution">When the `RP_ID` changes, already registered devices will stop working and users cannot log in anymore!
-Be very careful, if you want / need to do this in production.
-</code></pre>
+<div id="admonition-caution-1" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="#admonition-caution-1"></a></p>
+</div>
+<div>
+<p>When the <code>RP_ID</code> changes, already registered devices will stop working and users cannot log in anymore!
+Be very careful, if you want / need to do this in production.</p>
+</div>
+</div>
 <h3 id="rp_origin"><a class="header" href="#rp_origin"><code>RP_ORIGIN</code></a></h3>
 <p>The seconds important variable for FIDO 2 is the <code>RP_ORIGIN</code>. This needs to be set to the URL containing the effective
 domain name.</p>
-<pre><code class="language-admonish caution">The `RP_ORIGIN` must always include the port number, even it is just the default 443 for HTTPS.
-</code></pre>
+<div id="admonition-caution-2" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="#admonition-caution-2"></a></p>
+</div>
+<div>
+<p>The <code>RP_ORIGIN</code> must always include the port number, even it is just the default 443 for HTTPS.</p>
+</div>
+</div>
 <p>In this example, assuming rauthy will be available at port 443, correct would be:</p>
 <pre><code>RP_ORIGIN=https://auth.example.com:443
 </code></pre>

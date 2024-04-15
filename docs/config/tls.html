@@ -177,9 +177,16 @@
                         <h1 id="tls"><a class="header" href="#tls">TLS</a></h1>
 <p>If you do have TLS certificates from another source already, skip directly to <a href="#config">Config</a>.</p>
 <h2 id="generating-certificates"><a class="header" href="#generating-certificates">Generating Certificates</a></h2>
-<pre><code class="language-admonish hint">We are using another project of mine called [Nioca](https://github.com/sebadob/nioca) for an easy creation of a
-fully functioning and production ready private Root Certificate Authority (CA).
-</code></pre>
+<div id="admonition-hint" class="admonition admonish-tip">
+<div class="admonition-title">
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="#admonition-hint"></a></p>
+</div>
+<div>
+<p>We are using another project of mine called <a href="https://github.com/sebadob/nioca">Nioca</a> for an easy creation of a
+fully functioning and production ready private Root Certificate Authority (CA).</p>
+</div>
+</div>
 <p>I suggest to use <code>docker</code> for this task. Otherwise, you can use the <code>nioca</code> binary directly on any linux machine.
 If you want a permanent way of generating certificates for yourself, take a look at Rauthy's <code>justfile</code> and copy
 and adjust the recipes <code>create-root-ca</code> and <code>create-end-entity-tls</code> to your liking.<br />
@@ -276,9 +283,16 @@ following command, to create the Kubernetes secrets.</p>
 <pre><code>kubectl -n rauthy create secret tls redhac-tls-server --key="key.pem" --cert="cert-chain.pem" &amp;&amp; \
 kubectl -n rauthy create secret generic redhac-server-ca --from-file ca-chain.pem
 </code></pre>
-<pre><code class="language-admonish notice">We create the `redhac-tls-server` here with the exact same values. If you really want to harden your setup in production,
-you should provide a different set of certificates for the internal mTLS connection.
-</code></pre>
+<div id="admonition-note" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note"></a></p>
+</div>
+<div>
+<p>We create the <code>redhac-tls-server</code> here with the exact same values. If you really want to harden your setup in production,
+you should provide a different set of certificates for the internal mTLS connection.</p>
+</div>
+</div>
 <h4 id="config-adjustments---rest-api"><a class="header" href="#config-adjustments---rest-api">Config Adjustments - REST API</a></h4>
 <p>We need to configure the newly created Kubernetes secrets in the <code>std.yaml</code> from the
 <a href="../getting_started/k8s.html#create-and-apply-the-stateful-set">Kubernetes</a> setup.</p>

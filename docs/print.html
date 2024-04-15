@@ -176,12 +176,26 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
-<pre><code class="language-admonish caution">There has not been any third party security audit for this project.  
-Use this software at your own risk!
-</code></pre>
-<pre><code class="language-admonish info">This project is currently pre v1.0, which means, even though it is not expected, breaking changes might come
-with new versions.
-</code></pre>
+<div id="admonition-caution" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="intro.html#admonition-caution"></a></p>
+</div>
+<div>
+<p>There has not been any third party security audit for this project.<br />
+Use this software at your own risk!</p>
+</div>
+</div>
+<div id="admonition-info" class="admonition admonish-info">
+<div class="admonition-title">
+<p>Info</p>
+<p><a class="admonition-anchor-link" href="intro.html#admonition-info"></a></p>
+</div>
+<div>
+<p>This project is currently pre v1.0, which means, even though it is not expected, breaking changes might come
+with new versions.</p>
+</div>
+</div>
 <h2 id="what-it-is"><a class="header" href="#what-it-is">What it is</a></h2>
 <p>Rauthy is an OpenID Connect (OIDC) Provider and Single Sign-On solution written in Rust.</p>
 <p><strong>Secure by default</strong><br />
@@ -345,20 +359,34 @@ SwaggerUI documentation</li>
 No-Setup migrations between different databases (Yes, even between SQLite and Postgres)</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
-<pre><code class="language-admonish hint">Rauthy `v0.14` and beyond uses differnt container images for the different target databases.  
-Until and including `v0.13`, rauthy used the `Any` driver from [sqlx](https://crates.io/crates/sqlx). However, this
+<div id="admonition-hint" class="admonition admonish-tip">
+<div class="admonition-title">
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="getting_started/main.html#admonition-hint"></a></p>
+</div>
+<div>
+<p>Rauthy <code>v0.14</code> and beyond uses differnt container images for the different target databases.<br />
+Until and including <code>v0.13</code>, rauthy used the <code>Any</code> driver from <a href="https://crates.io/crates/sqlx">sqlx</a>. However, this
 driver has quite a few problems since sqlx 0.7, and I decided to migrate away from it, because the future of it seems
-too uncertain to me.
-</code></pre>
+too uncertain to me.</p>
+</div>
+</div>
 <ul>
 <li>The "normal" container images can be used for Postgres</li>
 <li>The <code>*-lite</code> images use an embedded SQLite</li>
 <li>The <code>DB_MIGRATE_FROM</code> (explained later) can be used with any combination of image / database</li>
 </ul>
 <p>At the time of writing, you can run Rauthy either with <a href="getting_started/./docker.html">Docker</a> or inside <a href="getting_started/./k8s.html">Kubernetes</a>.</p>
-<pre><code class="language-admonish caution">All the examples in this documentation are using the `*-lite` images and therefore SQLite. If you want to use Postgres
-in production, you need to use the "default" container images.
-</code></pre>
+<div id="admonition-caution" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="getting_started/main.html#admonition-caution"></a></p>
+</div>
+<div>
+<p>All the examples in this documentation are using the <code>*-lite</code> images and therefore SQLite. If you want to use Postgres
+in production, you need to use the "default" container images.</p>
+</div>
+</div>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="docker"><a class="header" href="#docker">Docker</a></h1>
 <h2 id="testing--local-evaluation"><a class="header" href="#testing--local-evaluation">Testing / Local Evaluation</a></h2>
 <p>For getting a first look at rauthy, you can start it with docker (or any other container runtime) on your localhost.
@@ -377,10 +405,17 @@ logs to see the URL and first password.</p>
     --name rauthy \
     ghcr.io/sebadob/rauthy:0.21.1-lite
 </code></pre>
-<pre><code class="language-admonish note">The second command does not start in interactive mode and it does not delete the container on exit.  
+<div id="admonition-note" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="getting_started/docker.html#admonition-note"></a></p>
+</div>
+<div>
+<p>The second command does not start in interactive mode and it does not delete the container on exit.<br />
 This means the data will be persisted, as long as the container itself is no erased and you can shutdown and
-restart to your liking without using test data.
-</code></pre>
+restart to your liking without using test data.</p>
+</div>
+</div>
 <p>To see the logs and the new admin password, take a look with</p>
 <pre><code>docker logs -f rauthy
 </code></pre>
@@ -396,10 +431,17 @@ The second thing is to provide a more custom config.</p>
 You can add environment variables to the startup command with the <code>-e</code> option, like shown in the on-disk SQLite
 command.<br />
 A better approach, when you have a bigger config file, would be to have all of them in a config file.</p>
-<pre><code class="language-admonish note">The following commands will work on Linux and Mac OS (even though not tested on Mac OS). If you are on Windows,
-you might replace the `pwd` command and just paste in the path directly. Since I am no Windows user myself, I
-cannot provide tested commands in this case.
-</code></pre>
+<div id="admonition-note-1" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="getting_started/docker.html#admonition-note-1"></a></p>
+</div>
+<div>
+<p>The following commands will work on Linux and Mac OS (even though not tested on Mac OS). If you are on Windows,
+you might replace the <code>pwd</code> command and just paste in the path directly. Since I am no Windows user myself, I
+cannot provide tested commands in this case.</p>
+</div>
+</div>
 <p><strong>1. We want to create a new directory for rauthy's persistent data</strong></p>
 <pre><code>mkdir rauthy
 </code></pre>
@@ -427,10 +469,17 @@ sudo chown -R 10001:10001 rauthy
 </code></pre>
 <p>This will make the directory writeable for everyone, so rauthy can create the database files inside the container
 with 10001:10001 again.</p>
-<pre><code class="language-admonish note">The safest approach would be to change the owner and group for these files on the host system. This needs `sudo`
+<div id="admonition-note-2" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="getting_started/docker.html#admonition-note-2"></a></p>
+</div>
+<div>
+<p>The safest approach would be to change the owner and group for these files on the host system. This needs <code>sudo</code>
 to edit the config, which may be a bit annoying, but at the same time it makes sure, that you can only read
-the secrets inside it with `sudo` too.
-</code></pre>
+the secrets inside it with <code>sudo</code> too.</p>
+</div>
+</div>
 <p><strong>4. Adopt the config to your liking.</strong><br />
 Make sure to adjust the volume mount for the sqlite directory in step 5, if it differs from <code>sqlite:data/rauthy.db</code></p>
 <p><strong>5. Start the container with volume mounts</strong></p>
@@ -483,11 +532,18 @@ data:
 </code></pre>
 <p>Open the config with your favorite editor and paste the <a href="getting_started/../config/config.html">reference config</a> in place.<br />
 Make sure to watch the indentation.</p>
-<pre><code class="language-admonish caution">Do not include sensitive information like for instance the ENC_KEYS inside the normal Config.
-Use the secrets from the next step for this.  
+<div id="admonition-caution" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="getting_started/k8s.html#admonition-caution"></a></p>
+</div>
+<div>
+<p>Do not include sensitive information like for instance the ENC_KEYS inside the normal Config.
+Use the secrets from the next step for this.<br />
 If you use SQLite, you can include the DATABASE_URL in the config, since it does not contain a password, but
-never do this for Postgres!
-</code></pre>
+never do this for Postgres!</p>
+</div>
+</div>
 <h3 id="create-and-apply-secrets"><a class="header" href="#create-and-apply-secrets">Create and apply secrets</a></h3>
 <pre><code>touch secrets.yaml
 </code></pre>
@@ -790,11 +846,25 @@ happen once and never again.</p>
 <h3 id="logs-with-kubernetes"><a class="header" href="#logs-with-kubernetes">Logs with Kubernetes</a></h3>
 <pre><code>kubectl -n rauthy logs -f rauthy-0
 </code></pre>
-<pre><code class="language-admonish note">If you do a Kubernets HA deployment directly, only the Pod `rauthy-0` will log the initial password.
-</code></pre>
-<pre><code class="language-admonish note">If you missed this log entry, you will not be able to log in.  
-If this is the case, you can delete the database / volume and just restart rauthy.
-</code></pre>
+<div id="admonition-note" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="getting_started/first_start.html#admonition-note"></a></p>
+</div>
+<div>
+<p>If you do a Kubernets HA deployment directly, only the Pod <code>rauthy-0</code> will log the initial password.</p>
+</div>
+</div>
+<div id="admonition-note-1" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="getting_started/first_start.html#admonition-note-1"></a></p>
+</div>
+<div>
+<p>If you missed this log entry, you will not be able to log in.<br />
+If this is the case, you can delete the database / volume and just restart rauthy.</p>
+</div>
+</div>
 <p>The log message contains a link to the accounts page, where you then should log in to immediately set a new password.
 Follow the link, use as the default admin <code>admin@localhost.de</code> and as password the copied value from the log.</p>
 <ul>
@@ -806,10 +876,17 @@ Follow the link, use as the default admin <code>admin@localhost.de</code> and as
 disable it, after a custom admin has been added.</p>
 <p>When logged in to the admin UI, you can add a new user. When the <code>SMTP</code> settings are correctly configured in the config,
 which we can test right now, you will receive an E-Mail with the very first password reset.</p>
-<pre><code class="language-admonish note">If you do not receive an E-Mail after the first user registration, chances are you may have a problem with the SMTP
-setup.  
-To debug this, you can set `LOG_LEVEL=debug` in the config and then watch the logs after a restart.
-</code></pre>
+<div id="admonition-note-2" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="getting_started/first_start.html#admonition-note-2"></a></p>
+</div>
+<div>
+<p>If you do not receive an E-Mail after the first user registration, chances are you may have a problem with the SMTP
+setup.<br />
+To debug this, you can set <code>LOG_LEVEL=debug</code> in the config and then watch the logs after a restart.</p>
+</div>
+</div>
 <h3 id="rauthy_admin-user-role"><a class="header" href="#rauthy_admin-user-role"><code>rauthy_admin</code> user role</a></h3>
 <p>The role, which allows a user to access the admin UI, is the <code>rauthy_admin</code>.<br />
 If the user has this role assigned, he will be seen as an admin.</p>
@@ -860,31 +937,54 @@ one Passkey with additional UV registered.</p>
 <li>no need to satisfy password policies</li>
 <li>no need to reset your password after it has been expired</li>
 </ul>
-<pre><code class="language-admonish caution">Passkey only accounts cannot use the traditional password reset E-Mails.
-
-This is a drawback and a benefit at the same time:  
+<div id="admonition-caution" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="config/fido.html#admonition-caution"></a></p>
+</div>
+<div>
+<p>Passkey only accounts cannot use the traditional password reset E-Mails.</p>
+<p>This is a drawback and a benefit at the same time:<br />
 No way to take over an account if the E-Mail account has been compromised, but at the same time the user
-relies on an Admin to reset the MFA devices, if no backup exists or all are lost.
-</code></pre>
-<pre><code class="language-admonish info">Android has finally added support for biometric UV in September 2023.  
-This has made is possible to implement this feature into Rauthy without sacrificing security.
-
-However, at the time of writing (09.10.2023), only biometric UV is supported and PIN UV is about to come
-in the near future.
-</code></pre>
-<pre><code class="language-admonish tip">If you want to register an Android device for a Passkey only account, but you are using for instance Yubikeys
-with PIN UV, you can do the following trick to get it done (works only with the latest Play store version):
-
-- Create a password for your account, if it does not exist yet
-- Remove all registered passkeys
-- Log in to your account view on your Android device and another device that works with your Yubikey
-- With both devices logged in at the same time:
-    - Register a new passkey with Android and choose "this device", which will create a Passkey flow with your fingerprint
-    - Register the Yubikey on the other device
-- You should now have 2 Passkeys: Android + Yubikey
-- Navigate to the Password page inside your account on any device and convert it to Passkey only
-- You should now be able to log in on your Android device with Passkey only and with your Yubikey
-</code></pre>
+relies on an Admin to reset the MFA devices, if no backup exists or all are lost.</p>
+</div>
+</div>
+<div id="admonition-info" class="admonition admonish-info">
+<div class="admonition-title">
+<p>Info</p>
+<p><a class="admonition-anchor-link" href="config/fido.html#admonition-info"></a></p>
+</div>
+<div>
+<p>Android has finally added support for biometric UV in September 2023.<br />
+This has made is possible to implement this feature into Rauthy without sacrificing security.</p>
+<p>However, at the time of writing (09.10.2023), only biometric UV is supported and PIN UV is about to come
+in the near future.</p>
+</div>
+</div>
+<div id="admonition-tip" class="admonition admonish-tip">
+<div class="admonition-title">
+<p>Tip</p>
+<p><a class="admonition-anchor-link" href="config/fido.html#admonition-tip"></a></p>
+</div>
+<div>
+<p>If you want to register an Android device for a Passkey only account, but you are using for instance Yubikeys
+with PIN UV, you can do the following trick to get it done (works only with the latest Play store version):</p>
+<ul>
+<li>Create a password for your account, if it does not exist yet</li>
+<li>Remove all registered passkeys</li>
+<li>Log in to your account view on your Android device and another device that works with your Yubikey</li>
+<li>With both devices logged in at the same time:
+<ul>
+<li>Register a new passkey with Android and choose "this device", which will create a Passkey flow with your fingerprint</li>
+<li>Register the Yubikey on the other device</li>
+</ul>
+</li>
+<li>You should now have 2 Passkeys: Android + Yubikey</li>
+<li>Navigate to the Password page inside your account on any device and convert it to Passkey only</li>
+<li>You should now be able to log in on your Android device with Passkey only and with your Yubikey</li>
+</ul>
+</div>
+</div>
 <h2 id="config-1"><a class="header" href="#config-1">Config</a></h2>
 <p>You should use FIDO 2 in production for 2FA / MFA.
 To make sure it works, you need to check your the config.</p>
@@ -894,14 +994,28 @@ To make sure it works, you need to check your the config.</p>
 For the above example, since our application is available under 'auth.example.com', this should also be:</p>
 <pre><code>RP_ID=auth.example.com
 </code></pre>
-<pre><code class="language-admonish caution">When the `RP_ID` changes, already registered devices will stop working and users cannot log in anymore!
-Be very careful, if you want / need to do this in production.
-</code></pre>
+<div id="admonition-caution-1" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="config/fido.html#admonition-caution-1"></a></p>
+</div>
+<div>
+<p>When the <code>RP_ID</code> changes, already registered devices will stop working and users cannot log in anymore!
+Be very careful, if you want / need to do this in production.</p>
+</div>
+</div>
 <h3 id="rp_origin"><a class="header" href="#rp_origin"><code>RP_ORIGIN</code></a></h3>
 <p>The seconds important variable for FIDO 2 is the <code>RP_ORIGIN</code>. This needs to be set to the URL containing the effective
 domain name.</p>
-<pre><code class="language-admonish caution">The `RP_ORIGIN` must always include the port number, even it is just the default 443 for HTTPS.
-</code></pre>
+<div id="admonition-caution-2" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="config/fido.html#admonition-caution-2"></a></p>
+</div>
+<div>
+<p>The <code>RP_ORIGIN</code> must always include the port number, even it is just the default 443 for HTTPS.</p>
+</div>
+</div>
 <p>In this example, assuming rauthy will be available at port 443, correct would be:</p>
 <pre><code>RP_ORIGIN=https://auth.example.com:443
 </code></pre>
@@ -928,9 +1042,16 @@ multiple keys, if you want to rotate them at some point without breaking the dec
 encryptions performed by the backend will use the key with the given ID.</p>
 <h2 id="key-rotation"><a class="header" href="#key-rotation">Key Rotation</a></h2>
 <p><strong>1. Add a new key to the <code>ENC_KEYS</code> in you secrets</strong></p>
-<pre><code class="language-admonish fail">You must not remove a current key, before the migration has been done via the UI.  
-If the old key is gone, the migration will fail.
-</code></pre>
+<div id="admonition-fail" class="admonition admonish-failure">
+<div class="admonition-title">
+<p>Fail</p>
+<p><a class="admonition-anchor-link" href="config/encryption.html#admonition-fail"></a></p>
+</div>
+<div>
+<p>You must not remove a current key, before the migration has been done via the UI.<br />
+If the old key is gone, the migration will fail.</p>
+</div>
+</div>
 <p><strong>2. Generate a new key + id</strong></p>
 <pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)"
 </code></pre>
@@ -947,9 +1068,16 @@ Wx1zrbLF/5vTaB7LdUSg1aTecmqHJOu2+RnU6zgTwNkDQU52Y3JM=
 <p>In this example, if the first key should be the new active default, set your <code>ENC_KEY</code>ACTIVE` to</p>
 <pre><code>ENC_KEY_ACTIVE=Wx1zrbLF
 </code></pre>
-<pre><code class="language-admonish help">If you are inside Kubernetes and (hopefully) use a Kubernetes secret for this, you need to base64 encode the whole
-value: `echo 'PutTheWholeValueHere' | base64`
-</code></pre>
+<div id="admonition-help" class="admonition admonish-question">
+<div class="admonition-title">
+<p>Help</p>
+<p><a class="admonition-anchor-link" href="config/encryption.html#admonition-help"></a></p>
+</div>
+<div>
+<p>If you are inside Kubernetes and (hopefully) use a Kubernetes secret for this, you need to base64 encode the whole
+value: <code>echo 'PutTheWholeValueHere' | base64</code></p>
+</div>
+</div>
 <p><strong>3. Set the <code>ENC_KEY_ACTIVE</code> to the ID of your newly generated key</strong></p>
 <p>This will make sure, that all new encryptions will use the new key. If you do not care about removing the old keys,
 because you maybe just want to rotate because its good practice, the secrets will migrate "by themselves" over time.
@@ -967,10 +1095,17 @@ This will migrate all encrypted data for existing OIDC clients and all JWKs used
 key.</p>
 <p><strong>5. Remove old keys</strong></p>
 <p>After a successful migration via the UI tool, you may remove old keys from the <code>ENC_KEYS</code> value.</p>
-<pre><code class="language-admonish caution">The MFA cookies, which are set for a client with an active security after a successful login, are encrypted with the
-`ENC_KEY_ACTIVE` too. This means, if you remove something from the `ENC_KEYS` which was used to encrypt one of these
-MFA cookies, the user will be prompted for the password again, even if the cookie has not expired yet. 
-</code></pre>
+<div id="admonition-caution" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="config/encryption.html#admonition-caution"></a></p>
+</div>
+<div>
+<p>The MFA cookies, which are set for a client with an active security after a successful login, are encrypted with the
+<code>ENC_KEY_ACTIVE</code> too. This means, if you remove something from the <code>ENC_KEYS</code> which was used to encrypt one of these
+MFA cookies, the user will be prompted for the password again, even if the cookie has not expired yet.</p>
+</div>
+</div>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="database-migrations"><a class="header" href="#database-migrations">Database Migrations</a></h1>
 <p>You can migrate easily between SQLite and Postgres, or just between different instances of them.</p>
 <p>Let's say you started out by evaluating Rauthy with a SQLite and a single instance deployment. Later on, you want to
@@ -986,17 +1121,37 @@ The way it works is the following:</p>
 <li>Close the connection to <code>MIGRATE_DB_FROM</code></li>
 <li>Use the <code>DATABASE_URL</code> as the new database and start normal operation</li>
 </ol>
-<pre><code class="language-admonish danger">`MIGRATE_DB_FROM` overwrites any data in the target database! Be very careful with this option.
-
-If you do not remove the `MIGRATE_DB_FROM` after the migration has been done, it will overwrite the target again with
-the next restart of the application. Remove the config variable immediately after the migration has finished.
-</code></pre>
-<pre><code class="language-admonish info">**v0.14 and beyond:** if you want to migrate to a different database, for instance from SQLite to Postgres, you need to
-switch to the correct rauthy image as well. Rauthy v0.14 and beyond has different container images for the databases.
-</code></pre>
-<pre><code class="language-admonish hint">The easiest to do is to just set `MIGRATE_DB_FROM` as an environmant variable, which is easier and quicker to remove 
-again afterwards. 
-</code></pre>
+<div id="admonition-danger" class="admonition admonish-danger">
+<div class="admonition-title">
+<p>Danger</p>
+<p><a class="admonition-anchor-link" href="config/db_migration.html#admonition-danger"></a></p>
+</div>
+<div>
+<p><code>MIGRATE_DB_FROM</code> overwrites any data in the target database! Be very careful with this option.</p>
+<p>If you do not remove the <code>MIGRATE_DB_FROM</code> after the migration has been done, it will overwrite the target again with
+the next restart of the application. Remove the config variable immediately after the migration has finished.</p>
+</div>
+</div>
+<div id="admonition-info" class="admonition admonish-info">
+<div class="admonition-title">
+<p>Info</p>
+<p><a class="admonition-anchor-link" href="config/db_migration.html#admonition-info"></a></p>
+</div>
+<div>
+<p><strong>v0.14 and beyond:</strong> if you want to migrate to a different database, for instance from SQLite to Postgres, you need to
+switch to the correct rauthy image as well. Rauthy v0.14 and beyond has different container images for the databases.</p>
+</div>
+</div>
+<div id="admonition-hint" class="admonition admonish-tip">
+<div class="admonition-title">
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="config/db_migration.html#admonition-hint"></a></p>
+</div>
+<div>
+<p>The easiest to do is to just set <code>MIGRATE_DB_FROM</code> as an environmant variable, which is easier and quicker to remove
+again afterwards.</p>
+</div>
+</div>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="backups"><a class="header" href="#backups">Backups</a></h1>
 <h2 id="sqlite"><a class="header" href="#sqlite">SQLite</a></h2>
 <p>If Rauthy is using a SQLite, it does automatic backups, which can be configured with:</p>
@@ -1016,9 +1171,16 @@ The database itself will be saved in <code>/app/data</code> by default.</p>
 <p>This difference makes it possible, that you could add a second volume mount to the container.<br />
 You then have the database itself on a different disk than the backups, which is the most simple and straight forward
 approach to have a basic backup strategy.</p>
-<pre><code class="language-admonish info">The SQLite backups are done with `VACUUM`, which means you can just use the backups as a normal database again.
-This makes it possible, to just use the [Database Migration](./db_migration.md) feature to apply backups very easily.
-</code></pre>
+<div id="admonition-info" class="admonition admonish-info">
+<div class="admonition-title">
+<p>Info</p>
+<p><a class="admonition-anchor-link" href="config/backup.html#admonition-info"></a></p>
+</div>
+<div>
+<p>The SQLite backups are done with <code>VACUUM</code>, which means you can just use the backups as a normal database again.
+This makes it possible, to just use the <a href="config/./db_migration.html">Database Migration</a> feature to apply backups very easily.</p>
+</div>
+</div>
 <h2 id="postgres"><a class="header" href="#postgres">Postgres</a></h2>
 <p>If you are using Postgres as the main database, Rauthy does not do any backups.<br />
 There are a lot of way better tools out there to handle this task.</p>
@@ -1074,10 +1236,17 @@ This happens for security reasons to provide cache inconsistencies. Better inval
 fresh from the DB or other cache members than working with possibly invalid values, which is especially true in an
 authn / authz situation.</li>
 </ol>
-<pre><code class="language-admonish hint">If you are in an environment where the described mechanism with extracting the hostname would not work, for instance
-you want a HA deployment with just different docker hosts, you can set the `HOSTNAME_OVERWRITE` for each instance to
-match one of the `HA_HOSTS` entries.
-</code></pre>
+<div id="admonition-hint" class="admonition admonish-tip">
+<div class="admonition-title">
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="config/ha.html#admonition-hint"></a></p>
+</div>
+<div>
+<p>If you are in an environment where the described mechanism with extracting the hostname would not work, for instance
+you want a HA deployment with just different docker hosts, you can set the <code>HOSTNAME_OVERWRITE</code> for each instance to
+match one of the <code>HA_HOSTS</code> entries.</p>
+</div>
+</div>
 <h3 id="cache_auth_token"><a class="header" href="#cache_auth_token"><code>CACHE_AUTH_TOKEN</code></a></h3>
 <p>You need to set a secret for the <code>CACHE_AUTH_TOKEN</code> which was left out in the
 <a href="config/../getting_started/k8s.html#create-and-apply-secrets">Getting Started</a></p>
@@ -1095,9 +1264,16 @@ all pods by default, you can use the HA cache with just plain HTTP, since linker
 <div style="break-before: page; page-break-before: always;"></div><h1 id="tls-1"><a class="header" href="#tls-1">TLS</a></h1>
 <p>If you do have TLS certificates from another source already, skip directly to <a href="config/tls.html#config">Config</a>.</p>
 <h2 id="generating-certificates"><a class="header" href="#generating-certificates">Generating Certificates</a></h2>
-<pre><code class="language-admonish hint">We are using another project of mine called [Nioca](https://github.com/sebadob/nioca) for an easy creation of a
-fully functioning and production ready private Root Certificate Authority (CA).
-</code></pre>
+<div id="admonition-hint" class="admonition admonish-tip">
+<div class="admonition-title">
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="config/tls.html#admonition-hint"></a></p>
+</div>
+<div>
+<p>We are using another project of mine called <a href="https://github.com/sebadob/nioca">Nioca</a> for an easy creation of a
+fully functioning and production ready private Root Certificate Authority (CA).</p>
+</div>
+</div>
 <p>I suggest to use <code>docker</code> for this task. Otherwise, you can use the <code>nioca</code> binary directly on any linux machine.
 If you want a permanent way of generating certificates for yourself, take a look at Rauthy's <code>justfile</code> and copy
 and adjust the recipes <code>create-root-ca</code> and <code>create-end-entity-tls</code> to your liking.<br />
@@ -1194,9 +1370,16 @@ following command, to create the Kubernetes secrets.</p>
 <pre><code>kubectl -n rauthy create secret tls redhac-tls-server --key="key.pem" --cert="cert-chain.pem" &amp;&amp; \
 kubectl -n rauthy create secret generic redhac-server-ca --from-file ca-chain.pem
 </code></pre>
-<pre><code class="language-admonish notice">We create the `redhac-tls-server` here with the exact same values. If you really want to harden your setup in production,
-you should provide a different set of certificates for the internal mTLS connection.
-</code></pre>
+<div id="admonition-note" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="config/tls.html#admonition-note"></a></p>
+</div>
+<div>
+<p>We create the <code>redhac-tls-server</code> here with the exact same values. If you really want to harden your setup in production,
+you should provide a different set of certificates for the internal mTLS connection.</p>
+</div>
+</div>
 <h4 id="config-adjustments---rest-api"><a class="header" href="#config-adjustments---rest-api">Config Adjustments - REST API</a></h4>
 <p>We need to configure the newly created Kubernetes secrets in the <code>std.yaml</code> from the
 <a href="config/../getting_started/k8s.html#create-and-apply-the-stateful-set">Kubernetes</a> setup.</p>
@@ -1239,10 +1422,17 @@ kubectl apply -f sts.yaml
 <p>The <code>rauthy</code> pods should restart now and TLS is configured.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="reference-config"><a class="header" href="#reference-config">Reference Config</a></h1>
 <p>This shows a full example config with (hopefully) every value nicely described.</p>
-<pre><code class="language-admonish caution">When you go into production, make sure that you provide the included secrets / sensistive information in this
+<div id="admonition-caution" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="config/config.html#admonition-caution"></a></p>
+</div>
+<div>
+<p>When you go into production, make sure that you provide the included secrets / sensistive information in this
 file in an appropriate way. With docker, you can leave them inside this file, but when deploying with Kubernetes,
-extract these values, create Kubernetes Secrets and provide them as environment variables.
-</code></pre>
+extract these values, create Kubernetes Secrets and provide them as environment variables.</p>
+</div>
+</div>
 <pre><code>#####################################
 ############## ACCESS ###############
 #####################################

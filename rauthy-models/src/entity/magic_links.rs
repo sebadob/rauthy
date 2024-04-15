@@ -274,7 +274,12 @@ mod tests {
 
     #[test]
     fn test_magic_link_usage_conversions() {
-        let ml = MagicLinkUsage::NewUser;
+        let ml = MagicLinkUsage::NewUser(None);
+        let s = ml.to_string();
+        let ml_from = MagicLinkUsage::try_from(&s).unwrap();
+        assert_eq!(ml, ml_from);
+
+        let ml = MagicLinkUsage::NewUser(Some("custom.uri.com".to_string()));
         let s = ml.to_string();
         let ml_from = MagicLinkUsage::try_from(&s).unwrap();
         assert_eq!(ml, ml_from);

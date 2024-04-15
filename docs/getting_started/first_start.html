@@ -188,11 +188,25 @@ happen once and never again.</p>
 <h3 id="logs-with-kubernetes"><a class="header" href="#logs-with-kubernetes">Logs with Kubernetes</a></h3>
 <pre><code>kubectl -n rauthy logs -f rauthy-0
 </code></pre>
-<pre><code class="language-admonish note">If you do a Kubernets HA deployment directly, only the Pod `rauthy-0` will log the initial password.
-</code></pre>
-<pre><code class="language-admonish note">If you missed this log entry, you will not be able to log in.  
-If this is the case, you can delete the database / volume and just restart rauthy.
-</code></pre>
+<div id="admonition-note" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note"></a></p>
+</div>
+<div>
+<p>If you do a Kubernets HA deployment directly, only the Pod <code>rauthy-0</code> will log the initial password.</p>
+</div>
+</div>
+<div id="admonition-note-1" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note-1"></a></p>
+</div>
+<div>
+<p>If you missed this log entry, you will not be able to log in.<br />
+If this is the case, you can delete the database / volume and just restart rauthy.</p>
+</div>
+</div>
 <p>The log message contains a link to the accounts page, where you then should log in to immediately set a new password.
 Follow the link, use as the default admin <code>admin@localhost.de</code> and as password the copied value from the log.</p>
 <ul>
@@ -204,10 +218,17 @@ Follow the link, use as the default admin <code>admin@localhost.de</code> and as
 disable it, after a custom admin has been added.</p>
 <p>When logged in to the admin UI, you can add a new user. When the <code>SMTP</code> settings are correctly configured in the config,
 which we can test right now, you will receive an E-Mail with the very first password reset.</p>
-<pre><code class="language-admonish note">If you do not receive an E-Mail after the first user registration, chances are you may have a problem with the SMTP
-setup.  
-To debug this, you can set `LOG_LEVEL=debug` in the config and then watch the logs after a restart.
-</code></pre>
+<div id="admonition-note-2" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note-2"></a></p>
+</div>
+<div>
+<p>If you do not receive an E-Mail after the first user registration, chances are you may have a problem with the SMTP
+setup.<br />
+To debug this, you can set <code>LOG_LEVEL=debug</code> in the config and then watch the logs after a restart.</p>
+</div>
+</div>
 <h3 id="rauthy_admin-user-role"><a class="header" href="#rauthy_admin-user-role"><code>rauthy_admin</code> user role</a></h3>
 <p>The role, which allows a user to access the admin UI, is the <code>rauthy_admin</code>.<br />
 If the user has this role assigned, he will be seen as an admin.</p>
