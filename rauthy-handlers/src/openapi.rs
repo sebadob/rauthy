@@ -1,5 +1,6 @@
 use crate::{
-    api_keys, blacklist, clients, events, generic, groups, oidc, roles, scopes, sessions, users,
+    api_keys, auth_providers, blacklist, clients, events, generic, groups, oidc, roles, scopes,
+    sessions, users,
 };
 use actix_web::web;
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
@@ -10,7 +11,7 @@ use rauthy_models::language;
 use rauthy_models::ListenScheme;
 use rauthy_models::{entity, request, response};
 use rauthy_service::token_set;
-use utoipa::openapi::Server;
+use utoipa::openapi::{Contact, Server};
 use utoipa::{openapi, OpenApi};
 
 #[derive(OpenApi)]
@@ -22,6 +23,18 @@ use utoipa::{openapi, OpenApi};
         api_keys::delete_api_key,
         api_keys::get_api_key_test,
         api_keys::put_api_key_secret,
+
+        auth_providers::post_providers,
+        auth_providers::post_provider,
+        auth_providers::post_provider_lookup,
+        auth_providers::post_provider_login,
+        auth_providers::post_provider_callback,
+        auth_providers::get_providers_minimal,
+        auth_providers::put_provider,
+        auth_providers::delete_provider,
+        auth_providers::get_provider_delete_safe,
+        auth_providers::get_provider_img,
+        auth_providers::put_provider_img,
 
         blacklist::get_blacklist,
         blacklist::post_blacklist,
@@ -168,6 +181,7 @@ use utoipa::{openapi, OpenApi};
             request::ProviderRequest,
             request::ProviderLoginRequest,
             request::ProviderLookupRequest,
+            request::ProviderCallbackRequest,
             request::RequestResetRequest,
             request::NewUserRequest,
             request::NewUserRegistrationRequest,
@@ -240,6 +254,7 @@ use utoipa::{openapi, OpenApi};
         (name = "roles", description = "Roles endpoints"),
         (name = "scopes", description = "Scopes endpoints"),
         (name = "events", description = "Events Stream"),
+        (name = "providers", description = "Upstream Auth Providers"),
         (name = "health", description = "Ping, Health, Ready Check"),
         (name = "blacklist", description = "IP Blacklist endpoints"),
         (name = "api_keys", description = "API Keys endpoints"),
@@ -263,7 +278,7 @@ impl ApiDoc {
         // let mut contact = Contact::new();
         // contact.name = Some("".to_string());
         // contact.url = Some("".to_string());
-        // contact.email = Some("".to_string());
+        // contact.email = Some(ADMIN);
         // doc.info.contact = Some(contact);
 
         let scheme = if !*PROXY_MODE && app_state.listen_scheme == ListenScheme::Http {
