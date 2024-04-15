@@ -768,8 +768,8 @@ pub struct UpdateClientRequest {
     /// Validation: `10 <= auth_code_lifetime <= 300`
     #[validate(range(min = 10, max = 300))]
     pub auth_code_lifetime: i32,
-    /// Validation: `60 <= access_token_lifetime <= 86400`
-    #[validate(range(min = 60, max = 86400))]
+    /// Validation: `10 <= access_token_lifetime <= 86400`
+    #[validate(range(min = 10, max = 86400))]
     pub access_token_lifetime: i32,
     /// Validation: `Vec<^[a-z0-9-_/]{2,128}$>`
     #[validate(custom(function = "validate_vec_lowercase"))]
