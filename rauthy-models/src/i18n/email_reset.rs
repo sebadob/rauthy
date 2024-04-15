@@ -1,15 +1,51 @@
 use crate::i18n::SsrJson;
 use crate::language::Language;
+use once_cell::sync::Lazy;
 use serde::Serialize;
+use std::env;
+
+static TPL_EN_RESET_SUBJECT: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_EN_RESET_SUBJECT").ok());
+static TPL_EN_RESET_HEADER: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_EN_RESET_HEADER").ok());
+static TPL_EN_RESET_TEXT: Lazy<Option<String>> = Lazy::new(|| env::var("TPL_EN_RESET_TEXT").ok());
+static TPL_EN_RESET_CLICK_LINK: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_EN_RESET_CLICK_LINK").ok());
+static TPL_EN_RESET_VALIDITY: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_EN_RESET_VALIDITY").ok());
+static TPL_EN_RESET_EXPIRES: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_EN_RESET_EXPIRES").ok());
+static TPL_EN_RESET_BUTTON: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_EN_RESET_BUTTON").ok());
+static TPL_EN_RESET_FOOTER: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_EN_RESET_FOOTER").ok());
+
+static TPL_DE_RESET_SUBJECT: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_DE_RESET_SUBJECT").ok());
+static TPL_DE_RESET_HEADER: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_DE_RESET_HEADER").ok());
+static TPL_DE_RESET_TEXT: Lazy<Option<String>> = Lazy::new(|| env::var("TPL_DE_RESET_TEXT").ok());
+static TPL_DE_RESET_CLICK_LINK: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_DE_RESET_CLICK_LINK").ok());
+static TPL_DE_RESET_VALIDITY: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_DE_RESET_VALIDITY").ok());
+static TPL_DE_RESET_EXPIRES: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_DE_RESET_EXPIRES").ok());
+static TPL_DE_RESET_BUTTON: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_DE_RESET_BUTTON").ok());
+static TPL_DE_RESET_FOOTER: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_DE_RESET_FOOTER").ok());
 
 #[derive(Debug, Serialize)]
 pub struct I18nEmailReset<'a> {
     pub subject: &'a str,
     pub header: &'a str,
+    pub text: Option<&'a str>,
     pub click_link: &'a str,
     pub validity: &'a str,
     pub expires: &'a str,
     pub button_text: &'a str,
+    pub footer: Option<&'a str>,
 }
 
 impl SsrJson for I18nEmailReset<'_> {
@@ -28,23 +64,47 @@ impl SsrJson for I18nEmailReset<'_> {
 impl I18nEmailReset<'_> {
     fn build_en() -> Self {
         Self {
-            subject: "Password Reset Request",
-            header: "Password reset request for",
-            click_link: "Click the link below to get forwarded to the password request form.",
-            validity: "This link is only valid for a short period of time for security reasons.",
-            expires: "Link expires:",
-            button_text: "Reset Password",
+            subject: TPL_EN_RESET_SUBJECT
+                .as_deref()
+                .unwrap_or("Password Reset Request"),
+            header: TPL_EN_RESET_HEADER
+                .as_deref()
+                .unwrap_or("Password reset request for"),
+            text: TPL_EN_RESET_TEXT.as_deref(),
+            click_link: TPL_EN_RESET_CLICK_LINK
+                .as_deref()
+                .unwrap_or("Click the link below to get forwarded to the password request form."),
+            validity: TPL_EN_RESET_VALIDITY.as_deref().unwrap_or(
+                "This link is only valid for a short period of time for security reasons.",
+            ),
+            expires: TPL_EN_RESET_EXPIRES.as_deref().unwrap_or("Link expires:"),
+            button_text: TPL_EN_RESET_BUTTON.as_deref().unwrap_or("Reset Password"),
+            footer: TPL_EN_RESET_FOOTER.as_deref(),
         }
     }
 
     fn build_de() -> Self {
         Self {
-            subject: "Passwort Reset angefordert",
-            header: "Passwort Reset angefordert für",
-            click_link: "Klicken Sie auf den unten stehenden Link für den Passwort Reset.",
-            validity: "Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig.",
-            expires: "Link gültig bis:",
-            button_text: "Passwort Zurücksetzen",
+            subject: TPL_DE_RESET_SUBJECT
+                .as_deref()
+                .unwrap_or("Passwort Reset angefordert"),
+            header: TPL_DE_RESET_HEADER
+                .as_deref()
+                .unwrap_or("Passwort Reset angefordert für"),
+            text: TPL_DE_RESET_TEXT.as_deref(),
+            click_link: TPL_DE_RESET_CLICK_LINK
+                .as_deref()
+                .unwrap_or("Klicken Sie auf den unten stehenden Link für den Passwort Reset."),
+            validity: TPL_DE_RESET_VALIDITY
+                .as_deref()
+                .unwrap_or("Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."),
+            expires: TPL_DE_RESET_EXPIRES
+                .as_deref()
+                .unwrap_or("Link gültig bis:"),
+            button_text: TPL_DE_RESET_BUTTON
+                .as_deref()
+                .unwrap_or("Passwort Zurücksetzen"),
+            footer: TPL_DE_RESET_FOOTER.as_deref(),
         }
     }
 }
