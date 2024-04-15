@@ -123,7 +123,7 @@
         padding: 5px 30px 5px 25px;
         background: var(--col-bg);
         border: 1px solid var(--col-glow);
-        border-radius: 7px;
+        border-radius: 3px;
         color: var(--col-text);
         font-size: 1.05rem;
         outline: none;
@@ -150,11 +150,11 @@
     }
 
     select {
-        padding: 4px;
+        height: 2.13rem;
         color: var(--col-text);
         background: var(--col-bg);
         font-size: 1.05rem;
-        border-radius: 5px;
+        border-radius: 3px;
         cursor: pointer;
         border: 1px solid var(--col-glow);
         box-shadow: 1px 1px 2px var(--col-gmid);

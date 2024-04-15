@@ -65,7 +65,7 @@
 <div class="container">
     {#if options.length > 1}
         <Tooltip text="Order by" yOffset={-30}>
-            <select class="opts" bind:value={selected}>
+            <select class="opts font-label" bind:value={selected}>
                 {#each options as opt}
                     <option value={opt.label}>{opt.label}</option>
                 {/each}
@@ -108,11 +108,11 @@
     }
 
     select {
-        padding: 4px;
+        height: 2.13rem;
         color: var(--col-text);
         background: var(--col-bg);
         font-size: 1.05rem;
-        border-radius: 5px;
+        border-radius: 3px;
         cursor: pointer;
         border: 1px solid var(--col-glow);
         box-shadow: 1px 1px 2px var(--col-gmid);
