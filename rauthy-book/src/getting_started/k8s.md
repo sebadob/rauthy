@@ -9,6 +9,7 @@ Since rauthy uses pretty aggressive caching for different reasons, you cannot ju
 scale up the replicas without enabling `HA_MODE`. How to deploy a HA version is described below.
 
 The steps to deploy on Kubernetes are pretty simple.
+
 - Create namespace
 - Create and apply the config
 - Create and apply secrets
@@ -179,7 +180,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.21.1-lite
+          image: ghcr.io/sebadob/rauthy:0.22.0-lite
           imagePullPolicy: IfNotPresent
           securityContext:
             # User ID 10001 is actually built into the container at the creation for
