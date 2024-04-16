@@ -21,12 +21,15 @@ token signing and S256 PKCE flow. This will not work with old clients, which do 
 deactivate this to your liking.
 
 **MFA and Passwordless Login**
+
 1. Option: Password + Security Key (without User Verification):  
-   Rauthy provides FIDO 2 / Webauthn login flows. If you once logged in on a new client with your username + password, you
+   Rauthy provides FIDO 2 / Webauthn login flows. If you once logged in on a new client with your username + password,
+   you
    will get an encrypted cookie which will allow you to log in without a password from that moment on. You only need to
-   have a FIDO  compliant Passkey being registered for your account.
+   have a FIDO compliant Passkey being registered for your account.
 2. Option: Passkey-Only Accounts:  
-   Since v0.16, Rauthy supports Passkey-Only-Accounts. You basically just provide your E-Mail address and log in with your
+   Since v0.16, Rauthy supports Passkey-Only-Accounts. You basically just provide your E-Mail address and log in with
+   your
    FIDO 2 Passkey. Your account will not even have / need a password. This login flow is restricted though to only those
    passkeys, that can provide User Verification (UV) to always have at least 2FA security.
 
@@ -93,6 +96,7 @@ Keycloak was a rough inspiration in certain places and if something is working w
 - [x] Supports ephemeral, dynamic clients for decentralized login flows
 - [x] Can serve a basic `webid` document for decentralized logins
 - [x] OpenID Connect Dynamic Client Registration
+- [x] Upstream Authentication Providers (Login with ...)
 - [x] Admin UI
 - [x] Account UI for each user with self-service
 - [x] Simple per client branding for the login page
@@ -106,6 +110,7 @@ Keycloak was a rough inspiration in certain places and if something is working w
 - [x] Admin API Keys with fine-grained access rights
 - [x] Events and alerting system
 - [x] Optional event notifications via: E-Mail, Matrix, Slack
+- [x] Configurable E-Mail templates for NewPassword + ResetPassword events
 - [x] Optional event persistence
 - [x] Admin UI component for archived / persisted events
 - [x] Optional Force MFA for the Admin UI

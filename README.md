@@ -94,6 +94,7 @@ Keycloak was a rough inspiration in certain places and if something is working w
 - [x] Supports ephemeral, dynamic clients for decentralized login flows
 - [x] Can serve a basic `webid` document for decentralized logins
 - [x] OpenID Connect Dynamic Client Registration
+- [x] Upstream Authentication Providers (Login with ...)
 - [x] Admin UI
 - [x] Account UI for each user with self-service
 - [x] Simple per client branding for the login page
@@ -107,6 +108,7 @@ Keycloak was a rough inspiration in certain places and if something is working w
 - [x] Admin API Keys with fine-grained access rights
 - [x] Events and alerting system
 - [x] Optional event notifications via: E-Mail, Matrix, Slack
+- [x] Configurable E-Mail templates for NewPassword + ResetPassword events
 - [x] Optional event persistence
 - [x] Admin UI component for archived / persisted events
 - [x] Optional Force MFA for the Admin UI
@@ -150,7 +152,7 @@ Either just take a look at the [Rauthy Book](https://sebadob.github.io/rauthy/),
 the application yourself with docker on your localhost:
 
 ```
-docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.21.1-lite
+docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.22.0-lite
 ```
 
 ## Contributing

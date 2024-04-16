@@ -2,11 +2,6 @@
 
 ## CURRENT WORK
 
-## TODO before v0.22
-
-- document "Login with Github" guide
-- fix `border-radius` for search input and sorting selectors
-
 ## Stage 1 - essentials
 
 [x] finished
