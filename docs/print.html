@@ -90,7 +90,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="config/config.html"><strong aria-hidden="true">10.</strong> Reference Config</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="auth_providers/index.html"><strong aria-hidden="true">10.</strong> Authentication Propviders</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="auth_providers/github.html"><strong aria-hidden="true">10.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="config/config.html"><strong aria-hidden="true">11.</strong> Reference Config</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -1420,6 +1420,51 @@ you should provide a different set of certificates for the internal mTLS connect
 kubectl apply -f sts.yaml
 </code></pre>
 <p>The <code>rauthy</code> pods should restart now and TLS is configured.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="upstream-authentication-providers"><a class="header" href="#upstream-authentication-providers">Upstream Authentication Providers</a></h1>
+<p>This section is about upstream authentication providers, for instance things like <strong>Sign in with Github</strong>.</p>
+<p>This feature can be considered "in beta state" and the only setup guide is for Github for now.<br />
+Additional ones may come, when people are using other providers and give feedback or actually contribute to these docs.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="github-provider"><a class="header" href="#github-provider">Github Provider</a></h1>
+<p>To set up Github as an upstream provider for Rauthy, you have pretty little things to do.<br />
+Rauthy includes a Template for Github already, which makes this whole process pretty simple.</p>
+<h2 id="create-an-oauth-app"><a class="header" href="#create-an-oauth-app">Create an OAuth App</a></h2>
+<ol>
+<li>Log in to your Github account</li>
+<li>Navigate to <code>Settings -&gt; Developer Settings -&gt; OAuth Apps -&gt; Register a new application</code></li>
+<li>Provide any name for your application. This is not important for the flow, only for your users to recognize</li>
+<li>Homepage URL should be the URL of your Rauthy deployment</li>
+<li><code>Authorization callback URL</code> is the only really important one here. For instance, if your Rauthy instance would live
+at <code>https://iam.example.com</code>, your callback URL would be <code>https://iam.example.com/auth/v1/providers/callback</code></li>
+<li>Don't enable Device Flow and <code>Register application</code></li>
+</ol>
+<p>TODO insert <code>1_github_app_create.png</code></p>
+<p>On the following page, you can upload a logo and so on, but the important information is:</p>
+<ul>
+<li><code>Client ID</code></li>
+<li><code>Generate a new client secret</code></li>
+</ul>
+<p>Both of these values need to be inserted into Rauthy's Admin UI in the next step, so lets open this in a new tab.</p>
+<h2 id="rauthy-provider-config"><a class="header" href="#rauthy-provider-config">Rauthy Provider Config</a></h2>
+<ol>
+<li>Log in to your Rauthy Admin UI, navigate to <code>Providers</code> and add a new provier.</li>
+<li>Choose <code>Github</code> as the <code>Type</code> and leave the Custom Root CA and insecure TLS unchecked.</li>
+</ol>
+<p>TODO insert <code>2_rauthy_add_new.png</code></p>
+<ol start="3">
+<li>The template pre-populates most of the inputs already for you. The only information you need to add here is
+<ul>
+<li><code>Client ID</code> -&gt; copy <code>Client ID</code> from the Github OAuth App page inside here</li>
+<li><code>Client Secret</code> -&gt; on Github, <code>Generate a new client secret</code> and copy &amp; paste the value</li>
+</ul>
+</li>
+<li>Leave the rest untouched and hit <code>Save</code></li>
+<li>You should expand the saved Github provider in the Rauthy UI again after saving and upload a Logo for the Client.
+Currently, Rauthy does not provide default Logos, though these might be added at some point. Just <code>UPLOAD LOGO</code> from
+your local disk.</li>
+</ol>
+<h2 id="finish"><a class="header" href="#finish">Finish</a></h2>
+<p>That's it. Now log out and try to log in to your Account view. You should see your new upstream provider on the Login
+page.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="reference-config"><a class="header" href="#reference-config">Reference Config</a></h1>
 <p>This shows a full example config with (hopefully) every value nicely described.</p>
 <div id="admonition-caution" class="admonition admonish-warning">

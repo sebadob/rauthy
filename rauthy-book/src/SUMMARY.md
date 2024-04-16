@@ -14,4 +14,8 @@
 - [Backups](config/backup.md)
 - [High Availability](config/ha.md)
 - [TLS](config/tls.md)
+
+- [Authentication Propviders](./auth_providers/index.md)
+    - [Github](./auth_providers/github.md)
+
 - [Reference Config](./config/config.md)
