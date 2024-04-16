@@ -91,9 +91,7 @@
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">10.</strong> Authentication Propviders</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html"><strong aria-hidden="true">10.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html" class="active"><strong aria-hidden="true">11.</strong> Reference Config</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
-                <div class="sidebar-resize-indicator"></div>
-            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -235,7 +233,7 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # account takeovers during a password reset.
 #
 # The problem however are companies (e.g. Microsoft) who scan their customers
-# E-Mails and even follow links and so on. They call it a "feature". The
+# E-Mails and even follow links and so on. They call it a &quot;feature&quot;. The
 # problem is, that their servers get this binding cookie and the user will be
 # unable to use this link himself. The usage of this config option is highly
 # discouraged, but since everything moves very slow in big enterprises and
@@ -252,19 +250,19 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # Cloudflare, which adds custom headers in this case.
 # For instance, if your requests are proxied through cloudflare, your would 
 # set `CF-Connecting-IP`.
-PEER_IP_HEADER_NAME="CF-Connecting-IP"
+PEER_IP_HEADER_NAME=&quot;CF-Connecting-IP&quot;
 
 #####################################
 ############# BACKUPS ###############
 #####################################
 
-# Cron job for automatic data store backups (default: "0 0 4 * * * *")
+# Cron job for automatic data store backups (default: &quot;0 0 4 * * * *&quot;)
 # sec min hour day_of_month month day_of_week year
-#BACKUP_TASK="0 0 4 * * * *"
+#BACKUP_TASK=&quot;0 0 4 * * * *&quot;
 
 # The name for the data store backups. The current timestamp
 # will always be appended automatically. (default: rauthy-backup-)
-#BACKUP_NAME="rauthy-backup-"
+#BACKUP_NAME=&quot;rauthy-backup-&quot;
 
 # All backups older than the specified hours will be cleaned up
 # automatically (default: 720)
@@ -325,12 +323,12 @@ PEER_IP_HEADER_NAME="CF-Connecting-IP"
 # The connection strings (with hostnames) of the HA instances
 # as a CSV.
 # Format: 'scheme://hostname:port'
-#HA_HOSTS="http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000"
+#HA_HOSTS=&quot;http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000&quot;
 
 # Overwrite the hostname which is used to identify each cache member.
 # Useful in scenarios, where for instance all members are on the same host with
 # different ports or for testing.
-#HOSTNAME_OVERWRITE="rauthy-0.rauthy:8080"
+#HOSTNAME_OVERWRITE=&quot;rauthy-0.rauthy:8080&quot;
 
 ## Define buffer sizes for channels between the components
 # Buffer for client requests on the incoming stream - server
@@ -504,7 +502,7 @@ DPOP_NONCE_EXP=900
 # that have been registered and not been used in the following
 # `DYN_CLIENT_CLEANUP_THRES` hours.
 # Since a dynamic client should be used right away, this should never
-# be a problem with "real" clients, that are not bots or spammers.
+# be a problem with &quot;real&quot; clients, that are not bots or spammers.
 #
 # The interval is specified in minutes.
 # default: 60
@@ -537,13 +535,13 @@ DPOP_NONCE_EXP=900
 
 # This contact information will be added to the `rauthy`client
 # within the anti lockout rule with each new restart.
-RAUTHY_ADMIN_EMAIL="admin@localhost.de"
+RAUTHY_ADMIN_EMAIL=&quot;admin@localhost.de&quot;
 
 # Will be used as the prefix for the E-Mail subject for each E-Mail 
 # that will be sent out to a client.
 # This can be used to further customize your deployment.
-# default: "Rauthy IAM"
-EMAIL_SUB_PREFIX="Rauthy IAM"
+# default: &quot;Rauthy IAM&quot;
+EMAIL_SUB_PREFIX=&quot;Rauthy IAM&quot;
 
 # Rauthy will force TLS and try a downgrade to STARTTLS, if
 # TLS fails. It will never allow an unencrypted connection.
@@ -552,8 +550,8 @@ EMAIL_SUB_PREFIX="Rauthy IAM"
 #SMTP_URL=
 #SMTP_USERNAME=
 #SMTP_PASSWORD=
-# Format: "Rauthy &lt;rauthy@localhost.de&gt;"
-# default: "Rauthy &lt;rauthy@localhost.de&gt;"
+# Format: &quot;Rauthy &lt;rauthy@localhost.de&gt;&quot;
+# default: &quot;Rauthy &lt;rauthy@localhost.de&gt;&quot;
 #SMTP_FROM=
 
 # The number of retries that should be done for connecting to
@@ -589,10 +587,10 @@ EMAIL_SUB_PREFIX="Rauthy IAM"
 # encryption cookies, and so on.
 #
 # The format must match:
-# ENC_KEYS="
+# ENC_KEYS=&quot;
 # q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
 # bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
-# "
+# &quot;
 #
 # The first part until the first `/` is the key ID.
 # The ID must match '[a-zA-Z0-9]{2,20}'
@@ -610,10 +608,10 @@ EMAIL_SUB_PREFIX="Rauthy IAM"
 # that all secrets have been migrated beforehand.
 # You can find a utility in the Admin UI to do this for you.
 #
-#ENC_KEYS="
+#ENC_KEYS=&quot;
 #q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
 #bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
-#"
+#&quot;
 
 # This identifies the key ID from the `ENC_KEYS` list, that
 # should actively be used for new encryptions.
@@ -652,9 +650,9 @@ MAX_HASH_THREADS=1
 # you cannot fully disable it.
 # In a HA deployment, this job will only be executed on the 
 # current cache leader at that time.
-# Format: "sec min hour day_of_month month day_of_week year"
-# default: "0 30 3 1 * * *"
-#JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
+# Format: &quot;sec min hour day_of_month month day_of_week year&quot;
+# default: &quot;0 30 3 1 * * *&quot;
+#JWK_AUTOROTATE_CRON=&quot;0 30 3 1 * * *&quot;
 
 #####################################
 ####### EPHEMERAL CLIENTS ###########
@@ -680,12 +678,12 @@ MAX_HASH_THREADS=1
 #EPHEMERAL_CLIENTS_FORCE_MFA=false
 
 # The allowed flows separated by ' ' for ephemeral clients.
-# default: "authorization_code"
-#EPHEMERAL_CLIENTS_ALLOWED_FLOWS="authorization_code refresh_token"
+# default: &quot;authorization_code&quot;
+#EPHEMERAL_CLIENTS_ALLOWED_FLOWS=&quot;authorization_code refresh_token&quot;
 
 # The allowed scopes separated by ' ' for ephemeral clients.
-# default: "openid profile email webid"
-#EPHEMERAL_CLIENTS_ALLOWED_SCOPES="openid profile email webid"
+# default: &quot;openid profile email webid&quot;
+#EPHEMERAL_CLIENTS_ALLOWED_SCOPES=&quot;openid profile email webid&quot;
 
 # The lifetime in seconds ephemeral clients will be kept inside the cache.
 # default: 3600
@@ -1008,42 +1006,42 @@ PROXY_MODE=false
 # If the below values are not set, the default will be taken.
 
 # New Password E-Mail
-#TPL_EN_PASSWORD_NEW_SUBJECT="New Password"
-#TPL_EN_PASSWORD_NEW_HEADER="New password for"
-#TPL_EN_PASSWORD_NEW_TEXT=""
-#TPL_EN_PASSWORD_NEW_CLICK_LINK="Click the link below to get forwarded to the password form."
-#TPL_EN_PASSWORD_NEW_VALIDITY="This link is only valid for a short period of time for security reasons."
-#TPL_EN_PASSWORD_NEW_EXPIRES="Link expires:"
-#TPL_EN_PASSWORD_NEW_BUTTON="Set Password"
-#TPL_EN_PASSWORD_NEW_FOOTER=""
+#TPL_EN_PASSWORD_NEW_SUBJECT=&quot;New Password&quot;
+#TPL_EN_PASSWORD_NEW_HEADER=&quot;New password for&quot;
+#TPL_EN_PASSWORD_NEW_TEXT=&quot;&quot;
+#TPL_EN_PASSWORD_NEW_CLICK_LINK=&quot;Click the link below to get forwarded to the password form.&quot;
+#TPL_EN_PASSWORD_NEW_VALIDITY=&quot;This link is only valid for a short period of time for security reasons.&quot;
+#TPL_EN_PASSWORD_NEW_EXPIRES=&quot;Link expires:&quot;
+#TPL_EN_PASSWORD_NEW_BUTTON=&quot;Set Password&quot;
+#TPL_EN_PASSWORD_NEW_FOOTER=&quot;&quot;
 
-#TPL_DE_PASSWORD_NEW_SUBJECT="Passwort Reset angefordert"
-#TPL_DE_PASSWORD_NEW_HEADER="Passwort Reset angefordert für"
-#TPL_DE_PASSWORD_NEW_TEXT=""
-#TPL_DE_PASSWORD_NEW_CLICK_LINK="Klicken Sie auf den unten stehenden Link für den Passwort Reset."
-#TPL_DE_PASSWORD_NEW_VALIDITY="Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
-#TPL_DE_PASSWORD_NEW_EXPIRES="Link gültig bis:"
-#TPL_DE_PASSWORD_NEW_BUTTON="Passwort Setzen"
-#TPL_DE_PASSWORD_NEW_FOOTER=""
+#TPL_DE_PASSWORD_NEW_SUBJECT=&quot;Passwort Reset angefordert&quot;
+#TPL_DE_PASSWORD_NEW_HEADER=&quot;Passwort Reset angefordert für&quot;
+#TPL_DE_PASSWORD_NEW_TEXT=&quot;&quot;
+#TPL_DE_PASSWORD_NEW_CLICK_LINK=&quot;Klicken Sie auf den unten stehenden Link für den Passwort Reset.&quot;
+#TPL_DE_PASSWORD_NEW_VALIDITY=&quot;Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig.&quot;
+#TPL_DE_PASSWORD_NEW_EXPIRES=&quot;Link gültig bis:&quot;
+#TPL_DE_PASSWORD_NEW_BUTTON=&quot;Passwort Setzen&quot;
+#TPL_DE_PASSWORD_NEW_FOOTER=&quot;&quot;
 
 # Password Reset E-Mail
-#TPL_EN_RESET_SUBJECT="Neues Passwort"
-#TPL_EN_RESET_HEADER="Neues Passwort für"
-#TPL_EN_RESET_TEXT=""
-#TPL_EN_RESET_CLICK_LINK="Klicken Sie auf den unten stehenden Link um ein neues Passwort zu setzen."
-#TPL_EN_RESET_VALIDITY="This link is only valid for a short period of time for security reasons."
-#TPL_EN_RESET_EXPIRES="Link expires:"
-#TPL_EN_RESET_BUTTON="Reset Password"
-#TPL_EN_RESET_FOOTER=""
+#TPL_EN_RESET_SUBJECT=&quot;Neues Passwort&quot;
+#TPL_EN_RESET_HEADER=&quot;Neues Passwort für&quot;
+#TPL_EN_RESET_TEXT=&quot;&quot;
+#TPL_EN_RESET_CLICK_LINK=&quot;Klicken Sie auf den unten stehenden Link um ein neues Passwort zu setzen.&quot;
+#TPL_EN_RESET_VALIDITY=&quot;This link is only valid for a short period of time for security reasons.&quot;
+#TPL_EN_RESET_EXPIRES=&quot;Link expires:&quot;
+#TPL_EN_RESET_BUTTON=&quot;Reset Password&quot;
+#TPL_EN_RESET_FOOTER=&quot;&quot;
 
-#TPL_DE_RESET_SUBJECT="Passwort Reset angefordert"
-#TPL_DE_RESET_HEADER="Passwort Reset angefordert für"
-#TPL_DE_RESET_TEXT=""
-#TPL_DE_RESET_CLICK_LINK="Klicken Sie auf den unten stehenden Link für den Passwort Reset."
-#TPL_DE_RESET_VALIDITY="Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
-#TPL_DE_RESET_EXPIRES="Link gültig bis:"
-#TPL_DE_RESET_BUTTON="Passwort Zurücksetzen"
-#TPL_DE_RESET_FOOTER=""
+#TPL_DE_RESET_SUBJECT=&quot;Passwort Reset angefordert&quot;
+#TPL_DE_RESET_HEADER=&quot;Passwort Reset angefordert für&quot;
+#TPL_DE_RESET_TEXT=&quot;&quot;
+#TPL_DE_RESET_CLICK_LINK=&quot;Klicken Sie auf den unten stehenden Link für den Passwort Reset.&quot;
+#TPL_DE_RESET_VALIDITY=&quot;Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig.&quot;
+#TPL_DE_RESET_EXPIRES=&quot;Link gültig bis:&quot;
+#TPL_DE_RESET_BUTTON=&quot;Passwort Zurücksetzen&quot;
+#TPL_DE_RESET_FOOTER=&quot;&quot;
 
 #####################################
 ############### TLS #################
@@ -1097,7 +1095,7 @@ CACHE_TLS_CLIENT_VALIDATE_DOMAIN=redhac.local
 # Can be used if you need to overwrite the SNI when the
 # client connects to the server, for instance if you are
 # behind a loadbalancer which combines multiple certificates.
-# default: ""
+# default: &quot;&quot;
 #CACHE_TLS_SNI_OVERWRITE=
 
 #####################################
