@@ -1,6 +1,6 @@
 use crate::config::Config;
 use actix_web::{web::Data, App, HttpServer};
-use rauthy_client::oidc_config::{JwtClaim, JwtClaimTyp, RauthyConfig};
+use rauthy_client::oidc_config::{ClaimMapping, JwtClaim, JwtClaimTyp, RauthyConfig};
 use rauthy_client::provider::OidcProvider;
 use rauthy_client::{DangerAcceptInvalidCerts, RauthyHttpsOnly};
 use std::collections::HashSet;
@@ -26,19 +26,19 @@ async fn main() -> anyhow::Result<()> {
     rauthy_client::init(None, RauthyHttpsOnly::No, DangerAcceptInvalidCerts::Yes).await?;
 
     let config = RauthyConfig {
-        // If this is Some(_), the principal will have a .is_admin field being set correctly, if
-        // this claim matches.
-        admin_claim: Some(JwtClaim {
+        // Sets the .is_admin field for the principal based on the `ClaimMapping`.
+        admin_claim: ClaimMapping::Or(vec![JwtClaim {
             typ: JwtClaimTyp::Roles,
             value: "admin".to_string(),
-        }),
-        // This claim must always exist for every single user. Without this claim, a user would
-        // not have access to this app. This is used, because usually you never want to just have
-        // all your OIDC users to have access to a certain application.
-        user_claim: JwtClaim {
+        }]),
+        // Sets the .is_user field for the principal based on the `ClaimMapping`.
+        // Without this claim, a user would not have access to this app. This is
+        // used, because usually you never want to just have all your OIDC users to
+        // have access to a certain application.
+        user_claim: ClaimMapping::Or(vec![JwtClaim {
             typ: JwtClaimTyp::Groups,
             value: "user".to_string(),
-        },
+        }]),
         // In almost all cases, this should just match the `client_id`
         allowed_audiences: HashSet::from(["dev-test".to_string()]),
         client_id: "dev-test".to_string(),

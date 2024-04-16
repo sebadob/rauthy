@@ -1,5 +1,5 @@
 use crate::jwks::JwksMsg;
-use crate::oidc_config::{JwtClaim, RauthyConfig};
+use crate::oidc_config::{ClaimMapping, RauthyConfig};
 use crate::{DangerAcceptInvalidCerts, RauthyHttpsOnly, VERSION};
 use jwt_simple::common::VerificationOptions;
 use serde::{Deserialize, Serialize};
@@ -18,8 +18,8 @@ pub(crate) struct OidcProviderConfig {
     pub provider: OidcProvider,
     pub redirect_uri: String,
     pub secret: Option<String>,
-    pub admin_claim: Option<JwtClaim>,
-    pub user_claim: JwtClaim,
+    pub admin_claim: ClaimMapping,
+    pub user_claim: ClaimMapping,
     pub verification_options: VerificationOptions,
 }
 
@@ -33,8 +33,8 @@ impl OidcProviderConfig {
         allowed_audiences: HashSet<String>,
         email_verified: bool,
         secret: Option<String>,
-        admin_claim: Option<JwtClaim>,
-        user_claim: JwtClaim,
+        admin_claim: ClaimMapping,
+        user_claim: ClaimMapping,
     ) -> anyhow::Result<Self> {
         let append = if iss.ends_with('/') {
             ".well-known/openid-configuration"
