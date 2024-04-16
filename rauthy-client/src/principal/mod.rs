@@ -2,6 +2,7 @@ use crate::provider::OidcProvider;
 use crate::token_set::JwtAccessClaims;
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::ops::Deref;
 
 #[cfg(feature = "actix-web")]
 mod actix_web;
@@ -46,8 +47,8 @@ impl PrincipalOidc {
         let roles = claims.roles.unwrap_or_default();
         let groups = claims.groups.unwrap_or_default();
 
-        let is_admin = config.admin_claim.matches(&roles, &groups);
-        let is_user = config.user_claim.matches(&roles, &groups);
+        let is_admin = config.admin_claim.matches(roles.deref(), groups.deref());
+        let is_user = config.user_claim.matches(roles.deref(), groups.deref());
 
         Ok(Self {
             id,
