@@ -14,3 +14,4 @@ static/v1
 templates/html/
 rauthy-book/book
 out/
+.test_pid

@@ -6,6 +6,8 @@ db_url_sqlite := "sqlite:data/rauthy.db"
 db_url_sqlite_mem := "sqlite::memory"
 db_url_postgres := "postgresql://rauthy:123SuperSafe@localhost:5432/rauthy"
 
+test_pid_file := ".test_pid"
+
 
 # Creates a new Root + Intermediate CA for development and testing TLS certificates
 create-root-ca:
@@ -159,6 +161,20 @@ test-backend: migrate prepare
     DATABASE_URL={{db_url_sqlite}} ./target/debug/rauthy test
 
 
+# stops a possibly running test backend that may have spawned in the background for integration tests
+test-backend-stop:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    if [ -f {{test_pid_file}} ]; then
+      PID=$(cat .test_pid)
+      echo "Stopping background process with PID $PID"
+      kill "$PID" || echo "Could not stop the process"
+      rm {{test_pid_file}}
+    else
+      echo "No background test process running"
+    fi
+
 # runs a single test with sqlite - needs the backend being started manually
 test test="":
     #!/usr/bin/env bash
@@ -169,7 +185,7 @@ test test="":
 
 
 # runs the full set of tests with in-memory sqlite
-test-full test="": migrate prepare
+test-full test="": test-backend-stop migrate prepare
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
@@ -180,6 +196,7 @@ test-full test="": migrate prepare
     #cargo test --features sqlite test_userinfo
     sleep 1
     PID=$(echo "$!")
+    echo $PID > {{test_pid_file}}
     echo "PID: $PID"
 
     DATABASE_URL={{db_url_sqlite}} cargo test --features sqlite {{test}}
@@ -188,7 +205,7 @@ test-full test="": migrate prepare
 
 
 # runs the full set of tests with postgres
-test-postgres test="": migrate-postgres prepare-postgres
+test-postgres test="": test-backend-stop migrate-postgres prepare-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
@@ -197,6 +214,7 @@ test-postgres test="": migrate-postgres prepare-postgres
     DATABASE_URL={{db_url_postgres}} ./target/debug/rauthy test &
     sleep 1
     PID=$(echo "$!")
+    echo $PID > {{test_pid_file}}
     echo "PID: $PID"
 
     DATABASE_URL={{db_url_postgres}} cargo test
@@ -366,3 +384,12 @@ publish-latest:
     docker pull ghcr.io/sebadob/rauthy:$TAG
     docker tag ghcr.io/sebadob/rauthy:$TAG ghcr.io/sebadob/rauthy:latest
     docker push ghcr.io/sebadob/rauthy:latest
+
+
+# should be run before submitting a PR to make sure everything is fine
+verify: build-ui fmt test-full
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    cargo clippy --features sqlite -- -D warnings
+
+    echo "all good"

@@ -107,18 +107,19 @@ You can stop the container with `just mailcrab-stop`.
 
 ## Before Submitting a PR
 
-This project does not have any actions and automatic pipelines set up yet.  
-This means, that you should make sure, that `clippy` does not give any warnings for your code and that all the test
-cases are fine.
+This project does not have any actions and automatic pipelines set up yet, but there is a `just` recipe to make sure
+everything is fine.
 
 As long as you do not have done anything like feature dependant queries and use different `query!` macro depending
-on the uses features, you are fine with just executing `clippy` and tests for sqlite only:
+on the uses features, you are fine with just executing
 
-- `just clippy-sqlite`
-- `just test-sqlite`
+```
+just verify
+```
 
-> One thing about `just test-sqlite`: This does build the backend, start it in a background task and then executes
-> all tests incl integration tests. However, is uses `set -euxo pipefail` inside the script, which make it fail if
-> any test case fails. The way the script works, this does not kill the background task currently, which you have to do
-> manually. The reasons this option is set is that it would otherwise be possible to execute the whole build pipeline
-> and oversee failing test cases. If you are working on tests locally, you can out-comment this line temporarily.
+If you however modified DB queries or something feature related, you should additionally run tests against postgres.
+The `just verify` only tests against SQLite for ease of use:
+
+```
+just test-postgres
+```
