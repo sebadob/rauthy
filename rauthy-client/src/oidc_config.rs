@@ -41,15 +41,11 @@ pub enum ClaimMapping {
 }
 
 impl ClaimMapping {
-    pub fn matches(&self, roles: &Vec<String>, groups: &Vec<String>) -> bool {
+    pub fn matches(&self, roles: &[String], groups: &[String]) -> bool {
         match self {
             ClaimMapping::Any => true,
-            ClaimMapping::Or(claims) => {
-                claims.into_iter().any(|claim| claim.matches(roles, groups))
-            }
-            ClaimMapping::And(claims) => {
-                claims.into_iter().all(|claim| claim.matches(roles, groups))
-            }
+            ClaimMapping::Or(claims) => claims.iter().any(|claim| claim.matches(roles, groups)),
+            ClaimMapping::And(claims) => claims.iter().all(|claim| claim.matches(roles, groups)),
             ClaimMapping::None => false,
         }
     }
@@ -62,7 +58,7 @@ pub struct JwtClaim {
 }
 
 impl JwtClaim {
-    pub fn matches(&self, roles: &Vec<String>, groups: &Vec<String>) -> bool {
+    pub fn matches(&self, roles: &[String], groups: &[String]) -> bool {
         match &self.typ {
             JwtClaimTyp::Roles => roles.contains(&self.value),
             JwtClaimTyp::Groups => groups.contains(&self.value),
@@ -75,4 +71,122 @@ impl JwtClaim {
 pub enum JwtClaimTyp {
     Roles,
     Groups,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ops::Deref;
+
+    #[test]
+    fn test_claim_mapping() -> anyhow::Result<()> {
+        let mapping = ClaimMapping::None;
+        // no matter which roles / groupe we have - None should always deny access
+        assert!(!mapping.matches(&vec!["".to_string()], &vec!["".to_string()]));
+
+        let mapping = ClaimMapping::Any;
+        // no matter which roles / groupe we have - Any should always allow access
+        assert!(mapping.matches(&vec!["".to_string()], &vec!["".to_string()]));
+
+        let test_roles = vec![
+            "role1".to_string(),
+            "role2".to_string(),
+            "role3".to_string(),
+        ];
+        let test_groups = vec![
+            "group1".to_string(),
+            "group2".to_string(),
+            "group3".to_string(),
+        ];
+
+        // AND: these should be allowed
+        let mapping = ClaimMapping::And(vec![
+            JwtClaim {
+                typ: JwtClaimTyp::Roles,
+                value: "role1".to_string(),
+            },
+            JwtClaim {
+                typ: JwtClaimTyp::Groups,
+                value: "group1".to_string(),
+            },
+        ]);
+        assert!(mapping.matches(test_roles.deref(), test_groups.deref()));
+
+        let mapping = ClaimMapping::And(vec![
+            JwtClaim {
+                typ: JwtClaimTyp::Roles,
+                value: "role1".to_string(),
+            },
+            JwtClaim {
+                typ: JwtClaimTyp::Roles,
+                value: "role2".to_string(),
+            },
+            JwtClaim {
+                typ: JwtClaimTyp::Groups,
+                value: "group3".to_string(),
+            },
+        ]);
+        assert!(mapping.matches(test_roles.deref(), test_groups.deref()));
+
+        // AND: these should not be allowed
+        let mapping = ClaimMapping::And(vec![
+            JwtClaim {
+                typ: JwtClaimTyp::Roles,
+                value: "role1".to_string(),
+            },
+            JwtClaim {
+                typ: JwtClaimTyp::Groups,
+                value: "group4".to_string(),
+            },
+        ]);
+        assert!(!mapping.matches(test_roles.deref(), test_groups.deref()));
+
+        let mapping = ClaimMapping::And(vec![
+            JwtClaim {
+                typ: JwtClaimTyp::Roles,
+                value: "role4".to_string(),
+            },
+            JwtClaim {
+                typ: JwtClaimTyp::Groups,
+                value: "group2".to_string(),
+            },
+        ]);
+        assert!(!mapping.matches(test_roles.deref(), test_groups.deref()));
+
+        // OR: should be allowed
+        let mapping = ClaimMapping::Or(vec![
+            JwtClaim {
+                typ: JwtClaimTyp::Roles,
+                value: "role1".to_string(),
+            },
+            JwtClaim {
+                typ: JwtClaimTyp::Roles,
+                value: "role4".to_string(),
+            },
+            JwtClaim {
+                typ: JwtClaimTyp::Groups,
+                value: "group1".to_string(),
+            },
+            JwtClaim {
+                typ: JwtClaimTyp::Groups,
+                value: "group5".to_string(),
+            },
+        ]);
+        assert!(mapping.matches(test_roles.deref(), test_groups.deref()));
+
+        // OR: should not be allowed
+        let mapping = ClaimMapping::Or(vec![
+            JwtClaim {
+                typ: JwtClaimTyp::Roles,
+                value: "role5".to_string(),
+            },
+            JwtClaim {
+                typ: JwtClaimTyp::Groups,
+                value: "group4".to_string(),
+            },
+        ]);
+        assert!(!mapping.matches(test_roles.deref(), test_groups.deref()));
+
+        Ok(())
+    }
 }

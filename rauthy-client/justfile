@@ -40,11 +40,11 @@ check: clippy-examples
 
 
 # runs the full set of tests
-test:
+test test="":
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    cargo test
+    cargo test {{test}}
     echo All tests successful
 
 
@@ -67,7 +67,7 @@ msrv-find:
 
 
 # makes sure everything is fine
-verfiy-is-clean: check test build msrv-verify
+verify: check test build msrv-verify
     #!/usr/bin/env bash
     set -euxo pipefail
 
@@ -78,7 +78,7 @@ verfiy-is-clean: check test build msrv-verify
 
 
 # publishes the current version to cargo.io
-publish: verfiy-is-clean
+publish: verify
     #!/usr/bin/env bash
     set -euxo pipefail
     cargo publish
