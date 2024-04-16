@@ -91,9 +91,7 @@
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html" class="active"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">10.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html"><strong aria-hidden="true">10.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">11.</strong> Reference Config</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
-                <div class="sidebar-resize-indicator"></div>
-            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -179,7 +177,7 @@
 <p>Some values, like authentication codes for instance, do live in the cache only. Additionally, there might come an
 option with a future version which offers a special in-memory only mode in some situations.</p>
 <p>Because of this, all instances create and share a single HA cache layer, which means at the same time, that you cannot
-just scale up the replicas infinitely. The optimal amount of replicas for a HA mode would be 3, or if you need even higher
+just scale up the replicas infinitely. The optimal amount of replicas for a HA mode would be 3, or if you need even higher 
 resilience 5. More replicas should work just fine, but this has never been really tested and the performance will
 degrade at some point.</p>
 <p>To achieve the HA caching layer embedded directly into the application, I created a library (or crate in Rust terms)
@@ -191,7 +189,7 @@ or inconsistencies and to guarantee a configured level of safety. Different so c
 Rauthy uses different levels in different situations to provide real HA and sync all caches between the pods. This
 means that you can loose a pod and still have the in-cache-only values available on the other ones.</p>
 <p>This syncing of the cache is the reason why write performance will degrade, if you scale up too many replicas, which should
-not really be necessary anyway. The best HA performance will be achieved with 3 replicas and then scaling up the
+not really be necessary anyway. The best HA performance will be achieved with 3 replicas and then scaling up the 
 resources for each pod before adding more replicas.</p>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <p>The way to configure the <code>HA_MODE</code> is optimized for a Kubernetes deployment but may seem a bit odd at the same time,
@@ -199,12 +197,12 @@ if you deploy somewhere else. You need to the following values in the config fil
 <h3 id="ha_mode"><a class="header" href="#ha_mode"><code>HA_MODE</code></a></h3>
 <p>The first one is easy, just set <code>HA_MODE=true</code></p>
 <h3 id="ha_hosts"><a class="header" href="#ha_hosts"><code>HA_HOSTS</code></a></h3>
-<p>The <code>HA_HOSTS</code> is working in a way, that it is really easy inside Kubernetes to configure it, as long as a
+<p>The <code>HA_HOSTS</code> is working in a way, that it is really easy inside Kubernetes to configure it, as long as a 
 StatefulSet is used for the deployment.</p>
 <p>The way a cache node finds its members is by the <code>HA_HOSTS</code> and its own <code>HOSTNAME</code>.<br />
 In the <code>HA_HOSTS</code>, add every cache member. For instance, if you want to use 3 replicas in HA mode which are running
 and are deployed as a StatefulSet with the name <code>rauthy</code> again:</p>
-<pre><code>HA_HOSTS="http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000"
+<pre><code>HA_HOSTS=&quot;http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000&quot;
 </code></pre>
 <p>The way it works:</p>
 <ol>
@@ -212,12 +210,12 @@ and are deployed as a StatefulSet with the name <code>rauthy</code> again:</p>
 This is the reason, why you use a StatefulSet for the deployment, even without any volumes attached. For StatefulSet
 called <code>rauthy</code>, the replicas will always have the names <code>rauthy-0</code>, <code>rauthy-1</code>, ..., which are at the same time the
 hostnames inside the pod.</li>
-<li>Find "me" inside the <code>HA_HOSTS</code> variable<br />
+<li>Find &quot;me&quot; inside the <code>HA_HOSTS</code> variable<br />
 If the hostname cannot be found in the <code>HA_HOSTS</code>, the application will panic and exit because of a misconfiguration.</li>
-<li>Use the port from the "me"-Entry that was found for the server part<br />
+<li>Use the port from the &quot;me&quot;-Entry that was found for the server part<br />
 This means you do not need to specify the port in another variable which eliminates the risk of having inconsistencies
 or a bad config in that case.</li>
-<li>Extract "me" from the <code>HA_HOSTS</code>, take the leftover nodes as all cache members and connect to them</li>
+<li>Extract &quot;me&quot; from the <code>HA_HOSTS</code>, take the leftover nodes as all cache members and connect to them</li>
 <li>Once a quorum has been reached, a leader will be elected<br />
 From that point on, the cache will start accepting requests</li>
 <li>If the leader is lost - elect a new one - No values will be lost</li>
@@ -241,7 +239,7 @@ match one of the <code>HA_HOSTS</code> entries.</p>
 <p>You need to set a secret for the <code>CACHE_AUTH_TOKEN</code> which was left out in the
 <a href="../getting_started/k8s.html#create-and-apply-secrets">Getting Started</a></p>
 <p>Just create a secret and add it in the same way:</p>
-<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48)" | base64
+<pre><code>echo &quot;$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48)&quot; | base64
 </code></pre>
 <h3 id="tls"><a class="header" href="#tls">TLS</a></h3>
 <p>If you are using a service mesh like for instance <a href="https://linkerd.io/">linkerd</a> which creates mTLS connections between
@@ -250,7 +248,7 @@ all pods by default, you can use the HA cache with just plain HTTP, since linker
 <pre><code>CACHE_TLS=false
 </code></pre>
 <p>to disable the use of TLS certificates between cache member.</p>
-<p>However, if you do not have encryption between pods by default, I would highly recommend, that you use <a href="tls.html">TLS</a>.</p>
+<p>However, if you do not have encryption between pods by default, I would highly recommend, that you use <a href="tls.html">TLS</a>. </p>
 
                     </main>
 
