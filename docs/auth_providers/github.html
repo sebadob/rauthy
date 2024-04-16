@@ -91,9 +91,7 @@
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">10.</strong> Authentication Propviders</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html" class="active"><strong aria-hidden="true">10.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">11.</strong> Reference Config</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
-                <div class="sidebar-resize-indicator"></div>
-            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -187,7 +185,7 @@ Rauthy includes a Template for Github already, which makes this whole process pr
 at <code>https://iam.example.com</code>, your callback URL would be <code>https://iam.example.com/auth/v1/providers/callback</code></li>
 <li>Don't enable Device Flow and <code>Register application</code></li>
 </ol>
-<p>TODO insert <code>1_github_app_create.png</code></p>
+<p><img src="img/1_github_app_create.png" alt="1_github_app_create" /></p>
 <p>On the following page, you can upload a logo and so on, but the important information is:</p>
 <ul>
 <li><code>Client ID</code></li>
@@ -199,14 +197,18 @@ at <code>https://iam.example.com</code>, your callback URL would be <code>https:
 <li>Log in to your Rauthy Admin UI, navigate to <code>Providers</code> and add a new provier.</li>
 <li>Choose <code>Github</code> as the <code>Type</code> and leave the Custom Root CA and insecure TLS unchecked.</li>
 </ol>
-<p>TODO insert <code>2_rauthy_add_new.png</code></p>
+<p><img src="img/2_rauthy_add_new.png" alt="1_github_app_create" /></p>
 <ol start="3">
 <li>The template pre-populates most of the inputs already for you. The only information you need to add here is
 <ul>
 <li><code>Client ID</code> -&gt; copy <code>Client ID</code> from the Github OAuth App page inside here</li>
 <li><code>Client Secret</code> -&gt; on Github, <code>Generate a new client secret</code> and copy &amp; paste the value</li>
+<li>you may edit the <code>Client Name</code> if you want something else than <code>Github</code></li>
 </ul>
 </li>
+</ol>
+<p><img src="img/3_rauthy_provider_config.png" alt="1_github_app_create" /></p>
+<ol start="5">
 <li>Leave the rest untouched and hit <code>Save</code></li>
 <li>You should expand the saved Github provider in the Rauthy UI again after saving and upload a Logo for the Client.
 Currently, Rauthy does not provide default Logos, though these might be added at some point. Just <code>UPLOAD LOGO</code> from
@@ -215,6 +217,7 @@ your local disk.</li>
 <h2 id="finish"><a class="header" href="#finish">Finish</a></h2>
 <p>That's it. Now log out and try to log in to your Account view. You should see your new upstream provider on the Login
 page.</p>
+<p><img src="img/4_rauthy_github_login.png" alt="1_github_app_create" /></p>
 
                     </main>
 

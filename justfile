@@ -290,6 +290,7 @@ build-docs:
     set -euxo pipefail
     cd rauthy-book
     mdbook build -d ../docs
+    cd ..
     git add docs
 
 
