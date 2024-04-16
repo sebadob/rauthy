@@ -205,11 +205,13 @@ deactivate this to your liking.</p>
 <p><strong>MFA and Passwordless Login</strong></p>
 <ol>
 <li>Option: Password + Security Key (without User Verification):<br />
-Rauthy provides FIDO 2 / Webauthn login flows. If you once logged in on a new client with your username + password, you
+Rauthy provides FIDO 2 / Webauthn login flows. If you once logged in on a new client with your username + password,
+you
 will get an encrypted cookie which will allow you to log in without a password from that moment on. You only need to
-have a FIDO  compliant Passkey being registered for your account.</li>
+have a FIDO compliant Passkey being registered for your account.</li>
 <li>Option: Passkey-Only Accounts:<br />
-Since v0.16, Rauthy supports Passkey-Only-Accounts. You basically just provide your E-Mail address and log in with your
+Since v0.16, Rauthy supports Passkey-Only-Accounts. You basically just provide your E-Mail address and log in with
+your
 FIDO 2 Passkey. Your account will not even have / need a password. This login flow is restricted though to only those
 passkeys, that can provide User Verification (UV) to always have at least 2FA security.</li>
 </ol>
@@ -281,6 +283,8 @@ Can serve a basic <code>webid</code> document for decentralized logins</li>
 <li><input disabled="" type="checkbox" checked=""/>
 OpenID Connect Dynamic Client Registration</li>
 <li><input disabled="" type="checkbox" checked=""/>
+Upstream Authentication Providers (Login with ...)</li>
+<li><input disabled="" type="checkbox" checked=""/>
 Admin UI</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Account UI for each user with self-service</li>
@@ -306,6 +310,8 @@ Admin API Keys with fine-grained access rights</li>
 Events and alerting system</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Optional event notifications via: E-Mail, Matrix, Slack</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Configurable E-Mail templates for NewPassword + ResetPassword events</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Optional event persistence</li>
 <li><input disabled="" type="checkbox" checked=""/>
