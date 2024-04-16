@@ -92,9 +92,7 @@
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="auth_providers/index.html"><strong aria-hidden="true">10.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="auth_providers/github.html"><strong aria-hidden="true">10.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="config/config.html"><strong aria-hidden="true">11.</strong> Reference Config</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
-                <div class="sidebar-resize-indicator"></div>
-            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -378,7 +376,7 @@ too uncertain to me.</p>
 </div>
 </div>
 <ul>
-<li>The "normal" container images can be used for Postgres</li>
+<li>The &quot;normal&quot; container images can be used for Postgres</li>
 <li>The <code>*-lite</code> images use an embedded SQLite</li>
 <li>The <code>DB_MIGRATE_FROM</code> (explained later) can be used with any combination of image / database</li>
 </ul>
@@ -390,7 +388,7 @@ too uncertain to me.</p>
 </div>
 <div>
 <p>All the examples in this documentation are using the <code>*-lite</code> images and therefore SQLite. If you want to use Postgres
-in production, you need to use the "default" container images.</p>
+in production, you need to use the &quot;default&quot; container images.</p>
 </div>
 </div>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="docker"><a class="header" href="#docker">Docker</a></h1>
@@ -526,7 +524,7 @@ If this is not the case for you, change the following commands accordingly.</p>
 <pre><code>mkdir rauthy &amp;&amp; cd rauthy
 </code></pre>
 <p>Create the config file, paste the <a href="getting_started/../config/config.html">reference config</a> and adjust it to your needs.<br />
-There is no "nice 1-liner" available yet.</p>
+There is no &quot;nice 1-liner&quot; available yet.</p>
 <pre><code>echo 'apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -570,7 +568,7 @@ data:
   # Postgres: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
   DATABASE_URL: 
     
-  # Format: "key_id/enc_key another_key_id/another_enc_key" - the enc_key itself must be exactly 32 characters long and
+  # Format: &quot;key_id/enc_key another_key_id/another_enc_key&quot; - the enc_key itself must be exactly 32 characters long and
   # and should not contain special characters.
   # The ID must match '[a-zA-Z0-9]{2,20}'
   ENC_KEYS:
@@ -587,7 +585,7 @@ create it as a secret anyway to have an easier optional migration to postgres la
 <pre><code>echo 'sqlite:data/rauthy.db' | base64
 </code></pre>
 <p>Generate a new encryption key with ID in the correct format.</p>
-<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)"  | base64
+<pre><code>echo &quot;$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)&quot;  | base64
 </code></pre>
 <p>Paste the base64 String in the secrets for <code>ENC_KEYS</code>.<br />
 To extract the <code>ENC_KEY_ID</code>, which needs to be added to the config from Step 2:</p>
@@ -715,7 +713,7 @@ spec:
               # pods request at least:
               # `ARGON2_M_COST` / 1024 * `MAX_HASH_THREADS` Mi
               # With SQLite: for small deployments, add additional ~20-30Mi for
-              # "the rest", for larger ones ~50-70 Mi should be enough.
+              # &quot;the rest&quot;, for larger ones ~50-70 Mi should be enough.
               memory: 64Mi
               # The CPU needs to be adjusted during runtime. This heavily
               # depends on your use case.
@@ -742,7 +740,7 @@ spec:
         name: rauthy-data
       spec:
         accessModes:
-          - "ReadWriteOnce"
+          - &quot;ReadWriteOnce&quot;
         resources:
           requests:
             storage: 128Mi
@@ -908,7 +906,7 @@ anyway.</p>
 beging done by the application and the variables need to be tuned for every deployment to provide the best compromise
 of security, resource usage and user experience.<br />
 The default values are way too low for a real production deployment. They should only be used for testing.</p>
-<p>The Admin UI provides a utility which helps you find the values for your deployment quickly. What and how to do is
+<p>The Admin UI provides a utility which helps you find the values for your deployment quickly. What and how to do is 
 described in the Admin UI itself, I just want to guide you to this utility especially, since it is an important step
 security wise.</p>
 <p>When you are logged in to the Admin UI, please navigate to <code>Config</code> -&gt; <code>Argon2 Parameters</code> to find your values.<br />
@@ -917,11 +915,11 @@ Keep in mind, that if you run the application in a way, where memory is limited,
 resource limits set too low, that it will crash, if either <code>ARGON2_M_COST</code> is set too high or the memory limit too low.</p>
 <p>There is one additional, really important config variable need to be taken into account for the tuning.<br />
 Since this operation is really ressource intense, you can limit the amount of threads, which can run in parallel doing
-hashing operations. This is really important when we think about constrained memory again.</p>
+hashing operations. This is really important when we think about constrained memory again. </p>
 <p><code>MAX_HASH_THREADS</code> limits the maximum amount of parallel password hashes at the exact same time to never exceed system
 memory while still allowing a good amount of memory.<br />
 The <strong>default</strong> value <strong>is 2</strong>.</p>
-<p>The rule is simple: Allow as many resources as possible for hashing to have the maximum amount of security, while
+<p>The rule is simple: Allow as many resources as possible for hashing to have the maximum amount of security, while 
 restricting it as much as necessary.</p>
 <p>For smaller deployments, set <code>MAX_HASH_THREADS=1</code>, which will technically allows only one user login at the exact same
 time. This value makes an external rate limiting for the login obsolete (while you may add some for the others).</p>
@@ -981,7 +979,7 @@ with PIN UV, you can do the following trick to get it done (works only with the 
 <li>Log in to your account view on your Android device and another device that works with your Yubikey</li>
 <li>With both devices logged in at the same time:
 <ul>
-<li>Register a new passkey with Android and choose "this device", which will create a Passkey flow with your fingerprint</li>
+<li>Register a new passkey with Android and choose &quot;this device&quot;, which will create a Passkey flow with your fingerprint</li>
 <li>Register the Yubikey on the other device</li>
 </ul>
 </li>
@@ -1026,8 +1024,8 @@ domain name.</p>
 <pre><code>RP_ORIGIN=https://auth.example.com:443
 </code></pre>
 <h3 id="rp_name"><a class="header" href="#rp_name"><code>RP_NAME</code></a></h3>
-<p>This variable can be set to anything "nice".
-This may be shown to the user in a way like "<code>RP_BNAE</code> requests your security key ...". If this is shown depends on the
+<p>This variable can be set to anything &quot;nice&quot;.
+This may be shown to the user in a way like &quot;<code>RP_BNAE</code> requests your security key ...&quot;. If this is shown depends on the
 OS and the browser the client uses. Firefox, for instance, does not show this at the time of writing.</p>
 <p>You can change the <code>RP_NAME</code> later on without affecting the validation of already registered keys.</p>
 <h3 id="webauthn_renew_exp"><a class="header" href="#webauthn_renew_exp"><code>WEBAUTHN_RENEW_EXP</code></a></h3>
@@ -1036,7 +1034,7 @@ passkeys. The keys are used either as a strong second factor, when they do not w
 login to real MFA, if the OS / Browser / Key does support this.</p>
 <p>When a user as logged in successfully on a new device and active 2FA / MFA, he will get an encrypted cookie.<br />
 The lifetime of this cookie can be configured with <code>WEBAUTHN_RENEW_EXP</code>.<br />
-The <strong>default</strong> of this value is <strong>2160 hours</strong>.</p>
+The <strong>default</strong> of this value is <strong>2160 hours</strong>. </p>
 <p>As long as this cookie is present and can be decrypted by the backend, the user can log in from this very
 device with his FIDO 2 key only, which makes a very good user experience for the whole login flow. The E-Mail will
 already be filled automatically and only a single click on the login button is necessary.</p>
@@ -1059,17 +1057,17 @@ If the old key is gone, the migration will fail.</p>
 </div>
 </div>
 <p><strong>2. Generate a new key + id</strong></p>
-<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)"
+<pre><code>echo &quot;$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)&quot;
 </code></pre>
 <p>The part before the first <code>/</code> is the <code>ENC_KEY_ID</code> and the part afterwards is the key base64 encoded.
 You might set the new <code>ENC_KEY_ACTIVE</code> to the newly generated key ID.</p>
 <p>Keep in mind, you need to ADD this to your existing keys and not just replace them! If you just replace them, almost
 all things will break and fall apart.</p>
 <p>The final format of the <code>ENC_KEYS</code> should look something like this, for instance:</p>
-<pre><code>ENC_KEYS="
+<pre><code>ENC_KEYS=&quot;
 Wx1zrbLF/5vTaB7LdUSg1aTecmqHJOu2+RnU6zgTwNkDQU52Y3JM=
 6uf5QebA/9DsKMoq8A+Gn2WQrTcSpz5sg751yYs3IJlkw3dn0rII=
-"
+&quot;
 </code></pre>
 <p>In this example, if the first key should be the new active default, set your <code>ENC_KEY</code>ACTIVE` to</p>
 <pre><code>ENC_KEY_ACTIVE=Wx1zrbLF
@@ -1085,8 +1083,8 @@ value: <code>echo 'PutTheWholeValueHere' | base64</code></p>
 </div>
 </div>
 <p><strong>3. Set the <code>ENC_KEY_ACTIVE</code> to the ID of your newly generated key</strong></p>
-<p>This will make sure, that all new encryptions will use the new key. If you do not care about removing the old keys,
-because you maybe just want to rotate because its good practice, the secrets will migrate "by themselves" over time.
+<p>This will make sure, that all new encryptions will use the new key. If you do not care about removing the old keys, 
+because you maybe just want to rotate because its good practice, the secrets will migrate &quot;by themselves&quot; over time.
 If Rauthy finds any secrets during its normal operation, that have been encrypted with an older key than the current
 <code>ENC_KEY_ACTIVE</code>, it will re-encrypt these secrets and update the values.<br />
 This means, you may just stop at this point, if this is good enough for you.</p>
@@ -1154,20 +1152,20 @@ switch to the correct rauthy image as well. Rauthy v0.14 and beyond has differen
 <p><a class="admonition-anchor-link" href="config/db_migration.html#admonition-hint"></a></p>
 </div>
 <div>
-<p>The easiest to do is to just set <code>MIGRATE_DB_FROM</code> as an environmant variable, which is easier and quicker to remove
+<p>The easiest to do is to just set <code>MIGRATE_DB_FROM</code> as an environmant variable, which is easier and quicker to remove 
 again afterwards.</p>
 </div>
 </div>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="backups"><a class="header" href="#backups">Backups</a></h1>
 <h2 id="sqlite"><a class="header" href="#sqlite">SQLite</a></h2>
 <p>If Rauthy is using a SQLite, it does automatic backups, which can be configured with:</p>
-<pre><code># Cron job for automatic data store backups (default: "0 0 4 * * * *")
+<pre><code># Cron job for automatic data store backups (default: &quot;0 0 4 * * * *&quot;)
 # sec min hour day_of_month month day_of_week year
-BACKUP_TASK="0 0 4 * * * *"
+BACKUP_TASK=&quot;0 0 4 * * * *&quot;
 
 # The name for the data store backups. The current timestamp will always be appended automatically.
 # default: rauthy-backup-
-BACKUP_NAME="rauthy-backup-"
+BACKUP_NAME=&quot;rauthy-backup-&quot;
 
 # All backups older than the specified hours will be cleaned up automatically (default: 720)
 BACKUP_RETENTION_LOCAL=24
@@ -1195,7 +1193,7 @@ There are a lot of way better tools out there to handle this task.</p>
 <p>Some values, like authentication codes for instance, do live in the cache only. Additionally, there might come an
 option with a future version which offers a special in-memory only mode in some situations.</p>
 <p>Because of this, all instances create and share a single HA cache layer, which means at the same time, that you cannot
-just scale up the replicas infinitely. The optimal amount of replicas for a HA mode would be 3, or if you need even higher
+just scale up the replicas infinitely. The optimal amount of replicas for a HA mode would be 3, or if you need even higher 
 resilience 5. More replicas should work just fine, but this has never been really tested and the performance will
 degrade at some point.</p>
 <p>To achieve the HA caching layer embedded directly into the application, I created a library (or crate in Rust terms)
@@ -1207,7 +1205,7 @@ or inconsistencies and to guarantee a configured level of safety. Different so c
 Rauthy uses different levels in different situations to provide real HA and sync all caches between the pods. This
 means that you can loose a pod and still have the in-cache-only values available on the other ones.</p>
 <p>This syncing of the cache is the reason why write performance will degrade, if you scale up too many replicas, which should
-not really be necessary anyway. The best HA performance will be achieved with 3 replicas and then scaling up the
+not really be necessary anyway. The best HA performance will be achieved with 3 replicas and then scaling up the 
 resources for each pod before adding more replicas.</p>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <p>The way to configure the <code>HA_MODE</code> is optimized for a Kubernetes deployment but may seem a bit odd at the same time,
@@ -1215,12 +1213,12 @@ if you deploy somewhere else. You need to the following values in the config fil
 <h3 id="ha_mode"><a class="header" href="#ha_mode"><code>HA_MODE</code></a></h3>
 <p>The first one is easy, just set <code>HA_MODE=true</code></p>
 <h3 id="ha_hosts"><a class="header" href="#ha_hosts"><code>HA_HOSTS</code></a></h3>
-<p>The <code>HA_HOSTS</code> is working in a way, that it is really easy inside Kubernetes to configure it, as long as a
+<p>The <code>HA_HOSTS</code> is working in a way, that it is really easy inside Kubernetes to configure it, as long as a 
 StatefulSet is used for the deployment.</p>
 <p>The way a cache node finds its members is by the <code>HA_HOSTS</code> and its own <code>HOSTNAME</code>.<br />
 In the <code>HA_HOSTS</code>, add every cache member. For instance, if you want to use 3 replicas in HA mode which are running
 and are deployed as a StatefulSet with the name <code>rauthy</code> again:</p>
-<pre><code>HA_HOSTS="http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000"
+<pre><code>HA_HOSTS=&quot;http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000&quot;
 </code></pre>
 <p>The way it works:</p>
 <ol>
@@ -1228,12 +1226,12 @@ and are deployed as a StatefulSet with the name <code>rauthy</code> again:</p>
 This is the reason, why you use a StatefulSet for the deployment, even without any volumes attached. For StatefulSet
 called <code>rauthy</code>, the replicas will always have the names <code>rauthy-0</code>, <code>rauthy-1</code>, ..., which are at the same time the
 hostnames inside the pod.</li>
-<li>Find "me" inside the <code>HA_HOSTS</code> variable<br />
+<li>Find &quot;me&quot; inside the <code>HA_HOSTS</code> variable<br />
 If the hostname cannot be found in the <code>HA_HOSTS</code>, the application will panic and exit because of a misconfiguration.</li>
-<li>Use the port from the "me"-Entry that was found for the server part<br />
+<li>Use the port from the &quot;me&quot;-Entry that was found for the server part<br />
 This means you do not need to specify the port in another variable which eliminates the risk of having inconsistencies
 or a bad config in that case.</li>
-<li>Extract "me" from the <code>HA_HOSTS</code>, take the leftover nodes as all cache members and connect to them</li>
+<li>Extract &quot;me&quot; from the <code>HA_HOSTS</code>, take the leftover nodes as all cache members and connect to them</li>
 <li>Once a quorum has been reached, a leader will be elected<br />
 From that point on, the cache will start accepting requests</li>
 <li>If the leader is lost - elect a new one - No values will be lost</li>
@@ -1257,7 +1255,7 @@ match one of the <code>HA_HOSTS</code> entries.</p>
 <p>You need to set a secret for the <code>CACHE_AUTH_TOKEN</code> which was left out in the
 <a href="config/../getting_started/k8s.html#create-and-apply-secrets">Getting Started</a></p>
 <p>Just create a secret and add it in the same way:</p>
-<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48)" | base64
+<pre><code>echo &quot;$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48)&quot; | base64
 </code></pre>
 <h3 id="tls"><a class="header" href="#tls">TLS</a></h3>
 <p>If you are using a service mesh like for instance <a href="https://linkerd.io/">linkerd</a> which creates mTLS connections between
@@ -1266,7 +1264,7 @@ all pods by default, you can use the HA cache with just plain HTTP, since linker
 <pre><code>CACHE_TLS=false
 </code></pre>
 <p>to disable the use of TLS certificates between cache member.</p>
-<p>However, if you do not have encryption between pods by default, I would highly recommend, that you use <a href="config/tls.html">TLS</a>.</p>
+<p>However, if you do not have encryption between pods by default, I would highly recommend, that you use <a href="config/tls.html">TLS</a>. </p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="tls-1"><a class="header" href="#tls-1">TLS</a></h1>
 <p>If you do have TLS certificates from another source already, skip directly to <a href="config/tls.html#config">Config</a>.</p>
 <h2 id="generating-certificates"><a class="header" href="#generating-certificates">Generating Certificates</a></h2>
@@ -1357,12 +1355,12 @@ CACHE_TLS_CA_CLIENT=tls/ca-chain.pem
 CACHE_TLS_CLIENT_VALIDATE_DOMAIN=redhac.local
 
 # Can be used, if you need to overwrite the SNI when the client connects to the server, for instance if you are behind
-# a loadbalancer which combines multiple certificates. (default: "")
+# a loadbalancer which combines multiple certificates. (default: &quot;&quot;)
 #CACHE_TLS_SNI_OVERWRITE=
 </code></pre>
 <h3 id="server"><a class="header" href="#server">Server</a></h3>
 <p>The TLS configuration for the REST API is much simpler.<br />
-By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and <code>/app/tls/tls.crt</code>, which is the
+By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and <code>/app/tls/tls.crt</code>, which is the 
 default naming for a Kubernetes TLS secret. The expected format is PEM, but you could provide the key in DER format too,
 if you rename the file-ending to <code>*.der</code>.</p>
 <p>You can change the default path for the files with the config variables <code>TLS_CERT</code> and <code>TLS_KEY</code>.</p>
@@ -1370,10 +1368,10 @@ if you rename the file-ending to <code>*.der</code>.</p>
 <p>If you did not follow the above procedure to generate the CA and certificates, you may need to rename the files in the
 following command, to create the Kubernetes secrets.</p>
 <p><strong>Secrets - REST API</strong></p>
-<pre><code>kubectl -n rauthy create secret tls rauthy-tls --key="key.pem" --cert="cert-chain.pem"
+<pre><code>kubectl -n rauthy create secret tls rauthy-tls --key=&quot;key.pem&quot; --cert=&quot;cert-chain.pem&quot;
 </code></pre>
 <p><strong>Secrets - <code>redhac</code> cache</strong></p>
-<pre><code>kubectl -n rauthy create secret tls redhac-tls-server --key="key.pem" --cert="cert-chain.pem" &amp;&amp; \
+<pre><code>kubectl -n rauthy create secret tls redhac-tls-server --key=&quot;key.pem&quot; --cert=&quot;cert-chain.pem&quot; &amp;&amp; \
 kubectl -n rauthy create secret generic redhac-server-ca --from-file ca-chain.pem
 </code></pre>
 <div id="admonition-note" class="admonition admonish-note">
@@ -1428,7 +1426,7 @@ kubectl apply -f sts.yaml
 <p>The <code>rauthy</code> pods should restart now and TLS is configured.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="upstream-authentication-providers"><a class="header" href="#upstream-authentication-providers">Upstream Authentication Providers</a></h1>
 <p>This section is about upstream authentication providers, for instance things like <strong>Sign in with Github</strong>.</p>
-<p>This feature can be considered "in beta state" and the only setup guide is for Github for now.<br />
+<p>This feature can be considered &quot;in beta state&quot; and the only setup guide is for Github for now.<br />
 Additional ones may come, when people are using other providers and give feedback or actually contribute to these docs.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="github-provider"><a class="header" href="#github-provider">Github Provider</a></h1>
 <p>To set up Github as an upstream provider for Rauthy, you have pretty little things to do.<br />
@@ -1436,7 +1434,8 @@ Rauthy includes a Template for Github already, which makes this whole process pr
 <h2 id="create-an-oauth-app"><a class="header" href="#create-an-oauth-app">Create an OAuth App</a></h2>
 <ol>
 <li>Log in to your Github account</li>
-<li>Navigate to <code>Settings -&gt; Developer Settings -&gt; OAuth Apps -&gt; Register a new application</code></li>
+<li>Navigate to
+<a href="https://github.com/settings/applications/new">Settings -&gt; Developer Settings -&gt; OAuth Apps -&gt; Register a new application</a></li>
 <li>Provide any name for your application. This is not important for the flow, only for your users to recognize</li>
 <li>Homepage URL should be the URL of your Rauthy deployment</li>
 <li><code>Authorization callback URL</code> is the only really important one here. For instance, if your Rauthy instance would live
@@ -1537,7 +1536,7 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # account takeovers during a password reset.
 #
 # The problem however are companies (e.g. Microsoft) who scan their customers
-# E-Mails and even follow links and so on. They call it a "feature". The
+# E-Mails and even follow links and so on. They call it a &quot;feature&quot;. The
 # problem is, that their servers get this binding cookie and the user will be
 # unable to use this link himself. The usage of this config option is highly
 # discouraged, but since everything moves very slow in big enterprises and
@@ -1554,19 +1553,19 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # Cloudflare, which adds custom headers in this case.
 # For instance, if your requests are proxied through cloudflare, your would 
 # set `CF-Connecting-IP`.
-PEER_IP_HEADER_NAME="CF-Connecting-IP"
+PEER_IP_HEADER_NAME=&quot;CF-Connecting-IP&quot;
 
 #####################################
 ############# BACKUPS ###############
 #####################################
 
-# Cron job for automatic data store backups (default: "0 0 4 * * * *")
+# Cron job for automatic data store backups (default: &quot;0 0 4 * * * *&quot;)
 # sec min hour day_of_month month day_of_week year
-#BACKUP_TASK="0 0 4 * * * *"
+#BACKUP_TASK=&quot;0 0 4 * * * *&quot;
 
 # The name for the data store backups. The current timestamp
 # will always be appended automatically. (default: rauthy-backup-)
-#BACKUP_NAME="rauthy-backup-"
+#BACKUP_NAME=&quot;rauthy-backup-&quot;
 
 # All backups older than the specified hours will be cleaned up
 # automatically (default: 720)
@@ -1627,12 +1626,12 @@ PEER_IP_HEADER_NAME="CF-Connecting-IP"
 # The connection strings (with hostnames) of the HA instances
 # as a CSV.
 # Format: 'scheme://hostname:port'
-#HA_HOSTS="http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000"
+#HA_HOSTS=&quot;http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000&quot;
 
 # Overwrite the hostname which is used to identify each cache member.
 # Useful in scenarios, where for instance all members are on the same host with
 # different ports or for testing.
-#HOSTNAME_OVERWRITE="rauthy-0.rauthy:8080"
+#HOSTNAME_OVERWRITE=&quot;rauthy-0.rauthy:8080&quot;
 
 ## Define buffer sizes for channels between the components
 # Buffer for client requests on the incoming stream - server
@@ -1806,7 +1805,7 @@ DPOP_NONCE_EXP=900
 # that have been registered and not been used in the following
 # `DYN_CLIENT_CLEANUP_THRES` hours.
 # Since a dynamic client should be used right away, this should never
-# be a problem with "real" clients, that are not bots or spammers.
+# be a problem with &quot;real&quot; clients, that are not bots or spammers.
 #
 # The interval is specified in minutes.
 # default: 60
@@ -1839,13 +1838,13 @@ DPOP_NONCE_EXP=900
 
 # This contact information will be added to the `rauthy`client
 # within the anti lockout rule with each new restart.
-RAUTHY_ADMIN_EMAIL="admin@localhost.de"
+RAUTHY_ADMIN_EMAIL=&quot;admin@localhost.de&quot;
 
 # Will be used as the prefix for the E-Mail subject for each E-Mail 
 # that will be sent out to a client.
 # This can be used to further customize your deployment.
-# default: "Rauthy IAM"
-EMAIL_SUB_PREFIX="Rauthy IAM"
+# default: &quot;Rauthy IAM&quot;
+EMAIL_SUB_PREFIX=&quot;Rauthy IAM&quot;
 
 # Rauthy will force TLS and try a downgrade to STARTTLS, if
 # TLS fails. It will never allow an unencrypted connection.
@@ -1854,8 +1853,8 @@ EMAIL_SUB_PREFIX="Rauthy IAM"
 #SMTP_URL=
 #SMTP_USERNAME=
 #SMTP_PASSWORD=
-# Format: "Rauthy &lt;rauthy@localhost.de&gt;"
-# default: "Rauthy &lt;rauthy@localhost.de&gt;"
+# Format: &quot;Rauthy &lt;rauthy@localhost.de&gt;&quot;
+# default: &quot;Rauthy &lt;rauthy@localhost.de&gt;&quot;
 #SMTP_FROM=
 
 # The number of retries that should be done for connecting to
@@ -1891,10 +1890,10 @@ EMAIL_SUB_PREFIX="Rauthy IAM"
 # encryption cookies, and so on.
 #
 # The format must match:
-# ENC_KEYS="
+# ENC_KEYS=&quot;
 # q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
 # bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
-# "
+# &quot;
 #
 # The first part until the first `/` is the key ID.
 # The ID must match '[a-zA-Z0-9]{2,20}'
@@ -1912,10 +1911,10 @@ EMAIL_SUB_PREFIX="Rauthy IAM"
 # that all secrets have been migrated beforehand.
 # You can find a utility in the Admin UI to do this for you.
 #
-#ENC_KEYS="
+#ENC_KEYS=&quot;
 #q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
 #bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
-#"
+#&quot;
 
 # This identifies the key ID from the `ENC_KEYS` list, that
 # should actively be used for new encryptions.
@@ -1954,9 +1953,9 @@ MAX_HASH_THREADS=1
 # you cannot fully disable it.
 # In a HA deployment, this job will only be executed on the 
 # current cache leader at that time.
-# Format: "sec min hour day_of_month month day_of_week year"
-# default: "0 30 3 1 * * *"
-#JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
+# Format: &quot;sec min hour day_of_month month day_of_week year&quot;
+# default: &quot;0 30 3 1 * * *&quot;
+#JWK_AUTOROTATE_CRON=&quot;0 30 3 1 * * *&quot;
 
 #####################################
 ####### EPHEMERAL CLIENTS ###########
@@ -1982,12 +1981,12 @@ MAX_HASH_THREADS=1
 #EPHEMERAL_CLIENTS_FORCE_MFA=false
 
 # The allowed flows separated by ' ' for ephemeral clients.
-# default: "authorization_code"
-#EPHEMERAL_CLIENTS_ALLOWED_FLOWS="authorization_code refresh_token"
+# default: &quot;authorization_code&quot;
+#EPHEMERAL_CLIENTS_ALLOWED_FLOWS=&quot;authorization_code refresh_token&quot;
 
 # The allowed scopes separated by ' ' for ephemeral clients.
-# default: "openid profile email webid"
-#EPHEMERAL_CLIENTS_ALLOWED_SCOPES="openid profile email webid"
+# default: &quot;openid profile email webid&quot;
+#EPHEMERAL_CLIENTS_ALLOWED_SCOPES=&quot;openid profile email webid&quot;
 
 # The lifetime in seconds ephemeral clients will be kept inside the cache.
 # default: 3600
@@ -2310,42 +2309,42 @@ PROXY_MODE=false
 # If the below values are not set, the default will be taken.
 
 # New Password E-Mail
-#TPL_EN_PASSWORD_NEW_SUBJECT="New Password"
-#TPL_EN_PASSWORD_NEW_HEADER="New password for"
-#TPL_EN_PASSWORD_NEW_TEXT=""
-#TPL_EN_PASSWORD_NEW_CLICK_LINK="Click the link below to get forwarded to the password form."
-#TPL_EN_PASSWORD_NEW_VALIDITY="This link is only valid for a short period of time for security reasons."
-#TPL_EN_PASSWORD_NEW_EXPIRES="Link expires:"
-#TPL_EN_PASSWORD_NEW_BUTTON="Set Password"
-#TPL_EN_PASSWORD_NEW_FOOTER=""
+#TPL_EN_PASSWORD_NEW_SUBJECT=&quot;New Password&quot;
+#TPL_EN_PASSWORD_NEW_HEADER=&quot;New password for&quot;
+#TPL_EN_PASSWORD_NEW_TEXT=&quot;&quot;
+#TPL_EN_PASSWORD_NEW_CLICK_LINK=&quot;Click the link below to get forwarded to the password form.&quot;
+#TPL_EN_PASSWORD_NEW_VALIDITY=&quot;This link is only valid for a short period of time for security reasons.&quot;
+#TPL_EN_PASSWORD_NEW_EXPIRES=&quot;Link expires:&quot;
+#TPL_EN_PASSWORD_NEW_BUTTON=&quot;Set Password&quot;
+#TPL_EN_PASSWORD_NEW_FOOTER=&quot;&quot;
 
-#TPL_DE_PASSWORD_NEW_SUBJECT="Passwort Reset angefordert"
-#TPL_DE_PASSWORD_NEW_HEADER="Passwort Reset angefordert für"
-#TPL_DE_PASSWORD_NEW_TEXT=""
-#TPL_DE_PASSWORD_NEW_CLICK_LINK="Klicken Sie auf den unten stehenden Link für den Passwort Reset."
-#TPL_DE_PASSWORD_NEW_VALIDITY="Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
-#TPL_DE_PASSWORD_NEW_EXPIRES="Link gültig bis:"
-#TPL_DE_PASSWORD_NEW_BUTTON="Passwort Setzen"
-#TPL_DE_PASSWORD_NEW_FOOTER=""
+#TPL_DE_PASSWORD_NEW_SUBJECT=&quot;Passwort Reset angefordert&quot;
+#TPL_DE_PASSWORD_NEW_HEADER=&quot;Passwort Reset angefordert für&quot;
+#TPL_DE_PASSWORD_NEW_TEXT=&quot;&quot;
+#TPL_DE_PASSWORD_NEW_CLICK_LINK=&quot;Klicken Sie auf den unten stehenden Link für den Passwort Reset.&quot;
+#TPL_DE_PASSWORD_NEW_VALIDITY=&quot;Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig.&quot;
+#TPL_DE_PASSWORD_NEW_EXPIRES=&quot;Link gültig bis:&quot;
+#TPL_DE_PASSWORD_NEW_BUTTON=&quot;Passwort Setzen&quot;
+#TPL_DE_PASSWORD_NEW_FOOTER=&quot;&quot;
 
 # Password Reset E-Mail
-#TPL_EN_RESET_SUBJECT="Neues Passwort"
-#TPL_EN_RESET_HEADER="Neues Passwort für"
-#TPL_EN_RESET_TEXT=""
-#TPL_EN_RESET_CLICK_LINK="Klicken Sie auf den unten stehenden Link um ein neues Passwort zu setzen."
-#TPL_EN_RESET_VALIDITY="This link is only valid for a short period of time for security reasons."
-#TPL_EN_RESET_EXPIRES="Link expires:"
-#TPL_EN_RESET_BUTTON="Reset Password"
-#TPL_EN_RESET_FOOTER=""
+#TPL_EN_RESET_SUBJECT=&quot;Neues Passwort&quot;
+#TPL_EN_RESET_HEADER=&quot;Neues Passwort für&quot;
+#TPL_EN_RESET_TEXT=&quot;&quot;
+#TPL_EN_RESET_CLICK_LINK=&quot;Klicken Sie auf den unten stehenden Link um ein neues Passwort zu setzen.&quot;
+#TPL_EN_RESET_VALIDITY=&quot;This link is only valid for a short period of time for security reasons.&quot;
+#TPL_EN_RESET_EXPIRES=&quot;Link expires:&quot;
+#TPL_EN_RESET_BUTTON=&quot;Reset Password&quot;
+#TPL_EN_RESET_FOOTER=&quot;&quot;
 
-#TPL_DE_RESET_SUBJECT="Passwort Reset angefordert"
-#TPL_DE_RESET_HEADER="Passwort Reset angefordert für"
-#TPL_DE_RESET_TEXT=""
-#TPL_DE_RESET_CLICK_LINK="Klicken Sie auf den unten stehenden Link für den Passwort Reset."
-#TPL_DE_RESET_VALIDITY="Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
-#TPL_DE_RESET_EXPIRES="Link gültig bis:"
-#TPL_DE_RESET_BUTTON="Passwort Zurücksetzen"
-#TPL_DE_RESET_FOOTER=""
+#TPL_DE_RESET_SUBJECT=&quot;Passwort Reset angefordert&quot;
+#TPL_DE_RESET_HEADER=&quot;Passwort Reset angefordert für&quot;
+#TPL_DE_RESET_TEXT=&quot;&quot;
+#TPL_DE_RESET_CLICK_LINK=&quot;Klicken Sie auf den unten stehenden Link für den Passwort Reset.&quot;
+#TPL_DE_RESET_VALIDITY=&quot;Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig.&quot;
+#TPL_DE_RESET_EXPIRES=&quot;Link gültig bis:&quot;
+#TPL_DE_RESET_BUTTON=&quot;Passwort Zurücksetzen&quot;
+#TPL_DE_RESET_FOOTER=&quot;&quot;
 
 #####################################
 ############### TLS #################
@@ -2399,7 +2398,7 @@ CACHE_TLS_CLIENT_VALIDATE_DOMAIN=redhac.local
 # Can be used if you need to overwrite the SNI when the
 # client connects to the server, for instance if you are
 # behind a loadbalancer which combines multiple certificates.
-# default: ""
+# default: &quot;&quot;
 #CACHE_TLS_SNI_OVERWRITE=
 
 #####################################

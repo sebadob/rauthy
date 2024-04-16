@@ -6,7 +6,8 @@ Rauthy includes a Template for Github already, which makes this whole process pr
 ## Create an OAuth App
 
 1. Log in to your Github account
-2. Navigate to `Settings -> Developer Settings -> OAuth Apps -> Register a new application`
+2. Navigate to
+   [Settings -> Developer Settings -> OAuth Apps -> Register a new application](https://github.com/settings/applications/new)
 3. Provide any name for your application. This is not important for the flow, only for your users to recognize
 4. Homepage URL should be the URL of your Rauthy deployment
 5. `Authorization callback URL` is the only really important one here. For instance, if your Rauthy instance would live
