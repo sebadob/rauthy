@@ -89,11 +89,9 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html" class="active"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">10.</strong> Reference Config</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html" class="active"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">10.</strong> Authentication Propviders</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html"><strong aria-hidden="true">10.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">11.</strong> Reference Config</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
-                <div class="sidebar-resize-indicator"></div>
-            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -264,12 +262,12 @@ CACHE_TLS_CA_CLIENT=tls/ca-chain.pem
 CACHE_TLS_CLIENT_VALIDATE_DOMAIN=redhac.local
 
 # Can be used, if you need to overwrite the SNI when the client connects to the server, for instance if you are behind
-# a loadbalancer which combines multiple certificates. (default: "")
+# a loadbalancer which combines multiple certificates. (default: &quot;&quot;)
 #CACHE_TLS_SNI_OVERWRITE=
 </code></pre>
 <h3 id="server"><a class="header" href="#server">Server</a></h3>
 <p>The TLS configuration for the REST API is much simpler.<br />
-By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and <code>/app/tls/tls.crt</code>, which is the
+By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and <code>/app/tls/tls.crt</code>, which is the 
 default naming for a Kubernetes TLS secret. The expected format is PEM, but you could provide the key in DER format too,
 if you rename the file-ending to <code>*.der</code>.</p>
 <p>You can change the default path for the files with the config variables <code>TLS_CERT</code> and <code>TLS_KEY</code>.</p>
@@ -277,10 +275,10 @@ if you rename the file-ending to <code>*.der</code>.</p>
 <p>If you did not follow the above procedure to generate the CA and certificates, you may need to rename the files in the
 following command, to create the Kubernetes secrets.</p>
 <p><strong>Secrets - REST API</strong></p>
-<pre><code>kubectl -n rauthy create secret tls rauthy-tls --key="key.pem" --cert="cert-chain.pem"
+<pre><code>kubectl -n rauthy create secret tls rauthy-tls --key=&quot;key.pem&quot; --cert=&quot;cert-chain.pem&quot;
 </code></pre>
 <p><strong>Secrets - <code>redhac</code> cache</strong></p>
-<pre><code>kubectl -n rauthy create secret tls redhac-tls-server --key="key.pem" --cert="cert-chain.pem" &amp;&amp; \
+<pre><code>kubectl -n rauthy create secret tls redhac-tls-server --key=&quot;key.pem&quot; --cert=&quot;cert-chain.pem&quot; &amp;&amp; \
 kubectl -n rauthy create secret generic redhac-server-ca --from-file ca-chain.pem
 </code></pre>
 <div id="admonition-note" class="admonition admonish-note">
@@ -342,7 +340,7 @@ kubectl apply -f sts.yaml
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../config/config.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../auth_providers/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -356,7 +354,7 @@ kubectl apply -f sts.yaml
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../config/config.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../auth_providers/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

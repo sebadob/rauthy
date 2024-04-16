@@ -89,11 +89,9 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html" class="active"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">10.</strong> Reference Config</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html" class="active"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">10.</strong> Authentication Propviders</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html"><strong aria-hidden="true">10.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">11.</strong> Reference Config</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
-                <div class="sidebar-resize-indicator"></div>
-            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -197,7 +195,7 @@ If this is not the case for you, change the following commands accordingly.</p>
 <pre><code>mkdir rauthy &amp;&amp; cd rauthy
 </code></pre>
 <p>Create the config file, paste the <a href="../config/config.html">reference config</a> and adjust it to your needs.<br />
-There is no "nice 1-liner" available yet.</p>
+There is no &quot;nice 1-liner&quot; available yet.</p>
 <pre><code>echo 'apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -241,7 +239,7 @@ data:
   # Postgres: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
   DATABASE_URL: 
     
-  # Format: "key_id/enc_key another_key_id/another_enc_key" - the enc_key itself must be exactly 32 characters long and
+  # Format: &quot;key_id/enc_key another_key_id/another_enc_key&quot; - the enc_key itself must be exactly 32 characters long and
   # and should not contain special characters.
   # The ID must match '[a-zA-Z0-9]{2,20}'
   ENC_KEYS:
@@ -258,7 +256,7 @@ create it as a secret anyway to have an easier optional migration to postgres la
 <pre><code>echo 'sqlite:data/rauthy.db' | base64
 </code></pre>
 <p>Generate a new encryption key with ID in the correct format.</p>
-<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)"  | base64
+<pre><code>echo &quot;$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)&quot;  | base64
 </code></pre>
 <p>Paste the base64 String in the secrets for <code>ENC_KEYS</code>.<br />
 To extract the <code>ENC_KEY_ID</code>, which needs to be added to the config from Step 2:</p>
@@ -386,7 +384,7 @@ spec:
               # pods request at least:
               # `ARGON2_M_COST` / 1024 * `MAX_HASH_THREADS` Mi
               # With SQLite: for small deployments, add additional ~20-30Mi for
-              # "the rest", for larger ones ~50-70 Mi should be enough.
+              # &quot;the rest&quot;, for larger ones ~50-70 Mi should be enough.
               memory: 64Mi
               # The CPU needs to be adjusted during runtime. This heavily
               # depends on your use case.
@@ -413,7 +411,7 @@ spec:
         name: rauthy-data
       spec:
         accessModes:
-          - "ReadWriteOnce"
+          - &quot;ReadWriteOnce&quot;
         resources:
           requests:
             storage: 128Mi
