@@ -37,12 +37,12 @@ impl DbVersion {
             };
             let data = bincode::serialize(&slf)?;
 
-            #[cfg(feature = "sqlite")]
+            #[cfg(not(feature = "postgres"))]
             let q = query!(
                 "insert or replace into config (id, data) values ('db_version', $1)",
                 data,
             );
-            #[cfg(not(feature = "sqlite"))]
+            #[cfg(feature = "postgres")]
             let q = query!(
                 r#"insert into config (id, data) values ('db_version', $1)
                 on conflict(id) do update set data = $1"#,
@@ -132,12 +132,12 @@ impl DbVersion {
         // which is already checked above
 
         // the passkeys table was introduced with v0.15.0
-        #[cfg(not(feature = "sqlite"))]
+        #[cfg(feature = "postgres")]
         let is_db_v0_15_0 = query!("select * from pg_tables where tablename = 'passkeys' limit 1")
             .fetch_one(db)
             .await
             .is_err();
-        #[cfg(feature = "sqlite")]
+        #[cfg(not(feature = "postgres"))]
         let is_db_v0_15_0 = query!(
             "select * from sqlite_master where type = 'table' and name = 'passkeys' limit 1"
         )
@@ -153,13 +153,13 @@ impl DbVersion {
 
         // To check for any DB older than 0.15.0, we check for the existence of the 'clients' table
         // which is there since the very beginning.
-        #[cfg(not(feature = "sqlite"))]
+        #[cfg(feature = "postgres")]
         let is_db_pre_v0_15_0 =
             query!("select * from pg_tables where tablename = 'clients' limit 1")
                 .fetch_one(db)
                 .await
                 .is_err();
-        #[cfg(feature = "sqlite")]
+        #[cfg(not(feature = "postgres"))]
         let is_db_pre_v0_15_0 =
             query!("select * from sqlite_master where type = 'table' and name = 'clients' limit 1")
                 .fetch_one(db)

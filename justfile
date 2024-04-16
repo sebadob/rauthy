@@ -92,12 +92,12 @@ pull-latest-cross:
 
 
 # clippy with sqlite features
-clippy:
+clippy ty="sqlite":
     #!/usr/bin/env bash
     set -euxo pipefail
 
     clear
-    cargo clippy --features sqlite
+    cargo clippy
 
 
 # clippy with postgres features
@@ -106,7 +106,7 @@ clippy-postgres:
     set -euxo pipefail
 
     clear
-    DATABASE_URL=$DB_URL_POSTGRES cargo clippy
+    DATABASE_URL=$DB_URL_POSTGRES cargo clippy --features postgres
 
 
 # re-create and migrate the sqlite database with sqlx
@@ -135,14 +135,12 @@ run ty="sqlite":
     clear
 
     if [[ {{ty}} == "postgres" ]]; then
-      DATABASE_URL=$DB_URL_POSTGRES cargo run
+      DATABASE_URL=$DB_URL_POSTGRES cargo run --features postgres
     elif [[ {{ty}} == "ui" ]]; then
       cd frontend
       npm run dev -- --host
     elif [[ {{ty}} == "sqlite" ]]; then
-      cargo run --features sqlite
-    else
-      echo "specifiy either nothing (sqlite), ui, por postgres"
+      cargo run
     fi
 
 
@@ -154,12 +152,12 @@ version:
 
 # prepare DB migrations for SQLite for compile-time checked queries
 prepare: migrate
-    cargo sqlx prepare --workspace -- --features sqlite
+    cargo sqlx prepare --workspace
 
 
 # prepare DB migrations for Postgres for compile-time checked queries
 prepare-postgres: migrate-postgres
-    DATABASE_URL=$DB_URL_POSTGRES cargo sqlx prepare --workspace
+    DATABASE_URL=$DB_URL_POSTGRES cargo sqlx prepare --workspace -- --features postgres
 
 
 # only starts the backend in test mode with sqlite database for easier test debugging
@@ -168,7 +166,7 @@ test-backend: migrate prepare
     set -euxo pipefail
     clear
 
-    cargo build --features sqlite
+    cargo build
     ./target/debug/rauthy test
 
 
@@ -192,7 +190,7 @@ test test="":
     set -euxo pipefail
     clear
 
-    cargo test --features sqlite {{test}}
+    cargo test {{test}}
 
 
 # runs the full set of tests with in-memory sqlite
@@ -201,16 +199,14 @@ test-full test="": test-backend-stop migrate prepare
     set -euxo pipefail
     clear
 
-    cargo build --features sqlite
+    cargo build
     ./target/debug/rauthy test &
-    #just migrate-sqlite && DATABASE_URL=sqlite:data/rauthy.db cargo run --features sqlite test
-    #cargo test --features sqlite test_userinfo
     sleep 1
     PID=$(echo "$!")
     echo $PID > {{test_pid_file}}
     echo "PID: $PID"
 
-    cargo test --features sqlite {{test}}
+    cargo test {{test}}
     kill "$PID"
     echo All tests successful
 
@@ -221,14 +217,14 @@ test-postgres test="": test-backend-stop migrate-postgres prepare-postgres
     set -euxo pipefail
     clear
 
-    DATABASE_URL=$DB_URL_POSTGRES cargo build
+    DATABASE_URL=$DB_URL_POSTGRES cargo build --features postgres
     DATABASE_URL=$DB_URL_POSTGRES ./target/debug/rauthy test &
     sleep 1
     PID=$(echo "$!")
     echo $PID > {{test_pid_file}}
     echo "PID: $PID"
 
-    DATABASE_URL=$DB_URL_POSTGRES cargo test
+    DATABASE_URL=$DB_URL_POSTGRES cargo test --features postgres {{test}}
     kill "$PID"
     echo All tests successful
 
@@ -312,12 +308,12 @@ build: test-full
 
     cargo clean
 
-    cargo clippy --features sqlite -- -D warnings
-    cross build --release --target x86_64-unknown-linux-musl --features sqlite
+    cargo clippy -- -D warnings
+    cross build --release --target x86_64-unknown-linux-musl
     cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-amd64
 
     cargo clean
-    cross build --release --target aarch64-unknown-linux-musl --features sqlite
+    cross build --release --target aarch64-unknown-linux-musl
     cp target/aarch64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-arm64
 
 
@@ -328,12 +324,12 @@ build-postgres: test-postgres
 
     cargo clean
 
-    cargo clippy -- -D warnings
-    cross build --release --target x86_64-unknown-linux-musl
+    cargo clippy --features postgres -- -D warnings
+    cross build --release --target x86_64-unknown-linux-musl --features postgres
     cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-postgres-amd64
 
     cargo clean
-    cross build --release --target aarch64-unknown-linux-musl
+    cross build --release --target aarch64-unknown-linux-musl --features postgres
     cp target/aarch64-unknown-linux-musl/release/rauthy out/rauthy-postgres-arm64
 
 

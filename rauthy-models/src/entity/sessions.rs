@@ -242,7 +242,7 @@ impl Session {
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         let state_str = self.state.as_str();
 
-        #[cfg(feature = "sqlite")]
+        #[cfg(not(feature = "postgres"))]
         let q = sqlx::query!(
             r#"insert or replace into
             sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen, remote_ip)
@@ -259,7 +259,7 @@ impl Session {
             self.remote_ip,
         );
 
-        #[cfg(not(feature = "sqlite"))]
+        #[cfg(feature = "postgres")]
         let q = sqlx::query!(
             r#"insert into
             sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen, remote_ip)

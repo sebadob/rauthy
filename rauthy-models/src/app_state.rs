@@ -24,14 +24,14 @@ use tracing::{debug, error, info, warn};
 use webauthn_rs::prelude::Url;
 use webauthn_rs::Webauthn;
 
-#[cfg(not(feature = "sqlite"))]
+#[cfg(feature = "postgres")]
 pub type DbPool = sqlx::PgPool;
-#[cfg(feature = "sqlite")]
+#[cfg(not(feature = "postgres"))]
 pub type DbPool = sqlx::SqlitePool;
 
-#[cfg(not(feature = "sqlite"))]
+#[cfg(feature = "postgres")]
 pub type DbTxn<'a> = sqlx::Transaction<'a, sqlx::Postgres>;
-#[cfg(feature = "sqlite")]
+#[cfg(not(feature = "postgres"))]
 pub type DbTxn<'a> = sqlx::Transaction<'a, sqlx::Sqlite>;
 
 #[derive(Debug, Clone)]
@@ -196,7 +196,7 @@ impl AppState {
             .parse::<u32>()
             .expect("Error parsing DATABASE_MAX_CONN to u32");
 
-        #[cfg(not(feature = "sqlite"))]
+        #[cfg(feature = "postgres")]
         let pool = {
             if *DB_TYPE == DbType::Sqlite {
                 let msg = r#"
@@ -216,7 +216,7 @@ impl AppState {
             pool
         };
 
-        #[cfg(feature = "sqlite")]
+        #[cfg(not(feature = "postgres"))]
         let pool = {
             if *DB_TYPE == DbType::Postgres {
                 let msg = r#"

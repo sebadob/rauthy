@@ -11,10 +11,10 @@ use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_AUTH_PROVIDER_CALLBACK,
     CACHE_NAME_CLIENTS_DYN, CACHE_NAME_DPOP_NONCES, CACHE_NAME_EPHEMERAL_CLIENTS,
     CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW, CACHE_NAME_SESSIONS, CACHE_NAME_USERS,
-    CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, DEV_MODE, DPOP_NONCE_EXP,
-    DYN_CLIENT_RATE_LIMIT_SEC, DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG, ENABLE_WEB_ID,
-    EPHEMERAL_CLIENTS_CACHE_LIFETIME, POW_EXP, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL,
-    SWAGGER_UI_INTERNAL, UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
+    CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, DPOP_NONCE_EXP, DYN_CLIENT_RATE_LIMIT_SEC,
+    DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG, ENABLE_WEB_ID, EPHEMERAL_CLIENTS_CACHE_LIFETIME,
+    POW_EXP, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
+    UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::password_hasher;
 use rauthy_handlers::middleware::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -82,9 +82,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     } else {
         dotenvy::from_filename("rauthy.cfg").expect("'rauthy.cfg' error");
         dotenvy::dotenv().ok();
-        #[cfg(not(feature = "sqlite"))]
+        #[cfg(feature = "postgres")]
         {
-            if *DEV_MODE {
+            if *rauthy_common::constants::DEV_MODE {
                 // In this case, we want to set the `DATABASE_URL` programmatically.
                 // It seems a bit silly at first, but it makes it possible to have a
                 // default for SQLite in the config to not make the LSP freak out, while

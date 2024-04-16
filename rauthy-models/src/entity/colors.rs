@@ -79,13 +79,13 @@ impl ColorEntity {
         let cols = Colors::from(req);
         let col_bytes = cols.as_bytes();
 
-        #[cfg(feature = "sqlite")]
+        #[cfg(not(feature = "postgres"))]
         let q = sqlx::query!(
             "insert or replace into colors (client_id, data) values ($1, $2)",
             client_id,
             col_bytes,
         );
-        #[cfg(not(feature = "sqlite"))]
+        #[cfg(feature = "postgres")]
         let q = sqlx::query!(
             r#"insert into colors (client_id, data) values ($1, $2)
                 on conflict(client_id) do update set data = $2"#,
