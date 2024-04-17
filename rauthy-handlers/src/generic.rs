@@ -5,7 +5,8 @@ use actix_web::web::Json;
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
 use cryptr::EncKeys;
 use rauthy_common::constants::{
-    APPLICATION_JSON, CACHE_NAME_LOGIN_DELAY, HEADER_HTML, IDX_LOGIN_TIME, RAUTHY_VERSION,
+    APPLICATION_JSON, CACHE_NAME_LOGIN_DELAY, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML,
+    IDX_LOGIN_TIME, RAUTHY_VERSION,
 };
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::real_ip_from_req;
@@ -517,9 +518,10 @@ pub async fn ping() -> impl Responder {
 )]
 #[get("/pow")]
 pub async fn get_pow(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
-    // TODO request at least a session in init state or something like that?
     let pow = PowEntity::create(&data).await?;
-    Ok(HttpResponse::Ok().body(pow.to_string()))
+    Ok(HttpResponse::Ok()
+        .insert_header(HEADER_ALLOW_ALL_ORIGINS)
+        .body(pow.to_string()))
 }
 
 /// Updates the language for the logged in principal depending on the `locale` cookie
