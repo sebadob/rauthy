@@ -76,12 +76,12 @@ impl LatestAppVersion {
         };
         let data = bincode::serialize(&slf)?;
 
-        #[cfg(feature = "sqlite")]
+        #[cfg(not(feature = "postgres"))]
         let q = query!(
             "insert or replace into config (id, data) values ('latest_version', $1)",
             data,
         );
-        #[cfg(not(feature = "sqlite"))]
+        #[cfg(feature = "postgres")]
         let q = query!(
             r#"insert into config (id, data) values ('latest_version', $1)
             on conflict(id) do update set data = $1"#,

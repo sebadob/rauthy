@@ -71,14 +71,14 @@ impl WebId {
     }
 
     pub async fn upsert(data: &web::Data<AppState>, web_id: WebId) -> Result<(), ErrorResponse> {
-        #[cfg(feature = "sqlite")]
+        #[cfg(not(feature = "postgres"))]
         let q = query!(
             "INSERT OR REPLACE INTO webids (user_id, custom_triples, expose_email) VALUES ($1, $2, $3)",
             web_id.user_id,
             web_id.custom_triples,
             web_id.expose_email,
         );
-        #[cfg(not(feature = "sqlite"))]
+        #[cfg(feature = "postgres")]
         let q = query!(
             r#"INSERT INTO webids (user_id, custom_triples, expose_email) VALUES ($1, $2, $3)
             ON CONFLICT(user_id) DO UPDATE SET custom_triples = $2, expose_email = $3"#,

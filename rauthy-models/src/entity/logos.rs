@@ -289,7 +289,7 @@ impl Logo {
         let res = self.res.as_str();
 
         // SVGs don't have a resolution -> just save one version
-        #[cfg(feature = "sqlite")]
+        #[cfg(not(feature = "postgres"))]
         match typ {
             LogoType::Client => {
                 query!(
@@ -317,7 +317,7 @@ impl Logo {
         .execute(&data.db)
         .await?;
 
-        #[cfg(not(feature = "sqlite"))]
+        #[cfg(feature = "postgres")]
         match typ {
             LogoType::Client => {
                 query!(

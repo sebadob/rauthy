@@ -101,7 +101,7 @@ impl RefreshToken {
     }
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        #[cfg(feature = "sqlite")]
+        #[cfg(not(feature = "postgres"))]
         let q = sqlx::query!(
             r#"insert or replace into refresh_tokens (id, user_id, nbf, exp, scope, is_mfa)
                 values ($1, $2, $3, $4, $5, $6)"#,
@@ -112,7 +112,7 @@ impl RefreshToken {
             self.scope,
             self.is_mfa,
         );
-        #[cfg(not(feature = "sqlite"))]
+        #[cfg(feature = "postgres")]
         let q = sqlx::query!(
             r#"insert into refresh_tokens (id, user_id, nbf, exp, scope, is_mfa)
                 values ($1, $2, $3, $4, $5, $6)

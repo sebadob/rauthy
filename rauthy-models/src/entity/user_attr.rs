@@ -35,14 +35,14 @@ impl UserAttrConfigEntity {
             ));
         }
 
-        #[cfg(feature = "sqlite")]
+        #[cfg(not(feature = "postgres"))]
         let q = sqlx::query!(
             "insert into user_attr_config (name, desc) values ($1, $2)",
             new_attr.name,
             new_attr.desc,
         );
 
-        #[cfg(not(feature = "sqlite"))]
+        #[cfg(feature = "postgres")]
         let q = sqlx::query!(
             "insert into user_attr_config (name, \"desc\") values ($1, $2)",
             new_attr.name,
@@ -243,7 +243,7 @@ impl UserAttrConfigEntity {
 
         let mut txn = data.db.begin().await?;
 
-        #[cfg(feature = "sqlite")]
+        #[cfg(not(feature = "postgres"))]
         let q = sqlx::query!(
             "update user_attr_config set name  = $1, desc = $2 where name = $3",
             slf.name,
@@ -251,7 +251,7 @@ impl UserAttrConfigEntity {
             name,
         );
 
-        #[cfg(not(feature = "sqlite"))]
+        #[cfg(feature = "postgres")]
         let q = sqlx::query!(
             "update user_attr_config set name  = $1, \"desc\" = $2 where name = $3",
             slf.name,
@@ -470,7 +470,7 @@ impl UserAttrValueEntity {
             } else {
                 let v = serde_json::to_vec(&value.value).unwrap();
 
-                #[cfg(feature = "sqlite")]
+                #[cfg(not(feature = "postgres"))]
                 let q = sqlx::query!(
                     r#"insert or replace into user_attr_values (user_id, key, value)
                     values ($1, $2, $3)"#,
@@ -479,7 +479,7 @@ impl UserAttrValueEntity {
                     v,
                 );
 
-                #[cfg(not(feature = "sqlite"))]
+                #[cfg(feature = "postgres")]
                 let q = sqlx::query!(
                     r#"insert into user_attr_values (user_id, key, value)
                     values ($1, $2, $3)

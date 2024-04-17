@@ -10,7 +10,8 @@ license.workspace = true
 doctest = false
 
 [features]
-sqlite = []
+default = []
+postgres = []
 
 [dependencies]
 accept-language = { workspace = true }

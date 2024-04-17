@@ -58,7 +58,7 @@ impl UserValues {
         user_id: String,
         values: UserValuesRequest,
     ) -> Result<Option<Self>, ErrorResponse> {
-        #[cfg(feature = "sqlite")]
+        #[cfg(not(feature = "postgres"))]
         let q = sqlx::query!(
             r#"INSERT OR REPLACE INTO
                 users_values (id, birthdate, phone, street, zip, city, country)
@@ -71,7 +71,7 @@ impl UserValues {
             values.city,
             values.country,
         );
-        #[cfg(not(feature = "sqlite"))]
+        #[cfg(feature = "postgres")]
         let q = sqlx::query!(
             r#"INSERT INTO
                 users_values (id, birthdate, phone, street, zip, city, country)
