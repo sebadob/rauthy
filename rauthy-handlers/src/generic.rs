@@ -509,15 +509,15 @@ pub async fn ping() -> impl Responder {
 
 /// Request a Proof-of-Work Challenge
 #[utoipa::path(
-    get,
+    post,
     path = "/pow",
     tag = "generic",
     responses(
         (status = 200, description = "Ok"),
     ),
 )]
-#[get("/pow")]
-pub async fn get_pow(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+#[post("/pow")]
+pub async fn post_pow(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
     let pow = PowEntity::create(&data).await?;
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
