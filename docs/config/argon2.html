@@ -91,7 +91,9 @@
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html" class="active"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">10.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html"><strong aria-hidden="true">10.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">11.</strong> Reference Config</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -179,7 +181,7 @@ anyway.</p>
 beging done by the application and the variables need to be tuned for every deployment to provide the best compromise
 of security, resource usage and user experience.<br />
 The default values are way too low for a real production deployment. They should only be used for testing.</p>
-<p>The Admin UI provides a utility which helps you find the values for your deployment quickly. What and how to do is 
+<p>The Admin UI provides a utility which helps you find the values for your deployment quickly. What and how to do is
 described in the Admin UI itself, I just want to guide you to this utility especially, since it is an important step
 security wise.</p>
 <p>When you are logged in to the Admin UI, please navigate to <code>Config</code> -&gt; <code>Argon2 Parameters</code> to find your values.<br />
@@ -188,11 +190,11 @@ Keep in mind, that if you run the application in a way, where memory is limited,
 resource limits set too low, that it will crash, if either <code>ARGON2_M_COST</code> is set too high or the memory limit too low.</p>
 <p>There is one additional, really important config variable need to be taken into account for the tuning.<br />
 Since this operation is really ressource intense, you can limit the amount of threads, which can run in parallel doing
-hashing operations. This is really important when we think about constrained memory again. </p>
+hashing operations. This is really important when we think about constrained memory again.</p>
 <p><code>MAX_HASH_THREADS</code> limits the maximum amount of parallel password hashes at the exact same time to never exceed system
 memory while still allowing a good amount of memory.<br />
 The <strong>default</strong> value <strong>is 2</strong>.</p>
-<p>The rule is simple: Allow as many resources as possible for hashing to have the maximum amount of security, while 
+<p>The rule is simple: Allow as many resources as possible for hashing to have the maximum amount of security, while
 restricting it as much as necessary.</p>
 <p>For smaller deployments, set <code>MAX_HASH_THREADS=1</code>, which will technically allows only one user login at the exact same
 time. This value makes an external rate limiting for the login obsolete (while you may add some for the others).</p>
