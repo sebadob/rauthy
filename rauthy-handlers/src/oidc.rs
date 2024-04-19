@@ -4,7 +4,11 @@ use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::{header, StatusCode};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError};
 use chrono::Utc;
-use rauthy_common::constants::{APPLICATION_JSON, COOKIE_MFA, HEADER_HTML, SESSION_LIFETIME};
+use rauthy_common::constants::{
+    APPLICATION_JSON, AUTH_HEADERS_ENABLE, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED,
+    AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
+    AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, HEADER_HTML, SESSION_LIFETIME,
+};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_models::app_state::AppState;
@@ -675,6 +679,64 @@ pub async fn get_userinfo(
     auth::get_userinfo(&data, req)
         .await
         .map(|u| HttpResponse::Ok().json(u))
+}
+
+/// GET forward authentication
+///
+/// This endpoint is very similar to the `/userinfo`, but instead of returning information about
+/// the user inside the body, information is added to the headers with an empty body.
+/// This makes it possible to use this endpoint in combination with a reverse proxy and can be used
+/// for authn/authz on downstream applications via Headers.
+///
+/// However, header based authentication as a lot of pitfalls outside the scope of Rauthy and
+/// you should only use it, if your downstream apps do not support OIDC natively, and you have no
+/// other choice.
+///
+/// Even though forward auth can be used to check general authentication / access to an application,
+/// it can never implement a really secure, proper way to mitigate potential CSRF Attacks. This is
+/// something, that the downstream application would have to manage.
+#[utoipa::path(
+    get,
+    path = "/oidc/forward_auth",
+    tag = "oidc",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+    ),
+)]
+#[get("/oidc/forward_auth")]
+pub async fn get_forward_auth(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    let info = auth::get_userinfo(&data, req).await?;
+
+    if *AUTH_HEADERS_ENABLE {
+        Ok(HttpResponse::Ok()
+            .insert_header((AUTH_HEADER_USER.as_str(), info.id))
+            .insert_header((AUTH_HEADER_ROLES.as_str(), info.roles.join(",")))
+            .insert_header((
+                AUTH_HEADER_GROUPS.as_str(),
+                info.groups.map(|g| g.join(",")).unwrap_or_default(),
+            ))
+            .insert_header((AUTH_HEADER_EMAIL.as_str(), info.email.unwrap_or_default()))
+            .insert_header((
+                AUTH_HEADER_EMAIL_VERIFIED.as_str(),
+                info.email_verified.unwrap_or(false).to_string(),
+            ))
+            .insert_header((
+                AUTH_HEADER_FAMILY_NAME.as_str(),
+                info.family_name.unwrap_or_default(),
+            ))
+            .insert_header((
+                AUTH_HEADER_GIVEN_NAME.as_str(),
+                info.given_name.unwrap_or_default(),
+            ))
+            .insert_header((AUTH_HEADER_MFA.as_str(), info.mfa_enabled.to_string()))
+            .finish())
+    } else {
+        Ok(HttpResponse::Ok().finish())
+    }
 }
 
 /// The `.well-known` endpoint for OIDC Client auto discovery.
