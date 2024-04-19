@@ -90,6 +90,7 @@ use utoipa::{openapi, OpenApi};
         oidc::post_token_info,
         oidc::post_validate_token,
         oidc::get_userinfo,
+        oidc::get_forward_auth,
         oidc::get_well_known,
 
         roles::get_roles,
