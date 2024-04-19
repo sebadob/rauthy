@@ -120,6 +120,27 @@ lazy_static! {
     pub static ref RE_TOKEN_68: Regex = Regex::new(r"^[a-zA-Z0-9-._~+/]+=*$").unwrap();
     pub static ref RE_TOKEN_ENDPOINT_AUTH_METHOD: Regex = Regex::new(r"^(client_secret_post|client_secret_basic|none)$").unwrap();
 
+    pub static ref AUTH_HEADERS_ENABLE: bool = env::var("AUTH_HEADERS_ENABLE")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("Cannot parse AUTH_HEADERS_ENABLE to bool");
+    pub static ref AUTH_HEADER_USER: String = env::var("AUTH_HEADER_USER")
+        .unwrap_or_else(|_| String::from("x-forwarded-user"));
+    pub static ref AUTH_HEADER_ROLES: String = env::var("AUTH_HEADER_ROLES")
+        .unwrap_or_else(|_| String::from("x-forwarded-user-roles"));
+    pub static ref AUTH_HEADER_GROUPS: String = env::var("AUTH_HEADER_GROUPS")
+        .unwrap_or_else(|_| String::from("x-forwarded-user-groups"));
+    pub static ref AUTH_HEADER_EMAIL: String = env::var("AUTH_HEADER_EMAIL")
+        .unwrap_or_else(|_| String::from("x-forwarded-user-email"));
+    pub static ref AUTH_HEADER_EMAIL_VERIFIED: String = env::var("AUTH_HEADER_EMAIL_VERIFIED")
+        .unwrap_or_else(|_| String::from("x-forwarded-user-email-verified"));
+    pub static ref AUTH_HEADER_FAMILY_NAME: String = env::var("AUTH_HEADER_FAMILY_NAME")
+        .unwrap_or_else(|_| String::from("x-forwarded-user-family-name"));
+    pub static ref AUTH_HEADER_GIVEN_NAME: String = env::var("AUTH_HEADER_GIVEN_NAME")
+        .unwrap_or_else(|_| String::from("x-forwarded-user-given-name"));
+    pub static ref AUTH_HEADER_MFA: String = env::var("AUTH_HEADER_MFA")
+        .unwrap_or_else(|_| String::from("x-forwarded-user-mfa"));
+
     pub static ref PUB_URL: String = env::var("PUB_URL").expect("PUB_URL env var is not set");
     pub static ref PUB_URL_WITH_SCHEME: String = {
         let scheme = if env::var("LISTEN_SCHEME").as_deref() == Ok("http") && !*PROXY_MODE {
@@ -153,7 +174,7 @@ lazy_static! {
     pub static ref DPOP_FORCE_NONCE: bool = env::var("DPOP_NONCE_FORCE")
         .unwrap_or_else(|_| String::from("true"))
         .parse::<bool>()
-        .unwrap_or(true);
+        .expect("Cannot parse DPOP_FORCE_NONCE to bool");
 
     pub static ref ENABLE_DYN_CLIENT_REG: bool = env::var("ENABLE_DYN_CLIENT_REG")
         .unwrap_or_else(|_| String::from("false"))

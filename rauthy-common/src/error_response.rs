@@ -2,9 +2,10 @@ use crate::constants::{APPLICATION_JSON, HEADER_DPOP_NONCE, HEADER_HTML, HEADER_
 use actix_multipart::MultipartError;
 use actix_web::error::BlockingError;
 use actix_web::http::header::{
-    ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS, WWW_AUTHENTICATE,
+    InvalidHeaderValue, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS,
+    WWW_AUTHENTICATE,
 };
-use actix_web::http::StatusCode;
+use actix_web::http::{header, StatusCode};
 use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
 use cryptr::CryptrError;
 use css_color::ParseColorError;
@@ -419,6 +420,15 @@ impl From<actix_web::http::header::ToStrError> for ErrorResponse {
                 "Request headers contained non ASCII characters: {:?}",
                 value
             ),
+        )
+    }
+}
+
+impl From<header::InvalidHeaderValue> for ErrorResponse {
+    fn from(value: InvalidHeaderValue) -> Self {
+        ErrorResponse::new(
+            ErrorResponseType::Internal,
+            format!("Cannot convert to HeaderValue: {:?}", value),
         )
     }
 }
