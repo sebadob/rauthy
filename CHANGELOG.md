@@ -1,5 +1,53 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### Dedicated `/forward_auth` + Trusted Authn/Authz Headers
+
+In addition to the `/userinfo` endpoint specified in the OIDC spec, Rauthy implements an additional endpoint
+specifically for ForwardAuth situations. You can find it at `/auth/v1/oidc/forward_auth` and it can be configured
+to append optional Trusted Header with User Information for downstream applications, that do not support OIDC
+on their own.
+
+The HeaderNames can be configured to match your environment.
+Please keep in mind, that you should only use these, if you legacy application does not support OIDC natively,
+because Auth Headers come with a lot of pitfalls, when your environment is not configured properly.
+
+```
+# You can enable authn/authz headers which would be added to the response
+# of the `/auth/v1/forward_auth` endpoint. With  `AUTH_HEADERS_ENABLE=true`,
+# the headers below will be added to authenticated requests. These could
+# be used on legacy downstream applications, that don't support OIDC on
+# their own.
+# However, be careful when using this, since this kind of authn/authz has
+# a lot of pitfalls out of the scope of Rauthy.
+AUTH_HEADERS_ENABLE=true
+
+# Configure the header names being used for the different values.
+# You can change them to your needs, if you cannot easily change your
+# downstream apps.
+# default: x-forwarded-user
+AUTH_HEADER_USER=x-forwarded-user
+# default: x-forwarded-user-roles
+AUTH_HEADER_ROLES=x-forwarded-user-roles
+# default: x-forwarded-user-groups
+AUTH_HEADER_GROUPS=x-forwarded-user-groups
+# default: x-forwarded-user-email
+AUTH_HEADER_EMAIL=x-forwarded-user-email
+# default: x-forwarded-user-email-verified
+AUTH_HEADER_EMAIL_VERIFIED=x-forwarded-user-email-verified
+# default: x-forwarded-user-family-name
+AUTH_HEADER_FAMILY_NAME=x-forwarded-user-family-name
+# default: x-forwarded-user-given-name
+AUTH_HEADER_GIVEN_NAME=x-forwarded-user-given-name
+# default: x-forwarded-user-mfa
+AUTH_HEADER_MFA=x-forwarded-user-mfa
+```
+
+[7d5a44a](https://github.com/sebadob/rauthy/commit/7d5a44a2ff29ec87458c6bf6b979cc4750491391)
+
 ## v0.22.0
 
 ### Breaking
