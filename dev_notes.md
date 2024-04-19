@@ -8,6 +8,7 @@
 
 ## Stage 2 - features - do before v1.0.0
 
+- dedicated auth headers endpoint
 - update the book with all the new features
 - add `at_hash` claim to the ID token
 - remove `offline_access` everywhere, because its overhead to manage and not really beneficial with webauthn?
