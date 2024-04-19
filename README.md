@@ -105,6 +105,8 @@ Keycloak was a rough inspiration in certain places and if something is working w
 - [x] Custom user attributes
 - [x] User attribute binding to custom scopes
 - [x] Configurable password policy
+- [x] Dedicated `forward_auth` endpoint, in addition to the existing userinfo,
+  with support for configurable trusted auth headers
 - [x] Admin API Keys with fine-grained access rights
 - [x] Events and alerting system
 - [x] Optional event notifications via: E-Mail, Matrix, Slack
@@ -139,8 +141,6 @@ Keycloak was a rough inspiration in certain places and if something is working w
 
 This is a non-exhaustive list of currently open TODO's
 
-- [ ] Dedicated token verification endpoint (in addition to the existing userinfo) with support for
-  trusted auth headers
 - [ ] Benchmarks and Optimizations
 - [ ] Maybe get a nicer Rauthy Logo
 - [ ] experimental implementation of [dilithium](https://pq-crystals.org/dilithium/) singing algorithm to become quantum
