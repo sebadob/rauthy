@@ -726,6 +726,7 @@ pub async fn get_userinfo(
         sub: user.id.clone(),
         name: format!("{} {}", &user.given_name, &user.family_name),
         roles,
+        mfa_enabled: user.has_webauthn_enabled(),
 
         // scope: address
         address: None,

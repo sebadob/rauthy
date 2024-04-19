@@ -76,6 +76,35 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # set `CF-Connecting-IP`.
 PEER_IP_HEADER_NAME="CF-Connecting-IP"
 
+# You can enable authn/authz headers which would be added to the response
+# of the `/auth/v1/forward_auth` endpoint. With  `AUTH_HEADERS_ENABLE=true`,
+# the headers below will be added to authenticated requests. These could
+# be used on legacy downstream applications, that don't support OIDC on
+# their own.
+# However, be careful when using this, since this kind of authn/authz has
+# a lot of pitfalls out of the scope of Rauthy.
+AUTH_HEADERS_ENABLE=true
+
+# Configure the header names being used for the different values.
+# You can change them to your needs, if you cannot easily change your
+# downstream apps.
+# default: x-forwarded-user
+AUTH_HEADER_USER=x-forwarded-user
+# default: x-forwarded-user-roles
+AUTH_HEADER_ROLES=x-forwarded-user-roles
+# default: x-forwarded-user-groups
+AUTH_HEADER_GROUPS=x-forwarded-user-groups
+# default: x-forwarded-user-email
+AUTH_HEADER_EMAIL=x-forwarded-user-email
+# default: x-forwarded-user-email-verified
+AUTH_HEADER_EMAIL_VERIFIED=x-forwarded-user-email-verified
+# default: x-forwarded-user-family-name
+AUTH_HEADER_FAMILY_NAME=x-forwarded-user-family-name
+# default: x-forwarded-user-given-name
+AUTH_HEADER_GIVEN_NAME=x-forwarded-user-given-name
+# default: x-forwarded-user-mfa
+AUTH_HEADER_MFA=x-forwarded-user-mfa
+
 #####################################
 ############# BACKUPS ###############
 #####################################

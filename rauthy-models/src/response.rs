@@ -524,6 +524,7 @@ pub struct Userinfo {
     pub sub: String,
     pub name: String,
     pub roles: Vec<String>,
+    pub mfa_enabled: bool,
 
     // scope: address
     #[serde(skip_serializing_if = "Option::is_none")]

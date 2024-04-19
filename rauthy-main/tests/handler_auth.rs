@@ -13,6 +13,7 @@ use rauthy_common::constants::{
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_encode, get_rand};
 use rauthy_models::entity::dpop_proof::{DPoPClaims, DPoPHeader};
+use rauthy_models::entity::groups::Group;
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType, JWKS};
 use rauthy_models::request::{
     LoginRequest, TokenRequest, TokenValidationRequest, UpdateClientRequest,
@@ -20,6 +21,7 @@ use rauthy_models::request::{
 use rauthy_models::response::TokenInfo;
 use rauthy_models::JwtTokenType;
 use rauthy_service::token_set::TokenSet;
+use reqwest::header::AUTHORIZATION;
 use ring::digest;
 use std::error::Error;
 use std::fmt::Write;
@@ -851,6 +853,101 @@ fn serve_ephemeral_client() -> JoinHandle<()> {
                 .await
                 .expect("ephemeral client test http server to start") })
     })
+}
+
+#[tokio::test]
+async fn test_auth_headers() -> Result<(), Box<dyn Error>> {
+    let backend_url = get_backend_url();
+    let client = reqwest::Client::new();
+
+    let url = format!("{}/oidc/forward_auth", backend_url);
+
+    // make sure we get unauthorized without correct headers
+    let res = client.get(&url).send().await?;
+    assert_eq!(res.status(), 401);
+
+    // fetch a valid token and try again
+    let url_token = format!("{}/oidc/token", backend_url);
+    let body = TokenRequest {
+        grant_type: "password".to_string(),
+        code: None,
+        redirect_uri: None,
+        client_id: Some(CLIENT_ID.to_string()),
+        client_secret: Some(CLIENT_SECRET.to_string()),
+        code_verifier: None,
+        username: Some(USERNAME.to_string()),
+        password: Some(PASSWORD.to_string()),
+        refresh_token: None,
+    };
+    let res = client.post(&url_token).form(&body).send().await?;
+    assert!(res.status().is_success());
+    let ts = res.json::<TokenSet>().await?;
+
+    // authorized request should return Ok and auth headers
+    let res = client
+        .get(&url)
+        .header(AUTHORIZATION, format!("Bearer {}", ts.access_token))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let headers = res.headers();
+    println!("{:?}", headers);
+
+    let value = headers.get("x-forwarded-user").unwrap().to_str().unwrap();
+    assert_eq!(value, "m4PJ3TnyP32LA8hzY23deme3");
+
+    let value = headers
+        .get("x-forwarded-user-roles")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert_eq!(value, "rauthy_admin");
+
+    // the following values are either empty or default, because the init_admin simply
+    // does not have these set during login and we just make sure that the headers are there
+    let value = headers
+        .get("x-forwarded-user-groups")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert_eq!(value, "");
+
+    let value = headers
+        .get("x-forwarded-user-email")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert_eq!(value, "");
+
+    let value = headers
+        .get("x-forwarded-user-email-verified")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert_eq!(value, "false");
+
+    let value = headers
+        .get("x-forwarded-user-family-name")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert_eq!(value, "");
+
+    let value = headers
+        .get("x-forwarded-user-given-name")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert_eq!(value, "");
+
+    let value = headers
+        .get("x-forwarded-user-mfa")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert_eq!(value, "false");
+
+    Ok(())
 }
 
 async fn validate_token(req: TokenValidationRequest) -> Result<TokenInfo, Box<dyn Error>> {
