@@ -1,8 +1,14 @@
 # Changelog
 
-## UNRELEASED
+## 0.22.1
 
-### Changes
+### Security
+
+This version fixes a [potential DoS in rustls](https://rustsec.org/advisories/RUSTSEC-2024-0336.html) which has
+been found yesterday.  
+[f4d65a6](https://github.com/sebadob/rauthy/commit/f4d65a6b056183f914075d6047384e2a7a4f0329)
+
+### Features
 
 #### Dedicated `/forward_auth` + Trusted Authn/Authz Headers
 
@@ -47,6 +53,16 @@ AUTH_HEADER_MFA=x-forwarded-user-mfa
 ```
 
 [7d5a44a](https://github.com/sebadob/rauthy/commit/7d5a44a2ff29ec87458c6bf6b979cc4750491391)
+
+### Bugfixes
+
+- allow CORS requests for the GET PoW and the user sign up endpoint's to make it possible to build a custom UI without
+  having a server side. At the same time, the method for requesting a PoW **has been changed from `GET` to `POST`**.
+  This change has been done because even though only in-memory, a request would create data in the backend, which should
+  never be done by a `GET`.
+  Technically, this is a breaking change, but since it has only been available from the Rauthy UI itself because of the
+  CORS header setting, I decided to only bump the patch, not the minor version.
+  [e4d935f](https://github.com/sebadob/rauthy/commit/e4d935f7b51459031a37fb2ec2eb9952bc278f2e)
 
 ## v0.22.0
 
