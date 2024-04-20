@@ -4,8 +4,8 @@ use actix_web::http::StatusCode;
 use actix_web::{cookie, delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
 use actix_web_validator::Json;
 use rauthy_common::constants::{
-    COOKIE_MFA, ENABLE_WEB_ID, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE, TEXT_TURTLE,
-    USER_REG_DOMAIN_RESTRICTION,
+    COOKIE_MFA, ENABLE_WEB_ID, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, OPEN_USER_REG,
+    PWD_RESET_COOKIE, TEXT_TURTLE, USER_REG_DOMAIN_RESTRICTION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_req;
@@ -297,7 +297,9 @@ pub async fn post_users_register(
         .await
         .unwrap();
 
-    Ok(HttpResponse::NoContent().finish())
+    Ok(HttpResponse::NoContent()
+        .insert_header(HEADER_ALLOW_ALL_ORIGINS)
+        .finish())
 }
 
 /// Returns a single user by its *id*

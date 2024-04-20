@@ -66,7 +66,7 @@ use utoipa::{openapi, OpenApi};
         generic::get_password_policy,
         generic::put_password_policy,
         generic::get_health,
-        generic::get_pow,
+        generic::post_pow,
         generic::get_ready,
         generic::ping,
         generic::whoami,

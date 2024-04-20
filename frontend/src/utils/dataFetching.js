@@ -116,7 +116,7 @@ export async function getProvidersTemplate() {
 
 export async function getPow() {
     return await fetch('/auth/v1/pow', {
-        method: 'GET',
+        method: 'POST',
         headers: HEADERS.json,
     });
 }
