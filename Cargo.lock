@@ -1115,12 +1115,13 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.94"
+version = "1.0.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17f6e324229dc011159fcc089755d1e2e216a90d43a7dea6853ca740b84f35e7"
+checksum = "d32a725bc159af97c3e629873bb9f88fb8cf8a4867175f76dc987815ea07c83b"
 dependencies = [
  "jobserver",
  "libc",
+ "once_cell",
 ]
 
 [[package]]
@@ -4272,7 +4273,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.22.0"
+version = "0.22.1"
 dependencies = [
  "actix-service",
  "actix-web",
@@ -4314,7 +4315,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.22.0"
+version = "0.22.1"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4355,7 +4356,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.22.0"
+version = "0.22.1"
 dependencies = [
  "actix",
  "actix-multipart",
@@ -4390,7 +4391,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.22.0"
+version = "0.22.1"
 dependencies = [
  "accept-language",
  "actix",
@@ -4459,7 +4460,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.22.0"
+version = "0.22.1"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4477,7 +4478,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.22.0"
+version = "0.22.1"
 dependencies = [
  "actix-web",
  "argon2",
