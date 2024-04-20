@@ -2,7 +2,7 @@ set shell := ["bash", "-uc"]
 
 export TAG := `cat Cargo.toml | grep '^version =' | cut -d " " -f3 | xargs`
 export DB_URL_SQLITE := `cat rauthy.cfg | grep ^DATABASE_URL= | cut -d'=' -f2`
-export DB_URL_POSTGRES := `cat rauthy.cfg | grep ^DATABASE_URL_POSTGRES= | cut -d'=' -f2`
+export DB_URL_POSTGRES := `cat .env | grep ^DATABASE_URL_POSTGRES= | cut -d'=' -f2`
 
 test_pid_file := ".test_pid"
 
@@ -324,12 +324,13 @@ build-postgres: test-postgres
 
     cargo clean
 
-    cargo clippy --features postgres -- -D warnings
-    cross build --release --target x86_64-unknown-linux-musl --features postgres
+    DATABASE_URL=$DB_URL_POSTGRES cargo clippy --features postgres -- -D warnings
+
+    CROSS_CONTAINER_OPTS="--env DATABASE_URL=$DB_URL_POSTGRES" cross build --release --target x86_64-unknown-linux-musl --features postgres
     cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-postgres-amd64
 
     cargo clean
-    cross build --release --target aarch64-unknown-linux-musl --features postgres
+    CROSS_CONTAINER_OPTS="--env DATABASE_URL=$DB_URL_POSTGRES" cross build --release --target aarch64-unknown-linux-musl --features postgres
     cp target/aarch64-unknown-linux-musl/release/rauthy out/rauthy-postgres-arm64
 
 
@@ -399,6 +400,6 @@ publish-latest:
 verify: build-ui fmt test-full
     #!/usr/bin/env bash
     set -euxo pipefail
-    cargo clippy --features sqlite -- -D warnings
+    cargo clippy -- -D warnings
 
     echo "all good"
