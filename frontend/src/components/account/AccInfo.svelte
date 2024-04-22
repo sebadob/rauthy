@@ -3,6 +3,9 @@
     import {buildWebIdUri, formatDateFromTs} from "../../utils/helpers.js";
     import {onMount} from "svelte";
     import {getAuthProvidersTemplate} from "../../utils/helpers.js";
+    import Button from "$lib/Button.svelte";
+    import Tooltip from "$lib/Tooltip.svelte";
+    import {deleteUserProviderLink} from "../../utils/dataFetching.js";
 
     export let t;
     export let user = {};
@@ -11,10 +14,23 @@
     export let webIdData;
     export let viewModePhone = false;
 
-    $: accType = user.account_type.startsWith('federated') ? `${user.account_type}: ${authProvider?.name || ''}` : user.account_type;
+    let unlinkErr = false;
+
+    $: isFederated = user.account_type.startsWith('federated');
+    $: accType = isFederated ? `${user.account_type}: ${authProvider?.name || ''}` : user.account_type;
 
     $: classRow = viewModePhone ? 'rowPhone' : 'row';
     $: classLabel = viewModePhone ? 'labelPhone' : 'label';
+
+    async function unlinkProvider() {
+        let res = await deleteUserProviderLink();
+        let body = await res.json();
+        if (res.ok) {
+            user = body;
+        } else {
+            unlinkErr = true;
+        }
+    }
 
 </script>
 
@@ -41,7 +57,23 @@
 
     <div class={classRow}>
         <div class={classLabel}><b>{t.accType}:</b></div>
-        <span class="value">{accType}</span>
+        <div>
+            <div class="value">{accType || ''}</div>
+            {#if isFederated}
+                <div class="fed-btn">
+                    <Button level={3} on:click={unlinkProvider}>
+                        {t.providerUnlink}
+                    </Button>
+                    {#if unlinkErr}
+                        <div class="link-err value">
+                            {t.providerUnlinkDesc}
+                        </div>
+                    {/if}
+                </div>
+            {:else}
+                <!-- TODO -->
+            {/if}
+        </div>
     </div>
 
     <div class={classRow}>
@@ -116,6 +148,15 @@
 
     .labelPhone {
         width: 12rem;
+    }
+
+    .fed-btn {
+        margin-left: -5px;
+    }
+
+    .link-err {
+        margin-left: 5px;
+        color: var(--col-err);
     }
 
     .row {

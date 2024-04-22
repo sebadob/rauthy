@@ -1,5 +1,21 @@
 # Changelog
 
+## UNRELEASE
+
+### Features
+
+#### Unlink Account from Provider
+
+A new button has been introduced to the account view of federated accounts.  
+You can now "Unlink" an account from an upstream provider, if you have set it up with at least
+a password or passkey before.
+
+### Bugfixe
+
+- The button for requesting a password reset from inside a federated account view has been
+  disabled when it should not be, and therefore did not send out requests.
+  []()
+
 ## 0.22.1
 
 ### Security

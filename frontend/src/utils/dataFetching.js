@@ -185,6 +185,13 @@ export async function getUserPasskeys(id) {
     });
 }
 
+export async function deleteUserProviderLink() {
+    return await fetch('/auth/v1/providers/link', {
+        method: 'DELETE',
+        headers: getCsrfHeaders(),
+    });
+}
+
 export async function getUserWebIdData(id) {
     return await fetch(`/auth/v1/users/${id}/webid/data`, {
         method: 'GET',

@@ -305,6 +305,27 @@ impl User {
         Ok(new_user)
     }
 
+    pub async fn provider_unlink(
+        data: &web::Data<AppState>,
+        user_id: String,
+    ) -> Result<Self, ErrorResponse> {
+        // we need to find the user first and validate that it has been set up properly
+        // to work without a provider
+        let mut slf = Self::find(data, user_id).await?;
+        if slf.password.is_none() && !slf.has_webauthn_enabled() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "You must have at least a password or passkey set up before you can remove a provider link".to_string(),
+            ));
+        }
+
+        slf.auth_provider_id = None;
+        slf.federation_uid = None;
+        slf.save(data, None, None).await?;
+
+        Ok(slf)
+    }
+
     pub async fn save(
         &self,
         data: &web::Data<AppState>,
