@@ -58,14 +58,17 @@
     <div class={classRow}>
         <div class={classLabel}><b>{t.accType}:</b></div>
         <div>
-            <div class="value">{accType}</div>
+            <div class="value">{accType || ''}</div>
             {#if isFederated}
                 <div class="fed-btn">
-                    <Tooltip html={t.providerUnlinkDesc}>
-                        <Button level={3} on:click={unlinkProvider}>
-                            {t.providerUnlink}
-                        </Button>
-                    </Tooltip>
+                    <Button level={3} on:click={unlinkProvider}>
+                        {t.providerUnlink}
+                    </Button>
+                    {#if unlinkErr}
+                        <div class="link-err value">
+                            {t.providerUnlinkDesc}
+                        </div>
+                    {/if}
                 </div>
             {:else}
                 <!-- TODO -->
@@ -149,6 +152,11 @@
 
     .fed-btn {
         margin-left: -5px;
+    }
+
+    .link-err {
+        margin-left: 5px;
+        color: var(--col-err);
     }
 
     .row {
