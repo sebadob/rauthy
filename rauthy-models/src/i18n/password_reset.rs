@@ -19,6 +19,7 @@ pub struct I18nPasswordReset<'a> {
     new_acc_desc_1: &'a str,
     new_acc_desc_2: &'a str,
     new_account: &'a str,
+    password_reset: &'a str,
     password: &'a str,
     passwordless: &'a str,
     password_confirm: &'a str,
@@ -64,6 +65,7 @@ a way stronger security. You will need at least one passkey (Yubikey, Apple Touc
 ...) to create such an account. Your device must embreace the Fido2 standard. For more information
 about this, you may follow this link: "#,
             new_account: "New Account",
+            password_reset: "Password Reset",
             password: "Password",
             passwordless: "FIDO Passkey",
             password_confirm: "Password Confirm",
@@ -99,6 +101,7 @@ und schnelleren Login.
 Dazu wird mindestens ein Passkey (Yubikey, Apple Touch ID, Windows Hello, ...) benötigt, welcher dem
 FIDO2 Standard gerecht wird. Für weitere Informationen können Sie diesem Link folgen: "#,
             new_account: "Neuer Account",
+            password_reset: "Passwort Zurücksetzen",
             password: "Passwort",
             passwordless: "FIDO Passkey",
             password_confirm: "Passwort bestätigen",
