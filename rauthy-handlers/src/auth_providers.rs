@@ -11,6 +11,7 @@ use rauthy_models::entity::auth_providers::{
 };
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::logos::{Logo, LogoType};
+use rauthy_models::entity::users::User;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
     ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
@@ -203,6 +204,32 @@ pub async fn post_provider_callback(
         )
     })?;
     Ok(resp)
+}
+
+/// DELETE a link between an existing user account and an upstream provider
+///
+/// This will always unlink the currently logged in user from its registered
+/// upstream auth provider. The user account must have been set up with at least
+/// a password or a passkey. Otherwise, this endpoint will return an error.
+#[utoipa::path(
+    delete,
+    path = "/providers/link",
+    tag = "providers",
+    responses(
+        (status = 200, description = "OK"),
+        (status = 400, description = "BadRequest", body = ErrorRresponse),
+    ),
+)]
+#[delete("/providers/link")]
+pub async fn delete_provider_link(
+    data: web::Data<AppState>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+
+    let user_id = principal.user_id()?.to_string();
+    let user = User::provider_unlink(&data, user_id).await?;
+    Ok(HttpResponse::Ok().json(user))
 }
 
 /// GET all upstream auth providers as templated minimal JSON

@@ -29,6 +29,7 @@ use utoipa::{openapi, OpenApi};
         auth_providers::post_provider_lookup,
         auth_providers::post_provider_login,
         auth_providers::post_provider_callback,
+        auth_providers::delete_provider_link,
         auth_providers::get_providers_minimal,
         auth_providers::put_provider,
         auth_providers::delete_provider,
