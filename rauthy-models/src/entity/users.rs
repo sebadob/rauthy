@@ -192,9 +192,7 @@ impl User {
             return Ok(user_opt);
         }
 
-        // cannot be compile-time-checked because of 8byte integer on sqlite by default
-        let user = sqlx::query_as::<_, Self>("select * from users where id = $1")
-            .bind(&id)
+        let user = sqlx::query_as!(Self, "select * from users where id = $1", id)
             .fetch_one(&data.db)
             .await?;
 
@@ -228,8 +226,7 @@ impl User {
             return Ok(user_opt);
         }
 
-        let user = sqlx::query_as::<_, Self>("select * from users where email = $1")
-            .bind(&email)
+        let user = sqlx::query_as!(Self, "select * from users where email = $1", email)
             .fetch_one(&data.db)
             .await?;
 
@@ -249,18 +246,19 @@ impl User {
         auth_provider_id: &str,
         federation_uid: &str,
     ) -> Result<Self, ErrorResponse> {
-        let user = sqlx::query_as::<_, Self>(
+        let user = sqlx::query_as!(
+            Self,
             "select * from users where auth_provider_id = $1 and federation_uid = $2",
+            auth_provider_id,
+            federation_uid
         )
-        .bind(auth_provider_id)
-        .bind(federation_uid)
         .fetch_one(&data.db)
         .await?;
         Ok(user)
     }
 
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        let res = sqlx::query_as::<_, Self>("select * from users")
+        let res = sqlx::query_as!(Self, "select * from users")
             .fetch_all(&data.db)
             .await?;
         Ok(res)
@@ -270,8 +268,7 @@ impl User {
         let now = OffsetDateTime::now_utc()
             .add(time::Duration::seconds(10))
             .unix_timestamp();
-        let res = sqlx::query_as::<_, Self>("select * from users where user_expires < $1")
-            .bind(now)
+        let res = sqlx::query_as!(Self, "select * from users where user_expires < $1", now)
             .fetch_all(&data.db)
             .await?;
         Ok(res)
