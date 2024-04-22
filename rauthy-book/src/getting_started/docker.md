@@ -26,6 +26,14 @@ docker run -d \
 ```
 
 ```admonish note
+**When using Safari:**
+
+If you want to test with Safari with plain HTTP, you need to add `-e DANGER_COOKIE_INSECURE=true`.
+Rauthy always builds secure cookies by default, but Safari does not treat localhost as secure like
+all other browsers. This option has been implemented in `v0.22.2-20240424-1`.
+```
+
+```admonish note
 The second command does not start in interactive mode and it does not delete the container on exit.  
 This means the data will be persisted, as long as the container itself is no erased and you can shutdown and
 restart to your liking without using test data.
