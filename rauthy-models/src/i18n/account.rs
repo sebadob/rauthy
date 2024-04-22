@@ -53,6 +53,10 @@ pub struct I18nAccount<'a> {
     password_policy_follow: &'a str,
     password_reset: &'a str,
     phone: &'a str,
+    provider_link: &'a str,
+    provider_link_desc: &'a str,
+    provider_unlink: &'a str,
+    provider_unlink_desc: &'a str,
     roles: &'a str,
     save: &'a str,
     street: &'a str,
@@ -144,6 +148,13 @@ external provider or by local password. Do you want to request a reset?"#,
             password_policy_follow: "You must follow the password policy",
             password_reset: "Password Reset",
             phone: "Phone",
+            provider_link: "Federate Account",
+            provider_link_desc: r#"You can allow linking to a federated account for a short period
+of time.<br>After activating this function, you will get logged out and redirect to the login page.<br>
+You can then choose an upstream provider which will be linked to this account, if the email matches."#,
+            provider_unlink: "Unlink Federation",
+            provider_unlink_desc: r#"If you have set up at least a password or a passkey for this
+account,<br>you can unlink it from the upstream provider."#,
             roles: "Roles",
             save: "Save",
             street: "Street",
@@ -223,6 +234,14 @@ Login entweder per externem Provider oder lokalem Password möglich. Passwort Re
             password_policy_follow: "Befolgen Sie die Passwort Regeln",
             password_reset: "Passwort Reset",
             phone: "Telefon",
+            provider_link: "Account Verbinden",
+            provider_link_desc: r#"Das Verbinden dieses Accounts mit einem externen Provider kann
+für eine<br>kurze Zeit erlaubt werden. Nach der Aktivierung foldet ein Ausloggen mit Umleitung zur<br>
+Login Seite. Dort kann dann ein Account Provider gewählt werden.<br>Sollte nach erfolgreichem Login
+die E-Mail Adresse übereinstimmen,<br>wird sie mit diesem Account verbunden."#,
+            provider_unlink: "Verbindung Trennen",
+            provider_unlink_desc: r#"Wenn mindestens ein Passwort oder ein Passkey für diesen
+Account gesetzt sind, kann die Verbindung zum Provider gelöst werden."#,
             roles: "Rollen",
             save: "Speichern",
             street: "Straße",
