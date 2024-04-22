@@ -4273,7 +4273,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.22.1"
+version = "0.22.2-20240424"
 dependencies = [
  "actix-service",
  "actix-web",
@@ -4315,7 +4315,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.22.1"
+version = "0.22.2-20240424"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4356,7 +4356,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.22.1"
+version = "0.22.2-20240424"
 dependencies = [
  "actix",
  "actix-multipart",
@@ -4391,7 +4391,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.22.1"
+version = "0.22.2-20240424"
 dependencies = [
  "accept-language",
  "actix",
@@ -4460,7 +4460,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.22.1"
+version = "0.22.2-20240424"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4478,7 +4478,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.22.1"
+version = "0.22.2-20240424"
 dependencies = [
  "actix-web",
  "argon2",
@@ -5093,9 +5093,9 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.38.32"
+version = "0.38.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65e04861e65f21776e67888bfbea442b3642beaa0138fdb1dd7a84a52dffdb89"
+checksum = "e3cc72858054fcff6d7dea32df2aeaee6a7c24227366d7ea429aada2f26b16ad"
 dependencies = [
  "bitflags 2.5.0",
  "errno",
@@ -5484,9 +5484,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook-registry"
-version = "1.4.1"
+version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8229b473baa5980ac72ef434c4415e70c4b5e71b423043adb4ba059f89c99a1"
+checksum = "a9e9e0b4211b72e7b8b6e85c807d36c212bdb33ea8587f7569562a84df5465b1"
 dependencies = [
  "libc",
 ]
@@ -5942,18 +5942,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.58"
+version = "1.0.59"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03468839009160513471e86a034bb2c5c0e4baae3b43f79ffc55c4a5427b3297"
+checksum = "f0126ad08bff79f29fc3ae6a55cc72352056dfff61e3ff8bb7129476d44b23aa"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.58"
+version = "1.0.59"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c61f3ba182994efc43764a46c018c347bc492c79f024e705f46567b418f6d4f7"
+checksum = "d1cd413b5d558b4c5bf3680e324a6fa5014e7b7c067a51e69dbdf47eb7148b66"
 dependencies = [
  "proc-macro2",
  "quote",

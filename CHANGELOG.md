@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASE
+## UNRELEASED
 
 ### Features
 
@@ -9,11 +9,16 @@
 A new button has been introduced to the account view of federated accounts.  
 You can now "Unlink" an account from an upstream provider, if you have set it up with at least
 a password or passkey before.
+[8b1d9a8](https://github.com/sebadob/rauthy/commit/8b1d9a882b0d4b059f3ed884deaacfcdeb109856)
 
-### Bugfixe
+### Bugfixes
 
 - The button for requesting a password reset from inside a federated account view has been
   disabled when it should not be, and therefore did not send out requests.
+  [39e585d](https://github.com/sebadob/rauthy/commit/39e585d1d53a2490b273ba5c33b864ec0d7835d5)
+- A really hard to reproduce bug where the backend complained about a not-possible mapping
+  from postgres `INT4` to Rust `i64` as been fixed. This came with the advantage of hacing
+  a few more compile-time checked queries for the `users` table.
   []()
 
 ## 0.22.1
