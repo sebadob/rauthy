@@ -158,7 +158,6 @@
                             width={btnWidth}
                             on:click={requestPasswordReset}
                             level={3}
-                            isDisabled={!success}
                     >
                         {t.passwordReset.toUpperCase()}
                     </Button>
