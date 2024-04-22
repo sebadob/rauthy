@@ -8,10 +8,10 @@
 
 ## Stage 2 - features - do before v1.0.0
 
-- dedicated auth headers endpoint
-- update the book with all the new features
+- oauth2 device auth flow for IoT and embedded devices
 - add `at_hash` claim to the ID token
-- remove `offline_access` everywhere, because its overhead to manage and not really beneficial with webauthn?
+- update the book with all the new features
+- handle `offline_access` properly again - either decide to fully remove or support it everywhere
 - benchmarks and performance tuning
 - maybe get a nicer logo
 

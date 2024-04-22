@@ -141,6 +141,7 @@ Keycloak was a rough inspiration in certain places and if something is working w
 
 This is a non-exhaustive list of currently open TODO's
 
+- [ ] RFC 8628: OAuth 2.0 Device Authorization Grant for embedded and IoT devices
 - [ ] Benchmarks and Optimizations
 - [ ] Maybe get a nicer Rauthy Logo
 - [ ] experimental implementation of [dilithium](https://pq-crystals.org/dilithium/) singing algorithm to become quantum
