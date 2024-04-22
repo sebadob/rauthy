@@ -331,7 +331,11 @@
 </script>
 
 <svelte:head>
-    <title>Password Reset</title>
+    {#if requestType.startsWith('new_user')}
+        <title>{t.newAccount}</title>
+    {:else if requestType === "password_reset"}
+        <title>{t.passwordReset}</title>
+    {/if}
 </svelte:head>
 
 <BrowserCheck>
