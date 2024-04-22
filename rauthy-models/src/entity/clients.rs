@@ -28,7 +28,7 @@ use sqlx::FromRow;
 use std::str::FromStr;
 use std::sync::OnceLock;
 use std::time::Duration;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, trace, warn};
 use utoipa::ToSchema;
 use validator::Validate;
 
@@ -659,6 +659,7 @@ impl Client {
     /// Principal::validate_admin_session() depending on the `ADMIN_FORCE_MFA` config variable.
     pub fn validate_mfa(&self, user: &User) -> Result<(), ErrorResponse> {
         if &self.id != "rauthy" && self.force_mfa && !user.has_webauthn_enabled() {
+            trace!("MFA required for this client but the user has none");
             Err(ErrorResponse::new(
                 ErrorResponseType::MfaRequired,
                 "MFA is required for this client".to_string(),
@@ -684,7 +685,7 @@ impl Client {
         }
 
         let err_msg = || {
-            debug!("Origin err msg is being created");
+            debug!("Client request from invalid origin");
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!(
@@ -734,6 +735,7 @@ impl Client {
             })
             .count();
         if matching_uris == 0 {
+            trace!("Invalid `redirect_uri`");
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 String::from("Invalid redirect uri"),
@@ -750,6 +752,7 @@ impl Client {
     ) -> Result<(), ErrorResponse> {
         if self.challenge.is_some() {
             if code_challenge.is_none() {
+                trace!("'code_challenge' is missing");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     String::from("'code_challenge' is missing"),
@@ -757,6 +760,7 @@ impl Client {
             }
 
             if code_challenge_method.is_none() {
+                trace!("'code_challenge_method' is missing");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     String::from("'code_challenge_method' is missing"),
@@ -765,6 +769,7 @@ impl Client {
 
             let method = code_challenge_method.as_ref().unwrap();
             if !self.challenge.as_ref().unwrap().contains(method) {
+                trace!("given code_challenge_method is not allowed");
                 Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     format!("code_challenge_method '{}' is not allowed", method),
@@ -773,6 +778,7 @@ impl Client {
                 Ok(())
             }
         } else if code_challenge.is_some() || code_challenge_method.is_some() {
+            trace!("'code_challenge' not enabled for this client");
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "'code_challenge' not enabled for this client".to_string(),

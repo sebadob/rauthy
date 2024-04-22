@@ -81,6 +81,10 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
         .expect("DEV_MODE cannot be parsed to bool - bad format");
+    pub static ref DANGER_COOKIE_INSECURE: bool = env::var("DANGER_COOKIE_INSECURE")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("DANGER_COOKIE_INSECURE cannot be parsed to bool - bad format");
     pub static ref DEV_DPOP_HTTP: bool = env::var("DEV_DPOP_HTTP")
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()

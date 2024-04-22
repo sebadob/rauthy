@@ -20,7 +20,7 @@ use spow::pow::PowError;
 use std::fmt::{Display, Formatter};
 use std::string::FromUtf8Error;
 use time::OffsetDateTime;
-use tracing::{debug, error};
+use tracing::{debug, error, trace};
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -178,6 +178,7 @@ impl ResponseError for ErrorResponse {
 
 impl From<std::io::Error> for ErrorResponse {
     fn from(value: std::io::Error) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("IO Error: {}", value),
@@ -187,6 +188,7 @@ impl From<std::io::Error> for ErrorResponse {
 
 impl From<argon2::Error> for ErrorResponse {
     fn from(err: argon2::Error) -> Self {
+        trace!("{:?}", err);
         ErrorResponse::new(
             ErrorResponseType::Internal,
             format!("Argon2Id Error: {}", err),
@@ -205,7 +207,8 @@ impl From<Box<bincode::ErrorKind>> for ErrorResponse {
 }
 
 impl From<chrono::ParseError> for ErrorResponse {
-    fn from(_: chrono::ParseError) -> Self {
+    fn from(value: chrono::ParseError) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             String::from("Unable to parse the correct DateTime"),
@@ -214,7 +217,8 @@ impl From<chrono::ParseError> for ErrorResponse {
 }
 
 impl From<BlockingError> for ErrorResponse {
-    fn from(_e: BlockingError) -> Self {
+    fn from(value: BlockingError) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::Internal,
             String::from("Database Pool is gone, please re-try later"),
@@ -224,6 +228,7 @@ impl From<BlockingError> for ErrorResponse {
 
 impl From<CacheError> for ErrorResponse {
     fn from(e: CacheError) -> Self {
+        trace!("{:?}", e);
         ErrorResponse::new(
             ErrorResponseType::Internal,
             format!("Internal Cache error: {:?}", e),
@@ -287,7 +292,8 @@ impl From<sqlx::Error> for ErrorResponse {
 }
 
 impl From<ParseColorError> for ErrorResponse {
-    fn from(_: ParseColorError) -> Self {
+    fn from(value: ParseColorError) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "Cannot parse input to valid CSS color".to_string(),
@@ -322,12 +328,14 @@ impl From<actix_multipart::MultipartError> for ErrorResponse {
 
 impl From<FromUtf8Error> for ErrorResponse {
     fn from(value: FromUtf8Error) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(ErrorResponseType::Internal, value.to_string())
     }
 }
 
 impl From<validator::ValidationErrors> for ErrorResponse {
     fn from(value: validator::ValidationErrors) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Payload validation error: {:?}", value),
@@ -337,6 +345,7 @@ impl From<validator::ValidationErrors> for ErrorResponse {
 
 impl From<serde_json::Error> for ErrorResponse {
     fn from(value: Error) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Payload deserialization error: {:?}", value),
@@ -345,6 +354,7 @@ impl From<serde_json::Error> for ErrorResponse {
 }
 impl From<reqwest::header::ToStrError> for ErrorResponse {
     fn from(value: reqwest::header::ToStrError) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!(
@@ -357,6 +367,7 @@ impl From<reqwest::header::ToStrError> for ErrorResponse {
 
 impl From<reqwest::Error> for ErrorResponse {
     fn from(value: reqwest::Error) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::Connection,
             format!("Cannot send out HTTP request: {:?}", value),
@@ -366,6 +377,7 @@ impl From<reqwest::Error> for ErrorResponse {
 
 impl From<TurtleError> for ErrorResponse {
     fn from(value: TurtleError) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Cannot format / parse turtle data: {:?}", value),
@@ -375,6 +387,7 @@ impl From<TurtleError> for ErrorResponse {
 
 impl From<oxiri::IriParseError> for ErrorResponse {
     fn from(value: oxiri::IriParseError) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Invalid iri given: {:?}", value),
@@ -384,18 +397,21 @@ impl From<oxiri::IriParseError> for ErrorResponse {
 
 impl From<CryptrError> for ErrorResponse {
     fn from(value: CryptrError) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(ErrorResponseType::Encryption, value.to_string())
     }
 }
 
 impl From<PowError> for ErrorResponse {
     fn from(value: PowError) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(ErrorResponseType::Forbidden, value.to_string())
     }
 }
 
 impl From<serde_json_path::ParseError> for ErrorResponse {
     fn from(value: ParseError) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("JsonPath error: {}", value),
@@ -405,6 +421,7 @@ impl From<serde_json_path::ParseError> for ErrorResponse {
 
 impl From<ImageError> for ErrorResponse {
     fn from(value: ImageError) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Cannot parse the image data: {}", value),
@@ -414,6 +431,7 @@ impl From<ImageError> for ErrorResponse {
 
 impl From<actix_web::http::header::ToStrError> for ErrorResponse {
     fn from(value: actix_web::http::header::ToStrError) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!(
@@ -426,6 +444,7 @@ impl From<actix_web::http::header::ToStrError> for ErrorResponse {
 
 impl From<header::InvalidHeaderValue> for ErrorResponse {
     fn from(value: InvalidHeaderValue) -> Self {
+        trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::Internal,
             format!("Cannot convert to HeaderValue: {:?}", value),

@@ -51,7 +51,7 @@ use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use time::OffsetDateTime;
 use tokio::sync::oneshot;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 
 /// # Business logic for [POST /oidc/authorize](crate::handlers::post_authorize)
 #[tracing::instrument(name = "post_authorize", skip_all, fields(client_id = req_data.client_id, email = req_data.email))]
@@ -97,6 +97,7 @@ pub async fn authorize(
     let user_must_provide_password =
         req_data.password.is_none() && account_type != AccountType::Passkey && mfa_cookie.is_none();
     if user_must_provide_password {
+        trace!("No user password has been provided");
         return Err((
             ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
@@ -136,6 +137,7 @@ pub async fn authorize(
                     .map_err(|err| (err, true))?;
             }
             Err(err) => {
+                trace!("Provided user password is invalid");
                 return Err((err, true));
             }
         }
