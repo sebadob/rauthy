@@ -255,7 +255,7 @@ pub async fn get_users_register(
     post,
     path = "/users/register",
     tag = "users",
-    request_body = NewUserRequest,
+    request_body = NewUserRegistrationRequest,
     responses(
         (status = 204, description = "NoContent"),
         (status = 403, description = "Forbidden", body = ErrorResponse),
