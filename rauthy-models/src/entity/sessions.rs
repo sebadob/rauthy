@@ -5,7 +5,7 @@ use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{cookie, web, HttpRequest};
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_SESSIONS, COOKIE_SESSION, CSRF_HEADER, DANGER_COOKIE_INSECURE,
-    DEV_MODE, IDX_SESSION,
+    IDX_SESSION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::get_rand;
@@ -17,7 +17,7 @@ use sqlx::{FromRow, Row};
 use std::ops::Add;
 use std::str::FromStr;
 use time::OffsetDateTime;
-use tracing::{error, trace, warn};
+use tracing::{error, warn};
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
