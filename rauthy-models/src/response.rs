@@ -307,7 +307,7 @@ impl From<PasskeyEntity> for PasskeyResponse {
     }
 }
 
-#[derive(Debug, Serialize, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PasswordPolicyResponse {
     pub length_min: i32,
     pub length_max: i32,

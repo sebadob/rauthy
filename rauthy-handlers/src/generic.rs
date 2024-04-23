@@ -543,15 +543,12 @@ pub async fn get_search(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
-    // TODO make this pretty once it has been implemented properly in the UI
     match params.ty {
-        SearchParamsType::User => {}
+        SearchParamsType::User => {
+            let res = User::search(&data, &params.idx, &params.q).await?;
+            Ok(HttpResponse::Ok().json(res))
+        }
     }
-
-    let pow = PowEntity::create(&data).await?;
-    Ok(HttpResponse::Ok()
-        .insert_header(HEADER_ALLOW_ALL_ORIGINS)
-        .body(pow.to_string()))
 }
 
 /// Updates the language for the logged in principal depending on the `locale` cookie
