@@ -94,12 +94,6 @@ pub async fn get_users(
         }
     } else {
         let users = User::find_all_simple(&data).await?;
-        // let mut res = Vec::new();
-        // users
-        //     .into_iter()
-        //     // return a simplified version to decrease payload for big deployments
-        //     .for_each(|u| res.push(UserResponseSimple::from(u)));
-
         Ok(HttpResponse::Ok()
             .insert_header(("x-user-count", user_count))
             .json(users))
