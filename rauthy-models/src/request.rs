@@ -667,6 +667,31 @@ pub struct ScopeRequest {
     pub attr_include_id: Option<Vec<String>>,
 }
 
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct SearchParams {
+    /// Data type
+    pub ty: SearchParamsType,
+    /// Index
+    pub idx: SearchParamsIdx,
+    /// The actual search query - validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]
+    pub q: String,
+}
+
+#[derive(Debug, PartialEq, Deserialize, ToSchema)]
+#[serde(rename("lowercase"))]
+pub enum SearchParamsIdx {
+    Id,
+    Email,
+}
+
+#[derive(Debug, PartialEq, Deserialize, ToSchema)]
+#[serde(rename("lowercase"))]
+pub enum SearchParamsType {
+    // For now, only user exists. More will be added if necessary.
+    User,
+}
+
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct TokenRequest {
     /// Validation: `^[a-z0-9-_/]{2,128}$`
