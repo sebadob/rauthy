@@ -21,7 +21,8 @@ use crate::templates::UserEmailChangeConfirmHtml;
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;
 use rauthy_common::constants::{
-    CACHE_NAME_USERS, IDX_USERS, RAUTHY_ADMIN_ROLE, WEBAUTHN_NO_PASSWORD_EXPIRY,
+    CACHE_NAME_12HR, CACHE_NAME_USERS, IDX_USERS, RAUTHY_ADMIN_ROLE, USER_COUNT_IDX,
+    WEBAUTHN_NO_PASSWORD_EXPIRY,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
@@ -73,6 +74,73 @@ pub struct User {
 
 // CRUD
 impl User {
+    pub async fn count(data: &web::Data<AppState>) -> Result<i64, ErrorResponse> {
+        if let Some(count) = cache_get!(
+            i64,
+            CACHE_NAME_12HR.to_string(),
+            USER_COUNT_IDX.to_string(),
+            &data.caches.ha_cache_config,
+            false
+        )
+        .await?
+        {
+            return Ok(count);
+        }
+
+        let res = sqlx::query!("SELECT COUNT (*) count FROM users")
+            .fetch_one(&data.db)
+            .await?;
+
+        // sqlite returns an i32 for count while postgres returns an Option<i64>
+        #[cfg(feature = "postgres")]
+        let count = res.count.unwrap_or_default();
+        #[cfg(not(feature = "postgres"))]
+        let count = res.count as i64;
+
+        cache_insert(
+            CACHE_NAME_12HR.to_string(),
+            USER_COUNT_IDX.to_string(),
+            &data.caches.ha_cache_config,
+            &count,
+            AckLevel::Once,
+        )
+        .await?;
+
+        Ok(count)
+    }
+
+    async fn count_inc(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        let mut count = Self::count(data).await?;
+        // theoretically, we could have overlaps here, but we don't really care
+        // -> used for dynamic pagination only and SQLite has limited query features
+        count += 1;
+        cache_insert(
+            CACHE_NAME_12HR.to_string(),
+            USER_COUNT_IDX.to_string(),
+            &data.caches.ha_cache_config,
+            &count,
+            AckLevel::Once,
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn count_dec(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        let mut count = Self::count(data).await?;
+        // theoretically, we could have overlaps here, but we don't really care
+        // -> used for dynamic pagination only and SQLite has limited query features
+        count -= 1;
+        cache_insert(
+            CACHE_NAME_12HR.to_string(),
+            USER_COUNT_IDX.to_string(),
+            &data.caches.ha_cache_config,
+            &count,
+            AckLevel::Once,
+        )
+        .await?;
+        Ok(())
+    }
+
     // Inserts a user into the database
     pub async fn create(
         data: &web::Data<AppState>,
@@ -154,6 +222,8 @@ impl User {
             AckLevel::Quorum,
         )
         .await?;
+
+        Self::count_dec(data).await?;
 
         Ok(())
     }
@@ -300,6 +370,8 @@ impl User {
         )
         .execute(&data.db)
         .await?;
+
+        Self::count_inc(data).await?;
 
         Ok(new_user)
     }
