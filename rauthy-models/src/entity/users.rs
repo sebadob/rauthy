@@ -587,6 +587,7 @@ impl User {
         data: &web::Data<AppState>,
         idx: &SearchParamsIdx,
         q: &str,
+        limit: i64,
     ) -> Result<Vec<UserResponseSimple>, ErrorResponse> {
         let q = format!("%{}%", q);
 
@@ -594,18 +595,20 @@ impl User {
             SearchParamsIdx::Id => {
                 query_as!(
                     UserResponseSimple,
-                    "SELECT id, email FROM users WHERE id LIKE $1 ORDER BY created_at ASC",
-                    q
+                    "SELECT id, email FROM users WHERE id LIKE $1 ORDER BY created_at ASC LIMIT $2",
+                    q,
+                    limit
                 )
                 .fetch_all(&data.db)
                 .await?
             }
             SearchParamsIdx::Email => {
                 query_as!(
-                    UserResponseSimple,
-                    "SELECT id, email FROM users WHERE email LIKE $1 ORDER BY created_at ASC",
-                    q
-                )
+                UserResponseSimple,
+                "SELECT id, email FROM users WHERE email LIKE $1 ORDER BY created_at ASC LIMIT $2",
+                q,
+                limit
+            )
                 .fetch_all(&data.db)
                 .await?
             }

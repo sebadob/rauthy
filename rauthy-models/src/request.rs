@@ -687,6 +687,7 @@ pub struct SearchParams {
     /// The actual search query - validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+`
     #[validate(regex(path = "RE_SEARCH", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+"))]
     pub q: String,
+    pub limit: Option<u16>,
 }
 
 #[derive(Debug, PartialEq, Deserialize, ToSchema)]
