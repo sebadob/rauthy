@@ -4,10 +4,12 @@
     import Tooltip from "../Tooltip.svelte";
     import {getKey} from "../utils/helpers.js";
     import IconBackspace from "$lib/icons/IconBackspace.svelte";
+    import {getSearch} from "../../utils/dataFetchingAdmin.js";
 
     export let items = [];
     export let resItems;
     export let options = [];
+    export let useServerSide = false;
 
     let selected = '';
     let search = '';
@@ -27,15 +29,10 @@
     $: {
         if (!search) {
             resItems = items;
+        } else if (useServerSide) {
+            filerItemsServerSide();
         } else {
-            resItems = [...items.filter(i => {
-                // This switch is a bit more annoying to maintain, but we can set a more strict CSP without `eval`
-                if (options.length > 0) {
-                    return callback(i, search);
-                } else {
-                    return i.toLowerCase().includes(search) || i === search;
-                }
-            })];
+            filerItems();
         }
     }
 
@@ -54,6 +51,33 @@
 
     function del() {
         search = '';
+    }
+
+    function filerItems() {
+        resItems = [...items.filter(i => {
+            // This switch is a bit more annoying to maintain, but we can set a more strict CSP without `eval`
+            if (options.length > 0) {
+                return callback(i, search);
+            } else {
+                return i.toLowerCase().includes(search) || i === search;
+            }
+        })];
+    }
+
+    async function filerItemsServerSide() {
+        if (search.length < 3) {
+            // skipping server side search below 3 chars
+            return;
+        }
+
+        const idx = selected.replaceAll('-', '').toLowerCase();
+        let res = await getSearch('user', idx, search);
+        if (res.ok) {
+            resItems = await res.json();
+        } else {
+            // should never happen ...
+            console.error(res);
+        }
     }
 
 </script>

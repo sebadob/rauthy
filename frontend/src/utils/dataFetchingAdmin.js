@@ -544,3 +544,11 @@ export async function deleteScope(id) {
     });
     return await checkRedirectForbidden(res);
 }
+
+export async function getSearch(ty, idx, q) {
+    const res = await fetch(`/auth/v1/search?ty=${ty}&idx=${idx}&q=${q}`, {
+        method: 'GET',
+        headers: HEADERS,
+    });
+    return await checkRedirectForbidden(res);
+}
