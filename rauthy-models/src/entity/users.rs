@@ -440,7 +440,6 @@ impl User {
         Ok(res)
     }
 
-    // TODO should we include an "unlink federation" for admins here?
     pub async fn update(
         data: &web::Data<AppState>,
         id: String,
