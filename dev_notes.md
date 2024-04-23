@@ -2,6 +2,8 @@
 
 ## CURRENT WORK
 
+- dynamic server side pagination for users in admin ui
+
 ## Stage 1 - essentials
 
 [x] finished
@@ -17,12 +19,13 @@
 
 ### Notes for performance optimizations
 
-- all the `get_`s on the `Client` will probably be good with returning slices instead of real Strings -> less memory
-  allocations
+- all the `get_`s on the `Client` will probably be good with returning slices instead of real Strings
+  -> less memory allocations
 
 ## Stage 3 - Possible nice to haves
 
 - respect `display=popup` and / or `display=touch` on `/authorize`
 - impl experimental `dilithium` alg for token signing to become quantum safe
-- 'rauthy-migrate' project to help migrating to rauthy?
+- 'rauthy-migrate' project to help migrating to rauthy? probably when doing benchmarks anyway and use it
+  for dummy data?
 - custom event listener template to build own implementation? -> only if NATS will be implemented maybe?

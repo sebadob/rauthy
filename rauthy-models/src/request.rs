@@ -647,6 +647,17 @@ pub struct NewRoleRequest {
     pub role: String,
 }
 
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct PaginationParams {
+    pub page: Option<u32>,
+    pub page_size: Option<u16>,
+    pub offset: Option<u16>,
+    pub backwards: Option<bool>,
+    /// Validation: `[a-zA-Z0-9]`
+    #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    pub continuation_token: Option<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct PasskeyRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,32}`
@@ -676,6 +687,7 @@ pub struct SearchParams {
     /// The actual search query - validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+`
     #[validate(regex(path = "RE_SEARCH", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+"))]
     pub q: String,
+    pub limit: Option<u16>,
 }
 
 #[derive(Debug, PartialEq, Deserialize, ToSchema)]

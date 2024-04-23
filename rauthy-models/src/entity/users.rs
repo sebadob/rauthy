@@ -1,6 +1,7 @@
 use crate::app_state::{AppState, Argon2Params, DbTxn};
 use crate::email::{send_email_change_info_new, send_email_confirm_change, send_pwd_reset};
 use crate::entity::colors::ColorEntity;
+use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::groups::Group;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
@@ -21,7 +22,8 @@ use crate::templates::UserEmailChangeConfirmHtml;
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;
 use rauthy_common::constants::{
-    CACHE_NAME_USERS, IDX_USERS, RAUTHY_ADMIN_ROLE, WEBAUTHN_NO_PASSWORD_EXPIRY,
+    CACHE_NAME_12HR, CACHE_NAME_USERS, IDX_USERS, RAUTHY_ADMIN_ROLE, USER_COUNT_IDX,
+    WEBAUTHN_NO_PASSWORD_EXPIRY,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
@@ -73,6 +75,73 @@ pub struct User {
 
 // CRUD
 impl User {
+    pub async fn count(data: &web::Data<AppState>) -> Result<i64, ErrorResponse> {
+        if let Some(count) = cache_get!(
+            i64,
+            CACHE_NAME_12HR.to_string(),
+            USER_COUNT_IDX.to_string(),
+            &data.caches.ha_cache_config,
+            false
+        )
+        .await?
+        {
+            return Ok(count);
+        }
+
+        let res = sqlx::query!("SELECT COUNT (*) count FROM users")
+            .fetch_one(&data.db)
+            .await?;
+
+        // sqlite returns an i32 for count while postgres returns an Option<i64>
+        #[cfg(feature = "postgres")]
+        let count = res.count.unwrap_or_default();
+        #[cfg(not(feature = "postgres"))]
+        let count = res.count as i64;
+
+        cache_insert(
+            CACHE_NAME_12HR.to_string(),
+            USER_COUNT_IDX.to_string(),
+            &data.caches.ha_cache_config,
+            &count,
+            AckLevel::Once,
+        )
+        .await?;
+
+        Ok(count)
+    }
+
+    async fn count_inc(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        let mut count = Self::count(data).await?;
+        // theoretically, we could have overlaps here, but we don't really care
+        // -> used for dynamic pagination only and SQLite has limited query features
+        count += 1;
+        cache_insert(
+            CACHE_NAME_12HR.to_string(),
+            USER_COUNT_IDX.to_string(),
+            &data.caches.ha_cache_config,
+            &count,
+            AckLevel::Once,
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn count_dec(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        let mut count = Self::count(data).await?;
+        // theoretically, we could have overlaps here, but we don't really care
+        // -> used for dynamic pagination only and SQLite has limited query features
+        count -= 1;
+        cache_insert(
+            CACHE_NAME_12HR.to_string(),
+            USER_COUNT_IDX.to_string(),
+            &data.caches.ha_cache_config,
+            &count,
+            AckLevel::Once,
+        )
+        .await?;
+        Ok(())
+    }
+
     // Inserts a user into the database
     pub async fn create(
         data: &web::Data<AppState>,
@@ -154,6 +223,8 @@ impl User {
             AckLevel::Quorum,
         )
         .await?;
+
+        Self::count_dec(data).await?;
 
         Ok(())
     }
@@ -260,9 +331,21 @@ impl User {
     }
 
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        let res = sqlx::query_as!(Self, "select * from users")
+        let res = sqlx::query_as!(Self, "SELECT * FROM users ORDER BY created_at ASC")
             .fetch_all(&data.db)
             .await?;
+        Ok(res)
+    }
+
+    pub async fn find_all_simple(
+        data: &web::Data<AppState>,
+    ) -> Result<Vec<UserResponseSimple>, ErrorResponse> {
+        let res = sqlx::query_as!(
+            UserResponseSimple,
+            "SELECT id, email FROM users ORDER BY created_at ASC"
+        )
+        .fetch_all(&data.db)
+        .await?;
         Ok(res)
     }
 
@@ -274,6 +357,95 @@ impl User {
             .fetch_all(&data.db)
             .await?;
         Ok(res)
+    }
+
+    pub async fn find_paginated(
+        data: &web::Data<AppState>,
+        continuation_token: Option<ContinuationToken>,
+        page_size: i64,
+        offset: i64,
+        backwards: bool,
+    ) -> Result<(Vec<UserResponseSimple>, Option<ContinuationToken>), ErrorResponse> {
+        let mut res = Vec::with_capacity(page_size as usize);
+        let mut latest_ts = 0;
+
+        if let Some(token) = continuation_token {
+            if backwards {
+                let rows = sqlx::query!(
+                    r#"SELECT id, email, created_at
+                    FROM users
+                    WHERE created_at <= $1 AND id != $2
+                    ORDER BY created_at DESC
+                    LIMIT $3
+                    OFFSET $4"#,
+                    token.ts,
+                    token.id,
+                    page_size,
+                    offset,
+                )
+                .fetch_all(&data.db)
+                .await?;
+
+                for row in rows {
+                    res.push(UserResponseSimple {
+                        id: row.id,
+                        email: row.email,
+                    });
+                    latest_ts = row.created_at;
+                }
+                res.reverse();
+            } else {
+                let rows = sqlx::query!(
+                    r#"SELECT id, email, created_at
+                    FROM users
+                    WHERE created_at >= $1 AND id != $2
+                    ORDER BY created_at ASC
+                    LIMIT $3
+                    OFFSET $4"#,
+                    token.ts,
+                    token.id,
+                    page_size,
+                    offset,
+                )
+                .fetch_all(&data.db)
+                .await?;
+
+                for row in rows {
+                    res.push(UserResponseSimple {
+                        id: row.id,
+                        email: row.email,
+                    });
+                    latest_ts = row.created_at;
+                }
+            };
+        } else {
+            // there is no "backwards" without a continuation token
+            let rows = sqlx::query!(
+                r#"SELECT id, email, created_at
+                FROM users
+                ORDER BY created_at ASC
+                LIMIT $1
+                OFFSET $2"#,
+                page_size,
+                offset,
+            )
+            .fetch_all(&data.db)
+            .await?;
+
+            for row in rows {
+                res.push(UserResponseSimple {
+                    id: row.id,
+                    email: row.email,
+                });
+                latest_ts = row.created_at;
+            }
+        };
+
+        let token = res
+            .last()
+            .map(|entry| ContinuationToken::new(entry.id.clone(), latest_ts));
+
+        Ok((res, token))
     }
 
     async fn insert(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
@@ -300,6 +472,8 @@ impl User {
         )
         .execute(&data.db)
         .await?;
+
+        Self::count_inc(data).await?;
 
         Ok(new_user)
     }
@@ -413,6 +587,7 @@ impl User {
         data: &web::Data<AppState>,
         idx: &SearchParamsIdx,
         q: &str,
+        limit: i64,
     ) -> Result<Vec<UserResponseSimple>, ErrorResponse> {
         let q = format!("%{}%", q);
 
@@ -420,18 +595,20 @@ impl User {
             SearchParamsIdx::Id => {
                 query_as!(
                     UserResponseSimple,
-                    "SELECT id, email FROM users WHERE id LIKE $1",
-                    q
+                    "SELECT id, email FROM users WHERE id LIKE $1 ORDER BY created_at ASC LIMIT $2",
+                    q,
+                    limit
                 )
                 .fetch_all(&data.db)
                 .await?
             }
             SearchParamsIdx::Email => {
                 query_as!(
-                    UserResponseSimple,
-                    "SELECT id, email FROM users WHERE email LIKE $1",
-                    q
-                )
+                UserResponseSimple,
+                "SELECT id, email FROM users WHERE email LIKE $1 ORDER BY created_at ASC LIMIT $2",
+                q,
+                limit
+            )
                 .fetch_all(&data.db)
                 .await?
             }

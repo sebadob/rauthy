@@ -68,6 +68,7 @@ pub const IDX_SCOPES: &str = "scopes_";
 pub const IDX_SESSION: &str = "session_";
 pub const IDX_SESSIONS: &str = "sessions";
 pub const IDX_USERS: &str = "users_";
+pub const USER_COUNT_IDX: &str = "users_count_total";
 pub const IDX_USERS_VALUES: &str = "users_values_";
 pub const IDX_USER_ATTR_CONFIG: &str = "user_attrs_";
 pub const IDX_WEBAUTHN: &str = "webauthn_";
@@ -347,6 +348,11 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
         .expect("SWAGGER_UI_EXTERNAL cannot be parsed to bool - bad format");
+
+     pub static ref SSP_THRESHOLD: u16 = env::var("SSP_THRESHOLD")
+        .unwrap_or_else(|_| String::from("1000"))
+        .parse::<u16>()
+        .expect("SSP_THRESHOLD cannot be parsed to u16 - bad format");
 
     pub static ref UNSAFE_NO_RESET_BINDING: bool = env::var("UNSAFE_NO_RESET_BINDING")
         .unwrap_or_else(|_| String::from("false"))

@@ -543,9 +543,10 @@ pub async fn get_search(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
+    let limit = params.limit.unwrap_or(100) as i64;
     match params.ty {
         SearchParamsType::User => {
-            let res = User::search(&data, &params.idx, &params.q).await?;
+            let res = User::search(&data, &params.idx, &params.q, limit).await?;
             Ok(HttpResponse::Ok().json(res))
         }
     }
