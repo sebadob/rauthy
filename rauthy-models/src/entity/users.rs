@@ -33,7 +33,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{query_as, FromRow};
 use std::ops::Add;
 use time::OffsetDateTime;
-use tracing::{error, warn};
+use tracing::{error, trace, warn};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccountType {
@@ -821,9 +821,10 @@ impl User {
 
     pub fn check_enabled(&self) -> Result<(), ErrorResponse> {
         if !self.enabled {
+            trace!("The user is not enabled");
             return Err(ErrorResponse::new(
                 ErrorResponseType::Disabled,
-                String::from("The user is not enabled"),
+                String::from("User is not enabled"),
             ));
         }
         Ok(())
@@ -832,6 +833,7 @@ impl User {
     pub fn check_expired(&self) -> Result<(), ErrorResponse> {
         if let Some(ts) = self.user_expires {
             if OffsetDateTime::now_utc().unix_timestamp() > ts {
+                trace!("User has expired");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Disabled,
                     String::from("User has expired"),

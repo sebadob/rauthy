@@ -3,6 +3,7 @@ use crate::entity::sessions::{Session, SessionState};
 use actix_web::{web, HttpRequest};
 use rauthy_common::constants::{ADMIN_FORCE_MFA, ROLE_ADMIN};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use tracing::trace;
 
 /// Used internally to check authentication and access rights for endpoints and actions
 #[derive(Debug, Clone, Default)]
@@ -179,12 +180,14 @@ impl Principal {
             if session.state == SessionState::Auth {
                 Ok(session)
             } else {
+                trace!("Validating the session failed - was not in auth state");
                 Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
                     "Unauthorized Session".to_string(),
                 ))
             }
         } else {
+            trace!("Validating the session failed - no session found");
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 "No valid session".to_string(),
@@ -194,17 +197,21 @@ impl Principal {
 
     #[inline(always)]
     pub fn validate_session_auth_or_init(&self) -> Result<(), ErrorResponse> {
-        if self
-            .session
-            .as_ref()
-            .map(|s| s.state == SessionState::Auth || s.state == SessionState::Init)
-            .unwrap_or(false)
-        {
-            Ok(())
+        if let Some(session) = &self.session {
+            if session.state == SessionState::Auth || session.state == SessionState::Init {
+                Ok(())
+            } else {
+                trace!("Validating the session failed - was not in init or auth state");
+                Err(ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "Unauthorized Session".to_string(),
+                ))
+            }
         } else {
+            trace!("Validating the session failed - no session found");
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                "Unauthorized Session".to_string(),
+                "No valid session".to_string(),
             ))
         }
     }
@@ -219,6 +226,7 @@ impl Principal {
         {
             Ok(())
         } else {
+            trace!("Validating the session failed - was not in init state");
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 "Session in Init state mandatory".to_string(),

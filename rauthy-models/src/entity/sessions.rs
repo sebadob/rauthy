@@ -4,7 +4,8 @@ use actix_web::cookie::{time, Cookie, SameSite};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{cookie, web, HttpRequest};
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_SESSIONS, COOKIE_SESSION, CSRF_HEADER, IDX_SESSION,
+    CACHE_NAME_12HR, CACHE_NAME_SESSIONS, COOKIE_SESSION, CSRF_HEADER, DANGER_COOKIE_INSECURE,
+    IDX_SESSION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::get_rand;
@@ -375,9 +376,15 @@ impl Session {
             OffsetDateTime::from_unix_timestamp(self.exp)
                 .expect("Error with offset datetime calculation for client cookie"),
         );
+
+        let secure = !*DANGER_COOKIE_INSECURE;
+        if !secure {
+            warn!("Building INSECURE session cookie - you MUST NEVER use this in production");
+        }
+
         cookie::Cookie::build(COOKIE_SESSION, self.id.clone())
             .http_only(true)
-            .secure(true)
+            .secure(secure)
             .same_site(SameSite::Lax)
             .expires(exp)
             .path("/auth")

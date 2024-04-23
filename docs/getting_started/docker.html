@@ -198,6 +198,19 @@ logs to see the URL and first password.</p>
 <p><a class="admonition-anchor-link" href="#admonition-note"></a></p>
 </div>
 <div>
+<p><strong>When using Safari:</strong></p>
+<p>If you want to test with Safari with plain HTTP, you need to add <code>-e DANGER_COOKIE_INSECURE=true</code>.
+Rauthy always builds secure cookies by default, but Safari does not treat localhost as secure like
+all other browsers. This option has been implemented in <code>v0.22.2-20240424-1</code>. So you might start it with:</p>
+<p><code>docker run --rm -p 8080:8080 -e DANGER_COOKIE_INSECURE=true ghcr.io/sebadob/rauthy:0.22.2-20240424-1-lite</code></p>
+</div>
+</div>
+<div id="admonition-note-1" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note-1"></a></p>
+</div>
+<div>
 <p>The second command does not start in interactive mode and it does not delete the container on exit.<br />
 This means the data will be persisted, as long as the container itself is no erased and you can shutdown and
 restart to your liking without using test data.</p>
@@ -218,10 +231,10 @@ The second thing is to provide a more custom config.</p>
 You can add environment variables to the startup command with the <code>-e</code> option, like shown in the on-disk SQLite
 command.<br />
 A better approach, when you have a bigger config file, would be to have all of them in a config file.</p>
-<div id="admonition-note-1" class="admonition admonish-note">
+<div id="admonition-note-2" class="admonition admonish-note">
 <div class="admonition-title">
 <p>Note</p>
-<p><a class="admonition-anchor-link" href="#admonition-note-1"></a></p>
+<p><a class="admonition-anchor-link" href="#admonition-note-2"></a></p>
 </div>
 <div>
 <p>The following commands will work on Linux and Mac OS (even though not tested on Mac OS). If you are on Windows,
@@ -256,10 +269,10 @@ sudo chown -R 10001:10001 rauthy
 </code></pre>
 <p>This will make the directory writeable for everyone, so rauthy can create the database files inside the container
 with 10001:10001 again.</p>
-<div id="admonition-note-2" class="admonition admonish-note">
+<div id="admonition-note-3" class="admonition admonish-note">
 <div class="admonition-title">
 <p>Note</p>
-<p><a class="admonition-anchor-link" href="#admonition-note-2"></a></p>
+<p><a class="admonition-anchor-link" href="#admonition-note-3"></a></p>
 </div>
 <div>
 <p>The safest approach would be to change the owner and group for these files on the host system. This needs <code>sudo</code>
