@@ -11,7 +11,7 @@ members = [
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.22.2-20240424-1"
+version = "0.22.2-20240424-2"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
