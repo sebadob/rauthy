@@ -13,8 +13,10 @@ use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
 use crate::events::event::Event;
 use crate::language::Language;
 use crate::request::{
-    NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
+    NewUserRegistrationRequest, NewUserRequest, SearchParamsIdx, UpdateUserRequest,
+    UpdateUserSelfRequest,
 };
+use crate::response::UserResponseSimple;
 use crate::templates::UserEmailChangeConfirmHtml;
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;
@@ -28,7 +30,7 @@ use redhac::{
     cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use sqlx::{query_as, FromRow};
 use std::ops::Add;
 use time::OffsetDateTime;
 use tracing::{error, warn};
@@ -406,7 +408,38 @@ impl User {
         Ok(())
     }
 
-    // TODO should we include a "unlink federation" for admins here?
+    /// Caution: Uses regex / LIKE on the database -> very costly query
+    pub async fn search(
+        data: &web::Data<AppState>,
+        idx: &SearchParamsIdx,
+        q: &str,
+    ) -> Result<Vec<UserResponseSimple>, ErrorResponse> {
+        let q = format!("%{}%", q);
+
+        let res = match idx {
+            SearchParamsIdx::Id => {
+                query_as!(
+                    UserResponseSimple,
+                    "SELECT id, email FROM users WHERE id LIKE $1",
+                    q
+                )
+                .fetch_all(&data.db)
+                .await?
+            }
+            SearchParamsIdx::Email => {
+                query_as!(
+                    UserResponseSimple,
+                    "SELECT id, email FROM users WHERE email LIKE $1",
+                    q
+                )
+                .fetch_all(&data.db)
+                .await?
+            }
+        };
+
+        Ok(res)
+    }
+
     pub async fn update(
         data: &web::Data<AppState>,
         id: String,

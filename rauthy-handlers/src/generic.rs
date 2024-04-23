@@ -32,7 +32,7 @@ use rauthy_models::i18n::SsrJson;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
     EncKeyMigrateRequest, I18nContent, I18nRequest, PasswordHashTimesRequest,
-    PasswordPolicyRequest, WhoamiRequestParam, WhoamiRequestParams,
+    PasswordPolicyRequest, SearchParams, SearchParamsType, WhoamiRequestParam, WhoamiRequestParams,
 };
 use rauthy_models::response::{
     AppVersionResponse, Argon2ParamsResponse, EncKeysResponse, HealthResponse, LoginTimeResponse,
@@ -522,6 +522,33 @@ pub async fn post_pow(data: web::Data<AppState>) -> Result<HttpResponse, ErrorRe
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
         .body(pow.to_string()))
+}
+
+/// Search endpoint used for searching from the Admin UI with active server side pagination
+#[utoipa::path(
+    get,
+    path = "/search",
+    tag = "generic",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest"),
+        (status = 401, description = "Unauthorized"),
+    ),
+)]
+#[get("/search")]
+pub async fn get_search(
+    data: web::Data<AppState>,
+    params: actix_web_validator::Query<SearchParams>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_admin_session()?;
+
+    match params.ty {
+        SearchParamsType::User => {
+            let res = User::search(&data, &params.idx, &params.q).await?;
+            Ok(HttpResponse::Ok().json(res))
+        }
+    }
 }
 
 /// Updates the language for the logged in principal depending on the `locale` cookie

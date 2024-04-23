@@ -11,7 +11,7 @@ use rauthy_common::constants::{
     RE_ATTR_DESC, RE_AUTH_PROVIDER_SCOPE, RE_CHALLENGE, RE_CITY, RE_CLIENT_ID_EPHEMERAL,
     RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_CODE_VERIFIER, RE_CONTACT, RE_DATE_STR, RE_FLOWS,
     RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE, RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_PEM, RE_PHONE,
-    RE_STREET, RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI, RE_USER_NAME,
+    RE_SEARCH, RE_STREET, RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI, RE_USER_NAME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::base64_decode;
@@ -665,6 +665,31 @@ pub struct ScopeRequest {
     /// Validation: `^[a-zA-Z0-9-_/]{2,128}$`
     #[validate(custom(function = "validate_vec_attr"))]
     pub attr_include_id: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct SearchParams {
+    /// Data type
+    pub ty: SearchParamsType,
+    /// Index
+    pub idx: SearchParamsIdx,
+    /// The actual search query - validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+`
+    #[validate(regex(path = "RE_SEARCH", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+"))]
+    pub q: String,
+}
+
+#[derive(Debug, PartialEq, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum SearchParamsIdx {
+    Id,
+    Email,
+}
+
+#[derive(Debug, PartialEq, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum SearchParamsType {
+    // For now, only user exists. More will be added if necessary.
+    User,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
