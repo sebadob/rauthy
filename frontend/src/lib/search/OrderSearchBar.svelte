@@ -7,6 +7,7 @@
     export let searchOptions = [];
     export let orderOptions = [];
     export let firstDirReverse = false;
+    export let useServerSide = false;
 
     let searchItems = [];
 </script>
@@ -30,6 +31,7 @@
                 items={items}
                 bind:resItems={searchItems}
                 options={searchOptions}
+                useServerSide={useServerSide}
         />
     </div>
 </div>
