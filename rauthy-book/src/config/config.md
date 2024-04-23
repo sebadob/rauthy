@@ -166,7 +166,7 @@ AUTH_HEADER_MFA=x-forwarded-user-mfa
 #RESTORE_BACKUP=
 
 #####################################
-############# BOOSTRAP ##############
+############ BOOTSTRAP ##############
 #####################################
 
 # If set, the email of the default admin will be changed
