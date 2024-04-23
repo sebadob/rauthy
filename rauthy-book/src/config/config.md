@@ -166,6 +166,26 @@ AUTH_HEADER_MFA=x-forwarded-user-mfa
 #RESTORE_BACKUP=
 
 #####################################
+############# BOOSTRAP ##############
+#####################################
+
+# If set, the email of the default admin will be changed
+# during the initialization of an empty production database.
+#BOOTSTRAP_ADMIN_EMAIL=admin@localhost.de
+
+# If set, this plain text password will be used for the
+# initial admin password instead of generating a random
+# password.
+#BOOTSTRAP_ADMIN_PASSWORD_PLAIN="123SuperSafe"
+
+# If set, this will take the argon2id hashed password
+# during the initialization of an empty production database.
+# If both BOOTSTRAP_ADMIN_PASSWORD_PLAIN and
+# BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID are set, the hashed version
+# will always be prioritized.
+#BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID='$argon2id$v=19$m=32768,t=3,p=2$xr23OhOHw+pNyy3dYKZUcA$CBO4NpGvyi6gvrb5uNrnsS/z/Ew+IuS0/gVqFmLKncA'
+
+#####################################
 ############## CACHE ################
 #####################################
 
