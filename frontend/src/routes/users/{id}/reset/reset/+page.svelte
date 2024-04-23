@@ -332,9 +332,9 @@
 
 <svelte:head>
     {#if requestType.startsWith('new_user')}
-        <title>{t.newAccount}</title>
+        <title>{t?.newAccount || ''}</title>
     {:else if requestType === "password_reset"}
-        <title>{t.passwordReset}</title>
+        <title>{t?.passwordReset || ''}</title>
     {/if}
 </svelte:head>
 
