@@ -1,6 +1,7 @@
 use crate::app_state::{AppState, Argon2Params, DbTxn};
 use crate::email::{send_email_change_info_new, send_email_confirm_change, send_pwd_reset};
 use crate::entity::colors::ColorEntity;
+use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::groups::Group;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
@@ -330,9 +331,21 @@ impl User {
     }
 
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        let res = sqlx::query_as!(Self, "select * from users")
+        let res = sqlx::query_as!(Self, "SELECT * FROM users ORDER BY created_at ASC")
             .fetch_all(&data.db)
             .await?;
+        Ok(res)
+    }
+
+    pub async fn find_all_simple(
+        data: &web::Data<AppState>,
+    ) -> Result<Vec<UserResponseSimple>, ErrorResponse> {
+        let res = sqlx::query_as!(
+            UserResponseSimple,
+            "SELECT id, email FROM users ORDER BY created_at ASC"
+        )
+        .fetch_all(&data.db)
+        .await?;
         Ok(res)
     }
 
@@ -344,6 +357,95 @@ impl User {
             .fetch_all(&data.db)
             .await?;
         Ok(res)
+    }
+
+    pub async fn find_paginated(
+        data: &web::Data<AppState>,
+        continuation_token: Option<ContinuationToken>,
+        page_size: i64,
+        offset: i64,
+        backwards: bool,
+    ) -> Result<(Vec<UserResponseSimple>, Option<ContinuationToken>), ErrorResponse> {
+        let mut res = Vec::with_capacity(page_size as usize);
+        let mut latest_ts = 0;
+
+        if let Some(token) = continuation_token {
+            if backwards {
+                let rows = sqlx::query!(
+                    r#"SELECT id, email, created_at
+                    FROM users
+                    WHERE created_at <= $1 AND id != $2
+                    ORDER BY created_at DESC
+                    LIMIT $3
+                    OFFSET $4"#,
+                    token.ts,
+                    token.id,
+                    page_size,
+                    offset,
+                )
+                .fetch_all(&data.db)
+                .await?;
+
+                for row in rows {
+                    res.push(UserResponseSimple {
+                        id: row.id,
+                        email: row.email,
+                    });
+                    latest_ts = row.created_at;
+                }
+                res.reverse();
+            } else {
+                let rows = sqlx::query!(
+                    r#"SELECT id, email, created_at
+                    FROM users
+                    WHERE created_at >= $1 AND id != $2
+                    ORDER BY created_at ASC
+                    LIMIT $3
+                    OFFSET $4"#,
+                    token.ts,
+                    token.id,
+                    page_size,
+                    offset,
+                )
+                .fetch_all(&data.db)
+                .await?;
+
+                for row in rows {
+                    res.push(UserResponseSimple {
+                        id: row.id,
+                        email: row.email,
+                    });
+                    latest_ts = row.created_at;
+                }
+            };
+        } else {
+            // there is no "backwards" without a continuation token
+            let rows = sqlx::query!(
+                r#"SELECT id, email, created_at
+                FROM users
+                ORDER BY created_at ASC
+                LIMIT $1
+                OFFSET $2"#,
+                page_size,
+                offset,
+            )
+            .fetch_all(&data.db)
+            .await?;
+
+            for row in rows {
+                res.push(UserResponseSimple {
+                    id: row.id,
+                    email: row.email,
+                });
+                latest_ts = row.created_at;
+            }
+        };
+
+        let token = res
+            .last()
+            .map(|entry| ContinuationToken::new(entry.id.clone(), latest_ts));
+
+        Ok((res, token))
     }
 
     async fn insert(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
@@ -492,7 +594,7 @@ impl User {
             SearchParamsIdx::Id => {
                 query_as!(
                     UserResponseSimple,
-                    "SELECT id, email FROM users WHERE id LIKE $1",
+                    "SELECT id, email FROM users WHERE id LIKE $1 ORDER BY created_at ASC",
                     q
                 )
                 .fetch_all(&data.db)
@@ -501,7 +603,7 @@ impl User {
             SearchParamsIdx::Email => {
                 query_as!(
                     UserResponseSimple,
-                    "SELECT id, email FROM users WHERE email LIKE $1",
+                    "SELECT id, email FROM users WHERE email LIKE $1 ORDER BY created_at ASC",
                     q
                 )
                 .fetch_all(&data.db)

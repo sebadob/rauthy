@@ -2,16 +2,17 @@ use crate::ReqPrincipal;
 use actix_web::http::header::LOCATION;
 use actix_web::http::StatusCode;
 use actix_web::{cookie, delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
-use actix_web_validator::Json;
+use actix_web_validator::{Json, Query};
 use rauthy_common::constants::{
     COOKIE_MFA, ENABLE_WEB_ID, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, OPEN_USER_REG,
-    PWD_RESET_COOKIE, TEXT_TURTLE, USER_REG_DOMAIN_RESTRICTION,
+    PWD_RESET_COOKIE, SSP_THRESHOLD, TEXT_TURTLE, USER_REG_DOMAIN_RESTRICTION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::colors::ColorEntity;
+use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::pow::PowEntity;
 use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
@@ -23,14 +24,14 @@ use rauthy_models::entity::webids::WebId;
 use rauthy_models::events::event::Event;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
-    MfaPurpose, NewUserRegistrationRequest, NewUserRequest, PasswordResetRequest,
+    MfaPurpose, NewUserRegistrationRequest, NewUserRequest, PaginationParams, PasswordResetRequest,
     RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest, UserAttrConfigRequest,
     UserAttrValuesUpdateRequest, WebIdRequest, WebauthnAuthFinishRequest, WebauthnAuthStartRequest,
     WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_models::response::{
     PasskeyResponse, UserAttrConfigResponse, UserAttrValueResponse, UserAttrValuesResponse,
-    UserResponse, UserResponseSimple, WebIdResponse,
+    UserResponse, WebIdResponse,
 };
 use rauthy_models::templates::{Error1Html, Error3Html, ErrorHtml, UserRegisterHtml};
 use rauthy_service::password_reset;
@@ -57,17 +58,52 @@ use tracing::{error, warn};
 pub async fn get_users(
     data: web::Data<AppState>,
     principal: ReqPrincipal,
+    params: Query<PaginationParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
 
-    let users = User::find_all(&data).await?;
-    let mut res = Vec::new();
-    users
-        .into_iter()
-        // return a simplified version to decrease payload for big deployments
-        .for_each(|u| res.push(UserResponseSimple::from(u)));
+    let user_count = User::count(&data).await?;
 
-    Ok(HttpResponse::Ok().json(res))
+    if user_count >= *SSP_THRESHOLD as i64 || params.page_size.is_some() {
+        let page_size = params.page_size.unwrap_or(15) as i64;
+        let offset = params.offset.unwrap_or(0) as i64;
+        let backwards = params.backwards.unwrap_or(false);
+        let continuation_token = if let Some(token) = &params.continuation_token {
+            Some(ContinuationToken::try_from(token.as_str())?)
+        } else {
+            None
+        };
+
+        let (users, continuation_token) =
+            User::find_paginated(&data, continuation_token, page_size, offset, backwards).await?;
+        let x_page_count = (user_count as f64 / page_size as f64).ceil() as u32;
+
+        if let Some(token) = continuation_token {
+            Ok(HttpResponse::PartialContent()
+                .insert_header(("x-user-count", user_count))
+                .insert_header(("x-page-count", x_page_count))
+                .insert_header(("x-page-size", page_size as u32))
+                .insert_header(token.into_header_pair())
+                .json(users))
+        } else {
+            Ok(HttpResponse::PartialContent()
+                .insert_header(("x-user-count", user_count))
+                .insert_header(("x-page-count", x_page_count))
+                .insert_header(("x-page-size", page_size as u32))
+                .json(users))
+        }
+    } else {
+        let users = User::find_all_simple(&data).await?;
+        // let mut res = Vec::new();
+        // users
+        //     .into_iter()
+        //     // return a simplified version to decrease payload for big deployments
+        //     .for_each(|u| res.push(UserResponseSimple::from(u)));
+
+        Ok(HttpResponse::Ok()
+            .insert_header(("x-user-count", user_count))
+            .json(users))
+    }
 }
 
 /// Adds a new user to the database
