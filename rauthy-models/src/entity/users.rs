@@ -16,7 +16,7 @@ use crate::request::{
     NewUserRegistrationRequest, NewUserRequest, SearchParamsIdx, UpdateUserRequest,
     UpdateUserSelfRequest,
 };
-use crate::response::UserResponse;
+use crate::response::UserResponseSimple;
 use crate::templates::UserEmailChangeConfirmHtml;
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;
@@ -411,28 +411,36 @@ impl User {
     /// Caution: Uses regex / LIKE on the database -> very costly query
     pub async fn search(
         data: &web::Data<AppState>,
-        idx: SearchParamsIdx,
+        idx: &SearchParamsIdx,
         q: &str,
-    ) -> Result<Vec<Self>, ErrorResponse> {
+    ) -> Result<Vec<UserResponseSimple>, ErrorResponse> {
         let q = format!("%{}%", q);
 
         let res = match idx {
             SearchParamsIdx::Id => {
-                query_as!(Self, "SELECT * FROM users WHERE id LIKE $1", q)
-                    .fetch_all(&data.db)
-                    .await?
+                query_as!(
+                    UserResponseSimple,
+                    "SELECT id, email FROM users WHERE id LIKE $1",
+                    q
+                )
+                .fetch_all(&data.db)
+                .await?
             }
             SearchParamsIdx::Email => {
-                query_as!(Self, "SELECT * FROM users WHERE email LIKE $1", q)
-                    .fetch_all(&data.db)
-                    .await?
+                query_as!(
+                    UserResponseSimple,
+                    "SELECT id, email FROM users WHERE email LIKE $1",
+                    q
+                )
+                .fetch_all(&data.db)
+                .await?
             }
         };
 
         Ok(res)
     }
 
-    // TODO should we include a "unlink federation" for admins here?
+    // TODO should we include an "unlink federation" for admins here?
     pub async fn update(
         data: &web::Data<AppState>,
         id: String,
