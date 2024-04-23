@@ -12,6 +12,7 @@
     let users = [];
     let resUsers = [];
     let resUsersPaginated = [];
+    let useServerSide = false;
 
     let searchOptions = [
         {
@@ -45,6 +46,11 @@
         if (!res.ok) {
             msg = 'Error fetching users: ' + res.body.message;
         } else {
+            // TODO implement partial response on the server
+            useServerSide = res.status === 206;
+            // TODO expect custom headers from a partial response with page size and count
+            // for the pagination component
+
             let u = await res.json();
             users = [...u];
             resUsers = [...u];
@@ -88,6 +94,7 @@
             bind:resItems={resUsers}
             bind:searchOptions
             bind:orderOptions
+            bind:useServerSide
     />
 
     <UserTileAddNew onSave={onSave}/>
