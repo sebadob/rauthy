@@ -6,14 +6,16 @@ use jwt_simple::algorithms::{
     Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
 };
 use rand_core::OsRng;
-use sqlx::Row;
+use ring::digest;
+use sqlx::{query, Row};
 use std::env;
 use time::OffsetDateTime;
 use tracing::{debug, info};
+use validator::Validate;
 
 use rauthy_common::constants::{ADMIN_FORCE_MFA, DB_TYPE, DEV_MODE, PUB_URL, PUB_URL_WITH_SCHEME};
 use rauthy_common::error_response::ErrorResponse;
-use rauthy_common::utils::get_rand;
+use rauthy_common::utils::{base64_decode, get_rand};
 use rauthy_common::DbType;
 
 use crate::app_state::DbPool;
@@ -36,6 +38,7 @@ use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
+use crate::request::ApiKeyRequest;
 
 pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse> {
     debug!("Executing anti_lockout_check");
@@ -214,6 +217,37 @@ pub async fn migrate_init_prod(
         )
         .execute(db)
         .await?;
+
+        // now check if we should bootstrap an API Key
+        if let Ok(api_key_raw) = env::var("BOOTSTRAP_API_KEY") {
+            // this is expected to be base64 encoded
+            let bytes = base64_decode(&api_key_raw)?;
+            // ... and then a JSON string
+            let s = String::from_utf8_lossy(&bytes);
+            let req = serde_json::from_str::<ApiKeyRequest>(&s)?;
+            req.validate()
+                .expect("Invalid API Key in BOOTSTRAP_API_KEY");
+
+            debug!("Bootstrapping API Key:\n{:?}", req);
+            let key_name = req.name.clone();
+            let _ = ApiKeyEntity::create(db, req.name, req.exp, req.access).await?;
+
+            if let Ok(secret_plain) = env::var("BOOTSTRAP_API_KEY_SECRET") {
+                assert!(secret_plain.len() >= 64);
+                let secret_hash = digest::digest(&digest::SHA256, secret_plain.as_bytes());
+                let secret_enc = EncValue::encrypt(secret_hash.as_ref())?
+                    .into_bytes()
+                    .to_vec();
+
+                query!(
+                    r#"UPDATE api_keys SET secret = $1 WHERE name = $2"#,
+                    secret_enc,
+                    key_name,
+                )
+                .execute(db)
+                .await?;
+            }
+        }
 
         let enc_key_active = &EncKeys::get_static().enc_key_active;
 
