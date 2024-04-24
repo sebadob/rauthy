@@ -11,8 +11,6 @@ pub struct I18nPasswordReset<'a> {
 
     account_login: &'a str,
     bad_format: &'a str,
-    email: &'a str,
-    email_err: &'a str,
     fido_link: &'a str,
     generate: &'a str,
     mfa: I18nAccountMfa<'a>,
@@ -46,6 +44,9 @@ impl SsrJson for I18nPasswordReset<'_> {
     }
 }
 
+// batman@batcave.io
+// 6f#h5b+eLZ9$9h5%hBQH,RH+
+
 impl I18nPasswordReset<'_> {
     pub fn build_en() -> Self {
         Self {
@@ -53,8 +54,6 @@ impl I18nPasswordReset<'_> {
 
             account_login: "Account Login",
             bad_format: "Bad Format",
-            email: "E-Mail",
-            email_err: "E-Mail does not match",
             fido_link: "https://fidoalliance.org/fido2",
             generate: "Generate",
             mfa: I18nAccountMfa::build_en(),
@@ -88,8 +87,6 @@ E-Mail in case you lose your current key."#,
 
             account_login: "Account Login",
             bad_format: "Ungültiges Format",
-            email: "E-Mail",
-            email_err: "E-Mail stimmt nicht überein",
             fido_link: "https://fidoalliance.org/fido2",
             generate: "Generieren",
             mfa: I18nAccountMfa::build_de(),

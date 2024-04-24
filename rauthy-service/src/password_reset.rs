@@ -29,19 +29,19 @@ pub async fn handle_get_pwd_reset<'a>(
     let mut ml = MagicLink::find(data, &reset_id).await?;
     ml.validate(&user_id, &req, false)?;
 
-    // check if the user has MFA enabled
     let user = User::find(data, ml.user_id.clone()).await?;
-    let email = if user.has_webauthn_enabled() {
-        Some(&user.email)
-    } else {
-        None
-    };
 
     // get the html and insert values
     let rules = PasswordPolicy::find(data).await?;
     let colors = ColorEntity::find_rauthy(data).await?;
     let lang = Language::try_from(&req).unwrap_or_default();
-    let html = PwdResetHtml::build(&ml.csrf_token, &rules, email, &colors, &lang);
+    let html = PwdResetHtml::build(
+        &ml.csrf_token,
+        &rules,
+        &colors,
+        &lang,
+        user.has_webauthn_enabled(),
+    );
 
     // generate a cookie value and save it to the magic link
     let cookie_val = get_rand(48);
@@ -154,21 +154,15 @@ pub async fn handle_put_user_passkey_finish<'a>(
 }
 
 /// Returns (magic link deletion cookie, optional custom redirect uri)
-#[tracing::instrument(level = "debug", skip_all, fields(email = req_data.email))]
+#[tracing::instrument(level = "debug", skip_all, fields(user_id = user_id))]
 pub async fn handle_put_user_password_reset<'a>(
     data: &web::Data<AppState>,
     req: HttpRequest,
     user_id: String,
     req_data: PasswordResetRequest,
 ) -> Result<(cookie::Cookie<'a>, Option<String>), ErrorResponse> {
-    // validate user_id / given email address
+    // validate user_id
     let mut user = User::find(data, user_id).await?;
-    if user.email != req_data.email {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            String::from("E-Mail does not match for this user"),
-        ));
-    }
 
     // check MFA code
     if user.has_webauthn_enabled() {
