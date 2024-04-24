@@ -646,7 +646,6 @@ pub struct NewRoleRequest {
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct PaginationParams {
-    pub page: Option<u32>,
     pub page_size: Option<u16>,
     pub offset: Option<u16>,
     pub backwards: Option<bool>,
