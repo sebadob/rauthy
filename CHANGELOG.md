@@ -15,7 +15,7 @@ hardening instead of opt-out evil provider error fixing.
 Additionally, to improve the UX even further, the additional E-Mail input form has been removed from the password
 reset page as well. The security benefits of this were rather small compared to the UX degradation.
 #365
-[]()
+[1af7b92](https://github.com/sebadob/rauthy/commit/1af7b92204a99de4883154055bb3081dc196d759)
 
 ### Features
 
