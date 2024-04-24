@@ -8,6 +8,8 @@
     export let sspContinuationToken = '';
     export let fetchPageCallback = (offset, backwards) => {
     };
+    export let sspPageSizeChange = (pageSize) => {
+    };
 
     const options = [2, 3, 5, 7, 10, 15, 20, 30, 50, 100];
     const iconSize = 16;
@@ -16,7 +18,7 @@
 
     $: if (pageSize) {
         console.log('page size change in pagination server');
-        fetchPageCallback(0, false)
+        sspPageSizeChange(pageSize);
     }
 
 </script>
@@ -35,6 +37,9 @@
     {/if}
 
     <div class="links">
+        <div class="pageNo noselect">
+            {sspPage}
+        </div>
     </div>
 
     {#if sspContinuationToken}
@@ -90,6 +95,12 @@
     .links {
         display: flex;
         margin: -3px 10px 0 0;
+    }
+
+    .pageNo {
+        margin: 2px;
+        padding: 2px;
+        color: var(--col-acnt);
     }
 
     .total {

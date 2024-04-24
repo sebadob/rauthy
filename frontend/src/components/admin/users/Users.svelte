@@ -21,7 +21,6 @@
     let sspPageSize = 15;
     let sspContinuationToken = '';
     let sspPage = 1;
-    // let sspPageCount = 1;
 
     let searchOptions = [
         {
@@ -69,11 +68,11 @@
         fetchGroups();
     })
 
-    async function fetchUsers(useSsp, offset, backwards) {
+    async function fetchUsers(useSsp, offset, backwards, pageSize) {
         let res;
         if (useSsp === true) {
             console.log('backwards in fetchUsers: ' + backwards);
-            res = await getUsersSsp(sspPageSize, offset, sspContinuationToken, backwards);
+            res = await getUsersSsp(pageSize || sspPageSize, offset, sspContinuationToken, backwards);
         } else {
             res = await getUsers();
         }
@@ -107,6 +106,13 @@
         } else {
             sspPage += 1;
         }
+    }
+
+    // Callback function for <PaginationServer>
+    async function sspPageSizeChange(pageSize) {
+        sspContinuationToken = '';
+        await fetchUsers(true, 0, false, pageSize);
+        sspPage = 1;
     }
 
     async function fetchRoles() {
@@ -180,6 +186,7 @@
                 bind:sspPageSize
                 bind:sspContinuationToken
                 fetchPageCallback={fetchUsersSsp}
+                sspPageSizeChange={sspPageSizeChange}
         />
     {:else}
         <Pagination bind:items={resUsers} bind:resItems={resUsersPaginated}/>
