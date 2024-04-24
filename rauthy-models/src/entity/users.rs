@@ -363,7 +363,7 @@ impl User {
         data: &web::Data<AppState>,
         continuation_token: Option<ContinuationToken>,
         page_size: i64,
-        offset: i64,
+        mut offset: i64,
         backwards: bool,
     ) -> Result<(Vec<UserResponseSimple>, Option<ContinuationToken>), ErrorResponse> {
         let mut res = Vec::with_capacity(page_size as usize);
@@ -371,20 +371,27 @@ impl User {
 
         if let Some(token) = continuation_token {
             if backwards {
-                let rows = sqlx::query!(
+                // when we go backwards, we must skip the current page
+                // the continuation token will always point at the last entry
+                // of the current page
+                // -> add to the offset
+                offset += page_size;
+
+                let mut rows = sqlx::query!(
                     r#"SELECT id, email, created_at
                     FROM users
-                    WHERE created_at <= $1 AND id != $2
+                    WHERE created_at <= $1
                     ORDER BY created_at DESC
-                    LIMIT $3
-                    OFFSET $4"#,
+                    LIMIT $2
+                    OFFSET $3"#,
                     token.ts,
-                    token.id,
                     page_size,
                     offset,
                 )
                 .fetch_all(&data.db)
                 .await?;
+
+                rows.reverse();
 
                 for row in rows {
                     res.push(UserResponseSimple {
@@ -393,7 +400,6 @@ impl User {
                     });
                     latest_ts = row.created_at;
                 }
-                res.reverse();
             } else {
                 let rows = sqlx::query!(
                     r#"SELECT id, email, created_at
@@ -418,14 +424,37 @@ impl User {
                     latest_ts = row.created_at;
                 }
             };
+        } else if backwards {
+            // backwards without any continuation token will simply
+            // serve the last elements without any other conditions
+            let mut rows = sqlx::query!(
+                r#"SELECT id, email, created_at
+                   FROM users
+                   ORDER BY created_at DESC
+                   LIMIT $1
+                   OFFSET $2"#,
+                page_size,
+                offset,
+            )
+            .fetch_all(&data.db)
+            .await?;
+
+            rows.reverse();
+
+            for row in rows {
+                res.push(UserResponseSimple {
+                    id: row.id,
+                    email: row.email,
+                });
+                latest_ts = row.created_at;
+            }
         } else {
-            // there is no "backwards" without a continuation token
             let rows = sqlx::query!(
                 r#"SELECT id, email, created_at
-                FROM users
-                ORDER BY created_at ASC
-                LIMIT $1
-                OFFSET $2"#,
+                   FROM users
+                   ORDER BY created_at ASC
+                   LIMIT $1
+                   OFFSET $2"#,
                 page_size,
                 offset,
             )

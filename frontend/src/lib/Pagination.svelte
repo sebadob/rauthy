@@ -117,6 +117,8 @@
                 width="50px"
         />
     </div>
+
+    <div class="font-label total">Total: {items.length}</div>
 </div>
 
 <style>
@@ -159,5 +161,11 @@
     .selected {
         font-weight: bold;
         text-decoration: underline;
+    }
+
+    .total {
+        margin: .2rem 0 0 .5rem;
+        font-weight: bold;
+        font-size: .9rem;
     }
 </style>
