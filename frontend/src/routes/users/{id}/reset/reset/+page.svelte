@@ -50,7 +50,6 @@
     let webauthnData;
 
     let formValues = {
-        email: '',
         passkeyName: '',
         password: '',
         passwordConfirm: '',
@@ -61,13 +60,11 @@
     let schemaPassword;
     $: if (t) {
         schemaPasskey = yup.object().shape({
-            email: yup.string().required(t.required).email(t.badFormat),
             passkeyName: yup.string()
                 .required(t.required)
                 .matches(REGEX_NAME, t.mfa.passkeyNameErr),
         });
         schemaPassword = yup.object().shape({
-            email: yup.string().required(t.required).email(t.badFormat),
             password: yup.string().required(t.required),
             passwordConfirm: yup.string().required(t.required)
         });
@@ -90,7 +87,6 @@
     $: if (accountTypeNew) {
         // reset all possibly filled in form values from before
         formValues = {
-            email: '',
             passkeyName: '',
             password: '',
             passwordConfirm: '',
@@ -104,15 +100,6 @@
         policy_vals
             .split(',')
             .forEach(v => arr.push(v));
-        // policy = {
-        // 	length_min: arr[0],
-        // 	length_max: arr[1],
-        // 	include_lower_case: arr[2],
-        // 	include_upper_case: arr[3],
-        // 	include_digits: arr[4],
-        // 	include_special: arr[5],
-        // 	not_recently_used: arr[6],
-        // };
         policy = {
             length_min: Number.parseInt(arr[0]),
             length_max: Number.parseInt(arr[1]),
@@ -122,11 +109,7 @@
             include_special: Number.parseInt(arr[5]),
             not_recently_used: Number.parseInt(arr[6]),
         };
-        let email = arr[7];
-        if (email && email !== "undefined") {
-            formValues.email = email;
-            isMfa = true;
-        }
+        isMfa = arr[7] == "true";
 
         csrf = window.document.getElementsByName('rauthy-csrf-token')[0].id
         userId = window.location.href.split("/users/")[1].split("/")[0];
@@ -173,7 +156,6 @@
 
         let data = {
             passkey_name: passkeyName,
-            email: formValues.email,
             magic_link_id: magicLinkId,
         };
         let res = await webauthnRegStartAccReset(userId, data, csrf);
@@ -217,7 +199,6 @@
             res = await webauthnRegFinishAccReset(userId, data, csrf);
             if (res.status === 201) {
                 formValues = {
-                    email: '',
                     passkeyName: '',
                     password: '',
                     passwordConfirm: '',
@@ -232,10 +213,6 @@
             let body = await res.json();
             console.error(body.error);
             console.error(body.message);
-            console.error(body.message.startsWith("E-Mail"));
-            if (body.error === "BadRequest" && body.message.startsWith("E-Mail")) {
-                err = t.emailErr;
-            }
         }
     }
 
@@ -264,11 +241,7 @@
             let res = await webauthnAuthStart(userId, {purpose: 'PasswordReset'});
             let body = await res.json();
             if (!res.ok) {
-                if (body.error === "BadRequest" && body.message.startsWith("E-Mail")) {
-                    err = t.emailErr;
-                } else {
-                    err = body.message;
-                }
+                err = body.message;
                 isLoading = false;
                 return;
             }
@@ -289,7 +262,6 @@
         isLoading = true;
 
         const data = {
-            email: formValues.email,
             password: formValues.password,
             magic_link_id: magicLinkId,
             mfa_code: mfaCode,
@@ -299,7 +271,6 @@
         if (res.ok) {
             err = '';
             formValues = {
-                email: '',
                 passkeyName: '',
                 password: '',
                 passwordConfirm: '',
@@ -331,11 +302,17 @@
 </script>
 
 <svelte:head>
-    {#if requestType.startsWith('new_user')}
-        <title>{t.newAccount}</title>
-    {:else if requestType === "password_reset"}
-        <title>{t.passwordReset}</title>
+    <!-- the :head component cannot be wrapped inside the <WithI18n> unfortunately -->
+    {#if t}
+        {#if requestType.startsWith('new_user')}
+            <title>{t.newAccount}</title>
+        {:else if requestType === "password_reset"}
+            <title>{t.passwordReset}</title>
+        {/if}
+    {:else}
+        <title>Password</title>
     {/if}
+
 </svelte:head>
 
 <BrowserCheck>
@@ -383,17 +360,6 @@
                     <div transition:slide>
                         <PasswordPolicy bind:t bind:accepted bind:policy bind:password={formValues.password}/>
 
-                        <Input
-                                type="email"
-                                bind:value={formValues.email}
-                                bind:error={formErrors.email}
-                                autocomplete="email"
-                                disabled={isMfa || success}
-                                placeholder={t.email}
-                                width={inputWidth}
-                        >
-                            {t.email.toUpperCase()}
-                        </Input>
                         <PasswordInput
                                 bind:value={formValues.password}
                                 bind:error={formErrors.password}
@@ -445,17 +411,6 @@
                 {:else if accountTypeNew === "passkey"}
                     <div transition:slide>
                         <Input
-                                type="email"
-                                bind:value={formValues.email}
-                                bind:error={formErrors.email}
-                                autocomplete="email"
-                                disabled={isMfa || success}
-                                placeholder={t.email}
-                                width={inputWidth}
-                        >
-                            {t.email.toUpperCase()}
-                        </Input>
-                        <Input
                                 bind:value={formValues.passkeyName}
                                 bind:error={formErrors.passkeyName}
                                 autocomplete="off"
@@ -499,17 +454,6 @@
 
                 <PasswordPolicy bind:t bind:accepted bind:policy bind:password={formValues.password}/>
 
-                <Input
-                        type="email"
-                        bind:value={formValues.email}
-                        bind:error={formErrors.email}
-                        autocomplete="email"
-                        disabled={isMfa}
-                        placeholder={t.email}
-                        width={inputWidth}
-                >
-                    {t.email.toUpperCase()}
-                </Input>
                 <PasswordInput
                         bind:value={formValues.password}
                         bind:error={formErrors.password}

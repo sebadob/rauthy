@@ -1274,11 +1274,10 @@ impl PwdResetHtml<'_> {
     pub fn build(
         csrf_token: &str,
         password_rules: &PasswordPolicy,
-        email: Option<&String>,
         colors: &Colors,
         lang: &Language,
+        needs_mfa: bool,
     ) -> String {
-        let mail = if let Some(e) = email { e } else { "undefined" };
         let data = format!(
             "{},{},{},{},{},{},{},{}",
             password_rules.length_min,
@@ -1288,7 +1287,7 @@ impl PwdResetHtml<'_> {
             password_rules.include_digits.unwrap_or(-1),
             password_rules.include_special.unwrap_or(-1),
             password_rules.not_recently_used.unwrap_or(-1),
-            mail,
+            needs_mfa,
         );
 
         let res = PwdResetHtml {

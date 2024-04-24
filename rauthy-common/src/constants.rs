@@ -354,10 +354,10 @@ lazy_static! {
         .parse::<u16>()
         .expect("SSP_THRESHOLD cannot be parsed to u16 - bad format");
 
-    pub static ref UNSAFE_NO_RESET_BINDING: bool = env::var("UNSAFE_NO_RESET_BINDING")
+    pub static ref PASSWORD_RESET_COOKIE_BINDING: bool = env::var("PASSWORD_RESET_COOKIE_BINDING")
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
-        .expect("UNSAFE_NO_RESET_BINDING cannot be parsed to bool - bad format");
+        .expect("PASSWORD_RESET_COOKIE_BINDING cannot be parsed to bool - bad format");
 
     pub static ref WEBAUTHN_REQ_EXP: u64 = env::var("WEBAUTHN_REQ_EXP")
         .unwrap_or_else(|_| String::from("60"))

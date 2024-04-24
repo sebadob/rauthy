@@ -151,29 +151,65 @@ pub async fn migrate_init_prod(
         .execute(db)
         .await?;
 
-        // generate new admin password
-        let plain = get_rand(24);
-        info!(
-            r#"
+        // check if we should use manually provided bootstrap values
+        let email =
+            env::var("BOOTSTRAP_ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost.de".to_string());
+        let hash = match env::var("BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID") {
+            Ok(hash) => {
+                info!(
+                    r#"
 
-    First-Time setup - new random password for 'admin@localhost.de':
+    First-Time setup - an already hashed bootstrap password has been given for '{email}'
+
+    Please change it immediately: {issuer}/account
+    You will never see this message again!
+        "#
+                );
+                hash
+            }
+            Err(_) => {
+                let plain = match env::var("BOOTSTRAP_ADMIN_PASSWORD_PLAIN") {
+                    Ok(plain) => {
+                        info!(
+                            r#"
+
+    First-Time setup - a bootstrap password has been given for '{email}'
+
+    Please change it immediately: {issuer}/account
+    You will never see this message again!
+        "#
+                        );
+                        plain
+                    }
+                    Err(_) => {
+                        let plain = get_rand(24);
+                        info!(
+                            r#"
+
+    First-Time setup - new random password for '{email}':
 
     {plain}
 
     Please change it immediately: {issuer}/account
     You will never see this message again!
         "#
-        );
+                        );
+                        plain
+                    }
+                };
 
-        let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, argon2_params);
-        let salt = SaltString::generate(&mut OsRng);
-        let hash = argon2
-            .hash_password(plain.as_bytes(), &salt)
-            .expect("Error hashing the Password")
-            .to_string();
+                let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, argon2_params);
+                let salt = SaltString::generate(&mut OsRng);
+                argon2
+                    .hash_password(plain.as_bytes(), &salt)
+                    .expect("Error hashing the Password")
+                    .to_string()
+            }
+        };
 
         sqlx::query!(
-            "update users set password = $1 where email = 'admin@localhost.de'",
+            "UPDATE users SET email = $1, password = $2 WHERE email = 'admin@localhost.de'",
+            email,
             hash
         )
         .execute(db)

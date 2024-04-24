@@ -2,7 +2,48 @@
 
 ## UNRELEASED
 
+### Breaking
+
+The config variable `UNSAFE_NO_RESET_BINDING` has been removed in favor of `PASSWORD_RESET_COOKIE_BINDING`.
+The logic for this security feature has been reversed. The default behavior until now was to block subsequent
+requests to the password reset form if they provided an invalid binding cookie. This created issues for people
+that were using evil E-Mail providers. These would scan their users E-Mails and use links inside them.
+This link usage however made it impossible for "the real user" to use the link properly, because it has been
+used already by its provider.  
+In some cases, this hurts the UX more than it is a benefit to the security, so this feature is now an opt-in
+hardening instead of opt-out evil provider error fixing.  
+Additionally, to improve the UX even further, the additional E-Mail input form has been removed from the password
+reset page as well. The security benefits of this were rather small compared to the UX degradation.
+#365
+[]()
+
 ### Features
+
+#### Dynamic Server Side Search + Pagination
+
+Until now, the Admin UI used client side searching and pagination. This is fine for most endpoints, but
+the users can grow quite large depending on the instance while all other endpoints will return rather small
+"GET all" data.  
+To keep big Rauthy instances with many thousands of users fast and responsive, you can set a threshold for
+the total users count at which Rauthy will dynamically switch from client side to server side pagination
+and searching for the Admin UI's Users page.
+
+```
+# Dynamic server side pagination threshold
+# If the total users count exceeds this value, Rauthy will dynamically
+# change search and pagination for users in the Admin UI from client
+# side to server side to not have a degradation in performance.
+# default: 1000
+SSP_THRESHOLD=1000
+```
+
+For smaller instances, keeping it client side will make the UI a bit more responsive and snappy.
+For higher user counts, you should switch to do this on the server though to keep the UI fast and not
+send huge payloads each time.
+
+[b4dead3](https://github.com/sebadob/rauthy/commit/b4dead36169cc284c97af5a982cc33fb8a0be02b)
+[9f87af3](https://github.com/sebadob/rauthy/commit/9f87af3dfb49b48300b885bf406f852579470193)
+[e6d39d1](https://github.com/sebadob/rauthy/commit/e6d39d1e1118e18aeb020fbbb477a944fcd1467a)
 
 #### Unlink Account from Provider
 
@@ -10,6 +51,35 @@ A new button has been introduced to the account view of federated accounts.
 You can now "Unlink" an account from an upstream provider, if you have set it up with at least
 a password or passkey before.
 [8b1d9a8](https://github.com/sebadob/rauthy/commit/8b1d9a882b0d4b059f3ed884deaacfcdeb109856)
+
+#### Bootstrap default Admin in production
+
+You can set environment variables either via `rauthy.cfg`, `.env` or as just an env var during
+initial setup in production. This makes it possible to create an admin account with the very first
+database setup with a custom E-Mail + Password, instead of the default `admin@localhost.de` with
+a random password, which you need to pull from the logs.
+
+```
+#####################################
+############# BOOSTRAP ##############
+#####################################
+
+# If set, the email of the default admin will be changed
+# during the initialization of an empty production database.
+BOOTSTRAP_ADMIN_EMAIL="alfred@batcave.io"
+
+# If set, this plain text password will be used for the
+# initial admin password instead of generating a random
+# password.
+#BOOTSTRAP_ADMIN_PASSWORD_PLAIN="123SuperSafe"
+
+# If set, this will take the argon2id hashed password
+# during the initialization of an empty production database.
+# If both BOOTSTRAP_ADMIN_PASSWORD_PLAIN and
+# BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID are set, the hashed version
+# will always be prioritized.
+BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID='$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
+```
 
 ### Bugfixes
 
@@ -19,7 +89,13 @@ a password or passkey before.
 - A really hard to reproduce bug where the backend complained about a not-possible mapping
   from postgres `INT4` to Rust `i64` as been fixed. This came with the advantage of hacing
   a few more compile-time checked queries for the `users` table.
-  []()
+  [1740177](https://github.com/sebadob/rauthy/commit/174017736d62d2237a5f00b9d0508bca0a57c8b0)
+- A fix for the `/users/register` endpoint in the OpenAPI documentation has been fixed, which
+  was referencing the wrong request body
+  [463e424](https://github.com/sebadob/rauthy/commit/463e42409d14d84b59a1d3606fa53ca2ecee2b86)
+- The page title for a password reset now shows "New Account" if this is a fresh setup and only
+  "Password Reset" when it actually is a reset
+  [84bbdf7](https://github.com/sebadob/rauthy/commit/84bbdf7bc464e5869285225e446cb56e17f53583)
 
 ## 0.22.1
 

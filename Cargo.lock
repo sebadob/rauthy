@@ -4273,7 +4273,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.22.2-20240424-1"
+version = "0.22.2-20240424-2"
 dependencies = [
  "actix-service",
  "actix-web",
@@ -4315,7 +4315,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.22.2-20240424-1"
+version = "0.22.2-20240424-2"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4356,7 +4356,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.22.2-20240424-1"
+version = "0.22.2-20240424-2"
 dependencies = [
  "actix",
  "actix-multipart",
@@ -4391,7 +4391,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.22.2-20240424-1"
+version = "0.22.2-20240424-2"
 dependencies = [
  "accept-language",
  "actix",
@@ -4460,7 +4460,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.22.2-20240424-1"
+version = "0.22.2-20240424-2"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4478,7 +4478,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.22.2-20240424-1"
+version = "0.22.2-20240424-2"
 dependencies = [
  "actix-web",
  "argon2",

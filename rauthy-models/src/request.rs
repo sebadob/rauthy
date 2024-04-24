@@ -455,9 +455,6 @@ pub struct PasswordPolicyRequest {
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct PasswordResetRequest {
-    /// Validation: `email`
-    #[validate(email)]
-    pub email: String,
     /// Validation: `[a-zA-Z0-9]{64}`
     #[validate(regex(path = "RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
     pub magic_link_id: String,
