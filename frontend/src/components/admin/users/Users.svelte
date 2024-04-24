@@ -43,25 +43,6 @@
         },
     ];
 
-    // $: if (useServerSide && sspPageSize) {
-    //     if (isInitialized) {
-    //         fetchUsersSsp(0, false);
-    //     } else {
-    //         isInitialized = true;
-    //     }
-    // }
-
-    // // TODO this currently does a second fetch all the time -> guard
-    // $: if (useServerSide && sspPageSize) {
-    //     if (isInitialized) {
-    //         console.log('sspPage: ' + sspPage);
-    //         console.log('sspPageSize: ' + sspPageSize);
-    //         console.log('sspPageCount: ' + sspPageCount);
-    //         console.log('sspContinuationToken: ' + sspContinuationToken);
-    //         fetchUsersSsp(0, false);
-    //     }
-    // }
-
     onMount(async () => {
         fetchUsers();
         fetchRoles();
@@ -79,13 +60,12 @@
         if (!res.ok) {
             msg = 'Error fetching users: ' + res.body.message;
         } else {
-            // TODO implement partial response on the server
             const isSsp = res.status === 206;
             if (isSsp) {
                 // we get a few headers during SSP we can use for the navigation
                 sspPageSize = Number.parseInt(res.headers.get('x-page-size'), 10);
-                // sspPageCount = res.headers.get('x-page-count');
                 sspContinuationToken = res.headers.get('x-continuation-token');
+                // sspPageCount = res.headers.get('x-page-count');
             }
 
             usersCountTotal = res.headers.get('x-user-count');
@@ -108,7 +88,7 @@
         }
     }
 
-    // Callback function for <PaginationServer>
+    // Callback function for <PaginationServer> to make page size switches work
     async function sspPageSizeChange(pageSize) {
         sspContinuationToken = '';
         await fetchUsers(true, 0, false, pageSize);
