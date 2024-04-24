@@ -1,6 +1,6 @@
 {
   "name": "bootstrap",
-  "expires": 1735599600,
+  "exp": 1735599600,
   "access": [
     {
       "group": "Clients",
