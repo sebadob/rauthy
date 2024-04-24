@@ -8,6 +8,7 @@
     export let orderOptions = [];
     export let firstDirReverse = false;
     export let useServerSide = false;
+    export let isSearchFiltered = false;
 
     let searchItems = [];
 </script>
@@ -28,10 +29,11 @@
 
     <div>
         <SearchBar
-                items={items}
+                bind:items
                 bind:resItems={searchItems}
                 options={searchOptions}
-                useServerSide={useServerSide}
+                bind:useServerSide
+                bind:isSearchFiltered
         />
     </div>
 </div>

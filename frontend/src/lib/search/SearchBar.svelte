@@ -5,11 +5,13 @@
     import {getKey} from "../utils/helpers.js";
     import IconBackspace from "$lib/icons/IconBackspace.svelte";
     import {getSearch} from "../../utils/dataFetchingAdmin.js";
+    import {SERVER_SIDE_SEARCH_THRES} from "../../utils/constants.js";
 
     export let items = [];
     export let resItems;
     export let options = [];
     export let useServerSide = false;
+    export let isSearchFiltered = false;
 
     let selected = '';
     let search = '';
@@ -29,6 +31,7 @@
     $: {
         if (!search) {
             resItems = items;
+            isSearchFiltered = false;
         } else if (useServerSide) {
             filerItemsServerSide();
         } else {
@@ -62,15 +65,20 @@
                 return i.toLowerCase().includes(search) || i === search;
             }
         })];
+        isSearchFiltered = true;
     }
 
     async function filerItemsServerSide() {
-        if (search.length < 3) {
+        if (search.length < SERVER_SIDE_SEARCH_THRES) {
             // skipping server side search below 3 chars
+            resItems = items;
+            isSearchFiltered = false;
             return;
         }
+        isSearchFiltered = true;
 
         const idx = selected.replaceAll('-', '').toLowerCase();
+        // if other server side searched need to be used in the future, the 'user' could be an exported var
         let res = await getSearch('user', idx, search);
         if (res.ok) {
             resItems = await res.json();

@@ -1,18 +1,27 @@
 <script>
     import {onMount} from "svelte";
-    import {getGroups, getRoles, getUsers} from "../../../utils/dataFetchingAdmin.js";
+    import {getGroups, getRoles, getUsers, getUsersSsp} from "../../../utils/dataFetchingAdmin.js";
     import UserTile from "./UserTile.svelte";
     import {globalGroups, globalGroupsNames, globalRoles, globalRolesNames,} from "../../../stores/admin.js";
     import UserTileAddNew from "./UserTileAddNew.svelte";
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
     import Pagination from "$lib/Pagination.svelte";
+    import PaginationServer from "$lib/PaginationServer.svelte";
 
     let msg = '';
+    let isInitialized = false;
 
     let users = [];
     let resUsers = [];
     let resUsersPaginated = [];
     let useServerSide = false;
+    let isSearchFiltered = false;
+
+    let usersCountTotal = 0;
+    let sspPageSize = 15;
+    let sspContinuationToken = '';
+    let sspPage = 1;
+    // let sspPageCount = 1;
 
     let searchOptions = [
         {
@@ -35,25 +44,68 @@
         },
     ];
 
+    // $: if (useServerSide && sspPageSize) {
+    //     if (isInitialized) {
+    //         fetchUsersSsp(0, false);
+    //     } else {
+    //         isInitialized = true;
+    //     }
+    // }
+
+    // // TODO this currently does a second fetch all the time -> guard
+    // $: if (useServerSide && sspPageSize) {
+    //     if (isInitialized) {
+    //         console.log('sspPage: ' + sspPage);
+    //         console.log('sspPageSize: ' + sspPageSize);
+    //         console.log('sspPageCount: ' + sspPageCount);
+    //         console.log('sspContinuationToken: ' + sspContinuationToken);
+    //         fetchUsersSsp(0, false);
+    //     }
+    // }
+
     onMount(async () => {
         fetchUsers();
         fetchRoles();
         fetchGroups();
     })
 
-    async function fetchUsers() {
-        let res = await getUsers();
+    async function fetchUsers(useSsp, offset, backwards) {
+        let res;
+        if (useSsp === true) {
+            console.log('backwards in fetchUsers: ' + backwards);
+            res = await getUsersSsp(sspPageSize, offset, sspContinuationToken, backwards);
+        } else {
+            res = await getUsers();
+        }
         if (!res.ok) {
             msg = 'Error fetching users: ' + res.body.message;
         } else {
             // TODO implement partial response on the server
-            useServerSide = res.status === 206;
-            // TODO expect custom headers from a partial response with page size and count
-            // for the pagination component
+            const isSsp = res.status === 206;
+            if (isSsp) {
+                // we get a few headers during SSP we can use for the navigation
+                sspPageSize = Number.parseInt(res.headers.get('x-page-size'), 10);
+                // sspPageCount = res.headers.get('x-page-count');
+                sspContinuationToken = res.headers.get('x-continuation-token');
+            }
+
+            usersCountTotal = res.headers.get('x-user-count');
+            useServerSide = isSsp;
 
             let u = await res.json();
             users = [...u];
             resUsers = [...u];
+        }
+    }
+
+    // Callback function for <PaginationServer>
+    // Fetches the next page during server side pagination with the given offset and direction.
+    async function fetchUsersSsp(offset, backwards) {
+        await fetchUsers(true, offset, backwards);
+        if (backwards) {
+            sspPage -= 1;
+        } else {
+            sspPage += 1;
         }
     }
 
@@ -95,22 +147,43 @@
             bind:searchOptions
             bind:orderOptions
             bind:useServerSide
+            bind:isSearchFiltered
     />
 
     <UserTileAddNew onSave={onSave}/>
 
     <div id="users">
-        {#each resUsersPaginated as user (user.id)}
-            <div>
-                <UserTile userId={user.id} userEmail={user.email} onSave={onSave}/>
-            </div>
-        {/each}
+        {#if useServerSide && !isSearchFiltered}
+            {#each users as user (user.id)}
+                <div>
+                    <UserTile userId={user.id} userEmail={user.email} onSave={onSave}/>
+                </div>
+            {/each}
+        {:else}
+            {#each resUsersPaginated as user (user.id)}
+                <div>
+                    <UserTile userId={user.id} userEmail={user.email} onSave={onSave}/>
+                </div>
+            {/each}
+        {/if}
     </div>
 
-    <Pagination
-            bind:items={resUsers}
-            bind:resItems={resUsersPaginated}
-    />
+    <!--
+    Even with server side pagination, we must use it client side if we
+    have a filtered search result. Otherwise, switching pages would
+    overwrite the filtered data.
+    -->
+    {#if useServerSide && !isSearchFiltered}
+        <PaginationServer
+                itemsTotal={usersCountTotal}
+                bind:sspPage
+                bind:sspPageSize
+                bind:sspContinuationToken
+                fetchPageCallback={fetchUsersSsp}
+        />
+    {:else}
+        <Pagination bind:items={resUsers} bind:resItems={resUsersPaginated}/>
+    {/if}
 </div>
 
 <style>

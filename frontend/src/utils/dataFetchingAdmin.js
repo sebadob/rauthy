@@ -331,6 +331,25 @@ export async function getUsers() {
     return await checkRedirectForbidden(res);
 }
 
+export async function getUsersSsp(pageSize, offset, continuationToken, backwards) {
+    let url = `/auth/v1/users?page_size=${pageSize}`;
+    if (offset) {
+        url = `${url}&offset=${offset}`;
+    }
+    if (backwards) {
+        url = `${url}&backwards=${backwards}`;
+    }
+    if (continuationToken) {
+        url = `${url}&continuation_token=${continuationToken}`;
+    }
+    const res = await fetch(
+        url, {
+            method: 'GET',
+            headers: HEADERS,
+        });
+    return await checkRedirectForbidden(res);
+}
+
 export async function postUser(data) {
     const res = await fetch('/auth/v1/users', {
         method: 'POST',
