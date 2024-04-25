@@ -7,8 +7,20 @@ https://datatracker.ietf.org/doc/html/rfc8628
 oauth2 device auth flow for IoT and embedded devices:
 
 - [ ] API endpoint for initiating a device flow
+    - POST with `application/x-www-form-urlencoded` including:
+        - `client_id` long, secure, non-guessable
+        - `scope` optional
+    - response with `application/json`
+        - `device_code`
+        - `user_code`
+        - `verification_uri` should be short and easy to remember
+        - `verification_uri_complete` optional same as above with included `user_code`
+        - `expires_in` lifetime in seconds
+        - `interval` optional min client polling interval
+    - define error response as described in https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
 - [ ] API endpoints for fetching all information about an existing one
 - [ ] UI to show to the user for investigation + accept
+- [ ] update the .well-known with `urn:ietf:params:oauth:grant-type:device_code`
 - [ ] implement the logic either into `rauthy-client` or maybe an independent new crate, if one does not
   yet exist for the rust ecosystem
 - [ ] create a fully working example with `rauthy` + `rauthy-client` on how to use it with a CLI tool
