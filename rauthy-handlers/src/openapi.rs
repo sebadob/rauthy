@@ -82,7 +82,7 @@ use utoipa::{openapi, OpenApi};
         oidc::post_authorize,
         oidc::get_certs,
         oidc::get_cert_by_kid,
-        oidc::post_device,
+        oidc::post_device_auth,
         oidc::get_logout,
         oidc::post_logout,
         oidc::rotate_jwk,

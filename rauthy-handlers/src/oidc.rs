@@ -7,14 +7,17 @@ use chrono::Utc;
 use rauthy_common::constants::{
     APPLICATION_JSON, AUTH_HEADERS_ENABLE, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED,
     AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
-    AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, HEADER_HTML, OPEN_USER_REG, SESSION_LIFETIME,
+    AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, DEVICE_GRANT_CODE_LIFETIME, HEADER_HTML,
+    OPEN_USER_REG, SESSION_LIFETIME,
 };
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::auth_providers::AuthProviderTemplate;
+use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::colors::ColorEntity;
+use rauthy_models::entity::devices::DeviceAuthCode;
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JWKS};
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
@@ -26,16 +29,17 @@ use rauthy_models::request::{
     TokenRequest, TokenValidationRequest,
 };
 use rauthy_models::response::{
-    JWKSCerts, JWKSPublicKeyCerts, OAuth2ErrorResponse, SessionInfoResponse,
+    DeviceCodeResponse, JWKSCerts, JWKSPublicKeyCerts, OAuth2ErrorResponse,
+    OAuth2ErrorTypeResponse, SessionInfoResponse,
 };
 use rauthy_models::templates::{
     AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction,
 };
 use rauthy_models::JwtCommonClaims;
 use rauthy_service::auth;
+use std::borrow::Cow;
 use std::ops::Add;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tracing::debug;
 
 /// OIDC Authorization HTML
 ///
@@ -284,10 +288,10 @@ pub async fn get_callback_html(
     data: web::Data<AppState>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth();
+    // TODO can we even be more strict and request session auth here?
+    principal.validate_session_auth_or_init()?;
     let colors = ColorEntity::find_rauthy(&data).await?;
     let body = CallbackHtml::build(&colors);
-
     Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
@@ -343,19 +347,72 @@ pub async fn get_cert_by_kid(
     ),
 )]
 #[post("/oidc/device")]
-pub async fn post_device(
+pub async fn post_device_auth(
     data: web::Data<AppState>,
-    req: HttpRequest,
-    req_data: web::Json<DeviceGrantRequest>,
-) -> Result<HttpResponse, ErrorResponse> {
-    // TODO add optional registration tokens
-
+    // req: HttpRequest,
+    payload: web::Json<DeviceGrantRequest>,
+) -> HttpResponse {
     // TODO add some kind of IP rate limiting
-    let ip = real_ip_from_req(&req);
+    // let ip = real_ip_from_req(&req);
 
-    // TODO accept the actual request and create the response
+    let payload = payload.into_inner();
+    let client = match Client::find(&data, payload.client_id).await {
+        Ok(client) => client,
+        Err(_) => {
+            return HttpResponse::NotFound().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::InvalidClient,
+                error_description: Some(Cow::from("`client_id` does not exist")),
+            });
+        }
+    };
 
-    todo!()
+    // make sure the client is allowed to use this flow
+    if let Err(err) = client.validate_flow("device_code") {
+        return HttpResponse::Forbidden().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::UnauthorizedClient,
+            error_description: Some(Cow::from(err.message)),
+        });
+    }
+
+    // check the requested scope
+    if let Some(scopes) = payload.scope {
+        for scope in scopes.split(' ') {
+            if !client.scopes.contains(scope) {
+                return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                    error: OAuth2ErrorTypeResponse::InvalidScope,
+                    error_description: Some(Cow::from(format!(
+                        "Allowed scopes: {}",
+                        client.scopes
+                    ))),
+                });
+            }
+        }
+    }
+
+    // we are good - create the code
+    let code = match DeviceAuthCode::new(&data).await {
+        Ok(code) => code,
+        Err(err) => {
+            return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::InvalidRequest,
+                error_description: Some(Cow::from(err.message)),
+            });
+        }
+    };
+
+    let user_code = code.user_code();
+    let verification_uri = code.verification_uri();
+    let verification_uri_complete = Some(code.verification_uri_complete());
+    let resp = DeviceCodeResponse {
+        device_code: &code.device_code,
+        user_code,
+        verification_uri,
+        verification_uri_complete,
+        expires_in: *DEVICE_GRANT_CODE_LIFETIME,
+        interval: Some(5),
+    };
+
+    HttpResponse::Ok().json(resp)
 }
 
 // Logout HTML page
