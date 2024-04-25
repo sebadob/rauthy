@@ -217,7 +217,7 @@ pub async fn post_provider_callback(
     tag = "providers",
     responses(
         (status = 200, description = "OK"),
-        (status = 400, description = "BadRequest", body = ErrorRresponse),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
     ),
 )]
 #[delete("/providers/link")]
