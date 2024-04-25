@@ -18,24 +18,30 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     let reset_id = "2qqdUOcXECQeypBNTs7Pnp7A2zAwr0VzynyzJiIjNR1Ua9KA95dTewM56JaPIoyj";
     let url_get = format!("{backend_url}/users/{user_id}/reset/{reset_id}");
 
+    let client = reqwest::Client::new();
+
     // try with bad magic link id
+    println!("test_get_pwd_reset_form with bad magic link id");
     let bad_url_get = format!("{backend_url}/users/{user_id}/reset/iDoNotExist123");
-    let res = reqwest::Client::new().get(&bad_url_get).send().await?;
+    let res = client.get(&bad_url_get).send().await?;
     assert_eq!(res.status(), 404);
 
     // try with wrong user id
+    println!("test_get_pwd_reset_form with wrong user id");
     let bad_url_get = format!("{backend_url}/users/2PYV3STNz3MN7VnPjJVcPQaX/reset/{reset_id}");
-    let res = reqwest::Client::new().get(&bad_url_get).send().await?;
+    let res = client.get(&bad_url_get).send().await?;
     assert_eq!(res.status(), 400);
     let err_html = res.text().await?;
     assert!(err_html.contains("request is malformed or incorrect"));
 
     // correct GET
-    let mut res = reqwest::Client::new().get(&url_get).send().await?;
+    println!("test_get_pwd_reset_form correct GET");
+    let mut res = client.get(&url_get).send().await?;
     res = check_status(res, 200).await?;
 
     // doing the same GET without the pwd_reset_cookie should fail now
-    let res_2 = reqwest::Client::new().get(&url_get).send().await?;
+    println!("test_get_pwd_reset_form without the pwd_reset_cookie");
+    let res_2 = client.get(&url_get).send().await?;
     assert_eq!(res_2.status(), 403);
     let err_html = res_2.text().await?;
     assert!(
@@ -68,44 +74,21 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
 
     // magic_link_id validation error
     let mut req = PasswordResetRequest {
-        email: "init_admin@localhost.de".to_string(),
         magic_link_id: "IAmSoWrong123".to_string(),
         password: "soSuperMegaSafe12345!\"§$%&/.".to_string(),
         mfa_code: None,
     };
-    let mut res = reqwest::Client::new()
-        .put(&url_put)
-        .json(&req)
-        .send()
-        .await?;
+    let mut res = client.put(&url_put).json(&req).send().await?;
     res = check_status(res, 400).await?;
     let err = res.text().await?;
-    eprintln!("0 {err}");
     assert!(err.contains("magic_link_id"));
 
-    // bad email
-    req.magic_link_id = reset_id.to_string();
-    let mut res = reqwest::Client::new()
-        .put(&url_put)
-        .json(&req)
-        .send()
-        .await?;
-    res = check_status(res, 400).await?;
-    let err = res.json::<ErrorResponse>().await?;
-    eprintln!("1 {err:?}");
-    assert_eq!(err.error, ErrorResponseType::BadRequest);
-    assert_eq!(err.message, "E-Mail does not match for this user");
-
     // missing cookie - session already assigned
-    req.email = username.to_string();
-    let mut res = reqwest::Client::new()
-        .put(&url_put)
-        .json(&req)
-        .send()
-        .await?;
-    res = check_status(res, 403).await?;
+    println!("test_get_pwd_reset_form missing cookie - session already assigned");
+    req.magic_link_id = reset_id.to_string();
+    let res = client.put(&url_put).json(&req).send().await?;
+    assert_eq!(res.status().as_u16(), 403);
     let err = res.json::<ErrorResponse>().await?;
-    eprintln!("2 {err:?}");
     assert_eq!(err.error, ErrorResponseType::Forbidden);
     assert_eq!(
         err.message,
@@ -113,26 +96,26 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     );
 
     // cookie only header -> csrf missing
-    let mut res = reqwest::Client::new()
+    println!("test_get_pwd_reset_form cookie only header -> csrf missing");
+    let res = client
         .put(&url_put)
         .json(&req)
         .headers(cookie_only_headers)
         .send()
         .await?;
-    res = check_status(res, 401).await?;
+    assert_eq!(res.status().as_u16(), 401);
     let err = res.json::<ErrorResponse>().await?;
-    eprintln!("3 {err:?}");
     assert_eq!(err.error, ErrorResponseType::Unauthorized);
     assert_eq!(err.message, "CSRF Token is missing");
 
     // correct headers - all should be good now
-    let res = reqwest::Client::new()
+    let res = client
         .put(&url_put)
         .json(&req)
         .headers(correct_headers.clone())
         .send()
         .await?;
-    check_status(res, 202).await?;
+    assert_eq!(res.status().as_u16(), 202);
 
     // now test logging in with the new password
     let url = format!("{}/oidc/token", get_backend_url());
@@ -147,7 +130,6 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
         password: Some(req.password.to_string()),
         refresh_token: None,
     };
-    let client = reqwest::Client::new();
     let res = client.post(&url).form(&body).send().await?;
     assert_eq!(res.status(), 200);
     let ts = res.json::<TokenSet>().await?;
@@ -155,13 +137,13 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     assert!(ts.id_token.is_some());
 
     // test was used
-    let mut res = reqwest::Client::new()
+    let res = client
         .put(&url_put)
         .json(&req)
         .headers(correct_headers)
         .send()
         .await?;
-    res = check_status(res, 400).await?;
+    assert_eq!(res.status().as_u16(), 400);
     let err = res.json::<ErrorResponse>().await?;
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert_eq!(err.message, "This link has expired already");

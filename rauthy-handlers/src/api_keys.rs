@@ -63,7 +63,7 @@ pub async fn post_api_key(
     principal.validate_admin_session()?;
 
     let req = payload.into_inner();
-    let secret = ApiKeyEntity::create(&data, req.name, req.exp, req.access).await?;
+    let secret = ApiKeyEntity::create(&data.db, req.name, req.exp, req.access).await?;
 
     Ok(HttpResponse::Ok()
         .content_type(TEXT_PLAIN_UTF_8)

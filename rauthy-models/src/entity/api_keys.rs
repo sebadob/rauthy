@@ -1,4 +1,4 @@
-use crate::app_state::AppState;
+use crate::app_state::{AppState, DbPool};
 use actix_web::web;
 use chrono::Utc;
 use cryptr::{EncKeys, EncValue};
@@ -23,7 +23,7 @@ pub struct ApiKeyEntity {
 
 impl ApiKeyEntity {
     pub async fn create(
-        data: &web::Data<AppState>,
+        db: &DbPool,
         name: String,
         expires: Option<i64>,
         access: Vec<ApiKeyAccess>,
@@ -51,7 +51,7 @@ impl ApiKeyEntity {
             enc_key_active,
             access_enc,
         )
-        .execute(&data.db)
+        .execute(db)
         .await?;
 
         let secret_fmt = format!("{}${}", name, secret_plain);
