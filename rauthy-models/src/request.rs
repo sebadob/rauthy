@@ -153,10 +153,6 @@ pub struct DeviceGrantRequest {
     /// Validation: `[a-zA-Z0-9\s]`
     #[validate(regex(path = "RE_ALNUM_SPACE", code = "[a-zA-Z0-9\\s]"))]
     pub scope: Option<String>,
-    /// This value is non-standard. Use with custom clients only.
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
-    pub token: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
