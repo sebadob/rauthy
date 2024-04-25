@@ -104,16 +104,22 @@
     }
 
     onMount(async () => {
-        clientName = window.document.getElementsByName('rauthy-data')[0].id
+        // clientName = window.document.getElementsByName('rauthy-data')[0].id
+        const data = window.document.getElementsByName('rauthy-data')[0].id.split('\n');
+        clientName = data[0];
+        const clientUri = data[1];
+        const isRegOpen = data[2] === "true";
+        console.log(clientUri);
+        console.log(isRegOpen);
 
-        const action = window.document.getElementsByName('rauthy-action')[0].id
+        const action = window.document.getElementsByName('rauthy-action')[0].id;
         if ('Refresh' === action) {
             refresh = true;
         } else if (action?.startsWith('MfaLogin ')) {
             existingMfaUser = action.replace('MfaLogin ', '');
         }
 
-        csrf = window.document.getElementsByName('rauthy-csrf-token')[0].id
+        csrf = window.document.getElementsByName('rauthy-csrf-token')[0].id;
         saveCsrfToken(csrf);
 
         // demo value for testing - only un-comment in local dev, not for production build
@@ -303,11 +309,7 @@
 </script>
 
 <svelte:head>
-    {#if clientName}
-        <title>Login {clientName}</title>
-    {:else}
-        <title>Login {clientId}</title>
-    {/if}
+    <title>Login {clientName || clientId}</title>
 </svelte:head>
 
 <BrowserCheck>
@@ -322,7 +324,7 @@
             </div>
 
             <div class="name">
-                <h2>{clientName}</h2>
+                <h2>{clientName || clientId}</h2>
             </div>
 
             {#if webauthnData}
