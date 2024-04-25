@@ -22,8 +22,8 @@ use rauthy_models::entity::webauthn::WebauthnCookie;
 use rauthy_models::entity::well_known::WellKnown;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
-    AuthRequest, LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest,
-    TokenValidationRequest,
+    AuthRequest, DeviceGrantRequest, LoginRefreshRequest, LoginRequest, LogoutRequest,
+    TokenRequest, TokenValidationRequest,
 };
 use rauthy_models::response::{JWKSCerts, JWKSPublicKeyCerts, SessionInfoResponse};
 use rauthy_models::templates::{
@@ -327,6 +327,31 @@ pub async fn get_cert_by_kid(
     let kp = JwkKeyPair::find(&data, kid.into_inner()).await?;
     let pub_key = JWKSPublicKey::from_key_pair(&kp);
     Ok(HttpResponse::Ok().json(JWKSPublicKeyCerts::from(pub_key)))
+}
+
+/// POST for starting an OAuth 2.0 Device Authorization Grant flow
+#[utoipa::path(
+    post,
+    path = "/oidc/device",
+    tag = "oidc",
+    request_body = DeviceGrantRequest,
+    responses(
+        (status = 200, description = "Correct credentials, but needs to continue with Webauthn MFA Login", body = WebauthnLoginResponse),
+        (status = 400, description = "Missing / bad input data", body = ErrorResponse),
+    ),
+)]
+#[post("/oidc/device")]
+pub async fn post_device(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+    req_data: web::Json<DeviceGrantRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    // TODO add optional registration tokens
+
+    // TODO add some kind of IP rate limiting
+    let ip = real_ip_from_req(&req);
+
+    todo!()
 }
 
 // Logout HTML page
