@@ -7,7 +7,7 @@ use chrono::Utc;
 use rauthy_common::constants::{
     APPLICATION_JSON, AUTH_HEADERS_ENABLE, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED,
     AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
-    AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, HEADER_HTML, SESSION_LIFETIME,
+    AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, HEADER_HTML, OPEN_USER_REG, SESSION_LIFETIME,
 };
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::real_ip_from_req;
@@ -128,12 +128,18 @@ pub async fn get_authorize(
     }
 
     let auth_providers_json = AuthProviderTemplate::get_all_json_template(&data).await?;
+    let tpl_data = Some(format!(
+        "{}\n{}\n{}",
+        client.name.unwrap_or_default(),
+        client.client_uri.unwrap_or_default(),
+        *OPEN_USER_REG,
+    ));
 
     // if the user is still authenticated and everything is valid -> immediate refresh
     if !force_new_session && principal.validate_session_auth().is_ok() {
         let csrf = principal.get_session_csrf_token()?;
         let body = AuthorizeHtml::build(
-            &client.name,
+            &tpl_data,
             csrf,
             FrontendAction::Refresh,
             &colors,
@@ -158,7 +164,7 @@ pub async fn get_authorize(
     }
 
     let body = AuthorizeHtml::build(
-        &client.name,
+        &tpl_data,
         &session.csrf_token,
         action,
         &colors,

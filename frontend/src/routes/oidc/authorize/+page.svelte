@@ -24,11 +24,13 @@
     import LangSelector from "$lib/LangSelector.svelte";
     import getPkce from "oauth-pkce";
     import {PKCE_VERIFIER_UPSTREAM} from "../../../utils/constants.js";
+    import IconHome from "$lib/icons/IconHome.svelte";
 
     let t = {};
 
     let clientId;
     let clientName = '';
+    let clientUri = '';
     let redirectUri = '';
     let nonce = '';
     let scopes = [];
@@ -60,6 +62,7 @@
     let emailSuccess = false;
     let tooManyRequests = false;
     let emailAfterSubmit = '';
+    let isRegOpen = false;
 
     let formValues = {email: '', password: ''};
     let formErrors = {};
@@ -104,16 +107,19 @@
     }
 
     onMount(async () => {
-        clientName = window.document.getElementsByName('rauthy-data')[0].id
+        const data = window.document.getElementsByName('rauthy-data')[0].id.split('\n');
+        clientName = data[0];
+        clientUri = data[1];
+        isRegOpen = data[2] === "true";
 
-        const action = window.document.getElementsByName('rauthy-action')[0].id
+        const action = window.document.getElementsByName('rauthy-action')[0].id;
         if ('Refresh' === action) {
             refresh = true;
         } else if (action?.startsWith('MfaLogin ')) {
             existingMfaUser = action.replace('MfaLogin ', '');
         }
 
-        csrf = window.document.getElementsByName('rauthy-csrf-token')[0].id
+        csrf = window.document.getElementsByName('rauthy-csrf-token')[0].id;
         saveCsrfToken(csrf);
 
         // demo value for testing - only un-comment in local dev, not for production build
@@ -303,11 +309,7 @@
 </script>
 
 <svelte:head>
-    {#if clientName}
-        <title>Login {clientName}</title>
-    {:else}
-        <title>Login {clientId}</title>
-    {/if}
+    <title>Login {clientName || clientId}</title>
 </svelte:head>
 
 <BrowserCheck>
@@ -319,10 +321,15 @@
                         <img src="{`/auth/v1/clients/${clientId}/logo`}" alt="No Logo Available"/>
                     {/if}
                 </div>
+                {#if clientUri}
+                    <a class="home" href={clientUri}>
+                        <IconHome opacity={0.5}/>
+                    </a>
+                {/if}
             </div>
 
             <div class="name">
-                <h2>{clientName}</h2>
+                <h2>{clientName || clientId}</h2>
             </div>
 
             {#if webauthnData}
@@ -407,6 +414,12 @@
                 </div>
             {/if}
 
+            {#if isRegOpen}
+                <a class="reg" href="/auth/v1/users/register" target="_blank">
+                    {t.signUp}
+                </a>
+            {/if}
+
             {#if err}
                 <div class="errMsg errMsgApi">
                     {err}
@@ -478,7 +491,11 @@
     .head {
         display: flex;
         justify-content: space-between;
-        padding-right: 35px;
+    }
+
+    .home {
+        margin-right: 5px;
+        cursor: pointer;
     }
 
     .name {
@@ -496,6 +513,10 @@
 
     .providers {
         margin-top: .66rem;
+    }
+
+    .reg {
+        margin-left: 5px;
     }
 
     .success {

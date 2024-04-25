@@ -21,6 +21,7 @@ pub struct I18nAuthorize<'a> {
     password_required: &'a str,
     provide_mfa: &'a str,
     request_expires: &'a str,
+    sign_up: &'a str,
 }
 
 impl SsrJson for I18nAuthorize<'_> {
@@ -56,6 +57,7 @@ To get access, you need to log in to your account and add at least one additiona
             password_required: "Password is required",
             provide_mfa: "Please login with your MFA device",
             request_expires: "Request expires",
+            sign_up: "User Registration",
         }
     }
 
@@ -79,6 +81,7 @@ hinzufügen."#,
             password_required: "Password ist notwendig",
             provide_mfa: "Bitte stellen Sie Ihr MFA Gerät zur Verfügung",
             request_expires: "Anfrage läuft ab",
+            sign_up: "Benutzer Registrierung",
         }
     }
 }
