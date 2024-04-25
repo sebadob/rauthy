@@ -2,7 +2,16 @@
 
 ## CURRENT WORK
 
-- dynamic server side pagination for users in admin ui
+https://datatracker.ietf.org/doc/html/rfc8628
+
+oauth2 device auth flow for IoT and embedded devices:
+
+- [ ] API endpoint for initiating a device flow
+- [ ] API endpoints for fetching all information about an existing one
+- [ ] UI to show to the user for investigation + accept
+- [ ] implement the logic either into `rauthy-client` or maybe an independent new crate, if one does not
+  yet exist for the rust ecosystem
+- [ ] create a fully working example with `rauthy` + `rauthy-client` on how to use it with a CLI tool
 
 ## Stage 1 - essentials
 
@@ -10,7 +19,6 @@
 
 ## Stage 2 - features - do before v1.0.0
 
-- oauth2 device auth flow for IoT and embedded devices
 - add `at_hash` claim to the ID token
 - update the book with all the new features
 - handle `offline_access` properly again - either decide to fully remove or support it everywhere
