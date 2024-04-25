@@ -1541,28 +1541,17 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # (default: true)
 #SESSION_VALIDATE_IP=true
 
-# This value may be set to 'true' to disable the binding cookie checking
-# when a user uses the password reset link from an E-Mail.
-#
-# When using such a link, you will get a so called binding cookie. This
-# happens on the very first usage of such a reset link. From that moment on,
-# you will only be able to access the password reset form with this very 
-# device and browser. This is just another security mechanism and prevents
-# someone else who might be passively sniffing network traffic to extract 
-# the (unencrypted) URI from the header and just use it, before the user 
-# has a change to fill out the form. This is a mechanism to prevent against
-# account takeovers during a password reset.
-#
-# The problem however are companies (e.g. Microsoft) who scan their customers
-# E-Mails and even follow links and so on. They call it a "feature". The
-# problem is, that their servers get this binding cookie and the user will be
-# unable to use this link himself. The usage of this config option is highly
-# discouraged, but since everything moves very slow in big enterprises and
-# you cannot change your E-Mail provider quickly, you can use it do just make
-# it work for the moment and deal with it later.
-#
-# default: false
-#UNSAFE_NO_RESET_BINDING=false
+# By default, Rauthy will log a warning into the logs, if an active password
+# reset form is being access multiple times from different hosts. You can set
+# this to `true` to actually block any following request after the initial one.
+# This hardens the security of the password reset form a bit more, but will
+# create problems with E-Mail providers like Microsoft, which cans the customers
+# E-Mails and even uses links inside, which make them unusable with this set to
+# true.
+# This feature works by setting an encrypted cookie to the host whichever opens
+# the password reset form for the very first time. All subsequent requests either
+# need to provide that cookie or would otherwise be rejected.
+#PASSWORD_RESET_COOKIE_BINDING=true
 
 # Can be set to extract the remote client peer IP from a custom header name
 # instead of the default mechanisms. This is needed when you are running 
@@ -1681,6 +1670,59 @@ AUTH_HEADER_MFA=x-forwarded-user-mfa
 # BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID are set, the hashed version
 # will always be prioritized.
 #BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID='$argon2id$v=19$m=32768,t=3,p=2$xr23OhOHw+pNyy3dYKZUcA$CBO4NpGvyi6gvrb5uNrnsS/z/Ew+IuS0/gVqFmLKncA'
+
+# You can provide an API Key during the initial prod database
+# bootstrap. This key must match the format and pass validation.
+# You need to provide it as a base64 encoded JSON in the format:
+#
+# ```
+# struct ApiKeyRequest {
+#     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
+#     name: String,
+#     /// Unix timestamp in seconds in the future (max year 2099)
+#     exp: Option&lt;i64&gt;,
+#     access: Vec&lt;ApiKeyAccess&gt;,
+# }
+#
+# struct ApiKeyAccess {
+#     group: AccessGroup,
+#     access_rights: Vec&lt;AccessRights&gt;,
+# }
+#
+# enum AccessGroup {
+#     Blacklist,
+#     Clients,
+#     Events,
+#     Generic,
+#     Groups,
+#     Roles,
+#     Secrets,
+#     Sessions,
+#     Scopes,
+#     UserAttributes,
+#     Users,
+# }
+#
+# #[serde(rename_all = "lowercase")]
+# enum AccessRights {
+#     Read,
+#     Create,
+#     Update,
+#     Delete,
+# }
+# ```
+#
+# You can use the `api_key_example.json` from `/` as
+# an example. Afterwards, just `base64 api_key_example.json | tr -d '\n'`
+#BOOTSTRAP_API_KEY="ewogICJuYW1lIjogImJvb3RzdHJhcCIsCiAgImV4cCI6IDE3MzU1OTk2MDAsCiAgImFjY2VzcyI6IFsKICAgIHsKICAgICAgImdyb3VwIjogIkNsaWVudHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgImdyb3VwIjogIlJvbGVzIiwKICAgICAgImFjY2Vzc19yaWdodHMiOiBbCiAgICAgICAgInJlYWQiLAogICAgICAgICJjcmVhdGUiLAogICAgICAgICJ1cGRhdGUiLAogICAgICAgICJkZWxldGUiCiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJncm91cCI6ICJHcm91cHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfQogIF0KfQ=="
+
+# The secret for the above defined bootstrap API Key.
+# This must be at least 64 alphanumeric characters long.
+# You will be able to use that key afterwards with setting
+# the `Authorization` header:
+#
+# `Authorization: API-Key &lt;your_key_name_from_above&gt;$&lt;this_secret&gt;`
+#BOOTSTRAP_API_KEY_SECRET=twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh
 
 #####################################
 ############## CACHE ################
