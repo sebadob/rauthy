@@ -145,6 +145,20 @@ impl ColorsRequest {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
+pub struct DeviceGrantRequest {
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$"))]
+    pub client_id: String,
+    /// Validation: `[a-zA-Z0-9\s]`
+    #[validate(regex(path = "RE_ALNUM_SPACE", code = "[a-zA-Z0-9\\s]"))]
+    pub scope: Option<String>,
+    /// This value is non-standard. Use with custom clients only.
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub token: Option<String>,
+}
+
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
 pub struct EncKeyMigrateRequest {
     #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
@@ -154,8 +168,10 @@ pub struct EncKeyMigrateRequest {
 /// This request is used for ephemeral clients, which are needed for Solid OIDC for instance.
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct EphemeralClientRequest {
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(
+        path = "RE_CLIENT_ID_EPHEMERAL",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
+    ))]
     pub client_id: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
     #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
