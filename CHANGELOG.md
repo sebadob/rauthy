@@ -45,6 +45,15 @@ send huge payloads each time.
 [9f87af3](https://github.com/sebadob/rauthy/commit/9f87af3dfb49b48300b885bf406f852579470193)
 [e6d39d1](https://github.com/sebadob/rauthy/commit/e6d39d1e1118e18aeb020fbbb477a944fcd1467a)
 
+#### UX Improvement on Login
+
+The login form now contains a "Home" icon which will appear, if a `client_uri` is registered for the current
+client. A user may click this and be redirected to the client, if a login is not desired for whatever reason.
+Additionally, if the user registration is configured to be open, a link to the user registration will be shown
+at the bottom as well.
+
+[]()
+
 #### Unlink Account from Provider
 
 A new button has been introduced to the account view of federated accounts.  
@@ -96,6 +105,9 @@ BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID='$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx
 - The page title for a password reset now shows "New Account" if this is a fresh setup and only
   "Password Reset" when it actually is a reset
   [84bbdf7](https://github.com/sebadob/rauthy/commit/84bbdf7bc464e5869285225e446cb56e17f53583)
+- The "User Registration" header on the page for an open user registration as only showing up,
+  when the domain was restricted.
+  []()
 
 ## 0.22.1
 
