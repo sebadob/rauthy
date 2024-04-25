@@ -11,6 +11,7 @@ pub mod colors;
 pub mod config;
 pub mod continuation_token;
 pub mod db_version;
+pub mod devices;
 pub mod dpop_proof;
 pub mod groups;
 pub mod jwk;
