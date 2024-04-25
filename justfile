@@ -307,6 +307,7 @@ build: test-full
     set -euxo pipefail
 
     cargo clean
+    mkdir -p out
 
     cargo clippy -- -D warnings
     cross build --release --target x86_64-unknown-linux-musl
@@ -323,6 +324,7 @@ build-postgres: test-postgres
     set -euxo pipefail
 
     cargo clean
+    mkdir -p out
 
     DATABASE_URL=$DB_URL_POSTGRES cargo clippy --features postgres -- -D warnings
 
