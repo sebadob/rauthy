@@ -648,6 +648,10 @@ pub async fn post_token(
     req: HttpRequest,
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    // TODO the `urn:ietf:params:oauth:grant-type:device_code` needs
+    // a fully customized handling here with customized error response
+    // to meet the oauth rfc
+
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let add_login_delay = req_data.grant_type == "password";
 

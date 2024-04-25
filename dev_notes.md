@@ -18,6 +18,7 @@ oauth2 device auth flow for IoT and embedded devices:
         - `expires_in` lifetime in seconds
         - `interval` optional min client polling interval
     - define error response as described in https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
+- [ ] accept `urn:ietf:params:oauth:grant-type:device_code` as grant on `/token`
 - [ ] API endpoints for fetching all information about an existing one
 - [ ] UI to show to the user for investigation + accept
 - [ ] update the .well-known with `urn:ietf:params:oauth:grant-type:device_code`
