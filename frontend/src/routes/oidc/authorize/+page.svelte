@@ -24,11 +24,13 @@
     import LangSelector from "$lib/LangSelector.svelte";
     import getPkce from "oauth-pkce";
     import {PKCE_VERIFIER_UPSTREAM} from "../../../utils/constants.js";
+    import IconHome from "$lib/icons/IconHome.svelte";
 
     let t = {};
 
     let clientId;
     let clientName = '';
+    let clientUri = '';
     let redirectUri = '';
     let nonce = '';
     let scopes = [];
@@ -60,6 +62,7 @@
     let emailSuccess = false;
     let tooManyRequests = false;
     let emailAfterSubmit = '';
+    let isRegOpen = false;
 
     let formValues = {email: '', password: ''};
     let formErrors = {};
@@ -104,13 +107,10 @@
     }
 
     onMount(async () => {
-        // clientName = window.document.getElementsByName('rauthy-data')[0].id
         const data = window.document.getElementsByName('rauthy-data')[0].id.split('\n');
         clientName = data[0];
-        const clientUri = data[1];
-        const isRegOpen = data[2] === "true";
-        console.log(clientUri);
-        console.log(isRegOpen);
+        clientUri = data[1];
+        isRegOpen = data[2] === "true";
 
         const action = window.document.getElementsByName('rauthy-action')[0].id;
         if ('Refresh' === action) {
@@ -321,6 +321,17 @@
                         <img src="{`/auth/v1/clients/${clientId}/logo`}" alt="No Logo Available"/>
                     {/if}
                 </div>
+                {#if clientUri}
+                    <div
+                            role="button"
+                            tabindex="0"
+                            class="home"
+                            on:click={() => window.location.href = clientUri}
+                            on:keypress={() => window.location.href = clientUri}
+                    >
+                        <IconHome opacity={0.5}/>
+                    </div>
+                {/if}
             </div>
 
             <div class="name">
@@ -409,6 +420,10 @@
                 </div>
             {/if}
 
+            {#if isRegOpen}
+                <a class="reg" href="/auth/v1/users/register">Sign-Up for an account</a>
+            {/if}
+
             {#if err}
                 <div class="errMsg errMsgApi">
                     {err}
@@ -480,7 +495,11 @@
     .head {
         display: flex;
         justify-content: space-between;
-        padding-right: 35px;
+    }
+
+    .home {
+        margin-right: 5px;
+        cursor: pointer;
     }
 
     .name {
@@ -498,6 +517,10 @@
 
     .providers {
         margin-top: .66rem;
+    }
+
+    .reg {
+        margin-left: 5px;
     }
 
     .success {
