@@ -222,6 +222,8 @@ use utoipa::{openapi, OpenApi};
             response::JWKSCerts,
             response::JWKSPublicKeyCerts,
             response::Argon2ParamsResponse,
+            response::OAuth2ErrorResponse,
+            response::OAuth2ErrorTypeResponse,
             response::PasswordPolicyResponse,
             response::ProviderResponse,
             response::ProviderLinkedUserResponse,

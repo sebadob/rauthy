@@ -286,6 +286,24 @@ pub struct LoginTimeResponse {
     pub num_cpus: usize,
 }
 
+#[derive(Debug, Serialize, ToSchema)]
+pub struct OAuth2ErrorResponse {
+    pub error: OAuth2ErrorTypeResponse,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_description: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum OAuth2ErrorTypeResponse {
+    InvalidRequest,
+    InvalidClient,
+    InvalidGrant,
+    UnauthorizedClient,
+    UnsupportedGrantType,
+    InvalidScope,
+}
+
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PasskeyResponse {
     pub name: String,

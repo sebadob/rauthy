@@ -25,7 +25,9 @@ use rauthy_models::request::{
     AuthRequest, DeviceGrantRequest, LoginRefreshRequest, LoginRequest, LogoutRequest,
     TokenRequest, TokenValidationRequest,
 };
-use rauthy_models::response::{JWKSCerts, JWKSPublicKeyCerts, SessionInfoResponse};
+use rauthy_models::response::{
+    JWKSCerts, JWKSPublicKeyCerts, OAuth2ErrorResponse, SessionInfoResponse,
+};
 use rauthy_models::templates::{
     AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction,
 };
@@ -336,8 +338,8 @@ pub async fn get_cert_by_kid(
     tag = "oidc",
     request_body = DeviceGrantRequest,
     responses(
-        (status = 200, description = "Correct credentials, but needs to continue with Webauthn MFA Login", body = WebauthnLoginResponse),
-        (status = 400, description = "Missing / bad input data", body = ErrorResponse),
+        (status = 200, description = "Ok", body = WebauthnLoginResponse),
+        (status = 400, description = "BadRequest", body = OAuth2ErrorResponse),
     ),
 )]
 #[post("/oidc/device")]
