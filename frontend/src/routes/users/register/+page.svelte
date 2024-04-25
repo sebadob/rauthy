@@ -114,14 +114,14 @@
 <BrowserCheck>
     <WithI18n bind:t content="register">
         <div class="container">
-            <h1>{t.userReg}</h1>
 
-            {#if restrictedDomain}
-                <div class="domainTxt">
+            <div class="domainTxt">
+                <h1>{t.userReg}</h1>
+                {#if restrictedDomain}
                     {t.domainRestricted}<br>
                     {t.domainAllowed} <code>@{restrictedDomain}</code>
-                </div>
-            {/if}
+                {/if}
+            </div>
 
             <Input
                     type="email"

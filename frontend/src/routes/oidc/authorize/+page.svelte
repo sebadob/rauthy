@@ -322,15 +322,9 @@
                     {/if}
                 </div>
                 {#if clientUri}
-                    <div
-                            role="button"
-                            tabindex="0"
-                            class="home"
-                            on:click={() => window.location.href = clientUri}
-                            on:keypress={() => window.location.href = clientUri}
-                    >
+                    <a class="home" href={clientUri}>
                         <IconHome opacity={0.5}/>
-                    </div>
+                    </a>
                 {/if}
             </div>
 
@@ -421,7 +415,9 @@
             {/if}
 
             {#if isRegOpen}
-                <a class="reg" href="/auth/v1/users/register">Sign-Up for an account</a>
+                <a class="reg" href="/auth/v1/users/register" target="_blank">
+                    {t.signUp}
+                </a>
             {/if}
 
             {#if err}
