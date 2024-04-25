@@ -277,19 +277,12 @@ pub async fn post_authorize_refresh(
         .map_err(|err| err.0)
 }
 
-// TODO request at least session state init ?
 #[get("/oidc/callback")]
 pub async fn get_callback_html(
     data: web::Data<AppState>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    // TODO remove debug log after testing
-    let session_auth = principal.validate_session_auth();
-    debug!(
-        "principal.validate_session_auth() in /oidc/callback: {:?}",
-        session_auth
-    );
-
+    principal.validate_session_auth();
     let colors = ColorEntity::find_rauthy(&data).await?;
     let body = CallbackHtml::build(&colors);
 
