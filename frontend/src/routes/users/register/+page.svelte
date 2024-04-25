@@ -114,9 +114,10 @@
 <BrowserCheck>
     <WithI18n bind:t content="register">
         <div class="container">
+            <h1>{t.userReg}</h1>
+
             {#if restrictedDomain}
                 <div class="domainTxt">
-                    <h1>{t.userReg}</h1>
                     {t.domainRestricted}<br>
                     {t.domainAllowed} <code>@{restrictedDomain}</code>
                 </div>
