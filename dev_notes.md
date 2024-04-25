@@ -25,6 +25,25 @@ oauth2 device auth flow for IoT and embedded devices:
   yet exist for the rust ecosystem
 - [ ] create a fully working example with `rauthy` + `rauthy-client` on how to use it with a CLI tool
 
+save devices in a new table:
+
+- device_id generated -> added to access + refresh token
+- client_id opt fk
+- user_id opt fk
+- created
+- access_exp
+- refresh_exp -> can be auto-deleted by scheduler if refresh has expired -> needs new login anyway?
+- peer_ip
+- authorized_by -> fk to users -> what about user deletion in the future? set null or revoke access?
+
+new refresh tokens table for devices only:
+
+- id
+- device_id fk to devices
+- nbf
+- exp
+- scope
+
 ## Stage 1 - essentials
 
 [x] finished

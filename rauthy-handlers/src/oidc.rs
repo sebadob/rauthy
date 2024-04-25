@@ -353,6 +353,8 @@ pub async fn post_device(
     // TODO add some kind of IP rate limiting
     let ip = real_ip_from_req(&req);
 
+    // TODO accept the actual request and create the response
+
     todo!()
 }
 
