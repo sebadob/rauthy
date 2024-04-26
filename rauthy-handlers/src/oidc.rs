@@ -390,7 +390,14 @@ pub async fn post_device_auth(
     }
 
     // check confidential client
-    // TODO
+    if let Ok(secret) = client.get_secret_cleartext() {
+        if secret != payload.client_secret {
+            return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::UnauthorizedClient,
+                error_description: Some(Cow::from("Invalid `client_secret`")),
+            });
+        }
+    }
 
     // we are good - create the code
     let code = match DeviceAuthCode::new(&data).await {
