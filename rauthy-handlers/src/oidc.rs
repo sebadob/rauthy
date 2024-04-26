@@ -367,7 +367,7 @@ pub async fn post_device_auth(
             });
         }
         Some(ip) => {
-            if let Some(dt) = DeviceIpRateLimit::check_limited(&data, ip.clone()).await {
+            if let Some(dt) = DeviceIpRateLimit::is_limited(&data, ip.clone()).await {
                 return HttpResponse::TooManyRequests()
                     .insert_header((HEADER_RETRY_NOT_BEFORE, dt.timestamp()))
                     .json(OAuth2ErrorResponse {

@@ -28,7 +28,7 @@ impl DeviceIpRateLimit {
         Ok(())
     }
 
-    pub async fn check_limited(data: &web::Data<AppState>, ip: String) -> Option<DateTime<Utc>> {
+    pub async fn is_limited(data: &web::Data<AppState>, ip: String) -> Option<DateTime<Utc>> {
         cache_get!(
             DateTime<Utc>,
             CACHE_NAME_IP_RATE_LIMIT.to_string(),
