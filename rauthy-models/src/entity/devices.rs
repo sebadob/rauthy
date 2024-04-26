@@ -89,6 +89,8 @@ pub struct DeviceAuthCode {
     pub exp: DateTime<Utc>,
     pub last_poll: DateTime<Utc>,
     pub scopes: Option<Vec<String>>,
+    // saved additionally here to have fewer cache requests during client polling
+    pub client_secret: Option<String>,
 }
 
 impl DeviceAuthCode {

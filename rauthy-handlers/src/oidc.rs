@@ -707,6 +707,7 @@ pub async fn post_token(
         // TODO the `urn:ietf:params:oauth:grant-type:device_code` needs
         // a fully customized handling here with customized error response
         // to meet the oauth rfc
+        return Ok(auth::grant_type_device_code(&data, req, payload.into_inner()).await);
     }
 
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();

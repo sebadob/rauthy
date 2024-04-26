@@ -22,6 +22,7 @@ use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::colors::ColorEntity;
+use rauthy_models::entity::devices::DeviceAuthCode;
 use rauthy_models::entity::dpop_proof::DPoPProof;
 use rauthy_models::entity::jwk::{Jwk, JwkKeyPair, JwkKeyPairAlg};
 use rauthy_models::entity::refresh_tokens::RefreshToken;
@@ -35,7 +36,7 @@ use rauthy_models::events::event::Event;
 use rauthy_models::events::ip_blacklist_handler::{IpBlacklistReq, IpFailedLoginCheck};
 use rauthy_models::language::Language;
 use rauthy_models::request::{LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest};
-use rauthy_models::response::{TokenInfo, Userinfo};
+use rauthy_models::response::{OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenInfo, Userinfo};
 use rauthy_models::templates::{LogoutHtml, TooManyRequestsHtml};
 use rauthy_models::{
     sign_jwt, validate_jwt, AddressClaim, AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn,
@@ -45,6 +46,7 @@ use rauthy_models::{
 use redhac::cache_del;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
 use ring::digest;
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::ops::{Add, Sub};
 use std::str::FromStr;
@@ -1084,50 +1086,38 @@ async fn grant_type_credentials(
 
 /// Return a [TokenSet](crate::models::response::TokenSet) for the `device_code` flow
 #[tracing::instrument(skip_all, fields(client_id = payload.client_id))]
-async fn grant_type_device_code(
+pub async fn grant_type_device_code(
     data: &web::Data<AppState>,
     req: HttpRequest,
     payload: TokenRequest,
-) -> Result<(TokenSet, Vec<(HeaderName, HeaderValue)>), ErrorResponse> {
-    let (client_id, client_secret) = payload.try_get_client_id_secret(&req)?;
-    let client = Client::find(data, client_id).await?;
+) -> HttpResponse {
+    let device_code = match payload.device_code {
+        None => {
+            return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::InvalidRequest,
+                error_description: Some(Cow::from("`device_code` is missing")),
+            });
+        }
+        Some(dc) => dc,
+    };
+    let code = match DeviceAuthCode::find_by_device_code(data, device_code).await {
+        Ok(Some(code)) => code,
+        Ok(None) | Err(_) => {
+            return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::UnauthorizedClient,
+                error_description: Some(Cow::from("invalid `device_code` or request has expired")),
+            });
+        }
+    };
+
+    let now = Utc::now();
+
+    // TODO
+    // validate secret
+    // check last_poll and make sure interval is ok
+    // check validation
+
     todo!("extract the validation for a client -> device_code into dedicated fn");
-    // if !client.enabled {
-    //     return Err(ErrorResponse::new(
-    //         ErrorResponseType::BadRequest,
-    //         String::from("client is disabled"),
-    //     ));
-    // }
-    // let secret = client_secret.ok_or_else(|| {
-    //     ErrorResponse::new(
-    //         ErrorResponseType::BadRequest,
-    //         String::from("'client_secret' is missing"),
-    //     )
-    // })?;
-    // client.validate_secret(&secret, &req)?;
-    // client.validate_flow("client_credentials")?;
-    // let header_origin = client.validate_origin(&req, &data.listen_scheme, &data.public_url)?;
-    //
-    // let mut headers = Vec::new();
-    // let dpop_fingerprint =
-    //     if let Some(proof) = DPoPProof::opt_validated_from(data, &req, &header_origin).await? {
-    //         if let Some(nonce) = &proof.claims.nonce {
-    //             headers.push((
-    //                 HeaderName::from_str(HEADER_DPOP_NONCE).unwrap(),
-    //                 HeaderValue::from_str(nonce).unwrap(),
-    //             ));
-    //         }
-    //         Some(proof.jwk_fingerprint()?)
-    //     } else {
-    //         None
-    //     };
-    // // We do not push the origin header, because client credentials should never be used from
-    // // any browser at all
-    //
-    // // update timestamp if it is a dynamic client
-    // if client.is_dynamic() {
-    //     ClientDyn::update_used(data, &client.id).await?;
-    // }
     //
     // let ts = TokenSet::for_client_credentials(data, &client, dpop_fingerprint).await?;
     // Ok((ts, headers))

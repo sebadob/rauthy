@@ -741,9 +741,6 @@ pub struct TokenRequest {
     /// Validation: max length is 256
     #[validate(length(max = 256))]
     pub device_code: Option<String>,
-    /// Validation: `[a-z0-9-_/:\s]{0,128}`
-    #[validate(regex(path = "RE_SCOPE", code = "[a-z0-9-_/:\\s]{0,128}"))]
-    pub scope: Option<String>,
     /// Validation: `email`
     #[validate(email)]
     pub username: Option<String>,
