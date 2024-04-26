@@ -8,10 +8,10 @@ use actix_web::HttpRequest;
 use css_color::Srgb;
 use rauthy_common::constants::{
     RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_ALNUM_SPACE, RE_API_KEY, RE_APP_ID, RE_ATTR,
-    RE_ATTR_DESC, RE_AUTH_PROVIDER_SCOPE, RE_CHALLENGE, RE_CITY, RE_CLIENT_ID_EPHEMERAL,
-    RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_CODE_VERIFIER, RE_CONTACT, RE_DATE_STR, RE_FLOWS,
-    RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE, RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_PEM, RE_PHONE,
-    RE_SEARCH, RE_STREET, RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI, RE_USER_NAME,
+    RE_ATTR_DESC, RE_CHALLENGE, RE_CITY, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE,
+    RE_CODE_VERIFIER, RE_CONTACT, RE_DATE_STR, RE_FLOWS, RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE,
+    RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_PEM, RE_PHONE, RE_SCOPE, RE_SEARCH, RE_STREET,
+    RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI, RE_USER_NAME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::base64_decode;
@@ -153,8 +153,8 @@ pub struct DeviceGrantRequest {
     /// Validation: max length is 256
     #[validate(length(max = 256))]
     pub client_secret: Option<String>,
-    /// Validation: `[a-zA-Z0-9\s]`
-    #[validate(regex(path = "RE_ALNUM_SPACE", code = "[a-zA-Z0-9\\s]"))]
+    /// Validation: `[a-z0-9-_/:\s]{0,128}`
+    #[validate(regex(path = "RE_SCOPE", code = "[a-z0-9-_/:\\s]{0,128}"))]
     pub scope: Option<String>,
 }
 
@@ -513,7 +513,7 @@ pub struct ProviderRequest {
     #[validate(length(max = 256))]
     pub client_secret: Option<String>,
     /// Validation: `[a-z0-9-_/:\s]{0,128}`
-    #[validate(regex(path = "RE_AUTH_PROVIDER_SCOPE", code = "[a-z0-9-_/:\\s]{0,128}"))]
+    #[validate(regex(path = "RE_SCOPE", code = "[a-z0-9-_/:\\s]{0,128}"))]
     pub scope: String,
     /// Validation: `(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)`
     #[validate(regex(
@@ -738,6 +738,12 @@ pub struct TokenRequest {
     /// Validation: `[a-zA-Z0-9-\\._~+/=]+`
     #[validate(regex(path = "RE_CODE_VERIFIER", code = "[a-zA-Z0-9-\\._~+/=]+"))]
     pub code_verifier: Option<String>,
+    /// Validation: max length is 256
+    #[validate(length(max = 256))]
+    pub device_code: Option<String>,
+    /// Validation: `[a-z0-9-_/:\s]{0,128}`
+    #[validate(regex(path = "RE_SCOPE", code = "[a-z0-9-_/:\\s]{0,128}"))]
+    pub scope: Option<String>,
     /// Validation: `email`
     #[validate(email)]
     pub username: Option<String>,
