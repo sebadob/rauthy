@@ -33,11 +33,13 @@ pub const PWD_CSRF_HEADER: &str = "pwd-csrf-token";
 pub const ARGON2ID_M_COST_MIN: u32 = 32768;
 pub const ARGON2ID_T_COST_MIN: u32 = 1;
 pub const API_KEY_LENGTH: usize = 64;
+pub const DEVICE_KEY_LENGTH: u8 = 64;
 pub const EVENTS_LATEST_LIMIT: u16 = 100;
 pub const UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS: u16 = 300;
 
 pub const CACHE_NAME_12HR: &str = "12hr";
 pub const CACHE_NAME_AUTH_CODES: &str = "auth-codes";
+pub const CACHE_NAME_DEVICE_CODES: &str = "device-codes";
 pub const CACHE_NAME_AUTH_PROVIDER_CALLBACK: &str = "auth-provider-callback";
 pub const CACHE_NAME_CLIENTS_DYN: &str = "clients-dyn";
 pub const CACHE_NAME_DPOP_NONCES: &str = "dpop-nonces";
@@ -157,6 +159,7 @@ lazy_static! {
         };
         format!("{}://{}", scheme, *PUB_URL)
     };
+
     pub static ref PROVIDER_CALLBACK_URI: String = {
         let scheme = if env::var("LISTEN_SCHEME").as_deref() == Ok("http") && !*PROXY_MODE {
             "http"
@@ -173,6 +176,20 @@ lazy_static! {
     pub static ref PROVIDER_CALLBACK_URI_ENCODED: String = {
         PROVIDER_CALLBACK_URI.replace(':', "%3A").replace('/', "%2F")
     };
+
+    pub static ref DEVICE_GRANT_CODE_CACHE_SIZE: u32 = env::var("DEVICE_GRANT_CODE_CACHE_SIZE")
+        .unwrap_or_else(|_| String::from("1000"))
+        .parse::<u32>()
+        .expect("DEVICE_GRANT_CODE_CACHE_SIZE cannot be parsed to u32 - bad format");
+    pub static ref DEVICE_GRANT_CODE_LIFETIME: u16 = env::var("DEVICE_GRANT_CODE_LIFETIME")
+        .unwrap_or_else(|_| String::from("300"))
+        .parse::<u16>()
+        .expect("DEVICE_GRANT_CODE_LIFETIME cannot be parsed to u16 - bad format");
+    pub static ref DEVICE_GRANT_USER_CODE_LENGTH: u8 = env::var("DEVICE_GRANT_USER_CODE_LENGTH")
+        .unwrap_or_else(|_| String::from("8"))
+        .parse::<u8>()
+        .expect("DEVICE_GRANT_USER_CODE_LENGTH cannot be parsed to u8 - bad format");
+
     pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
         let scheme = if *DEV_MODE && *DEV_DPOP_HTTP { "http" } else { "https" };
         let uri = format!("{}://{}/auth/v1/oidc/token", scheme, *PUB_URL);

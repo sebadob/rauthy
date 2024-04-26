@@ -20,6 +20,7 @@ use rio_api::formatter::TriplesFormatter;
 use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
 use rio_turtle::TurtleFormatter;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use time::OffsetDateTime;
 use tracing::debug;
 use utoipa::ToSchema;
@@ -128,6 +129,18 @@ impl From<Client> for ClientResponse {
             contacts,
         }
     }
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct DeviceCodeResponse<'a> {
+    pub device_code: &'a str,
+    pub user_code: &'a str,
+    pub verification_uri: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub verification_uri_complete: Option<String>,
+    pub expires_in: u16,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interval: Option<u32>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -284,6 +297,24 @@ pub struct LoginTimeResponse {
     pub argon2_params: Argon2ParamsResponse,
     pub login_time: u32,
     pub num_cpus: usize,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct OAuth2ErrorResponse<'a> {
+    pub error: OAuth2ErrorTypeResponse,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_description: Option<Cow<'a, str>>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum OAuth2ErrorTypeResponse {
+    InvalidRequest,
+    InvalidClient,
+    InvalidGrant,
+    UnauthorizedClient,
+    UnsupportedGrantType,
+    InvalidScope,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
