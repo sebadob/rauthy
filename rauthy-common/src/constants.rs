@@ -44,6 +44,7 @@ pub const CACHE_NAME_AUTH_PROVIDER_CALLBACK: &str = "auth-provider-callback";
 pub const CACHE_NAME_CLIENTS_DYN: &str = "clients-dyn";
 pub const CACHE_NAME_DPOP_NONCES: &str = "dpop-nonces";
 pub const CACHE_NAME_EPHEMERAL_CLIENTS: &str = "ephemeral-clients";
+pub const CACHE_NAME_IP_RATE_LIMIT: &str = "ip_rate_limit";
 pub const CACHE_NAME_LOGIN_DELAY: &str = "login-dly";
 pub const CACHE_NAME_SESSIONS: &str = "sessions";
 pub const CACHE_NAME_POW: &str = "pow";
@@ -189,6 +190,10 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("8"))
         .parse::<u8>()
         .expect("DEVICE_GRANT_USER_CODE_LENGTH cannot be parsed to u8 - bad format");
+    pub static ref DEVICE_GRANT_RATE_LIMIT: u32 = env::var("DEVICE_GRANT_RATE_LIMIT")
+        .unwrap_or_else(|_| String::from("30"))
+        .parse::<u32>()
+        .expect("DEVICE_GRANT_RATE_LIMIT cannot be parsed to u32- bad format");
 
     pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
         let scheme = if *DEV_MODE && *DEV_DPOP_HTTP { "http" } else { "https" };

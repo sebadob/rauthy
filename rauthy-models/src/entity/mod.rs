@@ -14,6 +14,7 @@ pub mod db_version;
 pub mod devices;
 pub mod dpop_proof;
 pub mod groups;
+pub mod ip_rate_limit;
 pub mod jwk;
 pub mod jwk_token_validation;
 pub mod logos;

@@ -8,7 +8,7 @@ use rauthy_common::constants::{
     APPLICATION_JSON, AUTH_HEADERS_ENABLE, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED,
     AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
     AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, DEVICE_GRANT_CODE_LIFETIME, HEADER_HTML,
-    OPEN_USER_REG, SESSION_LIFETIME,
+    HEADER_RETRY_NOT_BEFORE, OPEN_USER_REG, SESSION_LIFETIME,
 };
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::real_ip_from_req;
@@ -18,6 +18,7 @@ use rauthy_models::entity::auth_providers::AuthProviderTemplate;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::devices::DeviceAuthCode;
+use rauthy_models::entity::ip_rate_limit::DeviceIpRateLimit;
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JWKS};
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
@@ -40,6 +41,7 @@ use rauthy_service::auth;
 use std::borrow::Cow;
 use std::ops::Add;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tracing::error;
 
 /// OIDC Authorization HTML
 ///
@@ -349,12 +351,45 @@ pub async fn get_cert_by_kid(
 #[post("/oidc/device")]
 pub async fn post_device_auth(
     data: web::Data<AppState>,
-    // req: HttpRequest,
+    req: HttpRequest,
     payload: web::Json<DeviceGrantRequest>,
 ) -> HttpResponse {
-    // TODO add some kind of IP rate limiting
-    // let ip = real_ip_from_req(&req);
+    // handle ip rate-limiting
+    match real_ip_from_req(&req) {
+        None => {
+            let err = "Cannot extract client IP for rate-limiting - denying request";
+            error!("{err}");
+            return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::InvalidRequest,
+                error_description: Some(Cow::from(
+                    "internal error - cannot extract IP from request",
+                )),
+            });
+        }
+        Some(ip) => {
+            if let Some(dt) = DeviceIpRateLimit::check_limited(&data, ip.clone()).await {
+                return HttpResponse::TooManyRequests()
+                    .insert_header((HEADER_RETRY_NOT_BEFORE, dt.timestamp()))
+                    .json(OAuth2ErrorResponse {
+                        error: OAuth2ErrorTypeResponse::InvalidRequest,
+                        error_description: Some(Cow::from(format!(
+                            "no further requests allowed before: {}",
+                            dt
+                        ))),
+                    });
+            }
 
+            // if the IP was not limited, insert it into the cache now
+            if let Err(err) = DeviceIpRateLimit::insert(&data, ip).await {
+                error!(
+                    "Error inserting IP into the cache for rate-limiting: {:?}",
+                    err
+                );
+            }
+        }
+    };
+
+    // find and validate the client
     let payload = payload.into_inner();
     let client = match Client::find(&data, payload.client_id).await {
         Ok(client) => client,
@@ -389,7 +424,7 @@ pub async fn post_device_auth(
         }
     }
 
-    // check confidential client
+    // check confidential client's secret
     if let Ok(secret) = client.get_secret_cleartext() {
         if secret != payload.client_secret {
             return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
