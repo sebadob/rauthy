@@ -35,6 +35,7 @@ pub const ARGON2ID_T_COST_MIN: u32 = 1;
 pub const API_KEY_LENGTH: usize = 64;
 pub const DEVICE_KEY_LENGTH: u8 = 64;
 pub const EVENTS_LATEST_LIMIT: u16 = 100;
+pub const GRANT_TYPE_DEVICE_CODE: &str = "urn:ietf:params:oauth:grant-type:device_code";
 pub const UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS: u16 = 300;
 
 pub const CACHE_NAME_12HR: &str = "12hr";
@@ -194,6 +195,10 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("30"))
         .parse::<u32>()
         .expect("DEVICE_GRANT_RATE_LIMIT cannot be parsed to u32- bad format");
+    pub static ref DEVICE_GRANT_POLL_INTERVAL: u8 = env::var("DEVICE_GRANT_POLL_INTERVAL")
+        .unwrap_or_else(|_| String::from("5"))
+        .parse::<u8>()
+        .expect("DEVICE_GRANT_POLL_INTERVAL cannot be parsed to u8- bad format");
 
     pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
         let scheme = if *DEV_MODE && *DEV_DPOP_HTTP { "http" } else { "https" };

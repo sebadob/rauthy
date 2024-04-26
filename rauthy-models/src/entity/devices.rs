@@ -87,18 +87,26 @@ pub struct DeviceAuthCode {
     /// check here, it could be possible that a code lives longer than
     /// allowed.
     pub exp: DateTime<Utc>,
+    pub last_poll: DateTime<Utc>,
+    pub scopes: Option<Vec<String>>,
 }
 
 impl DeviceAuthCode {
     /// DeviceAuthCode's live inside the cache only
-    pub async fn new(data: &web::Data<AppState>) -> Result<Self, ErrorResponse> {
-        let exp = Utc::now().add(chrono::Duration::seconds(
+    pub async fn new(
+        data: &web::Data<AppState>,
+        scopes: Option<Vec<String>>,
+    ) -> Result<Self, ErrorResponse> {
+        let now = Utc::now();
+        let exp = now.add(chrono::Duration::seconds(
             *DEVICE_GRANT_CODE_LIFETIME as i64,
         ));
         let slf = Self {
             device_code: get_rand(DEVICE_KEY_LENGTH as usize),
             verified_by: None,
             exp,
+            last_poll: now,
+            scopes,
         };
 
         cache_put(

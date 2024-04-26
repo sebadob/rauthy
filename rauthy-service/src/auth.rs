@@ -1082,6 +1082,57 @@ async fn grant_type_credentials(
     Ok((ts, headers))
 }
 
+/// Return a [TokenSet](crate::models::response::TokenSet) for the `device_code` flow
+#[tracing::instrument(skip_all, fields(client_id = payload.client_id))]
+async fn grant_type_device_code(
+    data: &web::Data<AppState>,
+    req: HttpRequest,
+    payload: TokenRequest,
+) -> Result<(TokenSet, Vec<(HeaderName, HeaderValue)>), ErrorResponse> {
+    let (client_id, client_secret) = payload.try_get_client_id_secret(&req)?;
+    let client = Client::find(data, client_id).await?;
+    todo!("extract the validation for a client -> device_code into dedicated fn");
+    // if !client.enabled {
+    //     return Err(ErrorResponse::new(
+    //         ErrorResponseType::BadRequest,
+    //         String::from("client is disabled"),
+    //     ));
+    // }
+    // let secret = client_secret.ok_or_else(|| {
+    //     ErrorResponse::new(
+    //         ErrorResponseType::BadRequest,
+    //         String::from("'client_secret' is missing"),
+    //     )
+    // })?;
+    // client.validate_secret(&secret, &req)?;
+    // client.validate_flow("client_credentials")?;
+    // let header_origin = client.validate_origin(&req, &data.listen_scheme, &data.public_url)?;
+    //
+    // let mut headers = Vec::new();
+    // let dpop_fingerprint =
+    //     if let Some(proof) = DPoPProof::opt_validated_from(data, &req, &header_origin).await? {
+    //         if let Some(nonce) = &proof.claims.nonce {
+    //             headers.push((
+    //                 HeaderName::from_str(HEADER_DPOP_NONCE).unwrap(),
+    //                 HeaderValue::from_str(nonce).unwrap(),
+    //             ));
+    //         }
+    //         Some(proof.jwk_fingerprint()?)
+    //     } else {
+    //         None
+    //     };
+    // // We do not push the origin header, because client credentials should never be used from
+    // // any browser at all
+    //
+    // // update timestamp if it is a dynamic client
+    // if client.is_dynamic() {
+    //     ClientDyn::update_used(data, &client.id).await?;
+    // }
+    //
+    // let ts = TokenSet::for_client_credentials(data, &client, dpop_fingerprint).await?;
+    // Ok((ts, headers))
+}
+
 /// Return a [TokenSet](crate::models::response::TokenSet) for the `password` flow
 #[tracing::instrument(skip_all, fields(client_id = req_data.client_id, username = req_data.username))]
 async fn grant_type_password(
