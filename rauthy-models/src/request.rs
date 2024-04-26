@@ -150,6 +150,9 @@ pub struct DeviceGrantRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$"))]
     pub client_id: String,
+    /// Validation: max length is 256
+    #[validate(length(max = 256))]
+    pub client_secret: Option<String>,
     /// Validation: `[a-zA-Z0-9\s]`
     #[validate(regex(path = "RE_ALNUM_SPACE", code = "[a-zA-Z0-9\\s]"))]
     pub scope: Option<String>,

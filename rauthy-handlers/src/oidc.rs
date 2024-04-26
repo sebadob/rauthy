@@ -389,6 +389,9 @@ pub async fn post_device_auth(
         }
     }
 
+    // check confidential client
+    // TODO
+
     // we are good - create the code
     let code = match DeviceAuthCode::new(&data).await {
         Ok(code) => code,
