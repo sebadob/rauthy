@@ -169,6 +169,7 @@ impl WellKnown {
         WellKnown {
             issuer: String::from(issuer),
             authorization_endpoint,
+            device_authorization_endpoint,
             token_endpoint,
             introspection_endpoint,
             userinfo_endpoint,
