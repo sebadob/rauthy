@@ -21,7 +21,7 @@ pub enum AuthCodeFlow {
 
 #[derive(Debug, PartialEq)]
 pub enum DeviceCodeFlow {
-    Yes,
+    Yes(String),
     No,
 }
 
@@ -72,6 +72,8 @@ impl TokenSet {
         })
     }
 
+    // too many arguments is not an issue - params cannot be mistaken because of enum wrappers
+    #[allow(clippy::too_many_arguments)]
     pub async fn from_user(
         user: &User,
         data: &web::Data<AppState>,
@@ -198,8 +200,9 @@ impl TokenSet {
                     dpop_fingerprint,
                     client,
                     lifetime,
-                    scopes.map(|s| TokenScopes(s)),
+                    scopes.map(TokenScopes),
                     user.has_webauthn_enabled(),
+                    device_code_flow,
                 )
                 .await?,
             )

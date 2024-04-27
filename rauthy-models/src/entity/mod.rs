@@ -23,6 +23,7 @@ pub mod password;
 pub mod pow;
 pub mod principal;
 pub mod refresh_tokens;
+pub mod refresh_tokens_devices;
 pub mod roles;
 pub mod scopes;
 pub mod sessions;

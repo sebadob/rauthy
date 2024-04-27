@@ -28,6 +28,7 @@ use rauthy_models::entity::devices::DeviceAuthCode;
 use rauthy_models::entity::dpop_proof::DPoPProof;
 use rauthy_models::entity::jwk::{Jwk, JwkKeyPair, JwkKeyPairAlg};
 use rauthy_models::entity::refresh_tokens::RefreshToken;
+use rauthy_models::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_models::entity::scopes::Scope;
 use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::users::{AccountType, User};
@@ -617,6 +618,7 @@ pub async fn build_id_token(
 }
 
 /// Builds the refresh token for a user after all validation has been successful
+#[allow(clippy::too_many_arguments)]
 pub async fn build_refresh_token(
     user: &User,
     data: &web::Data<AppState>,
@@ -625,6 +627,7 @@ pub async fn build_refresh_token(
     access_token_lifetime: i64,
     scope: Option<TokenScopes>,
     is_mfa: bool,
+    device_code_flow: DeviceCodeFlow,
 ) -> Result<String, ErrorResponse> {
     let custom_claims = JwtRefreshClaims {
         azp: client.id.clone(),
@@ -643,20 +646,33 @@ pub async fn build_refresh_token(
     let validation_string = String::from(&token).split_off(token.len() - 49);
 
     // TODO make grace period configurable
-    let nbf = OffsetDateTime::now_utc().add(::time::Duration::seconds(access_token_lifetime - 60));
+    let nbf = Utc::now().add(chrono::Duration::seconds(access_token_lifetime - 60));
     // TODO make refresh token lifetime configurable
-    let exp = &nbf.add(::time::Duration::seconds(48 * 3600));
-    // TODO decision to create default or device refresh token here
-    RefreshToken::create(
-        data,
-        validation_string,
-        user.id.clone(),
-        nbf,
-        *exp,
-        scope.map(|s| s.0),
-        is_mfa,
-    )
-    .await?;
+    let exp = nbf.add(chrono::Duration::seconds(48 * 3600));
+
+    if let DeviceCodeFlow::Yes(device_id) = device_code_flow {
+        RefreshTokenDevice::create(
+            data,
+            validation_string,
+            device_id,
+            user.id.clone(),
+            nbf,
+            exp,
+            scope.map(|s| s.0),
+        )
+        .await?;
+    } else {
+        RefreshToken::create(
+            data,
+            validation_string,
+            user.id.clone(),
+            nbf,
+            exp,
+            scope.map(|s| s.0),
+            is_mfa,
+        )
+        .await?;
+    }
 
     Ok(token)
 }
@@ -993,7 +1009,7 @@ async fn grant_type_code(
         data,
         &client,
         dpop_fingerprint,
-        code.nonce.clone().map(|n| TokenNonce(n)),
+        code.nonce.clone().map(TokenNonce),
         Some(TokenScopes(code.scopes.join(" "))),
         AuthCodeFlow::Yes,
         DeviceCodeFlow::No,
