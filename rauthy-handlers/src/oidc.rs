@@ -408,7 +408,7 @@ pub async fn post_device_auth(
         });
     }
 
-    if let Err(err) = client.validate_flow("device_code") {
+    if let Err(err) = client.validate_flow(GRANT_TYPE_DEVICE_CODE) {
         return HttpResponse::Forbidden().json(OAuth2ErrorResponse {
             error: OAuth2ErrorTypeResponse::UnauthorizedClient,
             error_description: Some(Cow::from(err.message)),
