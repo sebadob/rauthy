@@ -10,9 +10,9 @@ use jwt_simple::algorithms::{
 use jwt_simple::claims;
 use jwt_simple::prelude::*;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, ENABLE_SOLID_AUD, ENABLE_WEB_ID,
-    HEADER_DPOP_NONCE, IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME, SESSION_LIFETIME,
-    SESSION_RENEW_MFA, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
+    CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, DEVICE_GRANT_POLL_INTERVAL,
+    ENABLE_SOLID_AUD, ENABLE_WEB_ID, HEADER_DPOP_NONCE, IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME,
+    SESSION_LIFETIME, SESSION_RENEW_MFA, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::HashPassword;
@@ -1091,7 +1091,7 @@ pub async fn grant_type_device_code(
     req: HttpRequest,
     payload: TokenRequest,
 ) -> HttpResponse {
-    let device_code = match payload.device_code {
+    let device_code = match &payload.device_code {
         None => {
             return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
                 error: OAuth2ErrorTypeResponse::InvalidRequest,
@@ -1100,7 +1100,7 @@ pub async fn grant_type_device_code(
         }
         Some(dc) => dc,
     };
-    let code = match DeviceAuthCode::find_by_device_code(data, device_code).await {
+    let mut code = match DeviceAuthCode::find_by_device_code(data, device_code).await {
         Ok(Some(code)) => code,
         Ok(None) | Err(_) => {
             return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
@@ -1110,17 +1110,64 @@ pub async fn grant_type_device_code(
         }
     };
 
+    // We need to check the device_code again, because the `find_by_device_code` uses
+    // the `user_code` as cache index under the hood for smaller footprints and the
+    // ability to find it in both ways without duplicated data.
+    if &code.device_code != device_code {
+        return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::UnauthorizedClient,
+            error_description: Some(Cow::from("Invalid `device_code`")),
+        });
+    }
+
+    if code.client_secret != payload.client_secret {
+        return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::UnauthorizedClient,
+            error_description: Some(Cow::from("Invalid `client_secret`")),
+        });
+    }
+
+    debug!("device auth code poll request is valid");
+    let mut error = OAuth2ErrorTypeResponse::AuthorizationPending;
+    let mut error_description = Cow::default();
+
+    // Check last_poll and make sure interval is being respected.
+    // We allow it to be 500ms shorter than specified to not get into
+    // possible problems with slightly inaccurate client implementations.
     let now = Utc::now();
+    let now_skew = now.sub(chrono::Duration::milliseconds(500));
+    let poll_thres = now_skew.sub(chrono::Duration::seconds(
+        *DEVICE_GRANT_POLL_INTERVAL as i64,
+    ));
+    if code.last_poll > poll_thres {
+        warn!("device does not respect the poll interval");
+        code.warnings += 1;
+        if code.warnings >= 3 {
+            warn!("deleting device auth code request early because of not respected poll interval");
+            error = OAuth2ErrorTypeResponse::AccessDenied;
+            error_description = Cow::from("poll interval has not been respected");
+            if let Err(err) = code.delete(data).await {
+                // this should never happen
+                error!("Error deleting DeviceAuthCode from the cache: {:}", err);
+            }
+        } else {
+            error = OAuth2ErrorTypeResponse::SlowDown;
+            error_description = Cow::from("must respect the poll interval");
+        }
+    }
 
-    // TODO
-    // validate secret
-    // check last_poll and make sure interval is ok
     // check validation
+    if let Some(verified_by) = code.verified_by {
+        // TODO
 
-    todo!("extract the validation for a client -> device_code into dedicated fn");
-    //
-    // let ts = TokenSet::for_client_credentials(data, &client, dpop_fingerprint).await?;
-    // Ok((ts, headers))
+        // let ts = TokenSet::for_client_credentials(data, &client, dpop_fingerprint).await?;
+        // Ok((ts, headers))
+    }
+
+    HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+        error,
+        error_description: None,
+    })
 }
 
 /// Return a [TokenSet](crate::models::response::TokenSet) for the `password` flow

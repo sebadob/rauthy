@@ -315,6 +315,11 @@ pub enum OAuth2ErrorTypeResponse {
     UnauthorizedClient,
     UnsupportedGrantType,
     InvalidScope,
+    // specific to the device grant
+    AuthorizationPending,
+    SlowDown,
+    AccessDenied,
+    ExpiredToken,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]

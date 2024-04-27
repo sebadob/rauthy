@@ -443,7 +443,7 @@ pub async fn post_device_auth(
     }
 
     // we are good - create the code
-    let code = match DeviceAuthCode::new(&data, scopes).await {
+    let code = match DeviceAuthCode::new(&data, scopes, payload.client_secret).await {
         Ok(code) => code,
         Err(err) => {
             return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {

@@ -91,6 +91,10 @@ pub struct DeviceAuthCode {
     pub scopes: Option<Vec<String>>,
     // saved additionally here to have fewer cache requests during client polling
     pub client_secret: Option<String>,
+    // The warnings counter will increase, if a client does not stick to
+    // the given interval and gets 'slow_down' from us. If this happens
+    // too many times, the IP will be blacklisted.1
+    pub warnings: u8,
 }
 
 impl DeviceAuthCode {
@@ -98,6 +102,7 @@ impl DeviceAuthCode {
     pub async fn new(
         data: &web::Data<AppState>,
         scopes: Option<Vec<String>>,
+        client_secret: Option<String>,
     ) -> Result<Self, ErrorResponse> {
         let now = Utc::now();
         let exp = now.add(chrono::Duration::seconds(
@@ -109,6 +114,8 @@ impl DeviceAuthCode {
             exp,
             last_poll: now,
             scopes,
+            client_secret,
+            warnings: 0,
         };
 
         cache_put(
@@ -124,9 +131,9 @@ impl DeviceAuthCode {
 
     pub async fn find_by_device_code(
         data: &web::Data<AppState>,
-        device_code: String,
+        device_code: &str,
     ) -> Result<Option<Self>, ErrorResponse> {
-        let key = &device_code.as_str()[..(*DEVICE_GRANT_USER_CODE_LENGTH as usize)];
+        let key = &device_code[..(*DEVICE_GRANT_USER_CODE_LENGTH as usize)];
         Self::find(data, key.to_string()).await
     }
 
