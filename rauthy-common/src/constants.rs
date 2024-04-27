@@ -198,7 +198,11 @@ lazy_static! {
     pub static ref DEVICE_GRANT_POLL_INTERVAL: u8 = env::var("DEVICE_GRANT_POLL_INTERVAL")
         .unwrap_or_else(|_| String::from("5"))
         .parse::<u8>()
-        .expect("DEVICE_GRANT_POLL_INTERVAL cannot be parsed to u8- bad format");
+        .expect("DEVICE_GRANT_POLL_INTERVAL cannot be parsed to u8 - bad format");
+    pub static ref DEVICE_GRANT_REFRESH_TOKEN_LIFETIME: u16 = env::var("DEVICE_GRANT_REFRESH_TOKEN_LIFETIME")
+       .unwrap_or_else(|_| String::from("72"))
+       .parse::<u16>()
+       .expect("DEVICE_GRANT_REFRESH_TOKEN_LIFETIME cannot be parsed to u16 - bad format");
 
     pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
         let scheme = if *DEV_MODE && *DEV_DPOP_HTTP { "http" } else { "https" };
@@ -275,6 +279,11 @@ lazy_static! {
             .unwrap_or_else(|_| String::from("3600"))
             .parse::<u64>()
             .expect("EPHEMERAL_CLIENTS_CACHE_LIFETIME cannot be parsed to u64 - bad format");
+
+    pub static ref REFRESH_TOKEN_LIFETIME: u16 = env::var("REFRESH_TOKEN_LIFETIME")
+       .unwrap_or_else(|_| String::from("48"))
+       .parse::<u16>()
+       .expect("REFRESH_TOKEN_LIFETIME cannot be parsed to u16 - bad format");
 
     pub static ref PROXY_MODE: bool = env::var("PROXY_MODE")
         .unwrap_or_else(|_| String::from("false"))
