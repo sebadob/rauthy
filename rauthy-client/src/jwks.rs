@@ -1,7 +1,9 @@
 use crate::base64_url_no_pad_decode;
 use crate::provider::HTTP_CLIENT;
+use crate::rauthy_error::RauthyError;
 use cached::Cached;
 use serde::Deserialize;
+use std::borrow::Cow;
 use std::sync::OnceLock;
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
@@ -11,17 +13,18 @@ static JWKS_TX: OnceLock<mpsc::UnboundedSender<JwksMsg>> = OnceLock::new();
 
 #[derive(Debug)]
 pub(crate) enum JwksMsg {
-    Get((String, oneshot::Sender<anyhow::Result<JwkPublicKey>>)),
+    Get((String, oneshot::Sender<Result<JwkPublicKey, RauthyError>>)),
     Update,
     NewJwksUri(String),
 }
 
 impl JwksMsg {
-    pub(crate) fn send(self) -> anyhow::Result<()> {
+    pub(crate) fn send(self) -> Result<(), RauthyError> {
         JWKS_TX
             .get()
-            .ok_or_else(|| anyhow::Error::msg("JWKS_TX has not been initialized"))?
-            .send(self)?;
+            .ok_or_else(|| RauthyError::Init("JWKS_TX has not been initialized"))?
+            .send(self)
+            .or_else(|err| Err(RauthyError::Internal(Cow::from(err.to_string()))))?;
         Ok(())
     }
 }
@@ -76,15 +79,16 @@ pub(crate) struct JwkPublicKey {
 
 impl JwkPublicKey {
     #[inline]
-    pub(crate) async fn get_for_token(token: &str) -> anyhow::Result<Self> {
+    pub(crate) async fn get_for_token(token: &str) -> Result<Self, RauthyError> {
         let metadata = jwt_simple::token::Token::decode_metadata(token)?;
         let kid = metadata
             .key_id()
-            .ok_or_else(|| anyhow::Error::msg("No 'kid' in JWT token header"))?;
+            .ok_or_else(|| RauthyError::InvalidClaims("No 'kid' in JWT token header"))?;
 
         let (tx, rx) = oneshot::channel();
         JwksMsg::Get((kid.to_string(), tx)).send()?;
-        rx.await?
+        rx.await
+            .map_err(|err| RauthyError::Internal(Cow::from(err.to_string())))?
     }
 }
 
@@ -189,10 +193,9 @@ pub(crate) async fn jwks_handler() {
                     // of DoS possibility with invalid tokens all over
                     if recently_looked_up.cache_get(&kid).is_some() {
                         tx_ack
-                            .send(Err(anyhow::Error::msg(format!(
-                                "KID {} not found and it has been recently looked up",
-                                kid
-                            ))))
+                            .send(Err(RauthyError::InvalidClaims(
+                                "'kid' not found and it has been recently looked up",
+                            )))
                             .unwrap();
                         continue;
                     }
@@ -209,10 +212,9 @@ pub(crate) async fn jwks_handler() {
                         }
                     }
                     tx_ack
-                        .send(Err(anyhow::Error::msg(format!(
-                            "KID {} not found after updating JWKs",
-                            kid
-                        ))))
+                        .send(Err(RauthyError::InvalidClaims(
+                            "'kid' not found after updating JWKs",
+                        )))
                         .unwrap();
                 }
 

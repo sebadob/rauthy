@@ -76,10 +76,11 @@ pub enum JwtClaimTyp {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::rauthy_error::RauthyError;
     use std::ops::Deref;
 
     #[test]
-    fn test_claim_mapping() -> anyhow::Result<()> {
+    fn test_claim_mapping() -> Result<(), RauthyError> {
         let mapping = ClaimMapping::None;
         // no matter which roles / groupe we have - None should always deny access
         assert!(!mapping.matches(&vec!["".to_string()], &vec!["".to_string()]));

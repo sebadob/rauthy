@@ -1,5 +1,6 @@
 use crate::jwks::JwksMsg;
 use crate::oidc_config::{ClaimMapping, RauthyConfig};
+use crate::rauthy_error::RauthyError;
 use crate::{DangerAcceptInvalidCerts, RauthyHttpsOnly, VERSION};
 use jwt_simple::common::VerificationOptions;
 use serde::{Deserialize, Serialize};
@@ -35,7 +36,7 @@ impl OidcProviderConfig {
         secret: Option<String>,
         admin_claim: ClaimMapping,
         user_claim: ClaimMapping,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, RauthyError> {
         let append = if iss.ends_with('/') {
             ".well-known/openid-configuration"
         } else {
@@ -96,14 +97,14 @@ pub struct OidcProvider {
 
 impl OidcProvider {
     #[inline]
-    pub(crate) fn config<'a>() -> anyhow::Result<&'a OidcProviderConfig> {
+    pub(crate) fn config<'a>() -> Result<&'a OidcProviderConfig, RauthyError> {
         match OIDC_CONFIG.get() {
-            None => Err(anyhow::Error::msg("OidcProvider has not been initialized")),
+            None => Err(RauthyError::Init("OidcProvider has not been initialized")),
             Some(c) => Ok(c),
         }
     }
 
-    async fn fetch(oidc_config_endpoint: &str) -> anyhow::Result<Self> {
+    async fn fetch(oidc_config_endpoint: &str) -> Result<Self, RauthyError> {
         let slf = Self::client()
             .get(oidc_config_endpoint)
             .send()
@@ -114,7 +115,10 @@ impl OidcProvider {
         Ok(slf)
     }
 
-    pub async fn setup_from_config(config: RauthyConfig, redirect_uri: &str) -> anyhow::Result<()> {
+    pub async fn setup_from_config(
+        config: RauthyConfig,
+        redirect_uri: &str,
+    ) -> Result<(), RauthyError> {
         let callback = redirect_uri.replace(':', "%3A").replace('/', "%2F");
         let scope = config.scope.join("+");
         let config = OidcProviderConfig::build_from_values(
@@ -131,7 +135,7 @@ impl OidcProvider {
         .await?;
 
         OIDC_CONFIG.set(config).map_err(|_| {
-            anyhow::Error::msg("OidcProvider::setup_from_config must only be called once")
+            RauthyError::Init("OidcProvider::setup_from_config must only be called once")
         })?;
 
         Ok(())
@@ -143,7 +147,7 @@ impl OidcProvider {
         root_certificate: Option<reqwest::Certificate>,
         https_only: RauthyHttpsOnly,
         danger_accept_invalid_certs: DangerAcceptInvalidCerts,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), RauthyError> {
         let mut c = reqwest::Client::builder()
             .timeout(Duration::from_secs(10))
             .connect_timeout(Duration::from_secs(10))
@@ -157,9 +161,9 @@ impl OidcProvider {
             c = c.add_root_certificate(root);
         }
 
-        HTTP_CLIENT.set(c.build().unwrap()).map_err(|_| {
-            anyhow::Error::msg("OidcProvider::init_client must only be called once")
-        })?;
+        HTTP_CLIENT
+            .set(c.build().unwrap())
+            .map_err(|_| RauthyError::Init("OidcProvider::init_client must only be called once"))?;
 
         Ok(())
     }

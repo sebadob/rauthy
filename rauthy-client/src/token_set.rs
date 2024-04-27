@@ -1,9 +1,11 @@
 use crate::jwks::{JwkKeyPairAlg, JwkPublicKey};
 use crate::provider::OidcProvider;
+use crate::rauthy_error::RauthyError;
 use crate::validate_jwt;
 use jwt_simple::algorithms::{EdDSAPublicKeyLike, RSAPublicKeyLike};
 use jwt_simple::claims;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 /// The token set returned upon a successful login flow
@@ -49,7 +51,7 @@ pub struct JwtAccessClaims {
 }
 
 impl JwtAccessClaims {
-    pub async fn from_token_validated(token: &str) -> anyhow::Result<Self> {
+    pub async fn from_token_validated(token: &str) -> Result<Self, RauthyError> {
         let config = OidcProvider::config()?;
 
         let pubkey = JwkPublicKey::get_for_token(token).await?;
@@ -59,7 +61,7 @@ impl JwtAccessClaims {
         let mut slf = claims.custom;
         // TODO should we even include DPoP here or leave it out?
         if slf.typ != JwtTokenType::Bearer {
-            return Err(anyhow::Error::msg("Must provide a Bearer token"));
+            return Err(RauthyError::Token(Cow::from("Must provide a Bearer token")));
         }
 
         slf.sub = claims.subject;
@@ -102,7 +104,7 @@ pub struct JwtIdClaims {
 }
 
 impl JwtIdClaims {
-    pub async fn from_token_validated(token: &str, nonce: &str) -> anyhow::Result<Self> {
+    pub async fn from_token_validated(token: &str, nonce: &str) -> Result<Self, RauthyError> {
         let config = OidcProvider::config()?;
 
         let pubkey = JwkPublicKey::get_for_token(token).await?;
@@ -113,15 +115,17 @@ impl JwtIdClaims {
         slf.sub = claims.subject;
 
         if slf.typ != JwtTokenType::Id {
-            return Err(anyhow::Error::msg("Must provide an id token"));
+            return Err(RauthyError::Token(Cow::from("Must provide an id token")));
         }
 
         if config.email_verified && slf.email_verified != Some(true) {
-            return Err(anyhow::Error::msg("'email_verified' is missing or false"));
+            return Err(RauthyError::InvalidClaims(
+                "'email_verified' is missing or false",
+            ));
         }
         // we want to validate the nonce manually each time for more efficiency
         if claims.nonce.as_deref() != Some(nonce) {
-            return Err(anyhow::Error::msg("'nonce' is not correct"));
+            return Err(RauthyError::InvalidClaims("'nonce' is not correct"));
         }
 
         Ok(slf)
@@ -152,20 +156,20 @@ macro_rules! validate_jwt {
                 let n = $pub_key
                     .n
                     .as_ref()
-                    .ok_or_else(|| anyhow::Error::msg("Invalid 'n' for RS256 key"))?;
+                    .ok_or_else(|| RauthyError::JWK(Cow::from("Invalid 'n' for RS256 key")))?;
                 let e = $pub_key
                     .e
                     .as_ref()
-                    .ok_or_else(|| anyhow::Error::msg("Invalid 'e' for RS256 key"))?;
+                    .ok_or_else(|| RauthyError::JWK(Cow::from("Invalid 'e' for RS256 key")))?;
                 let pk = jwt_simple::algorithms::RS256PublicKey::from_components(
                     n.as_bytes(),
                     e.as_bytes(),
                 )
                 .map_err(|err| {
-                    anyhow::Error::msg(format!(
+                    RauthyError::JWK(Cow::from(format!(
                         "Cannot build RS256 key from public key components: {:?}",
                         err,
-                    ))
+                    )))
                 })?;
                 pk.verify_token::<$type>($token, Some($options))
             }
@@ -174,20 +178,20 @@ macro_rules! validate_jwt {
                 let n = $pub_key
                     .n
                     .as_ref()
-                    .ok_or_else(|| anyhow::Error::msg("Invalid 'n' for RS384 key"))?;
+                    .ok_or_else(|| RauthyError::JWK(Cow::from("Invalid 'n' for RS384 key")))?;
                 let e = $pub_key
                     .e
                     .as_ref()
-                    .ok_or_else(|| anyhow::Error::msg("Invalid 'e' for RS384 key"))?;
+                    .ok_or_else(|| RauthyError::JWK(Cow::from("Invalid 'e' for RS384 key")))?;
                 let pk = jwt_simple::algorithms::RS384PublicKey::from_components(
                     n.as_bytes(),
                     e.as_bytes(),
                 )
                 .map_err(|err| {
-                    anyhow::Error::msg(format!(
+                    RauthyError::JWK(Cow::from(format!(
                         "Cannot build RS384 key from public key components: {:?}",
                         err,
-                    ))
+                    )))
                 })?;
                 pk.verify_token::<$type>($token, Some($options))
             }
@@ -196,20 +200,20 @@ macro_rules! validate_jwt {
                 let n = $pub_key
                     .n
                     .as_ref()
-                    .ok_or_else(|| anyhow::Error::msg("Invalid 'n' for RS512 key"))?;
+                    .ok_or_else(|| RauthyError::JWK(Cow::from("Invalid 'n' for RS512 key")))?;
                 let e = $pub_key
                     .e
                     .as_ref()
-                    .ok_or_else(|| anyhow::Error::msg("Invalid 'e' for RS512 key"))?;
+                    .ok_or_else(|| RauthyError::JWK(Cow::from("Invalid 'e' for RS512 key")))?;
                 let pk = jwt_simple::algorithms::RS512PublicKey::from_components(
                     n.as_bytes(),
                     e.as_bytes(),
                 )
                 .map_err(|err| {
-                    anyhow::Error::msg(format!(
+                    RauthyError::JWK(Cow::from(format!(
                         "Cannot build RS512 key from public key components: {:?}",
                         err,
-                    ))
+                    )))
                 })?;
                 pk.verify_token::<$type>($token, Some($options))
             }
@@ -218,17 +222,17 @@ macro_rules! validate_jwt {
                 let bytes = $pub_key
                     .x_bytes
                     .as_ref()
-                    .ok_or_else(|| anyhow::Error::msg("Invalid 'x' for EdDSA key"))?;
+                    .ok_or_else(|| RauthyError::JWK(Cow::from("Invalid 'x' for EdDSA key")))?;
                 let pk = jwt_simple::algorithms::Ed25519PublicKey::from_bytes(bytes.as_slice())
                     .map_err(|err| {
-                        anyhow::Error::msg(format!(
+                        RauthyError::JWK(Cow::from(format!(
                             "Cannot build EdDSA key from public key bytes: {:?}",
                             err,
-                        ))
+                        )))
                     })?;
                 pk.verify_token::<$type>($token, Some($options))
             }
         }
-        .map_err(|_| anyhow::Error::msg("Invalid Token"))
+        .map_err(|err| RauthyError::Token(Cow::from(err.to_string())))
     };
 }

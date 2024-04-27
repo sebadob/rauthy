@@ -1,8 +1,10 @@
+use crate::rauthy_error::RauthyError;
 use crate::{b64_decode, b64_encode, generate_pkce_challenge, secure_random};
 use chacha20poly1305::aead::{Aead, OsRng};
 use chacha20poly1305::{AeadCore, ChaCha20Poly1305, Key, KeyInit, Nonce};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use tracing::error;
 
 /// The name of the encrypted OIDC state cookie during the login flow
@@ -32,7 +34,10 @@ impl OidcCookieState {
     }
 
     #[inline]
-    pub fn from_cookie_value(state_cookie_value: &str, enc_key: &[u8]) -> anyhow::Result<Self> {
+    pub fn from_cookie_value(
+        state_cookie_value: &str,
+        enc_key: &[u8],
+    ) -> Result<Self, RauthyError> {
         let enc = b64_decode(state_cookie_value)?;
         let dec = Self::decrypt(&enc, enc_key)?;
         let slf = bincode::deserialize::<Self>(&dec)?;
@@ -44,11 +49,11 @@ impl OidcCookieState {
     pub fn from_jar_cookie_value(
         jar: &axum_extra::extract::CookieJar,
         enc_key: &[u8],
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, RauthyError> {
         match jar.get(OIDC_STATE_COOKIE) {
             None => {
                 tracing::warn!("STATE_COOKIE is missing - Request may have expired");
-                Err(anyhow::Error::msg("Request has expired"))
+                Err(RauthyError::Request(Cow::from("Request has expired")))
             }
             Some(cookie) => Self::from_cookie_value(cookie.value(), enc_key),
         }
@@ -59,11 +64,11 @@ impl OidcCookieState {
     pub fn from_req_cookie_value(
         req: &actix_web::HttpRequest,
         enc_key: &[u8],
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, RauthyError> {
         match req.cookie(OIDC_STATE_COOKIE) {
             None => {
                 tracing::warn!("STATE_COOKIE is missing - Request may have expired");
-                Err(anyhow::Error::msg("Request has expired"))
+                Err(RauthyError::Request(Cow::from("Request has expired")))
             }
             Some(cookie) => Self::from_cookie_value(cookie.value(), enc_key),
         }
@@ -76,11 +81,13 @@ impl OidcCookieState {
         b64_encode(&enc)
     }
 
-    fn decrypt(ciphertext: &[u8], key: &[u8]) -> anyhow::Result<Vec<u8>> {
+    fn decrypt(ciphertext: &[u8], key: &[u8]) -> Result<Vec<u8>, RauthyError> {
         // TODO can this check be removed safely?
         if ciphertext.len() < 12 {
             error!("Invalid ciphertext for decryption: {:?}", ciphertext);
-            return Err(anyhow::Error::msg("Invalid ciphertext for decryption"));
+            return Err(RauthyError::Encryption(Cow::from(
+                "Invalid ciphertext for decryption",
+            )));
         }
         let k = Key::from_slice(key);
         let cipher = ChaCha20Poly1305::new(k);
@@ -92,7 +99,7 @@ impl OidcCookieState {
         Ok(plaintext)
     }
 
-    fn encrypt(plain: &[u8], key: &[u8]) -> anyhow::Result<Vec<u8>> {
+    fn encrypt(plain: &[u8], key: &[u8]) -> Result<Vec<u8>, RauthyError> {
         let k = Key::from_slice(key);
         let cipher = ChaCha20Poly1305::new(k);
         let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
