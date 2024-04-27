@@ -70,10 +70,11 @@ export const TOKEN_ALGS = [
     'EdDSA'
 ]
 
-export const FLOWS = [{
-    label: 'authorization_code',
-    value: false,
-},
+export const FLOWS = [
+    {
+        label: 'authorization_code',
+        value: false,
+    },
     {
         label: 'client_credentials',
         value: false,
@@ -84,6 +85,10 @@ export const FLOWS = [{
     },
     {
         label: 'refresh_token',
+        value: false,
+    },
+    {
+        label: 'device_code',
         value: false,
     },
 ];

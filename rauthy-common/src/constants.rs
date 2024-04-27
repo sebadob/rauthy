@@ -35,6 +35,7 @@ pub const ARGON2ID_T_COST_MIN: u32 = 1;
 pub const API_KEY_LENGTH: usize = 64;
 pub const DEVICE_KEY_LENGTH: u8 = 64;
 pub const EVENTS_LATEST_LIMIT: u16 = 100;
+pub const GRANT_TYPE_DEVICE_CODE: &str = "urn:ietf:params:oauth:grant-type:device_code";
 pub const UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS: u16 = 300;
 
 pub const CACHE_NAME_12HR: &str = "12hr";
@@ -44,6 +45,7 @@ pub const CACHE_NAME_AUTH_PROVIDER_CALLBACK: &str = "auth-provider-callback";
 pub const CACHE_NAME_CLIENTS_DYN: &str = "clients-dyn";
 pub const CACHE_NAME_DPOP_NONCES: &str = "dpop-nonces";
 pub const CACHE_NAME_EPHEMERAL_CLIENTS: &str = "ephemeral-clients";
+pub const CACHE_NAME_IP_RATE_LIMIT: &str = "ip_rate_limit";
 pub const CACHE_NAME_LOGIN_DELAY: &str = "login-dly";
 pub const CACHE_NAME_SESSIONS: &str = "sessions";
 pub const CACHE_NAME_POW: &str = "pow";
@@ -97,7 +99,7 @@ lazy_static! {
 
     pub static ref RE_ATTR: Regex = Regex::new(r"^[a-zA-Z0-9-_/]{2,32}$").unwrap();
     pub static ref RE_ATTR_DESC: Regex = Regex::new(r"^[a-zA-Z0-9-_/\s]{0,128}$").unwrap();
-    pub static ref RE_AUTH_PROVIDER_SCOPE: Regex = Regex::new(r"^[a-z0-9-_/:\s]{0,128}$").unwrap();
+    pub static ref RE_SCOPE: Regex = Regex::new(r"^[a-z0-9-_/:\s]{0,128}$").unwrap();
     pub static ref RE_ALNUM: Regex = Regex::new(r"^[a-zA-Z0-9]+$").unwrap();
     pub static ref RE_ALNUM_24: Regex = Regex::new(r"^[a-zA-Z0-9]{24}$").unwrap();
     pub static ref RE_ALNUM_48: Regex = Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap();
@@ -114,8 +116,8 @@ lazy_static! {
     pub static ref RE_CODE_VERIFIER: Regex = Regex::new(r"^[a-zA-Z0-9-\._~+/=]+$").unwrap();
     pub static ref RE_CONTACT: Regex = Regex::new(r"^[a-zA-Z0-9\+.@/:]{0,48}$").unwrap();
     pub static ref RE_DATE_STR: Regex = Regex::new(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$").unwrap();
-    pub static ref RE_FLOWS: Regex = Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap();
-    pub static ref RE_GRANT_TYPES: Regex = Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap();
+    pub static ref RE_GRANT_TYPES: Regex = Regex::new(r"^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$").unwrap();
+    pub static ref RE_GRANT_TYPES_EPHEMERAL: Regex = Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap();
     pub static ref RE_LOWERCASE: Regex = Regex::new(r"^[a-z0-9-_/]{2,128}$").unwrap();
     pub static ref RE_LOWERCASE_SPACE: Regex = Regex::new(r"^[a-z0-9-_/\s]{2,128}$").unwrap();
     pub static ref RE_GROUPS: Regex = Regex::new(r"^[a-z0-9-_/,]{2,32}$").unwrap();
@@ -189,6 +191,18 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("8"))
         .parse::<u8>()
         .expect("DEVICE_GRANT_USER_CODE_LENGTH cannot be parsed to u8 - bad format");
+    pub static ref DEVICE_GRANT_RATE_LIMIT: u32 = env::var("DEVICE_GRANT_RATE_LIMIT")
+        .unwrap_or_else(|_| String::from("30"))
+        .parse::<u32>()
+        .expect("DEVICE_GRANT_RATE_LIMIT cannot be parsed to u32- bad format");
+    pub static ref DEVICE_GRANT_POLL_INTERVAL: u8 = env::var("DEVICE_GRANT_POLL_INTERVAL")
+        .unwrap_or_else(|_| String::from("5"))
+        .parse::<u8>()
+        .expect("DEVICE_GRANT_POLL_INTERVAL cannot be parsed to u8 - bad format");
+    pub static ref DEVICE_GRANT_REFRESH_TOKEN_LIFETIME: u16 = env::var("DEVICE_GRANT_REFRESH_TOKEN_LIFETIME")
+       .unwrap_or_else(|_| String::from("72"))
+       .parse::<u16>()
+       .expect("DEVICE_GRANT_REFRESH_TOKEN_LIFETIME cannot be parsed to u16 - bad format");
 
     pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
         let scheme = if *DEV_MODE && *DEV_DPOP_HTTP { "http" } else { "https" };
@@ -247,7 +261,7 @@ lazy_static! {
             .split(' ')
             .map(|flow| {
                 let flow = flow.trim();
-                if !RE_FLOWS.is_match(flow) {
+                if !RE_GRANT_TYPES_EPHEMERAL.is_match(flow) {
                     panic!("unknown EPHEMERAL_CLIENTS_ALLOWED_FLOWS: {}", flow)
                 }
                 flow.to_string()
@@ -265,6 +279,11 @@ lazy_static! {
             .unwrap_or_else(|_| String::from("3600"))
             .parse::<u64>()
             .expect("EPHEMERAL_CLIENTS_CACHE_LIFETIME cannot be parsed to u64 - bad format");
+
+    pub static ref REFRESH_TOKEN_LIFETIME: u16 = env::var("REFRESH_TOKEN_LIFETIME")
+       .unwrap_or_else(|_| String::from("48"))
+       .parse::<u16>()
+       .expect("REFRESH_TOKEN_LIFETIME cannot be parsed to u16 - bad format");
 
     pub static ref PROXY_MODE: bool = env::var("PROXY_MODE")
         .unwrap_or_else(|_| String::from("false"))

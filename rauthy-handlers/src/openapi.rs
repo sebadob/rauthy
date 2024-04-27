@@ -215,6 +215,7 @@ use utoipa::{openapi, OpenApi};
             response::BlacklistedIp,
             response::LoginTimeResponse,
             response::ClientResponse,
+            response::DeviceCodeResponse,
             response::DynamicClientResponse,
             response::ClientSecretResponse,
             response::EncKeysResponse,

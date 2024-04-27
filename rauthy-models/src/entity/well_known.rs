@@ -1,7 +1,7 @@
 use crate::app_state::AppState;
 use crate::entity::scopes::Scope;
 use actix_web::web;
-use rauthy_common::constants::{CACHE_NAME_12HR, ENABLE_DYN_CLIENT_REG};
+use rauthy_common::constants::{CACHE_NAME_12HR, ENABLE_DYN_CLIENT_REG, GRANT_TYPE_DEVICE_CODE};
 use rauthy_common::error_response::ErrorResponse;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
@@ -12,6 +12,7 @@ use utoipa::ToSchema;
 pub struct WellKnown {
     pub issuer: String,
     pub authorization_endpoint: String,
+    pub device_authorization_endpoint: String,
     pub token_endpoint: String,
     pub introspection_endpoint: String,
     pub userinfo_endpoint: String,
@@ -96,6 +97,7 @@ impl WellKnown {
 impl WellKnown {
     pub fn new(issuer: &str, scopes_supported: Vec<String>) -> Self {
         let authorization_endpoint = format!("{}/oidc/authorize", issuer);
+        let device_authorization_endpoint = format!("{}/oidc/device", issuer);
         let token_endpoint = format!("{}/oidc/token", issuer);
         let introspection_endpoint = format!("{}/oidc/tokenInfo", issuer);
         let userinfo_endpoint = format!("{}/oidc/userinfo", issuer);
@@ -108,6 +110,7 @@ impl WellKnown {
             "client_credentials".to_string(),
             "password".to_string(),
             "refresh_token".to_string(),
+            GRANT_TYPE_DEVICE_CODE.to_string(),
         ];
         let response_types_supported = vec!["code".to_string()];
         let subject_types_supported = vec!["public".to_string()];
@@ -166,6 +169,7 @@ impl WellKnown {
         WellKnown {
             issuer: String::from(issuer),
             authorization_endpoint,
+            device_authorization_endpoint,
             token_endpoint,
             introspection_endpoint,
             userinfo_endpoint,

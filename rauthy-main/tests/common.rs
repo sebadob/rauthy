@@ -119,6 +119,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
         client_id: Some("rauthy".to_string()),
         client_secret: None,
         code_verifier: Some(challenge_plain.to_string()),
+        device_code: None,
         username: None,
         password: None,
         refresh_token: None,

@@ -1,15 +1,16 @@
 use crate::app_state::AppState;
 use actix_web::web;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use rauthy_common::constants::{
-    CACHE_NAME_DEVICE_CODES, DEVICE_GRANT_USER_CODE_LENGTH, DEVICE_KEY_LENGTH, PUB_URL_WITH_SCHEME,
+    CACHE_NAME_DEVICE_CODES, DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_USER_CODE_LENGTH,
+    DEVICE_KEY_LENGTH, PUB_URL_WITH_SCHEME,
 };
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::get_rand;
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, FromRow};
-use std::ops::Sub;
+use std::ops::{Add, Sub};
 use tracing::info;
 
 #[derive(Debug, FromRow)]
@@ -78,16 +79,46 @@ impl DeviceEntity {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceAuthCode {
+    pub client_id: String,
     pub device_code: String,
-    pub is_verified: bool,
+    /// Will be Some(user_id) once a user has been validated the auth request
+    pub verified_by: Option<String>,
+    /// We need the additional `exp` here because a verification from a
+    /// user will reset the lifetime, which means without the additional
+    /// check here, it could be possible that a code lives longer than
+    /// allowed.
+    pub exp: DateTime<Utc>,
+    pub last_poll: DateTime<Utc>,
+    pub scopes: Option<String>,
+    // saved additionally here to have fewer cache requests during client polling
+    pub client_secret: Option<String>,
+    // The warnings counter will increase, if a client does not stick to
+    // the given interval and gets 'slow_down' from us. If this happens
+    // too many times, the IP will be blacklisted.1
+    pub warnings: u8,
 }
 
 impl DeviceAuthCode {
     /// DeviceAuthCode's live inside the cache only
-    pub async fn new(data: &web::Data<AppState>) -> Result<Self, ErrorResponse> {
+    pub async fn new(
+        data: &web::Data<AppState>,
+        scopes: Option<String>,
+        client_id: String,
+        client_secret: Option<String>,
+    ) -> Result<Self, ErrorResponse> {
+        let now = Utc::now();
+        let exp = now.add(chrono::Duration::seconds(
+            *DEVICE_GRANT_CODE_LIFETIME as i64,
+        ));
         let slf = Self {
+            client_id,
             device_code: get_rand(DEVICE_KEY_LENGTH as usize),
-            is_verified: false,
+            verified_by: None,
+            exp,
+            last_poll: now,
+            scopes,
+            client_secret,
+            warnings: 0,
         };
 
         cache_put(
@@ -101,40 +132,55 @@ impl DeviceAuthCode {
         Ok(slf)
     }
 
-    /// Needed for the device polling after the initial request
     pub async fn find_by_device_code(
         data: &web::Data<AppState>,
-        device_code: String,
+        device_code: &str,
     ) -> Result<Option<Self>, ErrorResponse> {
-        let key = &device_code.as_str()[..(*DEVICE_GRANT_USER_CODE_LENGTH as usize)];
+        let key = &device_code[..(*DEVICE_GRANT_USER_CODE_LENGTH as usize)];
         Self::find(data, key.to_string()).await
     }
 
-    /// Needed for lookup during the user confirmation
     pub async fn find(
         data: &web::Data<AppState>,
         user_code: String,
     ) -> Result<Option<Self>, ErrorResponse> {
-        let slf = cache_get!(
+        match cache_get!(
             Self,
             CACHE_NAME_DEVICE_CODES.to_string(),
             user_code,
             &data.caches.ha_cache_config,
             true
         )
-        .await?;
-        Ok(slf)
+        .await?
+        {
+            None => Ok(None),
+            Some(slf) => {
+                if slf.exp < Utc::now() {
+                    slf.delete(data).await?;
+                    Ok(None)
+                } else {
+                    Ok(Some(slf))
+                }
+            }
+        }
     }
 
-    pub async fn delete(
-        &self,
-        data: &web::Data<AppState>,
-        user_code: String,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         cache_del(
             CACHE_NAME_DEVICE_CODES.to_string(),
-            user_code,
+            self.user_code().to_string(),
             &data.caches.ha_cache_config,
+        )
+        .await?;
+        Ok(())
+    }
+
+    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        cache_put(
+            CACHE_NAME_DEVICE_CODES.to_string(),
+            self.user_code().to_string(),
+            &data.caches.ha_cache_config,
+            self,
         )
         .await?;
         Ok(())

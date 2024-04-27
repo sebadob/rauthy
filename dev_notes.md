@@ -51,6 +51,7 @@ new refresh tokens table for devices only:
 
 ## Stage 2 - features - do before v1.0.0
 
+- double check request params validation for `rauthy-client` on callback endpoints
 - add `at_hash` claim to the ID token
 - update the book with all the new features
 - handle `offline_access` properly again - either decide to fully remove or support it everywhere

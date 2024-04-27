@@ -29,6 +29,10 @@ create table refresh_tokens_devices
         constraint refresh_tokens_devices_devices_id_fk
             references devices
             on update cascade on delete cascade,
+    user_id   varchar not null
+        constraint refresh_tokens_users_user_id_fk
+            references users
+            on update cascade on delete cascade,
     nbf       bigint  not null,
     exp       bigint  not null,
     scope     varchar

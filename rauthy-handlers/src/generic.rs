@@ -1,7 +1,6 @@
 use crate::{Assets, ReqPrincipal};
 use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::{header, StatusCode};
-use actix_web::web::Json;
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
 use cryptr::EncKeys;
 use rauthy_common::constants::{
@@ -96,7 +95,8 @@ pub async fn get_static_assets(
 #[post("/i18n")]
 pub async fn post_i18n(
     req: HttpRequest,
-    req_data: Json<I18nRequest>,
+    // no validation needed for I18nRequest
+    req_data: web::Json<I18nRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let lang = Language::try_from(&req).unwrap_or_default();
     let body = match req_data.content {

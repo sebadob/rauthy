@@ -1,4 +1,6 @@
-use crate::token_set::TokenSet;
+use crate::token_set::{
+    AuthCodeFlow, DeviceCodeFlow, DpopFingerprint, TokenNonce, TokenScopes, TokenSet,
+};
 use actix_web::http::header;
 use actix_web::http::header::{HeaderMap, HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest, HttpResponse};
@@ -10,21 +12,24 @@ use jwt_simple::algorithms::{
 use jwt_simple::claims;
 use jwt_simple::prelude::*;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, ENABLE_SOLID_AUD, ENABLE_WEB_ID,
-    HEADER_DPOP_NONCE, IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME, SESSION_LIFETIME,
+    CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, DEVICE_GRANT_POLL_INTERVAL,
+    DEVICE_GRANT_REFRESH_TOKEN_LIFETIME, ENABLE_SOLID_AUD, ENABLE_WEB_ID, HEADER_DPOP_NONCE,
+    IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME, REFRESH_TOKEN_LIFETIME, SESSION_LIFETIME,
     SESSION_RENEW_MFA, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::HashPassword;
-use rauthy_common::utils::{base64_url_encode, get_client_ip, get_rand};
+use rauthy_common::utils::{base64_url_encode, get_client_ip, get_rand, new_store_id};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::colors::ColorEntity;
+use rauthy_models::entity::devices::{DeviceAuthCode, DeviceEntity};
 use rauthy_models::entity::dpop_proof::DPoPProof;
 use rauthy_models::entity::jwk::{Jwk, JwkKeyPair, JwkKeyPairAlg};
 use rauthy_models::entity::refresh_tokens::RefreshToken;
+use rauthy_models::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_models::entity::scopes::Scope;
 use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::users::{AccountType, User};
@@ -35,7 +40,7 @@ use rauthy_models::events::event::Event;
 use rauthy_models::events::ip_blacklist_handler::{IpBlacklistReq, IpFailedLoginCheck};
 use rauthy_models::language::Language;
 use rauthy_models::request::{LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest};
-use rauthy_models::response::{TokenInfo, Userinfo};
+use rauthy_models::response::{OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenInfo, Userinfo};
 use rauthy_models::templates::{LogoutHtml, TooManyRequestsHtml};
 use rauthy_models::{
     sign_jwt, validate_jwt, AddressClaim, AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn,
@@ -45,6 +50,8 @@ use rauthy_models::{
 use redhac::cache_del;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
 use ring::digest;
+use std::borrow::Cow;
+use std::cmp::PartialEq;
 use std::collections::{HashMap, HashSet};
 use std::ops::{Add, Sub};
 use std::str::FromStr;
@@ -150,7 +157,6 @@ pub async fn authorize(
     let client = Client::find_maybe_ephemeral(data, req_data.client_id)
         .await
         .map_err(|err| (err, !user_must_provide_password))?;
-
     client
         .validate_mfa(&user)
         .map_err(|err| (err, has_password_been_hashed))?;
@@ -163,54 +169,6 @@ pub async fn authorize(
     let header_origin = client
         .validate_origin(req, &data.listen_scheme, &data.public_url)
         .map_err(|err| (err, !user_must_provide_password))?;
-    // let challenge: Option<String> = req_data.code_challenge.clone();
-    // let mut challenge_method: Option<String> = None;
-    // // TODO would it be possible to omit a code challenge and skip it, even if the client should request it?
-    // // TODO -> double check, if the client has set code challenge? -> revert this logic and validate from client -> request
-    // if req_data.code_challenge.is_some() {
-    //     if client.challenge.is_none() {
-    //         return Err((
-    //             ErrorResponse::new(
-    //                 ErrorResponseType::BadRequest,
-    //                 String::from("no 'code_challenge_method' allowed for this client"),
-    //             ),
-    //             false,
-    //         ));
-    //     }
-    //
-    //     let method: String;
-    //     if req_data.code_challenge_method.is_none() {
-    //         method = String::from("plain");
-    //     } else {
-    //         match req_data.code_challenge_method.as_ref().unwrap().as_str() {
-    //             "S256" => method = String::from("S256"),
-    //             "plain" => method = String::from("plain"),
-    //             _ => {
-    //                 return Err((
-    //                     ErrorResponse::new(
-    //                         ErrorResponseType::BadRequest,
-    //                         String::from("invalid 'code_challenge_method"),
-    //                     ),
-    //                     false,
-    //                 ))
-    //             }
-    //         }
-    //     }
-    //
-    //     if !client.challenge.as_ref().unwrap().contains(&method) {
-    //         return Err((
-    //             ErrorResponse::new(
-    //                 ErrorResponseType::BadRequest,
-    //                 format!(
-    //                     "'code_challenge_method' '{}' is not allowed for this client",
-    //                     method,
-    //                 ),
-    //             ),
-    //             false,
-    //         ));
-    //     }
-    //     challenge_method = Some(method);
-    // }
 
     // build authorization code
     let code_lifetime = if user.has_webauthn_enabled() {
@@ -377,21 +335,23 @@ pub async fn build_access_token(
     user: Option<&User>,
     data: &web::Data<AppState>,
     client: &Client,
-    dpop_fingerprint: Option<String>,
+    dpop_fingerprint: Option<DpopFingerprint>,
     lifetime: i64,
-    scope: Option<String>,
+    scope: Option<TokenScopes>,
     scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
 ) -> Result<String, ErrorResponse> {
     let mut custom_claims = JwtAccessClaims {
         typ: JwtTokenType::Bearer,
         azp: client.id.to_string(),
-        scope: scope.unwrap_or_else(|| client.default_scopes.clone().replace(',', " ")),
+        scope: scope
+            .map(|s| s.0)
+            .unwrap_or_else(|| client.default_scopes.clone().replace(',', " ")),
         allowed_origins: None,
         email: None,
         preferred_username: None,
         roles: None,
         groups: None,
-        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt }),
+        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
         custom: None,
     };
 
@@ -453,23 +413,24 @@ pub async fn build_id_token(
     user: &User,
     data: &web::Data<AppState>,
     client: &Client,
-    dpop_fingerprint: Option<String>,
+    dpop_fingerprint: Option<DpopFingerprint>,
     lifetime: i64,
-    nonce: Option<String>,
+    nonce: Option<TokenNonce>,
     scope: &str,
     scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
-    is_auth_code_flow: bool,
+    auth_code_flow: AuthCodeFlow,
 ) -> Result<String, ErrorResponse> {
     let now_ts = Utc::now().timestamp();
+
+    // TODO the `auth_time` here is a bit inaccurate currently. The accuracy could be improved
+    // with future DB migrations by adding something like a `last_auth` column for each user.
+    // It is unclear right now, if we even need it right now.
     let (amr, auth_time) = match user.has_webauthn_enabled() {
         true => {
-            if is_auth_code_flow {
+            if auth_code_flow == AuthCodeFlow::Yes {
                 // With active MFA, the auth_time is always 'now', because it must be re-validated each time
                 (JwtAmrValue::Mfa.to_string(), now_ts)
             } else {
-                // TODO to get this 100% correct, we would need to do a DB migration with a new version and update
-                // something like a `last_auth` field in the DB each time. Not implemented now to not being forced into
-                // a new minor version just because of this small thing -> do in the future.
                 (
                     JwtAmrValue::Pwd.to_string(),
                     now_ts - *SESSION_LIFETIME as i64,
@@ -477,12 +438,9 @@ pub async fn build_id_token(
             }
         }
         false => {
-            if is_auth_code_flow {
-                // TODO this is a bit inaccurate at this time as well -> improve with DB migration in future minor version
-                // it might be the case, that this was initiated with a direct refresh
+            if auth_code_flow == AuthCodeFlow::Yes {
                 (JwtAmrValue::Pwd.to_string(), now_ts)
             } else {
-                // TODO make more accurate with future DB migration
                 (
                     JwtAmrValue::Pwd.to_string(),
                     now_ts - *SESSION_LIFETIME as i64,
@@ -510,7 +468,7 @@ pub async fn build_id_token(
         phone: None,
         roles: user.get_roles(),
         groups: None,
-        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt }),
+        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
         custom: None,
         webid,
     };
@@ -605,27 +563,29 @@ pub async fn build_id_token(
     }
 
     if let Some(nonce) = nonce {
-        claims = claims.with_nonce(nonce);
+        claims = claims.with_nonce(nonce.0);
     }
 
     sign_id_token(data, claims, client).await
 }
 
 /// Builds the refresh token for a user after all validation has been successful
+#[allow(clippy::too_many_arguments)]
 pub async fn build_refresh_token(
     user: &User,
     data: &web::Data<AppState>,
-    dpop_fingerprint: Option<String>,
+    dpop_fingerprint: Option<DpopFingerprint>,
     client: &Client,
     access_token_lifetime: i64,
-    scope: Option<String>,
+    scope: Option<TokenScopes>,
     is_mfa: bool,
+    device_code_flow: DeviceCodeFlow,
 ) -> Result<String, ErrorResponse> {
     let custom_claims = JwtRefreshClaims {
         azp: client.id.clone(),
         typ: JwtTokenType::Refresh,
         uid: user.id.clone(),
-        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt }),
+        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
     };
 
     let claims = Claims::with_custom_claims(custom_claims, coarsetime::Duration::from_hours(48))
@@ -637,19 +597,34 @@ pub async fn build_refresh_token(
     // only save the last 50 characters for validation
     let validation_string = String::from(&token).split_off(token.len() - 49);
 
-    // TODO extract the nbf and exp from the claims -> adjust entity
-    let nbf = OffsetDateTime::now_utc().add(::time::Duration::seconds(access_token_lifetime - 60));
-    let exp = &nbf.add(::time::Duration::seconds(48 * 3600));
-    RefreshToken::create(
-        data,
-        validation_string,
-        user.id.clone(),
-        nbf,
-        *exp,
-        scope,
-        is_mfa,
-    )
-    .await?;
+    let nbf = Utc::now().add(chrono::Duration::seconds(access_token_lifetime - 60));
+    if let DeviceCodeFlow::Yes(device_id) = device_code_flow {
+        let exp = nbf.add(chrono::Duration::hours(
+            *DEVICE_GRANT_REFRESH_TOKEN_LIFETIME as i64,
+        ));
+        RefreshTokenDevice::create(
+            data,
+            validation_string,
+            device_id,
+            user.id.clone(),
+            nbf,
+            exp,
+            scope.map(|s| s.0),
+        )
+        .await?;
+    } else {
+        let exp = nbf.add(chrono::Duration::hours(*REFRESH_TOKEN_LIFETIME as i64));
+        RefreshToken::create(
+            data,
+            validation_string,
+            user.id.clone(),
+            nbf,
+            exp,
+            scope.map(|s| s.0),
+            is_mfa,
+        )
+        .await?;
+    }
 
     Ok(token)
 }
@@ -907,7 +882,7 @@ async fn grant_type_code(
                     HeaderValue::from_str(nonce).unwrap(),
                 ));
             };
-            Some(proof.jwk_fingerprint()?)
+            Some(DpopFingerprint(proof.jwk_fingerprint()?))
         } else {
             None
         };
@@ -986,9 +961,10 @@ async fn grant_type_code(
         data,
         &client,
         dpop_fingerprint,
-        code.nonce.clone(),
-        Some(code.scopes.join(" ")),
-        true,
+        code.nonce.clone().map(TokenNonce),
+        Some(TokenScopes(code.scopes.join(" "))),
+        AuthCodeFlow::Yes,
+        DeviceCodeFlow::No,
     )
     .await?;
 
@@ -1066,7 +1042,7 @@ async fn grant_type_credentials(
                     HeaderValue::from_str(nonce).unwrap(),
                 ));
             }
-            Some(proof.jwk_fingerprint()?)
+            Some(DpopFingerprint(proof.jwk_fingerprint()?))
         } else {
             None
         };
@@ -1080,6 +1056,184 @@ async fn grant_type_credentials(
 
     let ts = TokenSet::for_client_credentials(data, &client, dpop_fingerprint).await?;
     Ok((ts, headers))
+}
+
+/// Return a [TokenSet](crate::models::response::TokenSet) for the `device_code` flow
+#[tracing::instrument(skip_all, fields(client_id = payload.client_id))]
+pub async fn grant_type_device_code(
+    data: &web::Data<AppState>,
+    peer_ip: Option<String>,
+    payload: TokenRequest,
+) -> HttpResponse {
+    let device_code = match &payload.device_code {
+        None => {
+            return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::InvalidRequest,
+                error_description: Some(Cow::from("`device_code` is missing")),
+            });
+        }
+        Some(dc) => dc,
+    };
+    let mut code = match DeviceAuthCode::find_by_device_code(data, device_code).await {
+        Ok(Some(code)) => code,
+        Ok(None) | Err(_) => {
+            return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::ExpiredToken,
+                error_description: Some(Cow::from("invalid `device_code` or request has expired")),
+            });
+        }
+    };
+
+    if Some(code.client_id.as_str()) != payload.client_id.as_deref() {
+        return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::InvalidRequest,
+            error_description: Some(Cow::from("Invalid `client_id`")),
+        });
+    }
+
+    // We need to check the device_code again, because the `find_by_device_code` uses
+    // the `user_code` as cache index under the hood for smaller footprints and the
+    // ability to find it in both ways without duplicated data.
+    if &code.device_code != device_code {
+        return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::UnauthorizedClient,
+            error_description: Some(Cow::from("Invalid `device_code`")),
+        });
+    }
+
+    if code.client_secret != payload.client_secret {
+        return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::UnauthorizedClient,
+            error_description: Some(Cow::from("Invalid `client_secret`")),
+        });
+    }
+
+    debug!("device auth code poll request is valid");
+    let mut error = OAuth2ErrorTypeResponse::AuthorizationPending;
+    let mut error_description = Cow::default();
+
+    // Check last_poll and make sure interval is being respected.
+    // We allow it to be 500ms shorter than specified to not get into
+    // possible problems with slightly inaccurate client implementations.
+    let now = Utc::now();
+    let now_skew = now.sub(chrono::Duration::milliseconds(500));
+    let poll_thres = now_skew.sub(chrono::Duration::seconds(
+        *DEVICE_GRANT_POLL_INTERVAL as i64,
+    ));
+    if code.last_poll > poll_thres {
+        warn!("device does not respect the poll interval");
+        code.warnings += 1;
+        if code.warnings >= 3 {
+            warn!("deleting device auth code request early because of not respected poll interval");
+            error = OAuth2ErrorTypeResponse::AccessDenied;
+            error_description = Cow::from("poll interval has not been respected");
+            if let Err(err) = code.delete(data).await {
+                // this should never happen
+                error!("Error deleting DeviceAuthCode from the cache: {:}", err);
+            }
+        } else {
+            error = OAuth2ErrorTypeResponse::SlowDown;
+            error_description = Cow::from("must respect the poll interval");
+        }
+    }
+
+    // check validation
+    if let Some(verified_by) = &code.verified_by {
+        let user = match User::find(data, verified_by.clone()).await {
+            Ok(user) => user,
+            Err(err) => {
+                // at this point, this should never fail - only if the DB went down in the meantime
+                error!("{:?}", err);
+                return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                    error: OAuth2ErrorTypeResponse::InvalidRequest,
+                    error_description: Some(Cow::from(err.to_string())),
+                });
+            }
+        };
+
+        let client = match Client::find(data, code.client_id.clone()).await {
+            Ok(client) => client,
+            Err(err) => {
+                // at this point, this should never fail - only if the DB went down in the meantime
+                error!("{:?}", err);
+                return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                    error: OAuth2ErrorTypeResponse::InvalidRequest,
+                    error_description: Some(Cow::from(err.to_string())),
+                });
+            }
+        };
+
+        let access_exp = now.add(chrono::Duration::seconds(
+            client.access_token_lifetime as i64,
+        ));
+        let refresh_exp = if client.refresh_token {
+            Some(
+                access_exp
+                    .add(chrono::Duration::seconds(48 * 3600))
+                    .timestamp(),
+            )
+        } else {
+            None
+        };
+
+        if let Err(err) = code.delete(data).await {
+            // should really never happen - in cache only
+            error!("Error deleting DeviceAuthCode: {:?}", err);
+        }
+
+        let device = DeviceEntity {
+            id: new_store_id(),
+            client_id: code.client_id,
+            user_id: Some(user.id.clone()),
+            created: now.timestamp(),
+            access_exp: access_exp.timestamp(),
+            refresh_exp,
+            peer_ip: peer_ip.unwrap_or_default(),
+        };
+        if let Err(err) = device.insert(data).await {
+            error!("{:?}", err);
+            return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::InvalidRequest,
+                error_description: Some(Cow::from(err.to_string())),
+            });
+        }
+        debug!("New Device has been created: {:?}", device);
+
+        let ts = match TokenSet::from_user(
+            &user,
+            data,
+            &client,
+            None,
+            None,
+            code.scopes.map(TokenScopes),
+            AuthCodeFlow::No,
+            DeviceCodeFlow::Yes(device.id),
+        )
+        .await
+        {
+            Ok(ts) => ts,
+            Err(err) => {
+                error!("Building Device TokenSet: {:?}", err);
+                return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                    error: OAuth2ErrorTypeResponse::InvalidRequest,
+                    error_description: Some(Cow::from(err.to_string())),
+                });
+            }
+        };
+
+        return HttpResponse::Ok().json(ts);
+    }
+
+    code.last_poll = now;
+    if let Err(err) = code.save(data).await {
+        // this should never happen
+        error!("Error saving the DeviceAuthCode: {:?}", err);
+    }
+
+    HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+        error,
+        error_description: Some(error_description),
+    })
 }
 
 /// Return a [TokenSet](crate::models::response::TokenSet) for the `password` flow
@@ -1128,7 +1282,7 @@ async fn grant_type_password(
                     HeaderValue::from_str(nonce).unwrap(),
                 ));
             }
-            Some(proof.jwk_fingerprint()?)
+            Some(DpopFingerprint(proof.jwk_fingerprint()?))
         } else {
             None
         };
@@ -1176,8 +1330,17 @@ async fn grant_type_password(
                 ClientDyn::update_used(data, &client.id).await?;
             }
 
-            let ts = TokenSet::from_user(&user, data, &client, dpop_fingerprint, None, None, false)
-                .await?;
+            let ts = TokenSet::from_user(
+                &user,
+                data,
+                &client,
+                dpop_fingerprint,
+                None,
+                None,
+                AuthCodeFlow::No,
+                DeviceCodeFlow::No,
+            )
+            .await?;
             Ok((ts, headers))
         }
         Err(err) => {
@@ -1786,7 +1949,7 @@ pub async fn validate_refresh_token(
                 ));
             }
             debug!("DPoP-Bound refresh token accepted");
-            (Some(fingerprint), proof.claims.nonce)
+            (Some(DpopFingerprint(fingerprint)), proof.claims.nonce)
         } else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
@@ -1836,7 +1999,6 @@ pub async fn validate_refresh_token(
         rt.save(data).await?;
     }
 
-    // TODO do we somehow need to be able to set ID 'nonce' here too?
     let ts = if let Some(s) = rt.scope {
         TokenSet::from_user(
             &user,
@@ -1844,8 +2006,10 @@ pub async fn validate_refresh_token(
             &client,
             dpop_fingerprint,
             None,
-            Some(s),
-            rt.is_mfa,
+            Some(TokenScopes(s)),
+            // TODO should we even ever set mfa for refresh tokens?
+            AuthCodeFlow::No,
+            DeviceCodeFlow::No,
         )
         .await
     } else {
@@ -1856,7 +2020,9 @@ pub async fn validate_refresh_token(
             dpop_fingerprint,
             None,
             None,
-            rt.is_mfa,
+            // TODO should we even ever set mfa for refresh tokens?
+            AuthCodeFlow::No,
+            DeviceCodeFlow::No,
         )
         .await
     }?;

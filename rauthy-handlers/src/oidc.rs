@@ -7,7 +7,8 @@ use chrono::Utc;
 use rauthy_common::constants::{
     APPLICATION_JSON, AUTH_HEADERS_ENABLE, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED,
     AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
-    AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, DEVICE_GRANT_CODE_LIFETIME, HEADER_HTML,
+    AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, DEVICE_GRANT_CODE_LIFETIME,
+    DEVICE_GRANT_POLL_INTERVAL, GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE,
     OPEN_USER_REG, SESSION_LIFETIME,
 };
 use rauthy_common::error_response::ErrorResponse;
@@ -18,6 +19,7 @@ use rauthy_models::entity::auth_providers::AuthProviderTemplate;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::devices::DeviceAuthCode;
+use rauthy_models::entity::ip_rate_limit::DeviceIpRateLimit;
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JWKS};
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
@@ -40,6 +42,7 @@ use rauthy_service::auth;
 use std::borrow::Cow;
 use std::ops::Add;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tracing::error;
 
 /// OIDC Authorization HTML
 ///
@@ -221,7 +224,7 @@ pub async fn get_authorize(
 pub async fn post_authorize(
     data: web::Data<AppState>,
     req: HttpRequest,
-    req_data: web::Json<LoginRequest>,
+    req_data: actix_web_validator::Json<LoginRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
@@ -259,7 +262,7 @@ pub async fn post_authorize(
 pub async fn post_authorize_refresh(
     data: web::Data<AppState>,
     req: HttpRequest,
-    req_data: web::Json<LoginRefreshRequest>,
+    req_data: actix_web_validator::Json<LoginRefreshRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     let session = principal.validate_session_auth()?;
@@ -342,19 +345,51 @@ pub async fn get_cert_by_kid(
     tag = "oidc",
     request_body = DeviceGrantRequest,
     responses(
-        (status = 200, description = "Ok", body = WebauthnLoginResponse),
+        (status = 200, description = "Ok", body = DeviceCodeResponse),
         (status = 400, description = "BadRequest", body = OAuth2ErrorResponse),
     ),
 )]
 #[post("/oidc/device")]
 pub async fn post_device_auth(
     data: web::Data<AppState>,
-    // req: HttpRequest,
-    payload: web::Json<DeviceGrantRequest>,
+    req: HttpRequest,
+    payload: actix_web_validator::Form<DeviceGrantRequest>,
 ) -> HttpResponse {
-    // TODO add some kind of IP rate limiting
-    // let ip = real_ip_from_req(&req);
+    // handle ip rate-limiting
+    match real_ip_from_req(&req) {
+        None => {
+            let err = "Cannot extract client IP for rate-limiting - denying request";
+            error!("{err}");
+            return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::InvalidRequest,
+                error_description: Some(Cow::from(
+                    "internal error - cannot extract IP from request",
+                )),
+            });
+        }
+        Some(ip) => {
+            if let Some(dt) = DeviceIpRateLimit::is_limited(&data, ip.clone()).await {
+                return HttpResponse::TooManyRequests()
+                    .insert_header((HEADER_RETRY_NOT_BEFORE, dt.timestamp()))
+                    .json(OAuth2ErrorResponse {
+                        error: OAuth2ErrorTypeResponse::InvalidRequest,
+                        error_description: Some(Cow::from(format!(
+                            "no further requests allowed before: {}",
+                            dt
+                        ))),
+                    });
+            }
 
+            if let Err(err) = DeviceIpRateLimit::insert(&data, ip).await {
+                error!(
+                    "Error inserting IP into the cache for rate-limiting: {:?}",
+                    err
+                );
+            }
+        }
+    };
+
+    // find and validate the client
     let payload = payload.into_inner();
     let client = match Client::find(&data, payload.client_id).await {
         Ok(client) => client,
@@ -366,17 +401,23 @@ pub async fn post_device_auth(
         }
     };
 
-    // make sure the client is allowed to use this flow
-    if let Err(err) = client.validate_flow("device_code") {
+    if !client.enabled {
+        return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::UnauthorizedClient,
+            error_description: Some(Cow::from("Client has been disabled")),
+        });
+    }
+
+    if let Err(err) = client.validate_flow(GRANT_TYPE_DEVICE_CODE) {
         return HttpResponse::Forbidden().json(OAuth2ErrorResponse {
             error: OAuth2ErrorTypeResponse::UnauthorizedClient,
             error_description: Some(Cow::from(err.message)),
         });
     }
 
-    // check the requested scope
-    if let Some(scopes) = payload.scope {
-        for scope in scopes.split(' ') {
+    let scopes = if let Some(scopes) = payload.scope {
+        let iter = scopes.split(' ').collect::<Vec<&str>>();
+        for scope in iter {
             if !client.scopes.contains(scope) {
                 return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
                     error: OAuth2ErrorTypeResponse::InvalidScope,
@@ -387,9 +428,11 @@ pub async fn post_device_auth(
                 });
             }
         }
-    }
+        Some(scopes)
+    } else {
+        None
+    };
 
-    // check confidential client
     if let Ok(secret) = client.get_secret_cleartext() {
         if secret != payload.client_secret {
             return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
@@ -400,7 +443,7 @@ pub async fn post_device_auth(
     }
 
     // we are good - create the code
-    let code = match DeviceAuthCode::new(&data).await {
+    let code = match DeviceAuthCode::new(&data, scopes, client.id, payload.client_secret).await {
         Ok(code) => code,
         Err(err) => {
             return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
@@ -419,7 +462,7 @@ pub async fn post_device_auth(
         verification_uri,
         verification_uri_complete,
         expires_in: *DEVICE_GRANT_CODE_LIFETIME,
-        interval: Some(5),
+        interval: Some(*DEVICE_GRANT_POLL_INTERVAL),
     };
 
     HttpResponse::Ok().json(resp)
@@ -444,7 +487,7 @@ pub async fn post_device_auth(
 pub async fn get_logout(
     data: web::Data<AppState>,
     req: HttpRequest,
-    req_data: web::Query<LogoutRequest>,
+    req_data: actix_web_validator::Query<LogoutRequest>,
     principal: ReqPrincipal,
 ) -> HttpResponse {
     // If we get any logout errors, maybe because there is no session anymore or whatever happens,
@@ -490,7 +533,7 @@ pub async fn get_logout(
 #[post("/oidc/logout")]
 pub async fn post_logout(
     data: web::Data<AppState>,
-    req_data: web::Query<LogoutRequest>,
+    req_data: actix_web_validator::Query<LogoutRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     let mut session = principal.get_session()?.clone();
@@ -652,22 +695,25 @@ pub async fn get_session_xsrf(
     ),
 )]
 #[post("/oidc/token")]
-#[tracing::instrument(level = "debug", skip_all, fields(grant_type = req_data.grant_type))]
+#[tracing::instrument(level = "debug", skip_all, fields(grant_type = payload.grant_type))]
 pub async fn post_token(
-    req_data: actix_web_validator::Form<TokenRequest>,
     req: HttpRequest,
     data: web::Data<AppState>,
+    payload: actix_web_validator::Form<TokenRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    // TODO the `urn:ietf:params:oauth:grant-type:device_code` needs
-    // a fully customized handling here with customized error response
-    // to meet the oauth rfc
-
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let add_login_delay = req_data.grant_type == "password";
-
     let ip = real_ip_from_req(&req);
 
-    let res = match auth::get_token_set(req_data.into_inner(), &data, req).await {
+    if payload.grant_type == GRANT_TYPE_DEVICE_CODE {
+        // TODO the `urn:ietf:params:oauth:grant-type:device_code` needs
+        // a fully customized handling here with customized error response
+        // to meet the oauth rfc
+        return Ok(auth::grant_type_device_code(&data, ip, payload.into_inner()).await);
+    }
+
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let add_login_delay = payload.grant_type == "password";
+
+    let res = match auth::get_token_set(payload.into_inner(), &data, req).await {
         Ok((token_set, headers)) => {
             let mut builder = HttpResponseBuilder::new(StatusCode::OK);
             for h in headers {

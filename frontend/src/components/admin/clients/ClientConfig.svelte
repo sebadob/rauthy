@@ -32,7 +32,11 @@
     let timer;
 
     let clientFlows = FLOWS.map(f => {
-        f.value = client.flows_enabled?.includes(f.label);
+        if (f.label === 'device_code') {
+            f.value = client.flows_enabled?.includes('urn:ietf:params:oauth:grant-type:device_code');
+        } else {
+            f.value = client.flows_enabled?.includes(f.label);
+        }
         return f;
     });
 
@@ -79,7 +83,7 @@
         if (client.redirect_uris[0] === '') {
             client.redirect_uris = [];
         }
-        if (client.post_logout_redirect_uris[0] === '') {
+        if (!client.post_logout_redirect_uris || client.post_logout_redirect_uris[0] === '') {
             client.post_logout_redirect_uris = [];
         }
         if (!client.name) {
@@ -126,7 +130,15 @@
         }
 
         client.access_token_lifetime = Number.parseInt(client.access_token_lifetime);
-        client.flows_enabled = clientFlows.filter(f => f.value).map(f => f.label);
+        client.flows_enabled = clientFlows.filter(f => f.value).map(f => {
+            if (f.label === 'device_code') {
+                // We will not show the full flow name in the UI for nicer UX,
+                // but the backend validation is strict.
+                return 'urn:ietf:params:oauth:grant-type:device_code';
+            } else {
+                return f.label;
+            }
+        });
 
         if (client.flows_enabled.includes('authorization_code') && client.redirect_uris.length === 0) {
             err = "With 'authorization_code' flow enabled, you need to specify at least one redirect URI";

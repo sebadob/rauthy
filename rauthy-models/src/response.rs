@@ -140,7 +140,7 @@ pub struct DeviceCodeResponse<'a> {
     pub verification_uri_complete: Option<String>,
     pub expires_in: u16,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub interval: Option<u32>,
+    pub interval: Option<u8>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -315,6 +315,11 @@ pub enum OAuth2ErrorTypeResponse {
     UnauthorizedClient,
     UnsupportedGrantType,
     InvalidScope,
+    // specific to the device grant
+    AuthorizationPending,
+    SlowDown,
+    AccessDenied,
+    ExpiredToken,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
