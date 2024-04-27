@@ -27,7 +27,10 @@ pub enum DeviceCodeFlow {
 
 #[derive(Clone)]
 pub struct DpopFingerprint(pub String);
+
 pub struct TokenNonce(pub String);
+
+/// Contains the scopes as a single String separated by `\s`
 pub struct TokenScopes(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

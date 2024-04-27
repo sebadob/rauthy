@@ -416,8 +416,8 @@ pub async fn post_device_auth(
     }
 
     let scopes = if let Some(scopes) = payload.scope {
-        let scopes = scopes.split(' ').map(String::from).collect::<Vec<String>>();
-        for scope in &scopes {
+        let iter = scopes.split(' ').collect::<Vec<&str>>();
+        for scope in iter {
             if !client.scopes.contains(scope) {
                 return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
                     error: OAuth2ErrorTypeResponse::InvalidScope,
@@ -443,7 +443,7 @@ pub async fn post_device_auth(
     }
 
     // we are good - create the code
-    let code = match DeviceAuthCode::new(&data, scopes, payload.client_secret).await {
+    let code = match DeviceAuthCode::new(&data, scopes, client.id, payload.client_secret).await {
         Ok(code) => code,
         Err(err) => {
             return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
@@ -707,7 +707,7 @@ pub async fn post_token(
         // TODO the `urn:ietf:params:oauth:grant-type:device_code` needs
         // a fully customized handling here with customized error response
         // to meet the oauth rfc
-        return Ok(auth::grant_type_device_code(&data, req, payload.into_inner()).await);
+        return Ok(auth::grant_type_device_code(&data, ip, payload.into_inner()).await);
     }
 
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();

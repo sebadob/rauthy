@@ -79,6 +79,7 @@ impl DeviceEntity {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceAuthCode {
+    pub client_id: String,
     pub device_code: String,
     /// Will be Some(user_id) once a user has been validated the auth request
     pub verified_by: Option<String>,
@@ -88,7 +89,7 @@ pub struct DeviceAuthCode {
     /// allowed.
     pub exp: DateTime<Utc>,
     pub last_poll: DateTime<Utc>,
-    pub scopes: Option<Vec<String>>,
+    pub scopes: Option<String>,
     // saved additionally here to have fewer cache requests during client polling
     pub client_secret: Option<String>,
     // The warnings counter will increase, if a client does not stick to
@@ -101,7 +102,8 @@ impl DeviceAuthCode {
     /// DeviceAuthCode's live inside the cache only
     pub async fn new(
         data: &web::Data<AppState>,
-        scopes: Option<Vec<String>>,
+        scopes: Option<String>,
+        client_id: String,
         client_secret: Option<String>,
     ) -> Result<Self, ErrorResponse> {
         let now = Utc::now();
@@ -109,6 +111,7 @@ impl DeviceAuthCode {
             *DEVICE_GRANT_CODE_LIFETIME as i64,
         ));
         let slf = Self {
+            client_id,
             device_code: get_rand(DEVICE_KEY_LENGTH as usize),
             verified_by: None,
             exp,
