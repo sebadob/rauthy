@@ -7,7 +7,7 @@ use base64::{engine, engine::general_purpose, Engine as _};
 use gethostname::gethostname;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
-use tracing::error;
+use tracing::{debug, error};
 
 const B64_URL_SAFE: engine::GeneralPurpose = general_purpose::URL_SAFE;
 const B64_URL_SAFE_NO_PAD: engine::GeneralPurpose = general_purpose::URL_SAFE_NO_PAD;
@@ -194,10 +194,7 @@ fn ip_from_cust_header(headers: &HeaderMap) -> Option<String> {
         if let Some(Ok(value)) = headers.get(header_name).map(|s| s.to_str()) {
             return Some(value.to_string());
         }
-        error!(
-            "Was unable to extract the PEER IP from PEER_IP_HEADER_NAME: {} - using fallback",
-            header_name
-        );
+        debug!("no PEER IP from PEER_IP_HEADER_NAME: '{}'", header_name);
     }
 
     None
