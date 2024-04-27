@@ -3,6 +3,7 @@ use crate::cookie_state::{OidcCookieState, OIDC_STATE_COOKIE};
 use crate::handler::{OidcCallbackParams, OidcCookieInsecure, OidcSetRedirectStatus};
 use crate::principal::PrincipalOidc;
 use crate::provider::OidcProvider;
+use crate::rauthy_error::RauthyError;
 use crate::token_set::{JwtIdClaims, OidcTokenSet};
 use axum::{
     body::Body,
@@ -54,11 +55,7 @@ pub async fn validate_redirect_principal(
         };
 
         let value = cookie_state.to_encrypted_cookie_value(enc_key);
-        let cookie = build_lax_cookie_300(
-            OIDC_STATE_COOKIE,
-            &value,
-            insecure,
-        );
+        let cookie = build_lax_cookie_300(OIDC_STATE_COOKIE, &value, insecure);
 
         if set_redirect_status == OidcSetRedirectStatus::Yes {
             Response::builder().status(302)
@@ -81,7 +78,7 @@ pub async fn oidc_callback(
     params: Query<OidcCallbackParams>,
     enc_key: &[u8],
     insecure: OidcCookieInsecure,
-) -> anyhow::Result<(String, OidcTokenSet, JwtIdClaims)> {
+) -> Result<(String, OidcTokenSet, JwtIdClaims), RauthyError> {
     let cookie_state = OidcCookieState::from_jar_cookie_value(jar, enc_key)?;
     crate::handler::oidc_callback(cookie_state, params.0, insecure).await
 }

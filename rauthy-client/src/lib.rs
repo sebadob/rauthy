@@ -20,9 +20,10 @@ use rand::{distributions, Rng};
 use ring::digest;
 use tracing::{error, warn};
 
-use crate::jwks::jwks_handler;
-pub use reqwest::Certificate as RootCertificate;
 use crate::handler::OidcCookieInsecure;
+use crate::jwks::jwks_handler;
+use crate::rauthy_error::RauthyError;
+pub use reqwest::Certificate as RootCertificate;
 
 /// Handles the encrypted OIDC state cookie for the login flow
 pub mod cookie_state;
@@ -38,13 +39,17 @@ pub mod provider;
 /// Provides everything necessary to extract and validate JWT token claims
 pub mod token_set;
 
+#[cfg(feature = "device_code")]
+pub mod device_code;
+mod rauthy_error;
+
 pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const B64_URL_SAFE_NO_PAD: engine::GeneralPurpose = general_purpose::URL_SAFE_NO_PAD;
 
 /// Decodes a base64 value
 #[allow(dead_code)]
-pub(crate) fn b64_decode(value: &str) -> anyhow::Result<Vec<u8>> {
+pub(crate) fn b64_decode(value: &str) -> Result<Vec<u8>, RauthyError> {
     let b = general_purpose::STANDARD.decode(value)?;
     Ok(b)
 }
@@ -69,10 +74,8 @@ pub(crate) fn base64_url_encode(input: &[u8]) -> String {
         .collect()
 }
 
-pub(crate) fn base64_url_no_pad_decode(b64: &str) -> anyhow::Result<Vec<u8>> {
-    B64_URL_SAFE_NO_PAD
-        .decode(b64)
-        .map_err(|_| anyhow::Error::msg("B64 decoding error"))
+pub(crate) fn base64_url_no_pad_decode(b64: &str) -> Result<Vec<u8>, RauthyError> {
+    Ok(B64_URL_SAFE_NO_PAD.decode(b64)?)
 }
 
 #[inline]
@@ -94,7 +97,7 @@ fn build_lax_cookie_300(name: &str, value: &str, insecure: OidcCookieInsecure) -
 
 /// Extracts the claims from a given token into the given struct.
 /// CAUTION: Does not validate the token!
-pub fn extract_token_claims<T>(token: &str) -> anyhow::Result<T>
+pub fn extract_token_claims<T>(token: &str) -> Result<T, RauthyError>
 where
     T: for<'a> serde::Deserialize<'a>,
 {
@@ -103,7 +106,7 @@ where
         Some((_metadata, rest)) => rest.split_once('.').map(|(body, _validation_str)| body),
     };
     if body.is_none() {
-        return Err(anyhow::Error::msg("Invalid or malformed JWT Token"));
+        return Err(RauthyError::MalformedJwt("Invalid or malformed JWT Token"));
     }
     let body = body.unwrap();
 
@@ -114,7 +117,7 @@ where
                 "Error decoding JWT token body '{}' from base64: {}",
                 body, err
             );
-            return Err(anyhow::Error::msg("Invalid JWT Token body"));
+            return Err(RauthyError::InvalidJwt("Invalid JWT Token body"));
         }
     };
     let s = String::from_utf8_lossy(b64.as_slice());
@@ -122,7 +125,7 @@ where
         Ok(claims) => claims,
         Err(err) => {
             error!("Error deserializing JWT Token claims: {}", err);
-            return Err(anyhow::Error::msg("Invalid JWT Token claims"));
+            return Err(RauthyError::InvalidJwt("Invalid JWT Token claims"));
         }
     };
 
@@ -172,7 +175,7 @@ pub async fn init(
     root_certificate: Option<RootCertificate>,
     https_only: RauthyHttpsOnly,
     danger_accept_invalid_certs: DangerAcceptInvalidCerts,
-) -> anyhow::Result<()> {
+) -> Result<(), RauthyError> {
     OidcProvider::init_client(root_certificate, https_only, danger_accept_invalid_certs)?;
     jwks_handler().await;
     Ok(())

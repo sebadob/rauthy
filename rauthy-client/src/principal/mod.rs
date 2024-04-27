@@ -1,4 +1,5 @@
 use crate::provider::OidcProvider;
+use crate::rauthy_error::RauthyError;
 use crate::token_set::JwtAccessClaims;
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -36,14 +37,14 @@ pub struct PrincipalOidc {
 impl PrincipalOidc {
     /// Creates a Principal from a raw Base64 encoded JWT token.
     /// This will also validate the token against the JWK fetched from the issuer.
-    pub async fn from_token_validated(token: &str) -> anyhow::Result<Self> {
+    pub async fn from_token_validated(token: &str) -> Result<Self, RauthyError> {
         let claims = JwtAccessClaims::from_token_validated(token).await?;
 
         let config = OidcProvider::config()?;
 
         let id = claims
             .sub
-            .ok_or_else(|| anyhow::Error::msg("'sub' claim is mandatory"))?;
+            .ok_or_else(|| RauthyError::InvalidClaims("'sub' claim is mandatory"))?;
         let roles = claims.roles.unwrap_or_default();
         let groups = claims.groups.unwrap_or_default();
 

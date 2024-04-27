@@ -1,8 +1,10 @@
 use crate::build_lax_cookie_300;
 use crate::cookie_state::{OidcCookieState, OIDC_STATE_COOKIE};
 use crate::provider::OidcProvider;
+use crate::rauthy_error::RauthyError;
 use crate::token_set::{JwtAccessClaims, JwtIdClaims, OidcTokenSet};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use tracing::error;
 
 #[cfg(feature = "axum")]
@@ -49,7 +51,7 @@ impl OidcCodeRequestParams {
         code: String,
         code_verifier: String,
         redirect_uri: String,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, RauthyError> {
         let cfg = OidcProvider::config()?;
         let client_id = cfg.client_id.clone();
         let client_secret = cfg.secret.clone();
@@ -98,11 +100,7 @@ pub async fn validate_principal_generic(
         };
 
         let value = cookie_state.to_encrypted_cookie_value(enc_key);
-        let cookie = build_lax_cookie_300(
-            OIDC_STATE_COOKIE,
-            &value,
-            insecure,
-        );
+        let cookie = build_lax_cookie_300(OIDC_STATE_COOKIE, &value, insecure);
 
         Err(Some((loc, cookie)))
     }
@@ -119,10 +117,10 @@ pub async fn oidc_callback(
     cookie_state: OidcCookieState,
     params: OidcCallbackParams,
     insecure: OidcCookieInsecure,
-) -> anyhow::Result<(String, OidcTokenSet, JwtIdClaims)> {
+) -> Result<(String, OidcTokenSet, JwtIdClaims), RauthyError> {
     // validate the state to prevent xsrf attacks
     if params.state != cookie_state.state {
-        return Err(anyhow::Error::msg("Bad state"));
+        return Err(RauthyError::BadRequest("Bad state"));
     }
 
     let (token_uri, redirect_uri) = {
@@ -154,17 +152,16 @@ pub async fn oidc_callback(
             Err(_) => "Internal Error - Bad response status".to_string(),
         };
 
-        Err(anyhow::Error::msg(msg))
+        Err(RauthyError::Provider(Cow::from(msg)))
     } else {
         match res.json::<OidcTokenSet>().await {
             Ok(ts) => {
                 // validate access token
-                let access_claims =
-                    JwtAccessClaims::from_token_validated(&ts.access_token).await?;
+                let access_claims = JwtAccessClaims::from_token_validated(&ts.access_token).await?;
 
                 // validate id token
                 if ts.id_token.is_none() {
-                    return Err(anyhow::Error::msg("ID token is missing"));
+                    return Err(RauthyError::Provider(Cow::from("ID token is missing")));
                 }
                 let id_claims = JwtIdClaims::from_token_validated(
                     ts.id_token.as_deref().unwrap(),
@@ -174,23 +171,19 @@ pub async fn oidc_callback(
 
                 // make sure the `sub` claims match
                 if access_claims.sub.is_none() || access_claims.sub != id_claims.sub {
-                    return Err(anyhow::Error::msg("Invalid `sub` claims"));
+                    return Err(RauthyError::InvalidClaims("Invalid `sub` claims"));
                 }
 
                 // reset STATE_COOKIE
-                let cookie = build_lax_cookie_300(
-                    OIDC_STATE_COOKIE,
-                    "",
-                    insecure,
-                );
+                let cookie = build_lax_cookie_300(OIDC_STATE_COOKIE, "", insecure);
 
                 Ok((cookie, ts, id_claims))
             }
             Err(err) => {
                 error!("Deserializing OIDC response to OidcTokenSet: {}", err);
-                Err(anyhow::Error::msg(
+                Err(RauthyError::Provider(Cow::from(
                     "Internal Error - Deserializing OIDC response",
-                ))
+                )))
             }
         }
     }
