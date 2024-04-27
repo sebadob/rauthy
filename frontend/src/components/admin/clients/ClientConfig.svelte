@@ -79,7 +79,7 @@
         if (client.redirect_uris[0] === '') {
             client.redirect_uris = [];
         }
-        if (client.post_logout_redirect_uris[0] === '') {
+        if (!client.post_logout_redirect_uris || client.post_logout_redirect_uris[0] === '') {
             client.post_logout_redirect_uris = [];
         }
         if (!client.name) {
