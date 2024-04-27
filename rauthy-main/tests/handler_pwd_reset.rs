@@ -126,6 +126,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(CLIENT_SECRET.to_string()),
         code_verifier: None,
+        device_code: None,
         username: Some(username.to_string()),
         password: Some(req.password.to_string()),
         refresh_token: None,
