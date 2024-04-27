@@ -116,8 +116,8 @@ lazy_static! {
     pub static ref RE_CODE_VERIFIER: Regex = Regex::new(r"^[a-zA-Z0-9-\._~+/=]+$").unwrap();
     pub static ref RE_CONTACT: Regex = Regex::new(r"^[a-zA-Z0-9\+.@/:]{0,48}$").unwrap();
     pub static ref RE_DATE_STR: Regex = Regex::new(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$").unwrap();
-    pub static ref RE_FLOWS: Regex = Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap();
-    pub static ref RE_GRANT_TYPES: Regex = Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap();
+    pub static ref RE_GRANT_TYPES: Regex = Regex::new(r"^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$").unwrap();
+    pub static ref RE_GRANT_TYPES_EPHEMERAL: Regex = Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap();
     pub static ref RE_LOWERCASE: Regex = Regex::new(r"^[a-z0-9-_/]{2,128}$").unwrap();
     pub static ref RE_LOWERCASE_SPACE: Regex = Regex::new(r"^[a-z0-9-_/\s]{2,128}$").unwrap();
     pub static ref RE_GROUPS: Regex = Regex::new(r"^[a-z0-9-_/,]{2,32}$").unwrap();
@@ -261,7 +261,7 @@ lazy_static! {
             .split(' ')
             .map(|flow| {
                 let flow = flow.trim();
-                if !RE_FLOWS.is_match(flow) {
+                if !RE_GRANT_TYPES_EPHEMERAL.is_match(flow) {
                     panic!("unknown EPHEMERAL_CLIENTS_ALLOWED_FLOWS: {}", flow)
                 }
                 flow.to_string()

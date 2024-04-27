@@ -9,7 +9,7 @@ use css_color::Srgb;
 use rauthy_common::constants::{
     RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_ALNUM_SPACE, RE_API_KEY, RE_APP_ID, RE_ATTR,
     RE_ATTR_DESC, RE_CHALLENGE, RE_CITY, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE,
-    RE_CODE_VERIFIER, RE_CONTACT, RE_DATE_STR, RE_FLOWS, RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE,
+    RE_CODE_VERIFIER, RE_CONTACT, RE_DATE_STR, RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE,
     RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_PEM, RE_PHONE, RE_SCOPE, RE_SEARCH, RE_STREET,
     RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI, RE_USER_NAME,
 };
@@ -367,7 +367,7 @@ pub struct DynamicClientRequest {
     #[validate(custom(function = "validate_vec_uri"))]
     pub redirect_uris: Vec<String>,
     /// Validation: `Vec<^(authorization_code|client_credentials|password|refresh_token)$>`
-    #[validate(custom(function = "validate_vec_flows"))]
+    #[validate(custom(function = "validate_vec_grant_types"))]
     pub grant_types: Vec<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
     #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
@@ -812,7 +812,7 @@ pub struct UpdateClientRequest {
     pub allowed_origins: Option<Vec<String>>,
     pub enabled: bool,
     /// Validation: `Vec<^(authorization_code|client_credentials|password|refresh_token)$>`
-    #[validate(custom(function = "validate_vec_flows"))]
+    #[validate(custom(function = "validate_vec_grant_types"))]
     pub flows_enabled: Vec<String>,
     /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub access_token_alg: JwkKeyPairAlg,
@@ -1048,14 +1048,14 @@ fn validate_vec_contact(value: &[String]) -> Result<(), ValidationError> {
     Ok(())
 }
 
-fn validate_vec_flows(value: &[String]) -> Result<(), ValidationError> {
+fn validate_vec_grant_types(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
 
     if value.is_empty() {
         err = Some("'flows_enabled' cannot be empty when provided");
     } else {
         value.iter().for_each(|v| {
-            if !RE_FLOWS.is_match(v) {
+            if !RE_GRANT_TYPES.is_match(v) {
                 err = Some("^(authorization_code|client_credentials|password|refresh_token)$");
             }
         });
