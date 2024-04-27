@@ -1078,7 +1078,7 @@ pub async fn grant_type_device_code(
         Ok(Some(code)) => code,
         Ok(None) | Err(_) => {
             return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
-                error: OAuth2ErrorTypeResponse::UnauthorizedClient,
+                error: OAuth2ErrorTypeResponse::ExpiredToken,
                 error_description: Some(Cow::from("invalid `device_code` or request has expired")),
             });
         }
