@@ -1,4 +1,6 @@
-use crate::token_set::TokenSet;
+use crate::token_set::{
+    AuthCodeFlow, DeviceCodeFlow, DpopFingerprint, TokenNonce, TokenScopes, TokenSet,
+};
 use actix_web::http::header;
 use actix_web::http::header::{HeaderMap, HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest, HttpResponse};
@@ -47,6 +49,7 @@ use redhac::cache_del;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
 use ring::digest;
 use std::borrow::Cow;
+use std::cmp::PartialEq;
 use std::collections::{HashMap, HashSet};
 use std::ops::{Add, Sub};
 use std::str::FromStr;
@@ -379,21 +382,23 @@ pub async fn build_access_token(
     user: Option<&User>,
     data: &web::Data<AppState>,
     client: &Client,
-    dpop_fingerprint: Option<String>,
+    dpop_fingerprint: Option<DpopFingerprint>,
     lifetime: i64,
-    scope: Option<String>,
+    scope: Option<TokenScopes>,
     scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
 ) -> Result<String, ErrorResponse> {
     let mut custom_claims = JwtAccessClaims {
         typ: JwtTokenType::Bearer,
         azp: client.id.to_string(),
-        scope: scope.unwrap_or_else(|| client.default_scopes.clone().replace(',', " ")),
+        scope: scope
+            .map(|s| s.0)
+            .unwrap_or_else(|| client.default_scopes.clone().replace(',', " ")),
         allowed_origins: None,
         email: None,
         preferred_username: None,
         roles: None,
         groups: None,
-        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt }),
+        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
         custom: None,
     };
 
@@ -455,23 +460,24 @@ pub async fn build_id_token(
     user: &User,
     data: &web::Data<AppState>,
     client: &Client,
-    dpop_fingerprint: Option<String>,
+    dpop_fingerprint: Option<DpopFingerprint>,
     lifetime: i64,
-    nonce: Option<String>,
+    nonce: Option<TokenNonce>,
     scope: &str,
     scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
-    is_auth_code_flow: bool,
+    auth_code_flow: AuthCodeFlow,
 ) -> Result<String, ErrorResponse> {
     let now_ts = Utc::now().timestamp();
+
+    // TODO the `auth_time` here is a bit inaccurate currently. The accuracy could be improved
+    // with future DB migrations by adding something like a `last_auth` column for each user.
+    // It is unclear right now, if we even need it right now.
     let (amr, auth_time) = match user.has_webauthn_enabled() {
         true => {
-            if is_auth_code_flow {
+            if auth_code_flow == AuthCodeFlow::Yes {
                 // With active MFA, the auth_time is always 'now', because it must be re-validated each time
                 (JwtAmrValue::Mfa.to_string(), now_ts)
             } else {
-                // TODO to get this 100% correct, we would need to do a DB migration with a new version and update
-                // something like a `last_auth` field in the DB each time. Not implemented now to not being forced into
-                // a new minor version just because of this small thing -> do in the future.
                 (
                     JwtAmrValue::Pwd.to_string(),
                     now_ts - *SESSION_LIFETIME as i64,
@@ -479,12 +485,9 @@ pub async fn build_id_token(
             }
         }
         false => {
-            if is_auth_code_flow {
-                // TODO this is a bit inaccurate at this time as well -> improve with DB migration in future minor version
-                // it might be the case, that this was initiated with a direct refresh
+            if auth_code_flow == AuthCodeFlow::Yes {
                 (JwtAmrValue::Pwd.to_string(), now_ts)
             } else {
-                // TODO make more accurate with future DB migration
                 (
                     JwtAmrValue::Pwd.to_string(),
                     now_ts - *SESSION_LIFETIME as i64,
@@ -512,7 +515,7 @@ pub async fn build_id_token(
         phone: None,
         roles: user.get_roles(),
         groups: None,
-        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt }),
+        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
         custom: None,
         webid,
     };
@@ -607,7 +610,7 @@ pub async fn build_id_token(
     }
 
     if let Some(nonce) = nonce {
-        claims = claims.with_nonce(nonce);
+        claims = claims.with_nonce(nonce.0);
     }
 
     sign_id_token(data, claims, client).await
@@ -617,17 +620,17 @@ pub async fn build_id_token(
 pub async fn build_refresh_token(
     user: &User,
     data: &web::Data<AppState>,
-    dpop_fingerprint: Option<String>,
+    dpop_fingerprint: Option<DpopFingerprint>,
     client: &Client,
     access_token_lifetime: i64,
-    scope: Option<String>,
+    scope: Option<TokenScopes>,
     is_mfa: bool,
 ) -> Result<String, ErrorResponse> {
     let custom_claims = JwtRefreshClaims {
         azp: client.id.clone(),
         typ: JwtTokenType::Refresh,
         uid: user.id.clone(),
-        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt }),
+        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
     };
 
     let claims = Claims::with_custom_claims(custom_claims, coarsetime::Duration::from_hours(48))
@@ -639,16 +642,18 @@ pub async fn build_refresh_token(
     // only save the last 50 characters for validation
     let validation_string = String::from(&token).split_off(token.len() - 49);
 
-    // TODO extract the nbf and exp from the claims -> adjust entity
+    // TODO make grace period configurable
     let nbf = OffsetDateTime::now_utc().add(::time::Duration::seconds(access_token_lifetime - 60));
+    // TODO make refresh token lifetime configurable
     let exp = &nbf.add(::time::Duration::seconds(48 * 3600));
+    // TODO decision to create default or device refresh token here
     RefreshToken::create(
         data,
         validation_string,
         user.id.clone(),
         nbf,
         *exp,
-        scope,
+        scope.map(|s| s.0),
         is_mfa,
     )
     .await?;
@@ -909,7 +914,7 @@ async fn grant_type_code(
                     HeaderValue::from_str(nonce).unwrap(),
                 ));
             };
-            Some(proof.jwk_fingerprint()?)
+            Some(DpopFingerprint(proof.jwk_fingerprint()?))
         } else {
             None
         };
@@ -988,9 +993,10 @@ async fn grant_type_code(
         data,
         &client,
         dpop_fingerprint,
-        code.nonce.clone(),
-        Some(code.scopes.join(" ")),
-        true,
+        code.nonce.clone().map(|n| TokenNonce(n)),
+        Some(TokenScopes(code.scopes.join(" "))),
+        AuthCodeFlow::Yes,
+        DeviceCodeFlow::No,
     )
     .await?;
 
@@ -1068,7 +1074,7 @@ async fn grant_type_credentials(
                     HeaderValue::from_str(nonce).unwrap(),
                 ));
             }
-            Some(proof.jwk_fingerprint()?)
+            Some(DpopFingerprint(proof.jwk_fingerprint()?))
         } else {
             None
         };
@@ -1160,6 +1166,10 @@ pub async fn grant_type_device_code(
     if let Some(verified_by) = code.verified_by {
         // TODO
 
+        // check if we should issue a refresh token
+        // possibly create a refresh token in the DB
+        // create a new device entry in the DB
+
         // let ts = TokenSet::for_client_credentials(data, &client, dpop_fingerprint).await?;
         // Ok((ts, headers))
     }
@@ -1216,7 +1226,7 @@ async fn grant_type_password(
                     HeaderValue::from_str(nonce).unwrap(),
                 ));
             }
-            Some(proof.jwk_fingerprint()?)
+            Some(DpopFingerprint(proof.jwk_fingerprint()?))
         } else {
             None
         };
@@ -1264,8 +1274,17 @@ async fn grant_type_password(
                 ClientDyn::update_used(data, &client.id).await?;
             }
 
-            let ts = TokenSet::from_user(&user, data, &client, dpop_fingerprint, None, None, false)
-                .await?;
+            let ts = TokenSet::from_user(
+                &user,
+                data,
+                &client,
+                dpop_fingerprint,
+                None,
+                None,
+                AuthCodeFlow::No,
+                DeviceCodeFlow::No,
+            )
+            .await?;
             Ok((ts, headers))
         }
         Err(err) => {
@@ -1874,7 +1893,7 @@ pub async fn validate_refresh_token(
                 ));
             }
             debug!("DPoP-Bound refresh token accepted");
-            (Some(fingerprint), proof.claims.nonce)
+            (Some(DpopFingerprint(fingerprint)), proof.claims.nonce)
         } else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
@@ -1924,7 +1943,6 @@ pub async fn validate_refresh_token(
         rt.save(data).await?;
     }
 
-    // TODO do we somehow need to be able to set ID 'nonce' here too?
     let ts = if let Some(s) = rt.scope {
         TokenSet::from_user(
             &user,
@@ -1932,8 +1950,10 @@ pub async fn validate_refresh_token(
             &client,
             dpop_fingerprint,
             None,
-            Some(s),
-            rt.is_mfa,
+            Some(TokenScopes(s)),
+            // TODO should we even ever set mfa for refresh tokens?
+            AuthCodeFlow::No,
+            DeviceCodeFlow::No,
         )
         .await
     } else {
@@ -1944,7 +1964,9 @@ pub async fn validate_refresh_token(
             dpop_fingerprint,
             None,
             None,
-            rt.is_mfa,
+            // TODO should we even ever set mfa for refresh tokens?
+            AuthCodeFlow::No,
+            DeviceCodeFlow::No,
         )
         .await
     }?;

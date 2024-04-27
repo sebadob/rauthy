@@ -13,6 +13,23 @@ use std::collections::HashMap;
 use time::OffsetDateTime;
 use utoipa::ToSchema;
 
+#[derive(Debug, PartialEq)]
+pub enum AuthCodeFlow {
+    Yes,
+    No,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum DeviceCodeFlow {
+    Yes,
+    No,
+}
+
+#[derive(Clone)]
+pub struct DpopFingerprint(pub String);
+pub struct TokenNonce(pub String);
+pub struct TokenScopes(pub String);
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct TokenSet {
     pub access_token: String,
@@ -28,7 +45,7 @@ impl TokenSet {
     pub async fn for_client_credentials(
         data: &web::Data<AppState>,
         client: &Client,
-        dpop_fingerprint: Option<String>,
+        dpop_fingerprint: Option<DpopFingerprint>,
     ) -> Result<Self, ErrorResponse> {
         let token_type = if dpop_fingerprint.is_some() {
             JwtTokenType::DPoP
@@ -59,11 +76,13 @@ impl TokenSet {
         user: &User,
         data: &web::Data<AppState>,
         client: &Client,
-        dpop_fingerprint: Option<String>,
-        nonce: Option<String>,
-        scopes: Option<String>,
-        is_auth_code_flow: bool,
+        dpop_fingerprint: Option<DpopFingerprint>,
+        nonce: Option<TokenNonce>,
+        scopes: Option<TokenScopes>,
+        auth_code_flow: AuthCodeFlow,
+        device_code_flow: DeviceCodeFlow,
     ) -> Result<Self, ErrorResponse> {
+        let scopes = scopes.map(|s| s.0);
         let scope = if let Some(s) = &scopes {
             s.clone()
         } else {
@@ -158,7 +177,7 @@ impl TokenSet {
             nonce,
             &scope,
             customs_id,
-            is_auth_code_flow,
+            auth_code_flow,
         )
         .await?;
         let access_token = auth::build_access_token(
@@ -167,7 +186,7 @@ impl TokenSet {
             client,
             dpop_fingerprint.clone(),
             lifetime,
-            Some(scope),
+            Some(TokenScopes(scope)),
             customs_access,
         )
         .await?;
@@ -179,8 +198,8 @@ impl TokenSet {
                     dpop_fingerprint,
                     client,
                     lifetime,
-                    scopes,
-                    is_auth_code_flow,
+                    scopes.map(|s| TokenScopes(s)),
+                    user.has_webauthn_enabled(),
                 )
                 .await?,
             )

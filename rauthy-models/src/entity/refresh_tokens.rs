@@ -25,6 +25,9 @@ impl RefreshToken {
         nbf: OffsetDateTime,
         exp: OffsetDateTime,
         scope: Option<String>,
+        // TODO should we even save mfa for refresh tokens?
+        // even if the original token has been issued with mfa, the refresh
+        // token not really is, because it can be given without user interaction.
         is_mfa: bool,
     ) -> Result<Self, ErrorResponse> {
         let rt = Self {
