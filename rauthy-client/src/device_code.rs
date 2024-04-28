@@ -4,9 +4,10 @@ use crate::{DangerAcceptInvalidCerts, RauthyHttpsOnly, RootCertificate, VERSION}
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::ops::Add;
 use std::time::Duration;
+use tracing::{debug, info, warn};
 
 #[derive(Debug, Deserialize)]
 struct DeviceCodeResponse {
@@ -26,10 +27,11 @@ struct DeviceGrantRequest<'a> {
 }
 
 #[derive(Serialize)]
-struct DeviceGrantTokenRequest<'a> {
-    pub client_id: &'a str,
-    pub client_secret: Option<&'a str>,
-    pub device_code: &'a str,
+struct DeviceGrantTokenRequest {
+    pub client_id: String,
+    pub client_secret: Option<String>,
+    pub device_code: String,
+    pub grant_type: &'static str,
 }
 
 #[derive(Debug, Deserialize)]
@@ -38,10 +40,34 @@ struct MetaResponse {
     pub token_endpoint: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct OAuth2ErrorResponse<'a> {
+    pub error: OAuth2ErrorTypeResponse,
+    pub error_description: Option<Cow<'a, str>>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OAuth2ErrorTypeResponse {
+    InvalidRequest,
+    InvalidClient,
+    InvalidGrant,
+    UnauthorizedClient,
+    UnsupportedGrantType,
+    InvalidScope,
+    // specific to the device grant
+    AuthorizationPending,
+    SlowDown,
+    AccessDenied,
+    ExpiredToken,
+}
+
 pub struct DeviceCode {
     client: reqwest::Client,
     token_endpoint: String,
-    token_endpoint_payload: String,
+    token_endpoint_payload: DeviceGrantTokenRequest,
+    // token_endpoint_payload: String,
+    interval: u64,
 
     pub expires: DateTime<Utc>,
     pub user_code: String,
@@ -60,6 +86,18 @@ impl Debug for DeviceCode {
             self.user_code,
             self.verification_uri,
             self.verification_uri_complete,
+        )
+    }
+}
+
+impl Display for DeviceCode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            r#"
+    Please visit {} and enter your User Code: {}
+"#,
+            self.verification_uri, self.user_code
         )
     }
 }
@@ -106,17 +144,14 @@ impl DeviceCode {
 
     /// Request a `device_code` from your Rauthy instance.
     /// This code can then be used in exchange for an OIDC Token Set.
-    pub async fn request(
-        issuer: &str,
-        client_id: &str,
-        client_secret: Option<&str>,
-        scope: Option<&str>,
-    ) -> Result<Self, RauthyError> {
+    /// Clients requesting `device_code`'s are typically public. If you have a confidential
+    /// client or need additional configuration, use `DeviceCode::request_with()`.
+    pub async fn request(issuer: &str, client_id: String) -> Result<Self, RauthyError> {
         Self::request_with(
             issuer,
             client_id,
-            client_secret,
-            scope,
+            None,
+            None,
             None,
             RauthyHttpsOnly::Yes,
             DangerAcceptInvalidCerts::No,
@@ -128,14 +163,13 @@ impl DeviceCode {
     /// This code can then be used in exchange for an OIDC Token Set.
     pub async fn request_with(
         issuer: &str,
-        client_id: &str,
-        client_secret: Option<&str>,
+        client_id: String,
+        client_secret: Option<String>,
         scope: Option<&str>,
         root_certificate: Option<RootCertificate>,
         https_only: RauthyHttpsOnly,
         danger_insecure: DangerAcceptInvalidCerts,
     ) -> Result<Self, RauthyError> {
-        // fetch metadata endpoint
         let append = if issuer.ends_with('/') {
             ".well-known/openid-configuration"
         } else {
@@ -149,24 +183,25 @@ impl DeviceCode {
             client
                 .post(meta.device_authorization_endpoint)
                 .form(&DeviceGrantRequest {
-                    client_id,
-                    client_secret,
+                    client_id: &client_id,
+                    client_secret: client_secret.as_deref(),
                     scope,
                 }),
         )
         .await?;
         let expires = Utc::now().add(chrono::Duration::seconds(device_code.expires_in as i64));
-        let token_endpoint_payload = serde_json::to_string(&DeviceGrantTokenRequest {
+        let token_endpoint_payload = DeviceGrantTokenRequest {
             client_id,
             client_secret,
-            device_code: &device_code.device_code,
-        })
-        .expect("DeviceGrantTokenRequest to always succeed");
+            device_code: device_code.device_code,
+            grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+        };
 
         Ok(DeviceCode {
             client,
             token_endpoint: meta.token_endpoint,
             token_endpoint_payload,
+            interval: device_code.interval.unwrap_or(5) as u64,
             expires,
             user_code: device_code.user_code,
             verification_uri: device_code.verification_uri,
@@ -176,7 +211,49 @@ impl DeviceCode {
 
     /// With a valid `device_code`, continuously poll the Rauthy instance and wait
     /// for user verification of your request, to get an OIDC Token Set.
-    pub async fn wait_for_token(&self) -> Result<OidcTokenSet, RauthyError> {
-        todo!()
+    pub async fn wait_for_token(&mut self) -> Result<OidcTokenSet, RauthyError> {
+        let mut wait_for = self.interval;
+
+        loop {
+            tokio::time::sleep(Duration::from_secs(wait_for)).await;
+
+            let res = self
+                .client
+                .post(&self.token_endpoint)
+                .form(&self.token_endpoint_payload)
+                .send()
+                .await?;
+
+            if res.status().is_success() {
+                let ts = res.json::<OidcTokenSet>().await?;
+                info!("Success - received an OIDC TokenSet");
+                return Ok(ts);
+            }
+
+            let err = res.json::<OAuth2ErrorResponse>().await?;
+            match err.error {
+                OAuth2ErrorTypeResponse::AuthorizationPending => {
+                    debug!("Authorization Pending - awaiting user verification");
+                }
+
+                // this should not happen with Rauthy -> should always be just 5 seconds
+                OAuth2ErrorTypeResponse::SlowDown => {
+                    warn!("Received a `slow_down` - doubling token fetch interval");
+                    wait_for *= 2;
+                }
+
+                OAuth2ErrorTypeResponse::AccessDenied => {
+                    return Err(RauthyError::Provider(Cow::from(format!("{:?}", err))));
+                }
+
+                OAuth2ErrorTypeResponse::ExpiredToken => {
+                    return Err(RauthyError::Provider(Cow::from(format!("{:?}", err))));
+                }
+
+                // the others should not come up, only if the connection dies in between
+                // or something like that
+                _ => return Err(RauthyError::Provider(Cow::from(format!("{:?}", err)))),
+            }
+        }
     }
 }
