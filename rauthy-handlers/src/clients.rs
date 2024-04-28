@@ -294,7 +294,7 @@ pub async fn put_clients(
 /// - rauthy_admin
 #[utoipa::path(
     get,
-    path = "/clients/{id}}/colors",
+    path = "/clients/{id}/colors",
     tag = "clients",
     responses(
         (status = 200, description = "Ok", body = Colors),
@@ -321,7 +321,7 @@ pub async fn get_client_colors(
 /// - rauthy_admin
 #[utoipa::path(
     put,
-    path = "/clients/{id}}/colors",
+    path = "/clients/{id}/colors",
     tag = "clients",
     request_body = ColorsRequest,
     responses(
@@ -353,7 +353,7 @@ pub async fn put_client_colors(
 /// - rauthy_admin
 #[utoipa::path(
     delete,
-    path = "/clients/{id}}/colors",
+    path = "/clients/{id}/colors",
     tag = "clients",
     responses(
         (status = 200, description = "Ok"),
