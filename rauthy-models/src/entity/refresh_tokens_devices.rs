@@ -147,7 +147,7 @@ impl RefreshTokenDevice {
                 (id, device_id, user_id, nbf, exp, scope)
                 VALUES ($1, $2, $3, $4, $5, $6)
                 ON CONFLICT(id) DO UPDATE
-                SET device_id = $2, user_id = $2, nbf = $3, exp = $4, scope = $5"#,
+                SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6"#,
             self.id,
             self.device_id,
             self.user_id,
