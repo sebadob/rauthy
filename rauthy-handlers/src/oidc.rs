@@ -8,8 +8,8 @@ use rauthy_common::constants::{
     APPLICATION_JSON, AUTH_HEADERS_ENABLE, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED,
     AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
     AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, DEVICE_GRANT_CODE_LIFETIME,
-    DEVICE_GRANT_POLL_INTERVAL, GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE,
-    OPEN_USER_REG, SESSION_LIFETIME,
+    DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT, GRANT_TYPE_DEVICE_CODE, HEADER_HTML,
+    HEADER_RETRY_NOT_BEFORE, OPEN_USER_REG, SESSION_LIFETIME,
 };
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::real_ip_from_req;
@@ -356,38 +356,40 @@ pub async fn post_device_auth(
     payload: actix_web_validator::Form<DeviceGrantRequest>,
 ) -> HttpResponse {
     // handle ip rate-limiting
-    match real_ip_from_req(&req) {
-        None => {
-            let err = "Cannot extract client IP for rate-limiting - denying request";
-            error!("{err}");
-            return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
-                error: OAuth2ErrorTypeResponse::InvalidRequest,
-                error_description: Some(Cow::from(
-                    "internal error - cannot extract IP from request",
-                )),
-            });
-        }
-        Some(ip) => {
-            if let Some(dt) = DeviceIpRateLimit::is_limited(&data, ip.clone()).await {
-                return HttpResponse::TooManyRequests()
-                    .insert_header((HEADER_RETRY_NOT_BEFORE, dt.timestamp()))
-                    .json(OAuth2ErrorResponse {
-                        error: OAuth2ErrorTypeResponse::InvalidRequest,
-                        error_description: Some(Cow::from(format!(
-                            "no further requests allowed before: {}",
-                            dt
-                        ))),
-                    });
+    if DEVICE_GRANT_RATE_LIMIT.is_some() {
+        match real_ip_from_req(&req) {
+            None => {
+                let err = "Cannot extract client IP for rate-limiting - denying request";
+                error!("{err}");
+                return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                    error: OAuth2ErrorTypeResponse::InvalidRequest,
+                    error_description: Some(Cow::from(
+                        "internal error - cannot extract IP from request",
+                    )),
+                });
             }
+            Some(ip) => {
+                if let Some(dt) = DeviceIpRateLimit::is_limited(&data, ip.clone()).await {
+                    return HttpResponse::TooManyRequests()
+                        .insert_header((HEADER_RETRY_NOT_BEFORE, dt.timestamp()))
+                        .json(OAuth2ErrorResponse {
+                            error: OAuth2ErrorTypeResponse::InvalidRequest,
+                            error_description: Some(Cow::from(format!(
+                                "no further requests allowed before: {}",
+                                dt
+                            ))),
+                        });
+                }
 
-            if let Err(err) = DeviceIpRateLimit::insert(&data, ip).await {
-                error!(
-                    "Error inserting IP into the cache for rate-limiting: {:?}",
-                    err
-                );
+                if let Err(err) = DeviceIpRateLimit::insert(&data, ip).await {
+                    error!(
+                        "Error inserting IP into the cache for rate-limiting: {:?}",
+                        err
+                    );
+                }
             }
-        }
-    };
+        };
+    }
 
     // find and validate the client
     let payload = payload.into_inner();
