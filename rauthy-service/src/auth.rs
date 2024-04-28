@@ -1116,11 +1116,12 @@ pub async fn grant_type_device_code(
     // We allow it to be 500ms shorter than specified to not get into
     // possible problems with slightly inaccurate client implementations.
     let now = Utc::now();
-    let now_skew = now.sub(chrono::Duration::milliseconds(500));
-    let poll_thres = now_skew.sub(chrono::Duration::seconds(
-        *DEVICE_GRANT_POLL_INTERVAL as i64,
-    ));
-    if code.last_poll > poll_thres {
+    let poll_thres = now
+        .sub(chrono::Duration::seconds(
+            *DEVICE_GRANT_POLL_INTERVAL as i64,
+        ))
+        .add(chrono::Duration::milliseconds(500));
+    if poll_thres < code.last_poll {
         warn!("device does not respect the poll interval");
         code.warnings += 1;
         if code.warnings >= 3 {

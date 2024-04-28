@@ -717,8 +717,11 @@ pub enum SearchParamsType {
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct TokenRequest {
-    /// Validation: `^[a-z0-9-_/]{2,128}$`
-    #[validate(regex(path = "RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
+    /// Validation: `^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$`
+    #[validate(regex(
+        path = "RE_GRANT_TYPES",
+        code = "^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$"
+    ))]
     pub grant_type: String,
     /// Validation: `[a-zA-Z0-9]`
     #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]

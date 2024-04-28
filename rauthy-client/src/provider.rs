@@ -79,6 +79,7 @@ impl OidcProviderConfig {
 pub struct OidcProvider {
     pub issuer: String,
     pub authorization_endpoint: String,
+    pub device_authorization_endpoint: String,
     pub token_endpoint: String,
     pub introspection_endpoint: String,
     pub userinfo_endpoint: String,

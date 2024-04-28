@@ -39,8 +39,9 @@ pub mod provider;
 /// Provides everything necessary to extract and validate JWT token claims
 pub mod token_set;
 
-#[cfg(feature = "device_code")]
+#[cfg(feature = "device-code")]
 pub mod device_code;
+
 mod rauthy_error;
 
 pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -165,13 +166,25 @@ impl DangerAcceptInvalidCerts {
     }
 }
 
-/// This function must(!) be called exactly once during your app start up before(!) the
+/// The init function must be called exactly once during your app start up before(!) the
 /// OidcProvider::setup_*() function.
 /// It will initialize variables, clients, cache, and validate the OIDC configuration.
 ///
 /// # Panics
 /// This will panic if it is called more than once.
-pub async fn init(
+pub async fn init() -> Result<(), RauthyError> {
+    OidcProvider::init_client(None, RauthyHttpsOnly::Yes, DangerAcceptInvalidCerts::No)?;
+    jwks_handler().await;
+    Ok(())
+}
+
+/// This function must be called exactly once during your app start up before(!) the
+/// OidcProvider::setup_*() function.
+/// It will initialize variables, clients, cache, and validate the OIDC configuration.
+///
+/// # Panics
+/// This will panic if it is called more than once.
+pub async fn init_with(
     root_certificate: Option<RootCertificate>,
     https_only: RauthyHttpsOnly,
     danger_accept_invalid_certs: DangerAcceptInvalidCerts,

@@ -191,10 +191,10 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("8"))
         .parse::<u8>()
         .expect("DEVICE_GRANT_USER_CODE_LENGTH cannot be parsed to u8 - bad format");
-    pub static ref DEVICE_GRANT_RATE_LIMIT: u32 = env::var("DEVICE_GRANT_RATE_LIMIT")
-        .unwrap_or_else(|_| String::from("30"))
-        .parse::<u32>()
-        .expect("DEVICE_GRANT_RATE_LIMIT cannot be parsed to u32- bad format");
+    pub static ref DEVICE_GRANT_RATE_LIMIT: Option<u32> = env::var("DEVICE_GRANT_RATE_LIMIT")
+        .map(|rl| rl.parse::<u32>()
+        .expect("DEVICE_GRANT_RATE_LIMIT cannot be parsed to u32 - bad format"))
+        .ok();
     pub static ref DEVICE_GRANT_POLL_INTERVAL: u8 = env::var("DEVICE_GRANT_POLL_INTERVAL")
         .unwrap_or_else(|_| String::from("5"))
         .parse::<u8>()
