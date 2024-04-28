@@ -207,8 +207,9 @@ impl AppState {
                 panic!("{msg}");
             }
 
+            info!("Trying to connect to Postgres instance");
             let pool = Self::connect_postgres(&DATABASE_URL, db_max_conn).await?;
-            info!("Using Postgres");
+            info!("Database Connection established");
 
             debug!("Migrating data from ../migrations/postgres");
             sqlx::migrate!("../migrations/postgres").run(&pool).await?;
