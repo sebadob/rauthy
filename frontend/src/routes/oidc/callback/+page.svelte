@@ -9,7 +9,12 @@
         saveIdToken
     } from "../../../utils/helpers.js";
     import {onMount} from "svelte";
-    import {CLIENT_ID, REDIRECT_URI_SUCCESS, REDIRECT_URI_SUCCESS_ACC} from "../../../utils/constants.js";
+    import {
+        CLIENT_ID,
+        REDIRECT_URI_SUCCESS,
+        REDIRECT_URI_SUCCESS_ACC,
+        REDIRECT_URI_SUCCESS_DEVICE
+    } from "../../../utils/constants.js";
     import {getSessionInfoXsrf, getToken} from "../../../utils/dataFetching.js";
 
     onMount(async () => {
@@ -19,6 +24,8 @@
         let redirectUri = REDIRECT_URI_SUCCESS;
         if (query.state && query.state === 'account') {
             redirectUri = REDIRECT_URI_SUCCESS_ACC;
+        } else if (query.state && query.state === 'device') {
+            redirectUri = REDIRECT_URI_SUCCESS_DEVICE;
         }
 
         data.append('grant_type', 'authorization_code');

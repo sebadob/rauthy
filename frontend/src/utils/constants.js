@@ -11,6 +11,7 @@ export const LOGOUT_URL = '/auth/v1/oidc/logout';
 export const REDIRECT_URI = '/auth/v1/oidc/callback';
 export const REDIRECT_URI_SUCCESS = '/auth/v1/admin';
 export const REDIRECT_URI_SUCCESS_ACC = '/auth/v1/account';
+export const REDIRECT_URI_SUCCESS_DEVICE = '/auth/v1/device';
 export const POST_LOGOUT_REDIRECT_URI = '/auth/v1/';
 
 export const REGEX_BIRTHDATE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/gm;
