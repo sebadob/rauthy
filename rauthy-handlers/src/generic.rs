@@ -21,6 +21,7 @@ use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
 use rauthy_models::i18n::account::I18nAccount;
 use rauthy_models::i18n::authorize::I18nAuthorize;
+use rauthy_models::i18n::device::I18nDevice;
 use rauthy_models::i18n::email_confirm_change_html::I18nEmailConfirmChangeHtml;
 use rauthy_models::i18n::error::I18nError;
 use rauthy_models::i18n::index::I18nIndex;
@@ -102,6 +103,7 @@ pub async fn post_i18n(
     let body = match req_data.content {
         I18nContent::Authorize => I18nAuthorize::build(&lang).as_json(),
         I18nContent::Account => I18nAccount::build(&lang).as_json(),
+        I18nContent::Device => I18nDevice::build(&lang).as_json(),
         I18nContent::EmailChangeConfirm => I18nEmailConfirmChangeHtml::build(&lang).as_json(),
         // Just return some default values for local dev -> dynamically built during prod
         I18nContent::Error => {

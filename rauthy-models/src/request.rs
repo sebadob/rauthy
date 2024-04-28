@@ -238,6 +238,7 @@ pub struct I18nRequest {
 pub enum I18nContent {
     Account,
     Authorize,
+    Device,
     EmailChangeConfirm,
     Error,
     Index,
