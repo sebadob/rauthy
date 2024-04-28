@@ -1120,7 +1120,7 @@ pub async fn grant_type_device_code(
         .sub(chrono::Duration::seconds(
             *DEVICE_GRANT_POLL_INTERVAL as i64,
         ))
-        .sub(chrono::Duration::milliseconds(500));
+        .add(chrono::Duration::milliseconds(500));
     if poll_thres < code.last_poll {
         warn!("device does not respect the poll interval");
         code.warnings += 1;
