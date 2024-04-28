@@ -39,8 +39,9 @@ pub mod provider;
 /// Provides everything necessary to extract and validate JWT token claims
 pub mod token_set;
 
-#[cfg(feature = "device_code")]
+#[cfg(feature = "device-code")]
 pub mod device_code;
+
 mod rauthy_error;
 
 pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -171,8 +172,7 @@ impl DangerAcceptInvalidCerts {
 ///
 /// # Panics
 /// This will panic if it is called more than once.
-pub async fn init(
-) -> Result<(), RauthyError> {
+pub async fn init() -> Result<(), RauthyError> {
     OidcProvider::init_client(None, RauthyHttpsOnly::Yes, DangerAcceptInvalidCerts::No)?;
     jwks_handler().await;
     Ok(())
@@ -184,7 +184,7 @@ pub async fn init(
 ///
 /// # Panics
 /// This will panic if it is called more than once.
-pub async fn init_custom(
+pub async fn init_with(
     root_certificate: Option<RootCertificate>,
     https_only: RauthyHttpsOnly,
     danger_accept_invalid_certs: DangerAcceptInvalidCerts,
