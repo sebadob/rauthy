@@ -41,17 +41,19 @@
         // const data = window.document.getElementsByName('rauthy-data')[0].id.split('\n');
         userCodeLength = Number.parseInt(data[0]);
         clientId = data[1];
+    })
 
+    onMount(async () => {
         const params = getQueryParams();
         if (params.code) {
             formValues.userCode = params.code;
         }
-    })
 
-    onMount(async () => {
         let res = await getSessionInfo();
         if (res.ok) {
             sessionInfo = await res.json();
+        } else if (params.code) {
+            redirectToLogin(`device?code=${params.code}`);
         } else {
             redirectToLogin('device');
         }

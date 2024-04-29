@@ -22,10 +22,13 @@
 
         const data = new URLSearchParams();
         let redirectUri = REDIRECT_URI_SUCCESS;
-        if (query.state && query.state === 'account') {
-            redirectUri = REDIRECT_URI_SUCCESS_ACC;
-        } else if (query.state && query.state === 'device') {
-            redirectUri = REDIRECT_URI_SUCCESS_DEVICE;
+
+        if (query.state) {
+            if (query.state === 'account') {
+                redirectUri = REDIRECT_URI_SUCCESS_ACC;
+            } else if (query.state.startsWith('device')) {
+                redirectUri = `/auth/v1/${query.state}`;
+            }
         }
 
         data.append('grant_type', 'authorization_code');
