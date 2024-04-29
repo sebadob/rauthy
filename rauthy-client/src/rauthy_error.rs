@@ -69,3 +69,10 @@ impl From<serde_json::Error> for RauthyError {
         Self::Serde(value.to_string())
     }
 }
+
+#[cfg(feature = "qrcode")]
+impl From<qrcode::types::QrError> for RauthyError {
+    fn from(value: qrcode::types::QrError) -> Self {
+        Self::Internal(Cow::from(value.to_string()))
+    }
+}
