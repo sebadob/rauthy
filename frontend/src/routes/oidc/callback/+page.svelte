@@ -13,7 +13,6 @@
         CLIENT_ID,
         REDIRECT_URI_SUCCESS,
         REDIRECT_URI_SUCCESS_ACC,
-        REDIRECT_URI_SUCCESS_DEVICE
     } from "../../../utils/constants.js";
     import {getSessionInfoXsrf, getToken} from "../../../utils/dataFetching.js";
 
