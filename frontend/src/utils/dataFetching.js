@@ -100,6 +100,14 @@ export async function getClientLogo(id) {
     });
 }
 
+export async function postDeviceVerify(data) {
+    return await fetch('/auth/v1/oidc/device/verify', {
+        method: 'POST',
+        headers: getCsrfHeaders(),
+        body: JSON.stringify(data),
+    });
+}
+
 export async function getPasswordPolicy() {
     return await fetch('/auth/v1/password_policy', {
         method: 'GET',

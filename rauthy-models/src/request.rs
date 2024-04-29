@@ -158,6 +158,28 @@ pub struct DeviceGrantRequest {
     pub scope: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum DeviceAcceptedRequest {
+    Accept,
+    Decline,
+    Pending,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
+pub struct DeviceVerifyRequest {
+    /// Validation: `[a-zA-Z0-9]`
+    #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    pub user_code: String,
+    /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]
+    pub pow: String,
+    /// If `DeviceAcceptedRequest::Pending`, information about the request will be returned.
+    /// If `DeviceAcceptedRequest::Accept` - the device will get a Token Set
+    /// If `DeviceAcceptedRequest::Decline` - the code request will be deleted and rejected
+    pub device_accepted: DeviceAcceptedRequest,
+}
+
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
 pub struct EncKeyMigrateRequest {
     #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]

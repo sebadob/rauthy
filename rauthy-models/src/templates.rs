@@ -2,6 +2,7 @@ use crate::entity::colors::Colors;
 use crate::entity::password::PasswordPolicy;
 use crate::i18n::account::I18nAccount;
 use crate::i18n::authorize::I18nAuthorize;
+use crate::i18n::device::I18nDevice;
 use crate::i18n::email_confirm_change_html::I18nEmailConfirmChangeHtml;
 use crate::i18n::error::I18nError;
 use crate::i18n::index::I18nIndex;
@@ -13,7 +14,9 @@ use crate::language::Language;
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, HttpResponseBuilder};
 use askama_actix::Template;
-use rauthy_common::constants::{HEADER_HTML, OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION};
+use rauthy_common::constants::{
+    DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION,
+};
 use std::fmt::Debug;
 
 #[derive(Debug, Clone)]
@@ -174,6 +177,57 @@ impl AdminHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            ..Default::default()
+        };
+
+        res.render().unwrap()
+    }
+}
+
+#[derive(Default, Template)]
+#[template(path = "html/device.html")]
+pub struct DeviceHtml<'a> {
+    pub lang: &'a str,
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: bool,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub i18n: String,
+    pub auth_providers: &'a str,
+}
+
+impl DeviceHtml<'_> {
+    pub fn build(colors: &Colors, lang: &Language) -> String {
+        let res = DeviceHtml {
+            lang: lang.as_str(),
+            csrf_token: "",
+            data: &DEVICE_GRANT_USER_CODE_LENGTH.to_string(),
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            i18n: I18nDevice::build(lang).as_json(),
             ..Default::default()
         };
 

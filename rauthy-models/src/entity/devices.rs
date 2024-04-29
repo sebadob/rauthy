@@ -11,7 +11,7 @@ use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, FromRow};
 use std::ops::{Add, Sub};
-use tracing::info;
+use tracing::{debug, info};
 
 #[derive(Debug, FromRow)]
 pub struct DeviceEntity {
@@ -155,6 +155,7 @@ impl DeviceAuthCode {
         {
             None => Ok(None),
             Some(slf) => {
+                debug!("\n\n{:?}\n", slf);
                 if slf.exp < Utc::now() {
                     slf.delete(data).await?;
                     Ok(None)
@@ -195,10 +196,14 @@ impl DeviceAuthCode {
 
     pub fn verification_uri(&self) -> String {
         // TODO config var if we should host at / as well for better UX ?
-        format!("{}/auth/v1/devices", *PUB_URL_WITH_SCHEME)
+        format!("{}/auth/v1/device", *PUB_URL_WITH_SCHEME)
     }
 
     pub fn verification_uri_complete(&self) -> String {
-        format!("{}/auth/v1/devices", *PUB_URL_WITH_SCHEME)
+        format!(
+            "{}/auth/v1/device?code={}",
+            *PUB_URL_WITH_SCHEME,
+            self.user_code()
+        )
     }
 }

@@ -1,6 +1,6 @@
 <script>
     import {onMount} from "svelte";
-    import {getSessionInfo} from "../../utils/dataFetching.js";
+    import {postDeviceVerify, getPow, getSessionInfo} from "../../utils/dataFetching.js";
     import Loading from "../../components/Loading.svelte";
     import {extractFormErrors, getQueryParams, redirectToLogin} from "../../utils/helpers.js";
     import BrowserCheck from "../../components/BrowserCheck.svelte";
@@ -10,6 +10,9 @@
     import Button from "$lib/Button.svelte";
     import * as yup from "yup";
     import {REGEX_URI} from "../../utils/constants.js";
+    import {pow_work_wasm} from "../../spow/spow-wasm.js";
+
+    const btnWidthInline = '8rem';
 
     /** @type {any} */
     let t;
@@ -17,10 +20,13 @@
     let sessionInfo;
 
     let err = '';
-    let clientId = '';
     let userCodeLength = 8;
     let isLoading = false;
     let onInputValidate = false;
+
+    let scopes = undefined;
+    let isAccepted = false;
+    let isDeclined = false;
 
     let formValues = {userCode: ''};
     let formErrors = {userCode: ''};
@@ -37,10 +43,7 @@
     }
 
     onMount(() => {
-        const data = '8\nrauthy'.split('\n');
-        // const data = window.document.getElementsByName('rauthy-data')[0].id.split('\n');
-        userCodeLength = Number.parseInt(data[0]);
-        clientId = data[1];
+        userCodeLength = Number.parseInt(window.document.getElementsByName('rauthy-data')[0].id);
     })
 
     onMount(async () => {
@@ -65,7 +68,7 @@
         }
     }
 
-    async function onSubmit() {
+    async function onSubmit(deviceAccepted) {
         err = '';
         onInputValidate = true;
 
@@ -75,7 +78,39 @@
         }
         isLoading = true;
 
-        console.error('TODO onSubmit');
+        // compute PoW
+        const powRes = await getPow();
+        let body = await powRes.text();
+        if (!powRes.ok) {
+            err = body;
+            return;
+        }
+        let start = new Date().getUTCMilliseconds();
+        // Ryzen 5600G - difficulty 20 -> ~925 ms median
+        let pow = await pow_work_wasm(body);
+        let diff = new Date().getUTCMilliseconds() - start;
+        console.log('pow computation took ' + diff + ' ms');
+
+        let data = {
+            user_code: formValues.userCode,
+            pow,
+            device_accepted: deviceAccepted,
+        };
+        const res = await postDeviceVerify(data);
+        if (res.status === 200) {
+            const body = await res.json();
+            console.log(body);
+            scopes = body.scopes?.split(' ') || ['openid'];
+        } else if (res.status === 202) {
+            isAccepted = true;
+        } else if (res.status === 204) {
+            isDeclined = true;
+        } else if (res.status === 404) {
+            err = t.wrongOrExpired;
+        } else {
+            const body = await res.json();
+            err = body.message;
+        }
 
         isLoading = false;
     }
@@ -102,37 +137,69 @@
             <Loading/>
         {:else}
             <div class="container">
-                <div class="head">
-                    <div class="logo">
-                        {#if clientId}
-                            <img src="{`/auth/v1/clients/${clientId}/logo`}" alt="No Logo Available"/>
-                        {/if}
-                    </div>
-                </div>
-
                 <div class="name">
                     <h2>{t.title}</h2>
                 </div>
 
-                <div class="desc">
-                    {t.desc.replaceAll('{{count}}', userCodeLength)}
-                </div>
+                {#if scopes === undefined}
+                    <div class="desc">
+                        {t.desc.replaceAll('{{count}}', userCodeLength)}
+                    </div>
 
-                <Input
-                        name="userCode"
-                        bind:value={formValues.userCode}
-                        bind:error={formErrors.userCode}
-                        autocomplete="off"
-                        placeholder={t.userCode}
-                        on:enter={onSubmit}
-                        on:input={onInput}
-                >
-                    {t.userCode.toUpperCase()}
-                </Input>
+                    <Input
+                            name="userCode"
+                            bind:value={formValues.userCode}
+                            bind:error={formErrors.userCode}
+                            autocomplete="off"
+                            placeholder={t.userCode}
+                            on:enter={onSubmit}
+                            on:input={onInput}
+                    >
+                        {t.userCode.toUpperCase()}
+                    </Input>
 
-                <Button on:click={onSubmit} bind:isLoading>
-                    {t.submit.toUpperCase()}
-                </Button>
+                    <Button on:click={() => onSubmit('pending')} bind:isLoading>
+                        {t.submit.toUpperCase()}
+                    </Button>
+                {:else if isAccepted}
+                    <div class="desc">
+                        <p>{t.isAccepted}</p>
+                        <p>{t.closeWindow}</p>
+                    </div>
+                {:else if isDeclined}
+                    <div class="desc">
+                        <p class="declined">{t.isDeclined}</p>
+                        <p>{t.closeWindow}</p>
+                    </div>
+                {:else}
+                    <div class="desc">
+                        {t.descScopes}
+                        <ul>
+                            {#each scopes as scope}
+                                <li>{scope}</li>
+                            {/each}
+                        </ul>
+                    </div>
+
+                    <div class="inline">
+                        <Button
+                                on:click={() => onSubmit('accept')}
+                                bind:isLoading
+                                level={1}
+                                width={btnWidthInline}
+                        >
+                            {t.accept}
+                        </Button>
+                        <Button
+                                on:click={() => onSubmit('decline')}
+                                bind:isLoading
+                                level={3}
+                                width={btnWidthInline}
+                        >
+                            {t.decline}
+                        </Button>
+                    </div>
+                {/if}
 
                 <div class="err">{err}</div>
             </div>
@@ -154,6 +221,10 @@
         box-shadow: 5px 5px 5px rgba(128, 128, 128, .1);
     }
 
+    .declined {
+        color: var(--col-err);
+    }
+
     .err, .desc {
         margin: 0 .33rem 1rem .33rem;
     }
@@ -162,18 +233,9 @@
         color: var(--col-err);
     }
 
-    .head {
+    .inline {
         display: flex;
         justify-content: space-between;
-    }
-
-    .logo {
-        margin: 0 .25rem;
-        width: 84px;
-        height: 84px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
     }
 
     .name {

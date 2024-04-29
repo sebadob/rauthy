@@ -41,7 +41,7 @@ use rauthy_models::response::{
 use rauthy_models::templates::{
     AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
     AdminConfigHtml, AdminDocsHtml, AdminGroupsHtml, AdminHtml, AdminRolesHtml, AdminScopesHtml,
-    AdminSessionsHtml, AdminUsersHtml, IndexHtml, ProvidersHtml,
+    AdminSessionsHtml, AdminUsersHtml, DeviceHtml, IndexHtml, ProvidersHtml,
 };
 use rauthy_service::encryption;
 use redhac::{cache_get, cache_get_from, cache_get_value, QuorumHealth, QuorumState};
@@ -264,6 +264,18 @@ pub async fn get_admin_users_html(
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
     let body = AdminUsersHtml::build(&colors);
+
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
+}
+
+#[get("/device")]
+pub async fn get_device_html(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    let colors = ColorEntity::find_rauthy(&data).await?;
+    let lang = Language::try_from(&req).unwrap_or_default();
+    let body = DeviceHtml::build(&colors, &lang);
 
     Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
