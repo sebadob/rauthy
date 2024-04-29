@@ -143,6 +143,12 @@ pub struct DeviceCodeResponse<'a> {
     pub interval: Option<u8>,
 }
 
+#[derive(Debug, Serialize, ToSchema)]
+pub struct DeviceVerifyResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scopes: Option<String>,
+}
+
 #[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct DynamicClientResponse {
     pub client_id: String,

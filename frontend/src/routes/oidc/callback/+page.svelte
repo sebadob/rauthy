@@ -9,7 +9,11 @@
         saveIdToken
     } from "../../../utils/helpers.js";
     import {onMount} from "svelte";
-    import {CLIENT_ID, REDIRECT_URI_SUCCESS, REDIRECT_URI_SUCCESS_ACC} from "../../../utils/constants.js";
+    import {
+        CLIENT_ID,
+        REDIRECT_URI_SUCCESS,
+        REDIRECT_URI_SUCCESS_ACC,
+    } from "../../../utils/constants.js";
     import {getSessionInfoXsrf, getToken} from "../../../utils/dataFetching.js";
 
     onMount(async () => {
@@ -17,8 +21,13 @@
 
         const data = new URLSearchParams();
         let redirectUri = REDIRECT_URI_SUCCESS;
-        if (query.state && query.state === 'account') {
-            redirectUri = REDIRECT_URI_SUCCESS_ACC;
+
+        if (query.state) {
+            if (query.state === 'account') {
+                redirectUri = REDIRECT_URI_SUCCESS_ACC;
+            } else if (query.state.startsWith('device')) {
+                redirectUri = `/auth/v1/${query.state}`;
+            }
         }
 
         data.append('grant_type', 'authorization_code');

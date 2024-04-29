@@ -1,15 +1,9 @@
 use rauthy_client::device_code::DeviceCode;
+use rauthy_client::rauthy_error::RauthyError;
 use rauthy_client::{DangerAcceptInvalidCerts, RauthyHttpsOnly};
-use tracing::{subscriber, Level};
-use tracing_subscriber::FmtSubscriber;
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .finish();
-    subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
-
+async fn main() -> Result<(), RauthyError> {
     let mut device_code = DeviceCode::request_with(
         "http://localhost:8080",
         "device".to_string(),
@@ -21,13 +15,19 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
     println!("{}", device_code);
+    println!(
+        r#"
+    You will get a complete uri with the code included as well
+    for displaying in a QR code or something like that:
+    {}"#,
+        device_code.verification_uri_complete.as_ref().unwrap()
+    );
 
-    let _ts = device_code.wait_for_token().await?;
+    let ts = device_code.wait_for_token().await?;
+    println!("\nTokenSet on accept:\n{:?}", ts);
 
-    // If the request has been verified, we have received a TokenSet at this point,
-    // which we can use for furter requests.
-
-    // TODO complete the example with qr code generation and fetch_userinfo()
+    let claims = ts.id_claims()?.unwrap();
+    println!("\nWe get the user claims as well:\n{:?}", claims);
 
     Ok(())
 }

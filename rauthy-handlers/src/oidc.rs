@@ -11,7 +11,7 @@ use rauthy_common::constants::{
     DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT, GRANT_TYPE_DEVICE_CODE, HEADER_HTML,
     HEADER_RETRY_NOT_BEFORE, OPEN_USER_REG, SESSION_LIFETIME,
 };
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
@@ -21,17 +21,18 @@ use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::devices::DeviceAuthCode;
 use rauthy_models::entity::ip_rate_limit::DeviceIpRateLimit;
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JWKS};
+use rauthy_models::entity::pow::PowEntity;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::WebauthnCookie;
 use rauthy_models::entity::well_known::WellKnown;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
-    AuthRequest, DeviceGrantRequest, LoginRefreshRequest, LoginRequest, LogoutRequest,
-    TokenRequest, TokenValidationRequest,
+    AuthRequest, DeviceAcceptedRequest, DeviceGrantRequest, DeviceVerifyRequest,
+    LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest, TokenValidationRequest,
 };
 use rauthy_models::response::{
-    DeviceCodeResponse, JWKSCerts, JWKSPublicKeyCerts, OAuth2ErrorResponse,
+    DeviceCodeResponse, DeviceVerifyResponse, JWKSCerts, JWKSPublicKeyCerts, OAuth2ErrorResponse,
     OAuth2ErrorTypeResponse, SessionInfoResponse,
 };
 use rauthy_models::templates::{
@@ -39,10 +40,11 @@ use rauthy_models::templates::{
 };
 use rauthy_models::JwtCommonClaims;
 use rauthy_service::auth;
+use spow::pow::Pow;
 use std::borrow::Cow;
 use std::ops::Add;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tracing::error;
+use tracing::{debug, error};
 
 /// OIDC Authorization HTML
 ///
@@ -468,6 +470,57 @@ pub async fn post_device_auth(
     };
 
     HttpResponse::Ok().json(resp)
+}
+
+/// POST for vertifying an OAuth 2.0 Device Authorization Grant flow
+#[utoipa::path(
+    post,
+    path = "/oidc/device/verify",
+    tag = "oidc",
+    request_body = DeviceVerifyRequest,
+    responses(
+        (status = 200, description = "Ok", body = DeviceVerifyResponse),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+    ),
+)]
+#[post("/oidc/device/verify")]
+#[tracing::instrument(level = "debug", skip_all, fields(user_code = payload.user_code))]
+pub async fn post_device_verify(
+    data: web::Data<AppState>,
+    payload: actix_web_validator::Json<DeviceVerifyRequest>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+
+    let payload = payload.into_inner();
+    debug!("{:?}", payload);
+
+    let challenge = Pow::validate(&payload.pow)?;
+    PowEntity::check_prevent_reuse(&data, challenge.to_string()).await?;
+
+    let mut device_code = DeviceAuthCode::find(&data, payload.user_code)
+        .await?
+        .ok_or_else(|| {
+            ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "DeviceAuthCode does not exist".to_string(),
+            )
+        })?;
+
+    match payload.device_accepted {
+        DeviceAcceptedRequest::Accept => {
+            device_code.verified_by = Some(principal.user_id()?.to_string());
+            device_code.save(&data).await?;
+            Ok(HttpResponse::Accepted().finish())
+        }
+        DeviceAcceptedRequest::Decline => {
+            device_code.delete(&data).await?;
+            Ok(HttpResponse::NoContent().finish())
+        }
+        DeviceAcceptedRequest::Pending => Ok(HttpResponse::Ok().json(DeviceVerifyResponse {
+            scopes: device_code.scopes,
+        })),
+    }
 }
 
 // Logout HTML page

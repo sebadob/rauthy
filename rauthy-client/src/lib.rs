@@ -42,7 +42,7 @@ pub mod token_set;
 #[cfg(feature = "device-code")]
 pub mod device_code;
 
-mod rauthy_error;
+pub mod rauthy_error;
 
 pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
 

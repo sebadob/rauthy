@@ -21,6 +21,7 @@ use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
 use rauthy_models::i18n::account::I18nAccount;
 use rauthy_models::i18n::authorize::I18nAuthorize;
+use rauthy_models::i18n::device::I18nDevice;
 use rauthy_models::i18n::email_confirm_change_html::I18nEmailConfirmChangeHtml;
 use rauthy_models::i18n::error::I18nError;
 use rauthy_models::i18n::index::I18nIndex;
@@ -40,7 +41,7 @@ use rauthy_models::response::{
 use rauthy_models::templates::{
     AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
     AdminConfigHtml, AdminDocsHtml, AdminGroupsHtml, AdminHtml, AdminRolesHtml, AdminScopesHtml,
-    AdminSessionsHtml, AdminUsersHtml, IndexHtml, ProvidersHtml,
+    AdminSessionsHtml, AdminUsersHtml, DeviceHtml, IndexHtml, ProvidersHtml,
 };
 use rauthy_service::encryption;
 use redhac::{cache_get, cache_get_from, cache_get_value, QuorumHealth, QuorumState};
@@ -102,6 +103,7 @@ pub async fn post_i18n(
     let body = match req_data.content {
         I18nContent::Authorize => I18nAuthorize::build(&lang).as_json(),
         I18nContent::Account => I18nAccount::build(&lang).as_json(),
+        I18nContent::Device => I18nDevice::build(&lang).as_json(),
         I18nContent::EmailChangeConfirm => I18nEmailConfirmChangeHtml::build(&lang).as_json(),
         // Just return some default values for local dev -> dynamically built during prod
         I18nContent::Error => {
@@ -262,6 +264,18 @@ pub async fn get_admin_users_html(
 ) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy(&data).await?;
     let body = AdminUsersHtml::build(&colors);
+
+    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
+}
+
+#[get("/device")]
+pub async fn get_device_html(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    let colors = ColorEntity::find_rauthy(&data).await?;
+    let lang = Language::try_from(&req).unwrap_or_default();
+    let body = DeviceHtml::build(&colors, &lang);
 
     Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }

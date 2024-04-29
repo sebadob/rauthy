@@ -2,6 +2,7 @@ use crate::language::Language;
 
 pub mod account;
 pub mod authorize;
+pub mod device;
 pub mod email_change_info_new;
 pub mod email_change_info_old;
 pub mod email_confirm_change;
