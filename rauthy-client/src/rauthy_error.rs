@@ -63,3 +63,9 @@ impl From<jwt_simple::Error> for RauthyError {
         Self::Token(Cow::from(value.to_string()))
     }
 }
+
+impl From<serde_json::Error> for RauthyError {
+    fn from(value: serde_json::Error) -> Self {
+        Self::Serde(value.to_string())
+    }
+}

@@ -1,7 +1,7 @@
 use crate::jwks::{JwkKeyPairAlg, JwkPublicKey};
 use crate::provider::OidcProvider;
 use crate::rauthy_error::RauthyError;
-use crate::validate_jwt;
+use crate::{base64_url_no_pad_decode, validate_jwt};
 use jwt_simple::algorithms::{EdDSAPublicKeyLike, RSAPublicKeyLike};
 use jwt_simple::claims;
 use serde::{Deserialize, Serialize};
@@ -16,6 +16,23 @@ pub struct OidcTokenSet {
     pub id_token: Option<String>,
     pub expires_in: i32,
     pub refresh_token: Option<String>,
+}
+
+impl OidcTokenSet {
+    /// Returns the user claims from the `id_token`.
+    /// CAUTION: This does NOT validate the signature!
+    pub fn id_claims(&self) -> Result<Option<JwtIdClaims>, RauthyError> {
+        if let Some(raw_token) = &self.id_token {
+            let (_, rest) = raw_token.split_once('.').unwrap_or(("", ""));
+            let (claims_b64, _) = rest.split_once('.').unwrap_or(("", ""));
+            let bytes = base64_url_no_pad_decode(claims_b64)?;
+            let s = String::from_utf8_lossy(&bytes);
+            let claims = serde_json::from_str::<JwtIdClaims>(s.as_ref())?;
+            Ok(Some(claims))
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 /// Rauthy-supported token types. This client however does currently not support `DPoP`.
