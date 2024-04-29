@@ -8,4 +8,4 @@ LISTEN_ADDRESS=0.0.0.0 \
 LISTEN_PORT_HTTP=8091 \
 METRICS_PORT=9092 \
 PUB_URL=localhost:8091 \
-cargo run
+cargo run --features postgres
