@@ -23,6 +23,14 @@ async fn main() -> Result<(), RauthyError> {
         device_code.verification_uri_complete.as_ref().unwrap()
     );
 
+    // with the `qrcode` feature endabled, we can render the
+    // verification_uri_complete into one
+    let qr = device_code.qr_string()?;
+    println!("\n{}", qr);
+
+    // we can get a QR as SVG as well, but this example can't display it.
+    // let qr = device_code.qr_svg()?;
+
     let ts = device_code.wait_for_token().await?;
     println!("\nTokenSet on accept:\n{:?}", ts);
 

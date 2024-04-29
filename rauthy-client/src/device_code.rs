@@ -256,4 +256,42 @@ impl DeviceCode {
             }
         }
     }
+
+    #[cfg(feature = "qrcode")]
+    fn qr(&self) -> Result<qrcode::QrCode, RauthyError> {
+        if let Some(uri) = &self.verification_uri_complete {
+            Ok(qrcode::QrCode::new(uri)?)
+        } else {
+            Err(RauthyError::Provider(Cow::from(
+                "did not receive a `verification_uri_complete`",
+            )))
+        }
+    }
+
+    #[cfg(feature = "qrcode")]
+    pub fn qr_string(&self) -> Result<String, RauthyError> {
+        use qrcode::render::unicode;
+
+        let code = self.qr()?;
+        let image = code
+            .render::<unicode::Dense1x2>()
+            .dark_color(unicode::Dense1x2::Light)
+            .light_color(unicode::Dense1x2::Dark)
+            .build();
+        Ok(image)
+    }
+
+    #[cfg(feature = "qrcode")]
+    pub fn qr_svg(&self) -> Result<String, RauthyError> {
+        use qrcode::render::svg;
+
+        let code = self.qr()?;
+        let image = code
+            .render()
+            .min_dimensions(200, 200)
+            .dark_color(svg::Color("#000000"))
+            .light_color(svg::Color("#ffffff"))
+            .build();
+        Ok(image)
+    }
 }
