@@ -97,6 +97,7 @@ Keycloak was a rough inspiration in certain places and if something is working w
 - [x] Can serve a basic `webid` document for decentralized logins
 - [x] OpenID Connect Dynamic Client Registration
 - [x] Upstream Authentication Providers (Login with ...)
+- [x] OAuth 2.0 Device Authorization Grant flow
 - [x] Admin UI
 - [x] Account UI for each user with self-service
 - [x] Simple per client branding for the login page

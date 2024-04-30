@@ -19,6 +19,23 @@ reset page as well. The security benefits of this were rather small compared to 
 
 ### Features
 
+#### OAuth 2.0 Device Authorization Grant
+
+This release brings support for the OAuth 2.0 Device Authorization Grant.  
+On top of the default RFC spec, we have some additional features like optional rate limiting and being able to
+do the flow with confidential clients as well. The [rauthy-client](https://crates.io/crates/rauthy-client) has the
+basics implemented as well for fetching tokens via the `device_code` flow. An automatic refresh token handler is
+on the TODO list though. A small
+[example](https://github.com/sebadob/rauthy/blob/main/rauthy-client/examples/device-code/src/main.rs) exists as well.  
+You will find new sections in the account and admin -> user view, where you can see all linked devices, can give
+them a friendly name and revoke refresh tokens, if they exist.
+[544bebe](https://github.com/sebadob/rauthy/commit/544bebe162797870401ae60ad98dfb8cb6ecae92)
+[8d028bf](https://github.com/sebadob/rauthy/commit/8d028bf6273819395d946bc13f2215ec6289a8b6)
+[e8077ce](https://github.com/sebadob/rauthy/commit/e8077ce2f6c6c21d0e83ba531efe2bf5ef1c6d84)
+[62d41bc](https://github.com/sebadob/rauthy/commit/62d41bc2c1eb0e9b6b85f1c4528b333f8d6fb97e)
+[51a50ac](https://github.com/sebadob/rauthy/commit/51a50ac20118a87dd2914006e858bf159bcf4675)
+[9352b3c](https://github.com/sebadob/rauthy/commit/9352b3c73885f4467e209c1d797116216562c256)
+
 #### Dynamic Server Side Search + Pagination
 
 Until now, the Admin UI used client side searching and pagination. This is fine for most endpoints, but

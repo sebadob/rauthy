@@ -95,6 +95,7 @@ Keycloak was a rough inspiration in certain places and if something is working w
 - [x] Can serve a basic `webid` document for decentralized logins
 - [x] OpenID Connect Dynamic Client Registration
 - [x] Upstream Authentication Providers (Login with ...)
+- [x] OAuth 2.0 Device Authorization Grant flow
 - [x] Admin UI
 - [x] Account UI for each user with self-service
 - [x] Simple per client branding for the login page
@@ -141,7 +142,6 @@ Keycloak was a rough inspiration in certain places and if something is working w
 
 This is a non-exhaustive list of currently open TODO's
 
-- [ ] RFC 8628: OAuth 2.0 Device Authorization Grant for embedded and IoT devices
 - [ ] Benchmarks and Optimizations
 - [ ] Maybe get a nicer Rauthy Logo
 - [ ] experimental implementation of [dilithium](https://pq-crystals.org/dilithium/) singing algorithm to become quantum
