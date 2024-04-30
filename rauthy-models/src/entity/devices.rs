@@ -22,14 +22,15 @@ pub struct DeviceEntity {
     pub access_exp: i64,
     pub refresh_exp: Option<i64>,
     pub peer_ip: String,
+    pub name: String,
 }
 
 impl DeviceEntity {
     pub async fn insert(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         query!(
             r#"INSERT INTO devices
-            (id, client_id, user_id, created, access_exp, refresh_exp, peer_ip)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+            (id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
             self.id,
             self.client_id,
             self.user_id,
@@ -37,6 +38,7 @@ impl DeviceEntity {
             self.access_exp,
             self.refresh_exp,
             self.peer_ip,
+            self.name,
         )
         .execute(&data.db)
         .await?;
@@ -48,6 +50,16 @@ impl DeviceEntity {
             .fetch_one(&data.db)
             .await?;
         Ok(slf)
+    }
+
+    pub async fn find_for_user(
+        data: &web::Data<AppState>,
+        user_id: &str,
+    ) -> Result<Vec<Self>, ErrorResponse> {
+        let res = query_as!(Self, "SELECT * FROM devices WHERE user_id = $1", user_id)
+            .fetch_all(&data.db)
+            .await?;
+        Ok(res)
     }
 
     /// Deletes all devices where access and refresh token expirations are in the past

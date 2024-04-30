@@ -13,6 +13,7 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::continuation_token::ContinuationToken;
+use rauthy_models::entity::devices::DeviceEntity;
 use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::pow::PowEntity;
 use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
@@ -30,8 +31,8 @@ use rauthy_models::request::{
     WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_models::response::{
-    PasskeyResponse, UserAttrConfigResponse, UserAttrValueResponse, UserAttrValuesResponse,
-    UserResponse, WebIdResponse,
+    DeviceResponse, PasskeyResponse, UserAttrConfigResponse, UserAttrValueResponse,
+    UserAttrValuesResponse, UserResponse, WebIdResponse,
 };
 use rauthy_models::templates::{Error1Html, Error3Html, ErrorHtml, UserRegisterHtml};
 use rauthy_service::password_reset;
@@ -420,6 +421,34 @@ pub async fn put_user_attr(
             .map(UserAttrValueResponse::from)
             .collect::<Vec<UserAttrValueResponse>>();
     Ok(HttpResponse::Ok().json(UserAttrValuesResponse { values }))
+}
+
+/// GET all devices for this user linked via the `device_code` flow
+#[utoipa::path(
+    get,
+    path = "/users/{id}/devices",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok", body = UserAttrValuesResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+    ),
+)]
+#[get("/users/{id}/devices")]
+pub async fn get_user_devices(
+    data: web::Data<AppState>,
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    let user_id = path.into_inner();
+    principal.validate_user_or_admin(&user_id)?;
+
+    let resp = DeviceEntity::find_for_user(&data, &user_id)
+        .await?
+        .into_iter()
+        .map(DeviceResponse::from)
+        .collet::<Vec<DeviceResponse>>();
+
+    Ok(HttpResponse::Ok().json(resp))
 }
 
 /// Endpoint for resetting passwords

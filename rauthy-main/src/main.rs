@@ -568,6 +568,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(users::get_user_by_id)
                             .service(users::get_user_attr)
                             .service(users::put_user_attr)
+                            .service(users::get_user_devices)
                             .service(users::get_user_webid_data)
                             .service(users::put_user_webid_data)
                             .service(users::get_user_email_confirm)
