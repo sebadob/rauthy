@@ -145,6 +145,16 @@ impl ColorsRequest {
     }
 }
 
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
+pub struct DeviceRequest {
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$"))]
+    pub device_id: String,
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
+    #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
+    pub name: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
 pub struct DeviceGrantRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$`

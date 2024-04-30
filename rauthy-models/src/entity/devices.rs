@@ -1,4 +1,5 @@
 use crate::app_state::AppState;
+use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use actix_web::web;
 use chrono::{DateTime, Utc};
 use rauthy_common::constants::{
@@ -85,6 +86,37 @@ impl DeviceEntity {
             .execute(&data.db)
             .await?;
         // we don't need to manually clean up refresh_tokens because of FK cascades
+        Ok(())
+    }
+
+    pub async fn revoke_refresh_tokens(
+        data: &web::Data<AppState>,
+        device_id: &str,
+    ) -> Result<(), ErrorResponse> {
+        RefreshTokenDevice::invalidate_all_for_device(data, device_id).await?;
+        query!(
+            "UPDATE devices SET refresh_exp = null WHERE id = $1",
+            device_id,
+        )
+        .execute(&data.db)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn update_name(
+        data: &web::Data<AppState>,
+        device_id: &str,
+        user_id: &str,
+        name: &str,
+    ) -> Result<(), ErrorResponse> {
+        query!(
+            "UPDATE devices SET name = $1 WHERE id = $2 AND user_id = $3",
+            name,
+            device_id,
+            user_id
+        )
+        .execute(&data.db)
+        .await?;
         Ok(())
     }
 }

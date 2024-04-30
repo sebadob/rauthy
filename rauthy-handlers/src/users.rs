@@ -25,10 +25,10 @@ use rauthy_models::entity::webids::WebId;
 use rauthy_models::events::event::Event;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
-    MfaPurpose, NewUserRegistrationRequest, NewUserRequest, PaginationParams, PasswordResetRequest,
-    RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest, UserAttrConfigRequest,
-    UserAttrValuesUpdateRequest, WebIdRequest, WebauthnAuthFinishRequest, WebauthnAuthStartRequest,
-    WebauthnRegFinishRequest, WebauthnRegStartRequest,
+    DeviceRequest, MfaPurpose, NewUserRegistrationRequest, NewUserRequest, PaginationParams,
+    PasswordResetRequest, RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest,
+    UserAttrConfigRequest, UserAttrValuesUpdateRequest, WebIdRequest, WebauthnAuthFinishRequest,
+    WebauthnAuthStartRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_models::response::{
     DeviceResponse, PasskeyResponse, UserAttrConfigResponse, UserAttrValueResponse,
@@ -429,8 +429,9 @@ pub async fn put_user_attr(
     path = "/users/{id}/devices",
     tag = "users",
     responses(
-        (status = 200, description = "Ok", body = UserAttrValuesResponse),
+        (status = 200, description = "Ok", body = DeviceResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
 )]
 #[get("/users/{id}/devices")]
@@ -449,6 +450,72 @@ pub async fn get_user_devices(
         .collect::<Vec<DeviceResponse>>();
 
     Ok(HttpResponse::Ok().json(resp))
+}
+
+/// GET all devices for this user linked via the `device_code` flow
+#[utoipa::path(
+    put,
+    path = "/users/{id}/devices",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[put("/users/{id}/devices")]
+pub async fn put_user_device_name(
+    data: web::Data<AppState>,
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+    payload: actix_web_validator::Json<DeviceRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    let user_id = path.into_inner();
+    principal.validate_user_or_admin(&user_id)?;
+
+    let payload = payload.into_inner();
+    if let Some(name) = &payload.name {
+        DeviceEntity::update_name(&data, &payload.device_id, &user_id, name).await?;
+    }
+
+    Ok(HttpResponse::Ok().finish())
+}
+
+/// DELETE all existing refresh tokens for a user device
+///
+/// This does NOT revoke already existing access tokens, since they are stateless!
+#[utoipa::path(
+    delete,
+    path = "/users/{id}/devices",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[delete("/users/{id}/devices")]
+pub async fn delete_user_device(
+    data: web::Data<AppState>,
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+    payload: actix_web_validator::Json<DeviceRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    let user_id = path.into_inner();
+    principal.validate_user_or_admin(&user_id)?;
+
+    let payload = payload.into_inner();
+    let device = DeviceEntity::find(&data, &payload.device_id).await?;
+    if device.user_id.as_deref() != Some(&user_id) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "You don't have access to this device".to_string(),
+        ));
+    }
+
+    DeviceEntity::revoke_refresh_tokens(&data, &payload.device_id).await?;
+
+    Ok(HttpResponse::Ok().finish())
 }
 
 /// Endpoint for resetting passwords
