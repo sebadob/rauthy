@@ -18,7 +18,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
 
     let url = format!("{}/api_keys", get_backend_url());
     let res = client.get(&url).send().await?;
-    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+    assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
 
     // create a new api key
     let mut payload = ApiKeyRequest {

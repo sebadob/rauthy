@@ -44,19 +44,6 @@ impl Principal {
     }
 
     #[inline(always)]
-    pub fn is_user_authorized_for_id(&self, user_id: &str) -> Result<(), ErrorResponse> {
-        let self_uid = self.session.as_ref().and_then(|s| s.user_id.as_deref());
-        if !self.is_admin() && self_uid != Some(user_id) {
-            Err(ErrorResponse::new(
-                ErrorResponseType::Forbidden,
-                "Access is forbidden with this user".to_string(),
-            ))
-        } else {
-            Ok(())
-        }
-    }
-
-    #[inline(always)]
     pub fn is_admin(&self) -> bool {
         self.roles.contains(&*ROLE_ADMIN)
     }
@@ -116,9 +103,10 @@ impl Principal {
         }
     }
 
-    /// Validates the Principal's session to only allow rauthy admin access
+    /// Validates the Principal's session to only allow authorized Rauthy admin access.
     #[inline(always)]
     pub fn validate_admin_session(&self) -> Result<(), ErrorResponse> {
+        let _session = self.validate_session_auth()?;
         if !self.is_admin() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
@@ -161,15 +149,31 @@ impl Principal {
         }
     }
 
-    /// Validates the given user_id against this Principal.
+    /// Validates the principal, that it is either an admin or the user matches the
+    /// given `user_id`
     #[inline(always)]
-    pub fn validate_user_session(&self, user_id: &str) -> Result<(), ErrorResponse> {
-        if self.user_id()? == user_id {
-            Ok(())
-        } else {
+    pub fn validate_user_or_admin(&self, user_id: &str) -> Result<(), ErrorResponse> {
+        let session = self.validate_session_auth()?;
+        if !self.is_admin() && session.user_id.as_deref() != Some(user_id) {
             Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                "Invalid user ID".to_string(),
+                "Access is forbidden with this user".to_string(),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Validates the given user_id against this Principal.
+    pub fn validate_user_session(&self, user_id: &str) -> Result<(), ErrorResponse> {
+        let session = self.validate_session_auth()?;
+        if session.user_id.as_deref() == Some(user_id) {
+            Ok(())
+        } else {
+            trace!("Validating the session failed - was not in auth state");
+            Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "Unauthorized session or invalid user ID".to_string(),
             ))
         }
     }
