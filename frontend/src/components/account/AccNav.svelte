@@ -1,5 +1,7 @@
 <script>
     import Button from "$lib/Button.svelte";
+	import { onMount } from "svelte";
+	import { getQueryParams } from "../../utils/helpers";
 
     export let t;
     export let selected = t.navInfo;
@@ -14,6 +16,13 @@
     $: if (selected) {
         toggles();
     }
+
+    onMount(() => {
+       let params = getQueryParams();
+       if (params.v === 'devices') {
+            selected = t.devices;
+        } 
+    });
 
     function toggles() {
         let toggles = [];

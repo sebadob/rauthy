@@ -24,6 +24,7 @@
     let isLoading = false;
     let onInputValidate = false;
 
+    /** @type {string | undefined} */
     let scopes = undefined;
     let isAccepted = false;
     let isDeclined = false;
@@ -103,6 +104,9 @@
             scopes = body.scopes?.split(' ') || ['openid'];
         } else if (res.status === 202) {
             isAccepted = true;
+            setTimeout(() => {
+                window.location.replace('/auth/v1/account?v=devices');
+            }, 2000);
         } else if (res.status === 204) {
             isDeclined = true;
         } else if (res.status === 404) {
@@ -164,7 +168,7 @@
                 {:else if isAccepted}
                     <div class="desc">
                         <p>{t.isAccepted}</p>
-                        <p>{t.closeWindow}</p>
+                        <p>{t.autoRedirectAccount}</p>
                     </div>
                 {:else if isDeclined}
                     <div class="desc">

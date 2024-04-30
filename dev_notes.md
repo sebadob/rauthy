@@ -4,9 +4,10 @@
 
 ## TODO before v0.23.0
 
-- accept an optional `name` param during initial `device_code` request to have better readable first
-  name for new devices OR redirect to account view and open devices directly?
-- cleanup scheduler that looks for expired devices like every 24h
+- `USERINFO_STRICT` config option -> strict session / device id checking against DB
+- handle `offline_access` properly again - either decide to fully remove or support it everywhere
+- add `at_hash` claim to the ID token
+- sessions view needs pagination
 
 ## Stage 1 - essentials
 
@@ -14,10 +15,6 @@
 
 ## Stage 2 - features - do before v1.0.0
 
-- sessions view needs pagination + option to revoke a single session
-- `USERINFO_STRICT` config option -> strict session / device id checking against DB
-- add `at_hash` claim to the ID token
-- handle `offline_access` properly again - either decide to fully remove or support it everywhere
 - update the book with all the new features
 - benchmarks and performance tuning
 - maybe get a nicer logo
