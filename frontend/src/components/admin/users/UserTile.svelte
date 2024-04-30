@@ -12,6 +12,7 @@
     import {onMount} from "svelte";
     import {getUser} from "../../../utils/dataFetching.js";
     import Loading from "$lib/Loading.svelte";
+    import UserDevices from "./UserDevices.svelte";
 
     export let userEmail = '';
     export let userId = '';
@@ -26,6 +27,7 @@
         'ATTRIBUTES',
         'PASSWORD',
         'MFA',
+        'DEVICES',
         'LOGOUT',
         'DELETE',
     ];
@@ -73,32 +75,43 @@
 
     <div slot="body">
         {#if isLoading}
-            <Loading />
+            <Loading/>
         {:else}
             <TabBar labels={tabBarItems} bind:selected/>
 
             {#if selected === 'INFO'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
                     <UserInfo bind:user bind:onSave/>
                 </div>
             {:else if selected === 'ATTRIBUTES'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
                     <UserAttr bind:user bind:onSave/>
                 </div>
             {:else if selected === 'PASSWORD'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
                     <UserPassword bind:user bind:onSave/>
                 </div>
             {:else if selected === 'MFA'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
                     <UserMfa bind:user bind:onSave/>
                 </div>
+            {:else if selected === 'DEVICES'}
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
+                    <UserDevices bind:user/>
+                </div>
             {:else if selected === 'LOGOUT'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
                     <UserForceLogout bind:user/>
                 </div>
             {:else if selected === 'DELETE'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
                     <UserDelete bind:user onSave={onDelete}/>
                 </div>
             {/if}
