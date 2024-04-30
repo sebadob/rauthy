@@ -19,13 +19,12 @@
     /** @type {any} */
     let sessionInfo;
 
-    $: console.log(t);
-
     let err = '';
     let userCodeLength = 8;
     let isLoading = false;
     let onInputValidate = false;
 
+    /** @type {string | undefined} */
     let scopes = undefined;
     let isAccepted = false;
     let isDeclined = false;

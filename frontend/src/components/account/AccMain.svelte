@@ -16,8 +16,8 @@
     export let sessionInfo = {};
     export let user = {};
     // webIdData will stay undefined if it is not enabled in the backend
-     export let webIdData;
-    
+    export let webIdData;
+
     let innerWidth;
     let providers;
     let authProvider;
@@ -67,22 +67,22 @@
         </div>
 
         <div class="container">
-            <AccNav bind:t bind:selected showWide />
+            <AccNav bind:t bind:selected showWide/>
 
             <div class="innerPhone">
                 <div style="opacity: {$op}">
                     {#if content === t.navInfo}
-                        <AccInfo bind:t bind:user bind:webIdData viewModePhone bind:authProvider />
+                        <AccInfo bind:t bind:user bind:webIdData viewModePhone bind:authProvider/>
                     {:else if content === t.navEdit}
-                        <AccEdit bind:t bind:user viewModePhone />
+                        <AccEdit bind:t bind:user viewModePhone/>
                     {:else if content === t.navPassword}
-                        <AccPassword bind:t bind:user bind:authProvider viewModePhone />
+                        <AccPassword bind:t bind:user bind:authProvider viewModePhone/>
                     {:else if content === t.navMfa}
                         <AccMFA bind:t bind:sessionInfo bind:user/>
                     {:else if content === 'WebID'}
-                        <AccWebId bind:t bind:webIdData viewModePhone />
+                        <AccWebId bind:t bind:webIdData viewModePhone/>
                     {:else if content === t.devices}
-                        <AccDevices bind:t bind:sessionInfo />
+                        <AccDevices bind:t bind:sessionInfo/>
                     {/if}
                 </div>
             </div>
@@ -97,22 +97,22 @@
         </div>
 
         <div class="container">
-            <AccNav bind:t bind:selected showWebId={!!webIdData} showWide />
+            <AccNav bind:t bind:selected showWebId={!!webIdData} showWide/>
 
             <div class="inner">
                 <div style="opacity: {$op}">
                     {#if content === t.navInfo}
-                        <AccInfo bind:t bind:user bind:webIdData bind:authProvider />
+                        <AccInfo bind:t bind:user bind:webIdData bind:authProvider/>
                     {:else if content === t.navEdit}
-                        <AccEdit bind:t bind:user />
+                        <AccEdit bind:t bind:user/>
                     {:else if content === t.navPassword}
-                        <AccPassword bind:t bind:user bind:authProvider />
+                        <AccPassword bind:t bind:user bind:authProvider/>
                     {:else if content === t.navMfa}
-                        <AccMFA bind:t bind:sessionInfo bind:user />
+                        <AccMFA bind:t bind:sessionInfo bind:user/>
                     {:else if content === 'WebID'}
-                        <AccWebId bind:t bind:webIdData />
+                        <AccWebId bind:t bind:webIdData/>
                     {:else if content === t.devices}
-                        <AccDevices bind:t bind:sessionInfo />
+                        <AccDevices bind:t bind:sessionInfo/>
                     {/if}
                 </div>
             </div>
