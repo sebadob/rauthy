@@ -16,8 +16,8 @@
     export let sessionInfo = {};
     export let user = {};
     // webIdData will stay undefined if it is not enabled in the backend
-    export let webIdData;
-
+     export let webIdData;
+    
     let innerWidth;
     let providers;
     let authProvider;

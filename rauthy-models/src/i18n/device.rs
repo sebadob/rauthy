@@ -6,6 +6,7 @@ use serde::Serialize;
 #[serde(rename_all = "camelCase")]
 pub struct I18nDevice<'a> {
     accept: &'a str,
+    auto_redirect_account: &'a str,
     close_window: &'a str,
     decline: &'a str,
     desc: &'a str,
@@ -38,6 +39,7 @@ impl I18nDevice<'_> {
     fn build_en() -> Self {
         Self {
             accept: "Accept",
+            auto_redirect_account: "You will be redirected to your account now",
             close_window: "You can close this window now.",
             decline: "Decline",
             desc: "Please enter the {{count}} character user code from your device.",
@@ -57,6 +59,7 @@ impl I18nDevice<'_> {
     fn build_de() -> Self {
         Self {
             accept: "Akzeptieren",
+            auto_redirect_account: "Automatische Weiterleitung zum Account folgt",
             close_window: "Dieses Fenster kann nun geschlossen werden.",
             decline: "Ablehnen",
             desc: "Bitte den {{count}}-stelligen vom Geräte angezeigten Benutzer Code eingeben.",

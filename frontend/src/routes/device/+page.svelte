@@ -19,6 +19,8 @@
     /** @type {any} */
     let sessionInfo;
 
+    $: console.log(t);
+
     let err = '';
     let userCodeLength = 8;
     let isLoading = false;
@@ -103,6 +105,9 @@
             scopes = body.scopes?.split(' ') || ['openid'];
         } else if (res.status === 202) {
             isAccepted = true;
+            setTimeout(() => {
+                window.location.replace('/auth/v1/account?v=devices');
+            }, 2000);
         } else if (res.status === 204) {
             isDeclined = true;
         } else if (res.status === 404) {
@@ -164,7 +169,7 @@
                 {:else if isAccepted}
                     <div class="desc">
                         <p>{t.isAccepted}</p>
-                        <p>{t.closeWindow}</p>
+                        <p>{t.autoRedirectAccount}</p>
                     </div>
                 {:else if isDeclined}
                     <div class="desc">
