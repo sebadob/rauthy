@@ -3,7 +3,6 @@
 
     export let t;
     export let sessionInfo;
-    export let user = {};
 
 </script>
 
