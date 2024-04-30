@@ -1,5 +1,5 @@
 <script>
-    import {getUserDevices} from "../../utils/dataFetching.js";
+    import {getUserDevices, putUserDeviceName, deleteUserDeviceRefresh} from "../../utils/dataFetching.js";
     import {onMount} from "svelte";
     import ExpandContainer from "$lib/ExpandContainer.svelte";
     import Input from "$lib/inputs/Input.svelte";
@@ -7,6 +7,7 @@
     import {formatDateFromTs} from "../../utils/helpers.js";
     import Tooltip from "$lib/Tooltip.svelte";
     import IconStop from "$lib/icons/IconStop.svelte";
+    import {REGEX_CLIENT_NAME} from "../../utils/constants.js";
 
     export let t;
     export let userId = '';
@@ -36,31 +37,55 @@
     async function onSaveName(id) {
         let newName = formValues[id];
 
-        // TODO manual regexp validation for the name
-
-        // TODO only on success
-        // update the name in memory to blend out the save button
-        formErrors[id] = '';
-        for (let device of devices) {
-            if (device.id === id) {
-                device.name = newName;
-                break;
-            }
+        let isValid = REGEX_CLIENT_NAME.test(newName);
+        if (isValid) {
+            formErrors[id] = '';
+        } else {
+            formErrors[id] = t?.invalidInput || 'Invalid Input';
+            return;
         }
-        formValues[id] = newName;
+
+        let data = {
+            device_id: id,
+            name: newName,
+        };
+        let res = await putUserDeviceName(userId, data);
+        if (res.ok) {
+            // update the name in memory to blend out the save button
+            formErrors[id] = '';
+            for (let device of devices) {
+                if (device.id === id) {
+                    device.name = newName;
+                    break;
+                }
+            }
+            devices = [...devices];
+            formValues[id] = newName;
+        } else {
+            let body = await res.json();
+            console.error(body);
+        }
+
     }
 
     async function onRevokeRefresh(id) {
-        console.error('TODO implemente refresh revoke');
-
-        // TODO on success
-        for (let device of devices) {
-            if (device.id === id) {
-                device.refresh_exp = undefined;
-                break;
+        let data = {
+            device_id: id,
+        };
+        let res = await deleteUserDeviceRefresh(userId, data);
+        if (res.ok) {
+            for (let device of devices) {
+                if (device.id === id) {
+                    device.refresh_exp = undefined;
+                    break;
+                }
             }
+            devices = [...devices];
+        } else {
+            let body = await res.json();
+            console.error(body);
         }
-        devices = [...devices];
+
     }
 </script>
 
