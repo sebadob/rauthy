@@ -14,7 +14,8 @@ create table devices
     created     bigint  not null,
     access_exp  bigint  not null,
     refresh_exp bigint,
-    peer_ip     varchar not null
+    peer_ip     varchar not,
+    name        varchar not null
 );
 
 create index devices_access_exp_refresh_exp_index
