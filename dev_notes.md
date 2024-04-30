@@ -2,48 +2,13 @@
 
 ## CURRENT WORK
 
-https://datatracker.ietf.org/doc/html/rfc8628
+## TODO before v0.23.0
 
-oauth2 device auth flow for IoT and embedded devices:
-
-- [ ] API endpoint for initiating a device flow
-    - POST with `application/x-www-form-urlencoded` including:
-        - `client_id` long, secure, non-guessable
-        - `scope` optional
-    - response with `application/json`
-        - `device_code`
-        - `user_code`
-        - `verification_uri` should be short and easy to remember
-        - `verification_uri_complete` optional same as above with included `user_code`
-        - `expires_in` lifetime in seconds
-        - `interval` optional min client polling interval
-    - define error response as described in https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
-- [ ] accept `urn:ietf:params:oauth:grant-type:device_code` as grant on `/token`
-- [ ] API endpoints for fetching all information about an existing one
-- [ ] UI to show to the user for investigation + accept
-- [ ] update the .well-known with `urn:ietf:params:oauth:grant-type:device_code`
-- [ ] implement the logic either into `rauthy-client` or maybe an independent new crate, if one does not
-  yet exist for the rust ecosystem
-- [ ] create a fully working example with `rauthy` + `rauthy-client` on how to use it with a CLI tool
-
-save devices in a new table:
-
-- device_id generated -> added to access + refresh token
-- client_id opt fk
-- user_id opt fk
-- created
-- access_exp
-- refresh_exp -> can be auto-deleted by scheduler if refresh has expired -> needs new login anyway?
-- peer_ip
-- authorized_by -> fk to users -> what about user deletion in the future? set null or revoke access?
-
-new refresh tokens table for devices only:
-
-- id
-- device_id fk to devices
-- nbf
-- exp
-- scope
+- accept an optional `name` param during initial `device_code` request to have better readable first
+  name for new devices
+- cleanup scheduler that looks for expired devices like every 24h
+- UI in the user account view to see and revoke device access
+- have a counterpart in the Admin UI as well? -> provide a user_id and see all devices?
 
 ## Stage 1 - essentials
 

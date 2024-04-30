@@ -186,6 +186,13 @@ export async function getUser(id) {
     });
 }
 
+export async function getUserDevices(id) {
+    return await fetch(`/auth/v1/users/${id}/devices`, {
+        method: 'GET',
+        headers: getCsrfHeaders(),
+    });
+}
+
 export async function getUserPasskeys(id) {
     return await fetch(`/auth/v1/users/${id}/webauthn`, {
         method: 'GET',

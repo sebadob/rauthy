@@ -1182,14 +1182,19 @@ pub async fn grant_type_device_code(
             error!("Error deleting DeviceAuthCode: {:?}", err);
         }
 
+        let id = new_store_id();
         let device = DeviceEntity {
-            id: new_store_id(),
+            id: id.clone(),
             client_id: code.client_id,
             user_id: Some(user.id.clone()),
             created: now.timestamp(),
             access_exp: access_exp.timestamp(),
             refresh_exp,
             peer_ip: peer_ip.unwrap_or_default(),
+            // The very first name will just always be the id.
+            // This is a better UX than asking for a custom name each time.
+            // TODO add an optional `name` param to the initial device request?
+            name: id,
         };
         if let Err(err) = device.insert(data).await {
             error!("{:?}", err);

@@ -446,7 +446,7 @@ pub async fn get_user_devices(
         .await?
         .into_iter()
         .map(DeviceResponse::from)
-        .collet::<Vec<DeviceResponse>>();
+        .collect::<Vec<DeviceResponse>>();
 
     Ok(HttpResponse::Ok().json(resp))
 }

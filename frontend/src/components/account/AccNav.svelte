@@ -7,8 +7,8 @@
     export let showWide = false;
 
     let labels = showWebId ?
-        [t.navInfo, t.navEdit, t.navPassword, t.navMfa, 'WebID', t.navLogout]
-        : [t.navInfo, t.navEdit, t.navPassword, t.navMfa, t.navLogout];
+        [t.navInfo, t.navEdit, t.navPassword, t.navMfa, 'WebID', t.devices, t.navLogout]
+        : [t.navInfo, t.navEdit, t.navPassword, t.navMfa, t.devices, t.navLogout];
     let toggle = [];
 
     $: if (selected) {
