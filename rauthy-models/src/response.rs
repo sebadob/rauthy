@@ -3,6 +3,7 @@ use crate::entity::api_keys::{ApiKey, ApiKeyAccess};
 use crate::entity::auth_providers::{AuthProvider, AuthProviderType};
 use crate::entity::clients::Client;
 use crate::entity::clients_dyn::ClientDyn;
+use crate::entity::devices::DeviceEntity;
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType, JWKS};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::scopes::Scope;
@@ -127,6 +128,35 @@ impl From<Client> for ClientResponse {
             force_mfa: client.force_mfa,
             client_uri: client.client_uri,
             contacts,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct DeviceResponse {
+    pub id: String,
+    pub client_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<String>,
+    pub created: i64,
+    pub access_exp: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refresh_exp: Option<i64>,
+    pub peer_ip: String,
+    pub name: String,
+}
+
+impl From<DeviceEntity> for DeviceResponse {
+    fn from(value: DeviceEntity) -> Self {
+        Self {
+            id: value.id,
+            client_id: value.client_id,
+            user_id: value.user_id,
+            created: value.created,
+            access_exp: value.access_exp,
+            refresh_exp: value.refresh_exp,
+            peer_ip: value.peer_ip,
+            name: value.name,
         }
     }
 }

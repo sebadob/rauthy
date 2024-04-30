@@ -1,4 +1,5 @@
 use crate::app_state::AppState;
+use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use actix_web::web;
 use chrono::{DateTime, Utc};
 use rauthy_common::constants::{
@@ -22,14 +23,15 @@ pub struct DeviceEntity {
     pub access_exp: i64,
     pub refresh_exp: Option<i64>,
     pub peer_ip: String,
+    pub name: String,
 }
 
 impl DeviceEntity {
     pub async fn insert(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         query!(
             r#"INSERT INTO devices
-            (id, client_id, user_id, created, access_exp, refresh_exp, peer_ip)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+            (id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
             self.id,
             self.client_id,
             self.user_id,
@@ -37,6 +39,7 @@ impl DeviceEntity {
             self.access_exp,
             self.refresh_exp,
             self.peer_ip,
+            self.name,
         )
         .execute(&data.db)
         .await?;
@@ -48,6 +51,16 @@ impl DeviceEntity {
             .fetch_one(&data.db)
             .await?;
         Ok(slf)
+    }
+
+    pub async fn find_for_user(
+        data: &web::Data<AppState>,
+        user_id: &str,
+    ) -> Result<Vec<Self>, ErrorResponse> {
+        let res = query_as!(Self, "SELECT * FROM devices WHERE user_id = $1", user_id)
+            .fetch_all(&data.db)
+            .await?;
+        Ok(res)
     }
 
     /// Deletes all devices where access and refresh token expirations are in the past
@@ -73,6 +86,37 @@ impl DeviceEntity {
             .execute(&data.db)
             .await?;
         // we don't need to manually clean up refresh_tokens because of FK cascades
+        Ok(())
+    }
+
+    pub async fn revoke_refresh_tokens(
+        data: &web::Data<AppState>,
+        device_id: &str,
+    ) -> Result<(), ErrorResponse> {
+        RefreshTokenDevice::invalidate_all_for_device(data, device_id).await?;
+        query!(
+            "UPDATE devices SET refresh_exp = null WHERE id = $1",
+            device_id,
+        )
+        .execute(&data.db)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn update_name(
+        data: &web::Data<AppState>,
+        device_id: &str,
+        user_id: &str,
+        name: &str,
+    ) -> Result<(), ErrorResponse> {
+        query!(
+            "UPDATE devices SET name = $1 WHERE id = $2 AND user_id = $3",
+            name,
+            device_id,
+            user_id
+        )
+        .execute(&data.db)
+        .await?;
         Ok(())
     }
 }

@@ -9,6 +9,7 @@
     import AccPassword from "./AccPassword.svelte";
     import AccWebId from "./AccWebId.svelte";
     import {onMount} from "svelte";
+    import AccDevices from "./AccDevices.svelte";
 
     export let t;
 
@@ -80,6 +81,8 @@
                         <AccMFA bind:t bind:sessionInfo bind:user/>
                     {:else if content === 'WebID'}
                         <AccWebId bind:t bind:webIdData viewModePhone />
+                    {:else if content === t.devices}
+                        <AccDevices bind:t bind:sessionInfo />
                     {/if}
                 </div>
             </div>
@@ -108,6 +111,8 @@
                         <AccMFA bind:t bind:sessionInfo bind:user />
                     {:else if content === 'WebID'}
                         <AccWebId bind:t bind:webIdData />
+                    {:else if content === t.devices}
+                        <AccDevices bind:t bind:sessionInfo />
                     {/if}
                 </div>
             </div>

@@ -94,6 +94,7 @@ export async function logout(data) {
     });
 }
 
+// TODO we should be able to get rid of this -> not needed anymore
 export async function getClientLogo(id) {
     return await fetch(`/auth/v1/clients/${id}/logo`, {
         method: 'GET',
@@ -183,6 +184,29 @@ export async function getUser(id) {
     return await fetch(`/auth/v1/users/${id}`, {
         method: 'GET',
         headers: HEADERS.json,
+    });
+}
+
+export async function getUserDevices(id) {
+    return await fetch(`/auth/v1/users/${id}/devices`, {
+        method: 'GET',
+        headers: getCsrfHeaders(),
+    });
+}
+
+export async function putUserDeviceName(id, data) {
+    return await fetch(`/auth/v1/users/${id}/devices`, {
+        method: 'PUT',
+        headers: getCsrfHeaders(),
+        body: JSON.stringify(data),
+    });
+}
+
+export async function deleteUserDeviceRefresh(id, data) {
+    return await fetch(`/auth/v1/users/${id}/devices`, {
+        method: 'DELETE',
+        headers: getCsrfHeaders(),
+        body: JSON.stringify(data),
     });
 }
 
