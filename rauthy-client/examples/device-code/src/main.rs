@@ -7,7 +7,7 @@ async fn main() -> Result<(), RauthyError> {
     let mut device_code = DeviceCode::request_with(
         "http://localhost:8080",
         "device".to_string(),
-        Some("ZEW3dyKiPG27LdWrOFkNg6m9CaAEW5beoCxSufwdEBzSXMsxjNAXsnEbeI074d4V".to_string()),
+        None,
         None,
         None,
         RauthyHttpsOnly::No,
