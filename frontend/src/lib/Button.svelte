@@ -133,5 +133,7 @@
 
     .txt {
         margin-top: 4px;
+        /* fixes misplaced button labels on chrome */
+        -webkit-margin-before: 0;
     }
 </style>
