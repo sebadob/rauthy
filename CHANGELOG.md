@@ -87,16 +87,6 @@ a random password, which you need to pull from the logs.
 
 [1a7d9e4](https://github.com/sebadob/rauthy/commit/1a7d9e40aad551a44648fe39e24c05d36a621fab)
 
-#### New config var `USERINFO_STRICT`
-
-You can now set a new config variable called `USERINFO_STRICT`. If set so true, Rauthy will do additional
-validations on the `/userinfo` endpoint and actually revoke (even otherwise still valid) access tokens,
-when any user / client / device it has been issued for has been deleted, expired or disabled. The non-strict
-mode will simply make sure the token is valid and that the user still exists. The additional validations
-will consume more resources because they need 1-2 additional database lookups but will provide more strict
-validation and possible earlier token revocation. If you don't need it that strict, and you are resource
-constrained, set it to `false`.
-
 ```
 #####################################
 ############# BOOSTRAP ##############
@@ -119,7 +109,17 @@ BOOTSTRAP_ADMIN_EMAIL="alfred@batcave.io"
 BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID='$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 ```
 
-[]()
+#### New config var `USERINFO_STRICT`
+
+You can now set a new config variable called `USERINFO_STRICT`. If set so true, Rauthy will do additional
+validations on the `/userinfo` endpoint and actually revoke (even otherwise still valid) access tokens,
+when any user / client / device it has been issued for has been deleted, expired or disabled. The non-strict
+mode will simply make sure the token is valid and that the user still exists. The additional validations
+will consume more resources because they need 1-2 additional database lookups but will provide more strict
+validation and possible earlier token revocation. If you don't need it that strict, and you are resource
+constrained, set it to `false`.
+
+[198e7f9](https://github.com/sebadob/rauthy/commit/198e7f957c32fef5f0f786b145408f7d625f20ce)
 
 ### Bugfixes
 
