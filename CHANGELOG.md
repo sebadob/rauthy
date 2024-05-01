@@ -96,7 +96,7 @@ a password or passkey before.
 You can set environment variables either via `rauthy.cfg`, `.env` or as just an env var during
 initial setup in production. This makes it possible to create an admin account with the very first
 database setup with a custom E-Mail + Password, instead of the default `admin@localhost.de` with
-a random password, which you need to pull from the logs.
+a random password, which you need to pull from the logs. A single API Key may be bootstrapped as well.
 
 ```
 #####################################
@@ -118,6 +118,59 @@ BOOTSTRAP_ADMIN_EMAIL="alfred@batcave.io"
 # BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID are set, the hashed version
 # will always be prioritized.
 BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID='$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
+
+# You can provide an API Key during the initial prod database
+# bootstrap. This key must match the format and pass validation.
+# You need to provide it as a base64 encoded JSON in the format:
+#
+# ```
+# struct ApiKeyRequest {
+#     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
+#     name: String,
+#     /// Unix timestamp in seconds in the future (max year 2099)
+#     exp: Option<i64>,
+#     access: Vec<ApiKeyAccess>,
+# }
+#
+# struct ApiKeyAccess {
+#     group: AccessGroup,
+#     access_rights: Vec<AccessRights>,
+# }
+#
+# enum AccessGroup {
+#     Blacklist,
+#     Clients,
+#     Events,
+#     Generic,
+#     Groups,
+#     Roles,
+#     Secrets,
+#     Sessions,
+#     Scopes,
+#     UserAttributes,
+#     Users,
+# }
+#
+# #[serde(rename_all = "lowercase")]
+# enum AccessRights {
+#     Read,
+#     Create,
+#     Update,
+#     Delete,
+# }
+# ```
+#
+# You can use the `api_key_example.json` from `/` as
+# an example. Afterwards, just `base64 api_key_example.json | tr -d '\n'`
+#BOOTSTRAP_API_KEY="ewogICJuYW1lIjogImJvb3RzdHJhcCIsCiAgImV4cCI6IDE3MzU1OTk2MDAsCiAgImFjY2VzcyI6IFsKICAgIHsKICAgICAgImdyb3VwIjogIkNsaWVudHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgImdyb3VwIjogIlJvbGVzIiwKICAgICAgImFjY2Vzc19yaWdodHMiOiBbCiAgICAgICAgInJlYWQiLAogICAgICAgICJjcmVhdGUiLAogICAgICAgICJ1cGRhdGUiLAogICAgICAgICJkZWxldGUiCiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJncm91cCI6ICJHcm91cHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfQogIF0KfQ=="
+
+# The secret for the above defined bootstrap API Key.
+# This must be at least 64 alphanumeric characters long.
+# You will be able to use that key afterwards with setting
+# the `Authorization` header:
+#
+# `Authorization: API-Key <your_key_name_from_above>$<this_secret>`
+#BOOTSTRAP_API_KEY_SECRET=
 ```
 
 [1a7d9e4](https://github.com/sebadob/rauthy/commit/1a7d9e40aad551a44648fe39e24c05d36a621fab)
@@ -158,7 +211,9 @@ belongs to a specific `access_token` and has not been swapped out.
   [84bbdf7](https://github.com/sebadob/rauthy/commit/84bbdf7bc464e5869285225e446cb56e17f53583)
 - The "User Registration" header on the page for an open user registration as only showing up,
   when the domain was restricted.
-  []()
+  [fc3417e](https://github.com/sebadob/rauthy/commit/fc3417e04451a552bc89c2437c11cc2b019867a0)
+- Button labels were misplaced on chrome based browsers
+  [901eb55](https://github.com/sebadob/rauthy/commit/901eb55c3e980c5340ace0b67941dba447da0671)
 
 ## 0.22.1
 
