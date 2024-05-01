@@ -339,7 +339,12 @@ pub async fn build_access_token(
     lifetime: i64,
     scope: Option<TokenScopes>,
     scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
+    device_code_flow: DeviceCodeFlow,
 ) -> Result<String, ErrorResponse> {
+    let did = match device_code_flow {
+        DeviceCodeFlow::Yes(did) => Some(did),
+        DeviceCodeFlow::No => None,
+    };
     let mut custom_claims = JwtAccessClaims {
         typ: JwtTokenType::Bearer,
         azp: client.id.to_string(),
@@ -347,6 +352,7 @@ pub async fn build_access_token(
             .map(|s| s.0)
             .unwrap_or_else(|| client.default_scopes.clone().replace(',', " ")),
         allowed_origins: None,
+        did,
         email: None,
         preferred_username: None,
         roles: None,
@@ -692,6 +698,11 @@ pub async fn get_userinfo(
             "The user has not been found".to_string(),
         )
     })?;
+
+    // TODO reject the request if user has been disabled, even when the token is still valid
+
+    // TODO add an optional `did` or `device_id` to the token an to a device lookup at this point,
+    // if a token has been issued via a `device_code` flow and check, that it still exists.
 
     let roles = user.get_roles();
     let groups = scope.contains("groups").then(|| user.get_groups());
