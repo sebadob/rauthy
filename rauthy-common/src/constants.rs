@@ -131,6 +131,11 @@ lazy_static! {
     pub static ref RE_TOKEN_68: Regex = Regex::new(r"^[a-zA-Z0-9-._~+/]+=*$").unwrap();
     pub static ref RE_TOKEN_ENDPOINT_AUTH_METHOD: Regex = Regex::new(r"^(client_secret_post|client_secret_basic|none)$").unwrap();
 
+    pub static ref USERINFO_STRICT: bool = env::var("USERINFO_STRICT")
+        .unwrap_or_else(|_| String::from("true"))
+        .parse::<bool>()
+        .expect("USERINFO_STRICT cannot be parsed to bool - bad format");
+
     pub static ref AUTH_HEADERS_ENABLE: bool = env::var("AUTH_HEADERS_ENABLE")
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
