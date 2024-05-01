@@ -140,6 +140,7 @@ The Rauthy `id_token` now contains the access token hash `at_hash` claim. This i
 downstream validation, if a client provides both tokens and they are not coming from Rauthy directly.
 With the additional validation of the `at_hash` claim, clients can be 100% sure, that a given `id_token`
 belongs to a specific `access_token` and has not been swapped out.
+[]()
 
 ### Bugfixes
 
