@@ -78,6 +78,8 @@ pub struct JwtCommonClaims {
     pub azp: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub did: Option<String>,
     pub cnf: Option<JktClaim>,
 }
 

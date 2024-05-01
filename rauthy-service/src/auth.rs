@@ -15,7 +15,7 @@ use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, DEVICE_GRANT_POLL_INTERVAL,
     DEVICE_GRANT_REFRESH_TOKEN_LIFETIME, ENABLE_SOLID_AUD, ENABLE_WEB_ID, HEADER_DPOP_NONCE,
     IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME, REFRESH_TOKEN_LIFETIME, SESSION_LIFETIME,
-    SESSION_RENEW_MFA, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
+    SESSION_RENEW_MFA, TOKEN_BEARER, USERINFO_STRICT, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::HashPassword;
@@ -684,8 +684,14 @@ pub async fn get_userinfo(
     let bearer = get_bearer_token_from_header(req.headers())?;
 
     let claims = validate_token::<JwtCommonClaims>(data, &bearer).await?;
-    let scope = claims.custom.scope.unwrap_or_else(|| "openid".to_string());
+    if claims.custom.typ != JwtTokenType::Bearer {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Token Type must be 'Bearer'".to_string(),
+        ));
+    }
 
+    let scope = claims.custom.scope.unwrap_or_else(|| "openid".to_string());
     let uid = claims.subject.ok_or_else(|| {
         ErrorResponse::new(
             ErrorResponseType::Internal,
@@ -699,10 +705,40 @@ pub async fn get_userinfo(
         )
     })?;
 
-    // TODO reject the request if user has been disabled, even when the token is still valid
+    // reject the request if user has been disabled, even when the token is still valid
+    if !user.enabled || user.check_expired().is_err() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("user-disabled".to_string()),
+            "The user has been disabled".to_string(),
+        ));
+    }
 
-    // TODO add an optional `did` or `device_id` to the token an to a device lookup at this point,
-    // if a token has been issued via a `device_code` flow and check, that it still exists.
+    if *USERINFO_STRICT {
+        // if the token has been issued to a device, make sure it still exists and is valid
+        if let Some(device_id) = claims.custom.did {
+            // just make sure it still exists
+            DeviceEntity::find(data, &device_id).await.map_err(|_| {
+                ErrorResponse::new(
+                    ErrorResponseType::WWWAuthenticate("user-device-not-found".to_string()),
+                    "The user device has not been found".to_string(),
+                )
+            })?;
+        }
+
+        // make sure the original client still exists and is enabled
+        let client = Client::find(data, claims.custom.azp).await.map_err(|_| {
+            ErrorResponse::new(
+                ErrorResponseType::WWWAuthenticate("client-not-found".to_string()),
+                "The client has not been found".to_string(),
+            )
+        })?;
+        if !client.enabled {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::WWWAuthenticate("client-disabled".to_string()),
+                "The client has been disabled".to_string(),
+            ));
+        }
+    }
 
     let roles = user.get_roles();
     let groups = scope.contains("groups").then(|| user.get_groups());
