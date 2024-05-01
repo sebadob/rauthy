@@ -4,11 +4,11 @@
 
 ## TODO before v0.23.0
 
-- add `at_hash` claim to the ID token
 - fix button label misplacement on chrome + ugly tab bar
 - sessions view needs pagination
 - `refresh_token` handler in rauthy-client for `device_code` grant flow
 - check possibility of `no_std` for rauthy-client + device_code
+- when implementing userinfo lookup into the rauthy-client, add an fn to validate the `at_hash` as well
 
 ## Stage 1 - essentials
 
