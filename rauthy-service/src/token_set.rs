@@ -1,6 +1,5 @@
 use crate::auth;
 use actix_web::web;
-use rauthy_common::constants::OFFLINE_TOKEN_LT;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
@@ -163,12 +162,6 @@ impl TokenSet {
             } else {
                 diff
             }
-        } else if scope.contains("offline_access") {
-            // TODO just fully remove the offline_access branch here. The term is way too confusing
-            // and not even used currently. It is impossible to end up in this if-branch right now.
-            // The mechanism that rauthy currently uses for refresh token handling is way better
-            // to understand for new users.
-            *OFFLINE_TOKEN_LT
         } else {
             client.access_token_lifetime.unsigned_abs() as i64
         };

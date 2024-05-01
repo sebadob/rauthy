@@ -3,7 +3,7 @@ use actix_web::web;
 use chrono::Utc;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, DB_TYPE, DYN_CLIENT_CLEANUP_INTERVAL, DYN_CLIENT_CLEANUP_MINUTES,
-    DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG, IDX_JWK_KID, OFFLINE_TOKEN_LT, RAUTHY_VERSION,
+    DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG, IDX_JWK_KID, RAUTHY_VERSION,
 };
 use rauthy_common::DbType;
 use rauthy_models::app_state::{AppState, DbPool};
@@ -560,8 +560,9 @@ pub async fn jwks_cleanup(
 
         debug!("Running jwks_cleanup scheduler");
 
+        // clean up all JWKs older than 90 days
         let cleanup_threshold = OffsetDateTime::now_utc()
-            .sub(::time::Duration::seconds(*OFFLINE_TOKEN_LT))
+            .sub(::time::Duration::seconds(3600 * 24 * 90))
             .unix_timestamp();
 
         // find all existing jwks

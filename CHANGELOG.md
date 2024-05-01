@@ -4,6 +4,8 @@
 
 ### Breaking
 
+#### Removal of `UNSAFE_NO_RESET_BINDING` in favor of `PASSWORD_RESET_COOKIE_BINDING`
+
 The config variable `UNSAFE_NO_RESET_BINDING` has been removed in favor of `PASSWORD_RESET_COOKIE_BINDING`.
 The logic for this security feature has been reversed. The default behavior until now was to block subsequent
 requests to the password reset form if they provided an invalid binding cookie. This created issues for people
@@ -16,6 +18,16 @@ Additionally, to improve the UX even further, the additional E-Mail input form h
 reset page as well. The security benefits of this were rather small compared to the UX degradation.
 #365
 [1af7b92](https://github.com/sebadob/rauthy/commit/1af7b92204a99de4883154055bb3081dc196d759)
+
+#### Removal of `OFFLINE_TOKEN_LIFETIME` config var
+
+`OFFLINE_TOKEN_LIFETIME` has been removed from the config. This variable has been deprecated since a lof
+of versions now. The `offline_access` scope was not even allowed via the UI for a long time now, so these offline
+tokens were never issued anyway.  
+The "new" mechanism Rauthy uses with the switch in the Admin UI to issue / allow refresh tokens for a client
+is much more clear, since the `offline_access` scope produces a lot of confusion for people new to OIDC.
+From the name, it simply makes no sense that you need to activate `offline_access` to get a refresh token.
+Having an option named "allow refresh tokens" is just so much better.
 
 ### Features
 
