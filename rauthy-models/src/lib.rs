@@ -78,6 +78,8 @@ pub struct JwtCommonClaims {
     pub azp: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub did: Option<String>,
     pub cnf: Option<JktClaim>,
 }
 
@@ -151,6 +153,8 @@ pub struct JwtAccessClaims {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub allowed_origins: Option<Vec<String>>,
     // user part
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub did: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

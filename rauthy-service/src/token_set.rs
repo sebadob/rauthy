@@ -19,7 +19,7 @@ pub enum AuthCodeFlow {
     No,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum DeviceCodeFlow {
     Yes(String),
     No,
@@ -63,6 +63,7 @@ impl TokenSet {
             client.access_token_lifetime as i64,
             None,
             None,
+            DeviceCodeFlow::No,
         )
         .await?;
 
@@ -163,6 +164,10 @@ impl TokenSet {
                 diff
             }
         } else if scope.contains("offline_access") {
+            // TODO just fully remove the offline_access branch here. The term is way too confusing
+            // and not even used currently. It is impossible to end up in this if-branch right now.
+            // The mechanism that rauthy currently uses for refresh token handling is way better
+            // to understand for new users.
             *OFFLINE_TOKEN_LT
         } else {
             client.access_token_lifetime.unsigned_abs() as i64
@@ -193,6 +198,7 @@ impl TokenSet {
             lifetime,
             Some(TokenScopes(scope)),
             customs_access,
+            device_code_flow.clone(),
         )
         .await?;
         let refresh_token = if client.refresh_token {

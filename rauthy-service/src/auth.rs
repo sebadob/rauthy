@@ -15,7 +15,7 @@ use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, DEVICE_GRANT_POLL_INTERVAL,
     DEVICE_GRANT_REFRESH_TOKEN_LIFETIME, ENABLE_SOLID_AUD, ENABLE_WEB_ID, HEADER_DPOP_NONCE,
     IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME, REFRESH_TOKEN_LIFETIME, SESSION_LIFETIME,
-    SESSION_RENEW_MFA, TOKEN_BEARER, WEBAUTHN_REQ_EXP,
+    SESSION_RENEW_MFA, TOKEN_BEARER, USERINFO_STRICT, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::HashPassword;
@@ -339,7 +339,12 @@ pub async fn build_access_token(
     lifetime: i64,
     scope: Option<TokenScopes>,
     scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
+    device_code_flow: DeviceCodeFlow,
 ) -> Result<String, ErrorResponse> {
+    let did = match device_code_flow {
+        DeviceCodeFlow::Yes(did) => Some(did),
+        DeviceCodeFlow::No => None,
+    };
     let mut custom_claims = JwtAccessClaims {
         typ: JwtTokenType::Bearer,
         azp: client.id.to_string(),
@@ -347,6 +352,7 @@ pub async fn build_access_token(
             .map(|s| s.0)
             .unwrap_or_else(|| client.default_scopes.clone().replace(',', " ")),
         allowed_origins: None,
+        did,
         email: None,
         preferred_username: None,
         roles: None,
@@ -678,8 +684,14 @@ pub async fn get_userinfo(
     let bearer = get_bearer_token_from_header(req.headers())?;
 
     let claims = validate_token::<JwtCommonClaims>(data, &bearer).await?;
-    let scope = claims.custom.scope.unwrap_or_else(|| "openid".to_string());
+    if claims.custom.typ != JwtTokenType::Bearer {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Token Type must be 'Bearer'".to_string(),
+        ));
+    }
 
+    let scope = claims.custom.scope.unwrap_or_else(|| "openid".to_string());
     let uid = claims.subject.ok_or_else(|| {
         ErrorResponse::new(
             ErrorResponseType::Internal,
@@ -692,6 +704,41 @@ pub async fn get_userinfo(
             "The user has not been found".to_string(),
         )
     })?;
+
+    // reject the request if user has been disabled, even when the token is still valid
+    if !user.enabled || user.check_expired().is_err() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("user-disabled".to_string()),
+            "The user has been disabled".to_string(),
+        ));
+    }
+
+    if *USERINFO_STRICT {
+        // if the token has been issued to a device, make sure it still exists and is valid
+        if let Some(device_id) = claims.custom.did {
+            // just make sure it still exists
+            DeviceEntity::find(data, &device_id).await.map_err(|_| {
+                ErrorResponse::new(
+                    ErrorResponseType::WWWAuthenticate("user-device-not-found".to_string()),
+                    "The user device has not been found".to_string(),
+                )
+            })?;
+        }
+
+        // make sure the original client still exists and is enabled
+        let client = Client::find(data, claims.custom.azp).await.map_err(|_| {
+            ErrorResponse::new(
+                ErrorResponseType::WWWAuthenticate("client-not-found".to_string()),
+                "The client has not been found".to_string(),
+            )
+        })?;
+        if !client.enabled {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::WWWAuthenticate("client-disabled".to_string()),
+                "The client has been disabled".to_string(),
+            ));
+        }
+    }
 
     let roles = user.get_roles();
     let groups = scope.contains("groups").then(|| user.get_groups());
