@@ -1,16 +1,59 @@
 use crate::auth;
 use actix_web::web;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::scopes::Scope;
 use rauthy_models::entity::user_attr::UserAttrValueEntity;
 use rauthy_models::entity::users::User;
 use rauthy_models::JwtTokenType;
+use ring::digest;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use time::OffsetDateTime;
 use utoipa::ToSchema;
+
+pub enum AtHashAlg {
+    Sha256,
+    Sha384,
+    Sha512,
+}
+
+impl TryFrom<&str> for AtHashAlg {
+    type Error = ErrorResponse;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let slf = match value {
+            "RS256" => Self::Sha256,
+            "RS384" => Self::Sha384,
+            "RS512" => Self::Sha512,
+            "EdDSA" => Self::Sha512,
+            _ => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Internal,
+                    "Cannot build AtHashAlg from value".to_string(),
+                ));
+            }
+        };
+        Ok(slf)
+    }
+}
+
+pub struct AtHash(pub String);
+
+impl AtHash {
+    pub fn build(access_token: &[u8], alg: AtHashAlg) -> Self {
+        let hash = match alg {
+            AtHashAlg::Sha256 => digest::digest(&digest::SHA256, access_token),
+            AtHashAlg::Sha384 => digest::digest(&digest::SHA384, access_token),
+            AtHashAlg::Sha512 => digest::digest(&digest::SHA512, access_token),
+        };
+        let bytes = hash.as_ref();
+        let (left_bits, _) = bytes.split_at(bytes.len() / 2);
+        Self(base64_url_no_pad_encode(left_bits))
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub enum AuthCodeFlow {
@@ -171,27 +214,33 @@ impl TokenSet {
         } else {
             JwtTokenType::Bearer
         };
-        let id_token = auth::build_id_token(
-            user,
-            data,
-            client,
-            dpop_fingerprint.clone(),
-            lifetime,
-            nonce,
-            &scope,
-            customs_id,
-            auth_code_flow,
-        )
-        .await?;
         let access_token = auth::build_access_token(
             Some(user),
             data,
             client,
             dpop_fingerprint.clone(),
             lifetime,
-            Some(TokenScopes(scope)),
+            Some(TokenScopes(scope.clone())),
             customs_access,
             device_code_flow.clone(),
+        )
+        .await?;
+
+        let at_hash = AtHash::build(
+            access_token.as_bytes(),
+            AtHashAlg::try_from(client.access_token_alg.as_str())?,
+        );
+        let id_token = auth::build_id_token(
+            user,
+            data,
+            client,
+            dpop_fingerprint.clone(),
+            at_hash,
+            lifetime,
+            nonce,
+            &scope,
+            customs_id,
+            auth_code_flow,
         )
         .await?;
         let refresh_token = if client.refresh_token {
@@ -219,5 +268,25 @@ impl TokenSet {
             expires_in: client.access_token_lifetime,
             refresh_token,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_at_hash() {
+        let ref_token =
+            b"YmJiZTAwYmYtMzgyOC00NzhkLTkyOTItNjJjNDM3MGYzOWIy9sFhvH8K_x8UIHj1osisS57f5DduL";
+
+        let sha256 = AtHash::build(ref_token, AtHashAlg::Sha256);
+        assert_eq!(&sha256.0, "xsZZrUssMXjL3FBlzoSh2g");
+
+        let sha384 = AtHash::build(ref_token, AtHashAlg::Sha384);
+        assert_eq!(&sha384.0, "adt46pcdiB-l6eTNifgoVM-5AIJAxq84");
+
+        let sha512 = AtHash::build(ref_token, AtHashAlg::Sha512);
+        assert_eq!(&sha512.0, "p2LHG4H-8pYDc0hyVOo3iIHvZJUqe9tbj3jESOuXbkY");
     }
 }

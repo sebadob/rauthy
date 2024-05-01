@@ -28,6 +28,7 @@ The "new" mechanism Rauthy uses with the switch in the Admin UI to issue / allow
 is much more clear, since the `offline_access` scope produces a lot of confusion for people new to OIDC.
 From the name, it simply makes no sense that you need to activate `offline_access` to get a refresh token.
 Having an option named "allow refresh tokens" is just so much better.
+[71db7fe](https://github.com/sebadob/rauthy/commit/71db7fef18568a599f30cae6e494bba40cb33e7d)
 
 ### Features
 
@@ -132,6 +133,14 @@ validation and possible earlier token revocation. If you don't need it that stri
 constrained, set it to `false`.
 
 [198e7f9](https://github.com/sebadob/rauthy/commit/198e7f957c32fef5f0f786b145408f7d625f20ce)
+
+#### `at_hash` in `id_token`
+
+The Rauthy `id_token` now contains the access token hash `at_hash` claim. This is needed for additional
+downstream validation, if a client provides both tokens and they are not coming from Rauthy directly.
+With the additional validation of the `at_hash` claim, clients can be 100% sure, that a given `id_token`
+belongs to a specific `access_token` and has not been swapped out.
+[]()
 
 ### Bugfixes
 

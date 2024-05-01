@@ -104,6 +104,7 @@ pub struct JwtIdClaims {
     pub typ: JwtTokenType,
     pub amr: Vec<String>,
     pub auth_time: i64,
+    pub at_hash: Option<String>,
     pub preferred_username: String,
     pub email: Option<String>,
     pub email_verified: Option<bool>,
