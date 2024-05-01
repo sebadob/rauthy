@@ -1,16 +1,25 @@
 use crate::auth;
 use actix_web::web;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::scopes::Scope;
 use rauthy_models::entity::user_attr::UserAttrValueEntity;
 use rauthy_models::entity::users::User;
 use rauthy_models::JwtTokenType;
+use ring::digest;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use time::OffsetDateTime;
 use utoipa::ToSchema;
+
+#[derive(Debug)]
+enum AtHash {
+    Sha256,
+    Sha384,
+    Sha512,
+}
 
 #[derive(Debug, PartialEq)]
 pub enum AuthCodeFlow {
@@ -44,6 +53,17 @@ pub struct TokenSet {
 }
 
 impl TokenSet {
+    fn calc_at_hash(access_token: &[u8], alg: AtHash) -> String {
+        let hash = match alg {
+            AtHash::Sha256 => digest::digest(&digest::SHA256, access_token),
+            AtHash::Sha384 => digest::digest(&digest::SHA384, access_token),
+            AtHash::Sha512 => digest::digest(&digest::SHA512, access_token),
+        };
+        let bytes = hash.as_ref();
+        let (left_bits, _) = bytes.split_at(bytes.len() / 2);
+        base64_url_no_pad_encode(left_bits)
+    }
+
     pub async fn for_client_credentials(
         data: &web::Data<AppState>,
         client: &Client,
@@ -171,6 +191,17 @@ impl TokenSet {
         } else {
             JwtTokenType::Bearer
         };
+        let access_token = auth::build_access_token(
+            Some(user),
+            data,
+            client,
+            dpop_fingerprint.clone(),
+            lifetime,
+            Some(TokenScopes(scope.clone())),
+            customs_access,
+            device_code_flow.clone(),
+        )
+        .await?;
         let id_token = auth::build_id_token(
             user,
             data,
@@ -181,17 +212,6 @@ impl TokenSet {
             &scope,
             customs_id,
             auth_code_flow,
-        )
-        .await?;
-        let access_token = auth::build_access_token(
-            Some(user),
-            data,
-            client,
-            dpop_fingerprint.clone(),
-            lifetime,
-            Some(TokenScopes(scope)),
-            customs_access,
-            device_code_flow.clone(),
         )
         .await?;
         let refresh_token = if client.refresh_token {
@@ -219,5 +239,25 @@ impl TokenSet {
             expires_in: client.access_token_lifetime,
             refresh_token,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_at_hash() {
+        let ref_token =
+            b"YmJiZTAwYmYtMzgyOC00NzhkLTkyOTItNjJjNDM3MGYzOWIy9sFhvH8K_x8UIHj1osisS57f5DduL";
+
+        let sha256 = TokenSet::calc_at_hash(ref_token, AtHash::Sha256);
+        assert_eq!(&sha256, "xsZZrUssMXjL3FBlzoSh2g");
+
+        let sha384 = TokenSet::calc_at_hash(ref_token, AtHash::Sha384);
+        assert_eq!(&sha384, "adt46pcdiB-l6eTNifgoVM-5AIJAxq84");
+
+        let sha512 = TokenSet::calc_at_hash(ref_token, AtHash::Sha512);
+        assert_eq!(&sha512, "p2LHG4H-8pYDc0hyVOo3iIHvZJUqe9tbj3jESOuXbkY");
     }
 }
