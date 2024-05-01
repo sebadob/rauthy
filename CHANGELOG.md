@@ -98,8 +98,6 @@ initial setup in production. This makes it possible to create an admin account w
 database setup with a custom E-Mail + Password, instead of the default `admin@localhost.de` with
 a random password, which you need to pull from the logs.
 
-[1a7d9e4](https://github.com/sebadob/rauthy/commit/1a7d9e40aad551a44648fe39e24c05d36a621fab)
-
 ```
 #####################################
 ############# BOOSTRAP ##############
@@ -122,6 +120,8 @@ BOOTSTRAP_ADMIN_EMAIL="alfred@batcave.io"
 BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID='$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 ```
 
+[1a7d9e4](https://github.com/sebadob/rauthy/commit/1a7d9e40aad551a44648fe39e24c05d36a621fab)
+
 #### New config var `USERINFO_STRICT`
 
 You can now set a new config variable called `USERINFO_STRICT`. If set so true, Rauthy will do additional
@@ -130,8 +130,7 @@ when any user / client / device it has been issued for has been deleted, expired
 mode will simply make sure the token is valid and that the user still exists. The additional validations
 will consume more resources because they need 1-2 additional database lookups but will provide more strict
 validation and possible earlier token revocation. If you don't need it that strict, and you are resource
-constrained, set it to `false`.
-
+constrained, set it to `false`.  
 [198e7f9](https://github.com/sebadob/rauthy/commit/198e7f957c32fef5f0f786b145408f7d625f20ce)
 
 #### `at_hash` in `id_token`
@@ -139,8 +138,8 @@ constrained, set it to `false`.
 The Rauthy `id_token` now contains the access token hash `at_hash` claim. This is needed for additional
 downstream validation, if a client provides both tokens and they are not coming from Rauthy directly.
 With the additional validation of the `at_hash` claim, clients can be 100% sure, that a given `id_token`
-belongs to a specific `access_token` and has not been swapped out.
-[]()
+belongs to a specific `access_token` and has not been swapped out.  
+[d506865](https://github.com/sebadob/rauthy/commit/d506865898e61fce45e5cf4c754ad4300bd37161)
 
 ### Bugfixes
 
