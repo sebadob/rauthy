@@ -4,7 +4,7 @@
 
 ## TODO before v0.23.0
 
-- fix button label misplacement on chrome + ugly tab bar
+- link to upstream provider with existing account
 - sessions view needs pagination
 - check out the possibility to include SCIM
 

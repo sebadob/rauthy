@@ -15,10 +15,10 @@
     let expandContainer;
 
     const tabBarItems = [
-        'CONFIG',
-        'SECRET',
-        'BRANDING',
-        'DELETE',
+        'Config',
+        'Secret',
+        'Branding',
+        'Delete',
     ];
     let selected = tabBarItems[0];
     const tabBarDur = 200;
@@ -51,22 +51,22 @@
     <div slot="body">
         <TabBar labels={tabBarItems} bind:selected/>
 
-        {#if selected === 'CONFIG'}
+        {#if selected === 'Config'}
             <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <ClientConfig bind:client bind:onSave/>
             </div>
 
-        {:else if selected === 'SECRET'}
+        {:else if selected === 'Secret'}
             <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <ClientSecret bind:client/>
             </div>
 
-        {:else if selected === 'BRANDING'}
+        {:else if selected === 'Branding'}
             <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <ClientBranding bind:client/>
             </div>
 
-        {:else if selected === 'DELETE'}
+        {:else if selected === 'Delete'}
             <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <ClientDelete bind:client onSave={onDelete}/>
             </div>

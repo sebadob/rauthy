@@ -1,6 +1,4 @@
 <script>
-    import {fade} from "svelte/transition";
-
     export let eventsCollapsed = true;
     export let eventsWide = false;
 </script>

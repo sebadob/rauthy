@@ -5,7 +5,8 @@
 
     export let idx = 0;
     export let show = false;
-    export let expandedCallback = () => {};
+    export let expandedCallback = () => {
+    };
 
     let isHover = false;
     let element;
@@ -31,7 +32,7 @@
 
     function toggle() {
         if (!show && expandedCallback) {
-            // If we will toggle from not showing to showing, we call the callback
+            // If we toggle from not showing to showing, the callback
             expandedCallback();
         }
         show = !show;
@@ -68,9 +69,7 @@
                 on:keypress={toggle}
         >
             <div style="rotate: {$rotate}deg">
-                <IconChevronRight
-                        color={isHover ? 'var(--col-act2a)' : 'var(--col-act2)'}
-                />
+                <IconChevronRight color={isHover ? 'var(--col-act2a)' : 'var(--col-act2)'}/>
             </div>
         </div>
 

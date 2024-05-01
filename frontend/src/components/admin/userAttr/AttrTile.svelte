@@ -13,8 +13,8 @@
     let expandContainer;
 
     const tabBarItems = [
-        'CONFIG',
-        'DELETE',
+        'Config',
+        'Delete',
     ];
     let selected = tabBarItems[0];
     const tabBarDur = 200;
@@ -39,12 +39,12 @@
     <div slot="body">
         <TabBar labels={tabBarItems} bind:selected/>
 
-        {#if selected === 'CONFIG'}
+        {#if selected === 'Config'}
             <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <UserAttrConfig bind:attr bind:onSave/>
             </div>
 
-        {:else if selected === 'DELETE'}
+        {:else if selected === 'Delete'}
             <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
                 <UserAttrDelete bind:attr onSave={onDelete}/>
             </div>

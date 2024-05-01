@@ -9,14 +9,15 @@
     import ApiKeySecret from "./ApiKeySecret.svelte";
 
     export let apiKey = {};
-    export let onSave = () => {};
+    export let onSave = () => {
+    };
 
     let expandContainer;
 
     const tabBarItems = [
-        'CONFIG',
-        'SECRET',
-        'DELETE',
+        'Config',
+        'Secret',
+        'Delete',
     ];
     let selected = tabBarItems[0];
     const tabBarDur = 200;
@@ -47,17 +48,17 @@
     <div slot="body">
         <TabBar labels={tabBarItems} bind:selected/>
 
-        {#if selected === 'CONFIG'}
+        {#if selected === 'Config'}
             <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
                 <ApiKeyConfig bind:apiKey bind:onSave/>
             </div>
 
-        {:else if selected === 'SECRET'}
+        {:else if selected === 'Secret'}
             <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
-                <ApiKeySecret bind:apiKey />
+                <ApiKeySecret bind:apiKey/>
             </div>
 
-        {:else if selected === 'DELETE'}
+        {:else if selected === 'Delete'}
             <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
                 <ApiKeyDelete bind:apiKey onSave={onDelete}/>
             </div>
