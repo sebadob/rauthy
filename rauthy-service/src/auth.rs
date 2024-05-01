@@ -1,5 +1,5 @@
 use crate::token_set::{
-    AuthCodeFlow, DeviceCodeFlow, DpopFingerprint, TokenNonce, TokenScopes, TokenSet,
+    AtHash, AuthCodeFlow, DeviceCodeFlow, DpopFingerprint, TokenNonce, TokenScopes, TokenSet,
 };
 use actix_web::http::header;
 use actix_web::http::header::{HeaderMap, HeaderName, HeaderValue};
@@ -330,7 +330,8 @@ pub async fn authorize_refresh(
 }
 
 /// Builds the access token for a user after all validation has been successful
-#[allow(clippy::type_complexity)]
+// too many arguments is not an issue - params cannot be mistaken because of enum wrappers
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub async fn build_access_token(
     user: Option<&User>,
     data: &web::Data<AppState>,
@@ -420,6 +421,7 @@ pub async fn build_id_token(
     data: &web::Data<AppState>,
     client: &Client,
     dpop_fingerprint: Option<DpopFingerprint>,
+    at_hash: AtHash,
     lifetime: i64,
     nonce: Option<TokenNonce>,
     scope: &str,
@@ -463,6 +465,7 @@ pub async fn build_id_token(
         typ: JwtTokenType::Id,
         amr: vec![amr],
         auth_time,
+        at_hash: at_hash.0,
         preferred_username: user.email.clone(),
         email: None,
         email_verified: None,

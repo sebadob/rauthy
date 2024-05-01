@@ -14,11 +14,45 @@ use std::collections::HashMap;
 use time::OffsetDateTime;
 use utoipa::ToSchema;
 
-#[derive(Debug)]
-enum AtHash {
+pub enum AtHashAlg {
     Sha256,
     Sha384,
     Sha512,
+}
+
+impl TryFrom<&str> for AtHashAlg {
+    type Error = ErrorResponse;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let slf = match value {
+            "RS256" => Self::Sha256,
+            "RS384" => Self::Sha384,
+            "RS512" => Self::Sha512,
+            "EdDSA" => Self::Sha512,
+            _ => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Internal,
+                    "Cannot build AtHashAlg from value".to_string(),
+                ));
+            }
+        };
+        Ok(slf)
+    }
+}
+
+pub struct AtHash(pub String);
+
+impl AtHash {
+    pub fn build(access_token: &[u8], alg: AtHashAlg) -> Self {
+        let hash = match alg {
+            AtHashAlg::Sha256 => digest::digest(&digest::SHA256, access_token),
+            AtHashAlg::Sha384 => digest::digest(&digest::SHA384, access_token),
+            AtHashAlg::Sha512 => digest::digest(&digest::SHA512, access_token),
+        };
+        let bytes = hash.as_ref();
+        let (left_bits, _) = bytes.split_at(bytes.len() / 2);
+        Self(base64_url_no_pad_encode(left_bits))
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -53,17 +87,6 @@ pub struct TokenSet {
 }
 
 impl TokenSet {
-    fn calc_at_hash(access_token: &[u8], alg: AtHash) -> String {
-        let hash = match alg {
-            AtHash::Sha256 => digest::digest(&digest::SHA256, access_token),
-            AtHash::Sha384 => digest::digest(&digest::SHA384, access_token),
-            AtHash::Sha512 => digest::digest(&digest::SHA512, access_token),
-        };
-        let bytes = hash.as_ref();
-        let (left_bits, _) = bytes.split_at(bytes.len() / 2);
-        base64_url_no_pad_encode(left_bits)
-    }
-
     pub async fn for_client_credentials(
         data: &web::Data<AppState>,
         client: &Client,
@@ -202,11 +225,17 @@ impl TokenSet {
             device_code_flow.clone(),
         )
         .await?;
+
+        let at_hash = AtHash::build(
+            access_token.as_bytes(),
+            AtHashAlg::try_from(client.access_token_alg.as_str())?,
+        );
         let id_token = auth::build_id_token(
             user,
             data,
             client,
             dpop_fingerprint.clone(),
+            at_hash,
             lifetime,
             nonce,
             &scope,
@@ -251,13 +280,13 @@ mod tests {
         let ref_token =
             b"YmJiZTAwYmYtMzgyOC00NzhkLTkyOTItNjJjNDM3MGYzOWIy9sFhvH8K_x8UIHj1osisS57f5DduL";
 
-        let sha256 = TokenSet::calc_at_hash(ref_token, AtHash::Sha256);
-        assert_eq!(&sha256, "xsZZrUssMXjL3FBlzoSh2g");
+        let sha256 = AtHash::build(ref_token, AtHashAlg::Sha256);
+        assert_eq!(&sha256.0, "xsZZrUssMXjL3FBlzoSh2g");
 
-        let sha384 = TokenSet::calc_at_hash(ref_token, AtHash::Sha384);
-        assert_eq!(&sha384, "adt46pcdiB-l6eTNifgoVM-5AIJAxq84");
+        let sha384 = AtHash::build(ref_token, AtHashAlg::Sha384);
+        assert_eq!(&sha384.0, "adt46pcdiB-l6eTNifgoVM-5AIJAxq84");
 
-        let sha512 = TokenSet::calc_at_hash(ref_token, AtHash::Sha512);
-        assert_eq!(&sha512, "p2LHG4H-8pYDc0hyVOo3iIHvZJUqe9tbj3jESOuXbkY");
+        let sha512 = AtHash::build(ref_token, AtHashAlg::Sha512);
+        assert_eq!(&sha512.0, "p2LHG4H-8pYDc0hyVOo3iIHvZJUqe9tbj3jESOuXbkY");
     }
 }
