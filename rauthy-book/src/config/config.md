@@ -771,9 +771,6 @@ EVENT_LEVEL_FAILED_LOGIN=info
 # default: 5
 #REFRESH_TOKEN_GRACE_TIME=5
 
-# Lifetime for offline tokens in hours (default: 720)
-#OFFLINE_TOKEN_LIFETIME=720
-
 # Session lifetime in seconds - the session can not be
 # extended beyond this time and a new login will be forced.
 # This is the session for the authorization code flow. (default: 14400)

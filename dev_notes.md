@@ -4,9 +4,6 @@
 
 ## TODO before v0.23.0
 
-- Fully get rid of `offline_access` everywhere and just use the current `refresh_token` allow switch.
-  The naming seems to confuse a lot of people, while Rauthy's current approach is much more clear.
-  Make sure all `offline_access` leftovers are cleaned up and properly mention the behavior in the docs.
 - add `at_hash` claim to the ID token
 - fix button label misplacement on chrome + ugly tab bar
 - sessions view needs pagination
