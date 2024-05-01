@@ -68,8 +68,8 @@ The login form now contains a "Home" icon which will appear, if a `client_uri` i
 client. A user may click this and be redirected to the client, if a login is not desired for whatever reason.
 Additionally, if the user registration is configured to be open, a link to the user registration will be shown
 at the bottom as well.
-
-[]()
+[b03349c](https://github.com/sebadob/rauthy/commit/b03349c9d3f998aaecd3e4177c7b62bda067bf8b)
+[b03349c](https://github.com/sebadob/rauthy/commit/b03349c9d3f998aaecd3e4177c7b62bda067bf8b)
 
 #### Unlink Account from Provider
 
@@ -84,6 +84,18 @@ You can set environment variables either via `rauthy.cfg`, `.env` or as just an 
 initial setup in production. This makes it possible to create an admin account with the very first
 database setup with a custom E-Mail + Password, instead of the default `admin@localhost.de` with
 a random password, which you need to pull from the logs.
+
+[1a7d9e4](https://github.com/sebadob/rauthy/commit/1a7d9e40aad551a44648fe39e24c05d36a621fab)
+
+#### New config var `USERINFO_STRICT`
+
+You can now set a new config variable called `USERINFO_STRICT`. If set so true, Rauthy will do additional
+validations on the `/userinfo` endpoint and actually revoke (even otherwise still valid) access tokens,
+when any user / client / device it has been issued for has been deleted, expired or disabled. The non-strict
+mode will simply make sure the token is valid and that the user still exists. The additional validations
+will consume more resources because they need 1-2 additional database lookups but will provide more strict
+validation and possible earlier token revocation. If you don't need it that strict, and you are resource
+constrained, set it to `false`.
 
 ```
 #####################################
@@ -106,6 +118,8 @@ BOOTSTRAP_ADMIN_EMAIL="alfred@batcave.io"
 # will always be prioritized.
 BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID='$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 ```
+
+[]()
 
 ### Bugfixes
 

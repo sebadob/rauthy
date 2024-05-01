@@ -4,10 +4,14 @@
 
 ## TODO before v0.23.0
 
-- `USERINFO_STRICT` config option -> strict session / device id checking against DB
-- handle `offline_access` properly again - either decide to fully remove or support it everywhere
+- Fully get rid of `offline_access` everywhere and just use the current `refresh_token` allow switch.
+  The naming seems to confuse a lot of people, while Rauthy's current approach is much more clear.
+  Make sure all `offline_access` leftovers are cleaned up and properly mention the behavior in the docs.
 - add `at_hash` claim to the ID token
+- fix button label misplacement on chrome + ugly tab bar
 - sessions view needs pagination
+- `refresh_token` handler in rauthy-client for `device_code` grant flow
+- check possibility of `no_std` for rauthy-client + device_code
 
 ## Stage 1 - essentials
 
