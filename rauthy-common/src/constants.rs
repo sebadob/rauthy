@@ -321,15 +321,6 @@ lazy_static! {
             .parse::<u8>()
             .expect("POW_DIFFICULTY cannot be parsed to u8 - bad format");
 
-    // Offline Token lifetime in seconds
-    pub static ref OFFLINE_TOKEN_LT: i64 = {
-        let lt = env::var("OFFLINE_TOKEN_LIFETIME")
-            .unwrap_or_else(|_| String::from("720"))
-            .parse::<i64>()
-            .expect("OFFLINE_TOKEN_LIFETIME cannot be parsed to i64 - bad format");
-        lt * 3600
-    };
-
     pub static ref ADMIN_FORCE_MFA: bool = env::var("ADMIN_FORCE_MFA")
         .unwrap_or_else(|_| String::from("true"))
         .parse::<bool>()
