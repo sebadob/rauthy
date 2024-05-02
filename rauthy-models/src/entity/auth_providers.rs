@@ -23,7 +23,7 @@ use itertools::Itertools;
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
     IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_CALLBACK_URI,
-    PROVIDER_CALLBACK_URI_ENCODED, PROVIDER_LINK_COOKIE, PWD_RESET_COOKIE, RAUTHY_VERSION,
+    PROVIDER_CALLBACK_URI_ENCODED, PROVIDER_LINK_COOKIE, RAUTHY_VERSION,
     UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
@@ -143,7 +143,7 @@ impl AuthProviderLinkCookie {
         Ok(cookie)
     }
 
-    pub fn deletion_cookie(&self) -> Cookie<'_> {
+    pub fn deletion_cookie<'a>() -> Cookie<'a> {
         cookie::Cookie::build(PROVIDER_LINK_COOKIE, "")
             .secure(true)
             .http_only(true)
@@ -814,6 +814,12 @@ impl AuthProviderCallback {
             return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
         }
 
+        // extract a possibly existing provider link cookie for
+        // linking an existing account to a provider
+        let link_cookie = req
+            .cookie(PROVIDER_LINK_COOKIE)
+            .and_then(|c| AuthProviderLinkCookie::try_from(c).ok());
+
         // deserialize payload and validate the information
         let (user, provider_mfa_login) = match res.json::<AuthProviderTokenSet>().await {
             Ok(ts) => {
@@ -831,7 +837,9 @@ impl AuthProviderCallback {
                 if let Some(id_token) = ts.id_token {
                     let claims_bytes = AuthProviderIdClaims::self_as_bytes_from_token(&id_token)?;
                     let claims = AuthProviderIdClaims::try_from(claims_bytes.as_slice())?;
-                    claims.validate_update_user(data, &provider).await?
+                    claims
+                        .validate_update_user(data, &provider, &link_cookie)
+                        .await?
                 } else if let Some(access_token) = ts.access_token {
                     // the id_token only exists, if we actually have an OIDC provider.
                     // If we only get an access token, we need to do another request to the
@@ -848,7 +856,9 @@ impl AuthProviderCallback {
 
                     let res_bytes = res.bytes().await?;
                     let claims = AuthProviderIdClaims::try_from(res_bytes.as_bytes())?;
-                    claims.validate_update_user(data, &provider).await?
+                    claims
+                        .validate_update_user(data, &provider, &link_cookie)
+                        .await?
                 } else {
                     let err = "Neither `access_token` nor `id_token` existed";
                     error!("{}", err);
@@ -870,6 +880,16 @@ impl AuthProviderCallback {
 
         user.check_enabled()?;
         user.check_expired()?;
+
+        if link_cookie.is_some() {
+            // If this is the case, we don't need to validate any further client values.
+            // We will not generate a new auth code at all -> this is just a request to federate
+            // an existing account. The federation has been done in the step above already.
+            return Ok((
+                AuthStep::ProviderLink,
+                AuthProviderLinkCookie::deletion_cookie(),
+            ));
+        }
 
         // validate client values
         let client = Client::find_maybe_ephemeral(data, slf.req_client_id).await?;
@@ -1132,6 +1152,7 @@ impl AuthProviderIdClaims<'_> {
         &self,
         data: &web::Data<AppState>,
         provider: &AuthProvider,
+        link_cookie: &Option<AuthProviderLinkCookie>,
     ) -> Result<(User, ProviderMfaLogin), ErrorResponse> {
         if self.email.is_none() {
             let err = "No `email` in ID token claims. This is a mandatory claim";
@@ -1175,17 +1196,51 @@ impl AuthProviderIdClaims<'_> {
                 // which is a key value for Rauthy, does not yet exist for another user.
                 // On conflict, the DB would return an error anyway, but the error message is
                 // rather cryptic for a normal user.
-                if let Ok(user) = User::find_by_email(data, self.email.unwrap().to_string()).await {
-                    let err = format!(
-                        "User with email '{}' already exists but is not linked to this provider.",
-                        user.email
-                    );
-                    error!("{}", err);
-                    debug!("{:?}", user);
-                    return Err(ErrorResponse::new(ErrorResponseType::Forbidden, err));
-                }
+                if let Ok(mut user) =
+                    User::find_by_email(data, self.email.unwrap().to_string()).await
+                {
+                    // TODO check if creating a new link for an existing user is allowed
+                    if let Some(link) = link_cookie {
+                        if link.provider_id != provider.id {
+                            return Err(ErrorResponse::new(
+                                ErrorResponseType::BadRequest,
+                                "bad provider_id in link cookie".to_string(),
+                            ));
+                        }
 
-                None
+                        if link.user_id != user.id {
+                            // In this case, the link cookie exists from another user session.
+                            // It is possible to build this situation manually with access to
+                            // multiple accounts.
+                            return Err(ErrorResponse::new(
+                                ErrorResponseType::BadRequest,
+                                "bad user_id in link cookie".to_string(),
+                            ));
+                        }
+
+                        // finally, this is our condition we allow linking for existing accs
+                        if link.user_email != user.email {
+                            return Err(ErrorResponse::new(
+                                ErrorResponseType::BadRequest,
+                                "Invalid E-Mail".to_string(),
+                            ));
+                        }
+
+                        // If we got here, everything was fine, and we can create the link.
+                        // No need to `.save()` here, will be done later anyway with other updates.
+                        user.auth_provider_id = Some(provider.id.clone());
+                        user.federation_uid = Some(claims_user_id.clone());
+
+                        Some(user)
+                    } else {
+                        return Err(ErrorResponse::new(ErrorResponseType::Forbidden, format!(
+                            "User with email '{}' already exists but is not linked to this provider.",
+                            user.email
+                        )));
+                    }
+                } else {
+                    None
+                }
             }
         };
         debug!("user_opt:\n{:?}", user_opt);
