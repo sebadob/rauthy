@@ -99,7 +99,6 @@ lazy_static! {
 
     pub static ref RE_ATTR: Regex = Regex::new(r"^[a-zA-Z0-9-_/]{2,32}$").unwrap();
     pub static ref RE_ATTR_DESC: Regex = Regex::new(r"^[a-zA-Z0-9-_/\s]{0,128}$").unwrap();
-    pub static ref RE_SCOPE: Regex = Regex::new(r"^[a-z0-9-_/:\s]{0,128}$").unwrap();
     pub static ref RE_ALNUM: Regex = Regex::new(r"^[a-zA-Z0-9]+$").unwrap();
     pub static ref RE_ALNUM_24: Regex = Regex::new(r"^[a-zA-Z0-9]{24}$").unwrap();
     pub static ref RE_ALNUM_48: Regex = Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap();
@@ -118,14 +117,17 @@ lazy_static! {
     pub static ref RE_DATE_STR: Regex = Regex::new(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$").unwrap();
     pub static ref RE_GRANT_TYPES: Regex = Regex::new(r"^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$").unwrap();
     pub static ref RE_GRANT_TYPES_EPHEMERAL: Regex = Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap();
+    pub static ref RE_GROUPS: Regex = Regex::new(r"^[a-z0-9-_/,:]{2,64}$").unwrap();
     pub static ref RE_LOWERCASE: Regex = Regex::new(r"^[a-z0-9-_/]{2,128}$").unwrap();
     pub static ref RE_LOWERCASE_SPACE: Regex = Regex::new(r"^[a-z0-9-_/\s]{2,128}$").unwrap();
-    pub static ref RE_GROUPS: Regex = Regex::new(r"^[a-z0-9-_/,]{2,32}$").unwrap();
     pub static ref RE_MFA_CODE: Regex = Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap();
     pub static ref RE_PEM: Regex = Regex::new(r"^(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)$").unwrap();
     pub static ref RE_PHONE: Regex = Regex::new(r"^\+[0-9]{0,32}$").unwrap();
-    pub static ref RE_STREET: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-.\s]{0,48}$").unwrap();
+    // we have a pretty high upper limit for characters here just to be sure that even if
+    // multiple values like 'urn:ietf:params:oauth:grant-type:device_code' would not fail
+    pub static ref RE_SCOPE_SPACE: Regex = Regex::new(r"^[a-z0-9-_/:\s]{0,512}$").unwrap();
     pub static ref RE_SEARCH: Regex = Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+$").unwrap();
+    pub static ref RE_STREET: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-.\s]{0,48}$").unwrap();
     pub static ref RE_URI: Regex = Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+$").unwrap();
     pub static ref RE_USER_NAME: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-\s]{2,32}$").unwrap();
     pub static ref RE_TOKEN_68: Regex = Regex::new(r"^[a-zA-Z0-9-._~+/]+=*$").unwrap();
