@@ -7,7 +7,7 @@ use rauthy_common::constants::{HEADER_HTML, HEADER_JSON};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_providers::{
-    AuthProvider, AuthProviderCallback, AuthProviderTemplate,
+    AuthProvider, AuthProviderCallback, AuthProviderLinkCookie, AuthProviderTemplate,
 };
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::logos::{Logo, LogoType};
@@ -134,7 +134,6 @@ pub async fn post_provider_lookup(
 #[post("/providers/login")]
 pub async fn post_provider_login(
     data: web::Data<AppState>,
-    // req: HttpRequest,
     payload: Json<ProviderLoginRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -188,9 +187,6 @@ pub async fn post_provider_callback(
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
-
-    // TODO extract the new possibly existing provider link cookie and provide
-    // that information to the login_finish fn
 
     let payload = payload.into_inner();
     let session = principal.get_session()?;
@@ -457,19 +453,37 @@ pub async fn put_provider_img(
 #[post("/providers/{id}/link")]
 pub async fn post_provider_link(
     data: web::Data<AppState>,
-    id: web::Path<String>,
+    provider_id: web::Path<String>,
     principal: ReqPrincipal,
+    payload: Json<ProviderLoginRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth()?;
 
     let user_id = principal.user_id()?.to_string();
+    let user = User::find(&data, user_id).await?;
 
-    // TODO
     // make sure the user is currently un-linked
-    // set an encrypted cookie with the provider_id + user_id / email
-    // directly redirect to the provider login page
-    // modify the callback to check for this new cookie
-    todo!()
+    if user.auth_provider_id.is_some() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "user is already federated".to_string(),
+        ));
+    }
 
-    // Ok(HttpResponse::Ok().json(user))
+    // set an encrypted cookie with the provider_id + user_id / email
+    let link_cookie = AuthProviderLinkCookie {
+        provider_id: provider_id.into_inner(),
+        user_id: user.id,
+        user_email: user.email,
+    };
+
+    // directly redirect to the provider login page
+    let (login_cookie, xsrf_token, location) =
+        AuthProviderCallback::login_start(&data, payload.into_inner()).await?;
+
+    Ok(HttpResponse::Accepted()
+        .insert_header((LOCATION, location))
+        .cookie(login_cookie)
+        .cookie(link_cookie.build_cookie()?)
+        .body(xsrf_token))
 }

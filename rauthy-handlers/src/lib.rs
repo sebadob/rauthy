@@ -80,6 +80,11 @@ pub async fn map_auth_step(
 
             Ok((resp, res.has_password_been_hashed))
         }
+
+        AuthStep::ProviderLink => {
+            // TODO generate a new event type in this case?
+            Ok((HttpResponse::NoContent().finish(), false))
+        }
     }
 }
 

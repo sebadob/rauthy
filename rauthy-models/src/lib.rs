@@ -28,6 +28,7 @@ pub mod templates;
 pub enum AuthStep {
     LoggedIn(AuthStepLoggedIn),
     AwaitWebauthn(AuthStepAwaitWebauthn),
+    ProviderLink,
 }
 
 pub struct AuthStepLoggedIn {
