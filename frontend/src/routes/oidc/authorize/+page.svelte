@@ -407,7 +407,7 @@
                         <Button on:click={() => providerLogin(provider.id)} level={3}>
                             <div class="flex-inline">
                                 <img src="{`/auth/v1/providers/${provider.id}/img`}" alt="" width="20" height="20"/>
-                                {provider.name}
+                                <span class="providerName">{provider.name}</span>
                             </div>
                         </Button>
                     {/each}
@@ -513,6 +513,11 @@
 
     .providers {
         margin-top: .66rem;
+    }
+
+    .providerName {
+        /*margin-bottom: -14px;*/
+        margin-top: 4px;
     }
 
     .reg {

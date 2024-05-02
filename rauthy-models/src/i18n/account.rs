@@ -165,9 +165,9 @@ external provider or by local password. Do you want to request a reset?"#,
             password_reset: "Password Reset",
             phone: "Phone",
             provider_link: "Federate Account",
-            provider_link_desc: r#"You can allow linking to a federated account for a short period
-of time. After activating this function, you will get logged out and redirect to the login page.
-You can then choose an upstream provider which will be linked to this account, if the email matches."#,
+            provider_link_desc: r#"You can link this account to one of the following login providers.
+After activating this function, you will be redirected to the login page of the chosen one.
+After a successful login and if the email matches, your account will be linked."#,
             provider_unlink: "Unlink Federation",
             provider_unlink_desc: r#"Only if you have set up at least a password or a passkey for this
 account, you can unlink it from the upstream provider."#,
@@ -260,10 +260,10 @@ Login entweder per externem Provider oder lokalem Password möglich. Passwort Re
             password_reset: "Passwort Reset",
             phone: "Telefon",
             provider_link: "Account Verbinden",
-            provider_link_desc: r#"Das Verbinden dieses Accounts mit einem externen Provider kann
-für eine kurze Zeit erlaubt werden. Nach der Aktivierung foldet ein Ausloggen mit Umleitung zur
-Login Seite. Dort kann dann ein Account Provider gewählt werden. Sollte nach erfolgreichem Login
-die E-Mail Adresse übereinstimmen, wird sie mit diesem Account verbunden."#,
+            provider_link_desc: r#"Dieser Account kann mit einem der folgenden Login Provider
+verbunden werden. Nach der Aktivierung des Prozesses wird eine Weiterleitung auf die Login Seite
+des gewählten Providers ausgelöst. Nach erfolgreichem Login und bei Übereinstimmung der E-Mail
+Adressen wird dieser Account verknüpft."#,
             provider_unlink: "Verbindung Trennen",
             provider_unlink_desc: r#"Nur wenn mindestens ein Passwort oder ein Passkey für diesen
 Account gesetzt ist, kann die Verbindung zum Provider gelöst werden."#,
