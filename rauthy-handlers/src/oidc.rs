@@ -627,7 +627,6 @@ pub async fn post_logout(
     post,
     path = "/oidc/rotateJwk",
     tag = "oidc",
-    params(LogoutRequest),
     responses(
         (status = 200, description = "Ok"),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
@@ -656,7 +655,6 @@ pub async fn rotate_jwk(
     post,
     path = "/oidc/sessioninfo",
     tag = "oidc",
-    params(LogoutRequest),
     responses(
         (status = 200, description = "Ok"),
     ),
@@ -703,7 +701,6 @@ pub async fn get_session_info(
     get,
     path = "/oidc/sessioninfo/xsrf",
     tag = "oidc",
-    params(LogoutRequest),
     responses(
         (status = 200, description = "Ok"),
     ),

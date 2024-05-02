@@ -129,9 +129,7 @@
                     {t.providerLink}
                 </div>
                 <Modal bind:showModal>
-                    <p>
-                        {t.providerLinkDesc}
-                    </p>
+                    <p>{t.providerLinkDesc}</p>
 
                     <div class="providers">
                         {#each providersAvailable as provider (provider.id)}
