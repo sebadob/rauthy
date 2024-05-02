@@ -500,6 +500,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(auth_providers::delete_provider)
                             .service(auth_providers::get_provider_img)
                             .service(auth_providers::put_provider_img)
+                            .service(auth_providers::post_provider_link)
                             .service(blacklist::get_blacklist)
                             .service(blacklist::post_blacklist)
                             .service(blacklist::delete_blacklist)

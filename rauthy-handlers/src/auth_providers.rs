@@ -7,7 +7,7 @@ use rauthy_common::constants::{HEADER_HTML, HEADER_JSON};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_providers::{
-    AuthProvider, AuthProviderCallback, AuthProviderTemplate,
+    AuthProvider, AuthProviderCallback, AuthProviderLinkCookie, AuthProviderTemplate,
 };
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::logos::{Logo, LogoType};
@@ -134,7 +134,6 @@ pub async fn post_provider_lookup(
 #[post("/providers/login")]
 pub async fn post_provider_login(
     data: web::Data<AppState>,
-    // req: HttpRequest,
     payload: Json<ProviderLoginRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -208,7 +207,7 @@ pub async fn post_provider_callback(
 
 /// DELETE a link between an existing user account and an upstream provider
 ///
-/// This will always unlink the currently logged in user from its registered
+/// This will always unlink the currently logged-in user from its registered
 /// upstream auth provider. The user account must have been set up with at least
 /// a password or a passkey. Otherwise, this endpoint will return an error.
 #[utoipa::path(
@@ -434,4 +433,57 @@ pub async fn put_provider_img(
     .await?;
 
     Ok(HttpResponse::Ok().finish())
+}
+
+/// POST a link between an existing user account and an upstream provider
+///
+/// This action will create a link between an already existing, non-linked account and a configured
+/// upstream auth provider. This can only be issued from within an authenticated, valid session.
+#[utoipa::path(
+    post,
+    path = "/providers/{id}/link",
+    tag = "providers",
+    responses(
+        (status = 200, description = "OK"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[post("/providers/{id}/link")]
+pub async fn post_provider_link(
+    data: web::Data<AppState>,
+    provider_id: web::Path<String>,
+    principal: ReqPrincipal,
+    payload: Json<ProviderLoginRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+
+    let user_id = principal.user_id()?.to_string();
+    let user = User::find(&data, user_id).await?;
+
+    // make sure the user is currently un-linked
+    if user.auth_provider_id.is_some() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "user is already federated".to_string(),
+        ));
+    }
+
+    // set an encrypted cookie with the provider_id + user_id / email
+    let link_cookie = AuthProviderLinkCookie {
+        provider_id: provider_id.into_inner(),
+        user_id: user.id,
+        user_email: user.email,
+    };
+
+    // directly redirect to the provider login page
+    let (login_cookie, xsrf_token, location) =
+        AuthProviderCallback::login_start(&data, payload.into_inner()).await?;
+
+    Ok(HttpResponse::Accepted()
+        .insert_header((LOCATION, location))
+        .cookie(login_cookie)
+        .cookie(link_cookie.build_cookie()?)
+        .body(xsrf_token))
 }

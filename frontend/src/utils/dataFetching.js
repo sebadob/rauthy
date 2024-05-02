@@ -217,6 +217,14 @@ export async function getUserPasskeys(id) {
     });
 }
 
+export async function postUserProviderLink(id, data) {
+    return await fetch(`/auth/v1/providers/${id}/link`, {
+        method: 'POST',
+        headers: getCsrfHeaders(),
+        body: JSON.stringify(data),
+    });
+}
+
 export async function deleteUserProviderLink() {
     return await fetch('/auth/v1/providers/link', {
         method: 'DELETE',

@@ -25,6 +25,7 @@ pub const COOKIE_SESSION: &str = "rauthy-session";
 pub const COOKIE_MFA: &str = "rauthy-mfa";
 pub const COOKIE_LOCALE: &str = "locale";
 pub const COOKIE_UPSTREAM_CALLBACK: &str = "upstream_auth_callback";
+pub const PROVIDER_LINK_COOKIE: &str = "rauthy-provider-link";
 pub const PWD_RESET_COOKIE: &str = "rauthy-pwd-reset";
 pub const APP_ID_HEADER: &str = "mfa-app-id";
 pub const CSRF_HEADER: &str = "csrf-token";

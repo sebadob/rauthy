@@ -4,9 +4,7 @@
 
 ## TODO before v0.23.0
 
-- link to upstream provider with existing account
 - sessions view needs pagination
-- check out the possibility to include SCIM
 
 ## Stage 1 - essentials
 
@@ -15,6 +13,7 @@
 ## Stage 2 - features - do before v1.0.0
 
 - prettify the UI
+- check out the possibility to include SCIM
 - update the book with all the new features
 - benchmarks and performance tuning
 - maybe get a nicer logo
