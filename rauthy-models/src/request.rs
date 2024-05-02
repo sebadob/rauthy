@@ -76,8 +76,8 @@ pub struct AuthRequest {
     /// Validation: `[a-z0-9-_/]{2,128}`
     #[validate(regex(path = "RE_LOWERCASE", code = "[a-z0-9-_/]{2,128}"))]
     pub response_type: String,
-    /// Validation: `[a-z0-9-_/:\s]{0,512}`
-    #[validate(regex(path = "RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s]{0,512}"))]
+    /// Validation: `[a-z0-9-_/:\s*]{0,512}`
+    #[validate(regex(path = "RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s*]{0,512}"))]
     #[serde(default = "default_scope")]
     pub scope: String,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
@@ -163,8 +163,8 @@ pub struct DeviceGrantRequest {
     /// Validation: max length is 256
     #[validate(length(max = 256))]
     pub client_secret: Option<String>,
-    /// Validation: `[a-z0-9-_/:\s]{0,512}`
-    #[validate(regex(path = "RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s]{0,512}"))]
+    /// Validation: `[a-z0-9-_/:\s*]{0,512}`
+    #[validate(regex(path = "RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s*]{0,512}"))]
     pub scope: Option<String>,
 }
 
@@ -225,8 +225,8 @@ pub struct EphemeralClientRequest {
     /// Validation: `60 <= access_token_lifetime <= 86400`
     #[validate(range(min = 60, max = 86400))]
     pub default_max_age: Option<i32>,
-    /// Validation: `[a-z0-9-_/:\s]{0,512}`
-    #[validate(regex(path = "RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s]{0,512}"))]
+    /// Validation: `[a-z0-9-_/:\s*]{0,512}`
+    #[validate(regex(path = "RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s*]{0,512}"))]
     pub scope: Option<String>,
     pub require_auth_time: Option<bool>,
 
@@ -296,7 +296,7 @@ pub struct LoginRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub redirect_uri: String,
-    /// Validation: `Vec<^[a-z0-9-_/,:]{2,64}$>`
+    /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_scopes"))]
     pub scopes: Option<Vec<String>>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
@@ -324,7 +324,7 @@ pub struct LoginRefreshRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub redirect_uri: String,
-    /// Validation: `Vec<^[a-z0-9-_/,:]{2,64}$>`
+    /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_scopes"))]
     pub scopes: Option<Vec<String>>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
@@ -458,8 +458,8 @@ pub struct DynamicClientRequest {
 
 #[derive(Serialize, Deserialize, Validate, ToSchema)]
 pub struct NewGroupRequest {
-    /// Validation: `^[a-z0-9-_/,:]{2,64}$`
-    #[validate(regex(path = "RE_GROUPS", code = "^[a-z0-9-_/,:]{2,64}$"))]
+    /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
+    #[validate(regex(path = "RE_GROUPS", code = "^[a-z0-9-_/,:*]{2,64}$"))]
     pub group: String,
 }
 
@@ -545,8 +545,8 @@ pub struct ProviderRequest {
     /// Validation: max length is 256
     #[validate(length(max = 256))]
     pub client_secret: Option<String>,
-    /// Validation: `[a-z0-9-_/:\s]{0,512}`
-    #[validate(regex(path = "RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s]{0,512}"))]
+    /// Validation: `[a-z0-9-_/:\s*]{0,512}`
+    #[validate(regex(path = "RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s*]{0,512}"))]
     pub scope: String,
     /// Validation: `(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)`
     #[validate(regex(
@@ -600,7 +600,7 @@ pub struct ProviderLoginRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub redirect_uri: String,
-    /// Validation: `Vec<^[a-z0-9-_/,:]{2,64}$>`
+    /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_scopes"))]
     pub scopes: Option<Vec<String>>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
@@ -657,10 +657,10 @@ pub struct NewUserRequest {
     #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,32}"))]
     pub given_name: String,
     pub language: Language,
-    /// Validation: `Vec<^[a-z0-9-_/,:]{2,64}$>`
+    /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_groups"))]
     pub groups: Option<Vec<String>>,
-    /// Validation: `Vec<^[a-z0-9-_/,:]{2,64}$>`
+    /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_roles"))]
     pub roles: Vec<String>,
     #[validate(range(min = 1672527600, max = 4070905200))]
@@ -687,8 +687,8 @@ pub struct NewUserRegistrationRequest {
 
 #[derive(Serialize, Deserialize, Validate, ToSchema)]
 pub struct NewRoleRequest {
-    /// Validation: `^[a-z0-9-_/,:]{2,64}$`
-    #[validate(regex(path = "RE_GROUPS", code = "^[a-z0-9-_/,:]{2,64}$"))]
+    /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
+    #[validate(regex(path = "RE_GROUPS", code = "^[a-z0-9-_/,:*]{2,64}$"))]
     pub role: String,
 }
 
@@ -712,8 +712,8 @@ pub struct PasskeyRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
 pub struct ScopeRequest {
     // `RE_GROUPS` is correct here
-    /// Validation: `^[a-z0-9-_/,:]{2,64}$`
-    #[validate(regex(path = "RE_GROUPS", code = "^[a-z0-9-_/,:]{2,64}$"))]
+    /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
+    #[validate(regex(path = "RE_GROUPS", code = "^[a-z0-9-_/,:*]{2,64}$"))]
     pub scope: String,
     /// Validation: `^[a-zA-Z0-9-_/]{2,128}$`
     #[validate(custom(function = "validate_vec_attr"))]
@@ -862,7 +862,7 @@ pub struct UpdateClientRequest {
     /// Validation: `10 <= access_token_lifetime <= 86400`
     #[validate(range(min = 10, max = 86400))]
     pub access_token_lifetime: i32,
-    /// Validation: `Vec<^[a-z0-9-_/,:]{2,64}$>`
+    /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_scopes"))]
     pub scopes: Vec<String>,
     /// Validation: `Vec<^[a-z0-9-_/:\s]{0,64}$>`
@@ -894,10 +894,10 @@ pub struct UpdateUserRequest {
     pub language: Option<Language>,
     /// Validation: Applies password policy
     pub password: Option<String>,
-    /// Validation: `Vec<^[a-z0-9-_/,:]{2,64}$>`
+    /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_roles"))]
     pub roles: Vec<String>,
-    /// Validation: `Vec<^[a-z0-9-_/,:]{2,64}$>`
+    /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_groups"))]
     pub groups: Option<Vec<String>>,
     pub enabled: bool,
@@ -1137,7 +1137,7 @@ fn validate_vec_groups(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
         if !RE_GROUPS.is_match(v) {
-            err = Some("^[a-z0-9-_/,:]{2,64}$");
+            err = Some("^[a-z0-9-_/,:*]{2,64}$");
         }
     });
     if let Some(e) = err {
@@ -1150,7 +1150,7 @@ fn validate_vec_roles(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
         if !RE_GROUPS.is_match(v) {
-            err = Some("^[a-z0-9-_/,:]{2,64}$");
+            err = Some("^[a-z0-9-_/,:*]{2,64}$");
         }
     });
     if let Some(e) = err {
@@ -1163,7 +1163,7 @@ fn validate_vec_scopes(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
         if !RE_GROUPS.is_match(v) {
-            err = Some("^[a-z0-9-_/,:]{2,64}$");
+            err = Some("^[a-z0-9-_/,:*]{2,64}$");
         }
     });
     if let Some(e) = err {
