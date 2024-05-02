@@ -189,6 +189,9 @@ pub async fn post_provider_callback(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
 
+    // TODO extract the new possibly existing provider link cookie and provide
+    // that information to the login_finish fn
+
     let payload = payload.into_inner();
     let session = principal.get_session()?;
     let (auth_step, cookie) =
@@ -208,7 +211,7 @@ pub async fn post_provider_callback(
 
 /// DELETE a link between an existing user account and an upstream provider
 ///
-/// This will always unlink the currently logged in user from its registered
+/// This will always unlink the currently logged-in user from its registered
 /// upstream auth provider. The user account must have been set up with at least
 /// a password or a passkey. Otherwise, this endpoint will return an error.
 #[utoipa::path(
@@ -434,4 +437,39 @@ pub async fn put_provider_img(
     .await?;
 
     Ok(HttpResponse::Ok().finish())
+}
+
+/// POST a link between an existing user account and an upstream provider
+///
+/// This action will create a link between an already existing, non-linked account and a configured
+/// upstream auth provider. This can only be issued from within an authenticated, valid session.
+#[utoipa::path(
+    post,
+    path = "/providers/{id}/link",
+    tag = "providers",
+    responses(
+        (status = 200, description = "OK"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[post("/providers/{id}/link")]
+pub async fn post_provider_link(
+    data: web::Data<AppState>,
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth()?;
+
+    let user_id = principal.user_id()?.to_string();
+
+    // TODO
+    // make sure the user is currently un-linked
+    // set an encrypted cookie with the provider_id + user_id / email
+    // directly redirect to the provider login page
+    // modify the callback to check for this new cookie
+    todo!()
+
+    // Ok(HttpResponse::Ok().json(user))
 }
