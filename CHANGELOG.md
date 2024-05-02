@@ -89,7 +89,18 @@ at the bottom as well.
 A new button has been introduced to the account view of federated accounts.  
 You can now "Unlink" an account from an upstream provider, if you have set it up with at least
 a password or passkey before.
+
 [8b1d9a8](https://github.com/sebadob/rauthy/commit/8b1d9a882b0d4b059f3ed884deaacfcdeb109856)
+
+#### Link Existing Account to Provider
+
+This is the counterpart to the unlink feature from above.
+This makes it possible to link an already existing, unlinked user account to an upstream auth provider.
+The only condition is a matching `email` claim after successful login. Apart from that, there are quite a few things
+going on behind the scenes and you must trigger this provider link from an authorized, valid session from inside your
+user account view. This is necessary to prevent account takeovers if an upstream provider has been hacked in some way.
+
+[]()
 
 #### Bootstrap default Admin in production
 
@@ -200,7 +211,8 @@ The allowed names for roles, groups and scopes have been adjusted. Rauthy allows
 now and containing `:` or `*`. This will make it possible to define custom scopes with names like
 `urn:matrix:client:api:guest` or `urn:matrix:client:api:*`.
 
-[]()
+[a5982d9](https://github.com/sebadob/rauthy/commit/a5982d91f37a2f2917ed4215dc6ded216dc0fd69)
+[50d0214](https://github.com/sebadob/rauthy/commit/50d021440eb50473977ec851a46c0bc979bbd12b)
 
 ### Bugfixes
 
