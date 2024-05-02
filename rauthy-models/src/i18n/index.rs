@@ -27,16 +27,16 @@ impl I18nIndex<'_> {
     fn build_en() -> Self {
         Self {
             register: "Register",
-            account_login: "Account Login",
-            admin_login: "Admin Login",
+            account_login: "Account",
+            admin_login: "Admin",
         }
     }
 
     fn build_de() -> Self {
         Self {
             register: "Registrieren",
-            account_login: "Account Login",
-            admin_login: "Admin Login",
+            account_login: "Account",
+            admin_login: "Admin",
         }
     }
 }
