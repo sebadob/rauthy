@@ -37,7 +37,7 @@
 
     let formErrors = {};
     const schema = yup.object().shape({
-        name: yup.string().trim().matches(REGEX_ROLES, "Can only contain: 'a-z0-9-_/:', length: 2-64"),
+        name: yup.string().trim().matches(REGEX_ROLES, "Can only contain: 'a-z0-9-_/:*', length: 2-64"),
     });
 
     function handleKeyPress(event) {
@@ -57,7 +57,7 @@
         }
 
         let req = {
-            scope: scope.name
+            scope: scope.name.trim(),
         }
         if (scope.attr_include_access.length > 0) {
             req.attr_include_access = scope.attr_include_access;
