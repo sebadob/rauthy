@@ -100,7 +100,7 @@ The only condition is a matching `email` claim after successful login. Apart fro
 going on behind the scenes and you must trigger this provider link from an authorized, valid session from inside your
 user account view. This is necessary to prevent account takeovers if an upstream provider has been hacked in some way.
 
-[]()
+[fdc683c](https://github.com/sebadob/rauthy/commit/fdc683cec0181e03bb86da1e42fff213715718f0)
 
 #### Bootstrap default Admin in production
 
