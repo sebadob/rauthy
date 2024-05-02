@@ -28,7 +28,7 @@
 
     let formErrors = {};
     const schema = yup.object().shape({
-        name: yup.string().trim().matches(REGEX_ROLES, "Can only contain: 'a-z0-9-_/:', length: 2-64"),
+        name: yup.string().trim().matches(REGEX_ROLES, "Can only contain: 'a-z0-9-_/:*', length: 2-64"),
     });
 
     function handleKeyPress(event) {
@@ -48,7 +48,7 @@
         }
 
         let req = {
-            role: role.name
+            role: role.name.trim(),
         }
 
         let res = await putRole(role.id, req);

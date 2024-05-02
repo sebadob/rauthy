@@ -12,7 +12,7 @@
     export let onSave;
     let expandContainer;
 
-    let group = { group: '' };
+    let group = {group: ''};
 
     let err = '';
     let isLoading = false;
@@ -21,14 +21,14 @@
     let formErrors = {};
 
     const schema = yup.object().shape({
-        group: yup.string().trim().matches(REGEX_ROLES, "Can only contain: 'a-z0-9-_/', length: 2-128"),
+        group: yup.string().trim().matches(REGEX_ROLES, "Can only contain: 'a-z0-9-_/:*', length: 2-64"),
     });
 
     $: if (success) {
         timer = setTimeout(() => {
             onSave();
             success = false;
-            group = { group: '' };
+            group = {group: ''};
             expandContainer = false;
         }, 1500);
     }
@@ -47,6 +47,7 @@
             return;
         }
 
+        group.group = group.group.trim();
         let res = await postGroup(group);
         if (res.ok) {
             success = true;

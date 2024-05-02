@@ -12,7 +12,7 @@
     export let onSave;
     let expandContainer;
 
-    let role = { role: '' };
+    let role = {role: ''};
 
     let err = '';
     let isLoading = false;
@@ -21,13 +21,13 @@
     let formErrors = {};
 
     const schema = yup.object().shape({
-        role: yup.string().trim().matches(REGEX_ROLES, "Can only contain: 'a-z0-9-_/', length: 2-128"),
+        role: yup.string().trim().matches(REGEX_ROLES, "Can only contain: 'a-z0-9-_/:*', length: 2-64"),
     });
 
     $: if (success) {
         timer = setTimeout(() => {
             success = false;
-            role = { role: '' };
+            role = {role: ''};
             expandContainer = false;
             onSave();
         }, 1500);
@@ -47,6 +47,7 @@
             return;
         }
 
+        role.role = role.role.trim();
         let res = await postRole(role);
         if (res.ok) {
             success = true;
