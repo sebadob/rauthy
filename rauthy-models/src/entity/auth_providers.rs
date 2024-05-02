@@ -12,7 +12,7 @@ use crate::request::{
 };
 use crate::response::{ProviderLinkedUserResponse, ProviderLookupResponse};
 use crate::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
-use actix_web::cookie::Cookie;
+use actix_web::cookie::{Cookie, SameSite};
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
 use actix_web::{cookie, web, HttpRequest};
@@ -23,13 +23,13 @@ use itertools::Itertools;
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
     IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_CALLBACK_URI,
-    PROVIDER_CALLBACK_URI_ENCODED, RAUTHY_VERSION, UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
-    WEBAUTHN_REQ_EXP,
+    PROVIDER_CALLBACK_URI_ENCODED, PROVIDER_LINK_COOKIE, PWD_RESET_COOKIE, RAUTHY_VERSION,
+    UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{
-    base64_decode, base64_encode, base64_url_encode, base64_url_no_pad_decode, get_rand,
-    new_store_id,
+    base64_decode, base64_encode, base64_url_decode, base64_url_encode, base64_url_no_pad_decode,
+    get_rand, new_store_id,
 };
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use reqwest::header::{ACCEPT, AUTHORIZATION};
@@ -98,7 +98,7 @@ impl From<String> for AuthProviderType {
 
 /// Minimal version of the OpenID metadata. This is used for upstream oauth2 lookup.
 /// Only includes the data we care about when doing a config lookup.
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct WellKnownLookup {
     pub issuer: String,
     pub authorization_endpoint: String,
@@ -107,6 +107,51 @@ pub struct WellKnownLookup {
     pub jwks_uri: String,
     pub scopes_supported: Vec<String>,
     pub code_challenge_methods_supported: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthProviderLinkCookie {
+    pub provider_id: String,
+    pub user_id: String,
+    pub user_email: String,
+}
+
+impl TryFrom<Cookie<'_>> for AuthProviderLinkCookie {
+    type Error = ErrorResponse;
+
+    fn try_from(value: Cookie) -> Result<AuthProviderLinkCookie, Self::Error> {
+        let bytes_enc = base64_url_decode(value.value())?;
+        let dec = EncValue::try_from(bytes_enc)?.decrypt()?;
+        let slf = bincode::deserialize::<AuthProviderLinkCookie>(dec.as_ref())?;
+        Ok(slf)
+    }
+}
+
+impl AuthProviderLinkCookie {
+    pub fn build_cookie(&self) -> Result<Cookie<'_>, ErrorResponse> {
+        let bytes = bincode::serialize(self)?;
+        let secret_enc = EncValue::encrypt(bytes.as_ref())?.into_bytes().to_vec();
+        let value = base64_url_encode(&secret_enc);
+
+        let cookie = cookie::Cookie::build(PROVIDER_LINK_COOKIE, value)
+            .secure(true)
+            .http_only(true)
+            .same_site(SameSite::Lax)
+            .max_age(cookie::time::Duration::seconds(300))
+            .path("/auth")
+            .finish();
+        Ok(cookie)
+    }
+
+    pub fn deletion_cookie(&self) -> Cookie<'_> {
+        cookie::Cookie::build(PROVIDER_LINK_COOKIE, "")
+            .secure(true)
+            .http_only(true)
+            .same_site(SameSite::Lax)
+            .max_age(cookie::time::Duration::ZERO)
+            .path("/auth")
+            .finish()
+    }
 }
 
 /// Upstream Auth Provider for upstream logins without a local Rauthy account
