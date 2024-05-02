@@ -32,7 +32,7 @@
 </script>
 
 <div class="container">
-    {#if items.length > 0}
+    {#if items?.length > 0}
         {#each items as item}
             <DeleteItemTile bind:label={item} onDelete={deleteItem}/>
         {/each}
