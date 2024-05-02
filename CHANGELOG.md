@@ -194,6 +194,14 @@ With the additional validation of the `at_hash` claim, clients can be 100% sure,
 belongs to a specific `access_token` and has not been swapped out.  
 [d506865](https://github.com/sebadob/rauthy/commit/d506865898e61fce45e5cf4c754ad4300bd37161)
 
+#### Better roles, groups and scopes names
+
+The allowed names for roles, groups and scopes have been adjusted. Rauthy allows names of up to 64 characters
+now and containing `:` or `*`. This will make it possible to define custom scopes with names like
+`urn:matrix:client:api:guest` or `urn:matrix:client:api:*`.
+
+[]()
+
 ### Bugfixes
 
 - The button for requesting a password reset from inside a federated account view has been
