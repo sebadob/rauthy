@@ -27,7 +27,7 @@ export const REGEX_CONTACT = /^[a-zA-Z0-9+.@/:]{0,48}$/gm;
 export const REGEX_LOWERCASE_SPACE = /^[a-z0-9-_\/\s]{2,128}$/gm;
 export const REGEX_PROVIDER_SCOPE = /^[a-z0-9-_\/:\s]{0,128}$/gm;
 export const REGEX_PEM = /^(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)$/gm;
-export const REGEX_ROLES = /^[a-z0-9\-_/]{2,128}$/gm;
+export const REGEX_ROLES = /^[a-z0-9\-_/:]{2,64}$/gm;
 export const REGEX_URI = /^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]*$/gm;
 export const REGEX_URI_SPACE = /^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%\s]+$/m;
 export const REGEX_IP_V4 = /^(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}$/gm;

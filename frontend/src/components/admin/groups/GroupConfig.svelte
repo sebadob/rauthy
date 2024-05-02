@@ -28,7 +28,7 @@
 
     let formErrors = {};
     const schema = yup.object().shape({
-        name: yup.string().trim().matches(REGEX_ROLES, "Can only contain: 'a-z0-9-_/', length: 2-128"),
+        name: yup.string().trim().matches(REGEX_ROLES, "Can only contain: 'a-z0-9-_/:', length: 2-64"),
     });
 
     function handleKeyPress(event) {
