@@ -40,7 +40,7 @@
     }
 
     $: if (providers) {
-        if (user.account_type.startsWith('federated')) {
+        if (user.account_type?.startsWith('federated')) {
             authProvider = providers.filter(p => p.id === user.auth_provider_id)[0];
         }
     }

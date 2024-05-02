@@ -28,7 +28,13 @@
             <IconStop color="var(--col-err)" width={24}/>
         </div>
         <div class="inner">
-            <slot></slot>
+            <!--
+            Just make sure that whatever we have in here will be loaded / fetched lazy.
+            There is no need to load resources like images if the dialog is closed anyway.
+            -->
+            {#if showModal}
+                <slot></slot>
+            {/if}
         </div>
     </div>
 </dialog>

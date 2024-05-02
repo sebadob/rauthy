@@ -1,9 +1,9 @@
 <script>
     import CheckIcon from "$lib/CheckIcon.svelte";
-    import {buildWebIdUri, formatDateFromTs} from "../../utils/helpers.js";
+    import {buildWebIdUri, formatDateFromTs, saveProviderToken} from "../../utils/helpers.js";
     import {onMount} from "svelte";
     import Button from "$lib/Button.svelte";
-    import {deleteUserProviderLink} from "../../utils/dataFetching.js";
+    import {deleteUserProviderLink, postUserProviderLink} from "../../utils/dataFetching.js";
     import Modal from "$lib/Modal.svelte";
     import getPkce from "oauth-pkce";
     import {PKCE_VERIFIER_UPSTREAM} from "../../utils/constants.js";
@@ -16,11 +16,10 @@
     export let viewModePhone = false;
 
     let unlinkErr = false;
-    let showModal = true;
-    // let showModal = false;
+    let showModal = false;
     let providersAvailable = [];
 
-    $: isFederated = user.account_type.startsWith('federated');
+    $: isFederated = user.account_type?.startsWith('federated');
     $: accType = isFederated ? `${user.account_type}: ${authProvider?.name || ''}` : user.account_type;
 
     $: classRow = viewModePhone ? 'rowPhone' : 'row';
@@ -31,20 +30,44 @@
         const providersTpl = [{
             "id": "7F6N7fb3el3P5XimjJSaeD2o",
             "name": "Rauthy IAM"
-        }, {"id": "7F6N7fb3el3P5XimjJSaeD2O", "name": "Rauthy IAM 2"}];
+        }];
         // const providersTpl = document?.getElementsByTagName("template").namedItem("auth_providers")?.innerHTML;
-        console.log(providersTpl);
         providersAvailable = providersTpl;
     })
 
     function linkProvider(id) {
-        console.error('TODO linkProvider');
-        // getPkce(64, (error, {challenge, verifier}) => {
-        //     if (!error) {
-        //         localStorage.setItem(PKCE_VERIFIER_UPSTREAM, verifier);
-        //         providerLoginPkce(id, challenge);
-        //     }
-        // });
+        getPkce(64, (error, {challenge, verifier}) => {
+            if (!error) {
+                localStorage.setItem(PKCE_VERIFIER_UPSTREAM, verifier);
+                providerLoginPkce(id, challenge);
+            }
+        });
+    }
+
+    async function providerLoginPkce(id, pkce_challenge) {
+        let data = {
+            email: user.email,
+            client_id: 'rauthy',
+            redirect_uri: window.location.href,
+            // scopes: '',
+            // state: state,
+            // nonce: nonce,
+            // code_challenge: challenge,
+            // code_challenge_method: challengeMethod,
+            provider_id: id,
+            pkce_challenge,
+        };
+        let res = await postUserProviderLink(id, data);
+        if (res.ok) {
+            const xsrfToken = await res.text();
+            saveProviderToken(xsrfToken);
+
+            window.location.href = res.headers.get('location');
+        } else {
+            let body = await res.json();
+            // TODO catch error even necessary? should be handled in `/callback` already...
+            console.error(body);
+        }
     }
 
     async function unlinkProvider() {
@@ -195,56 +218,6 @@
     .container {
         margin: 0 .25rem;
         padding: 10px;
-    }
-
-    dialog {
-        animation: fade-out 0.7s ease-out;
-    }
-
-    dialog[open] {
-        animation: fade-in 0.7s ease-out;
-    }
-
-    dialog[open]::backdrop {
-        animation: backdrop-fade-in 0.7s ease-out forwards;
-    }
-
-    @keyframes fade-in {
-        0% {
-            opacity: 0;
-            transform: scaleY(0);
-            display: none;
-        }
-
-        100% {
-            opacity: 1;
-            transform: scaleY(1);
-            display: block;
-        }
-    }
-
-    @keyframes fade-out {
-        0% {
-            opacity: 1;
-            transform: scaleY(1);
-            display: block;
-        }
-
-        100% {
-            opacity: 0;
-            transform: scaleY(0);
-            display: none;
-        }
-    }
-
-    @keyframes backdrop-fade-in {
-        0% {
-            background-color: rgb(0 0 0 / 0%);
-        }
-
-        100% {
-            background-color: rgb(0 0 0 / 25%);
-        }
     }
 
     .label {
