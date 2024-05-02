@@ -146,6 +146,6 @@
     }
 
     .wrapper {
-        height: 100dvh;
+        height: calc(100dvh - 20px);
     }
 </style>
