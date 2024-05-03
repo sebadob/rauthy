@@ -5,6 +5,7 @@ use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use std::fmt::{Display, Formatter};
 use time::OffsetDateTime;
 use tracing::warn;
 
@@ -51,20 +52,20 @@ impl TryFrom<&str> for MagicLinkUsage {
     }
 }
 
-impl ToString for MagicLinkUsage {
-    // For types with a value, `$` was chosen as the separating characters since it is URL safe.
-    // It also makes splitting of the value quite easy.
-    fn to_string(&self) -> String {
+impl Display for MagicLinkUsage {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // For types with a value, `$` was chosen as the separating characters since it is URL safe.
+        // It also makes splitting of the value quite easy.
         match self {
-            MagicLinkUsage::PasswordReset => "password_reset".to_string(),
+            MagicLinkUsage::PasswordReset => write!(f, "password_reset"),
             MagicLinkUsage::NewUser(redirect_uri) => {
                 if let Some(uri) = redirect_uri {
-                    format!("new_user${}", uri)
+                    write!(f, "new_user${}", uri)
                 } else {
-                    "new_user".to_string()
+                    write!(f, "new_user")
                 }
             }
-            MagicLinkUsage::EmailChange(email) => format!("email_change${}", email),
+            MagicLinkUsage::EmailChange(email) => write!(f, "email_change${}", email),
         }
     }
 }

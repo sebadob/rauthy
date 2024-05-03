@@ -4,6 +4,7 @@ use rauthy_common::constants::COOKIE_LOCALE;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
+use std::fmt::{Display, Formatter};
 use tracing::debug;
 use utoipa::ToSchema;
 
@@ -36,9 +37,9 @@ impl Default for Language {
     }
 }
 
-impl ToString for Language {
-    fn to_string(&self) -> String {
-        self.as_str().to_string()
+impl Display for Language {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
     }
 }
 

@@ -214,7 +214,7 @@ impl Role {
             .into_iter()
             .map(|mut r| {
                 if r.id == role.id {
-                    r.name = new_role.name.clone();
+                    r.name.clone_from(&new_role.name);
                 }
                 r
             })

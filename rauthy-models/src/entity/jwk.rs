@@ -12,7 +12,7 @@ use sqlx::postgres::PgRow;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Error, FromRow, Row};
 use std::default::Default;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use utoipa::ToSchema;
 
@@ -647,9 +647,9 @@ impl JwkKeyPairAlg {
     }
 }
 
-impl ToString for JwkKeyPairAlg {
-    fn to_string(&self) -> String {
-        self.as_str().to_string()
+impl Display for JwkKeyPairAlg {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
     }
 }
 

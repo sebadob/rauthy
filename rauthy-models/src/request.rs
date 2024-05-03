@@ -284,8 +284,8 @@ pub struct LoginRequest {
     /// Validation: `email`
     #[validate(email)]
     pub email: String,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    /// Validation: Applies password policy - max 256 characters
+    #[validate(length(max = 256))]
     pub password: Option<String>,
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
@@ -506,7 +506,8 @@ pub struct PasswordResetRequest {
     /// Validation: `[a-zA-Z0-9]{64}`
     #[validate(regex(path = "RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
     pub magic_link_id: String,
-    /// Validation: Applies password policy
+    /// Validation: Applies password policy - max 256 characters
+    #[validate(length(max = 256))]
     pub password: String,
     /// Validation: `[a-zA-Z0-9]{48}`
     #[validate(regex(path = "RE_ALNUM_48", code = "[a-zA-Z0-9]{48}"))]
@@ -786,6 +787,8 @@ pub struct TokenRequest {
     /// Validation: `email`
     #[validate(email)]
     pub username: Option<String>,
+    /// max 256 characters
+    #[validate(length(max = 256))]
     pub password: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
@@ -897,7 +900,8 @@ pub struct UpdateUserRequest {
     #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
     pub family_name: String,
     pub language: Option<Language>,
-    /// Validation: Applies password policy
+    /// Validation: Applies password policy - max 256 characters
+    #[validate(length(max = 256))]
     pub password: Option<String>,
     /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_roles"))]

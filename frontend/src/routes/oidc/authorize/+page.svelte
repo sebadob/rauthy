@@ -176,6 +176,10 @@
                 formErrors.password = t.passwordRequired;
                 return;
             }
+            if (formValues.password.length > 256) {
+                formErrors.password = 'max 256';
+                return;
+            }
             req.password = formValues.password;
         }
 
