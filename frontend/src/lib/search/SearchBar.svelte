@@ -10,7 +10,7 @@
     export let items = [];
     export let resItems;
     export let options = [];
-    export let useServerSide = false;
+    export let useServerSideIdx = '';
     export let isSearchFiltered = false;
 
     let selected = '';
@@ -32,7 +32,7 @@
         if (!search) {
             resItems = items;
             isSearchFiltered = false;
-        } else if (useServerSide) {
+        } else if (useServerSideIdx) {
             filerItemsServerSide();
         } else {
             filerItems();
@@ -77,9 +77,8 @@
         }
         isSearchFiltered = true;
 
-        const idx = selected.replaceAll('-', '').toLowerCase();
-        // if other server side searched need to be used in the future, the 'user' could be an exported var
-        let res = await getSearch('user', idx, search);
+        const idx = selected.replaceAll('-', '').replaceAll(' ', '').toLowerCase();
+        let res = await getSearch(useServerSideIdx, idx, search);
         if (res.ok) {
             resItems = await res.json();
         } else {

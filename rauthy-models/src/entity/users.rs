@@ -371,20 +371,16 @@ impl User {
 
         if let Some(token) = continuation_token {
             if backwards {
-                // when we go backwards, we must skip the current page
-                // the continuation token will always point at the last entry
-                // of the current page
-                // -> add to the offset
                 offset += page_size;
-
                 let mut rows = sqlx::query!(
                     r#"SELECT id, email, created_at
                     FROM users
-                    WHERE created_at <= $1
+                    WHERE created_at <= $1 AND id != $2
                     ORDER BY created_at DESC
-                    LIMIT $2
-                    OFFSET $3"#,
+                    LIMIT $3
+                    OFFSET $4"#,
                     token.ts,
+                    token.id,
                     page_size,
                     offset,
                 )
@@ -621,7 +617,7 @@ impl User {
         let q = format!("%{}%", q);
 
         let res = match idx {
-            SearchParamsIdx::Id => {
+            SearchParamsIdx::Id | SearchParamsIdx::UserId => {
                 query_as!(
                     UserResponseSimple,
                     "SELECT id, email FROM users WHERE id LIKE $1 ORDER BY created_at ASC LIMIT $2",
@@ -640,6 +636,12 @@ impl User {
             )
                 .fetch_all(&data.db)
                 .await?
+            }
+            _ => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "supported search idx for users: id / user_id, email".to_string(),
+                ))
             }
         };
 

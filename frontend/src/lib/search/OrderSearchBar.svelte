@@ -7,7 +7,7 @@
     export let searchOptions = [];
     export let orderOptions = [];
     export let firstDirReverse = false;
-    export let useServerSide = false;
+    export let useServerSideIdx = '';
     export let isSearchFiltered = false;
 
     let searchItems = [];
@@ -32,7 +32,7 @@
                 bind:items
                 bind:resItems={searchItems}
                 options={searchOptions}
-                bind:useServerSide
+                bind:useServerSideIdx
                 bind:isSearchFiltered
         />
     </div>

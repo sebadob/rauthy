@@ -307,6 +307,25 @@ export async function getSessions() {
     return await checkRedirectForbidden(res);
 }
 
+export async function getSessionsSsp(pageSize, offset, continuationToken, backwards) {
+    let url = `/auth/v1/sessions?page_size=${pageSize}`;
+    if (offset) {
+        url = `${url}&offset=${offset}`;
+    }
+    if (backwards) {
+        url = `${url}&backwards=${backwards}`;
+    }
+    if (continuationToken) {
+        url = `${url}&continuation_token=${continuationToken}`;
+    }
+    const res = await fetch(
+        url, {
+            method: 'GET',
+            headers: HEADERS,
+        });
+    return await checkRedirectForbidden(res);
+}
+
 export async function deleteAllSessions() {
     const res = await fetch('/auth/v1/sessions', {
         method: 'DELETE',

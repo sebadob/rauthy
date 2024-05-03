@@ -1,13 +1,20 @@
 use crate::ReqPrincipal;
 use actix_web::{delete, get, web, HttpResponse};
+use actix_web_validator::Query;
+use rauthy_common::constants::SSP_THRESHOLD;
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
+use rauthy_models::entity::users::User;
+use rauthy_models::request::PaginationParams;
 use rauthy_models::response::SessionResponse;
 
 /// Returns all existing sessions
+///
+/// TODO update pagination usage description
 ///
 /// **Permissions**
 /// - rauthy_admin
@@ -15,6 +22,7 @@ use rauthy_models::response::SessionResponse;
     get,
     path = "/sessions",
     tag = "sessions",
+    params(PaginationParams),
     responses(
         (status = 200, description = "Ok", body = [SessionResponse]),
         (status = 401, description = "Unauthorized"),
@@ -25,29 +33,75 @@ use rauthy_models::response::SessionResponse;
 pub async fn get_sessions(
     data: web::Data<AppState>,
     principal: ReqPrincipal,
+    params: Query<PaginationParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Read)?;
 
-    // TODO benchmark, which of these 2 implementations is faster in the end
-    // let sessions = Session::find_all()
-    //     .await?
-    //     .drain(..)
-    //     .map(SessionResponse::from)
+    // sessions will be dynamically paginated based on the same setting as users
+    let user_count = User::count(&data).await?;
+    if user_count >= *SSP_THRESHOLD as i64 || params.page_size.is_some() {
+        // TODO outsource the setup stuff here or keep it duplicated for better readability?
+        // currently used here and in GET /users
+        let page_size = params.page_size.unwrap_or(15) as i64;
+        let offset = params.offset.unwrap_or(0) as i64;
+        let backwards = params.backwards.unwrap_or(false);
+        let continuation_token = if let Some(token) = &params.continuation_token {
+            Some(ContinuationToken::try_from(token.as_str())?)
+        } else {
+            None
+        };
+
+        let (users, continuation_token) =
+            Session::find_paginated(&data, continuation_token, page_size, offset, backwards)
+                .await?;
+        let x_page_count = (user_count as f64 / page_size as f64).ceil() as u32;
+
+        if let Some(token) = continuation_token {
+            Ok(HttpResponse::PartialContent()
+                // .insert_header(("x-user-count", user_count))
+                .insert_header(("x-page-count", x_page_count))
+                .insert_header(("x-page-size", page_size as u32))
+                .insert_header(token.into_header_pair())
+                .json(users))
+        } else {
+            Ok(HttpResponse::PartialContent()
+                // .insert_header(("x-user-count", user_count))
+                .insert_header(("x-page-count", x_page_count))
+                .insert_header(("x-page-size", page_size as u32))
+                .json(users))
+        }
+    } else {
+        let sessions = Session::find_all(&data).await?;
+        let resp = sessions
+            .iter()
+            .map(|s| SessionResponse {
+                id: &s.id,
+                user_id: s.user_id.as_deref(),
+                is_mfa: s.is_mfa,
+                state: &s.state,
+                exp: s.exp,
+                last_seen: s.last_seen,
+                remote_ip: s.remote_ip.as_deref(),
+            })
+            .collect::<Vec<SessionResponse>>();
+        Ok(HttpResponse::Ok().json(resp))
+    }
+
+    // // TODO cleanup when pagination is working properly
+    // let sessions = Session::find_all(&data).await?;
+    // let resp = sessions
+    //     .iter()
+    //     .map(|s| SessionResponse {
+    //         id: &s.id,
+    //         user_id: s.user_id.as_deref(),
+    //         is_mfa: s.is_mfa,
+    //         state: &s.state,
+    //         exp: s.exp,
+    //         last_seen: s.last_seen,
+    //         remote_ip: s.remote_ip.as_deref(),
+    //     })
     //     .collect::<Vec<SessionResponse>>();
-    let sessions = Session::find_all(&data).await?;
-    let resp = sessions
-        .iter()
-        .map(|s| SessionResponse {
-            id: &s.id,
-            user_id: s.user_id.as_deref(),
-            is_mfa: s.is_mfa,
-            state: &s.state,
-            exp: s.exp,
-            last_seen: s.last_seen,
-            remote_ip: s.remote_ip.as_deref(),
-        })
-        .collect::<Vec<SessionResponse>>();
-    Ok(HttpResponse::Ok().json(resp))
+    // Ok(HttpResponse::Ok().json(resp))
 }
 
 /// Invalidates all existing sessions and therefore logs out every single user.

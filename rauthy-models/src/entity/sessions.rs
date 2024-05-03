@@ -1,5 +1,7 @@
 use crate::app_state::AppState;
+use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
+use crate::request::SearchParamsIdx;
 use actix_web::cookie::{time, Cookie, SameSite};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{cookie, web, HttpRequest};
@@ -13,7 +15,7 @@ use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_rem
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
 use sqlx::sqlite::SqliteRow;
-use sqlx::{FromRow, Row};
+use sqlx::{query_as, FromRow, Row};
 use std::ops::Add;
 use std::str::FromStr;
 use time::OffsetDateTime;
@@ -151,9 +153,13 @@ impl Session {
             return Ok(session);
         }
 
-        let session = sqlx::query_as!(Self, "select * from sessions where id = $1", id)
-            .fetch_one(&data.db)
-            .await?;
+        let session = sqlx::query_as!(
+            Self,
+            "SELECT * FROM sessions WHERE id = $1 ORDER BY exp DESC",
+            id
+        )
+        .fetch_one(&data.db)
+        .await?;
 
         cache_insert(
             CACHE_NAME_SESSIONS.to_string(),
@@ -170,10 +176,119 @@ impl Session {
     // not cached, since this is only used in the admin ui
     /// Returns all sessions and an empty Vec if not a single session exists
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        let sessions = sqlx::query_as!(Self, "select * from sessions")
+        let sessions = sqlx::query_as!(Self, "SELECT * FROM sessions ORDER BY exp DESC")
             .fetch_all(&data.db)
             .await?;
         Ok(sessions)
+    }
+
+    pub async fn find_paginated(
+        data: &web::Data<AppState>,
+        continuation_token: Option<ContinuationToken>,
+        page_size: i64,
+        mut offset: i64,
+        backwards: bool,
+    ) -> Result<(Vec<Self>, Option<ContinuationToken>), ErrorResponse> {
+        // Allowing this unused assignment here makes the type conflicts
+        // from sqlx later easier to handle.
+        #[allow(unused_assignments)]
+        let mut res = None;
+        let mut latest_ts = 0;
+
+        if let Some(token) = continuation_token {
+            if backwards {
+                offset += page_size;
+                let mut rows: Vec<Self> = sqlx::query_as!(
+                    Self,
+                    r#"SELECT *
+                    FROM sessions
+                    WHERE exp >= $1 AND id != $2
+                    ORDER BY exp ASC
+                    LIMIT $3
+                    OFFSET $4"#,
+                    token.ts,
+                    token.id,
+                    page_size,
+                    offset,
+                )
+                .fetch_all(&data.db)
+                .await?;
+
+                rows.reverse();
+                if let Some(s) = rows.last() {
+                    latest_ts = s.exp;
+                }
+                res = Some(rows);
+            } else {
+                let rows = sqlx::query_as!(
+                    Self,
+                    r#"SELECT *
+                    FROM sessions
+                    WHERE exp <= $1 AND id != $2
+                    ORDER BY exp DESC
+                    LIMIT $3
+                    OFFSET $4"#,
+                    token.ts,
+                    token.id,
+                    page_size,
+                    offset,
+                )
+                .fetch_all(&data.db)
+                .await?;
+
+                if let Some(s) = rows.last() {
+                    latest_ts = s.exp;
+                }
+                res = Some(rows);
+            };
+        } else if backwards {
+            // backwards without any continuation token will simply
+            // serve the last elements without any other conditions
+            let mut rows = sqlx::query_as!(
+                Self,
+                r#"SELECT *
+                   FROM sessions
+                   ORDER BY exp ASC
+                   LIMIT $1
+                   OFFSET $2"#,
+                page_size,
+                offset,
+            )
+            .fetch_all(&data.db)
+            .await?;
+
+            rows.reverse();
+            if let Some(s) = rows.last() {
+                latest_ts = s.exp;
+            }
+            res = Some(rows);
+        } else {
+            let rows = sqlx::query_as!(
+                Self,
+                r#"SELECT *
+                   FROM sessions
+                   ORDER BY exp DESC
+                   LIMIT $1
+                   OFFSET $2"#,
+                page_size,
+                offset,
+            )
+            .fetch_all(&data.db)
+            .await?;
+
+            if let Some(s) = rows.last() {
+                latest_ts = s.exp;
+            }
+            res = Some(rows);
+        };
+
+        let res = res
+            .expect("sessions paginated should always be at least an empty Vec<_> at this point");
+        let token = res
+            .last()
+            .map(|entry| ContinuationToken::new(entry.id.clone(), latest_ts));
+
+        Ok((res, token))
     }
 
     /// Invalidates all sessions by setting the expiry to `now()`
@@ -291,6 +406,57 @@ impl Session {
         .await?;
 
         Ok(())
+    }
+
+    /// Caution: Uses regex / LIKE on the database -> very costly query
+    pub async fn search(
+        data: &web::Data<AppState>,
+        idx: &SearchParamsIdx,
+        q: &str,
+        limit: i64,
+    ) -> Result<Vec<Self>, ErrorResponse> {
+        let q = format!("%{}%", q);
+
+        let res = match idx {
+            SearchParamsIdx::UserId => {
+                query_as!(
+                    Self,
+                    "SELECT * FROM sessions WHERE user_id LIKE $1 ORDER BY exp DESC LIMIT $2",
+                    q,
+                    limit
+                )
+                .fetch_all(&data.db)
+                .await?
+            }
+            SearchParamsIdx::Id | SearchParamsIdx::SessionId => {
+                query_as!(
+                    Self,
+                    "SELECT * FROM sessions WHERE id LIKE $1 ORDER BY exp DESC LIMIT $2",
+                    q,
+                    limit
+                )
+                .fetch_all(&data.db)
+                .await?
+            }
+            SearchParamsIdx::Ip => {
+                query_as!(
+                    Self,
+                    "SELECT * FROM sessions WHERE remote_ip LIKE $1 ORDER BY exp DESC LIMIT $2",
+                    q,
+                    limit
+                )
+                .fetch_all(&data.db)
+                .await?
+            }
+            _ => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "supported search idx for users: id / session_id, user_id, ip".to_string(),
+                ))
+            }
+        };
+
+        Ok(res)
     }
 }
 
