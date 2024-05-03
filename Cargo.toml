@@ -11,7 +11,7 @@ members = [
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.22.2-20240424-3"
+version = "0.23.0-beta1"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -42,11 +42,11 @@ askama_actix = "0.14"
 async-trait = "0.1.74"
 base64 = "0.22.0"
 bincode = "1"
-cached = "0.49.2"
+cached = "0.51.0"
 chacha20poly1305 = { version = "0.10", features = ["std"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 cron = "0.12"
-cryptr = { version = "0.3", features = ["s3", "streaming"] }
+cryptr = { version = "0.4", features = ["s3", "streaming"] }
 css-color = "0.2"
 derive_more = "0.99"
 dotenvy = "0.15"
@@ -106,7 +106,7 @@ utoipa = { version = "4", features = ["actix_extras", "chrono", "openapi_extensi
 utoipa-swagger-ui = { version = "6.0.0", features = ["actix-web"] }
 uuid = { version = "1", features = ["serde", "v4"] }
 # v0.18 breaks quite a few things - sticking to 0.16 for now
-validator = { version = "0.16", features = ["derive"] }
+validator = { version = "0.18.1", features = ["derive"] }
 webauthn-rs = { version = "0.4", features = [
     "danger-allow-state-serialisation", "danger-credential-internals", "resident-key-support"
 ] }

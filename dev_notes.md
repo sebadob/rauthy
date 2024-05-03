@@ -2,10 +2,6 @@
 
 ## CURRENT WORK
 
-## TODO before v0.23.0
-
-- sessions view needs pagination
-
 ## Stage 1 - essentials
 
 [x] finished
