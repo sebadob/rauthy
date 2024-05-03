@@ -1,4 +1,5 @@
 use crate::app_state::AppState;
+use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
 use actix_web::cookie::{time, Cookie, SameSite};
 use actix_web::http::header::{HeaderName, HeaderValue};
@@ -174,6 +175,119 @@ impl Session {
             .fetch_all(&data.db)
             .await?;
         Ok(sessions)
+    }
+
+    pub async fn find_paginated(
+        data: &web::Data<AppState>,
+        continuation_token: Option<ContinuationToken>,
+        page_size: i64,
+        mut offset: i64,
+        backwards: bool,
+    ) -> Result<(Vec<Self>, Option<ContinuationToken>), ErrorResponse> {
+        // Allowing this unused assignment here makes to type conflicts from sqlx later easier
+        // to handle.
+        #[allow(unused_assignments)]
+        let mut res = None;
+        let mut latest_ts = 0;
+
+        if let Some(token) = continuation_token {
+            if backwards {
+                // when we go backwards, we must skip the current page
+                // the continuation token will always point at the last entry
+                // of the current page
+                // -> add to the offset
+                offset += page_size;
+
+                let mut rows: Vec<Self> = sqlx::query_as!(
+                    Self,
+                    r#"SELECT *
+                    FROM sessions
+                    WHERE exp <= $1
+                    ORDER BY exp DESC
+                    LIMIT $2
+                    OFFSET $3"#,
+                    token.ts,
+                    page_size,
+                    offset,
+                )
+                .fetch_all(&data.db)
+                .await?;
+
+                rows.reverse();
+                if let Some(last) = rows.last() {
+                    latest_ts = last.exp;
+                }
+                res = Some(rows);
+            } else {
+                let rows = sqlx::query_as!(
+                    Self,
+                    r#"SELECT *
+                    FROM sessions
+                    WHERE exp >= $1 AND id != $2
+                    ORDER BY exp ASC
+                    LIMIT $3
+                    OFFSET $4"#,
+                    token.ts,
+                    token.id,
+                    page_size,
+                    offset,
+                )
+                .fetch_all(&data.db)
+                .await?;
+
+                if let Some(last) = rows.last() {
+                    latest_ts = last.exp;
+                }
+                res = Some(rows);
+            };
+        } else if backwards {
+            // backwards without any continuation token will simply
+            // serve the last elements without any other conditions
+            let mut rows = sqlx::query_as!(
+                Self,
+                r#"SELECT *
+                   FROM sessions
+                   ORDER BY exp DESC
+                   LIMIT $1
+                   OFFSET $2"#,
+                page_size,
+                offset,
+            )
+            .fetch_all(&data.db)
+            .await?;
+
+            rows.reverse();
+            if let Some(last) = rows.last() {
+                latest_ts = last.exp;
+            }
+            res = Some(rows);
+        } else {
+            let rows = sqlx::query_as!(
+                Self,
+                r#"SELECT *
+                   FROM sessions
+                   ORDER BY exp ASC
+                   LIMIT $1
+                   OFFSET $2"#,
+                page_size,
+                offset,
+            )
+            .fetch_all(&data.db)
+            .await?;
+
+            if let Some(last) = rows.last() {
+                latest_ts = last.exp;
+            }
+            res = Some(rows);
+        };
+
+        let res = res
+            .expect("sessions paginated should always be at least an empty Vec<_> at this point");
+        let token = res
+            .last()
+            .map(|entry| ContinuationToken::new(entry.id.clone(), latest_ts));
+
+        Ok((res, token))
     }
 
     /// Invalidates all sessions by setting the expiry to `now()`
