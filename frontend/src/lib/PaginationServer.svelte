@@ -11,7 +11,7 @@
     export let sspPageSizeChange = (pageSize) => {
     };
 
-    const options = [5, 7, 10, 15, 20, 30, 50, 100];
+    const options = [2, 3, 5, 7, 10, 15, 20, 30, 50, 100];
     const iconSize = 16;
 
     let pageSize = sspPageSize;
@@ -63,7 +63,9 @@
         />
     </div>
 
-    <div class="font-label total">Total: {itemsTotal}</div>
+    {#if itemsTotal && itemsTotal > 0}
+        <div class="font-label total">Total: {itemsTotal}</div>
+    {/if}
 </div>
 
 <style>

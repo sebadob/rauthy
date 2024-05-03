@@ -17,6 +17,7 @@ use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::is_db_alive;
 use rauthy_models::entity::password::{PasswordHashTimes, PasswordPolicy};
 use rauthy_models::entity::pow::PowEntity;
+use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
 use rauthy_models::i18n::account::I18nAccount;
@@ -559,6 +560,10 @@ pub async fn get_search(
 
     let limit = params.limit.unwrap_or(100) as i64;
     match params.ty {
+        SearchParamsType::Session => {
+            let res = Session::search(&data, &params.idx, &params.q, limit).await?;
+            Ok(HttpResponse::Ok().json(res))
+        }
         SearchParamsType::User => {
             let res = User::search(&data, &params.idx, &params.q, limit).await?;
             Ok(HttpResponse::Ok().json(res))
@@ -566,7 +571,7 @@ pub async fn get_search(
     }
 }
 
-/// Updates the language for the logged in principal depending on the `locale` cookie
+/// Updates the language for the logged-in principal depending on the `locale` cookie
 #[utoipa::path(
     post,
     path = "/update_language",

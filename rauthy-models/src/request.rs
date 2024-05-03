@@ -738,15 +738,20 @@ pub struct SearchParams {
 #[derive(Debug, PartialEq, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum SearchParamsIdx {
+    // user params
     Id,
     Email,
+    // session params
+    UserId,
+    SessionId,
+    Ip,
 }
 
 #[derive(Debug, PartialEq, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum SearchParamsType {
-    // For now, only user exists. More will be added if necessary.
     User,
+    Session,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]

@@ -1,19 +1,35 @@
 <script>
     import {onMount} from "svelte";
-    import {deleteAllSessions, getSessions} from "../../../utils/dataFetchingAdmin.js";
+    import {
+        deleteAllSessions,
+        getSessions,
+        getSessionsSsp,
+        getUsers,
+        getUsersSsp
+    } from "../../../utils/dataFetchingAdmin.js";
     import CheckIcon from "$lib/CheckIcon.svelte";
     import {formatDateFromTs, redirectToLogin} from "../../../utils/helpers.js";
     import Loading from "$lib/Loading.svelte";
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
     import Button from "$lib/Button.svelte";
     import Pagination from "$lib/Pagination.svelte";
+    import PaginationServer from "$lib/PaginationServer.svelte";
+    import SessionRow from "./SessionRow.svelte";
 
     let err = '';
     let sessions = [];
     let resSessions = [];
-    let isLoading = true;
+    let resSessionsPaginated = [];
     let deletingSessions = false;
+    // let deletingSessions = false;
     let now = Date.now() / 1000;
+
+    let useServerSideIdx = '';
+    let isSearchFiltered = false;
+
+    let sspPageSize = 15;
+    let sspContinuationToken = '';
+    let sspPage = 1;
 
     let searchOptions = [
         {
@@ -38,25 +54,60 @@
         {label: 'IP', callback: (a, b) => a.remote_ip?.localeCompare(b.remote_ip)},
     ];
 
-    onMount(async () => {
-        fetchData();
+    onMount(() => {
+        fetchSessions();
     });
 
-    async function fetchData() {
-        let res = await getSessions();
-        let body = await res.json();
-        if (res.ok) {
-            sessions = body;
+    async function fetchSessions(useSsp, offset, backwards, pageSize) {
+        let res;
+        if (useSsp === true) {
+            if (backwards && sspPage === 2) {
+                // In this case, just do a normal fetch of the very first entry to have a clean start again
+                res = await getSessionsSsp(pageSize || sspPageSize, offset, undefined, false);
+            } else {
+                res = await getSessionsSsp(pageSize || sspPageSize, offset, sspContinuationToken, backwards);
+            }
         } else {
-            err = body.message;
+            res = await getSessions();
         }
+        if (!res.ok) {
+            err = 'Error fetching sessions: ' + res.body.message;
+        } else {
+            const isSsp = res.status === 206;
+            if (isSsp) {
+                // we get a few headers during SSP we can use for the navigation
+                sspPageSize = Number.parseInt(res.headers.get('x-page-size'), 10);
+                sspContinuationToken = res.headers.get('x-continuation-token');
+                // sspPageCount = res.headers.get('x-page-count');
+                useServerSideIdx = 'session';
+            } else {
+                useServerSideIdx = '';
+            }
 
-        isLoading = false;
-        now = Date.now() / 1000;
+            let s = await res.json();
+            sessions = [...s];
+            resSessions = [...s];
+
+            now = Date.now() / 1000;
+        }
     }
 
-    function onSave() {
-        fetchData();
+    // Callback function for <PaginationServer>
+    // Fetches the next page during server side pagination with the given offset and direction.
+    async function fetchSessionsSsp(offset, backwards) {
+        await fetchSessions(true, offset, backwards);
+        if (backwards) {
+            sspPage -= 1;
+        } else {
+            sspPage += 1;
+        }
+    }
+
+    // Callback function for <PaginationServer> to make page size switches work
+    async function sspPageSizeChange(pageSize) {
+        sspContinuationToken = '';
+        await fetchSessions(true, 0, false, pageSize);
+        sspPage = 1;
     }
 
     async function invalidateSessions() {
@@ -74,132 +125,67 @@
     }
 </script>
 
-{#if isLoading}
-    <Loading/>
-{:else}
-    <div class="content">
-        <div class="row">
-            <OrderSearchBar
-                    items={sessions}
-                    bind:resItems={resSessions}
-                    searchOptions={searchOptions}
-                    orderOptions={orderOptions}
-                    firstDirReverse
-            />
-            <div class="button" style:margin-top="-10px">
-                <Button on:click={invalidateSessions} level={3}>
-                    Invalidate All Sessions
-                </Button>
-            </div>
+<div class="content">
+    <div class="row">
+        <OrderSearchBar
+                items={sessions}
+                bind:resItems={resSessions}
+                searchOptions={searchOptions}
+                orderOptions={orderOptions}
+                firstDirReverse
+                bind:useServerSideIdx
+                bind:isSearchFiltered
+        />
+        <div class="button" style:margin-top="-10px">
+            <Button on:click={invalidateSessions} level={3}>
+                Invalidate All Sessions
+            </Button>
         </div>
-
-        {#each resSessions as session}
-            <div class={session.exp > now ? 'entryRow' : 'entryRow expired'}>
-                <div class="row1">
-                    <div class="col-sid flex font-mono">
-                        <div class="label" style:margin-right=".75rem">SID:</div>
-                        {session.id}
-                    </div>
-
-                    <div class="col-exp flex">
-                        <div class="label">EXP:</div>
-                        {formatDateFromTs(session.exp)}
-                    </div>
-
-                    <div class="col-seen flex">
-                        <div class="label">SEEN:</div>
-                        {formatDateFromTs(session.last_seen)}
-                    </div>
-                </div>
-
-                <div class="row2">
-                    <div class="col-uid flex font-mono">
-                        <div class="label">USER:</div>
-                        {session.user_id}
-                    </div>
-
-                    <div class="col-state flex">
-                        <div class="label">STATE:</div>
-                        {session.state}
-                    </div>
-
-                    <div class="col-ip flex">
-                        <div class="label">IP:</div>
-                        {session.remote_ip}
-                    </div>
-
-                    <div class="col-mfa flex">
-                        <div class="label">MFA:</div>
-                        <CheckIcon check={session.is_mfa}/>
-                    </div>
-                </div>
-            </div>
-        {/each}
     </div>
-{/if}
+
+    {err}
+
+    <div id="sessions">
+        {#if useServerSideIdx && !isSearchFiltered}
+            {#each sessions as session (session.id)}
+                <div>
+                    <SessionRow bind:session bind:now/>
+                </div>
+            {/each}
+        {:else}
+            {#each resSessionsPaginated as session (session.id)}
+                <div>
+                    <SessionRow bind:session bind:now/>
+                </div>
+            {/each}
+        {/if}
+    </div>
+
+    <!--
+    Even with server side pagination, we must use it client side if we
+    have a filtered search result. Otherwise, switching pages would
+    overwrite the filtered data.
+    -->
+    {#if useServerSideIdx && !isSearchFiltered}
+        <PaginationServer
+                bind:sspPage
+                bind:sspPageSize
+                bind:sspContinuationToken
+                fetchPageCallback={fetchSessionsSsp}
+                sspPageSizeChange={sspPageSizeChange}
+        />
+    {:else}
+        <Pagination bind:items={resSessions} bind:resItems={resSessionsPaginated}/>
+    {/if}
+</div>
 
 <style>
+    #sessions div:nth-of-type(2n + 1) {
+        background: linear-gradient(90deg, var(--col-ghigh) 35rem, var(--col-bg) 50rem);
+    }
+
     .button {
         margin: 10px 0 0 25px;
-    }
-
-    .col-sid {
-        width: 23rem;
-    }
-
-    .col-uid {
-        width: 23rem;
-    }
-
-    .col-state {
-        width: 12.25rem;
-    }
-
-    .col-mfa {
-        width: 4.5rem;
-    }
-
-    .col-exp {
-        width: 12.25rem;
-    }
-
-    .col-seen {
-        width: 13rem;
-    }
-
-    .col-ip {
-        width: 9.75rem;
-    }
-
-    .expired {
-        background: var(--col-gmid);
-    }
-
-    .flex {
-        display: flex;
-        align-items: center;
-    }
-
-    .label {
-        margin-right: .25rem;
-        font-weight: bold;
-        font-size: .9rem;
-    }
-
-    .entryRow {
-        max-width: 50rem;
-        margin-bottom: .5rem;
-    }
-
-    .entryRow:hover {
-        background: var(--col-acnt);
-        color: white
-    }
-
-    .row1, .row2 {
-        display: inline-flex;
-        flex-wrap: wrap;
-        flex: 1;
     }
 
     .row {
