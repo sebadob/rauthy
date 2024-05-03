@@ -43,12 +43,15 @@ use tracing::{error, warn};
 
 /// Returns all existing users
 ///
+/// TODO update pagination usage description
+///
 /// **Permissions**
 /// - rauthy_admin
 #[utoipa::path(
     get,
     path = "/users",
     tag = "users",
+    params(PaginationParams),
     responses(
         (status = 200, description = "Ok", body = [UserResponse]),
         (status = 401, description = "Unauthorized"),

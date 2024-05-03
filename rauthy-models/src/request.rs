@@ -692,7 +692,7 @@ pub struct NewRoleRequest {
     pub role: String,
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
 pub struct PaginationParams {
     pub page_size: Option<u16>,
     pub offset: Option<u16>,
