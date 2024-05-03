@@ -87,7 +87,7 @@ pub struct OidcProvider {
     pub jwks_uri: String,
     // pub registration_endpoint: String,
     // pub check_session_iframe: String,
-    pub grant_types_supported: Vec<Flows>,
+    pub grant_types_supported: Vec<String>,
     pub response_types_supported: Vec<String>,
     pub id_token_signing_alg_values_supported: Vec<Algorithm>,
     pub token_endpoint_auth_signing_alg_values_supported: Vec<Algorithm>,
@@ -192,14 +192,4 @@ pub enum Algorithm {
 pub enum Challenge {
     plain,
     S256,
-}
-
-/// OIDC login flows
-#[allow(non_camel_case_types)]
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Flows {
-    authorization_code,
-    client_credentials,
-    password,
-    refresh_token,
 }
