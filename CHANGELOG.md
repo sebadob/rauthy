@@ -56,7 +56,7 @@ the users can grow quite large depending on the instance while all other endpoin
 "GET all" data.  
 To keep big Rauthy instances with many thousands of users fast and responsive, you can set a threshold for
 the total users count at which Rauthy will dynamically switch from client side to server side pagination
-and searching for the Admin UI's Users page.
+and searching for the Admin UI's Users and Sessions page.
 
 ```
 # Dynamic server side pagination threshold
