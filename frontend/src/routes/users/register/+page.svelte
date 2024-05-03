@@ -94,6 +94,11 @@
         if (res.ok) {
             err = '';
             success = true;
+            if (redirectUri) {
+                setTimeout(() => {
+                    window.location.replace(redirectUri);
+                }, 3000);
+            }
         } else {
             const body = await res.json();
             if (body.message.includes("UNIQUE constraint")) {
