@@ -211,7 +211,7 @@ impl Group {
             .into_iter()
             .map(|mut g| {
                 if g.id == group.id {
-                    g.name = new_group.name.clone();
+                    g.name.clone_from(&new_group.name);
                 }
                 g
             })

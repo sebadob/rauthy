@@ -17,7 +17,7 @@ use askama_actix::Template;
 use rauthy_common::constants::{
     DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION,
 };
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug, Clone)]
 pub enum FrontendAction {
@@ -26,12 +26,12 @@ pub enum FrontendAction {
     None,
 }
 
-impl ToString for FrontendAction {
-    fn to_string(&self) -> String {
+impl Display for FrontendAction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            FrontendAction::Refresh => "Refresh".to_string(),
-            FrontendAction::MfaLogin(s) => format!("MfaLogin {}", s),
-            FrontendAction::None => "None".to_string(),
+            FrontendAction::Refresh => write!(f, "Refresh"),
+            FrontendAction::MfaLogin(s) => write!(f, "MfaLogin {}", s),
+            FrontendAction::None => write!(f, "None"),
         }
     }
 }

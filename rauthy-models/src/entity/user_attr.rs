@@ -220,8 +220,8 @@ impl UserAttrConfigEntity {
     ) -> Result<Self, ErrorResponse> {
         let mut slf = Self::find(data, name.clone()).await?;
 
-        slf.name = req_data.name.clone();
-        slf.desc = req_data.desc;
+        slf.name.clone_from(&req_data.name);
+        slf.desc.clone_from(&req_data.desc);
 
         let is_name_update = name != req_data.name;
 
@@ -311,8 +311,8 @@ impl UserAttrConfigEntity {
             .into_iter()
             .map(|mut attr| {
                 if attr.name == name {
-                    attr.name = slf.name.clone();
-                    attr.desc = slf.desc.clone();
+                    attr.name.clone_from(&slf.name);
+                    attr.desc.clone_from(&slf.desc);
                 }
                 attr
             })

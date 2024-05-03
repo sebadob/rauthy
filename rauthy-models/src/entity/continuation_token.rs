@@ -1,6 +1,7 @@
 use actix_web::http::header::{HeaderName, HeaderValue};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -9,9 +10,9 @@ pub struct ContinuationToken {
     pub ts: i64,
 }
 
-impl ToString for ContinuationToken {
-    fn to_string(&self) -> String {
-        format!("{}{}", self.ts, self.id)
+impl Display for ContinuationToken {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}", self.ts, self.id)
     }
 }
 

@@ -258,12 +258,11 @@ impl FromStr for JwtAmrValue {
     }
 }
 
-impl ToString for JwtAmrValue {
-    fn to_string(&self) -> String {
-        let s = match self {
-            Self::Pwd => "pwd",
-            Self::Mfa => "mfa",
-        };
-        s.to_string()
+impl Display for JwtAmrValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Pwd => write!(f, "pwd"),
+            Self::Mfa => write!(f, "mfa"),
+        }
     }
 }

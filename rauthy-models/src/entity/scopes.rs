@@ -324,8 +324,8 @@ impl Scope {
             .into_iter()
             .map(|mut s| {
                 if s.id == id {
-                    s.attr_include_access = attr_include_access.clone();
-                    s.attr_include_id = attr_include_id.clone();
+                    s.attr_include_access.clone_from(&attr_include_access);
+                    s.attr_include_id.clone_from(&attr_include_id);
                 }
                 s
             })

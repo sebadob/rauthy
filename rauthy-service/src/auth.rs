@@ -1830,25 +1830,25 @@ pub async fn rotate_jwks(data: &web::Data<AppState>) -> Result<(), ErrorResponse
     // clear all latest_jwk from cache
     cache_del(
         CACHE_NAME_12HR.to_string(),
-        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS256.to_string()),
+        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS256.as_str()),
         &data.caches.ha_cache_config,
     )
     .await?;
     cache_del(
         CACHE_NAME_12HR.to_string(),
-        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS384.to_string()),
+        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS384.as_str()),
         &data.caches.ha_cache_config,
     )
     .await?;
     cache_del(
         CACHE_NAME_12HR.to_string(),
-        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS512.to_string()),
+        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS512.as_str()),
         &data.caches.ha_cache_config,
     )
     .await?;
     cache_del(
         CACHE_NAME_12HR.to_string(),
-        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::EdDSA.to_string()),
+        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::EdDSA.as_str()),
         &data.caches.ha_cache_config,
     )
     .await?;

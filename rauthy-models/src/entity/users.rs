@@ -1273,7 +1273,7 @@ impl User {
         if self.roles.ne("") {
             self.roles = format!("{},{}", self.roles, role);
         } else {
-            self.roles = role.to_owned();
+            role.clone_into(&mut self.roles);
         }
     }
 
