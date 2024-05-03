@@ -71,6 +71,11 @@
             return false;
         }
 
+        if (formValues.new.length > 256) {
+            err = 'max 256';
+            return false;
+        }
+
         if (formValues.new !== formValues.verify) {
             err = t.passwordNoMatch;
             return false;

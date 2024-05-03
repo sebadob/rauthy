@@ -229,6 +229,11 @@
             return;
         }
 
+        if (formValues.password.length > 256) {
+            err = 'max 256';
+            return;
+        }
+
         // do passwords match?
         if (formValues.password !== formValues.passwordConfirm) {
             err = t.passwordNoMatch;

@@ -64,6 +64,11 @@
     async function isFormValid() {
         errPwd = '';
 
+        if (formValues.new.length > 256) {
+            errPwd = 'max 256 characters';
+            return false;
+        }
+
         if (formValues.new !== formValues.verify) {
             errPwd = 'New passwords do not match';
             return false;
