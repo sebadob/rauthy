@@ -364,13 +364,13 @@ release:
 
 
 # publishes the application images - full pipeline incl clippy and testing
-publish: pull-latest-cross build-docs build-ui fmt build build-postgres
+publish image="ghcr.io/sebadob/rauthy": pull-latest-cross build-docs build-ui fmt build build-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
     # build and push sqlite version
     docker buildx build \
-          -t ghcr.io/sebadob/rauthy:$TAG-lite \
+          -t {{image}}:$TAG-lite \
            --platform linux/amd64,linux/arm64 \
            --build-arg="DB=sqlite" \
            --no-cache \
@@ -379,7 +379,7 @@ publish: pull-latest-cross build-docs build-ui fmt build build-postgres
 
     # build and push postgres version
     docker buildx build \
-          -t ghcr.io/sebadob/rauthy:$TAG \
+          -t {{image}}:$TAG \
           --platform linux/amd64,linux/arm64 \
           --build-arg="DB=postgres" \
           --no-cache \

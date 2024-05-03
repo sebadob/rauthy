@@ -419,9 +419,15 @@
             {/if}
 
             {#if isRegOpen}
-                <a class="reg" href="/auth/v1/users/register" target="_blank">
-                    {t.signUp}
-                </a>
+                {#if clientUri}
+                    <a class="reg" href="/auth/v1/users/register?redirect_uri={clientUri}" target="_blank">
+                        {t.signUp}
+                    </a>
+                {:else}
+                    <a class="reg" href="/auth/v1/users/register" target="_blank">
+                        {t.signUp}
+                    </a>
+                {/if}
             {/if}
 
             {#if err}
