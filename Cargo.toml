@@ -105,8 +105,8 @@ tokio = { version = "1", features = ["full"] }
 utoipa = { version = "4", features = ["actix_extras", "chrono", "openapi_extensions"] }
 utoipa-swagger-ui = { version = "6.0.0", features = ["actix-web"] }
 uuid = { version = "1", features = ["serde", "v4"] }
-# v0.18 breaks quite a few things - sticking to 0.16 for now
-validator = { version = "0.18.1", features = ["derive"] }
+# v0.18 breaks a lot of things - sticking to 0.16 for now
+validator = { version = "0.16", features = ["derive"] }
 webauthn-rs = { version = "0.4", features = [
     "danger-allow-state-serialisation", "danger-credential-internals", "resident-key-support"
 ] }

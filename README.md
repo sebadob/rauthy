@@ -165,7 +165,7 @@ Rauthy always builds secure cookies by default, but Safari does not treat localh
 all other browsers. This option has been implemented in `v0.22.2-20240424-1`. So you might test with:
 
 ```
-docker run --rm -p 8080:8080 -e DANGER_COOKIE_INSECURE=true ghcr.io/sebadob/rauthy:0.22.2-20240424-1-lite
+docker run --rm -p 8080:8080 -e DANGER_COOKIE_INSECURE=true ghcr.io/sebadob/rauthy:0.23.0-beta1-lite
 ```
 
 ## Contributing

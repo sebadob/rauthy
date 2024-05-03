@@ -384,7 +384,7 @@ dependencies = [
  "serde_qs",
  "serde_urlencoded",
  "thiserror",
- "validator 0.16.1",
+ "validator",
 ]
 
 [[package]]
@@ -2699,6 +2699,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "if_chain"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb56e1aa765b4b4f3aadfab769793b7087bb03a4ea4920644a6d238e2df5b9ed"
+
+[[package]]
 name = "image"
 version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4330,7 +4336,7 @@ dependencies = [
  "tracing-subscriber",
  "utoipa",
  "utoipa-swagger-ui",
- "validator 0.18.1",
+ "validator",
  "webauthn-rs",
 ]
 
@@ -4372,7 +4378,7 @@ dependencies = [
  "tokio-test",
  "tracing",
  "utoipa",
- "validator 0.18.1",
+ "validator",
 ]
 
 [[package]]
@@ -4407,7 +4413,7 @@ dependencies = [
  "tracing",
  "utoipa",
  "utoipa-swagger-ui",
- "validator 0.18.1",
+ "validator",
 ]
 
 [[package]]
@@ -4474,7 +4480,7 @@ dependencies = [
  "utoipa",
  "utoipa-swagger-ui",
  "uuid",
- "validator 0.18.1",
+ "validator",
  "webauthn-rs",
  "webauthn-rs-proto",
 ]
@@ -4528,7 +4534,7 @@ dependencies = [
  "tracing-subscriber",
  "utoipa",
  "utoipa-swagger-ui",
- "validator 0.18.1",
+ "validator",
  "webauthn-rs",
 ]
 
@@ -6554,36 +6560,33 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "url",
-]
-
-[[package]]
-name = "validator"
-version = "0.18.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db79c75af171630a3148bd3e6d7c4f42b6a9a014c2945bc5ed0020cbb8d9478e"
-dependencies = [
- "idna 0.5.0",
- "once_cell",
- "regex",
- "serde",
- "serde_derive",
- "serde_json",
- "url",
  "validator_derive",
 ]
 
 [[package]]
 name = "validator_derive"
-version = "0.18.1"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55591299b7007f551ed1eb79a684af7672c19c3193fb9e0a31936987bb2438ec"
+checksum = "bc44ca3088bb3ba384d9aecf40c6a23a676ce23e09bdaca2073d99c207f864af"
 dependencies = [
- "darling 0.20.8",
- "once_cell",
+ "if_chain",
+ "lazy_static",
  "proc-macro-error",
  "proc-macro2",
  "quote",
- "syn 2.0.60",
+ "regex",
+ "syn 1.0.109",
+ "validator_types",
+]
+
+[[package]]
+name = "validator_types"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "111abfe30072511849c5910134e8baf8dc05de4c0e5903d681cbd5c9c4d611e3"
+dependencies = [
+ "proc-macro2",
+ "syn 1.0.109",
 ]
 
 [[package]]
