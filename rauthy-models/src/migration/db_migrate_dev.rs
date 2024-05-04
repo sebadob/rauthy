@@ -150,7 +150,7 @@ pub async fn migrate_dev_data(db: &DbPool) -> Result<(), ErrorResponse> {
             .add(::time::Duration::days(1))
             .unix_timestamp(),
         used: false,
-        usage: MagicLinkUsage::PasswordReset.to_string(),
+        usage: MagicLinkUsage::PasswordReset(None).to_string(),
     };
     let _ = sqlx::query(
         r#"insert into magic_links (id, user_id, csrf_token, exp, used, usage)

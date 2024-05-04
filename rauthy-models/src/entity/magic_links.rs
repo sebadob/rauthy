@@ -13,7 +13,7 @@ use tracing::warn;
 #[serde(rename_all = "snake_case")]
 pub enum MagicLinkUsage {
     EmailChange(String),
-    PasswordReset,
+    PasswordReset(Option<String>),
     NewUser(Option<String>),
 }
 
@@ -31,7 +31,7 @@ impl TryFrom<&str> for MagicLinkUsage {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let (ty, v) = value.split_once('$').unwrap_or((value, ""));
         let slf = match ty {
-            "password_reset" => MagicLinkUsage::PasswordReset,
+            "email_change" => MagicLinkUsage::EmailChange(v.to_string()),
             "new_user" => {
                 if !v.is_empty() {
                     MagicLinkUsage::NewUser(Some(v.to_string()))
@@ -39,7 +39,13 @@ impl TryFrom<&str> for MagicLinkUsage {
                     MagicLinkUsage::NewUser(None)
                 }
             }
-            "email_change" => MagicLinkUsage::EmailChange(v.to_string()),
+            "password_reset" => {
+                if !v.is_empty() {
+                    MagicLinkUsage::PasswordReset(Some(v.to_string()))
+                } else {
+                    MagicLinkUsage::PasswordReset(None)
+                }
+            }
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
@@ -57,7 +63,7 @@ impl Display for MagicLinkUsage {
         // For types with a value, `$` was chosen as the separating characters since it is URL safe.
         // It also makes splitting of the value quite easy.
         match self {
-            MagicLinkUsage::PasswordReset => write!(f, "password_reset"),
+            MagicLinkUsage::EmailChange(email) => write!(f, "email_change${}", email),
             MagicLinkUsage::NewUser(redirect_uri) => {
                 if let Some(uri) = redirect_uri {
                     write!(f, "new_user${}", uri)
@@ -65,7 +71,13 @@ impl Display for MagicLinkUsage {
                     write!(f, "new_user")
                 }
             }
-            MagicLinkUsage::EmailChange(email) => write!(f, "email_change${}", email),
+            MagicLinkUsage::PasswordReset(redirect_uri) => {
+                if let Some(uri) = redirect_uri {
+                    write!(f, "password_reset${}", uri)
+                } else {
+                    write!(f, "password_reset")
+                }
+            }
         }
     }
 }

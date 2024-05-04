@@ -1115,13 +1115,14 @@ pub async fn put_user_webid_data(
 pub async fn post_user_password_request_reset(
     data: web::Data<AppState>,
     req: HttpRequest,
-    req_data: Json<RequestResetRequest>,
+    payload: Json<RequestResetRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
 
-    let user = User::find_by_email(&data, req_data.into_inner().email).await?;
-    user.request_password_reset(&data, req)
+    let payload = payload.into_inner();
+    let user = User::find_by_email(&data, payload.email).await?;
+    user.request_password_reset(&data, req, payload.redirect_uri)
         .await
         .map(|_| HttpResponse::Ok().status(StatusCode::OK).finish())
 }
