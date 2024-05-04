@@ -1062,7 +1062,7 @@ impl User {
 
         let usage = MagicLinkUsage::try_from(&ml.usage)?;
         let new_email = match usage {
-            MagicLinkUsage::NewUser(_) | MagicLinkUsage::PasswordReset => {
+            MagicLinkUsage::NewUser(_) | MagicLinkUsage::PasswordReset(_) => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "The Magic Link is not meant to be used to confirm an E-Mail address"
@@ -1281,6 +1281,7 @@ impl User {
         &self,
         data: &web::Data<AppState>,
         req: HttpRequest,
+        redirect_uri: Option<String>,
     ) -> Result<(), ErrorResponse> {
         // TODO implement something with a Backup Code for passkey only accounts?
         // deny for passkey only accounts
@@ -1301,9 +1302,9 @@ impl User {
         }
 
         let usage = if self.password.is_none() && !self.has_webauthn_enabled() {
-            MagicLinkUsage::NewUser(None)
+            MagicLinkUsage::NewUser(redirect_uri)
         } else {
-            MagicLinkUsage::PasswordReset
+            MagicLinkUsage::PasswordReset(redirect_uri)
         };
         let new_ml =
             MagicLink::create(data, self.id.clone(), data.ml_lt_pwd_reset as i64, usage).await?;
@@ -1340,7 +1341,7 @@ impl User {
                         data,
                         self.id.clone(),
                         data.ml_lt_pwd_reset as i64,
-                        MagicLinkUsage::PasswordReset,
+                        MagicLinkUsage::PasswordReset(None),
                     )
                     .await?;
                     send_pwd_reset(data, &magic_link, self).await;

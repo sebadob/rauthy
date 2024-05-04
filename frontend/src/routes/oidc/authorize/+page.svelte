@@ -296,6 +296,9 @@
         let req = {
             email: formValues.email,
         };
+        if (clientUri) {
+            req.redirect_uri = encodeURI(clientUri);
+        }
 
         isLoading = true;
 
@@ -418,18 +421,6 @@
                 </div>
             {/if}
 
-            {#if isRegOpen}
-                {#if clientUri}
-                    <a class="reg" href="/auth/v1/users/register?redirect_uri={clientUri}" target="_blank">
-                        {t.signUp}
-                    </a>
-                {:else}
-                    <a class="reg" href="/auth/v1/users/register" target="_blank">
-                        {t.signUp}
-                    </a>
-                {/if}
-            {/if}
-
             {#if err}
                 <div class="errMsg errMsgApi">
                     {err}
@@ -442,10 +433,22 @@
                 </div>
             {/if}
 
+            {#if isRegOpen && !clientMfaForce && !showResetRequest && !tooManyRequests}
+                {#if clientUri}
+                    <a class="reg" href="/auth/v1/users/register?redirect_uri={clientUri}" target="_blank">
+                        {t.signUp}
+                    </a>
+                {:else}
+                    <a class="reg" href="/auth/v1/users/register" target="_blank">
+                        {t.signUp}
+                    </a>
+                {/if}
+            {/if}
+
             {#if clientMfaForce}
                 <div class="btn flex-col">
                     <Button on:click={() => window.location.href = '/auth/v1/account'}>
-                        ACCOUNT LOGIN
+                        ACCOUNT
                     </Button>
                 </div>
             {/if}
@@ -474,7 +477,7 @@
 
     .errMsg {
         max-width: 15rem;
-        margin: -5px 10px 0 5px;
+        margin: -10px 10px 5px 5px;
         color: var(--col-err)
     }
 
@@ -535,6 +538,7 @@
     }
 
     .success {
+        margin: 0 5px;
         color: var(--col-ok);
     }
 </style>

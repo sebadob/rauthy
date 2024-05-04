@@ -1,7 +1,7 @@
 use crate::common::{get_auth_headers, get_backend_url, get_token_set};
 use pretty_assertions::assert_eq;
 use rauthy_models::language::Language;
-use rauthy_models::request::NewUserRequest;
+use rauthy_models::request::{NewUserRequest, RequestResetRequest};
 use rauthy_models::response::{UserResponse, UserResponseSimple};
 use reqwest::header::AUTHORIZATION;
 use std::error::Error;
@@ -112,6 +112,38 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
 
     let users = res.json::<Vec<UserResponseSimple>>().await?;
     assert_eq!(users.len(), 3);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_password_reset_always_ok() -> Result<(), Box<dyn Error>> {
+    let auth_headers = get_auth_headers().await?;
+    let client = reqwest::Client::new();
+
+    // get password reset for an existing user
+    let mut payload = RequestResetRequest {
+        email: "admin@localhost.de".to_string(),
+        redirect_uri: None,
+    };
+    let url = format!("{}/users/request_reset", get_backend_url());
+    let res = client
+        .post(&url)
+        .headers(auth_headers.clone())
+        .json(&payload)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // we should always get back an HTTP 200 for username enumeration prevention
+    payload.email = "idonotexist@iamaghost.io".to_string();
+    let res = client
+        .post(&url)
+        .headers(auth_headers.clone())
+        .json(&payload)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
 
     Ok(())
 }

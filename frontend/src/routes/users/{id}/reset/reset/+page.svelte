@@ -445,7 +445,7 @@
                         {/if}
                     </div>
                 {/if}
-            {:else if requestType === "password_reset"}
+            {:else if requestType.startsWith('password_reset')}
                 {#if webauthnData}
                     <WebauthnRequest
                             bind:data={webauthnData}

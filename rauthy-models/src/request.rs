@@ -644,6 +644,9 @@ pub struct RequestResetRequest {
     /// Validation: `email`
     #[validate(email)]
     pub email: String,
+    /// Redirect URI used after a successful reset - validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
+    pub redirect_uri: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]

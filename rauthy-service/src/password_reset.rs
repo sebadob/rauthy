@@ -221,6 +221,7 @@ pub async fn handle_put_user_password_reset<'a>(
     // check if we got a custom `redirect_uri` during registration
     let redirect_uri = match MagicLinkUsage::try_from(&ml.usage)? {
         MagicLinkUsage::NewUser(redirect_uri) => redirect_uri,
+        MagicLinkUsage::PasswordReset(redirect_uri) => redirect_uri,
         _ => None,
     };
 
