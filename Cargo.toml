@@ -108,6 +108,6 @@ uuid = { version = "1", features = ["serde", "v4"] }
 # v0.18 breaks a lot of things - sticking to 0.16 for now
 validator = { version = "0.16", features = ["derive"] }
 webauthn-rs = { version = "0.5", features = [
-    "danger-allow-state-serialisation", "danger-credential-internals", "resident-key-support"
+    "danger-allow-state-serialisation", "danger-credential-internals"
 ] }
 webauthn-rs-proto = "0.5"
