@@ -44,7 +44,7 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
     debug!("Executing anti_lockout_check");
 
     let (redirect_uris, allowed_origins) = if *DEV_MODE {
-        let (ip, _) = PUB_URL.split_once(':').unwrap();
+        let (ip, _) = PUB_URL.split_once(':').expect("PUB_URL must have a port");
         let origin = if ip != "localhost" {
             format!("https://{}:5173", ip)
         } else {
