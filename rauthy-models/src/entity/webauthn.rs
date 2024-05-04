@@ -25,7 +25,9 @@ use time::OffsetDateTime;
 use tracing::{error, info, warn};
 use utoipa::ToSchema;
 use webauthn_rs::prelude::*;
-use webauthn_rs_proto::{AuthenticatorSelectionCriteria, UserVerificationPolicy};
+use webauthn_rs_proto::{
+    AuthenticatorSelectionCriteria, ResidentKeyRequirement, UserVerificationPolicy,
+};
 
 #[derive(Debug, Clone, FromRow, Deserialize, Serialize)]
 pub struct PasskeyEntity {
@@ -59,7 +61,7 @@ impl PasskeyEntity {
             name,
             passkey_user_id: passkey_user_id.to_string(),
             passkey,
-            credential_id: pk.cred_id().0.clone(),
+            credential_id: pk.cred_id().to_vec(),
             registered: now,
             last_used: now,
             user_verified: Some(user_verified),
@@ -797,6 +799,7 @@ pub async fn reg_start(
                     } else {
                         Some(AuthenticatorSelectionCriteria {
                             authenticator_attachment: None,
+                            resident_key: Some(ResidentKeyRequirement::Discouraged),
                             require_resident_key: false,
                             user_verification: UserVerificationPolicy::Required,
                         })
