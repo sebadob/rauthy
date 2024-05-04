@@ -297,7 +297,7 @@
             email: formValues.email,
         };
         if (clientUri) {
-            req.redirect_uri = clientUri;
+            req.redirect_uri = encodeURI(clientUri);
         }
 
         isLoading = true;
