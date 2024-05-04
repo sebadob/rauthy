@@ -1121,10 +1121,16 @@ pub async fn post_user_password_request_reset(
     principal.validate_session_auth_or_init()?;
 
     let payload = payload.into_inner();
-    let user = User::find_by_email(&data, payload.email).await?;
-    user.request_password_reset(&data, req, payload.redirect_uri)
-        .await
-        .map(|_| HttpResponse::Ok().status(StatusCode::OK).finish())
+    match User::find_by_email(&data, payload.email).await {
+        Ok(user) => user
+            .request_password_reset(&data, req, payload.redirect_uri)
+            .await
+            .map(|_| HttpResponse::Ok().status(StatusCode::OK).finish()),
+        Err(_) => {
+            // always return OK, no matter what, for username enumeration prevention
+            Ok(HttpResponse::Ok().status(StatusCode::OK).finish())
+        }
+    }
 }
 
 /// Returns a single user by its *email*
