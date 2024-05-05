@@ -3,14 +3,18 @@ set positional-arguments
 set shell := ["bash", "-uc"]
 
 export TAG := `cat Cargo.toml | grep '^version =' | cut -d " " -f3 | xargs`
+export TODAY := `date +%Y%m%d`
+export USER :=  `echo "$(id -u):$(id -g)"`
+
+builder_image := "ghcr.io/sebadob/rauthy-builder"
+builder_tag_date := "20240505"
 
 arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
-test_pid_file := ".test_pid"
-builder_image := "ghcr.io/sebadob/rauthy-builder"
 
 container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_test_backend := "rauthy-test-backend"
+container_cargo_registry := "/home/.cargo/registry"
 
 db_url_sqlite := "sqlite:data/rauthy.db"
 db_url_postgres := "postgresql://rauthy:123SuperSafe@$DEV_HOST:5432/rauthy"
@@ -25,49 +29,49 @@ default:
 
 _run +args:
     @docker run --rm -it \
-      -v ~/.cargo/registry:/root/.cargo/registry \
+      -v ~/.cargo/registry:{{container_cargo_registry}} \
       -v ./:/work/ \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
       --name rauthy \
-      {{builder_image}}:{{arch}} {{args}}
+      {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
 
 _run-pg +args:
     @docker run --rm -it \
-      -v ~/.cargo/registry:/root/.cargo/registry \
+      -v ~/.cargo/registry:{{container_cargo_registry}} \
       -v ./:/work/ \
       -e DATABASE_URL={{db_url_postgres}} \
       --net host \
       --name rauthy-postgres \
-      {{builder_image}}:{{arch}} {{args}}
+      {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
 
 _run-ui +args:
     @docker run --rm -it \
-      -v ~/.cargo/registry:/root/.cargo/registry \
+      -v ~/.cargo/registry:{{container_cargo_registry}} \
       -v ./:/work/ \
       --net host \
       -w/work/frontend \
       --name rauthy-ui \
-      {{builder_image}}:{{arch}} {{args}}
+      {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
 
 _run-bg +args:
     @docker run --rm -d \
-      -v ~/.cargo/registry:/root/.cargo/registry \
+      -v ~/.cargo/registry:{{container_cargo_registry}} \
       -v ./:/work/ \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
       -p 8081:8081 \
       --name {{container_test_backend}} \
-      {{builder_image}}:{{arch}} {{args}}
+      {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
 
 _run-bg-pg +args:
     @docker run --rm -d \
-      -v ~/.cargo/registry:/root/.cargo/registry \
+      -v ~/.cargo/registry:{{container_cargo_registry}} \
       -v ./:/work/ \
       -e DATABASE_URL={{db_url_postgres}} \
       --net host \
       --name {{container_test_backend}} \
-      {{builder_image}}:{{arch}} {{args}}
+      {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
 
 # start the backend containers for local dev
 backend: mailcrab-start postgres-start
@@ -76,6 +80,9 @@ backend: mailcrab-start postgres-start
 backend-stop:
     just postgres-stop
     just mailcrab-stop
+
+clean:
+    just _run cargo clean
 
 # Creates a new Root + Intermediate CA for development and testing TLS certificates
 create-root-ca:
@@ -160,6 +167,8 @@ postgres-start:
       --restart unless-stopped \
       postgres:16.2
 
+    just migrate-postgres
+
 # Stops mailcrab
 postgres-stop:
     docker stop {{container_postgres}}
@@ -242,14 +251,14 @@ test-backend: migrate prepare
 
     just _run cargo build
     @docker run --rm -it \
-      -v ~/.cargo/registry:/root/.cargo/registry \
+      -v ~/.cargo/registry:{{container_cargo_registry}} \
       -v ./:/work/ \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
       -p 8080:8080 \
       -p 8443:8443 \
       --name {{container_test_backend}} \
-      {{builder_image}}:{{arch}} cargo run test
+      {{builder_image}}:{{arch}}-{{builder_tag_date}} cargo run test
 
 
 # stops a possibly running test backend that may have spawned in the background for integration tests
@@ -279,7 +288,7 @@ test-sqlite *test: test-backend-stop migrate prepare
 
 
 # runs the full set of tests with postgres
-test-postgres test="": test-backend-stop postgres-stop postgres-start migrate-postgres prepare-postgres
+test-postgres test="": test-backend-stop postgres-stop postgres-start prepare-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
@@ -378,25 +387,23 @@ build-sqlite: build-ui test-sqlite
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    #just _run cargo clean
     mkdir -p out
 
     just _run cargo clippy -- -D warnings
     docker run --rm -it \
-          -v ~/.cargo/registry:/root/.cargo/registry \
+          -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
           -e DATABASE_URL={{db_url_sqlite}} \
-          {{builder_image}}:amd64 \
+          {{builder_image}}:amd64-{{builder_tag_date}} \
           cargo build --release --target x86_64-unknown-linux-musl
     cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-amd64
 
-    #just _run cargo clean
     docker run --rm -it \
-              -v ~/.cargo/registry:/root/.cargo/registry \
-              -v ./:/work/ \
-              -e DATABASE_URL={{db_url_sqlite}} \
-              {{builder_image}}:arm64 \
-              cargo build --release --target aarch64-unknown-linux-musl
+          -v ~/.cargo/registry:{{container_cargo_registry}} \
+          -v ./:/work/ \
+          -e DATABASE_URL={{db_url_sqlite}} \
+          {{builder_image}}:arm64-{{builder_tag_date}} \
+          cargo build --release --target aarch64-unknown-linux-musl
     cp target/aarch64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-arm64
 
 
@@ -409,24 +416,24 @@ build-postgres: build-ui test-postgres
 
     just _run-pg cargo clippy --features postgres -- -D warnings
     docker run --rm -it \
-          -v ~/.cargo/registry:/root/.cargo/registry \
+          -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
           -e DATABASE_URL={{db_url_postgres}} \
-          {{builder_image}}:amd64 \
+          {{builder_image}}:amd64-{{builder_tag_date}} \
           cargo build --features postgres --release --target x86_64-unknown-linux-musl
     cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-postgres-amd64
 
     docker run --rm -it \
-          -v ~/.cargo/registry:/root/.cargo/registry \
+          -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
           -e DATABASE_URL={{db_url_postgres}} \
-          {{builder_image}}:arm64 \
+          {{builder_image}}:arm64-{{builder_tag_date}} \
           cargo build --features postgres --release --target aarch64-unknown-linux-musl
     cp target/aarch64-unknown-linux-musl/release/rauthy out/rauthy-postgres-arm64
 
 
 # build all release versions incl testing
-build: build-ui
+build: build-ui test-sqlite test-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
 
@@ -436,20 +443,20 @@ build: build-ui
     just _run cargo clippy -- -D warnings
     just test-sqlite
     docker run --rm -it \
-          -v ~/.cargo/registry:/root/.cargo/registry \
+          -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
           -e DATABASE_URL={{db_url_sqlite}} \
-          {{builder_image}}:amd64 \
+          {{builder_image}}:amd64-{{builder_tag_date}} \
           cargo build --release --target x86_64-unknown-linux-musl
     cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-amd64
 
     just _run-pg cargo clippy --features postgres -- -D warnings
     just test-postgres
     docker run --rm -it \
-          -v ~/.cargo/registry:/root/.cargo/registry \
+          -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
           -e DATABASE_URL={{db_url_postgres}} \
-          {{builder_image}}:amd64 \
+          {{builder_image}}:amd64-{{builder_tag_date}} \
           cargo build --features postgres --release --target x86_64-unknown-linux-musl
     cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-postgres-amd64
 
@@ -457,20 +464,20 @@ build: build-ui
     just migrate
     just prepare
     docker run --rm -it \
-          -v ~/.cargo/registry:/root/.cargo/registry \
+          -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
           -e DATABASE_URL={{db_url_sqlite}} \
-          {{builder_image}}:arm64 \
+          {{builder_image}}:arm64-{{builder_tag_date}} \
           cargo build --release --target aarch64-unknown-linux-musl
     cp target/aarch64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-arm64
 
     just migrate-postgres
     just prepare-postgres
     docker run --rm -it \
-          -v ~/.cargo/registry:/root/.cargo/registry \
+          -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
           -e DATABASE_URL={{db_url_postgres}} \
-          {{builder_image}}:arm64 \
+          {{builder_image}}:arm64-{{builder_tag_date}} \
           cargo build --features postgres --release --target aarch64-unknown-linux-musl
     cp target/aarch64-unknown-linux-musl/release/rauthy out/rauthy-postgres-arm64
 
@@ -513,6 +520,8 @@ publish image="ghcr.io/sebadob/rauthy": build-docs fmt build
           -t {{image}}:$TAG-lite \
            --platform linux/amd64,linux/arm64 \
            --build-arg="DB=sqlite" \
+           --build-arg="IMAGE={{builder_image}}" \
+           --build-arg="IMAGE_DATE={{builder_tag_date}}" \
            --no-cache \
            --push \
            .
@@ -522,6 +531,8 @@ publish image="ghcr.io/sebadob/rauthy": build-docs fmt build
           -t {{image}}:$TAG \
           --platform linux/amd64,linux/arm64 \
           --build-arg="DB=postgres" \
+          --build-arg="IMAGE={{builder_image}}" \
+          --build-arg="IMAGE_DATE={{builder_tag_date}}" \
           --no-cache \
           --push \
           .
@@ -534,7 +545,7 @@ build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
 
     docker pull ghcr.io/cross-rs/x86_64-unknown-linux-musl:edge
     docker buildx build \
-          -t {{image}}:amd64 \
+          -t {{image}}:amd64-$TODAY \
           -f Dockerfile_builder \
           --platform linux/amd64 \
           --build-arg="IMAGE=ghcr.io/cross-rs/x86_64-unknown-linux-musl:edge" \
@@ -543,10 +554,11 @@ build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
 
     docker pull ghcr.io/cross-rs/aarch64-unknown-linux-musl:edge
     docker buildx build \
-           -t {{image}}:arm64 \
+           -t {{image}}:arm64-$TODAY \
            -f Dockerfile_builder \
            --platform linux/arm64 \
            --build-arg="IMAGE=ghcr.io/cross-rs/aarch64-unknown-linux-musl:edge" \
+           --no-cache \
            --{{push}} \
            .
 
