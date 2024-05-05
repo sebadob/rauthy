@@ -64,7 +64,6 @@ _run-bg +args:
       -u $USER \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
-      -p 8081:8081 \
       --name {{container_test_backend}} \
       {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
 
@@ -261,8 +260,6 @@ test-backend: migrate prepare
       -u $USER \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
-      -p 8080:8080 \
-      -p 8443:8443 \
       --name {{container_test_backend}} \
       {{builder_image}}:{{arch}}-{{builder_tag_date}} cargo run test
 
@@ -443,15 +440,19 @@ build-postgres: build-ui test-postgres
 
 
 # build all release versions incl testing
-build: build-ui test-sqlite test-postgres
+build: build-ui
     #!/usr/bin/env bash
     set -euxo pipefail
 
     mkdir -p out
 
     # build amd64 version first with both DB's to make use of caching
+    echo "make sure clippy is fine with sqlite"
     just _run cargo clippy -- -D warnings
+    echo "run tests against sqlite"
     just test-sqlite
+
+    echo "build sqlite release for amd64"
     docker run --rm -it \
           -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
@@ -461,8 +462,12 @@ build: build-ui test-sqlite test-postgres
           cargo build --release --target x86_64-unknown-linux-musl
     cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-amd64
 
+    echo "make sure clippy is fine with postgres"
     just _run-pg cargo clippy --features postgres -- -D warnings
+    echo "run tests against postgres"
     just test-postgres
+
+    echo "build postgres release for amd64"
     docker run --rm -it \
           -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
@@ -473,7 +478,7 @@ build: build-ui test-sqlite test-postgres
     cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-postgres-amd64
 
     # build the arm64 version with both DB's
-    just migrate
+    echo "build sqlite release for arm64"
     just prepare
     docker run --rm -it \
           -v ~/.cargo/registry:{{container_cargo_registry}} \
@@ -484,7 +489,7 @@ build: build-ui test-sqlite test-postgres
           cargo build --release --target aarch64-unknown-linux-musl
     cp target/aarch64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-arm64
 
-    just migrate-postgres
+    echo "build sqlite release for arm64"
     just prepare-postgres
     docker run --rm -it \
           -v ~/.cargo/registry:{{container_cargo_registry}} \
