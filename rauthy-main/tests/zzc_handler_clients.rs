@@ -35,7 +35,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     assert_eq!(client.post_logout_redirect_uris.as_ref().unwrap().len(), 3);
     assert_eq!(
         client.allowed_origins,
-        Some(vec!["https://localhost:5173".to_string()])
+        Some(vec!["http://localhost:5173".to_string()])
     );
     assert_eq!(client.flows_enabled.len(), 1);
     assert_eq!(client.access_token_alg, "EdDSA");
