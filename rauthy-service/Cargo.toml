@@ -17,7 +17,8 @@ derive_more = { workspace = true }
 jwt-simple = { workspace = true }
 ## Add openssl-sys as a direct dependency, so it can be cross compiled to
 ## x86_64-unknown-linux-musl using the "vendored" feature below
-openssl-sys = { workspace = true }
+#openssl = { workspace = true }
+#openssl-sys = { workspace = true }
 rand = { workspace = true }
 rand_core = { workspace = true }
 rauthy-common = { path = "../rauthy-common" }
