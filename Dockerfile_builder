@@ -1,0 +1,65 @@
+ARG IMAGE
+
+# https://github.com/cross-rs/cross/pkgs/container/x86_64-unknown-linux-musl
+# https://github.com/cross-rs/cross/pkgs/container/aarch64-unknown-linux-musl
+FROM --platform=$BUILDPLATFORM $IMAGE
+
+# docker buildx args automatically available
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
+ENV PATH="${PATH}:/root/.cargo/bin"
+
+ENV LD_LIBRARY_PATH="${PATH}:/usr/local/lib64:${LD_LIBRARY_PATH}"
+ENV PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig"
+# just set any timezone to make headless npm install work
+ENV TZ="Europe/Berlin"
+
+RUN echo "Building on $BUILDPLATFORM for $TARGETOS/$TARGETARCH with --target=$TARGET"
+
+WORKDIR /root
+
+RUN cat <<EOF > /usr/local/bin/target
+#!/bin/bash
+if [ "arm64" == "$TARGETARCH" ]; then
+  echo aarch64-unknown-linux-musl
+else
+  echo x86_64-unknown-linux-musl
+fi
+EOF
+RUN chmod +x /usr/local/bin/target
+
+# we need to install openssl 3 to make webauthn-rs happy
+RUN apt update && apt install -y build-essential checkinstall zlib1g-dev vim
+# the base for this image is ubuntu 20.04 -> not available via apt
+RUN curl -LO https://github.com/openssl/openssl/releases/download/openssl-3.3.0/openssl-3.3.0.tar.gz && \
+    tar xvf openssl-3.3.0.tar.gz && \
+    cd openssl-3.3.0 && \
+    ./config && \
+    make && \
+    make test &&  \
+    make install &&  \
+    echo '/usr/local/lib64' > /etc/ld.so.conf.d/lib64.conf && \
+    ldconfig
+#RUN rm -rf openssl*
+
+# we need `npm` for the svelte UI
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y nodejs
+
+# now install latest stable rust
+RUN curl --proto '=https' --tlsv1.3 https://sh.rustup.rs | sh -s -- -y
+RUN rustup target add $(target)
+
+# install basic system tools
+RUN cargo install just
+RUN cargo install sd
+RUN cargo install mdbook
+RUN cargo install mdbook-admonish
+RUN cargo install sqlx-cli --no-default-features --features rustls,sqlite,postgres
+
+WORKDIR /work
+
+CMD ["/bin/bash"]

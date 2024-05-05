@@ -1,17 +1,16 @@
-FROM --platform=$BUILDPLATFORM alpine:3.18.4 AS builderBackend
+FROM --platform=$BUILDPLATFORM ghcr.io/sebadob/rauthy-builder:$TARGETARCH AS builder
 
 # docker buildx args automatically available
 ARG BUILDPLATFORM
 ARG TARGETPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
+ARG FEATURES="default"
 
-RUN echo "I'm building on $BUILDPLATFORM for $TARGETOS/$TARGETARCH"
+RUN echo "Building on $BUILDPLATFORM for $TARGETOS/$TARGETARCH"
 
-WORKDIR /work
-
-# Just a workaround to get an empty dir and be able to copy it over to scratch with
-# the correct access rights
+## Just a workaround to get an empty dir and be able to copy it over to scratch with
+## the correct access rights
 RUN mkdir data
 
 FROM --platform=$TARGETPLATFORM scratch
@@ -30,7 +29,7 @@ USER 10001:10001
 WORKDIR /app
 
 COPY --chown=10001:10001 /out/rauthy-"$DB"-"$TARGETARCH" ./rauthy
-COPY --chown=10001:10001 --from=builderBackend /work/data ./data
+COPY --chown=10001:10001 --from=builder /work/data ./data
 
 COPY --chown=10001:10001 tls/ca-chain.pem ./tls/ca-chain.pem
 COPY --chown=10001:10001 tls/cert-chain.pem ./tls/cert-chain.pem
