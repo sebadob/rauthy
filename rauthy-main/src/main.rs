@@ -83,19 +83,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     } else {
         dotenvy::from_filename("rauthy.cfg").expect("'rauthy.cfg' error");
         dotenvy::dotenv().ok();
-        #[cfg(feature = "postgres")]
-        {
-            if *rauthy_common::constants::DEV_MODE {
-                // In this case, we want to set the `DATABASE_URL` programmatically.
-                // It seems a bit silly at first, but it makes it possible to have a
-                // default for SQLite in the config to not make the LSP freak out, while
-                // still being able to switch to postgres without modifying the config
-                // each time.
-                let url_pg =
-                    env::var("DATABASE_URL_POSTGRES").expect("DATABASE_URL_POSTGRES to be set");
-                env::set_var("DATABASE_URL", url_pg);
-            }
-        }
     }
 
     let log_level = setup_logging();
