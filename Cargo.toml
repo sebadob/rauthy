@@ -112,19 +112,3 @@ webauthn-rs = { version = "0.5", features = [
     "danger-allow-state-serialisation", "danger-credential-internals"
 ] }
 webauthn-rs-proto = "0.5"
-
-# configure openssl deps to make cross-compiling webauthn-rs work
-[workspace.metadata.cross.target.x86_64-unknown-linux-musl]
-# Install libssl-dev:arm64, see <https://github.com/cross-rs/cross/blob/main/docs/custom_images.md#adding-dependencies-to-existing-images>
-#    "dpkg --add-architecture $CROSS_DEB_ARCH",
-pre-build = [
-    "apt update && apt install -y build-essential checkinstall zlib1g-dev",
-    "curl -LO https://github.com/openssl/openssl/releases/download/openssl-3.3.0/openssl-3.3.0.tar.gz",
-    "tar xvf openssl-3.3.0.tar.gz",
-    "cd openssl-3.3.0",
-    "./config",
-    "make",
-    "make test",
-    "make install",
-    "sudo ldconfig",
-]
