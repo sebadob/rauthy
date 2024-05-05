@@ -1,4 +1,7 @@
-FROM --platform=$BUILDPLATFORM ghcr.io/sebadob/rauthy-builder:$TARGETARCH AS builder
+ARG IMAGE
+ARG IMAGE_DATE
+
+FROM --platform=$BUILDPLATFORM $IMAGE:$TARGETARCH-$IMAGE_DATE AS builder
 
 # docker buildx args automatically available
 ARG BUILDPLATFORM
