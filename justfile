@@ -31,6 +31,7 @@ _run +args:
     @docker run --rm -it \
       -v ~/.cargo/registry:{{container_cargo_registry}} \
       -v ./:/work/ \
+      -u $USER \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
       --name rauthy \
@@ -40,6 +41,7 @@ _run-pg +args:
     @docker run --rm -it \
       -v ~/.cargo/registry:{{container_cargo_registry}} \
       -v ./:/work/ \
+      -u $USER \
       -e DATABASE_URL={{db_url_postgres}} \
       --net host \
       --name rauthy-postgres \
@@ -49,6 +51,7 @@ _run-ui +args:
     @docker run --rm -it \
       -v ~/.cargo/registry:{{container_cargo_registry}} \
       -v ./:/work/ \
+      -u $USER \
       --net host \
       -w/work/frontend \
       --name rauthy-ui \
@@ -58,6 +61,7 @@ _run-bg +args:
     @docker run --rm -d \
       -v ~/.cargo/registry:{{container_cargo_registry}} \
       -v ./:/work/ \
+      -u $USER \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
       -p 8081:8081 \
@@ -68,6 +72,7 @@ _run-bg-pg +args:
     @docker run --rm -d \
       -v ~/.cargo/registry:{{container_cargo_registry}} \
       -v ./:/work/ \
+      -u $USER \
       -e DATABASE_URL={{db_url_postgres}} \
       --net host \
       --name {{container_test_backend}} \
@@ -253,6 +258,7 @@ test-backend: migrate prepare
     @docker run --rm -it \
       -v ~/.cargo/registry:{{container_cargo_registry}} \
       -v ./:/work/ \
+      -u $USER \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
       -p 8080:8080 \
@@ -393,6 +399,7 @@ build-sqlite: build-ui test-sqlite
     docker run --rm -it \
           -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
+          -u $USER \
           -e DATABASE_URL={{db_url_sqlite}} \
           {{builder_image}}:amd64-{{builder_tag_date}} \
           cargo build --release --target x86_64-unknown-linux-musl
@@ -401,6 +408,7 @@ build-sqlite: build-ui test-sqlite
     docker run --rm -it \
           -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
+          -u $USER \
           -e DATABASE_URL={{db_url_sqlite}} \
           {{builder_image}}:arm64-{{builder_tag_date}} \
           cargo build --release --target aarch64-unknown-linux-musl
@@ -418,6 +426,7 @@ build-postgres: build-ui test-postgres
     docker run --rm -it \
           -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
+          -u $USER \
           -e DATABASE_URL={{db_url_postgres}} \
           {{builder_image}}:amd64-{{builder_tag_date}} \
           cargo build --features postgres --release --target x86_64-unknown-linux-musl
@@ -426,6 +435,7 @@ build-postgres: build-ui test-postgres
     docker run --rm -it \
           -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
+          -u $USER \
           -e DATABASE_URL={{db_url_postgres}} \
           {{builder_image}}:arm64-{{builder_tag_date}} \
           cargo build --features postgres --release --target aarch64-unknown-linux-musl
@@ -445,6 +455,7 @@ build: build-ui test-sqlite test-postgres
     docker run --rm -it \
           -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
+          -u $USER \
           -e DATABASE_URL={{db_url_sqlite}} \
           {{builder_image}}:amd64-{{builder_tag_date}} \
           cargo build --release --target x86_64-unknown-linux-musl
@@ -455,6 +466,7 @@ build: build-ui test-sqlite test-postgres
     docker run --rm -it \
           -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
+          -u $USER \
           -e DATABASE_URL={{db_url_postgres}} \
           {{builder_image}}:amd64-{{builder_tag_date}} \
           cargo build --features postgres --release --target x86_64-unknown-linux-musl
@@ -466,6 +478,7 @@ build: build-ui test-sqlite test-postgres
     docker run --rm -it \
           -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
+          -u $USER \
           -e DATABASE_URL={{db_url_sqlite}} \
           {{builder_image}}:arm64-{{builder_tag_date}} \
           cargo build --release --target aarch64-unknown-linux-musl
@@ -476,6 +489,7 @@ build: build-ui test-sqlite test-postgres
     docker run --rm -it \
           -v ~/.cargo/registry:{{container_cargo_registry}} \
           -v ./:/work/ \
+          -u $USER \
           -e DATABASE_URL={{db_url_postgres}} \
           {{builder_image}}:arm64-{{builder_tag_date}} \
           cargo build --features postgres --release --target aarch64-unknown-linux-musl
