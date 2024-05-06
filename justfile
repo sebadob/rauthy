@@ -19,9 +19,9 @@ container_cargo_registry := "/home/.cargo/registry"
 db_url_sqlite := "sqlite:data/rauthy.db"
 db_url_postgres := "postgresql://rauthy:123SuperSafe@$DEV_HOST:5432/rauthy"
 
-## All scripts in thie file with an `_` are meant for internal use only.
-## The ones with 2 `__` in front are meant to be executed inside a dev / builder container only, as they require
-## specific tooling and environment setup.
+## All scripts in the file with a leading `_` are meant for internal use only.
+## The ones with 2 `__` in front are meant to be executed inside a dev / builder container only,
+## as they require specific tooling and environmental setup.
 
 [private]
 default:
@@ -145,6 +145,10 @@ docker-buildx-setup:
     docker buildx create --name rauthy_builder --bootstrap --use
     docker buildx inspect rauthy_builder
 
+
+# Execute an `npm install` for the frontend inside the container. Only needed for the first setup or after an update.
+npm-install:
+    just _run-ui npm install
 
 # Starts mailcrab
 mailcrab-start:
@@ -307,7 +311,7 @@ test-postgres test="": test-backend-stop postgres-stop postgres-start prepare-po
 build-ui:
     #!/usr/bin/env bash
     set -euxo pipefail
-    just _run just __build-ui
+    just _run-ui just __build-ui
 
 # this recipe will only work inside the builder container
 __build-ui:
@@ -409,6 +413,7 @@ build mode="release" no-test="do-test" image="ghcr.io/sebadob/rauthy": build-ui
         --build-arg="DATABASE_URL={{db_url_sqlite}}" \
         --build-arg="FEATURES=default" \
         --build-arg="MODE={{mode}}" \
+        --progress=plain \
         --push \
         .
 

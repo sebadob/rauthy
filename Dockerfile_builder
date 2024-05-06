@@ -15,7 +15,7 @@ WORKDIR /home
 
 RUN cat <<EOF > /usr/local/bin/target
 #!/bin/bash
-if [ "arm64" == "$TARGETARCH" ]; then
+if [ "arm64" = "$TARGETARCH" ]; then
   echo aarch64-unknown-linux-musl
 else
   echo x86_64-unknown-linux-musl
@@ -31,26 +31,19 @@ RUN chmod +x /usr/local/bin/target
 # install latest stable rust + tools
 RUN <<EOF
 set -e
+
 curl --proto '=https' --tlsv1.3 https://sh.rustup.rs | sh -s -- -y
 rustup target add $(target)
+
 cargo install just
 cargo install sd
 cargo install mdbook
 cargo install mdbook-admonish
 cargo install sqlx-cli --no-default-features --features rustls,sqlite,postgres
+
 rm -rf /home/.rustup/tmp
 rm -rf /home/.cargo/registry
 EOF
-
-#RUN curl --proto '=https' --tlsv1.3 https://sh.rustup.rs | sh -s -- -y && \
-#    rustup target add $(target) && \
-#    cargo install just && \
-#    cargo install sd && \
-#    cargo install mdbook && \
-#    cargo install mdbook-admonish && \
-#    cargo install sqlx-cli --no-default-features --features rustls,sqlite,postgres && \
-#    rm -rf /home/.rustup/tmp && \
-#    rm -rf /home/.cargo/registry
 
 # any user should be able to use rust from that directory for best DX
 RUN chmod a+rwx -R /home
@@ -66,18 +59,16 @@ ENV PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig"
 
 WORKDIR /root
 
-# we need to install openssl 3 to make webauthn-rs happy
-#RUN apt update && \
-#    apt install -y build-essential checkinstall zlib1g-dev vim && \
-#    rm -rf /var/lib/apt/lists/*
-
 RUN <<EOF
 set -e
+
 apt update
 apt install -y build-essential checkinstall zlib1g-dev vim
 rm -rf /var/lib/apt/lists/*
+
 curl -LO https://github.com/openssl/openssl/releases/download/openssl-3.3.0/openssl-3.3.0.tar.gz
 tar xvf openssl-3.3.0.tar.gz
+
 cd openssl-3.3.0
 ./config
 make
@@ -85,20 +76,10 @@ make test
 make install
 echo '/usr/local/lib64' > /etc/ld.so.conf.d/lib64.conf
 ldconfig
+
 cd ..
 rm -rf openssl*
 EOF
-
-#RUN curl -LO https://github.com/openssl/openssl/releases/download/openssl-3.3.0/openssl-3.3.0.tar.gz && \
-#    tar xvf openssl-3.3.0.tar.gz && \
-#    cd openssl-3.3.0 && \
-#    ./config && \
-#    make && \
-#    make test &&  \
-#    make install &&  \
-#    echo '/usr/local/lib64' > /etc/ld.so.conf.d/lib64.conf && \
-#    ldconfig && \
-#    rm -rf openssl*
 
 ############################################
 ############################################
@@ -134,7 +115,8 @@ COPY --from=stage1 /home/.profile /home/.profile
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt install -y nodejs && \
     rm -rf /var/lib/apt/lists/*
-# TODO something is missing for the COPY's - fix in the future
+# TODO the overhead of a direct npm installation at this point is rather small, but fix when more time
+# TODO something is missing for the COPY's
 # When the missing parts are found, move the installation up in stage 1 again
 #COPY --from=stage1 /etc/alternatives/nodejs /etc/alternatives/nodejs
 #COPY --from=stage1 /etc/apt/preferences.d/nodejs /etc/apt/preferences.d/nodejs

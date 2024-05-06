@@ -20,14 +20,15 @@ RUN mkdir -p out && mkdir empty
 COPY . .
 #RUN --mount=type=cache,target=/usr/local/cargo/registry <<EOF
 RUN <<EOF
-if [ $MODE == "release" ]; then
+#!/bin/bash
+if [ "release" = "$MODE" ]; then
   DATABASE_URL=$DATABASE_URL cargo build --release --features $FEATURES --target $(target)
 else
   DATABASE_URL=$DATABASE_URL cargo build --features $FEATURES --target $(target)
 fi
-EOF
 
-RUN cp target/$(target)/$MODE/rauthy out/rauthy
+cp target/$(target)/$MODE/rauthy out/rauthy
+EOF
 
 FROM --platform=$TARGETPLATFORM scratch
 
