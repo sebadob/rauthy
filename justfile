@@ -78,7 +78,7 @@ _run-bg-pg +args:
       {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
 
 # start the backend containers for local dev
-backend: mailcrab-start postgres-start
+backend: mailcrab-start postgres-start prepare
 
 # stop mailcrab and postgres docker containers
 backend-stop:
@@ -385,120 +385,79 @@ __build-docs:
     cd ..
 
 
-# builds the whole application in release mode
-build-sqlite: build-ui test-sqlite
+# mode = release or debug / no-test = no-test or do-test / image = name for the final image
+build mode="release" no-test="do-test" image="ghcr.io/sebadob/rauthy": build-ui
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    mkdir -p out
+    # sqlite
+    if [ {{no-test}} != "no-test" ]; then
+        echo "make sure clippy is fine with sqlite"
+        just _run cargo clippy -- -D warnings
+        echo "run tests against sqlite"
+        just test-sqlite
+    else
+        just prepare
+    fi
 
-    just _run cargo clippy -- -D warnings
-    docker run --rm -it \
-          -v ~/.cargo/registry:{{container_cargo_registry}} \
-          -v ./:/work/ \
-          -u $USER \
-          -e DATABASE_URL={{db_url_sqlite}} \
-          {{builder_image}}:amd64-{{builder_tag_date}} \
-          cargo build --release --target x86_64-unknown-linux-musl
-    cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-amd64
+    echo "build sqlite release"
+    docker buildx build \
+        -t {{image}}:$TAG-lite \
+        --platform linux/amd64,linux/arm64 \
+        --build-arg="IMAGE={{builder_image}}" \
+        --build-arg="IMAGE_DATE={{builder_tag_date}}" \
+        --build-arg="DATABASE_URL={{db_url_sqlite}}" \
+        --build-arg="FEATURES=default" \
+        --build-arg="MODE={{mode}}" \
+        --push \
+        .
 
-    docker run --rm -it \
-          -v ~/.cargo/registry:{{container_cargo_registry}} \
-          -v ./:/work/ \
-          -u $USER \
-          -e DATABASE_URL={{db_url_sqlite}} \
-          {{builder_image}}:arm64-{{builder_tag_date}} \
-          cargo build --release --target aarch64-unknown-linux-musl
-    cp target/aarch64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-arm64
+    # postgres
+    if [ {{no-test}} != "no-test" ]; then
+        echo "make sure clippy is fine with postgres"
+        just _run-pg cargo clippy --features postgres -- -D warnings
+        echo "run tests against postgres"
+        just test-postgres
+    else
+        just prepare-postgres
+    fi
+
+    echo "build postgres release"
+    docker buildx build \
+        -t {{image}}:$TAG \
+        --platform linux/amd64,linux/arm64 \
+        --build-arg="IMAGE={{builder_image}}" \
+        --build-arg="IMAGE_DATE={{builder_tag_date}}" \
+        --build-arg="DATABASE_URL={{db_url_postgres}}" \
+        --build-arg="FEATURES=postgres" \
+        --build-arg="MODE={{mode}}" \
+        --push \
+        .
 
 
-# builds the whole application in release mode
-build-postgres: build-ui test-postgres
+# specify a custom image for building locally and change `push` to `load` to not push but only load it into your local docker context
+build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    mkdir -p out
+    docker pull ghcr.io/cross-rs/x86_64-unknown-linux-musl:edge
+    docker buildx build \
+          -t {{image}}:amd64-$TODAY \
+          -f Dockerfile_builder \
+          --platform linux/amd64 \
+          --build-arg="IMAGE=ghcr.io/cross-rs/x86_64-unknown-linux-musl:edge" \
+          --{{push}} \
+          .
 
-    just _run-pg cargo clippy --features postgres -- -D warnings
-    docker run --rm -it \
-          -v ~/.cargo/registry:{{container_cargo_registry}} \
-          -v ./:/work/ \
-          -u $USER \
-          -e DATABASE_URL={{db_url_postgres}} \
-          {{builder_image}}:amd64-{{builder_tag_date}} \
-          cargo build --features postgres --release --target x86_64-unknown-linux-musl
-    cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-postgres-amd64
-
-    docker run --rm -it \
-          -v ~/.cargo/registry:{{container_cargo_registry}} \
-          -v ./:/work/ \
-          -u $USER \
-          -e DATABASE_URL={{db_url_postgres}} \
-          {{builder_image}}:arm64-{{builder_tag_date}} \
-          cargo build --features postgres --release --target aarch64-unknown-linux-musl
-    cp target/aarch64-unknown-linux-musl/release/rauthy out/rauthy-postgres-arm64
-
-
-# build all release versions incl testing
-build: build-ui
-    #!/usr/bin/env bash
-    set -euxo pipefail
-
-    mkdir -p out
-
-    # build amd64 version first with both DB's to make use of caching
-    echo "make sure clippy is fine with sqlite"
-    just _run cargo clippy -- -D warnings
-    echo "run tests against sqlite"
-    just test-sqlite
-
-    echo "build sqlite release for amd64"
-    docker run --rm -it \
-          -v ~/.cargo/registry:{{container_cargo_registry}} \
-          -v ./:/work/ \
-          -u $USER \
-          -e DATABASE_URL={{db_url_sqlite}} \
-          {{builder_image}}:amd64-{{builder_tag_date}} \
-          cargo build --release --target x86_64-unknown-linux-musl
-    cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-amd64
-
-    echo "make sure clippy is fine with postgres"
-    just _run-pg cargo clippy --features postgres -- -D warnings
-    echo "run tests against postgres"
-    just test-postgres
-
-    echo "build postgres release for amd64"
-    docker run --rm -it \
-          -v ~/.cargo/registry:{{container_cargo_registry}} \
-          -v ./:/work/ \
-          -u $USER \
-          -e DATABASE_URL={{db_url_postgres}} \
-          {{builder_image}}:amd64-{{builder_tag_date}} \
-          cargo build --features postgres --release --target x86_64-unknown-linux-musl
-    cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-postgres-amd64
-
-    # build the arm64 version with both DB's
-    echo "build sqlite release for arm64"
-    just prepare
-    docker run --rm -it \
-          -v ~/.cargo/registry:{{container_cargo_registry}} \
-          -v ./:/work/ \
-          -u $USER \
-          -e DATABASE_URL={{db_url_sqlite}} \
-          {{builder_image}}:arm64-{{builder_tag_date}} \
-          cargo build --release --target aarch64-unknown-linux-musl
-    cp target/aarch64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-arm64
-
-    echo "build sqlite release for arm64"
-    just prepare-postgres
-    docker run --rm -it \
-          -v ~/.cargo/registry:{{container_cargo_registry}} \
-          -v ./:/work/ \
-          -u $USER \
-          -e DATABASE_URL={{db_url_postgres}} \
-          {{builder_image}}:arm64-{{builder_tag_date}} \
-          cargo build --features postgres --release --target aarch64-unknown-linux-musl
-    cp target/aarch64-unknown-linux-musl/release/rauthy out/rauthy-postgres-arm64
+    docker pull ghcr.io/cross-rs/aarch64-unknown-linux-musl:edge
+    docker buildx build \
+           -t {{image}}:arm64-$TODAY \
+           -f Dockerfile_builder \
+           --platform linux/arm64 \
+           --build-arg="IMAGE=ghcr.io/cross-rs/aarch64-unknown-linux-musl:edge" \
+           --no-cache \
+           --{{push}} \
+           .
 
 
 # makes sure everything is fine
@@ -530,56 +489,9 @@ release:
 
 
 # publishes the application images - full pipeline incl clippy and testing  you can provide a custom image name as variable
-publish image="ghcr.io/sebadob/rauthy": build-docs fmt build
+publish: build-docs fmt build
     #!/usr/bin/env bash
     set -euxo pipefail
-
-    # build and push sqlite version
-    docker buildx build \
-          -t {{image}}:$TAG-lite \
-           --platform linux/amd64,linux/arm64 \
-           --build-arg="DB=sqlite" \
-           --build-arg="IMAGE={{builder_image}}" \
-           --build-arg="IMAGE_DATE={{builder_tag_date}}" \
-           --no-cache \
-           --push \
-           .
-
-    # build and push postgres version
-    docker buildx build \
-          -t {{image}}:$TAG \
-          --platform linux/amd64,linux/arm64 \
-          --build-arg="DB=postgres" \
-          --build-arg="IMAGE={{builder_image}}" \
-          --build-arg="IMAGE_DATE={{builder_tag_date}}" \
-          --no-cache \
-          --push \
-          .
-
-
-# specify a custom image for building locally and change `push` to `load` to not push but only load it into your local docker context
-build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
-    #!/usr/bin/env bash
-    set -euxo pipefail
-
-    docker pull ghcr.io/cross-rs/x86_64-unknown-linux-musl:edge
-    docker buildx build \
-          -t {{image}}:amd64-$TODAY \
-          -f Dockerfile_builder \
-          --platform linux/amd64 \
-          --build-arg="IMAGE=ghcr.io/cross-rs/x86_64-unknown-linux-musl:edge" \
-          --{{push}} \
-          .
-
-    docker pull ghcr.io/cross-rs/aarch64-unknown-linux-musl:edge
-    docker buildx build \
-           -t {{image}}:arm64-$TODAY \
-           -f Dockerfile_builder \
-           --platform linux/arm64 \
-           --build-arg="IMAGE=ghcr.io/cross-rs/aarch64-unknown-linux-musl:edge" \
-           --no-cache \
-           --{{push}} \
-           .
 
 
 # publishes the application images - full pipeline incl clippy and testing
