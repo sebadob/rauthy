@@ -1,11 +1,92 @@
+set dotenv-load
+set positional-arguments
 set shell := ["bash", "-uc"]
 
 export TAG := `cat Cargo.toml | grep '^version =' | cut -d " " -f3 | xargs`
-export DB_URL_SQLITE := `cat rauthy.cfg | grep ^DATABASE_URL= | cut -d'=' -f2`
-export DB_URL_POSTGRES := `cat .env | grep ^DATABASE_URL_POSTGRES= | cut -d'=' -f2`
+export TODAY := `date +%Y%m%d`
+export USER :=  `echo "$(id -u):$(id -g)"`
 
-test_pid_file := ".test_pid"
+builder_image := "ghcr.io/sebadob/rauthy-builder"
+builder_tag_date := "20240505"
 
+arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
+
+container_mailcrab := "rauthy-mailcrab"
+container_postgres := "rauthy-db-postgres"
+container_test_backend := "rauthy-test-backend"
+container_cargo_registry := "/home/.cargo/registry"
+
+db_url_sqlite := "sqlite:data/rauthy.db"
+db_url_postgres := "postgresql://rauthy:123SuperSafe@$DEV_HOST:5432/rauthy"
+
+## All scripts in the file with a leading `_` are meant for internal use only.
+## The ones with 2 `__` in front are meant to be executed inside a dev / builder container only,
+## as they require specific tooling and environmental setup.
+
+[private]
+default:
+    @just --list
+
+_run +args:
+    @docker run --rm -it \
+      -v ~/.cargo/registry:{{container_cargo_registry}} \
+      -v ./:/work/ \
+      -u $USER \
+      -e DATABASE_URL={{db_url_sqlite}} \
+      --net host \
+      --name rauthy \
+      {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
+
+_run-pg +args:
+    @docker run --rm -it \
+      -v ~/.cargo/registry:{{container_cargo_registry}} \
+      -v ./:/work/ \
+      -u $USER \
+      -e DATABASE_URL={{db_url_postgres}} \
+      --net host \
+      --name rauthy-postgres \
+      {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
+
+_run-ui +args:
+    @docker run --rm -it \
+      -v ~/.cargo/registry:{{container_cargo_registry}} \
+      -v ./:/work/ \
+      -u $USER \
+      --net host \
+      -w/work/frontend \
+      --name rauthy-ui \
+      {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
+
+_run-bg +args:
+    @docker run --rm -d \
+      -v ~/.cargo/registry:{{container_cargo_registry}} \
+      -v ./:/work/ \
+      -u $USER \
+      -e DATABASE_URL={{db_url_sqlite}} \
+      --net host \
+      --name {{container_test_backend}} \
+      {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
+
+_run-bg-pg +args:
+    @docker run --rm -d \
+      -v ~/.cargo/registry:{{container_cargo_registry}} \
+      -v ./:/work/ \
+      -u $USER \
+      -e DATABASE_URL={{db_url_postgres}} \
+      --net host \
+      --name {{container_test_backend}} \
+      {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
+
+# start the backend containers for local dev
+backend: mailcrab-start postgres-start prepare
+
+# stop mailcrab and postgres docker containers
+backend-stop:
+    just postgres-stop
+    just mailcrab-stop
+
+clean:
+    just _run cargo clean
 
 # Creates a new Root + Intermediate CA for development and testing TLS certificates
 create-root-ca:
@@ -65,48 +146,62 @@ docker-buildx-setup:
     docker buildx inspect rauthy_builder
 
 
-# Starts maildev (https://github.com/maildev/maildev) on your localhost for E-Mail testing
+# Execute an `npm install` for the frontend inside the container. Only needed for the first setup or after an update.
+npm-install:
+    just _run-ui npm install
+
+# Starts mailcrab
 mailcrab-start:
-    #!/usr/bin/env bash
-    docker run -d -p 1080:1080 -p 1025:1025 --name mailcrab --restart unless-stopped marlonb/mailcrab
+    docker run -d \
+      --net host \
+      --name {{container_mailcrab}} \
+      --restart unless-stopped \
+      marlonb/mailcrab
 
-
-# Stops maildev
+# Stops mailcrab
 mailcrab-stop:
-    #!/usr/bin/env bash
-    docker stop mailcrab
-    docker rm mailcrab
+    docker stop {{container_mailcrab}}
+    docker rm {{container_mailcrab}}
+
+
+# Starts mailcrab
+postgres-start:
+    docker run -d \
+      -v ./postgres/init-script:/docker-entrypoint-initdb.d \
+      -v ./postgres/sql-scripts:/scripts/ \
+      -e POSTGRES_PASSWORD=123SuperSafe \
+      --net host \
+      --name {{container_postgres}} \
+      --restart unless-stopped \
+      postgres:16.2
+
+    just migrate-postgres
+
+# Stops mailcrab
+postgres-stop:
+    docker stop {{container_postgres}}
+    docker rm {{container_postgres}}
 
 
 # Just uses `cargo fmt --all`
 fmt:
-    #!/usr/bin/env bash
-    cargo fmt --all
-
-
-# Force-pulls the latest `cross` docker image for cross-compilation
-pull-latest-cross:
-    #!/usr/bin/env bash
-    docker pull ghcr.io/cross-rs/aarch64-unknown-linux-musl:main
-    docker pull ghcr.io/cross-rs/x86_64-unknown-linux-musl:main
+    @just _run cargo fmt --all
 
 
 # clippy with sqlite features
-clippy ty="sqlite":
+clippy:
     #!/usr/bin/env bash
     set -euxo pipefail
-
     clear
-    cargo clippy
+    just _run cargo clippy
 
 
 # clippy with postgres features
 clippy-postgres:
     #!/usr/bin/env bash
     set -euxo pipefail
-
     clear
-    DATABASE_URL=$DB_URL_POSTGRES cargo clippy --features postgres
+    just _run-pg cargo clippy --features postgres
 
 
 # re-create and migrate the sqlite database with sqlx
@@ -114,18 +209,15 @@ migrate:
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    mkdir -p data/
-    rm -f data/rauthy.db*
-    DATABASE_URL=$DB_URL_SQLITE sqlx database create
-    DATABASE_URL=$DB_URL_SQLITE sqlx migrate run --source migrations/sqlite
+    just _run mkdir -p data/
+    just _run rm -f data/rauthy.db*
+    just _run sqlx database create
+    just _run sqlx migrate run --source migrations/sqlite
 
 
 # migrate the postgres database with sqlx
 migrate-postgres:
-    #!/usr/bin/env bash
-    set -euxo pipefail
-
-    DATABASE_URL=$DB_URL_POSTGRES sqlx migrate run --source migrations/postgres
+    @just _run-pg sqlx migrate run --source migrations/postgres
 
 
 # runs any of: none (sqlite), postgres, ui
@@ -135,12 +227,11 @@ run ty="sqlite":
     clear
 
     if [[ {{ty}} == "postgres" ]]; then
-      DATABASE_URL=$DB_URL_POSTGRES cargo run --features postgres
+      just _run-pg cargo run --features postgres
     elif [[ {{ty}} == "ui" ]]; then
-      cd frontend
-      npm run dev -- --host
+      just _run-ui npm run dev -- --host=0.0.0.0
     elif [[ {{ty}} == "sqlite" ]]; then
-      cargo run
+      just _run cargo run
     fi
 
 
@@ -152,12 +243,12 @@ version:
 
 # prepare DB migrations for SQLite for compile-time checked queries
 prepare: migrate
-    cargo sqlx prepare --workspace
+    just _run cargo sqlx prepare --workspace
 
 
 # prepare DB migrations for Postgres for compile-time checked queries
 prepare-postgres: migrate-postgres
-    DATABASE_URL=$DB_URL_POSTGRES cargo sqlx prepare --workspace -- --features postgres
+    just _run-pg cargo sqlx prepare --workspace -- --features postgres
 
 
 # only starts the backend in test mode with sqlite database for easier test debugging
@@ -166,71 +257,64 @@ test-backend: migrate prepare
     set -euxo pipefail
     clear
 
-    cargo build
-    ./target/debug/rauthy test
+    just _run cargo build
+    @docker run --rm -it \
+      -v ~/.cargo/registry:{{container_cargo_registry}} \
+      -v ./:/work/ \
+      -u $USER \
+      -e DATABASE_URL={{db_url_sqlite}} \
+      --net host \
+      --name {{container_test_backend}} \
+      {{builder_image}}:{{arch}}-{{builder_tag_date}} cargo run test
 
 
 # stops a possibly running test backend that may have spawned in the background for integration tests
 test-backend-stop:
-    #!/usr/bin/env bash
-    set -euxo pipefail
-
-    if [ -f {{test_pid_file}} ]; then
-      PID=$(cat .test_pid)
-      echo "Stopping background process with PID $PID"
-      kill "$PID" || echo "Could not stop the process"
-      rm {{test_pid_file}}
-    else
-      echo "No background test process running"
-    fi
+    docker stop {{container_test_backend}} || exit 0
 
 # runs a single test with sqlite - needs the backend being started manually
-test test="":
+test *test:
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
 
-    cargo test {{test}}
+    just _run cargo test {{test}}
 
 
 # runs the full set of tests with in-memory sqlite
-test-full test="": test-backend-stop migrate prepare
+test-sqlite *test: test-backend-stop migrate prepare
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
 
-    cargo build
-    ./target/debug/rauthy test &
-    sleep 1
-    PID=$(echo "$!")
-    echo $PID > {{test_pid_file}}
-    echo "PID: $PID"
+    just _run cargo build
+    just _run-bg ./target/debug/rauthy test
 
-    cargo test {{test}}
-    kill "$PID"
-    echo All tests successful
+    just _run cargo test {{test}}
+    just test-backend-stop
 
 
 # runs the full set of tests with postgres
-test-postgres test="": test-backend-stop migrate-postgres prepare-postgres
+test-postgres test="": test-backend-stop postgres-stop postgres-start prepare-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
 
-    DATABASE_URL=$DB_URL_POSTGRES cargo build --features postgres
-    DATABASE_URL=$DB_URL_POSTGRES ./target/debug/rauthy test &
-    sleep 1
-    PID=$(echo "$!")
-    echo $PID > {{test_pid_file}}
-    echo "PID: $PID"
+    just _run-pg cargo build --features postgres
+    just _run-bg-pg ./target/debug/rauthy test
 
-    DATABASE_URL=$DB_URL_POSTGRES cargo test --features postgres {{test}}
-    kill "$PID"
-    echo All tests successful
+    just _run-pg cargo test --features postgres {{test}}
+    just test-backend-stop
 
 
 # builds the frontend and exports to static html
 build-ui:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    just _run-ui just __build-ui
+
+# this recipe will only work inside the builder container
+__build-ui:
     #!/usr/bin/env bash
     set -euxo pipefail
 
@@ -284,9 +368,6 @@ build-ui:
           sd '#f2f2f2;' '{{{{ col_ghigh }};' "$html"
           sd '#383838;' '{{{{ col_text }};' "$html"
           sd '#f7f7f7;' '{{{{ col_bg }};' "$html"
-          # for the nonce in the CSP for script files
-          #sed -i 's/<link /<link nonce="{{{{ nonce }}" /g' "$html"
-          #sed -i 's/<script>/<script nonce="{{{{ nonce }}">/g' "$html"
         done;
     done
 
@@ -295,45 +376,93 @@ build-ui:
 build-docs:
     #!/usr/bin/env bash
     set -euxo pipefail
-    cd rauthy-book
-    mdbook build -d ../docs
-    cd ..
+    just _run just __build-docs
     git add docs
 
 
-# builds the whole application in release mode
-build: test-full
+# builds the rauthy book
+__build-docs:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    cd rauthy-book
+    mdbook build -d ../docs
+    cd ..
+
+
+# mode = release or debug / no-test = no-test or do-test / image = name for the final image
+build mode="release" no-test="do-test" image="ghcr.io/sebadob/rauthy": build-ui
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    cargo clean
-    mkdir -p out
+    # sqlite
+    if [ {{no-test}} != "no-test" ]; then
+        echo "make sure clippy is fine with sqlite"
+        just _run cargo clippy -- -D warnings
+        echo "run tests against sqlite"
+        just test-sqlite
+    else
+        just prepare
+    fi
 
-    cargo clippy -- -D warnings
-    cross build --release --target x86_64-unknown-linux-musl
-    cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-amd64
+    echo "build sqlite release"
+    docker buildx build \
+        -t {{image}}:$TAG-lite \
+        --platform linux/amd64,linux/arm64 \
+        --build-arg="IMAGE={{builder_image}}" \
+        --build-arg="IMAGE_DATE={{builder_tag_date}}" \
+        --build-arg="DATABASE_URL={{db_url_sqlite}}" \
+        --build-arg="FEATURES=default" \
+        --build-arg="MODE={{mode}}" \
+        --progress=plain \
+        --push \
+        .
 
-    cargo clean
-    cross build --release --target aarch64-unknown-linux-musl
-    cp target/aarch64-unknown-linux-musl/release/rauthy out/rauthy-sqlite-arm64
+    # postgres
+    if [ {{no-test}} != "no-test" ]; then
+        echo "make sure clippy is fine with postgres"
+        just _run-pg cargo clippy --features postgres -- -D warnings
+        echo "run tests against postgres"
+        just test-postgres
+    else
+        just prepare-postgres
+    fi
+
+    echo "build postgres release"
+    docker buildx build \
+        -t {{image}}:$TAG \
+        --platform linux/amd64,linux/arm64 \
+        --build-arg="IMAGE={{builder_image}}" \
+        --build-arg="IMAGE_DATE={{builder_tag_date}}" \
+        --build-arg="DATABASE_URL={{db_url_postgres}}" \
+        --build-arg="FEATURES=postgres" \
+        --build-arg="MODE={{mode}}" \
+        --push \
+        .
 
 
-# builds the whole application in release mode
-build-postgres: test-postgres
+# specify a custom image for building locally and change `push` to `load` to not push but only load it into your local docker context
+build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    cargo clean
-    mkdir -p out
+    docker pull ghcr.io/cross-rs/x86_64-unknown-linux-musl:edge
+    docker buildx build \
+          -t {{image}}:amd64-$TODAY \
+          -f Dockerfile_builder \
+          --platform linux/amd64 \
+          --build-arg="IMAGE=ghcr.io/cross-rs/x86_64-unknown-linux-musl:edge" \
+          --{{push}} \
+          .
 
-    DATABASE_URL=$DB_URL_POSTGRES cargo clippy --features postgres -- -D warnings
-
-    CROSS_CONTAINER_OPTS="--env DATABASE_URL=$DB_URL_POSTGRES" cross build --release --target x86_64-unknown-linux-musl --features postgres
-    cp target/x86_64-unknown-linux-musl/release/rauthy out/rauthy-postgres-amd64
-
-    cargo clean
-    CROSS_CONTAINER_OPTS="--env DATABASE_URL=$DB_URL_POSTGRES" cross build --release --target aarch64-unknown-linux-musl --features postgres
-    cp target/aarch64-unknown-linux-musl/release/rauthy out/rauthy-postgres-arm64
+    docker pull ghcr.io/cross-rs/aarch64-unknown-linux-musl:edge
+    docker buildx build \
+           -t {{image}}:arm64-$TODAY \
+           -f Dockerfile_builder \
+           --platform linux/arm64 \
+           --build-arg="IMAGE=ghcr.io/cross-rs/aarch64-unknown-linux-musl:edge" \
+           --no-cache \
+           --{{push}} \
+           .
 
 
 # makes sure everything is fine
@@ -342,7 +471,8 @@ is-clean:
     set -euxo pipefail
 
     # exit early if clippy emits warnings
-    cargo clippy -- -D warnings
+    just _run cargo clippy -- -D warnings
+    just _run-pg cargo clippy --features postgres -- -D warnings
 
     # make sure everything has been committed
     git diff --exit-code
@@ -363,28 +493,10 @@ release:
     git push origin "v$TAG"
 
 
-# publishes the application images - full pipeline incl clippy and testing
-publish image="ghcr.io/sebadob/rauthy": pull-latest-cross build-docs build-ui fmt build build-postgres
+# publishes the application images - full pipeline incl clippy and testing  you can provide a custom image name as variable
+publish: build-docs fmt build
     #!/usr/bin/env bash
     set -euxo pipefail
-
-    # build and push sqlite version
-    docker buildx build \
-          -t {{image}}:$TAG-lite \
-           --platform linux/amd64,linux/arm64 \
-           --build-arg="DB=sqlite" \
-           --no-cache \
-           --push \
-           .
-
-    # build and push postgres version
-    docker buildx build \
-          -t {{image}}:$TAG \
-          --platform linux/amd64,linux/arm64 \
-          --build-arg="DB=postgres" \
-          --no-cache \
-          --push \
-          .
 
 
 # publishes the application images - full pipeline incl clippy and testing
@@ -399,9 +511,6 @@ publish-latest:
 
 
 # should be run before submitting a PR to make sure everything is fine
-verify: build-ui fmt test-full
+pre-pr-checks: build-ui fmt test-sqlite test-postgres clippy clippy-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
-    cargo clippy -- -D warnings
-
-    echo "all good"

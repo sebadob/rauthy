@@ -1,0 +1,145 @@
+ARG IMAGE
+
+FROM --platform=$BUILDPLATFORM $IMAGE as stage1
+
+# docker buildx args automatically available
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
+ENV HOME=/home
+ENV PATH="${PATH}:/home/.cargo/bin"
+
+WORKDIR /home
+
+RUN cat <<EOF > /usr/local/bin/target
+#!/bin/bash
+if [ "arm64" = "$TARGETARCH" ]; then
+  echo aarch64-unknown-linux-musl
+else
+  echo x86_64-unknown-linux-musl
+fi
+EOF
+RUN chmod +x /usr/local/bin/target
+
+# node and npm
+#RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+#    apt install -y nodejs && \
+#    rm -rf /var/lib/apt/lists/*
+
+# install latest stable rust + tools
+RUN <<EOF
+set -e
+
+curl --proto '=https' --tlsv1.3 https://sh.rustup.rs | sh -s -- -y
+rustup target add $(target)
+
+cargo install just
+cargo install sd
+cargo install mdbook
+cargo install mdbook-admonish
+cargo install sqlx-cli --no-default-features --features rustls,sqlite,postgres
+
+rm -rf /home/.rustup/tmp
+rm -rf /home/.cargo/registry
+EOF
+
+# any user should be able to use rust from that directory for best DX
+RUN chmod a+rwx -R /home
+
+############################################
+############################################
+############################################
+
+FROM --platform=$BUILDPLATFORM $IMAGE as stage2
+
+ENV LD_LIBRARY_PATH="${PATH}:/usr/local/lib64:${LD_LIBRARY_PATH}"
+ENV PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig"
+
+WORKDIR /root
+
+RUN <<EOF
+set -e
+
+apt update
+apt install -y build-essential checkinstall zlib1g-dev vim
+rm -rf /var/lib/apt/lists/*
+
+curl -LO https://github.com/openssl/openssl/releases/download/openssl-3.3.0/openssl-3.3.0.tar.gz
+tar xvf openssl-3.3.0.tar.gz
+
+cd openssl-3.3.0
+./config
+make
+make test
+make install
+echo '/usr/local/lib64' > /etc/ld.so.conf.d/lib64.conf
+ldconfig
+
+cd ..
+rm -rf openssl*
+EOF
+
+############################################
+############################################
+############################################
+
+FROM --platform=$BUILDPLATFORM $IMAGE
+
+# docker buildx args automatically available
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
+ENV HOME=/home
+
+ENV PATH="${PATH}:/home/.cargo/bin"
+ENV PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig
+
+ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-linux-musl-gcc
+ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUNNER="/qemu-runner x86_64"
+ENV CC_x86_64_unknown_linux_musl=x86_64-linux-musl-gcc
+
+ENV LD_LIBRARY_PATH="${PATH}:/usr/local/lib64:${LD_LIBRARY_PATH}"
+ENV PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig"
+
+# rust and tools
+COPY --from=stage1 /usr/local/bin/target /usr/local/bin/target
+COPY --from=stage1 /home/.cargo /home/.cargo
+COPY --from=stage1 /home/.rustup /home/.rustup
+COPY --from=stage1 /home/.profile /home/.profile
+
+# node and npm
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+# TODO the overhead of a direct npm installation at this point is rather small, but fix when more time
+# TODO something is missing for the COPY's
+# When the missing parts are found, move the installation up in stage 1 again
+#COPY --from=stage1 /etc/alternatives/nodejs /etc/alternatives/nodejs
+#COPY --from=stage1 /etc/apt/preferences.d/nodejs /etc/apt/preferences.d/nodejs
+#COPY --from=stage1 /usr/bin/npm /usr/bin/npm
+#COPY --from=stage1 /usr/bin/node /usr/bin/node
+#COPY --from=stage1 /usr/bin/nodejs /usr/bin/nodejs
+#COPY --from=stage1 /usr/include/node /usr/include/node
+#COPY --from=stage1 /usr/share/doc/node /usr/share/doc/node
+#COPY --from=stage1 /var/lib/dpkg/alternatives/nodejs /var/lib/dpkg/alternatives/nodejs
+#COPY --from=stage1 /usr/lib/node_modules /usr/lib/node_modules
+
+# openssl
+COPY --from=stage2 /etc/ld.so.conf.d/lib64.conf /etc/ld.so.conf.d/lib64.conf
+COPY --from=stage2 /usr/local/lib64 /usr/local/lib64
+COPY --from=stage2 /usr/local/include/openssl /usr/local/include/openssl
+COPY --from=stage2 /usr/local/bin/openssl /usr/local/bin/openssl
+COPY --from=stage2 /usr/local/bin/c_rehash /usr/local/bin/c_rehash
+COPY --from=stage2 /usr/local/ssl /usr/local/ssl
+COPY --from=stage2 /usr/local/share/man /usr/local/share/man
+COPY --from=stage2 /usr/local/share/doc/openssl /usr/local/share/doc/openssl
+
+RUN ldconfig
+
+WORKDIR /work
+
+CMD ["/bin/bash"]
