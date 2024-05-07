@@ -70,19 +70,18 @@ which will install all dependencies from inside a container to build and run the
 ### Config
 
 The default config file is the `rauthy.cfg`. This has reasonable defaults for local dev.
-Additionally, rauthy will read from a `.env` file, which has been added to the `.gitignore`.
+Additionally, Rauthy will read from a `.env` file, which has been added to the `.gitignore`.
 This will prevent you from accidentally pushing sensitive information into git.
 
 You need to add at least one entry in a `.env` file, which points to the public IP of your build host.
 
-CAUTION: This MUST not be `localhost`, as it would not work!  
 To make getting into the project easier for new developers, all tooling needed is installed in a `rauthy-builder`
 container image, which is used internally by `just` to invoke all kinds of commands. This uses your hosts network
 layer for the most amount of compatibility and the least painful setup on different machines and environments.
 These commands and containers use the `PUB_URL` in lots of places for inter-container communication.
 
 ```
-PUB_URL=192.168.0.1:8443
+DEV_HOST=192.168.0.1:8443
 ```
 
 You can set additional variables here and even insert sensitive information. These will never be pushed into git.

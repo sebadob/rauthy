@@ -4,6 +4,7 @@ set positional-arguments
 
 export TAG := `cat Cargo.toml | grep '^version =' | cut -d " " -f3 | xargs`
 export TODAY := `date +%Y%m%d`
+export DEV_HOST := `echo $PUB_URL | cut -d':' -f1`
 export USER :=  `echo "$(id -u):$(id -g)"`
 
 builder_image := "ghcr.io/sebadob/rauthy-builder"
