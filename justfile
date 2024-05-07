@@ -1,15 +1,16 @@
 set dotenv-load
 set positional-arguments
-set shell := ["bash", "-uc"]
+#set shell := ["bash", "-uc"]
 
 export TAG := `cat Cargo.toml | grep '^version =' | cut -d " " -f3 | xargs`
 export TODAY := `date +%Y%m%d`
+export DEV_HOST := `echo $PUB_URL | cut -d':' -f1`
 export USER :=  `echo "$(id -u):$(id -g)"`
+
+arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
 
 builder_image := "ghcr.io/sebadob/rauthy-builder"
 builder_tag_date := "20240505"
-
-arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
 
 container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
@@ -29,8 +30,8 @@ default:
 
 _run +args:
     @docker run --rm -it \
-      -v ~/.cargo/registry:{{container_cargo_registry}} \
-      -v ./:/work/ \
+      -v $HOME/.cargo/registry:{{container_cargo_registry}} \
+      -v {{invocation_directory()}}/:/work/ \
       -u $USER \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
@@ -39,8 +40,8 @@ _run +args:
 
 _run-pg +args:
     @docker run --rm -it \
-      -v ~/.cargo/registry:{{container_cargo_registry}} \
-      -v ./:/work/ \
+      -v $HOME/.cargo/registry:{{container_cargo_registry}} \
+      -v {{invocation_directory()}}/:/work/ \
       -u $USER \
       -e DATABASE_URL={{db_url_postgres}} \
       --net host \
@@ -49,8 +50,8 @@ _run-pg +args:
 
 _run-ui +args:
     @docker run --rm -it \
-      -v ~/.cargo/registry:{{container_cargo_registry}} \
-      -v ./:/work/ \
+      -v $HOME/.cargo/registry:{{container_cargo_registry}} \
+      -v {{invocation_directory()}}/:/work/ \
       -u $USER \
       --net host \
       -w/work/frontend \
@@ -59,8 +60,8 @@ _run-ui +args:
 
 _run-bg +args:
     @docker run --rm -d \
-      -v ~/.cargo/registry:{{container_cargo_registry}} \
-      -v ./:/work/ \
+      -v $HOME/.cargo/registry:{{container_cargo_registry}} \
+      -v {{invocation_directory()}}/:/work/ \
       -u $USER \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
@@ -69,8 +70,8 @@ _run-bg +args:
 
 _run-bg-pg +args:
     @docker run --rm -d \
-      -v ~/.cargo/registry:{{container_cargo_registry}} \
-      -v ./:/work/ \
+      -v $HOME/.cargo/registry:{{container_cargo_registry}} \
+      -v {{invocation_directory()}}/:/work/ \
       -u $USER \
       -e DATABASE_URL={{db_url_postgres}} \
       --net host \
@@ -78,12 +79,17 @@ _run-bg-pg +args:
       {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
 
 # start the backend containers for local dev
-backend: mailcrab-start postgres-start prepare
+backend:
+    just mailcrab-start || echo ">>> Mailcrab is already running - nothing to do"
+    just postgres-start || echo ">>> Postgres is already running - nothing to do"
+    just prepare
 
 # stop mailcrab and postgres docker containers
 backend-stop:
-    just postgres-stop
-    just mailcrab-stop
+    just postgres-stop || echo ">>> Postgres is not running - nothing to do"
+    just mailcrab-stop || echo ">>> Mailcrab is not running - nothing to do"
+    echo "Trying to cleanup orphaned containers"
+    docker rm container rauthy || echo ">>> No orphaned 'rauthy' container found"
 
 clean:
     just _run cargo clean
@@ -167,14 +173,15 @@ mailcrab-stop:
 # Starts mailcrab
 postgres-start:
     docker run -d \
-      -v ./postgres/init-script:/docker-entrypoint-initdb.d \
-      -v ./postgres/sql-scripts:/scripts/ \
+      -v {{invocation_directory()}}/postgres/init-script:/docker-entrypoint-initdb.d \
+      -v {{invocation_directory()}}/postgres/sql-scripts:/scripts/ \
       -e POSTGRES_PASSWORD=123SuperSafe \
       --net host \
       --name {{container_postgres}} \
       --restart unless-stopped \
       postgres:16.2
 
+    sleep 1
     just migrate-postgres
 
 # Stops mailcrab
@@ -259,8 +266,8 @@ test-backend: migrate prepare
 
     just _run cargo build
     @docker run --rm -it \
-      -v ~/.cargo/registry:{{container_cargo_registry}} \
-      -v ./:/work/ \
+      -v $HOME/.cargo/registry:{{container_cargo_registry}} \
+      -v {{invocation_directory()}}/:/work/ \
       -u $USER \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
@@ -456,13 +463,13 @@ build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
 
     docker pull ghcr.io/cross-rs/aarch64-unknown-linux-musl:edge
     docker buildx build \
-           -t {{image}}:arm64-$TODAY \
-           -f Dockerfile_builder \
-           --platform linux/arm64 \
-           --build-arg="IMAGE=ghcr.io/cross-rs/aarch64-unknown-linux-musl:edge" \
-           --no-cache \
-           --{{push}} \
-           .
+          -t {{image}}:arm64-$TODAY \
+          -f Dockerfile_builder \
+          --platform linux/arm64 \
+          --build-arg="IMAGE=ghcr.io/cross-rs/aarch64-unknown-linux-musl:edge" \
+          --no-cache \
+          --{{push}} \
+          .
 
 
 # makes sure everything is fine
