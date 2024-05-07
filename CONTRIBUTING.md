@@ -81,7 +81,7 @@ layer for the most amount of compatibility and the least painful setup on differ
 These commands and containers use the `PUB_URL` in lots of places for inter-container communication.
 
 ```
-DEV_HOST=192.168.0.1:8443
+PUB_URL=192.168.0.1:8443
 ```
 
 You can set additional variables here and even insert sensitive information. These will never be pushed into git.
