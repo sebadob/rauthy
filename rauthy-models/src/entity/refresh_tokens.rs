@@ -84,9 +84,15 @@ impl RefreshToken {
     }
 
     pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
-        match sqlx::query_as!(Self, "SELECT * FROM refresh_tokens WHERE id = $1", id)
-            .fetch_one(&data.db)
-            .await
+        let now = Utc::now().timestamp();
+        match sqlx::query_as!(
+            Self,
+            "SELECT * FROM refresh_tokens WHERE id = $1 AND exp > $2",
+            id,
+            now
+        )
+        .fetch_one(&data.db)
+        .await
         {
             Ok(res) => Ok(res),
             Err(_) => Err(ErrorResponse::new(

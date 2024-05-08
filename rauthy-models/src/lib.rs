@@ -153,9 +153,9 @@ pub struct JwtAccessClaims {
     pub scope: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub allowed_origins: Option<Vec<String>>,
-    // user part
     #[serde(skip_serializing_if = "Option::is_none")]
     pub did: Option<String>,
+    // user part
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -212,6 +212,8 @@ pub struct JwtRefreshClaims {
     pub uid: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cnf: Option<JktClaim>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub did: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
