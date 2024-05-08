@@ -84,10 +84,12 @@ impl RefreshTokenDevice {
     }
 
     pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
+        let now = Utc::now().timestamp();
         match sqlx::query_as!(
             Self,
-            "SELECT * FROM refresh_tokens_devices WHERE id = $1",
-            id
+            "SELECT * FROM refresh_tokens_devices WHERE id = $1 AND exp > $2",
+            id,
+            now
         )
         .fetch_one(&data.db)
         .await
