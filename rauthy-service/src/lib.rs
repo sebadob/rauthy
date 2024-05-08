@@ -2,9 +2,9 @@
 
 #![forbid(unsafe_code)]
 
-pub mod aggressive_scan_block;
 pub mod auth;
 pub mod client;
 pub mod encryption;
 pub mod password_reset;
+pub mod suspicious_request_block;
 pub mod token_set;

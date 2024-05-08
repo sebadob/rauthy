@@ -35,7 +35,7 @@ use rauthy_models::i18n::SsrJson;
 use rauthy_models::language::Language;
 use rauthy_models::request::{
     EncKeyMigrateRequest, I18nContent, I18nRequest, PasswordHashTimesRequest,
-    PasswordPolicyRequest, SearchParams, SearchParamsType, WhoamiRequestParam, WhoamiRequestParams,
+    PasswordPolicyRequest, SearchParams, SearchParamsType,
 };
 use rauthy_models::response::{
     AppVersionResponse, Argon2ParamsResponse, EncKeysResponse, HealthResponse, LoginTimeResponse,
@@ -46,7 +46,7 @@ use rauthy_models::templates::{
     AdminConfigHtml, AdminDocsHtml, AdminGroupsHtml, AdminHtml, AdminRolesHtml, AdminScopesHtml,
     AdminSessionsHtml, AdminUsersHtml, DeviceHtml, IndexHtml, ProvidersHtml,
 };
-use rauthy_service::encryption;
+use rauthy_service::{encryption, suspicious_request_block};
 use redhac::{cache_get, cache_get_from, cache_get_value, QuorumHealth, QuorumState};
 use semver::Version;
 use std::borrow::Cow;
@@ -685,28 +685,29 @@ pub async fn catch_all(data: web::Data<AppState>, req: HttpRequest) -> impl Resp
 
     if *SUSPICIOUS_REQUESTS_LOG && path.len() > 1 {
         // TODO create a new event type for these? maybe too many events ...?
-        warn!("Suspicious request path '' from {}", path, ip)
+        warn!("Suspicious request path '{}' from {}", path, ip)
     }
 
-    if *SUSPICIOUS_REQUESTS_BLACKLIST > 0 && path.len() > 1 {
-        if rauthy_service::aggressive_scan_block::is_scan_target(path) {
-            warn!(
-                "Blacklisting suspicious target path request '{}' from {}",
-                path, ip,
+    if *SUSPICIOUS_REQUESTS_BLACKLIST > 0
+        && path.len() > 1
+        && suspicious_request_block::is_scan_target(path)
+    {
+        warn!(
+            "Blacklisting suspicious target path request '{}' from {}",
+            path, ip,
+        );
+        let exp = Utc::now().add(chrono::Duration::minutes(
+            *SUSPICIOUS_REQUESTS_BLACKLIST as i64,
+        ));
+        if let Err(err) = data
+            .tx_ip_blacklist
+            .send_async(IpBlacklistReq::Blacklist(IpBlacklist { ip, exp }))
+            .await
+        {
+            error!(
+                "Error blacklisting suspicious request - please repot this bug: {:?}",
+                err
             );
-            let exp = Utc::now().add(chrono::Duration::minutes(
-                *SUSPICIOUS_REQUESTS_BLACKLIST as i64,
-            ));
-            if let Err(err) = data
-                .tx_ip_blacklist
-                .send_async(IpBlacklistReq::Blacklist(IpBlacklist { ip, exp }))
-                .await
-            {
-                error!(
-                    "Error blacklisting suspicious request - please repot this bug: {:?}",
-                    err
-                );
-            }
         }
     }
 
@@ -723,41 +724,6 @@ pub async fn redirect_v1() -> HttpResponse {
     HttpResponse::MovedPermanently()
         .insert_header(("location", "/auth/v1/"))
         .finish()
-}
-
-/// Simple `whoami` endpoint for debugging purposes
-///
-/// Returns a body with the original requests headers
-#[utoipa::path(
-    get,
-    path = "/whoami",
-    tag = "generic",
-    params(WhoamiRequestParams),
-    responses(
-        (status = 200, description = "Ok"),
-        (status = 503, description = "ServiceUnavailable"),
-    ),
-)]
-#[get("/whoami")]
-pub async fn whoami(req: HttpRequest, params: web::Query<WhoamiRequestParams>) -> impl Responder {
-    use std::fmt::Write;
-
-    let ip = real_ip_from_req(&req).unwrap_or_default();
-
-    if let Some(typ) = &params.typ {
-        match typ {
-            WhoamiRequestParam::Ip => HttpResponse::Ok().append_header(HEADER_HTML).body(ip),
-        }
-    } else {
-        let mut resp = String::with_capacity(500);
-
-        req.headers().iter().for_each(|(k, v)| {
-            let _ = writeln!(resp, "{}: {:?}", k, v.to_str().unwrap_or_default());
-        });
-        let _ = writeln!(resp, "ip: {}", ip);
-
-        HttpResponse::Ok().body(resp)
-    }
 }
 
 /// Returns the current Rauthy Version

@@ -1033,17 +1033,6 @@ pub struct WebIdRequest {
     pub expose_email: bool,
 }
 
-#[derive(Debug, Deserialize, Validate, IntoParams, ToSchema)]
-pub struct WhoamiRequestParams {
-    pub typ: Option<WhoamiRequestParam>,
-}
-
-#[derive(Debug, PartialEq, Deserialize, ToSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum WhoamiRequestParam {
-    Ip,
-}
-
 // validation helpers
 
 fn validate_vec_attr(value: &[String]) -> Result<(), ValidationError> {

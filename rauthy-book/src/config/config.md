@@ -113,7 +113,7 @@ AUTH_HEADER_MFA=x-forwarded-user-mfa
 # preemptively for the set time in minutes.
 # You can disable it with setting it to `0`.
 # default: 1440
-SUSPICIOUS_REQUESTS_BLACKLIST=1440
+#SUSPICIOUS_REQUESTS_BLACKLIST=1440
 
 # This will emit a log with level of warning if a request to `/` has
 # been made that has not been caught by any of the usual routes and
@@ -122,7 +122,7 @@ SUSPICIOUS_REQUESTS_BLACKLIST=1440
 # This can help to improve the internal suspicious blocklist in the
 # future.
 # default: false
-SUSPICIOUS_REQUESTS_LOG=true
+#SUSPICIOUS_REQUESTS_LOG=false
 
 #####################################
 ############# BACKUPS ###############
