@@ -7,4 +7,6 @@ license = "Apache-2.0"
 
 [dependencies]
 tokio = { version = "1.34.0", features = ["full"] }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["tracing"] }
 rauthy-client = { path = "../..", features = ["device-code", "qrcode"] }
