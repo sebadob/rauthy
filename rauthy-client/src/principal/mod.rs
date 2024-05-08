@@ -10,6 +10,49 @@ mod actix_web;
 #[cfg(feature = "axum")]
 mod axum;
 
+#[cfg(feature = "userinfo")]
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct AddressClaim {
+    pub formatted: String,
+    pub street_address: Option<String>,
+    pub locality: Option<String>,
+    pub postal_code: Option<i32>,
+    pub country: Option<String>,
+}
+
+#[cfg(feature = "userinfo")]
+#[derive(Debug, serde::Deserialize)]
+pub struct Userinfo {
+    pub id: String,
+    pub sub: String,
+    pub name: String,
+    pub roles: Vec<String>,
+    pub mfa_enabled: bool,
+
+    // scope: address
+    pub address: Option<AddressClaim>,
+
+    // scope: email
+    pub email: Option<String>,
+    pub email_verified: Option<bool>,
+
+    // scope: groups
+    pub groups: Option<Vec<String>>,
+
+    // scope: profile
+    pub preferred_username: Option<String>,
+    pub given_name: Option<String>,
+    pub family_name: Option<String>,
+    pub birthdate: Option<String>,
+    pub locale: Option<String>,
+
+    // scope: phone
+    pub phone: Option<String>,
+
+    // scope: webid
+    pub webid: Option<String>,
+}
+
 /// The AuthorizedUser making requests to the API
 #[derive(Debug)]
 pub struct PrincipalOidc {
@@ -32,6 +75,8 @@ pub struct PrincipalOidc {
     /// Contains all custom scopes that are configured inside Rauthy and are mapped into the
     /// `access_token` for the given user
     pub custom_claims: Option<HashMap<String, serde_json::Value>>,
+    #[cfg(feature = "userinfo")]
+    access_token: Option<String>,
 }
 
 impl PrincipalOidc {
@@ -61,7 +106,55 @@ impl PrincipalOidc {
             is_admin,
             is_user,
             custom_claims: claims.custom,
+            #[cfg(feature = "userinfo")]
+            access_token: Some(token.to_string()),
         })
+    }
+
+    #[cfg(feature = "userinfo")]
+    pub async fn fetch_userinfo(&self) -> Result<Userinfo, RauthyError> {
+        use crate::provider::{HTTP_CLIENT, OIDC_CONFIG};
+        use std::borrow::Cow;
+
+        let token = match &self.access_token {
+            None => {
+                return Err(RauthyError::Init(
+                    "Cannot fetch userinfo when Principal has not been \
+                initialized with an access_token",
+                ));
+            }
+            Some(token) => token,
+        };
+
+        let url = match OIDC_CONFIG.get() {
+            None => {
+                return Err(RauthyError::Init(
+                    "OidcProvider::setup_from_config has not been called",
+                ));
+            }
+            Some(cfg) => &cfg.provider.userinfo_endpoint,
+        };
+        let client = match HTTP_CLIENT.get() {
+            None => {
+                return Err(RauthyError::Init(
+                    "OidcProvider::init_client has not been called",
+                ));
+            }
+            Some(c) => c,
+        };
+
+        let res = client
+            .post(url)
+            .header("Authorization", format!("Bearer {}", token))
+            .send()
+            .await?;
+        let status = res.status();
+        if status.is_success() {
+            Ok(res.json::<Userinfo>().await?)
+        } else {
+            let body = res.text().await?;
+            Err(RauthyError::Token(Cow::from(body)))
+        }
     }
 }
 
