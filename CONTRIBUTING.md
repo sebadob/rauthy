@@ -46,26 +46,36 @@ just
 
 to see all available public recipes. Internal ones do exist as well, but you most likely don't need to care about these.
 
+Rauthy is using compile-time checked templating with [askama](https://crates.io/crates/askama) and the UI will be
+compiled into static HTML files during the build process. To make the initial database migrations (and therefore the
+compiler) happy, the first thing we need to do is to build the HTML files. This is kind of a chicken and egg problem.
+
 The first thing you should do is
-
-```
-just backend
-```
-
-which will start a [mailcrab](https://github.com/tweedegolf/mailcrab) container so you can receive E-Mails from Rauthy
-without the need to set up any additional SMTP server. You can access the UI via `http://<your_host_ip>:1080`.
-It will also start a Postgres database in another container. You can access it with the user `rauthy` and default
-password `123SuperSafe`, but the access is already pre-configured.  
-This command will also apply all existing database migrations to both a local SQLite file and the newly started
-Postgres container.
-
-The second thing you need to do is
 
 ```
 just npm-install
 ```
 
-which will install all dependencies from inside a container to build and run the Svelte UI.
+which will install all dependencies from inside a container to build and run the Svelte UI, followed by a
+
+```
+just build-ui
+```
+
+which will build the UI into static HTML files and populate the `templates/html` folder to make askama happy.
+
+The next thing is to start the backend containers with
+
+```
+just backend
+```
+
+which will start a [mailcrab](https://github.com/tweedegolf/mailcrab) container, so you can receive E-Mails from Rauthy
+without the need to set up any additional SMTP server. You can access the UI via `http://<your_host_ip>:1080`.
+It will also start a Postgres database in another container. You can access it with the user `rauthy` and default
+password `123SuperSafe`, but the access is already pre-configured.  
+This command will also apply all existing database migrations to both a local SQLite file and the newly started
+Postgres container. This is the reason we needed to build the UI files beforehand.
 
 ### Config
 
@@ -90,14 +100,6 @@ You can set additional variables here and even insert sensitive information. The
 
 Once prerequisites are met, the rest should be really simple:
 
-If this is a fresh pull, build the UI once to populate the `templates/html`
-
-```
-just build-ui
-```
-
-Then you should be ready to go, and it depends, what you want to work on.
-
 ```
 just run
 ```
@@ -105,12 +107,20 @@ just run
 will start Rauthy with a SQLite backend serving the statically built HTML UI, all on port `8443` by default.  
 If you want to work on the frontend too, execute in another terminal:
 
-`just run ui`
+```
+just run ui
+```
 
 which will make the Svelte UI in dev mode available via port `5173` on your machine.  
 There is only one thing about the UI in dev mode: The way the static file adapter from svelte is set up right now,
 you will not be able to access http://localhost:5173/auth/v1, you actually would need to append `/index` here once.
 The rest works just the same and as expected: http://localhost:5173/auth/v1/index
+
+If you want to test against Postgres, instead of the above `just run`, simply execute
+
+```
+just run postgres
+```
 
 If you don't use passkeys, it should work right away. If you however want to test passkeys with the local
 dev ui, you need to adjust the port for `RP_ORIGIN`.
