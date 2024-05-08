@@ -70,7 +70,6 @@ use utoipa::{openapi, OpenApi};
         generic::post_pow,
         generic::get_ready,
         generic::ping,
-        generic::whoami,
         generic::get_version,
 
         groups::get_groups,
@@ -206,8 +205,6 @@ use utoipa::{openapi, OpenApi};
             request::WebauthnAuthStartRequest,
             request::WebauthnAuthFinishRequest,
             request::WebIdRequest,
-            request::WhoamiRequestParam,
-            request::WhoamiRequestParams,
 
             response::ApiKeyResponse,
             response::ApiKeysResponse,
