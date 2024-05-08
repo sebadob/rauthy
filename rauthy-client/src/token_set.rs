@@ -7,6 +7,7 @@ use jwt_simple::claims;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::fmt::Debug;
 
 /// The token set returned upon a successful login flow
 #[derive(Debug, Serialize, Deserialize)]
@@ -32,6 +33,39 @@ impl OidcTokenSet {
         } else {
             Ok(None)
         }
+    }
+
+    /// This function will return the claims from a given JWT token.
+    /// CAUTION: It does NOT VALIDATE the token signature or any other values!
+    /// It will only try to decode the payload into the target struct.
+    pub fn danger_claims_unvalidated<T>(token: &str) -> Result<T, RauthyError>
+    where
+        T: Debug + for<'a> serde::de::Deserialize<'a>,
+    {
+        let mut split = token.split(".");
+
+        // The first part is the header
+        if split.next().is_none() {
+            return Err(RauthyError::Token(Cow::from(
+                "Bad format for raw token - header missing",
+            )));
+        }
+
+        // The second part are the claims we care about
+        let claims_b64 = match split.next() {
+            None => {
+                return Err(RauthyError::Token(Cow::from(
+                    "Bad format for raw token - claims missing",
+                )));
+            }
+            Some(s) => s,
+        };
+
+        let bytes = base64_url_no_pad_decode(claims_b64)?;
+        let s = String::from_utf8_lossy(&bytes);
+        let claims = serde_json::from_str::<T>(&s)?;
+
+        Ok(claims)
     }
 }
 
@@ -152,6 +186,11 @@ impl JwtIdClaims {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct JwtRefreshClaims {
+    pub iat: i64,
+    pub exp: i64,
+    pub nbf: i64,
+    pub iss: String,
+    pub aud: String,
     pub azp: String,
     pub typ: JwtTokenType,
     pub uid: String,

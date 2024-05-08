@@ -22,9 +22,9 @@ impl JwksMsg {
     pub(crate) fn send(self) -> Result<(), RauthyError> {
         JWKS_TX
             .get()
-            .ok_or_else(|| RauthyError::Init("JWKS_TX has not been initialized"))?
+            .ok_or(RauthyError::Init("JWKS_TX has not been initialized"))?
             .send(self)
-            .or_else(|err| Err(RauthyError::Internal(Cow::from(err.to_string()))))?;
+            .map_err(|err| RauthyError::Internal(Cow::from(err.to_string())))?;
         Ok(())
     }
 }
@@ -83,7 +83,7 @@ impl JwkPublicKey {
         let metadata = jwt_simple::token::Token::decode_metadata(token)?;
         let kid = metadata
             .key_id()
-            .ok_or_else(|| RauthyError::InvalidClaims("No 'kid' in JWT token header"))?;
+            .ok_or(RauthyError::InvalidClaims("No 'kid' in JWT token header"))?;
 
         let (tx, rx) = oneshot::channel();
         JwksMsg::Get((kid.to_string(), tx)).send()?;

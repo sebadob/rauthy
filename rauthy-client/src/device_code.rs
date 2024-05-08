@@ -1,13 +1,21 @@
 use crate::rauthy_error::RauthyError;
-use crate::token_set::OidcTokenSet;
+use crate::token_set::{JwtRefreshClaims, OidcTokenSet};
 use crate::{DangerAcceptInvalidCerts, RauthyHttpsOnly, RootCertificate, VERSION};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::Add;
+use std::sync::OnceLock;
 use std::time::Duration;
-use tracing::{debug, info, warn};
+use tokio::sync::watch;
+use tokio::time;
+use tracing::{debug, error, info, warn};
+
+static TX_ACCESS_TOKEN: OnceLock<watch::Sender<String>> = std::sync::OnceLock::new();
+static RX_ACCESS_TOKEN: OnceLock<watch::Receiver<String>> = std::sync::OnceLock::new();
+static TX_ID_TOKEN: OnceLock<watch::Sender<Option<String>>> = std::sync::OnceLock::new();
+static RX_ID_TOKEN: OnceLock<watch::Receiver<Option<String>>> = std::sync::OnceLock::new();
 
 #[derive(Debug, Deserialize)]
 struct DeviceCodeResponse {
@@ -293,5 +301,199 @@ impl DeviceCode {
             .light_color(svg::Color("#ffffff"))
             .build();
         Ok(image)
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct TokenRequest<'a> {
+    // refresh_token
+    grant_type: &'a str,
+    client_id: &'a str,
+    client_secret: &'a Option<String>,
+    refresh_token: &'a str,
+}
+
+impl OidcTokenSet {
+    pub async fn access_token<'a>() -> Result<String, RauthyError> {
+        if let Some(rx) = RX_ACCESS_TOKEN.get() {
+            Ok(rx.borrow().to_string())
+        } else {
+            Err(RauthyError::Init("You must spawn a refresh handler first"))
+        }
+    }
+
+    pub async fn id_token<'a>() -> Result<Option<String>, RauthyError> {
+        if let Some(rx) = RX_ID_TOKEN.get() {
+            Ok(rx.borrow().clone())
+        } else {
+            Err(RauthyError::Init("You must spawn a refresh handler first"))
+        }
+    }
+
+    pub async fn into_refresh_handler(
+        self,
+        client_id: String,
+        client_secret: Option<String>,
+    ) -> Result<(), RauthyError> {
+        self.into_refresh_handler_with(
+            client_id,
+            client_secret,
+            None,
+            RauthyHttpsOnly::Yes,
+            DangerAcceptInvalidCerts::No,
+        )
+        .await
+    }
+
+    pub async fn into_refresh_handler_with(
+        self,
+        client_id: String,
+        client_secret: Option<String>,
+        root_certificate: Option<RootCertificate>,
+        https_only: RauthyHttpsOnly,
+        danger_insecure: DangerAcceptInvalidCerts,
+    ) -> Result<(), RauthyError> {
+        if self.refresh_token.is_none() {
+            return Err(RauthyError::Provider(Cow::from(
+                "Misconfigured client - refresh_token is missing",
+            )));
+        }
+
+        // this way of initializing makes it possible to restart a handler that went down
+        // because of network issues
+        if RX_ACCESS_TOKEN.get().is_none() {
+            let (tx_access, rx_access) = watch::channel(self.access_token);
+            let (tx_id, rx_id) = watch::channel(self.id_token);
+            TX_ACCESS_TOKEN.set(tx_access).unwrap();
+            RX_ACCESS_TOKEN.set(rx_access).unwrap();
+            TX_ID_TOKEN.set(tx_id).unwrap();
+            RX_ID_TOKEN.set(rx_id).unwrap();
+        } else {
+            TX_ACCESS_TOKEN.get().unwrap().send(self.access_token)?;
+            TX_ID_TOKEN.get().unwrap().send(self.id_token)?;
+        }
+
+        // unwrap cannot panic - checked above already
+        let refresh_token = self.refresh_token.unwrap();
+        let refresh_claims =
+            OidcTokenSet::danger_claims_unvalidated::<JwtRefreshClaims>(&refresh_token)?;
+        let now = Utc::now().timestamp();
+
+        if refresh_claims.exp < now {
+            return Err(RauthyError::Token(Cow::from(
+                "The refresh_token as already expired",
+            )));
+        }
+
+        tokio::spawn(Self::refresh_handler(
+            refresh_token,
+            refresh_claims,
+            client_id,
+            client_secret,
+            root_certificate,
+            https_only,
+            danger_insecure,
+        ));
+
+        Ok(())
+    }
+
+    async fn refresh_handler(
+        mut refresh_token: String,
+        mut refresh_claims: JwtRefreshClaims,
+        client_id: String,
+        client_secret: Option<String>,
+        root_certificate: Option<RootCertificate>,
+        https_only: RauthyHttpsOnly,
+        danger_insecure: DangerAcceptInvalidCerts,
+    ) {
+        'main: loop {
+            let sleep_for = refresh_claims.nbf - Utc::now().timestamp() + 1;
+            if sleep_for >= 10 {
+                time::sleep(Duration::from_secs(sleep_for as u64)).await;
+            } else {
+                warn!(
+                    "refresh_token nbf is < 10 seconds -> you may want to increase access_token \
+                    lifetime to not end up in a busy refresh loop"
+                );
+                // even if the token can be used right away, sleep for 1 second in any case
+                // to avoid spamming Rauthy too much because of a misconfigured client
+                time::sleep(Duration::from_secs(1)).await;
+            }
+            debug!("Refreshing token now");
+
+            let token_url = format!("{}/oidc/token", refresh_claims.iss);
+            let payload = TokenRequest {
+                grant_type: "refresh_token",
+                client_id: &client_id,
+                client_secret: &client_secret,
+                refresh_token: &refresh_token,
+            };
+
+            // this client builder cannot panic because it must have been working before
+            let client = DeviceCode::build_client(
+                root_certificate.clone(),
+                https_only.clone(),
+                danger_insecure.clone(),
+            )
+            .unwrap();
+
+            let mut retries = 0;
+            loop {
+                match client.post(&token_url).form(&payload).send().await {
+                    Ok(res) => {
+                        let status = res.status();
+                        if status.is_success() {
+                            match res.json::<OidcTokenSet>().await {
+                                Ok(ts) => {
+                                    TX_ACCESS_TOKEN
+                                        .get()
+                                        .unwrap()
+                                        .send(ts.access_token)
+                                        .expect("internal send to not fail");
+                                    TX_ID_TOKEN
+                                        .get()
+                                        .unwrap()
+                                        .send(ts.id_token)
+                                        .expect("internal send to not fail");
+
+                                    if let Some(rt) = ts.refresh_token {
+                                        refresh_token = rt;
+                                        refresh_claims =
+                                            OidcTokenSet::danger_claims_unvalidated(&refresh_token)
+                                                .unwrap();
+                                        break;
+                                    } else {
+                                        warn!("Did not receive a new refresh_token from refresh - exiting refresh handler");
+                                        break 'main;
+                                    }
+                                }
+                                Err(err) => {
+                                    error!("Error deserializing TokenSet: {:?}\nexiting refresh handler", err);
+                                    break 'main;
+                                }
+                            }
+                        } else {
+                            let body = res.text().await.unwrap_or_default();
+                            error!(
+                                "Error during token refresh: {}: {}\nexiting refresh handler",
+                                status, body
+                            );
+                            break 'main;
+                        }
+                    }
+                    Err(err) => {
+                        // we might get here, if the network is currently down -> retry
+                        error!("Error refreshing token: {:?}", err);
+                        retries += 1;
+                        if retries > 10 {
+                            error!("Refresh retries exceeded - exiting refresh handler");
+                            break 'main;
+                        }
+                        time::sleep(Duration::from_secs(10)).await;
+                    }
+                }
+            }
+        }
     }
 }

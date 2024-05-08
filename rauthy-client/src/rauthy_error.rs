@@ -76,3 +76,17 @@ impl From<qrcode::types::QrError> for RauthyError {
         Self::Internal(Cow::from(value.to_string()))
     }
 }
+
+#[cfg(feature = "device-code")]
+impl From<tokio::sync::watch::error::SendError<String>> for RauthyError {
+    fn from(value: tokio::sync::watch::error::SendError<String>) -> Self {
+        Self::Internal(Cow::from(value.to_string()))
+    }
+}
+
+#[cfg(feature = "device-code")]
+impl From<tokio::sync::watch::error::SendError<Option<String>>> for RauthyError {
+    fn from(value: tokio::sync::watch::error::SendError<Option<String>>) -> Self {
+        Self::Internal(Cow::from(value.to_string()))
+    }
+}
