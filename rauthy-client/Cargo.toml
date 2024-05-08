@@ -25,6 +25,7 @@ axum = [
 ]
 device-code = []
 qrcode = ["device-code", "dep:qrcode"]
+userinfo = []
 
 [dependencies]
 # common

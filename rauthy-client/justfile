@@ -34,11 +34,13 @@ check: clippy-examples
     cargo +nightly clippy --features actix-web -- -D warnings
     cargo +nightly clippy --features axum -- -D warnings
     cargo +nightly clippy --features device-code -- -D warnings
+    cargo +nightly clippy --features userinfo -- -D warnings
 
     cargo minimal-versions check
     cargo minimal-versions check --features actix-web
     cargo minimal-versions check --features axum
     cargo minimal-versions check --features device-code
+    cargo minimal-versions check --features userinfo
 
 
 # runs the full set of tests
