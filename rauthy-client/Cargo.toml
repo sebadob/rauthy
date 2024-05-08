@@ -1,6 +1,6 @@
 [package]
 name = "rauthy-client"
-version = "0.4.0-20240503"
+version = "0.4.0"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
