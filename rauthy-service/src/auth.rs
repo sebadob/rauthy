@@ -590,15 +590,26 @@ pub async fn build_refresh_token(
     is_mfa: bool,
     device_code_flow: DeviceCodeFlow,
 ) -> Result<String, ErrorResponse> {
+    let did = if let DeviceCodeFlow::Yes(device_id) = device_code_flow {
+        Some(device_id)
+    } else {
+        None
+    };
+
     let custom_claims = JwtRefreshClaims {
         azp: client.id.clone(),
         typ: JwtTokenType::Refresh,
         uid: user.id.clone(),
         cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
+        did: did.clone(),
     };
+
+    let nbf = Utc::now().add(chrono::Duration::seconds(access_token_lifetime - 60));
+    let nbf_unix = UnixTimeStamp::from_secs(nbf.timestamp() as u64);
 
     let claims = Claims::with_custom_claims(custom_claims, coarsetime::Duration::from_hours(48))
         .with_issuer(data.issuer.clone())
+        .invalid_before(nbf_unix)
         .with_audience(client.id.to_string());
 
     let token = sign_refresh_token(data, claims).await?;
@@ -606,8 +617,7 @@ pub async fn build_refresh_token(
     // only save the last 50 characters for validation
     let validation_string = String::from(&token).split_off(token.len() - 49);
 
-    let nbf = Utc::now().add(chrono::Duration::seconds(access_token_lifetime - 60));
-    if let DeviceCodeFlow::Yes(device_id) = device_code_flow {
+    if let Some(device_id) = did {
         let exp = nbf.add(chrono::Duration::hours(
             *DEVICE_GRANT_REFRESH_TOKEN_LIFETIME as i64,
         ));
@@ -2016,28 +2026,43 @@ pub async fn validate_refresh_token(
         (None, None)
     };
 
-    // validate that it exists in the db
-    let (_, validation_str) = refresh_token.split_at(refresh_token.len() - 49);
-
-    let mut rt = RefreshToken::find(data, validation_str).await?;
-
-    // check expires_at from the db entry
-    if rt.exp < OffsetDateTime::now_utc().unix_timestamp() {
-        // if an already used refresh token was provided again, invalidate all existing ones for the
-        // user as well to prevent possible security issues
-        RefreshToken::invalidate_all_for_user(data, &rt.user_id).await?;
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            String::from(
-                "Refresh Token has expired already. All other refresh tokens\
-                for this user have been invalidated now because of misuse.",
-            ),
-        ));
-    }
-
     let mut user = User::find(data, uid).await?;
     user.check_enabled()?;
     user.check_expired()?;
+
+    // validate that it exists in the db and invalidate it afterward
+    let (_, validation_str) = refresh_token.split_at(refresh_token.len() - 49);
+    let now = OffsetDateTime::now_utc().unix_timestamp();
+    let exp_at_secs = now + data.refresh_grace_time as i64;
+    let rt_scope = if let Some(device_id) = &claims.custom.did {
+        let mut rt = RefreshTokenDevice::find(data, validation_str).await?;
+
+        if &rt.device_id != device_id {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "'device_id' does not match".to_string(),
+            ));
+        }
+        if rt.user_id != user.id {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "'user_id' does not match".to_string(),
+            ));
+        }
+
+        if rt.exp > exp_at_secs + 1 {
+            rt.exp = exp_at_secs;
+            rt.save(data).await?;
+        }
+        rt.scope
+    } else {
+        let mut rt = RefreshToken::find(data, validation_str).await?;
+        if rt.exp > exp_at_secs + 1 {
+            rt.exp = exp_at_secs;
+            rt.save(data).await?;
+        }
+        rt.scope
+    };
 
     // at this point, everything has been validated -> we can issue a new TokenSet safely
     debug!("Refresh Token - all good!");
@@ -2046,16 +2071,7 @@ pub async fn validate_refresh_token(
     user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
     user.save(data, None, None).await?;
 
-    // invalidate current refresh token
-    let now = OffsetDateTime::now_utc().unix_timestamp();
-    let exp_at_secs = now + data.refresh_grace_time as i64;
-    // do not set expires_at, if we are below our refresh token grace time anyway already
-    if rt.exp > exp_at_secs + 1 {
-        rt.exp = exp_at_secs;
-        rt.save(data).await?;
-    }
-
-    let ts = if let Some(s) = rt.scope {
+    let ts = if let Some(s) = rt_scope {
         TokenSet::from_user(
             &user,
             data,
@@ -2063,7 +2079,6 @@ pub async fn validate_refresh_token(
             dpop_fingerprint,
             None,
             Some(TokenScopes(s)),
-            // TODO should we even ever set mfa for refresh tokens?
             AuthCodeFlow::No,
             DeviceCodeFlow::No,
         )
@@ -2076,7 +2091,6 @@ pub async fn validate_refresh_token(
             dpop_fingerprint,
             None,
             None,
-            // TODO should we even ever set mfa for refresh tokens?
             AuthCodeFlow::No,
             DeviceCodeFlow::No,
         )
