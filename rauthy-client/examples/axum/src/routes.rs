@@ -6,6 +6,7 @@ use axum::http::header::{CONTENT_TYPE, SET_COOKIE};
 use axum::response::{IntoResponse, Response};
 use rauthy_client::handler::{OidcCallbackParams, OidcCookieInsecure, OidcSetRedirectStatus};
 use rauthy_client::principal::PrincipalOidc;
+use rauthy_client::rauthy_error::RauthyError;
 use std::sync::Arc;
 
 type ConfigExt = axum::extract::State<Arc<Config>>;
@@ -100,13 +101,23 @@ pub async fn get_callback(
 /// As soon as you request the `principal: PrincipalOidc` as a parameter, this route can only be
 /// accessed with a valid Token. Otherwise, the Principal cannot be build and would return a 401
 /// from the extractor function.
-pub async fn get_protected(principal: PrincipalOidc) -> Result<Response, Response> {
+pub async fn get_protected(principal: PrincipalOidc) -> Result<Response, RauthyError> {
     // As soon as we get here, the principal is actually valid already.
     // The Principal provides some handy base functions for further easy validation, like:
     //
     // principal.is_admin()?;
     // principal.has_any_group(vec!["group123", "group456"])?;
     // principal.has_any_role(vec!["admin", "root"])?;
+
+    // For very important routes, you could do an additional userinfo fetch, if this feature
+    // has been enabled. This should not be done on each request, but may make sense depending
+    // on you setup. The userinfo fetch will do an additional online validation of the token
+    // and trigger validation + database lookups on Rauthy.
+    // The other reason you might want to do this, if you need more information about the user
+    // and you only have an access_token and not done the initial login flow to get the id_token.
+
+    let userinfo = principal.fetch_userinfo().await?;
+    println!("{:?}", userinfo);
 
     Ok(Response::new(format!(
         "Hello from Protected Resource:<br/>{:?}",
