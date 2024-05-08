@@ -44,7 +44,7 @@ impl PrincipalOidc {
 
         let id = claims
             .sub
-            .ok_or_else(|| RauthyError::InvalidClaims("'sub' claim is mandatory"))?;
+            .ok_or(RauthyError::InvalidClaims("'sub' claim is mandatory"))?;
         let roles = claims.roles.unwrap_or_default();
         let groups = claims.groups.unwrap_or_default();
 

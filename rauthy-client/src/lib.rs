@@ -142,7 +142,7 @@ pub fn generate_pkce_challenge() -> (String, String) {
     (plain, challenge)
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RauthyHttpsOnly {
     Yes,
     No,
@@ -154,7 +154,7 @@ impl RauthyHttpsOnly {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum DangerAcceptInvalidCerts {
     Yes,
     No,

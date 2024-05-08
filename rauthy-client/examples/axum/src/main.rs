@@ -25,7 +25,7 @@ async fn main() -> anyhow::Result<()> {
     subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
     // we need to start the backend for the rauthy-client
-    rauthy_client::init(None, RauthyHttpsOnly::No, DangerAcceptInvalidCerts::Yes).await?;
+    rauthy_client::init_with(None, RauthyHttpsOnly::No, DangerAcceptInvalidCerts::Yes).await?;
 
     let config = RauthyConfig {
         // Sets the .is_admin field for the principal based on the `ClaimMapping`.
