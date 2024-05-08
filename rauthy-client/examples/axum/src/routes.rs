@@ -8,7 +8,6 @@ use rauthy_client::handler::{OidcCallbackParams, OidcCookieInsecure, OidcSetRedi
 use rauthy_client::principal::PrincipalOidc;
 use rauthy_client::rauthy_error::RauthyError;
 use std::sync::Arc;
-use tracing::info;
 
 type ConfigExt = axum::extract::State<Arc<Config>>;
 
