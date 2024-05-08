@@ -52,6 +52,7 @@ _run-ui +args:
     @docker run --rm -it \
       -v $HOME/.cargo/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
+      -e npm_config_cache=/work/.npm_cache \
       -u $USER \
       --net host \
       -w/work/frontend \
