@@ -5,8 +5,8 @@ use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
 use chrono::Utc;
 use cryptr::EncKeys;
 use rauthy_common::constants::{
-    APPLICATION_JSON, BLACKLIST_SUSPICIOUS_REQUESTS, CACHE_NAME_LOGIN_DELAY,
-    HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, IDX_LOGIN_TIME, RAUTHY_VERSION,
+    APPLICATION_JSON, CACHE_NAME_LOGIN_DELAY, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML,
+    IDX_LOGIN_TIME, RAUTHY_VERSION, SUSPICIOUS_REQUESTS_BLACKLIST, SUSPICIOUS_REQUESTS_LOG,
 };
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::real_ip_from_req;
@@ -680,16 +680,22 @@ pub async fn get_ready(data: web::Data<AppState>) -> impl Responder {
 /// request path against common bot / hacker scan targets and blacklist preemptively.
 #[get("/")]
 pub async fn catch_all(data: web::Data<AppState>, req: HttpRequest) -> impl Responder {
-    if *BLACKLIST_SUSPICIOUS_REQUESTS > 0 {
-        let path = req.path();
+    let path = req.path();
+    let ip = real_ip_from_req(&req).unwrap_or_default();
+
+    if *SUSPICIOUS_REQUESTS_LOG && path.len() > 1 {
+        // TODO create a new event type for these? maybe too many events ...?
+        warn!("Suspicious request path '' from {}", path, ip)
+    }
+
+    if *SUSPICIOUS_REQUESTS_BLACKLIST > 0 && path.len() > 1 {
         if rauthy_service::aggressive_scan_block::is_scan_target(path) {
-            let ip = real_ip_from_req(&req).unwrap_or_default();
             warn!(
                 "Blacklisting suspicious target path request '{}' from {}",
                 path, ip,
             );
             let exp = Utc::now().add(chrono::Duration::minutes(
-                *BLACKLIST_SUSPICIOUS_REQUESTS as i64,
+                *SUSPICIOUS_REQUESTS_BLACKLIST as i64,
             ));
             if let Err(err) = data
                 .tx_ip_blacklist
