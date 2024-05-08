@@ -8,6 +8,7 @@ use rauthy_client::handler::{OidcCallbackParams, OidcCookieInsecure, OidcSetRedi
 use rauthy_client::principal::PrincipalOidc;
 use rauthy_client::rauthy_error::RauthyError;
 use std::sync::Arc;
+use tracing::info;
 
 type ConfigExt = axum::extract::State<Arc<Config>>;
 
@@ -115,9 +116,8 @@ pub async fn get_protected(principal: PrincipalOidc) -> Result<Response, RauthyE
     // and trigger validation + database lookups on Rauthy.
     // The other reason you might want to do this, if you need more information about the user
     // and you only have an access_token and not done the initial login flow to get the id_token.
-
-    let userinfo = principal.fetch_userinfo().await?;
-    println!("{:?}", userinfo);
+    //
+    // let userinfo = principal.fetch_userinfo().await?;
 
     Ok(Response::new(format!(
         "Hello from Protected Resource:<br/>{:?}",
