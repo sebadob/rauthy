@@ -90,3 +90,28 @@ impl From<tokio::sync::watch::error::SendError<Option<String>>> for RauthyError 
         Self::Internal(Cow::from(value.to_string()))
     }
 }
+
+#[cfg(feature = "axum")]
+impl axum::response::IntoResponse for RauthyError {
+    fn into_response(self) -> axum::response::Response {
+        let (status, body) = match self {
+            RauthyError::BadRequest(err) => (400, err.to_string()),
+            RauthyError::Base64(err) => (400, err),
+            RauthyError::Encryption(err) => (400, err.to_string()),
+            RauthyError::Internal(err) => (400, err.to_string()),
+            RauthyError::Init(err) => (400, err.to_string()),
+            RauthyError::InvalidClaims(err) => (400, err.to_string()),
+            RauthyError::InvalidJwt(err) => (400, err.to_string()),
+            RauthyError::JWK(err) => (400, err.to_string()),
+            RauthyError::MalformedJwt(err) => (400, err.to_string()),
+            RauthyError::Provider(err) => (400, err.to_string()),
+            RauthyError::Request(err) => (400, err.to_string()),
+            RauthyError::Serde(err) => (400, err),
+            RauthyError::Token(err) => (400, err.to_string()),
+        };
+        axum::response::Response::builder()
+            .status(status)
+            .body(axum::body::Body::from(body))
+            .unwrap()
+    }
+}

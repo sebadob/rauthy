@@ -9,7 +9,7 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 pub(crate) static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
-static OIDC_CONFIG: OnceLock<OidcProviderConfig> = OnceLock::new();
+pub(crate) static OIDC_CONFIG: OnceLock<OidcProviderConfig> = OnceLock::new();
 
 #[derive(Debug)]
 pub(crate) struct OidcProviderConfig {

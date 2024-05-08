@@ -59,7 +59,6 @@ async fn main() -> anyhow::Result<()> {
         // If set to None, the client will be treated as a public client and not provide any
         // secret to the /token endpoint after the callback. Set a secret for confidential clients.
         secret: None,
-        // secret: Some("secretCopiedFromTheRauthyUiIfIsConfidentialClient".to_string(),),
     };
     // The redirect_uri here must match the URI of this application, where we accept and handle
     // the callback after a successful login.
@@ -75,7 +74,7 @@ async fn main() -> anyhow::Result<()> {
         // in production, you should add middlewares here with safe default resposne headers
         .with_state(Arc::new(config));
 
-    let addr = "127.0.0.1:3000";
+    let addr = "0.0.0.0:3000";
     let listener = tokio::net::TcpListener::bind(addr)
         .await
         .expect("port 3000 to be free");
