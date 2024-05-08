@@ -94,7 +94,7 @@ impl PrincipalOidc {
         let groups = claims.groups.unwrap_or_default();
 
         let is_admin = config.admin_claim.matches(roles.deref(), groups.deref());
-        let is_user = config.user_claim.matches(roles.deref(), groups.deref());
+        let is_user = is_admin || config.user_claim.matches(roles.deref(), groups.deref());
 
         Ok(Self {
             id,
@@ -144,16 +144,18 @@ impl PrincipalOidc {
         };
 
         let res = client
-            .post(url)
+            .get(url)
             .header("Authorization", format!("Bearer {}", token))
             .send()
             .await?;
         let status = res.status();
         if status.is_success() {
-            Ok(res.json::<Userinfo>().await?)
+            let info = res.json::<Userinfo>().await?;
+            Ok(info)
         } else {
             let body = res.text().await?;
-            Err(RauthyError::Token(Cow::from(body)))
+            let err = format!("{} {}", status, body);
+            Err(RauthyError::Token(Cow::from(err)))
         }
     }
 }
