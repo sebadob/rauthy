@@ -160,6 +160,15 @@ lazy_static! {
     pub static ref AUTH_HEADER_MFA: String = env::var("AUTH_HEADER_MFA")
         .unwrap_or_else(|_| String::from("x-forwarded-user-mfa"));
 
+    pub static ref SUSPICIOUS_REQUESTS_BLACKLIST: u16 = env::var("SUSPICIOUS_REQUESTS_BLACKLIST")
+        .unwrap_or_else(|_| String::from("1440"))
+        .parse::<u16>()
+        .expect("SUSPICIOUS_REQUESTS_BLACKLIST cannot be parsed to u16 - bad format");
+    pub static ref SUSPICIOUS_REQUESTS_LOG: bool = env::var("SUSPICIOUS_REQUESTS_LOG")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("SUSPICIOUS_REQUESTS_LOG cannot be parsed to bool - bad format");
+
     pub static ref PUB_URL: String = env::var("PUB_URL").expect("PUB_URL env var is not set");
     pub static ref PUB_URL_WITH_SCHEME: String = {
         let scheme = if env::var("LISTEN_SCHEME").as_deref() == Ok("http") && !*PROXY_MODE {

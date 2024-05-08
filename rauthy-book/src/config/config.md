@@ -107,6 +107,23 @@ AUTH_HEADER_GIVEN_NAME=x-forwarded-user-given-name
 # default: x-forwarded-user-mfa
 AUTH_HEADER_MFA=x-forwarded-user-mfa
 
+# The "catch all" route handler on `/` will compare the request path
+# against a hardcoded list of common scan targets from bots and attackers.
+# If the path matches any of these targets, the IP will be blacklisted
+# preemptively for the set time in minutes.
+# You can disable it with setting it to `0`.
+# default: 1440
+SUSPICIOUS_REQUESTS_BLACKLIST=1440
+
+# This will emit a log with level of warning if a request to `/` has
+# been made that has not been caught by any of the usual routes and
+# and handlers. Apart from a request to just `/` which will end in
+# a redirect to `/auth/v1`, all additional path's will be logged.
+# This can help to improve the internal suspicious blocklist in the
+# future.
+# default: false
+SUSPICIOUS_REQUESTS_LOG=true
+
 #####################################
 ############# BACKUPS ###############
 #####################################

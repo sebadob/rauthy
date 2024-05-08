@@ -2,10 +2,11 @@ use crate::{Assets, ReqPrincipal};
 use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::{header, StatusCode};
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
+use chrono::Utc;
 use cryptr::EncKeys;
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_NAME_LOGIN_DELAY, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML,
-    IDX_LOGIN_TIME, RAUTHY_VERSION,
+    IDX_LOGIN_TIME, RAUTHY_VERSION, SUSPICIOUS_REQUESTS_BLACKLIST, SUSPICIOUS_REQUESTS_LOG,
 };
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::real_ip_from_req;
@@ -20,6 +21,7 @@ use rauthy_models::entity::pow::PowEntity;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
+use rauthy_models::events::ip_blacklist_handler::{IpBlacklist, IpBlacklistReq};
 use rauthy_models::i18n::account::I18nAccount;
 use rauthy_models::i18n::authorize::I18nAuthorize;
 use rauthy_models::i18n::device::I18nDevice;
@@ -48,8 +50,9 @@ use rauthy_service::encryption;
 use redhac::{cache_get, cache_get_from, cache_get_value, QuorumHealth, QuorumState};
 use semver::Version;
 use std::borrow::Cow;
+use std::ops::Add;
 use std::str::FromStr;
-use tracing::error;
+use tracing::{error, warn};
 
 #[get("/")]
 pub async fn get_index(
@@ -672,9 +675,41 @@ pub async fn get_ready(data: web::Data<AppState>) -> impl Responder {
     HttpResponse::Ok().finish()
 }
 
-/// Redirects from root to the "real root" /auth/v1/
+/// Catch all - redirects from root to the "real root" /auth/v1/
+/// If `BLACKLIST_SUSPICIOUS_REQUESTS` is set, it will also compare the
+/// request path against common bot / hacker scan targets and blacklist preemptively.
 #[get("/")]
-pub async fn redirect() -> impl Responder {
+pub async fn catch_all(data: web::Data<AppState>, req: HttpRequest) -> impl Responder {
+    let path = req.path();
+    let ip = real_ip_from_req(&req).unwrap_or_default();
+
+    if *SUSPICIOUS_REQUESTS_LOG && path.len() > 1 {
+        // TODO create a new event type for these? maybe too many events ...?
+        warn!("Suspicious request path '' from {}", path, ip)
+    }
+
+    if *SUSPICIOUS_REQUESTS_BLACKLIST > 0 && path.len() > 1 {
+        if rauthy_service::aggressive_scan_block::is_scan_target(path) {
+            warn!(
+                "Blacklisting suspicious target path request '{}' from {}",
+                path, ip,
+            );
+            let exp = Utc::now().add(chrono::Duration::minutes(
+                *SUSPICIOUS_REQUESTS_BLACKLIST as i64,
+            ));
+            if let Err(err) = data
+                .tx_ip_blacklist
+                .send_async(IpBlacklistReq::Blacklist(IpBlacklist { ip, exp }))
+                .await
+            {
+                error!(
+                    "Error blacklisting suspicious request - please repot this bug: {:?}",
+                    err
+                );
+            }
+        }
+    }
+
     HttpResponse::MovedPermanently()
         .insert_header((
             header::LOCATION,
