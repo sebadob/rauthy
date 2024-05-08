@@ -2,6 +2,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod aggressive_scan_block;
 pub mod auth;
 pub mod client;
 pub mod encryption;
