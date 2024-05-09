@@ -1,6 +1,5 @@
 set dotenv-load
 set positional-arguments
-#set shell := ["bash", "-uc"]
 
 export TAG := `cat Cargo.toml | grep '^version =' | cut -d " " -f3 | xargs`
 export TODAY := `date +%Y%m%d`
@@ -80,19 +79,19 @@ _run-bg-pg +args:
       {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
 
 # start the backend containers for local dev
-backend:
+@backend:
     just mailcrab-start || echo ">>> Mailcrab is already running - nothing to do"
     just postgres-start || echo ">>> Postgres is already running - nothing to do"
     just prepare
 
 # stop mailcrab and postgres docker containers
-backend-stop:
+@backend-stop:
     just postgres-stop || echo ">>> Postgres is not running - nothing to do"
     just mailcrab-stop || echo ">>> Mailcrab is not running - nothing to do"
     echo "Trying to cleanup orphaned containers"
     docker rm container rauthy || echo ">>> No orphaned 'rauthy' container found"
 
-clean:
+@clean:
     just _run cargo clean
 
 # Creates a new Root + Intermediate CA for development and testing TLS certificates
@@ -229,7 +228,7 @@ migrate-postgres:
 
 
 # runs any of: none (sqlite), postgres, ui
-run ty="sqlite":
+@run ty="sqlite":
     #!/usr/bin/env bash
     set -euxo pipefail
     clear

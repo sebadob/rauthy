@@ -25,11 +25,13 @@ use crate::entity::clients::Client;
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::colors::ColorEntity;
 use crate::entity::config::ConfigEntity;
+use crate::entity::devices::DeviceEntity;
 use crate::entity::groups::Group;
 use crate::entity::jwk::{Jwk, JwkKeyPairAlg};
 use crate::entity::magic_links::MagicLink;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::refresh_tokens::RefreshToken;
+use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use crate::entity::roles::Role;
 use crate::entity::scopes::Scope;
 use crate::entity::sessions::Session;
@@ -330,6 +332,12 @@ pub async fn migrate_init_prod(
 
     Ok(())
 }
+
+// NOTE:
+// All the queries in the migrations here cannot be compile-time checked.
+// This is a limitation of `sqlx`, because we would be referencing 2 different database
+// types at the same time.
+// Be careful when you update these!
 
 /// Migrates `MIGRATE_DB_FROM` to `DATABASE_URL`
 pub async fn migrate_from_sqlite(
@@ -827,6 +835,54 @@ pub async fn migrate_from_sqlite(
         .await?;
     }
 
+    // DEVICES
+    debug!("Migrating table: devices");
+    let before = sqlx::query_as::<_, DeviceEntity>("select * from devices")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from devices").execute(db_to).await?;
+    for b in before {
+        sqlx::query(
+            r#"INSERT INTO devices
+            (id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+        )
+        .bind(b.id)
+        .bind(b.client_id)
+        .bind(b.user_id)
+        .bind(b.created)
+        .bind(b.access_exp)
+        .bind(b.refresh_exp)
+        .bind(b.peer_ip)
+        .bind(b.name)
+        .execute(db_to)
+        .await?;
+    }
+
+    // REFRESH TOKENS DEVICES
+    debug!("Migrating table: devices");
+    let before = sqlx::query_as::<_, RefreshTokenDevice>("select * from refresh_tokens_devices")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from refresh_tokens_devices")
+        .execute(db_to)
+        .await?;
+    for b in before {
+        sqlx::query(
+            r#"INSERT INTO refresh_tokens_devices
+                (id, device_id, user_id, nbf, exp, scope)
+                VALUES ($1, $2, $3, $4, $5, $6)"#,
+        )
+        .bind(b.id)
+        .bind(b.device_id)
+        .bind(b.user_id)
+        .bind(b.nbf)
+        .bind(b.exp)
+        .bind(b.scope)
+        .execute(db_to)
+        .await?;
+    }
+
     // SESSIONS
     debug!("Migrating table: sessions");
     let before = sqlx::query_as::<_, Session>("select * from sessions")
@@ -912,7 +968,7 @@ pub async fn migrate_from_postgres(
 
     // API KEYS
     debug!("Migrating table: api_keys");
-    let before = sqlx::query_as::<_, ApiKeyEntity>("SELECT * FROM api_keys")
+    let before = sqlx::query_as::<_, ApiKeyEntity>("SELECT * FROM rauthy.api_keys")
         .fetch_all(&db_from)
         .await?;
     sqlx::query!("DELETE FROM api_keys").execute(db_to).await?;
@@ -1368,6 +1424,55 @@ pub async fn migrate_from_postgres(
         .bind(b.zip)
         .bind(b.city)
         .bind(b.country)
+        .execute(db_to)
+        .await?;
+    }
+
+    // DEVICES
+    debug!("Migrating table: devices");
+    let before = sqlx::query_as::<_, DeviceEntity>("select * from rauthy.devices")
+        .fetch_all(&db_from)
+        .await?;
+    sqlx::query("delete from devices").execute(db_to).await?;
+    for b in before {
+        sqlx::query(
+            r#"INSERT INTO devices
+            (id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+        )
+        .bind(b.id)
+        .bind(b.client_id)
+        .bind(b.user_id)
+        .bind(b.created)
+        .bind(b.access_exp)
+        .bind(b.refresh_exp)
+        .bind(b.peer_ip)
+        .bind(b.name)
+        .execute(db_to)
+        .await?;
+    }
+
+    // REFRESH TOKENS DEVICES
+    debug!("Migrating table: devices");
+    let before =
+        sqlx::query_as::<_, RefreshTokenDevice>("select * from rauthy.refresh_tokens_devices")
+            .fetch_all(&db_from)
+            .await?;
+    sqlx::query("delete from refresh_tokens_devices")
+        .execute(db_to)
+        .await?;
+    for b in before {
+        sqlx::query(
+            r#"INSERT INTO refresh_tokens_devices
+                (id, device_id, user_id, nbf, exp, scope)
+                VALUES ($1, $2, $3, $4, $5, $6)"#,
+        )
+        .bind(b.id)
+        .bind(b.device_id)
+        .bind(b.user_id)
+        .bind(b.nbf)
+        .bind(b.exp)
+        .bind(b.scope)
         .execute(db_to)
         .await?;
     }
