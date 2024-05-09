@@ -1,8 +1,8 @@
-use actix_web::cookie::SameSite;
 use actix_web::{cookie, web, HttpRequest, HttpResponse};
 use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{get_rand, real_ip_from_req};
+use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::magic_links::{MagicLink, MagicLinkUsage};
@@ -49,14 +49,7 @@ pub async fn handle_get_pwd_reset<'a>(
     ml.save(data).await?;
 
     let age_secs = ml.exp - OffsetDateTime::now_utc().unix_timestamp();
-    let max_age = cookie::time::Duration::seconds(age_secs);
-    let cookie = cookie::Cookie::build(PWD_RESET_COOKIE, ml.cookie.unwrap())
-        .secure(true)
-        .http_only(true)
-        .same_site(SameSite::Lax)
-        .max_age(max_age)
-        .path("/auth")
-        .finish();
+    let cookie = ApiCookie::build(PWD_RESET_COOKIE, ml.cookie.unwrap(), age_secs);
 
     Ok((html, cookie))
 }
@@ -143,13 +136,7 @@ pub async fn handle_put_user_passkey_finish<'a>(
     user.save(data, None, None).await?;
 
     // delete the cookie
-    let cookie = cookie::Cookie::build(PWD_RESET_COOKIE, "")
-        .secure(true)
-        .http_only(true)
-        .same_site(SameSite::Lax)
-        .max_age(cookie::time::Duration::ZERO)
-        .path("/auth")
-        .finish();
+    let cookie = ApiCookie::build(PWD_RESET_COOKIE, "", 0);
     Ok(HttpResponse::Created().cookie(cookie).finish())
 }
 
@@ -226,12 +213,6 @@ pub async fn handle_put_user_password_reset<'a>(
     };
 
     // delete the cookie
-    let cookie = cookie::Cookie::build(PWD_RESET_COOKIE, "")
-        .secure(true)
-        .http_only(true)
-        .same_site(SameSite::Lax)
-        .max_age(cookie::time::Duration::ZERO)
-        .path("/auth")
-        .finish();
+    let cookie = ApiCookie::build(PWD_RESET_COOKIE, "", 0);
     Ok((cookie, redirect_uri))
 }

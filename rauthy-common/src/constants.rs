@@ -6,6 +6,13 @@ use std::env;
 use std::str::FromStr;
 use std::string::ToString;
 
+#[derive(Debug, PartialEq)]
+pub enum CookieMode {
+    Host,
+    Secure,
+    DangerInsecure,
+}
+
 pub const RAUTHY_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub const CONTENT_TYPE_WEBP: &str = "image/webp";
@@ -21,10 +28,10 @@ pub const TOKEN_API_KEY: &str = "API-Key";
 pub const TOKEN_BEARER: &str = "Bearer";
 pub const TOKEN_DPOP: &str = "DPoP";
 pub const TOKEN_DPOP_NONCE: &str = "DPoP-nonce";
-pub const COOKIE_SESSION: &str = "rauthy-session";
-pub const COOKIE_MFA: &str = "rauthy-mfa";
+pub const COOKIE_SESSION: &str = "RauthySession";
+pub const COOKIE_MFA: &str = "RauthyMfa";
 pub const COOKIE_LOCALE: &str = "locale";
-pub const COOKIE_UPSTREAM_CALLBACK: &str = "upstream_auth_callback";
+pub const COOKIE_UPSTREAM_CALLBACK: &str = "UpstreamAuthCallback";
 pub const PROVIDER_LINK_COOKIE: &str = "rauthy-provider-link";
 pub const PWD_RESET_COOKIE: &str = "rauthy-pwd-reset";
 pub const APP_ID_HEADER: &str = "mfa-app-id";
@@ -87,10 +94,6 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
         .expect("DEV_MODE cannot be parsed to bool - bad format");
-    pub static ref DANGER_COOKIE_INSECURE: bool = env::var("DANGER_COOKIE_INSECURE")
-        .unwrap_or_else(|_| String::from("false"))
-        .parse::<bool>()
-        .expect("DANGER_COOKIE_INSECURE cannot be parsed to bool - bad format");
     pub static ref DEV_DPOP_HTTP: bool = env::var("DEV_DPOP_HTTP")
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
@@ -159,6 +162,20 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("x-forwarded-user-given-name"));
     pub static ref AUTH_HEADER_MFA: String = env::var("AUTH_HEADER_MFA")
         .unwrap_or_else(|_| String::from("x-forwarded-user-mfa"));
+
+    pub static ref COOKIE_MODE: CookieMode = {
+        let var = env::var("COOKIE_MODE").unwrap_or_else(|_| "host".to_string());
+        match var.as_str() {
+            "host" => CookieMode::Host,
+            "secure" => CookieMode::Secure,
+            "danger-insecure" => CookieMode::DangerInsecure,
+            _ => panic!("COOKIE_MODE must be one of: host, secure, danger-insecure")
+        }
+    };
+    pub static ref COOKIE_SET_PATH: bool = env::var("COOKIE_SET_PATH")
+        .unwrap_or_else(|_| String::from("true"))
+        .parse::<bool>()
+        .expect("COOKIE_SET_PATH cannot be parsed to bool - bad format");
 
     pub static ref SUSPICIOUS_REQUESTS_BLACKLIST: u16 = env::var("SUSPICIOUS_REQUESTS_BLACKLIST")
         .unwrap_or_else(|_| String::from("1440"))

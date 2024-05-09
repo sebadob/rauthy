@@ -1,7 +1,7 @@
 use crate::ReqPrincipal;
 use actix_web::http::header::LOCATION;
 use actix_web::http::StatusCode;
-use actix_web::{cookie, delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
+use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
 use actix_web_validator::{Json, Query};
 use rauthy_common::constants::{
     COOKIE_MFA, ENABLE_WEB_ID, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, OPEN_USER_REG,
@@ -9,6 +9,7 @@ use rauthy_common::constants::{
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_req;
+use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::colors::ColorEntity;
@@ -718,7 +719,7 @@ pub async fn post_webauthn_auth_start(
             // A password reset webauthn req can be opened without any session at all.
             // This is mandatory to make password reset flows fully work, even with an old
             // account with linked Passkeys.
-            match req.cookie(PWD_RESET_COOKIE) {
+            match ApiCookie::from_req(&req, PWD_RESET_COOKIE) {
                 None => {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::BadRequest,
@@ -858,13 +859,7 @@ pub async fn delete_webauthn(
     }
 
     // make sure to delete any existing MFA cookie when a key is deleted
-    let cookie = cookie::Cookie::build(COOKIE_MFA, "")
-        .secure(true)
-        .http_only(true)
-        .same_site(cookie::SameSite::Lax)
-        .max_age(cookie::time::Duration::ZERO)
-        .path("/auth")
-        .finish();
+    let cookie = ApiCookie::build(COOKIE_MFA, "", 0);
     let mut resp = HttpResponse::Ok().finish();
     if let Err(err) = resp.add_cookie(&cookie) {
         error!("Error deleting MFA cookie in post_webauthn_delete: {}", err);

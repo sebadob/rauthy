@@ -5,6 +5,7 @@
 use actix_web::{web, HttpRequest, HttpResponse};
 use rauthy_common::constants::COOKIE_MFA;
 use rauthy_common::error_response::ErrorResponse;
+use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::entity::api_keys::ApiKey;
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::Session;
@@ -68,9 +69,11 @@ pub async fn map_auth_step(
             if let Some((name, value)) = res.header_origin {
                 resp.headers_mut().insert(name, value);
             }
-
+            //
             // if there is no mfa_cookie present, set a new one
-            if let Ok(mfa_cookie) = WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA)) {
+            if let Ok(mfa_cookie) =
+                WebauthnCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA))
+            {
                 if mfa_cookie.email != res.email {
                     add_req_mfa_cookie(&mut resp, res.email.clone()).map_err(|err| (err, true))?;
                 }

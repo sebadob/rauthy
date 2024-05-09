@@ -1,3 +1,4 @@
+use crate::api_cookie::ApiCookie;
 use crate::app_state::AppState;
 use crate::entity::auth_codes::AuthCode;
 use crate::entity::clients::Client;
@@ -12,10 +13,10 @@ use crate::request::{
 };
 use crate::response::{ProviderLinkedUserResponse, ProviderLookupResponse};
 use crate::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
-use actix_web::cookie::{Cookie, SameSite};
+use actix_web::cookie::Cookie;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
-use actix_web::{cookie, web, HttpRequest};
+use actix_web::{web, HttpRequest};
 use cryptr::utils::secure_random_alnum;
 use cryptr::EncValue;
 use image::EncodableLayout;
@@ -132,25 +133,11 @@ impl AuthProviderLinkCookie {
         let bytes = bincode::serialize(self)?;
         let secret_enc = EncValue::encrypt(bytes.as_ref())?.into_bytes().to_vec();
         let value = base64_url_encode(&secret_enc);
-
-        let cookie = cookie::Cookie::build(PROVIDER_LINK_COOKIE, value)
-            .secure(true)
-            .http_only(true)
-            .same_site(SameSite::Lax)
-            .max_age(cookie::time::Duration::seconds(300))
-            .path("/auth")
-            .finish();
-        Ok(cookie)
+        Ok(ApiCookie::build(PROVIDER_LINK_COOKIE, value, 300))
     }
 
     pub fn deletion_cookie<'a>() -> Cookie<'a> {
-        cookie::Cookie::build(PROVIDER_LINK_COOKIE, "")
-            .secure(true)
-            .http_only(true)
-            .same_site(SameSite::Lax)
-            .max_age(cookie::time::Duration::ZERO)
-            .path("/auth")
-            .finish()
+        ApiCookie::build(PROVIDER_LINK_COOKIE, "", 0)
     }
 }
 
@@ -681,7 +668,6 @@ impl AuthProviderCallback {
             provider.scope,
             slf.callback_id
         );
-        debug!("location header for provider login:\n{}", location);
         if provider.use_pkce {
             write!(
                 location,
@@ -693,15 +679,11 @@ impl AuthProviderCallback {
 
         let id_enc = EncValue::encrypt(slf.callback_id.as_bytes())?;
         let id_b64 = base64_encode(id_enc.into_bytes().as_ref());
-        let cookie = cookie::Cookie::build(COOKIE_UPSTREAM_CALLBACK, id_b64)
-            .secure(true)
-            .http_only(true)
-            .same_site(cookie::SameSite::Lax)
-            .max_age(cookie::time::Duration::seconds(
-                UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as i64,
-            ))
-            .path("/auth")
-            .finish();
+        let cookie = ApiCookie::build(
+            COOKIE_UPSTREAM_CALLBACK,
+            id_b64,
+            UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as i64,
+        );
 
         slf.save(data).await?;
 
@@ -720,7 +702,7 @@ impl AuthProviderCallback {
         mut session: Session,
     ) -> Result<(AuthStep, Cookie<'a>), ErrorResponse> {
         // the callback id for the cache should be inside the encrypted cookie
-        let cookie = req.cookie(COOKIE_UPSTREAM_CALLBACK).ok_or_else(|| {
+        let cookie = ApiCookie::from_req(req, COOKIE_UPSTREAM_CALLBACK).ok_or_else(|| {
             ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "Missing encrypted callback cookie".to_string(),
@@ -816,8 +798,7 @@ impl AuthProviderCallback {
 
         // extract a possibly existing provider link cookie for
         // linking an existing account to a provider
-        let link_cookie = req
-            .cookie(PROVIDER_LINK_COOKIE)
+        let link_cookie = ApiCookie::from_req(req, PROVIDER_LINK_COOKIE)
             .and_then(|c| AuthProviderLinkCookie::try_from(c).ok());
 
         // deserialize payload and validate the information
@@ -971,14 +952,7 @@ impl AuthProviderCallback {
         };
 
         // callback data deletion cookie
-        let cookie = cookie::Cookie::build(COOKIE_UPSTREAM_CALLBACK, "")
-            .secure(true)
-            .http_only(true)
-            .same_site(cookie::SameSite::Lax)
-            .max_age(cookie::time::Duration::ZERO)
-            .path("/auth")
-            .finish();
-
+        let cookie = ApiCookie::build(COOKIE_UPSTREAM_CALLBACK, "", 0);
         Ok((auth_step, cookie))
     }
 }

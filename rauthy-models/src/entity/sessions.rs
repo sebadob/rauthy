@@ -1,13 +1,14 @@
+use crate::api_cookie::ApiCookie;
 use crate::app_state::AppState;
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
 use crate::request::SearchParamsIdx;
-use actix_web::cookie::{time, Cookie, SameSite};
+use actix_web::cookie::{time, Cookie};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{cookie, web, HttpRequest};
+use chrono::Utc;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_SESSIONS, COOKIE_SESSION, CSRF_HEADER, DANGER_COOKIE_INSECURE,
-    IDX_SESSION,
+    CACHE_NAME_12HR, CACHE_NAME_SESSIONS, COOKIE_SESSION, CSRF_HEADER, IDX_SESSION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::get_rand;
@@ -16,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{query_as, FromRow, Row};
+use std::borrow::Cow;
 use std::ops::Add;
 use std::str::FromStr;
 use time::OffsetDateTime;
@@ -538,23 +540,8 @@ impl Session {
     }
 
     pub fn client_cookie(&self) -> cookie::Cookie {
-        let exp = cookie::Expiration::from(
-            OffsetDateTime::from_unix_timestamp(self.exp)
-                .expect("Error with offset datetime calculation for client cookie"),
-        );
-
-        let secure = !*DANGER_COOKIE_INSECURE;
-        if !secure {
-            warn!("Building INSECURE session cookie - you MUST NEVER use this in production");
-        }
-
-        cookie::Cookie::build(COOKIE_SESSION, self.id.clone())
-            .http_only(true)
-            .secure(secure)
-            .same_site(SameSite::Lax)
-            .expires(exp)
-            .path("/auth")
-            .finish()
+        let max_age = self.exp - Utc::now().timestamp();
+        ApiCookie::build(COOKIE_SESSION, Cow::from(&self.id), max_age)
     }
 
     pub fn extract_from_req(
@@ -611,13 +598,7 @@ impl Session {
         )
         .await?;
 
-        Ok(cookie::Cookie::build(COOKIE_SESSION, &self.id)
-            .http_only(true)
-            .secure(true)
-            .same_site(SameSite::Lax)
-            .max_age(cookie::time::Duration::ZERO)
-            .path("/auth")
-            .finish())
+        Ok(ApiCookie::build(COOKIE_SESSION, &self.id, 0))
     }
 
     /// Checks if the current session is valid: has not expired and has not timed out (last_seen)
