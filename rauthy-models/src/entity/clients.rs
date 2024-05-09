@@ -60,7 +60,6 @@ pub struct Client {
     pub access_token_alg: String,
     // Currently supported Algorithms: RS 256, 384, 512 and EdDSA
     pub id_token_alg: String,
-    pub refresh_token: bool,
     pub auth_code_lifetime: i32,
     pub access_token_lifetime: i32,
     pub scopes: String,
@@ -94,10 +93,10 @@ impl Client {
         let rows =  sqlx::query!(
             r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
             redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg,
-            id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
+            id_token_alg, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
             challenge, force_mfa, client_uri, contacts)
             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-            $18, $19, $20, $21)"#,
+            $18, $19, $20)"#,
             client.id,
             client.name,
             client.enabled,
@@ -110,7 +109,6 @@ impl Client {
             client.flows_enabled,
             client.access_token_alg,
             client.id_token_alg,
-            client.refresh_token,
             client.auth_code_lifetime,
             client.access_token_lifetime,
             client.scopes,
@@ -159,10 +157,10 @@ impl Client {
         sqlx::query!(
             r#"INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid,
             redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled,
-            access_token_alg, id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime,
+            access_token_alg, id_token_alg, auth_code_lifetime, access_token_lifetime,
             scopes, default_scopes, challenge, force_mfa, client_uri, contacts)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-            $18, $19, $20, $21)"#,
+            $18, $19, $20)"#,
             client.id,
             client.name,
             client.enabled,
@@ -175,7 +173,6 @@ impl Client {
             client.flows_enabled,
             client.access_token_alg,
             client.id_token_alg,
-            client.refresh_token,
             client.auth_code_lifetime,
             client.access_token_lifetime,
             client.scopes,
@@ -185,8 +182,8 @@ impl Client {
             client.client_uri,
             client.contacts,
         )
-            .execute(&mut *txn)
-            .await?;
+        .execute(&mut *txn)
+        .await?;
 
         let client_dyn = ClientDyn::create(
             &mut txn,
@@ -307,10 +304,10 @@ impl Client {
         let q = sqlx::query!(
             r#"update clients set name = $1, enabled = $2, confidential = $3, secret = $4,
             secret_kid = $5, redirect_uris = $6, post_logout_redirect_uris = $7, allowed_origins = $8,
-            flows_enabled = $9, access_token_alg = $10, id_token_alg = $11, refresh_token = $12,
-            auth_code_lifetime = $13, access_token_lifetime = $14, scopes = $15, default_scopes = $16,
-            challenge = $17, force_mfa= $18, client_uri = $19, contacts = $20
-            where id = $21"#,
+            flows_enabled = $9, access_token_alg = $10, id_token_alg = $11, auth_code_lifetime = $12,
+            access_token_lifetime = $13, scopes = $14, default_scopes = $15,
+            challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19
+            where id = $20"#,
             self.name,
             self.enabled,
             self.confidential,
@@ -322,7 +319,6 @@ impl Client {
             self.flows_enabled,
             self.access_token_alg,
             self.id_token_alg,
-            self.refresh_token,
             self.auth_code_lifetime,
             self.access_token_lifetime,
             self.scopes,
@@ -412,6 +408,10 @@ impl Client {
 }
 
 impl Client {
+    pub fn allow_refresh_token(&self) -> bool {
+        self.flows_enabled.contains("refresh_token")
+    }
+
     // TODO make a generic 'delete_from_csv' function out of this and re-use it in some other places
     pub fn delete_scope(&mut self, scope: &str) {
         // find the scope via index in the string
@@ -948,7 +948,6 @@ impl From<EphemeralClientRequest> for Client {
                 .id_token_signed_response_alg
                 .unwrap_or_default()
                 .to_string(),
-            refresh_token: EPHEMERAL_CLIENTS_ALLOWED_FLOWS.contains("refresh_token"),
             auth_code_lifetime: 60,
             access_token_lifetime: value.default_max_age.unwrap_or(1800),
             scopes: scopes.clone(),
@@ -986,7 +985,6 @@ impl Default for Client {
             flows_enabled: "authorization_code".to_string(),
             access_token_alg: "EdDSA".to_string(),
             id_token_alg: "EdDSA".to_string(),
-            refresh_token: false,
             auth_code_lifetime: 60,
             access_token_lifetime: 1800,
             scopes: "openid,email,profile,groups".to_string(),
@@ -1040,12 +1038,6 @@ impl Client {
             .id_token_signed_response_alg
             .unwrap_or_default()
             .to_string();
-        let refresh_token = req
-            .grant_types
-            .iter()
-            .map(|t| t.as_str())
-            .collect::<Vec<&str>>()
-            .contains(&"refresh_token");
 
         Ok(Self {
             id,
@@ -1060,7 +1052,6 @@ impl Client {
             flows_enabled: req.grant_types.join(","),
             access_token_alg,
             id_token_alg,
-            refresh_token,
             access_token_lifetime: *DYN_CLIENT_DEFAULT_TOKEN_LIFETIME,
             challenge: confidential.then_some("S256".to_string()),
             force_mfa: false,
@@ -1151,7 +1142,6 @@ mod tests {
             flows_enabled: "authorization_code,password".to_string(),
             access_token_alg: "EdDSA".to_string(),
             id_token_alg: "RS256".to_string(),
-            refresh_token: true,
             auth_code_lifetime: 0,
             access_token_lifetime: 0,
             scopes: "openid,email,profile,groups".to_string(),

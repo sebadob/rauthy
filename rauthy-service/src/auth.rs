@@ -1227,7 +1227,7 @@ pub async fn grant_type_device_code(
         let access_exp = now.add(chrono::Duration::seconds(
             client.access_token_lifetime as i64,
         ));
-        let refresh_exp = if client.refresh_token {
+        let refresh_exp = if client.allow_refresh_token() {
             Some(
                 access_exp
                     .add(chrono::Duration::seconds(48 * 3600))

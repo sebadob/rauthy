@@ -2,6 +2,11 @@
 
 ## CURRENT WORK
 
+## TODO before v0.23.0
+
+- add `devices` + `refresh_tokens_devices` tables to `db_migrate()`
+- make cookie setting configurable -> path(/auth) vs __Host-*
+
 ## Stage 1 - essentials
 
 [x] finished

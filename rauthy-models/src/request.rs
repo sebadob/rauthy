@@ -866,7 +866,6 @@ pub struct UpdateClientRequest {
     pub access_token_alg: JwkKeyPairAlg,
     /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub id_token_alg: JwkKeyPairAlg,
-    pub refresh_token: bool,
     /// Validation: `10 <= auth_code_lifetime <= 300`
     #[validate(range(min = 10, max = 300))]
     pub auth_code_lifetime: i32,
