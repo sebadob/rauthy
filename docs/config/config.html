@@ -285,6 +285,39 @@ AUTH_HEADER_GIVEN_NAME=x-forwarded-user-given-name
 # default: x-forwarded-user-mfa
 AUTH_HEADER_MFA=x-forwarded-user-mfa
 
+# You can set different security levels for Rauthy's cookies.
+# The safest option would be 'host', but may not be desirable when
+# you host an application on the same origin behind a reverse proxy.
+# In this case you might want to restrict to 'secure', which will then
+# take the COOKIE_PATH from below into account.
+# The last option is 'danger-insecure' which really should never be used
+# unless you are just testing on localhost on you are using Safari.
+#COOKIE_MODE=host
+
+# If set to 'true', Rauthy will bind the cookie to the `/auth` path.
+# You may want to change this only for very specific reasons and if
+# you are in such a situation, where you need this, you will know it.
+# Otherwise don't change this value.
+# default: true
+#COOKIE_SET_PATH=true
+
+# The "catch all" route handler on `/` will compare the request path
+# against a hardcoded list of common scan targets from bots and attackers.
+# If the path matches any of these targets, the IP will be blacklisted
+# preemptively for the set time in minutes.
+# You can disable it with setting it to `0`.
+# default: 1440
+#SUSPICIOUS_REQUESTS_BLACKLIST=1440
+
+# This will emit a log with level of warning if a request to `/` has
+# been made that has not been caught by any of the usual routes and
+# and handlers. Apart from a request to just `/` which will end in
+# a redirect to `/auth/v1`, all additional path's will be logged.
+# This can help to improve the internal suspicious blocklist in the
+# future.
+# default: false
+#SUSPICIOUS_REQUESTS_LOG=false
+
 #####################################
 ############# BACKUPS ###############
 #####################################
