@@ -69,6 +69,8 @@ impl TryFrom<&HttpRequest> for Language {
     type Error = ErrorResponse;
 
     fn try_from(value: &HttpRequest) -> Result<Self, Self::Error> {
+        // Do not use ApiCookie::from_req here since this cookie is non-sensitive and
+        // set via the UI and JS
         if let Some(cookie) = value.cookie(COOKIE_LOCALE) {
             debug!("locale cookie {:?}", cookie);
             return Ok(Language::from(cookie.value()));

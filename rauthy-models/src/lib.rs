@@ -14,6 +14,7 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use utoipa::ToSchema;
 
+pub mod api_cookie;
 pub mod app_state;
 pub mod email;
 pub mod entity;
