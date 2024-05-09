@@ -243,7 +243,7 @@ impl TokenSet {
             auth_code_flow,
         )
         .await?;
-        let refresh_token = if client.refresh_token {
+        let refresh_token = if client.allow_refresh_token() {
             Some(
                 auth::build_refresh_token(
                     user,

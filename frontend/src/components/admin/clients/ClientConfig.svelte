@@ -360,7 +360,7 @@
     </div>
     <div class="desc">
         <p>
-            The allowed origins and the redirect URIs may contain a <code>*</code> wildcard only at the end.
+            The redirect URIs may contain a <code>*</code> wildcard only at the end.
         </p>
     </div>
 
@@ -467,16 +467,6 @@
             <div class="value">
                 <OptionSelect bind:value={client.id_token_alg} options={TOKEN_ALGS}/>
             </div>
-        </div>
-    </div>
-
-    <!-- Refresh Tokens -->
-    <div class="unit">
-        <div class="label font-label">
-            REFRESH TOKENS
-        </div>
-        <div class="value">
-            <Switch bind:selected={client.refresh_token}/>
         </div>
     </div>
 

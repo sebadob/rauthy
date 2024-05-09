@@ -76,7 +76,6 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         flows_enabled: "authorization_code".to_string(),
         access_token_alg: "EdDSA".to_string(),
         id_token_alg: "EdDSA".to_string(),
-        refresh_token: false,
         auth_code_lifetime: 10,
         access_token_lifetime: 10, // The token is actually not used for the Admin UI -> session only
         scopes: "openid".to_string(),
@@ -96,10 +95,10 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
     sqlx::query!(
         r#"update clients set enabled = $1, confidential = $2, redirect_uris = $3,
         post_logout_redirect_uris = $4, allowed_origins = $5, flows_enabled = $6,
-        access_token_alg = $7, id_token_alg = $8, refresh_token = $9, auth_code_lifetime = $10,
-        access_token_lifetime = $11, scopes = $12, default_scopes = $13, challenge = $14,
-        force_mfa= $15, client_uri = $16, contacts = $17
-        where id = $18"#,
+        access_token_alg = $7, id_token_alg = $8, auth_code_lifetime = $9,
+        access_token_lifetime = $10, scopes = $11, default_scopes = $12, challenge = $13,
+        force_mfa= $14, client_uri = $15, contacts = $16
+        where id = $17"#,
         rauthy.enabled,
         rauthy.confidential,
         rauthy.redirect_uris,
@@ -108,7 +107,6 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         rauthy.flows_enabled,
         rauthy.access_token_alg,
         rauthy.id_token_alg,
-        rauthy.refresh_token,
         rauthy.auth_code_lifetime,
         rauthy.access_token_lifetime,
         rauthy.scopes,
@@ -520,11 +518,10 @@ pub async fn migrate_from_sqlite(
         sqlx::query(
             r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
             redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg,
-            id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
+            id_token_alg, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
             challenge, force_mfa, client_uri, contacts)
             values
-            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
-            $20, $21)"#)
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#)
             .bind(&b.id)
             .bind(&b.name)
             .bind(b.enabled)
@@ -537,7 +534,6 @@ pub async fn migrate_from_sqlite(
             .bind(&b.flows_enabled)
             .bind(&b.access_token_alg)
             .bind(&b.id_token_alg)
-            .bind(b.refresh_token)
             .bind(b.auth_code_lifetime)
             .bind(b.access_token_lifetime)
             .bind(&b.scopes)
@@ -1078,11 +1074,10 @@ pub async fn migrate_from_postgres(
         sqlx::query(
             r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
             redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg,
-            id_token_alg, refresh_token, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
+            id_token_alg, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
             challenge, force_mfa, client_uri, contacts)
             values
-            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
-            $20, $21)"#)
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#)
             .bind(&b.id)
             .bind(&b.name)
             .bind(b.enabled)
@@ -1095,7 +1090,6 @@ pub async fn migrate_from_postgres(
             .bind(&b.flows_enabled)
             .bind(&b.access_token_alg)
             .bind(&b.id_token_alg)
-            .bind(b.refresh_token)
             .bind(b.auth_code_lifetime)
             .bind(b.access_token_lifetime)
             .bind(&b.scopes)

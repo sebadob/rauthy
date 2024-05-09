@@ -46,7 +46,6 @@ pub async fn update_client(
 
     client.access_token_alg = client_req.access_token_alg.to_string();
     client.id_token_alg = client_req.id_token_alg.to_string();
-    client.refresh_token = client_req.refresh_token;
 
     client.auth_code_lifetime = client_req.auth_code_lifetime;
     client.access_token_lifetime = client_req.access_token_lifetime;
