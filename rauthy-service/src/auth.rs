@@ -20,6 +20,7 @@ use rauthy_common::constants::{
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::password_hasher::HashPassword;
 use rauthy_common::utils::{base64_url_encode, get_client_ip, get_rand, new_store_id};
+use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_codes::AuthCode;
 use rauthy_models::entity::clients::Client;
@@ -85,17 +86,18 @@ pub async fn authorize(
             )
         })?;
 
-    let mfa_cookie = if let Ok(c) = WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA)) {
-        if c.email == user.email && user.has_webauthn_enabled() {
-            Some(c)
+    let mfa_cookie =
+        if let Ok(c) = WebauthnCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA)) {
+            if c.email == user.email && user.has_webauthn_enabled() {
+                Some(c)
+            } else {
+                // If a possibly existing mfa cookie does not match the given email, or user has webauthn
+                // disabled in the meantime -> ignore the cookie
+                None
+            }
         } else {
-            // If a possibly existing mfa cookie does not match the given email, or user has webauthn
-            // disabled in the meantime -> ignore the cookie
             None
-        }
-    } else {
-        None
-    };
+        };
 
     let account_type = user.account_type();
 

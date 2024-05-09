@@ -1,3 +1,4 @@
+use crate::api_cookie::ApiCookie;
 use crate::app_state::AppState;
 use actix_web::{web, HttpRequest};
 use rauthy_common::constants::{PASSWORD_RESET_COOKIE_BINDING, PWD_CSRF_HEADER, PWD_RESET_COOKIE};
@@ -202,7 +203,7 @@ impl MagicLink {
                 ),
             );
 
-            let cookie_opt = req.cookie(PWD_RESET_COOKIE);
+            let cookie_opt = ApiCookie::from_req(req, PWD_RESET_COOKIE);
             if let Some(cookie) = cookie_opt {
                 // the extracted cookie from the request starts with 'rauthy-pwd-reset='
                 if !cookie.value().ends_with(self.cookie.as_ref().unwrap()) {

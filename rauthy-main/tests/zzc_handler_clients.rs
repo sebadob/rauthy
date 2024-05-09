@@ -40,7 +40,6 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     assert_eq!(client.flows_enabled.len(), 1);
     assert_eq!(client.access_token_alg, "EdDSA");
     assert_eq!(client.id_token_alg, "EdDSA");
-    assert_eq!(client.refresh_token, false);
     assert_eq!(client.auth_code_lifetime, 10);
     assert_eq!(client.access_token_lifetime, 10);
     assert_eq!(client.scopes.len(), 2);
@@ -99,7 +98,6 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         flows_enabled,
         access_token_alg: JwkKeyPairAlg::RS256,
         id_token_alg: JwkKeyPairAlg::RS256,
-        refresh_token: true,
         auth_code_lifetime: 60,
         access_token_lifetime: 900,
         scopes: vec![
@@ -148,7 +146,6 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     );
     assert_eq!(client.access_token_alg, "RS256");
     assert_eq!(client.id_token_alg, "RS256");
-    assert_eq!(client.refresh_token, true);
     assert_eq!(client.auth_code_lifetime, 60);
     assert_eq!(client.access_token_lifetime, 900);
     assert!(client.scopes.contains(&"openid".to_string()));

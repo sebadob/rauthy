@@ -25,7 +25,7 @@ async fn test_ip_blacklist() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), StatusCode::OK);
 
     // get the IP with which we are coming in at the backend from this test
-    let url_ip = format!("{}/whoami?typ=ip", get_backend_url());
+    let url_ip = format!("{}/whoami", get_backend_url());
     let res = client.get(&url_ip).send().await?;
     assert_eq!(res.status(), StatusCode::OK);
     let ip = res.text().await?.parse::<Ipv4Addr>().unwrap();

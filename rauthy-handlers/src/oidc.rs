@@ -13,6 +13,7 @@ use rauthy_common::constants::{
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_req;
+use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::auth_providers::AuthProviderTemplate;
@@ -111,7 +112,7 @@ pub async fn get_authorize(
 
     // check if the user needs to do the Webauthn login each time
     let mut action = FrontendAction::None;
-    if let Ok(mfa_cookie) = WebauthnCookie::parse_validate(&req.cookie(COOKIE_MFA)) {
+    if let Ok(mfa_cookie) = WebauthnCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA)) {
         if let Ok(user) = User::find_by_email(&data, mfa_cookie.email.clone()).await {
             // we need to check this, because a user could deactivate MFA in another browser or
             // be deleted while still having existing mfa cookies somewhere else

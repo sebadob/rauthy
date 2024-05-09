@@ -1,3 +1,4 @@
+use crate::api_cookie::ApiCookie;
 use crate::app_state::{AppState, DbTxn};
 use crate::entity::users::{AccountType, User};
 use crate::request::{
@@ -7,7 +8,8 @@ use crate::response::{WebauthnAuthStartResponse, WebauthnLoginFinishResponse};
 use actix_web::cookie::Cookie;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
-use actix_web::{cookie, web, HttpResponse};
+use actix_web::{web, HttpResponse};
+use chrono::Utc;
 use cryptr::EncValue;
 use rauthy_common::constants::{
     CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, COOKIE_MFA, IDX_WEBAUTHN, WEBAUTHN_FORCE_UV,
@@ -375,14 +377,8 @@ impl WebauthnCookie {
         let enc = EncValue::encrypt(&ser)?.into_bytes();
         let b64 = base64_encode(&enc);
 
-        let cookie_exp = cookie::Expiration::from(self.exp);
-        Ok(Cookie::build(COOKIE_MFA, b64)
-            .http_only(true)
-            .secure(true)
-            .same_site(cookie::SameSite::Lax)
-            .expires(cookie_exp)
-            .path("/auth")
-            .finish())
+        let max_age = self.exp.unix_timestamp() - Utc::now().timestamp();
+        Ok(ApiCookie::build(COOKIE_MFA, b64, max_age))
     }
 
     pub fn parse_validate(cookie: &Option<Cookie>) -> Result<Self, ErrorResponse> {
