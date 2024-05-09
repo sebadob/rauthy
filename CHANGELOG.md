@@ -1,8 +1,17 @@
 # Changelog
 
-## UNRELEASED
+## v0.23.0-beta3
+
+This release does the first preparations to prepare a future v1.0.0 release.  
+Quite a few values have been cleaned up or improved.
 
 ### Breaking
+
+#### `rauthy-client` compatibility
+
+If you are using the [rauthy-client](https://crates.io/crates/rauthy-client), you should upgrade to `v0.4.0` before
+upgrade Rauthy to `v0.23.0`. Any older client version will not understand the new grant type for the OAuth2
+Device Authorization grant.
 
 #### Removal of `UNSAFE_NO_RESET_BINDING` in favor of `PASSWORD_RESET_COOKIE_BINDING`
 
@@ -29,6 +38,23 @@ is much more clear, since the `offline_access` scope produces a lot of confusion
 From the name, it simply makes no sense that you need to activate `offline_access` to get a refresh token.
 Having an option named "allow refresh tokens" is just so much better.
 [71db7fe](https://github.com/sebadob/rauthy/commit/71db7fef18568a599f30cae6e494bba40cb33e7d)
+
+#### Change in `GET /clients/{id}/secret`
+
+If you used the endpoint for retrieving a client secret with an API key before, you need to change the method.
+The endpoint works exactly the same, but the method has been changed from a `GET` to a `POST` to request and validate
+the additional CSRF token from the Admin UI.  
+[72f077f](https://github.com/sebadob/rauthy/commit/72f077f462e4b28624d101510cfb50b64700e425)
+
+#### Removal of the `Refresh Token` switch in Admin UI
+
+The `Refresh Token` switch for a client config in the Admin UI has been removed.  
+The old behavior was misleading and unintuitive, I just got rid of that switch.
+
+If you want to use the refresh flow with a client, the only thing you need to do is to allow the `refresh_token` flow.
+You needed to do this before anyway, but in addition enable the switch further down below. So this is not really a
+breaking change, but could lead to confusion, if this switch is just gone.  
+[2ece6ed](https://github.com/sebadob/rauthy/commit/2ece6ed6da214b353cc7c9adfbe7904c0f2f6bce)
 
 ### Features
 
@@ -214,6 +240,79 @@ now and containing `:` or `*`. This will make it possible to define custom scope
 [a5982d9](https://github.com/sebadob/rauthy/commit/a5982d91f37a2f2917ed4215dc6ded216dc0fd69)
 [50d0214](https://github.com/sebadob/rauthy/commit/50d021440eb50473977ec851a46c0bc979bbd12b)
 
+#### Configurable Cookie Security
+
+Depending on your final deployment, you may want to change the way Rauthy's set's its cookies, for instance if you
+want to create your own UI endpoints but still want to be able to communicate with the API.
+
+The default cookie setting has been changed in a way that all cookies will have the `__Host-` prefix now, which provides
+the highest level of security. There might be cases where you don't want this and rather have the path restriction to
+`/auth` from before, for instance when you host an additional app on the same origin behind a reverse proxy, that should
+not be able to read Rauthy's cookies.
+
+And finally, for all Safari users, since Safari does not consider `localhost` to be secure when testing, you can even
+set insecure cookies for testing purposes.
+
+```
+# You can set different security levels for Rauthy's cookies.
+# The safest option would be 'host', but may not be desirable when
+# you host an application on the same origin behind a reverse proxy.
+# In this case you might want to restrict to 'secure', which will then
+# take the COOKIE_PATH from below into account.
+# The last option is 'danger-insecure' which really should never be used
+# unless you are just testing on localhost on you are using Safari.
+#COOKIE_MODE=host
+
+# If set to 'true', Rauthy will bind the cookie to the `/auth` path.
+# You may want to change this only for very specific reasons and if
+# you are in such a situation, where you need this, you will know it.
+# Otherwise don't change this value.
+# default: true
+#COOKIE_SET_PATH=true
+```
+
+[e697389](https://github.com/sebadob/rauthy/commit/e697389d409dace9cdf866988e833efcd79d4529)
+
+#### Auto-Blacklisting of suspicious requests
+
+Rauthy can now auto-blacklist IP's that do suspicious requests, like for instance:
+
+- /.ssh/
+- /.kube/config
+- /backup.zip
+- /wp-admin/
+
+... and so on.  
+Rauthy has a "catch all" API route handler on `/` which looks for these by default.  
+By default, IPs from such requests will be blacklisted for 24 hours, but you can of course configure this.
+
+```
+# The "catch all" route handler on `/` will compare the request path
+# against a hardcoded list of common scan targets from bots and attackers.
+# If the path matches any of these targets, the IP will be blacklisted
+# preemptively for the set time in minutes.
+# You can disable it with setting it to `0`.
+# default: 1440
+SUSPICIOUS_REQUESTS_BLACKLIST=1440
+
+# This will emit a log with level of warning if a request to `/` has
+# been made that has not been caught by any of the usual routes and
+# and handlers. Apart from a request to just `/` which will end in
+# a redirect to `/auth/v1`, all additional path's will be logged.
+# This can help to improve the internal suspicious blocklist in the
+# future.
+# default: false
+SUSPICIOUS_REQUESTS_LOG=flase
+```
+
+#### Changes for `/auth/v1/whoami`
+
+The whoami endpoint has been changed. It does not return all headers anymore, because this could possibly leak sensitive
+headers in some environments, especially with the new auth headers feature in some situations.  
+Instead, it only returns the peer IP that Rauthy extracted for this request. This can be very helpful if you need to
+configure the extraction, for instance when you are behind a reverse proxy or CDN.  
+[758b31c](https://github.com/sebadob/rauthy/commit/758b31cb5dc2277a0cc3ec31f15b5de90ff00ea7)
+
 ### Bugfixes
 
 - The button for requesting a password reset from inside a federated account view has been
@@ -234,6 +333,9 @@ now and containing `:` or `*`. This will make it possible to define custom scope
   [fc3417e](https://github.com/sebadob/rauthy/commit/fc3417e04451a552bc89c2437c11cc2b019867a0)
 - Button labels were misplaced on chrome based browsers
   [901eb55](https://github.com/sebadob/rauthy/commit/901eb55c3e980c5340ace0b67941dba447da0671)
+- `/authorize` for logins had a bit too strict validation for the user password, which had a chance that
+  a new password a user just set, would be rejected because of some invalid special chars not being allowed
+  [9bb0a72](https://github.com/sebadob/rauthy/commit/9bb0a72fe2e3cc87e000b6db36c84fcf2d255bf5)
 
 ## 0.22.1
 
