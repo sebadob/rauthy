@@ -123,8 +123,8 @@ export async function deleteClientLogo(id) {
 
 export async function getClientSecret(id) {
     const res = await fetch(`/auth/v1/clients/${id}/secret`, {
-        method: 'GET',
-        headers: HEADERS,
+        method: 'POST',
+        headers: getHeaders(),
     });
     return await checkRedirectForbidden(res);
 }

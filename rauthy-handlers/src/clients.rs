@@ -86,10 +86,13 @@ pub async fn get_client_by_id(
 
 /// Returns the secret in cleartext for a given client by its *id*.
 ///
+/// This is a `POST` request on purpose to do an additional CSRF token check for such a
+/// sensitive endpoint.
+///
 /// **Permissions**
 /// - rauthy_admin
 #[utoipa::path(
-    get,
+    post,
     path = "/clients/{id}/secret",
     tag = "clients",
     responses(
@@ -100,7 +103,7 @@ pub async fn get_client_by_id(
         (status = 404, description = "NotFound"),
     ),
 )]
-#[get("/clients/{id}/secret")]
+#[post("/clients/{id}/secret")]
 pub async fn get_client_secret(
     data: web::Data<AppState>,
     path: web::Path<String>,
