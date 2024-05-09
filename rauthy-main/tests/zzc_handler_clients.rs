@@ -191,7 +191,7 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
     // get the current client secret
     let url = format!("{}/clients/init_client/secret", backend_url);
     let res = client
-        .get(&url)
+        .post(&url)
         .headers(auth_headers.clone())
         .send()
         .await?;
@@ -201,9 +201,10 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
     assert_eq!(resp.confidential, true);
     assert_eq!(resp.secret.unwrap(), CLIENT_SECRET);
 
+    // be sure that this endpoint is idempotent
     let url = format!("{}/clients/init_client/secret", backend_url);
     let res = client
-        .get(&url)
+        .post(&url)
         .headers(auth_headers.clone())
         .send()
         .await?;
@@ -226,7 +227,7 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
 
     let url = format!("{}/clients/init_client/secret", backend_url);
     let res = client
-        .get(&url)
+        .post(&url)
         .headers(auth_headers.clone())
         .send()
         .await?;
