@@ -260,7 +260,7 @@ set insecure cookies for testing purposes.
 # In this case you might want to restrict to 'secure', which will then
 # take the COOKIE_PATH from below into account.
 # The last option is 'danger-insecure' which really should never be used
-# unless you are just testing on localhost on you are using Safari.
+# unless you are just testing on localhost and you are using Safari.
 #COOKIE_MODE=host
 
 # If set to 'true', Rauthy will bind the cookie to the `/auth` path.
