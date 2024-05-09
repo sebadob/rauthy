@@ -160,12 +160,12 @@ docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.22.1-lite
 
 **Note on using Safari:**
 
-If you want to test with Safari with plain HTTP, you need to add `-e DANGER_COOKIE_INSECURE=true`.
+If you want to test with Safari with plain HTTP, you need to add `-e COOKIE_MODE=danger-insecure`.
 Rauthy always builds secure cookies by default, but Safari does not treat localhost as secure like
-all other browsers. This option has been implemented in `v0.22.2-20240424-1`. So you might test with:
+all other browsers. This option has been implemented in `v0.23.0-beta3`. So you might test with:
 
 ```
-docker run --rm -p 8080:8080 -e DANGER_COOKIE_INSECURE=true ghcr.io/sebadob/rauthy:0.23.0-beta1-lite
+docker run --rm -p 8080:8080 -e COOKIE_MODE=danger-insecure ghcr.io/sebadob/rauthy:0.23.0-beta3-lite
 ```
 
 ## Contributing
