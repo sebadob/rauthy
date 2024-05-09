@@ -516,6 +516,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(generic::post_i18n)
                             .service(generic::post_update_language)
                             .service(generic::get_version)
+                            .service(generic::get_whoami)
                             .service(oidc::get_authorize)
                             .service(oidc::post_authorize)
                             .service(oidc::post_authorize_refresh)

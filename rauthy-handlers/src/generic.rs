@@ -764,3 +764,17 @@ pub async fn get_version(data: web::Data<AppState>) -> Result<HttpResponse, Erro
     };
     Ok(HttpResponse::Ok().json(resp))
 }
+
+/// Returns the remote IP that Rauthy has extracted for this client
+#[utoipa::path(
+    get,
+    path = "/whoami",
+    tag = "generic",
+    responses(
+        (status = 200, description = "Ok"),
+    ),
+)]
+#[get("/whoami")]
+pub async fn get_whoami(req: HttpRequest) -> String {
+    real_ip_from_req(&req).unwrap_or_default()
+}

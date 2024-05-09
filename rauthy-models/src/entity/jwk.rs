@@ -905,6 +905,7 @@ mod tests {
                 typ: JwtTokenType::Refresh,
                 uid: "user_id_13337".to_string(),
                 cnf: None,
+                did: None,
             },
             coarsetime::Duration::from_secs(300),
         );

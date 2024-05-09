@@ -268,7 +268,6 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         ],
         access_token_alg: JwkKeyPairAlg::RS384,
         id_token_alg: JwkKeyPairAlg::EdDSA,
-        refresh_token: true,
         auth_code_lifetime: 120,
         access_token_lifetime: 60,
         scopes: vec![

@@ -19,7 +19,7 @@ impl ApiCookie {
             CookieMode::Host => (format!("__Host-{}", name), true, "/"),
             CookieMode::Secure => (format!("__Secure-{}", name), true, path),
             CookieMode::DangerInsecure => {
-                warn!("Building INSECURE session cookie - you MUST NEVER use this in production");
+                warn!("Building INSECURE cookie - you MUST NEVER use this in production");
                 (name.to_string(), false, path)
             }
         };

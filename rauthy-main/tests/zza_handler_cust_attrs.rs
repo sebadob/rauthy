@@ -119,7 +119,6 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         flows_enabled: c.flows_enabled,
         access_token_alg: JwkKeyPairAlg::from(c.access_token_alg),
         id_token_alg: JwkKeyPairAlg::from(c.id_token_alg),
-        refresh_token: c.refresh_token,
         auth_code_lifetime: c.auth_code_lifetime,
         access_token_lifetime: c.access_token_lifetime,
         scopes,

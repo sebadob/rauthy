@@ -71,6 +71,7 @@ use utoipa::{openapi, OpenApi};
         generic::get_ready,
         generic::ping,
         generic::get_version,
+        generic::get_whoami,
 
         groups::get_groups,
         groups::post_group,
