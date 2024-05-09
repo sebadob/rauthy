@@ -521,3 +521,8 @@ publish-latest:
 pre-pr-checks: build-ui fmt test-sqlite test-postgres clippy clippy-postgres
     #!/usr/bin/env bash
     set -euxo pipefail
+
+# does a `cargo update` + `npm update` for the UI
+update-deps:
+    just _run cargo update
+    just _run-ui npm update
