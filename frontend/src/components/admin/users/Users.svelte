@@ -16,6 +16,7 @@
     let resUsersPaginated = [];
     let useServerSideIdx = '';
     let isSearchFiltered = false;
+    let search = '';
 
     let usersCountTotal = 0;
     let sspPageSize = 15;
@@ -135,6 +136,7 @@
         fetchUsers();
         fetchRoles();
         fetchGroups();
+        search = '';
     }
 </script>
 
@@ -148,6 +150,7 @@
             bind:orderOptions
             bind:useServerSideIdx
             bind:isSearchFiltered
+            bind:search
     />
 
     <UserTileAddNew onSave={onSave}/>

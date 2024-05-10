@@ -10,6 +10,7 @@
     let roles = [];
     let resRoles = [];
     let resRolesPaginated = [];
+    let search = '';
 
     let searchOptions = [
         {
@@ -48,6 +49,7 @@
 
     function onSave() {
         fetchData();
+        search = '';
     }
 
 </script>
@@ -60,6 +62,7 @@
             bind:resItems={resRoles}
             searchOptions={searchOptions}
             orderOptions={orderOptions}
+            bind:search
     />
 
     <RoleTileAddNew onSave={onSave}/>

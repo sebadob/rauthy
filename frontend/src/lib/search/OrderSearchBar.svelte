@@ -9,6 +9,7 @@
     export let firstDirReverse = false;
     export let useServerSideIdx = '';
     export let isSearchFiltered = false;
+    export let search = '';
 
     let searchItems = [];
 </script>
@@ -34,6 +35,7 @@
                 options={searchOptions}
                 bind:useServerSideIdx
                 bind:isSearchFiltered
+                bind:search
         />
     </div>
 </div>

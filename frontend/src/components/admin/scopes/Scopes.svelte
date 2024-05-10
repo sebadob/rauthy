@@ -12,6 +12,7 @@
     let resScopes = [];
     let resScopesPaginated = [];
     let refresh;
+    let search = '';
 
     let searchOptions = [
         {
@@ -37,6 +38,7 @@
     onMount(() => {
         fetchScopes();
         fetchAttr();
+        search = '';
     });
 
     async function fetchAttr() {
@@ -73,6 +75,7 @@
             bind:resItems={resScopes}
             searchOptions={searchOptions}
             orderOptions={orderOptions}
+            bind:search
     />
 
     <ScopeTileAddNew onSave={onSave}/>

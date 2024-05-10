@@ -2,7 +2,6 @@
     import IconMagnify from "$lib/icons/IconMagnify.svelte";
     import {onMount} from "svelte";
     import Tooltip from "../Tooltip.svelte";
-    import {getKey} from "../utils/helpers.js";
     import IconBackspace from "$lib/icons/IconBackspace.svelte";
     import {getSearch} from "../../utils/dataFetchingAdmin.js";
     import {SERVER_SIDE_SEARCH_THRES} from "../../utils/constants.js";
@@ -13,8 +12,8 @@
     export let useServerSideIdx = '';
     export let isSearchFiltered = false;
 
+    export let search = '';
     let selected = '';
-    let search = '';
     let callback;
 
     onMount(() => {
@@ -104,7 +103,6 @@
         <input
                 class="input"
                 type="text"
-                name={getKey()}
                 bind:value={search}
                 placeholder="Search"
                 autocomplete="off"

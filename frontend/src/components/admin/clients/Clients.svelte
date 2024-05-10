@@ -12,6 +12,7 @@
     let clients = [];
     let resClients = [];
     let resClientsPaginated = [];
+    let search = '';
 
     let searchOptions = [
         {
@@ -55,6 +56,7 @@
     function onSave() {
         fetchClients();
         fetchScopes();
+        search = '';
     }
 </script>
 
@@ -66,6 +68,7 @@
             bind:resItems={resClients}
             searchOptions={searchOptions}
             orderOptions={orderOptions}
+            bind:search
     />
 
     <ClientTileAddNew onSave={onSave}/>

@@ -10,6 +10,7 @@
     let attr = [];
     let resAttr = [];
     let resAttrPaginated = [];
+    let search = '';
 
     let searchOptions = [
         {
@@ -40,6 +41,7 @@
 
     function onSave() {
         fetchAttr();
+        search = '';
     }
 
 </script>
@@ -52,6 +54,7 @@
             bind:resItems={resAttr}
             searchOptions={searchOptions}
             orderOptions={orderOptions}
+            bind:search
     />
 
     <UserAttrTileAddNew onSave={onSave}/>
