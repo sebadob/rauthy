@@ -15,7 +15,7 @@
             on:click={() => onDelete(label)}
             on:keypress={() => onDelete(label)}
     >
-        <IconStop width="14"/>
+        <IconStop color="--var(--col-bg)" width={14}/>
     </div>
 </div>
 
