@@ -9,7 +9,6 @@
     import PaginationServer from "$lib/PaginationServer.svelte";
 
     let msg = '';
-    let isInitialized = false;
 
     let users = [];
     let resUsers = [];
@@ -41,6 +40,20 @@
         {
             label: 'ID',
             callback: (a, b) => a.id.localeCompare(b.id),
+        },
+        {
+            label: 'Created',
+            callback: (a, b) => a.created_at < b.created_at,
+        },
+        {
+            label: 'Last Login',
+            callback: (a, b) => {
+                // 9999999999 as default to make ordering correct with a unix timestamp
+                // otherwise undefined values will screw ordering up
+                let al = a.last_login || 9999999999;
+                let bl = b.last_login || 9999999999;
+                return al < bl;
+            }
         },
     ];
 
@@ -157,7 +170,7 @@
 
     <div id="users">
         {#if useServerSideIdx && !isSearchFiltered}
-            {#each users as user (user.id)}
+            {#each resUsers as user (user.id)}
                 <div>
                     <UserTile userId={user.id} userEmail={user.email} onSave={onSave}/>
                 </div>
