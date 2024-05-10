@@ -441,7 +441,6 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
             .wrap(
                 middleware::DefaultHeaders::new()
                     .add(("x-frame-options", "SAMEORIGIN"))
-                    .add(("x-xss-protection", "1;mode=block"))
                     .add(("x-content-type-options", "nosniff"))
                     .add(("X-Robots-Tag", "noindex, nofollow"))
                     .add((
@@ -449,7 +448,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                         "max-age=31536000;includeSubDomains",
                     ))
                     .add(("referrer-policy", "no-referrer"))
-                    .add(("x-robots-tag", "none"))
+                    .add(("x-robots-tag", "noindex, nofollow"))
                     .add((
                         "content-security-policy",
                         "frame-ancestors 'none'; object-src 'none';",
