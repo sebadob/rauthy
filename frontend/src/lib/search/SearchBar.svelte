@@ -188,6 +188,8 @@
 
     select {
         height: 2.13rem;
+        padding-top: .2rem;
+        padding-left: .5rem;
         color: var(--col-text);
         background: var(--col-bg);
         font-size: 1.05rem;

@@ -67,7 +67,9 @@
         <Tooltip text="Order by" yOffset={-30}>
             <select class="opts font-label" bind:value={selected}>
                 {#each options as opt}
-                    <option value={opt.label}>{opt.label}</option>
+                    <option value={opt.label}>
+                        {opt.label}
+                    </option>
                 {/each}
             </select>
         </Tooltip>
@@ -109,6 +111,8 @@
 
     select {
         height: 2.13rem;
+        padding-top: .2rem;
+        padding-left: .5rem;
         color: var(--col-text);
         background: var(--col-bg);
         font-size: 1.05rem;

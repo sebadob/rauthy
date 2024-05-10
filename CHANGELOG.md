@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.23.0-beta3
+## v0.23.0
 
 This release does the first preparations to prepare a future v1.0.0 release.  
 Quite a few values have been cleaned up or improved.
@@ -313,6 +313,12 @@ Instead, it only returns the peer IP that Rauthy extracted for this request. Thi
 configure the extraction, for instance when you are behind a reverse proxy or CDN.  
 [758b31c](https://github.com/sebadob/rauthy/commit/758b31cb5dc2277a0cc3ec31f15b5de90ff00ea7)
 
+#### New sorting options for users
+
+Users in the Admin UI can now be sorted by their `created_at` or `last_login` timestamp.  
+Users that never have logged in will always be at the end of the list, since this value might be `undefined`.  
+[4c41d64](https://github.com/sebadob/rauthy/commit/4c41d64f570dbbe94dcb8b681ac31608ed492652)
+
 ### Bugfixes
 
 - The button for requesting a password reset from inside a federated account view has been
@@ -336,6 +342,11 @@ configure the extraction, for instance when you are behind a reverse proxy or CD
 - `/authorize` for logins had a bit too strict validation for the user password, which had a chance that
   a new password a user just set, would be rejected because of some invalid special chars not being allowed
   [9bb0a72](https://github.com/sebadob/rauthy/commit/9bb0a72fe2e3cc87e000b6db36c84fcf2d255bf5)
+- when resources in the Admin UI have been re-fetched, for instance because of a user deletion, the search input
+  has not been emptied
+  [033db25](https://github.com/sebadob/rauthy/commit/033db25db695d2565bc4adcdfe07a77125c2a9a5)
+- the deprecated `x-xss-protection` header has been removed
+  [5008438](https://github.com/sebadob/rauthy/commit/50084385df887f4782bbe9224e63bc60719600fd)
 
 ## 0.22.1
 
