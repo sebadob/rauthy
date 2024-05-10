@@ -228,7 +228,7 @@ migrate-postgres:
 
 
 # runs any of: none (sqlite), postgres, ui
-@run ty="sqlite":
+run ty="sqlite":
     #!/usr/bin/env bash
     set -euxo pipefail
     clear

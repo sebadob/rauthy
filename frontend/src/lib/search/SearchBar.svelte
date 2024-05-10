@@ -2,6 +2,7 @@
     import IconMagnify from "$lib/icons/IconMagnify.svelte";
     import {onMount} from "svelte";
     import Tooltip from "../Tooltip.svelte";
+    import {getKey} from "../utils/helpers.js";
     import IconBackspace from "$lib/icons/IconBackspace.svelte";
     import {getSearch} from "../../utils/dataFetchingAdmin.js";
     import {SERVER_SIDE_SEARCH_THRES} from "../../utils/constants.js";
@@ -56,6 +57,12 @@
     }
 
     function filerItems() {
+        if (search.length < 2) {
+            resItems = items;
+            isSearchFiltered = false;
+            return;
+        }
+
         resItems = [...items.filter(i => {
             // This switch is a bit more annoying to maintain, but we can set a more strict CSP without `eval`
             if (options.length > 0) {
@@ -103,6 +110,7 @@
         <input
                 class="input"
                 type="text"
+                name={getKey()}
                 bind:value={search}
                 placeholder="Search"
                 autocomplete="off"
