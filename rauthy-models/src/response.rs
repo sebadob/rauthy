@@ -729,6 +729,8 @@ impl UserResponse {
 pub struct UserResponseSimple {
     pub id: String,
     pub email: String,
+    pub created_at: i64,
+    pub last_login: Option<i64>,
 }
 
 impl From<User> for UserResponseSimple {
@@ -736,6 +738,8 @@ impl From<User> for UserResponseSimple {
         Self {
             id: value.id,
             email: value.email,
+            created_at: value.created_at,
+            last_login: value.last_login,
         }
     }
 }

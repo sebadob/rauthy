@@ -342,7 +342,7 @@ impl User {
     ) -> Result<Vec<UserResponseSimple>, ErrorResponse> {
         let res = sqlx::query_as!(
             UserResponseSimple,
-            "SELECT id, email FROM users ORDER BY created_at ASC"
+            "SELECT id, email, created_at, last_login FROM users ORDER BY created_at ASC"
         )
         .fetch_all(&data.db)
         .await?;
@@ -373,7 +373,7 @@ impl User {
             if backwards {
                 offset += page_size;
                 let mut rows = sqlx::query!(
-                    r#"SELECT id, email, created_at
+                    r#"SELECT id, email, created_at, last_login
                     FROM users
                     WHERE created_at <= $1 AND id != $2
                     ORDER BY created_at DESC
@@ -393,12 +393,14 @@ impl User {
                     res.push(UserResponseSimple {
                         id: row.id,
                         email: row.email,
+                        created_at: row.created_at,
+                        last_login: row.last_login,
                     });
                     latest_ts = row.created_at;
                 }
             } else {
                 let rows = sqlx::query!(
-                    r#"SELECT id, email, created_at
+                    r#"SELECT id, email, created_at, last_login
                     FROM users
                     WHERE created_at >= $1 AND id != $2
                     ORDER BY created_at ASC
@@ -416,6 +418,8 @@ impl User {
                     res.push(UserResponseSimple {
                         id: row.id,
                         email: row.email,
+                        created_at: row.created_at,
+                        last_login: row.last_login,
                     });
                     latest_ts = row.created_at;
                 }
@@ -424,7 +428,7 @@ impl User {
             // backwards without any continuation token will simply
             // serve the last elements without any other conditions
             let mut rows = sqlx::query!(
-                r#"SELECT id, email, created_at
+                r#"SELECT id, email, created_at, last_login
                    FROM users
                    ORDER BY created_at DESC
                    LIMIT $1
@@ -441,12 +445,14 @@ impl User {
                 res.push(UserResponseSimple {
                     id: row.id,
                     email: row.email,
+                    created_at: row.created_at,
+                    last_login: row.last_login,
                 });
                 latest_ts = row.created_at;
             }
         } else {
             let rows = sqlx::query!(
-                r#"SELECT id, email, created_at
+                r#"SELECT id, email, created_at, last_login
                    FROM users
                    ORDER BY created_at ASC
                    LIMIT $1
@@ -461,6 +467,8 @@ impl User {
                 res.push(UserResponseSimple {
                     id: row.id,
                     email: row.email,
+                    created_at: row.created_at,
+                    last_login: row.last_login,
                 });
                 latest_ts = row.created_at;
             }
@@ -620,7 +628,11 @@ impl User {
             SearchParamsIdx::Id | SearchParamsIdx::UserId => {
                 query_as!(
                     UserResponseSimple,
-                    "SELECT id, email FROM users WHERE id LIKE $1 ORDER BY created_at ASC LIMIT $2",
+                    r#"SELECT id, email, created_at, last_login
+                    FROM users
+                    WHERE id LIKE $1
+                    ORDER BY created_at ASC
+                    LIMIT $2"#,
                     q,
                     limit
                 )
@@ -629,11 +641,15 @@ impl User {
             }
             SearchParamsIdx::Email => {
                 query_as!(
-                UserResponseSimple,
-                "SELECT id, email FROM users WHERE email LIKE $1 ORDER BY created_at ASC LIMIT $2",
-                q,
-                limit
-            )
+                    UserResponseSimple,
+                    r#"SELECT id, email, created_at, last_login
+                    FROM users
+                    WHERE email LIKE $1
+                    ORDER BY created_at ASC
+                    LIMIT $2"#,
+                    q,
+                    limit
+                )
                 .fetch_all(&data.db)
                 .await?
             }
