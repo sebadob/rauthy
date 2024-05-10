@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.23.0-beta3
+## v0.23.0
 
 This release does the first preparations to prepare a future v1.0.0 release.  
 Quite a few values have been cleaned up or improved.

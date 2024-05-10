@@ -420,7 +420,6 @@ build mode="release" no-test="do-test" image="ghcr.io/sebadob/rauthy": build-ui
         --build-arg="DATABASE_URL={{db_url_sqlite}}" \
         --build-arg="FEATURES=default" \
         --build-arg="MODE={{mode}}" \
-        --progress=plain \
         --push \
         .
 
