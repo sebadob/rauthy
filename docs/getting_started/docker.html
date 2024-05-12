@@ -176,9 +176,12 @@
                     <main>
                         <h1 id="docker"><a class="header" href="#docker">Docker</a></h1>
 <h2 id="testing--local-evaluation"><a class="header" href="#testing--local-evaluation">Testing / Local Evaluation</a></h2>
-<p>For getting a first look at rauthy, you can start it with docker (or any other container runtime) on your localhost.
-The image contains a basic default config which is sufficient for local testing.</p>
+<p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on your localhost.
+The image contains a basic default config which is sufficient for local testing. Rauthy has pretty strict cookie
+settings and not all browsers treat <code>localhost</code> as being secure, therefore you should allow insecure cookies for
+testing locally:</p>
 <pre><code>docker run --rm \
+    -e COOKIE_MODE=danger-insecure \
     -p 8080:8080 \
     --name rauthy \
     ghcr.io/sebadob/rauthy:0.23.0-lite
@@ -187,6 +190,7 @@ The image contains a basic default config which is sufficient for local testing.
 logs to see the URL and first password.</p>
 <p>If you want to test a bit more in depth, you can change to an on-disk database easily:</p>
 <pre><code>docker run -d \
+    -e COOKIE_MODE=danger-insecure \
     -e DATABASE_URL=sqlite:data/rauthy.db \
     -p 8080:8080 \
     --name rauthy \
@@ -196,19 +200,6 @@ logs to see the URL and first password.</p>
 <div class="admonition-title">
 <p>Note</p>
 <p><a class="admonition-anchor-link" href="#admonition-note"></a></p>
-</div>
-<div>
-<p><strong>When using Safari:</strong></p>
-<p>If you want to test with Safari with plain HTTP, you need to add <code>-e DANGER_COOKIE_INSECURE=true</code>.
-Rauthy always builds secure cookies by default, but Safari does not treat localhost as secure like
-all other browsers. This option has been implemented in <code>v0.22.2-20240424-1</code>. So you might start it with:</p>
-<p><code>docker run --rm -p 8080:8080 -e DANGER_COOKIE_INSECURE=true ghcr.io/sebadob/rauthy:0.22.2-20240424-1-lite</code></p>
-</div>
-</div>
-<div id="admonition-note-1" class="admonition admonish-note">
-<div class="admonition-title">
-<p>Note</p>
-<p><a class="admonition-anchor-link" href="#admonition-note-1"></a></p>
 </div>
 <div>
 <p>The second command does not start in interactive mode and it does not delete the container on exit.<br />
@@ -231,10 +222,10 @@ The second thing is to provide a more custom config.</p>
 You can add environment variables to the startup command with the <code>-e</code> option, like shown in the on-disk SQLite
 command.<br />
 A better approach, when you have a bigger config file, would be to have all of them in a config file.</p>
-<div id="admonition-note-2" class="admonition admonish-note">
+<div id="admonition-note-1" class="admonition admonish-note">
 <div class="admonition-title">
 <p>Note</p>
-<p><a class="admonition-anchor-link" href="#admonition-note-2"></a></p>
+<p><a class="admonition-anchor-link" href="#admonition-note-1"></a></p>
 </div>
 <div>
 <p>The following commands will work on Linux and Mac OS (even though not tested on Mac OS). If you are on Windows,
@@ -269,10 +260,10 @@ sudo chown -R 10001:10001 rauthy
 </code></pre>
 <p>This will make the directory writeable for everyone, so rauthy can create the database files inside the container
 with 10001:10001 again.</p>
-<div id="admonition-note-3" class="admonition admonish-note">
+<div id="admonition-note-2" class="admonition admonish-note">
 <div class="admonition-title">
 <p>Note</p>
-<p><a class="admonition-anchor-link" href="#admonition-note-3"></a></p>
+<p><a class="admonition-anchor-link" href="#admonition-note-2"></a></p>
 </div>
 <div>
 <p>The safest approach would be to change the owner and group for these files on the host system. This needs <code>sudo</code>
