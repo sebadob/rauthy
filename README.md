@@ -152,20 +152,11 @@ This is a non-exhaustive list of currently open TODO's
 ## Getting Started
 
 Either just take a look at the [Rauthy Book](https://sebadob.github.io/rauthy/), or start directly by taking a look at
-the application yourself with docker on your localhost:
+the application yourself with docker on your localhost. Rauthy has pretty strict cookie settings and not all
+browsers treat `localhost` as being secure, therefore you should allow insecure cookies for testing locally:
 
 ```
-docker run --rm -p 8080:8080 ghcr.io/sebadob/rauthy:0.23.0-lite
-```
-
-**Note on using Safari:**
-
-If you want to test with Safari with plain HTTP, you need to add `-e COOKIE_MODE=danger-insecure`.
-Rauthy always builds secure cookies by default, but Safari does not treat localhost as secure like
-all other browsers:
-
-```
-docker run --rm -p 8080:8080 -e COOKIE_MODE=danger-insecure ghcr.io/sebadob/rauthy:0.23.0-lite
+docker run --rm -e COOKIE_MODE=danger-insecure -p 8080:8080 ghcr.io/sebadob/rauthy:0.23.0-lite
 ```
 
 ## Contributing

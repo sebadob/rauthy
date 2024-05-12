@@ -2,11 +2,14 @@
 
 ## Testing / Local Evaluation
 
-For getting a first look at rauthy, you can start it with docker (or any other container runtime) on your localhost.
-The image contains a basic default config which is sufficient for local testing.
+For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on your localhost.
+The image contains a basic default config which is sufficient for local testing. Rauthy has pretty strict cookie
+settings and not all browsers treat `localhost` as being secure, therefore you should allow insecure cookies for
+testing locally:
 
 ```
 docker run --rm \
+    -e COOKIE_MODE=danger-insecure \
     -p 8080:8080 \
     --name rauthy \
     ghcr.io/sebadob/rauthy:0.23.0-lite
@@ -19,20 +22,11 @@ If you want to test a bit more in depth, you can change to an on-disk database e
 
 ```
 docker run -d \
+    -e COOKIE_MODE=danger-insecure \
     -e DATABASE_URL=sqlite:data/rauthy.db \
     -p 8080:8080 \
     --name rauthy \
     ghcr.io/sebadob/rauthy:0.23.0-lite
-```
-
-```admonish note
-**When using Safari:**
-
-If you want to test with Safari with plain HTTP, you need to add `-e DANGER_COOKIE_INSECURE=true`.
-Rauthy always builds secure cookies by default, but Safari does not treat localhost as secure like
-all other browsers. This option has been implemented in `v0.22.2-20240424-1`. So you might start it with:
-
-<code>docker run --rm -p 8080:8080 -e DANGER_COOKIE_INSECURE=true ghcr.io/sebadob/rauthy:0.22.2-20240424-1-lite</code>
 ```
 
 ```admonish note
