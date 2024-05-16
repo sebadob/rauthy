@@ -1,10 +1,10 @@
 use crate::ReqPrincipal;
-use actix_web::http::header::LOCATION;
+use actix_web::http::header::{ACCEPT, LOCATION};
 use actix_web::http::StatusCode;
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
 use actix_web_validator::{Json, Query};
 use rauthy_common::constants::{
-    COOKIE_MFA, ENABLE_WEB_ID, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, OPEN_USER_REG,
+    COOKIE_MFA, ENABLE_WEB_ID, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, OPEN_USER_REG,
     PWD_RESET_COOKIE, SSP_THRESHOLD, TEXT_TURTLE, USER_REG_DOMAIN_RESTRICTION,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
@@ -32,8 +32,8 @@ use rauthy_models::request::{
     WebauthnAuthStartRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_models::response::{
-    DeviceResponse, PasskeyResponse, UserAttrConfigResponse, UserAttrValueResponse,
-    UserAttrValuesResponse, UserResponse, WebIdResponse,
+    CsrfTokenResponse, DeviceResponse, PasskeyResponse, UserAttrConfigResponse,
+    UserAttrValueResponse, UserAttrValuesResponse, UserResponse, WebIdResponse,
 };
 use rauthy_models::templates::{Error1Html, Error3Html, ErrorHtml, UserRegisterHtml};
 use rauthy_service::password_reset;
@@ -563,7 +563,7 @@ pub async fn get_user_email_confirm(
     path = "/users/{id}/reset/{reset_id}",
     tag = "users",
     responses(
-        (status = 200, description = "Ok"),
+        (status = 200, description = "Ok", body = CsrfTokenResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
@@ -574,13 +574,31 @@ pub async fn get_user_password_reset(
     path: web::Path<(String, String)>,
     req: HttpRequest,
 ) -> HttpResponse {
-    let lang = Language::try_from(&req).unwrap_or_default();
     let (user_id, reset_id) = path.into_inner();
-    match password_reset::handle_get_pwd_reset(&data, req, user_id, reset_id).await {
-        Ok((html, cookie)) => HttpResponse::Ok()
-            .cookie(cookie)
-            .insert_header(HEADER_HTML)
-            .body(html),
+    let lang = Language::try_from(&req).unwrap_or_default();
+    let accept = req
+        .headers()
+        .get(ACCEPT)
+        .map(|v| v.to_str().unwrap_or("text/html"))
+        .unwrap_or("text/html");
+    let no_html = accept == "application/json";
+
+    match password_reset::handle_get_pwd_reset(&data, req, user_id, reset_id, no_html).await {
+        Ok((content, cookie)) => {
+            if no_html {
+                HttpResponse::Ok()
+                    .cookie(cookie)
+                    .insert_header(HEADER_JSON)
+                    .json(CsrfTokenResponse {
+                        csrf_token: content,
+                    })
+            } else {
+                HttpResponse::Ok()
+                    .cookie(cookie)
+                    .insert_header(HEADER_HTML)
+                    .body(content)
+            }
+        }
         Err(err) => {
             let colors = ColorEntity::find_rauthy(&data).await.unwrap_or_default();
             let status = err.status_code();

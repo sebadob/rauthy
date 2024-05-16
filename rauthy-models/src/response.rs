@@ -131,6 +131,11 @@ impl From<Client> for ClientResponse {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
+pub struct CsrfTokenResponse {
+    pub csrf_token: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
 pub struct DeviceResponse {
     pub id: String,
     pub client_id: String,
