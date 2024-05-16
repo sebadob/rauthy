@@ -44,7 +44,10 @@ use tracing::{error, warn};
 
 /// Returns all existing users
 ///
-/// TODO update pagination usage description
+/// This endpoint will switch from simply returning all existing users to a server side pagination
+/// dynamically, depending on the threshold set via `SSP_THRESHOLD`.
+/// If the response contains all existing users, the status code will be an HTTP 200.
+/// If the backend is in server side pagination mode, it will return an HTTP 206.
 ///
 /// **Permissions**
 /// - rauthy_admin
@@ -55,6 +58,7 @@ use tracing::{error, warn};
     params(PaginationParams),
     responses(
         (status = 200, description = "Ok", body = [UserResponse]),
+        (status = 206, description = "PartialContent", body = [UserResponse]),
         (status = 401, description = "Unauthorized"),
         (status = 403, description = "Forbidden"),
     ),
