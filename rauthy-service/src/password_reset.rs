@@ -25,6 +25,7 @@ pub async fn handle_get_pwd_reset<'a>(
     req: HttpRequest,
     user_id: String,
     reset_id: String,
+    no_html: bool,
 ) -> Result<(String, cookie::Cookie<'a>), ErrorResponse> {
     let mut ml = MagicLink::find(data, &reset_id).await?;
     ml.validate(&user_id, &req, false)?;
@@ -35,13 +36,18 @@ pub async fn handle_get_pwd_reset<'a>(
     let rules = PasswordPolicy::find(data).await?;
     let colors = ColorEntity::find_rauthy(data).await?;
     let lang = Language::try_from(&req).unwrap_or_default();
-    let html = PwdResetHtml::build(
-        &ml.csrf_token,
-        &rules,
-        &colors,
-        &lang,
-        user.has_webauthn_enabled(),
-    );
+
+    let content = if no_html {
+        ml.csrf_token.clone()
+    } else {
+        PwdResetHtml::build(
+            &ml.csrf_token,
+            &rules,
+            &colors,
+            &lang,
+            user.has_webauthn_enabled(),
+        )
+    };
 
     // generate a cookie value and save it to the magic link
     let cookie_val = get_rand(48);
@@ -51,7 +57,7 @@ pub async fn handle_get_pwd_reset<'a>(
     let age_secs = ml.exp - OffsetDateTime::now_utc().unix_timestamp();
     let cookie = ApiCookie::build(PWD_RESET_COOKIE, ml.cookie.unwrap(), age_secs);
 
-    Ok((html, cookie))
+    Ok((content, cookie))
 }
 
 #[tracing::instrument(level = "debug", skip_all, fields(user_id = user_id))]

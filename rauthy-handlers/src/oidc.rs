@@ -9,7 +9,7 @@ use rauthy_common::constants::{
     AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
     AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, DEVICE_GRANT_CODE_LIFETIME,
     DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT, GRANT_TYPE_DEVICE_CODE, HEADER_HTML,
-    HEADER_RETRY_NOT_BEFORE, OPEN_USER_REG, SESSION_LIFETIME,
+    HEADER_RETRY_NOT_BEFORE, OPEN_USER_REG, SESSION_LIFETIME, SESSION_VALIDATE_IP,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_req;
@@ -126,7 +126,7 @@ pub async fn get_authorize(
         }
     }
 
-    // check for no-prompt
+    // check for `prompt=no-prompt`
     if !force_new_session
         && req_data
             .prompt
@@ -168,7 +168,22 @@ pub async fn get_authorize(
         return Ok(HttpResponse::Ok().append_header(HEADER_HTML).body(body));
     }
 
-    let session = Session::new(*SESSION_LIFETIME, real_ip_from_req(&req));
+    // check if we can re-use a still valid session or need to create a new one
+    let session = if let Some(session) = &principal.session {
+        let remote_ip = if *SESSION_VALIDATE_IP {
+            Some(real_ip_from_req(&req).unwrap_or_default())
+        } else {
+            None
+        };
+        if session.is_valid(data.session_timeout, remote_ip) {
+            session.clone()
+        } else {
+            Session::new(*SESSION_LIFETIME, real_ip_from_req(&req))
+        }
+    } else {
+        Session::new(*SESSION_LIFETIME, real_ip_from_req(&req))
+    };
+
     if let Err(err) = session.save(&data).await {
         let status = err.status_code();
         let body = Error1Html::build(&colors, &lang, status, Some(err.message));
@@ -645,15 +660,55 @@ pub async fn rotate_jwk(
         .map(|_| HttpResponse::Ok().finish())
 }
 
+/// Create a new session
+///
+/// You can use this endpoint to create a new session outside the `/authorize` page when logging
+/// in. This endpoint is used inside Rauthy's integration tests internally and may be used, if you
+/// want to create your own login or other user facing UI components.
+/// This endpoint will return a session in `Init` state. You will need to log in and verify your
+/// credentials, but it is a prerequisite for using the `/authorize` endpoint.
+///
+/// CAUTION: You will never see the returned CSRF token again - save it somewhere safe!
+#[utoipa::path(
+    post,
+    path = "/oidc/session",
+    tag = "oidc",
+    responses(
+        (status = 201, description = "Created"),
+    ),
+)]
+#[post("/oidc/session")]
+pub async fn post_session(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    let session = Session::new(*SESSION_LIFETIME, real_ip_from_req(&req));
+    session.save(&data).await?;
+    let cookie = session.client_cookie();
+
+    let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
+        .unwrap()
+        .add(::time::Duration::seconds(data.session_timeout as i64));
+    let info = SessionInfoResponse {
+        id: session.id.as_str().into(),
+        csrf_token: Some(session.csrf_token.as_str().into()),
+        user_id: session.user_id.as_deref().map(|v| v.into()),
+        roles: session.roles.as_deref().map(|v| v.into()),
+        groups: session.groups.as_deref().map(|v| v.into()),
+        exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
+        timeout,
+        state: session.state.clone(),
+    };
+
+    Ok(HttpResponse::Created().cookie(cookie).json(info))
+}
+
 /// OIDC sessioninfo
 ///
 /// Returns information about the current session. This is currently only used in the Rauthy Admin UI
 /// and does not make much sense anywhere else. Only works with a fully authenticated session.
-///
-/// **Permissions**
-/// - session-auth
 #[utoipa::path(
-    post,
+    get,
     path = "/oidc/sessioninfo",
     tag = "oidc",
     responses(
@@ -668,18 +723,18 @@ pub async fn get_session_info(
     principal.validate_session_auth()?;
     let session = principal.get_session()?;
 
-    // let timeout_secs = session.last_seen.timestamp() + data.session_timeout as i64;
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
         .add(::time::Duration::seconds(data.session_timeout as i64));
     let info = SessionInfoResponse {
-        id: &session.id,
+        id: session.id.as_str().into(),
         csrf_token: None,
-        user_id: session.user_id.as_ref(),
-        roles: session.roles.as_ref(),
-        groups: session.groups.as_ref(),
+        user_id: session.user_id.as_deref().map(|v| v.into()),
+        roles: session.roles.as_deref().map(|v| v.into()),
+        groups: session.groups.as_deref().map(|v| v.into()),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
+        state: session.state.clone(),
     };
 
     Ok(HttpResponse::Ok().json(info))
@@ -718,13 +773,14 @@ pub async fn get_session_xsrf(
         .unwrap()
         .add(::time::Duration::seconds(data.session_timeout as i64));
     let info = SessionInfoResponse {
-        id: &session.id,
-        csrf_token: Some(&session.csrf_token),
-        user_id: session.user_id.as_ref(),
-        roles: session.roles.as_ref(),
-        groups: session.groups.as_ref(),
+        id: session.id.as_str().into(),
+        csrf_token: Some(session.csrf_token.as_str().into()),
+        user_id: session.user_id.as_deref().map(|v| v.into()),
+        roles: session.roles.as_deref().map(|v| v.into()),
+        groups: session.groups.as_deref().map(|v| v.into()),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
+        state: session.state.clone(),
     };
     Ok(HttpResponse::Ok().json(info))
 }

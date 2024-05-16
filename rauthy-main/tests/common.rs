@@ -2,8 +2,9 @@
 use rauthy_common::constants::CSRF_HEADER;
 use rauthy_common::utils::base64_url_encode;
 use rauthy_models::request::{LoginRequest, TokenRequest};
+use rauthy_models::response::SessionInfoResponse;
 use rauthy_service::token_set::TokenSet;
-use reqwest::header::{HeaderMap, HeaderValue};
+use reqwest::header::{HeaderMap, HeaderValue, SET_COOKIE};
 use reqwest::{header, Response};
 use ring::digest;
 use std::env;
@@ -72,8 +73,8 @@ pub async fn get_token_set() -> TokenSet {
 
 pub async fn session_headers() -> (HeaderMap, TokenSet) {
     let backend_url = get_backend_url();
+    let client = reqwest::Client::new();
 
-    // Step 1: GET /authorize for the CSRF token and simulate UI login
     let challenge_plain = "oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys";
     let redirect_uri = format!("{}/oidc/callback", backend_url);
     let query = format!(
@@ -87,8 +88,11 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
         query, challenge_s256
     );
     let url_auth = format!("{}/oidc/authorize?{}", backend_url, query_pkce);
-    let res = reqwest::get(&url_auth).await.unwrap();
-    let headers = cookie_csrf_headers_from_res(res).await.unwrap();
+
+    // we need a session in Init state
+    let url_session = format!("{}/oidc/session", backend_url);
+    let res = client.post(&url_session).send().await.unwrap();
+    let headers = cookie_csrf_headers_from_res_direct(res).await.unwrap();
 
     let req_login = LoginRequest {
         email: USERNAME.to_string(),
@@ -102,14 +106,14 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
         code_challenge_method: Some("S256".to_string()),
     };
 
-    let mut res = reqwest::Client::new()
+    let res = client
         .post(&url_auth)
         .headers(headers.clone())
         .json(&req_login)
         .send()
         .await
         .unwrap();
-    res = check_status(res, 202).await.unwrap();
+    assert_eq!(res.status(), 202);
 
     let (code, _state) = code_state_from_headers(res).unwrap();
     let req_token = TokenRequest {
@@ -126,19 +130,44 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
     };
 
     let url_token = format!("{}/oidc/token", backend_url);
-    let mut res = reqwest::Client::new()
+    let res = client
         .post(&url_token)
         .form(&req_token)
         .send()
         .await
         .unwrap();
-    res = check_status(res, 200).await.unwrap();
+    assert_eq!(res.status(), 200);
 
     let ts = res.json::<TokenSet>().await.unwrap();
 
     (headers, ts)
 }
 
+/// extractor for the POST `/oidc/session` endpoint
+pub async fn cookie_csrf_headers_from_res_direct(
+    res: Response,
+) -> Result<HeaderMap, Box<dyn Error>> {
+    assert!(res.status().is_success());
+
+    let cookie = res
+        .headers()
+        .get(SET_COOKIE)
+        .expect("Set-Cookie header to exist");
+    let (session_cookie, _) = cookie.to_str()?.split_once(';').unwrap();
+
+    let mut headers = HeaderMap::new();
+    headers.append(header::COOKIE, HeaderValue::from_str(&session_cookie)?);
+
+    let session_info = res.json::<SessionInfoResponse>().await.unwrap();
+    headers.append(
+        CSRF_HEADER,
+        HeaderValue::from_str(&session_info.csrf_token.unwrap())?,
+    );
+
+    Ok(headers)
+}
+
+/// extractor from the `/oidc/authorize` html
 pub async fn cookie_csrf_headers_from_res(res: Response) -> Result<HeaderMap, Box<dyn Error>> {
     let cookie = res.headers().get(header::SET_COOKIE).unwrap();
     let (session_cookie, _) = cookie.to_str()?.split_once(';').unwrap();
