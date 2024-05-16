@@ -93,10 +93,6 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
     let url_session = format!("{}/oidc/session", backend_url);
     let res = client.post(&url_session).send().await.unwrap();
     let headers = cookie_csrf_headers_from_res_direct(res).await.unwrap();
-    // eprintln!("{:?}", headers);
-    //
-    // let res = client.get(&url_auth).send().await.unwrap();
-    // let headers = cookie_csrf_headers_from_res_html(res).await.unwrap();
 
     let req_login = LoginRequest {
         email: USERNAME.to_string(),
