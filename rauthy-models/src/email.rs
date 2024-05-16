@@ -383,7 +383,7 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
 
 pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
     let exp = email_ts_prettify(user.password_expires.unwrap());
-    let link = format!("{}/auth/v1/account.html", data.public_url);
+    let link = format!("{}/auth/v1/account", data.public_url);
 
     let i18n = I18nEmailResetInfo::build(&user.language);
     let text = EmailResetInfoTxt {
