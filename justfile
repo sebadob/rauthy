@@ -265,7 +265,7 @@ test-backend: migrate prepare
     clear
 
     just _run cargo build
-    @docker run --rm -it \
+    docker run --rm -it \
       -v $HOME/.cargo/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       -u $USER \
@@ -397,7 +397,7 @@ __build-docs:
 
 
 # mode = release or debug / no-test = no-test or do-test / image = name for the final image
-build mode="release" no-test="do-test" image="ghcr.io/sebadob/rauthy": build-ui
+build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
     #!/usr/bin/env bash
     set -euxo pipefail
 
