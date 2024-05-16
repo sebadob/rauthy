@@ -524,17 +524,17 @@ pub struct SessionResponse<'a> {
     pub remote_ip: Option<&'a str>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct SessionInfoResponse<'a> {
-    pub id: &'a String,
+    pub id: Cow<'a, str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub csrf_token: Option<&'a String>,
+    pub csrf_token: Option<Cow<'a, str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub user_id: Option<&'a String>,
+    pub user_id: Option<Cow<'a, str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub roles: Option<&'a String>,
+    pub roles: Option<Cow<'a, str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub groups: Option<&'a String>,
+    pub groups: Option<Cow<'a, str>>,
     /// format: `OffsetDateTime`
     #[schema(value_type = str)]
     #[serde(with = "time::serde::rfc3339")]
@@ -543,7 +543,30 @@ pub struct SessionInfoResponse<'a> {
     #[schema(value_type = str)]
     #[serde(with = "time::serde::rfc3339")]
     pub timeout: OffsetDateTime,
+    pub state: SessionState,
 }
+
+// #[derive(Debug, Serialize, ToSchema)]
+// pub struct SessionInfoResponse<'a> {
+//     pub id: &'a String,
+//     #[serde(skip_serializing_if = "Option::is_none")]
+//     pub csrf_token: Option<&'a String>,
+//     #[serde(skip_serializing_if = "Option::is_none")]
+//     pub user_id: Option<&'a String>,
+//     #[serde(skip_serializing_if = "Option::is_none")]
+//     pub roles: Option<&'a String>,
+//     #[serde(skip_serializing_if = "Option::is_none")]
+//     pub groups: Option<&'a String>,
+//     /// format: `OffsetDateTime`
+//     #[schema(value_type = str)]
+//     #[serde(with = "time::serde::rfc3339")]
+//     pub exp: OffsetDateTime,
+//     /// format: `OffsetDateTime`
+//     #[schema(value_type = str)]
+//     #[serde(with = "time::serde::rfc3339")]
+//     pub timeout: OffsetDateTime,
+//     pub state: &'a SessionState,
+// }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct TokenInfo {
