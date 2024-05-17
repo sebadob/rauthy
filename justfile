@@ -425,6 +425,10 @@ build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
 
     # postgres
     if [ {{no-test}} != "no-test" ]; then
+        # restart postgres to clean it up for the tests
+        just postgres-stop || echo ">>> Postgres is not running - nothing to do"
+        just postgres-start || echo ">>> Postgres is already running - nothing to do"
+
         echo "make sure clippy is fine with postgres"
         just _run-pg cargo clippy --features postgres -- -D warnings
         echo "run tests against postgres"
