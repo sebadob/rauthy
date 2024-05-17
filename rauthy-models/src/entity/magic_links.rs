@@ -206,7 +206,7 @@ impl MagicLink {
             let cookie_opt = ApiCookie::from_req(req, PWD_RESET_COOKIE);
             if let Some(cookie) = cookie_opt {
                 // the extracted cookie from the request starts with 'rauthy-pwd-reset='
-                if !cookie.value().ends_with(self.cookie.as_ref().unwrap()) {
+                if !cookie.ends_with(self.cookie.as_ref().unwrap()) {
                     if *PASSWORD_RESET_COOKIE_BINDING {
                         return Err(err);
                     } else {
