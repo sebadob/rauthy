@@ -12,7 +12,7 @@ even if you would try to do it manually.
 
 [4fdb3f2](https://github.com/sebadob/rauthy/commit/4fdb3f262f128fe803d1542418c06eff08bf210c)
 
-#### Easier extraction for CSRF tokens with external Frontend
+#### Easier extraction of CSRF tokens with external Frontend
 
 If you are in the situation where you run Rauthy behind a reverse proxy on the exact same origin with another app,
 and you want to build custom user facing UI parts, you had to retrieve the original HTML for `/authorize` or the
