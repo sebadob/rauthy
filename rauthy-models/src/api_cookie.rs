@@ -4,7 +4,6 @@ use actix_web::{cookie, HttpRequest};
 use cryptr::EncValue;
 use rauthy_common::constants::{CookieMode, COOKIE_MODE, COOKIE_SET_PATH};
 use rauthy_common::utils::{base64_decode, base64_encode};
-use semver::Op;
 use std::borrow::Cow;
 use std::fmt::Display;
 use tracing::warn;

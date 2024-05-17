@@ -1,5 +1,39 @@
 # Changelog
 
+## v0.23.1
+
+### Features
+
+#### Global Cookie Encryption
+
+All Rauthy cookies (except for the locale) are now encrypted globally inside the whole app by default.  
+This is just another defense in depth. The AEAD algorithm makes sure, that you can't tamper with the cookie values,
+even if you would try to do it manually.
+
+[4fdb3f2](https://github.com/sebadob/rauthy/commit/4fdb3f262f128fe803d1542418c06eff08bf210c)
+
+#### Easier extraction of CSRF tokens with external Frontend
+
+If you are in the situation where you run Rauthy behind a reverse proxy on the exact same origin with another app,
+and you want to build custom user facing UI parts, you had to retrieve the original HTML for `/authorize` or the
+password reset to extract the CSRF token from the HTML content.  
+Doing this in tests is fine, but very tedious and wasteful for a production deployment.
+
+For this reason, there are now 2 new possibilities:
+
+- POST `/oidc/session` endpoint to create a session in `Init` state, which will return the cookie and the
+  correct CSRF token in a json body
+- the password reset link returns a json with a CSRF token instead of an HTML document, if you request it
+  with a `Accept: application/json` header
+
+[c37e1f5](https://github.com/sebadob/rauthy/commit/c37e1f5bc27ebd679c4424ef568a8bae82c523bc)
+
+### Bugfix
+
+- the password expiry reminder E-Mail had a wrong a link to the account page, a left over from older versions
+  with `.html` appended
+  [d728317](https://github.com/sebadob/rauthy/commit/d728317ef31e20a117a0ca2a903e767e34c556d4)
+
 ## v0.23.0
 
 This release does the first preparations to prepare a future v1.0.0 release.  
