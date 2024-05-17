@@ -750,7 +750,7 @@ pub async fn post_webauthn_auth_start(
                     ));
                 }
                 Some(c) => {
-                    if c.value().len() != 48 {
+                    if c.len() != 48 {
                         return Err(ErrorResponse::new(
                             ErrorResponseType::BadRequest,
                             "Malformed magic link binding cookie".to_string(),

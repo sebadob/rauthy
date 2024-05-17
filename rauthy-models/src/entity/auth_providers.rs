@@ -117,13 +117,12 @@ pub struct AuthProviderLinkCookie {
     pub user_email: String,
 }
 
-impl TryFrom<Cookie<'_>> for AuthProviderLinkCookie {
+impl TryFrom<&str> for AuthProviderLinkCookie {
     type Error = ErrorResponse;
 
-    fn try_from(value: Cookie) -> Result<AuthProviderLinkCookie, Self::Error> {
-        let bytes_enc = base64_url_decode(value.value())?;
-        let dec = EncValue::try_from(bytes_enc)?.decrypt()?;
-        let slf = bincode::deserialize::<AuthProviderLinkCookie>(dec.as_ref())?;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let bytes = base64_decode(value)?;
+        let slf = bincode::deserialize::<AuthProviderLinkCookie>(bytes.as_slice())?;
         Ok(slf)
     }
 }
@@ -131,8 +130,7 @@ impl TryFrom<Cookie<'_>> for AuthProviderLinkCookie {
 impl AuthProviderLinkCookie {
     pub fn build_cookie(&self) -> Result<Cookie<'_>, ErrorResponse> {
         let bytes = bincode::serialize(self)?;
-        let secret_enc = EncValue::encrypt(bytes.as_ref())?.into_bytes().to_vec();
-        let value = base64_url_encode(&secret_enc);
+        let value = base64_encode(&bytes);
         Ok(ApiCookie::build(PROVIDER_LINK_COOKIE, value, 300))
     }
 
@@ -677,11 +675,9 @@ impl AuthProviderCallback {
             .expect("write to always succeed");
         }
 
-        let id_enc = EncValue::encrypt(slf.callback_id.as_bytes())?;
-        let id_b64 = base64_encode(id_enc.into_bytes().as_ref());
         let cookie = ApiCookie::build(
             COOKIE_UPSTREAM_CALLBACK,
-            id_b64,
+            &slf.callback_id,
             UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as i64,
         );
 
@@ -702,16 +698,12 @@ impl AuthProviderCallback {
         mut session: Session,
     ) -> Result<(AuthStep, Cookie<'a>), ErrorResponse> {
         // the callback id for the cache should be inside the encrypted cookie
-        let cookie = ApiCookie::from_req(req, COOKIE_UPSTREAM_CALLBACK).ok_or_else(|| {
+        let callback_id = ApiCookie::from_req(req, COOKIE_UPSTREAM_CALLBACK).ok_or_else(|| {
             ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "Missing encrypted callback cookie".to_string(),
             )
         })?;
-        let bytes = base64_decode(cookie.value())?;
-        let plain = EncValue::try_from(bytes)?.decrypt()?;
-        let callback_id = String::from_utf8_lossy(plain.as_ref()).to_string();
-        debug!("callback_id from encrypted cookie: {}", callback_id);
 
         // validate state
         if callback_id != payload.state {
@@ -799,7 +791,7 @@ impl AuthProviderCallback {
         // extract a possibly existing provider link cookie for
         // linking an existing account to a provider
         let link_cookie = ApiCookie::from_req(req, PROVIDER_LINK_COOKIE)
-            .and_then(|c| AuthProviderLinkCookie::try_from(c).ok());
+            .and_then(|value| AuthProviderLinkCookie::try_from(value.as_str()).ok());
 
         // deserialize payload and validate the information
         let (user, provider_mfa_login) = match res.json::<AuthProviderTokenSet>().await {
@@ -1475,6 +1467,28 @@ struct OidcCodeRequestParams<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cryptr::EncKeys;
+
+    #[test]
+    fn test_auth_provider_link_cookie() {
+        dotenvy::from_filename("rauthy.test.cfg").ok();
+        let _ = EncKeys::from_env().unwrap().init();
+
+        let value = AuthProviderLinkCookie {
+            provider_id: "my_id_1337".to_string(),
+            user_id: "batman123".to_string(),
+            user_email: "batman@gotham.io".to_string(),
+        };
+
+        let cookie = value.build_cookie().unwrap();
+
+        let cookie_val = ApiCookie::cookie_into_value(Some(cookie)).unwrap();
+        let res = AuthProviderLinkCookie::try_from(cookie_val.as_str()).unwrap();
+
+        assert_eq!(value.provider_id, res.provider_id);
+        assert_eq!(value.user_id, res.user_id);
+        assert_eq!(value.user_email, res.user_email);
+    }
 
     // ... just to understand the query syntax
     #[test]

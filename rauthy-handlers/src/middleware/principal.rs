@@ -122,7 +122,7 @@ async fn get_session_from_cookie(
         None => {
             return Ok(None);
         }
-        Some(cookie) => cookie.value().to_string(),
+        Some(session_id) => session_id,
     };
 
     match Session::find(data, session_id).await {

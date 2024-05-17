@@ -381,7 +381,7 @@ impl WebauthnCookie {
         Ok(ApiCookie::build(COOKIE_MFA, b64, max_age))
     }
 
-    pub fn parse_validate(cookie: &Option<Cookie>) -> Result<Self, ErrorResponse> {
+    pub fn parse_validate(cookie: &Option<String>) -> Result<Self, ErrorResponse> {
         if cookie.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -389,7 +389,7 @@ impl WebauthnCookie {
             ));
         }
         let cookie = cookie.as_ref().unwrap();
-        let bytes = base64_decode(cookie.value())?;
+        let bytes = base64_decode(cookie)?;
         let dec = EncValue::try_from(bytes)?.decrypt()?;
         let slf = bincode::deserialize::<Self>(&dec)?;
 
