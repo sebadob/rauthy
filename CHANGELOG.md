@@ -10,6 +10,8 @@ All Rauthy cookies (except for the locale) are now encrypted globally inside the
 This is just another defense in depth. The AEAD algorithm makes sure, that you can't tamper with the cookie values,
 even if you would try to do it manually.
 
+[4fdb3f2](https://github.com/sebadob/rauthy/commit/4fdb3f262f128fe803d1542418c06eff08bf210c)
+
 #### Easier extraction for CSRF tokens with external Frontend
 
 If you are in the situation where you run Rauthy behind a reverse proxy on the exact same origin with another app,
@@ -23,6 +25,8 @@ For this reason, there are now 2 new possibilities:
   correct CSRF token in a json body
 - the password reset link returns a json with a CSRF token instead of an HTML document, if you request it
   with a `Accept: application/json` header
+
+[c37e1f5](https://github.com/sebadob/rauthy/commit/c37e1f5bc27ebd679c4424ef568a8bae82c523bc)
 
 ### Bugfix
 
