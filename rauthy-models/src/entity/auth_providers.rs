@@ -29,8 +29,8 @@ use rauthy_common::constants::{
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{
-    base64_decode, base64_encode, base64_url_decode, base64_url_encode, base64_url_no_pad_decode,
-    get_rand, new_store_id,
+    base64_decode, base64_encode, base64_url_encode, base64_url_no_pad_decode, get_rand,
+    new_store_id,
 };
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use reqwest::header::{ACCEPT, AUTHORIZATION};
