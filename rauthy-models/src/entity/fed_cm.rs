@@ -124,7 +124,8 @@ pub struct FedCMIdPConfig {
     pub client_metadata_endpoint: String,
     pub id_assertion_endpoint: String,
     pub login_url: String,
-    pub disconnect_endpoint: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disconnect_endpoint: Option<String>,
     pub branding: FedCMIdPBranding,
 }
 
@@ -145,7 +146,8 @@ impl FedCMIdPConfig {
             id_assertion_endpoint: format!("{}/{}/token", iss, sub_path),
             // TODO where should be point this URL in case of Rauthy for it to make sense?
             login_url: format!("{}/{}/login", iss, sub_path),
-            disconnect_endpoint: format!("{}/{}/disconnect", iss, sub_path),
+            disconnect_endpoint: None,
+            // disconnect_endpoint: format!("{}/{}/disconnect", iss, sub_path),
             branding,
         };
 
@@ -153,6 +155,25 @@ impl FedCMIdPConfig {
         Ok(IDP_CONFIG.get().unwrap())
     }
 }
+
+// #[derive(Clone, Debug, Serialize, ToSchema)]
+// pub enum FedCMLoginStatus {
+//     LoggedIn,
+//     LoggedOut,
+// }
+//
+// impl FedCMLoginStatus {
+//     pub fn as_str(&self) -> &str {
+//         match self {
+//             FedCMLoginStatus::LoggedIn => "logged-in",
+//             FedCMLoginStatus::LoggedOut => "logged-out",
+//         }
+//     }
+//
+//     pub fn into_header_pair(&self) -> (&str, &str) {
+//         ("Set-Login", self.as_str())
+//     }
+// }
 
 #[derive(Clone, Debug, Serialize, ToSchema)]
 pub struct WebIdentity {

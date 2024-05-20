@@ -2,15 +2,6 @@
 
 ## CURRENT WORK
 
-FedCM endpoints:
-
-- [x] base setup and definitions
-- [x] web-identity
-- [x] config
-- [ ] client metadata
-- [ ] assertion
-- [ ] disconnect
-
 ## Stage 1 - essentials
 
 [x] finished

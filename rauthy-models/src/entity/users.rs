@@ -23,7 +23,7 @@ use crate::templates::UserEmailChangeConfirmHtml;
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_USERS, COOKIE_FED_CM, IDX_USERS, RAUTHY_ADMIN_ROLE, USER_COUNT_IDX,
+    CACHE_NAME_12HR, CACHE_NAME_USERS, IDX_USERS, RAUTHY_ADMIN_ROLE, USER_COUNT_IDX,
     WEBAUTHN_NO_PASSWORD_EXPIRY,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
@@ -362,23 +362,8 @@ impl User {
 
     pub async fn find_for_fed_cm_validated(
         data: &web::Data<AppState>,
-        req: &HttpRequest,
+        user_id: String,
     ) -> Result<Self, ErrorResponse> {
-        // The FedCM endpoints use a special cookie instead of the usual session.
-        // This is important to be able to recognize a user for a long period of time even whe
-        // there is no active / valid session right now. The Rauthy session cookie though has a very
-        // short lifetime, which is why it can't be re-used.
-        let user_id = ApiCookie::from_req(&req, COOKIE_FED_CM).ok_or_else(|| {
-            // CAUTION: The spec does not have any clarification on how to behave if the user
-            // is not logged in or does not exist
-            // -> we assume and use the OAuth2 WWW-Authenticate header for now
-            // https://github.com/fedidcg/FedCM/issues/218
-            ErrorResponse::new(
-                ErrorResponseType::WWWAuthenticate("user-not-found".to_string()),
-                "No user found by FedCM cookie".to_string(),
-            )
-        })?;
-
         // We will stick to the WWW-Authenticate header for now and use duplicated code from
         // some OAuth2 handlers for now until the spec has settled on an error behavior.
         let slf = Self::find(data, user_id).await.map_err(|_| {
