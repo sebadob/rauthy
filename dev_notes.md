@@ -6,7 +6,7 @@ FedCM endpoints:
 
 - [x] base setup and definitions
 - [x] web-identity
-- [ ] config
+- [x] config
 - [ ] client metadata
 - [ ] assertion
 - [ ] disconnect

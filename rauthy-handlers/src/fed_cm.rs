@@ -6,7 +6,7 @@ use rauthy_common::constants::{
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
-use rauthy_models::entity::fed_cm::WebIdentity;
+use rauthy_models::entity::fed_cm::{FedCMIdPConfig, WebIdentity};
 use rauthy_models::entity::well_known::WellKnown;
 
 /// GET accounts linked to the users
@@ -52,17 +52,25 @@ pub async fn get_fed_cm_client_meta(
 /// https://fedidcg.github.io/FedCM/#idp-api
 #[utoipa::path(
     get,
-    path = "/fed_cm/config",
+    path = "/fed_cm/config.json",
     tag = "fed_cm",
     responses(
         (status = 200, description = "Ok"),
     ),
 )]
-#[get("/fed_cm/config")]
-pub async fn get_fed_cm_config(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+#[get("/fed_cm/config.json")]
+pub async fn get_fed_cm_config(
+    req: HttpRequest,
+    data: web::Data<AppState>,
+) -> Result<HttpResponse, ErrorResponse> {
     is_fed_cm_enabled()?;
+    is_web_identity_fetch(&req)?;
 
-    todo!()
+    let config = FedCMIdPConfig::get(&data).await?;
+    Ok(HttpResponse::Ok()
+        .insert_header(HEADER_JSON)
+        .insert_header(HEADER_ALLOW_ALL_ORIGINS)
+        .json(config))
 }
 
 /// Disconnect an account
@@ -124,21 +132,7 @@ pub async fn get_fed_cm_well_known(
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     is_fed_cm_enabled()?;
-
-    // make sure the request comes in properly configured
-    if req
-        .headers()
-        .get("sec-fetch-dest")
-        .map(|v| v.to_str().unwrap_or_default())
-        != Some("webidentity")
-    {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "Expected header `Sec-Fetch-Dest: webidentity`".to_string(),
-        ));
-    }
-
-    // don't care about origin or referrer headers, just ignore them
+    is_web_identity_fetch(&req)?;
 
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_JSON)
@@ -154,6 +148,25 @@ fn is_fed_cm_enabled() -> Result<(), ErrorResponse> {
         Err(ErrorResponse::new(
             ErrorResponseType::Internal,
             "The FedCM API is disabled on this instance".to_string(),
+        ))
+    }
+}
+
+/// Checks for `Sec-Fetch-Dest: webidentity`
+/// Ignores validation of empty origin and referrer headers - not our job
+#[inline(always)]
+fn is_web_identity_fetch(req: &HttpRequest) -> Result<(), ErrorResponse> {
+    if req
+        .headers()
+        .get("sec-fetch-dest")
+        .map(|v| v.to_str().unwrap_or_default())
+        == Some("webidentity")
+    {
+        Ok(())
+    } else {
+        Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Expected header `Sec-Fetch-Dest: webidentity`".to_string(),
         ))
     }
 }
