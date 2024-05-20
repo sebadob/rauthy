@@ -146,7 +146,7 @@ impl FedCMIdPConfig {
             client_metadata_endpoint: format!("{}/{}/client_meta", iss, sub_path),
             id_assertion_endpoint: format!("{}/{}/token", iss, sub_path),
             // TODO where should be point this URL in case of Rauthy for it to make sense?
-            login_url: format!("{}/{}/login", iss, sub_path),
+            login_url: format!("{}/account", iss),
             disconnect_endpoint: None,
             // disconnect_endpoint: format!("{}/{}/disconnect", iss, sub_path),
             branding,
