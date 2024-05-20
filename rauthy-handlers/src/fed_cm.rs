@@ -8,7 +8,7 @@ use rauthy_models::entity::well_known::WellKnown;
 
 /// GET accounts linked to the users
 ///
-/// https://fedidcg.github.io/FedCM/
+/// https://fedidcg.github.io/FedCM/#idp-api
 #[utoipa::path(
     get,
     path = "/fed_cm/accounts",
@@ -26,7 +26,7 @@ pub async fn get_fed_cm_accounts(data: web::Data<AppState>) -> Result<HttpRespon
 
 /// GET metadata for the FedCM client
 ///
-/// https://fedidcg.github.io/FedCM/
+/// https://fedidcg.github.io/FedCM/#idp-api
 #[utoipa::path(
     get,
     path = "/fed_cm/client_meta",
@@ -46,7 +46,7 @@ pub async fn get_fed_cm_client_meta(
 
 /// The FedCM IdP configuration
 ///
-/// https://fedidcg.github.io/FedCM/
+/// https://fedidcg.github.io/FedCM/#idp-api
 #[utoipa::path(
     get,
     path = "/fed_cm/config",
@@ -62,9 +62,29 @@ pub async fn get_fed_cm_config(data: web::Data<AppState>) -> Result<HttpResponse
     todo!()
 }
 
+/// Disconnect an account
+///
+/// https://fedidcg.github.io/FedCM/#idp-api
+#[utoipa::path(
+    get,
+    path = "/fed_cm/disconnect",
+    tag = "fed_cm",
+    responses(
+        (status = 200, description = "Ok"),
+    ),
+)]
+#[get("/fed_cm/disconnect")]
+pub async fn post_fed_cm_disconnect(
+    data: web::Data<AppState>,
+) -> Result<HttpResponse, ErrorResponse> {
+    is_fed_cm_enabled()?;
+
+    todo!()
+}
+
 /// POST ID assertion
 ///
-/// https://fedidcg.github.io/FedCM/
+/// https://fedidcg.github.io/FedCM/#idp-api
 #[utoipa::path(
     get,
     path = "/fed_cm/token",
@@ -82,7 +102,7 @@ pub async fn post_fed_cm_token(data: web::Data<AppState>) -> Result<HttpResponse
 
 /// The `.well-known` endpoint for FedCM clients
 ///
-/// https://fedidcg.github.io/FedCM/
+/// https://fedidcg.github.io/FedCM/#idp-api
 ///
 /// TODO from the spec, this MUST be at eTLD+1:
 /// -> not compatible with OIDC spec (<issuer>/.well-known/...)
