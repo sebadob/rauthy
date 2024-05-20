@@ -40,8 +40,10 @@ impl FedCMIdPBranding {
         let rauthy_icon = FedCMIdPIcon::rauthy_logo(&data.issuer);
 
         Ok(Self {
-            background_color: Some(colors.bg),
-            color: Some(colors.act2),
+            // Background color for IDP-branded widgets such as buttons.
+            background_color: Some(colors.act2),
+            // color for text on IDP branded widgets.
+            color: Some(colors.text),
             icons: vec![rauthy_icon],
             name: Some(&*EMAIL_SUB_PREFIX),
         })
