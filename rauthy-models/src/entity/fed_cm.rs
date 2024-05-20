@@ -45,7 +45,8 @@ impl From<User> for FedCMAccount {
             given_name: Some(user.given_name),
             // Rauthy does not store user pictures
             picture: None,
-            // TODO
+            // TODO how should we decide which clients to return here?
+            // simply all of them? Or introduce a new flow to allow fedCm and filter?
             approved_clients: vec![],
             login_hints: vec![login_hint],
             // Rauthy does not use such a value
@@ -157,24 +158,24 @@ impl FedCMIdPConfig {
     }
 }
 
-// #[derive(Clone, Debug, Serialize, ToSchema)]
-// pub enum FedCMLoginStatus {
-//     LoggedIn,
-//     LoggedOut,
-// }
-//
-// impl FedCMLoginStatus {
-//     pub fn as_str(&self) -> &str {
-//         match self {
-//             FedCMLoginStatus::LoggedIn => "logged-in",
-//             FedCMLoginStatus::LoggedOut => "logged-out",
-//         }
-//     }
-//
-//     pub fn into_header_pair(&self) -> (&str, &str) {
-//         ("Set-Login", self.as_str())
-//     }
-// }
+#[derive(Clone, Debug, Serialize, ToSchema)]
+pub enum FedCMLoginStatus {
+    LoggedIn,
+    LoggedOut,
+}
+
+impl FedCMLoginStatus {
+    pub fn as_str(&self) -> &str {
+        match self {
+            FedCMLoginStatus::LoggedIn => "logged-in",
+            FedCMLoginStatus::LoggedOut => "logged-out",
+        }
+    }
+
+    pub fn into_header_pair(&self) -> (&str, &str) {
+        ("Set-Login", self.as_str())
+    }
+}
 
 #[derive(Clone, Debug, Serialize, ToSchema)]
 pub struct WebIdentity {

@@ -11,7 +11,9 @@ use rauthy_models::entity::fed_cm::{
 };
 use rauthy_models::entity::users::User;
 use rauthy_models::request::{FedCMAssertionRequest, FedCMClientMetadataRequest};
+use rauthy_models::ListenScheme;
 use rauthy_service::token_set::{AuthCodeFlow, DeviceCodeFlow, TokenNonce, TokenSet};
+use tracing::debug;
 
 const HEADER_ALLOW_CREDENTIALS: (&str, &str) = ("access-control-allow-credentials", "true");
 
@@ -277,31 +279,61 @@ fn client_origin_header(
     req: &HttpRequest,
     client: &Client,
 ) -> Result<(HeaderName, HeaderValue), ErrorResponse> {
-    let header = if client.is_ephemeral() {
-        let origin = req
-            .headers()
-            .get(header::ORIGIN)
-            .map(|v| v.to_str().unwrap_or_default())
-            .unwrap_or_default();
+    let origin = req
+        .headers()
+        .get(header::ORIGIN)
+        .map(|v| v.to_str().unwrap_or_default())
+        .ok_or_else(|| {
+            ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Origin header is missing".to_string(),
+            )
+        })?;
+    let header = (
+        header::ACCESS_CONTROL_ALLOW_ORIGIN,
+        HeaderValue::from_str(origin).unwrap(),
+    );
+
+    if client.is_ephemeral() {
         if client.id != origin {
             return Err(ErrorResponse::new(
                 ErrorResponseType::WWWAuthenticate("invalid-origin".to_string()),
                 "invalid `Origin` header".to_string(),
             ));
         };
-        (
-            header::ACCESS_CONTROL_ALLOW_ORIGIN,
-            HeaderValue::from_str(origin).unwrap(),
-        )
     } else {
-        client
-            .validate_origin(req, &data.listen_scheme, &data.public_url)?
-            .ok_or_else(|| {
-                ErrorResponse::new(
-                    ErrorResponseType::WWWAuthenticate("origin-header-missing".to_string()),
-                    "The `Origin` header is missing".to_string(),
-                )
-            })?
+        if client.allowed_origins.is_none() {
+            debug!("Allowed origins is None");
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "The origin is not allowed for this client".to_string(),
+            ));
+        }
+
+        if let Some(allowed_origins) = &client.allowed_origins {
+            for ao in allowed_origins.split(',') {
+                if (data.listen_scheme == ListenScheme::HttpHttps && ao.ends_with(origin))
+                    || ao.eq(origin)
+                {
+                    return Ok(header);
+                }
+            }
+        }
+
+        // in case we did not have a specific allowed origin, we can validate via allowed
+        // `redirect_uri`s
+        for uri in client.redirect_uris.split(',') {
+            if uri.starts_with(origin) {
+                return Ok(header);
+            }
+        }
+
+        debug!("No match found for allowed origin");
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "The origin is not allowed for this client".to_string(),
+        ));
     };
+
     Ok(header)
 }
