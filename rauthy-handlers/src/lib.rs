@@ -20,6 +20,7 @@ pub mod auth_providers;
 pub mod blacklist;
 pub mod clients;
 pub mod events;
+pub mod fed_cm;
 pub mod generic;
 pub mod groups;
 pub mod middleware;
