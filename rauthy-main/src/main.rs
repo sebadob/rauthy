@@ -457,6 +457,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
             )
             .wrap(pub_metrics.clone())
             .service(oidc::get_well_known)
+            .service(fed_cm::get_fed_cm_well_known)
             .service(generic::catch_all)
             // Important: Do not move this middleware do need the least amount of computing
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first

@@ -1,9 +1,12 @@
 use actix_web::http::header;
 use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
-use actix_web::{get, web, HttpResponse};
-use rauthy_common::constants::{APPLICATION_JSON, EXPERIMENTAL_FED_CM_ENABLE};
+use actix_web::{get, web, HttpRequest, HttpResponse};
+use rauthy_common::constants::{
+    APPLICATION_JSON, EXPERIMENTAL_FED_CM_ENABLE, HEADER_ALLOW_ALL_ORIGINS, HEADER_JSON,
+};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
+use rauthy_models::entity::fed_cm::WebIdentity;
 use rauthy_models::entity::well_known::WellKnown;
 
 /// GET accounts linked to the users
@@ -106,7 +109,7 @@ pub async fn post_fed_cm_token(data: web::Data<AppState>) -> Result<HttpResponse
 ///
 /// TODO from the spec, this MUST be at eTLD+1:
 /// -> not compatible with OIDC spec (<issuer>/.well-known/...)
-/// -> redirects ok?
+/// -> mention in docs!
 #[utoipa::path(
     get,
     path = "/.well-known/web-identity",
@@ -118,18 +121,29 @@ pub async fn post_fed_cm_token(data: web::Data<AppState>) -> Result<HttpResponse
 #[get("/.well-known/web-identity")]
 pub async fn get_fed_cm_well_known(
     data: web::Data<AppState>,
+    req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     is_fed_cm_enabled()?;
 
-    todo!()
-    // let wk = WellKnown::json(&data).await?;
-    // Ok(HttpResponse::Ok()
-    //     .insert_header((CONTENT_TYPE, APPLICATION_JSON))
-    //     .insert_header((
-    //         header::ACCESS_CONTROL_ALLOW_ORIGIN,
-    //         HeaderValue::from_str("*").unwrap(),
-    //     ))
-    //     .body(wk))
+    // make sure the request comes in properly configured
+    if req
+        .headers()
+        .get("sec-fetch-dest")
+        .map(|v| v.to_str().unwrap_or_default())
+        != Some("webidentity")
+    {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Expected header `Sec-Fetch-Dest: webidentity`".to_string(),
+        ));
+    }
+
+    // don't care about origin or referrer headers, just ignore them
+
+    Ok(HttpResponse::Ok()
+        .insert_header(HEADER_JSON)
+        .insert_header(HEADER_ALLOW_ALL_ORIGINS)
+        .json(WebIdentity::new(&data.issuer)))
 }
 
 #[inline(always)]

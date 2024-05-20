@@ -151,6 +151,7 @@ use utoipa::{openapi, OpenApi};
             entity::auth_providers::AuthProviderType,
             entity::clients::Client,
             entity::colors::Colors,
+            entity::fed_cm::WebIdentity,
             entity::groups::Group,
             entity::jwk::JwkKeyPairAlg,
             entity::jwk::JwkKeyPairType,
