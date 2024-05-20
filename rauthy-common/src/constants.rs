@@ -314,6 +314,11 @@ lazy_static! {
             .parse::<u64>()
             .expect("EPHEMERAL_CLIENTS_CACHE_LIFETIME cannot be parsed to u64 - bad format");
 
+    pub static ref EXPERIMENTAL_FED_CM_ENABLE: bool = env::var("EXPERIMENTAL_FED_CM_ENABLE")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("EXPERIMENTAL_FED_CM_ENABLE cannot be parsed to bool - bad format");
+
     pub static ref REFRESH_TOKEN_LIFETIME: u16 = env::var("REFRESH_TOKEN_LIFETIME")
        .unwrap_or_else(|_| String::from("48"))
        .parse::<u16>()
