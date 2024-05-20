@@ -30,7 +30,7 @@ accept-language = "3"
 actix = "0.13"
 actix-multipart = "0.6"
 actix-service = "2"
-actix-web = { version = "4.4", features = ["rustls-0_22"] }
+actix-web = { version = "4.6", features = ["rustls-0_23"] }
 actix-web-actors = "4"
 actix-web-lab = "0.20"
 actix-web-prom = "0.8.0"
@@ -88,7 +88,7 @@ rio_api = "0.8.4"
 rio_turtle = "0.8.4"
 rsa = { version = "0.9.3", features = ["serde", "sha2"] }
 # actix_web does not have 0.23 support yet
-rustls = "0.22"
+rustls = "0.23"
 rustls-pki-types = "1.4.1"
 #rustls-pemfile = "1"
 rustls-pemfile = "2.1.2"

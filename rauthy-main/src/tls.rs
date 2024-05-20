@@ -39,6 +39,10 @@ pub async fn load_tls() -> rustls::ServerConfig {
         .map(|cert| cert.expect("Invalid TLS certificate file"))
         .collect();
 
+    rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .expect("default CryptoProvider installation to succeed");
+
     rustls::ServerConfig::builder()
         .with_no_client_auth()
         .with_single_cert(cert_chain, key)
