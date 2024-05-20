@@ -59,36 +59,21 @@ pub struct FedCMAccounts {
     pub accounts: Vec<FedCMAccount>,
 }
 
-impl FedCMAccounts {
-    pub async fn try_for_user_id(
-        data: &web::Data<AppState>,
-        user_id: String,
-    ) -> Result<Self, ErrorResponse> {
-        // We will stick to the WWW-Authenticate header for now and use duplicated code from
-        // some OAuth2 handlers for now until the spec has settled on an error behavior.
-        let user = User::find(data, user_id).await.map_err(|_| {
-            ErrorResponse::new(
-                ErrorResponseType::WWWAuthenticate("user-not-found".to_string()),
-                "The user has not been found".to_string(),
-            )
-        })?;
+#[derive(Clone, Debug, Serialize, ToSchema)]
+pub struct FedCMClientMetadata {
+    // A link to the RP's Privacy Policy.
+    pub privacy_policy_url: String,
+    // A link to the RP's Terms of Service.
+    pub terms_of_service_url: String,
+}
 
-        // reject the request if user has been disabled, even when the token is still valid
-        if !user.enabled || user.check_expired().is_err() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::WWWAuthenticate("user-disabled".to_string()),
-                "The user has been disabled".to_string(),
-            ));
+impl FedCMClientMetadata {
+    pub fn new() -> Self {
+        Self {
+            // Rauthy does not track any policy or ToS
+            privacy_policy_url: String::default(),
+            terms_of_service_url: String::default(),
         }
-
-        // TODO does it make sense to store a dedicated FedCM session during login (if not exists)
-        // to be able to do remote-logouts and track them?
-        // -> probably something with a future minor version, since it would need a DB migration
-
-        let account = FedCMAccount::from(user);
-        Ok(Self {
-            accounts: vec![account],
-        })
     }
 }
 
@@ -177,7 +162,7 @@ pub struct WebIdentity {
 impl WebIdentity {
     pub fn new(issuer: &str) -> Self {
         Self {
-            provider_urls: vec![format!("{}/fed_cm/config.json", issuer)],
+            provider_urls: vec![format!("{}/fed_cm/config", issuer)],
         }
     }
 }

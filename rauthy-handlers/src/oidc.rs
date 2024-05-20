@@ -45,6 +45,7 @@ use spow::pow::Pow;
 use std::borrow::Cow;
 use std::ops::Add;
 use std::time::{SystemTime, UNIX_EPOCH};
+use time::util::local_offset::set_soundness;
 use tracing::{debug, error};
 
 /// OIDC Authorization HTML
@@ -167,18 +168,11 @@ pub async fn get_authorize(
         }
         return Ok(HttpResponse::Ok().append_header(HEADER_HTML).body(body));
     }
-
     // check if we can re-use a still valid session or need to create a new one
     let session = if let Some(session) = &principal.session {
-        let remote_ip = if *SESSION_VALIDATE_IP {
-            Some(real_ip_from_req(&req).unwrap_or_default())
-        } else {
-            None
-        };
-        if session.is_valid(data.session_timeout, remote_ip) {
-            session.clone()
-        } else {
-            Session::new(*SESSION_LIFETIME, real_ip_from_req(&req))
+        match principal.validate_session_auth_or_init() {
+            Ok(_) => session.clone(),
+            Err(_) => Session::new(*SESSION_LIFETIME, real_ip_from_req(&req)),
         }
     } else {
         Session::new(*SESSION_LIFETIME, real_ip_from_req(&req))

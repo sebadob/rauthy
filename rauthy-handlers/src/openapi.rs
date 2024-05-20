@@ -180,6 +180,8 @@ use utoipa::{openapi, OpenApi};
             request::ColorsRequest,
             request::DeviceGrantRequest,
             request::EncKeyMigrateRequest,
+            request::FedCMAssertionRequest,
+            request::FedCMClientMetadataRequest,
             request::LoginRequest,
             request::LogoutRequest,
             request::MfaAwaitRequest,

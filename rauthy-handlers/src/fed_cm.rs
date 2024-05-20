@@ -1,15 +1,15 @@
-use actix_web::http::header;
-use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
-use actix_web::{get, web, HttpRequest, HttpResponse};
-use rauthy_common::constants::{
-    APPLICATION_JSON, COOKIE_FED_CM, EXPERIMENTAL_FED_CM_ENABLE, HEADER_ALLOW_ALL_ORIGINS,
-    HEADER_JSON,
-};
+use crate::ReqPrincipal;
+use actix_web::{get, post, web, HttpRequest, HttpResponse};
+use rauthy_common::constants::{EXPERIMENTAL_FED_CM_ENABLE, HEADER_ALLOW_ALL_ORIGINS, HEADER_JSON};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
-use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
-use rauthy_models::entity::fed_cm::{FedCMAccounts, FedCMIdPConfig, WebIdentity};
-use rauthy_models::entity::well_known::WellKnown;
+use rauthy_models::entity::clients::Client;
+use rauthy_models::entity::fed_cm::{
+    FedCMAccount, FedCMAccounts, FedCMClientMetadata, FedCMIdPConfig, WebIdentity,
+};
+use rauthy_models::entity::users::User;
+use rauthy_models::request::{FedCMAssertionRequest, FedCMClientMetadataRequest};
+use rauthy_service::token_set::{AuthCodeFlow, DeviceCodeFlow, TokenNonce, TokenSet};
 
 /// GET accounts linked to the users
 ///
@@ -19,7 +19,8 @@ use rauthy_models::entity::well_known::WellKnown;
     path = "/fed_cm/accounts",
     tag = "fed_cm",
     responses(
-        (status = 200, description = "Ok"),
+        (status = 200, description = "Ok", body = FedCMAccounts),
+        (status = 400, description = "BadRequest"),
     ),
 )]
 #[get("/fed_cm/accounts")]
@@ -30,22 +31,12 @@ pub async fn get_fed_cm_accounts(
     is_fed_cm_enabled()?;
     is_web_identity_fetch(&req)?;
 
-    // The FedCM endpoints use a special cookie instead of the usual session.
-    // This is important to be able to recognize a user for a long period of time even whe
-    // there is no active / valid session right now. The Rauthy session cookie though has a very
-    // short lifetime, which is why it can't be re-used.
-    let user_id = ApiCookie::from_req(&req, COOKIE_FED_CM).ok_or_else(|| {
-        // CAUTION: The spec does not have any clarification on how to behave if the user
-        // is not logged in or does not exist
-        // -> we assume and use the OAuth2 WWW-Authenticate header for now
-        // https://github.com/fedidcg/FedCM/issues/218
-        ErrorResponse::new(
-            ErrorResponseType::WWWAuthenticate("user-not-found".to_string()),
-            "No user found by FedCM cookie".to_string(),
-        )
-    })?;
+    let user = User::find_for_fed_cm_validated(&data, &req).await?;
 
-    let accounts = FedCMAccounts::try_for_user_id(&data, user_id).await?;
+    let account = FedCMAccount::from(user);
+    let accounts = FedCMAccounts {
+        accounts: vec![account],
+    };
     Ok(HttpResponse::Ok().json(accounts))
 }
 
@@ -56,6 +47,7 @@ pub async fn get_fed_cm_accounts(
     get,
     path = "/fed_cm/client_meta",
     tag = "fed_cm",
+    params(FedCMClientMetadataRequest),
     responses(
         (status = 200, description = "Ok"),
     ),
@@ -63,10 +55,33 @@ pub async fn get_fed_cm_accounts(
 #[get("/fed_cm/client_meta")]
 pub async fn get_fed_cm_client_meta(
     data: web::Data<AppState>,
+    req: HttpRequest,
+    params: actix_web_validator::Query<FedCMClientMetadataRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     is_fed_cm_enabled()?;
+    is_web_identity_fetch(&req)?;
 
-    todo!()
+    let params = params.into_inner();
+
+    let client = Client::find(&data, params.client_id).await?;
+    if !client.enabled {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("client-disabled".to_string()),
+            "This client has been disabled".to_string(),
+        ));
+    }
+
+    let origin_header = client
+        .validate_origin(&req, &data.listen_scheme, &data.public_url)?
+        .ok_or_else(|| {
+            ErrorResponse::new(
+                ErrorResponseType::WWWAuthenticate("origin-header-missing".to_string()),
+                "The `Origin` header is missing".to_string(),
+            )
+        })?;
+
+    let meta = FedCMClientMetadata::new();
+    Ok(HttpResponse::Ok().insert_header(origin_header).json(meta))
 }
 
 /// The FedCM IdP configuration
@@ -74,13 +89,14 @@ pub async fn get_fed_cm_client_meta(
 /// https://fedidcg.github.io/FedCM/#idp-api
 #[utoipa::path(
     get,
-    path = "/fed_cm/config.json",
+    path = "/fed_cm/config",
     tag = "fed_cm",
     responses(
-        (status = 200, description = "Ok"),
+        (status = 200, description = "Ok", body = FedCMIdPConfig),
+        (status = 400, description = "BadRequest"),
     ),
 )]
-#[get("/fed_cm/config.json")]
+#[get("/fed_cm/config")]
 pub async fn get_fed_cm_config(
     req: HttpRequest,
     data: web::Data<AppState>,
@@ -119,33 +135,105 @@ pub async fn post_fed_cm_disconnect(
 ///
 /// https://fedidcg.github.io/FedCM/#idp-api
 #[utoipa::path(
-    get,
+    post,
     path = "/fed_cm/token",
     tag = "fed_cm",
+    request_body(
+        content = FedCMAssertionRequest,
+        content_type = "application/x-www-form-urlencoded"
+    ),
     responses(
         (status = 200, description = "Ok"),
     ),
 )]
-#[get("/fed_cm/token")]
-pub async fn post_fed_cm_token(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+#[post("/fed_cm/token")]
+pub async fn post_fed_cm_token(
+    req: HttpRequest,
+    data: web::Data<AppState>,
+    payload: actix_web_validator::Form<FedCMAssertionRequest>,
+    principal: Option<ReqPrincipal>,
+) -> Result<HttpResponse, ErrorResponse> {
     is_fed_cm_enabled()?;
+    is_web_identity_fetch(&req)?;
 
-    todo!()
+    // check the active session
+    // TODO should we return the not logged in here or at /accounts? how to handle clock skew?
+    let principal = principal.ok_or_else(|| {
+        ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("not-logged-in".to_string()),
+            "No active session found".to_string(),
+        )
+    })?;
+    let session = principal.validate_session_auth().map_err(|err| {
+        ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("not-logged-in".to_string()),
+            err.message,
+        )
+    })?;
+
+    let payload = payload.into_inner();
+
+    // find and check the client
+    let client = Client::find(&data, payload.client_id).await?;
+    if !client.enabled {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("client-disabled".to_string()),
+            "This client has been disabled".to_string(),
+        ));
+    }
+
+    // TODO what about confidential clients?
+    // TODO impl a new `FedCM` flow for client's and reject if not true?
+
+    let origin_header = client
+        .validate_origin(&req, &data.listen_scheme, &data.public_url)?
+        .ok_or_else(|| {
+            ErrorResponse::new(
+                ErrorResponseType::WWWAuthenticate("origin-header-missing".to_string()),
+                "The `Origin` header is missing".to_string(),
+            )
+        })?;
+
+    // find and check the user
+    let user = User::find_for_fed_cm_validated(&data, &req).await?;
+    if payload.account_id != user.id || session.user_id.as_deref() != Some(&user.id) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("invalid-user".to_string()),
+            "The `account_id` does not match the `user_id` from the active session".to_string(),
+        ));
+    }
+
+    // We are good - issue a TokenSet
+    let nonce = if let Some(nonce) = payload.nonce {
+        Some(TokenNonce(nonce))
+    } else {
+        None
+    };
+    let ts = TokenSet::from_user(
+        &user,
+        &data,
+        &client,
+        None,
+        nonce,
+        // TODO add something like `fedcm` to the scopes? Maybe depending on new allowed flow?
+        None,
+        AuthCodeFlow::No,
+        DeviceCodeFlow::No,
+    )
+    .await?;
+
+    Ok(HttpResponse::Ok().insert_header(origin_header).json(ts))
 }
 
 /// The `.well-known` endpoint for FedCM clients
 ///
 /// https://fedidcg.github.io/FedCM/#idp-api
-///
-/// TODO from the spec, this MUST be at eTLD+1:
-/// -> not compatible with OIDC spec (<issuer>/.well-known/...)
-/// -> mention in docs - we must break out of `/auth` sub path
 #[utoipa::path(
     get,
     path = "/.well-known/web-identity",
     tag = "fed_cm",
     responses(
-        (status = 200, description = "Ok"),
+        (status = 200, description = "Ok", body = WebIdentity),
     ),
 )]
 #[get("/.well-known/web-identity")]
