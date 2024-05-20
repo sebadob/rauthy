@@ -3,7 +3,7 @@ use crate::entity::colors::ColorEntity;
 use crate::entity::users::User;
 use actix_web::web;
 use rauthy_common::constants::EMAIL_SUB_PREFIX;
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::error_response::ErrorResponse;
 use serde::Serialize;
 use std::sync::OnceLock;
 use utoipa::ToSchema;
@@ -59,7 +59,7 @@ pub struct FedCMAccounts {
     pub accounts: Vec<FedCMAccount>,
 }
 
-#[derive(Clone, Debug, Serialize, ToSchema)]
+#[derive(Clone, Debug, Default, Serialize, ToSchema)]
 pub struct FedCMClientMetadata {
     // A link to the RP's Privacy Policy.
     pub privacy_policy_url: String,
@@ -69,11 +69,12 @@ pub struct FedCMClientMetadata {
 
 impl FedCMClientMetadata {
     pub fn new() -> Self {
-        Self {
-            // Rauthy does not track any policy or ToS
-            privacy_policy_url: String::default(),
-            terms_of_service_url: String::default(),
-        }
+        // Self {
+        //     // Rauthy does not track any policy or ToS
+        //     privacy_policy_url: String::default(),
+        //     terms_of_service_url: String::default(),
+        // }
+        Self::default()
     }
 }
 
@@ -104,7 +105,7 @@ pub struct FedCMIdPBranding {
 
 impl FedCMIdPBranding {
     async fn new(data: &web::Data<AppState>) -> Result<Self, ErrorResponse> {
-        let colors = ColorEntity::find_rauthy(&data).await?;
+        let colors = ColorEntity::find_rauthy(data).await?;
         let rauthy_icon = FedCMIdPIcon::rauthy_logo(&data.issuer);
 
         Ok(Self {

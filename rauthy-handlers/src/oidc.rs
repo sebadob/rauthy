@@ -9,7 +9,7 @@ use rauthy_common::constants::{
     AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
     AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, DEVICE_GRANT_CODE_LIFETIME,
     DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT, GRANT_TYPE_DEVICE_CODE, HEADER_HTML,
-    HEADER_RETRY_NOT_BEFORE, OPEN_USER_REG, SESSION_LIFETIME, SESSION_VALIDATE_IP,
+    HEADER_RETRY_NOT_BEFORE, OPEN_USER_REG, SESSION_LIFETIME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_req;
@@ -45,7 +45,6 @@ use spow::pow::Pow;
 use std::borrow::Cow;
 use std::ops::Add;
 use std::time::{SystemTime, UNIX_EPOCH};
-use time::util::local_offset::set_soundness;
 use tracing::{debug, error};
 
 /// OIDC Authorization HTML

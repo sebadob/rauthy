@@ -197,17 +197,12 @@ pub async fn post_fed_cm_token(
     }
 
     // We are good - issue a TokenSet
-    let nonce = if let Some(nonce) = payload.nonce {
-        Some(TokenNonce(nonce))
-    } else {
-        None
-    };
     let ts = TokenSet::from_user(
         &user,
         &data,
         &client,
         None,
-        nonce,
+        payload.nonce.map(TokenNonce),
         // TODO add something like `fedcm` to the scopes? Maybe depending on new allowed flow?
         None,
         AuthCodeFlow::No,
@@ -283,17 +278,24 @@ fn client_origin_header(
     client: &Client,
 ) -> Result<(HeaderName, HeaderValue), ErrorResponse> {
     let header = if client.is_ephemeral() {
-        let origin = req.headers().get(header::ORIGIN).unwrap_or_default();
-        if &client.id != origin.to_str().unwrap_or_default() {
+        let origin = req
+            .headers()
+            .get(header::ORIGIN)
+            .map(|v| v.to_str().unwrap_or_default())
+            .unwrap_or_default();
+        if client.id != origin {
             return Err(ErrorResponse::new(
                 ErrorResponseType::WWWAuthenticate("invalid-origin".to_string()),
                 "invalid `Origin` header".to_string(),
             ));
         };
-        (header::ACCESS_CONTROL_ALLOW_ORIGIN, origin.clone())
+        (
+            header::ACCESS_CONTROL_ALLOW_ORIGIN,
+            HeaderValue::from_str(origin).unwrap(),
+        )
     } else {
         client
-            .validate_origin(&req, &data.listen_scheme, &data.public_url)?
+            .validate_origin(req, &data.listen_scheme, &data.public_url)?
             .ok_or_else(|| {
                 ErrorResponse::new(
                     ErrorResponseType::WWWAuthenticate("origin-header-missing".to_string()),

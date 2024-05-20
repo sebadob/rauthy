@@ -1,4 +1,3 @@
-use crate::api_cookie::ApiCookie;
 use crate::app_state::{AppState, Argon2Params, DbTxn};
 use crate::email::{send_email_change_info_new, send_email_confirm_change, send_pwd_reset};
 use crate::entity::colors::ColorEntity;
