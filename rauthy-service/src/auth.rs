@@ -741,17 +741,22 @@ pub async fn get_userinfo(
         }
 
         // make sure the original client still exists and is enabled
-        let client = Client::find(data, claims.custom.azp).await.map_err(|_| {
-            ErrorResponse::new(
-                ErrorResponseType::WWWAuthenticate("client-not-found".to_string()),
-                "The client has not been found".to_string(),
-            )
-        })?;
-        if !client.enabled {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::WWWAuthenticate("client-disabled".to_string()),
-                "The client has been disabled".to_string(),
-            ));
+        // skip this check if the client is ephemeral
+        if !(claims.custom.azp.starts_with("http://") || claims.custom.azp.starts_with("https://"))
+        {
+            let client = Client::find(data, claims.custom.azp).await.map_err(|_| {
+                ErrorResponse::new(
+                    ErrorResponseType::WWWAuthenticate("client-not-found".to_string()),
+                    "The client has not been found".to_string(),
+                )
+            })?;
+
+            if !client.enabled {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::WWWAuthenticate("client-disabled".to_string()),
+                    "The client has been disabled".to_string(),
+                ));
+            }
         }
     }
 
