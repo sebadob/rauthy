@@ -201,7 +201,7 @@ pub struct EncKeyMigrateRequest {
 pub struct EphemeralClientRequest {
     #[validate(regex(
         path = "RE_CLIENT_ID_EPHEMERAL",
-        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
     pub client_id: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`

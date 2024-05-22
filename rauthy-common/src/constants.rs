@@ -113,7 +113,7 @@ lazy_static! {
     pub static ref RE_BASE64: Regex = Regex::new(r"^[a-zA-Z0-9+/=]{4}$").unwrap();
     pub static ref RE_CHALLENGE: Regex = Regex::new(r"^(plain|S256)$").unwrap();
     pub static ref RE_CITY: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-]{0,48}$").unwrap();
-    pub static ref RE_CLIENT_ID_EPHEMERAL: Regex = Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$").unwrap();
+    pub static ref RE_CLIENT_ID_EPHEMERAL: Regex = Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,256}$").unwrap();
     pub static ref RE_CLIENT_NAME: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-\s]{2,128}$").unwrap();
     pub static ref RE_CODE_CHALLENGE: Regex = Regex::new(r"^[a-zA-Z0-9-\._~]{43,128}$").unwrap();
     pub static ref RE_CODE_VERIFIER: Regex = Regex::new(r"^[a-zA-Z0-9-\._~+/=]+$").unwrap();
