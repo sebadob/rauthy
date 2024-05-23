@@ -376,10 +376,10 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("2592000"))
         .parse::<i64>()
         .expect("SESSION_LIFETIME_FED_CM cannot be parsed to i64 - bad format");
-    pub static ref SESSION_TIMEOUT_FED_CM: i64 = env::var("SESSION_TIMEOUT_FED_CM")
+    pub static ref SESSION_TIMEOUT_FED_CM: u32 = env::var("SESSION_TIMEOUT_FED_CM")
         .unwrap_or_else(|_| String::from("259200"))
-        .parse::<i64>()
-        .expect("SESSION_TIMEOUT_FED_CM cannot be parsed to i64 - bad format");
+        .parse::<u32>()
+        .expect("SESSION_TIMEOUT_FED_CM cannot be parsed to u32 - bad format");
 
     pub static ref SESSION_LIFETIME: u32 = env::var("SESSION_LIFETIME")
         .unwrap_or_else(|_| String::from("14400"))

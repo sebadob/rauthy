@@ -1,14 +1,20 @@
-use crate::ReqPrincipal;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
-use rauthy_common::constants::{EXPERIMENTAL_FED_CM_ENABLE, HEADER_ALLOW_ALL_ORIGINS, HEADER_JSON};
+use rauthy_common::constants::{
+    COOKIE_SESSION_FED_CM, COOKIE_USER, EXPERIMENTAL_FED_CM_ENABLE, HEADER_ALLOW_ALL_ORIGINS,
+    HEADER_JSON, SESSION_TIMEOUT_FED_CM,
+};
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::real_ip_from_req;
+use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::fed_cm::{
-    FedCMAccount, FedCMAccounts, FedCMClientMetadata, FedCMIdPConfig, WebIdentity,
+    FedCMAccount, FedCMAccounts, FedCMClientMetadata, FedCMIdPConfig, FedCMLoginStatus,
+    FedCMTokenResponse, WebIdentity,
 };
+use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::request::{FedCMAssertionRequest, FedCMClientMetadataRequest};
 use rauthy_models::ListenScheme;
@@ -33,14 +39,39 @@ const HEADER_ALLOW_CREDENTIALS: (&str, &str) = ("access-control-allow-credential
 pub async fn get_fed_cm_accounts(
     req: HttpRequest,
     data: web::Data<AppState>,
-    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     is_fed_cm_enabled()?;
     is_web_identity_fetch(&req)?;
 
-    let session = principal.validate_session_auth()?;
-    let user =
-        User::find_for_fed_cm_validated(&data, session.user_id.clone().unwrap_or_default()).await?;
+    let user_id = user_id_from_req(&req)?;
+    match ApiCookie::from_req(&req, COOKIE_SESSION_FED_CM) {
+        None => {
+            return Ok(HttpResponse::Unauthorized()
+                .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
+                .json(FedCMAccounts {
+                    accounts: Vec::default(),
+                }));
+        }
+        Some(sid) => {
+            let session = Session::find(&data, sid).await?;
+            if !session.is_valid(*SESSION_TIMEOUT_FED_CM, real_ip_from_req(&req)) {
+                return Ok(HttpResponse::Unauthorized()
+                    .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
+                    .json(FedCMAccounts {
+                        accounts: Vec::default(),
+                    }));
+            }
+
+            if session.user_id.as_deref() != Some(&user_id) {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Internal,
+                    "Invalid user_id for linked session found".to_string(),
+                ));
+            }
+        }
+    };
+
+    let user = User::find_for_fed_cm_validated(&data, user_id).await?;
 
     let clients = Client::find_all(&data)
         .await?
@@ -52,7 +83,9 @@ pub async fn get_fed_cm_accounts(
     let accounts = FedCMAccounts {
         accounts: vec![account],
     };
-    Ok(HttpResponse::Ok().json(accounts))
+    Ok(HttpResponse::Ok()
+        .insert_header(FedCMLoginStatus::LoggedIn.as_header_pair())
+        .json(accounts))
 }
 
 /// GET metadata for the FedCM client
@@ -172,18 +205,37 @@ pub async fn post_fed_cm_token(
     req: HttpRequest,
     data: web::Data<AppState>,
     payload: actix_web_validator::Form<FedCMAssertionRequest>,
-    principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     is_fed_cm_enabled()?;
     is_web_identity_fetch(&req)?;
 
-    // check the active session
-    let session = principal.validate_session_auth().map_err(|err| {
-        ErrorResponse::new(
-            ErrorResponseType::WWWAuthenticate("not-logged-in".to_string()),
-            err.message,
-        )
-    })?;
+    let user_id = user_id_from_req(&req)?;
+    match ApiCookie::from_req(&req, COOKIE_SESSION_FED_CM) {
+        None => {
+            return Ok(HttpResponse::Unauthorized()
+                .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
+                .json(FedCMAccounts {
+                    accounts: Vec::default(),
+                }));
+        }
+        Some(sid) => {
+            let session = Session::find(&data, sid).await?;
+            if !session.is_valid(*SESSION_TIMEOUT_FED_CM, real_ip_from_req(&req)) {
+                return Ok(HttpResponse::Unauthorized()
+                    .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
+                    .json(FedCMAccounts {
+                        accounts: Vec::default(),
+                    }));
+            }
+
+            if session.user_id.as_deref() != Some(&user_id) {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Internal,
+                    "Invalid user_id for linked session found".to_string(),
+                ));
+            }
+        }
+    };
 
     let payload = payload.into_inner();
 
@@ -202,9 +254,8 @@ pub async fn post_fed_cm_token(
     let origin_header = client_origin_header(&data, &req, &client)?;
 
     // find and check the user
-    let user =
-        User::find_for_fed_cm_validated(&data, session.user_id.clone().unwrap_or_default()).await?;
-    if payload.account_id != user.id || session.user_id.as_deref() != Some(&user.id) {
+    let user = User::find_for_fed_cm_validated(&data, user_id).await?;
+    if payload.account_id != user.id {
         return Err(ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("invalid-user".to_string()),
             "The `account_id` does not match the `user_id` from the active session".to_string(),
@@ -228,7 +279,10 @@ pub async fn post_fed_cm_token(
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_ALLOW_CREDENTIALS)
         .insert_header(origin_header)
-        .json(ts))
+        .insert_header(FedCMLoginStatus::LoggedIn.as_header_pair())
+        .json(FedCMTokenResponse {
+            token: ts.id_token.unwrap(),
+        }))
 }
 
 /// The `.well-known` endpoint for FedCM clients
@@ -349,4 +403,14 @@ fn client_origin_header(
     };
 
     Ok(header)
+}
+
+#[inline(always)]
+fn user_id_from_req(req: &HttpRequest) -> Result<String, ErrorResponse> {
+    ApiCookie::from_req(req, COOKIE_USER).ok_or_else(|| {
+        ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("user-does-not-exist".to_string()),
+            "No Rauthy User cookie found".to_string(),
+        )
+    })
 }

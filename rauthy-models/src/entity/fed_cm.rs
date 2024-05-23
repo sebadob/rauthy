@@ -60,6 +60,11 @@ pub struct FedCMAccounts {
     pub accounts: Vec<FedCMAccount>,
 }
 
+#[derive(Clone, Debug, Serialize, ToSchema)]
+pub struct FedCMTokenResponse {
+    pub token: String,
+}
+
 #[derive(Clone, Debug, Default, Serialize, ToSchema)]
 pub struct FedCMClientMetadata {
     // A link to the RP's Privacy Policy.
@@ -172,7 +177,7 @@ impl FedCMLoginStatus {
         }
     }
 
-    pub fn into_header_pair(&self) -> (&str, &str) {
+    pub fn as_header_pair(&self) -> (&str, &str) {
         ("Set-Login", self.as_str())
     }
 }
