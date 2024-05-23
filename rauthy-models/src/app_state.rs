@@ -99,15 +99,15 @@ impl AppState {
 
         // Argon2id config
         let argon2_m_cost = env::var("ARGON2_M_COST")
-            .unwrap_or_else(|_| String::from("32768"))
+            .unwrap_or_else(|_| String::from("131072"))
             .parse::<u32>()
             .expect("Could not parse ARGON2_M_COST value");
         let argon2_t_cost = env::var("ARGON2_T_COST")
-            .unwrap_or_else(|_| String::from("3"))
+            .unwrap_or_else(|_| String::from("4"))
             .parse::<u32>()
             .expect("Could not parse ARGON2_T_COST value");
         let argon2_p_cost = env::var("ARGON2_P_COST")
-            .unwrap_or_else(|_| String::from("1"))
+            .unwrap_or_else(|_| String::from("8"))
             .parse::<u32>()
             .expect("Could not parse ARGON2_P_COST value");
         let params = argon2::Params::new(argon2_m_cost, argon2_t_cost, argon2_p_cost, None)
