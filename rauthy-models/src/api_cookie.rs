@@ -16,6 +16,19 @@ impl ApiCookie {
         N: Into<Cow<'c, str>> + Display,
         V: Into<Cow<'b, str>> + Display,
     {
+        Self::build_with_same_site(name, value, max_age, SameSite::Lax)
+    }
+
+    pub fn build_with_same_site<'c, 'b, N, V>(
+        name: N,
+        value: V,
+        max_age: i64,
+        same_site: SameSite,
+    ) -> Cookie<'c>
+    where
+        N: Into<Cow<'c, str>> + Display,
+        V: Into<Cow<'b, str>> + Display,
+    {
         let path = if *COOKIE_SET_PATH { "/auth" } else { "/" };
         let (name, secure, path) = match *COOKIE_MODE {
             CookieMode::Host => (format!("__Host-{}", name), true, "/"),
@@ -39,7 +52,7 @@ impl ApiCookie {
         Cookie::build(name, value_b64)
             .secure(secure)
             .http_only(true)
-            .same_site(SameSite::Lax)
+            .same_site(same_site)
             .max_age(max_age)
             .path(path)
             .finish()
