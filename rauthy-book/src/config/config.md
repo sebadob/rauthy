@@ -582,11 +582,11 @@ ENC_KEY_ACTIVE=bVCyTsGaggVy5yqQ
 # for more information:
 # https://sebadob.github.io/rauthy/config/argon2.html
 # M_COST should never be below 32768 in production
-ARGON2_M_COST=32768
+ARGON2_M_COST=131072
 # T_COST should never be below 1 in production
-ARGON2_T_COST=3
+ARGON2_T_COST=4
 # P_COST should never be below 2 in production
-ARGON2_P_COST=2
+ARGON2_P_COST=8
 
 # Limits the maximum amount of parallel password hashes at
 # the exact same time to never exceed system memory while
@@ -594,8 +594,8 @@ ARGON2_P_COST=2
 # algorithm (default: 2)
 #
 # CAUTION: You must make sure, that you have at least
-# (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + ~30 MB of memory
-# available.
+# (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + idle memory
+# of your deployment available
 MAX_HASH_THREADS=1
 
 # The time in ms when to log a warning, if a request waited
