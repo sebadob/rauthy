@@ -8,7 +8,6 @@
 
 ## Stage 2 - features - do before v1.0.0
 
-- migrate from `rusty_s3` to `s3_simple` to get rid of presigned URLs
 - prettify the UI
 - check out the possibility to include SCIM
 - update the book with all the new features
@@ -22,8 +21,6 @@
 
 ### `rauthy-client` TODO's
 
-- automatic `refresh_token` handler for `device_code` grant flow
-- add `fetch_userinfo()` for a `PrincipalOidc`
 - when implementing userinfo lookup, add an fn to validate the `at_hash` as well
 
 ## Stage 3 - Possible nice to haves

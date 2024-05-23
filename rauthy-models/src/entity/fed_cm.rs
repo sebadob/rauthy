@@ -33,8 +33,8 @@ pub struct FedCMAccount {
     pub domain_hints: Vec<String>,
 }
 
-impl From<User> for FedCMAccount {
-    fn from(user: User) -> Self {
+impl FedCMAccount {
+    pub fn build(user: User, clients: Vec<String>) -> Self {
         let name = format!("{} {}", user.given_name, user.family_name);
         let login_hint = format!("login_hint={}", user.email);
 
@@ -45,10 +45,10 @@ impl From<User> for FedCMAccount {
             given_name: Some(user.given_name),
             // Rauthy does not store user pictures
             picture: None,
-            // TODO how should we decide which clients to return here?
+            // TODO how should we decide which clients to return here? How to make this dynamic?
             // simply all of them? Or introduce a new flow to allow fedCm and filter?
-            approved_clients: vec![],
-            login_hints: vec![login_hint],
+            approved_clients: clients,
+            login_hints: vec![login_hint, "state=fedcm".to_string()],
             // Rauthy does not use such a value
             domain_hints: vec![],
         }

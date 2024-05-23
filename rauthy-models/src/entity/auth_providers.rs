@@ -936,6 +936,7 @@ impl AuthProviderCallback {
         } else {
             AuthStep::LoggedIn(AuthStepLoggedIn {
                 has_password_been_hashed: false,
+                user_id: user.id,
                 email: user.email,
                 header_loc: (header::LOCATION, HeaderValue::from_str(&loc).unwrap()),
                 header_csrf: Session::get_csrf_header(&session.csrf_token),

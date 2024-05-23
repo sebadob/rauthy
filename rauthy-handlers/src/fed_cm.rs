@@ -42,7 +42,13 @@ pub async fn get_fed_cm_accounts(
     let user =
         User::find_for_fed_cm_validated(&data, session.user_id.clone().unwrap_or_default()).await?;
 
-    let account = FedCMAccount::from(user);
+    let clients = Client::find_all(&data)
+        .await?
+        .into_iter()
+        .filter_map(|c| (c.id != "rauthy").then_some(c.id))
+        .collect::<Vec<String>>();
+
+    let account = FedCMAccount::build(user, clients);
     let accounts = FedCMAccounts {
         accounts: vec![account],
     };
@@ -71,6 +77,13 @@ pub async fn get_fed_cm_client_meta(
     is_web_identity_fetch(&req)?;
 
     let params = params.into_inner();
+
+    if &params.client_id == "rauthy" {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("client-forbidden".to_string()),
+            "The 'rauthy' client is forbidden to be used with FedCM".to_string(),
+        ));
+    }
 
     let client = Client::find(&data, params.client_id).await?;
     if !client.enabled {

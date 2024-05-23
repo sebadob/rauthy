@@ -8,8 +8,8 @@ use rauthy_common::constants::{
     APPLICATION_JSON, AUTH_HEADERS_ENABLE, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED,
     AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
     AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, DEVICE_GRANT_CODE_LIFETIME,
-    DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT, GRANT_TYPE_DEVICE_CODE, HEADER_HTML,
-    HEADER_RETRY_NOT_BEFORE, OPEN_USER_REG, SESSION_LIFETIME,
+    DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT, EXPERIMENTAL_FED_CM_ENABLE,
+    GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE, OPEN_USER_REG, SESSION_LIFETIME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_req;
@@ -201,10 +201,19 @@ pub async fn get_authorize(
             .insert_header(HEADER_HTML)
             .body(body));
     }
-    Ok(HttpResponse::build(StatusCode::OK)
-        .cookie(cookie)
-        .insert_header(HEADER_HTML)
-        .body(body))
+
+    if *EXPERIMENTAL_FED_CM_ENABLE {
+        Ok(HttpResponse::build(StatusCode::OK)
+            .cookie(session.client_cookie_fed_cm())
+            .cookie(cookie)
+            .insert_header(HEADER_HTML)
+            .body(body))
+    } else {
+        Ok(HttpResponse::build(StatusCode::OK)
+            .cookie(cookie)
+            .insert_header(HEADER_HTML)
+            .body(body))
+    }
 }
 
 /// POST login credentials to proceed with the authorization_code flow
@@ -235,7 +244,7 @@ pub async fn get_authorize(
 pub async fn post_authorize(
     data: web::Data<AppState>,
     req: HttpRequest,
-    req_data: actix_web_validator::Json<LoginRequest>,
+    payload: actix_web_validator::Json<LoginRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
@@ -244,7 +253,7 @@ pub async fn post_authorize(
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
 
     let session = principal.get_session()?;
-    let res = match auth::authorize(&data, &req, req_data.into_inner(), session.clone()).await {
+    let res = match auth::authorize(&data, &req, payload.into_inner(), session.clone()).await {
         Ok(auth_step) => map_auth_step(auth_step, &req).await,
         Err(err) => Err(err),
     };
@@ -693,7 +702,14 @@ pub async fn post_session(
         state: session.state.clone(),
     };
 
-    Ok(HttpResponse::Created().cookie(cookie).json(info))
+    if *EXPERIMENTAL_FED_CM_ENABLE {
+        Ok(HttpResponse::Created()
+            .cookie(cookie)
+            .cookie(session.client_cookie_fed_cm())
+            .json(info))
+    } else {
+        Ok(HttpResponse::Created().cookie(cookie).json(info))
+    }
 }
 
 /// OIDC sessioninfo

@@ -3,7 +3,7 @@ use crate::app_state::AppState;
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
 use crate::request::SearchParamsIdx;
-use actix_web::cookie::{time, Cookie};
+use actix_web::cookie::{time, Cookie, SameSite};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{cookie, web, HttpRequest};
 use chrono::Utc;
@@ -542,6 +542,16 @@ impl Session {
     pub fn client_cookie(&self) -> cookie::Cookie {
         let max_age = self.exp - Utc::now().timestamp();
         ApiCookie::build(COOKIE_SESSION, Cow::from(&self.id), max_age)
+    }
+
+    pub fn client_cookie_fed_cm(&self) -> cookie::Cookie {
+        let max_age = self.exp - Utc::now().timestamp();
+        ApiCookie::build_with_same_site(
+            COOKIE_SESSION,
+            Cow::from(&self.id),
+            max_age,
+            SameSite::None,
+        )
     }
 
     pub fn extract_from_req(
