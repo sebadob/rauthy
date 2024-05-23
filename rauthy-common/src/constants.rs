@@ -369,18 +369,17 @@ lazy_static! {
 
     pub static ref DPOP_NONCE_EXP: u32 = env::var("DPOP_NONCE_EXP")
         .unwrap_or_else(|_| String::from("900"))
-        // parsing to u32 to be able to typecast to i64 for chrono safely
         .parse::<u32>()
         .expect("DPOP_NONCE_EXP cannot be parsed to u32 - bad format");
 
-    pub static ref SESSION_LIFETIME_FED_CM: u32 = env::var("SESSION_LIFETIME_FED_CM")
+    pub static ref SESSION_LIFETIME_FED_CM: i64 = env::var("SESSION_LIFETIME_FED_CM")
         .unwrap_or_else(|_| String::from("2592000"))
-        .parse::<u32>()
-        .expect("SESSION_LIFETIME_FED_CM cannot be parsed to u32 - bad format");
-    pub static ref SESSION_TIMEOUT_FED_CM: u32 = env::var("SESSION_TIMEOUT_FED_CM")
+        .parse::<i64>()
+        .expect("SESSION_LIFETIME_FED_CM cannot be parsed to i64 - bad format");
+    pub static ref SESSION_TIMEOUT_FED_CM: i64 = env::var("SESSION_TIMEOUT_FED_CM")
         .unwrap_or_else(|_| String::from("259200"))
-        .parse::<u32>()
-        .expect("SESSION_TIMEOUT_FED_CM cannot be parsed to u32 - bad format");
+        .parse::<i64>()
+        .expect("SESSION_TIMEOUT_FED_CM cannot be parsed to i64 - bad format");
 
     pub static ref SESSION_LIFETIME: u32 = env::var("SESSION_LIFETIME")
         .unwrap_or_else(|_| String::from("14400"))
