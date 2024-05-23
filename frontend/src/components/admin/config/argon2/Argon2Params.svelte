@@ -66,9 +66,7 @@
                 1GB. If you can sacrifice 4GB, give it 4GB.
             </p>
             <p>
-                <b>Important: You should never go below an <code>m_cost</code> of <code>32768</code></b>, which means
-                rauthy will
-                by default use at least 32MiB of memory when hashing a single password.
+                <b>Important: You should never go below an <code>m_cost</code> of <code>32768</code></b>.
             </p>
         </li>
 
@@ -76,15 +74,13 @@
             <b>p cost</b>
             <p>
                 The <code>p_cost</code> defines the amount of <b>parallelism</b> for hashing.<br>
-                Again, the higher the value, the better. The <code>p_cost</code> is basically predefined by the backend
-                / server
-                rauthy is running on.<br>
+                This value most often tops out at ~8, which is the default for Rauthy.<br>
                 <code>p_cost</code> does not affect the time needed for the calculation, if the resources are available.
             </p>
             <p>
                 The general rule is:<br>
                 Set the <code>p_cost</code> to twice the size of cores your have available.<br>
-                For instance, if you have 4 cores available, set the <code>p_cost</code> to <code>8</code>.
+                For instance, if you have 4 cores available, set the <code>p_cost</code> to <code>8</code>.<br>
             </p>
         </li>
 
@@ -94,7 +90,7 @@
                 The <code>t_cost</code> defines the amount of <b>time</b> for hashing.<br>
                 This value is actually the only one, that needs tuning, since <code>m_cost</code> and
                 <code>p_cost</code> are
-                basically defined by the environment.
+                basically given by the environment.
             </p>
             <p>
                 Tuning is easy: Set <code>m_cost</code> and <code>p_cost</code> accordingly and then increase <code>t_cost</code>
