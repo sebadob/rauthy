@@ -2,6 +2,7 @@
 
 #![forbid(unsafe_code)]
 
+use actix_web::cookie::SameSite;
 use actix_web::{web, HttpRequest, HttpResponse};
 use rauthy_common::constants::{COOKIE_MFA, COOKIE_USER, USER_COOKIE_LIFETIME};
 use rauthy_common::error_response::ErrorResponse;
@@ -47,7 +48,12 @@ pub async fn map_auth_step(
 ) -> Result<(HttpResponse, bool), (ErrorResponse, bool)> {
     match auth_step {
         AuthStep::LoggedIn(res) => {
-            let cookie_user = ApiCookie::build(COOKIE_USER, &res.user_id, *USER_COOKIE_LIFETIME);
+            let cookie_user = ApiCookie::build_with_same_site(
+                COOKIE_USER,
+                &res.user_id,
+                *USER_COOKIE_LIFETIME,
+                SameSite::None,
+            );
 
             let mut resp = HttpResponse::Accepted()
                 .cookie(cookie_user)
@@ -61,7 +67,12 @@ pub async fn map_auth_step(
         }
 
         AuthStep::AwaitWebauthn(res) => {
-            let cookie_user = ApiCookie::build(COOKIE_USER, &res.user_id, *USER_COOKIE_LIFETIME);
+            let cookie_user = ApiCookie::build_with_same_site(
+                COOKIE_USER,
+                &res.user_id,
+                *USER_COOKIE_LIFETIME,
+                SameSite::None,
+            );
 
             let body = WebauthnLoginResponse {
                 code: res.code,
