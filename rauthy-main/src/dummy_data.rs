@@ -1,0 +1,49 @@
+use actix_web::web;
+use rauthy_common::error_response::ErrorResponse;
+use rauthy_common::utils::get_rand;
+use rauthy_models::{app_state::AppState, entity::users::User, language::Language};
+use std::time::Duration;
+use tracing::info;
+
+pub async fn insert_dummy_data(
+    app_state: web::Data<AppState>,
+    amount: u32,
+) -> Result<(), ErrorResponse> {
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    info!(
+        r#"
+
+Preparing to insert dummy data into the Database.
+CAUTION: Do not do this on a production database!
+Will go on in 10 seconds...
+        "#
+    );
+    tokio::time::sleep(Duration::from_secs(10)).await;
+    info!("Generating and inserting dummy data now");
+
+    // for now, this will simply generate users equal to the given amount with some random values
+    // and insert them into the database
+
+    // TODO in the future, this can be extended with a handful of groups and roles the users can
+    // be randomly assigned to, as well as maybe scope clients and scopes to have more data to
+    // play with
+
+    let rnd = get_rand(4);
+
+    for i in 0..amount {
+        let user = User {
+            email: format!("dummy_{}_{}@rauthy.local", rnd, i),
+            email_verified: false,
+            given_name: format!("given {}", i),
+            family_name: format!("family {}", i),
+            language: Language::En,
+            groups: None,
+            roles: String::default(),
+            user_expires: None,
+            ..Default::default()
+        };
+        User::insert(&app_state, user).await?;
+    }
+
+    Ok(())
+}

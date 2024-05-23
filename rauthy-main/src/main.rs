@@ -50,6 +50,7 @@ use crate::cache_notify::handle_notify;
 use crate::logging::setup_logging;
 
 mod cache_notify;
+mod dummy_data;
 mod logging;
 mod schedulers;
 mod tls;
@@ -324,6 +325,18 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
             error!("{}", e);
         })
     });
+
+    if args.len() > 1 && args[1] == "dummy-data" {
+        let amount = if args.len() > 2 {
+            args[2].parse::<u32>().unwrap_or(100_000)
+        } else {
+            100_000
+        };
+        tokio::spawn(crate::dummy_data::insert_dummy_data(
+            app_state.clone(),
+            amount,
+        ));
+    }
 
     actix.join().unwrap().unwrap();
     app_state.caches.ha_cache_config.shutdown().await.unwrap();
