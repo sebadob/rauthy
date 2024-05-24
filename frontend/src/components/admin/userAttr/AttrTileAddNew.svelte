@@ -29,7 +29,7 @@
     async function onSubmit() {
         const valid = await validateForm();
         if (!valid) {
-            return;path = "RE_CLIENT_ID_EPHEMERAL",
+            return;
         }
         err = '';
         isLoading = true;
