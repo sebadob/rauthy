@@ -524,6 +524,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(generic::get_admin_sessions_html)
                             .service(generic::get_admin_users_html)
                             .service(generic::get_device_html)
+                            .service(generic::get_fed_cm_html)
                             .service(generic::get_auth_check)
                             .service(generic::get_auth_check_admin)
                             .service(generic::post_i18n)

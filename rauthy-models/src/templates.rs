@@ -235,6 +235,56 @@ impl DeviceHtml<'_> {
     }
 }
 
+#[derive(Default, Template)]
+#[template(path = "html/fedcm.html")]
+pub struct FedCMHtml<'a> {
+    pub lang: &'a str,
+    pub csrf_token: &'a str,
+    pub data: &'a str,
+    pub action: bool,
+    pub col_act1: &'a str,
+    pub col_act1a: &'a str,
+    pub col_act2: &'a str,
+    pub col_act2a: &'a str,
+    pub col_acnt: &'a str,
+    pub col_acnta: &'a str,
+    pub col_ok: &'a str,
+    pub col_err: &'a str,
+    pub col_glow: &'a str,
+    pub col_gmid: &'a str,
+    pub col_ghigh: &'a str,
+    pub col_text: &'a str,
+    pub col_bg: &'a str,
+    pub i18n: String,
+    pub auth_providers: &'a str,
+}
+
+impl FedCMHtml<'_> {
+    pub fn build(colors: &Colors) -> String {
+        let res = FedCMHtml {
+            lang: "en",
+            csrf_token: "",
+            data: &DEVICE_GRANT_USER_CODE_LENGTH.to_string(),
+            col_act1: &colors.act1,
+            col_act1a: &colors.act1a,
+            col_act2: &colors.act2,
+            col_act2a: &colors.act2a,
+            col_acnt: &colors.acnt,
+            col_acnta: &colors.acnta,
+            col_ok: &colors.ok,
+            col_err: &colors.err,
+            col_glow: &colors.glow,
+            col_gmid: &colors.gmid,
+            col_ghigh: &colors.ghigh,
+            col_text: &colors.text,
+            col_bg: &colors.bg,
+            ..Default::default()
+        };
+
+        res.render().unwrap()
+    }
+}
+
 #[derive(Debug, Default, Template)]
 #[template(path = "html/error.html")]
 pub struct ErrorHtml<'a> {
