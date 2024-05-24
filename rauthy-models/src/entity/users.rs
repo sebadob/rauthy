@@ -35,7 +35,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{query_as, FromRow};
 use std::ops::Add;
 use time::OffsetDateTime;
-use tracing::{error, trace, warn};
+use tracing::{debug, error, trace, warn};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccountType {
@@ -365,7 +365,9 @@ impl User {
     ) -> Result<Self, ErrorResponse> {
         // We will stick to the WWW-Authenticate header for now and use duplicated code from
         // some OAuth2 handlers for now until the spec has settled on an error behavior.
+        debug!("Logging up FedCM user_id {}", user_id);
         let slf = Self::find(data, user_id).await.map_err(|_| {
+            debug!("FedCM user not found");
             ErrorResponse::new(
                 ErrorResponseType::WWWAuthenticate("user-not-found".to_string()),
                 "The user has not been found".to_string(),
@@ -374,6 +376,7 @@ impl User {
 
         // reject the request if user has been disabled, even when the token is still valid
         if !slf.enabled || slf.check_expired().is_err() {
+            debug!("FedCM user is disabled");
             return Err(ErrorResponse::new(
                 ErrorResponseType::WWWAuthenticate("user-disabled".to_string()),
                 "The user has been disabled".to_string(),

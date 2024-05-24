@@ -36,6 +36,7 @@ const HEADER_ALLOW_CREDENTIALS: (&str, &str) = ("access-control-allow-credential
     ),
 )]
 #[get("/fed_cm/accounts")]
+#[tracing::instrument(level = "debug", skip_all)]
 pub async fn get_fed_cm_accounts(
     req: HttpRequest,
     data: web::Data<AppState>,
@@ -46,6 +47,10 @@ pub async fn get_fed_cm_accounts(
     let user_id = user_id_from_req(&req)?;
     match ApiCookie::from_req(&req, COOKIE_SESSION_FED_CM) {
         None => {
+            debug!(
+                "FedCM session cookie not found -> user_id {} is logged-out",
+                user_id
+            );
             return Ok(HttpResponse::Unauthorized()
                 .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
                 .json(FedCMAccounts {
@@ -55,6 +60,10 @@ pub async fn get_fed_cm_accounts(
         Some(sid) => {
             let session = Session::find(&data, sid).await?;
             if !session.is_valid(*SESSION_TIMEOUT_FED_CM, real_ip_from_req(&req)) {
+                debug!(
+                    "FedCM session is invalid -> user_id {} is logged-out",
+                    user_id
+                );
                 return Ok(HttpResponse::Unauthorized()
                     .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
                     .json(FedCMAccounts {
@@ -63,6 +72,11 @@ pub async fn get_fed_cm_accounts(
             }
 
             if session.user_id.as_deref() != Some(&user_id) {
+                debug!(
+                    "session.user_id.as_deref() != Some(&user_id) -> {:?} != {:?}",
+                    session.user_id,
+                    Some(&user_id)
+                );
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Internal,
                     "Invalid user_id for linked session found".to_string(),
@@ -101,6 +115,7 @@ pub async fn get_fed_cm_accounts(
     ),
 )]
 #[get("/fed_cm/client_meta")]
+#[tracing::instrument(level = "debug", skip_all, fields(client_id = params.client_id))]
 pub async fn get_fed_cm_client_meta(
     data: web::Data<AppState>,
     req: HttpRequest,
@@ -147,6 +162,7 @@ pub async fn get_fed_cm_client_meta(
     ),
 )]
 #[get("/fed_cm/config")]
+#[tracing::instrument(level = "debug", skip_all)]
 pub async fn get_fed_cm_config(
     req: HttpRequest,
     data: web::Data<AppState>,
@@ -201,6 +217,7 @@ pub async fn get_fed_cm_config(
     ),
 )]
 #[post("/fed_cm/token")]
+#[tracing::instrument(level = "debug", skip_all, fields(client_id = payload.client_id))]
 pub async fn post_fed_cm_token(
     req: HttpRequest,
     data: web::Data<AppState>,
@@ -212,6 +229,10 @@ pub async fn post_fed_cm_token(
     let user_id = user_id_from_req(&req)?;
     match ApiCookie::from_req(&req, COOKIE_SESSION_FED_CM) {
         None => {
+            debug!(
+                "FedCM session cookie not found -> user_id {} is logged-out",
+                user_id
+            );
             return Ok(HttpResponse::Unauthorized()
                 .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
                 .json(FedCMAccounts {
@@ -221,6 +242,10 @@ pub async fn post_fed_cm_token(
         Some(sid) => {
             let session = Session::find(&data, sid).await?;
             if !session.is_valid(*SESSION_TIMEOUT_FED_CM, real_ip_from_req(&req)) {
+                debug!(
+                    "FedCM session is invalid -> user_id {} is logged-out",
+                    user_id
+                );
                 return Ok(HttpResponse::Unauthorized()
                     .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
                     .json(FedCMAccounts {
@@ -229,6 +254,11 @@ pub async fn post_fed_cm_token(
             }
 
             if session.user_id.as_deref() != Some(&user_id) {
+                debug!(
+                    "session.user_id.as_deref() != Some(&user_id) -> {:?} != {:?}",
+                    session.user_id,
+                    Some(&user_id)
+                );
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Internal,
                     "Invalid user_id for linked session found".to_string(),
@@ -242,6 +272,7 @@ pub async fn post_fed_cm_token(
     // find and check the client
     let client = Client::find_maybe_ephemeral(&data, payload.client_id).await?;
     if !client.enabled {
+        debug!("client {} is disabled", client.id);
         return Err(ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("client-disabled".to_string()),
             "This client has been disabled".to_string(),
@@ -256,6 +287,10 @@ pub async fn post_fed_cm_token(
     // find and check the user
     let user = User::find_for_fed_cm_validated(&data, user_id).await?;
     if payload.account_id != user.id {
+        debug!(
+            "payload.account_id != user.id -> {} != {}",
+            payload.account_id, user.id
+        );
         return Err(ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("invalid-user".to_string()),
             "The `account_id` does not match the `user_id` from the active session".to_string(),
@@ -334,6 +369,7 @@ fn is_web_identity_fetch(req: &HttpRequest) -> Result<(), ErrorResponse> {
     {
         Ok(())
     } else {
+        debug!("`Sec-Fetch-Dest: webidentity` not set`");
         Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "Expected header `Sec-Fetch-Dest: webidentity`".to_string(),
@@ -351,6 +387,7 @@ fn client_origin_header(
         .get(header::ORIGIN)
         .map(|v| v.to_str().unwrap_or_default())
         .ok_or_else(|| {
+            debug!("Origin header is missing");
             ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Origin header is missing".to_string(),
@@ -363,6 +400,7 @@ fn client_origin_header(
 
     if client.is_ephemeral() {
         if client.id != origin {
+            debug!("client.id != origin -> {} != {}", client.id, origin);
             return Err(ErrorResponse::new(
                 ErrorResponseType::WWWAuthenticate("invalid-origin".to_string()),
                 "invalid `Origin` header".to_string(),
@@ -408,6 +446,7 @@ fn client_origin_header(
 #[inline(always)]
 fn user_id_from_req(req: &HttpRequest) -> Result<String, ErrorResponse> {
     ApiCookie::from_req(req, COOKIE_USER).ok_or_else(|| {
+        debug!("Could not extract the RauthyUser cookie");
         ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("user-does-not-exist".to_string()),
             "No Rauthy User cookie found".to_string(),

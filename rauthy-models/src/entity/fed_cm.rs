@@ -126,10 +126,10 @@ impl FedCMIdPBranding {
 
 #[derive(Clone, Debug, Serialize, ToSchema)]
 pub struct FedCMIdPConfig {
-    pub accounts_endpoint: String,
-    pub client_metadata_endpoint: String,
-    pub id_assertion_endpoint: String,
-    pub login_url: String,
+    pub accounts_endpoint: &'static str,
+    pub client_metadata_endpoint: &'static str,
+    pub id_assertion_endpoint: &'static str,
+    pub login_url: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub disconnect_endpoint: Option<String>,
     pub branding: FedCMIdPBranding,
@@ -143,15 +143,25 @@ impl FedCMIdPConfig {
 
         let branding = FedCMIdPBranding::new(data).await?;
 
-        let iss = &data.issuer;
-        let sub_path = "fed_cm";
+        // let iss = &data.issuer;
+        // let sub_path = "/auth/v1/fed_cm";
 
+        // let slf = Self {
+        //     accounts_endpoint: format!("{}/{}/accounts", iss, sub_path),
+        //     client_metadata_endpoint: format!("{}/{}/client_meta", iss, sub_path),
+        //     id_assertion_endpoint: format!("{}/{}/token", iss, sub_path),
+        //     // TODO where should be point this URL in case of Rauthy for it to make sense?
+        //     login_url: format!("{}/account", iss),
+        //     disconnect_endpoint: None,
+        //     // disconnect_endpoint: format!("{}/{}/disconnect", iss, sub_path),
+        //     branding,
+        // };
         let slf = Self {
-            accounts_endpoint: format!("{}/{}/accounts", iss, sub_path),
-            client_metadata_endpoint: format!("{}/{}/client_meta", iss, sub_path),
-            id_assertion_endpoint: format!("{}/{}/token", iss, sub_path),
+            accounts_endpoint: "/auth/v1/fed_cm/accounts",
+            client_metadata_endpoint: "/auth/v1/fed_cm/client_meta",
+            id_assertion_endpoint: "/auth/v1/fed_cm/token",
             // TODO where should be point this URL in case of Rauthy for it to make sense?
-            login_url: format!("{}/account", iss),
+            login_url: "/auth/v1//account",
             disconnect_endpoint: None,
             // disconnect_endpoint: format!("{}/{}/disconnect", iss, sub_path),
             branding,
