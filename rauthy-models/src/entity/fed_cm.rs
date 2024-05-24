@@ -2,7 +2,7 @@ use crate::app_state::AppState;
 use crate::entity::colors::ColorEntity;
 use crate::entity::users::User;
 use actix_web::web;
-use rauthy_common::constants::EMAIL_SUB_PREFIX;
+use rauthy_common::constants::{EMAIL_SUB_PREFIX, PUB_URL};
 use rauthy_common::error_response::ErrorResponse;
 use serde::Serialize;
 use std::sync::OnceLock;
@@ -49,8 +49,7 @@ impl FedCMAccount {
             // simply all of them? Or introduce a new flow to allow fedCm and filter?
             approved_clients: clients,
             login_hints: vec![login_hint, "state=fedcm".to_string()],
-            // Rauthy does not use such a value
-            domain_hints: vec![],
+            domain_hints: vec![PUB_URL.to_string()],
         }
     }
 }
