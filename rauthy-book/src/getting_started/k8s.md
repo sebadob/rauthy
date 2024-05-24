@@ -75,17 +75,17 @@ data:
   # The CACHE_AUTH_TOKEN is only needed for a deployment with HA_MODE == true
   # Secret token, which is used to authenticate the cache members
   #CACHE_AUTH_TOKEN:
-  
+
   # The database driver will be chosen at runtime depending on the given DATABASE_URL format. Examples:
   # Sqlite: 'sqlite:data/rauthy.db' or 'sqlite::memory:'
   # Postgres: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
-  DATABASE_URL: 
-    
+  DATABASE_URL:
+
   # Format: "key_id/enc_key another_key_id/another_enc_key" - the enc_key itself must be exactly 32 characters long and
   # and should not contain special characters.
   # The ID must match '[a-zA-Z0-9]{2,20}'
   ENC_KEYS:
-  
+
   # Needed for sending E-Mails for password resets and so on
   SMTP_PASSWORD:
 ```
@@ -244,10 +244,8 @@ spec:
             requests:
               # Tune the memory requests value carefully. Make sure, that the
               # pods request at least:
-              # `ARGON2_M_COST` / 1024 * `MAX_HASH_THREADS` Mi
-              # With SQLite: for small deployments, add additional ~20-30Mi for
-              # "the rest", for larger ones ~50-70 Mi should be enough.
-              memory: 64Mi
+              # `ARGON2_M_COST` / 1024 * `MAX_HASH_THREADS` Mi + idle memory
+              memory: 164Mi
               # The CPU needs to be adjusted during runtime. This heavily
               # depends on your use case.
               cpu: 100m

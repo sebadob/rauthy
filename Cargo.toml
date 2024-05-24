@@ -87,10 +87,8 @@ ring = "0.17"
 rio_api = "0.8.4"
 rio_turtle = "0.8.4"
 rsa = { version = "0.9.3", features = ["serde", "sha2"] }
-# actix_web does not have 0.23 support yet
-rustls = "0.23"
+rustls = { version = "0.23", default-features = false, features = ["logging", "std", "tls12", "ring"] }
 rustls-pki-types = "1.4.1"
-#rustls-pemfile = "1"
 rustls-pemfile = "2.1.2"
 rusty-s3 = "0.5.0"
 semver = { version = "1.0.19", features = ["serde"] }

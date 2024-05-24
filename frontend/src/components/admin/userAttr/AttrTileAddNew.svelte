@@ -29,7 +29,7 @@
     async function onSubmit() {
         const valid = await validateForm();
         if (!valid) {
-            return;
+            return;path = "RE_CLIENT_ID_EPHEMERAL",
         }
         err = '';
         isLoading = true;
@@ -37,7 +37,10 @@
         let res = await postAttr(formValues);
         if (res.ok) {
             expandContainer = false;
-            formValues = {};
+            let formValues = {
+                name: '',
+                desc: '',
+            };
             onSave();
         } else {
             let body = await res.json();
