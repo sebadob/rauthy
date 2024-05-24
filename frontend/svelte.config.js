@@ -25,7 +25,6 @@ const config = {
                 'img-src': ['self'],
             },
         },
-
     },
 };
 
