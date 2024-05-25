@@ -33,8 +33,6 @@ pub const COOKIE_SESSION_FED_CM: &str = "RauthySessionFedCM";
 pub const COOKIE_MFA: &str = "RauthyMfa";
 pub const COOKIE_LOCALE: &str = "locale";
 pub const COOKIE_UPSTREAM_CALLBACK: &str = "UpstreamAuthCallback";
-pub const COOKIE_USER: &str = "RauthyUser";
-// pub const COOKIE_FED_CM: &str = "FedCMUser";
 pub const PROVIDER_LINK_COOKIE: &str = "rauthy-provider-link";
 pub const PWD_RESET_COOKIE: &str = "rauthy-pwd-reset";
 pub const APP_ID_HEADER: &str = "mfa-app-id";
@@ -140,10 +138,6 @@ lazy_static! {
     pub static ref RE_TOKEN_68: Regex = Regex::new(r"^[a-zA-Z0-9-._~+/]+=*$").unwrap();
     pub static ref RE_TOKEN_ENDPOINT_AUTH_METHOD: Regex = Regex::new(r"^(client_secret_post|client_secret_basic|none)$").unwrap();
 
-    pub static ref USER_COOKIE_LIFETIME: i64 = env::var("USER_COOKIE_LIFETIME")
-        .unwrap_or_else(|_| String::from("63072000"))
-        .parse::<i64>()
-        .expect("USER_COOKIE_LIFETIME cannot be parsed to i64 - bad format");
     pub static ref USERINFO_STRICT: bool = env::var("USERINFO_STRICT")
         .unwrap_or_else(|_| String::from("true"))
         .parse::<bool>()

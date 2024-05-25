@@ -2,8 +2,8 @@ use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use rauthy_common::constants::{
-    COOKIE_SESSION_FED_CM, COOKIE_USER, EXPERIMENTAL_FED_CM_ENABLE, HEADER_ALLOW_ALL_ORIGINS,
-    HEADER_JSON, PUB_URL_WITH_SCHEME, RAUTHY_ADMIN_EMAIL, SESSION_TIMEOUT_FED_CM,
+    COOKIE_SESSION_FED_CM, EXPERIMENTAL_FED_CM_ENABLE, HEADER_ALLOW_ALL_ORIGINS, HEADER_JSON,
+    PUB_URL_WITH_SCHEME, RAUTHY_ADMIN_EMAIL, SESSION_TIMEOUT_FED_CM,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_req;
@@ -437,59 +437,35 @@ async fn login_status_from_req(
     data: &web::Data<AppState>,
     req: &HttpRequest,
 ) -> (FedCMLoginStatus, String) {
-    let user_id = match user_id_from_req(req) {
-        Ok(uid) => uid,
-        Err(_) => return (FedCMLoginStatus::LoggedOut, String::default()),
-    };
-
     match ApiCookie::from_req(req, COOKIE_SESSION_FED_CM) {
         None => {
-            debug!(
-                "FedCM session cookie not found -> user_id {} is logged-out",
-                user_id
-            );
-            return (FedCMLoginStatus::LoggedOut, user_id);
+            debug!("FedCM session cookie not found -> user_id is logged-out",);
+            (FedCMLoginStatus::LoggedOut, String::default())
         }
         Some(sid) => {
             let session = match Session::find(data, sid).await {
                 Ok(s) => s,
                 Err(_) => {
-                    debug!(
-                        "FedCM session not found -> user_id {} is logged-out",
-                        user_id
-                    );
-                    return (FedCMLoginStatus::LoggedOut, user_id);
+                    debug!("FedCM session not found -> user_id is logged-out",);
+                    return (FedCMLoginStatus::LoggedOut, String::default());
                 }
             };
-            if !session.is_valid(*SESSION_TIMEOUT_FED_CM, real_ip_from_req(req)) {
-                debug!(
-                    "FedCM session is invalid -> user_id {} is logged-out",
-                    user_id
-                );
-                return (FedCMLoginStatus::LoggedOut, user_id);
-            }
 
-            if session.user_id.as_deref() != Some(&user_id) {
+            if session.is_valid(*SESSION_TIMEOUT_FED_CM, real_ip_from_req(req)) {
+                (
+                    FedCMLoginStatus::LoggedIn,
+                    session.user_id.unwrap_or_default(),
+                )
+            } else {
                 debug!(
-                    "session.user_id.as_deref() != Some(&user_id) -> {:?} != {:?}",
-                    session.user_id,
-                    Some(&user_id)
+                    "FedCM session is invalid -> user_id {:?} is logged-out",
+                    session.user_id
                 );
-                return (FedCMLoginStatus::LoggedOut, user_id);
+                (
+                    FedCMLoginStatus::LoggedOut,
+                    session.user_id.unwrap_or_default(),
+                )
             }
         }
-    };
-
-    (FedCMLoginStatus::LoggedIn, user_id)
-}
-
-#[inline(always)]
-fn user_id_from_req(req: &HttpRequest) -> Result<String, ErrorResponse> {
-    ApiCookie::from_req(req, COOKIE_USER).ok_or_else(|| {
-        debug!("Could not extract the RauthyUser cookie");
-        ErrorResponse::new(
-            ErrorResponseType::WWWAuthenticate("user-does-not-exist".to_string()),
-            "No Rauthy User cookie found".to_string(),
-        )
-    })
+    }
 }

@@ -2,9 +2,8 @@
 
 #![forbid(unsafe_code)]
 
-use actix_web::cookie::SameSite;
 use actix_web::{web, HttpRequest, HttpResponse};
-use rauthy_common::constants::{COOKIE_MFA, COOKIE_USER, USER_COOKIE_LIFETIME};
+use rauthy_common::constants::COOKIE_MFA;
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::entity::api_keys::ApiKey;
@@ -52,15 +51,7 @@ pub async fn map_auth_step(
 
     match auth_step {
         AuthStep::LoggedIn(res) => {
-            let cookie_user = ApiCookie::build_with_same_site(
-                COOKIE_USER,
-                &res.user_id,
-                *USER_COOKIE_LIFETIME,
-                SameSite::None,
-            );
-
             let mut resp = HttpResponse::Accepted()
-                .cookie(cookie_user)
                 .insert_header(fed_cm_header)
                 .insert_header(res.header_loc)
                 .insert_header(res.header_csrf)
@@ -72,20 +63,12 @@ pub async fn map_auth_step(
         }
 
         AuthStep::AwaitWebauthn(res) => {
-            let cookie_user = ApiCookie::build_with_same_site(
-                COOKIE_USER,
-                &res.user_id,
-                *USER_COOKIE_LIFETIME,
-                SameSite::None,
-            );
-
             let body = WebauthnLoginResponse {
                 code: res.code,
                 user_id: res.user_id,
                 exp: res.exp,
             };
             let mut resp = HttpResponse::Ok()
-                .cookie(cookie_user)
                 .insert_header(fed_cm_header)
                 .insert_header(res.header_csrf)
                 .json(&body);
