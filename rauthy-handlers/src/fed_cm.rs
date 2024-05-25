@@ -176,10 +176,10 @@ pub async fn get_fed_client_config() -> HttpResponse {
         contacts: RAUTHY_ADMIN_EMAIL.clone().map(|e| vec![e]),
         redirect_uris: vec![format!("{}/auth/v1/*", *PUB_URL_WITH_SCHEME)],
         post_logout_redirect_uris: Some(vec![format!("{}/auth/v1/*", *PUB_URL_WITH_SCHEME)]),
-        grant_types: vec![
+        grant_types: Some(vec![
             "authorization_code".to_string(),
             "refresh_token".to_string(),
-        ],
+        ]),
         default_max_age: Some(300),
         scope: Some("openid email profile".to_string()),
         require_auth_time: Some(true),
