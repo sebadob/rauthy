@@ -61,6 +61,7 @@ use utoipa::{openapi, OpenApi};
         fed_cm::get_fed_cm_accounts,
         fed_cm::get_fed_cm_client_meta,
         fed_cm::get_fed_cm_config,
+        fed_cm::get_fed_cm_status,
         fed_cm::post_fed_cm_token,
         fed_cm::get_fed_cm_well_known,
 

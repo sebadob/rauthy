@@ -57,13 +57,6 @@ pub async fn get_fed_cm_accounts(
     }
 
     let user = User::find_for_fed_cm_validated(&data, user_id).await?;
-
-    // let clients = Client::find_all(&data)
-    //     .await?
-    //     .into_iter()
-    //     .filter_map(|c| (c.id != "rauthy").then_some(c.id))
-    //     .collect::<Vec<String>>();
-
     let account = FedCMAccount::build(user);
     let accounts = FedCMAccounts {
         accounts: vec![account],
@@ -172,6 +165,7 @@ pub async fn get_fed_cm_config(
 //     Ok(HttpResponse::Ok().finish())
 // }
 
+/// Just a sample ephemeral client config for FedCM testing
 #[tracing::instrument(level = "debug", skip_all)]
 #[get("/fed_cm/client_config")]
 pub async fn get_fed_client_config() -> HttpResponse {
@@ -196,6 +190,17 @@ pub async fn get_fed_client_config() -> HttpResponse {
     HttpResponse::Ok().json(config)
 }
 
+/// GET the current FedCM login state for the user
+///
+/// https://fedidcg.github.io/FedCM/#idp-api
+#[utoipa::path(
+    get,
+    path = "/fed_cm/status",
+    tag = "fed_cm",
+    responses(
+        (status = 200, description = "Ok"),
+    ),
+)]
 #[tracing::instrument(level = "debug", skip_all)]
 #[get("/fed_cm/status")]
 pub async fn get_fed_cm_status(req: HttpRequest, data: web::Data<AppState>) -> HttpResponse {

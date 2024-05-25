@@ -11,7 +11,7 @@ use rauthy_common::constants::{
     AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, COOKIE_SESSION_FED_CM,
     DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT,
     EXPERIMENTAL_FED_CM_ENABLE, GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE,
-    OPEN_USER_REG, SESSION_LIFETIME, SESSION_LIFETIME_FED_CM,
+    OPEN_USER_REG, SESSION_LIFETIME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_req;
@@ -614,12 +614,8 @@ pub async fn post_logout(
 ) -> Result<HttpResponse, ErrorResponse> {
     let mut session = principal.get_session()?.clone();
     let cookie = session.invalidate(&data).await?;
-    let cookie_fed_cm = ApiCookie::build_with_same_site(
-        COOKIE_SESSION_FED_CM,
-        Cow::from(&session.id),
-        0,
-        SameSite::None,
-    );
+    let cookie_fed_cm =
+        ApiCookie::build_with_same_site(COOKIE_SESSION_FED_CM, Cow::from(""), 0, SameSite::None);
 
     if req_data.post_logout_redirect_uri.is_some() {
         let state = if req_data.state.is_some() {
