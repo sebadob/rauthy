@@ -19,7 +19,7 @@ use rauthy_models::entity::users::User;
 use rauthy_models::request::{FedCMAssertionRequest, FedCMClientMetadataRequest};
 use rauthy_models::ListenScheme;
 use rauthy_service::token_set::{AuthCodeFlow, DeviceCodeFlow, TokenNonce, TokenSet};
-use tracing::debug;
+use tracing::{debug, warn};
 
 const HEADER_ALLOW_CREDENTIALS: (&str, &str) = ("access-control-allow-credentials", "true");
 
@@ -44,56 +44,24 @@ pub async fn get_fed_cm_accounts(
     is_fed_cm_enabled()?;
     is_web_identity_fetch(&req)?;
 
-    let user_id = user_id_from_req(&req)?;
-    match ApiCookie::from_req(&req, COOKIE_SESSION_FED_CM) {
-        None => {
-            debug!(
-                "FedCM session cookie not found -> user_id {} is logged-out",
-                user_id
-            );
-            return Ok(HttpResponse::Unauthorized()
-                .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
-                .json(FedCMAccounts {
-                    accounts: Vec::default(),
-                }));
-        }
-        Some(sid) => {
-            let session = Session::find(&data, sid).await?;
-            if !session.is_valid(*SESSION_TIMEOUT_FED_CM, real_ip_from_req(&req)) {
-                debug!(
-                    "FedCM session is invalid -> user_id {} is logged-out",
-                    user_id
-                );
-                return Ok(HttpResponse::Unauthorized()
-                    .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
-                    .json(FedCMAccounts {
-                        accounts: Vec::default(),
-                    }));
-            }
-
-            if session.user_id.as_deref() != Some(&user_id) {
-                debug!(
-                    "session.user_id.as_deref() != Some(&user_id) -> {:?} != {:?}",
-                    session.user_id,
-                    Some(&user_id)
-                );
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    "Invalid user_id for linked session found".to_string(),
-                ));
-            }
-        }
-    };
+    let (login_status, user_id) = login_status_from_req(&data, &req).await;
+    if login_status == FedCMLoginStatus::LoggedOut {
+        return Ok(HttpResponse::Unauthorized()
+            .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
+            .json(FedCMAccounts {
+                accounts: Vec::default(),
+            }));
+    }
 
     let user = User::find_for_fed_cm_validated(&data, user_id).await?;
 
-    let clients = Client::find_all(&data)
-        .await?
-        .into_iter()
-        .filter_map(|c| (c.id != "rauthy").then_some(c.id))
-        .collect::<Vec<String>>();
+    // let clients = Client::find_all(&data)
+    //     .await?
+    //     .into_iter()
+    //     .filter_map(|c| (c.id != "rauthy").then_some(c.id))
+    //     .collect::<Vec<String>>();
 
-    let account = FedCMAccount::build(user, clients);
+    let account = FedCMAccount::build(user);
     let accounts = FedCMAccounts {
         accounts: vec![account],
     };
@@ -133,7 +101,7 @@ pub async fn get_fed_cm_client_meta(
         ));
     }
 
-    let client = Client::find(&data, params.client_id).await?;
+    let client = Client::find_maybe_ephemeral(&data, params.client_id).await?;
     if !client.enabled {
         return Err(ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("client-disabled".to_string()),
@@ -143,7 +111,9 @@ pub async fn get_fed_cm_client_meta(
     let origin_header = client_origin_header(&data, &req, &client)?;
 
     let meta = FedCMClientMetadata::new();
+    let (login_status, _) = login_status_from_req(&data, &req).await;
     Ok(HttpResponse::Ok()
+        .insert_header(login_status.as_header_pair())
         .insert_header(HEADER_ALLOW_CREDENTIALS)
         .insert_header(origin_header)
         .json(meta))
@@ -171,7 +141,9 @@ pub async fn get_fed_cm_config(
     is_web_identity_fetch(&req)?;
 
     let config = FedCMIdPConfig::get(&data).await?;
+    let (login_status, _) = login_status_from_req(&data, &req).await;
     Ok(HttpResponse::Ok()
+        .insert_header(login_status.as_header_pair())
         .insert_header(HEADER_JSON)
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
         .json(config))
@@ -226,46 +198,12 @@ pub async fn post_fed_cm_token(
     is_fed_cm_enabled()?;
     is_web_identity_fetch(&req)?;
 
-    let user_id = user_id_from_req(&req)?;
-    match ApiCookie::from_req(&req, COOKIE_SESSION_FED_CM) {
-        None => {
-            debug!(
-                "FedCM session cookie not found -> user_id {} is logged-out",
-                user_id
-            );
-            return Ok(HttpResponse::Unauthorized()
-                .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
-                .json(FedCMAccounts {
-                    accounts: Vec::default(),
-                }));
-        }
-        Some(sid) => {
-            let session = Session::find(&data, sid).await?;
-            if !session.is_valid(*SESSION_TIMEOUT_FED_CM, real_ip_from_req(&req)) {
-                debug!(
-                    "FedCM session is invalid -> user_id {} is logged-out",
-                    user_id
-                );
-                return Ok(HttpResponse::Unauthorized()
-                    .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
-                    .json(FedCMAccounts {
-                        accounts: Vec::default(),
-                    }));
-            }
-
-            if session.user_id.as_deref() != Some(&user_id) {
-                debug!(
-                    "session.user_id.as_deref() != Some(&user_id) -> {:?} != {:?}",
-                    session.user_id,
-                    Some(&user_id)
-                );
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    "Invalid user_id for linked session found".to_string(),
-                ));
-            }
-        }
-    };
+    let (login_status, user_id) = login_status_from_req(&data, &req).await;
+    if login_status == FedCMLoginStatus::LoggedOut {
+        return Ok(HttpResponse::Unauthorized()
+            .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
+            .finish());
+    }
 
     let payload = payload.into_inner();
 
@@ -339,7 +277,9 @@ pub async fn get_fed_cm_well_known(
     is_fed_cm_enabled()?;
     is_web_identity_fetch(&req)?;
 
+    let (login_status, _) = login_status_from_req(&data, &req).await;
     Ok(HttpResponse::Ok()
+        .insert_header(login_status.as_header_pair())
         .insert_header(HEADER_JSON)
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
         .json(WebIdentity::new(&data.issuer)))
@@ -369,7 +309,7 @@ fn is_web_identity_fetch(req: &HttpRequest) -> Result<(), ErrorResponse> {
     {
         Ok(())
     } else {
-        debug!("`Sec-Fetch-Dest: webidentity` not set`");
+        warn!("`Sec-Fetch-Dest: webidentity` not set`");
         Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "Expected header `Sec-Fetch-Dest: webidentity`".to_string(),
@@ -393,12 +333,14 @@ fn client_origin_header(
                 "Origin header is missing".to_string(),
             )
         })?;
+    debug!("Origin header from request: {}", origin);
     let header = (
         header::ACCESS_CONTROL_ALLOW_ORIGIN,
         HeaderValue::from_str(origin).unwrap(),
     );
 
     if client.is_ephemeral() {
+        // TODO does this make sense? what if we host the config somewhere else?
         if client.id != origin {
             debug!("client.id != origin -> {} != {}", client.id, origin);
             return Err(ErrorResponse::new(
@@ -417,6 +359,7 @@ fn client_origin_header(
 
         if let Some(allowed_origins) = &client.allowed_origins {
             for ao in allowed_origins.split(',') {
+                debug!("Comparing Allowed Origin '{}' to origin '{}'", ao, origin);
                 if (data.listen_scheme == ListenScheme::HttpHttps && ao.ends_with(origin))
                     || ao.eq(origin)
                 {
@@ -441,6 +384,57 @@ fn client_origin_header(
     };
 
     Ok(header)
+}
+
+#[inline(always)]
+async fn login_status_from_req(
+    data: &web::Data<AppState>,
+    req: &HttpRequest,
+) -> (FedCMLoginStatus, String) {
+    let user_id = match user_id_from_req(req) {
+        Ok(uid) => uid,
+        Err(_) => return (FedCMLoginStatus::LoggedOut, String::default()),
+    };
+
+    match ApiCookie::from_req(req, COOKIE_SESSION_FED_CM) {
+        None => {
+            debug!(
+                "FedCM session cookie not found -> user_id {} is logged-out",
+                user_id
+            );
+            return (FedCMLoginStatus::LoggedOut, user_id);
+        }
+        Some(sid) => {
+            let session = match Session::find(data, sid).await {
+                Ok(s) => s,
+                Err(_) => {
+                    debug!(
+                        "FedCM session not found -> user_id {} is logged-out",
+                        user_id
+                    );
+                    return (FedCMLoginStatus::LoggedOut, user_id);
+                }
+            };
+            if !session.is_valid(*SESSION_TIMEOUT_FED_CM, real_ip_from_req(req)) {
+                debug!(
+                    "FedCM session is invalid -> user_id {} is logged-out",
+                    user_id
+                );
+                return (FedCMLoginStatus::LoggedOut, user_id);
+            }
+
+            if session.user_id.as_deref() != Some(&user_id) {
+                debug!(
+                    "session.user_id.as_deref() != Some(&user_id) -> {:?} != {:?}",
+                    session.user_id,
+                    Some(&user_id)
+                );
+                return (FedCMLoginStatus::LoggedOut, user_id);
+            }
+        }
+    };
+
+    (FedCMLoginStatus::LoggedIn, user_id)
 }
 
 #[inline(always)]
