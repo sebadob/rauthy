@@ -1,5 +1,6 @@
 use crate::{map_auth_step, ReqPrincipal};
 use actix_web::cookie::time::OffsetDateTime;
+use actix_web::cookie::SameSite;
 use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::{header, StatusCode};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError};
@@ -7,9 +8,10 @@ use chrono::Utc;
 use rauthy_common::constants::{
     APPLICATION_JSON, AUTH_HEADERS_ENABLE, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED,
     AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
-    AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, DEVICE_GRANT_CODE_LIFETIME,
-    DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT, EXPERIMENTAL_FED_CM_ENABLE,
-    GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE, OPEN_USER_REG, SESSION_LIFETIME,
+    AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, COOKIE_SESSION_FED_CM,
+    DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT,
+    EXPERIMENTAL_FED_CM_ENABLE, GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE,
+    OPEN_USER_REG, SESSION_LIFETIME, SESSION_LIFETIME_FED_CM,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_req;
@@ -612,6 +614,12 @@ pub async fn post_logout(
 ) -> Result<HttpResponse, ErrorResponse> {
     let mut session = principal.get_session()?.clone();
     let cookie = session.invalidate(&data).await?;
+    let cookie_fed_cm = ApiCookie::build_with_same_site(
+        COOKIE_SESSION_FED_CM,
+        Cow::from(&session.id),
+        0,
+        SameSite::None,
+    );
 
     if req_data.post_logout_redirect_uri.is_some() {
         let state = if req_data.state.is_some() {
@@ -627,6 +635,7 @@ pub async fn post_logout(
         return Ok(HttpResponse::build(StatusCode::MOVED_PERMANENTLY)
             .append_header((header::LOCATION, loc))
             .cookie(cookie)
+            .cookie(cookie_fed_cm)
             .finish());
     }
 
