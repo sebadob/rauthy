@@ -4,14 +4,16 @@
     import Button from "$lib/Button.svelte";
     import Input from "$lib/inputs/Input.svelte";
     import * as yup from "yup";
-    import {REGEX_CLIENT_ID, REGEX_CLIENT_NAME, REGEX_URI} from "../../utils/constants.js";
+    import {REGEX_URI} from "../../utils/constants.js";
     import {extractFormErrors} from "../../utils/helpers.js";
     import CheckIcon from "$lib/CheckIcon.svelte";
+    import {getFedCMStatus} from "../../utils/dataFetching.js";
 
     let configUrl = '';
     let isSupported = false;
     let isLoggedIn = false;
     let credentials = '';
+    let credentialType = '';
 
     $: console.log('built config url: ' + configUrl);
 
@@ -27,6 +29,15 @@
 
     onMount(async () => {
         configUrl = `${window.location.origin}/auth/v1/fed_cm/config`;
+        formValues.clientId = `${window.location.origin}/auth/v1/fed_cm/client_config`;
+
+        let res = await getFedCMStatus();
+        if (res.ok) {
+            console.log('FedCM status is: logged-in');
+            isLoggedIn = true;
+        } else {
+            console.log('FedCM status is: logged-out');
+        }
 
         if (window["IdentityProvider"] && // Is FedCM available?
             IdentityProvider.register != undefined  // Is the IdP Registration API available?
@@ -62,10 +73,8 @@
                 }
             })
             console.log(creds);
-            console.log(creds.id);
-            console.log(creds.type);
-            console.log(creds.token);
-            credentials = creds.token || 'logged in';
+            credentialType = creds.type;
+            credentials = creds.token;
             isLoggedIn = true;
         } catch (err) {
             console.error('FedCM credentials error: ' + err);
@@ -89,14 +98,16 @@
 </script>
 
 <h1>FedCM Testing</h1>
-<p>
-    <b>FedCM supported:</b>
-    <CheckIcon check={isSupported}/>
-    {#if !isSupported}
-        <br>-> enable idp registration:<br>
-        <code>chrome://flags/#fedcm-idp-registration</code>
-    {/if}
-</p>
+<div class="row">
+    <div><b>FedCM supported:</b></div>
+    <div class="check">
+        <CheckIcon check={isSupported}/>
+    </div>
+</div>
+{#if !isSupported}
+    <br>-> enable idp registration:<br>
+    <code>chrome://flags/#fedcm-idp-registration</code>
+{/if}
 
 {#if isSupported}
     <p>
@@ -124,12 +135,37 @@
         </Input>
         <Button on:click={login}>Login</Button>
     </p>
-    <p>
+    <div class="row">
         <b>Logged In:</b>
-        <CheckIcon check={isLoggedIn}/>
-    </p>
+        <div class="check">
+            <CheckIcon check={isLoggedIn}/>
+        </div>
+    </div>
 {/if}
 
 {#if credentials}
-    <p>{credentials}</p>
+    <div class="row">
+        <b>Credential Type:</b>
+        <span>{credentialType}</span>
+    </div>
+    <div class="token">
+        {credentials}
+    </div>
 {/if}
+
+<style>
+    .check {
+        margin-bottom: -.3rem;
+    }
+
+    .row {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .token {
+        word-wrap: break-word;
+        width: 20rem;
+    }
+</style>
