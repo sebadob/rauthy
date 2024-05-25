@@ -34,7 +34,7 @@ pub struct FedCMAccount {
 }
 
 impl FedCMAccount {
-    pub fn build(user: User, clients: Vec<String>) -> Self {
+    pub fn build(user: User) -> Self {
         let name = format!("{} {}", user.given_name, user.family_name);
         let login_hint = format!("login_hint={}", user.email);
 
@@ -47,7 +47,9 @@ impl FedCMAccount {
             picture: None,
             // TODO how should we decide which clients to return here? How to make this dynamic?
             // simply all of them? Or introduce a new flow to allow fedCm and filter?
-            approved_clients: clients,
+            // approved_clients: clients,
+            // TODO not sure if it produces errors and problems if we populate this value at all
+            approved_clients: Vec::default(),
             login_hints: vec![login_hint, "state=fedcm".to_string()],
             domain_hints: vec![PUB_URL.to_string()],
         }
@@ -142,26 +144,12 @@ impl FedCMIdPConfig {
         }
 
         let branding = FedCMIdPBranding::new(data).await?;
-
-        // let iss = &data.issuer;
-        // let sub_path = "/auth/v1/fed_cm";
-
-        // let slf = Self {
-        //     accounts_endpoint: format!("{}/{}/accounts", iss, sub_path),
-        //     client_metadata_endpoint: format!("{}/{}/client_meta", iss, sub_path),
-        //     id_assertion_endpoint: format!("{}/{}/token", iss, sub_path),
-        //     // TODO where should be point this URL in case of Rauthy for it to make sense?
-        //     login_url: format!("{}/account", iss),
-        //     disconnect_endpoint: None,
-        //     // disconnect_endpoint: format!("{}/{}/disconnect", iss, sub_path),
-        //     branding,
-        // };
         let slf = Self {
             accounts_endpoint: "/auth/v1/fed_cm/accounts",
             client_metadata_endpoint: "/auth/v1/fed_cm/client_meta",
             id_assertion_endpoint: "/auth/v1/fed_cm/token",
             // TODO where should be point this URL in case of Rauthy for it to make sense?
-            login_url: "/auth/v1//account",
+            login_url: "/auth/v1/account",
             disconnect_endpoint: None,
             // disconnect_endpoint: format!("{}/{}/disconnect", iss, sub_path),
             branding,
@@ -172,7 +160,7 @@ impl FedCMIdPConfig {
     }
 }
 
-#[derive(Clone, Debug, Serialize, ToSchema)]
+#[derive(Clone, Debug, PartialEq, Serialize, ToSchema)]
 pub enum FedCMLoginStatus {
     LoggedIn,
     LoggedOut,
