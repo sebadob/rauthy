@@ -403,6 +403,7 @@ lazy_static! {
         .parse::<u16>()
         .expect("SSE_KEEP_ALIVE cannot be parsed to u16 - bad format");
 
+    pub static ref RAUTHY_ADMIN_EMAIL: Option<String> = env::var("RAUTHY_ADMIN_EMAIL").ok();
     pub static ref EMAIL_SUB_PREFIX: String = env::var("EMAIL_SUB_PREFIX")
         .unwrap_or_else(|_| String::from("Rauthy IAM"));
     pub static ref SMTP_USERNAME: String = env::var("SMTP_USERNAME")

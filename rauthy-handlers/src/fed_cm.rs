@@ -3,7 +3,7 @@ use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use rauthy_common::constants::{
     COOKIE_SESSION_FED_CM, COOKIE_USER, EXPERIMENTAL_FED_CM_ENABLE, HEADER_ALLOW_ALL_ORIGINS,
-    HEADER_JSON, SESSION_TIMEOUT_FED_CM,
+    HEADER_JSON, PUB_URL_WITH_SCHEME, RAUTHY_ADMIN_EMAIL, SESSION_TIMEOUT_FED_CM,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_req;
@@ -14,9 +14,12 @@ use rauthy_models::entity::fed_cm::{
     FedCMAccount, FedCMAccounts, FedCMClientMetadata, FedCMIdPConfig, FedCMLoginStatus,
     FedCMTokenResponse, WebIdentity,
 };
+use rauthy_models::entity::jwk::JwkKeyPairAlg;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
-use rauthy_models::request::{FedCMAssertionRequest, FedCMClientMetadataRequest};
+use rauthy_models::request::{
+    EphemeralClientRequest, FedCMAssertionRequest, FedCMClientMetadataRequest,
+};
 use rauthy_models::ListenScheme;
 use rauthy_service::token_set::{AuthCodeFlow, DeviceCodeFlow, TokenNonce, TokenSet};
 use tracing::{debug, warn};
@@ -111,9 +114,7 @@ pub async fn get_fed_cm_client_meta(
     let origin_header = client_origin_header(&data, &req, &client)?;
 
     let meta = FedCMClientMetadata::new();
-    let (login_status, _) = login_status_from_req(&data, &req).await;
     Ok(HttpResponse::Ok()
-        .insert_header(login_status.as_header_pair())
         .insert_header(HEADER_ALLOW_CREDENTIALS)
         .insert_header(origin_header)
         .json(meta))
@@ -141,9 +142,7 @@ pub async fn get_fed_cm_config(
     is_web_identity_fetch(&req)?;
 
     let config = FedCMIdPConfig::get(&data).await?;
-    let (login_status, _) = login_status_from_req(&data, &req).await;
     Ok(HttpResponse::Ok()
-        .insert_header(login_status.as_header_pair())
         .insert_header(HEADER_JSON)
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
         .json(config))
@@ -172,6 +171,51 @@ pub async fn get_fed_cm_config(
 //
 //     Ok(HttpResponse::Ok().finish())
 // }
+
+#[tracing::instrument(level = "debug", skip_all)]
+#[get("/fed_cm/client_config")]
+pub async fn get_fed_client_config() -> HttpResponse {
+    let config = EphemeralClientRequest {
+        client_id: PUB_URL_WITH_SCHEME.to_string(),
+        client_name: Some("Rauthy".to_string()),
+        client_uri: Some(PUB_URL_WITH_SCHEME.to_string()),
+        contacts: RAUTHY_ADMIN_EMAIL.clone().map(|e| vec![e]),
+        redirect_uris: vec![format!("{}/auth/v1/*", *PUB_URL_WITH_SCHEME)],
+        post_logout_redirect_uris: Some(vec![format!("{}/auth/v1/*", *PUB_URL_WITH_SCHEME)]),
+        grant_types: vec![
+            "authorization_code".to_string(),
+            "refresh_token".to_string(),
+        ],
+        default_max_age: Some(300),
+        scope: Some("openid email profile".to_string()),
+        require_auth_time: Some(true),
+        access_token_signed_response_alg: Some(JwkKeyPairAlg::EdDSA),
+        id_token_signed_response_alg: Some(JwkKeyPairAlg::EdDSA),
+    };
+
+    HttpResponse::Ok().json(config)
+}
+
+#[tracing::instrument(level = "debug", skip_all)]
+#[get("/fed_cm/status")]
+pub async fn get_fed_cm_status(req: HttpRequest, data: web::Data<AppState>) -> HttpResponse {
+    if is_fed_cm_enabled().is_err() {
+        HttpResponse::Unauthorized()
+            .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
+            .finish()
+    } else {
+        let (login_status, _) = login_status_from_req(&data, &req).await;
+        if login_status == FedCMLoginStatus::LoggedOut {
+            HttpResponse::Unauthorized()
+                .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
+                .finish()
+        } else {
+            HttpResponse::Ok()
+                .insert_header(FedCMLoginStatus::LoggedIn.as_header_pair())
+                .finish()
+        }
+    }
+}
 
 /// POST ID assertion
 ///
@@ -277,9 +321,7 @@ pub async fn get_fed_cm_well_known(
     is_fed_cm_enabled()?;
     is_web_identity_fetch(&req)?;
 
-    let (login_status, _) = login_status_from_req(&data, &req).await;
     Ok(HttpResponse::Ok()
-        .insert_header(login_status.as_header_pair())
         .insert_header(HEADER_JSON)
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
         .json(WebIdentity::new(&data.issuer)))
