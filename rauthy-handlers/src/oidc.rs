@@ -613,9 +613,13 @@ pub async fn post_logout(
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     let mut session = principal.get_session()?.clone();
+    let cookie_fed_cm = ApiCookie::build_with_same_site(
+        COOKIE_SESSION_FED_CM,
+        Cow::from(&session.id),
+        0,
+        SameSite::None,
+    );
     let cookie = session.invalidate(&data).await?;
-    let cookie_fed_cm =
-        ApiCookie::build_with_same_site(COOKIE_SESSION_FED_CM, Cow::from(""), 0, SameSite::None);
 
     if req_data.post_logout_redirect_uri.is_some() {
         let state = if req_data.state.is_some() {
@@ -635,7 +639,10 @@ pub async fn post_logout(
             .finish());
     }
 
-    return Ok(HttpResponse::build(StatusCode::OK).cookie(cookie).finish());
+    return Ok(HttpResponse::build(StatusCode::OK)
+        .cookie(cookie)
+        .cookie(cookie_fed_cm)
+        .finish());
 }
 
 /// Rotate JWKs
