@@ -20,6 +20,7 @@ use rauthy_models::entity::auth_providers::AuthProviderTemplate;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::devices::DeviceAuthCode;
+use rauthy_models::entity::fed_cm::FedCMLoginStatus;
 use rauthy_models::entity::ip_rate_limit::DeviceIpRateLimit;
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JWKS};
 use rauthy_models::entity::pow::PowEntity;
@@ -725,12 +726,20 @@ pub async fn post_session(
     ),
 )]
 #[get("/oidc/sessioninfo")]
-pub async fn get_session_info(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth()?;
-    let session = principal.get_session()?;
+pub async fn get_session_info(data: web::Data<AppState>, principal: ReqPrincipal) -> HttpResponse {
+    if let Err(err) = principal.validate_session_auth() {
+        return HttpResponse::Unauthorized()
+            .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
+            .json(err);
+    }
+    let session = match principal.get_session() {
+        Ok(s) => s,
+        Err(err) => {
+            return HttpResponse::Unauthorized()
+                .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
+                .json(err);
+        }
+    };
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
@@ -746,7 +755,9 @@ pub async fn get_session_info(
         state: session.state.clone(),
     };
 
-    Ok(HttpResponse::Ok().json(info))
+    HttpResponse::Ok()
+        .insert_header(FedCMLoginStatus::LoggedIn.as_header_pair())
+        .json(info)
 }
 
 // TODO maybe generate a new csrf token each time this endpoint is used. This would boost the security

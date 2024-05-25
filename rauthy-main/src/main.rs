@@ -567,6 +567,8 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(fed_cm::get_fed_cm_client_meta)
                             .service(fed_cm::get_fed_cm_well_known)
                             .service(fed_cm::post_fed_cm_token)
+                            .service(fed_cm::get_fed_client_config)
+                            .service(fed_cm::get_fed_cm_status)
                             .service(users::get_users)
                             .service(users::get_users_register)
                             .service(users::post_users_register)

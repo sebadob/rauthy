@@ -13,7 +13,9 @@ use time::OffsetDateTime;
 use tracing::{debug, info};
 use validator::Validate;
 
-use rauthy_common::constants::{ADMIN_FORCE_MFA, DB_TYPE, DEV_MODE, PUB_URL, PUB_URL_WITH_SCHEME};
+use rauthy_common::constants::{
+    ADMIN_FORCE_MFA, DB_TYPE, DEV_MODE, PUB_URL, PUB_URL_WITH_SCHEME, RAUTHY_ADMIN_EMAIL,
+};
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::{base64_decode, get_rand};
 use rauthy_common::DbType;
@@ -85,7 +87,7 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         challenge: Some("S256".to_string()),
         force_mfa: *ADMIN_FORCE_MFA,
         client_uri: Some(PUB_URL_WITH_SCHEME.to_string()),
-        contacts: env::var("RAUTHY_ADMIN_EMAIL").ok(),
+        contacts: RAUTHY_ADMIN_EMAIL.clone(),
     };
 
     // MUST NOT use `insert or replace` syntax

@@ -117,7 +117,7 @@ impl FedCMIdPBranding {
 
         Ok(Self {
             // Background color for IDP-branded widgets such as buttons.
-            background_color: Some(colors.act2),
+            background_color: Some(colors.bg),
             // color for text on IDP branded widgets.
             color: Some(colors.text),
             icons: vec![rauthy_icon],
