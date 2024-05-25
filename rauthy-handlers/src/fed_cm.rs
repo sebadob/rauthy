@@ -22,7 +22,7 @@ use rauthy_models::request::{
 };
 use rauthy_models::ListenScheme;
 use rauthy_service::token_set::{AuthCodeFlow, DeviceCodeFlow, TokenNonce, TokenSet};
-use tracing::{debug, warn};
+use tracing::{debug, error, warn};
 
 const HEADER_ALLOW_CREDENTIALS: (&str, &str) = ("access-control-allow-credentials", "true");
 
@@ -176,7 +176,7 @@ pub async fn get_fed_cm_config(
 #[get("/fed_cm/client_config")]
 pub async fn get_fed_client_config() -> HttpResponse {
     let config = EphemeralClientRequest {
-        client_id: PUB_URL_WITH_SCHEME.to_string(),
+        client_id: format!("{}/auth/v1/fed_cm/client_config", *PUB_URL_WITH_SCHEME),
         client_name: Some("Rauthy".to_string()),
         client_uri: Some(PUB_URL_WITH_SCHEME.to_string()),
         contacts: RAUTHY_ADMIN_EMAIL.clone().map(|e| vec![e]),
@@ -252,7 +252,13 @@ pub async fn post_fed_cm_token(
     let payload = payload.into_inner();
 
     // find and check the client
-    let client = Client::find_maybe_ephemeral(&data, payload.client_id).await?;
+    let client = match Client::find_maybe_ephemeral(&data, payload.client_id).await {
+        Ok(c) => c,
+        Err(err) => {
+            error!("Error looking up maybe ephemeral client: {:?}", err);
+            return Err(err);
+        }
+    };
     if !client.enabled {
         debug!("client {} is disabled", client.id);
         return Err(ErrorResponse::new(
@@ -265,6 +271,7 @@ pub async fn post_fed_cm_token(
     // TODO impl a new `FedCM` flow for client's and reject if not true?
 
     let origin_header = client_origin_header(&data, &req, &client)?;
+    debug!("built origin header for client: {:?}", origin_header.1);
 
     // find and check the user
     let user = User::find_for_fed_cm_validated(&data, user_id).await?;
@@ -381,51 +388,43 @@ fn client_origin_header(
         HeaderValue::from_str(origin).unwrap(),
     );
 
-    if client.is_ephemeral() {
-        // TODO does this make sense? what if we host the config somewhere else?
-        if client.id != origin {
-            debug!("client.id != origin -> {} != {}", client.id, origin);
-            return Err(ErrorResponse::new(
-                ErrorResponseType::WWWAuthenticate("invalid-origin".to_string()),
-                "invalid `Origin` header".to_string(),
-            ));
-        };
-    } else {
-        if client.allowed_origins.is_none() {
-            debug!("Allowed origins is None");
-            return Err(ErrorResponse::new(
-                ErrorResponseType::Forbidden,
-                "The origin is not allowed for this client".to_string(),
-            ));
-        }
+    if client.is_ephemeral() && client.id.starts_with(origin) {
+        debug!("The client is ephemeral and its ID matches the origin",);
+        return Ok(header);
+    }
 
-        if let Some(allowed_origins) = &client.allowed_origins {
-            for ao in allowed_origins.split(',') {
-                debug!("Comparing Allowed Origin '{}' to origin '{}'", ao, origin);
-                if (data.listen_scheme == ListenScheme::HttpHttps && ao.ends_with(origin))
-                    || ao.eq(origin)
-                {
-                    return Ok(header);
-                }
-            }
-        }
-
-        // in case we did not have a specific allowed origin, we can validate via allowed
-        // `redirect_uri`s
-        for uri in client.redirect_uris.split(',') {
-            if uri.starts_with(origin) {
+    if let Some(allowed_origins) = &client.allowed_origins {
+        for ao in allowed_origins.split(',') {
+            debug!("Comparing Allowed Origin '{}' to origin '{}'", ao, origin);
+            if (data.listen_scheme == ListenScheme::HttpHttps && ao.ends_with(origin))
+                || ao.eq(origin)
+            {
+                debug!(
+                    "Found matching allowed_origin '{}' for origin: '{}'",
+                    ao, origin
+                );
                 return Ok(header);
             }
         }
+    }
 
-        debug!("No match found for allowed origin");
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
-            "The origin is not allowed for this client".to_string(),
-        ));
-    };
+    // in case we did not have a specific allowed origin, we can validate via allowed
+    // `redirect_uri`s
+    for uri in client.redirect_uris.split(',') {
+        if uri.starts_with(origin) {
+            debug!(
+                "Found matching redirect_uri '{}' for origin: '{}'",
+                uri, origin
+            );
+            return Ok(header);
+        }
+    }
 
-    Ok(header)
+    debug!("No match found for allowed origin");
+    Err(ErrorResponse::new(
+        ErrorResponseType::Forbidden,
+        "The origin is not allowed for this client".to_string(),
+    ))
 }
 
 #[inline(always)]
