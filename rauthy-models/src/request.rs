@@ -221,7 +221,7 @@ pub struct EphemeralClientRequest {
     pub post_logout_redirect_uris: Option<Vec<String>>,
     /// Validation: `Vec<^(authorization_code|client_credentials|password|refresh_token)$>`
     #[validate(custom(function = "validate_vec_grant_type"))]
-    pub grant_types: Vec<String>,
+    pub grant_types: Option<Vec<String>>,
     /// Validation: `60 <= access_token_lifetime <= 86400`
     #[validate(range(min = 60, max = 86400))]
     pub default_max_age: Option<i32>,
