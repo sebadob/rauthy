@@ -63,7 +63,7 @@
         try {
             let creds = await navigator.credentials.get({
                 identity: {
-                    context: "signin",
+                    // context: "signin",
                     providers: [{
                         configURL: configUrl,
                         // TODO configurable via input
