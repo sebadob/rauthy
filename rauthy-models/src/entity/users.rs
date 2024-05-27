@@ -481,7 +481,7 @@ impl User {
         Ok((res, token))
     }
 
-    async fn insert(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
+    pub async fn insert(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
         let lang = new_user.language.as_str();
         sqlx::query!(
             r#"INSERT INTO USERS
