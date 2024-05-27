@@ -77,7 +77,7 @@ where
                         .map(|h| h.to_str().unwrap_or_default())
                         .unwrap_or_default();
 
-                    if mode == "navigate" && !["object", "embed"].contains(&dest) {
+                    if mode == "navigate" && !["embed", "iframe", "object"].contains(&dest) {
                         return service.call(req).await;
                     }
                 }
