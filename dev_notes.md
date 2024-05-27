@@ -2,8 +2,6 @@
 
 ## CURRENT WORK
 
-- bug when setting attribute - after set -> undefined instead of ''
-
 ## Stage 1 - essentials
 
 [x] finished
