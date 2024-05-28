@@ -11,7 +11,7 @@ members = [
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.23.2-20240524"
+version = "0.23.2-20240528"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -59,7 +59,7 @@ hex = { version = "0.4", features = ["serde"] }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
 image = "0.25.1"
-itertools = "0.12"
+itertools = "0.13.0"
 jwt-simple = { version = "0.12.6", default-features = false, features = ["pure-rust"] }
 lazy_static = "1"
 lettre = { version = "0.11", default-features = false, features = [
