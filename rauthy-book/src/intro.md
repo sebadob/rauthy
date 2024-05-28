@@ -91,37 +91,34 @@ Keycloak was a rough inspiration in certain places and if something is working w
 - [x] Highly configurable
 - [x] Secure default values
 - [x] True passwordless accounts with E-Mail + Magic Link + Passkey
-- [x] Account conversions between traditional password and Passkey only
+- [x] Dedicated Admin UI
+- [x] Account dashboard UI for each user with self-service
+- [x] OpenID Connect Dynamic Client Registration
+- [x] OAuth 2.0 Device Authorization Grant flow
+- [x] Upstream Authentication Providers (Login with ...)
 - [x] Supports DPoP tokens for decentralized login flows
 - [x] Supports ephemeral, dynamic clients for decentralized login flows
-- [x] Can serve a basic `webid` document for decentralized logins
-- [x] OpenID Connect Dynamic Client Registration
-- [x] Upstream Authentication Providers (Login with ...)
-- [x] OAuth 2.0 Device Authorization Grant flow
-- [x] Admin UI
-- [x] Account UI for each user with self-service
-- [x] Simple per client branding for the login page
 - [x] All End-User facing sites support i18n server-side translation
+  with the possibility to add more languages
+- [x] Simple per client branding for the login page
 - [x] Custom roles
 - [x] Custom groups
 - [x] Custom scopes
 - [x] Custom user attributes
 - [x] User attribute binding to custom scopes
 - [x] Configurable password policy
-- [x] Dedicated `forward_auth` endpoint, in addition to the existing userinfo,
-  with support for configurable trusted auth headers
 - [x] Admin API Keys with fine-grained access rights
 - [x] Events and alerting system
-- [x] Optional event notifications via: E-Mail, Matrix, Slack
-- [x] Configurable E-Mail templates for NewPassword + ResetPassword events
 - [x] Optional event persistence
-- [x] Admin UI component for archived / persisted events
+- [x] Dedicated `forward_auth` endpoint, in addition to the existing userinfo,
+  with support for configurable trusted auth headers
+- [x] Optional event notifications via: E-Mail, Matrix, Slack
 - [x] Optional Force MFA for the Admin UI
 - [x] Optional Force MFA for each individual client
 - [x] Additional encryption inside the database for the most critical entries
 - [x] Automatic database backups with configurable retention and auto-cleanup (SQLite only)
 - [x] auto-encrypted backups (SQLite)
-- [x] pushing SQLite backups to S3 storage
+- [x] Ability to push SQLite backups to S3 storage
 - [x] auto-restore SQLite backups from file and s3
 - [x] High-Availability
 - [x] HA cache layer with its own (optional) mTLS connection
@@ -133,10 +130,14 @@ Keycloak was a rough inspiration in certain places and if something is working w
 - [x] Argon2ID with config helper UI utility
 - [x] Housekeeping schedulers and cron jobs
 - [x] JSON Web Key Set (JWKS) autorotation feature
+- [x] Account conversions between traditional password and Passkey only
 - [x] Optional open user registration
 - [x] Optional user registration domain restriction
 - [x] App version update checker
-- [x] Prometheus `/metrics` endpoint on separate port
 - [x] SwaggerUI documentation
+- [x] Configurable E-Mail templates for NewPassword + ResetPassword events
+- [x] Prometheus `/metrics` endpoint on separate port
 - [x] No-Setup migrations between different databases (Yes, even between SQLite and Postgres)
+- [x] Can serve a basic `webid` document
 - [x] Experimental FedCM support
+
