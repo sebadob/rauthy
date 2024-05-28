@@ -14,6 +14,21 @@ another defense in depth. The advantage of the new middleware is, that this can 
 after enough testing in parallel.  
 If this works fine without any issues, we might get rid of the current way of doing it and only use the new middleware,
 which is easier to maintain and to work with.
+
+To not break any existing deployments and make sure I did not forget route exceptions for the new middleware, you can
+set it to warn-only mode for this minor release. This option will be removed in future releases though and should only
+be a temporary solution:
+
+```
+# If set to true, a violation inside the CSRF protection middleware based
+# on Sec-* headers will block invalid requests. Usually you always want this
+# enabled. You may only set it to false during the first testing phase if you
+# experience any issues with an already existing Rauthy deployment.
+# In future releases, it will not be possible the disable these blocks.
+# default: true
+#SEC_HEADER_BLOCK=true
+```
+
 [97fedf1](https://github.com/sebadob/rauthy/commit/97fedf189d54afe9c0d03dbf241ea59248806900)
 
 #### Experimental FedCM support
@@ -90,6 +105,9 @@ ARGON2_P_COST=8
 - A small bug appeared in the UI after you have added new custom user attributes. Instead of resetting the input
   values to empty strings after the registration, they were set to undefined.
   [ab77595](https://github.com/sebadob/rauthy/commit/ab775958dec70eee3b2915fe2faa8b4a9816ec2e)
+- Because of a bug in the account overview UI, it was not possible to link an already existing account to an upstream
+  IdP after the registration.
+  [22751ee](https://github.com/sebadob/rauthy/commit/22751ee6e9b31361d2ee5047a8c8795518d30745)
 
 ## v0.23.1
 

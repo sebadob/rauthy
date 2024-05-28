@@ -28,7 +28,7 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # If you don't need the extra validations, you can set this to `false` to
 # save some resources, if your clients to a lot of `/userinfo` lookups.
 # default: true
-USERINFO_STRICT=true
+#USERINFO_STRICT=true
 
 # Can be used when 'OPEN_USER_REG=true' to restrict the domains
 # for a registration. For instance, set it to
@@ -42,7 +42,7 @@ USERINFO_STRICT=true
 # experience any issues with an already existing Rauthy deployment.
 # In future releases, it will not be possible the disable these blocks.
 # default: true
-SEC_HEADER_BLOCK=true
+#SEC_HEADER_BLOCK=true
 
 # If set to 'true', this will validate the remote peer IP address with
 # each request and compare it with the IP which was used during the initial
