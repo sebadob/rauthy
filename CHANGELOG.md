@@ -94,8 +94,8 @@ ARGON2_T_COST=4
 ARGON2_P_COST=8
 ```
 
-[5145889](https://github.com/sebadob/rauthy/commit/514588937db574b2f6beea8a41dc80062f1faad4
-[feee23e](https://github.com/sebadob/rauthy/commit/feee23ee1809bd50416370ccd975e9577a7192e6
+[5145889](https://github.com/sebadob/rauthy/commit/514588937db574b2f6beea8a41dc80062f1faad4)
+[feee23e](https://github.com/sebadob/rauthy/commit/feee23ee1809bd50416370ccd975e9577a7192e6)
 
 ### Bugfixes
 
