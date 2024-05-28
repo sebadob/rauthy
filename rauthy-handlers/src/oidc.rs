@@ -1,5 +1,6 @@
 use crate::{map_auth_step, ReqPrincipal};
 use actix_web::cookie::time::OffsetDateTime;
+use actix_web::cookie::SameSite;
 use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::{header, StatusCode};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError};
@@ -7,9 +8,10 @@ use chrono::Utc;
 use rauthy_common::constants::{
     APPLICATION_JSON, AUTH_HEADERS_ENABLE, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED,
     AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
-    AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, DEVICE_GRANT_CODE_LIFETIME,
-    DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT, GRANT_TYPE_DEVICE_CODE, HEADER_HTML,
-    HEADER_RETRY_NOT_BEFORE, OPEN_USER_REG, SESSION_LIFETIME, SESSION_VALIDATE_IP,
+    AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, COOKIE_SESSION_FED_CM,
+    DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT,
+    EXPERIMENTAL_FED_CM_ENABLE, GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE,
+    OPEN_USER_REG, SESSION_LIFETIME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_req;
@@ -20,6 +22,7 @@ use rauthy_models::entity::auth_providers::AuthProviderTemplate;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::devices::DeviceAuthCode;
+use rauthy_models::entity::fed_cm::FedCMLoginStatus;
 use rauthy_models::entity::ip_rate_limit::DeviceIpRateLimit;
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JWKS};
 use rauthy_models::entity::pow::PowEntity;
@@ -167,18 +170,11 @@ pub async fn get_authorize(
         }
         return Ok(HttpResponse::Ok().append_header(HEADER_HTML).body(body));
     }
-
     // check if we can re-use a still valid session or need to create a new one
     let session = if let Some(session) = &principal.session {
-        let remote_ip = if *SESSION_VALIDATE_IP {
-            Some(real_ip_from_req(&req).unwrap_or_default())
-        } else {
-            None
-        };
-        if session.is_valid(data.session_timeout, remote_ip) {
-            session.clone()
-        } else {
-            Session::new(*SESSION_LIFETIME, real_ip_from_req(&req))
+        match principal.validate_session_auth_or_init() {
+            Ok(_) => session.clone(),
+            Err(_) => Session::new(*SESSION_LIFETIME, real_ip_from_req(&req)),
         }
     } else {
         Session::new(*SESSION_LIFETIME, real_ip_from_req(&req))
@@ -208,10 +204,19 @@ pub async fn get_authorize(
             .insert_header(HEADER_HTML)
             .body(body));
     }
-    Ok(HttpResponse::build(StatusCode::OK)
-        .cookie(cookie)
-        .insert_header(HEADER_HTML)
-        .body(body))
+
+    if *EXPERIMENTAL_FED_CM_ENABLE {
+        Ok(HttpResponse::build(StatusCode::OK)
+            .cookie(session.client_cookie_fed_cm())
+            .cookie(cookie)
+            .insert_header(HEADER_HTML)
+            .body(body))
+    } else {
+        Ok(HttpResponse::build(StatusCode::OK)
+            .cookie(cookie)
+            .insert_header(HEADER_HTML)
+            .body(body))
+    }
 }
 
 /// POST login credentials to proceed with the authorization_code flow
@@ -242,7 +247,7 @@ pub async fn get_authorize(
 pub async fn post_authorize(
     data: web::Data<AppState>,
     req: HttpRequest,
-    req_data: actix_web_validator::Json<LoginRequest>,
+    payload: actix_web_validator::Json<LoginRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
@@ -251,7 +256,7 @@ pub async fn post_authorize(
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
 
     let session = principal.get_session()?;
-    let res = match auth::authorize(&data, &req, req_data.into_inner(), session.clone()).await {
+    let res = match auth::authorize(&data, &req, payload.into_inner(), session.clone()).await {
         Ok(auth_step) => map_auth_step(auth_step, &req).await,
         Err(err) => Err(err),
     };
@@ -608,6 +613,12 @@ pub async fn post_logout(
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     let mut session = principal.get_session()?.clone();
+    let cookie_fed_cm = ApiCookie::build_with_same_site(
+        COOKIE_SESSION_FED_CM,
+        Cow::from(&session.id),
+        0,
+        SameSite::None,
+    );
     let cookie = session.invalidate(&data).await?;
 
     if req_data.post_logout_redirect_uri.is_some() {
@@ -624,10 +635,14 @@ pub async fn post_logout(
         return Ok(HttpResponse::build(StatusCode::MOVED_PERMANENTLY)
             .append_header((header::LOCATION, loc))
             .cookie(cookie)
+            .cookie(cookie_fed_cm)
             .finish());
     }
 
-    return Ok(HttpResponse::build(StatusCode::OK).cookie(cookie).finish());
+    return Ok(HttpResponse::build(StatusCode::OK)
+        .cookie(cookie)
+        .cookie(cookie_fed_cm)
+        .finish());
 }
 
 /// Rotate JWKs
@@ -700,7 +715,14 @@ pub async fn post_session(
         state: session.state.clone(),
     };
 
-    Ok(HttpResponse::Created().cookie(cookie).json(info))
+    if *EXPERIMENTAL_FED_CM_ENABLE {
+        Ok(HttpResponse::Created()
+            .cookie(cookie)
+            .cookie(session.client_cookie_fed_cm())
+            .json(info))
+    } else {
+        Ok(HttpResponse::Created().cookie(cookie).json(info))
+    }
 }
 
 /// OIDC sessioninfo
@@ -716,12 +738,20 @@ pub async fn post_session(
     ),
 )]
 #[get("/oidc/sessioninfo")]
-pub async fn get_session_info(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth()?;
-    let session = principal.get_session()?;
+pub async fn get_session_info(data: web::Data<AppState>, principal: ReqPrincipal) -> HttpResponse {
+    if let Err(err) = principal.validate_session_auth() {
+        return HttpResponse::Unauthorized()
+            .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
+            .json(err);
+    }
+    let session = match principal.get_session() {
+        Ok(s) => s,
+        Err(err) => {
+            return HttpResponse::Unauthorized()
+                .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
+                .json(err);
+        }
+    };
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
@@ -737,7 +767,9 @@ pub async fn get_session_info(
         state: session.state.clone(),
     };
 
-    Ok(HttpResponse::Ok().json(info))
+    HttpResponse::Ok()
+        .insert_header(FedCMLoginStatus::LoggedIn.as_header_pair())
+        .json(info)
 }
 
 // TODO maybe generate a new csrf token each time this endpoint is used. This would boost the security

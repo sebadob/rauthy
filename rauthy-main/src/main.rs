@@ -23,8 +23,8 @@ use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
 use rauthy_handlers::middleware::principal::RauthyPrincipalMiddleware;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
-    api_keys, auth_providers, blacklist, clients, events, generic, groups, oidc, roles, scopes,
-    sessions, users,
+    api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
+    scopes, sessions, users,
 };
 use rauthy_models::app_state::{AppState, Caches};
 use rauthy_models::email::EMail;
@@ -470,6 +470,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
             )
             .wrap(pub_metrics.clone())
             .service(oidc::get_well_known)
+            .service(fed_cm::get_fed_cm_well_known)
             .service(generic::catch_all)
             // Important: Do not move this middleware do need the least amount of computing
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
@@ -523,6 +524,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(generic::get_admin_sessions_html)
                             .service(generic::get_admin_users_html)
                             .service(generic::get_device_html)
+                            .service(generic::get_fed_cm_html)
                             .service(generic::get_auth_check)
                             .service(generic::get_auth_check_admin)
                             .service(generic::post_i18n)
@@ -560,6 +562,13 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(clients::get_clients_dyn)
                             .service(clients::put_clients_dyn)
                             .service(generic::get_login_time)
+                            .service(fed_cm::get_fed_cm_accounts)
+                            .service(fed_cm::get_fed_cm_config)
+                            .service(fed_cm::get_fed_cm_client_meta)
+                            .service(fed_cm::get_fed_cm_well_known)
+                            .service(fed_cm::post_fed_cm_token)
+                            .service(fed_cm::get_fed_client_config)
+                            .service(fed_cm::get_fed_cm_status)
                             .service(users::get_users)
                             .service(users::get_users_register)
                             .service(users::post_users_register)

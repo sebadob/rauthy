@@ -12,17 +12,19 @@ const config = {
         // If you want to run with dev TLS certificates, for instance when you use a remote host, uncomment the following
         // lines. Do not forget to adjust the `PUB_URL` in `rauthy.cfg` accordingly to allow the `redirect_uri`, for instance:
         // `PUB_URL=your_remote_host_ip:8443`
-        https: {
-            key: fs.readFileSync(`${__dirname}/../tls/key.pem`),
-            cert: fs.readFileSync(`${__dirname}/../tls/cert-chain.pem`)
-        },
+        // https: {
+        //     key: fs.readFileSync(`${__dirname}/../tls/key.pem`),
+        //     cert: fs.readFileSync(`${__dirname}/../tls/cert-chain.pem`)
+        // },
         proxy: {
+            '/.well-known/': backend,
             '/auth/v1/_app': backend,
             '/auth/v1/book/': backend,
             '/auth/v1/api_keys': backend,
             '/auth/v1/auth_check_admin': backend,
             '/auth/v1/blacklist': backend,
             '/auth/v1/events': backend,
+            '/auth/v1/fed_cm/': backend,
             '/auth/v1/i18n': backend,
             '/auth/v1/oidc/authorize': backend,
             '/auth/v1/oidc/callback': backend,

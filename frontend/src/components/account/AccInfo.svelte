@@ -27,12 +27,14 @@
 
     onMount(() => {
         // value for dev testing only
-        const providersTpl = [{
-            "id": "7F6N7fb3el3P5XimjJSaeD2o",
-            "name": "Rauthy IAM"
-        }];
-        // const providersTpl = document?.getElementsByTagName("template").namedItem("auth_providers")?.innerHTML;
-        providersAvailable = providersTpl;
+        // providersAvailable = [{
+        //     "id": "7F6N7fb3el3P5XimjJSaeD2o",
+        //     "name": "Rauthy IAM"
+        // }];
+        let tpl = document?.getElementsByTagName("template").namedItem("auth_providers")?.innerHTML;
+        if (tpl) {
+            providersAvailable = JSON.parse(tpl);
+        }
     })
 
     function linkProvider(id) {

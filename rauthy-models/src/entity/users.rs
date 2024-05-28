@@ -35,7 +35,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{query_as, FromRow};
 use std::ops::Add;
 use time::OffsetDateTime;
-use tracing::{error, trace, warn};
+use tracing::{debug, error, trace, warn};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccountType {
@@ -359,6 +359,33 @@ impl User {
         Ok(res)
     }
 
+    pub async fn find_for_fed_cm_validated(
+        data: &web::Data<AppState>,
+        user_id: String,
+    ) -> Result<Self, ErrorResponse> {
+        // We will stick to the WWW-Authenticate header for now and use duplicated code from
+        // some OAuth2 handlers for now until the spec has settled on an error behavior.
+        debug!("Looking up FedCM user_id {}", user_id);
+        let slf = Self::find(data, user_id).await.map_err(|_| {
+            debug!("FedCM user not found");
+            ErrorResponse::new(
+                ErrorResponseType::WWWAuthenticate("user-not-found".to_string()),
+                "The user has not been found".to_string(),
+            )
+        })?;
+
+        // reject the request if user has been disabled, even when the token is still valid
+        if !slf.enabled || slf.check_expired().is_err() {
+            debug!("FedCM user is disabled");
+            return Err(ErrorResponse::new(
+                ErrorResponseType::WWWAuthenticate("user-disabled".to_string()),
+                "The user has been disabled".to_string(),
+            ));
+        }
+
+        Ok(slf)
+    }
+
     pub async fn find_paginated(
         data: &web::Data<AppState>,
         continuation_token: Option<ContinuationToken>,
@@ -481,7 +508,7 @@ impl User {
         Ok((res, token))
     }
 
-    async fn insert(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
+    pub async fn insert(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
         let lang = new_user.language.as_str();
         sqlx::query!(
             r#"INSERT INTO USERS

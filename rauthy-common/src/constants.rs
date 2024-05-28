@@ -29,6 +29,7 @@ pub const TOKEN_BEARER: &str = "Bearer";
 pub const TOKEN_DPOP: &str = "DPoP";
 pub const TOKEN_DPOP_NONCE: &str = "DPoP-nonce";
 pub const COOKIE_SESSION: &str = "RauthySession";
+pub const COOKIE_SESSION_FED_CM: &str = "RauthySessionFedCM";
 pub const COOKIE_MFA: &str = "RauthyMfa";
 pub const COOKIE_LOCALE: &str = "locale";
 pub const COOKIE_UPSTREAM_CALLBACK: &str = "UpstreamAuthCallback";
@@ -314,6 +315,11 @@ lazy_static! {
             .parse::<u64>()
             .expect("EPHEMERAL_CLIENTS_CACHE_LIFETIME cannot be parsed to u64 - bad format");
 
+    pub static ref EXPERIMENTAL_FED_CM_ENABLE: bool = env::var("EXPERIMENTAL_FED_CM_ENABLE")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("EXPERIMENTAL_FED_CM_ENABLE cannot be parsed to bool - bad format");
+
     pub static ref REFRESH_TOKEN_LIFETIME: u16 = env::var("REFRESH_TOKEN_LIFETIME")
        .unwrap_or_else(|_| String::from("48"))
        .parse::<u16>()
@@ -357,9 +363,17 @@ lazy_static! {
 
     pub static ref DPOP_NONCE_EXP: u32 = env::var("DPOP_NONCE_EXP")
         .unwrap_or_else(|_| String::from("900"))
-        // parsing to u32 to be able to typecast to i64 for chrono safely
         .parse::<u32>()
         .expect("DPOP_NONCE_EXP cannot be parsed to u32 - bad format");
+
+    pub static ref SESSION_LIFETIME_FED_CM: i64 = env::var("SESSION_LIFETIME_FED_CM")
+        .unwrap_or_else(|_| String::from("2592000"))
+        .parse::<i64>()
+        .expect("SESSION_LIFETIME_FED_CM cannot be parsed to i64 - bad format");
+    pub static ref SESSION_TIMEOUT_FED_CM: u32 = env::var("SESSION_TIMEOUT_FED_CM")
+        .unwrap_or_else(|_| String::from("259200"))
+        .parse::<u32>()
+        .expect("SESSION_TIMEOUT_FED_CM cannot be parsed to u32 - bad format");
 
     pub static ref SESSION_LIFETIME: u32 = env::var("SESSION_LIFETIME")
         .unwrap_or_else(|_| String::from("14400"))
@@ -383,6 +397,7 @@ lazy_static! {
         .parse::<u16>()
         .expect("SSE_KEEP_ALIVE cannot be parsed to u16 - bad format");
 
+    pub static ref RAUTHY_ADMIN_EMAIL: Option<String> = env::var("RAUTHY_ADMIN_EMAIL").ok();
     pub static ref EMAIL_SUB_PREFIX: String = env::var("EMAIL_SUB_PREFIX")
         .unwrap_or_else(|_| String::from("Rauthy IAM"));
     pub static ref SMTP_USERNAME: String = env::var("SMTP_USERNAME")

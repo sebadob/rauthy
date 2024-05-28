@@ -109,6 +109,13 @@ export async function postDeviceVerify(data) {
     });
 }
 
+export async function getFedCMStatus() {
+    return await fetch('/auth/v1/fed_cm/status', {
+        method: 'GET',
+        headers: HEADERS.json,
+    });
+}
+
 export async function getPasswordPolicy() {
     return await fetch('/auth/v1/password_policy', {
         method: 'GET',

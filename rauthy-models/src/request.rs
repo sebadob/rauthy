@@ -67,7 +67,7 @@ pub struct AuthRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
         path = "RE_CLIENT_ID_EPHEMERAL",
-        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
     pub client_id: String,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
@@ -221,7 +221,7 @@ pub struct EphemeralClientRequest {
     pub post_logout_redirect_uris: Option<Vec<String>>,
     /// Validation: `Vec<^(authorization_code|client_credentials|password|refresh_token)$>`
     #[validate(custom(function = "validate_vec_grant_type"))]
-    pub grant_types: Vec<String>,
+    pub grant_types: Option<Vec<String>>,
     /// Validation: `60 <= access_token_lifetime <= 86400`
     #[validate(range(min = 60, max = 86400))]
     pub default_max_age: Option<i32>,
@@ -254,6 +254,38 @@ pub struct EventsRequest {
     pub until: Option<i64>,
     pub level: EventLevel,
     pub typ: Option<EventType>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct FedCMAssertionRequest {
+    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
+    #[validate(regex(
+        path = "RE_CLIENT_ID_EPHEMERAL",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
+    ))]
+    pub client_id: String,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    pub nonce: Option<String>,
+    /// Validation: `[a-zA-Z0-9]`
+    #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    pub account_id: String,
+    /// Whether the user agent has explicitly shown to the user what specific information the
+    /// IDP intends to share with the RP (e.g. "idp.example will share your name, email... with
+    /// rp.example"), used by the request permission to sign-up algorithm for new users. It is
+    /// used as an assurance by the user agent to the IDP that it has indeed shown the terms of
+    /// service and privacy policy to the user in the cases where it is required to do so.
+    pub disclosure_text_shown: bool,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
+pub struct FedCMClientMetadataRequest {
+    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
+    #[validate(regex(
+        path = "RE_CLIENT_ID_EPHEMERAL",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
+    ))]
+    pub client_id: String,
 }
 
 fn default_scope() -> String {

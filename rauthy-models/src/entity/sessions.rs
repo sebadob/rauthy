@@ -3,12 +3,13 @@ use crate::app_state::AppState;
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
 use crate::request::SearchParamsIdx;
-use actix_web::cookie::{time, Cookie};
+use actix_web::cookie::{time, Cookie, SameSite};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{cookie, web, HttpRequest};
 use chrono::Utc;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_SESSIONS, COOKIE_SESSION, CSRF_HEADER, IDX_SESSION,
+    CACHE_NAME_12HR, CACHE_NAME_SESSIONS, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER,
+    IDX_SESSION, SESSION_LIFETIME_FED_CM,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::get_rand;
@@ -542,6 +543,15 @@ impl Session {
     pub fn client_cookie(&self) -> cookie::Cookie {
         let max_age = self.exp - Utc::now().timestamp();
         ApiCookie::build(COOKIE_SESSION, Cow::from(&self.id), max_age)
+    }
+
+    pub fn client_cookie_fed_cm(&self) -> cookie::Cookie {
+        ApiCookie::build_with_same_site(
+            COOKIE_SESSION_FED_CM,
+            Cow::from(&self.id),
+            *SESSION_LIFETIME_FED_CM,
+            SameSite::None,
+        )
     }
 
     pub fn extract_from_req(

@@ -1,6 +1,6 @@
 use crate::{
-    api_keys, auth_providers, blacklist, clients, events, generic, groups, oidc, roles, scopes,
-    sessions, users,
+    api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
+    scopes, sessions, users,
 };
 use actix_web::web;
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
@@ -57,6 +57,13 @@ use utoipa::{openapi, OpenApi};
 
         events::sse_events,
         events::post_event_test,
+
+        fed_cm::get_fed_cm_accounts,
+        fed_cm::get_fed_cm_client_meta,
+        fed_cm::get_fed_cm_config,
+        fed_cm::get_fed_cm_status,
+        fed_cm::post_fed_cm_token,
+        fed_cm::get_fed_cm_well_known,
 
         generic::get_auth_check,
         generic::get_auth_check_admin,
@@ -145,6 +152,7 @@ use utoipa::{openapi, OpenApi};
             entity::auth_providers::AuthProviderType,
             entity::clients::Client,
             entity::colors::Colors,
+            entity::fed_cm::WebIdentity,
             entity::groups::Group,
             entity::jwk::JwkKeyPairAlg,
             entity::jwk::JwkKeyPairType,
@@ -173,6 +181,8 @@ use utoipa::{openapi, OpenApi};
             request::ColorsRequest,
             request::DeviceGrantRequest,
             request::EncKeyMigrateRequest,
+            request::FedCMAssertionRequest,
+            request::FedCMClientMetadataRequest,
             request::LoginRequest,
             request::LogoutRequest,
             request::MfaAwaitRequest,
@@ -268,6 +278,7 @@ use utoipa::{openapi, OpenApi};
         (name = "api_keys", description = "API Keys endpoints"),
         (name = "generic", description = "Generic endpoints"),
         (name = "webid", description = "WebID endpoints"),
+        (name = "fed_cm", description = "Experimental FedCM endpoints"),
         (name = "deprecated", description = "Deprecated endpoints - will be removed in a future version"),
     ),
 )]

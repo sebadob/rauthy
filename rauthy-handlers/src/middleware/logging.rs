@@ -171,37 +171,3 @@ async fn log_access(uri: &Uri, req: &ServiceRequest) -> Result<(), ErrorResponse
 
     Ok(())
 }
-
-// async fn validate_host(uri: &Uri, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-//     // host can be none if we are on localhost or is none, if connected via HTTP/2
-//     let host = uri.host();
-//     if let Some(host) = host {
-//         let scheme = uri
-//             .scheme()
-//             .expect("Scheme is None when Host was Some")
-//             .as_str();
-//         if !match data.listen_scheme {
-//             ListenScheme::Http => scheme == "http",
-//             ListenScheme::Https => scheme == "https",
-//             ListenScheme::HttpHttps => scheme == "https" || scheme == "http",
-//         } {
-//             return Err(ErrorResponse::new(
-//                 ErrorResponseType::NotFound,
-//                 "".to_string(),
-//             ));
-//         }
-//
-//         if !data.public_url.contains(host) {
-//             return Err(ErrorResponse::new(
-//                 ErrorResponseType::NotFound,
-//                 "".to_string(),
-//             ));
-//         }
-//     } else {
-//         // TODO do something in that case? Check Origin in case of HTTP/2 ?
-//         // can this only happen on localhost for 100%? -> investigate
-//         debug!("Host is None in logging middleware");
-//     }
-//
-//     Ok(())
-// }

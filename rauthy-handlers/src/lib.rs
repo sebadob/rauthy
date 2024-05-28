@@ -7,6 +7,7 @@ use rauthy_common::constants::COOKIE_MFA;
 use rauthy_common::error_response::ErrorResponse;
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::entity::api_keys::ApiKey;
+use rauthy_models::entity::fed_cm::FedCMLoginStatus;
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::webauthn::WebauthnCookie;
@@ -20,6 +21,7 @@ pub mod auth_providers;
 pub mod blacklist;
 pub mod clients;
 pub mod events;
+pub mod fed_cm;
 pub mod generic;
 pub mod groups;
 pub mod middleware;
@@ -44,9 +46,13 @@ pub async fn map_auth_step(
     // the bool for Ok() is true is the password has been hashed
     // the bool for Err() means if we need to add a login delay (and none otherwise for better UX)
 ) -> Result<(HttpResponse, bool), (ErrorResponse, bool)> {
+    // we will only get here after a successful login -> always return logged-in header
+    let fed_cm_header = FedCMLoginStatus::LoggedIn.as_header_pair();
+
     match auth_step {
         AuthStep::LoggedIn(res) => {
             let mut resp = HttpResponse::Accepted()
+                .insert_header(fed_cm_header)
                 .insert_header(res.header_loc)
                 .insert_header(res.header_csrf)
                 .finish();
@@ -63,13 +69,14 @@ pub async fn map_auth_step(
                 exp: res.exp,
             };
             let mut resp = HttpResponse::Ok()
+                .insert_header(fed_cm_header)
                 .insert_header(res.header_csrf)
                 .json(&body);
 
             if let Some((name, value)) = res.header_origin {
                 resp.headers_mut().insert(name, value);
             }
-            //
+
             // if there is no mfa_cookie present, set a new one
             if let Ok(mfa_cookie) =
                 WebauthnCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA))
@@ -86,7 +93,12 @@ pub async fn map_auth_step(
 
         AuthStep::ProviderLink => {
             // TODO generate a new event type in this case?
-            Ok((HttpResponse::NoContent().finish(), false))
+            Ok((
+                HttpResponse::NoContent()
+                    .insert_header(fed_cm_header)
+                    .finish(),
+                false,
+            ))
         }
     }
 }
