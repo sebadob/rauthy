@@ -1,5 +1,114 @@
 # Changelog
 
+## v0.23.2
+
+This release brings some very minor features and bugfixes.
+
+### Changes
+
+#### New CSRF protection middleware
+
+CSRF protection was there already without any issues.  
+However, a new middleware has been added to the whole routing stack in addition to the existing checks. This provides
+another defense in depth. The advantage of the new middleware is, that this can be enforced all the way in the future
+after enough testing in parallel.  
+If this works fine without any issues, we might get rid of the current way of doing it and only use the new middleware,
+which is easier to maintain and to work with.
+
+To not break any existing deployments and make sure I did not forget route exceptions for the new middleware, you can
+set it to warn-only mode for this minor release. This option will be removed in future releases though and should only
+be a temporary solution:
+
+```
+# If set to true, a violation inside the CSRF protection middleware based
+# on Sec-* headers will block invalid requests. Usually you always want this
+# enabled. You may only set it to false during the first testing phase if you
+# experience any issues with an already existing Rauthy deployment.
+# In future releases, it will not be possible the disable these blocks.
+# default: true
+#SEC_HEADER_BLOCK=true
+```
+
+[97fedf1](https://github.com/sebadob/rauthy/commit/97fedf189d54afe9c0d03dbf241ea59248806900)
+
+#### Experimental FedCM support
+
+This is not really considered a new feature, but Rauthy now has experimental support for FedCM in its current state.
+This is opt-in and disabled by default. You should not attempt to use it in production because the FedCM implementation
+itself still has a few bumps and sharp edges.  
+The only reason the experimental support is there is to help smooth out these things and hopefully have FedCM as a
+really nice addition. It does not really bring any new possibilities to the table, but it would improve the UX quite a
+bit, if it hopefully turns out great.
+
+```
+#####################################
+############## FED CM ###############
+#####################################
+
+## CAUTION: The FedCM is highly experimental at this point!
+## Do not attempt to use it in production because it is subject to change
+## in the future! The spec is currently a draft and under active development.
+
+# Set to `true` to enable the experimental FedCM.
+# default: false
+#EXPERIMENTAL_FED_CM_ENABLE=false
+
+# Session lifetime for FedCM in seconds - the session can not be extended
+# beyond this time and a new login will be forced.
+# default: 2592000
+#SESSION_LIFETIME_FED_CM=2592000
+
+# Session timeout for FedCM in seconds
+# When a new token / login is requested before this timeout hits the limit,
+# the user will be authenticated without prompting for the credentials again.
+# This is the value which can extend the session, until it hits its maximum
+# lifetime set with _FED_CM.
+# default: 259200
+#SESSION_TIMEOUT_FED_CM=259200
+```
+
+[4689e54](https://github.com/sebadob/rauthy/commit/4689e54b6193cf62877a75650d74e3bc29e5c8e7)
+
+#### Relaxed validation on ephemeral `client_id`s
+
+The input validation for ephemeral `client_id`s has been relaxed. This now makes it possible to test them with OIDC
+playgrounds, which typically generate pretty long testing URLs, which were being rejected for their length beforehand.
+Rauthy now accepts URLs of up to 256 characters as `client_id`s.  
+[62405bb](https://github.com/sebadob/rauthy/commit/62405bbad7230f2e3af864b004081a90ab505f6f)
+
+#### Bumped Argon2ID defaults
+
+The default values for the Argon2ID hashing algorithm have been bumped up quite a bit. Rauthy's goal is to be as secure
+as possible by default. The old values were quite a bit above the OWASP recommendation, but still way too low imho.
+The values will of course still need tuning and adjustment to the target architecture / deployment, but they provide a
+way better starting point and can be considered really secure even if not adjusted.
+
+The new defaults are:
+
+```
+# M_COST should never be below 32768 in production
+ARGON2_M_COST=131072
+# T_COST should never be below 1 in production
+ARGON2_T_COST=4
+# P_COST should never be below 2 in production
+ARGON2_P_COST=8
+```
+
+[5145889](https://github.com/sebadob/rauthy/commit/514588937db574b2f6beea8a41dc80062f1faad4
+[feee23e](https://github.com/sebadob/rauthy/commit/feee23ee1809bd50416370ccd975e9577a7192e6
+
+### Bugfixes
+
+- Ephemeral client's now work properly with the `/userinfo` endpoint in strict-validation mode. Their validation is
+  simply being skipped at that point, because it does not make much sense to do an `enabled` check at that point.
+  [90b0367](https://github.com/sebadob/rauthy/commit/90b03677ffd3b99372ac9496540449b302af66d5)
+- A small bug appeared in the UI after you have added new custom user attributes. Instead of resetting the input
+  values to empty strings after the registration, they were set to undefined.
+  [ab77595](https://github.com/sebadob/rauthy/commit/ab775958dec70eee3b2915fe2faa8b4a9816ec2e)
+- Because of a bug in the account overview UI, it was not possible to link an already existing account to an upstream
+  IdP after the registration.
+  [22751ee](https://github.com/sebadob/rauthy/commit/22751ee6e9b31361d2ee5047a8c8795518d30745)
+
 ## v0.23.1
 
 ### Features

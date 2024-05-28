@@ -197,64 +197,89 @@ with new versions.</p>
 </div>
 <h2 id="what-it-is"><a class="header" href="#what-it-is">What it is</a></h2>
 <p>Rauthy is an OpenID Connect (OIDC) Provider and Single Sign-On solution written in Rust.</p>
-<p><strong>Secure by default</strong><br />
-It tries to be as secure as possible by default while still providing all the options needed to be compatible with
+<h3 id="secure-by-default"><a class="header" href="#secure-by-default">Secure by default</a></h3>
+<p>It tries to be as secure as possible by default while still providing all the options needed to be compatible with
 older systems. For instance, if you create a new OIDC client, it activates <code>ed25519</code> as the default algorithm for
 token signing and S256 PKCE flow. This will not work with old clients, which do not support it, but you can of course
 deactivate this to your liking.</p>
-<p><strong>MFA and Passwordless Login</strong></p>
-<ol>
-<li>Option: Password + Security Key (without User Verification):<br />
+<h3 id="mfa-and-passwordless-login"><a class="header" href="#mfa-and-passwordless-login">MFA and Passwordless Login</a></h3>
+<p><strong>Option 1:</strong><br />
+Password + Security Key (without User Verification):<br />
 Rauthy provides FIDO 2 / Webauthn login flows. If you once logged in on a new client with your username + password,
 you
 will get an encrypted cookie which will allow you to log in without a password from that moment on. You only need to
-have a FIDO compliant Passkey being registered for your account.</li>
-<li>Option: Passkey-Only Accounts:<br />
-Since v0.16, Rauthy supports Passkey-Only-Accounts. You basically just provide your E-Mail address and log in with
-your
-FIDO 2 Passkey. Your account will not even have / need a password. This login flow is restricted though to only those
-passkeys, that can provide User Verification (UV) to always have at least 2FA security.</li>
-</ol>
-<p><strong>Fast and efficient</strong><br />
-The main goal was to provide an SSO solution like Keycloak and others while using a way lower footprint
+have a FIDO compliant Passkey being registered for your account.</p>
+<p><strong>Option 2:</strong><br />
+Passkey-Only Accounts:<br />
+Rauthy supports Passkey-Only-Accounts: you basically just provide your E-Mail address and log in with
+your FIDO 2 Passkey. Your account will not even have / need a password. This login flow is restricted though to only
+those passkeys, that can provide User Verification (UV) to always have at least 2FA security.</p>
+<div id="admonition-note" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note"></a></p>
+</div>
+<div>
+<p>Discoverable credentials are discouraged with Rauthy. This means you will need to enter your E-Mail for the login
+(which will be auto-filled after the first one), but Rauthy passkeys do not use any storage on your device. For instance
+when you have a Yubikey which can store 25 passkeys, it will not use a single slot there even having full support.</p>
+</div>
+</div>
+<h3 id="fast-and-efficient"><a class="header" href="#fast-and-efficient">Fast and efficient</a></h3>
+<p>The main goal was to provide an SSO solution like Keycloak and others while using a way lower footprint
 and being more efficient with resources. For instance, Rauthy can easily run a fully blown SSO provider on just a
 Raspberry Pi. It makes extensive use of caching to be as fast as possible in cases where your database is further
-away or just a bit slower, because it is maybe running on an SBC from an SD card. Most things are even cached
-for several hours (config options will come in the future) and special care has been taken into account in case of cache
-eviction and invalidation.<br />
-A Rauthy deployment with the embedded SQLite, filled caches and a small set of clients and users configured typically
-only uses <strong>between 17 and 22 MB of memory</strong>! This is pretty awesome when comparing it to other existing solutions
+away or just a bit slower, because it is maybe running on an SBC from an SD card or in the cloud with the lowest storage
+bandwidth. Most things are even cached for several hours and special care has been taken into account in case of cache
+eviction and invalidation.</p>
+<p>A Rauthy deployment with the embedded SQLite, filled caches and a small set of clients and users configured typically
+only uses <strong>between 20 and 25 MB of memory</strong>! This is pretty awesome when comparing it to other existing solutions
 out there. If a password from a login is hashed, the memory consumption will of course go up way higher than this
-depending on your configured Argon2ID parameters, which you got fully under control. If you use it with an external
-Postgres, the memory consumption of Rauthy itself will even be a bit lower, since it does not need to care about SQLite.
-<br />
-For achieving this speed and efficiency, some additional design tradeoffs werde made. For instance, some things you
+depending on your configured Argon2ID parameters, which you got fully under control.</p>
+<p>For achieving the speed and efficiency, some additional design tradeoffs were made. For instance, some things you
 configure statically via config file and not dynamically via UI, while most of them are configured once and then never
 touched again.</p>
-<p><strong>Highly Available</strong><br />
-Even though it makes extensive use of caching, you can run it in HA mode. It uses its own embedded distributed HA cache
+<h3 id="highly-available"><a class="header" href="#highly-available">Highly Available</a></h3>
+<p>Even though it makes extensive use of caching, you can run it in HA mode. It uses its own embedded distributed HA cache
 called <a href="https://crates.io/crates/redhac">redhac</a>, which cares about cache eviction on remote hosts.
 You can choose between a <em>SQLite</em> for single instance deployments and a <em>Postgres</em>, if you need HA. MySQL support might
 come in the future.</p>
-<p><strong>Nice UI</strong><br />
-Unlike many other options, <code>rauthy</code> does have a nice Admin UI which can be used to basically do almost any operation you
-might need to administrate the whole application and its users. Some Screenshots and further introduction will follow
-in the future.</p>
-<p><strong>Client Branding</strong><br />
-You have a simple way to create some kind of branding or stylized look for the Login page for each client.<br />
+<h3 id="admin-ui--user-account-dashboard"><a class="header" href="#admin-ui--user-account-dashboard">Admin UI + User Account Dashboard</a></h3>
+<p>Unlike many other options, <code>rauthy</code> does have an Admin UI which can be used to basically do almost any operation you
+might need to administrate the whole application and its users. There is also an account dashboard for each individual
+user, where users will get a basic overview over their account and can self-manage som values, password, passkeys, and
+so son.<br />
+Some Screenshots and further introduction will follow in the future.</p>
+<h3 id="client-branding"><a class="header" href="#client-branding">Client Branding</a></h3>
+<p>You have a simple way to create some kind of branding or stylized look for the Login page for each client.<br />
 The whole color theme can be changed and each client can have its own custom logo.<br />
 Additionally, if you modify the branding for the default <code>rauthy</code> client, it will not only change the look for the Login
 page, but also for the Account and Admin page.</p>
-<p><strong>Events and Auditing</strong><br />
-Since v0.17, Rauthy implements an Event-System. Events are generated in all kinds of scenarios. They can be sent via
+<h3 id="events-and-auditing"><a class="header" href="#events-and-auditing">Events and Auditing</a></h3>
+<p>Rauthy comes with an Event and Alerting-System. Events are generated in all kinds of scenarios. They can be sent via
 E-Mail, Matrix or Slack, depending on the severity and the configured level. You will see them in the Admin UI in real
 time, or you can subscribe to the events stream and externally handle them depending on your own business logic.</p>
-<p><strong>Brute-Force and basic DoS protection</strong><br />
-Rauthy has brute force and basic DoS protection for the login endpoint. Your timeout will be artificially delayed after
+<h3 id="brute-force-and-basic-dos-protection"><a class="header" href="#brute-force-and-basic-dos-protection">Brute-Force and basic DoS protection</a></h3>
+<p>Rauthy has brute force and basic DoS protection for the login endpoint. Your timeout will be artificially delayed after
 enough invalid logins. It does auto-balacklist IP's that exceeded too many invalid logins, with automatic
 expiry of the blacklisting. You can, if you like, manually blacklist certain IP's as well via the Admin UI.</p>
-<p><strong>Already in production</strong><br />
-Rauthy is already being used in production, and it works with all typical OIDC clients (so far). It was just not an
+<h3 id="iot-ready"><a class="header" href="#iot-ready">IoT Ready</a></h3>
+<p>With the possibility to run on devices with very limited resources and having compatibility for the OAuth Device
+Authorization Grant <code>device_code</code> flow, Rauthy would be a very good choice for IoT projects. The IdP itself can easily
+run on a Raspberry Pi and all headless devices can be authenticated via the <code>device_code</code> flow. The <code>rauthy-client</code>
+has everything built-in and ready, if you want to use Rust on the IoT devices as well. It has not been checked in a
+<code>no_std</code> environment yet, but the client implementation is pretty simple.</p>
+<h3 id="scales-to-millions-of-users"><a class="header" href="#scales-to-millions-of-users">Scales to millions of users</a></h3>
+<p>Benchmarks for v1.0.0 have not been done yet, but after some first basic tests and generating a lot of dummy data, I
+can confirm that Rauthy has no issues handling millions of users. The first very basic tests have been done with SQLite
+and ~11 million users. All parts and functions kept being fast and responsive with the only exception that the
+user-search in the admin UI was slowed down with such a high user count. It took ~2-3 seconds at that point to get a
+result, which should be no issue at all so far (Postgres tests have not been done yet).<br />
+The only limiting factor at that point will be your configuration and needs for password hashing security. It really
+depends on how many resources you want to use for hashing (more resources == more secure) and how many concurrent logins
+at the exact same time you need to support.</p>
+<h3 id="already-in-production"><a class="header" href="#already-in-production">Already in production</a></h3>
+<p>Rauthy is already being used in production, and it works with all typical OIDC clients (so far). It was just not an
 open source project for quite some time.<br />
 Keycloak was a rough inspiration in certain places and if something is working with Keycloak, it does with <code>rauthy</code> too
 (again, so far).</p>
@@ -273,27 +298,24 @@ Secure default values</li>
 <li><input disabled="" type="checkbox" checked=""/>
 True passwordless accounts with E-Mail + Magic Link + Passkey</li>
 <li><input disabled="" type="checkbox" checked=""/>
-Account conversions between traditional password and Passkey only</li>
+Dedicated Admin UI</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Account dashboard UI for each user with self-service</li>
+<li><input disabled="" type="checkbox" checked=""/>
+OpenID Connect Dynamic Client Registration</li>
+<li><input disabled="" type="checkbox" checked=""/>
+OAuth 2.0 Device Authorization Grant flow</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Upstream Authentication Providers (Login with ...)</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Supports DPoP tokens for decentralized login flows</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Supports ephemeral, dynamic clients for decentralized login flows</li>
 <li><input disabled="" type="checkbox" checked=""/>
-Can serve a basic <code>webid</code> document for decentralized logins</li>
-<li><input disabled="" type="checkbox" checked=""/>
-OpenID Connect Dynamic Client Registration</li>
-<li><input disabled="" type="checkbox" checked=""/>
-Upstream Authentication Providers (Login with ...)</li>
-<li><input disabled="" type="checkbox" checked=""/>
-OAuth 2.0 Device Authorization Grant flow</li>
-<li><input disabled="" type="checkbox" checked=""/>
-Admin UI</li>
-<li><input disabled="" type="checkbox" checked=""/>
-Account UI for each user with self-service</li>
+All End-User facing sites support i18n server-side translation
+with the possibility to add more languages</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Simple per client branding for the login page</li>
-<li><input disabled="" type="checkbox" checked=""/>
-All End-User facing sites support i18n server-side translation</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Custom roles</li>
 <li><input disabled="" type="checkbox" checked=""/>
@@ -307,20 +329,16 @@ User attribute binding to custom scopes</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Configurable password policy</li>
 <li><input disabled="" type="checkbox" checked=""/>
-Dedicated <code>forward_auth</code> endpoint, in addition to the existing userinfo,
-with support for configurable trusted auth headers</li>
-<li><input disabled="" type="checkbox" checked=""/>
 Admin API Keys with fine-grained access rights</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Events and alerting system</li>
 <li><input disabled="" type="checkbox" checked=""/>
-Optional event notifications via: E-Mail, Matrix, Slack</li>
-<li><input disabled="" type="checkbox" checked=""/>
-Configurable E-Mail templates for NewPassword + ResetPassword events</li>
-<li><input disabled="" type="checkbox" checked=""/>
 Optional event persistence</li>
 <li><input disabled="" type="checkbox" checked=""/>
-Admin UI component for archived / persisted events</li>
+Dedicated <code>forward_auth</code> endpoint, in addition to the existing userinfo,
+with support for configurable trusted auth headers</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Optional event notifications via: E-Mail, Matrix, Slack</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Optional Force MFA for the Admin UI</li>
 <li><input disabled="" type="checkbox" checked=""/>
@@ -332,7 +350,7 @@ Automatic database backups with configurable retention and auto-cleanup (SQLite 
 <li><input disabled="" type="checkbox" checked=""/>
 auto-encrypted backups (SQLite)</li>
 <li><input disabled="" type="checkbox" checked=""/>
-pushing SQLite backups to S3 storage</li>
+Ability to push SQLite backups to S3 storage</li>
 <li><input disabled="" type="checkbox" checked=""/>
 auto-restore SQLite backups from file and s3</li>
 <li><input disabled="" type="checkbox" checked=""/>
@@ -356,17 +374,25 @@ Housekeeping schedulers and cron jobs</li>
 <li><input disabled="" type="checkbox" checked=""/>
 JSON Web Key Set (JWKS) autorotation feature</li>
 <li><input disabled="" type="checkbox" checked=""/>
+Account conversions between traditional password and Passkey only</li>
+<li><input disabled="" type="checkbox" checked=""/>
 Optional open user registration</li>
 <li><input disabled="" type="checkbox" checked=""/>
 Optional user registration domain restriction</li>
 <li><input disabled="" type="checkbox" checked=""/>
 App version update checker</li>
 <li><input disabled="" type="checkbox" checked=""/>
-Prometheus <code>/metrics</code> endpoint on separate port</li>
-<li><input disabled="" type="checkbox" checked=""/>
 SwaggerUI documentation</li>
 <li><input disabled="" type="checkbox" checked=""/>
+Configurable E-Mail templates for NewPassword + ResetPassword events</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Prometheus <code>/metrics</code> endpoint on separate port</li>
+<li><input disabled="" type="checkbox" checked=""/>
 No-Setup migrations between different databases (Yes, even between SQLite and Postgres)</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Can serve a basic <code>webid</code> document</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Experimental FedCM support</li>
 </ul>
 
                     </main>

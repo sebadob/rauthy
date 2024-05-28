@@ -64,14 +64,15 @@
             let creds = await navigator.credentials.get({
                 identity: {
                     // context: "signin",
+                    mode: "button", // button mode will actually open the `login_url` if `logged-out`
                     providers: [{
                         configURL: configUrl,
-                        // TODO configurable via input
                         clientId: clientId,
                         nonce: getKey(48),
                     }]
                 }
-            })
+            });
+
             console.log(creds);
             credentialType = creds.type;
             credentials = creds.token;

@@ -143,6 +143,11 @@ lazy_static! {
         .parse::<bool>()
         .expect("USERINFO_STRICT cannot be parsed to bool - bad format");
 
+    pub static ref SEC_HEADER_BLOCK: bool = env::var("SEC_HEADER_BLOCK")
+        .unwrap_or_else(|_| String::from("true"))
+        .parse::<bool>()
+        .expect("SEC_HEADER_BLOCK cannot be parsed to bool - bad format");
+
     pub static ref AUTH_HEADERS_ENABLE: bool = env::var("AUTH_HEADERS_ENABLE")
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
