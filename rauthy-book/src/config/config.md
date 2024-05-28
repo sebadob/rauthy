@@ -36,6 +36,14 @@ USERINFO_STRICT=true
 # registrations with 'user@gmail.com' (default: '')
 #USER_REG_DOMAIN_RESTRICTION=some-domain.com
 
+# If set to true, a violation inside the CSRF protection middleware based
+# on Sec-* headers will block invalid requests. Usually you always want this
+# enabled. You may only set it to false during the first testing phase if you
+# experience any issues with an already existing Rauthy deployment.
+# In future releases, it will not be possible the disable these blocks.
+# default: true
+SEC_HEADER_BLOCK=true
+
 # If set to 'true', this will validate the remote peer IP address with
 # each request and compare it with the IP which was used during the initial
 # session creation / login. If the IP is different, the session will be

@@ -4,9 +4,12 @@ use actix_web::{
     Error,
 };
 use futures::future::LocalBoxFuture;
+use rauthy_common::constants::SEC_HEADER_BLOCK;
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_common::utils::real_ip_from_svc_req;
 use std::future::{ready, Ready};
 use std::rc::Rc;
+use tracing::warn;
 
 pub struct CsrfProtectionMiddleware;
 
@@ -59,7 +62,7 @@ where
                     return service.call(req).await;
                 }
 
-                if req.method() == &Method::GET {
+                if req.method() == Method::GET {
                     // user interactions will be 'none'
                     if site == "none" {
                         return service.call(req).await;
@@ -87,10 +90,24 @@ where
                     return service.call(req).await;
                 }
 
-                Err(Error::from(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "cross-origin request forbidden for this resource".to_string(),
-                )))
+                let ip = real_ip_from_svc_req(&req).unwrap_or_default();
+                warn!(
+                    "CSRF / Sec-Header violation from {} on path {}",
+                    ip,
+                    req.path()
+                );
+                if *SEC_HEADER_BLOCK {
+                    Err(Error::from(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        "cross-origin request forbidden for this resource".to_string(),
+                    )))
+                } else {
+                    warn!(
+                        "SEC_HEADER_BLOCK is set to false - not blocking violation requests.\
+                        This will not be possible in future releases."
+                    );
+                    service.call(req).await
+                }
             } else {
                 // allow requests that do not contain the header
                 service.call(req).await
