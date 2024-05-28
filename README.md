@@ -137,6 +137,7 @@ Keycloak was a rough inspiration in certain places and if something is working w
 - [x] Prometheus `/metrics` endpoint on separate port
 - [x] SwaggerUI documentation
 - [x] No-Setup migrations between different databases (Yes, even between SQLite and Postgres)
+- [x] Experimental FedCM support
 
 ### Features TODO
 
