@@ -18,6 +18,7 @@ use rauthy_common::constants::{
     SWAGGER_UI_INTERNAL, UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::password_hasher;
+use rauthy_handlers::middleware::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_handlers::middleware::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
 use rauthy_handlers::middleware::principal::RauthyPrincipalMiddleware;
@@ -450,6 +451,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
             // .data shares application state for all workers
             .app_data(app_state.clone())
             .wrap(RauthyPrincipalMiddleware)
+            .wrap(CsrfProtectionMiddleware)
             .wrap(RauthyLoggingMiddleware)
             .wrap(
                 middleware::DefaultHeaders::new()
