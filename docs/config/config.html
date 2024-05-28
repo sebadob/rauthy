@@ -206,13 +206,21 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # If you don't need the extra validations, you can set this to `false` to
 # save some resources, if your clients to a lot of `/userinfo` lookups.
 # default: true
-USERINFO_STRICT=true
+#USERINFO_STRICT=true
 
 # Can be used when 'OPEN_USER_REG=true' to restrict the domains
 # for a registration. For instance, set it to
 # 'USER_REG_DOMAIN_RESTRICTION=gmail.com' to allow only
 # registrations with 'user@gmail.com' (default: '')
 #USER_REG_DOMAIN_RESTRICTION=some-domain.com
+
+# If set to true, a violation inside the CSRF protection middleware based
+# on Sec-* headers will block invalid requests. Usually you always want this
+# enabled. You may only set it to false during the first testing phase if you
+# experience any issues with an already existing Rauthy deployment.
+# In future releases, it will not be possible the disable these blocks.
+# default: true
+#SEC_HEADER_BLOCK=true
 
 # If set to 'true', this will validate the remote peer IP address with
 # each request and compare it with the IP which was used during the initial
@@ -962,6 +970,31 @@ EVENT_LEVEL_FAILED_LOGIN=info
 # This ignores any type of prerelease and will only notify for a new stable.
 # default: false
 #DISABLE_APP_VERSION_CHECK=false
+
+#####################################
+############## FED CM ###############
+#####################################
+
+## CAUTION: The FedCM is highly experimental at this point!
+## Do not attempt to use it in production because it is subject to change
+## in the future! The spec is currently a draft and under active development.
+
+# Set to `true` to enable the experimental FedCM.
+# default: false
+#EXPERIMENTAL_FED_CM_ENABLE=false
+
+# Session lifetime for FedCM in seconds - the session can not be extended
+# beyond this time and a new login will be forced.
+# default: 2592000
+#SESSION_LIFETIME_FED_CM=2592000
+
+# Session timeout for FedCM in seconds
+# When a new token / login is requested before this timeout hits the limit,
+# the user will be authenticated without prompting for the credentials again.
+# This is the value which can extend the session, until it hits its maximum
+# lifetime set with _FED_CM.
+# default: 259200
+#SESSION_TIMEOUT_FED_CM=259200
 
 #####################################
 ####### LIFETIMES / TIMEOUTS ########
