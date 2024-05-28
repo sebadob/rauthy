@@ -131,6 +131,8 @@ fn is_path_csrf_exception(path: &str) -> bool {
                 || path == "/pow"
                 // make it possible to fetch public keys from browsers / SPAs
                 || path.starts_with("/oidc/certs")
+                // FedCM has its own validation mechanisms
+                || path.starts_with("/fed_cm/")
                 || path.ends_with("/logo")
                 || path.starts_with("/.well-known/")
                 || path.starts_with("/auth/v1/.well-known/")
