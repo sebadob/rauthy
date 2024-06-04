@@ -138,7 +138,7 @@ pub async fn get_authorize(
             .unwrap_or(false)
     {
         let status = StatusCode::UNAUTHORIZED;
-        let body = Error1Html::build(&colors, &lang, status, Some("login_required".to_string()));
+        let body = Error1Html::build(&colors, &lang, status, Some("login_required"));
         return Ok(ErrorHtml::response(body, status));
     }
 
@@ -436,7 +436,7 @@ pub async fn post_device_auth(
     if let Err(err) = client.validate_flow(GRANT_TYPE_DEVICE_CODE) {
         return HttpResponse::Forbidden().json(OAuth2ErrorResponse {
             error: OAuth2ErrorTypeResponse::UnauthorizedClient,
-            error_description: Some(Cow::from(err.message)),
+            error_description: Some(err.message),
         });
     }
 
@@ -473,7 +473,7 @@ pub async fn post_device_auth(
         Err(err) => {
             return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
                 error: OAuth2ErrorTypeResponse::InvalidRequest,
-                error_description: Some(Cow::from(err.message)),
+                error_description: Some(err.message),
             });
         }
     };

@@ -231,7 +231,7 @@ impl DPoPProof {
                     if let Err(nonce) = slf.validate_nonce(data).await {
                         return Err(ErrorResponse::new(
                             ErrorResponseType::UseDpopNonce((origin, nonce)),
-                            "DPoP 'nonce' is required in DPoP proof".to_string(),
+                            "DPoP 'nonce' is required in DPoP proof",
                         ));
                     }
 
@@ -339,7 +339,7 @@ impl DPoPProof {
                     Ok(v) => v,
                     Err(err) => {
                         error!("Cache lookup error during DPoP nonce generation: {:?}", err);
-                        err.message
+                        err.message.to_string()
                     }
                 };
                 return Err(latest);
@@ -349,7 +349,7 @@ impl DPoPProof {
                 Ok(v) => v,
                 Err(err) => {
                     error!("Cache lookup error during DPoP nonce generation: {:?}", err);
-                    err.message
+                    err.message.to_string()
                 }
             };
             return Err(latest);

@@ -2,25 +2,25 @@ use crate::i18n::SsrJson;
 use crate::language::Language;
 use actix_web::http::StatusCode;
 use serde::Serialize;
+use std::borrow::Cow;
 
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct I18nError<'a> {
     error: String,
-    error_text: String,
+    error_text: &'static str,
     details: &'a str,
-    details_text: Option<String>,
+    details_text: Option<Cow<'static, str>>,
 }
 
 impl I18nError<'_> {
-    pub fn build_with(
-        lang: &Language,
-        status_code: StatusCode,
-        details_text: Option<String>,
-    ) -> Self {
+    pub fn build_with<C>(lang: &Language, status_code: StatusCode, details_text: Option<C>) -> Self
+    where
+        C: Into<Cow<'static, str>>,
+    {
         match lang {
-            Language::En => Self::build_en(status_code, details_text),
-            Language::De => Self::build_de(status_code, details_text),
+            Language::En => Self::build_en(status_code, details_text.map(|t| t.into())),
+            Language::De => Self::build_de(status_code, details_text.map(|t| t.into())),
         }
     }
 }
@@ -39,16 +39,16 @@ impl SsrJson for I18nError<'_> {
 }
 
 impl I18nError<'_> {
-    fn build_en(status_code: StatusCode, details_text: Option<String>) -> Self {
+    fn build_en(status_code: StatusCode, details_text: Option<Cow<'static, str>>) -> Self {
         let error_text = match status_code {
             StatusCode::BAD_REQUEST => {
-                "Your request is malformed or incorrect, please see details.".to_string()
+                "Your request is malformed or incorrect, please see details."
             }
             StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
-                "Access denied - you are not allowed to use or access this resource.".to_string()
+                "Access denied - you are not allowed to use or access this resource."
             }
-            StatusCode::INTERNAL_SERVER_ERROR => "Internal Server Error".to_string(),
-            _ => "The requested data could not be found".to_string(),
+            StatusCode::INTERNAL_SERVER_ERROR => "Internal Server Error",
+            _ => "The requested data could not be found",
         };
 
         Self {
@@ -59,12 +59,12 @@ impl I18nError<'_> {
         }
     }
 
-    fn build_de(status_code: StatusCode, details_text: Option<String>) -> Self {
+    fn build_de(status_code: StatusCode, details_text: Option<Cow<'static, str>>) -> Self {
         let error_text = match status_code {
-            StatusCode::BAD_REQUEST => "Der Request ist falsch formuliert. Weitere Informationen in den Details.".to_string(),
-            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => "Zugriff verweigert - das Nutzen oder der Zugriff auf diese Ressource ist nicht erlaubt.".to_string(),
-            StatusCode::INTERNAL_SERVER_ERROR => "Interner Server Fehler".to_string(),
-           _ =>  "Die angeforderte Seite konnte nicht gefunden werden.".to_string(),
+            StatusCode::BAD_REQUEST => "Der Request ist falsch formuliert. Weitere Informationen in den Details.",
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => "Zugriff verweigert - das Nutzen oder der Zugriff auf diese Ressource ist nicht erlaubt.",
+            StatusCode::INTERNAL_SERVER_ERROR => "Interner Server Fehler",
+           _ =>  "Die angeforderte Seite konnte nicht gefunden werden.",
         };
 
         Self {

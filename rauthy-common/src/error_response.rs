@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Error;
 use serde_json_path::ParseError;
 use spow::pow::PowError;
+use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 use std::string::FromUtf8Error;
 use time::OffsetDateTime;
@@ -66,15 +67,18 @@ impl Display for ErrorResponseType {
 pub struct ErrorResponse {
     pub timestamp: i64,
     pub error: ErrorResponseType,
-    pub message: String,
+    pub message: Cow<'static, str>,
 }
 
 impl ErrorResponse {
-    pub fn new(error: ErrorResponseType, message: String) -> Self {
+    pub fn new<C>(error: ErrorResponseType, message: C) -> Self
+    where
+        C: Into<Cow<'static, str>>,
+    {
         Self {
             timestamp: OffsetDateTime::now_utc().unix_timestamp(),
             error,
-            message,
+            message: message.into(),
         }
     }
 
