@@ -88,7 +88,7 @@ impl TryFrom<&HttpRequest> for Language {
 
         Err(ErrorResponse::new(
             ErrorResponseType::NotFound,
-            "Could not find and extract  a locale cookie or the accept-language header".to_string(),
+            "Could not find and extract  a locale cookie or the accept-language header",
         ))
     }
 }

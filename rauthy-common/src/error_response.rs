@@ -203,10 +203,7 @@ impl From<argon2::Error> for ErrorResponse {
 impl From<Box<bincode::ErrorKind>> for ErrorResponse {
     fn from(err: Box<bincode::ErrorKind>) -> Self {
         error!("Bincode Error: {:?}", err);
-        ErrorResponse::new(
-            ErrorResponseType::Internal,
-            "Serialization Error".to_string(),
-        )
+        ErrorResponse::new(ErrorResponseType::Internal, "Serialization Error")
     }
 }
 
@@ -215,7 +212,7 @@ impl From<chrono::ParseError> for ErrorResponse {
         trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("Unable to parse the correct DateTime"),
+            "Unable to parse the correct DateTime",
         )
     }
 }
@@ -225,7 +222,7 @@ impl From<BlockingError> for ErrorResponse {
         trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::Internal,
-            String::from("Database Pool is gone, please re-try later"),
+            "Database Pool is gone, please re-try later",
         )
     }
 }
@@ -243,10 +240,7 @@ impl From<CacheError> for ErrorResponse {
 impl From<chacha20poly1305::Error> for ErrorResponse {
     fn from(e: chacha20poly1305::Error) -> Self {
         error!("{}", e);
-        ErrorResponse::new(
-            ErrorResponseType::Internal,
-            "Internal Encryption Error".to_string(),
-        )
+        ErrorResponse::new(ErrorResponseType::Internal, "Internal Encryption Error")
     }
 }
 
@@ -300,7 +294,7 @@ impl From<ParseColorError> for ErrorResponse {
         trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "Cannot parse input to valid CSS color".to_string(),
+            "Cannot parse input to valid CSS color",
         )
     }
 }
@@ -326,7 +320,7 @@ impl From<actix_multipart::MultipartError> for ErrorResponse {
             _ => "MultipartError::Unknown",
         };
 
-        ErrorResponse::new(ErrorResponseType::BadRequest, text.to_string())
+        ErrorResponse::new(ErrorResponseType::BadRequest, text)
     }
 }
 

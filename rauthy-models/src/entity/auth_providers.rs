@@ -82,7 +82,7 @@ impl TryFrom<&str> for AuthProviderType {
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "Invalid AuthProviderType".to_string(),
+                    "Invalid AuthProviderType",
                 ))
             }
         };
@@ -471,7 +471,7 @@ impl AuthProvider {
         } else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "either `metadata_url` or `issuer` must be given".to_string(),
+                "either `metadata_url` or `issuer` must be given",
             ));
         };
         let config_url = if url.starts_with("http://") || url.starts_with("https://") {
@@ -611,7 +611,7 @@ impl AuthProviderCallback {
         {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
-                "Callback Code not found - timeout reached?".to_string(),
+                "Callback Code not found - timeout reached?",
             )),
             Some(slf) => Ok(slf),
         }

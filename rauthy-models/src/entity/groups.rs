@@ -28,7 +28,7 @@ impl Group {
             if g.name == group_req.group {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "Group already exists".to_string(),
+                    "Group already exists",
                 ));
             }
         }

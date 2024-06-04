@@ -386,7 +386,7 @@ impl Client {
         if !current.is_dynamic() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                "Invalid request for non-dynamic client".to_string(),
+                "Invalid request for non-dynamic client",
             ));
         }
 
@@ -662,7 +662,7 @@ impl Client {
             trace!("MFA required for this client but the user has none");
             Err(ErrorResponse::new(
                 ErrorResponseType::MfaRequired,
-                "MFA is required for this client".to_string(),
+                "MFA is required for this client",
             ))
         } else {
             Ok(())
@@ -738,7 +738,7 @@ impl Client {
             trace!("Invalid `redirect_uri`");
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("Invalid redirect uri"),
+                "Invalid redirect uri",
             ))
         } else {
             Ok(())
@@ -755,7 +755,7 @@ impl Client {
                 trace!("'code_challenge' is missing");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    String::from("'code_challenge' is missing"),
+                    "'code_challenge' is missing",
                 ));
             }
 

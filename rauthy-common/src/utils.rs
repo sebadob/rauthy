@@ -62,12 +62,9 @@ pub fn base64_encode(input: &[u8]) -> String {
 
 #[inline(always)]
 pub fn base64_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
-    B64_STD.decode(b64).map_err(|_| {
-        ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "B64 decoding error".to_string(),
-        )
-    })
+    B64_STD
+        .decode(b64)
+        .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
 }
 
 // Returns the given input as a base64 URL Encoded String
@@ -91,22 +88,16 @@ pub fn base64_url_no_pad_encode(input: &[u8]) -> String {
 
 #[inline(always)]
 pub fn base64_url_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
-    B64_URL_SAFE.decode(b64).map_err(|_| {
-        ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "B64 decoding error".to_string(),
-        )
-    })
+    B64_URL_SAFE
+        .decode(b64)
+        .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
 }
 
 #[inline(always)]
 pub fn base64_url_no_pad_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
-    B64_URL_SAFE_NO_PAD.decode(b64).map_err(|_| {
-        ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "B64 decoding error".to_string(),
-        )
-    })
+    B64_URL_SAFE_NO_PAD
+        .decode(b64)
+        .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
 }
 
 pub fn new_store_id() -> String {
@@ -127,7 +118,7 @@ where
     if body.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
-            "Invalid or malformed JWT Token".to_string(),
+            "Invalid or malformed JWT Token",
         ));
     }
     let body = body.unwrap();
@@ -141,7 +132,7 @@ where
             );
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "Invalid JWT Token body".to_string(),
+                "Invalid JWT Token body",
             ));
         }
     };
@@ -152,7 +143,7 @@ where
             error!("Error deserializing JWT Token claims: {}", err);
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "Invalid JWT Token claims".to_string(),
+                "Invalid JWT Token claims",
             ));
         }
     };

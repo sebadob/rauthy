@@ -23,7 +23,7 @@ impl TryFrom<&str> for ContinuationToken {
         if value.len() < 16 {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "Invalid continuation_token".to_string(),
+                "Invalid continuation_token",
             ));
         }
 

@@ -28,7 +28,7 @@ impl Role {
             if s.name == role_req.role {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "Role already exists".to_string(),
+                    "Role already exists",
                 ));
             }
         }
@@ -66,7 +66,7 @@ impl Role {
         if role.name == "rauthy_admin" {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "Anti-Lockout Rule: The 'rauthy_admin' role cannot be deleted".to_string(),
+                "Anti-Lockout Rule: The 'rauthy_admin' role cannot be deleted",
             ));
         }
 

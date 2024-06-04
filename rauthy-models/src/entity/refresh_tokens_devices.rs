@@ -97,7 +97,7 @@ impl RefreshTokenDevice {
             Ok(res) => Ok(res),
             Err(_) => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
-                "Device Refresh Token does not exist".to_string(),
+                "Device Refresh Token does not exist",
             )),
         }
     }

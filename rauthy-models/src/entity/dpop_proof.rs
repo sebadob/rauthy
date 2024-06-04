@@ -154,7 +154,7 @@ impl DPoPProof {
         match value.split_once('.') {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::DPoP(origin.map(String::from)),
-                "Invalid DPoP header format".to_string(),
+                "Invalid DPoP header format",
             )),
 
             Some((header, rest)) => {
@@ -173,7 +173,7 @@ impl DPoPProof {
                 match rest.split_once('.') {
                     None => Err(ErrorResponse::new(
                         ErrorResponseType::DPoP(origin.map(String::from)),
-                        "Invalid DPoP claims format".to_string(),
+                        "Invalid DPoP claims format",
                     )),
                     Some((claims, signature)) => {
                         let bytes = base64_url_no_pad_decode(claims)?;
@@ -220,7 +220,7 @@ impl DPoPProof {
                 if !RE_TOKEN_68.is_match(b64) {
                     Err(ErrorResponse::new(
                         ErrorResponseType::DPoP(origin),
-                        "DPoP header must be in Token68 format".to_string(),
+                        "DPoP header must be in Token68 format",
                     ))
                 } else {
                     let slf = Self::try_from_str(origin.as_deref(), b64)?;
