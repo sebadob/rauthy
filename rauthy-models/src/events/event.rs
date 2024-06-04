@@ -69,7 +69,7 @@ impl FromStr for EventLevel {
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Internal,
-                    "Cannot parse EventLevel".to_string(),
+                    "Cannot parse EventLevel",
                 ));
             }
         };

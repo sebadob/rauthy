@@ -50,7 +50,7 @@ impl TryFrom<&str> for MagicLinkUsage {
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "Invalid string for MagicLinkUsage parsing".to_string(),
+                    "Invalid string for MagicLinkUsage parsing",
                 ))
             }
         };
@@ -198,9 +198,7 @@ impl MagicLink {
         if self.cookie.is_some() {
             let err = ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                String::from(
-                    "The requested password reset link is already tied to another session",
-                ),
+                "The requested password reset link is already tied to another session",
             );
 
             let cookie_opt = ApiCookie::from_req(req, PWD_RESET_COOKIE);
@@ -228,14 +226,14 @@ impl MagicLink {
                 None => {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::Unauthorized,
-                        String::from("CSRF Token is missing"),
+                        "CSRF Token is missing",
                     ));
                 }
                 Some(token) => {
                     if self.csrf_token != token.to_str().unwrap_or("") {
                         return Err(ErrorResponse::new(
                             ErrorResponseType::Unauthorized,
-                            String::from("Invalid CSRF Token"),
+                            "Invalid CSRF Token",
                         ));
                     }
                 }
@@ -245,21 +243,21 @@ impl MagicLink {
         if self.user_id != user_id {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("The user id is invalid"),
+                "The user id is invalid",
             ));
         }
 
         if self.exp < OffsetDateTime::now_utc().unix_timestamp() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("This link has expired already"),
+                "This link has expired already",
             ));
         }
 
         if self.used {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("The requested passwort reset link was already used"),
+                "The requested passwort reset link was already used",
             ));
         }
 

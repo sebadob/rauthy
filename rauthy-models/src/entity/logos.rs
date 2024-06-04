@@ -168,7 +168,7 @@ impl Logo {
             "image/jpeg" | "image/png" => Self::upsert_jpg_png(data.clone(), id, logo, typ).await,
             _ => Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "Invalid mime type for auth provider logo".to_string(),
+                "Invalid mime type for auth provider logo",
             )),
         }
     }

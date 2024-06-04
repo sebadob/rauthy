@@ -454,7 +454,7 @@ impl Session {
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "supported search idx for users: id / session_id, user_id, ip".to_string(),
+                    "supported search idx for users: id / session_id, user_id, ip",
                 ))
             }
         };
@@ -509,7 +509,7 @@ impl Session {
             if now.unix_timestamp() > ts {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
-                    "User has expired".to_string(),
+                    "User has expired",
                 ));
             } else {
                 let target = now
@@ -560,7 +560,7 @@ impl Session {
         if session_req.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("Session cookie is missing"),
+                "Session cookie is missing",
             ));
         }
         Ok(session_req.into_inner().unwrap())
@@ -684,7 +684,7 @@ impl Session {
         if csrf.is_err() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::CSRFTokenError,
-                String::from("CSRF Token not present in HTTP Header"),
+                "CSRF Token not present in HTTP Header",
             ));
         }
         if self.csrf_token.eq(csrf.unwrap()) {
@@ -692,7 +692,7 @@ impl Session {
         }
         Err(ErrorResponse::new(
             ErrorResponseType::CSRFTokenError,
-            String::from("CSRF Token is not correct"),
+            "CSRF Token is not correct",
         ))
     }
 

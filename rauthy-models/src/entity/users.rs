@@ -370,7 +370,7 @@ impl User {
             debug!("FedCM user not found");
             ErrorResponse::new(
                 ErrorResponseType::WWWAuthenticate("user-not-found".to_string()),
-                "The user has not been found".to_string(),
+                "The user has not been found",
             )
         })?;
 
@@ -379,7 +379,7 @@ impl User {
             debug!("FedCM user is disabled");
             return Err(ErrorResponse::new(
                 ErrorResponseType::WWWAuthenticate("user-disabled".to_string()),
-                "The user has been disabled".to_string(),
+                "The user has been disabled",
             ));
         }
 
@@ -548,7 +548,7 @@ impl User {
         if slf.password.is_none() && !slf.has_webauthn_enabled() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "You must have at least a password or passkey set up before you can remove a provider link".to_string(),
+                "You must have at least a password or passkey set up before you can remove a provider link",
             ));
         }
 
@@ -683,7 +683,7 @@ impl User {
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "supported search idx for users: id / user_id, email".to_string(),
+                    "supported search idx for users: id / user_id, email",
                 ))
             }
         };
@@ -797,14 +797,14 @@ impl User {
                 if svc_req.user_id != user.id {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::Forbidden,
-                        "User ID does not match".to_string(),
+                        "User ID does not match",
                     ));
                 }
                 svc_req.delete(data).await?;
             } else {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "Cannot set a new password without the current one".to_string(),
+                    "Cannot set a new password without the current one",
                 ));
             }
             password = Some(pwd_new);
@@ -880,7 +880,7 @@ impl User {
         if user.account_type() != AccountType::Password {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "Only AccountType::Password can be converted".to_string(),
+                "Only AccountType::Password can be converted",
             ));
         }
 
@@ -888,8 +888,7 @@ impl User {
         if !user.has_webauthn_enabled() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "Account type conversion can only happen with at least one active Passkey"
-                    .to_string(),
+                "Account type conversion can only happen with at least one active Passkey",
             ));
         }
 

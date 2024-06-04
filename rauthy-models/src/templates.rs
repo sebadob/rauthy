@@ -17,6 +17,7 @@ use askama_actix::Template;
 use rauthy_common::constants::{
     DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION,
 };
+use std::borrow::Cow;
 use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug, Clone)]
@@ -314,7 +315,7 @@ impl ErrorHtml<'_> {
         colors: &Colors,
         lang: &Language,
         status_code: StatusCode,
-        details_text: Option<String>,
+        details_text: Option<Cow<'static, str>>,
     ) -> String {
         let res = ErrorHtml {
             lang: lang.as_str(),
@@ -376,12 +377,15 @@ pub struct Error1Html<'a> {
 }
 
 impl Error1Html<'_> {
-    pub fn build(
+    pub fn build<C>(
         colors: &Colors,
         lang: &Language,
         status_code: StatusCode,
-        details_text: Option<String>,
-    ) -> String {
+        details_text: Option<C>,
+    ) -> String
+    where
+        C: Into<Cow<'static, str>>,
+    {
         let res = Error1Html {
             lang: lang.as_str(),
             col_act1: &colors.act1,
@@ -430,12 +434,15 @@ pub struct Error2Html<'a> {
 }
 
 impl Error2Html<'_> {
-    pub fn build(
+    pub fn build<C>(
         colors: &Colors,
         lang: &Language,
         status_code: StatusCode,
-        details_text: Option<String>,
-    ) -> String {
+        details_text: Option<C>,
+    ) -> String
+    where
+        C: Into<Cow<'static, str>>,
+    {
         let res = Error2Html {
             lang: lang.as_str(),
             col_act1: &colors.act1,
@@ -484,12 +491,15 @@ pub struct Error3Html<'a> {
 }
 
 impl Error3Html<'_> {
-    pub fn build(
+    pub fn build<C>(
         colors: &Colors,
         lang: &Language,
         status_code: StatusCode,
-        details_text: Option<String>,
-    ) -> String {
+        details_text: Option<C>,
+    ) -> String
+    where
+        C: Into<Cow<'static, str>>,
+    {
         let res = Error3Html {
             lang: lang.as_str(),
             col_act1: &colors.act1,

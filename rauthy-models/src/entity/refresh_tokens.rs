@@ -97,7 +97,7 @@ impl RefreshToken {
             Ok(res) => Ok(res),
             Err(_) => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
-                "Refresh Token does not exist".to_string(),
+                "Refresh Token does not exist",
             )),
         }
     }

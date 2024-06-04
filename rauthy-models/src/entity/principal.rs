@@ -21,7 +21,7 @@ impl Principal {
         principal.into_inner().ok_or_else(|| {
             ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                String::from("Only allowed as a logged in user"),
+                "Only allowed as a logged in user",
             )
         })
     }
@@ -33,7 +33,7 @@ impl Principal {
         } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                "No valid session".to_string(),
+                "No valid session",
             ))
         }
     }
@@ -53,7 +53,7 @@ impl Principal {
         if self.user_id() != Ok(id) {
             Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                "You are not allowed to modify this user".to_string(),
+                "You are not allowed to modify this user",
             ))
         } else {
             Ok(())
@@ -71,10 +71,7 @@ impl Principal {
             .as_ref()
             .and_then(|s| s.user_id.as_deref())
             .ok_or_else(|| {
-                ErrorResponse::new(
-                    ErrorResponseType::NotFound,
-                    "No session for principal".to_string(),
-                )
+                ErrorResponse::new(ErrorResponseType::NotFound, "No session for principal")
             })
     }
 
@@ -98,7 +95,7 @@ impl Principal {
         } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                "No API Key found".to_string(),
+                "No API Key found",
             ))
         }
     }
@@ -110,7 +107,7 @@ impl Principal {
         if !self.is_admin() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                "Rauthy admin access only".to_string(),
+                "Rauthy admin access only",
             ));
         }
 
@@ -157,7 +154,7 @@ impl Principal {
         if !self.is_admin() && session.user_id.as_deref() != Some(user_id) {
             Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                "Access is forbidden with this user".to_string(),
+                "Access is forbidden with this user",
             ))
         } else {
             Ok(())
@@ -173,7 +170,7 @@ impl Principal {
             trace!("Validating the session failed - was not in auth state");
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                "Unauthorized session or invalid user ID".to_string(),
+                "Unauthorized session or invalid user ID",
             ))
         }
     }

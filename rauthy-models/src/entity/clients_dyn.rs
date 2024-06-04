@@ -201,7 +201,7 @@ impl ClientDyn {
         if self.registration_token_plain()? != bearer {
             Err(ErrorResponse::new(
                 ErrorResponseType::WWWAuthenticate("invalid_token".to_string()),
-                "Invalid registration_token".to_string(),
+                "Invalid registration_token",
             ))
         } else {
             Ok(())

@@ -612,7 +612,7 @@ async fn conn_test_smtp_insecure(
             );
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
-                "Could not connect to localhost SMTP relay".to_string(),
+                "Could not connect to localhost SMTP relay",
             ))
         }
     }

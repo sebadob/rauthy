@@ -385,7 +385,7 @@ impl WebauthnCookie {
         if cookie.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "Webauthn Cookie is missing".to_string(),
+                "Webauthn Cookie is missing",
             ));
         }
         let cookie = cookie.as_ref().unwrap();
@@ -396,7 +396,7 @@ impl WebauthnCookie {
         if slf.exp < OffsetDateTime::now_utc() {
             Err(ErrorResponse::new(
                 ErrorResponseType::SessionExpired,
-                "Webauthn Cookie has expired".to_string(),
+                "Webauthn Cookie has expired",
             ))
         } else {
             Ok(slf)
@@ -438,7 +438,7 @@ impl WebauthnData {
         match res {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
-                "Webauthn Data not found".to_string(),
+                "Webauthn Data not found",
             )),
             Some(res) => Ok(res),
         }
@@ -539,7 +539,7 @@ impl WebauthnLoginReq {
         match res {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
-                "Webauthn Login Request Data not found".to_string(),
+                "Webauthn Login Request Data not found",
             )),
             Some(res) => Ok(res),
         }
@@ -598,7 +598,7 @@ impl WebauthnServiceReq {
         match res {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
-                "Webauthn Service Request Data not found".to_string(),
+                "Webauthn Service Request Data not found",
             )),
             Some(res) => Ok(res),
         }
@@ -658,7 +658,7 @@ pub async fn auth_start(
         // may be the case if the user has presence only keys and the config has changed
         return Err(ErrorResponse::new(
             ErrorResponseType::NotFound,
-            "No Security Keys with active user verification found".to_string(),
+            "No Security Keys with active user verification found",
         ));
     }
 
@@ -690,7 +690,7 @@ pub async fn auth_start(
             error!("Webauthn challenge authentication: {:?}", err);
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
-                "Internal error with Webauthn Challenge Authentication".to_string(),
+                "Internal error with Webauthn Challenge Authentication",
             ))
         }
     }
@@ -721,7 +721,7 @@ pub async fn auth_finish(
                 );
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
-                    "User Presence only is not allowed - Verification is needed".to_string(),
+                    "User Presence only is not allowed - Verification is needed",
                 ));
             }
 
@@ -827,7 +827,7 @@ pub async fn reg_start(
             error!("Webauthn challenge register: {:?}", err);
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
-                "Internal error with Webauthn Challenge Registration".to_string(),
+                "Internal error with Webauthn Challenge Registration",
             ))
         }
     }
@@ -852,7 +852,7 @@ pub async fn reg_finish(
     if res.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "Webauthn Registration Request not found".to_string(),
+            "Webauthn Registration Request not found",
         ));
     }
     cache_remove(
@@ -881,7 +881,7 @@ pub async fn reg_finish(
                 );
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
-                    "User Presence only is not allowed - Verification is needed".to_string(),
+                    "User Presence only is not allowed - Verification is needed",
                 ));
             }
 

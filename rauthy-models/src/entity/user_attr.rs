@@ -31,7 +31,7 @@ impl UserAttrConfigEntity {
         if Self::find(data, new_attr.name.clone()).await.is_ok() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "User attribute config does already exist".to_string(),
+                "User attribute config does already exist",
             ));
         }
 

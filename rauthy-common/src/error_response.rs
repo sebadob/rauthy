@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Error;
 use serde_json_path::ParseError;
 use spow::pow::PowError;
+use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 use std::string::FromUtf8Error;
 use time::OffsetDateTime;
@@ -66,15 +67,18 @@ impl Display for ErrorResponseType {
 pub struct ErrorResponse {
     pub timestamp: i64,
     pub error: ErrorResponseType,
-    pub message: String,
+    pub message: Cow<'static, str>,
 }
 
 impl ErrorResponse {
-    pub fn new(error: ErrorResponseType, message: String) -> Self {
+    pub fn new<C>(error: ErrorResponseType, message: C) -> Self
+    where
+        C: Into<Cow<'static, str>>,
+    {
         Self {
             timestamp: OffsetDateTime::now_utc().unix_timestamp(),
             error,
-            message,
+            message: message.into(),
         }
     }
 
@@ -199,10 +203,7 @@ impl From<argon2::Error> for ErrorResponse {
 impl From<Box<bincode::ErrorKind>> for ErrorResponse {
     fn from(err: Box<bincode::ErrorKind>) -> Self {
         error!("Bincode Error: {:?}", err);
-        ErrorResponse::new(
-            ErrorResponseType::Internal,
-            "Serialization Error".to_string(),
-        )
+        ErrorResponse::new(ErrorResponseType::Internal, "Serialization Error")
     }
 }
 
@@ -211,7 +212,7 @@ impl From<chrono::ParseError> for ErrorResponse {
         trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("Unable to parse the correct DateTime"),
+            "Unable to parse the correct DateTime",
         )
     }
 }
@@ -221,7 +222,7 @@ impl From<BlockingError> for ErrorResponse {
         trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::Internal,
-            String::from("Database Pool is gone, please re-try later"),
+            "Database Pool is gone, please re-try later",
         )
     }
 }
@@ -239,10 +240,7 @@ impl From<CacheError> for ErrorResponse {
 impl From<chacha20poly1305::Error> for ErrorResponse {
     fn from(e: chacha20poly1305::Error) -> Self {
         error!("{}", e);
-        ErrorResponse::new(
-            ErrorResponseType::Internal,
-            "Internal Encryption Error".to_string(),
-        )
+        ErrorResponse::new(ErrorResponseType::Internal, "Internal Encryption Error")
     }
 }
 
@@ -296,7 +294,7 @@ impl From<ParseColorError> for ErrorResponse {
         trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "Cannot parse input to valid CSS color".to_string(),
+            "Cannot parse input to valid CSS color",
         )
     }
 }
@@ -322,7 +320,7 @@ impl From<actix_multipart::MultipartError> for ErrorResponse {
             _ => "MultipartError::Unknown",
         };
 
-        ErrorResponse::new(ErrorResponseType::BadRequest, text.to_string())
+        ErrorResponse::new(ErrorResponseType::BadRequest, text)
     }
 }
 

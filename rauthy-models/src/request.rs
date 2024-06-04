@@ -850,7 +850,7 @@ impl TokenRequest {
             match decoded.split_once(':') {
                 None => Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "Bad Authorization header".to_string(),
+                    "Bad Authorization header",
                 )),
                 Some((client_id, client_secret)) => {
                     Ok((client_id.to_string(), Some(client_secret.to_string())))

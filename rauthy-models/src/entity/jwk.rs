@@ -45,12 +45,7 @@ macro_rules! sign_jwt {
                 key.with_key_id(&$key_pair.kid).sign($claims)
             }
         }
-        .map_err(|_| {
-            ErrorResponse::new(
-                ErrorResponseType::Internal,
-                "Error signing JWT Token".to_string(),
-            )
-        })
+        .map_err(|_| ErrorResponse::new(ErrorResponseType::Internal, "Error signing JWT Token"))
     };
 }
 
@@ -87,9 +82,7 @@ macro_rules! validate_jwt {
                     .verify_token::<$type>($token, Some($options))
             }
         }
-        .map_err(|_| {
-            ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid Token".to_string())
-        })
+        .map_err(|_| ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid Token"))
     };
 }
 
@@ -221,7 +214,7 @@ impl JWKSPublicKey {
         } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
-                "No 'alg' in JwkKeyPublicKey".to_string(),
+                "No 'alg' in JwkKeyPublicKey",
             ))
         }
     }
@@ -233,7 +226,7 @@ impl JWKSPublicKey {
         } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
-                "No 'n' in JwkKeyPublicKey".to_string(),
+                "No 'n' in JwkKeyPublicKey",
             ))
         }
     }
@@ -245,7 +238,7 @@ impl JWKSPublicKey {
         } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
-                "No 'e' in JwkKeyPublicKey".to_string(),
+                "No 'e' in JwkKeyPublicKey",
             ))
         }
     }
@@ -256,7 +249,7 @@ impl JWKSPublicKey {
         } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
-                "No 'x' in JwkKeyPublicKey".to_string(),
+                "No 'x' in JwkKeyPublicKey",
             ))
         }
     }

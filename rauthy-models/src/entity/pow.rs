@@ -40,7 +40,7 @@ impl PowEntity {
             None => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::NotFound,
-                    "PoW not found".to_string(),
+                    "PoW not found",
                 ));
             }
         };

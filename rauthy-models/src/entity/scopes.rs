@@ -37,7 +37,7 @@ impl Scope {
             if s.name == scope_req.scope {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "Scope already exists".to_string(),
+                    "Scope already exists",
                 ));
             }
         }
@@ -47,7 +47,7 @@ impl Scope {
         {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "OpenID default scopes cannot have custom mappings".to_string(),
+                "OpenID default scopes cannot have custom mappings",
             ));
         }
 
@@ -91,7 +91,7 @@ impl Scope {
         if scope.name == "openid" {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("The 'openid' scope cannot be deleted"),
+                "The 'openid' scope cannot be deleted",
             ));
         }
 
@@ -196,7 +196,7 @@ impl Scope {
         if scope.name == "openid" {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("The 'openid' scope cannot be changed"),
+                "The 'openid' scope cannot be changed",
             ));
         }
 
@@ -205,7 +205,7 @@ impl Scope {
         {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "OpenID default scopes cannot have custom mappings".to_string(),
+                "OpenID default scopes cannot have custom mappings",
             ));
         }
 

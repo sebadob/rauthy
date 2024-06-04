@@ -111,8 +111,7 @@ pub async fn post_i18n(
         I18nContent::EmailChangeConfirm => I18nEmailConfirmChangeHtml::build(&lang).as_json(),
         // Just return some default values for local dev -> dynamically built during prod
         I18nContent::Error => {
-            I18nError::build_with(&lang, StatusCode::NOT_FOUND, Some("<empty>".to_string()))
-                .as_json()
+            I18nError::build_with(&lang, StatusCode::NOT_FOUND, Some("<empty>")).as_json()
         }
         I18nContent::Index => I18nIndex::build(&lang).as_json(),
         I18nContent::Logout => I18nLogout::build(&lang).as_json(),

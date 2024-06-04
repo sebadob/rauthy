@@ -193,10 +193,7 @@ impl ApiKeyEntity {
         token: &str,
     ) -> Result<ApiKey, ErrorResponse> {
         let (name, secret) = token.split_once('$').ok_or_else(|| {
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "Malformed API-Key".to_string(),
-            )
+            ErrorResponse::new(ErrorResponseType::BadRequest, "Malformed API-Key")
         })?;
 
         let idx = Self::cache_idx(name);
@@ -296,14 +293,14 @@ impl ApiKey {
                 } else {
                     Err(ErrorResponse::new(
                         ErrorResponseType::Forbidden,
-                        "Access denied".to_string(),
+                        "Access denied",
                     ))
                 };
             }
         }
         Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
-            "Access denied".to_string(),
+            "Access denied",
         ))
     }
 
@@ -313,7 +310,7 @@ impl ApiKey {
             if Utc::now().timestamp() > exp {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
-                    "API Key has expired".to_string(),
+                    "API Key has expired",
                 ));
             }
         }
@@ -324,7 +321,7 @@ impl ApiKey {
         } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                "Invalid API-Key".to_string(),
+                "Invalid API-Key",
             ))
         }
     }
