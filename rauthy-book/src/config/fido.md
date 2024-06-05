@@ -2,8 +2,8 @@
 
 ## Passkey Only Accounts
 
-Since v0.16.0, Rauthy provides the ability to optionally create Passkey only accounts.  
-These accounts do not have any password at all. The user can lo gin via E-Mail and then providing the MFA
+Rauthy provides the ability to optionally create Passkey only accounts.    
+These accounts do not have any password at all. The user can login via E-Mail + providing the MFA
 FIDO 2 Passkey. Only keys and systems with additional user verification (UV) will be accepted for these accounts.
 This makes sure, that they are 2FA / MFA secured (depending on the device) all the time.
 
@@ -12,6 +12,7 @@ convert a traditional password account to a passkey only account in your account
 one Passkey with additional UV registered.
 
 Passkey only accounts provide a few benefits:
+
 - no need to remember or store any passwords
 - way easier and faster logging in
 - always 2FA / MFA
@@ -31,8 +32,9 @@ relies on an Admin to reset the MFA devices, if no backup exists or all are lost
 Android has finally added support for biometric UV in September 2023.  
 This has made is possible to implement this feature into Rauthy without sacrificing security.
 
-However, at the time of writing (09.10.2023), only biometric UV is supported and PIN UV is about to come
-in the near future.
+However, at the time of writing (2024/06/05), PIN / biometric UV via NFC keys like Yubikeys does still not work. 
+
+Sadly, Google just decided to not implement this feature for other keys than their own implementation of it.
 ```
 
 ```admonish tip
@@ -96,13 +98,14 @@ You can change the `RP_NAME` later on without affecting the validation of alread
 
 ### `WEBAUTHN_RENEW_EXP`
 
-For all non Passkey only accounts, Rauthy will always prompt a user at least once for the password on a new machine, even with active
+For all non Passkey only accounts, Rauthy will always prompt a user at least once for the password on a new machine,
+even with active
 passkeys. The keys are used either as a strong second factor, when they do not work with a PIN, or bump up the whole
 login to real MFA, if the OS / Browser / Key does support this.
 
 When a user as logged in successfully on a new device and active 2FA / MFA, he will get an encrypted cookie.  
 The lifetime of this cookie can be configured with `WEBAUTHN_RENEW_EXP`.  
-The **default** of this value is **2160 hours**. 
+The **default** of this value is **2160 hours**.
 
 As long as this cookie is present and can be decrypted by the backend, the user can log in from this very
 device with his FIDO 2 key only, which makes a very good user experience for the whole login flow. The E-Mail will
