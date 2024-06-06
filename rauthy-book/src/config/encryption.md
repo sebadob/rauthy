@@ -98,14 +98,15 @@ Admin UI which helps you with this.
 Log in to the Admin UI and navigate to `Config` -> `Encryption Keys`.  
 You will see the currently recognized keys and the currently active ID.
 
-You can then make sure, that the ID you want to migrate secrets to is selected and execute the migrations.  
-Please keep in mind, that if you have a lot of data, it might take a few seconds to perform this operation.  
-This will migrate all encrypted data for existing OIDC clients and all JWKs used for JWT token singing with the new
-key.
+You can then make sure, that the ID you want to migrate secrets to is selected and execute the migrations.
+Please keep in mind, that if you have a lot of data, it might take a few seconds to perform this operation.
+This will migrate all encrypted data for existing OIDC clients, all JWKs, and so on, with the new key.
 
 **5. Remove old keys**
 
-After a successful migration via the UI tool, you may remove old keys from the `ENC_KEYS` value.
+After a successful migration via the UI tool, you could remove old keys from the `ENC_KEYS` value, but it is not
+recommended as long as you did not have a known data breach. Just keep them around for some time because of
+encrypted cookies with older keys.
 
 ```admonish caution
 All cookies are encrypted with the `ENC_KEY_ACTIVE`. This means, if you remove something from the `ENC_KEYS` which has
