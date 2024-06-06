@@ -8,6 +8,8 @@
 
 ## Stage 2 - features - do before v1.0.0
 
+- `code_challenge` missing on `/authorize` -> show error earlier than after login
+
 - prettify the UI
 - check out the possibility to include SCIM
 - update the book with all the new features
