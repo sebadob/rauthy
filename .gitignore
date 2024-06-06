@@ -5,6 +5,8 @@ rauthy-client/examples/*/target
 rauthy-client/.idea
 rauthy-client/examples/*/.idea
 .vscode
+.helix
+.lapce
 .env
 data
 frontend/.next

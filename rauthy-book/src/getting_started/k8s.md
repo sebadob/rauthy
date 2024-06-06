@@ -71,58 +71,86 @@ metadata:
   name: rauthy-secrets
   namespace: rauthy
 type: Opaque
-data:
-  # The CACHE_AUTH_TOKEN is only needed for a deployment with HA_MODE == true
-  # Secret token, which is used to authenticate the cache members
-  #CACHE_AUTH_TOKEN:
+stringData:
+  # Secret token, which is used to authenticate the cache members.
+  # Only necessary when `HA_MODE=true`
+  #CACHE_AUTH_TOKEN=
 
-  # The database driver will be chosen at runtime depending on the given DATABASE_URL format. Examples:
+  # The database driver will be chosen at runtime depending on
+  # the given DATABASE_URL format. Examples:
   # Sqlite: 'sqlite:data/rauthy.db' or 'sqlite::memory:'
   # Postgres: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
+  #
+  # NOTE: The password in this case should be alphanumeric. 
+  # Special characters could cause problems in the connection
+  # string.
   DATABASE_URL:
 
-  # Format: "key_id/enc_key another_key_id/another_enc_key" - the enc_key itself must be exactly 32 characters long and
-  # and should not contain special characters.
-  # The ID must match '[a-zA-Z0-9]{2,20}'
-  ENC_KEYS:
+  # You need to define at least one valid encryption key.
+  # These keys are used in various places, like for instance
+  # encrypting confidential client secrets in the database, or
+  # encryption cookies, and so on.
+  #
+  # The format must match:
+  # ENC_KEYS: |-
+  #   q6u26vXV/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
+  #   bVCyaggQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
+  ENC_KEYS: |-
+  # This identifies the key ID from the `ENC_KEYS` list, that
+  # should actively be used for new encryption's.
+  ENC_KEY_ACTIVE:
 
   # Needed for sending E-Mails for password resets and so on
   SMTP_PASSWORD:
+
+  # The Webhook for Slack Notifications.
+  # If left empty, no messages will be sent to Slack.
+  #EVENT_SLACK_WEBHOOK=
+
+  # Matrix variables for event notifications.
+  # `EVENT_MATRIX_USER_ID` and `EVENT_MATRIX_ROOM_ID` are mandatory.
+  # Depending on your Matrix setup, additionally one of
+  # `EVENT_MATRIX_ACCESS_TOKEN` or `EVENT_MATRIX_USER_PASSWORD` 
+  # is needed. If you log in to Matrix with User + Password, you 
+  # may use `EVENT_MATRIX_USER_PASSWORD`.
+  # If you log in via OIDC SSO (or just want to use a session token 
+  # you can revoke), you should provide `EVENT_MATRIX_ACCESS_TOKEN`.
+  # If both are given, the `EVENT_MATRIX_ACCESS_TOKEN` will be preferred.
+  #
+  # If left empty, no messages will be sent to Slack.
+  # Format: `@<user_id>:<server address>`
+  #EVENT_MATRIX_USER_ID=
+  # Format: `!<random string>:<server address>`
+  #EVENT_MATRIX_ROOM_ID=
+  #EVENT_MATRIX_ACCESS_TOKEN=
+  #EVENT_MATRIX_USER_PASSWORD=
 ```
 
-The secrets need to be base64 encoded. If you are on Linux, you can do this in the shell easily. If not, use
-any tool you like.  
-Make sure that things like `CACHE_AUTH_TOKEN` (only needed with `HA_MODE == true`) and `ENC_KEYS` are generated
-in a secure random way.
+All variables specified here should be out-commented in the `rauthy-config` from above.  
+Make sure that things like `CACHE_AUTH_TOKEN` and `ENC_KEYS` are generated in a secure random way.
 
 The `DATABASE_URL` with SQLite, like used in this example, does not contain sensitive information, but we will
 create it as a secret anyway to have an easier optional migration to postgres later on.
 
-```
-echo 'sqlite:data/rauthy.db' | base64
-```
-
 Generate a new encryption key with ID in the correct format.
 
 ```
-echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)"  | base64
+echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 ```
 
-Paste the base64 String in the secrets for `ENC_KEYS`.  
-To extract the `ENC_KEY_ID`, which needs to be added to the config from Step 2:
+Paste the String quoted in the secrets for `ENC_KEYS`.
+The `ENC_KEY_ID` are the characters in the beginning until the first `/`, for instance when
 
 ```
-echo -n PasteTheGeneratedBase64Here | base64 -d | cut -d/ -f1
+❯ echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
+d4d1a581/mNIqEpxz4UudPggRpF1QJtjVdZ6JEeVAHepDLZZYI2M=
 ```
 
-And finally, the `SMTP_PASSWORD`
+The `ENC_KEY_ID` would be
 
 ```
-echo 'PasteYourSMTPPasswordHere' | base64
+d4d1a581
 ```
-
-Paste all the generated secrets into the `secrets.yaml` file and the `ENC_KEY_ID` into the `config.yaml` from the step
-before.
 
 ### Create and apply the stateful set
 
@@ -195,21 +223,61 @@ spec:
             - containerPort: 8080
             - containerPort: 8443
           env:
+            #- name: CACHE_AUTH_TOKEN
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: rauthy-secrets
+            #      key: CACHE_AUTH_TOKEN
+
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: rauthy-secrets
                   key: DATABASE_URL
+
             - name: ENC_KEYS
               valueFrom:
                 secretKeyRef:
                   name: rauthy-secrets
                   key: ENC_KEYS
+            - name: ENC_KEY_ACTIVE
+              valueFrom:
+                secretKeyRef:
+                  name: rauthy-secrets
+                  key: ENC_KEY_ACTIVE
+
             - name: SMTP_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: rauthy-secrets
                   key: SMTP_PASSWORD
+
+            #- name: EVENT_SLACK_WEBHOOK
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: rauthy-secrets
+            #      key: EVENT_SLACK_WEBHOOK
+
+            #- name: EVENT_MATRIX_USER_ID
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: rauthy-secrets
+            #      key: EVENT_MATRIX_USER_ID
+            #- name: EVENT_MATRIX_ROOM_ID
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: rauthy-secrets
+            #      key: EVENT_MATRIX_ROOM_ID
+            #- name: EVENT_MATRIX_ACCESS_TOKEN
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: rauthy-secrets
+            #      key: EVENT_MATRIX_ACCESS_TOKEN
+            #- name: EVENT_MATRIX_USER_PASSWORD
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: rauthy-secrets
+            #      key: EVENT_MATRIX_USER_PASSWORD
           volumeMounts:
             - mountPath: /app/data
               name: rauthy-data
@@ -275,7 +343,7 @@ spec:
         resources:
           requests:
             storage: 128Mi
-        #storageClassName: provideIfYouHaveMultipleOnes
+        #storageClassName: provideIfNeeded
 ```
 
 ### Ingress
