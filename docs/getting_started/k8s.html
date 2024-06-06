@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html" class="active"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">4.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">5.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">6.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">7.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">8.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">9.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">10.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html"><strong aria-hidden="true">10.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">11.</strong> Reference Config</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html" class="active"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/production_config.html"><strong aria-hidden="true">3.</strong> Production Config</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.1.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">3.2.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">3.3.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">3.4.</strong> Database Migrations</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">3.5.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">3.6.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">3.7.</strong> TLS</a></li></ol></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">4.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html"><strong aria-hidden="true">4.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">5.</strong> Reference Config</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -231,44 +231,75 @@ metadata:
   name: rauthy-secrets
   namespace: rauthy
 type: Opaque
-data:
-  # The CACHE_AUTH_TOKEN is only needed for a deployment with HA_MODE == true
-  # Secret token, which is used to authenticate the cache members
-  #CACHE_AUTH_TOKEN:
+stringData:
+  # Secret token, which is used to authenticate the cache members.
+  # Only necessary when `HA_MODE=true`
+  #CACHE_AUTH_TOKEN=
 
-  # The database driver will be chosen at runtime depending on the given DATABASE_URL format. Examples:
+  # The database driver will be chosen at runtime depending on
+  # the given DATABASE_URL format. Examples:
   # Sqlite: 'sqlite:data/rauthy.db' or 'sqlite::memory:'
   # Postgres: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
+  #
+  # NOTE: The password in this case should be alphanumeric. 
+  # Special characters could cause problems in the connection
+  # string.
   DATABASE_URL:
 
-  # Format: "key_id/enc_key another_key_id/another_enc_key" - the enc_key itself must be exactly 32 characters long and
-  # and should not contain special characters.
-  # The ID must match '[a-zA-Z0-9]{2,20}'
-  ENC_KEYS:
+  # You need to define at least one valid encryption key.
+  # These keys are used in various places, like for instance
+  # encrypting confidential client secrets in the database, or
+  # encryption cookies, and so on.
+  #
+  # The format must match:
+  # ENC_KEYS: |-
+  #   q6u26vXV/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
+  #   bVCyaggQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
+  ENC_KEYS: |-
+  # This identifies the key ID from the `ENC_KEYS` list, that
+  # should actively be used for new encryption's.
+  ENC_KEY_ACTIVE:
 
   # Needed for sending E-Mails for password resets and so on
   SMTP_PASSWORD:
+
+  # The Webhook for Slack Notifications.
+  # If left empty, no messages will be sent to Slack.
+  #EVENT_SLACK_WEBHOOK=
+
+  # Matrix variables for event notifications.
+  # `EVENT_MATRIX_USER_ID` and `EVENT_MATRIX_ROOM_ID` are mandatory.
+  # Depending on your Matrix setup, additionally one of
+  # `EVENT_MATRIX_ACCESS_TOKEN` or `EVENT_MATRIX_USER_PASSWORD` 
+  # is needed. If you log in to Matrix with User + Password, you 
+  # may use `EVENT_MATRIX_USER_PASSWORD`.
+  # If you log in via OIDC SSO (or just want to use a session token 
+  # you can revoke), you should provide `EVENT_MATRIX_ACCESS_TOKEN`.
+  # If both are given, the `EVENT_MATRIX_ACCESS_TOKEN` will be preferred.
+  #
+  # If left empty, no messages will be sent to Slack.
+  # Format: `@&lt;user_id&gt;:&lt;server address&gt;`
+  #EVENT_MATRIX_USER_ID=
+  # Format: `!&lt;random string&gt;:&lt;server address&gt;`
+  #EVENT_MATRIX_ROOM_ID=
+  #EVENT_MATRIX_ACCESS_TOKEN=
+  #EVENT_MATRIX_USER_PASSWORD=
 </code></pre>
-<p>The secrets need to be base64 encoded. If you are on Linux, you can do this in the shell easily. If not, use
-any tool you like.<br />
-Make sure that things like <code>CACHE_AUTH_TOKEN</code> (only needed with <code>HA_MODE == true</code>) and <code>ENC_KEYS</code> are generated
-in a secure random way.</p>
+<p>All variables specified here should be out-commented in the <code>rauthy-config</code> from above.<br />
+Make sure that things like <code>CACHE_AUTH_TOKEN</code> and <code>ENC_KEYS</code> are generated in a secure random way.</p>
 <p>The <code>DATABASE_URL</code> with SQLite, like used in this example, does not contain sensitive information, but we will
 create it as a secret anyway to have an easier optional migration to postgres later on.</p>
-<pre><code>echo 'sqlite:data/rauthy.db' | base64
-</code></pre>
 <p>Generate a new encryption key with ID in the correct format.</p>
-<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c8)/$(cat /dev/urandom | head -c32 | base64)"  | base64
+<pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
 </code></pre>
-<p>Paste the base64 String in the secrets for <code>ENC_KEYS</code>.<br />
-To extract the <code>ENC_KEY_ID</code>, which needs to be added to the config from Step 2:</p>
-<pre><code>echo -n PasteTheGeneratedBase64Here | base64 -d | cut -d/ -f1
+<p>Paste the String quoted in the secrets for <code>ENC_KEYS</code>.
+The <code>ENC_KEY_ID</code> are the characters in the beginning until the first <code>/</code>, for instance when</p>
+<pre><code>❯ echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
+d4d1a581/mNIqEpxz4UudPggRpF1QJtjVdZ6JEeVAHepDLZZYI2M=
 </code></pre>
-<p>And finally, the <code>SMTP_PASSWORD</code></p>
-<pre><code>echo 'PasteYourSMTPPasswordHere' | base64
+<p>The <code>ENC_KEY_ID</code> would be</p>
+<pre><code>d4d1a581
 </code></pre>
-<p>Paste all the generated secrets into the <code>secrets.yaml</code> file and the <code>ENC_KEY_ID</code> into the <code>config.yaml</code> from the step
-before.</p>
 <h3 id="create-and-apply-the-stateful-set"><a class="header" href="#create-and-apply-the-stateful-set">Create and apply the stateful set</a></h3>
 <pre><code>touch sts.yaml
 </code></pre>
@@ -335,21 +366,61 @@ spec:
             - containerPort: 8080
             - containerPort: 8443
           env:
+            #- name: CACHE_AUTH_TOKEN
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: rauthy-secrets
+            #      key: CACHE_AUTH_TOKEN
+
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: rauthy-secrets
                   key: DATABASE_URL
+
             - name: ENC_KEYS
               valueFrom:
                 secretKeyRef:
                   name: rauthy-secrets
                   key: ENC_KEYS
+            - name: ENC_KEY_ACTIVE
+              valueFrom:
+                secretKeyRef:
+                  name: rauthy-secrets
+                  key: ENC_KEY_ACTIVE
+
             - name: SMTP_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: rauthy-secrets
                   key: SMTP_PASSWORD
+
+            #- name: EVENT_SLACK_WEBHOOK
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: rauthy-secrets
+            #      key: EVENT_SLACK_WEBHOOK
+
+            #- name: EVENT_MATRIX_USER_ID
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: rauthy-secrets
+            #      key: EVENT_MATRIX_USER_ID
+            #- name: EVENT_MATRIX_ROOM_ID
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: rauthy-secrets
+            #      key: EVENT_MATRIX_ROOM_ID
+            #- name: EVENT_MATRIX_ACCESS_TOKEN
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: rauthy-secrets
+            #      key: EVENT_MATRIX_ACCESS_TOKEN
+            #- name: EVENT_MATRIX_USER_PASSWORD
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: rauthy-secrets
+            #      key: EVENT_MATRIX_USER_PASSWORD
           volumeMounts:
             - mountPath: /app/data
               name: rauthy-data
@@ -415,7 +486,7 @@ spec:
         resources:
           requests:
             storage: 128Mi
-        #storageClassName: provideIfYouHaveMultipleOnes
+        #storageClassName: provideIfNeeded
 </code></pre>
 <h3 id="ingress"><a class="header" href="#ingress">Ingress</a></h3>
 <p>This example assumes, that the deployment will run behind a Kubernetes ingress resource of your choice.</p>
