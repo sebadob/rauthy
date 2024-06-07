@@ -21,6 +21,7 @@ use crate::response::UserResponseSimple;
 use crate::templates::UserEmailChangeConfirmHtml;
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;
+use chrono::Utc;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_USERS, IDX_USERS, RAUTHY_ADMIN_ROLE, USER_COUNT_IDX,
     WEBAUTHN_NO_PASSWORD_EXPIRY,
@@ -1071,24 +1072,26 @@ impl User {
         Ok(())
     }
 
+    #[inline]
     pub fn check_enabled(&self) -> Result<(), ErrorResponse> {
         if !self.enabled {
             trace!("The user is not enabled");
             return Err(ErrorResponse::new(
                 ErrorResponseType::Disabled,
-                String::from("User is not enabled"),
+                "User is not enabled",
             ));
         }
         Ok(())
     }
 
+    #[inline]
     pub fn check_expired(&self) -> Result<(), ErrorResponse> {
         if let Some(ts) = self.user_expires {
-            if OffsetDateTime::now_utc().unix_timestamp() > ts {
+            if Utc::now().timestamp() > ts {
                 trace!("User has expired");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Disabled,
-                    String::from("User has expired"),
+                    "User has expired",
                 ));
             }
         }
