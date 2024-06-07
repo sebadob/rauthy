@@ -913,12 +913,14 @@ impl User {
 impl User {
     #[inline]
     pub fn account_type(&self) -> AccountType {
-        if self.federation_uid.is_some() && self.password.is_some() {
-            AccountType::FederatedPassword
-        } else if self.federation_uid.is_some() && self.has_webauthn_enabled() {
-            AccountType::FederatedPasskey
-        } else if self.federation_uid.is_some() {
-            AccountType::Federated
+        if self.federation_uid.is_some() {
+            if self.password.is_some() {
+                AccountType::FederatedPassword
+            } else if self.has_webauthn_enabled() {
+                AccountType::FederatedPasskey
+            } else {
+                AccountType::Federated
+            }
         } else if self.password.is_some() {
             AccountType::Password
         } else if self.has_webauthn_enabled() {
@@ -1363,7 +1365,7 @@ impl User {
         if self.password.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::PasswordExpired,
-                String::from("No password set"),
+                "No password set",
             ));
         }
 
@@ -1373,7 +1375,7 @@ impl User {
                 if !self.enabled {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::PasswordExpired,
-                        String::from("The password has expired"),
+                        "The password has expired",
                     ));
                 }
 
@@ -1390,12 +1392,12 @@ impl User {
 
                     Err(ErrorResponse::new(
                         ErrorResponseType::PasswordRefresh,
-                        String::from("The password has expired. A reset E-Mail has been sent out."),
+                        "The password has expired. A reset E-Mail has been sent out.",
                     ))
                 } else {
                     Err(ErrorResponse::new(
                         ErrorResponseType::Unauthorized,
-                        String::from("Invalid user credentials"),
+                        "Invalid user credentials",
                     ))
                 };
             }
@@ -1406,7 +1408,7 @@ impl User {
         } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                String::from("Invalid user credentials"),
+                "Invalid user credentials",
             ))
         }
     }
