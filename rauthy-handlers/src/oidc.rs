@@ -256,13 +256,55 @@ pub async fn post_authorize(
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
 
     let session = principal.get_session()?;
-    let res = match auth::authorize(&data, &req, payload.into_inner(), session.clone()).await {
+
+    let mut has_password_been_hashed = false;
+    let mut add_login_delay = true;
+    let mut user_needs_mfa = false;
+
+    let res = match auth::authorize(
+        &data,
+        &req,
+        payload.into_inner(),
+        session.clone(),
+        &mut has_password_been_hashed,
+        &mut add_login_delay,
+        &mut user_needs_mfa,
+    )
+    .await
+    {
         Ok(auth_step) => map_auth_step(auth_step, &req).await,
-        Err(err) => Err(err),
+        Err(err) => {
+            debug!("{:?}", err);
+            // We always must return the exact same error type, no matter what the actual error is,
+            // to prevent information enumeration. The only exception is when the user needs to add
+            // a passkey to the account while having given the correct credentials. In that case,
+            // we return the original error to be able to display the info message in the UI.
+            if user_needs_mfa {
+                // in this case, we can return directly without any login delay
+                return Err(err);
+            }
+
+            let err = Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "Invalid user credentials",
+            ));
+            if !add_login_delay {
+                return err;
+            }
+            err
+        }
     };
 
     let ip = real_ip_from_req(&req);
-    auth::handle_login_delay(&data, ip, start, &data.caches.ha_cache_config, res).await
+    auth::handle_login_delay(
+        &data,
+        ip,
+        start,
+        &data.caches.ha_cache_config,
+        res,
+        has_password_been_hashed,
+    )
+    .await
 }
 
 /// Immediate login refresh with valid session
@@ -303,10 +345,7 @@ pub async fn post_authorize_refresh(
     let auth_step =
         auth::authorize_refresh(&data, session, client, header_origin, req_data.into_inner())
             .await?;
-    map_auth_step(auth_step, &req)
-        .await
-        .map(|res| res.0)
-        .map_err(|err| err.0)
+    map_auth_step(auth_step, &req).await
 }
 
 #[get("/oidc/callback")]
@@ -845,14 +884,14 @@ pub async fn post_token(
     let ip = real_ip_from_req(&req);
 
     if payload.grant_type == GRANT_TYPE_DEVICE_CODE {
-        // TODO the `urn:ietf:params:oauth:grant-type:device_code` needs
+        // the `urn:ietf:params:oauth:grant-type:device_code` needs
         // a fully customized handling here with customized error response
         // to meet the oauth rfc
         return Ok(auth::grant_type_device_code(&data, ip, payload.into_inner()).await);
     }
 
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let add_login_delay = payload.grant_type == "password";
+    let has_password_been_hashed = payload.grant_type == "password";
 
     let res = match auth::get_token_set(payload.into_inner(), &data, req).await {
         Ok((token_set, headers)) => {
@@ -861,12 +900,25 @@ pub async fn post_token(
                 builder.insert_header(h);
             }
             let resp = builder.json(token_set);
-            Ok((resp, add_login_delay))
+            Ok(resp)
         }
-        Err(err) => Err((err, add_login_delay)),
+        Err(err) => {
+            if !has_password_been_hashed {
+                return Err(err);
+            }
+            Err(err)
+        }
     };
 
-    auth::handle_login_delay(&data, ip, start, &data.caches.ha_cache_config, res).await
+    auth::handle_login_delay(
+        &data,
+        ip,
+        start,
+        &data.caches.ha_cache_config,
+        res,
+        has_password_been_hashed,
+    )
+    .await
 }
 
 /// The tokenInfo endpoint for the OIDC standard.

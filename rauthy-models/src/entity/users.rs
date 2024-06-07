@@ -21,6 +21,7 @@ use crate::response::UserResponseSimple;
 use crate::templates::UserEmailChangeConfirmHtml;
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;
+use chrono::Utc;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_USERS, IDX_USERS, RAUTHY_ADMIN_ROLE, USER_COUNT_IDX,
     WEBAUTHN_NO_PASSWORD_EXPIRY,
@@ -913,12 +914,14 @@ impl User {
 impl User {
     #[inline]
     pub fn account_type(&self) -> AccountType {
-        if self.federation_uid.is_some() && self.password.is_some() {
-            AccountType::FederatedPassword
-        } else if self.federation_uid.is_some() && self.has_webauthn_enabled() {
-            AccountType::FederatedPasskey
-        } else if self.federation_uid.is_some() {
-            AccountType::Federated
+        if self.federation_uid.is_some() {
+            if self.password.is_some() {
+                AccountType::FederatedPassword
+            } else if self.has_webauthn_enabled() {
+                AccountType::FederatedPasskey
+            } else {
+                AccountType::Federated
+            }
         } else if self.password.is_some() {
             AccountType::Password
         } else if self.has_webauthn_enabled() {
@@ -1069,24 +1072,26 @@ impl User {
         Ok(())
     }
 
+    #[inline]
     pub fn check_enabled(&self) -> Result<(), ErrorResponse> {
         if !self.enabled {
             trace!("The user is not enabled");
             return Err(ErrorResponse::new(
                 ErrorResponseType::Disabled,
-                String::from("User is not enabled"),
+                "User is not enabled",
             ));
         }
         Ok(())
     }
 
+    #[inline]
     pub fn check_expired(&self) -> Result<(), ErrorResponse> {
         if let Some(ts) = self.user_expires {
-            if OffsetDateTime::now_utc().unix_timestamp() > ts {
+            if Utc::now().timestamp() > ts {
                 trace!("User has expired");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Disabled,
-                    String::from("User has expired"),
+                    "User has expired",
                 ));
             }
         }
@@ -1363,7 +1368,7 @@ impl User {
         if self.password.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::PasswordExpired,
-                String::from("No password set"),
+                "No password set",
             ));
         }
 
@@ -1373,7 +1378,7 @@ impl User {
                 if !self.enabled {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::PasswordExpired,
-                        String::from("The password has expired"),
+                        "The password has expired",
                     ));
                 }
 
@@ -1390,12 +1395,12 @@ impl User {
 
                     Err(ErrorResponse::new(
                         ErrorResponseType::PasswordRefresh,
-                        String::from("The password has expired. A reset E-Mail has been sent out."),
+                        "The password has expired. A reset E-Mail has been sent out.",
                     ))
                 } else {
                     Err(ErrorResponse::new(
                         ErrorResponseType::Unauthorized,
-                        String::from("Invalid user credentials"),
+                        "Invalid user credentials",
                     ))
                 };
             }
@@ -1406,7 +1411,7 @@ impl User {
         } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                String::from("Invalid user credentials"),
+                "Invalid user credentials",
             ))
         }
     }

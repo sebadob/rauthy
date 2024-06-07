@@ -193,9 +193,7 @@ pub async fn post_provider_callback(
     let (auth_step, cookie) =
         AuthProviderCallback::login_finish(&data, &req, &payload, session.clone()).await?;
 
-    let (mut resp, _) = map_auth_step(auth_step, &req)
-        .await
-        .map_err(|(err, _)| err)?;
+    let mut resp = map_auth_step(auth_step, &req).await?;
     resp.add_cookie(&cookie).map_err(|err| {
         ErrorResponse::new(
             ErrorResponseType::Internal,
@@ -411,7 +409,7 @@ pub async fn put_provider_img(
             None => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "content_type is missing".to_string(),
+                    "content_type is missing",
                 ));
             }
         }
@@ -466,7 +464,7 @@ pub async fn post_provider_link(
     if user.auth_provider_id.is_some() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "user is already federated".to_string(),
+            "user is already federated",
         ));
     }
 

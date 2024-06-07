@@ -114,7 +114,7 @@ impl Principal {
         if *ADMIN_FORCE_MFA && !self.has_mfa_active() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::MfaRequired,
-                "Rauthy admin access only allowed with MFA active".to_string(),
+                "Rauthy admin access only allowed with MFA active",
             ));
         }
 
@@ -184,14 +184,14 @@ impl Principal {
                 trace!("Validating the session failed - was not in auth state");
                 Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
-                    "Unauthorized Session".to_string(),
+                    "Unauthorized Session",
                 ))
             }
         } else {
             trace!("Validating the session failed - no session found");
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                "No valid session".to_string(),
+                "No valid session",
             ))
         }
     }
@@ -205,14 +205,14 @@ impl Principal {
                 trace!("Validating the session failed - was not in init or auth state");
                 Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
-                    "Unauthorized Session".to_string(),
+                    "Unauthorized Session",
                 ))
             }
         } else {
             trace!("Validating the session failed - no session found");
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                "No valid session".to_string(),
+                "No valid session",
             ))
         }
     }
@@ -230,7 +230,7 @@ impl Principal {
             trace!("Validating the session failed - was not in init state");
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                "Session in Init state mandatory".to_string(),
+                "Session in Init state mandatory",
             ))
         }
     }

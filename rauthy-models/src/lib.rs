@@ -33,7 +33,6 @@ pub enum AuthStep {
 }
 
 pub struct AuthStepLoggedIn {
-    pub has_password_been_hashed: bool,
     pub user_id: String,
     pub email: String,
     pub header_loc: (HeaderName, HeaderValue),
@@ -42,7 +41,6 @@ pub struct AuthStepLoggedIn {
 }
 
 pub struct AuthStepAwaitWebauthn {
-    pub has_password_been_hashed: bool,
     pub code: String,
     pub header_csrf: (HeaderName, HeaderValue),
     pub header_origin: Option<(HeaderName, HeaderValue)>,

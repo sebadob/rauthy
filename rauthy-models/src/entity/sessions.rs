@@ -701,7 +701,7 @@ impl Session {
             if OffsetDateTime::now_utc().unix_timestamp() > ts {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
-                    "User has expired".to_string(),
+                    "User has expired",
                 ));
             } else if ts < self.exp {
                 self.exp = ts;

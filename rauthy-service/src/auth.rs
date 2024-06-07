@@ -54,6 +54,7 @@ use ring::digest;
 use std::borrow::Cow;
 use std::cmp::PartialEq;
 use std::collections::{HashMap, HashSet};
+use std::fmt::Write;
 use std::ops::{Add, Sub};
 use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -68,22 +69,21 @@ pub async fn authorize(
     req: &HttpRequest,
     req_data: LoginRequest,
     mut session: Session,
-    // the second argument with the error will be 'true' if a login delay should be added
-) -> Result<AuthStep, (ErrorResponse, bool)> {
-    // This Error must be the same if user does not exist AND passwords do not match to prevent
-    // username enumeration
+    has_password_been_hashed: &mut bool,
+    add_login_delay: &mut bool,
+    user_needs_mfa: &mut bool,
+) -> Result<AuthStep, ErrorResponse> {
     let mut user = User::find_by_email(data, req_data.email)
         .await
-        .map_err(|e| {
-            error!("{:?}", e);
-            // be careful, that this Err and the one in User::validate_password are exactly the same
-            (
-                ErrorResponse::new(
-                    ErrorResponseType::Unauthorized,
-                    String::from("Invalid user credentials"),
-                ),
-                false,
-            )
+        .map_err(|err| {
+            // The UI does not show the password input form when there is no user yet.
+            // To prevent username enumeration, we should not add a login delay if a user does not
+            // even exist, when the UI is in that phase where the user does not provide any
+            // password.
+            if req_data.password.is_none() {
+                *add_login_delay = false;
+            }
+            err
         })?;
 
     let mfa_cookie =
@@ -91,8 +91,8 @@ pub async fn authorize(
             if c.email == user.email && user.has_webauthn_enabled() {
                 Some(c)
             } else {
-                // If a possibly existing mfa cookie does not match the given email, or user has webauthn
-                // disabled in the meantime -> ignore the cookie
+                // If a possibly existing mfa cookie does not match the given email, or the user
+                // has webauthn disabled in the meantime, ignore the cookie
                 None
             }
         } else {
@@ -101,76 +101,62 @@ pub async fn authorize(
 
     let account_type = user.account_type();
 
-    // this allows a user without the mfa cookie to login anyway if it is an only passkey account
-    // in this case, UV is always enforced, not matter what -> safe to login without cookie
+    // only allow an empty password, if the user has a passkey only account or a valid MFA cookie
     let user_must_provide_password =
         req_data.password.is_none() && account_type != AccountType::Passkey && mfa_cookie.is_none();
     if user_must_provide_password {
+        // if we get here, the UI did the first step from the login form
+        // -> username only without password
+        // we should not add a delay in that case, because the user did nothing wrong, we just need
+        // to get the password, because it is no passkey only account
+        *add_login_delay = false;
+
         trace!("No user password has been provided");
-        return Err((
-            ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                String::from("Invalid user credentials"),
-            ),
-            false,
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "User needs to provide a password",
         ));
     }
 
     if account_type == AccountType::New {
-        return Err((
-            ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                String::from("Invalid user credentials"),
-            ),
-            // this basically means, if the user did the first login in the UI with just username,
-            // do not add any login delay afterwards for a better UX
-            !user_must_provide_password,
+        // the user has created an account but no password has been set so far
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "The account has not been set up yet",
         ));
     }
 
-    user.check_enabled()
-        .map_err(|err| (err, !user_must_provide_password))?;
-    user.check_expired()
-        .map_err(|err| (err, !user_must_provide_password))?;
+    user.check_enabled()?;
+    user.check_expired()?;
 
-    let has_password_been_hashed = if let Some(pwd) = req_data.password {
-        match user.validate_password(data, pwd).await {
-            Ok(_) => {
-                // update user info
-                // in case of webauthn login, the info will be updates in the auth finish step
-                user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
-                user.last_failed_login = None;
-                user.failed_login_attempts = None;
-                user.save(data, None, None)
-                    .await
-                    .map_err(|err| (err, true))?;
-            }
-            Err(err) => {
-                trace!("Provided user password is invalid");
-                return Err((err, true));
-            }
-        }
-        true
-    } else {
-        false
-    };
+    // TODO should we move the password hashing as far back as possible? -> most expensive operation
+    // maybe it makes sense to do additional DB requests instead of hashing a password?
+    // what about brute force attempts in that case?
+    // -> identify the best ordering and if it maybe makes sense to check the client first
+    if let Some(pwd) = req_data.password {
+        *has_password_been_hashed = true;
+        user.validate_password(data, pwd).await?;
+
+        // update user info
+        // in case of webauthn login, the info will be updated in the auth finish step
+        user.last_login = Some(Utc::now().timestamp());
+        user.last_failed_login = None;
+        user.failed_login_attempts = None;
+        user.save(data, None, None).await?;
+    }
 
     // client validations
-    let client = Client::find_maybe_ephemeral(data, req_data.client_id)
-        .await
-        .map_err(|err| (err, !user_must_provide_password))?;
-    client
-        .validate_mfa(&user)
-        .map_err(|err| (err, has_password_been_hashed))?;
-    client
-        .validate_redirect_uri(&req_data.redirect_uri)
-        .map_err(|err| (err, !user_must_provide_password))?;
-    client
-        .validate_code_challenge(&req_data.code_challenge, &req_data.code_challenge_method)
-        .map_err(|err| (err, !user_must_provide_password))?;
-    let header_origin = client
-        .validate_origin(req, &data.listen_scheme, &data.public_url)
-        .map_err(|err| (err, !user_must_provide_password))?;
+    let client = Client::find_maybe_ephemeral(data, req_data.client_id).await?;
+    client.validate_mfa(&user).map_err(|err| {
+        // in this case, we do not want to add a login delay
+        // the user password was correct, we only need a passkey being added to the account
+        *user_needs_mfa = true;
+        *add_login_delay = false;
+        err
+    })?;
+    client.validate_redirect_uri(&req_data.redirect_uri)?;
+    client.validate_code_challenge(&req_data.code_challenge, &req_data.code_challenge_method)?;
+    let header_origin = client.validate_origin(req, &data.listen_scheme, &data.public_url)?;
 
     // build authorization code
     let code_lifetime = if user.has_webauthn_enabled() {
@@ -178,9 +164,7 @@ pub async fn authorize(
     } else {
         client.auth_code_lifetime
     };
-    let scopes = client
-        .sanitize_login_scopes(&req_data.scopes)
-        .map_err(|err| (err, !user_must_provide_password))?;
+    let scopes = client.sanitize_login_scopes(&req_data.scopes)?;
     let code = AuthCode::new(
         user.id.clone(),
         client.id,
@@ -191,27 +175,21 @@ pub async fn authorize(
         scopes,
         code_lifetime,
     );
-    code.save(data)
-        .await
-        .map_err(|err| (err, !user_must_provide_password))?;
+    code.save(data).await?;
 
     // build location header
     let mut loc = format!("{}?code={}", req_data.redirect_uri, code.id);
     if let Some(state) = req_data.state {
-        loc = format!("{}&state={}", loc, state);
+        write!(loc, "&state={}", state)?;
     };
 
     // TODO double check that we do not have any problems with the direct webauthn login here
     // TODO should we allow to skip this step if set so in the config?
     // check if we need to validate the 2nd factor
     if user.has_webauthn_enabled() {
-        session
-            .set_mfa(data, true)
-            .await
-            .map_err(|err| (err, !user_must_provide_password))?;
+        session.set_mfa(data, true).await?;
 
         let step = AuthStepAwaitWebauthn {
-            has_password_been_hashed,
             code: get_rand(48),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
             header_origin,
@@ -231,13 +209,11 @@ pub async fn authorize(
                 .map(|h| h.1.to_str().unwrap().to_string()),
         }
         .save(data)
-        .await
-        .map_err(|err| (err, !user_must_provide_password))?;
+        .await?;
 
         Ok(AuthStep::AwaitWebauthn(step))
     } else {
         Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
-            has_password_been_hashed,
             user_id: user.id,
             email: user.email,
             header_loc: (header::LOCATION, HeaderValue::from_str(&loc).unwrap()),
@@ -258,7 +234,7 @@ pub async fn authorize_refresh(
     let user_id = session.user_id.as_ref().ok_or_else(|| {
         ErrorResponse::new(
             ErrorResponseType::Internal,
-            String::from("No linked user_id for already validated session"),
+            "No linked user_id for already validated session",
         )
     })?;
     let user = User::find(data, user_id.clone()).await?;
@@ -296,7 +272,6 @@ pub async fn authorize_refresh(
     // check if we need to validate the 2nd factor
     if user.has_webauthn_enabled() && *SESSION_RENEW_MFA {
         let step = AuthStepAwaitWebauthn {
-            has_password_been_hashed: false,
             code: get_rand(48),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
             header_origin,
@@ -320,7 +295,6 @@ pub async fn authorize_refresh(
         Ok(AuthStep::AwaitWebauthn(step))
     } else {
         Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
-            has_password_been_hashed: false,
             user_id: user.id,
             email: user.email,
             header_loc: (
@@ -654,16 +628,13 @@ pub async fn build_refresh_token(
 
 #[inline(always)]
 pub fn get_bearer_token_from_header(headers: &HeaderMap) -> Result<String, ErrorResponse> {
-    let bearer = headers.get("Authorization").ok_or_else(|| {
-        ErrorResponse::new(
-            ErrorResponseType::Unauthorized,
-            String::from("Bearer Token missing"),
-        )
-    });
+    let bearer = headers
+        .get("Authorization")
+        .ok_or_else(|| ErrorResponse::new(ErrorResponseType::Unauthorized, "Bearer Token missing"));
     if bearer.is_err() {
         return Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
-            String::from("Authorization header missing"),
+            "Authorization header missing",
         ));
     }
 
@@ -672,7 +643,7 @@ pub fn get_bearer_token_from_header(headers: &HeaderMap) -> Result<String, Error
         .map_err(|_| {
             ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                String::from("Malformed Authorization Header. Could not extract token."),
+                "Malformed Authorization Header. Could not extract token.",
             )
         })?
         .to_string();
@@ -680,13 +651,13 @@ pub fn get_bearer_token_from_header(headers: &HeaderMap) -> Result<String, Error
     let (p, bearer) = head_val.split_once(' ').ok_or(("ERR", "")).map_err(|_| {
         ErrorResponse::new(
             ErrorResponseType::Unauthorized,
-            String::from("Malformed Authorization Header. Could not extract token."),
+            "Malformed Authorization Header. Could not extract token.",
         )
     })?;
     if p.ne(TOKEN_BEARER) || bearer.is_empty() {
         return Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
-            String::from("No bearer token given"),
+            "No bearer token given",
         ));
     }
     Ok(bearer.to_string())
@@ -704,7 +675,7 @@ pub async fn get_userinfo(
     if claims.custom.typ != JwtTokenType::Bearer {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "Token Type must be 'Bearer'".to_string(),
+            "Token Type must be 'Bearer'",
         ));
     }
 
@@ -712,7 +683,7 @@ pub async fn get_userinfo(
     let uid = claims.subject.ok_or_else(|| {
         ErrorResponse::new(
             ErrorResponseType::Internal,
-            String::from("Token without 'sub' - could not extract the Principal"),
+            "Token without 'sub' - could not extract the Principal",
         )
     })?;
     let user = User::find(data, uid).await.map_err(|_| {
@@ -898,7 +869,7 @@ pub async fn get_token_set(
         "refresh_token" => grant_type_refresh(data, req, req_data).await,
         _ => Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("Invalid 'grant_type'"),
+            "Invalid 'grant_type'",
         )),
     }
 }
@@ -914,7 +885,7 @@ async fn grant_type_code(
         warn!("'code' is missing");
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("'code' is missing"),
+            "'code' is missing",
         ));
     }
 
@@ -932,10 +903,7 @@ async fn grant_type_code(
     if client.confidential {
         let secret = client_secret.ok_or_else(|| {
             warn!("'client_secret' is missing");
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                String::from("'client_secret' is missing"),
-            )
+            ErrorResponse::new(ErrorResponseType::BadRequest, "'client_secret' is missing")
         })?;
         client.validate_secret(&secret, &req)?;
     }
@@ -968,7 +936,7 @@ async fn grant_type_code(
         );
         ErrorResponse::new(
             ErrorResponseType::Unauthorized,
-            "'auth_code' could not be found inside the cache".to_string(),
+            "'auth_code' could not be found inside the cache",
         )
     })?;
     // validate the auth code
@@ -981,7 +949,7 @@ async fn grant_type_code(
         warn!("The Authorization Code has expired");
         return Err(ErrorResponse::new(
             ErrorResponseType::SessionExpired,
-            String::from("The Authorization Code has expired"),
+            "The Authorization Code has expired",
         ));
     }
     if code.challenge.is_some() {
@@ -989,7 +957,7 @@ async fn grant_type_code(
             warn!("'code_verifier' is missing");
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("'code_verifier' is missing"),
+                "'code_verifier' is missing",
             ));
         }
 
@@ -998,7 +966,7 @@ async fn grant_type_code(
                 warn!("'code_verifier' does not match the challenge");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
-                    String::from("'code_verifier' does not match the challenge"),
+                    "'code_verifier' does not match the challenge",
                 ));
             }
         } else {
@@ -1009,7 +977,7 @@ async fn grant_type_code(
                 warn!("'code_verifier' does not match the challenge");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
-                    String::from("'code_verifier' does not match the challenge"),
+                    "'code_verifier' does not match the challenge",
                 ));
             }
         }
@@ -1074,7 +1042,7 @@ async fn grant_type_credentials(
     if req_data.client_secret.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("'client_secret' is missing"),
+            "'client_secret' is missing",
         ));
     }
 
@@ -1083,20 +1051,17 @@ async fn grant_type_credentials(
     if !client.confidential {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("'client_credentials' flow is allowed for confidential clients only"),
+            "'client_credentials' flow is allowed for confidential clients only",
         ));
     }
     if !client.enabled {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("client is disabled"),
+            "client is disabled",
         ));
     }
     let secret = client_secret.ok_or_else(|| {
-        ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            String::from("'client_secret' is missing"),
-        )
+        ErrorResponse::new(ErrorResponseType::BadRequest, "'client_secret' is missing")
     })?;
     client.validate_secret(&secret, &req)?;
     client.validate_flow("client_credentials")?;
@@ -1321,13 +1286,13 @@ async fn grant_type_password(
     if req_data.username.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("Missing 'username'"),
+            "Missing 'username'",
         ));
     }
     if req_data.password.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("Missing 'password"),
+            "Missing 'password",
         ));
     }
 
@@ -1339,10 +1304,7 @@ async fn grant_type_password(
     let header_origin = client.validate_origin(&req, &data.listen_scheme, &data.public_url)?;
     if client.confidential {
         let secret = client_secret.ok_or_else(|| {
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                String::from("Missing 'client_secret'"),
-            )
+            ErrorResponse::new(ErrorResponseType::BadRequest, "Missing 'client_secret'")
         })?;
         client.validate_secret(&secret, &req)?;
     }
@@ -1375,10 +1337,7 @@ async fn grant_type_password(
                 get_client_ip(&req),
                 email
             );
-            ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                String::from("Invalid user credentials"),
-            )
+            ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid user credentials")
         })?;
     user.check_enabled()?;
     user.check_expired()?;
@@ -1446,7 +1405,7 @@ async fn grant_type_refresh(
     if req_data.refresh_token.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("'refresh_token' is missing"),
+            "'refresh_token' is missing",
         ));
     }
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
@@ -1456,10 +1415,7 @@ async fn grant_type_refresh(
 
     if client.confidential {
         let secret = client_secret.ok_or_else(|| {
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                String::from("'client_secret' is missing"),
-            )
+            ErrorResponse::new(ErrorResponseType::BadRequest, "'client_secret' is missing")
         })?;
         client.validate_secret(&secret, &req)?;
     }
@@ -1497,9 +1453,8 @@ pub async fn handle_login_delay(
     peer_ip: Option<String>,
     start: Duration,
     cache_config: &redhac::CacheConfig,
-    // the bool for Ok() is true is the password has been hashed
-    // the bool for Err() means if we need to add a login delay (and none otherwise for better UX)
-    res: Result<(HttpResponse, bool), (ErrorResponse, bool)>,
+    res: Result<HttpResponse, ErrorResponse>,
+    has_password_been_hashed: bool,
 ) -> Result<HttpResponse, ErrorResponse> {
     let success_time = cache_get!(
         i64,
@@ -1515,7 +1470,7 @@ pub async fn handle_login_delay(
     let delta = end - start;
 
     match res {
-        Ok((resp, has_password_been_hashed)) => {
+        Ok(resp) => {
             // cleanup possibly blacklisted IP
             if let Some(ip) = peer_ip {
                 data.tx_ip_blacklist
@@ -1543,11 +1498,7 @@ pub async fn handle_login_delay(
 
             Ok(resp)
         }
-        Err((err, add_login_delay)) => {
-            if !add_login_delay {
-                return Err(err);
-            }
-
+        Err(err) => {
             let mut failed_logins = 1;
 
             // check possibly blacklisted IP
@@ -1728,7 +1679,7 @@ pub async fn logout(
     if JwtTokenType::Id != claims.custom.typ {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("The provided token is not an ID token"),
+            "The provided token is not an ID token",
         ));
     }
 
@@ -1740,7 +1691,7 @@ pub async fn logout(
         if client.post_logout_redirect_uris.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("Given 'post_logout_redirect_uri' is not allowed"),
+                "Given 'post_logout_redirect_uri' is not allowed",
             ));
         }
 
@@ -1758,7 +1709,7 @@ pub async fn logout(
         if valid_redirect.count() == 0 {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("Given 'post_logout_redirect_uri' is not allowed"),
+                "Given 'post_logout_redirect_uri' is not allowed",
             ));
         }
         // redirect uri is valid at this point
@@ -1946,7 +1897,7 @@ pub async fn validate_auth_req_param(
         if code_challenge.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("'code_challenge' is missing"),
+                "'code_challenge' is missing",
             ));
         } else {
             // 'plain' is the default method to be assumed by the OAuth specification when it is
@@ -1991,7 +1942,7 @@ pub async fn validate_refresh_token(
     if claims.custom.typ != JwtTokenType::Refresh {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("Provided Token is not a valid refresh token"),
+            "Provided Token is not a valid refresh token",
         ));
     }
 
@@ -2007,7 +1958,7 @@ pub async fn validate_refresh_token(
     if client.id != claims.custom.azp {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("Invalid 'azp'"),
+            "Invalid 'azp'",
         ));
     }
     let header_origin = client.validate_origin(req, &data.listen_scheme, &data.public_url)?;
@@ -2020,7 +1971,7 @@ pub async fn validate_refresh_token(
             if fingerprint != cnf.jkt {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
-                    "The refresh token is bound to a missing DPoP proof".to_string(),
+                    "The refresh token is bound to a missing DPoP proof",
                 ));
             }
             debug!("DPoP-Bound refresh token accepted");
@@ -2028,7 +1979,7 @@ pub async fn validate_refresh_token(
         } else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                "The refresh token is bound to a missing DPoP proof".to_string(),
+                "The refresh token is bound to a missing DPoP proof",
             ));
         }
     } else {
@@ -2049,13 +2000,13 @@ pub async fn validate_refresh_token(
         if &rt.device_id != device_id {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                "'device_id' does not match".to_string(),
+                "'device_id' does not match",
             ));
         }
         if rt.user_id != user.id {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                "'user_id' does not match".to_string(),
+                "'user_id' does not match",
             ));
         }
 

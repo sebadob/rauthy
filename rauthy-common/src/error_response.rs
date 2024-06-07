@@ -449,3 +449,13 @@ impl From<header::InvalidHeaderValue> for ErrorResponse {
         )
     }
 }
+
+impl From<std::fmt::Error> for ErrorResponse {
+    fn from(value: std::fmt::Error) -> Self {
+        trace!("{:?}", value);
+        ErrorResponse::new(
+            ErrorResponseType::Internal,
+            format!("fmt error: {:?}", value),
+        )
+    }
+}

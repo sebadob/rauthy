@@ -763,7 +763,7 @@ impl Client {
                 trace!("'code_challenge_method' is missing");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    String::from("'code_challenge_method' is missing"),
+                    "'code_challenge_method' is missing",
                 ));
             }
 
@@ -781,7 +781,7 @@ impl Client {
             trace!("'code_challenge' not enabled for this client");
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "'code_challenge' not enabled for this client".to_string(),
+                "'code_challenge' not enabled for this client",
             ))
         } else {
             Ok(())
