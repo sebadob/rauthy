@@ -193,9 +193,7 @@ pub async fn post_provider_callback(
     let (auth_step, cookie) =
         AuthProviderCallback::login_finish(&data, &req, &payload, session.clone()).await?;
 
-    let (mut resp, _) = map_auth_step(auth_step, &req)
-        .await
-        .map_err(|(err, _)| err)?;
+    let mut resp = map_auth_step(auth_step, &req).await?;
     resp.add_cookie(&cookie).map_err(|err| {
         ErrorResponse::new(
             ErrorResponseType::Internal,

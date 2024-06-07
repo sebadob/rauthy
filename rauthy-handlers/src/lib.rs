@@ -45,7 +45,7 @@ pub async fn map_auth_step(
     req: &HttpRequest,
     // the bool for Ok() is true is the password has been hashed
     // the bool for Err() means if we need to add a login delay (and none otherwise for better UX)
-) -> Result<(HttpResponse, bool), (ErrorResponse, bool)> {
+) -> Result<HttpResponse, ErrorResponse> {
     // we will only get here after a successful login -> always return logged-in header
     let fed_cm_header = FedCMLoginStatus::LoggedIn.as_header_pair();
 
@@ -59,7 +59,7 @@ pub async fn map_auth_step(
             if let Some((name, value)) = res.header_origin {
                 resp.headers_mut().insert(name, value);
             }
-            Ok((resp, res.has_password_been_hashed))
+            Ok(resp)
         }
 
         AuthStep::AwaitWebauthn(res) => {
@@ -82,23 +82,20 @@ pub async fn map_auth_step(
                 WebauthnCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA))
             {
                 if mfa_cookie.email != res.email {
-                    add_req_mfa_cookie(&mut resp, res.email.clone()).map_err(|err| (err, true))?;
+                    add_req_mfa_cookie(&mut resp, res.email.clone())?;
                 }
             } else {
-                add_req_mfa_cookie(&mut resp, res.email.clone()).map_err(|err| (err, true))?;
+                add_req_mfa_cookie(&mut resp, res.email.clone())?;
             }
 
-            Ok((resp, res.has_password_been_hashed))
+            Ok(resp)
         }
 
         AuthStep::ProviderLink => {
             // TODO generate a new event type in this case?
-            Ok((
-                HttpResponse::NoContent()
-                    .insert_header(fed_cm_header)
-                    .finish(),
-                false,
-            ))
+            Ok(HttpResponse::NoContent()
+                .insert_header(fed_cm_header)
+                .finish())
         }
     }
 }

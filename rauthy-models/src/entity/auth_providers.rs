@@ -701,7 +701,7 @@ impl AuthProviderCallback {
         let callback_id = ApiCookie::from_req(req, COOKIE_UPSTREAM_CALLBACK).ok_or_else(|| {
             ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                "Missing encrypted callback cookie".to_string(),
+                "Missing encrypted callback cookie",
             )
         })?;
 
@@ -712,7 +712,7 @@ impl AuthProviderCallback {
             error!("`state` does not match");
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "`state` does not match".to_string(),
+                "`state` does not match",
             ));
         }
         debug!("callback state is valid");
@@ -725,7 +725,7 @@ impl AuthProviderCallback {
             error!("invalid CSRF token");
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                "invalid CSRF token".to_string(),
+                "invalid CSRF token",
             ));
         }
         debug!("callback csrf token is valid");
@@ -739,7 +739,7 @@ impl AuthProviderCallback {
             error!("invalid PKCE verifier");
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                "invalid PKCE verifier".to_string(),
+                "invalid PKCE verifier",
             ));
         }
         debug!("callback pkce verifier is valid");
@@ -835,10 +835,7 @@ impl AuthProviderCallback {
                 } else {
                     let err = "Neither `access_token` nor `id_token` existed";
                     error!("{}", err);
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::BadRequest,
-                        err.to_string(),
-                    ));
+                    return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
                 }
             }
             Err(err) => {
@@ -871,7 +868,7 @@ impl AuthProviderCallback {
             if provider_mfa_login == ProviderMfaLogin::No && !user.has_webauthn_enabled() {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::MfaRequired,
-                    "MFA is required for this client".to_string(),
+                    "MFA is required for this client",
                 ));
             }
             session.set_mfa(data, true).await?;
@@ -905,12 +902,11 @@ impl AuthProviderCallback {
         // location header
         let mut loc = format!("{}?code={}", slf.req_redirect_uri, code.id);
         if let Some(state) = slf.req_state {
-            write!(loc, "&state={}", state).expect("`write!` to succeed");
+            write!(loc, "&state={}", state)?;
         };
 
         let auth_step = if user.has_webauthn_enabled() {
             let step = AuthStepAwaitWebauthn {
-                has_password_been_hashed: false,
                 code: get_rand(48),
                 header_csrf: Session::get_csrf_header(&session.csrf_token),
                 header_origin,
@@ -935,7 +931,6 @@ impl AuthProviderCallback {
             AuthStep::AwaitWebauthn(step)
         } else {
             AuthStep::LoggedIn(AuthStepLoggedIn {
-                has_password_been_hashed: false,
                 user_id: user.id,
                 email: user.email,
                 header_loc: (header::LOCATION, HeaderValue::from_str(&loc).unwrap()),
