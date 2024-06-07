@@ -234,7 +234,7 @@ pub async fn authorize_refresh(
     let user_id = session.user_id.as_ref().ok_or_else(|| {
         ErrorResponse::new(
             ErrorResponseType::Internal,
-            String::from("No linked user_id for already validated session"),
+            "No linked user_id for already validated session",
         )
     })?;
     let user = User::find(data, user_id.clone()).await?;
@@ -628,16 +628,13 @@ pub async fn build_refresh_token(
 
 #[inline(always)]
 pub fn get_bearer_token_from_header(headers: &HeaderMap) -> Result<String, ErrorResponse> {
-    let bearer = headers.get("Authorization").ok_or_else(|| {
-        ErrorResponse::new(
-            ErrorResponseType::Unauthorized,
-            String::from("Bearer Token missing"),
-        )
-    });
+    let bearer = headers
+        .get("Authorization")
+        .ok_or_else(|| ErrorResponse::new(ErrorResponseType::Unauthorized, "Bearer Token missing"));
     if bearer.is_err() {
         return Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
-            String::from("Authorization header missing"),
+            "Authorization header missing",
         ));
     }
 
@@ -646,7 +643,7 @@ pub fn get_bearer_token_from_header(headers: &HeaderMap) -> Result<String, Error
         .map_err(|_| {
             ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                String::from("Malformed Authorization Header. Could not extract token."),
+                "Malformed Authorization Header. Could not extract token.",
             )
         })?
         .to_string();
@@ -654,13 +651,13 @@ pub fn get_bearer_token_from_header(headers: &HeaderMap) -> Result<String, Error
     let (p, bearer) = head_val.split_once(' ').ok_or(("ERR", "")).map_err(|_| {
         ErrorResponse::new(
             ErrorResponseType::Unauthorized,
-            String::from("Malformed Authorization Header. Could not extract token."),
+            "Malformed Authorization Header. Could not extract token.",
         )
     })?;
     if p.ne(TOKEN_BEARER) || bearer.is_empty() {
         return Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
-            String::from("No bearer token given"),
+            "No bearer token given",
         ));
     }
     Ok(bearer.to_string())
@@ -678,7 +675,7 @@ pub async fn get_userinfo(
     if claims.custom.typ != JwtTokenType::Bearer {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "Token Type must be 'Bearer'".to_string(),
+            "Token Type must be 'Bearer'",
         ));
     }
 
@@ -686,7 +683,7 @@ pub async fn get_userinfo(
     let uid = claims.subject.ok_or_else(|| {
         ErrorResponse::new(
             ErrorResponseType::Internal,
-            String::from("Token without 'sub' - could not extract the Principal"),
+            "Token without 'sub' - could not extract the Principal",
         )
     })?;
     let user = User::find(data, uid).await.map_err(|_| {
@@ -872,7 +869,7 @@ pub async fn get_token_set(
         "refresh_token" => grant_type_refresh(data, req, req_data).await,
         _ => Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("Invalid 'grant_type'"),
+            "Invalid 'grant_type'",
         )),
     }
 }
@@ -888,7 +885,7 @@ async fn grant_type_code(
         warn!("'code' is missing");
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("'code' is missing"),
+            "'code' is missing",
         ));
     }
 
@@ -906,10 +903,7 @@ async fn grant_type_code(
     if client.confidential {
         let secret = client_secret.ok_or_else(|| {
             warn!("'client_secret' is missing");
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                String::from("'client_secret' is missing"),
-            )
+            ErrorResponse::new(ErrorResponseType::BadRequest, "'client_secret' is missing")
         })?;
         client.validate_secret(&secret, &req)?;
     }
@@ -942,7 +936,7 @@ async fn grant_type_code(
         );
         ErrorResponse::new(
             ErrorResponseType::Unauthorized,
-            "'auth_code' could not be found inside the cache".to_string(),
+            "'auth_code' could not be found inside the cache",
         )
     })?;
     // validate the auth code
@@ -955,7 +949,7 @@ async fn grant_type_code(
         warn!("The Authorization Code has expired");
         return Err(ErrorResponse::new(
             ErrorResponseType::SessionExpired,
-            String::from("The Authorization Code has expired"),
+            "The Authorization Code has expired",
         ));
     }
     if code.challenge.is_some() {
@@ -963,7 +957,7 @@ async fn grant_type_code(
             warn!("'code_verifier' is missing");
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("'code_verifier' is missing"),
+                "'code_verifier' is missing",
             ));
         }
 
@@ -972,7 +966,7 @@ async fn grant_type_code(
                 warn!("'code_verifier' does not match the challenge");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
-                    String::from("'code_verifier' does not match the challenge"),
+                    "'code_verifier' does not match the challenge",
                 ));
             }
         } else {
@@ -983,7 +977,7 @@ async fn grant_type_code(
                 warn!("'code_verifier' does not match the challenge");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
-                    String::from("'code_verifier' does not match the challenge"),
+                    "'code_verifier' does not match the challenge",
                 ));
             }
         }
@@ -1048,7 +1042,7 @@ async fn grant_type_credentials(
     if req_data.client_secret.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("'client_secret' is missing"),
+            "'client_secret' is missing",
         ));
     }
 
@@ -1057,20 +1051,17 @@ async fn grant_type_credentials(
     if !client.confidential {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("'client_credentials' flow is allowed for confidential clients only"),
+            "'client_credentials' flow is allowed for confidential clients only",
         ));
     }
     if !client.enabled {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("client is disabled"),
+            "client is disabled",
         ));
     }
     let secret = client_secret.ok_or_else(|| {
-        ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            String::from("'client_secret' is missing"),
-        )
+        ErrorResponse::new(ErrorResponseType::BadRequest, "'client_secret' is missing")
     })?;
     client.validate_secret(&secret, &req)?;
     client.validate_flow("client_credentials")?;
@@ -1295,13 +1286,13 @@ async fn grant_type_password(
     if req_data.username.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("Missing 'username'"),
+            "Missing 'username'",
         ));
     }
     if req_data.password.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("Missing 'password"),
+            "Missing 'password",
         ));
     }
 
@@ -1313,10 +1304,7 @@ async fn grant_type_password(
     let header_origin = client.validate_origin(&req, &data.listen_scheme, &data.public_url)?;
     if client.confidential {
         let secret = client_secret.ok_or_else(|| {
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                String::from("Missing 'client_secret'"),
-            )
+            ErrorResponse::new(ErrorResponseType::BadRequest, "Missing 'client_secret'")
         })?;
         client.validate_secret(&secret, &req)?;
     }
@@ -1349,10 +1337,7 @@ async fn grant_type_password(
                 get_client_ip(&req),
                 email
             );
-            ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                String::from("Invalid user credentials"),
-            )
+            ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid user credentials")
         })?;
     user.check_enabled()?;
     user.check_expired()?;
@@ -1420,7 +1405,7 @@ async fn grant_type_refresh(
     if req_data.refresh_token.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("'refresh_token' is missing"),
+            "'refresh_token' is missing",
         ));
     }
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
@@ -1430,10 +1415,7 @@ async fn grant_type_refresh(
 
     if client.confidential {
         let secret = client_secret.ok_or_else(|| {
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                String::from("'client_secret' is missing"),
-            )
+            ErrorResponse::new(ErrorResponseType::BadRequest, "'client_secret' is missing")
         })?;
         client.validate_secret(&secret, &req)?;
     }
@@ -1697,7 +1679,7 @@ pub async fn logout(
     if JwtTokenType::Id != claims.custom.typ {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("The provided token is not an ID token"),
+            "The provided token is not an ID token",
         ));
     }
 
@@ -1709,7 +1691,7 @@ pub async fn logout(
         if client.post_logout_redirect_uris.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("Given 'post_logout_redirect_uri' is not allowed"),
+                "Given 'post_logout_redirect_uri' is not allowed",
             ));
         }
 
@@ -1727,7 +1709,7 @@ pub async fn logout(
         if valid_redirect.count() == 0 {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("Given 'post_logout_redirect_uri' is not allowed"),
+                "Given 'post_logout_redirect_uri' is not allowed",
             ));
         }
         // redirect uri is valid at this point
@@ -1960,7 +1942,7 @@ pub async fn validate_refresh_token(
     if claims.custom.typ != JwtTokenType::Refresh {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("Provided Token is not a valid refresh token"),
+            "Provided Token is not a valid refresh token",
         ));
     }
 
@@ -1976,7 +1958,7 @@ pub async fn validate_refresh_token(
     if client.id != claims.custom.azp {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            String::from("Invalid 'azp'"),
+            "Invalid 'azp'",
         ));
     }
     let header_origin = client.validate_origin(req, &data.listen_scheme, &data.public_url)?;
@@ -1989,7 +1971,7 @@ pub async fn validate_refresh_token(
             if fingerprint != cnf.jkt {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
-                    "The refresh token is bound to a missing DPoP proof".to_string(),
+                    "The refresh token is bound to a missing DPoP proof",
                 ));
             }
             debug!("DPoP-Bound refresh token accepted");
@@ -1997,7 +1979,7 @@ pub async fn validate_refresh_token(
         } else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                "The refresh token is bound to a missing DPoP proof".to_string(),
+                "The refresh token is bound to a missing DPoP proof",
             ));
         }
     } else {
@@ -2018,13 +2000,13 @@ pub async fn validate_refresh_token(
         if &rt.device_id != device_id {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                "'device_id' does not match".to_string(),
+                "'device_id' does not match",
             ));
         }
         if rt.user_id != user.id {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                "'user_id' does not match".to_string(),
+                "'user_id' does not match",
             ));
         }
 

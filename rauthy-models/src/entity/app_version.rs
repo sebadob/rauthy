@@ -145,8 +145,7 @@ impl LatestAppVersion {
                 } else {
                     Err(ErrorResponse::new(
                         ErrorResponseType::Internal,
-                        "Could not find 'tag_name' in Rauthy App Version lookup response"
-                            .to_string(),
+                        "Could not find 'tag_name' in Rauthy App Version lookup response",
                     ))
                 }?;
 

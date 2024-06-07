@@ -409,7 +409,7 @@ pub async fn put_provider_img(
             None => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "content_type is missing".to_string(),
+                    "content_type is missing",
                 ));
             }
         }
@@ -464,7 +464,7 @@ pub async fn post_provider_link(
     if user.auth_provider_id.is_some() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "user is already federated".to_string(),
+            "user is already federated",
         ));
     }
 
