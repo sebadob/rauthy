@@ -12,7 +12,6 @@
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import {
         REGEX_CLIENT_NAME,
-        REGEX_LOWERCASE_SPACE,
         REGEX_PEM, REGEX_PROVIDER_SCOPE,
         REGEX_URI
     } from "../../../utils/constants.js";
@@ -73,47 +72,6 @@
     $: isOidc = mode === modes[0];
     $: isSpecial = !isAuto && !isCustom && !isOidc;
 
-    // hook for templated values
-    $: if (!isAuto && !isCustom && !isOidc) {
-        if (mode === 'Github') {
-            // Github does not implement metadata lookup -> configure manually
-            config = {
-                enabled: true,
-
-                // fixed values after lookup
-                issuer: 'github.com',
-                danger_allow_insecure: false,
-                authorization_endpoint: 'https://github.com/login/oauth/authorize',
-                token_endpoint: 'https://github.com/login/oauth/access_token',
-                token_auth_method_basic: false,
-                userinfo_endpoint: 'https://api.github.com/user',
-                use_pkce: false,
-
-                // user defined values
-                name: 'Github',
-                client_id: '',
-                client_secret: '',
-                scope: 'read:user',
-                root_pem: null,
-
-                admin_claim_path: null,
-                admin_claim_value: null,
-                mfa_claim_path: '$.two_factor_authentication',
-                mfa_claim_value: 'true',
-                // maybe additional ones in the future like client_logo
-            }
-        } else if (mode === 'Google') {
-            // Google supports oidc metadata lookup
-            configLookup = {
-                issuer: 'accounts.google.com',
-                metadata_url: null,
-                danger_allow_insecure: false,
-                root_pem: null,
-            }
-            onSubmitLookup();
-        }
-    }
-
     let formErrors = {};
     const schemaConfig = yup.object().shape({
         issuer: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
@@ -137,6 +95,87 @@
         metadata_url: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         root_pem: yup.string().trim().nullable().matches(REGEX_PEM, "Valid PEM certificate"),
     });
+
+    // hook for templated values
+    $: if (mode) {
+        // reset values
+        lookupSuccess = false;
+        formErrors = {};
+        configLookup = {
+            issuer: null,
+            metadata_url: null,
+            danger_allow_insecure: false,
+            root_pem: null,
+        };
+
+        switch (mode) {
+            case 'Github':
+                // Github does not implement metadata lookup -> configure manually
+                config = {
+                    enabled: true,
+
+                    // fixed values after lookup
+                    issuer: 'github.com',
+                    danger_allow_insecure: false,
+                    authorization_endpoint: 'https://github.com/login/oauth/authorize',
+                    token_endpoint: 'https://github.com/login/oauth/access_token',
+                    token_auth_method_basic: false,
+                    userinfo_endpoint: 'https://api.github.com/user',
+                    use_pkce: false,
+
+                    // user defined values
+                    name: 'Github',
+                    client_id: '',
+                    client_secret: '',
+                    scope: 'read:user',
+                    root_pem: null,
+
+                    admin_claim_path: null,
+                    admin_claim_value: null,
+                    mfa_claim_path: '$.two_factor_authentication',
+                    mfa_claim_value: 'true',
+                    // maybe additional ones in the future like client_logo
+                };
+                break;
+            case 'Google':
+                // Google supports oidc metadata lookup
+                configLookup = {
+                    issuer: 'accounts.google.com',
+                    metadata_url: null,
+                    danger_allow_insecure: false,
+                    root_pem: null,
+                }
+                onSubmitLookup();
+                break;
+            default:
+                config = {
+                    enabled: true,
+                    typ: 'oidc',
+
+                    // fixed values after lookup
+                    issuer: '',
+                    danger_allow_insecure: false,
+                    authorization_endpoint: '',
+                    token_endpoint: '',
+                    token_auth_method_basic: false,
+                    userinfo_endpoint: '',
+                    use_pkce: true,
+
+                    // user defined values
+                    name: '',
+                    client_id: '',
+                    client_secret: '',
+                    scope: '',
+                    root_pem: null,
+
+                    admin_claim_path: null,
+                    admin_claim_value: null,
+                    mfa_claim_path: null,
+                    mfa_claim_value: null,
+                    // maybe additional ones in the future like client_logo
+                };
+        }
+    }
 
     $: if (success) {
         timer = setTimeout(() => {
