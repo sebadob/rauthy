@@ -56,7 +56,8 @@
             error = t.clientForceMfa;
             clientMfaForce = true;
         } else {
-            error = `Uncovered HTTP return status '${res.status}'. This should never happen, please report this bug.`;
+            let body = await res.json();
+            error = `HTTP ${res.status}: ${body}`;
         }
     });
 
