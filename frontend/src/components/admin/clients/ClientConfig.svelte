@@ -355,13 +355,7 @@
         />
     </div>
 
-    <!-- URLs Description -->
     <div class="separator">
-    </div>
-    <div class="desc">
-        <p>
-            The redirect URIs may contain a <code>*</code> wildcard only at the end.
-        </p>
     </div>
 
     <!-- Allowed Origins -->
@@ -382,6 +376,11 @@
     </ExpandableInput>
 
     <!-- Redirect URIs -->
+    <div class="desc">
+        <p>
+            Redirect URIs may contain a <code>*</code> wildcard only at the end.
+        </p>
+    </div>
     <ExpandableInput
             style="width: {urlInputWidth}"
             validation={{
@@ -397,6 +396,9 @@
     >
         REDIRECT URI
     </ExpandableInput>
+
+    <div class="separator">
+    </div>
 
     <!-- Post Logout Redirect URIs -->
     <ExpandableInput
