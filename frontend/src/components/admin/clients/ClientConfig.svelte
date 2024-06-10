@@ -10,7 +10,8 @@
         REGEX_CLIENT_NAME,
         REGEX_CONTACT,
         REGEX_URI,
-        TOKEN_ALGS
+        REGEX_ORIGIN,
+        TOKEN_ALGS,
     } from "../../../utils/constants.js";
     import {onMount} from "svelte";
     import {globalScopesNames} from "../../../stores/admin.js";
@@ -363,8 +364,8 @@
             style="width: {urlInputWidth}"
             validation={{
           required: true,
-          regex: REGEX_URI,
-          errMsg: "Only URL safe values: a-zA-Z0-9,.:/_-&?=~#!$'()*+%",
+          regex: REGEX_ORIGIN,
+          errMsg: "Must be a valid origin",
         }}
             bind:values={client.allowed_origins}
             bind:validate={validateAllowedOrigins}
