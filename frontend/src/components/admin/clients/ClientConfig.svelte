@@ -10,7 +10,8 @@
         REGEX_CLIENT_NAME,
         REGEX_CONTACT,
         REGEX_URI,
-        TOKEN_ALGS
+        REGEX_ORIGIN,
+        TOKEN_ALGS,
     } from "../../../utils/constants.js";
     import {onMount} from "svelte";
     import {globalScopesNames} from "../../../stores/admin.js";
@@ -355,13 +356,7 @@
         />
     </div>
 
-    <!-- URLs Description -->
     <div class="separator">
-    </div>
-    <div class="desc">
-        <p>
-            The redirect URIs may contain a <code>*</code> wildcard only at the end.
-        </p>
     </div>
 
     <!-- Allowed Origins -->
@@ -369,8 +364,8 @@
             style="width: {urlInputWidth}"
             validation={{
           required: true,
-          regex: REGEX_URI,
-          errMsg: "Only URL safe values: a-zA-Z0-9,.:/_-&?=~#!$'()*+%",
+          regex: REGEX_ORIGIN,
+          errMsg: "Must be a valid origin",
         }}
             bind:values={client.allowed_origins}
             bind:validate={validateAllowedOrigins}
@@ -382,6 +377,11 @@
     </ExpandableInput>
 
     <!-- Redirect URIs -->
+    <div class="desc">
+        <p>
+            Redirect URIs may contain a <code>*</code> wildcard only at the end.
+        </p>
+    </div>
     <ExpandableInput
             style="width: {urlInputWidth}"
             validation={{
@@ -397,6 +397,9 @@
     >
         REDIRECT URI
     </ExpandableInput>
+
+    <div class="separator">
+    </div>
 
     <!-- Post Logout Redirect URIs -->
     <ExpandableInput
