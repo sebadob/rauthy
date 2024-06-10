@@ -82,7 +82,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     let mut redirect_uris = client.redirect_uris;
     redirect_uris.push("http://test.client.io/callback123".to_string());
 
-    let allowed_origins = Some(vec!["http://origin.test.cient.io/*".to_string()]);
+    let allowed_origins = Some(vec!["http://origin.test.cient.io".to_string()]);
 
     let mut flows_enabled = client.flows_enabled;
     flows_enabled.push("password".to_string());

@@ -9,8 +9,8 @@ use css_color::Srgb;
 use rauthy_common::constants::{
     RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_API_KEY, RE_APP_ID, RE_ATTR, RE_ATTR_DESC, RE_CHALLENGE,
     RE_CITY, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_CODE_VERIFIER,
-    RE_CONTACT, RE_DATE_STR, RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE, RE_MFA_CODE, RE_PEM,
-    RE_PHONE, RE_SCOPE_SPACE, RE_SEARCH, RE_STREET, RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
+    RE_CONTACT, RE_DATE_STR, RE_GRANT_TYPES, RE_GROUPS, RE_LOWERCASE, RE_MFA_CODE, RE_ORIGIN,
+    RE_PEM, RE_PHONE, RE_SCOPE_SPACE, RE_SEARCH, RE_STREET, RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
     RE_USER_NAME,
 };
 use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
@@ -887,8 +887,8 @@ pub struct UpdateClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub post_logout_redirect_uris: Option<Vec<String>>,
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
-    #[validate(custom(function = "validate_vec_uri"))]
+    /// Validation: `Vec<^(http|https)://[a-zA-Z0-9.:]+$>`
+    #[validate(custom(function = "validate_vec_origin"))]
     pub allowed_origins: Option<Vec<String>>,
     pub enabled: bool,
     /// Validation: `Vec<^(authorization_code|client_credentials|password|refresh_token)$>`
@@ -1130,6 +1130,19 @@ fn validate_vec_grant_types(value: &[String]) -> Result<(), ValidationError> {
         });
     }
 
+    if let Some(e) = err {
+        return Err(ValidationError::new(e));
+    }
+    Ok(())
+}
+
+fn validate_vec_origin(value: &[String]) -> Result<(), ValidationError> {
+    let mut err = None;
+    value.iter().for_each(|v| {
+        if !RE_ORIGIN.is_match(v) {
+            err = Some("^(http|https)://[a-zA-Z0-9.:]+$");
+        }
+    });
     if let Some(e) = err {
         return Err(ValidationError::new(e));
     }

@@ -258,7 +258,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         confidential: true,
         redirect_uris: vec!["http://localhost:3000/oidc/callback".to_string()],
         post_logout_redirect_uris: Some(vec!["http://localhost:8080".to_string()]),
-        allowed_origins: Some(vec!["http://localhost:8080/*".to_string()]),
+        allowed_origins: Some(vec!["http://localhost:8080".to_string()]),
         enabled: true,
         flows_enabled: vec![
             "authorization_code".to_string(),
