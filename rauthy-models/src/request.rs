@@ -874,8 +874,11 @@ pub struct TokenValidationRequest {
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct UpdateClientRequest {
-    /// Validation: `^[a-z0-9-_/]{2,128}$`
-    #[validate(regex(path = "RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
+    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,256}$`
+    #[validate(regex(
+        path = "RE_CLIENT_ID_EPHEMERAL",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
+    ))]
     pub id: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
     #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
@@ -887,7 +890,7 @@ pub struct UpdateClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub post_logout_redirect_uris: Option<Vec<String>>,
-    /// Validation: `Vec<^(http|https)://[a-zA-Z0-9.:]+$>`
+    /// Validation: `Vec<^(http|https)://[a-z0-9.:-]+$>`
     #[validate(custom(function = "validate_vec_origin"))]
     pub allowed_origins: Option<Vec<String>>,
     pub enabled: bool,
@@ -1140,7 +1143,7 @@ fn validate_vec_origin(value: &[String]) -> Result<(), ValidationError> {
     let mut err = None;
     value.iter().for_each(|v| {
         if !RE_ORIGIN.is_match(v) {
-            err = Some("^(http|https)://[a-zA-Z0-9.:]+$");
+            err = Some("^(http|https)://[a-z0-9.:-]+$");
         }
     });
     if let Some(e) = err {
