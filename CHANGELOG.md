@@ -1,5 +1,55 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### Documentation Updates
+
+Updated sections in the documentation for:
+
+- Choose database in Getting Started
+- Started a new page for production setup
+- Info on Android passkey status
+- Encryption section
+- Getting Started with Kubernetes
+
+[9f85c77](https://github.com/sebadob/rauthy/commit/9f85c776666a492eb910c3730676e9fc9c23865d)
+
+#### More strict origin checking
+
+More strict checking and validation for `allowed_origins` has been implemented, when you configure clients. Before,
+the regex only checked for the input to be a valid URI, which is not strict enough for validation an origin.  
+This should improve the UX and prevents hard to debug bugs, when someone enters an invalid origin.
+
+At the same time, a better visual separation has been added to the Origins / URI section in the UI when configuring
+clients.
+
+[55704f3](https://github.com/sebadob/rauthy/commit/55704f3cd3a5dcf04e5796a66ab4aba48b8c70dd)  
+[d993d42](https://github.com/sebadob/rauthy/commit/d993d420fae628b069ac3857dfc1e69d812b16f7)  
+[8d4e455](https://github.com/sebadob/rauthy/commit/8d4e455aa9455418aa8fc90612b707da1d72ce57)
+
+#### Small performance optimizations
+
+Small improvements have been made in a lot of places, which resulted in less memory allocations.  
+[9144f2a](https://github.com/sebadob/rauthy/commit/9144f2afad3d1052bc4a927d0cbeaf24c6ea5589)
+
+#### POST `/authorize` simplification
+
+The logic on POST `/authorize` has been simplified internally. The code grew to an over-complicated state with new
+features coming in all the time until a point where it was hard to follow. This has been simplified.
+This makes the software better maintainable in the future.  
+[af0db9d](https://github.com/sebadob/rauthy/commit/af0db9d0cbe560de327db60e33b61ccf32e33776)
+
+### Bugfix
+
+- add all `/fed_cm/` routes as exceptions to the new CSRF protection middleware
+  [360ce46](https://github.com/sebadob/rauthy/commit/360ce46c19bad81ee60de817f3b3f74f0dd3c408)
+- upstream auth provider templates could get stuck in the UI when switching between them
+  [d2b928a](https://github.com/sebadob/rauthy/commit/d2b928ad9d34302f0ef2af7830d19cadaf784d5a)
+- when a problem with an upstream provider occurs on `/callback`, you will now see the detailed error in the UI
+  [8041c95](https://github.com/sebadob/rauthy/commit/8041c95b57292ac83330c7613698398857864e30)
+
 ## v0.23.2
 
 This release brings some very minor features and bugfixes.
