@@ -1043,17 +1043,17 @@ struct AuthProviderIdClaims<'a> {
     // azp: Option<&'a str>,
     // even though `email` is mandatory for Rauthy, we set it to optional for
     // the deserialization to have more control over the error message being returned
-    email: Option<&'a str>,
+    email: Option<Cow<'a, str>>,
     email_verified: Option<bool>,
 
-    name: Option<&'a str>,
-    given_name: Option<&'a str>,
-    family_name: Option<&'a str>,
+    name: Option<Cow<'a, str>>,
+    given_name: Option<Cow<'a, str>>,
+    family_name: Option<Cow<'a, str>>,
 
     address: Option<AuthProviderAddressClaims<'a>>,
-    birthdate: Option<&'a str>,
-    locale: Option<&'a str>,
-    phone: Option<&'a str>,
+    birthdate: Option<Cow<'a, str>>,
+    locale: Option<Cow<'a, str>>,
+    phone: Option<Cow<'a, str>>,
 
     json_bytes: Option<&'a [u8]>,
 }
@@ -1070,9 +1070,9 @@ impl<'a> TryFrom<&'a [u8]> for AuthProviderIdClaims<'a> {
 
 impl AuthProviderIdClaims<'_> {
     fn given_name(&self) -> &str {
-        if let Some(given_name) = self.given_name {
+        if let Some(given_name) = &self.given_name {
             given_name
-        } else if let Some(name) = self.name {
+        } else if let Some(name) = &self.name {
             let (given_name, _) = name.split_once(' ').unwrap_or(("N/A", "N/A"));
             given_name
         } else {
@@ -1081,9 +1081,9 @@ impl AuthProviderIdClaims<'_> {
     }
 
     fn family_name(&self) -> &str {
-        if let Some(family_name) = self.family_name {
+        if let Some(family_name) = &self.family_name {
             family_name
-        } else if let Some(name) = self.name {
+        } else if let Some(name) = &self.name {
             let (_, family_name) = name.split_once(' ').unwrap_or(("N/A", "N/A"));
             family_name
         } else {
@@ -1159,7 +1159,7 @@ impl AuthProviderIdClaims<'_> {
                 // On conflict, the DB would return an error anyway, but the error message is
                 // rather cryptic for a normal user.
                 if let Ok(mut user) =
-                    User::find_by_email(data, self.email.unwrap().to_string()).await
+                    User::find_by_email(data, self.email.as_ref().unwrap().to_string()).await
                 {
                     // TODO check if creating a new link for an existing user is allowed
                     if let Some(link) = link_cookie {
@@ -1321,9 +1321,9 @@ impl AuthProviderIdClaims<'_> {
             }
 
             // check / update email
-            if Some(user.email.as_str()) != self.email {
+            if Some(user.email.as_str()) != self.email.as_deref() {
                 old_email = Some(user.email);
-                user.email = self.email.unwrap().to_string();
+                user.email = self.email.as_ref().unwrap().to_string();
             }
 
             // check other existing values and possibly update them
@@ -1370,7 +1370,7 @@ impl AuthProviderIdClaims<'_> {
         } else {
             // Create a new federated user
             let new_user = User {
-                email: self.email.unwrap().to_string(),
+                email: self.email.as_ref().unwrap().to_string(),
                 given_name: self.given_name().to_string(),
                 family_name: self.family_name().to_string(),
                 roles: should_be_rauthy_admin
@@ -1385,7 +1385,7 @@ impl AuthProviderIdClaims<'_> {
                 enabled: true,
                 email_verified: self.email_verified.unwrap_or(false),
                 last_login: Some(now),
-                language: self.locale.map(Language::from).unwrap_or_default(),
+                language: Language::from(self.locale.as_ref().unwrap().as_ref()),
                 auth_provider_id: Some(provider.id.clone()),
                 federation_uid: Some(claims_user_id.to_string()),
                 ..Default::default()
@@ -1413,11 +1413,11 @@ impl AuthProviderIdClaims<'_> {
                 country: None,
             },
         };
-        if let Some(bday) = self.birthdate {
+        if let Some(bday) = &self.birthdate {
             user_values.birthdate = Some(bday.to_string());
             found_values = true;
         }
-        if let Some(phone) = self.phone {
+        if let Some(phone) = &self.phone {
             user_values.phone = Some(phone.to_string());
             found_values = true;
         }
@@ -1464,6 +1464,7 @@ struct OidcCodeRequestParams<'a> {
 mod tests {
     use super::*;
     use cryptr::EncKeys;
+    use rauthy_common::utils::{base64_url_decode, base64_url_no_pad_encode};
 
     #[test]
     fn test_auth_provider_link_cookie() {
@@ -1532,5 +1533,13 @@ mod tests {
         let nodes = path.query(&value).all();
         assert_eq!(nodes.len(), 1);
         assert_eq!(nodes.get(0).unwrap().as_str(), Some("yes"));
+    }
+
+    #[test]
+    fn test_id_token_deserialization() {
+        // this raw token contains unicode encoded chars
+        let raw = "eyJhbGciOiJSUzI1NiIsImtpZCI6InlPeXYtWG1tUVYtUTNrUUVCbkRHVlFGb2hoVTNyaTFiRkY0VEg4VGZYTFUiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOlsiaHR0cHM6Ly9vcGVuaWRjb25uZWN0Lm5ldCJdLCJlbWFpbCI6InRlc3RcdTAwMjZAYXBpdG1hbi5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZXhwIjoxNzE4MjAwNjc2LCJpYXQiOjE3MTgxMTQyNzYsImlzcyI6Imh0dHBzOi8vbGFzdGxvZ2luLmlvIiwibmFtZSI6InRlc3RcdTAwMjYiLCJub25jZSI6IiIsInN1YiI6InRlc3RcdTAwMjZAYXBpdG1hbi5jb20ifQ.IchRsMNdE4isQ9ug8GqFtc_TRkZ3wA1KQw4dqnwqqVgNMcbY3qTuufwRHW-zoLDxQZkNOCl0niJolrLGmSfeSAo0fRtRMrkq41b7hhcnfE2MLBTZbI3E8m2mbxdgGlBJxeOBFdIwhN3meuioxiqnoAdCh1aw8p2dj7TuBaHpNXdREUcB76U1ZXHqSmYFWZDVROzMgVb7PjL2ikPcjksWf-jlFIRrEdbRXm9DygL9LAUFI10IjCZePFv8wjmr0aJS1pXAXYn31hoSWaH0xxoDCmO4t4aBafL392zX6is0i3uRYSu-3L0GJRCT7qmbm_FiGvEqfFQoILslKRvzWG74Ww";
+        let claims_bytes = AuthProviderIdClaims::self_as_bytes_from_token(raw).unwrap();
+        assert!(AuthProviderIdClaims::try_from(claims_bytes.as_bytes()).is_ok());
     }
 }
