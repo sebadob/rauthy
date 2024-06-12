@@ -56,7 +56,7 @@
             error = t.clientForceMfa;
             clientMfaForce = true;
         } else {
-            let body = await res.json();
+            let body = await res.text();
             error = `HTTP ${res.status}: ${body}`;
         }
     });
