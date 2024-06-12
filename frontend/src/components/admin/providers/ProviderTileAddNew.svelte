@@ -74,15 +74,15 @@
 
     let formErrors = {};
     const schemaConfig = yup.object().shape({
-        issuer: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
-        authorization_endpoint: yup.string().url(),
-        token_endpoint: yup.string().url(),
-        userinfo_endpoint: yup.string().url(),
+        issuer: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128").required('Required'),
+        authorization_endpoint: yup.string().url().required('Required'),
+        token_endpoint: yup.string().url().required('Required'),
+        userinfo_endpoint: yup.string().url().required('Required'),
 
-        name: yup.string().trim().matches(REGEX_CLIENT_NAME, "Can only contain: 'a-zA-Z0-9À-ÿ- ', length max: 128"),
-        client_id: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
+        name: yup.string().trim().matches(REGEX_CLIENT_NAME, "Can only contain: 'a-zA-Z0-9À-ÿ- ', length max: 128").required('Required'),
+        client_id: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128").required('Required'),
         client_secret: yup.string().trim().max(256, "Max 256 characters"),
-        scope: yup.string().trim().matches(REGEX_PROVIDER_SCOPE, "Can only contain: 'a-zA-Z0-9-_/ ', length max: 128"),
+        scope: yup.string().trim().matches(REGEX_PROVIDER_SCOPE, "Can only contain: 'a-zA-Z0-9-_/ ', length max: 128").required('Required'),
         root_pem: yup.string().trim().nullable().matches(REGEX_PEM, "Invalid PEM certificate"),
 
         admin_claim_path: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
@@ -310,9 +310,15 @@
     }
 
     async function validateFormLookup() {
+        formErrors = {};
         try {
             await schemaLookup.validate(configLookup, {abortEarly: false});
-            formErrors = {};
+            if (!configLookup.issuer && !configLookup.metadata_url) {
+                formErrors.issuer = 'Required';
+                formErrors.metadata_url = formErrors.issuer;
+                return false;
+            }
+
             return true;
         } catch (err) {
             formErrors = extractFormErrors(err);
@@ -366,9 +372,10 @@
 
         {#if isOidc && !lookupSuccess}
             <Input
+                    type="url"
+                    name="issuer"
                     bind:value={configLookup.issuer}
                     bind:error={formErrors.issuer}
-                    autocomplete="off"
                     placeholder="Issuer URL"
                     on:input={validateFormLookup}
                     width={inputWidth}
@@ -382,9 +389,10 @@
             </Button>
         {:else if isAuto && !lookupSuccess}
             <Input
+                    type="url"
+                    name="metadata"
                     bind:value={configLookup.metadata_url}
                     bind:error={formErrors.metadata_url}
-                    autocomplete="off"
                     placeholder=".../.well-known/openid-configuration"
                     on:input={validateFormLookup}
                     width={inputWidth}
@@ -423,9 +431,10 @@
             {/if}
 
             <Input
+                    type="url"
+                    name="issuer"
                     bind:value={config.issuer}
                     bind:error={formErrors.issuer}
-                    autocomplete="off"
                     placeholder="Issuer URL"
                     on:input={validateFormLookup}
                     width={inputWidth}
@@ -435,9 +444,10 @@
             </Input>
 
             <Input
+                    type="url"
+                    name="auth_endpoint"
                     bind:value={config.authorization_endpoint}
                     bind:error={formErrors.authorization_endpoint}
-                    autocomplete="off"
                     placeholder="Authorization Endpoint"
                     on:input={validateFormLookup}
                     width={inputWidth}
@@ -447,9 +457,10 @@
             </Input>
 
             <Input
+                    type="url"
+                    name="token_endpoint"
                     bind:value={config.token_endpoint}
                     bind:error={formErrors.token_endpoint}
-                    autocomplete="off"
                     placeholder="Token Endpoint"
                     on:input={validateFormLookup}
                     width={inputWidth}
@@ -459,9 +470,10 @@
             </Input>
 
             <Input
+                    type="url"
+                    name="userinfo_endpoint"
                     bind:value={config.userinfo_endpoint}
                     bind:error={formErrors.userinfo_endpoint}
-                    autocomplete="off"
                     placeholder="Userinfo Endpoint"
                     on:input={validateFormLookup}
                     width={inputWidth}
@@ -486,9 +498,9 @@
                 Provide the values separated by space.
             </div>
             <Input
+                    name="scope"
                     bind:value={config.scope}
                     bind:error={formErrors.scope}
-                    autocomplete="off"
                     placeholder="openid profile email"
                     on:input={validateFormConfig}
                     width={inputWidth}
@@ -500,9 +512,9 @@
                 Client name for the Rauthy login form
             </div>
             <Input
+                    name="client_name"
                     bind:value={config.name}
                     bind:error={formErrors.name}
-                    autocomplete="off"
                     placeholder="Client Name"
                     on:input={validateFormConfig}
                     width={inputWidth}
@@ -514,6 +526,7 @@
                 Client ID given by the auth provider
             </div>
             <Input
+                    name="client_id"
                     bind:value={config.client_id}
                     bind:error={formErrors.client_id}
                     autocomplete="off"
@@ -529,6 +542,7 @@
                 At least a client secret or PKCE is required.
             </div>
             <PasswordInput
+                    name="client_secret"
                     bind:value={config.client_secret}
                     bind:error={formErrors.client_secret}
                     autocomplete="off"
@@ -546,9 +560,9 @@
                 </p>
             </div>
             <Input
+                    name="admin_claim_path"
                     bind:value={config.admin_claim_path}
                     bind:error={formErrors.admin_claim_path}
-                    autocomplete="off"
                     placeholder="$.roles.*"
                     on:input={validateFormConfig}
                     width={inputWidth}
@@ -556,9 +570,9 @@
                 ADMIN CLAIM PATH
             </Input>
             <Input
+                    name="admin_claim_value"
                     bind:value={config.admin_claim_value}
                     bind:error={formErrors.admin_claim_value}
-                    autocomplete="off"
                     placeholder="rauthy_admin"
                     on:input={validateFormConfig}
                     width={inputWidth}
@@ -573,9 +587,9 @@
                 </p>
             </div>
             <Input
+                    name="mfa_claim_path"
                     bind:value={config.mfa_claim_path}
                     bind:error={formErrors.mfa_claim_path}
-                    autocomplete="off"
                     placeholder="$.amr.*"
                     on:input={validateFormConfig}
                     width={inputWidth}
@@ -583,9 +597,9 @@
                 MFA CLAIM PATH
             </Input>
             <Input
+                    name="mfa_claim_value"
                     bind:value={config.mfa_claim_value}
                     bind:error={formErrors.mfa_claim_value}
-                    autocomplete="off"
                     placeholder="mfa"
                     on:input={validateFormConfig}
                     width={inputWidth}
