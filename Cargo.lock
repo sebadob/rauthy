@@ -831,9 +831,9 @@ dependencies = [
 
 [[package]]
 name = "backtrace"
-version = "0.3.72"
+version = "0.3.73"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17c6a35df3749d2e8bb1b7b21a976d82b15548788d2735b9d82f329268f71a11"
+checksum = "5cc23269a4f8976d0a4d2e7109211a419fe30e8d88d677cd60b6bc79c5732e0a"
 dependencies = [
  "addr2line",
  "cc",
@@ -1087,9 +1087,9 @@ dependencies = [
 
 [[package]]
 name = "cached"
-version = "0.51.3"
+version = "0.51.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd93a9f06ec296ca66b4c26fafa9ed63f32c473d7a708a5f28563ee64c948515"
+checksum = "0feb64151eed3da6107fddd2d717a6ca4b9dbd74e43784c55c841d1abfe5a295"
 dependencies = [
  "ahash",
  "async-trait",
@@ -2484,9 +2484,9 @@ dependencies = [
 
 [[package]]
 name = "httparse"
-version = "1.9.2"
+version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f3935c160d00ac752e09787e6e6bfc26494c2183cc922f1bc678a60d4733bc2"
+checksum = "d0e7a4dd27b9476dc40cb050d3632d3bba3a70ddbff012285f7f8559a1e7e545"
 
 [[package]]
 name = "httpdate"
@@ -3829,9 +3829,9 @@ dependencies = [
 
 [[package]]
 name = "object"
-version = "0.35.0"
+version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8ec7ab813848ba4522158d5517a6093db1ded27575b070f4177b8d12b41db5e"
+checksum = "576dfe1fc8f9df304abb159d767a29d0476f7750fbf8aa7ad07816004a207434"
 dependencies = [
  "memchr",
 ]
@@ -4425,7 +4425,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.23.3"
+version = "0.23.4"
 dependencies = [
  "actix-service",
  "actix-web",
@@ -4467,7 +4467,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.23.3"
+version = "0.23.4"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4508,7 +4508,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.23.3"
+version = "0.23.4"
 dependencies = [
  "actix",
  "actix-multipart",
@@ -4543,7 +4543,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.23.3"
+version = "0.23.4"
 dependencies = [
  "accept-language",
  "actix",
@@ -4614,7 +4614,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.23.3"
+version = "0.23.4"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4632,7 +4632,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.23.3"
+version = "0.23.4"
 dependencies = [
  "actix-web",
  "argon2",
@@ -5782,11 +5782,10 @@ dependencies = [
 
 [[package]]
 name = "sqlformat"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce81b7bd7c4493975347ef60d8c7e8b742d4694f4c49f93e0a12ea263938176c"
+checksum = "f895e3734318cc55f1fe66258926c9b910c124d47520339efecbb6c59cec7c1f"
 dependencies = [
- "itertools 0.12.1",
  "nom",
  "unicode_categories",
 ]

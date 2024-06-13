@@ -1464,7 +1464,6 @@ struct OidcCodeRequestParams<'a> {
 mod tests {
     use super::*;
     use cryptr::EncKeys;
-    use rauthy_common::utils::{base64_url_decode, base64_url_no_pad_encode};
 
     #[test]
     fn test_auth_provider_link_cookie() {
