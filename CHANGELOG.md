@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.23.4
+
+This is a tiny update, but brings an important bugfix for upstream IdPs.
+
+### Bugfix
+
+A bug has been fixed in case an upstream IdP included special characters inside Strings in the returned JWT token after
+a successful user login flow.  
+Since JWT tokens should use UNICODE encoding in these cases, it is not possible to do zero-copy deserialization into
+Rust UTF8 string slices in that case. This has been fixed in a way, that only when there are existing special
+characters,
+Rauthy will now do the additional, necessary String allocations for the deserialization process.  
+This should fix current issues when logging in via an upstream IdP with special characters inside the E-Mail address for
+instance.  
+[aa97cb8](https://github.com/sebadob/rauthy/commit/aa97cb8ba2100f540d48e98aa597c11963c84be3)
+
+Apart from that, there were some minor UX improvements for the Admin UI providers setup page like earlier client side
+checking of variables and preventing form submission when some required ones were missing.  
+[9a227c9](https://github.com/sebadob/rauthy/commit/9a227c9297ec326191b3f83eaa45a9f88d8270fb)  
+[c89fb7f](https://github.com/sebadob/rauthy/commit/c89fb7fbacb002a202a8022d8318362ee4d6db73)
+
 ## v0.23.3
 
 ### Changes
