@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.23.5
+
+### Upstream IdP Locale Fix
+
+This patch fixes a regression from fixing the special characters encoding in upstream IdP JWT tokens. A panic was
+possible when the upstream IdP did not include a `locale` in the `id_token`.  
+[ea24e7e](https://github.com/sebadob/rauthy/commit/ea24e7e73f883446a30d7c4f8e38837148da9732)  
+[481c9b3](https://github.com/sebadob/rauthy/commit/481c9b36d3304a2100c2c4906013224c8a5a934f)
+
 ## v0.23.4
 
 This is a tiny update, but brings an important bugfix for upstream IdPs.
