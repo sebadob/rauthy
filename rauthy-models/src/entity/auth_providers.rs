@@ -1323,7 +1323,7 @@ impl AuthProviderIdClaims<'_> {
             // check / update email
             if Some(user.email.as_str()) != self.email.as_deref() {
                 old_email = Some(user.email);
-                user.email = self.email.to_string();
+                user.email = self.email.as_ref().unwrap().to_string();
             }
 
             // check other existing values and possibly update them
@@ -1370,7 +1370,7 @@ impl AuthProviderIdClaims<'_> {
         } else {
             // Create a new federated user
             let new_user = User {
-                email: self.email.to_string(),
+                email: self.email.as_ref().unwrap().to_string(),
                 given_name: self.given_name().to_string(),
                 family_name: self.family_name().to_string(),
                 roles: should_be_rauthy_admin
