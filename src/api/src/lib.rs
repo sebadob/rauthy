@@ -37,7 +37,7 @@ pub type ReqPrincipal = web::ReqData<Principal>;
 pub type ReqSession = web::ReqData<Option<Session>>;
 
 #[derive(RustEmbed)]
-#[folder = "../static/v1/"]
+#[folder = "../../static/v1/"]
 struct Assets;
 
 pub async fn map_auth_step(

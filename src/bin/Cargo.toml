@@ -20,10 +20,10 @@ dotenvy = { workspace = true }
 flume = { workspace = true }
 num_cpus = { workspace = true }
 prometheus = { workspace = true }
-rauthy-common = { path = "../rauthy-common" }
-rauthy-handlers = { path = "../rauthy-handlers" }
-rauthy-models = { path = "../rauthy-models" }
-rauthy-service = { path = "../rauthy-service" }
+rauthy-common = { path = "../common" }
+rauthy-handlers = { path = "../api" }
+rauthy-models = { path = "../models" }
+rauthy-service = { path = "../service" }
 redhac = { workspace = true }
 rustls = { workspace = true }
 rustls-pki-types = { workspace = true }

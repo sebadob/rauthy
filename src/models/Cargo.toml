@@ -52,8 +52,8 @@ openssl-sys = { workspace = true }
 once_cell = { workspace = true }
 rand = { workspace = true }
 rand_core = { workspace = true }
-rauthy-common = { path = "../rauthy-common" }
-rauthy-notify = { path = "../rauthy-notify" }
+rauthy-common = { path = "../common" }
+rauthy-notify = { path = "../notify" }
 redhac = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }

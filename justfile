@@ -391,7 +391,7 @@ build-docs:
 __build-docs:
     #!/usr/bin/env bash
     set -euxo pipefail
-    cd rauthy-book
+    cd book
     mdbook build -d ../docs
     cd ..
 

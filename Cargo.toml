@@ -1,13 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
-    "rauthy-common",
-    "rauthy-handlers",
-    "rauthy-main",
-    "rauthy-models",
-    "rauthy-notify",
-    "rauthy-service",
-]
+members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
