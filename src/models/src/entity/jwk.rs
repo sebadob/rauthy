@@ -497,7 +497,7 @@ impl JwkKeyPair {
         Ok(kp)
     }
 
-    // Returns the latest JWK (especially important after a [JWK Rotation](crate::handlers::rotate_jwk)
+    // Returns the latest JWK (especially important after a [JWK Rotation](crate::api::rotate_jwk)
     // by a given algorithm.
     pub async fn find_latest(
         data: &web::Data<AppState>,

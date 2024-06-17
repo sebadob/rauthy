@@ -211,8 +211,10 @@ impl AppState {
             let pool = Self::connect_postgres(&DATABASE_URL, db_max_conn).await?;
             info!("Database Connection established");
 
-            debug!("Migrating data from ../migrations/postgres");
-            sqlx::migrate!("../migrations/postgres").run(&pool).await?;
+            debug!("Migrating data from ../../migrations/postgres");
+            sqlx::migrate!("../../migrations/postgres")
+                .run(&pool)
+                .await?;
 
             pool
         };
@@ -235,8 +237,8 @@ impl AppState {
                 info!("Using on-disk SQLite");
             }
 
-            debug!("Migrating data from ../migrations/sqlite");
-            sqlx::migrate!("../migrations/sqlite").run(&pool).await?;
+            debug!("Migrating data from ../../migrations/sqlite");
+            sqlx::migrate!("../../migrations/sqlite").run(&pool).await?;
 
             pool
         };

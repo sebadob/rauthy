@@ -365,7 +365,7 @@ impl User {
         user_id: String,
     ) -> Result<Self, ErrorResponse> {
         // We will stick to the WWW-Authenticate header for now and use duplicated code from
-        // some OAuth2 handlers for now until the spec has settled on an error behavior.
+        // some OAuth2 api for now until the spec has settled on an error behavior.
         debug!("Looking up FedCM user_id {}", user_id);
         let slf = Self::find(data, user_id).await.map_err(|_| {
             debug!("FedCM user not found");

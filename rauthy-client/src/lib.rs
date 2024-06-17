@@ -11,8 +11,8 @@
 //!
 //! # Features
 //!
-//! - `actix-web` will enable actix-web specific extractors and handlers
-//! - `axum` will enable axum specific extractors and handlers
+//! - `actix-web` will enable actix-web specific extractors and api
+//! - `axum` will enable axum specific extractors and api
 
 use crate::provider::OidcProvider;
 use base64::{engine, engine::general_purpose, Engine as _};
@@ -27,7 +27,7 @@ pub use reqwest::Certificate as RootCertificate;
 
 /// Handles the encrypted OIDC state cookie for the login flow
 pub mod cookie_state;
-/// The handlers which need to be called from your endpoints
+/// The api which need to be called from your endpoints
 pub mod handler;
 mod jwks;
 /// The Rauthy OIDC config
