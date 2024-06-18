@@ -4441,6 +4441,7 @@ dependencies = [
  "prometheus",
  "rauthy-common",
  "rauthy-handlers",
+ "rauthy-middlewares",
  "rauthy-models",
  "rauthy-schedulers",
  "rauthy-service",
@@ -4505,17 +4506,12 @@ dependencies = [
 name = "rauthy-handlers"
 version = "0.23.5"
 dependencies = [
- "actix",
  "actix-multipart",
  "actix-web",
- "actix-web-actors",
  "actix-web-lab",
  "actix-web-validator",
  "chrono",
  "cryptr",
- "futures",
- "image",
- "lazy_static",
  "mime_guess",
  "num_cpus",
  "pretty_assertions",
@@ -4525,7 +4521,6 @@ dependencies = [
  "redhac",
  "rust-embed",
  "semver",
- "serde_json",
  "spow",
  "time",
  "tokio",
@@ -4534,6 +4529,24 @@ dependencies = [
  "utoipa",
  "utoipa-swagger-ui",
  "validator",
+]
+
+[[package]]
+name = "rauthy-middlewares"
+version = "0.23.5"
+dependencies = [
+ "actix-web",
+ "chrono",
+ "futures",
+ "lazy_static",
+ "pretty_assertions",
+ "rauthy-common",
+ "rauthy-models",
+ "rauthy-service",
+ "time",
+ "tokio",
+ "tokio-test",
+ "tracing",
 ]
 
 [[package]]
