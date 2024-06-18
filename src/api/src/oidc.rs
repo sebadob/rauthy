@@ -1000,7 +1000,7 @@ pub async fn post_validate_token(
 /// Depending on the JWT token from the *Authorization* header, it will return information about
 /// the requesting user / token.
 #[utoipa::path(
-    post,
+    get,
     path = "/oidc/userinfo",
     tag = "oidc",
     responses(
