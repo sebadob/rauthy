@@ -1020,6 +1020,31 @@ pub async fn get_userinfo(
         .map(|u| HttpResponse::Ok().json(u))
 }
 
+/// The userinfo endpoint for the OIDC standard.
+///
+/// Depending on the JWT token from the *Authorization* header, it will return information about
+/// the requesting user / token.
+#[utoipa::path(
+    post,
+    path = "/oidc/userinfo",
+    tag = "oidc",
+    responses(
+        (status = 200, description = "Ok", body = Userinfo),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[post("/oidc/userinfo")]
+pub async fn post_userinfo(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    auth::get_userinfo(&data, req)
+        .await
+        .map(|u| HttpResponse::Ok().json(u))
+}
+
 /// GET forward authentication
 ///
 /// This endpoint is very similar to the `/userinfo`, but instead of returning information about
