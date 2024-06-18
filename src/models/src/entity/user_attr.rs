@@ -1,8 +1,9 @@
 use crate::app_state::{AppState, DbTxn};
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
-use crate::request::{UserAttrConfigRequest, UserAttrValuesUpdateRequest};
 use actix_web::web;
+use rauthy_api_types::request::{UserAttrConfigRequest, UserAttrValuesUpdateRequest};
+use rauthy_api_types::response::{UserAttrConfigValueResponse, UserAttrValueResponse};
 use rauthy_common::constants::{CACHE_NAME_USERS, IDX_USER_ATTR_CONFIG};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
@@ -10,15 +11,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::FromRow;
 use std::collections::HashSet;
-use utoipa::ToSchema;
 
 // Additional custom attributes for users. These can be set for every user and then mapped to a
 // scope, to include them in JWT tokens.
-#[derive(Clone, Debug, FromRow, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, FromRow, Serialize, Deserialize)]
 pub struct UserAttrConfigEntity {
-    // Unique name
     pub name: String,
-    // Description for the attribute
     pub desc: Option<String>,
 }
 
@@ -366,9 +364,18 @@ impl UserAttrConfigEntity {
     }
 }
 
+impl From<UserAttrConfigEntity> for UserAttrConfigValueResponse {
+    fn from(value: UserAttrConfigEntity) -> Self {
+        Self {
+            name: value.name,
+            desc: value.desc,
+        }
+    }
+}
+
 /// The value for a pre-defined UserAttrConfig with all `serde_json::Value` being valid values.
 /// Important: There is no further input validation / restriction
-#[derive(Clone, Debug, FromRow, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, FromRow, Serialize, Deserialize)]
 pub struct UserAttrValueEntity {
     pub user_id: String,
     pub key: String,
@@ -519,5 +526,15 @@ impl UserAttrValueEntity {
 impl UserAttrValueEntity {
     fn cache_idx(user_id: &str) -> String {
         format!("{}{}", IDX_USER_ATTR_CONFIG, user_id)
+    }
+}
+
+impl From<UserAttrValueEntity> for UserAttrValueResponse {
+    fn from(value: UserAttrValueEntity) -> Self {
+        let val = serde_json::from_slice(&value.value).unwrap();
+        Self {
+            key: value.key,
+            value: val,
+        }
     }
 }

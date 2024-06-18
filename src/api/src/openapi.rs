@@ -3,13 +3,12 @@ use crate::{
     scopes, sessions, users,
 };
 use actix_web::web;
+use rauthy_api_types::{request, response};
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
-use rauthy_models::events::event;
-use rauthy_models::language;
+use rauthy_models::entity;
 use rauthy_models::ListenScheme;
-use rauthy_models::{entity, request, response};
 use rauthy_service::token_set;
 use utoipa::openapi::Server;
 use utoipa::{openapi, OpenApi};
@@ -146,33 +145,39 @@ use utoipa::{openapi, OpenApi};
     ),
     components(
         schemas(
-            entity::api_keys::AccessGroup,
-            entity::api_keys::AccessRights,
-            entity::api_keys::ApiKeyAccess,
-            entity::auth_providers::AuthProviderType,
-            entity::clients::Client,
             entity::colors::Colors,
+            entity::fed_cm::FedCMAccount,
+            entity::fed_cm::FedCMAccounts,
+            entity::fed_cm::FedCMIdPBranding,
+            entity::fed_cm::FedCMIdPConfig,
+            entity::fed_cm::FedCMIdPIcon,
             entity::fed_cm::WebIdentity,
             entity::groups::Group,
-            entity::jwk::JwkKeyPairAlg,
-            entity::jwk::JwkKeyPairType,
             entity::password::PasswordHashTime,
             entity::password::PasswordHashTimes,
             entity::roles::Role,
             entity::scopes::Scope,
             entity::sessions::SessionState,
-            entity::user_attr::UserAttrConfigEntity,
-            entity::user_attr::UserAttrValueEntity,
             entity::webauthn::WebauthnAdditionalData,
             entity::webauthn::WebauthnLoginReq,
             entity::webauthn::WebauthnServiceReq,
             entity::well_known::WellKnown,
-            entity::webids::WebId,
 
-            event::EventLevel,
+            rauthy_api_types::AccessGroup,
+            rauthy_api_types::AccessRights,
+            rauthy_api_types::AddressClaim,
+            rauthy_api_types::ApiKeyAccess,
+            rauthy_api_types::AuthProviderType,
+            rauthy_api_types::EventLevel,
+            rauthy_api_types::JktClaim,
+            rauthy_api_types::JwkKeyPairAlg,
+            rauthy_api_types::JwkKeyPairType,
+            rauthy_api_types::Language,
+
+            rauthy_models::JwtTokenType,
+
             ErrorResponse,
             ErrorResponseType,
-            language::Language,
 
             request::ApiKeyRequest,
             request::AuthCodeRequest,
@@ -245,6 +250,7 @@ use utoipa::{openapi, OpenApi};
             response::SessionInfoResponse,
             response::TokenInfo,
             response::UserAttrConfigResponse,
+            response::UserAttrConfigValueResponse,
             response::UserAttrValueResponse,
             response::UserAttrValuesResponse,
             response::Userinfo,
@@ -254,11 +260,9 @@ use utoipa::{openapi, OpenApi};
             response::WebauthnAuthStartResponse,
             response::WebauthnLoginFinishResponse,
             response::WebauthnLoginResponse,
+            response::WebId,
             response::WebIdResponse,
 
-            rauthy_models::AddressClaim,
-            rauthy_models::JktClaim,
-            rauthy_models::JwtTokenType,
             token_set::TokenSet,
         ),
     ),

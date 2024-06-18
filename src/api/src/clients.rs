@@ -4,6 +4,10 @@ use actix_web::http::header::{
 };
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_lab::__reexports::futures_util::StreamExt;
+use rauthy_api_types::request::{
+    ColorsRequest, DynamicClientRequest, NewClientRequest, UpdateClientRequest,
+};
+use rauthy_api_types::response::ClientResponse;
 use rauthy_common::constants::{DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG};
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -13,10 +17,6 @@ use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::logos::{Logo, LogoType};
-use rauthy_models::request::{
-    ColorsRequest, DynamicClientRequest, NewClientRequest, UpdateClientRequest,
-};
-use rauthy_models::response::{ClientResponse, DynamicClientResponse};
 use rauthy_service::auth::get_bearer_token_from_header;
 use rauthy_service::client;
 use tracing::debug;
@@ -30,7 +30,7 @@ use tracing::debug;
     path = "/clients",
     tag = "clients",
     responses(
-        (status = 200, description = "Ok", body = [Client]),
+        (status = 200, description = "Ok", body = ClientResponse),
         (status = 400, description = "BadRequest"),
         (status = 401, description = "Unauthorized"),
         (status = 403, description = "Forbidden"),
@@ -64,7 +64,7 @@ pub async fn get_clients(
     path = "/clients/{id}",
     tag = "clients",
     responses(
-        (status = 200, description = "Ok", body = Client),
+        (status = 200, description = "Ok", body = ClientResponse),
         (status = 400, description = "BadRequest"),
         (status = 401, description = "Unauthorized"),
         (status = 403, description = "Forbidden"),
@@ -126,7 +126,7 @@ pub async fn get_client_secret(
     tag = "clients",
     request_body = NewClientRequest,
     responses(
-        (status = 200, description = "Ok", body = Client),
+        (status = 200, description = "Ok", body = ClientResponse),
         (status = 400, description = "BadRequest"),
         (status = 401, description = "Unauthorized"),
         (status = 403, description = "Forbidden"),
@@ -223,7 +223,7 @@ pub async fn get_clients_dyn(
     client_dyn.validate_token(&bearer)?;
 
     let client = Client::find(&data, id).await?;
-    let resp = DynamicClientResponse::build(&data, client, client_dyn, false)?;
+    let resp = client.into_dynamic_client_response(&data, client_dyn, false)?;
     Ok(HttpResponse::Ok().json(resp))
 }
 
@@ -270,7 +270,7 @@ pub async fn put_clients_dyn(
     tag = "clients",
     request_body = UpdateClientRequest,
     responses(
-        (status = 200, description = "Ok", body = Client),
+        (status = 200, description = "Ok", body = ClientResponse),
         (status = 400, description = "BadRequest"),
         (status = 401, description = "Unauthorized"),
         (status = 403, description = "Forbidden"),

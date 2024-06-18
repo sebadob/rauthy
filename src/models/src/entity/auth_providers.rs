@@ -7,11 +7,6 @@ use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::WebauthnLoginReq;
 use crate::language::Language;
-use crate::request::{
-    ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
-    UserValuesRequest,
-};
-use crate::response::{ProviderLinkedUserResponse, ProviderLookupResponse};
 use crate::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
 use actix_web::cookie::Cookie;
 use actix_web::http::header;
@@ -21,6 +16,13 @@ use cryptr::utils::secure_random_alnum;
 use cryptr::EncValue;
 use image::EncodableLayout;
 use itertools::Itertools;
+use rauthy_api_types::request::{
+    ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
+    UserValuesRequest,
+};
+use rauthy_api_types::response::{
+    ProviderLinkedUserResponse, ProviderLookupResponse, ProviderResponse,
+};
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
     IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_CALLBACK_URI,
@@ -48,7 +50,7 @@ use time::OffsetDateTime;
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "varchar")]
 #[sqlx(rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
@@ -94,6 +96,28 @@ impl From<String> for AuthProviderType {
     /// Defaults to Self::OIDC in case of an error
     fn from(value: String) -> Self {
         Self::try_from(value.as_str()).unwrap_or(Self::Custom)
+    }
+}
+
+impl From<rauthy_api_types::AuthProviderType> for AuthProviderType {
+    fn from(value: rauthy_api_types::AuthProviderType) -> Self {
+        match value {
+            rauthy_api_types::AuthProviderType::Custom => Self::Custom,
+            rauthy_api_types::AuthProviderType::Github => Self::Github,
+            rauthy_api_types::AuthProviderType::Google => Self::Google,
+            rauthy_api_types::AuthProviderType::OIDC => Self::OIDC,
+        }
+    }
+}
+
+impl From<AuthProviderType> for rauthy_api_types::AuthProviderType {
+    fn from(value: AuthProviderType) -> Self {
+        match value {
+            AuthProviderType::Custom => Self::Custom,
+            AuthProviderType::Github => Self::Github,
+            AuthProviderType::Google => Self::Google,
+            AuthProviderType::OIDC => Self::OIDC,
+        }
     }
 }
 
@@ -415,7 +439,7 @@ impl AuthProvider {
             id,
             name: req.name,
             enabled: req.enabled,
-            typ: req.typ,
+            typ: req.typ.into(),
             issuer: req.issuer,
             authorization_endpoint: req.authorization_endpoint,
             token_endpoint: req.token_endpoint,
@@ -560,6 +584,34 @@ impl AuthProvider {
         } else {
             Ok(None)
         }
+    }
+}
+
+impl TryFrom<AuthProvider> for ProviderResponse {
+    type Error = ErrorResponse;
+
+    fn try_from(value: AuthProvider) -> Result<Self, Self::Error> {
+        let secret = AuthProvider::get_secret_cleartext(&value.secret)?;
+        Ok(Self {
+            id: value.id,
+            name: value.name,
+            typ: value.typ.into(),
+            enabled: value.enabled,
+            issuer: value.issuer,
+            authorization_endpoint: value.authorization_endpoint,
+            token_endpoint: value.token_endpoint,
+            userinfo_endpoint: value.userinfo_endpoint,
+            client_id: value.client_id,
+            client_secret: secret,
+            scope: value.scope,
+            admin_claim_path: value.admin_claim_path,
+            admin_claim_value: value.admin_claim_value,
+            mfa_claim_path: value.mfa_claim_path,
+            mfa_claim_value: value.mfa_claim_value,
+            danger_allow_insecure: value.allow_insecure_requests,
+            use_pkce: value.use_pkce,
+            root_pem: value.root_pem,
+        })
     }
 }
 

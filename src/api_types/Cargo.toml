@@ -1,5 +1,5 @@
 [package]
-name = "rauthy-models"
+name = "rauthy-api-types"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -14,7 +14,6 @@ default = []
 postgres = []
 
 [dependencies]
-rauthy-api-types = { path = "../api_types" }
 rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
 rauthy-notify = { path = "../notify" }

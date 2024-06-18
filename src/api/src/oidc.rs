@@ -5,6 +5,15 @@ use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::{header, StatusCode};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError};
 use chrono::Utc;
+use rauthy_api_types::request::{
+    AuthRequest, DeviceAcceptedRequest, DeviceGrantRequest, DeviceVerifyRequest,
+    LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest, TokenValidationRequest,
+};
+use rauthy_api_types::response::{
+    DeviceCodeResponse, DeviceVerifyResponse, JWKSCerts, JWKSPublicKeyCerts, OAuth2ErrorResponse,
+    OAuth2ErrorTypeResponse, SessionInfoResponse,
+};
+use rauthy_api_types::SessionState;
 use rauthy_common::constants::{
     APPLICATION_JSON, AUTH_HEADERS_ENABLE, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED,
     AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
@@ -31,14 +40,6 @@ use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::WebauthnCookie;
 use rauthy_models::entity::well_known::WellKnown;
 use rauthy_models::language::Language;
-use rauthy_models::request::{
-    AuthRequest, DeviceAcceptedRequest, DeviceGrantRequest, DeviceVerifyRequest,
-    LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest, TokenValidationRequest,
-};
-use rauthy_models::response::{
-    DeviceCodeResponse, DeviceVerifyResponse, JWKSCerts, JWKSPublicKeyCerts, OAuth2ErrorResponse,
-    OAuth2ErrorTypeResponse, SessionInfoResponse,
-};
 use rauthy_models::templates::{
     AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction,
 };
@@ -751,7 +752,7 @@ pub async fn post_session(
         groups: session.groups.as_deref().map(|v| v.into()),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
-        state: session.state.clone(),
+        state: SessionState::from(&session.state),
     };
 
     if *EXPERIMENTAL_FED_CM_ENABLE {
@@ -803,7 +804,7 @@ pub async fn get_session_info(data: web::Data<AppState>, principal: ReqPrincipal
         groups: session.groups.as_deref().map(|v| v.into()),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
-        state: session.state.clone(),
+        state: SessionState::from(&session.state),
     };
 
     HttpResponse::Ok()
@@ -851,7 +852,7 @@ pub async fn get_session_xsrf(
         groups: session.groups.as_deref().map(|v| v.into()),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
-        state: session.state.clone(),
+        state: SessionState::from(&session.state),
     };
     Ok(HttpResponse::Ok().json(info))
 }

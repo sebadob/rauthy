@@ -42,7 +42,7 @@ use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
-use crate::request::ApiKeyRequest;
+use rauthy_api_types::request::ApiKeyRequest;
 
 pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse> {
     debug!("Executing anti_lockout_check");
@@ -232,7 +232,13 @@ pub async fn migrate_init_prod(
 
             debug!("Bootstrapping API Key:\n{:?}", req);
             let key_name = req.name.clone();
-            let _ = ApiKeyEntity::create(db, req.name, req.exp, req.access).await?;
+            let _ = ApiKeyEntity::create(
+                db,
+                req.name,
+                req.exp,
+                req.access.into_iter().map(|a| a.into()).collect(),
+            )
+            .await?;
 
             if let Ok(secret_plain) = env::var("BOOTSTRAP_API_KEY_SECRET") {
                 assert!(secret_plain.len() >= 64);

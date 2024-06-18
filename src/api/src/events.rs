@@ -3,6 +3,7 @@ use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use actix_web_lab::sse;
 use actix_web_validator::Json;
 use chrono::Utc;
+use rauthy_api_types::request::{EventsListenParams, EventsRequest};
 use rauthy_common::constants::SSE_KEEP_ALIVE;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -10,7 +11,6 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::events::event::Event;
 use rauthy_models::events::listener::EventRouterMsg;
-use rauthy_models::request::{EventsListenParams, EventsRequest};
 use std::time::Duration;
 use tokio::sync::mpsc;
 use validator::Validate;
@@ -42,8 +42,8 @@ pub async fn post_events(
         &data.db,
         payload.from,
         payload.until.unwrap_or_else(|| Utc::now().timestamp()),
-        payload.level,
-        payload.typ,
+        payload.level.into(),
+        payload.typ.map(|t| t.into()),
     )
     .await?;
 
@@ -85,13 +85,14 @@ pub async fn sse_events(
             let params = params.into_inner();
             let (tx, rx) = mpsc::channel(10);
 
+            let level = params.level.map(|l| l.into()).unwrap_or_default();
             if let Err(err) = data
                 .tx_events_router
                 .send_async(EventRouterMsg::ClientReg {
                     ip,
                     tx,
                     latest: params.latest,
-                    level: params.level.unwrap_or_default(),
+                    level,
                 })
                 .await
             {

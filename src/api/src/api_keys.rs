@@ -2,11 +2,11 @@ use crate::ReqPrincipal;
 use actix_web::{delete, get, post, put, web, HttpResponse};
 use actix_web_validator::Json;
 use mime_guess::mime::TEXT_PLAIN_UTF_8;
+use rauthy_api_types::request::ApiKeyRequest;
+use rauthy_api_types::response::{ApiKeyResponse, ApiKeysResponse};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::ApiKeyEntity;
-use rauthy_models::request::ApiKeyRequest;
-use rauthy_models::response::{ApiKeyResponse, ApiKeysResponse};
 
 /// Returns all API Keys
 ///
@@ -63,7 +63,8 @@ pub async fn post_api_key(
     principal.validate_admin_session()?;
 
     let req = payload.into_inner();
-    let secret = ApiKeyEntity::create(&data.db, req.name, req.exp, req.access).await?;
+    let access = req.access.into_iter().map(|a| a.into()).collect();
+    let secret = ApiKeyEntity::create(&data.db, req.name, req.exp, access).await?;
 
     Ok(HttpResponse::Ok()
         .content_type(TEXT_PLAIN_UTF_8)
@@ -103,7 +104,8 @@ pub async fn put_api_key(
         ));
     }
 
-    ApiKeyEntity::update(&data, &name, req.exp, req.access).await?;
+    let access = req.access.into_iter().map(|a| a.into()).collect();
+    ApiKeyEntity::update(&data, &name, req.exp, access).await?;
 
     Ok(HttpResponse::Ok().finish())
 }

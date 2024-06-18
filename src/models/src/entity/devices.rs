@@ -2,6 +2,7 @@ use crate::app_state::AppState;
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use actix_web::web;
 use chrono::{DateTime, Utc};
+use rauthy_api_types::response::DeviceResponse;
 use rauthy_common::constants::{
     CACHE_NAME_DEVICE_CODES, DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_USER_CODE_LENGTH,
     DEVICE_KEY_LENGTH, PUB_URL_WITH_SCHEME,
@@ -118,6 +119,21 @@ impl DeviceEntity {
         .execute(&data.db)
         .await?;
         Ok(())
+    }
+}
+
+impl From<DeviceEntity> for DeviceResponse {
+    fn from(value: DeviceEntity) -> Self {
+        Self {
+            id: value.id,
+            client_id: value.client_id,
+            user_id: value.user_id,
+            created: value.created,
+            access_exp: value.access_exp,
+            refresh_exp: value.refresh_exp,
+            peer_ip: value.peer_ip,
+            name: value.name,
+        }
     }
 }
 

@@ -1,6 +1,9 @@
 use crate::ReqPrincipal;
 use actix_web::{delete, get, web, HttpResponse};
 use actix_web_validator::Query;
+use rauthy_api_types::request::PaginationParams;
+use rauthy_api_types::response::SessionResponse;
+use rauthy_api_types::SessionState;
 use rauthy_common::constants::SSP_THRESHOLD;
 use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;
@@ -9,8 +12,6 @@ use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
-use rauthy_models::request::PaginationParams;
-use rauthy_models::response::SessionResponse;
 
 /// Returns all existing sessions
 ///
@@ -78,7 +79,7 @@ pub async fn get_sessions(
                 id: &s.id,
                 user_id: s.user_id.as_deref(),
                 is_mfa: s.is_mfa,
-                state: &s.state,
+                state: SessionState::from(&s.state),
                 exp: s.exp,
                 last_seen: s.last_seen,
                 remote_ip: s.remote_ip.as_deref(),

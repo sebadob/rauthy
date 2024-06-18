@@ -1,16 +1,17 @@
 use crate::api_cookie::ApiCookie;
 use crate::app_state::{AppState, DbTxn};
 use crate::entity::users::{AccountType, User};
-use crate::request::{
-    MfaPurpose, WebauthnAuthFinishRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
-};
-use crate::response::{WebauthnAuthStartResponse, WebauthnLoginFinishResponse};
 use actix_web::cookie::Cookie;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
 use actix_web::{web, HttpResponse};
 use chrono::Utc;
 use cryptr::EncValue;
+use rauthy_api_types::request::{
+    MfaPurpose, WebauthnAuthFinishRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
+};
+use rauthy_api_types::response::PasskeyResponse;
+use rauthy_api_types::response::{WebauthnAuthStartResponse, WebauthnLoginFinishResponse};
 use rauthy_common::constants::{
     CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, COOKIE_MFA, IDX_WEBAUTHN, WEBAUTHN_FORCE_UV,
     WEBAUTHN_NO_PASSWORD_EXPIRY, WEBAUTHN_RENEW_EXP, WEBAUTHN_REQ_EXP,
@@ -357,6 +358,17 @@ impl PasskeyEntity {
 
     fn cache_idx_creds(user_id: &str) -> String {
         format!("{}{}_creds", IDX_WEBAUTHN, user_id)
+    }
+}
+
+impl From<PasskeyEntity> for PasskeyResponse {
+    fn from(value: PasskeyEntity) -> Self {
+        Self {
+            name: value.name,
+            registered: value.registered,
+            last_used: value.last_used,
+            user_verified: value.user_verified,
+        }
     }
 }
 

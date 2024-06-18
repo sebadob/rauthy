@@ -6,6 +6,7 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
+rauthy-api-types = { path = "../api_types" }
 rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
 rauthy-models = { path = "../models" }

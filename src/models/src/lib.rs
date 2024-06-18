@@ -6,6 +6,7 @@ use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use actix_web::http::header::{HeaderName, HeaderValue};
+use rauthy_api_types::JktClaim;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -22,8 +23,6 @@ pub mod events;
 pub mod i18n;
 pub mod language;
 pub mod migration;
-pub mod request;
-pub mod response;
 pub mod templates;
 
 pub enum AuthStep {
@@ -84,12 +83,7 @@ pub struct JwtCommonClaims {
     pub cnf: Option<JktClaim>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct JktClaim {
-    pub jkt: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddressClaim {
     pub formatted: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -142,6 +136,30 @@ impl AddressClaim {
             Some(slf)
         } else {
             None
+        }
+    }
+}
+
+impl From<rauthy_api_types::AddressClaim> for AddressClaim {
+    fn from(value: rauthy_api_types::AddressClaim) -> Self {
+        Self {
+            formatted: value.formatted,
+            street_address: value.street_address,
+            locality: value.locality,
+            postal_code: value.postal_code,
+            country: value.country,
+        }
+    }
+}
+
+impl From<AddressClaim> for rauthy_api_types::AddressClaim {
+    fn from(value: AddressClaim) -> Self {
+        Self {
+            formatted: value.formatted,
+            street_address: value.street_address,
+            locality: value.locality,
+            postal_code: value.postal_code,
+            country: value.country,
         }
     }
 }
