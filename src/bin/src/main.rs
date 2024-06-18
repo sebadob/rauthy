@@ -624,6 +624,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(oidc::post_token)
                             .service(oidc::post_token_info)
                             .service(oidc::get_userinfo)
+                            .service(oidc::post_userinfo)
                             .service(oidc::get_forward_auth)
                             .service(generic::get_enc_keys)
                             .service(generic::post_migrate_enc_key)
