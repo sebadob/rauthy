@@ -4,7 +4,7 @@
 
 use async_trait::async_trait;
 use rauthy_common::constants::RAUTHY_VERSION;
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_error::ErrorResponse;
 use reqwest::tls;
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;

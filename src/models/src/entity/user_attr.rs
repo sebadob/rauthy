@@ -4,7 +4,7 @@ use crate::entity::users::User;
 use crate::request::{UserAttrConfigRequest, UserAttrValuesUpdateRequest};
 use actix_web::web;
 use rauthy_common::constants::{CACHE_NAME_USERS, IDX_USER_ATTR_CONFIG};
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

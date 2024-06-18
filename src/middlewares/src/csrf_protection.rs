@@ -5,8 +5,8 @@ use actix_web::{
 };
 use futures::future::LocalBoxFuture;
 use rauthy_common::constants::SEC_HEADER_BLOCK;
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_svc_req;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::future::{ready, Ready};
 use std::rc::Rc;
 use tracing::warn;

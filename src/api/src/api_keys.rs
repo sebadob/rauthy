@@ -2,7 +2,7 @@ use crate::ReqPrincipal;
 use actix_web::{delete, get, post, put, web, HttpResponse};
 use actix_web_validator::Json;
 use mime_guess::mime::TEXT_PLAIN_UTF_8;
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::ApiKeyEntity;
 use rauthy_models::request::ApiKeyRequest;

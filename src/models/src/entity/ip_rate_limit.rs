@@ -1,8 +1,9 @@
 use crate::app_state::AppState;
 use actix_web::web;
 use chrono::{DateTime, Utc};
+use rauthy_common::constants::CACHE_NAME_IP_RATE_LIMIT;
 use rauthy_common::constants::DEVICE_GRANT_RATE_LIMIT;
-use rauthy_common::{constants::CACHE_NAME_IP_RATE_LIMIT, error_response::ErrorResponse};
+use rauthy_error::ErrorResponse;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use serde::{Deserialize, Serialize};
 

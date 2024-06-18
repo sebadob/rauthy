@@ -6,11 +6,13 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
+rauthy-common = { path = "../common" }
+rauthy-error = { path = "../error" }
+
 async-trait = { workspace = true }
 chrono = { workspace = true }
 flume = { workspace = true }
 matrix-sdk = { workspace = true }
-rauthy-common = { path = "../common" }
 reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

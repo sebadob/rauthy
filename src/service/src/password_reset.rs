@@ -1,7 +1,7 @@
 use actix_web::{cookie, web, HttpRequest, HttpResponse};
 use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{get_rand, real_ip_from_req};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::colors::ColorEntity;

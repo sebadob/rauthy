@@ -2,8 +2,8 @@
 // which cannot handle some stuff from the `rsa` crate at the time of writing
 
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg};
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::base64_url_no_pad_decode;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rsa::sha2::{Sha256, Sha384, Sha512};
 use rsa::{Pkcs1v15Sign, RsaPublicKey};
 use tracing::warn;

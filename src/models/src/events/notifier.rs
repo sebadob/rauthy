@@ -2,7 +2,7 @@ use crate::email;
 use crate::email::EMail;
 use crate::events::event::{Event, EventLevel, EventType};
 use async_trait::async_trait;
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_error::ErrorResponse;
 use rauthy_notify::matrix::NotifierMatrix;
 use rauthy_notify::slack::NotifierSlack;
 use rauthy_notify::{Notification, Notify};

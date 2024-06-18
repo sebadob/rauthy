@@ -7,7 +7,7 @@ use rand_core::OsRng;
 use rauthy_common::constants::{
     ARGON2ID_M_COST_MIN, ARGON2ID_T_COST_MIN, CACHE_NAME_12HR, IDX_PASSWORD_RULES,
 };
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_error::ErrorResponse;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};

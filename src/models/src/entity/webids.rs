@@ -1,7 +1,7 @@
 use crate::app_state::AppState;
 use actix_web::web;
 use rauthy_common::constants::{CACHE_NAME_USERS, PUB_URL_WITH_SCHEME};
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_error::ErrorResponse;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use rio_api::formatter::TriplesFormatter;
 use rio_api::parser::TriplesParser;

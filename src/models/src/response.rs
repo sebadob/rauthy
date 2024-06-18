@@ -16,7 +16,7 @@ use crate::entity::webids::WebId;
 use crate::language::Language;
 use crate::{AddressClaim, JktClaim};
 use actix_web::web;
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_error::ErrorResponse;
 use rio_api::formatter::TriplesFormatter;
 use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
 use rio_turtle::TurtleFormatter;

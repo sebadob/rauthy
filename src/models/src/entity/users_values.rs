@@ -3,7 +3,7 @@ use crate::request::UserValuesRequest;
 use actix_web::web;
 use jwt_simple::prelude::{Deserialize, Serialize};
 use rauthy_common::constants::{CACHE_NAME_USERS, IDX_USERS_VALUES};
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_error::ErrorResponse;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use sqlx::FromRow;
 

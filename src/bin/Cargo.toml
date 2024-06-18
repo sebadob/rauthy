@@ -11,6 +11,7 @@ postgres = []
 
 [dependencies]
 rauthy-common = { path = "../common" }
+rauthy-error = { path = "../error" }
 rauthy-handlers = { path = "../api" }
 rauthy-middlewares = { path = "../middlewares" }
 rauthy-models = { path = "../models" }

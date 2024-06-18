@@ -10,8 +10,8 @@ use pretty_assertions::assert_eq;
 use rauthy_common::constants::{
     APPLICATION_JSON, DPOP_TOKEN_ENDPOINT, HEADER_DPOP_NONCE, TOKEN_DPOP,
 };
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_encode, get_rand};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::dpop_proof::{DPoPClaims, DPoPHeader};
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType, JWKS};
 use rauthy_models::request::{

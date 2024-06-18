@@ -1,8 +1,8 @@
 use crate::app_state::AppState;
 use actix_web::web;
 use rauthy_common::constants::CACHE_NAME_AUTH_CODES;
-use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::get_rand;
+use rauthy_error::ErrorResponse;
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
 use std::ops::Add;

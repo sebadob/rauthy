@@ -1,7 +1,7 @@
 use crate::app_state::AppState;
 use actix_web::web;
 use chrono::{DateTime, Utc};
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use time::OffsetDateTime;

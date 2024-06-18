@@ -13,8 +13,8 @@ use rauthy_common::constants::{
     RE_PEM, RE_PHONE, RE_SCOPE_SPACE, RE_SEARCH, RE_STREET, RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
     RE_USER_NAME,
 };
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::base64_decode;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::net::Ipv4Addr;
 use std::str::FromStr;

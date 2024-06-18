@@ -2,7 +2,7 @@ use crate::app_state::AppState;
 use crate::entity::scopes::Scope;
 use actix_web::web;
 use rauthy_common::constants::{CACHE_NAME_12HR, ENABLE_DYN_CLIENT_REG, GRANT_TYPE_DEVICE_CODE};
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_error::ErrorResponse;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

@@ -16,7 +16,7 @@ use lettre::{AsyncSmtpTransport, AsyncTransport};
 use rauthy_common::constants::{
     EMAIL_SUB_PREFIX, SMTP_FROM, SMTP_PASSWORD, SMTP_URL, SMTP_USERNAME,
 };
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::Notification;
 use std::env;
 use std::time::Duration;

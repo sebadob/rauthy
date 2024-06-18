@@ -1,7 +1,7 @@
 use crate::app_state::DbPool;
 use crate::entity::jwk::Jwk;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_error::ErrorResponse;
 use std::ops::Add;
 use time::OffsetDateTime;
 use tracing::warn;

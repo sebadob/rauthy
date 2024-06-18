@@ -1,6 +1,6 @@
 use actix_web::web;
-use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::get_rand;
+use rauthy_error::ErrorResponse;
 use rauthy_models::{app_state::AppState, entity::users::User, language::Language};
 use std::time::Duration;
 use tracing::info;
