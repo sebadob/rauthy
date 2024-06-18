@@ -6,26 +6,21 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-actix = { workspace = true }
+rauthy-common = { path = "../common" }
+rauthy-models = { path = "../models" }
+rauthy-service = { path = "../service" }
+
 actix-multipart = { workspace = true }
 actix-web = { workspace = true }
-actix-web-actors = { workspace = true }
 actix-web-lab = { workspace = true }
 actix-web-validator = { workspace = true }
 chrono = { workspace = true }
 cryptr = { workspace = true }
-futures = { workspace = true }
-image = { workspace = true }
-lazy_static = { workspace = true }
 mime_guess = { workspace = true }
 num_cpus = { workspace = true }
-rauthy-common = { path = "../common" }
-rauthy-models = { path = "../models" }
-rauthy-service = { path = "../service" }
 redhac = { workspace = true }
 rust-embed = { version = "8", features = ["actix-web", "tokio"] }
 semver = { workspace = true }
-serde_json = { workspace = true }
 spow = { workspace = true }
 time = { workspace = true }
 tracing = { workspace = true }

@@ -10,6 +10,13 @@ default = []
 postgres = []
 
 [dependencies]
+rauthy-common = { path = "../common" }
+rauthy-handlers = { path = "../api" }
+rauthy-middlewares = { path = "../middlewares" }
+rauthy-models = { path = "../models" }
+rauthy-schedulers = { path = "../schedulers" }
+rauthy-service = { path = "../service" }
+
 actix-web = { workspace = true }
 actix-web-prom = { workspace = true }
 actix-service = { workspace = true }
@@ -19,11 +26,6 @@ dotenvy = { workspace = true }
 flume = { workspace = true }
 num_cpus = { workspace = true }
 prometheus = { workspace = true }
-rauthy-common = { path = "../common" }
-rauthy-handlers = { path = "../api" }
-rauthy-models = { path = "../models" }
-rauthy-schedulers = { path = "../schedulers" }
-rauthy-service = { path = "../service" }
 redhac = { workspace = true }
 rustls = { workspace = true }
 rustls-pki-types = { workspace = true }

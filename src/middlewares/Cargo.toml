@@ -1,0 +1,23 @@
+[package]
+name = "rauthy-middlewares"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+rauthy-common = { path = "../common" }
+rauthy-models = { path = "../models" }
+rauthy-service = { path = "../service" }
+
+actix-web = { workspace = true }
+chrono = { workspace = true }
+futures = { workspace = true }
+lazy_static = { workspace = true }
+time = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = "1"
+tokio-test = "*"

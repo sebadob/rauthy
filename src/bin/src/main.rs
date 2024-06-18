@@ -18,15 +18,15 @@ use rauthy_common::constants::{
     SWAGGER_UI_INTERNAL, UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::password_hasher;
-use rauthy_handlers::middleware::csrf_protection::CsrfProtectionMiddleware;
-use rauthy_handlers::middleware::ip_blacklist::RauthyIpBlacklistMiddleware;
-use rauthy_handlers::middleware::logging::RauthyLoggingMiddleware;
-use rauthy_handlers::middleware::principal::RauthyPrincipalMiddleware;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
     api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
     scopes, sessions, users,
 };
+use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
+use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
+use rauthy_middlewares::logging::RauthyLoggingMiddleware;
+use rauthy_middlewares::principal::RauthyPrincipalMiddleware;
 use rauthy_models::app_state::{AppState, Caches};
 use rauthy_models::email::EMail;
 use rauthy_models::events::event::Event;
