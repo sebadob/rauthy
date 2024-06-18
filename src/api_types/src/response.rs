@@ -3,7 +3,6 @@ use crate::{
     Language, SessionState,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use std::borrow::Cow;
 use time::OffsetDateTime;
 use utoipa::ToSchema;
@@ -371,7 +370,7 @@ pub struct TokenInfo {
     pub cnf: Option<JktClaim>,
 }
 
-#[derive(Clone, Debug, FromRow, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct UserAttrConfigValueResponse {
     pub name: String,
     pub desc: Option<String>,

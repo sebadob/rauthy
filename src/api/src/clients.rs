@@ -30,7 +30,7 @@ use tracing::debug;
     path = "/clients",
     tag = "clients",
     responses(
-        (status = 200, description = "Ok", body = [Client]),
+        (status = 200, description = "Ok", body = ClientResponse),
         (status = 400, description = "BadRequest"),
         (status = 401, description = "Unauthorized"),
         (status = 403, description = "Forbidden"),
@@ -64,7 +64,7 @@ pub async fn get_clients(
     path = "/clients/{id}",
     tag = "clients",
     responses(
-        (status = 200, description = "Ok", body = Client),
+        (status = 200, description = "Ok", body = ClientResponse),
         (status = 400, description = "BadRequest"),
         (status = 401, description = "Unauthorized"),
         (status = 403, description = "Forbidden"),
@@ -126,7 +126,7 @@ pub async fn get_client_secret(
     tag = "clients",
     request_body = NewClientRequest,
     responses(
-        (status = 200, description = "Ok", body = Client),
+        (status = 200, description = "Ok", body = ClientResponse),
         (status = 400, description = "BadRequest"),
         (status = 401, description = "Unauthorized"),
         (status = 403, description = "Forbidden"),
@@ -270,7 +270,7 @@ pub async fn put_clients_dyn(
     tag = "clients",
     request_body = UpdateClientRequest,
     responses(
-        (status = 200, description = "Ok", body = Client),
+        (status = 200, description = "Ok", body = ClientResponse),
         (status = 400, description = "BadRequest"),
         (status = 401, description = "Unauthorized"),
         (status = 403, description = "Forbidden"),

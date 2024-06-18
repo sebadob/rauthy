@@ -146,6 +146,11 @@ use utoipa::{openapi, OpenApi};
     components(
         schemas(
             entity::colors::Colors,
+            entity::fed_cm::FedCMAccount,
+            entity::fed_cm::FedCMAccounts,
+            entity::fed_cm::FedCMIdPBranding,
+            entity::fed_cm::FedCMIdPConfig,
+            entity::fed_cm::FedCMIdPIcon,
             entity::fed_cm::WebIdentity,
             entity::groups::Group,
             entity::password::PasswordHashTime,
@@ -168,6 +173,8 @@ use utoipa::{openapi, OpenApi};
             rauthy_api_types::JwkKeyPairAlg,
             rauthy_api_types::JwkKeyPairType,
             rauthy_api_types::Language,
+
+            rauthy_models::JwtTokenType,
 
             ErrorResponse,
             ErrorResponseType,
@@ -243,6 +250,7 @@ use utoipa::{openapi, OpenApi};
             response::SessionInfoResponse,
             response::TokenInfo,
             response::UserAttrConfigResponse,
+            response::UserAttrConfigValueResponse,
             response::UserAttrValueResponse,
             response::UserAttrValuesResponse,
             response::Userinfo,
