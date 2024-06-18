@@ -4431,7 +4431,6 @@ dependencies = [
  "actix-web",
  "actix-web-prom",
  "chrono",
- "cron",
  "cryptr",
  "dotenvy",
  "ed25519-compact",
@@ -4451,19 +4450,14 @@ dependencies = [
  "rustls 0.23.10",
  "rustls-pemfile 2.1.2",
  "rustls-pki-types",
- "semver",
  "serde_json",
  "spow",
- "sqlx",
- "time",
  "tokio",
  "tokio-test",
  "tracing",
  "tracing-subscriber",
  "utoipa",
  "utoipa-swagger-ui",
- "validator",
- "webauthn-rs",
 ]
 
 [[package]]
