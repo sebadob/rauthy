@@ -23,6 +23,7 @@ prometheus = { workspace = true }
 rauthy-common = { path = "../common" }
 rauthy-handlers = { path = "../api" }
 rauthy-models = { path = "../models" }
+rauthy-schedulers = { path = "../schedulers" }
 rauthy-service = { path = "../service" }
 redhac = { workspace = true }
 rustls = { workspace = true }

@@ -1,0 +1,20 @@
+[package]
+name = "rauthy-schedulers"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+actix-web = { workspace = true }
+chrono = { workspace = true }
+cron = { workspace = true }
+rauthy-common = { path = "../common" }
+rauthy-models = { path = "../models" }
+rauthy-service = { path = "../service" }
+redhac = { workspace = true }
+semver = { workspace = true }
+sqlx = { workspace = true }
+time = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }

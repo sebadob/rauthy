@@ -4443,6 +4443,7 @@ dependencies = [
  "rauthy-common",
  "rauthy-handlers",
  "rauthy-models",
+ "rauthy-schedulers",
  "rauthy-service",
  "redhac",
  "reqwest 0.12.4",
@@ -4627,6 +4628,24 @@ dependencies = [
  "serde_json",
  "tokio",
  "tokio-test",
+ "tracing",
+]
+
+[[package]]
+name = "rauthy-schedulers"
+version = "0.23.5"
+dependencies = [
+ "actix-web",
+ "chrono",
+ "cron",
+ "rauthy-common",
+ "rauthy-models",
+ "rauthy-service",
+ "redhac",
+ "semver",
+ "sqlx",
+ "time",
+ "tokio",
  "tracing",
 ]
 

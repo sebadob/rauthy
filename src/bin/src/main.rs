@@ -53,7 +53,6 @@ use crate::logging::setup_logging;
 mod cache_notify;
 mod dummy_data;
 mod logging;
-mod schedulers;
 mod tls;
 
 #[tokio::main]
@@ -309,7 +308,7 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
             info!("Schedulers are disabled");
         }
         _ => {
-            tokio::spawn(schedulers::scheduler_main(app_state.clone()));
+            tokio::spawn(rauthy_schedulers::spawn(app_state.clone()));
         }
     };
 
