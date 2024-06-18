@@ -11,6 +11,11 @@ use jwt_simple::algorithms::{
 };
 use jwt_simple::claims;
 use jwt_simple::prelude::*;
+use rauthy_api_types::request::{LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest};
+use rauthy_api_types::response::{
+    OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenInfo, Userinfo,
+};
+use rauthy_api_types::JktClaim;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, DEVICE_GRANT_POLL_INTERVAL,
     DEVICE_GRANT_REFRESH_TOKEN_LIFETIME, ENABLE_SOLID_AUD, ENABLE_WEB_ID, HEADER_DPOP_NONCE,
@@ -40,13 +45,10 @@ use rauthy_models::entity::webids::WebId;
 use rauthy_models::events::event::Event;
 use rauthy_models::events::ip_blacklist_handler::{IpBlacklistReq, IpFailedLoginCheck};
 use rauthy_models::language::Language;
-use rauthy_models::request::{LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest};
-use rauthy_models::response::{OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenInfo, Userinfo};
 use rauthy_models::templates::{LogoutHtml, TooManyRequestsHtml};
 use rauthy_models::{
     sign_jwt, validate_jwt, AddressClaim, AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn,
-    JktClaim, JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtRefreshClaims,
-    JwtTokenType,
+    JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtRefreshClaims, JwtTokenType,
 };
 use redhac::cache_del;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
@@ -800,7 +802,7 @@ pub async fn get_userinfo(
         }
 
         if let Some(values) = &user_values {
-            userinfo.address = AddressClaim::try_build(&user, values);
+            userinfo.address = AddressClaim::try_build(&user, values).map(|claim| claim.into());
         }
     }
 

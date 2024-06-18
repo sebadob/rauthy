@@ -2,6 +2,7 @@ use crate::app_state::{AppState, DbPool};
 use actix_web::web;
 use cryptr::EncValue;
 use jwt_simple::algorithms;
+use rauthy_api_types::response::{JWKSCerts, JWKSPublicKeyCerts};
 use rauthy_common::constants::{CACHE_NAME_12HR, IDX_JWKS, IDX_JWK_KID, IDX_JWK_LATEST};
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -14,7 +15,6 @@ use sqlx::{Error, FromRow, Row};
 use std::default::Default;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
-use utoipa::ToSchema;
 
 #[macro_export]
 macro_rules! sign_jwt {
@@ -191,6 +191,16 @@ impl JWKS {
     pub fn add_jwk(&mut self, key_pair: &JwkKeyPair) {
         let pub_key = JWKSPublicKey::from_key_pair(key_pair);
         self.keys.push(pub_key)
+    }
+}
+
+impl From<JWKS> for JWKSCerts {
+    fn from(jwks: JWKS) -> Self {
+        let mut keys = Vec::with_capacity(jwks.keys.len());
+        for k in jwks.keys {
+            keys.push(JWKSPublicKeyCerts::from(k));
+        }
+        Self { keys }
     }
 }
 
@@ -424,6 +434,31 @@ impl JWKSPublicKey {
     }
 }
 
+impl From<JWKSPublicKey> for JWKSPublicKeyCerts {
+    fn from(pk: JWKSPublicKey) -> Self {
+        let kty = match pk.kty {
+            JwkKeyPairType::RSA => rauthy_api_types::JwkKeyPairType::RSA,
+            JwkKeyPairType::OKP => rauthy_api_types::JwkKeyPairType::OKP,
+        };
+        let alg = match pk.alg.unwrap_or_default() {
+            JwkKeyPairAlg::RS256 => rauthy_api_types::JwkKeyPairAlg::RS256,
+            JwkKeyPairAlg::RS384 => rauthy_api_types::JwkKeyPairAlg::RS256,
+            JwkKeyPairAlg::RS512 => rauthy_api_types::JwkKeyPairAlg::RS256,
+            JwkKeyPairAlg::EdDSA => rauthy_api_types::JwkKeyPairAlg::RS256,
+        };
+
+        Self {
+            kty,
+            alg,
+            crv: pk.crv,
+            kid: pk.kid,
+            n: pk.n,
+            e: pk.e,
+            x: pk.x,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JwkKeyPair {
     pub kid: String,
@@ -566,7 +601,7 @@ impl JwkKeyPair {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum JwkKeyPairType {
     RSA,
     OKP,
@@ -587,7 +622,7 @@ impl JwkKeyPairType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum JwkKeyPairAlg {
     RS256,
     RS384,

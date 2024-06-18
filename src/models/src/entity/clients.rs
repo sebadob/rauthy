@@ -3,13 +3,13 @@ use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::jwk::JwkKeyPairAlg;
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
-use crate::request::{DynamicClientRequest, EphemeralClientRequest, NewClientRequest};
-use crate::response::DynamicClientResponse;
 use crate::ListenScheme;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest};
 use cryptr::{utils, EncKeys, EncValue};
+use rauthy_api_types::request::{DynamicClientRequest, EphemeralClientRequest, NewClientRequest};
+use rauthy_api_types::response::{ClientResponse, DynamicClientResponse};
 use rauthy_common::constants::{
     ADMIN_FORCE_MFA, APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_EPHEMERAL_CLIENTS,
     DYN_CLIENT_DEFAULT_TOKEN_LIFETIME, DYN_CLIENT_SECRET_AUTO_ROTATE, ENABLE_EPHEMERAL_CLIENTS,
@@ -29,7 +29,6 @@ use std::str::FromStr;
 use std::sync::OnceLock;
 use std::time::Duration;
 use tracing::{debug, error, trace, warn};
-use utoipa::ToSchema;
 use validator::Validate;
 
 static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
@@ -44,7 +43,7 @@ performance, when we do reads on clients, which we do most of the time.
 
 `*_lifetime` values are meant to be in seconds.
  */
-#[derive(Debug, Clone, PartialEq, Eq, FromRow, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, FromRow, Deserialize, Serialize)]
 pub struct Client {
     pub id: String,
     pub name: Option<String>,
@@ -194,7 +193,7 @@ impl Client {
 
         txn.commit().await?;
 
-        DynamicClientResponse::build(data, client, client_dyn, true)
+        client.into_dynamic_client_response(data, client_dyn, true)
     }
 
     // Deletes a client
@@ -403,7 +402,7 @@ impl Client {
             .await?;
         txn.commit().await?;
 
-        DynamicClientResponse::build(data, new_client, client_dyn, *DYN_CLIENT_SECRET_AUTO_ROTATE)
+        new_client.into_dynamic_client_response(data, client_dyn, *DYN_CLIENT_SECRET_AUTO_ROTATE)
     }
 }
 
@@ -925,6 +924,40 @@ impl Client {
     }
 }
 
+impl From<Client> for ClientResponse {
+    fn from(client: Client) -> Self {
+        let redirect_uris = client.get_redirect_uris();
+        let post_logout_redirect_uris = client.get_post_logout_uris();
+        let allowed_origins = client.get_allowed_origins();
+        let flows_enabled = client.get_flows();
+        let scopes = client.get_scopes();
+        let default_scopes = client.get_default_scopes();
+        let challenges = client.get_challenges();
+        let contacts = client.get_contacts();
+
+        Self {
+            id: client.id,
+            name: client.name,
+            enabled: client.enabled,
+            confidential: client.confidential,
+            redirect_uris,
+            post_logout_redirect_uris,
+            allowed_origins,
+            flows_enabled,
+            access_token_alg: client.access_token_alg,
+            id_token_alg: client.id_token_alg,
+            auth_code_lifetime: client.auth_code_lifetime,
+            access_token_lifetime: client.access_token_lifetime,
+            scopes,
+            default_scopes,
+            challenges,
+            force_mfa: client.force_mfa,
+            client_uri: client.client_uri,
+            contacts,
+        }
+    }
+}
+
 impl From<EphemeralClientRequest> for Client {
     fn from(value: EphemeralClientRequest) -> Self {
         let scopes = EPHEMERAL_CLIENTS_ALLOWED_SCOPES.clone();
@@ -1058,6 +1091,47 @@ impl Client {
             client_uri: req.client_uri,
             contacts: req.contacts.map(|c| c.join(",")),
             ..Default::default()
+        })
+    }
+
+    pub fn into_dynamic_client_response(
+        self,
+        data: &web::Data<AppState>,
+        client_dyn: ClientDyn,
+        map_registration_client_uri: bool,
+    ) -> Result<DynamicClientResponse, ErrorResponse> {
+        let contacts = self.get_contacts();
+
+        let redirect_uris = self.get_redirect_uris();
+        let grant_types = self.get_flows();
+        let post_logout_redirect_uri = self.get_redirect_uris().first().cloned();
+
+        let client_secret = self.get_secret_cleartext()?;
+        let (registration_access_token, registration_client_uri) = if map_registration_client_uri {
+            (
+                Some(client_dyn.registration_token_plain()?),
+                Some(ClientDyn::registration_client_uri(data, &client_dyn.id)),
+            )
+        } else {
+            (None, None)
+        };
+
+        Ok(DynamicClientResponse {
+            client_id: self.id,
+            client_name: self.name,
+            client_uri: self.client_uri,
+            contacts,
+            client_secret,
+            // TODO check if we can make sure that a client will renew the secret properly -> let it expire then
+            client_secret_expires_at: 0,
+            redirect_uris,
+            post_logout_redirect_uri,
+            registration_access_token,
+            registration_client_uri,
+            grant_types,
+            id_token_signed_response_alg: self.id_token_alg,
+            token_endpoint_auth_method: client_dyn.token_endpoint_auth_method,
+            token_endpoint_auth_signing_alg: self.access_token_alg,
         })
     }
 }

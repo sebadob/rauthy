@@ -17,9 +17,8 @@ use sqlx::{query, query_as};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use tracing::error;
-use utoipa::ToSchema;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum EventLevel {
     Info,
@@ -35,6 +34,17 @@ impl From<&EventLevel> for NotificationLevel {
             EventLevel::Notice => NotificationLevel::Notice,
             EventLevel::Warning => NotificationLevel::Warning,
             EventLevel::Critical => NotificationLevel::Critical,
+        }
+    }
+}
+
+impl From<rauthy_api_types::EventLevel> for EventLevel {
+    fn from(value: rauthy_api_types::EventLevel) -> Self {
+        match value {
+            rauthy_api_types::EventLevel::Info => Self::Info,
+            rauthy_api_types::EventLevel::Notice => Self::Notice,
+            rauthy_api_types::EventLevel::Warning => Self::Warning,
+            rauthy_api_types::EventLevel::Critical => Self::Critical,
         }
     }
 }
@@ -121,7 +131,7 @@ impl EventLevel {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum EventType {
     InvalidLogins,
     IpBlacklisted,
@@ -165,6 +175,28 @@ impl Display for EventType {
             EventType::UserEmailChange => write!(f, "User's E-Mail has been changed"),
             EventType::UserPasswordReset => write!(f, "User has reset its password"),
             EventType::Test => write!(f, "TEST"),
+        }
+    }
+}
+
+impl From<rauthy_api_types::EventType> for EventType {
+    fn from(value: rauthy_api_types::EventType) -> Self {
+        match value {
+            rauthy_api_types::EventType::InvalidLogins => Self::InvalidLogins,
+            rauthy_api_types::EventType::IpBlacklisted => Self::IpBlacklisted,
+            rauthy_api_types::EventType::IpBlacklistRemoved => Self::IpBlacklistRemoved,
+            rauthy_api_types::EventType::JwksRotated => Self::JwksRotated,
+            rauthy_api_types::EventType::NewUserRegistered => Self::NewUserRegistered,
+            rauthy_api_types::EventType::NewRauthyAdmin => Self::NewRauthyAdmin,
+            rauthy_api_types::EventType::NewRauthyVersion => Self::NewRauthyVersion,
+            rauthy_api_types::EventType::PossibleBruteForce => Self::PossibleBruteForce,
+            rauthy_api_types::EventType::RauthyStarted => Self::RauthyStarted,
+            rauthy_api_types::EventType::RauthyHealthy => Self::RauthyHealthy,
+            rauthy_api_types::EventType::RauthyUnhealthy => Self::RauthyUnhealthy,
+            rauthy_api_types::EventType::SecretsMigrated => Self::SecretsMigrated,
+            rauthy_api_types::EventType::UserEmailChange => Self::UserEmailChange,
+            rauthy_api_types::EventType::UserPasswordReset => Self::UserPasswordReset,
+            rauthy_api_types::EventType::Test => Self::Test,
         }
     }
 }

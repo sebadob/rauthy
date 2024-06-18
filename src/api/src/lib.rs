@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 use actix_web::{web, HttpRequest, HttpResponse};
+use rauthy_api_types::response::WebauthnLoginResponse;
 use rauthy_common::constants::COOKIE_MFA;
 use rauthy_error::ErrorResponse;
 use rauthy_models::api_cookie::ApiCookie;
@@ -11,7 +12,6 @@ use rauthy_models::entity::fed_cm::FedCMLoginStatus;
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::webauthn::WebauthnCookie;
-use rauthy_models::response::WebauthnLoginResponse;
 use rauthy_models::AuthStep;
 use rust_embed::RustEmbed;
 use tracing::error;

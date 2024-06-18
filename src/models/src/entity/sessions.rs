@@ -2,11 +2,11 @@ use crate::api_cookie::ApiCookie;
 use crate::app_state::AppState;
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
-use crate::request::SearchParamsIdx;
 use actix_web::cookie::{time, Cookie, SameSite};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{cookie, web, HttpRequest};
 use chrono::Utc;
+use rauthy_api_types::request::SearchParamsIdx;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_SESSIONS, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER,
     IDX_SESSION, SESSION_LIFETIME_FED_CM,
@@ -81,6 +81,30 @@ impl FromStr for SessionState {
             _ => SessionState::Unknown,
         };
         Ok(res)
+    }
+}
+
+impl From<rauthy_api_types::SessionState> for SessionState {
+    fn from(value: rauthy_api_types::SessionState) -> Self {
+        match value {
+            rauthy_api_types::SessionState::Open => Self::Open,
+            rauthy_api_types::SessionState::Init => Self::Init,
+            rauthy_api_types::SessionState::Auth => Self::Auth,
+            rauthy_api_types::SessionState::LoggedOut => Self::LoggedOut,
+            rauthy_api_types::SessionState::Unknown => Self::Unknown,
+        }
+    }
+}
+
+impl From<&SessionState> for rauthy_api_types::SessionState {
+    fn from(value: &SessionState) -> Self {
+        match value {
+            SessionState::Open => Self::Open,
+            SessionState::Init => Self::Init,
+            SessionState::Auth => Self::Auth,
+            SessionState::LoggedOut => Self::LoggedOut,
+            SessionState::Unknown => Self::Unknown,
+        }
     }
 }
 

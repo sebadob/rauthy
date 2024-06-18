@@ -6,10 +6,9 @@ use serde::{Deserialize, Serialize};
 use sqlx::Type;
 use std::fmt::{Display, Formatter};
 use tracing::debug;
-use utoipa::ToSchema;
 
 // Note: Updating this enum will require an update on the LANGUAGES constant for the frontend too
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Type, ToSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Type)]
 #[sqlx(type_name = "varchar")]
 #[sqlx(rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
@@ -90,5 +89,23 @@ impl TryFrom<&HttpRequest> for Language {
             ErrorResponseType::NotFound,
             "Could not find and extract  a locale cookie or the accept-language header",
         ))
+    }
+}
+
+impl From<rauthy_api_types::Language> for Language {
+    fn from(value: rauthy_api_types::Language) -> Self {
+        match value {
+            rauthy_api_types::Language::En => Self::En,
+            rauthy_api_types::Language::De => Self::De,
+        }
+    }
+}
+
+impl From<Language> for rauthy_api_types::Language {
+    fn from(value: Language) -> Self {
+        match value {
+            Language::En => Self::En,
+            Language::De => Self::De,
+        }
     }
 }

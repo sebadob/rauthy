@@ -1,6 +1,9 @@
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
+use rauthy_api_types::request::{
+    EphemeralClientRequest, FedCMAssertionRequest, FedCMClientMetadataRequest,
+};
 use rauthy_common::constants::{
     COOKIE_SESSION_FED_CM, EXPERIMENTAL_FED_CM_ENABLE, HEADER_ALLOW_ALL_ORIGINS, HEADER_JSON,
     PUB_URL_WITH_SCHEME, RAUTHY_ADMIN_EMAIL, SESSION_TIMEOUT_FED_CM,
@@ -14,12 +17,8 @@ use rauthy_models::entity::fed_cm::{
     FedCMAccount, FedCMAccounts, FedCMClientMetadata, FedCMIdPConfig, FedCMLoginStatus,
     FedCMTokenResponse, WebIdentity,
 };
-use rauthy_models::entity::jwk::JwkKeyPairAlg;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
-use rauthy_models::request::{
-    EphemeralClientRequest, FedCMAssertionRequest, FedCMClientMetadataRequest,
-};
 use rauthy_models::ListenScheme;
 use rauthy_service::token_set::{AuthCodeFlow, DeviceCodeFlow, TokenNonce, TokenSet};
 use tracing::{debug, error, warn};
@@ -183,8 +182,8 @@ pub async fn get_fed_client_config() -> HttpResponse {
         default_max_age: Some(300),
         scope: Some("openid email profile".to_string()),
         require_auth_time: Some(true),
-        access_token_signed_response_alg: Some(JwkKeyPairAlg::EdDSA),
-        id_token_signed_response_alg: Some(JwkKeyPairAlg::EdDSA),
+        access_token_signed_response_alg: Some(rauthy_api_types::JwkKeyPairAlg::EdDSA),
+        id_token_signed_response_alg: Some(rauthy_api_types::JwkKeyPairAlg::EdDSA),
     };
 
     HttpResponse::Ok().json(config)

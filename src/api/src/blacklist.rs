@@ -2,13 +2,13 @@ use crate::ReqPrincipal;
 use actix_web::{delete, get, post, web, HttpResponse};
 use actix_web_validator::Json;
 use chrono::DateTime;
+use rauthy_api_types::request::IpBlacklistRequest;
+use rauthy_api_types::response::{BlacklistResponse, BlacklistedIp};
 use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::events::event::Event;
 use rauthy_models::events::ip_blacklist_handler::IpBlacklistReq;
-use rauthy_models::request::IpBlacklistRequest;
-use rauthy_models::response::{BlacklistResponse, BlacklistedIp};
 use tokio::sync::oneshot;
 
 /// Returns all blacklisted IP's

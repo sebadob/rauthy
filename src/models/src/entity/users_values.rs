@@ -1,7 +1,8 @@
 use crate::app_state::AppState;
-use crate::request::UserValuesRequest;
 use actix_web::web;
 use jwt_simple::prelude::{Deserialize, Serialize};
+use rauthy_api_types::request::UserValuesRequest;
+use rauthy_api_types::response::UserValuesResponse;
 use rauthy_common::constants::{CACHE_NAME_USERS, IDX_USERS_VALUES};
 use rauthy_error::ErrorResponse;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
@@ -109,5 +110,18 @@ impl UserValues {
         .await?;
 
         Ok(slf)
+    }
+}
+
+impl From<UserValues> for UserValuesResponse {
+    fn from(value: UserValues) -> Self {
+        Self {
+            birthdate: value.birthdate,
+            phone: value.phone,
+            street: value.street,
+            zip: value.zip,
+            city: value.city,
+            country: value.country,
+        }
     }
 }

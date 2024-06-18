@@ -13,15 +13,17 @@ use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
 use crate::events::event::Event;
 use crate::language::Language;
-use crate::request::{
-    NewUserRegistrationRequest, NewUserRequest, SearchParamsIdx, UpdateUserRequest,
-    UpdateUserSelfRequest,
-};
-use crate::response::UserResponseSimple;
 use crate::templates::UserEmailChangeConfirmHtml;
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;
 use chrono::Utc;
+use rauthy_api_types::request::{
+    NewUserRegistrationRequest, NewUserRequest, SearchParamsIdx, UpdateUserRequest,
+    UpdateUserSelfRequest,
+};
+use rauthy_api_types::response::{
+    UserAccountTypeResponse, UserResponse, UserResponseSimple, UserValuesResponse,
+};
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_USERS, IDX_USERS, RAUTHY_ADMIN_ROLE, USER_COUNT_IDX,
     WEBAUTHN_NO_PASSWORD_EXPIRY,
@@ -49,6 +51,19 @@ pub enum AccountType {
     FederatedPassword,
     /// Federated + Local Passkey
     FederatedPasskey,
+}
+
+impl From<AccountType> for UserAccountTypeResponse {
+    fn from(value: AccountType) -> Self {
+        match value {
+            AccountType::New => Self::New,
+            AccountType::Password => Self::Password,
+            AccountType::Passkey => Self::Passkey,
+            AccountType::Federated => Self::Federated,
+            AccountType::FederatedPasskey => Self::FederatedPasskey,
+            AccountType::FederatedPassword => Self::FederatedPassword,
+        }
+    }
 }
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -714,7 +729,7 @@ impl User {
         user.family_name = upd_user.family_name;
 
         if let Some(lang) = upd_user.language {
-            user.language = lang;
+            user.language = lang.into();
         }
 
         if let Some(password) = &upd_user.password {
@@ -1218,7 +1233,7 @@ impl User {
             email_verified: false,
             given_name: new_user.given_name,
             family_name: new_user.family_name,
-            language: new_user.language,
+            language: new_user.language.into(),
             roles,
             groups,
             user_expires: new_user.user_expires,
@@ -1253,6 +1268,41 @@ impl User {
     #[inline(always)]
     pub fn has_webauthn_enabled(&self) -> bool {
         self.webauthn_user_id.is_some()
+    }
+
+    pub fn into_response(self, user_values: Option<UserValues>) -> UserResponse {
+        let roles = self.get_roles();
+        let groups = if self.groups.is_some() {
+            Some(self.get_groups())
+        } else {
+            None
+        };
+        let account_type = UserAccountTypeResponse::from(self.account_type());
+
+        UserResponse {
+            id: self.id,
+            email: self.email,
+            given_name: self.given_name,
+            family_name: self.family_name,
+            language: self.language.into(),
+            roles,
+            groups,
+            enabled: self.enabled,
+            email_verified: self.email_verified,
+            password_expires: self.password_expires,
+            created_at: self.created_at,
+            last_login: self.last_login,
+            last_failed_login: self.last_failed_login,
+            failed_login_attempts: self.failed_login_attempts,
+            user_expires: self.user_expires,
+            account_type,
+            webauthn_user_id: self.webauthn_user_id,
+            user_values: user_values
+                .map(UserValuesResponse::from)
+                .unwrap_or_default(),
+            auth_provider_id: self.auth_provider_id,
+            federation_uid: self.federation_uid,
+        }
     }
 
     pub fn is_argon2_uptodate(&self, params: &Argon2Params) -> Result<bool, ErrorResponse> {
@@ -1439,6 +1489,17 @@ impl Default for User {
             user_expires: None,
             auth_provider_id: None,
             federation_uid: None,
+        }
+    }
+}
+
+impl From<User> for UserResponseSimple {
+    fn from(value: User) -> Self {
+        Self {
+            id: value.id,
+            email: value.email,
+            created_at: value.created_at,
+            last_login: value.last_login,
         }
     }
 }

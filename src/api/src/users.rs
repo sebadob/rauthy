@@ -3,6 +3,16 @@ use actix_web::http::header::{ACCEPT, LOCATION};
 use actix_web::http::StatusCode;
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
 use actix_web_validator::{Json, Query};
+use rauthy_api_types::request::{
+    DeviceRequest, MfaPurpose, NewUserRegistrationRequest, NewUserRequest, PaginationParams,
+    PasswordResetRequest, RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest,
+    UserAttrConfigRequest, UserAttrValuesUpdateRequest, WebIdRequest, WebauthnAuthFinishRequest,
+    WebauthnAuthStartRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
+};
+use rauthy_api_types::response::{
+    CsrfTokenResponse, DeviceResponse, PasskeyResponse, UserAttrConfigResponse,
+    UserAttrValueResponse, UserAttrValuesResponse, WebIdResponse,
+};
 use rauthy_common::constants::{
     COOKIE_MFA, ENABLE_WEB_ID, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, OPEN_USER_REG,
     PWD_RESET_COOKIE, SSP_THRESHOLD, TEXT_TURTLE, USER_REG_DOMAIN_RESTRICTION,
@@ -25,16 +35,6 @@ use rauthy_models::entity::webauthn::PasskeyEntity;
 use rauthy_models::entity::webids::WebId;
 use rauthy_models::events::event::Event;
 use rauthy_models::language::Language;
-use rauthy_models::request::{
-    DeviceRequest, MfaPurpose, NewUserRegistrationRequest, NewUserRequest, PaginationParams,
-    PasswordResetRequest, RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest,
-    UserAttrConfigRequest, UserAttrValuesUpdateRequest, WebIdRequest, WebauthnAuthFinishRequest,
-    WebauthnAuthStartRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
-};
-use rauthy_models::response::{
-    CsrfTokenResponse, DeviceResponse, PasskeyResponse, UserAttrConfigResponse,
-    UserAttrValueResponse, UserAttrValuesResponse, UserResponse, WebIdResponse,
-};
 use rauthy_models::templates::{Error1Html, Error3Html, ErrorHtml, UserRegisterHtml};
 use rauthy_service::password_reset;
 use spow::pow::Pow;
@@ -149,7 +149,7 @@ pub async fn post_users(
             .unwrap();
     }
 
-    Ok(HttpResponse::Ok().json(UserResponse::build(user, None)))
+    Ok(HttpResponse::Ok().json(user.into_response(None)))
 }
 
 /// Get the configured / allowed additional custom user attribute
@@ -169,9 +169,11 @@ pub async fn get_cust_attr(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Read)?;
 
-    UserAttrConfigEntity::find_all(&data)
-        .await
-        .map(|values| HttpResponse::Ok().json(UserAttrConfigResponse { values }))
+    UserAttrConfigEntity::find_all(&data).await.map(|values| {
+        HttpResponse::Ok().json(UserAttrConfigResponse {
+            values: values.into_iter().map(|v| v.into()).collect(),
+        })
+    })
 }
 
 /// Create a new allowed additional custom user attribute
@@ -371,7 +373,7 @@ pub async fn get_user_by_id(
     let user = User::find(&data, id).await?;
     let values = UserValues::find(&data, &user.id).await?;
 
-    Ok(HttpResponse::Ok().json(UserResponse::build(user, values)))
+    Ok(HttpResponse::Ok().json(user.into_response(values)))
 }
 
 /// Returns the additional custom attributes for the given user id
@@ -1013,15 +1015,15 @@ pub async fn get_user_webid(
     let user = User::find(&data, webid.user_id.clone()).await?;
 
     let resp = WebIdResponse {
-        webid,
+        webid: webid.into(),
         issuer: data.issuer.clone(),
         email: user.email,
         given_name: user.given_name,
         family_name: user.family_name,
-        language: user.language,
+        language: user.language.into(),
     };
 
-    resp.as_turtle()
+    WebId::into_turtle(resp)
         .map(|content| HttpResponse::Ok().content_type(TEXT_TURTLE).body(content))
 }
 
@@ -1175,7 +1177,7 @@ pub async fn get_user_by_email(
     let user = User::find_by_email(&data, path.into_inner()).await?;
     let values = UserValues::find(&data, &user.id).await?;
 
-    Ok(HttpResponse::Ok().json(UserResponse::build(user, values)))
+    Ok(HttpResponse::Ok().json(user.into_response(values)))
 }
 
 /// Modifies a user
@@ -1216,7 +1218,7 @@ pub async fn put_user_by_id(
             .unwrap();
     }
 
-    Ok(HttpResponse::Ok().json(UserResponse::build(user, user_values)))
+    Ok(HttpResponse::Ok().json(user.into_response(user_values)))
 }
 
 /// Allows modification of specific user values from the user himself
@@ -1250,13 +1252,13 @@ pub async fn put_user_self(
     let (user, user_values, email_updated) =
         User::update_self_req(&data, id, user.into_inner()).await?;
     if email_updated {
-        Ok(HttpResponse::Accepted().json(UserResponse::build(user, user_values)))
+        Ok(HttpResponse::Accepted().json(user.into_response(user_values)))
     } else {
-        Ok(HttpResponse::Ok().json(UserResponse::build(user, user_values)))
+        Ok(HttpResponse::Ok().json(user.into_response(user_values)))
     }
 }
 
-/// Allows an authenticated and logged in user to convert his account to passkey only
+/// Allows an authenticated and logged-in user to convert his account to passkey only
 ///
 /// **Permissions**
 /// - authenticated user

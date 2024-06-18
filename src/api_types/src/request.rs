@@ -1,8 +1,4 @@
-use crate::entity::api_keys::ApiKeyAccess;
-use crate::entity::auth_providers::AuthProviderType;
-use crate::entity::jwk::JwkKeyPairAlg;
-use crate::events::event::{EventLevel, EventType};
-use crate::language::Language;
+use crate::{ApiKeyAccess, AuthProviderType, EventLevel, EventType, JwkKeyPairAlg, Language};
 use actix_web::http::header;
 use actix_web::HttpRequest;
 use css_color::Srgb;

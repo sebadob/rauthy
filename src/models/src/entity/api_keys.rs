@@ -2,6 +2,7 @@ use crate::app_state::{AppState, DbPool};
 use actix_web::web;
 use chrono::Utc;
 use cryptr::{EncKeys, EncValue};
+use rauthy_api_types::response::ApiKeyResponse;
 use rauthy_common::constants::{API_KEY_LENGTH, CACHE_NAME_12HR};
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -9,7 +10,6 @@ use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
 use ring::digest;
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, FromRow};
-use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ApiKeyEntity {
@@ -239,7 +239,7 @@ impl ApiKeyEntity {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AccessGroup {
     Blacklist,
     Clients,
@@ -254,7 +254,7 @@ pub enum AccessGroup {
     Users,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AccessRights {
     Read,
@@ -263,7 +263,7 @@ pub enum AccessRights {
     Delete,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ApiKeyAccess {
     pub group: AccessGroup,
     pub access_rights: Vec<AccessRights>,
@@ -323,6 +323,105 @@ impl ApiKey {
                 ErrorResponseType::Unauthorized,
                 "Invalid API-Key",
             ))
+        }
+    }
+}
+
+impl From<ApiKey> for ApiKeyResponse {
+    fn from(value: ApiKey) -> Self {
+        Self {
+            name: value.name,
+            created: value.created,
+            expires: value.expires,
+            access: value
+                .access
+                .into_iter()
+                .map(rauthy_api_types::ApiKeyAccess::from)
+                .collect(),
+        }
+    }
+}
+
+impl From<AccessGroup> for rauthy_api_types::AccessGroup {
+    fn from(value: AccessGroup) -> Self {
+        match value {
+            AccessGroup::Blacklist => Self::Blacklist,
+            AccessGroup::Clients => Self::Clients,
+            AccessGroup::Events => Self::Events,
+            AccessGroup::Generic => Self::Generic,
+            AccessGroup::Groups => Self::Groups,
+            AccessGroup::Roles => Self::Roles,
+            AccessGroup::Secrets => Self::Secrets,
+            AccessGroup::Sessions => Self::Sessions,
+            AccessGroup::Scopes => Self::Scopes,
+            AccessGroup::UserAttributes => Self::UserAttributes,
+            AccessGroup::Users => Self::Users,
+        }
+    }
+}
+
+impl From<AccessRights> for rauthy_api_types::AccessRights {
+    fn from(value: AccessRights) -> Self {
+        match value {
+            AccessRights::Read => Self::Read,
+            AccessRights::Create => Self::Create,
+            AccessRights::Update => Self::Update,
+            AccessRights::Delete => Self::Delete,
+        }
+    }
+}
+
+impl From<ApiKeyAccess> for rauthy_api_types::ApiKeyAccess {
+    fn from(value: ApiKeyAccess) -> Self {
+        Self {
+            group: value.group.into(),
+            access_rights: value
+                .access_rights
+                .into_iter()
+                .map(|ar| ar.into())
+                .collect(),
+        }
+    }
+}
+
+impl From<rauthy_api_types::AccessGroup> for AccessGroup {
+    fn from(value: rauthy_api_types::AccessGroup) -> Self {
+        match value {
+            rauthy_api_types::AccessGroup::Blacklist => Self::Blacklist,
+            rauthy_api_types::AccessGroup::Clients => Self::Clients,
+            rauthy_api_types::AccessGroup::Events => Self::Events,
+            rauthy_api_types::AccessGroup::Generic => Self::Generic,
+            rauthy_api_types::AccessGroup::Groups => Self::Groups,
+            rauthy_api_types::AccessGroup::Roles => Self::Roles,
+            rauthy_api_types::AccessGroup::Secrets => Self::Secrets,
+            rauthy_api_types::AccessGroup::Sessions => Self::Sessions,
+            rauthy_api_types::AccessGroup::Scopes => Self::Scopes,
+            rauthy_api_types::AccessGroup::UserAttributes => Self::UserAttributes,
+            rauthy_api_types::AccessGroup::Users => Self::Users,
+        }
+    }
+}
+
+impl From<rauthy_api_types::AccessRights> for AccessRights {
+    fn from(value: rauthy_api_types::AccessRights) -> Self {
+        match value {
+            rauthy_api_types::AccessRights::Read => Self::Read,
+            rauthy_api_types::AccessRights::Create => Self::Create,
+            rauthy_api_types::AccessRights::Update => Self::Update,
+            rauthy_api_types::AccessRights::Delete => Self::Delete,
+        }
+    }
+}
+
+impl From<rauthy_api_types::ApiKeyAccess> for ApiKeyAccess {
+    fn from(value: rauthy_api_types::ApiKeyAccess) -> Self {
+        Self {
+            group: value.group.into(),
+            access_rights: value
+                .access_rights
+                .into_iter()
+                .map(|ar| ar.into())
+                .collect(),
         }
     }
 }

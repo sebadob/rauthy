@@ -1,9 +1,10 @@
 use crate::app_state::AppState;
-use crate::request::{PasswordHashTimesRequest, PasswordPolicyRequest};
 use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::{Algorithm, Argon2, PasswordHasher, Version};
 use rand_core::OsRng;
+use rauthy_api_types::request::{PasswordHashTimesRequest, PasswordPolicyRequest};
+use rauthy_api_types::response::PasswordPolicyResponse;
 use rauthy_common::constants::{
     ARGON2ID_M_COST_MIN, ARGON2ID_T_COST_MIN, CACHE_NAME_12HR, IDX_PASSWORD_RULES,
 };
@@ -185,6 +186,21 @@ impl PasswordPolicy {
         self.include_special = req.include_special;
         self.valid_days = req.valid_days;
         self.not_recently_used = req.not_recently_used;
+    }
+}
+
+impl From<PasswordPolicy> for PasswordPolicyResponse {
+    fn from(r: PasswordPolicy) -> Self {
+        Self {
+            length_min: r.length_min,
+            length_max: r.length_max,
+            include_lower_case: r.include_lower_case,
+            include_upper_case: r.include_upper_case,
+            include_digits: r.include_digits,
+            include_special: r.include_special,
+            valid_days: r.valid_days,
+            not_recently_used: r.not_recently_used,
+        }
     }
 }
 

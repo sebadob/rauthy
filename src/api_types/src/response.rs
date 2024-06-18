@@ -1,37 +1,19 @@
-use crate::app_state::AppState;
-use crate::entity::api_keys::{ApiKey, ApiKeyAccess};
-use crate::entity::auth_providers::{AuthProvider, AuthProviderType};
-use crate::entity::clients::Client;
-use crate::entity::clients_dyn::ClientDyn;
-use crate::entity::devices::DeviceEntity;
-use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType, JWKS};
-use crate::entity::password::PasswordPolicy;
-use crate::entity::scopes::Scope;
-use crate::entity::sessions::SessionState;
-use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
-use crate::entity::users::{AccountType, User};
-use crate::entity::users_values::UserValues;
-use crate::entity::webauthn::PasskeyEntity;
-use crate::entity::webids::WebId;
-use crate::language::Language;
-use crate::{AddressClaim, JktClaim};
-use actix_web::web;
-use rauthy_error::ErrorResponse;
-use rio_api::formatter::TriplesFormatter;
-use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
-use rio_turtle::TurtleFormatter;
+use crate::{
+    AddressClaim, ApiKeyAccess, AuthProviderType, JktClaim, JwkKeyPairAlg, JwkKeyPairType,
+    Language, SessionState,
+};
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 use std::borrow::Cow;
 use time::OffsetDateTime;
-use tracing::debug;
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ApiKeysResponse {
     pub keys: Vec<ApiKeyResponse>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ApiKeyResponse {
     pub name: String,
     /// unix timestamp
@@ -39,17 +21,6 @@ pub struct ApiKeyResponse {
     /// unix timestamp
     pub expires: Option<i64>,
     pub access: Vec<ApiKeyAccess>,
-}
-
-impl From<ApiKey> for ApiKeyResponse {
-    fn from(value: ApiKey) -> Self {
-        Self {
-            name: value.name,
-            created: value.created,
-            expires: value.expires,
-            access: value.access,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
@@ -96,40 +67,6 @@ pub struct ClientResponse {
     pub contacts: Option<Vec<String>>,
 }
 
-impl From<Client> for ClientResponse {
-    fn from(client: Client) -> Self {
-        let redirect_uris = client.get_redirect_uris();
-        let post_logout_redirect_uris = client.get_post_logout_uris();
-        let allowed_origins = client.get_allowed_origins();
-        let flows_enabled = client.get_flows();
-        let scopes = client.get_scopes();
-        let default_scopes = client.get_default_scopes();
-        let challenges = client.get_challenges();
-        let contacts = client.get_contacts();
-
-        Self {
-            id: client.id,
-            name: client.name,
-            enabled: client.enabled,
-            confidential: client.confidential,
-            redirect_uris,
-            post_logout_redirect_uris,
-            allowed_origins,
-            flows_enabled,
-            access_token_alg: client.access_token_alg,
-            id_token_alg: client.id_token_alg,
-            auth_code_lifetime: client.auth_code_lifetime,
-            access_token_lifetime: client.access_token_lifetime,
-            scopes,
-            default_scopes,
-            challenges,
-            force_mfa: client.force_mfa,
-            client_uri: client.client_uri,
-            contacts,
-        }
-    }
-}
-
 #[derive(Debug, Serialize, ToSchema)]
 pub struct CsrfTokenResponse {
     pub csrf_token: String,
@@ -147,21 +84,6 @@ pub struct DeviceResponse {
     pub refresh_exp: Option<i64>,
     pub peer_ip: String,
     pub name: String,
-}
-
-impl From<DeviceEntity> for DeviceResponse {
-    fn from(value: DeviceEntity) -> Self {
-        Self {
-            id: value.id,
-            client_id: value.client_id,
-            user_id: value.user_id,
-            created: value.created,
-            access_exp: value.access_exp,
-            refresh_exp: value.refresh_exp,
-            peer_ip: value.peer_ip,
-            name: value.name,
-        }
-    }
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -217,49 +139,6 @@ pub struct DynamicClientResponse {
     pub token_endpoint_auth_signing_alg: String,
 }
 
-impl DynamicClientResponse {
-    pub fn build(
-        data: &web::Data<AppState>,
-        client: Client,
-        client_dyn: ClientDyn,
-        map_registration_client_uri: bool,
-    ) -> Result<Self, ErrorResponse> {
-        let contacts = client.get_contacts();
-
-        let redirect_uris = client.get_redirect_uris();
-        let grant_types = client.get_flows();
-        let post_logout_redirect_uri = client.get_redirect_uris().first().cloned();
-
-        let client_secret = client.get_secret_cleartext()?;
-        let (registration_access_token, registration_client_uri) = if map_registration_client_uri {
-            (
-                Some(client_dyn.registration_token_plain()?),
-                Some(ClientDyn::registration_client_uri(data, &client_dyn.id)),
-            )
-        } else {
-            (None, None)
-        };
-
-        Ok(Self {
-            client_id: client.id,
-            client_name: client.name,
-            client_uri: client.client_uri,
-            contacts,
-            client_secret,
-            // TODO check if we can make sure that a client will renew the secret properly -> let it expire then
-            client_secret_expires_at: 0,
-            redirect_uris,
-            post_logout_redirect_uri,
-            registration_access_token,
-            registration_client_uri,
-            grant_types,
-            id_token_signed_response_alg: client.id_token_alg,
-            token_endpoint_auth_method: client_dyn.token_endpoint_auth_method,
-            token_endpoint_auth_signing_alg: client.access_token_alg,
-        })
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct ClientSecretResponse {
     pub id: String,
@@ -291,16 +170,6 @@ pub struct JWKSCerts {
     pub keys: Vec<JWKSPublicKeyCerts>,
 }
 
-impl From<JWKS> for JWKSCerts {
-    fn from(jwks: JWKS) -> Self {
-        let mut keys = Vec::with_capacity(jwks.keys.len());
-        for k in jwks.keys {
-            keys.push(JWKSPublicKeyCerts::from(k));
-        }
-        Self { keys }
-    }
-}
-
 #[derive(Debug, Serialize, ToSchema)]
 pub struct JWKSPublicKeyCerts {
     pub kty: JwkKeyPairType,
@@ -315,20 +184,6 @@ pub struct JWKSPublicKeyCerts {
     pub e: Option<String>, // RSA
     #[serde(skip_serializing_if = "Option::is_none")]
     pub x: Option<String>, // OCT
-}
-
-impl From<JWKSPublicKey> for JWKSPublicKeyCerts {
-    fn from(pk: JWKSPublicKey) -> Self {
-        Self {
-            kty: pk.kty,
-            alg: pk.alg.unwrap_or_default(),
-            crv: pk.crv,
-            kid: pk.kid,
-            n: pk.n,
-            e: pk.e,
-            x: pk.x,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
@@ -371,17 +226,6 @@ pub struct PasskeyResponse {
     pub user_verified: Option<bool>,
 }
 
-impl From<PasskeyEntity> for PasskeyResponse {
-    fn from(value: PasskeyEntity) -> Self {
-        Self {
-            name: value.name,
-            registered: value.registered,
-            last_used: value.last_used,
-            user_verified: value.user_verified,
-        }
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PasswordPolicyResponse {
     pub length_min: i32,
@@ -398,21 +242,6 @@ pub struct PasswordPolicyResponse {
     pub valid_days: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub not_recently_used: Option<i32>,
-}
-
-impl From<PasswordPolicy> for PasswordPolicyResponse {
-    fn from(r: PasswordPolicy) -> Self {
-        Self {
-            length_min: r.length_min,
-            length_max: r.length_max,
-            include_lower_case: r.include_lower_case,
-            include_upper_case: r.include_upper_case,
-            include_digits: r.include_digits,
-            include_special: r.include_special,
-            valid_days: r.valid_days,
-            not_recently_used: r.not_recently_used,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
@@ -440,34 +269,6 @@ pub struct ProviderResponse {
     pub use_pkce: bool,
 
     pub root_pem: Option<String>,
-}
-
-impl TryFrom<AuthProvider> for ProviderResponse {
-    type Error = ErrorResponse;
-
-    fn try_from(value: AuthProvider) -> Result<Self, Self::Error> {
-        let secret = AuthProvider::get_secret_cleartext(&value.secret)?;
-        Ok(Self {
-            id: value.id,
-            name: value.name,
-            typ: value.typ,
-            enabled: value.enabled,
-            issuer: value.issuer,
-            authorization_endpoint: value.authorization_endpoint,
-            token_endpoint: value.token_endpoint,
-            userinfo_endpoint: value.userinfo_endpoint,
-            client_id: value.client_id,
-            client_secret: secret,
-            scope: value.scope,
-            admin_claim_path: value.admin_claim_path,
-            admin_claim_value: value.admin_claim_value,
-            mfa_claim_path: value.mfa_claim_path,
-            mfa_claim_value: value.mfa_claim_value,
-            danger_allow_insecure: value.allow_insecure_requests,
-            use_pkce: value.use_pkce,
-            root_pem: value.root_pem,
-        })
-    }
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
@@ -498,24 +299,6 @@ pub struct ScopeResponse {
     pub attr_include_id: Option<Vec<String>>,
 }
 
-impl From<Scope> for ScopeResponse {
-    fn from(value: Scope) -> Self {
-        let attr_include_access = value
-            .attr_include_access
-            .map(|attr| attr.split(',').map(String::from).collect());
-        let attr_include_id = value
-            .attr_include_id
-            .map(|attr| attr.split(',').map(String::from).collect());
-
-        Self {
-            id: value.id,
-            name: value.name,
-            attr_include_access,
-            attr_include_id,
-        }
-    }
-}
-
 // TODO benchmark, which of these 2 implementations is faster in the end
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SessionResponse<'a> {
@@ -523,7 +306,7 @@ pub struct SessionResponse<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_id: Option<&'a str>,
     pub is_mfa: bool,
-    pub state: &'a SessionState,
+    pub state: SessionState,
     pub exp: i64,
     pub last_seen: i64,
     pub remote_ip: Option<&'a str>,
@@ -588,27 +371,21 @@ pub struct TokenInfo {
     pub cnf: Option<JktClaim>,
 }
 
+#[derive(Clone, Debug, FromRow, Serialize, Deserialize, ToSchema)]
+pub struct UserAttrConfigValueResponse {
+    pub name: String,
+    pub desc: Option<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct UserAttrConfigResponse {
-    pub values: Vec<UserAttrConfigEntity>,
+    pub values: Vec<UserAttrConfigValueResponse>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct UserAttrValueResponse {
     pub key: String,
     pub value: serde_json::Value,
-}
-
-impl From<UserAttrValueEntity> for UserAttrValueResponse {
-    fn from(value: UserAttrValueEntity) -> Self {
-        debug!("{:?}", value);
-        let val = serde_json::from_slice(&value.value).unwrap();
-        debug!("{:?}", val);
-        Self {
-            key: value.key,
-            value: val,
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -670,19 +447,6 @@ pub enum UserAccountTypeResponse {
     FederatedPassword,
 }
 
-impl From<AccountType> for UserAccountTypeResponse {
-    fn from(value: AccountType) -> Self {
-        match value {
-            AccountType::New => Self::New,
-            AccountType::Password => Self::Password,
-            AccountType::Passkey => Self::Passkey,
-            AccountType::Federated => Self::Federated,
-            AccountType::FederatedPasskey => Self::FederatedPasskey,
-            AccountType::FederatedPassword => Self::FederatedPassword,
-        }
-    }
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct UserResponse {
     pub id: String,
@@ -718,58 +482,12 @@ pub struct UserResponse {
     pub federation_uid: Option<String>,
 }
 
-impl UserResponse {
-    pub fn build(u: User, v: Option<UserValues>) -> Self {
-        let roles = u.get_roles();
-        let groups = if u.groups.is_some() {
-            Some(u.get_groups())
-        } else {
-            None
-        };
-        let account_type = UserAccountTypeResponse::from(u.account_type());
-
-        Self {
-            id: u.id,
-            email: u.email,
-            given_name: u.given_name,
-            family_name: u.family_name,
-            language: u.language,
-            roles,
-            groups,
-            enabled: u.enabled,
-            email_verified: u.email_verified,
-            password_expires: u.password_expires,
-            created_at: u.created_at,
-            last_login: u.last_login,
-            last_failed_login: u.last_failed_login,
-            failed_login_attempts: u.failed_login_attempts,
-            user_expires: u.user_expires,
-            account_type,
-            webauthn_user_id: u.webauthn_user_id,
-            user_values: v.map(UserValuesResponse::from).unwrap_or_default(),
-            auth_provider_id: u.auth_provider_id,
-            federation_uid: u.federation_uid,
-        }
-    }
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct UserResponseSimple {
     pub id: String,
     pub email: String,
     pub created_at: i64,
     pub last_login: Option<i64>,
-}
-
-impl From<User> for UserResponseSimple {
-    fn from(value: User) -> Self {
-        Self {
-            id: value.id,
-            email: value.email,
-            created_at: value.created_at,
-            last_login: value.last_login,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
@@ -780,19 +498,6 @@ pub struct UserValuesResponse {
     pub zip: Option<i32>,
     pub city: Option<String>,
     pub country: Option<String>,
-}
-
-impl From<UserValues> for UserValuesResponse {
-    fn from(value: UserValues) -> Self {
-        Self {
-            birthdate: value.birthdate,
-            phone: value.phone,
-            street: value.street,
-            zip: value.zip,
-            city: value.city,
-            country: value.country,
-        }
-    }
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -817,6 +522,13 @@ pub struct WebauthnLoginResponse {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
+pub struct WebId {
+    pub user_id: String,
+    pub expose_email: bool,
+    pub custom_triples: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
 pub struct WebIdResponse {
     pub webid: WebId,
     pub issuer: String,
@@ -826,102 +538,6 @@ pub struct WebIdResponse {
     pub language: Language,
 }
 
-impl WebIdResponse {
-    fn triple<'a>(s: impl Into<Subject<'a>>, p: &'a str, o: impl Into<Term<'a>>) -> Triple<'a> {
-        Triple {
-            subject: s.into(),
-            predicate: NamedNode { iri: p },
-            object: o.into(),
-        }
-    }
-
-    /// Serialize the webid response to a graph serializable syntax.
-    fn serialize_turtle(
-        &self,
-        formatter: &mut TurtleFormatter<Vec<u8>>,
-    ) -> Result<(), ErrorResponse> {
-        let webid = &self.webid;
-        let t_user = NamedNode {
-            iri: &WebId::resolve_webid_uri(&webid.user_id),
-        };
-        let t_card = NamedNode {
-            iri: &WebId::resolve_webid_card_uri(&webid.user_id),
-        };
-        let t_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
-
-        formatter.format(&Self::triple(
-            t_card,
-            t_type,
-            NamedNode {
-                iri: "http://xmlns.com/foaf/0.1/PersonalProfileDocument",
-            },
-        ))?;
-
-        formatter.format(&Self::triple(
-            t_card,
-            "http://xmlns.com/foaf/0.1/primaryTopic",
-            t_user,
-        ))?;
-
-        formatter.format(&Self::triple(
-            t_user,
-            "http://www.w3.org/ns/solid/terms#oidcIssuer",
-            NamedNode { iri: &self.issuer },
-        ))?;
-
-        // rdf:type
-        formatter.format(&Self::triple(
-            t_user,
-            t_type,
-            NamedNode {
-                iri: "http://xmlns.com/foaf/0.1/Person",
-            },
-        ))?;
-
-        // foaf:name
-        formatter.format(&Self::triple(
-            t_user,
-            "http://xmlns.com/foaf/0.1/givenname",
-            Literal::Simple {
-                value: &self.given_name,
-            },
-        ))?;
-        formatter.format(&Self::triple(
-            t_user,
-            "http://xmlns.com/foaf/0.1/family_name",
-            Literal::Simple {
-                value: &self.family_name,
-            },
-        ))?;
-
-        // foaf:mbox
-        if webid.expose_email {
-            formatter.format(&Self::triple(
-                t_user,
-                "http://xmlns.com/foaf/0.1/mbox",
-                NamedNode {
-                    iri: &format!("mailto:{}", &self.email),
-                },
-            ))?;
-        }
-
-        // Format custom data.
-        webid
-            .fmt_custom_triples_to_ttl(formatter)
-            .expect("Must be valid");
-
-        Ok(())
-    }
-
-    pub fn as_turtle(&self) -> Result<String, ErrorResponse> {
-        let mut formatter = TurtleFormatter::new(Vec::<u8>::new());
-        self.serialize_turtle(&mut formatter)?;
-
-        let finished = formatter.finish()?;
-        Ok(String::from_utf8(finished).expect("Must be a valid turtle string."))
-    }
-}
-
 #[derive(Debug, Serialize, ToSchema)]
 pub struct AppVersionResponse {
     pub current: String,
@@ -929,40 +545,4 @@ pub struct AppVersionResponse {
     pub latest: Option<String>,
     pub latest_url: Option<String>,
     pub update_available: bool,
-}
-
-#[cfg(test)]
-mod tests {
-    use rstest::rstest;
-    use std::env;
-
-    use crate::{entity::webids::WebId, response::WebIdResponse};
-
-    #[rstest]
-    #[case(
-        Some(r#"
-<http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me>
-<http://www.w3.org/ns/solid/terms#oidcIssuer>
-<http://localhost:8080/auth/v1> .
-"#),
-  "<http://localhost:8081/auth/SomeId123/profile> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/PersonalProfileDocument> ;\n\t<http://xmlns.com/foaf/0.1/primaryTopic> <http://localhost:8081/auth/SomeId123/profile#me> .\n<http://localhost:8081/auth/SomeId123/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> ;\n\t<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> ;\n\t<http://xmlns.com/foaf/0.1/givenname> \"Given\" ;\n\t<http://xmlns.com/foaf/0.1/family_name> \"Family\" ;\n\t<http://xmlns.com/foaf/0.1/mbox> <mailto:mail@example.com> .\n<http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> .\n"
-    )]
-    #[ignore] // this is currently ignored, because setting the PUB_URL here interferes with other tests in CI
-    fn test_web_id_response(#[case] custom_triples: Option<&str>, #[case] expected_resp: &str) {
-        env::set_var("PUB_URL", "localhost:8081".to_string());
-
-        let resp = WebIdResponse {
-            webid: WebId::try_new("SomeId123".to_string(), custom_triples, true)
-                .expect("Invalid custom triples in test case"),
-            issuer: "http://localhost:8080/auth/v1".to_string(),
-            email: "mail@example.com".to_string(),
-            given_name: "Given".to_string(),
-            family_name: "Family".to_string(),
-            language: Default::default(),
-        };
-
-        assert_eq!(resp.as_turtle().unwrap(), expected_resp);
-        // TODO we actually need real test cases with complex custom_triples to make sure
-        // the outcome is as expected
-    }
 }

@@ -1,9 +1,9 @@
 use actix_web::web;
+use rauthy_api_types::request::UpdateClientRequest;
+use rauthy_api_types::response::ClientSecretResponse;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
-use rauthy_models::request::UpdateClientRequest;
-use rauthy_models::response::ClientSecretResponse;
 
 // Updates a client.<br>
 // A client secret will be automatically generated if the

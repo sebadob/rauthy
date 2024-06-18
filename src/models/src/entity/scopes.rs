@@ -2,8 +2,9 @@ use crate::app_state::{AppState, DbTxn};
 use crate::entity::clients::Client;
 use crate::entity::user_attr::UserAttrConfigEntity;
 use crate::entity::well_known::WellKnown;
-use crate::request::ScopeRequest;
 use actix_web::web;
+use rauthy_api_types::request::ScopeRequest;
+use rauthy_api_types::response::ScopeResponse;
 use rauthy_common::constants::{CACHE_NAME_12HR, IDX_CLIENTS, IDX_SCOPES};
 use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -379,6 +380,24 @@ impl Scope {
     /// and efficiency reasons.
     pub fn is_custom(scope: &str) -> bool {
         scope != "openid" && scope != "profile" && scope != "email" && scope != "groups"
+    }
+}
+
+impl From<Scope> for ScopeResponse {
+    fn from(value: Scope) -> Self {
+        let attr_include_access = value
+            .attr_include_access
+            .map(|attr| attr.split(',').map(String::from).collect());
+        let attr_include_id = value
+            .attr_include_id
+            .map(|attr| attr.split(',').map(String::from).collect());
+
+        Self {
+            id: value.id,
+            name: value.name,
+            attr_include_access,
+            attr_include_id,
+        }
     }
 }
 

@@ -1,4 +1,7 @@
 use actix_web::{cookie, web, HttpRequest, HttpResponse};
+use rauthy_api_types::request::{
+    PasswordResetRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
+};
 use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -13,9 +16,6 @@ use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::WebauthnServiceReq;
 use rauthy_models::events::event::Event;
 use rauthy_models::language::Language;
-use rauthy_models::request::{
-    PasswordResetRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
-};
 use rauthy_models::templates::PwdResetHtml;
 use time::OffsetDateTime;
 use tracing::{debug, error};
