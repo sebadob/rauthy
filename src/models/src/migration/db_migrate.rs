@@ -16,9 +16,9 @@ use validator::Validate;
 use rauthy_common::constants::{
     ADMIN_FORCE_MFA, DB_TYPE, DEV_MODE, PUB_URL, PUB_URL_WITH_SCHEME, RAUTHY_ADMIN_EMAIL,
 };
-use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::{base64_decode, get_rand};
 use rauthy_common::DbType;
+use rauthy_error::ErrorResponse;
 
 use crate::app_state::DbPool;
 use crate::entity::api_keys::ApiKeyEntity;

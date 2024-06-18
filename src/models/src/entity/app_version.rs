@@ -2,7 +2,7 @@ use crate::app_state::AppState;
 use actix_web::web;
 use chrono::Utc;
 use rauthy_common::constants::{CACHE_NAME_12HR, IDX_APP_VERSION, RAUTHY_VERSION};
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use reqwest::header::ACCEPT;
 use serde::{Deserialize, Serialize};

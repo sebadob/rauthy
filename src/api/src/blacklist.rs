@@ -2,7 +2,7 @@ use crate::ReqPrincipal;
 use actix_web::{delete, get, post, web, HttpResponse};
 use actix_web_validator::Json;
 use chrono::DateTime;
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::events::event::Event;

@@ -1,6 +1,6 @@
 use crate::auth;
 use cryptr::{EncKeys, EncValue};
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::ApiKeyEntity;
 use rauthy_models::entity::auth_providers::AuthProvider;

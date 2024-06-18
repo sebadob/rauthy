@@ -9,8 +9,8 @@ use crate::events::{
 };
 use chrono::{DateTime, Timelike, Utc};
 use rauthy_common::constants::EMAIL_SUB_PREFIX;
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{get_local_hostname, get_rand};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::{Notification, NotificationLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};

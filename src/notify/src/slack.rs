@@ -1,6 +1,6 @@
 use crate::{Notification, Notify};
 use async_trait::async_trait;
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::Serialize;
 use tracing::{debug, error};
 

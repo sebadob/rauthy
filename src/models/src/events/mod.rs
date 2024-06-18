@@ -1,5 +1,5 @@
 use crate::events::event::EventLevel;
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_error::ErrorResponse;
 use std::env;
 use std::sync::OnceLock;
 use tracing::info;

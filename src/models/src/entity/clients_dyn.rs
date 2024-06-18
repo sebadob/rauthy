@@ -6,7 +6,7 @@ use cryptr::EncValue;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_CLIENTS_DYN, DYN_CLIENT_SECRET_AUTO_ROTATE,
 };
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, FromRow};

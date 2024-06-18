@@ -1,5 +1,5 @@
 use actix_web::http::header::{HeaderName, HeaderValue};
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;

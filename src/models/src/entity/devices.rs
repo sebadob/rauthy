@@ -6,8 +6,8 @@ use rauthy_common::constants::{
     CACHE_NAME_DEVICE_CODES, DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_USER_CODE_LENGTH,
     DEVICE_KEY_LENGTH, PUB_URL_WITH_SCHEME,
 };
-use rauthy_common::error_response::ErrorResponse;
 use rauthy_common::utils::get_rand;
+use rauthy_error::ErrorResponse;
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, FromRow};

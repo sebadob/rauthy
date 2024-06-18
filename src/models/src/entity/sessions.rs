@@ -11,8 +11,8 @@ use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_SESSIONS, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER,
     IDX_SESSION, SESSION_LIFETIME_FED_CM,
 };
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::get_rand;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;

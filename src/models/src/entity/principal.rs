@@ -2,7 +2,7 @@ use crate::entity::api_keys::{AccessGroup, AccessRights, ApiKey};
 use crate::entity::sessions::{Session, SessionState};
 use actix_web::{web, HttpRequest};
 use rauthy_common::constants::{ADMIN_FORCE_MFA, ROLE_ADMIN};
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::trace;
 
 /// Used internally to check authentication and access rights for endpoints and actions

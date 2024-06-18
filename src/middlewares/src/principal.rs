@@ -4,8 +4,8 @@ use actix_web::{
 };
 use futures::future::LocalBoxFuture;
 use rauthy_common::constants::{COOKIE_SESSION, SESSION_VALIDATE_IP, TOKEN_API_KEY};
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_svc_req;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{ApiKey, ApiKeyEntity};

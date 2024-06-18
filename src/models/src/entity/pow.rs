@@ -1,7 +1,7 @@
 use crate::app_state::AppState;
 use actix_web::web;
 use rauthy_common::constants::{CACHE_NAME_POW, POW_DIFFICULTY, POW_EXP};
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
 use spow::pow::Pow;
 

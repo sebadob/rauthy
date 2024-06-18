@@ -1,6 +1,6 @@
 use crate::common::{check_status, get_auth_headers, get_backend_url};
 use pretty_assertions::assert_eq;
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::language::Language;
 use rauthy_models::request::{NewUserRequest, PasswordPolicyRequest, UpdateUserRequest};
 use rauthy_models::response::{PasswordPolicyResponse, UserResponse};

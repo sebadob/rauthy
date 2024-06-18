@@ -1,7 +1,7 @@
 use actix_web::http::header::{HeaderValue, ACCEPT_LANGUAGE};
 use actix_web::HttpRequest;
 use rauthy_common::constants::COOKIE_LOCALE;
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
 use std::fmt::{Display, Formatter};

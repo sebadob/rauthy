@@ -1,5 +1,4 @@
 use crate::constants::{PEER_IP_HEADER_NAME, PROXY_MODE};
-use crate::error_response::{ErrorResponse, ErrorResponseType};
 use actix_web::dev::ServiceRequest;
 use actix_web::http::header::HeaderMap;
 use actix_web::HttpRequest;
@@ -7,6 +6,7 @@ use base64::{engine, engine::general_purpose, Engine as _};
 use gethostname::gethostname;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::{error, trace};
 
 const B64_URL_SAFE: engine::GeneralPurpose = general_purpose::URL_SAFE;

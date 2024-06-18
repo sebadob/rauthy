@@ -6,8 +6,8 @@ use actix_web::{
 };
 use futures::future::LocalBoxFuture;
 use lazy_static::lazy_static;
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::real_ip_from_svc_req;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::env;
 use std::future::{ready, Ready};
 use std::rc::Rc;

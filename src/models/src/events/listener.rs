@@ -7,7 +7,7 @@ use actix_web_lab::sse;
 use chrono::DateTime;
 use rauthy_common::constants::HA_MODE;
 use rauthy_common::constants::{DATABASE_URL, EVENTS_LATEST_LIMIT};
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_error::ErrorResponse;
 use sqlx::postgres::PgListener;
 use std::collections::{HashMap, VecDeque};
 use std::time::Duration;

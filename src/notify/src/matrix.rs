@@ -1,17 +1,15 @@
-use std::str::FromStr;
-use std::time::Duration;
-
 use async_trait::async_trait;
 use matrix_sdk::config::SyncSettings;
 use matrix_sdk::matrix_auth::{MatrixSession, MatrixSessionTokens};
 use matrix_sdk::ruma::events::room::message::RoomMessageEventContent;
 use matrix_sdk::ruma::{OwnedDeviceId, OwnedRoomId, OwnedUserId};
 use matrix_sdk::{AuthSession, Client, RoomState, SessionMeta};
+use rauthy_common::constants::RAUTHY_VERSION;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
+use std::str::FromStr;
+use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info, warn};
-
-use rauthy_common::constants::RAUTHY_VERSION;
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 
 use crate::{Notification, Notify};
 

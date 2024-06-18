@@ -6,12 +6,13 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-actix-web = { workspace = true }
-chrono = { workspace = true }
-cron = { workspace = true }
 rauthy-common = { path = "../common" }
 rauthy-models = { path = "../models" }
 rauthy-service = { path = "../service" }
+
+actix-web = { workspace = true }
+chrono = { workspace = true }
+cron = { workspace = true }
 redhac = { workspace = true }
 semver = { workspace = true }
 sqlx = { workspace = true }

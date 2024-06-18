@@ -1,4 +1,4 @@
-use crate::constants::{APPLICATION_JSON, HEADER_DPOP_NONCE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE};
+use crate::{ErrorResponse, ErrorResponseType};
 use actix_multipart::MultipartError;
 use actix_web::error::BlockingError;
 use actix_web::http::header::{
@@ -9,66 +9,21 @@ use actix_web::http::{header, StatusCode};
 use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
 use cryptr::CryptrError;
 use css_color::ParseColorError;
-use derive_more::Display;
 use image::ImageError;
 use redhac::CacheError;
 use rio_turtle::TurtleError;
-use serde::{Deserialize, Serialize};
 use serde_json::Error;
 use serde_json_path::ParseError;
 use spow::pow::PowError;
 use std::borrow::Cow;
-use std::fmt::{Display, Formatter};
 use std::string::FromUtf8Error;
 use time::OffsetDateTime;
 use tracing::{debug, error, trace};
-use utoipa::ToSchema;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub enum ErrorResponseType {
-    BadRequest,
-    Connection,
-    CSRFTokenError,
-    Database,
-    DatabaseIo,
-    Disabled,
-    // These String could be optimized in the future with borrowing
-    // -> just not going down that rabbit hole for now
-    DPoP(Option<String>),
-    Encryption,
-    UseDpopNonce((Option<String>, String)),
-    Forbidden,
-    Internal,
-    JoseError,
-    MfaRequired,
-    NoSession,
-    NotFound,
-    PasswordExpired,
-    PasswordRefresh,
-    SessionExpired,
-    SessionTimeout,
-    TooManyRequests(i64),
-    Unauthorized,
-    WWWAuthenticate(String),
-}
-
-impl Display for ErrorResponseType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-// This is the default `ErrorResponse` that could be the answer on almost every API endpoint in
-// case something is wrong.<br>
-// Except for input validations, every error will have this format and every possible error in the
-// backend will be converted to this.
-#[derive(Debug, Clone, Display, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
-#[display(fmt = "error: {} message: {}", error, message)]
-pub struct ErrorResponse {
-    pub timestamp: i64,
-    pub error: ErrorResponseType,
-    pub message: Cow<'static, str>,
-}
+const APPLICATION_JSON: &str = "application/json";
+const HEADER_DPOP_NONCE: &str = "DPoP-Nonce";
+const HEADER_HTML: (&str, &str) = ("content-type", "text/html;charset=utf-8");
+const HEADER_RETRY_NOT_BEFORE: &str = "x-retry-not-before";
 
 impl ErrorResponse {
     pub fn new<C>(error: ErrorResponseType, message: C) -> Self

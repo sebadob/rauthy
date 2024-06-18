@@ -4,7 +4,7 @@ use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use actix_web_validator::Json;
 use rauthy_common::constants::{HEADER_HTML, HEADER_JSON};
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderLinkCookie, AuthProviderTemplate,

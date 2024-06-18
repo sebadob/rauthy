@@ -7,8 +7,8 @@ use rauthy_common::constants::{
     CACHE_NAME_DPOP_NONCES, DPOP_FORCE_NONCE, DPOP_NONCE_EXP, DPOP_TOKEN_ENDPOINT, RE_TOKEN_68,
     TOKEN_DPOP,
 };
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{base64_url_no_pad_decode, get_rand};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
 use std::ops::{Add, Sub};

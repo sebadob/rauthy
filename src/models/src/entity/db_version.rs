@@ -1,6 +1,6 @@
 use crate::app_state::DbPool;
 use rauthy_common::constants::RAUTHY_VERSION;
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_error::ErrorResponse;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use sqlx::query;

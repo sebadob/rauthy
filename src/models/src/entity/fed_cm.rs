@@ -3,7 +3,7 @@ use crate::entity::colors::ColorEntity;
 use crate::entity::users::User;
 use actix_web::web;
 use rauthy_common::constants::{EMAIL_SUB_PREFIX, PUB_URL};
-use rauthy_common::error_response::ErrorResponse;
+use rauthy_error::ErrorResponse;
 use serde::Serialize;
 use std::sync::OnceLock;
 use utoipa::ToSchema;

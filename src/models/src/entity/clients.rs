@@ -16,8 +16,8 @@ use rauthy_common::constants::{
     EPHEMERAL_CLIENTS_ALLOWED_FLOWS, EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA,
     IDX_CLIENTS, PROXY_MODE, RAUTHY_VERSION,
 };
-use rauthy_common::error_response::{ErrorResponse, ErrorResponseType};
 use rauthy_common::utils::{cache_entry_client, get_client_ip, get_rand};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use redhac::{
     cache_get, cache_get_from, cache_get_value, cache_insert, cache_put, cache_remove, AckLevel,
 };
