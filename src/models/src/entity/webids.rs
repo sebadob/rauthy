@@ -265,6 +265,7 @@ impl From<rauthy_api_types::users::WebId> for WebId {
 
 #[cfg(test)]
 mod tests {
+    use rauthy_api_types::generic::Language;
     use rauthy_api_types::users::WebIdResponse;
     use rstest::rstest;
     use std::env;
@@ -319,10 +320,11 @@ mod tests {
             email: "mail@example.com".to_string(),
             given_name: "Given".to_string(),
             family_name: "Family".to_string(),
-            language: Default::default(),
+            language: Language::En,
         };
 
-        assert_eq!(resp.as_turtle().unwrap(), expected_resp);
+        let ttl = WebId::into_turtle(resp).unwrap();
+        assert_eq!(ttl, expected_resp);
         // TODO we actually need real test cases with complex custom_triples to make sure
         // the outcome is as expected
     }

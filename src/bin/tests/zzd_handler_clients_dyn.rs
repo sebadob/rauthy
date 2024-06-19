@@ -1,7 +1,6 @@
 use crate::common::get_backend_url;
 use pretty_assertions::{assert_eq, assert_ne};
-use rauthy_models::request::DynamicClientRequest;
-use rauthy_models::response::DynamicClientResponse;
+use rauthy_api_types::clients::{DynamicClientRequest, DynamicClientResponse};
 use reqwest::header::AUTHORIZATION;
 use std::error::Error;
 

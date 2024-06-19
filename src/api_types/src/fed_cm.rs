@@ -1,5 +1,5 @@
-use jwt_simple::prelude::Deserialize;
 use rauthy_common::constants::{RE_ALNUM, RE_CLIENT_ID_EPHEMERAL, RE_URI};
+use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 

@@ -1,7 +1,7 @@
 use crate::common::{get_auth_headers, get_backend_url};
 use chrono::Utc;
 use pretty_assertions::assert_eq;
-use rauthy_models::request::IpBlacklistRequest;
+use rauthy_api_types::blacklist::IpBlacklistRequest;
 use reqwest::StatusCode;
 use std::error::Error;
 use std::net::Ipv4Addr;

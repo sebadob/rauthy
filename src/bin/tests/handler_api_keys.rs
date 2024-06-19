@@ -1,9 +1,9 @@
 use crate::common::{get_auth_headers, get_backend_url};
 use chrono::Utc;
 use pretty_assertions::assert_eq;
-use rauthy_models::entity::api_keys::{AccessGroup, AccessRights, ApiKeyAccess};
+use rauthy_api_types::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyRequest};
+use rauthy_api_types::groups::NewGroupRequest;
 use rauthy_models::entity::groups::Group;
-use rauthy_models::request::{ApiKeyRequest, NewGroupRequest};
 use reqwest::header::AUTHORIZATION;
 use reqwest::StatusCode;
 use std::error::Error;

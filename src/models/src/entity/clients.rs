@@ -937,6 +937,13 @@ impl From<Client> for ClientResponse {
         let challenges = client.get_challenges();
         let contacts = client.get_contacts();
 
+        let access_token_alg = JwkKeyPairAlg::from_str(&client.access_token_alg)
+            .expect("internal JwkKeyPairAlg conversion to always succeed")
+            .into();
+        let id_token_alg = JwkKeyPairAlg::from_str(&client.id_token_alg)
+            .expect("internal JwkKeyPairAlg conversion to always succeed")
+            .into();
+
         Self {
             id: client.id,
             name: client.name,
@@ -946,8 +953,8 @@ impl From<Client> for ClientResponse {
             post_logout_redirect_uris,
             allowed_origins,
             flows_enabled,
-            access_token_alg: client.access_token_alg,
-            id_token_alg: client.id_token_alg,
+            access_token_alg,
+            id_token_alg,
             auth_code_lifetime: client.auth_code_lifetime,
             access_token_lifetime: client.access_token_lifetime,
             scopes,

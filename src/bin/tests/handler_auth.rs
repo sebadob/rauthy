@@ -7,17 +7,17 @@ use chrono::Utc;
 use ed25519_compact::Noise;
 use josekit::jwk;
 use pretty_assertions::assert_eq;
+use rauthy_api_types::clients::UpdateClientRequest;
+use rauthy_api_types::oidc::{
+    JwkKeyPairAlg, LoginRequest, TokenInfo, TokenRequest, TokenValidationRequest,
+};
 use rauthy_common::constants::{
     APPLICATION_JSON, DPOP_TOKEN_ENDPOINT, HEADER_DPOP_NONCE, TOKEN_DPOP,
 };
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_encode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::dpop_proof::{DPoPClaims, DPoPHeader};
-use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType, JWKS};
-use rauthy_models::request::{
-    LoginRequest, TokenRequest, TokenValidationRequest, UpdateClientRequest,
-};
-use rauthy_models::response::TokenInfo;
+use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPairType, JWKS};
 use rauthy_models::JwtTokenType;
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::AUTHORIZATION;
@@ -172,6 +172,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
 
     // verify 'nonce' existing in id token
     let id_token = ts.id_token.unwrap();
+    println!("id_token: {}", id_token);
     // decode header to get the kid
     let header = josekit::jwt::decode_header(id_token.clone())?;
     let kid = header
@@ -184,6 +185,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     let res = reqwest::get(&kid_url).await?;
     assert_eq!(res.status(), 200);
     let jwk = res.json::<jwk::Jwk>().await?;
+    println!("{:?}", jwk);
 
     // check signature and get the payload
     let verifier = josekit::jws::RS512.verifier_from_jwk(&jwk).unwrap();
@@ -583,7 +585,7 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
 
     let header = DPoPHeader {
         typ: "dpop+jwt".to_string(),
-        alg: JwkKeyPairAlg::EdDSA,
+        alg: rauthy_models::entity::jwk::JwkKeyPairAlg::EdDSA,
         jwk: JWKSPublicKey {
             kty: JwkKeyPairType::OKP,
             // DPoP request will not have the 'alg' here but one level higher

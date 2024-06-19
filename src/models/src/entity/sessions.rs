@@ -84,19 +84,19 @@ impl FromStr for SessionState {
     }
 }
 
-impl From<rauthy_api_types::SessionState> for SessionState {
-    fn from(value: rauthy_api_types::SessionState) -> Self {
+impl From<rauthy_api_types::sessions::SessionState> for SessionState {
+    fn from(value: rauthy_api_types::sessions::SessionState) -> Self {
         match value {
-            rauthy_api_types::SessionState::Open => Self::Open,
-            rauthy_api_types::SessionState::Init => Self::Init,
-            rauthy_api_types::SessionState::Auth => Self::Auth,
-            rauthy_api_types::SessionState::LoggedOut => Self::LoggedOut,
-            rauthy_api_types::SessionState::Unknown => Self::Unknown,
+            rauthy_api_types::sessions::SessionState::Open => Self::Open,
+            rauthy_api_types::sessions::SessionState::Init => Self::Init,
+            rauthy_api_types::sessions::SessionState::Auth => Self::Auth,
+            rauthy_api_types::sessions::SessionState::LoggedOut => Self::LoggedOut,
+            rauthy_api_types::sessions::SessionState::Unknown => Self::Unknown,
         }
     }
 }
 
-impl From<&SessionState> for rauthy_api_types::SessionState {
+impl From<&SessionState> for rauthy_api_types::sessions::SessionState {
     fn from(value: &SessionState) -> Self {
         match value {
             SessionState::Open => Self::Open,

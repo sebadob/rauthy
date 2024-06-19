@@ -1,5 +1,5 @@
-use jwt_simple::prelude::{Deserialize, Serialize};
 use rauthy_common::constants::{RE_ALNUM, RE_SEARCH};
+use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
@@ -26,6 +26,13 @@ pub enum I18nContent {
     Logout,
     PasswordReset,
     Register,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum Language {
+    En,
+    De,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]

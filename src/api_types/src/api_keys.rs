@@ -1,8 +1,37 @@
-use crate::ApiKeyAccess;
-use jwt_simple::prelude::{Deserialize, Serialize};
 use rauthy_common::constants::RE_API_KEY;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+pub enum AccessGroup {
+    Blacklist,
+    Clients,
+    Events,
+    Generic,
+    Groups,
+    Roles,
+    Secrets,
+    Sessions,
+    Scopes,
+    UserAttributes,
+    Users,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum AccessRights {
+    Read,
+    Create,
+    Update,
+    Delete,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct ApiKeyAccess {
+    pub group: AccessGroup,
+    pub access_rights: Vec<AccessRights>,
+}
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct ApiKeyRequest {

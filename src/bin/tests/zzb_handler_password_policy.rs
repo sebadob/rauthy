@@ -1,9 +1,8 @@
 use crate::common::{check_status, get_auth_headers, get_backend_url};
 use pretty_assertions::assert_eq;
+use rauthy_api_types::generic::{Language, PasswordPolicyRequest, PasswordPolicyResponse};
+use rauthy_api_types::users::{NewUserRequest, UpdateUserRequest, UserResponse};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::language::Language;
-use rauthy_models::request::{NewUserRequest, PasswordPolicyRequest, UpdateUserRequest};
-use rauthy_models::response::{PasswordPolicyResponse, UserResponse};
 use std::error::Error;
 
 mod common;

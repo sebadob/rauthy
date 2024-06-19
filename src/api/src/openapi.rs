@@ -5,7 +5,7 @@ use crate::{
 use actix_web::web;
 use rauthy_api_types::{
     api_keys::*, auth_providers::*, blacklist::*, clients::*, events::*, fed_cm::*, generic::*,
-    groups::*, oidc::*, roles::*, scopes::*, sessions::*, users::*, *,
+    groups::*, oidc::*, roles::*, scopes::*, sessions::*, users::*,
 };
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_error::{ErrorResponse, ErrorResponseType};

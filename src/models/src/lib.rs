@@ -6,7 +6,7 @@ use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use rauthy_api_types::JktClaim;
+use rauthy_api_types::oidc::JktClaim;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -140,8 +140,8 @@ impl AddressClaim {
     }
 }
 
-impl From<rauthy_api_types::AddressClaim> for AddressClaim {
-    fn from(value: rauthy_api_types::AddressClaim) -> Self {
+impl From<rauthy_api_types::oidc::AddressClaim> for AddressClaim {
+    fn from(value: rauthy_api_types::oidc::AddressClaim) -> Self {
         Self {
             formatted: value.formatted,
             street_address: value.street_address,
@@ -152,7 +152,7 @@ impl From<rauthy_api_types::AddressClaim> for AddressClaim {
     }
 }
 
-impl From<AddressClaim> for rauthy_api_types::AddressClaim {
+impl From<AddressClaim> for rauthy_api_types::oidc::AddressClaim {
     fn from(value: AddressClaim) -> Self {
         Self {
             formatted: value.formatted,

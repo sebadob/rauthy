@@ -181,8 +181,8 @@ pub async fn get_fed_client_config() -> HttpResponse {
         default_max_age: Some(300),
         scope: Some("openid email profile".to_string()),
         require_auth_time: Some(true),
-        access_token_signed_response_alg: Some(rauthy_api_types::JwkKeyPairAlg::EdDSA),
-        id_token_signed_response_alg: Some(rauthy_api_types::JwkKeyPairAlg::EdDSA),
+        access_token_signed_response_alg: Some(rauthy_api_types::oidc::JwkKeyPairAlg::EdDSA),
+        id_token_signed_response_alg: Some(rauthy_api_types::oidc::JwkKeyPairAlg::EdDSA),
     };
 
     HttpResponse::Ok().json(config)

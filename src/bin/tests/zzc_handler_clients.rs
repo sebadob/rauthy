@@ -1,8 +1,9 @@
 use crate::common::{get_auth_headers, get_backend_url, CLIENT_SECRET};
 use pretty_assertions::{assert_eq, assert_ne};
-use rauthy_models::entity::jwk::JwkKeyPairAlg;
-use rauthy_models::request::{NewClientRequest, UpdateClientRequest};
-use rauthy_models::response::{ClientResponse, ClientSecretResponse};
+use rauthy_api_types::clients::{
+    ClientResponse, ClientSecretResponse, NewClientRequest, UpdateClientRequest,
+};
+use rauthy_api_types::oidc::JwkKeyPairAlg;
 use std::error::Error;
 
 mod common;
@@ -38,8 +39,8 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         Some(vec!["http://localhost:5173".to_string()])
     );
     assert_eq!(client.flows_enabled.len(), 1);
-    assert_eq!(client.access_token_alg, "EdDSA");
-    assert_eq!(client.id_token_alg, "EdDSA");
+    assert_eq!(client.access_token_alg, JwkKeyPairAlg::EdDSA);
+    assert_eq!(client.id_token_alg, JwkKeyPairAlg::EdDSA);
     assert_eq!(client.auth_code_lifetime, 10);
     assert_eq!(client.access_token_lifetime, 10);
     assert_eq!(client.scopes.len(), 2);
@@ -144,8 +145,8 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         client.flows_enabled,
         vec!["authorization_code".to_string(), "password".to_string()]
     );
-    assert_eq!(client.access_token_alg, "RS256");
-    assert_eq!(client.id_token_alg, "RS256");
+    assert_eq!(client.access_token_alg, JwkKeyPairAlg::RS256);
+    assert_eq!(client.id_token_alg, JwkKeyPairAlg::RS256);
     assert_eq!(client.auth_code_lifetime, 60);
     assert_eq!(client.access_token_lifetime, 900);
     assert!(client.scopes.contains(&"openid".to_string()));

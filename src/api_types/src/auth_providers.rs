@@ -1,12 +1,20 @@
 use crate::cust_validation::validate_vec_scopes;
-use crate::AuthProviderType;
-use jwt_simple::prelude::{Deserialize, Serialize};
 use rauthy_common::constants::{
     RE_ALNUM, RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_PEM, RE_SCOPE_SPACE,
     RE_URI,
 };
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum AuthProviderType {
+    Custom,
+    Github,
+    Google,
+    OIDC,
+}
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct ProviderRequest {
