@@ -1,4 +1,4 @@
-use jwt_simple::prelude::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 

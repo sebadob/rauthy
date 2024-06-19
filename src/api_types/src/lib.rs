@@ -1,4 +1,4 @@
-use jwt_simple::prelude::Deserialize;
+use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::{Display, Formatter};
 use utoipa::ToSchema;

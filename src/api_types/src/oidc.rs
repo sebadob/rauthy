@@ -2,13 +2,13 @@ use crate::cust_validation::validate_vec_scopes;
 use crate::{JktClaim, JwkKeyPairAlg, JwkKeyPairType, SessionState};
 use actix_web::http::header;
 use actix_web::HttpRequest;
-use jwt_simple::prelude::{Deserialize, Serialize};
 use rauthy_common::constants::{
     RE_ALNUM, RE_CLIENT_ID_EPHEMERAL, RE_CODE_VERIFIER, RE_GRANT_TYPES, RE_LOWERCASE,
     RE_SCOPE_SPACE, RE_URI,
 };
 use rauthy_common::utils::base64_decode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use time::OffsetDateTime;
 use utoipa::{IntoParams, ToSchema};

@@ -1,5 +1,5 @@
 use crate::SessionState;
-use jwt_simple::prelude::Serialize;
+use serde::Serialize;
 use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, ToSchema)]

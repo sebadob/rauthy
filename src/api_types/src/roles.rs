@@ -1,5 +1,5 @@
-use jwt_simple::prelude::{Deserialize, Serialize};
 use rauthy_common::constants::RE_GROUPS;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
 

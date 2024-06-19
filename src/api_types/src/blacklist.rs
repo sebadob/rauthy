@@ -1,5 +1,4 @@
-use jwt_simple::prelude::{Deserialize, Serialize};
-
+use serde::{Deserialize, Serialize};
 use std::net::Ipv4Addr;
 use utoipa::ToSchema;
 use validator::Validate;

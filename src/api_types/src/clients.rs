@@ -1,12 +1,12 @@
 use crate::cust_validation::*;
 use crate::JwkKeyPairAlg;
 use css_color::Srgb;
-use jwt_simple::prelude::{Deserialize, Serialize};
 use rauthy_common::constants::{
     RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_LOWERCASE, RE_SCOPE_SPACE,
     RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
 };
 use rauthy_error::ErrorResponse;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use utoipa::ToSchema;
 use validator::Validate;
