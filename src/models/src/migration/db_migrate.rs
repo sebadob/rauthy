@@ -6,6 +6,7 @@ use jwt_simple::algorithms::{
     Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
 };
 use rand_core::OsRng;
+use rauthy_api_types::api_keys::ApiKeyRequest;
 use ring::digest;
 use sqlx::{query, Row};
 use std::env;
@@ -42,7 +43,6 @@ use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
-use rauthy_api_types::request::ApiKeyRequest;
 
 pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse> {
     debug!("Executing anti_lockout_check");

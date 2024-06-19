@@ -6,7 +6,7 @@ use actix_web::cookie::{time, Cookie, SameSite};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{cookie, web, HttpRequest};
 use chrono::Utc;
-use rauthy_api_types::request::SearchParamsIdx;
+use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_SESSIONS, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER,
     IDX_SESSION, SESSION_LIFETIME_FED_CM,

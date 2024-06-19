@@ -3,7 +3,7 @@
 #![forbid(unsafe_code)]
 
 use actix_web::{web, HttpRequest, HttpResponse};
-use rauthy_api_types::response::WebauthnLoginResponse;
+use rauthy_api_types::users::WebauthnLoginResponse;
 use rauthy_common::constants::COOKIE_MFA;
 use rauthy_error::ErrorResponse;
 use rauthy_models::api_cookie::ApiCookie;

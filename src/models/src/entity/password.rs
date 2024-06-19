@@ -3,8 +3,9 @@ use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::{Algorithm, Argon2, PasswordHasher, Version};
 use rand_core::OsRng;
-use rauthy_api_types::request::{PasswordHashTimesRequest, PasswordPolicyRequest};
-use rauthy_api_types::response::PasswordPolicyResponse;
+use rauthy_api_types::generic::{
+    PasswordHashTimesRequest, PasswordPolicyRequest, PasswordPolicyResponse,
+};
 use rauthy_common::constants::{
     ARGON2ID_M_COST_MIN, ARGON2ID_T_COST_MIN, CACHE_NAME_12HR, IDX_PASSWORD_RULES,
 };

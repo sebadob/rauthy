@@ -4,13 +4,10 @@ use actix_web::http::{header, StatusCode};
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
 use chrono::Utc;
 use cryptr::EncKeys;
-use rauthy_api_types::request::{
-    EncKeyMigrateRequest, I18nContent, I18nRequest, PasswordHashTimesRequest,
-    PasswordPolicyRequest, SearchParams, SearchParamsType,
-};
-use rauthy_api_types::response::{
-    AppVersionResponse, Argon2ParamsResponse, EncKeysResponse, HealthResponse, LoginTimeResponse,
-    PasswordPolicyResponse,
+use rauthy_api_types::generic::{
+    AppVersionResponse, Argon2ParamsResponse, EncKeyMigrateRequest, EncKeysResponse,
+    HealthResponse, I18nContent, I18nRequest, LoginTimeResponse, PasswordHashTimesRequest,
+    PasswordPolicyRequest, PasswordPolicyResponse, SearchParams, SearchParamsType,
 };
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_NAME_LOGIN_DELAY, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML,

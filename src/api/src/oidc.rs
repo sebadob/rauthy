@@ -5,13 +5,11 @@ use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::{header, StatusCode};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError};
 use chrono::Utc;
-use rauthy_api_types::request::{
-    AuthRequest, DeviceAcceptedRequest, DeviceGrantRequest, DeviceVerifyRequest,
-    LoginRefreshRequest, LoginRequest, LogoutRequest, TokenRequest, TokenValidationRequest,
-};
-use rauthy_api_types::response::{
-    DeviceCodeResponse, DeviceVerifyResponse, JWKSCerts, JWKSPublicKeyCerts, OAuth2ErrorResponse,
-    OAuth2ErrorTypeResponse, SessionInfoResponse,
+use rauthy_api_types::oidc::{
+    AuthRequest, DeviceAcceptedRequest, DeviceCodeResponse, DeviceGrantRequest,
+    DeviceVerifyRequest, DeviceVerifyResponse, JWKSCerts, JWKSPublicKeyCerts, LoginRefreshRequest,
+    LoginRequest, LogoutRequest, OAuth2ErrorResponse, OAuth2ErrorTypeResponse, SessionInfoResponse,
+    TokenRequest, TokenValidationRequest,
 };
 use rauthy_api_types::SessionState;
 use rauthy_common::constants::{

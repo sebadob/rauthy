@@ -2,7 +2,7 @@ use crate::app_state::{AppState, DbPool};
 use actix_web::web;
 use chrono::Utc;
 use cryptr::{EncKeys, EncValue};
-use rauthy_api_types::response::ApiKeyResponse;
+use rauthy_api_types::api_keys::ApiKeyResponse;
 use rauthy_common::constants::{API_KEY_LENGTH, CACHE_NAME_12HR};
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};

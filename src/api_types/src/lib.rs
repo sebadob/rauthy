@@ -3,8 +3,20 @@ use serde::Serialize;
 use std::fmt::{Display, Formatter};
 use utoipa::ToSchema;
 
-pub mod request;
-pub mod response;
+pub mod api_keys;
+pub mod auth_providers;
+pub mod blacklist;
+pub mod clients;
+mod cust_validation;
+pub mod events;
+pub mod fed_cm;
+pub mod generic;
+pub mod groups;
+pub mod oidc;
+pub mod roles;
+pub mod scopes;
+pub mod sessions;
+pub mod users;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum AccessGroup {
@@ -57,34 +69,6 @@ pub enum AuthProviderType {
     Github,
     Google,
     OIDC,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum EventLevel {
-    Info,
-    Notice,
-    Warning,
-    Critical,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
-pub enum EventType {
-    InvalidLogins,
-    IpBlacklisted,
-    IpBlacklistRemoved,
-    JwksRotated,
-    NewUserRegistered,
-    NewRauthyAdmin,
-    NewRauthyVersion,
-    PossibleBruteForce,
-    RauthyStarted,
-    RauthyHealthy,
-    RauthyUnhealthy,
-    SecretsMigrated,
-    UserEmailChange,
-    UserPasswordReset,
-    Test,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

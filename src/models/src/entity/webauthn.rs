@@ -7,11 +7,10 @@ use actix_web::http::header::HeaderValue;
 use actix_web::{web, HttpResponse};
 use chrono::Utc;
 use cryptr::EncValue;
-use rauthy_api_types::request::{
-    MfaPurpose, WebauthnAuthFinishRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
+use rauthy_api_types::users::{
+    MfaPurpose, PasskeyResponse, WebauthnAuthFinishRequest, WebauthnAuthStartResponse,
+    WebauthnLoginFinishResponse, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
-use rauthy_api_types::response::PasskeyResponse;
-use rauthy_api_types::response::{WebauthnAuthStartResponse, WebauthnLoginFinishResponse};
 use rauthy_common::constants::{
     CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, COOKIE_MFA, IDX_WEBAUTHN, WEBAUTHN_FORCE_UV,
     WEBAUTHN_NO_PASSWORD_EXPIRY, WEBAUTHN_RENEW_EXP, WEBAUTHN_REQ_EXP,

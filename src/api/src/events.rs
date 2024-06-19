@@ -3,7 +3,7 @@ use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use actix_web_lab::sse;
 use actix_web_validator::Json;
 use chrono::Utc;
-use rauthy_api_types::request::{EventsListenParams, EventsRequest};
+use rauthy_api_types::events::{EventsListenParams, EventsRequest};
 use rauthy_common::constants::SSE_KEEP_ALIVE;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
