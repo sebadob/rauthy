@@ -1,5 +1,6 @@
 use crate::cust_validation::{validate_vec_groups, validate_vec_roles};
-use crate::{AddressClaim, Language};
+use crate::generic::Language;
+use crate::oidc::AddressClaim;
 use rauthy_common::constants::{
     RE_ALNUM_48, RE_ALNUM_64, RE_APP_ID, RE_ATTR, RE_ATTR_DESC, RE_CITY, RE_CLIENT_NAME,
     RE_DATE_STR, RE_MFA_CODE, RE_PHONE, RE_STREET, RE_URI, RE_USER_NAME,

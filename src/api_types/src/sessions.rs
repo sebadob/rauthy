@@ -1,6 +1,14 @@
-use crate::SessionState;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub enum SessionState {
+    Open,
+    Init,
+    Auth,
+    LoggedOut,
+    Unknown,
+}
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SessionResponse<'a> {

@@ -1,5 +1,5 @@
 use crate::cust_validation::validate_vec_scopes;
-use crate::{JktClaim, JwkKeyPairAlg, JwkKeyPairType, SessionState};
+use crate::sessions::SessionState;
 use actix_web::http::header;
 use actix_web::HttpRequest;
 use rauthy_common::constants::{
@@ -10,9 +10,24 @@ use rauthy_common::utils::base64_decode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
+use std::fmt::{Display, Formatter};
 use time::OffsetDateTime;
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct AddressClaim {
+    pub formatted: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub street_address: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub locality: Option<String>,
+    // pub region: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub postal_code: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub country: Option<String>,
+}
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
 pub struct AuthRequest {
@@ -285,6 +300,49 @@ pub struct DeviceCodeResponse<'a> {
 pub struct DeviceVerifyResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scopes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct JktClaim {
+    pub jkt: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub enum JwkKeyPairAlg {
+    RS256,
+    RS384,
+    RS512,
+    EdDSA,
+}
+
+impl Default for JwkKeyPairAlg {
+    fn default() -> Self {
+        Self::EdDSA
+    }
+}
+
+impl Display for JwkKeyPairAlg {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            JwkKeyPairAlg::RS256 => "RS256",
+            JwkKeyPairAlg::RS384 => "RS384",
+            JwkKeyPairAlg::RS512 => "RS512",
+            JwkKeyPairAlg::EdDSA => "EdDSA",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub enum JwkKeyPairType {
+    RSA,
+    OKP,
+}
+
+impl Default for JwkKeyPairType {
+    fn default() -> Self {
+        Self::OKP
+    }
 }
 
 #[derive(Debug, Serialize, ToSchema)]

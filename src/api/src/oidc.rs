@@ -11,7 +11,7 @@ use rauthy_api_types::oidc::{
     LoginRequest, LogoutRequest, OAuth2ErrorResponse, OAuth2ErrorTypeResponse, SessionInfoResponse,
     TokenRequest, TokenValidationRequest,
 };
-use rauthy_api_types::SessionState;
+use rauthy_api_types::sessions::SessionState;
 use rauthy_common::constants::{
     APPLICATION_JSON, AUTH_HEADERS_ENABLE, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED,
     AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,

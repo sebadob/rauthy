@@ -99,18 +99,18 @@ impl From<String> for AuthProviderType {
     }
 }
 
-impl From<rauthy_api_types::AuthProviderType> for AuthProviderType {
-    fn from(value: rauthy_api_types::AuthProviderType) -> Self {
+impl From<rauthy_api_types::auth_providers::AuthProviderType> for AuthProviderType {
+    fn from(value: rauthy_api_types::auth_providers::AuthProviderType) -> Self {
         match value {
-            rauthy_api_types::AuthProviderType::Custom => Self::Custom,
-            rauthy_api_types::AuthProviderType::Github => Self::Github,
-            rauthy_api_types::AuthProviderType::Google => Self::Google,
-            rauthy_api_types::AuthProviderType::OIDC => Self::OIDC,
+            rauthy_api_types::auth_providers::AuthProviderType::Custom => Self::Custom,
+            rauthy_api_types::auth_providers::AuthProviderType::Github => Self::Github,
+            rauthy_api_types::auth_providers::AuthProviderType::Google => Self::Google,
+            rauthy_api_types::auth_providers::AuthProviderType::OIDC => Self::OIDC,
         }
     }
 }
 
-impl From<AuthProviderType> for rauthy_api_types::AuthProviderType {
+impl From<AuthProviderType> for rauthy_api_types::auth_providers::AuthProviderType {
     fn from(value: AuthProviderType) -> Self {
         match value {
             AuthProviderType::Custom => Self::Custom,

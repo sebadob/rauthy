@@ -336,13 +336,13 @@ impl From<ApiKey> for ApiKeyResponse {
             access: value
                 .access
                 .into_iter()
-                .map(rauthy_api_types::ApiKeyAccess::from)
+                .map(rauthy_api_types::api_keys::ApiKeyAccess::from)
                 .collect(),
         }
     }
 }
 
-impl From<AccessGroup> for rauthy_api_types::AccessGroup {
+impl From<AccessGroup> for rauthy_api_types::api_keys::AccessGroup {
     fn from(value: AccessGroup) -> Self {
         match value {
             AccessGroup::Blacklist => Self::Blacklist,
@@ -360,7 +360,7 @@ impl From<AccessGroup> for rauthy_api_types::AccessGroup {
     }
 }
 
-impl From<AccessRights> for rauthy_api_types::AccessRights {
+impl From<AccessRights> for rauthy_api_types::api_keys::AccessRights {
     fn from(value: AccessRights) -> Self {
         match value {
             AccessRights::Read => Self::Read,
@@ -371,7 +371,7 @@ impl From<AccessRights> for rauthy_api_types::AccessRights {
     }
 }
 
-impl From<ApiKeyAccess> for rauthy_api_types::ApiKeyAccess {
+impl From<ApiKeyAccess> for rauthy_api_types::api_keys::ApiKeyAccess {
     fn from(value: ApiKeyAccess) -> Self {
         Self {
             group: value.group.into(),
@@ -384,37 +384,37 @@ impl From<ApiKeyAccess> for rauthy_api_types::ApiKeyAccess {
     }
 }
 
-impl From<rauthy_api_types::AccessGroup> for AccessGroup {
-    fn from(value: rauthy_api_types::AccessGroup) -> Self {
+impl From<rauthy_api_types::api_keys::AccessGroup> for AccessGroup {
+    fn from(value: rauthy_api_types::api_keys::AccessGroup) -> Self {
         match value {
-            rauthy_api_types::AccessGroup::Blacklist => Self::Blacklist,
-            rauthy_api_types::AccessGroup::Clients => Self::Clients,
-            rauthy_api_types::AccessGroup::Events => Self::Events,
-            rauthy_api_types::AccessGroup::Generic => Self::Generic,
-            rauthy_api_types::AccessGroup::Groups => Self::Groups,
-            rauthy_api_types::AccessGroup::Roles => Self::Roles,
-            rauthy_api_types::AccessGroup::Secrets => Self::Secrets,
-            rauthy_api_types::AccessGroup::Sessions => Self::Sessions,
-            rauthy_api_types::AccessGroup::Scopes => Self::Scopes,
-            rauthy_api_types::AccessGroup::UserAttributes => Self::UserAttributes,
-            rauthy_api_types::AccessGroup::Users => Self::Users,
+            rauthy_api_types::api_keys::AccessGroup::Blacklist => Self::Blacklist,
+            rauthy_api_types::api_keys::AccessGroup::Clients => Self::Clients,
+            rauthy_api_types::api_keys::AccessGroup::Events => Self::Events,
+            rauthy_api_types::api_keys::AccessGroup::Generic => Self::Generic,
+            rauthy_api_types::api_keys::AccessGroup::Groups => Self::Groups,
+            rauthy_api_types::api_keys::AccessGroup::Roles => Self::Roles,
+            rauthy_api_types::api_keys::AccessGroup::Secrets => Self::Secrets,
+            rauthy_api_types::api_keys::AccessGroup::Sessions => Self::Sessions,
+            rauthy_api_types::api_keys::AccessGroup::Scopes => Self::Scopes,
+            rauthy_api_types::api_keys::AccessGroup::UserAttributes => Self::UserAttributes,
+            rauthy_api_types::api_keys::AccessGroup::Users => Self::Users,
         }
     }
 }
 
-impl From<rauthy_api_types::AccessRights> for AccessRights {
-    fn from(value: rauthy_api_types::AccessRights) -> Self {
+impl From<rauthy_api_types::api_keys::AccessRights> for AccessRights {
+    fn from(value: rauthy_api_types::api_keys::AccessRights) -> Self {
         match value {
-            rauthy_api_types::AccessRights::Read => Self::Read,
-            rauthy_api_types::AccessRights::Create => Self::Create,
-            rauthy_api_types::AccessRights::Update => Self::Update,
-            rauthy_api_types::AccessRights::Delete => Self::Delete,
+            rauthy_api_types::api_keys::AccessRights::Read => Self::Read,
+            rauthy_api_types::api_keys::AccessRights::Create => Self::Create,
+            rauthy_api_types::api_keys::AccessRights::Update => Self::Update,
+            rauthy_api_types::api_keys::AccessRights::Delete => Self::Delete,
         }
     }
 }
 
-impl From<rauthy_api_types::ApiKeyAccess> for ApiKeyAccess {
-    fn from(value: rauthy_api_types::ApiKeyAccess) -> Self {
+impl From<rauthy_api_types::api_keys::ApiKeyAccess> for ApiKeyAccess {
+    fn from(value: rauthy_api_types::api_keys::ApiKeyAccess) -> Self {
         Self {
             group: value.group.into(),
             access_rights: value

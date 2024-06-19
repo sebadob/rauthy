@@ -1,5 +1,5 @@
 use crate::cust_validation::*;
-use crate::JwkKeyPairAlg;
+use crate::oidc::JwkKeyPairAlg;
 use css_color::Srgb;
 use rauthy_common::constants::{
     RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_LOWERCASE, RE_SCOPE_SPACE,

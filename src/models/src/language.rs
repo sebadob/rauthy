@@ -92,16 +92,16 @@ impl TryFrom<&HttpRequest> for Language {
     }
 }
 
-impl From<rauthy_api_types::Language> for Language {
-    fn from(value: rauthy_api_types::Language) -> Self {
+impl From<rauthy_api_types::generic::Language> for Language {
+    fn from(value: rauthy_api_types::generic::Language) -> Self {
         match value {
-            rauthy_api_types::Language::En => Self::En,
-            rauthy_api_types::Language::De => Self::De,
+            rauthy_api_types::generic::Language::En => Self::En,
+            rauthy_api_types::generic::Language::De => Self::De,
         }
     }
 }
 
-impl From<Language> for rauthy_api_types::Language {
+impl From<Language> for rauthy_api_types::generic::Language {
     fn from(value: Language) -> Self {
         match value {
             Language::En => Self::En,

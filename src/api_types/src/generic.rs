@@ -28,6 +28,13 @@ pub enum I18nContent {
     Register,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum Language {
+    En,
+    De,
+}
+
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
 pub struct PaginationParams {
     pub page_size: Option<u16>,

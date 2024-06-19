@@ -4432,6 +4432,7 @@ dependencies = [
  "num_cpus",
  "pretty_assertions",
  "prometheus",
+ "rauthy-api-types",
  "rauthy-common",
  "rauthy-error",
  "rauthy-handlers",

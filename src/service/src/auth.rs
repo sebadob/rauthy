@@ -12,11 +12,10 @@ use jwt_simple::algorithms::{
 use jwt_simple::claims;
 use jwt_simple::prelude::*;
 use rauthy_api_types::oidc::{
-    LoginRefreshRequest, LoginRequest, LogoutRequest, OAuth2ErrorResponse, OAuth2ErrorTypeResponse,
-    TokenInfo, TokenRequest,
+    JktClaim, LoginRefreshRequest, LoginRequest, LogoutRequest, OAuth2ErrorResponse,
+    OAuth2ErrorTypeResponse, TokenInfo, TokenRequest,
 };
 use rauthy_api_types::users::Userinfo;
-use rauthy_api_types::JktClaim;
 use rauthy_common::constants::{
     CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, DEVICE_GRANT_POLL_INTERVAL,
     DEVICE_GRANT_REFRESH_TOKEN_LIFETIME, ENABLE_SOLID_AUD, ENABLE_WEB_ID, HEADER_DPOP_NONCE,
