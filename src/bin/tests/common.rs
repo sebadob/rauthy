@@ -1,8 +1,7 @@
 #![allow(dead_code)]
+use rauthy_api_types::oidc::{LoginRequest, SessionInfoResponse, TokenRequest};
 use rauthy_common::constants::CSRF_HEADER;
 use rauthy_common::utils::base64_url_encode;
-use rauthy_models::request::{LoginRequest, TokenRequest};
-use rauthy_models::response::SessionInfoResponse;
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::{HeaderMap, HeaderValue, SET_COOKIE};
 use reqwest::{header, Response};

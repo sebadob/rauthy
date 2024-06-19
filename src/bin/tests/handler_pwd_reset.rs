@@ -1,8 +1,9 @@
 use crate::common::{check_status, get_backend_url, CLIENT_ID, CLIENT_SECRET};
 use pretty_assertions::assert_eq;
+use rauthy_api_types::oidc::TokenRequest;
+use rauthy_api_types::users::PasswordResetRequest;
 use rauthy_common::constants::PWD_CSRF_HEADER;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::request::{PasswordResetRequest, TokenRequest};
 use rauthy_service::token_set::TokenSet;
 use reqwest::header;
 use reqwest::header::{HeaderMap, HeaderValue};

@@ -259,7 +259,7 @@ prepare-postgres: migrate-postgres
 
 
 # only starts the backend in test mode with sqlite database for easier test debugging
-test-backend: migrate prepare
+test-backend: test-backend-stop migrate prepare
     #!/usr/bin/env bash
     set -euxo pipefail
     clear

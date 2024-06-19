@@ -1,7 +1,7 @@
 use crate::common::{get_auth_headers, get_backend_url};
 use pretty_assertions::assert_eq;
+use rauthy_api_types::roles::NewRoleRequest;
 use rauthy_models::entity::roles::Role;
-use rauthy_models::request::NewRoleRequest;
 use std::error::Error;
 
 mod common;

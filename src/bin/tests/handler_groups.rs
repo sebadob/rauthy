@@ -1,7 +1,7 @@
 use crate::common::{get_auth_headers, get_backend_url};
 use pretty_assertions::assert_eq;
+use rauthy_api_types::groups::NewGroupRequest;
 use rauthy_models::entity::groups::Group;
-use rauthy_models::request::NewGroupRequest;
 use std::error::Error;
 
 mod common;

@@ -40,6 +40,8 @@ utoipa = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
 
 [dev-dependencies]
+rauthy-api-types = { path = "../api_types" }
+
 ed25519-compact = { workspace = true }
 josekit = "0.8"
 pretty_assertions = "1"

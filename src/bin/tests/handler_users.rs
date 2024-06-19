@@ -1,8 +1,9 @@
 use crate::common::{get_auth_headers, get_backend_url, get_token_set};
 use pretty_assertions::assert_eq;
-use rauthy_models::language::Language;
-use rauthy_models::request::{NewUserRequest, RequestResetRequest};
-use rauthy_models::response::{UserResponse, UserResponseSimple};
+use rauthy_api_types::generic::Language;
+use rauthy_api_types::users::{
+    NewUserRequest, RequestResetRequest, UserResponse, UserResponseSimple,
+};
 use reqwest::header::AUTHORIZATION;
 use std::error::Error;
 

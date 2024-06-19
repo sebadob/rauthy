@@ -265,8 +265,8 @@ impl From<rauthy_api_types::users::WebId> for WebId {
 
 #[cfg(test)]
 mod tests {
+    use rauthy_api_types::generic::Language;
     use rauthy_api_types::users::WebIdResponse;
-    use rauthy_api_types::Language;
     use rstest::rstest;
     use std::env;
 

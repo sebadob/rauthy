@@ -442,9 +442,9 @@ impl From<JWKSPublicKey> for JWKSPublicKeyCerts {
         };
         let alg = match pk.alg.unwrap_or_default() {
             JwkKeyPairAlg::RS256 => rauthy_api_types::oidc::JwkKeyPairAlg::RS256,
-            JwkKeyPairAlg::RS384 => rauthy_api_types::oidc::JwkKeyPairAlg::RS256,
-            JwkKeyPairAlg::RS512 => rauthy_api_types::oidc::JwkKeyPairAlg::RS256,
-            JwkKeyPairAlg::EdDSA => rauthy_api_types::oidc::JwkKeyPairAlg::RS256,
+            JwkKeyPairAlg::RS384 => rauthy_api_types::oidc::JwkKeyPairAlg::RS384,
+            JwkKeyPairAlg::RS512 => rauthy_api_types::oidc::JwkKeyPairAlg::RS512,
+            JwkKeyPairAlg::EdDSA => rauthy_api_types::oidc::JwkKeyPairAlg::EdDSA,
         };
 
         Self {
@@ -694,6 +694,17 @@ impl FromStr for JwkKeyPairAlg {
                 ErrorResponseType::BadRequest,
                 "Invalid JWT Token algorithm".to_string(),
             )),
+        }
+    }
+}
+
+impl From<JwkKeyPairAlg> for rauthy_api_types::oidc::JwkKeyPairAlg {
+    fn from(value: JwkKeyPairAlg) -> Self {
+        match value {
+            JwkKeyPairAlg::RS256 => Self::RS256,
+            JwkKeyPairAlg::RS384 => Self::RS384,
+            JwkKeyPairAlg::RS512 => Self::RS512,
+            JwkKeyPairAlg::EdDSA => Self::EdDSA,
         }
     }
 }

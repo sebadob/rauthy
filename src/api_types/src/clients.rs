@@ -250,8 +250,8 @@ pub struct ClientResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub allowed_origins: Option<Vec<String>>,
     pub flows_enabled: Vec<String>,
-    pub access_token_alg: String,
-    pub id_token_alg: String,
+    pub access_token_alg: JwkKeyPairAlg,
+    pub id_token_alg: JwkKeyPairAlg,
     pub auth_code_lifetime: i32,
     pub access_token_lifetime: i32,
     pub scopes: Vec<String>,
