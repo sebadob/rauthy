@@ -1,8 +1,8 @@
 use crate::ReqPrincipal;
 use actix_web::{delete, get, web, HttpResponse};
 use actix_web_validator::Query;
-use rauthy_api_types::request::PaginationParams;
-use rauthy_api_types::response::SessionResponse;
+use rauthy_api_types::generic::PaginationParams;
+use rauthy_api_types::sessions::SessionResponse;
 use rauthy_api_types::SessionState;
 use rauthy_common::constants::SSP_THRESHOLD;
 use rauthy_error::ErrorResponse;

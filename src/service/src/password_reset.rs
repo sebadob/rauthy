@@ -1,5 +1,5 @@
 use actix_web::{cookie, web, HttpRequest, HttpResponse};
-use rauthy_api_types::request::{
+use rauthy_api_types::users::{
     PasswordResetRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};

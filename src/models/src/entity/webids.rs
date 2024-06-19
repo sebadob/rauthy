@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
 use actix_web::web;
-use rauthy_api_types::response::WebIdResponse;
+use rauthy_api_types::users::WebIdResponse;
 use rauthy_common::constants::{CACHE_NAME_USERS, PUB_URL_WITH_SCHEME};
 use rauthy_error::ErrorResponse;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
@@ -243,7 +243,7 @@ impl WebId {
     }
 }
 
-impl From<WebId> for rauthy_api_types::response::WebId {
+impl From<WebId> for rauthy_api_types::users::WebId {
     fn from(value: WebId) -> Self {
         Self {
             user_id: value.user_id,
@@ -253,8 +253,8 @@ impl From<WebId> for rauthy_api_types::response::WebId {
     }
 }
 
-impl From<rauthy_api_types::response::WebId> for WebId {
-    fn from(value: rauthy_api_types::response::WebId) -> Self {
+impl From<rauthy_api_types::users::WebId> for WebId {
+    fn from(value: rauthy_api_types::users::WebId) -> Self {
         Self {
             user_id: value.user_id,
             expose_email: value.expose_email,
@@ -265,7 +265,7 @@ impl From<rauthy_api_types::response::WebId> for WebId {
 
 #[cfg(test)]
 mod tests {
-    use rauthy_api_types::response::WebIdResponse;
+    use rauthy_api_types::users::WebIdResponse;
     use rstest::rstest;
     use std::env;
 

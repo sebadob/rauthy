@@ -1,6 +1,6 @@
 use crate::ReqPrincipal;
 use actix_web::{delete, get, post, put, web, HttpResponse};
-use rauthy_api_types::request::NewGroupRequest;
+use rauthy_api_types::groups::NewGroupRequest;
 use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};

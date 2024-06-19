@@ -3,10 +3,10 @@ use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE, LOCATION};
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use actix_web_validator::Json;
-use rauthy_api_types::request::{
+use rauthy_api_types::auth_providers::ProviderResponse;
+use rauthy_api_types::auth_providers::{
     ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
 };
-use rauthy_api_types::response::ProviderResponse;
 use rauthy_common::constants::{HEADER_HTML, HEADER_JSON};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;

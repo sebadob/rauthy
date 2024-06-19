@@ -2,8 +2,10 @@ use crate::app_state::{AppState, DbTxn};
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
 use actix_web::web;
-use rauthy_api_types::request::{UserAttrConfigRequest, UserAttrValuesUpdateRequest};
-use rauthy_api_types::response::{UserAttrConfigValueResponse, UserAttrValueResponse};
+use rauthy_api_types::users::{
+    UserAttrConfigRequest, UserAttrConfigValueResponse, UserAttrValueResponse,
+    UserAttrValuesUpdateRequest,
+};
 use rauthy_common::constants::{CACHE_NAME_USERS, IDX_USER_ATTR_CONFIG};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};

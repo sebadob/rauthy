@@ -1,6 +1,5 @@
 use actix_web::web;
-use rauthy_api_types::request::UpdateClientRequest;
-use rauthy_api_types::response::ClientSecretResponse;
+use rauthy_api_types::clients::{ClientSecretResponse, UpdateClientRequest};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;

@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
 use actix_web::web;
-use rauthy_api_types::request::ColorsRequest;
+use rauthy_api_types::clients::ColorsRequest;
 use rauthy_common::constants::CACHE_NAME_12HR;
 use rauthy_error::ErrorResponse;
 use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};

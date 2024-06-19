@@ -17,11 +17,9 @@ use crate::templates::UserEmailChangeConfirmHtml;
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;
 use chrono::Utc;
-use rauthy_api_types::request::{
-    NewUserRegistrationRequest, NewUserRequest, SearchParamsIdx, UpdateUserRequest,
-    UpdateUserSelfRequest,
-};
-use rauthy_api_types::response::{
+use rauthy_api_types::generic::SearchParamsIdx;
+use rauthy_api_types::users::{
+    NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
     UserAccountTypeResponse, UserResponse, UserResponseSimple, UserValuesResponse,
 };
 use rauthy_common::constants::{

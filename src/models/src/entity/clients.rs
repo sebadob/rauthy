@@ -8,8 +8,10 @@ use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest};
 use cryptr::{utils, EncKeys, EncValue};
-use rauthy_api_types::request::{DynamicClientRequest, EphemeralClientRequest, NewClientRequest};
-use rauthy_api_types::response::{ClientResponse, DynamicClientResponse};
+use rauthy_api_types::clients::{
+    ClientResponse, DynamicClientRequest, DynamicClientResponse, EphemeralClientRequest,
+    NewClientRequest,
+};
 use rauthy_common::constants::{
     ADMIN_FORCE_MFA, APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_EPHEMERAL_CLIENTS,
     DYN_CLIENT_DEFAULT_TOKEN_LIFETIME, DYN_CLIENT_SECRET_AUTO_ROTATE, ENABLE_EPHEMERAL_CLIENTS,

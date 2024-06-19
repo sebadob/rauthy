@@ -1,9 +1,8 @@
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
-use rauthy_api_types::request::{
-    EphemeralClientRequest, FedCMAssertionRequest, FedCMClientMetadataRequest,
-};
+use rauthy_api_types::clients::EphemeralClientRequest;
+use rauthy_api_types::fed_cm::{FedCMAssertionRequest, FedCMClientMetadataRequest};
 use rauthy_common::constants::{
     COOKIE_SESSION_FED_CM, EXPERIMENTAL_FED_CM_ENABLE, HEADER_ALLOW_ALL_ORIGINS, HEADER_JSON,
     PUB_URL_WITH_SCHEME, RAUTHY_ADMIN_EMAIL, SESSION_TIMEOUT_FED_CM,

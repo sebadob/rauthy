@@ -16,13 +16,13 @@ use cryptr::utils::secure_random_alnum;
 use cryptr::EncValue;
 use image::EncodableLayout;
 use itertools::Itertools;
-use rauthy_api_types::request::{
+use rauthy_api_types::auth_providers::{
     ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
-    UserValuesRequest,
 };
-use rauthy_api_types::response::{
+use rauthy_api_types::auth_providers::{
     ProviderLinkedUserResponse, ProviderLookupResponse, ProviderResponse,
 };
+use rauthy_api_types::users::UserValuesRequest;
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
     IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_CALLBACK_URI,

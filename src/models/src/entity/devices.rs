@@ -2,7 +2,7 @@ use crate::app_state::AppState;
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use actix_web::web;
 use chrono::{DateTime, Utc};
-use rauthy_api_types::response::DeviceResponse;
+use rauthy_api_types::users::DeviceResponse;
 use rauthy_common::constants::{
     CACHE_NAME_DEVICE_CODES, DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_USER_CODE_LENGTH,
     DEVICE_KEY_LENGTH, PUB_URL_WITH_SCHEME,

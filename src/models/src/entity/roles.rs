@@ -1,7 +1,7 @@
 use crate::app_state::AppState;
 use crate::entity::users::User;
 use actix_web::web;
-use rauthy_api_types::request::NewRoleRequest;
+use rauthy_api_types::roles::NewRoleRequest;
 use rauthy_common::constants::{CACHE_NAME_12HR, IDX_ROLES, IDX_USERS};
 use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};

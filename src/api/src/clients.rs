@@ -4,10 +4,9 @@ use actix_web::http::header::{
 };
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_lab::__reexports::futures_util::StreamExt;
-use rauthy_api_types::request::{
-    ColorsRequest, DynamicClientRequest, NewClientRequest, UpdateClientRequest,
+use rauthy_api_types::clients::{
+    ClientResponse, ColorsRequest, DynamicClientRequest, NewClientRequest, UpdateClientRequest,
 };
-use rauthy_api_types::response::ClientResponse;
 use rauthy_common::constants::{DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG};
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};

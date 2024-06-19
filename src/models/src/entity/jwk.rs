@@ -2,7 +2,7 @@ use crate::app_state::{AppState, DbPool};
 use actix_web::web;
 use cryptr::EncValue;
 use jwt_simple::algorithms;
-use rauthy_api_types::response::{JWKSCerts, JWKSPublicKeyCerts};
+use rauthy_api_types::oidc::{JWKSCerts, JWKSPublicKeyCerts};
 use rauthy_common::constants::{CACHE_NAME_12HR, IDX_JWKS, IDX_JWK_KID, IDX_JWK_LATEST};
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode};
 use rauthy_error::{ErrorResponse, ErrorResponseType};

@@ -38,13 +38,13 @@ impl From<&EventLevel> for NotificationLevel {
     }
 }
 
-impl From<rauthy_api_types::EventLevel> for EventLevel {
-    fn from(value: rauthy_api_types::EventLevel) -> Self {
+impl From<rauthy_api_types::events::EventLevel> for EventLevel {
+    fn from(value: rauthy_api_types::events::EventLevel) -> Self {
         match value {
-            rauthy_api_types::EventLevel::Info => Self::Info,
-            rauthy_api_types::EventLevel::Notice => Self::Notice,
-            rauthy_api_types::EventLevel::Warning => Self::Warning,
-            rauthy_api_types::EventLevel::Critical => Self::Critical,
+            rauthy_api_types::events::EventLevel::Info => Self::Info,
+            rauthy_api_types::events::EventLevel::Notice => Self::Notice,
+            rauthy_api_types::events::EventLevel::Warning => Self::Warning,
+            rauthy_api_types::events::EventLevel::Critical => Self::Critical,
         }
     }
 }
@@ -179,24 +179,24 @@ impl Display for EventType {
     }
 }
 
-impl From<rauthy_api_types::EventType> for EventType {
-    fn from(value: rauthy_api_types::EventType) -> Self {
+impl From<rauthy_api_types::events::EventType> for EventType {
+    fn from(value: rauthy_api_types::events::EventType) -> Self {
         match value {
-            rauthy_api_types::EventType::InvalidLogins => Self::InvalidLogins,
-            rauthy_api_types::EventType::IpBlacklisted => Self::IpBlacklisted,
-            rauthy_api_types::EventType::IpBlacklistRemoved => Self::IpBlacklistRemoved,
-            rauthy_api_types::EventType::JwksRotated => Self::JwksRotated,
-            rauthy_api_types::EventType::NewUserRegistered => Self::NewUserRegistered,
-            rauthy_api_types::EventType::NewRauthyAdmin => Self::NewRauthyAdmin,
-            rauthy_api_types::EventType::NewRauthyVersion => Self::NewRauthyVersion,
-            rauthy_api_types::EventType::PossibleBruteForce => Self::PossibleBruteForce,
-            rauthy_api_types::EventType::RauthyStarted => Self::RauthyStarted,
-            rauthy_api_types::EventType::RauthyHealthy => Self::RauthyHealthy,
-            rauthy_api_types::EventType::RauthyUnhealthy => Self::RauthyUnhealthy,
-            rauthy_api_types::EventType::SecretsMigrated => Self::SecretsMigrated,
-            rauthy_api_types::EventType::UserEmailChange => Self::UserEmailChange,
-            rauthy_api_types::EventType::UserPasswordReset => Self::UserPasswordReset,
-            rauthy_api_types::EventType::Test => Self::Test,
+            rauthy_api_types::events::EventType::InvalidLogins => Self::InvalidLogins,
+            rauthy_api_types::events::EventType::IpBlacklisted => Self::IpBlacklisted,
+            rauthy_api_types::events::EventType::IpBlacklistRemoved => Self::IpBlacklistRemoved,
+            rauthy_api_types::events::EventType::JwksRotated => Self::JwksRotated,
+            rauthy_api_types::events::EventType::NewUserRegistered => Self::NewUserRegistered,
+            rauthy_api_types::events::EventType::NewRauthyAdmin => Self::NewRauthyAdmin,
+            rauthy_api_types::events::EventType::NewRauthyVersion => Self::NewRauthyVersion,
+            rauthy_api_types::events::EventType::PossibleBruteForce => Self::PossibleBruteForce,
+            rauthy_api_types::events::EventType::RauthyStarted => Self::RauthyStarted,
+            rauthy_api_types::events::EventType::RauthyHealthy => Self::RauthyHealthy,
+            rauthy_api_types::events::EventType::RauthyUnhealthy => Self::RauthyUnhealthy,
+            rauthy_api_types::events::EventType::SecretsMigrated => Self::SecretsMigrated,
+            rauthy_api_types::events::EventType::UserEmailChange => Self::UserEmailChange,
+            rauthy_api_types::events::EventType::UserPasswordReset => Self::UserPasswordReset,
+            rauthy_api_types::events::EventType::Test => Self::Test,
         }
     }
 }
