@@ -214,6 +214,14 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # registrations with 'user@gmail.com' (default: '')
 #USER_REG_DOMAIN_RESTRICTION=some-domain.com
 
+# If `OPEN_USER_REG=true`, you can blacklist certain domains
+# on the open registration endpoint.
+# Provide the domains as a `\n` separated list.
+#USER_REG_DOMAIN_BLACKLIST="
+#example.com
+#evil.net
+#"
+
 # If set to true, a violation inside the CSRF protection middleware based
 # on Sec-* headers will block invalid requests. Usually you always want this
 # enabled. You may only set it to false during the first testing phase if you
@@ -1128,6 +1136,15 @@ PUB_URL=localhost:8080
 # When rauthy is running behind a reverse proxy, set to true
 # default: false
 PROXY_MODE=false
+
+# A `\n` separated list of trusted proxy CIDRs.
+# When `PROXY_MODE=true` or `PEER_IP_HEADER_NAME` is set,
+# these are mandatory to be able to extract the real client
+# IP properly and safely to prevent IP header spoofing.
+# All requests with a different source will be blocked.
+#TRUSTED_PROXIES="
+#192.168.14.0/24
+#"
 
 # To enable or disable the additional HTTP server to expose the /metrics endpoint
 # default: true
