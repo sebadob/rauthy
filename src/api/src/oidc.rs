@@ -173,10 +173,10 @@ pub async fn get_authorize(
     let session = if let Some(session) = &principal.session {
         match principal.validate_session_auth_or_init() {
             Ok(_) => session.clone(),
-            Err(_) => Session::new(*SESSION_LIFETIME, real_ip_from_req(&req)),
+            Err(_) => Session::new(*SESSION_LIFETIME, Some(real_ip_from_req(&req)?)),
         }
     } else {
-        Session::new(*SESSION_LIFETIME, real_ip_from_req(&req))
+        Session::new(*SESSION_LIFETIME, Some(real_ip_from_req(&req)?))
     };
 
     if let Err(err) = session.save(&data).await {
@@ -294,7 +294,7 @@ pub async fn post_authorize(
         }
     };
 
-    let ip = real_ip_from_req(&req);
+    let ip = real_ip_from_req(&req)?;
     auth::handle_login_delay(
         &data,
         ip,
@@ -419,8 +419,7 @@ pub async fn post_device_auth(
     // handle ip rate-limiting
     if DEVICE_GRANT_RATE_LIMIT.is_some() {
         match real_ip_from_req(&req) {
-            None => {
-                let err = "Cannot extract client IP for rate-limiting - denying request";
+            Err(err) => {
                 error!("{err}");
                 return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
                     error: OAuth2ErrorTypeResponse::InvalidRequest,
@@ -429,8 +428,8 @@ pub async fn post_device_auth(
                     )),
                 });
             }
-            Some(ip) => {
-                if let Some(dt) = DeviceIpRateLimit::is_limited(&data, ip.clone()).await {
+            Ok(ip) => {
+                if let Some(dt) = DeviceIpRateLimit::is_limited(&data, ip.to_string()).await {
                     return HttpResponse::TooManyRequests()
                         .insert_header((HEADER_RETRY_NOT_BEFORE, dt.timestamp()))
                         .json(OAuth2ErrorResponse {
@@ -442,7 +441,7 @@ pub async fn post_device_auth(
                         });
                 }
 
-                if let Err(err) = DeviceIpRateLimit::insert(&data, ip).await {
+                if let Err(err) = DeviceIpRateLimit::insert(&data, ip.to_string()).await {
                     error!(
                         "Error inserting IP into the cache for rate-limiting: {:?}",
                         err
@@ -735,7 +734,7 @@ pub async fn post_session(
     data: web::Data<AppState>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let session = Session::new(*SESSION_LIFETIME, real_ip_from_req(&req));
+    let session = Session::new(*SESSION_LIFETIME, real_ip_from_req(&req).ok());
     session.save(&data).await?;
     let cookie = session.client_cookie();
 
@@ -880,7 +879,7 @@ pub async fn post_token(
     data: web::Data<AppState>,
     payload: actix_web_validator::Form<TokenRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let ip = real_ip_from_req(&req);
+    let ip = real_ip_from_req(&req)?;
 
     if payload.grant_type == GRANT_TYPE_DEVICE_CODE {
         // the `urn:ietf:params:oauth:grant-type:device_code` needs

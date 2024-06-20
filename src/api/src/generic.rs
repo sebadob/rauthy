@@ -375,11 +375,12 @@ pub async fn post_migrate_enc_key(
     req_data: actix_web_validator::Json<EncKeyMigrateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
+    let ip = real_ip_from_req(&req)?;
 
     encryption::migrate_encryption_alg(&data, &req_data.key_id).await?;
 
     data.tx_events
-        .send_async(Event::secrets_migrated(real_ip_from_req(&req)))
+        .send_async(Event::secrets_migrated(ip))
         .await
         .unwrap();
 
@@ -682,9 +683,12 @@ pub async fn get_ready(data: web::Data<AppState>) -> impl Responder {
 /// If `BLACKLIST_SUSPICIOUS_REQUESTS` is set, it will also compare the
 /// request path against common bot / hacker scan targets and blacklist preemptively.
 #[get("/")]
-pub async fn catch_all(data: web::Data<AppState>, req: HttpRequest) -> impl Responder {
+pub async fn catch_all(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
     let path = req.path();
-    let ip = real_ip_from_req(&req).unwrap_or_default();
+    let ip = real_ip_from_req(&req)?.to_string();
 
     if *SUSPICIOUS_REQUESTS_LOG && path.len() > 1 {
         // TODO create a new event type for these? maybe too many events ...?
@@ -714,12 +718,12 @@ pub async fn catch_all(data: web::Data<AppState>, req: HttpRequest) -> impl Resp
         }
     }
 
-    HttpResponse::MovedPermanently()
+    Ok(HttpResponse::MovedPermanently()
         .insert_header((
             header::LOCATION,
             HeaderValue::from_str("/auth/v1/").unwrap(),
         ))
-        .finish()
+        .finish())
 }
 
 #[get("/v1")]
@@ -779,5 +783,8 @@ pub async fn get_version(data: web::Data<AppState>) -> Result<HttpResponse, Erro
 )]
 #[get("/whoami")]
 pub async fn get_whoami(req: HttpRequest) -> String {
-    real_ip_from_req(&req).unwrap_or_default()
+    match real_ip_from_req(&req) {
+        Ok(ip) => ip.to_string(),
+        Err(_) => "UNKNOWN".to_string(),
+    }
 }

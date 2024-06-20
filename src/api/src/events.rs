@@ -75,37 +75,29 @@ pub async fn sse_events(
 
     params.validate()?;
 
-    match real_ip_from_req(&req) {
-        None => Err(ErrorResponse::new(
-            ErrorResponseType::NotFound,
-            "Cannot extract client IP from HttpRequest. This is an internal network error."
-                .to_string(),
-        )),
-        Some(ip) => {
-            let params = params.into_inner();
-            let (tx, rx) = mpsc::channel(10);
+    let ip = real_ip_from_req(&req)?.to_string();
+    let params = params.into_inner();
+    let (tx, rx) = mpsc::channel(10);
 
-            let level = params.level.map(|l| l.into()).unwrap_or_default();
-            if let Err(err) = data
-                .tx_events_router
-                .send_async(EventRouterMsg::ClientReg {
-                    ip,
-                    tx,
-                    latest: params.latest,
-                    level,
-                })
-                .await
-            {
-                Err(ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    format!("Cannot register SSE client: {:?}", err),
-                ))
-            } else {
-                Ok(sse::Sse::from_infallible_receiver(rx)
-                    .with_keep_alive(Duration::from_secs(*SSE_KEEP_ALIVE as u64))
-                    .with_retry_duration(Duration::from_secs(10)))
-            }
-        }
+    let level = params.level.map(|l| l.into()).unwrap_or_default();
+    if let Err(err) = data
+        .tx_events_router
+        .send_async(EventRouterMsg::ClientReg {
+            ip,
+            tx,
+            latest: params.latest,
+            level,
+        })
+        .await
+    {
+        Err(ErrorResponse::new(
+            ErrorResponseType::Internal,
+            format!("Cannot register SSE client: {:?}", err),
+        ))
+    } else {
+        Ok(sse::Sse::from_infallible_receiver(rx)
+            .with_keep_alive(Duration::from_secs(*SSE_KEEP_ALIVE as u64))
+            .with_retry_duration(Duration::from_secs(10)))
     }
 }
 
@@ -128,7 +120,7 @@ pub async fn post_event_test(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Events, AccessRights::Create)?;
 
-    Event::test(real_ip_from_req(&req))
+    Event::test(real_ip_from_req(&req)?)
         .send(&data.tx_events)
         .await?;
 

@@ -208,14 +208,14 @@ impl MagicLink {
                     if *PASSWORD_RESET_COOKIE_BINDING {
                         return Err(err);
                     } else {
-                        let ip = real_ip_from_req(req).unwrap_or_default();
+                        let ip = real_ip_from_req(req)?;
                         warn!("PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding cookie from {}", ip);
                     }
                 }
             } else if *PASSWORD_RESET_COOKIE_BINDING {
                 return Err(err);
             } else {
-                let ip = real_ip_from_req(req).unwrap_or_default();
+                let ip = real_ip_from_req(req)?;
                 warn!("PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding cookie from {}", ip);
             }
         }

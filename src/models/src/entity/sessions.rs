@@ -19,6 +19,7 @@ use sqlx::postgres::PgRow;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{query_as, FromRow, Row};
 use std::borrow::Cow;
+use std::net::IpAddr;
 use std::ops::Add;
 use std::str::FromStr;
 use time::OffsetDateTime;
@@ -489,7 +490,7 @@ impl Session {
 
 impl Session {
     /// exp_in will be the time in seconds when the session will expire
-    pub fn new(exp_in: u32, remote_ip: Option<String>) -> Self {
+    pub fn new(exp_in: u32, remote_ip: Option<IpAddr>) -> Self {
         let id = get_rand(32);
         let csrf_token = get_rand(32);
         let now = OffsetDateTime::now_utc();
@@ -506,7 +507,7 @@ impl Session {
                 .add(time::Duration::seconds(exp_in as i64))
                 .unix_timestamp(),
             last_seen: now.unix_timestamp(),
-            remote_ip,
+            remote_ip: remote_ip.map(|ip| ip.to_string()),
         }
     }
 
@@ -636,7 +637,7 @@ impl Session {
     }
 
     /// Checks if the current session is valid: has not expired and has not timed out (last_seen)
-    pub fn is_valid(&self, session_timeout: u32, remote_ip: Option<String>) -> bool {
+    pub fn is_valid(&self, session_timeout: u32, remote_ip: Option<IpAddr>) -> bool {
         let now = OffsetDateTime::now_utc().unix_timestamp();
         if self.exp < now {
             return false;
@@ -649,7 +650,7 @@ impl Session {
         }
         if let Some(ip) = remote_ip {
             if (self.state == SessionState::Open || self.state == SessionState::Auth)
-                && self.remote_ip.as_ref() != Some(&ip)
+                && self.remote_ip != Some(ip.to_string())
             {
                 let session_ip = self.remote_ip.as_deref().unwrap_or("UNKNOWN");
                 warn!(

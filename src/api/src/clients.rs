@@ -180,7 +180,7 @@ pub async fn post_clients_dyn(
                 .finish());
         }
     } else {
-        let ip = real_ip_from_req(&req).unwrap_or_default();
+        let ip = real_ip_from_req(&req)?;
         ClientDyn::rate_limit_ip(&data, ip).await?;
     }
 

@@ -1,4 +1,4 @@
-use crate::constants::{PEER_IP_HEADER_NAME, PROXY_MODE};
+use crate::constants::{PEER_IP_HEADER_NAME, PROXY_MODE, TRUSTED_PROXIES};
 use actix_web::dev::ServiceRequest;
 use actix_web::http::header::HeaderMap;
 use actix_web::HttpRequest;
@@ -7,6 +7,9 @@ use gethostname::gethostname;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use std::env;
+use std::net::IpAddr;
+use std::str::FromStr;
 use tracing::{error, trace};
 
 const B64_URL_SAFE: engine::GeneralPurpose = general_purpose::URL_SAFE;
@@ -153,37 +156,102 @@ where
 
 // TODO unify real_ip_from_req and real_ip_from_svc_req by using an impl Trait
 #[inline(always)]
-pub fn real_ip_from_req(req: &HttpRequest) -> Option<String> {
+pub fn real_ip_from_req(req: &HttpRequest) -> Result<IpAddr, ErrorResponse> {
+    let peer_ip = parse_peer_addr(req.connection_info().peer_addr())?;
     if let Some(ip) = ip_from_cust_header(req.headers()) {
-        Some(ip)
+        check_trusted_proxy(&peer_ip)?;
+        Ok(ip)
     } else if *PROXY_MODE {
-        req.connection_info()
-            .realip_remote_addr()
-            .map(|ip| ip.to_string())
+        check_trusted_proxy(&peer_ip)?;
+        parse_peer_addr(req.connection_info().realip_remote_addr())
     } else {
-        req.connection_info().peer_addr().map(|ip| ip.to_string())
+        Ok(peer_ip)
     }
 }
 
 #[inline(always)]
-pub fn real_ip_from_svc_req(req: &ServiceRequest) -> Option<String> {
+pub fn real_ip_from_svc_req(req: &ServiceRequest) -> Result<IpAddr, ErrorResponse> {
+    let peer_ip = parse_peer_addr(req.connection_info().peer_addr())?;
     if let Some(ip) = ip_from_cust_header(req.headers()) {
-        Some(ip)
+        check_trusted_proxy(&peer_ip)?;
+        Ok(ip)
     } else if *PROXY_MODE {
-        req.connection_info()
-            .realip_remote_addr()
-            .map(|ip| ip.to_string())
+        check_trusted_proxy(&peer_ip)?;
+        parse_peer_addr(req.connection_info().realip_remote_addr())
     } else {
-        req.connection_info().peer_addr().map(|ip| ip.to_string())
+        Ok(peer_ip)
     }
 }
 
 #[inline(always)]
-fn ip_from_cust_header(headers: &HeaderMap) -> Option<String> {
+fn parse_peer_addr(peer_addr: Option<&str>) -> Result<IpAddr, ErrorResponse> {
+    match peer_addr {
+        None => Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "No IP Addr in Connection Info - this should only happen in tests",
+        )),
+        Some(peer) => match IpAddr::from_str(peer) {
+            Ok(ip) => Ok(ip),
+            Err(err) => Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                format!("Cannot parse peer IP address: {}", err),
+            )),
+        },
+    }
+}
+
+#[inline(always)]
+fn check_trusted_proxy(peer_ip: &IpAddr) -> Result<(), ErrorResponse> {
+    for cidr in &*TRUSTED_PROXIES {
+        if cidr.contains(peer_ip) {
+            return Ok(());
+        }
+    }
+
+    error!(
+        "Invalid request from IP {} which is not a trusted proxy",
+        peer_ip
+    );
+    Err(ErrorResponse::new(
+        ErrorResponseType::BadRequest,
+        "Invalid IP Address",
+    ))
+}
+
+pub(crate) fn build_trusted_proxies() -> Vec<cidr::IpCidr> {
+    let raw = env::var("TRUSTED_PROXIES").expect("TRUSTED_PROXIES is not net set");
+    let mut proxies = Vec::new();
+
+    for line in raw.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        match cidr::IpCidr::from_str(trimmed) {
+            Ok(cidr) => {
+                proxies.push(cidr);
+            }
+            Err(err) => {
+                error!("Cannot parse trusted proxy entry to CIDR: {}", err);
+            }
+        }
+    }
+    proxies
+}
+
+#[inline(always)]
+fn ip_from_cust_header(headers: &HeaderMap) -> Option<IpAddr> {
     // If a custom override has been set, try this first and use the default as fallback
     if let Some(header_name) = &*PEER_IP_HEADER_NAME {
         if let Some(Ok(value)) = headers.get(header_name).map(|s| s.to_str()) {
-            return Some(value.to_string());
+            match IpAddr::from_str(value) {
+                Ok(ip) => {
+                    return Some(ip);
+                }
+                Err(err) => {
+                    error!("Cannot parse IP from PEER_IP_HEADER_NAME: {}", err);
+                }
+            }
         }
         trace!("no PEER IP from PEER_IP_HEADER_NAME: '{}'", header_name);
     }
@@ -222,5 +290,37 @@ mod tests {
 
         let rnd = get_rand(1024);
         assert_eq!(rnd.len(), 1024);
+    }
+
+    #[test]
+    fn test_trusted_proxy_check() {
+        env::set_var(
+            "TRUSTED_PROXIES",
+            r#"
+            192.168.100.0/24
+            192.168.0.96/28
+            172.16.0.1/32
+            10.10.10.10/31"#,
+        );
+
+        println!("{:?}", build_trusted_proxies());
+
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.100.1").unwrap()).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.100.255").unwrap()).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.99.1").unwrap()).is_err());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.99.255").unwrap()).is_err());
+
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.0.96").unwrap()).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.0.111").unwrap()).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.0.95").unwrap()).is_err());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.0.112").unwrap()).is_err());
+
+        assert!(check_trusted_proxy(&IpAddr::from_str("172.16.0.1").unwrap()).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("172.16.0.2").unwrap()).is_err());
+
+        assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.10").unwrap()).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.11").unwrap()).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.9").unwrap()).is_err());
+        assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.12").unwrap()).is_err());
     }
 }

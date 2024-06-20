@@ -1154,7 +1154,7 @@ impl User {
         send_email_confirm_change(data, &user, &old_email, &user.email, false).await;
 
         let event_text = format!("{} -> {}", old_email, user.email);
-        let ip = real_ip_from_req(&req);
+        let ip = real_ip_from_req(&req).ok();
         data.tx_events
             .send_async(Event::user_email_change(event_text, ip))
             .await

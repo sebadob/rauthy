@@ -15,6 +15,7 @@ use rauthy_notify::{Notification, NotificationLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
 use std::fmt::{Display, Formatter};
+use std::net::IpAddr;
 use std::str::FromStr;
 use tracing::error;
 
@@ -544,21 +545,21 @@ impl Event {
         )
     }
 
-    pub fn new_user(email: String, ip: Option<String>) -> Self {
+    pub fn new_user(email: String, ip: String) -> Self {
         Self::new(
             EVENT_LEVEL_NEW_USER.get().cloned().unwrap(),
             EventType::NewUserRegistered,
-            ip,
+            Some(ip),
             None,
             Some(email),
         )
     }
 
-    pub fn new_rauthy_admin(email: String, ip: Option<String>) -> Self {
+    pub fn new_rauthy_admin(email: String, ip: String) -> Self {
         Self::new(
             EVENT_LEVEL_NEW_RAUTHY_ADMIN.get().cloned().unwrap(),
             EventType::NewRauthyAdmin,
-            ip,
+            Some(ip),
             None,
             Some(email),
         )
@@ -630,31 +631,31 @@ impl Event {
         )
     }
 
-    pub fn secrets_migrated(ip: Option<String>) -> Self {
+    pub fn secrets_migrated(ip: IpAddr) -> Self {
         Self::new(
             EVENT_LEVEL_SECRETS_MIGRATED.get().cloned().unwrap(),
             EventType::SecretsMigrated,
-            ip,
+            Some(ip.to_string()),
             None,
             None,
         )
     }
 
-    pub fn test(ip: Option<String>) -> Self {
+    pub fn test(ip: IpAddr) -> Self {
         Self::new(
             EventLevel::Info,
             EventType::Test,
-            ip,
+            Some(ip.to_string()),
             None,
             Some("This is a Test-Event".to_string()),
         )
     }
 
-    pub fn user_email_change(text: String, ip: Option<String>) -> Self {
+    pub fn user_email_change(text: String, ip: Option<IpAddr>) -> Self {
         Self::new(
             EVENT_LEVEL_USER_EMAIL_CHANGE.get().cloned().unwrap(),
             EventType::UserEmailChange,
-            ip,
+            ip.map(|ip| ip.to_string()),
             None,
             Some(text),
         )
