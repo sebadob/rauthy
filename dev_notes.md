@@ -8,10 +8,7 @@
 
 ## Stage 2 - features - do before v1.0.0
 
-- add "request time taken" to access logging middleware
-- possibility to check for existing valid email?
 - prettify the UI
-- check out the possibility to include SCIM
 - update the book with all the new features
 - benchmarks and performance tuning
 - maybe get a nicer logo
@@ -22,7 +19,6 @@
 
 ## Stage 3 - Possible nice to haves
 
-- respect `display=popup` and / or `display=touch` on `/authorize`
 - impl experimental `dilithium` alg for token signing to become quantum safe
 - 'rauthy-migrate' project to help migrating to rauthy? probably when doing benchmarks anyway and use it
   for dummy data?
