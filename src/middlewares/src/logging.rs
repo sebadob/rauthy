@@ -91,26 +91,14 @@ where
         let service = Rc::clone(&self.service);
 
         Box::pin(async move {
-            handle_req(&req).await?;
+            log_access(&req).await?;
             service.call(req).await
         })
     }
 }
 
-async fn handle_req(req: &ServiceRequest) -> Result<(), ErrorResponse> {
-    // let data = req
-    //     .app_data::<web::Data<AppState>>()
-    //     .expect("Error getting AppData inside logging middleware");
-    let uri = req.uri();
-
-    // validate_host(uri, data).await?;
-    log_access(uri, req).await?;
-
-    Ok(())
-}
-
-async fn log_access(uri: &Uri, req: &ServiceRequest) -> Result<(), ErrorResponse> {
-    let path = uri.path();
+async fn log_access(req: &ServiceRequest) -> Result<(), ErrorResponse> {
+    let path = req.uri().path();
     let ip = real_ip_from_svc_req(req)?;
 
     match *LOG_LEVEL_ACCESS {
