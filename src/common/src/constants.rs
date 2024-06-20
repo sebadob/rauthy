@@ -4,6 +4,7 @@ use actix_web::http::Uri;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::env;
+use std::ops::Not;
 use std::str::FromStr;
 use std::string::ToString;
 
@@ -348,6 +349,15 @@ lazy_static! {
             Ok(domain) => Some(domain)
         }
     };
+    pub static ref USER_REG_DOMAIN_BLACKLIST: Option<Vec<String>> = env::var("USER_REG_DOMAIN_BLACKLIST")
+        .ok()
+        .map(|blacklist| blacklist.lines()
+            .filter_map(|line| {
+                let trimmed = line.trim();
+                trimmed.is_empty().not().then_some(trimmed.to_string())
+            })
+            .collect()
+        );
 
     pub static ref PEER_IP_HEADER_NAME: Option<String> = env::var("PEER_IP_HEADER_NAME").ok();
 
