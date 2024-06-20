@@ -193,12 +193,12 @@ pub async fn handle_put_user_password_reset<'a>(
     user.email_verified = true;
     user.save(data, None, None).await?;
 
-    let ip = match real_ip_from_req(&req) {
+    let ip = match real_ip_from_req(&req).ok() {
         None => {
             error!("Extracting clients real IP from HttpRequest during password reset");
             "UNKNOWN".to_string()
         }
-        Some(ip) => ip,
+        Some(ip) => ip.to_string(),
     };
     data.tx_events
         .send_async(Event::user_password_reset(

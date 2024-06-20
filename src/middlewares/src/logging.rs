@@ -111,7 +111,7 @@ async fn handle_req(req: &ServiceRequest) -> Result<(), ErrorResponse> {
 
 async fn log_access(uri: &Uri, req: &ServiceRequest) -> Result<(), ErrorResponse> {
     let path = uri.path();
-    let ip = real_ip_from_svc_req(req).unwrap_or_else(|| "<UNKNOWN>".to_string());
+    let ip = real_ip_from_svc_req(req)?;
 
     match *LOG_LEVEL_ACCESS {
         LogLevelAccess::Debug => {

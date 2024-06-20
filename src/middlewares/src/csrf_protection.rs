@@ -91,7 +91,7 @@ where
                     return service.call(req).await;
                 }
 
-                let ip = real_ip_from_svc_req(&req).unwrap_or_default();
+                let ip = real_ip_from_svc_req(&req)?;
                 warn!(
                     "CSRF / Sec-Header violation from {} on path {}",
                     ip,

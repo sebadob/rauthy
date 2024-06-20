@@ -136,14 +136,17 @@ pub async fn post_users(
     let user = User::create_from_new(&data, user.into_inner()).await?;
 
     data.tx_events
-        .send_async(Event::new_user(user.email.clone(), real_ip_from_req(&req)))
+        .send_async(Event::new_user(
+            user.email.clone(),
+            real_ip_from_req(&req)?.to_string(),
+        ))
         .await
         .unwrap();
     if user.is_admin() {
         data.tx_events
             .send_async(Event::new_rauthy_admin(
                 user.email.clone(),
-                real_ip_from_req(&req),
+                real_ip_from_req(&req)?.to_string(),
             ))
             .await
             .unwrap();
@@ -334,7 +337,10 @@ pub async fn post_users_register(
     let user = User::create_from_reg(&data, req_data.into_inner(), lang).await?;
 
     data.tx_events
-        .send_async(Event::new_user(user.email, real_ip_from_req(&req)))
+        .send_async(Event::new_user(
+            user.email,
+            real_ip_from_req(&req)?.to_string(),
+        ))
         .await
         .unwrap();
 
@@ -1212,7 +1218,7 @@ pub async fn put_user_by_id(
         data.tx_events
             .send_async(Event::new_rauthy_admin(
                 user.email.clone(),
-                real_ip_from_req(&req),
+                real_ip_from_req(&req)?.to_string(),
             ))
             .await
             .unwrap();

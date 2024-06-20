@@ -10,6 +10,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, FromRow};
+use std::net::IpAddr;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ClientDyn {
@@ -158,12 +159,12 @@ impl ClientDyn {
     /// If not, the IP will be cached with an Ok(()).
     pub async fn rate_limit_ip(
         data: &web::Data<AppState>,
-        ip: String,
+        ip: IpAddr,
     ) -> Result<(), ErrorResponse> {
         if let Some(ts) = cache_get!(
             i64,
             CACHE_NAME_CLIENTS_DYN.to_string(),
-            ip.clone(),
+            ip.to_string(),
             &data.caches.ha_cache_config,
             true
         )
@@ -177,7 +178,7 @@ impl ClientDyn {
             let now = Utc::now().timestamp();
             cache_insert(
                 CACHE_NAME_CLIENTS_DYN.to_string(),
-                ip,
+                ip.to_string(),
                 &data.caches.ha_cache_config,
                 &now,
                 AckLevel::Once,

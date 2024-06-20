@@ -1431,13 +1431,13 @@ impl PwdResetHtml<'_> {
 
 #[derive(Default, Template)]
 #[template(path = "error/429.html")]
-pub struct TooManyRequestsHtml<'a> {
-    pub ip: &'a str,
+pub struct TooManyRequestsHtml {
+    pub ip: String,
     pub exp: i64,
 }
 
-impl TooManyRequestsHtml<'_> {
-    pub fn build(ip: &str, exp: i64) -> String {
+impl TooManyRequestsHtml {
+    pub fn build(ip: String, exp: i64) -> String {
         TooManyRequestsHtml { ip, exp }.render().unwrap()
     }
 }

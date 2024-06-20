@@ -8,18 +8,13 @@
 
 ## Stage 2 - features - do before v1.0.0
 
-- `code_challenge` missing on `/authorize` -> show error earlier than after login
-
+- add "request time taken" to access logging middleware
+- possibility to check for existing valid email?
 - prettify the UI
 - check out the possibility to include SCIM
 - update the book with all the new features
 - benchmarks and performance tuning
 - maybe get a nicer logo
-
-### Notes for performance optimizations
-
-- all the `get_`s on the `Client` will probably be good with returning slices instead of real Strings
-  -> less memory allocations
 
 ### `rauthy-client` TODO's
 

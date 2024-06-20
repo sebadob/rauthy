@@ -128,7 +128,7 @@ async fn get_session_from_cookie(
     match Session::find(data, session_id).await {
         Ok(mut session) => {
             let remote_ip = if *SESSION_VALIDATE_IP {
-                real_ip_from_svc_req(req)
+                real_ip_from_svc_req(req).ok()
             } else {
                 None
             };
@@ -151,6 +151,7 @@ async fn get_session_from_cookie(
                     Ok(Some(session))
                 }
             } else {
+                debug!("Access to {} with invalid Session Peer IP", req.path());
                 Ok(None)
             }
         }

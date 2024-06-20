@@ -57,6 +57,7 @@ use std::borrow::Cow;
 use std::cmp::PartialEq;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
+use std::net::IpAddr;
 use std::ops::{Add, Sub};
 use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -1098,7 +1099,7 @@ async fn grant_type_credentials(
 #[tracing::instrument(skip_all, fields(client_id = payload.client_id))]
 pub async fn grant_type_device_code(
     data: &web::Data<AppState>,
-    peer_ip: Option<String>,
+    peer_ip: IpAddr,
     payload: TokenRequest,
 ) -> HttpResponse {
     let device_code = match &payload.device_code {
@@ -1226,7 +1227,7 @@ pub async fn grant_type_device_code(
             created: now.timestamp(),
             access_exp: access_exp.timestamp(),
             refresh_exp,
-            peer_ip: peer_ip.unwrap_or_default(),
+            peer_ip: peer_ip.to_string(),
             // The very first name will just always be the id.
             // This is a better UX than asking for a custom name each time.
             // TODO add an optional `name` param to the initial device request?
@@ -1452,7 +1453,7 @@ current average for a successful login, to prevent things like username enumerat
  */
 pub async fn handle_login_delay(
     data: &web::Data<AppState>,
-    peer_ip: Option<String>,
+    peer_ip: IpAddr,
     start: Duration,
     cache_config: &redhac::CacheConfig,
     res: Result<HttpResponse, ErrorResponse>,
@@ -1474,14 +1475,10 @@ pub async fn handle_login_delay(
     match res {
         Ok(resp) => {
             // cleanup possibly blacklisted IP
-            if let Some(ip) = peer_ip {
-                data.tx_ip_blacklist
-                    .send_async(IpBlacklistReq::LoginFailedDelete(ip))
-                    .await
-                    .expect("ip blacklist recv not to be closed");
-            } else {
-                warn!("No IP in login delay handler - check your reverse proxy setup");
-            }
+            data.tx_ip_blacklist
+                .send_async(IpBlacklistReq::LoginFailedDelete(peer_ip.to_string()))
+                .await
+                .expect("ip blacklist recv not to be closed");
 
             // only calculate the new median login time base on the full duration incl password hash
             if has_password_been_hashed {
@@ -1504,40 +1501,30 @@ pub async fn handle_login_delay(
             let mut failed_logins = 1;
 
             // check possibly blacklisted IP
-            if let Some(ip) = peer_ip.clone() {
-                let (tx, rx) = oneshot::channel();
-                data.tx_ip_blacklist
-                    .send_async(IpBlacklistReq::LoginCheck(IpFailedLoginCheck {
-                        ip,
-                        increase_counter: true,
-                        tx,
-                    }))
-                    .await
-                    .expect("ip blacklist recv not to be closed");
+            let (tx, rx) = oneshot::channel();
+            data.tx_ip_blacklist
+                .send_async(IpBlacklistReq::LoginCheck(IpFailedLoginCheck {
+                    ip: peer_ip.to_string(),
+                    increase_counter: true,
+                    tx,
+                }))
+                .await
+                .expect("ip blacklist recv not to be closed");
 
-                match rx.await {
-                    Ok(res) => {
-                        if let Some(counter) = res {
-                            failed_logins = counter;
-                        }
-                    }
-                    Err(err) => {
-                        error!("oneshot recv error in login delay handler - this should never happen: {:?}", err);
+            match rx.await {
+                Ok(res) => {
+                    if let Some(counter) = res {
+                        failed_logins = counter;
                     }
                 }
-            } else {
-                warn!("No IP in login delay handler - check your reverse proxy setup");
+                Err(err) => {
+                    error!("oneshot recv error in login delay handler - this should never happen: {:?}", err);
+                }
             }
 
             // event for failed login
-            let ip = if let Some(ip) = peer_ip {
-                ip
-            } else {
-                error!("No peer IP for connected client - check your reverse proxy setup!");
-                "UNKNOWN".to_string()
-            };
             data.tx_events
-                .send_async(Event::invalid_login(failed_logins, ip.clone()))
+                .send_async(Event::invalid_login(failed_logins, peer_ip.to_string()))
                 .await
                 .unwrap();
 
@@ -1556,10 +1543,10 @@ pub async fn handle_login_delay(
                 t if t >= 25 => {
                     let not_before = Utc::now().add(chrono::Duration::seconds(86400));
                     let ts = not_before.timestamp();
-                    let html = TooManyRequestsHtml::build(&ip, ts);
+                    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
 
                     data.tx_events
-                        .send_async(Event::ip_blacklisted(not_before, ip.clone()))
+                        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
                         .await
                         .unwrap();
 
@@ -1575,10 +1562,10 @@ pub async fn handle_login_delay(
                 20 => {
                     let not_before = Utc::now().add(chrono::Duration::seconds(3600));
                     let ts = not_before.timestamp();
-                    let html = TooManyRequestsHtml::build(&ip, ts);
+                    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
 
                     data.tx_events
-                        .send_async(Event::ip_blacklisted(not_before, ip.clone()))
+                        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
                         .await
                         .unwrap();
 
@@ -1594,10 +1581,10 @@ pub async fn handle_login_delay(
                 15 => {
                     let not_before = Utc::now().add(chrono::Duration::seconds(900));
                     let ts = not_before.timestamp();
-                    let html = TooManyRequestsHtml::build(&ip, ts);
+                    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
 
                     data.tx_events
-                        .send_async(Event::ip_blacklisted(not_before, ip.clone()))
+                        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
                         .await
                         .unwrap();
 
@@ -1613,10 +1600,10 @@ pub async fn handle_login_delay(
                 10 => {
                     let not_before = Utc::now().add(chrono::Duration::seconds(600));
                     let ts = not_before.timestamp();
-                    let html = TooManyRequestsHtml::build(&ip, ts);
+                    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
 
                     data.tx_events
-                        .send_async(Event::ip_blacklisted(not_before, ip.clone()))
+                        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
                         .await
                         .unwrap();
 
@@ -1632,10 +1619,10 @@ pub async fn handle_login_delay(
                 7 => {
                     let not_before = Utc::now().add(chrono::Duration::seconds(60));
                     let ts = not_before.timestamp();
-                    let html = TooManyRequestsHtml::build(&ip, ts);
+                    let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
 
                     data.tx_events
-                        .send_async(Event::ip_blacklisted(not_before, ip.clone()))
+                        .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
                         .await
                         .unwrap();
 

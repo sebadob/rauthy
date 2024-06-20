@@ -61,34 +61,32 @@ where
                 .app_data::<web::Data<AppState>>()
                 .expect("AppState to be in the Actix context");
 
-            if let Some(ip) = real_ip_from_svc_req(&req) {
-                let (tx, rx) = oneshot::channel();
-                app_state
-                    .tx_ip_blacklist
-                    .send_async(IpBlacklistReq::BlacklistCheck(IpBlacklistCheck {
-                        ip: ip.clone(),
-                        tx,
-                    }))
-                    .await
-                    .unwrap();
-                match rx.await {
-                    Ok(exp) => {
-                        if let Some(exp) = exp {
-                            if exp > Utc::now() {
-                                let ts = exp.timestamp();
-                                return Err(Error::from(ErrorResponse::new(
-                                    ErrorResponseType::TooManyRequests(ts),
-                                    TooManyRequestsHtml::build(&ip, ts),
-                                )));
-                            }
+            let ip = real_ip_from_svc_req(&req)?;
+            // if let Some(ip) = real_ip_from_svc_req(&req) {
+            let (tx, rx) = oneshot::channel();
+            app_state
+                .tx_ip_blacklist
+                .send_async(IpBlacklistReq::BlacklistCheck(IpBlacklistCheck {
+                    ip: ip.to_string(),
+                    tx,
+                }))
+                .await
+                .unwrap();
+            match rx.await {
+                Ok(exp) => {
+                    if let Some(exp) = exp {
+                        if exp > Utc::now() {
+                            let ts = exp.timestamp();
+                            return Err(Error::from(ErrorResponse::new(
+                                ErrorResponseType::TooManyRequests(ts),
+                                TooManyRequestsHtml::build(ip.to_string(), ts),
+                            )));
                         }
                     }
-                    Err(err) => {
-                        error!("Checking IP Blacklist status in middleware - this should never happen: {:?}", err);
-                    }
                 }
-            } else {
-                error!("Cannot extract IP from HttpRequest - check your Reverse Proxy settings");
+                Err(err) => {
+                    error!("Checking IP Blacklist status in middleware - this should never happen: {:?}", err);
+                }
             }
 
             service.call(req).await
