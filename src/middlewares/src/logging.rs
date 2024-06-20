@@ -1,5 +1,5 @@
 use actix_web::http::header::HeaderValue;
-use actix_web::http::{Method, Uri};
+use actix_web::http::Method;
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     Error,
