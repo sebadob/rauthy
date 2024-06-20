@@ -9,7 +9,7 @@ export USER :=  `echo "$(id -u):$(id -g)"`
 arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
 
 builder_image := "ghcr.io/sebadob/rauthy-builder"
-builder_tag_date := "20240505"
+builder_tag_date := "20240620"
 
 container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
