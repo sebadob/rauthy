@@ -1,3 +1,4 @@
+use crate::utils::build_trusted_proxies;
 use crate::DbType;
 use actix_web::http::Uri;
 use lazy_static::lazy_static;
@@ -335,6 +336,7 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
         .unwrap_or(true);
+    pub static ref TRUSTED_PROXIES: Vec<cidr::IpCidr> = build_trusted_proxies();
 
     pub static ref OPEN_USER_REG: bool = env::var("OPEN_USER_REG")
         .unwrap_or_else(|_| String::from("false"))
