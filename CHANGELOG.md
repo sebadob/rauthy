@@ -1,5 +1,77 @@
 # Changelog
 
+## UNRELEASED (ghcr.io/sebadob/rauthy:0.24.0-20240620)
+
+Many thousands of lines have been refactored internally to provide better maintainability in the future.
+These are not mentioned separately, since they did not introduce anything new. Apart from this, there are only small
+changes, but one of them is an important breaking change.
+
+### Breaking
+
+#### `TRUSTED_PROXIES` Config Variable
+
+The new config variable `TRUSTED_PROXIES` introduces a breaking change in some cases.  
+If you are running Rauthy with either `PROXY_MODE=true` or with a set `PEER_IP_HEADER_NAME` value, you must add the
+`TRUSTED_PROXIES` to your existing config before updating.
+
+This value specifies trusted proxies in the above situation. The reason is that Rauthy extracts the client IP from
+the HTTP headers, which could be spoofed if they are used without validating the source. This was not a security issue,
+but gave an attacker the ability to blacklist or rate-limit IPs that do not belong to him.
+
+When `PROXY_MODE=true` or set `PEER_IP_HEADER_NAME`, Rauthy will now only accept direct connections from IPs specified
+with `TRUSTED_PROXIES` and block all other requests. You can provide a list of CIDRs to have full flexibility for your
+deployment.
+
+```
+# A `\n` separated list of trusted proxy CIDRs.
+# When `PROXY_MODE=true` or `PEER_IP_HEADER_NAME` is set,
+# these are mandatory to be able to extract the real client
+# IP properly and safely to prevent IP header spoofing.
+# All requests with a different source will be blocked.
+#TRUSTED_PROXIES="
+#192.168.14.0/24
+#10.0.0.0/8
+#"
+```
+
+**Note:**  
+Keep in mind, that you must include IPs for direct health checks like for instance inside Kubernetes here,
+if they are not being sent via a trusted proxy.
+
+[e1ae491](https://github.com/sebadob/rauthy/commit/e1ae49164f9753e3ec57cb4b6e2aed8614227bce)
+
+### Features
+
+#### User Registration Domain Blacklisting
+
+If you are using an open user registration without domain restriction, you now have the possibility to blacklist
+certain E-Mail provider domains. Even if your registration endpoint allows registrations, this blacklist will be
+checked and deny requests with these domains.  
+This is mainly useful if you want to prevent malicious E-Mail providers from registering and spamming your database.
+
+```
+# If `OPEN_USER_REG=true`, you can blacklist certain domains
+# on the open registration endpoint.
+# Provide the domains as a `\n` separated list.
+#USER_REG_DOMAIN_BLACKLIST="
+#example.com
+#evil.net
+#"
+```
+
+[824b109](https://github.com/sebadob/rauthy/commit/824b109e081f608a9b950483b3da90cde288f6eb)
+
+### Changes
+
+Even though it was not needed so far, the OIDC userinfo endpoint now has a proper `POST` handler in addition to the
+existing `GET` to comply with the RFC.  
+[05a8793](https://github.com/sebadob/rauthy/commit/05a8793f013f864db1855ae0ee1c848ec36b9254)
+
+### Bugfixes
+
+- The upstream crate `curve25519-dalek` had a moderate timing variability security issue
+  [8bb4069](https://github.com/sebadob/rauthy/commit/8bb4069e5f22439b08f9f5a51059561007b90af3)
+
 ## v0.23.5
 
 ### Upstream IdP Locale Fix
