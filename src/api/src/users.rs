@@ -15,7 +15,8 @@ use rauthy_api_types::users::{
 };
 use rauthy_common::constants::{
     COOKIE_MFA, ENABLE_WEB_ID, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, OPEN_USER_REG,
-    PWD_RESET_COOKIE, SSP_THRESHOLD, TEXT_TURTLE, USER_REG_DOMAIN_RESTRICTION,
+    PWD_RESET_COOKIE, SSP_THRESHOLD, TEXT_TURTLE, USER_REG_DOMAIN_BLACKLIST,
+    USER_REG_DOMAIN_RESTRICTION,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -326,6 +327,15 @@ pub async fn post_users_register(
                     restriction
                 ),
             ));
+        }
+    } else if let Some(blacklist) = &*USER_REG_DOMAIN_BLACKLIST {
+        for blacklisted in blacklist {
+            if req_data.email.ends_with(blacklisted) {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "Domain is blacklisted",
+                ));
+            }
         }
     }
 
