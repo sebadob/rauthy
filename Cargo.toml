@@ -52,7 +52,9 @@ gethostname = "0.4"
 hex = { version = "0.4", features = ["serde"] }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
-image = "0.25.1"
+image = { version = "0.25.1", default-features = false, features = [
+    "rayon", "ico", "jpeg", "png", "tiff", "webp"
+] }
 itertools = "0.13.0"
 jwt-simple = { version = "0.12.6", default-features = false, features = ["pure-rust"] }
 lazy_static = "1"
