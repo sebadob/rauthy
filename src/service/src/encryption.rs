@@ -1,10 +1,10 @@
-use crate::auth;
 use cryptr::{EncKeys, EncValue};
 use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::ApiKeyEntity;
 use rauthy_models::entity::auth_providers::AuthProvider;
 use rauthy_models::entity::clients::Client;
+use rauthy_models::entity::jwk::JWKS;
 use tracing::{error, info};
 
 /// Migrates encrypted data in the backend to a new key.
@@ -46,8 +46,8 @@ pub async fn migrate_encryption_alg(
     }
     info!("Finished clients secrets migration to key id: {}", new_kid);
 
-    // JWKS will just be rotated, which is better for security anyways
-    auth::rotate_jwks(data).await?;
+    // JWKS will just be rotated, which is better for security anyway
+    JWKS::rotate(data).await?;
 
     // migrate ApiKey's
     info!("Starting ApiKeys migration to key id: {}", new_kid);

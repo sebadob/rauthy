@@ -5,10 +5,7 @@ use actix_web::http::header;
 use actix_web::http::header::{HeaderMap, HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::Utc;
-use cryptr::{EncKeys, EncValue};
-use jwt_simple::algorithms::{
-    EdDSAKeyPairLike, EdDSAPublicKeyLike, RSAKeyPairLike, RSAPublicKeyLike,
-};
+use jwt_simple::algorithms::{EdDSAPublicKeyLike, RSAPublicKeyLike};
 use jwt_simple::claims;
 use jwt_simple::prelude::*;
 use rauthy_api_types::oidc::{
@@ -17,8 +14,8 @@ use rauthy_api_types::oidc::{
 };
 use rauthy_api_types::users::Userinfo;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, COOKIE_MFA, DEVICE_GRANT_POLL_INTERVAL, ENABLE_WEB_ID, HEADER_DPOP_NONCE,
-    IDX_JWKS, IDX_JWK_LATEST, SESSION_RENEW_MFA, TOKEN_BEARER, USERINFO_STRICT, WEBAUTHN_REQ_EXP,
+    COOKIE_MFA, DEVICE_GRANT_POLL_INTERVAL, ENABLE_WEB_ID, HEADER_DPOP_NONCE, SESSION_RENEW_MFA,
+    TOKEN_BEARER, USERINFO_STRICT, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::password_hasher::HashPassword;
 use rauthy_common::utils::{base64_url_encode, get_client_ip, get_rand, new_store_id};
@@ -31,7 +28,7 @@ use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::devices::{DeviceAuthCode, DeviceEntity};
 use rauthy_models::entity::dpop_proof::DPoPProof;
-use rauthy_models::entity::jwk::{Jwk, JwkKeyPair, JwkKeyPairAlg};
+use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_models::entity::sessions::{Session, SessionState};
@@ -39,14 +36,12 @@ use rauthy_models::entity::users::{AccountType, User};
 use rauthy_models::entity::users_values::UserValues;
 use rauthy_models::entity::webauthn::{WebauthnCookie, WebauthnLoginReq};
 use rauthy_models::entity::webids::WebId;
-use rauthy_models::events::event::Event;
 use rauthy_models::language::Language;
 use rauthy_models::templates::LogoutHtml;
 use rauthy_models::{
     validate_jwt, AddressClaim, AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn, JwtCommonClaims,
     JwtIdClaims, JwtRefreshClaims, JwtTokenType,
 };
-use redhac::cache_del;
 use ring::digest;
 use std::borrow::Cow;
 use std::cmp::PartialEq;
@@ -1176,129 +1171,6 @@ pub async fn logout(
     }
 
     Ok(LogoutHtml::build(&session.csrf_token, true, &colors, lang))
-}
-
-// TODO move into entity
-/// Rotates and generates a whole new Set of JWKs for signing JWT Tokens
-pub async fn rotate_jwks(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-    info!("Starting JWKS rotation");
-
-    // let key = data.enc_keys.get(&data.enc_key_active).unwrap();
-    let enc_key_active = &EncKeys::get_static().enc_key_active;
-
-    // RSA256
-    let jwk_plain = web::block(|| {
-        RS256KeyPair::generate(2048)
-            .unwrap()
-            .with_key_id(&get_rand(24))
-    })
-    .await?;
-    let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
-        .into_bytes()
-        .to_vec();
-    let entity = Jwk {
-        kid: jwk_plain.key_id().as_ref().unwrap().clone(),
-        created_at: OffsetDateTime::now_utc().unix_timestamp(),
-        signature: JwkKeyPairAlg::RS256,
-        enc_key_id: enc_key_active.to_string(),
-        jwk,
-    };
-    entity.save(&data.db).await?;
-
-    // RS384
-    let jwk_plain = web::block(|| {
-        RS384KeyPair::generate(3072)
-            .unwrap()
-            .with_key_id(&get_rand(24))
-    })
-    .await?;
-    let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
-        .into_bytes()
-        .to_vec();
-    let entity = Jwk {
-        kid: jwk_plain.key_id().as_ref().unwrap().clone(),
-        created_at: OffsetDateTime::now_utc().unix_timestamp(),
-        signature: JwkKeyPairAlg::RS384,
-        enc_key_id: enc_key_active.to_string(),
-        jwk,
-    };
-    entity.save(&data.db).await?;
-
-    // RSA512
-    let jwk_plain = web::block(|| {
-        RS512KeyPair::generate(4096)
-            .unwrap()
-            .with_key_id(&get_rand(24))
-    })
-    .await?;
-    let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
-        .into_bytes()
-        .to_vec();
-    let entity = Jwk {
-        kid: jwk_plain.key_id().as_ref().unwrap().clone(),
-        created_at: OffsetDateTime::now_utc().unix_timestamp(),
-        signature: JwkKeyPairAlg::RS512,
-        enc_key_id: enc_key_active.to_string(),
-        jwk,
-    };
-    entity.save(&data.db).await?;
-
-    // Ed25519
-    let jwk_plain = web::block(|| Ed25519KeyPair::generate().with_key_id(&get_rand(24))).await?;
-    let jwk = EncValue::encrypt(jwk_plain.to_der().as_slice())?
-        .into_bytes()
-        .to_vec();
-    let entity = Jwk {
-        kid: jwk_plain.key_id().as_ref().unwrap().clone(),
-        created_at: OffsetDateTime::now_utc().unix_timestamp(),
-        signature: JwkKeyPairAlg::EdDSA,
-        enc_key_id: enc_key_active.to_string(),
-        jwk,
-    };
-    entity.save(&data.db).await?;
-
-    // clear all latest_jwk from cache
-    cache_del(
-        CACHE_NAME_12HR.to_string(),
-        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS256.as_str()),
-        &data.caches.ha_cache_config,
-    )
-    .await?;
-    cache_del(
-        CACHE_NAME_12HR.to_string(),
-        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS384.as_str()),
-        &data.caches.ha_cache_config,
-    )
-    .await?;
-    cache_del(
-        CACHE_NAME_12HR.to_string(),
-        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS512.as_str()),
-        &data.caches.ha_cache_config,
-    )
-    .await?;
-    cache_del(
-        CACHE_NAME_12HR.to_string(),
-        format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::EdDSA.as_str()),
-        &data.caches.ha_cache_config,
-    )
-    .await?;
-
-    // clear the all_certs / JWKS cache
-    cache_del(
-        CACHE_NAME_12HR.to_string(),
-        IDX_JWKS.to_string(),
-        &data.caches.ha_cache_config,
-    )
-    .await?;
-
-    info!("Finished JWKS rotation");
-
-    data.tx_events
-        .send_async(Event::jwks_rotated())
-        .await
-        .unwrap();
-
-    Ok(())
 }
 
 /// Validates request parameters for the authorization and refresh endpoints

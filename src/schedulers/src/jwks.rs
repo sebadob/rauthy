@@ -2,8 +2,7 @@ use crate::{is_ha_leader, sleep_schedule_next};
 use actix_web::web;
 use rauthy_common::constants::{CACHE_NAME_12HR, IDX_JWK_KID};
 use rauthy_models::app_state::AppState;
-use rauthy_models::entity::jwk::Jwk;
-use rauthy_service::auth;
+use rauthy_models::entity::jwk::{Jwk, JWKS};
 use redhac::{cache_del, QuorumHealthState};
 use std::collections::HashSet;
 use std::ops::Sub;
@@ -34,7 +33,7 @@ pub async fn jwks_auto_rotate(
             }
         }
 
-        if let Err(err) = auth::rotate_jwks(&data).await {
+        if let Err(err) = JWKS::rotate(&data).await {
             error!("Error during JWKS auto-rotation: {}", err.message);
         }
     }
