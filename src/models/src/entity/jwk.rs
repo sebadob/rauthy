@@ -536,10 +536,9 @@ impl JwkKeyPair {
     // by a given algorithm.
     pub async fn find_latest(
         data: &web::Data<AppState>,
-        alg: &str,
-        key_pair_type: JwkKeyPairAlg,
+        key_pair_alg: JwkKeyPairAlg,
     ) -> Result<Self, ErrorResponse> {
-        let idx = format!("{}{}", IDX_JWK_LATEST, &alg);
+        let idx = format!("{}{}", IDX_JWK_LATEST, key_pair_alg.as_str());
         let jwk_opt = cache_get!(
             JwkKeyPair,
             CACHE_NAME_12HR.to_string(),
@@ -556,7 +555,7 @@ impl JwkKeyPair {
             .fetch_all(&data.db)
             .await?
             .into_iter()
-            .filter(|jwk| jwk.signature == key_pair_type)
+            .filter(|jwk| jwk.signature == key_pair_alg)
             .collect::<Vec<Jwk>>();
 
         jwks.sort_by(|a, b| a.created_at.cmp(&b.created_at));
@@ -564,7 +563,7 @@ impl JwkKeyPair {
             panic!("No latest JWK found - database corrupted?");
         }
 
-        let jwk = JwkKeyPair::decrypt(jwks.first().unwrap(), key_pair_type)?;
+        let jwk = JwkKeyPair::decrypt(jwks.first().unwrap(), key_pair_alg)?;
 
         cache_put(
             CACHE_NAME_12HR.to_string(),
