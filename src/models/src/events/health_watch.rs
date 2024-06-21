@@ -71,7 +71,7 @@ pub async fn watch_health(
             was_healthy_after_startup = true;
         }
 
-        if is_good_now && is_good_now != last_state {
+        if is_good_now && !last_state {
             // let only the cache leader send healthy message in HA deployment
             tx_events.send_async(Event::rauthy_healthy()).await.unwrap();
         }
