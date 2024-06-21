@@ -456,7 +456,6 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                 middleware::DefaultHeaders::new()
                     .add(("x-frame-options", "SAMEORIGIN"))
                     .add(("x-content-type-options", "nosniff"))
-                    .add(("X-Robots-Tag", "noindex, nofollow"))
                     .add((
                         "strict-transport-security",
                         "max-age=31536000;includeSubDomains",
