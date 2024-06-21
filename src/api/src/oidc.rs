@@ -42,7 +42,7 @@ use rauthy_models::templates::{
     AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction,
 };
 use rauthy_models::JwtCommonClaims;
-use rauthy_service::auth;
+use rauthy_service::{auth, login_delay};
 use spow::pow::Pow;
 use std::borrow::Cow;
 use std::ops::Add;
@@ -295,7 +295,7 @@ pub async fn post_authorize(
     };
 
     let ip = real_ip_from_req(&req)?;
-    auth::handle_login_delay(
+    login_delay::handle_login_delay(
         &data,
         ip,
         start,
@@ -908,7 +908,7 @@ pub async fn post_token(
         }
     };
 
-    auth::handle_login_delay(
+    login_delay::handle_login_delay(
         &data,
         ip,
         start,
