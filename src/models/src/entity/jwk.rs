@@ -1,12 +1,16 @@
 use crate::app_state::{AppState, DbPool};
+use crate::events::event::Event;
 use actix_web::web;
-use cryptr::EncValue;
+use cryptr::{EncKeys, EncValue};
 use jwt_simple::algorithms;
+use jwt_simple::algorithms::{
+    Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
+};
 use rauthy_api_types::oidc::{JWKSCerts, JWKSPublicKeyCerts};
 use rauthy_common::constants::{CACHE_NAME_12HR, IDX_JWKS, IDX_JWK_KID, IDX_JWK_LATEST};
-use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode};
+use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
+use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
 use rsa::BigUint;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
@@ -15,6 +19,8 @@ use sqlx::{Error, FromRow, Row};
 use std::default::Default;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
+use time::OffsetDateTime;
+use tracing::info;
 
 #[macro_export]
 macro_rules! sign_jwt {
@@ -191,6 +197,129 @@ impl JWKS {
     pub fn add_jwk(&mut self, key_pair: &JwkKeyPair) {
         let pub_key = JWKSPublicKey::from_key_pair(key_pair);
         self.keys.push(pub_key)
+    }
+
+    /// Rotates and generates a whole new Set of JWKs for signing JWT Tokens
+    pub async fn rotate(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        info!("Starting JWKS rotation");
+
+        // let key = data.enc_keys.get(&data.enc_key_active).unwrap();
+        let enc_key_active = &EncKeys::get_static().enc_key_active;
+
+        // RSA256
+        let jwk_plain = web::block(|| {
+            RS256KeyPair::generate(2048)
+                .unwrap()
+                .with_key_id(&get_rand(24))
+        })
+        .await?;
+        let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
+            .into_bytes()
+            .to_vec();
+        let entity = Jwk {
+            kid: jwk_plain.key_id().as_ref().unwrap().clone(),
+            created_at: OffsetDateTime::now_utc().unix_timestamp(),
+            signature: JwkKeyPairAlg::RS256,
+            enc_key_id: enc_key_active.to_string(),
+            jwk,
+        };
+        entity.save(&data.db).await?;
+
+        // RS384
+        let jwk_plain = web::block(|| {
+            RS384KeyPair::generate(3072)
+                .unwrap()
+                .with_key_id(&get_rand(24))
+        })
+        .await?;
+        let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
+            .into_bytes()
+            .to_vec();
+        let entity = Jwk {
+            kid: jwk_plain.key_id().as_ref().unwrap().clone(),
+            created_at: OffsetDateTime::now_utc().unix_timestamp(),
+            signature: JwkKeyPairAlg::RS384,
+            enc_key_id: enc_key_active.to_string(),
+            jwk,
+        };
+        entity.save(&data.db).await?;
+
+        // RSA512
+        let jwk_plain = web::block(|| {
+            RS512KeyPair::generate(4096)
+                .unwrap()
+                .with_key_id(&get_rand(24))
+        })
+        .await?;
+        let jwk = EncValue::encrypt(jwk_plain.to_der().unwrap().as_slice())?
+            .into_bytes()
+            .to_vec();
+        let entity = Jwk {
+            kid: jwk_plain.key_id().as_ref().unwrap().clone(),
+            created_at: OffsetDateTime::now_utc().unix_timestamp(),
+            signature: JwkKeyPairAlg::RS512,
+            enc_key_id: enc_key_active.to_string(),
+            jwk,
+        };
+        entity.save(&data.db).await?;
+
+        // Ed25519
+        let jwk_plain =
+            web::block(|| Ed25519KeyPair::generate().with_key_id(&get_rand(24))).await?;
+        let jwk = EncValue::encrypt(jwk_plain.to_der().as_slice())?
+            .into_bytes()
+            .to_vec();
+        let entity = Jwk {
+            kid: jwk_plain.key_id().as_ref().unwrap().clone(),
+            created_at: OffsetDateTime::now_utc().unix_timestamp(),
+            signature: JwkKeyPairAlg::EdDSA,
+            enc_key_id: enc_key_active.to_string(),
+            jwk,
+        };
+        entity.save(&data.db).await?;
+
+        // clear all latest_jwk from cache
+        cache_del(
+            CACHE_NAME_12HR.to_string(),
+            format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS256.as_str()),
+            &data.caches.ha_cache_config,
+        )
+        .await?;
+        cache_del(
+            CACHE_NAME_12HR.to_string(),
+            format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS384.as_str()),
+            &data.caches.ha_cache_config,
+        )
+        .await?;
+        cache_del(
+            CACHE_NAME_12HR.to_string(),
+            format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS512.as_str()),
+            &data.caches.ha_cache_config,
+        )
+        .await?;
+        cache_del(
+            CACHE_NAME_12HR.to_string(),
+            format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::EdDSA.as_str()),
+            &data.caches.ha_cache_config,
+        )
+        .await?;
+
+        // clear the all_certs / JWKS cache
+        cache_del(
+            CACHE_NAME_12HR.to_string(),
+            IDX_JWKS.to_string(),
+            &data.caches.ha_cache_config,
+        )
+        .await?;
+
+        info!("Finished JWKS rotation");
+
+        data.tx_events
+            .send_async(Event::jwks_rotated())
+            .await
+            .unwrap();
+
+        Ok(())
     }
 }
 

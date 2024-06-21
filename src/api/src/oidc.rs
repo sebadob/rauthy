@@ -707,7 +707,7 @@ pub async fn rotate_jwk(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
 
-    auth::rotate_jwks(&data)
+    JWKS::rotate(&data)
         .await
         .map(|_| HttpResponse::Ok().finish())
 }
