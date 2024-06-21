@@ -1,5 +1,5 @@
 use crate::token_set::{
-    AtHash, AuthCodeFlow, DeviceCodeFlow, DpopFingerprint, TokenNonce, TokenScopes, TokenSet,
+    AuthCodeFlow, DeviceCodeFlow, DpopFingerprint, TokenNonce, TokenScopes, TokenSet,
 };
 use actix_web::http::header;
 use actix_web::http::header::{HeaderMap, HeaderName, HeaderValue};
@@ -12,15 +12,14 @@ use jwt_simple::algorithms::{
 use jwt_simple::claims;
 use jwt_simple::prelude::*;
 use rauthy_api_types::oidc::{
-    JktClaim, LoginRefreshRequest, LoginRequest, LogoutRequest, OAuth2ErrorResponse,
-    OAuth2ErrorTypeResponse, TokenInfo, TokenRequest,
+    LoginRefreshRequest, LoginRequest, LogoutRequest, OAuth2ErrorResponse, OAuth2ErrorTypeResponse,
+    TokenInfo, TokenRequest,
 };
 use rauthy_api_types::users::Userinfo;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, DEVICE_GRANT_POLL_INTERVAL,
-    DEVICE_GRANT_REFRESH_TOKEN_LIFETIME, ENABLE_SOLID_AUD, ENABLE_WEB_ID, HEADER_DPOP_NONCE,
-    IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME, REFRESH_TOKEN_LIFETIME, SESSION_LIFETIME,
-    SESSION_RENEW_MFA, TOKEN_BEARER, USERINFO_STRICT, WEBAUTHN_REQ_EXP,
+    CACHE_NAME_12HR, CACHE_NAME_LOGIN_DELAY, COOKIE_MFA, DEVICE_GRANT_POLL_INTERVAL, ENABLE_WEB_ID,
+    HEADER_DPOP_NONCE, IDX_JWKS, IDX_JWK_LATEST, IDX_LOGIN_TIME, SESSION_RENEW_MFA, TOKEN_BEARER,
+    USERINFO_STRICT, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::password_hasher::HashPassword;
 use rauthy_common::utils::{base64_url_encode, get_client_ip, get_rand, new_store_id};
@@ -36,7 +35,6 @@ use rauthy_models::entity::dpop_proof::DPoPProof;
 use rauthy_models::entity::jwk::{Jwk, JwkKeyPair, JwkKeyPairAlg};
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::refresh_tokens_devices::RefreshTokenDevice;
-use rauthy_models::entity::scopes::Scope;
 use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::users::{AccountType, User};
 use rauthy_models::entity::users_values::UserValues;
@@ -47,15 +45,15 @@ use rauthy_models::events::ip_blacklist_handler::{IpBlacklistReq, IpFailedLoginC
 use rauthy_models::language::Language;
 use rauthy_models::templates::{LogoutHtml, TooManyRequestsHtml};
 use rauthy_models::{
-    sign_jwt, validate_jwt, AddressClaim, AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn,
-    JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtRefreshClaims, JwtTokenType,
+    validate_jwt, AddressClaim, AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn, JwtCommonClaims,
+    JwtIdClaims, JwtRefreshClaims, JwtTokenType,
 };
 use redhac::cache_del;
 use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
 use ring::digest;
 use std::borrow::Cow;
 use std::cmp::PartialEq;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fmt::Write;
 use std::net::IpAddr;
 use std::ops::{Add, Sub};
@@ -308,325 +306,6 @@ pub async fn authorize_refresh(
             header_origin,
         }))
     }
-}
-
-/// Builds the access token for a user after all validation has been successful
-// too many arguments is not an issue - params cannot be mistaken because of enum wrappers
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
-pub async fn build_access_token(
-    user: Option<&User>,
-    data: &web::Data<AppState>,
-    client: &Client,
-    dpop_fingerprint: Option<DpopFingerprint>,
-    lifetime: i64,
-    scope: Option<TokenScopes>,
-    scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
-    device_code_flow: DeviceCodeFlow,
-) -> Result<String, ErrorResponse> {
-    let did = match device_code_flow {
-        DeviceCodeFlow::Yes(did) => Some(did),
-        DeviceCodeFlow::No => None,
-    };
-    let mut custom_claims = JwtAccessClaims {
-        typ: JwtTokenType::Bearer,
-        azp: client.id.to_string(),
-        scope: scope
-            .map(|s| s.0)
-            .unwrap_or_else(|| client.default_scopes.clone().replace(',', " ")),
-        allowed_origins: None,
-        did,
-        email: None,
-        preferred_username: None,
-        roles: None,
-        groups: None,
-        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
-        custom: None,
-    };
-
-    // add user specific claims if available
-    let sub = if let Some(user) = user {
-        custom_claims.preferred_username = Some(user.email.clone());
-        custom_claims.roles = Some(user.get_roles());
-
-        if custom_claims.scope.contains("email") {
-            custom_claims.email = Some(user.email.clone());
-        }
-
-        if custom_claims.scope.contains("groups") {
-            custom_claims.groups = Some(user.get_groups());
-        }
-
-        Some(&user.id)
-    } else {
-        None
-    };
-
-    if let Some((cust, user_attrs)) = scope_customs {
-        let user_attrs = user_attrs.as_ref().unwrap();
-        let mut attr = HashMap::with_capacity(cust.len());
-        for c in cust {
-            if let Some(csv) = &c.attr_include_access {
-                let scopes = csv.split(',');
-                for cust_name in scopes {
-                    if let Some(value) = user_attrs.get(cust_name) {
-                        let json = serde_json::from_slice(value.as_slice())
-                            .expect("Converting cust user id attr to json");
-                        attr.insert(cust_name.to_string(), json);
-                    };
-                }
-            }
-        }
-        if !attr.is_empty() {
-            custom_claims.custom = Some(attr);
-        }
-    }
-
-    let mut claims = Claims::with_custom_claims(
-        custom_claims,
-        coarsetime::Duration::from_secs(lifetime as u64),
-    )
-    .with_issuer(data.issuer.clone())
-    .with_audience(client.id.to_string());
-
-    if let Some(sub) = sub {
-        claims = claims.with_subject(sub);
-    }
-
-    sign_access_token(data, claims, client).await
-}
-
-/// Builds the id token for a user after all validation has been successful
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
-pub async fn build_id_token(
-    user: &User,
-    data: &web::Data<AppState>,
-    client: &Client,
-    dpop_fingerprint: Option<DpopFingerprint>,
-    at_hash: AtHash,
-    lifetime: i64,
-    nonce: Option<TokenNonce>,
-    scope: &str,
-    scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
-    auth_code_flow: AuthCodeFlow,
-) -> Result<String, ErrorResponse> {
-    let now_ts = Utc::now().timestamp();
-
-    // TODO the `auth_time` here is a bit inaccurate currently. The accuracy could be improved
-    // with future DB migrations by adding something like a `last_auth` column for each user.
-    // It is unclear right now, if we even need it right now.
-    let (amr, auth_time) = match user.has_webauthn_enabled() {
-        true => {
-            if auth_code_flow == AuthCodeFlow::Yes {
-                // With active MFA, the auth_time is always 'now', because it must be re-validated each time
-                (JwtAmrValue::Mfa.to_string(), now_ts)
-            } else {
-                (
-                    JwtAmrValue::Pwd.to_string(),
-                    now_ts - *SESSION_LIFETIME as i64,
-                )
-            }
-        }
-        false => {
-            if auth_code_flow == AuthCodeFlow::Yes {
-                (JwtAmrValue::Pwd.to_string(), now_ts)
-            } else {
-                (
-                    JwtAmrValue::Pwd.to_string(),
-                    now_ts - *SESSION_LIFETIME as i64,
-                )
-            }
-        }
-    };
-
-    let webid =
-        (*ENABLE_WEB_ID && scope.contains("webid")).then(|| WebId::resolve_webid_uri(&user.id));
-
-    let mut custom_claims = JwtIdClaims {
-        azp: client.id.clone(),
-        typ: JwtTokenType::Id,
-        amr: vec![amr],
-        auth_time,
-        at_hash: at_hash.0,
-        preferred_username: user.email.clone(),
-        email: None,
-        email_verified: None,
-        given_name: None,
-        family_name: None,
-        address: None,
-        birthdate: None,
-        locale: None,
-        phone: None,
-        roles: user.get_roles(),
-        groups: None,
-        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
-        custom: None,
-        webid,
-    };
-
-    let mut user_values = None;
-    let mut user_values_fetched = false;
-
-    if scope.contains("email") {
-        custom_claims.email = Some(user.email.clone());
-        custom_claims.email_verified = Some(user.email_verified);
-    }
-
-    if scope.contains("profile") {
-        custom_claims.given_name = Some(user.given_name.clone());
-        custom_claims.family_name = Some(user.family_name.clone());
-        custom_claims.locale = Some(user.language.to_string());
-
-        user_values = UserValues::find(data, &user.id).await?;
-        user_values_fetched = true;
-
-        if let Some(values) = &user_values {
-            if let Some(birthdate) = &values.birthdate {
-                custom_claims.birthdate = Some(birthdate.clone());
-            }
-        }
-    }
-
-    if scope.contains("address") {
-        if !user_values_fetched {
-            user_values = UserValues::find(data, &user.id).await?;
-            user_values_fetched = true;
-        }
-
-        if let Some(values) = &user_values {
-            custom_claims.address = AddressClaim::try_build(user, values);
-        }
-    }
-
-    if scope.contains("phone") {
-        if !user_values_fetched {
-            user_values = UserValues::find(data, &user.id).await?;
-            // user_values_fetched = true;
-        }
-
-        if let Some(values) = &user_values {
-            if let Some(phone) = &values.phone {
-                custom_claims.phone = Some(phone.clone());
-            }
-        }
-    }
-
-    if scope.contains("groups") {
-        custom_claims.groups = Some(user.get_groups());
-    }
-
-    if let Some((cust, user_attrs)) = scope_customs {
-        let user_attrs = user_attrs.as_ref().unwrap();
-        let mut attr = HashMap::with_capacity(cust.len());
-        for c in cust {
-            if let Some(csv) = &c.attr_include_id {
-                let scopes = csv.split(',');
-                for cust_name in scopes {
-                    if let Some(value) = user_attrs.get(cust_name) {
-                        let json = serde_json::from_slice(value.as_slice())
-                            .expect("Converting cust user id attr to json");
-                        attr.insert(cust_name.to_string(), json);
-                    };
-                }
-            }
-        }
-        if !attr.is_empty() {
-            custom_claims.custom = Some(attr);
-        }
-    }
-
-    let mut claims = Claims::with_custom_claims(
-        custom_claims,
-        coarsetime::Duration::from_secs(lifetime as u64),
-    )
-    .with_subject(user.id.clone())
-    .with_issuer(data.issuer.clone());
-
-    // TODO should we maybe always include the "solid" claim here depending on if a webid exists?
-    // like it is now, static clients would never include this claim, even though they might need it
-    if client.is_ephemeral() && *ENABLE_SOLID_AUD {
-        let mut aud = HashSet::with_capacity(2);
-        aud.insert("solid".to_string());
-        aud.insert(client.id.to_string());
-        claims = claims.with_audiences(aud);
-    } else {
-        claims = claims.with_audience(client.id.to_string());
-    }
-
-    if let Some(nonce) = nonce {
-        claims = claims.with_nonce(nonce.0);
-    }
-
-    sign_id_token(data, claims, client).await
-}
-
-/// Builds the refresh token for a user after all validation has been successful
-#[allow(clippy::too_many_arguments)]
-pub async fn build_refresh_token(
-    user: &User,
-    data: &web::Data<AppState>,
-    dpop_fingerprint: Option<DpopFingerprint>,
-    client: &Client,
-    access_token_lifetime: i64,
-    scope: Option<TokenScopes>,
-    is_mfa: bool,
-    device_code_flow: DeviceCodeFlow,
-) -> Result<String, ErrorResponse> {
-    let did = if let DeviceCodeFlow::Yes(device_id) = device_code_flow {
-        Some(device_id)
-    } else {
-        None
-    };
-
-    let custom_claims = JwtRefreshClaims {
-        azp: client.id.clone(),
-        typ: JwtTokenType::Refresh,
-        uid: user.id.clone(),
-        cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
-        did: did.clone(),
-    };
-
-    let nbf = Utc::now().add(chrono::Duration::seconds(access_token_lifetime - 60));
-    let nbf_unix = UnixTimeStamp::from_secs(nbf.timestamp() as u64);
-
-    let claims = Claims::with_custom_claims(custom_claims, coarsetime::Duration::from_hours(48))
-        .with_issuer(data.issuer.clone())
-        .invalid_before(nbf_unix)
-        .with_audience(client.id.to_string());
-
-    let token = sign_refresh_token(data, claims).await?;
-
-    // only save the last 50 characters for validation
-    let validation_string = String::from(&token).split_off(token.len() - 49);
-
-    if let Some(device_id) = did {
-        let exp = nbf.add(chrono::Duration::hours(
-            *DEVICE_GRANT_REFRESH_TOKEN_LIFETIME as i64,
-        ));
-        RefreshTokenDevice::create(
-            data,
-            validation_string,
-            device_id,
-            user.id.clone(),
-            nbf,
-            exp,
-            scope.map(|s| s.0),
-        )
-        .await?;
-    } else {
-        let exp = nbf.add(chrono::Duration::hours(*REFRESH_TOKEN_LIFETIME as i64));
-        RefreshToken::create(
-            data,
-            validation_string,
-            user.id.clone(),
-            nbf,
-            exp,
-            scope.map(|s| s.0),
-            is_mfa,
-        )
-        .await?;
-    }
-
-    Ok(token)
 }
 
 #[inline(always)]
@@ -1828,39 +1507,6 @@ pub async fn rotate_jwks(data: &web::Data<AppState>) -> Result<(), ErrorResponse
         .unwrap();
 
     Ok(())
-}
-
-/// Signs an access token
-async fn sign_access_token(
-    data: &web::Data<AppState>,
-    claims: claims::JWTClaims<JwtAccessClaims>,
-    client: &Client,
-) -> Result<String, ErrorResponse> {
-    let key_pair_type = JwkKeyPairAlg::from_str(&client.access_token_alg)?;
-    let kp = JwkKeyPair::find_latest(data, &client.access_token_alg, key_pair_type).await?;
-    sign_jwt!(kp, claims)
-}
-
-/// Signs an id token
-async fn sign_id_token(
-    data: &web::Data<AppState>,
-    claims: claims::JWTClaims<JwtIdClaims>,
-    client: &Client,
-) -> Result<String, ErrorResponse> {
-    let key_pair_type = JwkKeyPairAlg::from_str(&client.id_token_alg)?;
-    let kp = JwkKeyPair::find_latest(data, &client.id_token_alg, key_pair_type).await?;
-    sign_jwt!(kp, claims)
-}
-
-/// Signs a refresh token
-async fn sign_refresh_token(
-    data: &web::Data<AppState>,
-    claims: claims::JWTClaims<JwtRefreshClaims>,
-) -> Result<String, ErrorResponse> {
-    let alg = String::from("EdDSA");
-    let key_pair_type = JwkKeyPairAlg::from_str(&alg)?;
-    let kp = JwkKeyPair::find_latest(data, &alg, key_pair_type).await?;
-    sign_jwt!(kp, claims)
 }
 
 /// Validates request parameters for the authorization and refresh endpoints

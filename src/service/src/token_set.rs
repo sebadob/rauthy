@@ -1,16 +1,34 @@
-use crate::auth;
 use actix_web::web;
+use chrono::Utc;
+use jwt_simple::algorithms::{EdDSAKeyPairLike, RSAKeyPairLike};
+use jwt_simple::claims::Claims;
+use jwt_simple::prelude::{coarsetime, UnixTimeStamp};
+use rauthy_api_types::oidc::JktClaim;
+use rauthy_common::constants::{
+    DEVICE_GRANT_REFRESH_TOKEN_LIFETIME, ENABLE_SOLID_AUD, ENABLE_WEB_ID, REFRESH_TOKEN_LIFETIME,
+    SESSION_LIFETIME,
+};
 use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
+use rauthy_models::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
+use rauthy_models::entity::refresh_tokens::RefreshToken;
+use rauthy_models::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_models::entity::scopes::Scope;
 use rauthy_models::entity::user_attr::UserAttrValueEntity;
 use rauthy_models::entity::users::User;
-use rauthy_models::JwtTokenType;
+use rauthy_models::entity::users_values::UserValues;
+use rauthy_models::entity::webids::WebId;
+use rauthy_models::{
+    sign_jwt, AddressClaim, JwtAccessClaims, JwtAmrValue, JwtIdClaims, JwtRefreshClaims,
+    JwtTokenType,
+};
 use ring::digest;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::ops::Add;
+use std::str::FromStr;
 use time::OffsetDateTime;
 use utoipa::ToSchema;
 
@@ -87,6 +105,336 @@ pub struct TokenSet {
 }
 
 impl TokenSet {
+    /// Builds the access token for a user after all validation has been successful
+    // too many arguments is not an issue - params cannot be mistaken because of enum wrappers
+    #[allow(clippy::too_many_arguments, clippy::type_complexity)]
+    pub async fn build_access_token(
+        user: Option<&User>,
+        data: &web::Data<AppState>,
+        client: &Client,
+        dpop_fingerprint: Option<DpopFingerprint>,
+        lifetime: i64,
+        scope: Option<TokenScopes>,
+        scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
+        device_code_flow: DeviceCodeFlow,
+    ) -> Result<String, ErrorResponse> {
+        let did = match device_code_flow {
+            DeviceCodeFlow::Yes(did) => Some(did),
+            DeviceCodeFlow::No => None,
+        };
+        let mut custom_claims = JwtAccessClaims {
+            typ: JwtTokenType::Bearer,
+            azp: client.id.to_string(),
+            scope: scope
+                .map(|s| s.0)
+                .unwrap_or_else(|| client.default_scopes.clone().replace(',', " ")),
+            allowed_origins: None,
+            did,
+            email: None,
+            preferred_username: None,
+            roles: None,
+            groups: None,
+            cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
+            custom: None,
+        };
+
+        // add user specific claims if available
+        let sub = if let Some(user) = user {
+            custom_claims.preferred_username = Some(user.email.clone());
+            custom_claims.roles = Some(user.get_roles());
+
+            if custom_claims.scope.contains("email") {
+                custom_claims.email = Some(user.email.clone());
+            }
+
+            if custom_claims.scope.contains("groups") {
+                custom_claims.groups = Some(user.get_groups());
+            }
+
+            Some(&user.id)
+        } else {
+            None
+        };
+
+        if let Some((cust, user_attrs)) = scope_customs {
+            let user_attrs = user_attrs.as_ref().unwrap();
+            let mut attr = HashMap::with_capacity(cust.len());
+            for c in cust {
+                if let Some(csv) = &c.attr_include_access {
+                    let scopes = csv.split(',');
+                    for cust_name in scopes {
+                        if let Some(value) = user_attrs.get(cust_name) {
+                            let json = serde_json::from_slice(value.as_slice())
+                                .expect("Converting cust user id attr to json");
+                            attr.insert(cust_name.to_string(), json);
+                        };
+                    }
+                }
+            }
+            if !attr.is_empty() {
+                custom_claims.custom = Some(attr);
+            }
+        }
+
+        let mut claims = Claims::with_custom_claims(
+            custom_claims,
+            coarsetime::Duration::from_secs(lifetime as u64),
+        )
+        .with_issuer(data.issuer.clone())
+        .with_audience(client.id.to_string());
+
+        if let Some(sub) = sub {
+            claims = claims.with_subject(sub);
+        }
+
+        // sign the token
+        let key_pair_alg = JwkKeyPairAlg::from_str(&client.access_token_alg)?;
+        let kp = JwkKeyPair::find_latest(data, key_pair_alg).await?;
+        sign_jwt!(kp, claims)
+    }
+
+    /// Builds the id token for a user after all validation has been successful
+    #[allow(clippy::too_many_arguments, clippy::type_complexity)]
+    pub async fn build_id_token(
+        user: &User,
+        data: &web::Data<AppState>,
+        client: &Client,
+        dpop_fingerprint: Option<DpopFingerprint>,
+        at_hash: AtHash,
+        lifetime: i64,
+        nonce: Option<TokenNonce>,
+        scope: &str,
+        scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
+        auth_code_flow: AuthCodeFlow,
+    ) -> Result<String, ErrorResponse> {
+        let now_ts = Utc::now().timestamp();
+
+        // TODO the `auth_time` here is a bit inaccurate currently. The accuracy could be improved
+        // with future DB migrations by adding something like a `last_auth` column for each user.
+        // It is unclear right now, if we even need it right now.
+        let (amr, auth_time) = match user.has_webauthn_enabled() {
+            true => {
+                if auth_code_flow == AuthCodeFlow::Yes {
+                    // With active MFA, the auth_time is always 'now', because it must be re-validated each time
+                    (JwtAmrValue::Mfa.to_string(), now_ts)
+                } else {
+                    (
+                        JwtAmrValue::Pwd.to_string(),
+                        now_ts - *SESSION_LIFETIME as i64,
+                    )
+                }
+            }
+            false => {
+                if auth_code_flow == AuthCodeFlow::Yes {
+                    (JwtAmrValue::Pwd.to_string(), now_ts)
+                } else {
+                    (
+                        JwtAmrValue::Pwd.to_string(),
+                        now_ts - *SESSION_LIFETIME as i64,
+                    )
+                }
+            }
+        };
+
+        let webid =
+            (*ENABLE_WEB_ID && scope.contains("webid")).then(|| WebId::resolve_webid_uri(&user.id));
+
+        let mut custom_claims = JwtIdClaims {
+            azp: client.id.clone(),
+            typ: JwtTokenType::Id,
+            amr: vec![amr],
+            auth_time,
+            at_hash: at_hash.0,
+            preferred_username: user.email.clone(),
+            email: None,
+            email_verified: None,
+            given_name: None,
+            family_name: None,
+            address: None,
+            birthdate: None,
+            locale: None,
+            phone: None,
+            roles: user.get_roles(),
+            groups: None,
+            cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
+            custom: None,
+            webid,
+        };
+
+        let mut user_values = None;
+        let mut user_values_fetched = false;
+
+        if scope.contains("email") {
+            custom_claims.email = Some(user.email.clone());
+            custom_claims.email_verified = Some(user.email_verified);
+        }
+
+        if scope.contains("profile") {
+            custom_claims.given_name = Some(user.given_name.clone());
+            custom_claims.family_name = Some(user.family_name.clone());
+            custom_claims.locale = Some(user.language.to_string());
+
+            user_values = UserValues::find(data, &user.id).await?;
+            user_values_fetched = true;
+
+            if let Some(values) = &user_values {
+                if let Some(birthdate) = &values.birthdate {
+                    custom_claims.birthdate = Some(birthdate.clone());
+                }
+            }
+        }
+
+        if scope.contains("address") {
+            if !user_values_fetched {
+                user_values = UserValues::find(data, &user.id).await?;
+                user_values_fetched = true;
+            }
+
+            if let Some(values) = &user_values {
+                custom_claims.address = AddressClaim::try_build(user, values);
+            }
+        }
+
+        if scope.contains("phone") {
+            if !user_values_fetched {
+                user_values = UserValues::find(data, &user.id).await?;
+                // user_values_fetched = true;
+            }
+
+            if let Some(values) = &user_values {
+                if let Some(phone) = &values.phone {
+                    custom_claims.phone = Some(phone.clone());
+                }
+            }
+        }
+
+        if scope.contains("groups") {
+            custom_claims.groups = Some(user.get_groups());
+        }
+
+        if let Some((cust, user_attrs)) = scope_customs {
+            let user_attrs = user_attrs.as_ref().unwrap();
+            let mut attr = HashMap::with_capacity(cust.len());
+            for c in cust {
+                if let Some(csv) = &c.attr_include_id {
+                    let scopes = csv.split(',');
+                    for cust_name in scopes {
+                        if let Some(value) = user_attrs.get(cust_name) {
+                            let json = serde_json::from_slice(value.as_slice())
+                                .expect("Converting cust user id attr to json");
+                            attr.insert(cust_name.to_string(), json);
+                        };
+                    }
+                }
+            }
+            if !attr.is_empty() {
+                custom_claims.custom = Some(attr);
+            }
+        }
+
+        let mut claims = Claims::with_custom_claims(
+            custom_claims,
+            coarsetime::Duration::from_secs(lifetime as u64),
+        )
+        .with_subject(user.id.clone())
+        .with_issuer(data.issuer.clone());
+
+        // TODO should we maybe always include the "solid" claim here depending on if a webid exists?
+        // like it is now, static clients would never include this claim, even though they might need it
+        if client.is_ephemeral() && *ENABLE_SOLID_AUD {
+            let mut aud = HashSet::with_capacity(2);
+            aud.insert("solid".to_string());
+            aud.insert(client.id.to_string());
+            claims = claims.with_audiences(aud);
+        } else {
+            claims = claims.with_audience(client.id.to_string());
+        }
+
+        if let Some(nonce) = nonce {
+            claims = claims.with_nonce(nonce.0);
+        }
+
+        // sign the token
+        let key_pair_alg = JwkKeyPairAlg::from_str(&client.id_token_alg)?;
+        let kp = JwkKeyPair::find_latest(data, key_pair_alg).await?;
+        sign_jwt!(kp, claims)
+    }
+
+    /// Builds the refresh token for a user after all validation has been successful
+    #[allow(clippy::too_many_arguments)]
+    pub async fn build_refresh_token(
+        user: &User,
+        data: &web::Data<AppState>,
+        dpop_fingerprint: Option<DpopFingerprint>,
+        client: &Client,
+        access_token_lifetime: i64,
+        scope: Option<TokenScopes>,
+        is_mfa: bool,
+        device_code_flow: DeviceCodeFlow,
+    ) -> Result<String, ErrorResponse> {
+        let did = if let DeviceCodeFlow::Yes(device_id) = device_code_flow {
+            Some(device_id)
+        } else {
+            None
+        };
+
+        let custom_claims = JwtRefreshClaims {
+            azp: client.id.clone(),
+            typ: JwtTokenType::Refresh,
+            uid: user.id.clone(),
+            cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
+            did: did.clone(),
+        };
+
+        let nbf = Utc::now().add(chrono::Duration::seconds(access_token_lifetime - 60));
+        let nbf_unix = UnixTimeStamp::from_secs(nbf.timestamp() as u64);
+
+        let claims =
+            Claims::with_custom_claims(custom_claims, coarsetime::Duration::from_hours(48))
+                .with_issuer(data.issuer.clone())
+                .invalid_before(nbf_unix)
+                .with_audience(client.id.to_string());
+
+        // sign the token
+        let token = {
+            let kp = JwkKeyPair::find_latest(data, JwkKeyPairAlg::default()).await?;
+            sign_jwt!(kp, claims)
+        }?;
+
+        // only save the last 50 characters for validation
+        let validation_string = String::from(&token).split_off(token.len() - 49);
+
+        if let Some(device_id) = did {
+            let exp = nbf.add(chrono::Duration::hours(
+                *DEVICE_GRANT_REFRESH_TOKEN_LIFETIME as i64,
+            ));
+            RefreshTokenDevice::create(
+                data,
+                validation_string,
+                device_id,
+                user.id.clone(),
+                nbf,
+                exp,
+                scope.map(|s| s.0),
+            )
+            .await?;
+        } else {
+            let exp = nbf.add(chrono::Duration::hours(*REFRESH_TOKEN_LIFETIME as i64));
+            RefreshToken::create(
+                data,
+                validation_string,
+                user.id.clone(),
+                nbf,
+                exp,
+                scope.map(|s| s.0),
+                is_mfa,
+            )
+            .await?;
+        }
+
+        Ok(token)
+    }
+
     pub async fn for_client_credentials(
         data: &web::Data<AppState>,
         client: &Client,
@@ -97,7 +445,7 @@ impl TokenSet {
         } else {
             JwtTokenType::Bearer
         };
-        let access_token = auth::build_access_token(
+        let access_token = Self::build_access_token(
             None,
             data,
             client,
@@ -214,7 +562,7 @@ impl TokenSet {
         } else {
             JwtTokenType::Bearer
         };
-        let access_token = auth::build_access_token(
+        let access_token = Self::build_access_token(
             Some(user),
             data,
             client,
@@ -230,7 +578,7 @@ impl TokenSet {
             access_token.as_bytes(),
             AtHashAlg::try_from(client.access_token_alg.as_str())?,
         );
-        let id_token = auth::build_id_token(
+        let id_token = Self::build_id_token(
             user,
             data,
             client,
@@ -245,7 +593,7 @@ impl TokenSet {
         .await?;
         let refresh_token = if client.allow_refresh_token() {
             Some(
-                auth::build_refresh_token(
+                Self::build_refresh_token(
                     user,
                     data,
                     dpop_fingerprint,
