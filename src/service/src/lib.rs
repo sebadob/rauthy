@@ -2,7 +2,6 @@
 
 #![forbid(unsafe_code)]
 
-pub mod auth_svc;
 pub mod client;
 pub mod encryption;
 pub mod login_delay;
