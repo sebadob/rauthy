@@ -16,8 +16,8 @@ use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::logos::{Logo, LogoType};
-use rauthy_service::auth::get_bearer_token_from_header;
 use rauthy_service::client;
+use rauthy_service::oidc::helpers;
 use tracing::debug;
 
 /// Returns all existing OIDC clients with all their information, except for the client secrets.
@@ -169,7 +169,7 @@ pub async fn post_clients_dyn(
     }
 
     if let Some(token) = &*DYN_CLIENT_REG_TOKEN {
-        let bearer = get_bearer_token_from_header(req.headers())?;
+        let bearer = helpers::get_bearer_token_from_header(req.headers())?;
         if token != &bearer {
             return Ok(HttpResponse::Unauthorized()
                 .insert_header((
@@ -216,7 +216,7 @@ pub async fn get_clients_dyn(
         return Ok(HttpResponse::NotFound().finish());
     }
 
-    let bearer = get_bearer_token_from_header(req.headers())?;
+    let bearer = helpers::get_bearer_token_from_header(req.headers())?;
     let id = id.into_inner();
     let client_dyn = ClientDyn::find(&data, id.clone()).await?;
     client_dyn.validate_token(&bearer)?;
@@ -250,7 +250,7 @@ pub async fn put_clients_dyn(
         return Ok(HttpResponse::NotFound().finish());
     }
 
-    let bearer = get_bearer_token_from_header(req.headers())?;
+    let bearer = helpers::get_bearer_token_from_header(req.headers())?;
     let id = id.into_inner();
     let client_dyn = ClientDyn::find(&data, id.clone()).await?;
     client_dyn.validate_token(&bearer)?;

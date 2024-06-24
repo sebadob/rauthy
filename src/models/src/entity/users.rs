@@ -27,7 +27,7 @@ use rauthy_common::constants::{
     WEBAUTHN_NO_PASSWORD_EXPIRY,
 };
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
-use rauthy_common::utils::{get_client_ip, new_store_id, real_ip_from_req};
+use rauthy_common::utils::{new_store_id, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use redhac::{
     cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel,
@@ -1390,7 +1390,7 @@ impl User {
             if ml.exp > OffsetDateTime::now_utc().unix_timestamp() {
                 warn!(
                     "Password reset request with already existing valid magic link from: {}",
-                    get_client_ip(&req)
+                    real_ip_from_req(&req)?
                 );
                 ml.invalidate(data).await?;
             }
