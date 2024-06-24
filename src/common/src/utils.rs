@@ -34,6 +34,7 @@ pub fn json_arr_to_vec(arr: &str) -> Vec<String> {
         .collect()
 }
 
+#[deprecated]
 pub fn get_client_ip(req: &HttpRequest) -> String {
     req.connection_info()
         .peer_addr()

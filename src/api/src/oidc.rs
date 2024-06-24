@@ -42,8 +42,8 @@ use rauthy_models::templates::{
     AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction,
 };
 use rauthy_models::JwtCommonClaims;
-use rauthy_service::oidc::authorization_code;
-use rauthy_service::{auth_svc, login_delay};
+use rauthy_service::oidc::{authorize, logout, token_info, userinfo, validation};
+use rauthy_service::{login_delay, oidc};
 use spow::pow::Pow;
 use std::borrow::Cow;
 use std::ops::Add;
@@ -76,7 +76,7 @@ pub async fn get_authorize(
         .unwrap_or_default();
     let lang = Language::try_from(&req).unwrap_or_default();
 
-    let (client, origin_header) = match auth_svc::validate_auth_req_param(
+    let (client, origin_header) = match validation::validate_auth_req_param(
         &data,
         &req,
         &req_data.client_id,
@@ -261,7 +261,7 @@ pub async fn post_authorize(
     let mut add_login_delay = true;
     let mut user_needs_mfa = false;
 
-    let res = match authorization_code::post_authorize(
+    let res = match authorize::post_authorize(
         &data,
         &req,
         payload.into_inner(),
@@ -332,7 +332,7 @@ pub async fn post_authorize_refresh(
 ) -> Result<HttpResponse, ErrorResponse> {
     let session = principal.validate_session_auth()?;
 
-    let (client, header_origin) = auth_svc::validate_auth_req_param(
+    let (client, header_origin) = validation::validate_auth_req_param(
         &data,
         &req,
         &req_data.client_id,
@@ -342,7 +342,7 @@ pub async fn post_authorize_refresh(
     )
     .await?;
 
-    let auth_step = authorization_code::post_authorize_refresh(
+    let auth_step = authorize::post_authorize_refresh(
         &data,
         session,
         client,
@@ -621,7 +621,7 @@ pub async fn get_logout(
     };
 
     let lang = Language::try_from(&req).unwrap_or_default();
-    let body = match auth_svc::logout(req_data.into_inner(), session, &data, &lang).await {
+    let body = match logout::get_logout_html(req_data.into_inner(), session, &data, &lang).await {
         Ok(t) => t,
         Err(_) => {
             return HttpResponse::build(StatusCode::from_u16(302).unwrap())
@@ -891,13 +891,13 @@ pub async fn post_token(
         // the `urn:ietf:params:oauth:grant-type:device_code` needs
         // a fully customized handling here with customized error response
         // to meet the oauth rfc
-        return Ok(auth_svc::grant_type_device_code(&data, ip, payload.into_inner()).await);
+        return Ok(oidc::grant_type_device_code(&data, ip, payload.into_inner()).await);
     }
 
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let has_password_been_hashed = payload.grant_type == "password";
 
-    let res = match auth_svc::get_token_set(payload.into_inner(), &data, req).await {
+    let res = match oidc::get_token_set(payload.into_inner(), &data, req).await {
         Ok((token_set, headers)) => {
             let mut builder = HttpResponseBuilder::new(StatusCode::OK);
             for h in headers {
@@ -942,7 +942,7 @@ pub async fn post_token_info(
     data: web::Data<AppState>,
     req_data: actix_web_validator::Json<TokenValidationRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    auth_svc::get_token_info(&data, &req_data.token)
+    token_info::get_token_info(&data, &req_data.token)
         .await
         .map(|i| HttpResponse::Ok().json(i))
 }
@@ -993,7 +993,7 @@ pub async fn post_validate_token(
     data: web::Data<AppState>,
     req_data: actix_web_validator::Json<TokenValidationRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    auth_svc::validate_token::<JwtCommonClaims>(&data, &req_data.token)
+    validation::validate_token::<JwtCommonClaims>(&data, &req_data.token)
         .await
         .map(|_| HttpResponse::Accepted().finish())
 }
@@ -1018,7 +1018,7 @@ pub async fn get_userinfo(
     data: web::Data<AppState>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    auth_svc::get_userinfo(&data, req)
+    userinfo::get_userinfo(&data, req)
         .await
         .map(|u| HttpResponse::Ok().json(u))
 }
@@ -1043,7 +1043,7 @@ pub async fn post_userinfo(
     data: web::Data<AppState>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    auth_svc::get_userinfo(&data, req)
+    userinfo::get_userinfo(&data, req)
         .await
         .map(|u| HttpResponse::Ok().json(u))
 }
@@ -1076,7 +1076,7 @@ pub async fn get_forward_auth(
     data: web::Data<AppState>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let info = auth_svc::get_userinfo(&data, req).await?;
+    let info = userinfo::get_userinfo(&data, req).await?;
 
     if *AUTH_HEADERS_ENABLE {
         Ok(HttpResponse::Ok()
