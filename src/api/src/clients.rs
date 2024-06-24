@@ -16,7 +16,7 @@ use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::logos::{Logo, LogoType};
-use rauthy_service::auth::get_bearer_token_from_header;
+use rauthy_service::auth_svc::get_bearer_token_from_header;
 use rauthy_service::client;
 use tracing::debug;
 
