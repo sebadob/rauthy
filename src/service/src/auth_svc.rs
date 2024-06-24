@@ -968,7 +968,6 @@ pub async fn validate_auth_req_param(
     Ok((client, header))
 }
 
-// TODO remove handler /refresh and move into grant_type_refresh? -> obsolete since grant_type_refresh?
 /// Validates common claims for refresh tokens used in different places
 pub async fn validate_refresh_token(
     // when this is some, it will be checked against the 'azp' claim, otherwise skipped and a client
