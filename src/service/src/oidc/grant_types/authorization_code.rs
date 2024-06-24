@@ -5,7 +5,7 @@ use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest};
 use rauthy_api_types::oidc::TokenRequest;
 use rauthy_common::constants::HEADER_DPOP_NONCE;
-use rauthy_common::utils::{base64_url_encode, get_client_ip};
+use rauthy_common::utils::{base64_url_encode, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_codes::AuthCode;
@@ -73,16 +73,19 @@ pub async fn grant_type_authorization_code(
 
     // get the oidc code from the cache
     let idx = req_data.code.as_ref().unwrap().to_owned();
-    let code = AuthCode::find(data, idx).await?.ok_or_else(|| {
-        warn!(
-            "'auth_code' could not be found inside the cache - Host: {}",
-            get_client_ip(&req),
-        );
-        ErrorResponse::new(
-            ErrorResponseType::Unauthorized,
-            "'auth_code' could not be found inside the cache",
-        )
-    })?;
+    let code = match AuthCode::find(data, idx).await? {
+        None => {
+            warn!(
+                "'auth_code' could not be found inside the cache - Host: {}",
+                real_ip_from_req(&req)?,
+            );
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "'auth_code' could not be found inside the cache",
+            ));
+        }
+        Some(code) => code,
+    };
     // validate the oidc code
     if code.client_id != client_id {
         let err = format!("Wrong 'code' for client_id '{}'", client_id);

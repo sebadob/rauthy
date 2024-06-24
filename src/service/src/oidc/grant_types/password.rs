@@ -4,7 +4,7 @@ use actix_web::{web, HttpRequest};
 use rauthy_api_types::oidc::TokenRequest;
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_common::password_hasher::HashPassword;
-use rauthy_common::utils::get_client_ip;
+use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
@@ -67,16 +67,7 @@ pub async fn grant_type_password(
 
     // This Error must be the same if user does not exist AND passwords do not match to prevent
     // username enumeration
-    let mut user = User::find_by_email(data, String::from(email))
-        .await
-        .map_err(|_| {
-            warn!(
-                "False login from Host: '{}' with invalid username: '{}'",
-                get_client_ip(&req),
-                email
-            );
-            ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid user credentials")
-        })?;
+    let mut user = User::find_by_email(data, String::from(email)).await?;
     user.check_enabled()?;
     user.check_expired()?;
 
@@ -118,7 +109,7 @@ pub async fn grant_type_password(
         Err(err) => {
             warn!(
                 "False Login attempt from Host: '{}' for user: '{}'",
-                get_client_ip(&req),
+                real_ip_from_req(&req)?,
                 user.email
             );
 

@@ -910,6 +910,7 @@ pub async fn post_token(
             if !has_password_been_hashed {
                 return Err(err);
             }
+            // TODO return always the same error here as well, just like during authorize?
             Err(err)
         }
     };
