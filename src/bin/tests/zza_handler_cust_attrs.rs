@@ -1,4 +1,6 @@
-use crate::common::{get_auth_headers, get_backend_url, get_token_set};
+use crate::common::{
+    extract_token_claims_unverified, get_auth_headers, get_backend_url, get_token_set,
+};
 use rauthy_api_types::clients::{ClientResponse, UpdateClientRequest};
 use rauthy_api_types::oidc::JwkKeyPairAlg;
 use rauthy_api_types::scopes::{ScopeRequest, ScopeResponse};
@@ -6,7 +8,6 @@ use rauthy_api_types::users::{
     UserAttrConfigRequest, UserAttrConfigResponse, UserAttrValueRequest, UserAttrValuesResponse,
     UserAttrValuesUpdateRequest,
 };
-use rauthy_common::utils::extract_token_claims_unverified;
 use rauthy_models::entity::user_attr::UserAttrConfigEntity;
 use rauthy_models::JwtAccessClaims;
 use serde_json::Value;

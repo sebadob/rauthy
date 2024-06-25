@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 use rauthy_api_types::oidc::{LoginRequest, SessionInfoResponse, TokenRequest};
 use rauthy_common::constants::CSRF_HEADER;
-use rauthy_common::utils::base64_url_encode;
+use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::{HeaderMap, HeaderValue, SET_COOKIE};
 use reqwest::{header, Response};
@@ -9,6 +10,7 @@ use ring::digest;
 use std::env;
 use std::error::Error;
 use std::sync::OnceLock;
+use tracing::error;
 
 #[macro_export]
 macro_rules! aw {
@@ -205,4 +207,39 @@ pub fn code_state_from_headers(res: Response) -> Result<(String, Option<String>)
     }
 
     Ok((code, state))
+}
+
+// Extracts the claims from a given token into a HashMap.
+// Returns an empty HashMap if no values could be extracted at all.
+// CAUTION: Does not validate the token!
+pub fn extract_token_claims_unverified<T>(token: &str) -> Result<T, ErrorResponse>
+where
+    T: for<'a> serde::Deserialize<'a>,
+{
+    let body = match token.split_once('.') {
+        None => None,
+        Some((_metadata, rest)) => rest.split_once('.').map(|(body, _validation_str)| body),
+    };
+    if body.is_none() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "Invalid or malformed JWT Token",
+        ));
+    }
+    let body = body.unwrap();
+    let b64 = base64_url_no_pad_decode(body).unwrap();
+
+    let s = String::from_utf8_lossy(b64.as_slice());
+    let claims = match serde_json::from_str::<T>(s.as_ref()) {
+        Ok(claims) => claims,
+        Err(err) => {
+            error!("Error deserializing JWT Token claims: {}", err);
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Invalid JWT Token claims",
+            ));
+        }
+    };
+
+    Ok(claims)
 }

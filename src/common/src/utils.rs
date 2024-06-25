@@ -100,53 +100,6 @@ pub fn new_store_id() -> String {
     get_rand(24)
 }
 
-// Extracts the claims from a given token into a HashMap.
-// Returns an empty HashMap if no values could be extracted at all.
-// CAUTION: Does not validate the token!
-pub fn extract_token_claims_unverified<T>(token: &str) -> Result<T, ErrorResponse>
-where
-    T: for<'a> serde::Deserialize<'a>,
-{
-    let body = match token.split_once('.') {
-        None => None,
-        Some((_metadata, rest)) => rest.split_once('.').map(|(body, _validation_str)| body),
-    };
-    if body.is_none() {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Unauthorized,
-            "Invalid or malformed JWT Token",
-        ));
-    }
-    let body = body.unwrap();
-
-    let b64 = match B64_URL_SAFE_NO_PAD.decode(body) {
-        Ok(values) => values,
-        Err(err) => {
-            error!(
-                "Error decoding JWT token body '{}' from base64: {}",
-                body, err
-            );
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "Invalid JWT Token body",
-            ));
-        }
-    };
-    let s = String::from_utf8_lossy(b64.as_slice());
-    let claims = match serde_json::from_str::<T>(s.as_ref()) {
-        Ok(claims) => claims,
-        Err(err) => {
-            error!("Error deserializing JWT Token claims: {}", err);
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "Invalid JWT Token claims",
-            ));
-        }
-    };
-
-    Ok(claims)
-}
-
 // TODO unify real_ip_from_req and real_ip_from_svc_req by using an impl Trait
 #[inline(always)]
 pub fn real_ip_from_req(req: &HttpRequest) -> Result<IpAddr, ErrorResponse> {
