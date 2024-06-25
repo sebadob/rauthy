@@ -111,8 +111,8 @@ impl Jwk {
     pub async fn save(&self, db: &DbPool) -> Result<(), ErrorResponse> {
         let sig_str = self.signature.as_str();
         sqlx::query!(
-            r#"insert into jwks (kid, created_at, signature, enc_key_id, jwk)
-            values ($1, $2, $3, $4, $5)"#,
+            r#"INSERT INTO jwks (kid, created_at, signature, enc_key_id, jwk)
+            VALUES ($1, $2, $3, $4, $5)"#,
             self.kid,
             self.created_at,
             sig_str,
@@ -164,7 +164,7 @@ impl JWKS {
             return Ok(jwks);
         }
 
-        let res = sqlx::query_as!(Jwk, "select * from jwks")
+        let res = sqlx::query_as!(Jwk, "SELECT * FROM jwks")
             .fetch_all(&data.db)
             .await?;
 
@@ -644,7 +644,7 @@ impl JwkKeyPair {
             return Ok(jwk_opt);
         }
 
-        let jwk = sqlx::query_as!(Jwk, "select * from jwks where kid = $1", kid,)
+        let jwk = sqlx::query_as!(Jwk, "SELECT * FROM jwks WHERE kid = $1", kid,)
             .fetch_one(&data.db)
             .await?;
 
@@ -680,7 +680,7 @@ impl JwkKeyPair {
             return Ok(jwk_opt);
         }
 
-        let mut jwks = sqlx::query_as!(Jwk, "select * from jwks")
+        let mut jwks = sqlx::query_as!(Jwk, "SELECT * FROM jwks")
             .fetch_all(&data.db)
             .await?
             .into_iter()

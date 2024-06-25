@@ -115,8 +115,8 @@ impl MagicLink {
         };
 
         sqlx::query!(
-            r#"insert into magic_links (id, user_id, csrf_token, exp, used, usage)
-            values ($1, $2, $3, $4, $5, $6)"#,
+            r#"INSERT INTO magic_links (id, user_id, csrf_token, exp, used, usage)
+            VALUES ($1, $2, $3, $4, $5, $6)"#,
             link.id,
             link.user_id,
             link.csrf_token,
@@ -131,7 +131,7 @@ impl MagicLink {
     }
 
     pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
-        let res = sqlx::query_as!(Self, "select * from magic_links where id = $1", id)
+        let res = sqlx::query_as!(Self, "SELECT * FROM magic_links WHERE id = $1", id)
             .fetch_one(&data.db)
             .await?;
 
@@ -144,7 +144,7 @@ impl MagicLink {
     ) -> Result<MagicLink, ErrorResponse> {
         let res = sqlx::query_as!(
             Self,
-            "select * from magic_links where user_id = $1",
+            "SELECT * FROM magic_links WHERE user_id = $1",
             user_id
         )
         .fetch_one(&data.db)
@@ -158,7 +158,7 @@ impl MagicLink {
         user_id: &str,
     ) -> Result<(), ErrorResponse> {
         sqlx::query!(
-            "delete from magic_links where user_id = $1 and usage like 'email_change$%'",
+            "DELETE FROM magic_links WHERE user_id = $1 AND USAGE LIKE 'email_change$%'",
             user_id,
         )
         .execute(&data.db)
@@ -169,7 +169,7 @@ impl MagicLink {
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         sqlx::query!(
-            "update magic_links set cookie = $1, exp = $2, used = $3 where id = $4",
+            "UPDATE magic_links SET cookie = $1, exp = $2, used = $3 WHERE id = $4",
             self.cookie,
             self.exp,
             self.used,

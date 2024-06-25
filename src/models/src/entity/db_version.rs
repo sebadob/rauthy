@@ -14,7 +14,7 @@ pub struct DbVersion {
 
 impl DbVersion {
     pub async fn find(db: &DbPool) -> Option<Self> {
-        let res = query!("select data from config where id = 'db_version'")
+        let res = query!("SELECT data FROM config WHERE id = 'db_version'")
             .fetch_optional(db)
             .await
             .ok()?;
@@ -39,13 +39,14 @@ impl DbVersion {
 
             #[cfg(not(feature = "postgres"))]
             let q = query!(
-                "insert or replace into config (id, data) values ('db_version', $1)",
+                "INSERT OR REPLACE INTO config (id, data) VALUES ('db_version', $1)",
                 data,
             );
             #[cfg(feature = "postgres")]
             let q = query!(
-                r#"insert into config (id, data) values ('db_version', $1)
-                on conflict(id) do update set data = $1"#,
+                r#"INSERT INTO config (id, data)
+                VALUES ('db_version', $1)
+                ON CONFLICT(id) DO UPDATE SET data = $1"#,
                 data,
             );
             q.execute(db).await?;
@@ -59,7 +60,7 @@ impl DbVersion {
         debug!("Current Rauthy Version: {:?}", app_version);
 
         // check DB version for compatibility
-        let db_exists = query!("select id from config limit 1")
+        let db_exists = query!("SELECT id FROM config LIMIT 1")
             .fetch_one(db)
             .await
             .is_ok();
@@ -133,13 +134,13 @@ impl DbVersion {
 
         // the passkeys table was introduced with v0.15.0
         #[cfg(feature = "postgres")]
-        let is_db_v0_15_0 = query!("select * from pg_tables where tablename = 'passkeys' limit 1")
+        let is_db_v0_15_0 = query!("SELECT * FROM pg_tables WHERE tablename = 'passkeys' LIMIT 1")
             .fetch_one(db)
             .await
             .is_err();
         #[cfg(not(feature = "postgres"))]
         let is_db_v0_15_0 = query!(
-            "select * from sqlite_master where type = 'table' and name = 'passkeys' limit 1"
+            "SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'passkeys' LIMIT 1"
         )
         .fetch_one(db)
         .await
@@ -155,13 +156,13 @@ impl DbVersion {
         // which is there since the very beginning.
         #[cfg(feature = "postgres")]
         let is_db_pre_v0_15_0 =
-            query!("select * from pg_tables where tablename = 'clients' limit 1")
+            query!("SELECT * FROM pg_tables WHERE tablename = 'clients' LIMIT 1")
                 .fetch_one(db)
                 .await
                 .is_err();
         #[cfg(not(feature = "postgres"))]
         let is_db_pre_v0_15_0 =
-            query!("select * from sqlite_master where type = 'table' and name = 'clients' limit 1")
+            query!("SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'clients' LIMIT 1")
                 .fetch_one(db)
                 .await
                 .is_err();

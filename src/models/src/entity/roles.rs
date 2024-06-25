@@ -38,7 +38,7 @@ impl Role {
             name: role_req.role,
         };
         sqlx::query!(
-            "insert into roles (id, name) values ($1, $2)",
+            "INSERT INTO roles (id, name) VALUES ($1, $2)",
             new_role.id,
             new_role.name,
         )
@@ -100,7 +100,7 @@ impl Role {
             user.save(data, None, Some(&mut txn)).await?;
         }
 
-        sqlx::query!("delete from roles where id = $1", id)
+        sqlx::query!("DELETE FROM roles WHERE id = $1", id)
             .execute(&mut *txn)
             .await?;
 
@@ -126,7 +126,7 @@ impl Role {
 
     // Returns a single role by id
     pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
-        let res = sqlx::query_as!(Self, "select * from roles where id = $1", id)
+        let res = sqlx::query_as!(Self, "SELECT * FROM roles WHERE id = $1", id)
             .fetch_one(&data.db)
             .await?;
 
@@ -147,7 +147,7 @@ impl Role {
             return Ok(roles);
         }
 
-        let res = sqlx::query_as!(Self, "select * from roles")
+        let res = sqlx::query_as!(Self, "SELECT * FROM roles")
             .fetch_all(&data.db)
             .await?;
 
@@ -200,7 +200,7 @@ impl Role {
 
         let new_role = Role { id, name: new_name };
         sqlx::query!(
-            "update roles set name = $1 where id = $2",
+            "UPDATE roles SET name = $1 WHERE id = $2",
             new_role.name,
             new_role.id,
         )

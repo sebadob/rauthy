@@ -151,7 +151,7 @@ impl Scope {
 
     // Returns a single scope by id
     pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
-        let res = sqlx::query_as!(Self, "select * from scopes where id = $1", id)
+        let res = sqlx::query_as!(Self, "SELECT * FROM scopes WHERE id = $1", id)
             .fetch_one(&data.db)
             .await?;
         Ok(res)
@@ -171,7 +171,7 @@ impl Scope {
             return Ok(scopes);
         }
 
-        let res = sqlx::query_as!(Self, "select * from scopes")
+        let res = sqlx::query_as!(Self, "SELECT * FROM scopes")
             .fetch_all(&data.db)
             .await?;
 
@@ -264,14 +264,16 @@ impl Scope {
         };
 
         sqlx::query!(
-            "update scopes set name = $1, attr_include_access = $2, attr_include_id = $3 where id = $4",
+            r#"UPDATE scopes
+            SET name = $1, attr_include_access = $2, attr_include_id = $3
+            WHERE id = $4"#,
             new_scope.name,
             new_scope.attr_include_access,
             new_scope.attr_include_id,
             new_scope.id,
         )
-            .execute(&mut *txn)
-            .await?;
+        .execute(&mut *txn)
+        .await?;
 
         txn.commit().await?;
 
@@ -311,7 +313,9 @@ impl Scope {
         txn: &mut DbTxn<'_>,
     ) -> Result<(), ErrorResponse> {
         sqlx::query!(
-            "update scopes set attr_include_access = $1, attr_include_id = $2 where id = $3",
+            r#"UPDATE scopes
+            SET attr_include_access = $1, attr_include_id = $2
+            WHERE id = $3"#,
             attr_include_access,
             attr_include_id,
             id,

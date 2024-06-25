@@ -258,7 +258,7 @@ impl User {
             return Ok(());
         }
 
-        sqlx::query!("select id from users where id = $1", id)
+        sqlx::query!("SELECT id FROM users WHERE id = $1", id)
             .fetch_one(&data.db)
             .await?;
 
@@ -279,7 +279,7 @@ impl User {
             return Ok(user_opt);
         }
 
-        let user = sqlx::query_as!(Self, "select * from users where id = $1", id)
+        let user = sqlx::query_as!(Self, "SELECT * FROM users WHERE id = $1", id)
             .fetch_one(&data.db)
             .await?;
 
@@ -313,7 +313,7 @@ impl User {
             return Ok(user_opt);
         }
 
-        let user = sqlx::query_as!(Self, "select * from users where email = $1", email)
+        let user = sqlx::query_as!(Self, "SELECT * FROM users WHERE email = $1", email)
             .fetch_one(&data.db)
             .await?;
 
@@ -335,7 +335,7 @@ impl User {
     ) -> Result<Self, ErrorResponse> {
         let user = sqlx::query_as!(
             Self,
-            "select * from users where auth_provider_id = $1 and federation_uid = $2",
+            "SELECT * FROM users WHERE auth_provider_id = $1 AND federation_uid = $2",
             auth_provider_id,
             federation_uid
         )
@@ -367,7 +367,7 @@ impl User {
         let now = OffsetDateTime::now_utc()
             .add(time::Duration::seconds(10))
             .unix_timestamp();
-        let res = sqlx::query_as!(Self, "select * from users where user_expires < $1", now)
+        let res = sqlx::query_as!(Self, "SELECT * FROM users WHERE user_expires < $1", now)
             .fetch_all(&data.db)
             .await?;
         Ok(res)
@@ -585,12 +585,12 @@ impl User {
 
         let lang = self.language.as_str();
         let q = sqlx::query(
-            r#"update users set
+            r#"UPDATE USERS SET
             email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6,
             enabled = $7, email_verified = $8, password_expires = $9, last_login = $10,
             last_failed_login = $11, failed_login_attempts = $12, language = $13,
             webauthn_user_id = $14, user_expires = $15, auth_provider_id = $16, federation_uid = $17
-            where id = $18"#,
+            WHERE id = $18"#,
         )
         .bind(&self.email)
         .bind(&self.given_name)

@@ -37,14 +37,14 @@ impl UserAttrConfigEntity {
 
         #[cfg(not(feature = "postgres"))]
         let q = sqlx::query!(
-            "insert into user_attr_config (name, desc) values ($1, $2)",
+            "INSERT INTO user_attr_config (name, desc) VALUES ($1, $2)",
             new_attr.name,
             new_attr.desc,
         );
 
         #[cfg(feature = "postgres")]
         let q = sqlx::query!(
-            "insert into user_attr_config (name, \"desc\") values ($1, $2)",
+            "INSERT INTO user_attr_config (name, \"desc\") VALUES ($1, $2)",
             new_attr.name,
             new_attr.desc,
         );
@@ -134,7 +134,7 @@ impl UserAttrConfigEntity {
 
         UserAttrValueEntity::delete_all_by_key(data, &name, &mut txn).await?;
 
-        sqlx::query!("delete from user_attr_config where name  = $1", name)
+        sqlx::query!("DELETE FROM user_attr_config WHERE name  = $1", name)
             .execute(&mut *txn)
             .await?;
 
@@ -170,7 +170,7 @@ impl UserAttrConfigEntity {
             return Ok(attr_opt);
         }
 
-        let attr = sqlx::query_as!(Self, "select * from user_attr_config where name = $1", name)
+        let attr = sqlx::query_as!(Self, "SELECT * FROM user_attr_config WHERE name = $1", name)
             .fetch_one(&data.db)
             .await?;
 
@@ -198,7 +198,7 @@ impl UserAttrConfigEntity {
             return Ok(attrs);
         }
 
-        let res = sqlx::query_as!(Self, "select * from user_attr_config")
+        let res = sqlx::query_as!(Self, "SELECT * FROM user_attr_config")
             .fetch_all(&data.db)
             .await?;
 
@@ -228,7 +228,7 @@ impl UserAttrConfigEntity {
         // collect all current value IDs with the setting for cache clear on success
         let cache_idxs = if is_name_update {
             let idx = sqlx::query_as::<_, UserAttrValueEntity>(
-                "select * from user_attr_values where key = $1",
+                "SELECT * FROM user_attr_values WHERE key = $1",
             )
             .bind(&name)
             .fetch_all(&data.db)
@@ -245,7 +245,7 @@ impl UserAttrConfigEntity {
 
         #[cfg(not(feature = "postgres"))]
         let q = sqlx::query!(
-            "update user_attr_config set name  = $1, desc = $2 where name = $3",
+            "UPDATE user_attr_config SET name  = $1, desc = $2 WHERE name = $3",
             slf.name,
             slf.desc,
             name,
@@ -253,7 +253,7 @@ impl UserAttrConfigEntity {
 
         #[cfg(feature = "postgres")]
         let q = sqlx::query!(
-            "update user_attr_config set name  = $1, \"desc\" = $2 where name = $3",
+            "UPDATE user_attr_config SET name  = $1, \"desc\" = $2 WHERE name = $3",
             slf.name,
             slf.desc,
             name,
@@ -391,7 +391,7 @@ impl UserAttrValueEntity {
         txn: &mut DbTxn<'_>,
     ) -> Result<(), ErrorResponse> {
         let cache_idxs =
-            sqlx::query_as!(Self, "select * from user_attr_values where key = $1", key)
+            sqlx::query_as!(Self, "SELECT * FROM user_attr_values WHERE key = $1", key)
                 .fetch_all(&data.db)
                 .await?
                 .into_iter()
@@ -408,7 +408,7 @@ impl UserAttrValueEntity {
             .await?;
         }
 
-        sqlx::query!("delete from user_attr_values where key = $1", key)
+        sqlx::query!("DELETE FROM user_attr_values WHERE key = $1", key)
             .execute(&mut **txn)
             .await?;
 
@@ -434,7 +434,7 @@ impl UserAttrValueEntity {
 
         let res = sqlx::query_as!(
             Self,
-            "select * from user_attr_values where user_id = $1",
+            "SELECT * FROM user_attr_values WHERE user_id = $1",
             user_id
         )
         .fetch_all(&data.db)
@@ -470,7 +470,7 @@ impl UserAttrValueEntity {
 
             if del || value.value == Value::Null {
                 sqlx::query!(
-                    "delete from user_attr_values where user_id = $1 and key = $2",
+                    "DELETE FROM user_attr_values WHERE user_id = $1 AND key = $2",
                     user_id,
                     value.key,
                 )
@@ -481,8 +481,9 @@ impl UserAttrValueEntity {
 
                 #[cfg(not(feature = "postgres"))]
                 let q = sqlx::query!(
-                    r#"insert or replace into user_attr_values (user_id, key, value)
-                    values ($1, $2, $3)"#,
+                    r#"INSERT OR REPLACE INTO
+                    user_attr_values (user_id, key, value)
+                    VALUES ($1, $2, $3)"#,
                     user_id,
                     value.key,
                     v,
@@ -490,9 +491,9 @@ impl UserAttrValueEntity {
 
                 #[cfg(feature = "postgres")]
                 let q = sqlx::query!(
-                    r#"insert into user_attr_values (user_id, key, value)
-                    values ($1, $2, $3)
-                    on conflict(user_id, key) do update set value = $3"#,
+                    r#"INSERT INTO user_attr_values (user_id, key, value)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT(user_id, key) DO UPDATE SET value = $3"#,
                     user_id,
                     value.key,
                     v,
@@ -505,7 +506,7 @@ impl UserAttrValueEntity {
         // 2nd query again to have more compatibility
         let res = sqlx::query_as!(
             Self,
-            "select * from user_attr_values where user_id = $1",
+            "SELECT * FROM user_attr_values WHERE user_id = $1",
             user_id
         )
         .fetch_all(&data.db)

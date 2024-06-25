@@ -18,7 +18,7 @@ use rauthy_common::constants::{
     EPHEMERAL_CLIENTS_ALLOWED_FLOWS, EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA,
     IDX_CLIENTS, PROXY_MODE, RAUTHY_VERSION,
 };
-use rauthy_common::utils::{cache_entry_client, get_rand, real_ip_from_req};
+use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use redhac::{
     cache_get, cache_get_from, cache_get_value, cache_insert, cache_put, cache_remove, AckLevel,
@@ -225,7 +225,7 @@ impl Client {
         let client = cache_get!(
             Client,
             CACHE_NAME_12HR.to_string(),
-            cache_entry_client(&id),
+            Client::get_cache_entry(&id),
             &data.caches.ha_cache_config,
             false
         )
