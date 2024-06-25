@@ -16,24 +16,6 @@ const B64_URL_SAFE: engine::GeneralPurpose = general_purpose::URL_SAFE;
 const B64_URL_SAFE_NO_PAD: engine::GeneralPurpose = general_purpose::URL_SAFE_NO_PAD;
 const B64_STD: engine::GeneralPurpose = general_purpose::STANDARD;
 
-// Returns the cache key for a given client
-pub fn cache_entry_client(id: &str) -> String {
-    format!("client_{}", id)
-}
-
-// Converts a given Json array / list into a Vec<String>
-pub fn json_arr_to_vec(arr: &str) -> Vec<String> {
-    arr.chars()
-        .skip(1)
-        .filter(|&c| c != '"')
-        // TODO improve -> array inside array would not work
-        .take_while(|&c| c != ']')
-        .collect::<String>()
-        .split(',')
-        .map(|i| i.to_string())
-        .collect()
-}
-
 pub fn get_local_hostname() -> String {
     let hostname_os = gethostname();
     hostname_os
@@ -209,22 +191,6 @@ fn ip_from_cust_header(headers: &HeaderMap) -> Option<IpAddr> {
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
-    use std::string::String;
-
-    #[test]
-    fn test_json_arr_to_vec() {
-        let arr = String::from("[\"one\",\"two\",\"three\"]");
-        let arr_as_vec = vec!["one", "two", "three"];
-        assert_eq!(json_arr_to_vec(&arr), arr_as_vec);
-
-        let arr = String::from("[\"one\"]");
-        let arr_as_vec = vec!["one"];
-        assert_eq!(json_arr_to_vec(&arr), arr_as_vec);
-
-        let arr = String::from("[]");
-        let arr_as_vec = vec![""];
-        assert_eq!(json_arr_to_vec(&arr), arr_as_vec);
-    }
 
     #[test]
     fn test_get_rand() {
