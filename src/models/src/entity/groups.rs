@@ -39,7 +39,7 @@ impl Group {
         };
 
         sqlx::query!(
-            "insert into groups (id, name) values ($1, $2)",
+            "INSERT INTO groups (id, name) VALUES ($1, $2)",
             new_group.id,
             new_group.name,
         )
@@ -93,7 +93,7 @@ impl Group {
             user.save(data, None, Some(&mut txn)).await?;
         }
 
-        sqlx::query!("delete from groups where id = $1", group.id)
+        sqlx::query!("DELETE FROM groups WHERE id = $1", group.id)
             .execute(&mut *txn)
             .await?;
 
@@ -118,7 +118,7 @@ impl Group {
 
     // Returns a single group by id
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
-        let res = sqlx::query_as!(Self, "select * from groups where id = $1", id,)
+        let res = sqlx::query_as!(Self, "SELECT * FROM groups WHERE id = $1", id,)
             .fetch_one(&data.db)
             .await?;
 
@@ -139,7 +139,7 @@ impl Group {
             return Ok(groups);
         }
 
-        let res = sqlx::query_as!(Self, "select * from groups")
+        let res = sqlx::query_as!(Self, "SELECT * FROM groups")
             .fetch_all(&data.db)
             .await?;
 
@@ -197,7 +197,7 @@ impl Group {
         };
 
         sqlx::query!(
-            "update groups set name = $1 where id = $2",
+            "UPDATE groups SET name = $1 WHERE id = $2",
             new_group.name,
             new_group.id,
         )

@@ -136,7 +136,7 @@ impl PasswordPolicy {
             return Ok(policy);
         }
 
-        let res = sqlx::query("select data from config where id = 'password_policy'")
+        let res = sqlx::query("SELECT data FROM config WHERE id = 'password_policy'")
             .fetch_one(&data.db)
             .await?;
         let bytes: Vec<u8> = res.get("data");
@@ -158,7 +158,7 @@ impl PasswordPolicy {
         let slf = bincode::serialize(&self).unwrap();
 
         sqlx::query!(
-            "update config set data = $1 where id = 'password_policy'",
+            "UPDATE config SET data = $1 WHERE id = 'password_policy'",
             slf
         )
         .execute(&data.db)
@@ -219,7 +219,7 @@ impl RecentPasswordsEntity {
         passwords: &String,
     ) -> Result<(), ErrorResponse> {
         sqlx::query!(
-            "insert into recent_passwords (user_id, passwords) values ($1, $2)",
+            "INSERT INTO recent_passwords (user_id, passwords) VALUES ($1, $2)",
             user_id,
             passwords,
         )
@@ -232,7 +232,7 @@ impl RecentPasswordsEntity {
     pub async fn find(data: &web::Data<AppState>, user_id: &str) -> Result<Self, ErrorResponse> {
         let res = sqlx::query_as!(
             Self,
-            "select * from recent_passwords where user_id = $1",
+            "SELECT * FROM recent_passwords WHERE user_id = $1",
             user_id,
         )
         .fetch_one(&data.db)
@@ -242,7 +242,7 @@ impl RecentPasswordsEntity {
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         sqlx::query!(
-            "update recent_passwords set passwords = $1 where user_id = $2",
+            "UPDATE recent_passwords SET passwords = $1 WHERE user_id = $2",
             self.passwords,
             self.user_id,
         )

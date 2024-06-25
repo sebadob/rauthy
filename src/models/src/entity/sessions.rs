@@ -388,9 +388,9 @@ impl Session {
 
         #[cfg(not(feature = "postgres"))]
         let q = sqlx::query!(
-            r#"insert or replace into
+            r#"INSERT OR REPLACE INTO
             sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen, remote_ip)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#,
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#,
             self.id,
             self.csrf_token,
             self.user_id,
@@ -405,10 +405,10 @@ impl Session {
 
         #[cfg(feature = "postgres")]
         let q = sqlx::query!(
-            r#"insert into
+            r#"INSERT INTO
             sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen, remote_ip)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            on conflict(id) do update set user_id = $3, roles = $4, groups = $5, is_mfa = $6,
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ON CONFLICT(id) DO UPDATE set user_id = $3, roles = $4, groups = $5, is_mfa = $6,
             state = $7, exp = $8, last_seen = $9, remote_ip = $10"#,
             self.id,
             self.csrf_token,

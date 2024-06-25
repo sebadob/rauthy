@@ -17,7 +17,7 @@ pub struct ColorEntity {
 // CRUD
 impl ColorEntity {
     pub async fn delete(data: &web::Data<AppState>, client_id: &str) -> Result<(), ErrorResponse> {
-        sqlx::query!("delete from colors where client_id = $1", client_id,)
+        sqlx::query!("DELETE FROM colors WHERE client_id = $1", client_id,)
             .execute(&data.db)
             .await?;
 
@@ -48,7 +48,7 @@ impl ColorEntity {
             return Ok(colors);
         }
 
-        let res = sqlx::query_as!(Self, "select * from colors where client_id = $1", client_id)
+        let res = sqlx::query_as!(Self, "SELECT * FROM colors WHERE client_id = $1", client_id)
             .fetch_optional(&data.db)
             .await?;
         let colors = match res {
@@ -81,14 +81,14 @@ impl ColorEntity {
 
         #[cfg(not(feature = "postgres"))]
         let q = sqlx::query!(
-            "insert or replace into colors (client_id, data) values ($1, $2)",
+            "INSERT OR REPLACE INTO colors (client_id, data) values ($1, $2)",
             client_id,
             col_bytes,
         );
         #[cfg(feature = "postgres")]
         let q = sqlx::query!(
-            r#"insert into colors (client_id, data) values ($1, $2)
-                on conflict(client_id) do update set data = $2"#,
+            r#"INSERT INTO colors (client_id, data) values ($1, $2)
+                ON CONFLICT(client_id) DO UPDATE SET data = $2"#,
             client_id,
             col_bytes,
         );
