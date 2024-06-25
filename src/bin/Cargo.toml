@@ -47,4 +47,5 @@ josekit = "0.8"
 pretty_assertions = "1"
 reqwest = { workspace = true }
 ring = { workspace = true }
+serde = "1"
 tokio-test = "*"
