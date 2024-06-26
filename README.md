@@ -179,9 +179,6 @@ Keycloak was a rough inspiration in certain places and if something is working w
 
 This is a non-exhaustive list of currently open TODO's
 
-- [ ] Internal code restructuring and organizing to get to a cleaner setup.
-  All the new features lately have made the codebase a bit hard to get into.
-- [ ] Benchmarks and Optimizations
 - [ ] Maybe get a nicer Rauthy Logo
 - [ ] experimental implementation of [dilithium](https://pq-crystals.org/dilithium/) singing algorithm to become quantum
   safe
@@ -195,7 +192,7 @@ the application yourself with docker on your localhost. Rauthy has pretty strict
 browsers treat `localhost` as being secure, therefore you should allow insecure cookies for testing locally:
 
 ```
-docker run --rm -e COOKIE_MODE=danger-insecure -p 8080:8080 ghcr.io/sebadob/rauthy:0.23.5-lite
+docker run --rm -e COOKIE_MODE=danger-insecure -p 8080:8080 ghcr.io/sebadob/rauthy:0.24.0-lite
 ```
 
 ## Contributing

@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED (ghcr.io/sebadob/rauthy:0.24.0-20240620)
+## v0.24.0
 
 Many thousands of lines have been refactored internally to provide better maintainability in the future.
 These are not mentioned separately, since they did not introduce anything new. Apart from this, there are only small

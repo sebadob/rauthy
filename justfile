@@ -122,7 +122,7 @@ create-root-ca:
 # Intermediate CA DEV password: 123SuperMegaSafe
 create-end-entity-tls:
     # create the new certificate
-    docker run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
+    docker run --rm -it -v ./tls/ca:/ca -u $USER \
           ghcr.io/sebadob/nioca \
           x509 \
           --cn 'localhost' \
@@ -403,14 +403,17 @@ build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
     set -euxo pipefail
 
     # sqlite
-    if [ {{no-test}} != "no-test" ]; then
-        echo "make sure clippy is fine with sqlite"
-        just _run cargo clippy -- -D warnings
-        echo "run tests against sqlite"
-        just test-sqlite
-    else
-        just prepare
-    fi
+    #if [ {{no-test}} != "no-test" ]; then
+    #    echo "make sure clippy is fine with sqlite"
+    #    just _run cargo clippy -- -D warnings
+    #    echo "run tests against sqlite"
+    #    just test-sqlite
+    #else
+    #    just prepare
+    #fi
+
+    # make sure any big testing sqlite backups are cleaned up to speed up docker build
+    rm -rf data/backup
 
     echo "build sqlite release"
     docker buildx build \

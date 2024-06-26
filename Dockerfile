@@ -17,8 +17,20 @@ RUN echo "Building on $BUILDPLATFORM for $TARGETOS/$TARGETARCH in $MODE mode wit
 
 RUN mkdir -p out && mkdir empty
 
-COPY . .
+COPY data ./data
+COPY migrations ./migrations
+COPY src ./src
+COPY static ./static
+COPY templates ./templates
+COPY tls ./tls
+COPY .env .
+COPY Cargo.lock .
+COPY Cargo.toml .
+COPY rauthy.cfg .
+COPY rauthy.deploy.cfg .
+COPY rauthy.test.cfg .
 #RUN --mount=type=cache,target=/usr/local/cargo/registry <<EOF
+
 RUN <<EOF
 #!/bin/bash
 if [ "release" = "$MODE" ]; then
