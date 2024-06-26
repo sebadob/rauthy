@@ -10,7 +10,6 @@
 
 - prettify the UI
 - update the book with all the new features
-- benchmarks and performance tuning
 - maybe get a nicer logo
 
 ### `rauthy-client` TODO's
