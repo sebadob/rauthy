@@ -122,7 +122,7 @@ create-root-ca:
 # Intermediate CA DEV password: 123SuperMegaSafe
 create-end-entity-tls:
     # create the new certificate
-    docker run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
+    docker run --rm -it -v ./tls/ca:/ca -u $USER \
           ghcr.io/sebadob/nioca \
           x509 \
           --cn 'localhost' \
