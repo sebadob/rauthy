@@ -15,6 +15,7 @@
     - [Backups](config/backup.md)
     - [High Availability](config/ha.md)
     - [TLS](config/tls.md)
+    - [Sessions](config/sessions.md)
     - [User Registration](config/user_reg.md)
 
 - [Authentication Providers](./auth_providers/index.md)
