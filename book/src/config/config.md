@@ -847,14 +847,15 @@ EVENT_LEVEL_FAILED_LOGIN=info
 
 # Session lifetime in seconds - the session can not be
 # extended beyond this time and a new login will be forced.
-# This is the session for the authorization code flow. (default: 14400)
+# This is the session for the authorization code flow. 
+# (default: 14400)
 #SESSION_LIFETIME=14400
 
 # If 'true', a 2FA / MFA check will be done with each automatic
 # token generation, even with an active session, which kind of
 # makes the session useless with Webauthn enabled, but provides
 # maximum amount of security.
-# If 'false', the user will not get a MFA prompt with an active
+# If 'false', the user will not get an MFA prompt with an active
 # session at the authorization endpoint.
 # (default: false)
 #SESSION_RENEW_MFA=false
