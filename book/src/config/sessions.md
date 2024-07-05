@@ -212,7 +212,7 @@ often a different story and its not guaranteed, that you will have AES accelerat
 Rauthy tries to be as secure as possible by default and therefore ChaCha20Poly1305 has a slight advantage over AES.
 ```
 
-## CSRF Protection
+### CSRF Protection
 
 CSRF protection happens in 2 ways:
 
