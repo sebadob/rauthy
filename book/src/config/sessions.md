@@ -203,15 +203,6 @@ cookie settings. But if you really need to (and you know what you are doing), yo
 #COOKIE_SET_PATH=true
 ```
 
-```admonish note
-Rauthy uses ChaCha20Poly1305 for any encryption. AES GCM is not used on purpose, because it has some attack vectors if 
-its used without hardware acceleration.  
-
-Usually, devices these days all come with dedicated AES acceleration, even embedded ones. However, with VM's this is 
-often a different story and its not guaranteed, that you will have AES acceleration when you spin up a VM in some cloud. 
-Rauthy tries to be as secure as possible by default and therefore ChaCha20Poly1305 has a slight advantage over AES.
-```
-
 ### CSRF Protection
 
 CSRF protection happens in multiple ways:
