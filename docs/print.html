@@ -1243,7 +1243,19 @@ encrypted cookies with older keys.</p>
 been used to encrypt cookies, the user will be prompted to log in again, even if cookies have not expired yet.</p>
 </div>
 </div>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="database-migrations"><a class="header" href="#database-migrations">Database Migrations</a></h1>
+<div id="admonition-note" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="config/encryption.html#admonition-note"></a></p>
+</div>
+<div>
+<p>Rauthy uses ChaCha20Poly1305 for any encryption. AES GCM is not used on purpose, because it has some attack vectors if
+its used without hardware acceleration.</p>
+<p>Usually, devices these days all come with dedicated AES acceleration, even embedded ones. However, with VM's this is
+often a different story and its not guaranteed, that you will have AES acceleration when you spin up a VM in some cloud.
+Rauthy tries to be as secure as possible by default and therefore ChaCha20Poly1305 has a slight advantage over AES.</p>
+</div>
+</div><div style="break-before: page; page-break-before: always;"></div><h1 id="database-migrations"><a class="header" href="#database-migrations">Database Migrations</a></h1>
 <p>You can migrate easily between SQLite and Postgres, or just between different instances of them.</p>
 <p>Let's say you started out by evaluating Rauthy with a SQLite and a single instance deployment. Later on, you want to
 migrate to a HA setup, which requires you to use a Postgres.</p>
@@ -1737,21 +1749,8 @@ cookie settings. But if you really need to (and you know what you are doing), yo
 # default: true
 #COOKIE_SET_PATH=true
 </code></pre>
-<div id="admonition-note-1" class="admonition admonish-note">
-<div class="admonition-title">
-<p>Note</p>
-<p><a class="admonition-anchor-link" href="config/sessions.html#admonition-note-1"></a></p>
-</div>
-<div>
-<p>Rauthy uses ChaCha20Poly1305 for any encryption. AES GCM is not used on purpose, because it has some attack vectors if
-its used without hardware acceleration.</p>
-<p>Usually, devices these days all come with dedicated AES acceleration, even embedded ones. However, with VM's this is
-often a different story and its not guaranteed, that you will have AES acceleration when you spin up a VM in some cloud.
-Rauthy tries to be as secure as possible by default and therefore ChaCha20Poly1305 has a slight advantage over AES.</p>
-</div>
-</div>
 <h3 id="csrf-protection"><a class="header" href="#csrf-protection">CSRF Protection</a></h3>
-<p>CSRF protection happens in 2 ways:</p>
+<p>CSRF protection happens in multiple ways:</p>
 <ul>
 <li><code>CORS</code> / <code>Origin</code> headers</li>
 <li>classic synchronizer token pattern</li>
