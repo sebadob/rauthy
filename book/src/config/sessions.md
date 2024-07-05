@@ -214,7 +214,7 @@ Rauthy tries to be as secure as possible by default and therefore ChaCha20Poly13
 
 ### CSRF Protection
 
-CSRF protection happens in 2 ways:
+CSRF protection happens in multiple ways:
 
 - `CORS` / `Origin` headers
 - classic synchronizer token pattern
