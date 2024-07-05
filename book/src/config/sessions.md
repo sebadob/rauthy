@@ -6,10 +6,10 @@ Rauthy only for things like account management. Depending on your configuration,
 client immediately, if they already have a still valid session.
 
 You can configure quite a lot like session timeouts and so on, but the default are safe. However, there is one
-**really important thing**:
+really important thing:
 
-You need to make sure, that Rauthy can extract the connecting clients IP properly. This is
-very important for failed login counters, login delays, blacklisting, and so on.
+**You need to make sure, that Rauthy can extract the connecting clients IP properly. This is
+very important for failed login counters, login delays, blacklisting, and so on.**
 
 If your instance is exposed directly, in most situations the IP extractions works just fine. This may change though
 when running behind a reverse proxy or a CDN.
@@ -164,4 +164,99 @@ SESSION_RENEW_MFA=false
 # This is the value which can extend the session, until it hits
 # its maximum lifetime set with SESSION_LIFETIME.
 SESSION_TIMEOUT=5400
+```
+
+## Security
+
+You usually don't need to configure anything about session security or CSRF protection, all of it happens automatically.
+This section is more informational about what Rauthy does in this case.
+
+### Session Cookies
+
+Rauthy stores sessions as encrypted cookies. Depending on the situation, configuration and the users account, it will
+set multiple cookies inside your browser for different purposes like if you are allowed to do a direct session refresh
+with an MFA account for instance.
+
+Apart from the locale preference for the UI, each cookie is stored encrypted. This makes sure, that you can't tamper
+with the data. The cookies are stored as host only cookies with the most secure settings in today's browsers by default.
+This means they are host only and use the `__Host-` prefix to tell the browser to do additional checks. The `SameSite`
+attribute is set to `Lax` for all of them.
+
+Apart from local testing, you should never get in the situation where you want to disable the default secure
+cookie settings. But if you really need to (and you know what you are doing), you have the following option:
+
+```
+# You can set different security levels for Rauthy's cookies.
+# The safest option would be 'host', but may not be desirable when
+# you host an application on the same origin behind a reverse proxy.
+# In this case you might want to restrict to 'secure', which will then
+# take the COOKIE_PATH from below into account.
+# The last option is 'danger-insecure' which really should never be used
+# unless you are just testing on localhost and you are using Safari.
+#COOKIE_MODE=host
+
+# If set to 'true', Rauthy will bind the cookie to the `/auth` path.
+# You may want to change this only for very specific reasons and if
+# you are in such a situation, where you need this, you will know it.
+# Otherwise don't change this value.
+# default: true
+#COOKIE_SET_PATH=true
+```
+
+```admonish note
+Rauthy uses ChaCha20Poly1305 for any encryption. AES GCM is not used on purpose, because it has some attack vectors if 
+its used without hardware acceleration.  
+
+Usually, devices these days all come with dedicated AES acceleration, even embedded ones. However, with VM's this is 
+often a different story and its not guaranteed, that you will have AES acceleration when you spin up a VM in some cloud. 
+Rauthy tries to be as secure as possible by default and therefore ChaCha20Poly1305 has a slight advantage over AES.
+```
+
+### CSRF Protection
+
+CSRF protection happens in 2 ways:
+
+- `CORS` / `Origin` headers
+- classic synchronizer token pattern
+- `Sec-` headers checks
+
+In today's browsers, you could use the `Sec-` headers only and be safe, or actually even only stick to the secure
+Cookie settings we have, and call it a day. The additional checks Rauthy does in this case are there to catch unusual
+situations, where someone maybe uses an older browser or one which has a security issue. All of these techniques are
+defenses in depth.
+
+The synchronizer token pattern stores the additional CSRF token in local storage. Yes, this is not "secure" in a way
+that a malicious browser extension can read it, but it could read the DOM as well, which means it could also just
+read a meta tag or extract it from a hidden form field. The backend expects the CSRF token to be added as a header
+with each non-`GET` request.
+
+A new token will be created when you get a fresh session. Generating a new token after each request would improve the
+security but badly hurt the UX, because the browsers back button would simply not work anymore in most cases. In a
+perfect world where all users only use modern browsers that fully respect today's cookie settings, we would not even
+need this token, so a new token with each new session is fine.
+
+The `Sec-` headers middleware has been added recently to the mix. Desktop browsers do add these headers since ~3 years
+by now, but they only have been added pretty recently to mobile browsers as well. This middleware on its own would be
+a full CSRF protection even without additional cookie settings or a synchronizer token, but these headers are just
+way too fresh on mobile browsers to only rely on them right now.
+
+The `Sec-` middleware is pretty new to Rauthy, so it might be too restrictive in some situations where I forgot to add
+an exception for. By default, it blocks any non-user initiated or navigating cross-origin request and I added exceptions
+for routes, which should be available cross-origin. If you experience issues with it, you might want to disable it and
+set it to warn-only mode. Please [open an issue](https://github.com/sebadob/rauthy/issues) about this though so it can
+be fixed, if it makes sense, because this option will probably be removed in a future version:
+
+```
+# If set to true, a violation inside the CSRF protection middleware based
+# on Sec-* headers will block invalid requests. Usually you always want this
+# enabled. You may only set it to false during the first testing phase if you
+# experience any issues with an already existing Rauthy deployment.
+# In future releases, it will not be possible the disable these blocks.
+# default: true
+SEC_HEADER_BLOCK=true
+```
+
+```admonish danger
+Only change any of the above mentioned session security settings if you really know what you are doing and if you have 
+a good reason to do so.
 ```
