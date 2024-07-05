@@ -1,7 +1,6 @@
 # User Registration
 
 By default, new users can only be added by an admin. This is safe and secure, and your database cannot ever be spammed.
-
 However, you might want users to register themselves for whatever reason. In that case, follow the next step.
 
 ## Open Registration
