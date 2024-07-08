@@ -682,7 +682,7 @@ MAX_HASH_THREADS=1
 # you should provide `EVENT_MATRIX_ACCESS_TOKEN`.
 # If both are given, the `EVENT_MATRIX_ACCESS_TOKEN` will be preferred.
 #
-# If left empty, no messages will be sent to Slack.
+# If left empty, no messages will be sent to Matrix.
 # Format: `@<user_id>:<server address>`
 #EVENT_MATRIX_USER_ID=
 # Format: `!<random string>:<server address>`
@@ -712,7 +712,7 @@ MAX_HASH_THREADS=1
 
 # The notification level for events. Works the same way as a logging level. 
 # For instance: 'notice' means send out a notifications for all events with 
-# the info level or higher.
+# the notice level or higher.
 # Possible values:
 # - info
 # - notice

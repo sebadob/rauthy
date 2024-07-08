@@ -1,0 +1,537 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Logging and Auditing - Rauthy Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href=".././mdbook-admonish.css">
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/production_config.html"><strong aria-hidden="true">3.</strong> Production Config</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.1.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html"><strong aria-hidden="true">3.2.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">3.3.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/logging.html" class="active"><strong aria-hidden="true">3.4.</strong> Logging and Auditing</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">3.5.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">3.6.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">3.7.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/sessions.html"><strong aria-hidden="true">3.8.</strong> Sessions</a></li><li class="chapter-item expanded "><a href="../config/user_reg.html"><strong aria-hidden="true">3.9.</strong> User Registration</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">3.10.</strong> Database Migrations</a></li></ol></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">4.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html"><strong aria-hidden="true">4.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">5.</strong> Reference Config</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Rauthy Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="logging-and-auditing"><a class="header" href="#logging-and-auditing">Logging and Auditing</a></h1>
+<p>Rauthy logs most things into the console, depending on the configuration of different log levels. In addition, more
+important events can be sent to Matrix, Slack or via E-Mail. All of this is highly configurable and you should be able
+to achieve whatever you need. All events are logged into the console as well with their configured level. This means,
+if Rauthy fires an event of type <code>NewUser</code> with the level <code>info</code> and you have configured a log level of at least the
+same, you will see the event in the console as well. So you could only use log aggregation and use existing tools
+without configuring other targets and still catch everything.</p>
+<h2 id="logging"><a class="header" href="#logging">Logging</a></h2>
+<p>You can configure not only different levels for logging, but also different targets / situations.</p>
+<h3 id="log_level"><a class="header" href="#log_level"><code>LOG_LEVEL</code></a></h3>
+<p>The <code>LOG_LEVEL</code> variable configures the default logging in most situations. This defines the logging for instance
+for logging information from different function runs or things that have been triggered.</p>
+<pre><code># This is the log level for stdout logs
+# Accepts: error, info, debug, trace (default: info)
+LOG_LEVEL=info
+</code></pre>
+<h3 id="log_level_access"><a class="header" href="#log_level_access"><code>LOG_LEVEL_ACCESS</code></a></h3>
+<p>For changing the logging behavior for access logs to the API endpoints, you will need to set the <code>LOG_LEVEL_ACCESS</code>.
+If you have access logging configured at your firewall or reverse proxy, you can disable the <code>LOG_LEVEL_ACCESS</code> fully
+to reduce duplicated log outputs.</p>
+<pre><code># This is a special config which allows the configuration of
+# customized access logs. These logs will be logged with each
+# request in addition to the normal LOG_LEVEL logs.
+# The following values are valid:
+# - Debug
+#   CAUTION: The Debug setting logs every information available
+#   to the middleware which includes SENSITIVE HEADERS
+#   DO NOT use the Debug level in a working production environment!
+# - Verbose
+#   Verbose logging without headers - generates huge outputs
+# - Basic
+#   Logs access to all endpoints apart from the Frontend ones
+#   which all js, css, ...
+# - Modifying
+#   Logs only requests to modifying endpoints and skips all GET
+# - Off
+# default: Modifying
+LOG_LEVEL_ACCESS=Basic
+</code></pre>
+<h2 id="events"><a class="header" href="#events">Events</a></h2>
+<p>Events are used for auditing and never miss anything. If something important happens, you usually need to inspect logs
+to catch it, but why should you, if you did not notice any problems? This is where Rauthy Events are helping you out.
+You need to set up basic configuration for Event targets and then you could customize the different levels.</p>
+<h3 id="basic-setup"><a class="header" href="#basic-setup">Basic Setup</a></h3>
+<p>Rauthy has the following Event targets built-in:</p>
+<ul>
+<li>E-Mail</li>
+<li>Matrix</li>
+<li>Slack</li>
+</ul>
+<h4 id="e-mail"><a class="header" href="#e-mail">E-Mail</a></h4>
+<p>To be able to receive Events via E-Mail, you need to have set up an SMTP server and have a working connection. With
+a working SMTP, you only need to set <code>EVENT_EMAIL</code>, that's it.</p>
+<pre><code># The E-Mail address event notifications should be sent to.
+EVENT_EMAIL=admin@localhost.de
+</code></pre>
+<h4 id="matrix"><a class="header" href="#matrix">Matrix</a></h4>
+<p>Matrix is often deployed with home servers that may not even have real TLS certificates or if just running behind closed
+doors, may use self-signed certificates. To make it work in all of these situations, you can configure quite a lot for
+the connection to Matrix. In the end, you will only need to have some credentials and a room ID, so Rauthy knows where
+it should post the events.</p>
+<pre><code># Matrix variables for event notifications.
+# `EVENT_MATRIX_USER_ID` and `EVENT_MATRIX_ROOM_ID` are mandatory.
+# Depending on your Matrix setup, additionally one of
+# `EVENT_MATRIX_ACCESS_TOKEN` or `EVENT_MATRIX_USER_PASSWORD` is needed.
+# If you log in to Matrix with User + Password, you may use `EVENT_MATRIX_USER_PASSWORD`.
+# If you log in via OIDC SSO (or just want to use a session token you can revoke),
+# you should provide `EVENT_MATRIX_ACCESS_TOKEN`.
+# If both are given, the `EVENT_MATRIX_ACCESS_TOKEN` will be preferred.
+#
+# If left empty, no messages will be sent to Matrix.
+# Format: `@&lt;user_id&gt;:&lt;server address&gt;`
+#EVENT_MATRIX_USER_ID=
+# Format: `!&lt;random string&gt;:&lt;server address&gt;`
+#EVENT_MATRIX_ROOM_ID=
+#EVENT_MATRIX_ACCESS_TOKEN=
+#EVENT_MATRIX_USER_PASSWORD=
+# Optional path to a PEM Root CA certificate file for the Matrix client.
+#EVENT_MATRIX_ROOT_CA_PATH=path/to/my/root_ca_cert.pem
+# May be set to disable the TLS validation for the Matrix client.
+# default: false
+#EVENT_MATRIX_DANGER_DISABLE_TLS_VALIDATION=false
+# The default behavior is, that Rauthy will panic at startup if it cannot connect
+# to a configured Matrix server. The reason is that event notifications cannot be
+# dropped silently.
+# However, if you use a self-hosted Matrix server which uses Rauthy as its OIDC
+# provider and both instances went offline, you will have a chicken and egg problem:
+# - Rauthy cannot connect to Matrix and will panic
+# - Your Matrix server cannot connect to Rauthy and will panic
+# To solve this issue, you can temporarily set this value to 'true' and revert
+# back, after the system is online again.
+# default: false
+#EVENT_MATRIX_ERROR_NO_PANIC=false
+</code></pre>
+<div id="admonition-hint" class="admonition admonish-tip">
+<div class="admonition-title">
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="#admonition-hint"></a></p>
+</div>
+<div>
+<p>I suggest that you create a separate room for these events. If you experience issues with Matrix encryption, you should
+maybe disbale the encryption for the Events room. I came across some weird errors from Matrix in the past when I was
+using a session token which has been created on another machine.</p>
+</div>
+</div>
+<h4 id="slack"><a class="header" href="#slack">Slack</a></h4>
+<p>To receive messages via Slack, you need to create a legacy webhook inside your Slack account. This is then the only
+config variable you need to set:</p>
+<pre><code># The Webhook for Slack Notifications.
+# If left empty, no messages will be sent to Slack.
+#EVENT_SLACK_WEBHOOK=
+</code></pre>
+<h4 id="custom-target"><a class="header" href="#custom-target">Custom Target</a></h4>
+<p>If you need your events to be sent somewhere custom, you can always create an API key with <code>read</code> access for Events.
+Then write a small app that simply listens to the events stream, which can process or just forwards the events to where
+ever you need them.</p>
+<ol>
+<li>Log in to the Admin UI and create an API key with <code>read</code> access for events.</li>
+</ol>
+<p><img src="img/api_key_1.png" alt="api_key_events" /></p>
+<ol start="2">
+<li>Save the key, expand the new entry, navigate to <code>Secret</code> and <code>Generate New</code></li>
+</ol>
+<p><img src="img/api_key_2.png" alt="api_key_events" /></p>
+<ol start="3">
+<li>Copy the new Secret from the hidden input that will appear.
+You will also see 2 prepared <code>curl</code> statements to test your new API key.
+From the test, you should get an output similar to this:</li>
+</ol>
+<pre><code class="language-json">{
+  "name": "events",
+  "created": 1720428190,
+  "expires": null,
+  "access": [
+    {
+      "group": "Events",
+      "access_rights": [
+        "read"
+      ]
+    }
+  ]
+}
+</code></pre>
+<ol start="4">
+<li>Listen to the events stream.
+You need to add the API key in the <code>Authorization</code> header with the prefix <code>API-Key</code>, for instance like</li>
+</ol>
+<pre><code>Authorization: API-Key events$SUcpBxcPmfwH9z1Kb4ExOUYDSXpxOj9mFLadjuQ1049XaWzdWB328aa97k2nj21E
+</code></pre>
+<p>You can either periodically fetch via the <code>/auth/v1/events</code> endpoint (see Swagger documentation in the Admin UI), or
+by listening to the <code>/auth/v1/events/stream</code>, which will be a Server Sent Events stream.</p>
+<p>The events will be sent in JSON format and have the following content:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct Event {
+    pub id: String,
+    pub timestamp: i64,
+    pub level: EventLevel,
+    pub typ: EventType,
+    pub ip: Option&lt;String&gt;,
+    pub data: Option&lt;i64&gt;,
+    pub text: Option&lt;String&gt;,
+}
+
+// the `EventLevel`s will be converted to lower case
+enum EventLevel {
+    Info,
+    Notice,
+    Warning,
+    Critical,
+}
+
+enum EventType {
+    InvalidLogins,
+    IpBlacklisted,
+    IpBlacklistRemoved,
+    JwksRotated,
+    NewUserRegistered,
+    NewRauthyAdmin,
+    NewRauthyVersion,
+    PossibleBruteForce,
+    RauthyStarted,
+    RauthyHealthy,
+    RauthyUnhealthy,
+    SecretsMigrated,
+    UserEmailChange,
+    UserPasswordReset,
+    Test,
+}
+<span class="boring">}</span></code></pre></pre>
+<div id="admonition-note" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note"></a></p>
+</div>
+<div>
+<p>Keep in mind, that depending on proxies you might have in between, they might kill your connection to the events stream
+after some timeout without messages. Your app should work around this and either re-connect on connection loss, or you
+could fix it with a different proxy config or keep alive messages.</p>
+</div>
+</div>
+<h3 id="testing"><a class="header" href="#testing">Testing</a></h3>
+<p>You can test your Event handler / pipeline setup when you log in to the Admin UI and simply press the <code>Test</code> button
+in the upper right corner in the Events sidebar. This will send a Test event to all configured targets and listeners
+independent of any configured event level restrictions. Test events will always be sent as long as everything is working
+properly.</p>
+<h3 id="event_notify_level"><a class="header" href="#event_notify_level"><code>EVENT_NOTIFY_LEVEL</code></a></h3>
+<p>You can set different levels for each target. By default, Only events with <code>warning</code> or higher are sent via E-Mail
+while Matrix / Slack would receive Events with <code>notice</code> or higher. If you want a different behavior, you can get this:</p>
+<pre><code># The notification level for events. Works the same way as a logging level. 
+# For instance: 'notice' means send out a notifications for all events with 
+# the notice level or higher.
+# Possible values:
+# - info
+# - notice
+# - warning
+# - critical
+#
+# default: 'warning'
+EVENT_NOTIFY_LEVEL_EMAIL=warning
+# default: 'notice'
+EVENT_NOTIFY_LEVEL_MATRIX=notice
+# default: 'notice'
+EVENT_NOTIFY_LEVEL_SLACK=notice
+</code></pre>
+<h3 id="event-persistence"><a class="header" href="#event-persistence">Event Persistence</a></h3>
+<p>Rauthy's Admin UI has a component for inspecting Events from the past for analytical purposes. By default, events with
+the level <code>info</code> or higher are persisted for <code>31</code> days. After this period, they will be removed from the database to
+keep it clean.</p>
+<p>You can configure both the level which should be persisted, for instance set "only persist Events with level warning
+or higher" and the days how long they should be kept.</p>
+<pre><code># Define the level from which on events should be persisted inside the 
+# database. All events with a lower level will be lost, if there is no 
+# active event subscriber.
+# Possible values:
+# - info
+# - notice
+# - warning
+# - critical
+# default: 'info'
+#EVENT_PERSIST_LEVEL=info
+
+# Define the number of days when events should be cleaned up from the database.
+# default: 31
+#EVENT_CLEANUP_DAYS=31
+</code></pre>
+<h3 id="event_level_-values"><a class="header" href="#event_level_-values"><code>EVENT_LEVEL_</code> Values</a></h3>
+<p>There are a lot of values starting with <code>EVENT_LEVEL_</code>. These can be used to configure the level for different kinds
+of event being fired by Rauthy.</p>
+<p>For instance, let's say you only want to receive events with a level of <code>warning</code> or higher, but you also want to
+receive a notification when there are more than 7 failed logins from an IP. By default, 7 failed logins would trigger an
+event with the level of <code>notice</code>. You can then set</p>
+<pre><code>EVENT_LEVEL_FAILED_LOGINS_7=warning
+</code></pre>
+<p>to also receive these while still only receiving <code>warning</code> events.</p>
+<p>The full list of these configurable levels is the following:</p>
+<pre><code># The level for the generated Event after a new user has been registered.
+# default: info
+EVENT_LEVEL_NEW_USER=info
+# The level for the generated Event after a user has changed his E-Mail
+# default: notice
+EVENT_LEVEL_USER_EMAIL_CHANGE=notice
+# The level for the generated Event after a user has reset its password
+# default: notice
+EVENT_LEVEL_USER_PASSWORD_RESET=notice
+# The level for the generated Event after a user has been given the 
+# 'rauthy_admin' role
+# default: notice
+EVENT_LEVEL_RAUTHY_ADMIN=notice
+# The level for the generated Event after a new App version has been found
+# default: notice
+EVENT_LEVEL_RAUTHY_VERSION=notice
+# The level for the generated Event after the JWKS has been rotated
+# default: notice
+EVENT_LEVEL_JWKS_ROTATE=notice
+# The level for the generated Event after DB secrets have been migrated 
+# to a new key
+# default: notice
+EVENT_LEVEL_SECRETS_MIGRATED=notice
+# The level for the generated Event after a Rauthy instance has been 
+# started
+# default: info
+EVENT_LEVEL_RAUTHY_START=info
+# The level for the generated Event after a Rauthy entered a healthy 
+# state (again)
+# default: notice
+EVENT_LEVEL_RAUTHY_HEALTHY=notice
+# The level for the generated Event after a Rauthy entered an unhealthy 
+#state
+# default: critical
+EVENT_LEVEL_RAUTHY_UNHEALTHY=critical
+# The level for the generated Event after an IP has been blacklisted
+# default: warning
+EVENT_LEVEL_IP_BLACKLISTED=warning
+# The level for the generated Event after certain amounts of false 
+# logins from an IP
+# default: critical
+EVENT_LEVEL_FAILED_LOGINS_25=critical
+# default: critical
+EVENT_LEVEL_FAILED_LOGINS_20=critical
+# default: warning
+EVENT_LEVEL_FAILED_LOGINS_15=warning
+# default: warning
+EVENT_LEVEL_FAILED_LOGINS_10=warning
+# default: notice
+EVENT_LEVEL_FAILED_LOGINS_7=notice
+# default: info
+EVENT_LEVEL_FAILED_LOGIN=info
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../config/encryption.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../config/backup.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../config/encryption.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../config/backup.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
