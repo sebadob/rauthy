@@ -17,7 +17,7 @@
 
         if (res.ok) {
             secret = await res.text();
-            curl = `curl -H 'Authorization: API-Key ${secret}' ${window.location.origin}/auth/v1/api_keys/${apiKey.name}/test`;
+            curl = `curl -s -H 'Authorization: API-Key ${secret}' ${window.location.origin}/auth/v1/api_keys/${apiKey.name}/test`;
             curlPretty = `${curl} | jq`;
         } else {
             let body = await res.json();
