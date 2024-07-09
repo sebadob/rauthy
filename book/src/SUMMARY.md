@@ -9,7 +9,7 @@
 
 - [Production Config](config/production_config.md)
     - [Password Hashing](config/argon2.md)
-    - [FIDO 2 Passkeys](config/fido.md)
+    - [Passkeys](config/passkeys.md)
     - [Encryption](config/encryption.md)
     - [Logging and Auditing](config/logging.md)
     - [Backups](config/backup.md)

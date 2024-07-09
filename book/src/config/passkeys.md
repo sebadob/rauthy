@@ -1,4 +1,4 @@
-# FIDO 2 / WebAuthn
+# Passkeys / WebAuthn
 
 ## Passkey Only Accounts
 
