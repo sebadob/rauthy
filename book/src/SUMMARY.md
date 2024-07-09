@@ -8,8 +8,8 @@
     - [First Start](./getting_started/first_start.md)
 
 - [Production Config](config/production_config.md)
-    - [Argon 2](config/argon2.md)
-    - [FIDO 2 Passkeys](config/fido.md)
+    - [Password Hashing](config/argon2.md)
+    - [Passkeys](config/passkeys.md)
     - [Encryption](config/encryption.md)
     - [Logging and Auditing](config/logging.md)
     - [Backups](config/backup.md)
