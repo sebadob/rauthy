@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>FIDO 2 Passkeys - Rauthy Documentation</title>
+        <title>Passkeys - Rauthy Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/production_config.html"><strong aria-hidden="true">3.</strong> Production Config</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.1.</strong> Argon 2</a></li><li class="chapter-item expanded "><a href="../config/fido.html" class="active"><strong aria-hidden="true">3.2.</strong> FIDO 2 Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">3.3.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/logging.html"><strong aria-hidden="true">3.4.</strong> Logging and Auditing</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">3.5.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">3.6.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">3.7.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/sessions.html"><strong aria-hidden="true">3.8.</strong> Sessions</a></li><li class="chapter-item expanded "><a href="../config/user_reg.html"><strong aria-hidden="true">3.9.</strong> User Registration</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">3.10.</strong> Database Migrations</a></li></ol></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">4.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html"><strong aria-hidden="true">4.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">5.</strong> Reference Config</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/production_config.html"><strong aria-hidden="true">3.</strong> Production Config</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.1.</strong> Password Hashing</a></li><li class="chapter-item expanded "><a href="../config/passkeys.html" class="active"><strong aria-hidden="true">3.2.</strong> Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">3.3.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/logging.html"><strong aria-hidden="true">3.4.</strong> Logging and Auditing</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">3.5.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">3.6.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">3.7.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/sessions.html"><strong aria-hidden="true">3.8.</strong> Sessions</a></li><li class="chapter-item expanded "><a href="../config/user_reg.html"><strong aria-hidden="true">3.9.</strong> User Registration</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">3.10.</strong> Database Migrations</a></li></ol></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">4.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html"><strong aria-hidden="true">4.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">5.</strong> Reference Config</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -174,12 +174,12 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="fido-2--webauthn"><a class="header" href="#fido-2--webauthn">FIDO 2 / WebAuthn</a></h1>
+                        <h1 id="passkeys--webauthn"><a class="header" href="#passkeys--webauthn">Passkeys / WebAuthn</a></h1>
 <h2 id="passkey-only-accounts"><a class="header" href="#passkey-only-accounts">Passkey Only Accounts</a></h2>
-<p>Rauthy provides the ability to optionally create Passkey only accounts.<br />
-These accounts do not have any password at all. The user can login via E-Mail + providing the MFA
-FIDO 2 Passkey. Only keys and systems with additional user verification (UV) will be accepted for these accounts.
-This makes sure, that they are 2FA / MFA secured (depending on the device) all the time.</p>
+<p>Rauthy provides the ability to create Passkey only accounts.<br />
+These accounts do not have any password at all. The user can login via E-Mail + providing the Passkey. Only keys
+with additional user verification (UV) will be accepted for these accounts. This makes sure, that they are 2FA / MFA
+secured (depending on the device) all the time.</p>
 <p>You can choose the account type either during the initial password reset link you get via E-Mail, or you can
 convert a traditional password account to a passkey only account in your account view, if you have at least
 one Passkey with additional UV registered.</p>
@@ -204,6 +204,24 @@ No way to take over an account if the E-Mail account has been compromised, but a
 relies on an Admin to reset the MFA devices, if no backup exists or all are lost.</p>
 </div>
 </div>
+<div id="admonition-note" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note"></a></p>
+</div>
+<div>
+<p>Unfortunately, passkeys have one big drawback when you use the discoverable credentials / redident keys feature.
+This is really cool and the best possible UX at first glance, because the user does not need to provide even a
+username / email manually, but has one very big drawback.</p>
+<p><strong>The amount of resident keys a passkey can store is always limited.</strong></p>
+<p>There are devices, that can get locked up completely if you try to register resident keys beyond the capacity of
+the device itself. For this reason, Rauthy strictly discourages the use of resident keys and will always request the
+user to provide the email, so you can never end up in such a situation with Rauthy. Non-discoverable credentials are
+not limited per device.</p>
+<p>Rauthy remembers the last email that has been used for a login on each machine. This provides the same best possible
+UX in the end that you would get with discoverable credentials but without the drawbacks of the limited amount.</p>
+</div>
+</div>
 <div id="admonition-info" class="admonition admonish-info">
 <div class="admonition-title">
 <p>Info</p>
@@ -216,10 +234,10 @@ This has made is possible to implement this feature into Rauthy without sacrific
 <p>Sadly, Google just decided to not implement this feature for other keys than their own implementation of it.</p>
 </div>
 </div>
-<div id="admonition-tip" class="admonition admonish-tip">
+<div id="admonition-hint" class="admonition admonish-tip">
 <div class="admonition-title">
-<p>Tip</p>
-<p><a class="admonition-anchor-link" href="#admonition-tip"></a></p>
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="#admonition-hint"></a></p>
 </div>
 <div>
 <p>If you want to register an Android device for a Passkey only account, but you are using for instance Yubikeys
@@ -241,12 +259,12 @@ with PIN UV, you can do the following trick to get it done (works only with the 
 </div>
 </div>
 <h2 id="config"><a class="header" href="#config">Config</a></h2>
-<p>You should use FIDO 2 in production for 2FA / MFA.
+<p>You should use Passkeys / Webauthn in production for 2FA / MFA.
 To make sure it works, you need to check your the config.</p>
-<p>Set / check some variables in your config, to make sure it works correctly.</p>
+<p>Adjust the following variables in your config, to make sure it works correctly.</p>
 <h3 id="rp_id"><a class="header" href="#rp_id"><code>RP_ID</code></a></h3>
-<p>This usually is the 'Relaying Party (RP) ID', which should be your effective domain name.
-For the above example, since our application is available under 'auth.example.com', this should also be:</p>
+<p>This is the <em>Relaying Party (RP) ID</em>, which should be your effective domain name.<br />
+Let's say our application is available at <code>auth.example.com</code>, then this should be:</p>
 <pre><code>RP_ID=auth.example.com
 </code></pre>
 <div id="admonition-caution-1" class="admonition admonish-warning">
@@ -260,22 +278,22 @@ Be very careful, if you want / need to do this in production.</p>
 </div>
 </div>
 <h3 id="rp_origin"><a class="header" href="#rp_origin"><code>RP_ORIGIN</code></a></h3>
-<p>The seconds important variable for FIDO 2 is the <code>RP_ORIGIN</code>. This needs to be set to the URL containing the effective
-domain name.</p>
+<p>The second important variable is the <code>RP_ORIGIN</code>. This needs to be set to the scheme + URL containing the effective
+domain name + port.</p>
 <div id="admonition-caution-2" class="admonition admonish-warning">
 <div class="admonition-title">
 <p>Caution</p>
 <p><a class="admonition-anchor-link" href="#admonition-caution-2"></a></p>
 </div>
 <div>
-<p>The <code>RP_ORIGIN</code> must always include the port number, even it is just the default 443 for HTTPS.</p>
+<p>The <code>RP_ORIGIN</code> must always include the port number, even if it is just the default 443 for HTTPS.</p>
 </div>
 </div>
-<p>In this example, assuming rauthy will be available at port 443, correct would be:</p>
+<p>In this example, assuming Rauthy will be available at port 443, correct would be:</p>
 <pre><code>RP_ORIGIN=https://auth.example.com:443
 </code></pre>
 <h3 id="rp_name"><a class="header" href="#rp_name"><code>RP_NAME</code></a></h3>
-<p>This variable can be set to anything "nice".
+<p>This variable can be set to anything "pretty".<br />
 This may be shown to the user in a way like "<code>RP_BNAE</code> requests your security key ...". If this is shown depends on the
 OS and the browser the client uses. Firefox, for instance, does not show this at the time of writing.</p>
 <p>You can change the <code>RP_NAME</code> later on without affecting the validation of already registered keys.</p>
@@ -284,12 +302,12 @@ OS and the browser the client uses. Firefox, for instance, does not show this at
 even with active
 passkeys. The keys are used either as a strong second factor, when they do not work with a PIN, or bump up the whole
 login to real MFA, if the OS / Browser / Key does support this.</p>
-<p>When a user as logged in successfully on a new device and active 2FA / MFA, he will get an encrypted cookie.<br />
-The lifetime of this cookie can be configured with <code>WEBAUTHN_RENEW_EXP</code>.<br />
-The <strong>default</strong> of this value is <strong>2160 hours</strong>.</p>
+<p>When a user has logged in successfully on a new device and active 2FA / MFA, Rauthy will set an encrypted cookie as a
+"remember me". The lifetime of this cookie can be configured with <code>WEBAUTHN_RENEW_EXP</code>. The <strong>default</strong> of this value
+is <strong>2160 hours</strong>.</p>
 <p>As long as this cookie is present and can be decrypted by the backend, the user can log in from this very
-device with his FIDO 2 key only, which makes a very good user experience for the whole login flow. The E-Mail will
-already be filled automatically and only a single click on the login button is necessary.</p>
+device with the registered Passkey key only, which makes a very good user experience for the whole login flow.
+The E-Mail will already be filled automatically and only a single click on the login button is necessary.</p>
 
                     </main>
 
