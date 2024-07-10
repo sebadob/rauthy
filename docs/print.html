@@ -90,7 +90,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="config/production_config.html"><strong aria-hidden="true">3.</strong> Production Config</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="config/argon2.html"><strong aria-hidden="true">3.1.</strong> Password Hashing</a></li><li class="chapter-item expanded "><a href="config/passkeys.html"><strong aria-hidden="true">3.2.</strong> Passkeys</a></li><li class="chapter-item expanded "><a href="config/encryption.html"><strong aria-hidden="true">3.3.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="config/logging.html"><strong aria-hidden="true">3.4.</strong> Logging and Auditing</a></li><li class="chapter-item expanded "><a href="config/backup.html"><strong aria-hidden="true">3.5.</strong> Backups</a></li><li class="chapter-item expanded "><a href="config/tls.html"><strong aria-hidden="true">3.6.</strong> TLS</a></li><li class="chapter-item expanded "><a href="config/ha.html"><strong aria-hidden="true">3.7.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="config/sessions.html"><strong aria-hidden="true">3.8.</strong> Sessions</a></li><li class="chapter-item expanded "><a href="config/user_reg.html"><strong aria-hidden="true">3.9.</strong> User Registration</a></li><li class="chapter-item expanded "><a href="config/db_migration.html"><strong aria-hidden="true">3.10.</strong> Database Migrations</a></li></ol></li><li class="chapter-item expanded "><a href="auth_providers/index.html"><strong aria-hidden="true">4.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="auth_providers/github.html"><strong aria-hidden="true">4.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="config/config.html"><strong aria-hidden="true">5.</strong> Reference Config</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="config/production_config.html"><strong aria-hidden="true">3.</strong> Production Config</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="config/argon2.html"><strong aria-hidden="true">3.1.</strong> Password Hashing</a></li><li class="chapter-item expanded "><a href="config/passkeys.html"><strong aria-hidden="true">3.2.</strong> Passkeys</a></li><li class="chapter-item expanded "><a href="config/encryption.html"><strong aria-hidden="true">3.3.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="config/logging.html"><strong aria-hidden="true">3.4.</strong> Logging and Auditing</a></li><li class="chapter-item expanded "><a href="config/backup.html"><strong aria-hidden="true">3.5.</strong> Backups</a></li><li class="chapter-item expanded "><a href="config/tls.html"><strong aria-hidden="true">3.6.</strong> TLS</a></li><li class="chapter-item expanded "><a href="config/sessions.html"><strong aria-hidden="true">3.7.</strong> Sessions</a></li><li class="chapter-item expanded "><a href="config/user_reg.html"><strong aria-hidden="true">3.8.</strong> User Registration</a></li><li class="chapter-item expanded "><a href="config/ha.html"><strong aria-hidden="true">3.9.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="config/forward_auth.html"><strong aria-hidden="true">3.10.</strong> Forward Authentication</a></li><li class="chapter-item expanded "><a href="config/db_migration.html"><strong aria-hidden="true">3.11.</strong> Database Migrations</a></li></ol></li><li class="chapter-item expanded "><a href="auth_providers/index.html"><strong aria-hidden="true">4.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="auth_providers/github.html"><strong aria-hidden="true">4.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="config/config.html"><strong aria-hidden="true">5.</strong> Reference Config</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -1773,83 +1773,6 @@ you should provide a different set of certificates for the internal mTLS connect
 kubectl apply -f sts.yaml
 </code></pre>
 <p>The <code>rauthy</code> pods should restart now and TLS is configured.</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="high-availability"><a class="header" href="#high-availability">High Availability</a></h1>
-<p>Rauthy is capable of running in a High Availability Mode (HA).</p>
-<p>Some values, like authentication codes for instance, do live in the cache only. Additionally, there might come an
-option with a future version which offers a special in-memory only mode in some situations.</p>
-<p>Because of this, all instances create and share a single HA cache layer, which means at the same time, that you cannot
-just scale up the replicas infinitely. The optimal amount of replicas for a HA mode would be 3, or if you need even higher
-resilience 5. More replicas should work just fine, but this has never been really tested and the performance will
-degrade at some point.</p>
-<p>To achieve the HA caching layer embedded directly into the application, I created a library (or crate in Rust terms)
-called <code>redhac</code>.<br />
-This crate will create each a gRPC server and a client part and each node will connect to all other ones. Once quorum
-has been reached, a leader will be elected, which then will execute all insert requests by default to avoid overlaps
-or inconsistencies and to guarantee a configured level of safety. Different so called <code>AckLevel</code> are available, like
-<code>Quorum</code>, <code>Once</code> and <code>Leader</code> in addition to a direct cache put without any safeties.<br />
-Rauthy uses different levels in different situations to provide real HA and sync all caches between the pods. This
-means that you can loose a pod and still have the in-cache-only values available on the other ones.</p>
-<p>This syncing of the cache is the reason why write performance will degrade, if you scale up too many replicas, which should
-not really be necessary anyway. The best HA performance will be achieved with 3 replicas and then scaling up the
-resources for each pod before adding more replicas.</p>
-<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
-<p>The way to configure the <code>HA_MODE</code> is optimized for a Kubernetes deployment but may seem a bit odd at the same time,
-if you deploy somewhere else. You need to the following values in the config file:</p>
-<h3 id="ha_mode"><a class="header" href="#ha_mode"><code>HA_MODE</code></a></h3>
-<p>The first one is easy, just set <code>HA_MODE=true</code></p>
-<h3 id="ha_hosts"><a class="header" href="#ha_hosts"><code>HA_HOSTS</code></a></h3>
-<p>The <code>HA_HOSTS</code> is working in a way, that it is really easy inside Kubernetes to configure it, as long as a
-StatefulSet is used for the deployment.</p>
-<p>The way a cache node finds its members is by the <code>HA_HOSTS</code> and its own <code>HOSTNAME</code>.<br />
-In the <code>HA_HOSTS</code>, add every cache member. For instance, if you want to use 3 replicas in HA mode which are running
-and are deployed as a StatefulSet with the name <code>rauthy</code> again:</p>
-<pre><code>HA_HOSTS="http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000"
-</code></pre>
-<p>The way it works:</p>
-<ol>
-<li>A node gets its own hostname from the OS<br />
-This is the reason, why you use a StatefulSet for the deployment, even without any volumes attached. For StatefulSet
-called <code>rauthy</code>, the replicas will always have the names <code>rauthy-0</code>, <code>rauthy-1</code>, ..., which are at the same time the
-hostnames inside the pod.</li>
-<li>Find "me" inside the <code>HA_HOSTS</code> variable<br />
-If the hostname cannot be found in the <code>HA_HOSTS</code>, the application will panic and exit because of a misconfiguration.</li>
-<li>Use the port from the "me"-Entry that was found for the server part<br />
-This means you do not need to specify the port in another variable which eliminates the risk of having inconsistencies
-or a bad config in that case.</li>
-<li>Extract "me" from the <code>HA_HOSTS</code>, take the leftover nodes as all cache members and connect to them</li>
-<li>Once a quorum has been reached, a leader will be elected<br />
-From that point on, the cache will start accepting requests</li>
-<li>If the leader is lost - elect a new one - No values will be lost</li>
-<li>If quorum is lost, the cache will be invalidated<br />
-This happens for security reasons to provide cache inconsistencies. Better invalidate the cache and fetch the values
-fresh from the DB or other cache members than working with possibly invalid values, which is especially true in an
-authn / authz situation.</li>
-</ol>
-<div id="admonition-hint" class="admonition admonish-tip">
-<div class="admonition-title">
-<p>Hint</p>
-<p><a class="admonition-anchor-link" href="config/ha.html#admonition-hint"></a></p>
-</div>
-<div>
-<p>If you are in an environment where the described mechanism with extracting the hostname would not work, for instance
-you want a HA deployment with just different docker hosts, you can set the <code>HOSTNAME_OVERWRITE</code> for each instance to
-match one of the <code>HA_HOSTS</code> entries.</p>
-</div>
-</div>
-<h3 id="cache_auth_token"><a class="header" href="#cache_auth_token"><code>CACHE_AUTH_TOKEN</code></a></h3>
-<p>You need to set a secret for the <code>CACHE_AUTH_TOKEN</code> which was left out in the
-<a href="config/../getting_started/k8s.html#create-and-apply-secrets">Getting Started</a></p>
-<p>Just create a secret and add it in the same way:</p>
-<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48)" | base64
-</code></pre>
-<h3 id="tls-1"><a class="header" href="#tls-1">TLS</a></h3>
-<p>If you are using a service mesh like for instance <a href="https://linkerd.io/">linkerd</a> which creates mTLS connections between
-all pods by default, you can use the HA cache with just plain HTTP, since linkerd will encapsulate the traffic anyway.</p>
-<p>You may then set</p>
-<pre><code>CACHE_TLS=false
-</code></pre>
-<p>to disable the use of TLS certificates between cache member.</p>
-<p>However, if you do not have encryption between pods by default, I would highly recommend, that you use <a href="config/tls.html">TLS</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="sessions"><a class="header" href="#sessions">Sessions</a></h1>
 <p>When you log in to anything, be it your account dashboard, the admin UI, or a downstream application, you will get a
 Rauthy session. This is independent of any client / application login. These sessions are used to authorize against
@@ -2244,6 +2167,137 @@ submit the form at all.</p>
 <p>You can configure PoWs with <code>POW_DIFFICULTY</code> and <code>POW_EXP</code>.<br />
 Keep in mind, that the <code>POW_EXP</code> should be a high as necessary but always as low as possible.</p>
 </div>
+</div><div style="break-before: page; page-break-before: always;"></div><h1 id="high-availability"><a class="header" href="#high-availability">High Availability</a></h1>
+<p>Rauthy is capable of running in a High Availability Mode (HA).</p>
+<p>Some values, like authentication codes for instance, do live in the cache only. Additionally, there might come an
+option with a future version which offers a special in-memory only mode in some situations.</p>
+<p>Because of this, all instances create and share a single HA cache layer, which means at the same time, that you cannot
+just scale up the replicas infinitely. The optimal amount of replicas for a HA mode would be 3, or if you need even higher
+resilience 5. More replicas should work just fine, but this has never been really tested and the performance will
+degrade at some point.</p>
+<p>To achieve the HA caching layer embedded directly into the application, I created a library (or crate in Rust terms)
+called <code>redhac</code>.<br />
+This crate will create each a gRPC server and a client part and each node will connect to all other ones. Once quorum
+has been reached, a leader will be elected, which then will execute all insert requests by default to avoid overlaps
+or inconsistencies and to guarantee a configured level of safety. Different so called <code>AckLevel</code> are available, like
+<code>Quorum</code>, <code>Once</code> and <code>Leader</code> in addition to a direct cache put without any safeties.<br />
+Rauthy uses different levels in different situations to provide real HA and sync all caches between the pods. This
+means that you can loose a pod and still have the in-cache-only values available on the other ones.</p>
+<p>This syncing of the cache is the reason why write performance will degrade, if you scale up too many replicas, which should
+not really be necessary anyway. The best HA performance will be achieved with 3 replicas and then scaling up the
+resources for each pod before adding more replicas.</p>
+<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
+<p>The way to configure the <code>HA_MODE</code> is optimized for a Kubernetes deployment but may seem a bit odd at the same time,
+if you deploy somewhere else. You need to the following values in the config file:</p>
+<h3 id="ha_mode"><a class="header" href="#ha_mode"><code>HA_MODE</code></a></h3>
+<p>The first one is easy, just set <code>HA_MODE=true</code></p>
+<h3 id="ha_hosts"><a class="header" href="#ha_hosts"><code>HA_HOSTS</code></a></h3>
+<p>The <code>HA_HOSTS</code> is working in a way, that it is really easy inside Kubernetes to configure it, as long as a
+StatefulSet is used for the deployment.</p>
+<p>The way a cache node finds its members is by the <code>HA_HOSTS</code> and its own <code>HOSTNAME</code>.<br />
+In the <code>HA_HOSTS</code>, add every cache member. For instance, if you want to use 3 replicas in HA mode which are running
+and are deployed as a StatefulSet with the name <code>rauthy</code> again:</p>
+<pre><code>HA_HOSTS="http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000"
+</code></pre>
+<p>The way it works:</p>
+<ol>
+<li>A node gets its own hostname from the OS<br />
+This is the reason, why you use a StatefulSet for the deployment, even without any volumes attached. For StatefulSet
+called <code>rauthy</code>, the replicas will always have the names <code>rauthy-0</code>, <code>rauthy-1</code>, ..., which are at the same time the
+hostnames inside the pod.</li>
+<li>Find "me" inside the <code>HA_HOSTS</code> variable<br />
+If the hostname cannot be found in the <code>HA_HOSTS</code>, the application will panic and exit because of a misconfiguration.</li>
+<li>Use the port from the "me"-Entry that was found for the server part<br />
+This means you do not need to specify the port in another variable which eliminates the risk of having inconsistencies
+or a bad config in that case.</li>
+<li>Extract "me" from the <code>HA_HOSTS</code>, take the leftover nodes as all cache members and connect to them</li>
+<li>Once a quorum has been reached, a leader will be elected<br />
+From that point on, the cache will start accepting requests</li>
+<li>If the leader is lost - elect a new one - No values will be lost</li>
+<li>If quorum is lost, the cache will be invalidated<br />
+This happens for security reasons to provide cache inconsistencies. Better invalidate the cache and fetch the values
+fresh from the DB or other cache members than working with possibly invalid values, which is especially true in an
+authn / authz situation.</li>
+</ol>
+<div id="admonition-hint" class="admonition admonish-tip">
+<div class="admonition-title">
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="config/ha.html#admonition-hint"></a></p>
+</div>
+<div>
+<p>If you are in an environment where the described mechanism with extracting the hostname would not work, for instance
+you want a HA deployment with just different docker hosts, you can set the <code>HOSTNAME_OVERWRITE</code> for each instance to
+match one of the <code>HA_HOSTS</code> entries.</p>
+</div>
+</div>
+<h3 id="cache_auth_token"><a class="header" href="#cache_auth_token"><code>CACHE_AUTH_TOKEN</code></a></h3>
+<p>You need to set a secret for the <code>CACHE_AUTH_TOKEN</code> which was left out in the
+<a href="config/../getting_started/k8s.html#create-and-apply-secrets">Getting Started</a></p>
+<p>Just create a secret and add it in the same way:</p>
+<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48)" | base64
+</code></pre>
+<h3 id="tls-1"><a class="header" href="#tls-1">TLS</a></h3>
+<p>If you are using a service mesh like for instance <a href="https://linkerd.io/">linkerd</a> which creates mTLS connections between
+all pods by default, you can use the HA cache with just plain HTTP, since linkerd will encapsulate the traffic anyway.</p>
+<p>You may then set</p>
+<pre><code>CACHE_TLS=false
+</code></pre>
+<p>to disable the use of TLS certificates between cache member.</p>
+<p>However, if you do not have encryption between pods by default, I would highly recommend, that you use <a href="config/tls.html">TLS</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="forward-authentication"><a class="header" href="#forward-authentication">Forward Authentication</a></h1>
+<p>If you want to secure applications running behind a reverse proxy that do not have authn / authz on their own in terms
+of being able to use OIDC flows or similar with them, you can use something like the <a href="https://traefik.io/">Traefik</a>
+middleware <a href="https://doc.traefik.io/traefik/middlewares/http/forwardauth/">ForwardAuth</a>. Other proxies support this as
+well.</p>
+<p>Incoming requests can be intercepted and forwarded to Rauthy first. It will check for a valid <code>Bearer</code> token in the
+<code>Authorization</code> header. If it is valid, Rauthy will return an <code>HTTP 200 Ok</code> and will append additional headers with
+information about the user to the request. These headers could easily be read by a downstream application.</p>
+<p>The forward auth headers are disabled by default, because they can leak information, if you do not set up your internal
+environment carefully. You can enable the feature with</p>
+<pre><code># You can enable authn/authz headers which would be added to the response
+# of the `/auth/v1/oidc/forward_auth` endpoint. With  `AUTH_HEADERS_ENABLE=true`,
+# the headers below will be added to authenticated requests. These could
+# be used on legacy downstream applications, that don't support OIDC on
+# their own.
+# However, be careful when using this, since this kind of authn/authz has
+# a lot of pitfalls out of the scope of Rauthy.
+# default: false
+AUTH_HEADERS_ENABLE=false
+
+</code></pre>
+<p>You can also change the header names containing the information, if you need to support some older application that
+needs special naming for them:</p>
+<pre><code># Configure the header names being used for the different values.
+# You can change them to your needs, if you cannot easily change your
+# downstream apps.
+# default: x-forwarded-user
+AUTH_HEADER_USER=x-forwarded-user
+# default: x-forwarded-user-roles
+AUTH_HEADER_ROLES=x-forwarded-user-roles
+# default: x-forwarded-user-groups
+AUTH_HEADER_GROUPS=x-forwarded-user-groups
+# default: x-forwarded-user-email
+AUTH_HEADER_EMAIL=x-forwarded-user-email
+# default: x-forwarded-user-email-verified
+AUTH_HEADER_EMAIL_VERIFIED=x-forwarded-user-email-verified
+# default: x-forwarded-user-family-name
+AUTH_HEADER_FAMILY_NAME=x-forwarded-user-family-name
+# default: x-forwarded-user-given-name
+AUTH_HEADER_GIVEN_NAME=x-forwarded-user-given-name
+# default: x-forwarded-user-mfa
+AUTH_HEADER_MFA=x-forwarded-user-mfa
+</code></pre>
+<div id="admonition-caution" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="config/forward_auth.html#admonition-caution"></a></p>
+</div>
+<div>
+<p>This feature makes it really easy for any application behind your reverse proxy to serve protected resources, but you
+really only use it, if you cannot use a proper OIDC client or something like that.</p>
+<p>Auth forward has many pitfalls and you need to be careful with your whole setup when using it. A direct token validation
+inside your downstream application should always be preferred.</p>
+</div>
 </div><div style="break-before: page; page-break-before: always;"></div><h1 id="database-migrations"><a class="header" href="#database-migrations">Database Migrations</a></h1>
 <p>You can migrate easily between SQLite and Postgres, or just between different instances of them.</p>
 <p>Let's say you started out by evaluating Rauthy with a SQLite and a single instance deployment. Later on, you want to
@@ -2440,12 +2494,13 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 PEER_IP_HEADER_NAME="CF-Connecting-IP"
 
 # You can enable authn/authz headers which would be added to the response
-# of the `/auth/v1/forward_auth` endpoint. With  `AUTH_HEADERS_ENABLE=true`,
+# of the `/auth/v1/oidc/forward_auth` endpoint. With  `AUTH_HEADERS_ENABLE=true`,
 # the headers below will be added to authenticated requests. These could
 # be used on legacy downstream applications, that don't support OIDC on
 # their own.
 # However, be careful when using this, since this kind of authn/authz has
 # a lot of pitfalls out of the scope of Rauthy.
+# default: false
 AUTH_HEADERS_ENABLE=true
 
 # Configure the header names being used for the different values.

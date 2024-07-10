@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Database Migrations - Rauthy Documentation</title>
+        <title>Forward Authentication - Rauthy Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/production_config.html"><strong aria-hidden="true">3.</strong> Production Config</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.1.</strong> Password Hashing</a></li><li class="chapter-item expanded "><a href="../config/passkeys.html"><strong aria-hidden="true">3.2.</strong> Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">3.3.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/logging.html"><strong aria-hidden="true">3.4.</strong> Logging and Auditing</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">3.5.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">3.6.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/sessions.html"><strong aria-hidden="true">3.7.</strong> Sessions</a></li><li class="chapter-item expanded "><a href="../config/user_reg.html"><strong aria-hidden="true">3.8.</strong> User Registration</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">3.9.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/forward_auth.html"><strong aria-hidden="true">3.10.</strong> Forward Authentication</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html" class="active"><strong aria-hidden="true">3.11.</strong> Database Migrations</a></li></ol></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">4.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html"><strong aria-hidden="true">4.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">5.</strong> Reference Config</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/production_config.html"><strong aria-hidden="true">3.</strong> Production Config</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.1.</strong> Password Hashing</a></li><li class="chapter-item expanded "><a href="../config/passkeys.html"><strong aria-hidden="true">3.2.</strong> Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">3.3.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/logging.html"><strong aria-hidden="true">3.4.</strong> Logging and Auditing</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">3.5.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">3.6.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/sessions.html"><strong aria-hidden="true">3.7.</strong> Sessions</a></li><li class="chapter-item expanded "><a href="../config/user_reg.html"><strong aria-hidden="true">3.8.</strong> User Registration</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">3.9.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/forward_auth.html" class="active"><strong aria-hidden="true">3.10.</strong> Forward Authentication</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">3.11.</strong> Database Migrations</a></li></ol></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">4.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html"><strong aria-hidden="true">4.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">5.</strong> Reference Config</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -174,62 +174,70 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="database-migrations"><a class="header" href="#database-migrations">Database Migrations</a></h1>
-<p>You can migrate easily between SQLite and Postgres, or just between different instances of them.</p>
-<p>Let's say you started out by evaluating Rauthy with a SQLite and a single instance deployment. Later on, you want to
-migrate to a HA setup, which requires you to use a Postgres.</p>
-<p><strong>Solution:</strong> <code>MIGRATE_DB_FROM</code></p>
-<p>If you set the <code>MIGRATE_DB_FROM</code> in Rauthy's config, it will perform a migration at the next restart.<br />
-The way it works is the following:</p>
-<ol>
-<li>At startup, have a look if <code>MIGRATE_DB_FROM</code> is configured</li>
-<li>If yes, then connect to the given database</li>
-<li>At the same time, connect to the database specified in the <code>DATABASE_URL</code></li>
-<li>Overwrite all existing data in <code>DATABASE_URL</code> with the data from the <code>MIGRATE_DB_FROM</code> database</li>
-<li>Close the connection to <code>MIGRATE_DB_FROM</code></li>
-<li>Use the <code>DATABASE_URL</code> as the new database and start normal operation</li>
-</ol>
-<div id="admonition-danger" class="admonition admonish-danger">
-<div class="admonition-title">
-<p>Danger</p>
-<p><a class="admonition-anchor-link" href="#admonition-danger"></a></p>
-</div>
-<div>
-<p><code>MIGRATE_DB_FROM</code> overwrites any data in the target database! Be very careful with this option.</p>
-<p>If you do not remove the <code>MIGRATE_DB_FROM</code> after the migration has been done, it will overwrite the target again with
-the next restart of the application. Remove the config variable immediately after the migration has finished.</p>
-</div>
-</div>
-<div id="admonition-info" class="admonition admonish-info">
-<div class="admonition-title">
-<p>Info</p>
-<p><a class="admonition-anchor-link" href="#admonition-info"></a></p>
-</div>
-<div>
-<p><strong>v0.14 and beyond:</strong> if you want to migrate to a different database, for instance from SQLite to Postgres, you need to
-switch to the correct rauthy image as well. Rauthy v0.14 and beyond has different container images for the databases.</p>
-</div>
-</div>
-<div id="admonition-hint" class="admonition admonish-tip">
-<div class="admonition-title">
-<p>Hint</p>
-<p><a class="admonition-anchor-link" href="#admonition-hint"></a></p>
-</div>
-<div>
-<p>The easiest to do is to just set <code>MIGRATE_DB_FROM</code> as an environmant variable, which is easier and quicker to remove
-again afterwards.</p>
-</div>
-</div>
+                        <h1 id="forward-authentication"><a class="header" href="#forward-authentication">Forward Authentication</a></h1>
+<p>If you want to secure applications running behind a reverse proxy that do not have authn / authz on their own in terms
+of being able to use OIDC flows or similar with them, you can use something like the <a href="https://traefik.io/">Traefik</a>
+middleware <a href="https://doc.traefik.io/traefik/middlewares/http/forwardauth/">ForwardAuth</a>. Other proxies support this as
+well.</p>
+<p>Incoming requests can be intercepted and forwarded to Rauthy first. It will check for a valid <code>Bearer</code> token in the
+<code>Authorization</code> header. If it is valid, Rauthy will return an <code>HTTP 200 Ok</code> and will append additional headers with
+information about the user to the request. These headers could easily be read by a downstream application.</p>
+<p>The forward auth headers are disabled by default, because they can leak information, if you do not set up your internal
+environment carefully. You can enable the feature with</p>
+<pre><code># You can enable authn/authz headers which would be added to the response
+# of the `/auth/v1/oidc/forward_auth` endpoint. With  `AUTH_HEADERS_ENABLE=true`,
+# the headers below will be added to authenticated requests. These could
+# be used on legacy downstream applications, that don't support OIDC on
+# their own.
+# However, be careful when using this, since this kind of authn/authz has
+# a lot of pitfalls out of the scope of Rauthy.
+# default: false
+AUTH_HEADERS_ENABLE=false
 
+</code></pre>
+<p>You can also change the header names containing the information, if you need to support some older application that
+needs special naming for them:</p>
+<pre><code># Configure the header names being used for the different values.
+# You can change them to your needs, if you cannot easily change your
+# downstream apps.
+# default: x-forwarded-user
+AUTH_HEADER_USER=x-forwarded-user
+# default: x-forwarded-user-roles
+AUTH_HEADER_ROLES=x-forwarded-user-roles
+# default: x-forwarded-user-groups
+AUTH_HEADER_GROUPS=x-forwarded-user-groups
+# default: x-forwarded-user-email
+AUTH_HEADER_EMAIL=x-forwarded-user-email
+# default: x-forwarded-user-email-verified
+AUTH_HEADER_EMAIL_VERIFIED=x-forwarded-user-email-verified
+# default: x-forwarded-user-family-name
+AUTH_HEADER_FAMILY_NAME=x-forwarded-user-family-name
+# default: x-forwarded-user-given-name
+AUTH_HEADER_GIVEN_NAME=x-forwarded-user-given-name
+# default: x-forwarded-user-mfa
+AUTH_HEADER_MFA=x-forwarded-user-mfa
+</code></pre>
+<div id="admonition-caution" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="#admonition-caution"></a></p>
+</div>
+<div>
+<p>This feature makes it really easy for any application behind your reverse proxy to serve protected resources, but you
+really only use it, if you cannot use a proper OIDC client or something like that.</p>
+<p>Auth forward has many pitfalls and you need to be careful with your whole setup when using it. A direct token validation
+inside your downstream application should always be preferred.</p>
+</div>
+</div>
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../config/forward_auth.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../config/ha.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../auth_providers/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../config/db_migration.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -239,11 +247,11 @@ again afterwards.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../config/forward_auth.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../config/ha.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../auth_providers/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../config/db_migration.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
