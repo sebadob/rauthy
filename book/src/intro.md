@@ -8,6 +8,8 @@ Use this software at your own risk!
 ```admonish info
 This project is currently pre v1.0, which means, even though it is not expected, breaking changes might come
 with new versions.
+
+The docs are not fully complete yet, some parts are missing and are being worked on.
 ```
 
 ## What it is
