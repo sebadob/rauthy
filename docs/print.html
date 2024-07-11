@@ -90,7 +90,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="config/production_config.html"><strong aria-hidden="true">3.</strong> Production Config</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="config/argon2.html"><strong aria-hidden="true">3.1.</strong> Password Hashing</a></li><li class="chapter-item expanded "><a href="config/passkeys.html"><strong aria-hidden="true">3.2.</strong> Passkeys</a></li><li class="chapter-item expanded "><a href="config/encryption.html"><strong aria-hidden="true">3.3.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="config/logging.html"><strong aria-hidden="true">3.4.</strong> Logging and Auditing</a></li><li class="chapter-item expanded "><a href="config/backup.html"><strong aria-hidden="true">3.5.</strong> Backups</a></li><li class="chapter-item expanded "><a href="config/tls.html"><strong aria-hidden="true">3.6.</strong> TLS</a></li><li class="chapter-item expanded "><a href="config/sessions.html"><strong aria-hidden="true">3.7.</strong> Sessions</a></li><li class="chapter-item expanded "><a href="config/user_reg.html"><strong aria-hidden="true">3.8.</strong> User Registration</a></li><li class="chapter-item expanded "><a href="config/ha.html"><strong aria-hidden="true">3.9.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="config/forward_auth.html"><strong aria-hidden="true">3.10.</strong> Forward Authentication</a></li><li class="chapter-item expanded "><a href="config/db_migration.html"><strong aria-hidden="true">3.11.</strong> Database Migrations</a></li></ol></li><li class="chapter-item expanded "><a href="auth_providers/index.html"><strong aria-hidden="true">4.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="auth_providers/github.html"><strong aria-hidden="true">4.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="config/config.html"><strong aria-hidden="true">5.</strong> Reference Config</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="config/production_config.html"><strong aria-hidden="true">3.</strong> Production Config</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="config/argon2.html"><strong aria-hidden="true">3.1.</strong> Password Hashing</a></li><li class="chapter-item expanded "><a href="config/passkeys.html"><strong aria-hidden="true">3.2.</strong> Passkeys</a></li><li class="chapter-item expanded "><a href="config/encryption.html"><strong aria-hidden="true">3.3.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="config/logging.html"><strong aria-hidden="true">3.4.</strong> Logging and Auditing</a></li><li class="chapter-item expanded "><a href="config/backup.html"><strong aria-hidden="true">3.5.</strong> Backups</a></li><li class="chapter-item expanded "><a href="config/tls.html"><strong aria-hidden="true">3.6.</strong> TLS</a></li><li class="chapter-item expanded "><a href="config/sessions.html"><strong aria-hidden="true">3.7.</strong> Sessions</a></li><li class="chapter-item expanded "><a href="config/user_reg.html"><strong aria-hidden="true">3.8.</strong> User Registration</a></li><li class="chapter-item expanded "><a href="config/ha.html"><strong aria-hidden="true">3.9.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="config/forward_auth.html"><strong aria-hidden="true">3.10.</strong> Forward Authentication</a></li><li class="chapter-item expanded "><a href="config/bootstrap.html"><strong aria-hidden="true">3.11.</strong> Bootstrapping</a></li><li class="chapter-item expanded "><a href="config/db_migration.html"><strong aria-hidden="true">3.12.</strong> Database Migrations</a></li></ol></li><li class="chapter-item expanded "><a href="auth_providers/index.html"><strong aria-hidden="true">4.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="auth_providers/github.html"><strong aria-hidden="true">4.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="config/config.html"><strong aria-hidden="true">5.</strong> Reference Config</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -194,6 +194,7 @@ Use this software at your own risk!</p>
 <div>
 <p>This project is currently pre v1.0, which means, even though it is not expected, breaking changes might come
 with new versions.</p>
+<p>The docs are not fully complete yet, some parts are missing and are being worked on.</p>
 </div>
 </div>
 <h2 id="what-it-is"><a class="header" href="#what-it-is">What it is</a></h2>
@@ -2297,6 +2298,160 @@ AUTH_HEADER_MFA=x-forwarded-user-mfa
 really only use it, if you cannot use a proper OIDC client or something like that.</p>
 <p>Auth forward has many pitfalls and you need to be careful with your whole setup when using it. A direct token validation
 inside your downstream application should always be preferred.</p>
+</div>
+</div><div style="break-before: page; page-break-before: always;"></div><h1 id="bootstrapping"><a class="header" href="#bootstrapping">Bootstrapping</a></h1>
+<p>Rauthy supports some basic bootstrapping functionality to make it easier to use in some kind of automated environment.</p>
+<h2 id="admin-user"><a class="header" href="#admin-user">Admin User</a></h2>
+<p>By default, the admin user will always be <code>admin@localhost.de</code> and the password will be auto-generated and shown
+only once in the logs. This is the easiest way if you want to set up a new instance manually.</p>
+<p>However, you can change the default admin username and also provide a bootstrap password for this user, if Rauthy
+starts with an empty database for the very first time. This makes it possible to either generate a secure password with
+external tooling and have more control over it, or just use the same one all the time, because you may spin up an
+instance in test pipelines.</p>
+<p>You can change the default admin user E-Mail with:</p>
+<pre><code># If set, the email of the default admin will be changed
+# during the initialization of an empty production database.
+BOOTSTRAP_ADMIN_EMAIL="alfred@batcave.io"
+</code></pre>
+<p>The password can be bootstrapped in 2 ways:</p>
+<ul>
+<li>Provide a plain test password</li>
+<li>Provide the password hashed with argon2id</li>
+</ul>
+<pre><code># If set, this plain text password will be used for the
+# initial admin password instead of generating a random
+# password.
+BOOTSTRAP_ADMIN_PASSWORD_PLAIN="123SuperSafe"
+
+# If set, this will take the argon2id hashed password
+# during the initialization of an empty production database.
+# If both BOOTSTRAP_ADMIN_PASSWORD_PLAIN and
+# BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID are set, the hashed version
+# will always be prioritized.
+BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID='$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
+</code></pre>
+<div id="admonition-caution" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="config/bootstrap.html#admonition-caution"></a></p>
+</div>
+<div>
+<p>When you provide the password hashed with argon2id, you need to properly quote the string like in this example with
+single <code>''</code>. This will probably change in a future version, so you would need to encode it as base64, but this is not
+the case right now (v0.24.0).</p>
+</div>
+</div>
+<h2 id="api-key"><a class="header" href="#api-key">API Key</a></h2>
+<p>In automated environments, you would usually not use a normal user to access the Rauthy API, since it is a bit more
+cumbersome to use from outside the browser because of additional CSRF tokens and security features. If you want to
+automatically set up Rauthy with external tooling after the first startup, you would want to do this with an API key
+most probably.</p>
+<p>If Rauthy starts up with an empty database, you can bootstrap a single API key with providing a base64 encoded json.</p>
+<p>An example json, which would create a key named <code>bootstrap</code> with access to <code>clients, roles, groups</code> with all
+<code>read, write, update, delete</code> could look like this:</p>
+<pre><code class="language-json">{
+  "name": "bootstrap",
+  "exp": 1735599600,
+  "access": [
+    {
+      "group": "Clients",
+      "access_rights": [
+        "read",
+        "create",
+        "update",
+        "delete"
+      ]
+    },
+    {
+      "group": "Roles",
+      "access_rights": [
+        "read",
+        "create",
+        "update",
+        "delete"
+      ]
+    },
+    {
+      "group": "Groups",
+      "access_rights": [
+        "read",
+        "create",
+        "update",
+        "delete"
+      ]
+    }
+  ]
+}
+</code></pre>
+<p>The config documentation for the bootstrap value should explain all further questions:</p>
+<pre><code># You can provide an API Key during the initial prod database
+# bootstrap. This key must match the format and pass validation.
+# You need to provide it as a base64 encoded JSON in the format:
+#
+# ```
+# struct ApiKeyRequest {
+#     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
+#     name: String,
+#     /// Unix timestamp in seconds in the future (max year 2099)
+#     exp: Option&lt;i64&gt;,
+#     access: Vec&lt;ApiKeyAccess&gt;,
+# }
+#
+# struct ApiKeyAccess {
+#     group: AccessGroup,
+#     access_rights: Vec&lt;AccessRights&gt;,
+# }
+#
+# enum AccessGroup {
+#     Blacklist,
+#     Clients,
+#     Events,
+#     Generic,
+#     Groups,
+#     Roles,
+#     Secrets,
+#     Sessions,
+#     Scopes,
+#     UserAttributes,
+#     Users,
+# }
+#
+# #[serde(rename_all="lowercase")]
+# enum AccessRights {
+#     Read,
+#     Create,
+#     Update,
+#     Delete,
+# }
+# ```
+#
+# You can use the `api_key_example.json` from `/` as
+# an example. Afterwards, just `base64 api_key_example.json | tr -d '\n'`
+BOOTSTRAP_API_KEY="ewogICJuYW1lIjogImJvb3RzdHJhcCIsCiAgImV4cCI6IDE3MzU1OTk2MDAsCiAgImFjY2VzcyI6IFsKICAgIHsKICAgICAgImdyb3VwIjogIkNsaWVudHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgImdyb3VwIjogIlJvbGVzIiwKICAgICAgImFjY2Vzc19yaWdodHMiOiBbCiAgICAgICAgInJlYWQiLAogICAgICAgICJjcmVhdGUiLAogICAgICAgICJ1cGRhdGUiLAogICAgICAgICJkZWxldGUiCiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJncm91cCI6ICJHcm91cHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfQogIF0KfQ=="
+</code></pre>
+<p>The secret needs to be set with a second variable. Just make sure it contains at least 64 alphanumeric characters.</p>
+<pre><code># The secret for the above defined bootstrap API Key.
+# This must be at least 64 alphanumeric characters long.
+# You will be able to use that key afterwards with setting
+# the `Authorization` header:
+#
+# `Authorization: API-Key &lt;your_key_name_from_above&gt;$&lt;this_secret&gt;`
+BOOTSTRAP_API_KEY_SECRET=twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh
+</code></pre>
+<p>With the values from this example, you will then be able to use the API key with providing the <code>Authorization</code> header
+with each request in the following format:</p>
+<pre><code>Authorization: API-Key &lt;API Key name&gt;$&lt;API Key secret&gt;
+</code></pre>
+<pre><code>Authorization: API-Key bootstrap$twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh
+</code></pre>
+<div id="admonition-hint" class="admonition admonish-tip">
+<div class="admonition-title">
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="config/bootstrap.html#admonition-hint"></a></p>
+</div>
+<div>
+<p>API Keys are not nicely documented in this book yet, but should be self-explanatory when you take a look at the section
+in the Admin UI.</p>
 </div>
 </div><div style="break-before: page; page-break-before: always;"></div><h1 id="database-migrations"><a class="header" href="#database-migrations">Database Migrations</a></h1>
 <p>You can migrate easily between SQLite and Postgres, or just between different instances of them.</p>

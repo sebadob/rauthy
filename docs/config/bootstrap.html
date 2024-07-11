@@ -1,0 +1,382 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Bootstrapping - Rauthy Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href=".././mdbook-admonish.css">
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/production_config.html"><strong aria-hidden="true">3.</strong> Production Config</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.1.</strong> Password Hashing</a></li><li class="chapter-item expanded "><a href="../config/passkeys.html"><strong aria-hidden="true">3.2.</strong> Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">3.3.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/logging.html"><strong aria-hidden="true">3.4.</strong> Logging and Auditing</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">3.5.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">3.6.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/sessions.html"><strong aria-hidden="true">3.7.</strong> Sessions</a></li><li class="chapter-item expanded "><a href="../config/user_reg.html"><strong aria-hidden="true">3.8.</strong> User Registration</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">3.9.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/forward_auth.html"><strong aria-hidden="true">3.10.</strong> Forward Authentication</a></li><li class="chapter-item expanded "><a href="../config/bootstrap.html" class="active"><strong aria-hidden="true">3.11.</strong> Bootstrapping</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">3.12.</strong> Database Migrations</a></li></ol></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">4.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html"><strong aria-hidden="true">4.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">5.</strong> Reference Config</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Rauthy Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="bootstrapping"><a class="header" href="#bootstrapping">Bootstrapping</a></h1>
+<p>Rauthy supports some basic bootstrapping functionality to make it easier to use in some kind of automated environment.</p>
+<h2 id="admin-user"><a class="header" href="#admin-user">Admin User</a></h2>
+<p>By default, the admin user will always be <code>admin@localhost.de</code> and the password will be auto-generated and shown
+only once in the logs. This is the easiest way if you want to set up a new instance manually.</p>
+<p>However, you can change the default admin username and also provide a bootstrap password for this user, if Rauthy
+starts with an empty database for the very first time. This makes it possible to either generate a secure password with
+external tooling and have more control over it, or just use the same one all the time, because you may spin up an
+instance in test pipelines.</p>
+<p>You can change the default admin user E-Mail with:</p>
+<pre><code># If set, the email of the default admin will be changed
+# during the initialization of an empty production database.
+BOOTSTRAP_ADMIN_EMAIL="alfred@batcave.io"
+</code></pre>
+<p>The password can be bootstrapped in 2 ways:</p>
+<ul>
+<li>Provide a plain test password</li>
+<li>Provide the password hashed with argon2id</li>
+</ul>
+<pre><code># If set, this plain text password will be used for the
+# initial admin password instead of generating a random
+# password.
+BOOTSTRAP_ADMIN_PASSWORD_PLAIN="123SuperSafe"
+
+# If set, this will take the argon2id hashed password
+# during the initialization of an empty production database.
+# If both BOOTSTRAP_ADMIN_PASSWORD_PLAIN and
+# BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID are set, the hashed version
+# will always be prioritized.
+BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID='$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
+</code></pre>
+<div id="admonition-caution" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Caution</p>
+<p><a class="admonition-anchor-link" href="#admonition-caution"></a></p>
+</div>
+<div>
+<p>When you provide the password hashed with argon2id, you need to properly quote the string like in this example with
+single <code>''</code>. This will probably change in a future version, so you would need to encode it as base64, but this is not
+the case right now (v0.24.0).</p>
+</div>
+</div>
+<h2 id="api-key"><a class="header" href="#api-key">API Key</a></h2>
+<p>In automated environments, you would usually not use a normal user to access the Rauthy API, since it is a bit more
+cumbersome to use from outside the browser because of additional CSRF tokens and security features. If you want to
+automatically set up Rauthy with external tooling after the first startup, you would want to do this with an API key
+most probably.</p>
+<p>If Rauthy starts up with an empty database, you can bootstrap a single API key with providing a base64 encoded json.</p>
+<p>An example json, which would create a key named <code>bootstrap</code> with access to <code>clients, roles, groups</code> with all
+<code>read, write, update, delete</code> could look like this:</p>
+<pre><code class="language-json">{
+  "name": "bootstrap",
+  "exp": 1735599600,
+  "access": [
+    {
+      "group": "Clients",
+      "access_rights": [
+        "read",
+        "create",
+        "update",
+        "delete"
+      ]
+    },
+    {
+      "group": "Roles",
+      "access_rights": [
+        "read",
+        "create",
+        "update",
+        "delete"
+      ]
+    },
+    {
+      "group": "Groups",
+      "access_rights": [
+        "read",
+        "create",
+        "update",
+        "delete"
+      ]
+    }
+  ]
+}
+</code></pre>
+<p>The config documentation for the bootstrap value should explain all further questions:</p>
+<pre><code># You can provide an API Key during the initial prod database
+# bootstrap. This key must match the format and pass validation.
+# You need to provide it as a base64 encoded JSON in the format:
+#
+# ```
+# struct ApiKeyRequest {
+#     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
+#     name: String,
+#     /// Unix timestamp in seconds in the future (max year 2099)
+#     exp: Option&lt;i64&gt;,
+#     access: Vec&lt;ApiKeyAccess&gt;,
+# }
+#
+# struct ApiKeyAccess {
+#     group: AccessGroup,
+#     access_rights: Vec&lt;AccessRights&gt;,
+# }
+#
+# enum AccessGroup {
+#     Blacklist,
+#     Clients,
+#     Events,
+#     Generic,
+#     Groups,
+#     Roles,
+#     Secrets,
+#     Sessions,
+#     Scopes,
+#     UserAttributes,
+#     Users,
+# }
+#
+# #[serde(rename_all="lowercase")]
+# enum AccessRights {
+#     Read,
+#     Create,
+#     Update,
+#     Delete,
+# }
+# ```
+#
+# You can use the `api_key_example.json` from `/` as
+# an example. Afterwards, just `base64 api_key_example.json | tr -d '\n'`
+BOOTSTRAP_API_KEY="ewogICJuYW1lIjogImJvb3RzdHJhcCIsCiAgImV4cCI6IDE3MzU1OTk2MDAsCiAgImFjY2VzcyI6IFsKICAgIHsKICAgICAgImdyb3VwIjogIkNsaWVudHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgImdyb3VwIjogIlJvbGVzIiwKICAgICAgImFjY2Vzc19yaWdodHMiOiBbCiAgICAgICAgInJlYWQiLAogICAgICAgICJjcmVhdGUiLAogICAgICAgICJ1cGRhdGUiLAogICAgICAgICJkZWxldGUiCiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJncm91cCI6ICJHcm91cHMiLAogICAgICAiYWNjZXNzX3JpZ2h0cyI6IFsKICAgICAgICAicmVhZCIsCiAgICAgICAgImNyZWF0ZSIsCiAgICAgICAgInVwZGF0ZSIsCiAgICAgICAgImRlbGV0ZSIKICAgICAgXQogICAgfQogIF0KfQ=="
+</code></pre>
+<p>The secret needs to be set with a second variable. Just make sure it contains at least 64 alphanumeric characters.</p>
+<pre><code># The secret for the above defined bootstrap API Key.
+# This must be at least 64 alphanumeric characters long.
+# You will be able to use that key afterwards with setting
+# the `Authorization` header:
+#
+# `Authorization: API-Key &lt;your_key_name_from_above&gt;$&lt;this_secret&gt;`
+BOOTSTRAP_API_KEY_SECRET=twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh
+</code></pre>
+<p>With the values from this example, you will then be able to use the API key with providing the <code>Authorization</code> header
+with each request in the following format:</p>
+<pre><code>Authorization: API-Key &lt;API Key name&gt;$&lt;API Key secret&gt;
+</code></pre>
+<pre><code>Authorization: API-Key bootstrap$twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh
+</code></pre>
+<div id="admonition-hint" class="admonition admonish-tip">
+<div class="admonition-title">
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="#admonition-hint"></a></p>
+</div>
+<div>
+<p>API Keys are not nicely documented in this book yet, but should be self-explanatory when you take a look at the section
+in the Admin UI.</p>
+</div>
+</div>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../config/forward_auth.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../config/db_migration.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../config/forward_auth.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../config/db_migration.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
