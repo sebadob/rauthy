@@ -18,6 +18,7 @@
     - [User Registration](config/user_reg.md)
     - [High Availability](config/ha.md)
     - [Forward Authentication](config/forward_auth.md)
+    - [Bootstrapping](config/bootstrap.md)
     - [Database Migrations](config/db_migration.md)
 
 - [Authentication Providers](./auth_providers/index.md)
