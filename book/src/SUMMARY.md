@@ -21,7 +21,10 @@
     - [Bootstrapping](config/bootstrap.md)
     - [Database Migrations](config/db_migration.md)
 
-- [Authentication Providers](./auth_providers/index.md)
+- [Authentication Providers](auth_providers/index.md)
     - [Github](./auth_providers/github.md)
+
+- [Working with Rauthy](work/index.md)
+    - [API Keys](work/api_keys.md)
 
 - [Reference Config](./config/config.md)

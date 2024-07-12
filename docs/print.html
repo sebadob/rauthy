@@ -90,7 +90,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="config/production_config.html"><strong aria-hidden="true">3.</strong> Production Config</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="config/argon2.html"><strong aria-hidden="true">3.1.</strong> Password Hashing</a></li><li class="chapter-item expanded "><a href="config/passkeys.html"><strong aria-hidden="true">3.2.</strong> Passkeys</a></li><li class="chapter-item expanded "><a href="config/encryption.html"><strong aria-hidden="true">3.3.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="config/logging.html"><strong aria-hidden="true">3.4.</strong> Logging and Auditing</a></li><li class="chapter-item expanded "><a href="config/backup.html"><strong aria-hidden="true">3.5.</strong> Backups</a></li><li class="chapter-item expanded "><a href="config/tls.html"><strong aria-hidden="true">3.6.</strong> TLS</a></li><li class="chapter-item expanded "><a href="config/sessions.html"><strong aria-hidden="true">3.7.</strong> Sessions</a></li><li class="chapter-item expanded "><a href="config/user_reg.html"><strong aria-hidden="true">3.8.</strong> User Registration</a></li><li class="chapter-item expanded "><a href="config/ha.html"><strong aria-hidden="true">3.9.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="config/forward_auth.html"><strong aria-hidden="true">3.10.</strong> Forward Authentication</a></li><li class="chapter-item expanded "><a href="config/bootstrap.html"><strong aria-hidden="true">3.11.</strong> Bootstrapping</a></li><li class="chapter-item expanded "><a href="config/db_migration.html"><strong aria-hidden="true">3.12.</strong> Database Migrations</a></li></ol></li><li class="chapter-item expanded "><a href="auth_providers/index.html"><strong aria-hidden="true">4.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="auth_providers/github.html"><strong aria-hidden="true">4.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="config/config.html"><strong aria-hidden="true">5.</strong> Reference Config</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="config/production_config.html"><strong aria-hidden="true">3.</strong> Production Config</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="config/argon2.html"><strong aria-hidden="true">3.1.</strong> Password Hashing</a></li><li class="chapter-item expanded "><a href="config/passkeys.html"><strong aria-hidden="true">3.2.</strong> Passkeys</a></li><li class="chapter-item expanded "><a href="config/encryption.html"><strong aria-hidden="true">3.3.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="config/logging.html"><strong aria-hidden="true">3.4.</strong> Logging and Auditing</a></li><li class="chapter-item expanded "><a href="config/backup.html"><strong aria-hidden="true">3.5.</strong> Backups</a></li><li class="chapter-item expanded "><a href="config/tls.html"><strong aria-hidden="true">3.6.</strong> TLS</a></li><li class="chapter-item expanded "><a href="config/sessions.html"><strong aria-hidden="true">3.7.</strong> Sessions</a></li><li class="chapter-item expanded "><a href="config/user_reg.html"><strong aria-hidden="true">3.8.</strong> User Registration</a></li><li class="chapter-item expanded "><a href="config/ha.html"><strong aria-hidden="true">3.9.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="config/forward_auth.html"><strong aria-hidden="true">3.10.</strong> Forward Authentication</a></li><li class="chapter-item expanded "><a href="config/bootstrap.html"><strong aria-hidden="true">3.11.</strong> Bootstrapping</a></li><li class="chapter-item expanded "><a href="config/db_migration.html"><strong aria-hidden="true">3.12.</strong> Database Migrations</a></li></ol></li><li class="chapter-item expanded "><a href="auth_providers/index.html"><strong aria-hidden="true">4.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="auth_providers/github.html"><strong aria-hidden="true">4.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="work/index.html"><strong aria-hidden="true">5.</strong> Working with Rauthy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="work/api_keys.html"><strong aria-hidden="true">5.1.</strong> API Keys</a></li></ol></li><li class="chapter-item expanded "><a href="config/config.html"><strong aria-hidden="true">6.</strong> Reference Config</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -2550,7 +2550,67 @@ your local disk.</li>
 <p>That's it. Now log out and try to log in to your Account view. You should see your new upstream provider on the Login
 page.</p>
 <p><img src="auth_providers/img/4_rauthy_github_login.png" alt="1_github_app_create" /></p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="reference-config"><a class="header" href="#reference-config">Reference Config</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="working-with-rauthy"><a class="header" href="#working-with-rauthy">Working with Rauthy</a></h1>
+<p>This section will describe a few things you should now when working with Rauthy</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="api-keys"><a class="header" href="#api-keys">API Keys</a></h1>
+<p>API Keys allow you to interact with Rauthy's REST API in a programmatic way. They allow you to do almost all the same
+things as a logged in Admin via the UI is allowed to do. There are only very few exceptions, like for instance an API
+Key is not allowed to manage other API Keys to reduce the impact of leaked credentials somewhere in your applications.</p>
+<p>Each API Key can be configured with very fine-grained access rights, so you only allow actions it actually needs to
+perform for improved security.</p>
+<p>Setting these access rights should be very intuitive. For instance, if you want to use your API Key to listen to the
+events stream, you need to allow <em>Events: read</em>, which makes sense. If you want to read users and maybe update them in
+some external application, you would need <em>Users: read, update</em>.<br />
+Most access rights requests mimic their HTTP methods:</p>
+<ul>
+<li><code>GET</code> -&gt; <code>read</code></li>
+<li><code>POST</code> -&gt; <code>create</code></li>
+<li><code>PUT</code> -&gt; <code>update</code></li>
+<li><code>DELETE</code> -&gt; <code>delete</code></li>
+</ul>
+<p>To use an API Key, you need to provide is with the HTTP <code>Authorization</code> header, but instead of <code>Bearer</code> as prefix, you
+set it to <code>API-Key</code>, so Rauthy can efficiently distinguish if you try to access the API with a JWT token or an API Key:</p>
+<pre><code>Authorization: API-Key &lt;API Key name&gt;$&lt;API Key secret&gt;
+</code></pre>
+<pre><code>Authorization: API-Key my_key$twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh
+</code></pre>
+<p>The correct format will be generated automatically, when you create a new secret for an API Key via the Admin UI, so
+you only need to copy &amp; paste it.</p>
+<div id="admonition-info" class="admonition admonish-info">
+<div class="admonition-title">
+<p>Info</p>
+<p><a class="admonition-anchor-link" href="work/api_keys.html#admonition-info"></a></p>
+</div>
+<div>
+<p>The only actions API Keys are not allowed to do is interacting with other API Keys and external SSO Providers for
+logins to limit the likelyhood of priviledge escalation in case of leaked credentials.</p>
+</div>
+</div>
+<h2 id="creating-a-new-api-key"><a class="header" href="#creating-a-new-api-key">Creating a new API Key</a></h2>
+<p>Apart from the initial <a href="work/../config/bootstrap.html#api-key">bootstrap</a>, the creation and modification of API Keys is only
+allowed via the Admin UI.</p>
+<p>Navigate to the <code>API Keys</code> section, click <code>New Key</code>, fill out the inputs and <code>Save</code>. You can set an optional key expiry.
+By default, API Keys never expire.</p>
+<p><img src="work/../config/img/api_key_1.png" alt="api key create" /></p>
+<p>The secret is created in a second step. Whenever you generate a new secret, the old one will stop working immediately.</p>
+<p><img src="work/../config/img/api_key_2.png" alt="api key secret" /></p>
+<p>After generating a new secret, you will never be able to see it again. If you loose it, you must generate a new one.
+Rauthy will format the API key in the correct format and shows a <code>curl</code> command for making sure your key works fine.
+You can copy &amp; paste the pre-configured <code>curl</code> for the test endpoint. The result should look something like this:</p>
+<p><img src="work/../config/img/api_key_test.png" alt="api key test" /></p>
+<p>If you try to access an endpoint with an API Key that has insufficient access rights, Rauthy will return a proper
+error message with description, which access rights you actually need.</p>
+<p><img src="work/../config/img/api_key_permission.png" alt="api key permission" /></p>
+<div id="admonition-hint" class="admonition admonish-tip">
+<div class="admonition-title">
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="work/api_keys.html#admonition-hint"></a></p>
+</div>
+<div>
+<p>When you set up a fresh Rauthy instance, you have the option to <a href="work/../config/bootstrap.html#api-key">bootstrap</a> an API Key,
+which is the only situation where you are allowed to do it without an active Rauthy admin session.</p>
+</div>
+</div><div style="break-before: page; page-break-before: always;"></div><h1 id="reference-config"><a class="header" href="#reference-config">Reference Config</a></h1>
 <p>This shows a full example config with (hopefully) every value nicely described.</p>
 <div id="admonition-caution" class="admonition admonish-warning">
 <div class="admonition-title">
