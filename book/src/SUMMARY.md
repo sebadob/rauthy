@@ -26,5 +26,6 @@
 
 - [Working with Rauthy](work/index.md)
     - [API Keys](work/api_keys.md)
+    - [IP Blacklisting](work/ip_blacklist.md)
 
 - [Reference Config](./config/config.md)
