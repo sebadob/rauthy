@@ -1,0 +1,435 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Ephemeral Clients - Rauthy Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href=".././mdbook-admonish.css">
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/production_config.html"><strong aria-hidden="true">3.</strong> Production Config</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.1.</strong> Password Hashing</a></li><li class="chapter-item expanded "><a href="../config/passkeys.html"><strong aria-hidden="true">3.2.</strong> Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">3.3.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/logging.html"><strong aria-hidden="true">3.4.</strong> Logging and Auditing</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">3.5.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">3.6.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/sessions.html"><strong aria-hidden="true">3.7.</strong> Sessions</a></li><li class="chapter-item expanded "><a href="../config/user_reg.html"><strong aria-hidden="true">3.8.</strong> User Registration</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">3.9.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/forward_auth.html"><strong aria-hidden="true">3.10.</strong> Forward Authentication</a></li><li class="chapter-item expanded "><a href="../config/bootstrap.html"><strong aria-hidden="true">3.11.</strong> Bootstrapping</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">3.12.</strong> Database Migrations</a></li></ol></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">4.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html"><strong aria-hidden="true">4.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../work/index.html"><strong aria-hidden="true">5.</strong> Working with Rauthy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../work/api_keys.html"><strong aria-hidden="true">5.1.</strong> API Keys</a></li><li class="chapter-item expanded "><a href="../work/ip_blacklist.html"><strong aria-hidden="true">5.2.</strong> IP Blacklisting</a></li><li class="chapter-item expanded "><a href="../work/ephemeral_clients.html" class="active"><strong aria-hidden="true">5.3.</strong> Ephemeral Clients</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">6.</strong> Reference Config</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Rauthy Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="ephemeral-clients"><a class="header" href="#ephemeral-clients">Ephemeral Clients</a></h1>
+<p>In addition to static, upfront registered clients, which should always be preferred if they work out for your, and
+dynamically registered clients via OIDC DCR, Rauthy supports an additional feature, which is <em>Ephemeral Clients</em>.
+Originally implemented when the support for SolidOIDC came, this feature is fully working on its own. These are very
+easy to use and provide a completely new functionality, but keep in mind that these are the least efficient of the 3,
+as they require an additional network round trip to where ever their document is hosted (apart from caching).</p>
+<p>Just to make clear what I am talking about, a high level comparison of these different clients:</p>
+<p><strong>Static clients</strong> are the ones that you register and configure via the Admin UI. These are the most efficient and
+secure
+ones. They require less work in the backend and exist inside the Rauthy database.</p>
+<p>Then there is OIDC <strong>Dynamic Client Registration</strong> (DCR), which is an OIDC extension that Rauthy supports as well. If a
+downstream application has support for this feature, it can self-register a client, which then can be used for the
+login afterward. This sound very nice in the beginning, but brings quite a few problems:</p>
+<ul>
+<li>If the endpoint is open, anyone can register a client, also bots and spammers</li>
+<li>If the endpoint is secured an additional token for the registration, there is not much benefit from it, because the
+token must be communicated upfront anyway. If so, you could simply register a faster and more efficient static client.</li>
+<li>The downstream application must manage its own client. If they don't do it properly, they can spam Rauthy's database
+again.</li>
+<li>As mentioned already, dynamic clients are a bit less efficient than static ones and require at least one additional
+database round trip during each login.</li>
+</ul>
+<div id="admonition-info" class="admonition admonish-info">
+<div class="admonition-title">
+<p>Info</p>
+<p><a class="admonition-anchor-link" href="#admonition-info"></a></p>
+</div>
+<div>
+<p>In case of an open, unauthenticated endpoint for DCR, Rauthy has a simple internal cleanup logic. For instance, if a
+dynamic client is registered by bots or spammers and is not used within the first hour after the registration, it will
+be deleted automatically. Usually, when an app registers via DCR, the client will be used immeditately for at least one
+login.</p>
+</div>
+</div>
+<p>As the third option, Rauthy gives you the option to use <strong>Ephemeral Clients</strong>. These are disabled by default, because
+they are not a default OIDC feature yet (There is an open Draft to include them though). Ephemeral Clients provide
+way fewer configuration options, but make it possible that user can self-manage their own clients without any additional
+upfront tasks on Rauthy's side. This means as long as you have an account on a Rauthy instance with this feature
+enabled, you would not even need an admin to be able to connect any new application to this Rauthy instance.</p>
+<p>The client definition exists in some JSON document that is hosted on some domain the user controls, which must be
+reachable by Rauthy. The format must be parsable by Rauthy of course, which I will mention later. Whatever information
+you provide in this JSON document, Rauthy will use it to authenticate your login request with that very client. The
+most important part about this is, that the <code>client_id</code> <strong>must match</strong> the exact URI the document is hosted on.<br />
+For instance, let's say you have a JSON on a Github repo at
+https://github.com/sebadob/rauthy/blob/main/ephemeral_client_example.json, then the <code>client_id</code> <strong>must</strong> be</p>
+<pre><code>"client_id": "https://github.com/sebadob/rauthy/blob/main/ephemeral_client_example.json"
+</code></pre>
+<div id="admonition-danger" class="admonition admonish-danger">
+<div class="admonition-title">
+<p>Danger</p>
+<p><a class="admonition-anchor-link" href="#admonition-danger"></a></p>
+</div>
+<div>
+<p>It is very important that the domain for an ephemeral client JSON is under your control and no one else you don't fully
+trust has access. Otherwise, someone else could modify this JSON which affects your login flow. For instance, add an
+additional allowed <code>redirect_uri</code> and trick you into a scam website.</p>
+</div>
+</div>
+<p>To keep the whole setup as simple as possible, apart from the <code>client_id</code>, there is only one other mandatory field
+in this document, which is <code>redirect_uris</code>. This must be an array with at least one allowed redirect URI which is
+allowed during the login flow. Rauthy allows a wildcard <code>*</code> at the end of given redirect uri, but be careful with these.
+Wildcards should only be used during initial setup and testing, when you don't know the final URI yet.</p>
+<div id="admonition-danger-1" class="admonition admonish-danger">
+<div class="admonition-title">
+<p>Danger</p>
+<p><a class="admonition-anchor-link" href="#admonition-danger-1"></a></p>
+</div>
+<div>
+<p>Technically, it is possible to just use a single <code>*</code> as a <code>redirect_uri</code>. This would allow any
+redirect URI without further validation. You must never use this apart from maybe some internal DEV or testing setups!</p>
+</div>
+</div>
+<p>The JSON document for the ephemeral clients follows the same rules and works in the same ways any other OIDC client.</p>
+<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
+<p>The support for ephemeral clients is opt-in. You need to set at least</p>
+<pre><code># Can be set to 'true' to allow the dynamic client lookup via URLs as
+# 'client_id's during authorization_code flow initiation.
+# default: false
+ENABLE_EPHEMERAL_CLIENTS=true
+</code></pre>
+<p>Apart from this, there are more options you can modify. Ephemeral clients are the least flexible, and they share some
+common restrictions. These are valid for all ephemeral clients used with this instance, no matter if they define
+something else in their JSON document. This is important so a Rauthy admin can configure a security standard that
+can't be broken or ignored.</p>
+<pre><code># If set to 'true', MFA / Passkeys will be forced for ephemeral clients.
+# default: false
+#EPHEMERAL_CLIENTS_FORCE_MFA=false
+
+# The allowed flows separated by ' ' for ephemeral clients.
+# default: "authorization_code"
+#EPHEMERAL_CLIENTS_ALLOWED_FLOWS="authorization_code refresh_token"
+
+# The allowed scopes separated by ' ' for ephemeral clients.
+# default: "openid profile email webid"
+#EPHEMERAL_CLIENTS_ALLOWED_SCOPES="openid profile email webid"
+</code></pre>
+<p>If you need support for Solid OIDC, you need to at least enable web IDs and the solid <code>aud</code>:</p>
+<pre><code># Can be set to 'true' to enable WebID functionality like needed
+# for things like Solid OIDC.
+# default: false
+#ENABLE_WEB_ID=false
+
+# If set to 'true', 'solid' will be added to the 'aud' claim from the ID token
+# for ephemeral clients.
+# default: false
+#ENABLE_SOLID_AUD=true
+</code></pre>
+<p>The last option is the caching timeout. The cache for these documents is very important for performance. Without any
+cache, Rauthy would need to do an additional network round trip to the client JSON <strong>with each login</strong>. This is very
+inefficient, because usually these documents rarely change after the initial setup.</p>
+<pre><code># The lifetime in seconds ephemeral clients will be kept inside the cache.
+# default: 3600
+#EPHEMERAL_CLIENTS_CACHE_LIFETIME=3600
+</code></pre>
+<div id="admonition-hint" class="admonition admonish-tip">
+<div class="admonition-title">
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="#admonition-hint"></a></p>
+</div>
+<div>
+<p>If you are developing or testing, set the <code>EPHEMERAL_CLIENTS_CACHE_LIFETIME</code> to a very low value. Otherwise,
+Rauthy would not see any changes you do to this document as long as the internal cache has not expired.</p>
+</div>
+</div>
+<h2 id="minimal-client-json-document"><a class="header" href="#minimal-client-json-document">Minimal Client JSON Document</a></h2>
+<p>The minimal requirements for the client JSON were described above already. They are <code>client_id</code> and <code>redirect_uris</code>.
+This means a minimal example JSON could look like this</p>
+<pre><code class="language-json">{
+  "client_id": "https://example.com/my_ephemeral_client.json",
+  "redirect_uris": [
+    "https://this.is.where/my/website/is"
+  ]
+}
+</code></pre>
+<p>If this is all you care about, you're done.<br />
+If you want to configure some more things, keep reading.</p>
+<h2 id="advanced-client-json-document"><a class="header" href="#advanced-client-json-document">Advanced Client JSON Document</a></h2>
+<p>All values in the client document are validated of course. Below you see a simplified version of the current Rust
+<code>struct</code> Rauthy tries to deserialize the document into:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct EphemeralClientRequest {
+    /// Validation: `^[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]{2,256}$`
+    client_id: String,
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
+    client_name: Option&lt;String&gt;,
+    /// Validation: `[a-zA-Z0-9,.:/_-&amp;?=~#!$'()*+%]+$`
+    client_uri: Option&lt;String&gt;,
+    /// Validation: `Vec&lt;^[a-zA-Z0-9\+.@/]{0,48}$&gt;`
+    contacts: Option&lt;Vec&lt;String&gt;&gt;,
+    /// Validation: `Vec&lt;^[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+$&gt;`
+    redirect_uris: Vec&lt;String&gt;,
+    /// Validation: `Vec&lt;^[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+$&gt;`
+    post_logout_redirect_uris: Option&lt;Vec&lt;String&gt;&gt;,
+    /// Validation: `Vec&lt;^(authorization_code|client_credentials|password|refresh_token)$&gt;`
+    grant_types: Option&lt;Vec&lt;String&gt;&gt;,
+    /// Validation: `60 &lt;= access_token_lifetime &lt;= 86400`
+    default_max_age: Option&lt;i32&gt;,
+    /// Validation: `[a-z0-9-_/:\s*]{0,512}`
+    scope: Option&lt;String&gt;,
+    require_auth_time: Option&lt;bool&gt;,
+    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
+    access_token_signed_response_alg: Option&lt;JwkKeyPairAlg&gt;,
+    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
+    id_token_signed_response_alg: Option&lt;JwkKeyPairAlg&gt;,
+}
+<span class="boring">}</span></code></pre></pre>
+<div id="admonition-note" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note"></a></p>
+</div>
+<div>
+<p>The <code>grant_types</code> exist for completeness only. They are actually ignored and overridden by the
+<code>EPHEMERAL_CLIENTS_ALLOWED_FLOWS</code> config variable.</p>
+</div>
+</div>
+<p>With this information, we can now build a complete example JSON with all the possible values you can set:</p>
+<pre><code class="language-json">{
+  "client_id": "https://example.com/my_ephemeral_client.json",
+  "client_name": "My Ephemeral Client",
+  "client_uri": "https://this.is.where",
+  "contacts": [
+    "mail@ephemeral.info"
+  ],
+  "redirect_uris": [
+    "https://this.is.where/my/website/is"
+  ],
+  "post_logout_redirect_uris": [
+    "https://this.is.where"
+  ],
+  "default_max_age": 300,
+  "scope": "openid email custom",
+  "require_auth_time": true,
+  "access_token_signed_response_alg": "RS256",
+  "id_token_signed_response_alg": "RS256"
+}
+</code></pre>
+<div id="admonition-hint-1" class="admonition admonish-tip">
+<div class="admonition-title">
+<p>Hint</p>
+<p><a class="admonition-anchor-link" href="#admonition-hint-1"></a></p>
+</div>
+<div>
+<p>Rauthy fetches the document with an <code>Accept: application/json</code> header. This makes it possible to host your
+file on Github for instance and receive a valid JSON.</p>
+</div>
+</div>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../work/ip_blacklist.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../config/config.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../work/ip_blacklist.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../config/config.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
