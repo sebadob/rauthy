@@ -27,5 +27,6 @@
 - [Working with Rauthy](work/index.md)
     - [API Keys](work/api_keys.md)
     - [IP Blacklisting](work/ip_blacklist.md)
+    - [Ephemeral Clients](work/ephemeral_clients.md)
 
 - [Reference Config](./config/config.md)
