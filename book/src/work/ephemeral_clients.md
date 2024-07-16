@@ -42,7 +42,8 @@ reachable by Rauthy. The format must be parsable by Rauthy of course, which I wi
 you provide in this JSON document, Rauthy will use it to authenticate your login request with that very client. The
 most important part about this is, that the `client_id` **must match** the exact URI the document is hosted on.  
 For instance, let's say you have a JSON on a Github repo at
-https://github.com/sebadob/rauthy/blob/main/ephemeral_client_example.json, then the `client_id` **must** be
+[https://github.com/sebadob/rauthy/blob/main/ephemeral_client_example.json](https://github.com/sebadob/rauthy/blob/main/ephemeral_client_example.json)
+, then the `client_id` **must** be
 
 ```
 "client_id": "https://github.com/sebadob/rauthy/blob/main/ephemeral_client_example.json"
