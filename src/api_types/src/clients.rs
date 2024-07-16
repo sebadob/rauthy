@@ -126,6 +126,7 @@ pub struct DynamicClientRequest {
 /// This request is used for ephemeral clients, which are needed for Solid OIDC for instance.
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct EphemeralClientRequest {
+    /// Validation: `^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$`
     #[validate(regex(
         path = "RE_CLIENT_ID_EPHEMERAL",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
