@@ -7,12 +7,8 @@
 - JWKS rotation
 - secrets migration
 - custom scopes
-- ephemeral clients
 - mention i18n possibilities
-- cookie behavior with password + passkey accounts
 - E-Mail templates
-- Session setup / timeouts
-- proxy mode
 - Swagger UI (no external by default)
 
 ## Stage 1 - essentials
