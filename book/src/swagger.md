@@ -12,6 +12,9 @@ For this reason, you have multiple ways of accessing the Swagger UI.
 ```admonish info 
 The UI is not meant to be used for testing out endpoints. Rauthy has way to many options and details regarding to the
 authentication and it's not that simple, that the default Swagger UI can handle it, at least to my knowledge.
+
+If you want to test certain endpoints, I suggest you <b>create an API Key</b> for that case, which you can use with any tool
+you like.
 ```
 
 ## External Access
