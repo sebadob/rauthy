@@ -30,3 +30,4 @@
     - [Ephemeral Clients](work/ephemeral_clients.md)
 
 - [Reference Config](./config/config.md)
+- [Swagger UI](swagger.md)
