@@ -17,6 +17,9 @@
 
 ## Stage 2 - features - do before v1.0.0
 
+- find a nice way to simply always expose the swagger UI for rauthy admins only without config
+  current issue: when the session cookie is a non-host cookie with path restriction -> not working
+  probably move from `/docs/v1` to `/auth/v1/docs`
 - prettify the UI
 - update the book with all the new features
 - maybe get a nicer logo
