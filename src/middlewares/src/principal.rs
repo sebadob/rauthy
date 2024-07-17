@@ -14,7 +14,7 @@ use rauthy_models::entity::sessions::Session;
 use std::future::{ready, Ready};
 use std::rc::Rc;
 use time::OffsetDateTime;
-use tracing::debug;
+use tracing::{debug, warn};
 
 pub struct RauthyPrincipalMiddleware;
 
@@ -71,6 +71,15 @@ where
                 principal.roles = s.roles_as_vec().unwrap_or_default();
                 principal.session = Some(s);
             }
+
+            // TODO this would work and reject docs requests with __Host- cookies,
+            // but not with secure + path -> session would not exist
+            // if req.path().starts_with("/docs/") && !principal.is_admin() {
+            //     return Err(Error::from(ErrorResponse::new(
+            //         ErrorResponseType::Unauthorized,
+            //         "Only Admins are allowed to see the API documentation",
+            //     )));
+            // }
 
             req.extensions_mut().insert(principal);
 
