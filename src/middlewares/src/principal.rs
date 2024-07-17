@@ -14,7 +14,7 @@ use rauthy_models::entity::sessions::Session;
 use std::future::{ready, Ready};
 use std::rc::Rc;
 use time::OffsetDateTime;
-use tracing::{debug, warn};
+use tracing::debug;
 
 pub struct RauthyPrincipalMiddleware;
 
