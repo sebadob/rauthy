@@ -13,7 +13,7 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity;
 use rauthy_models::ListenScheme;
 use rauthy_service::token_set;
-use utoipa::openapi::Server;
+use utoipa::openapi::{ExternalDocs, Server};
 use utoipa::{openapi, OpenApi};
 
 #[derive(OpenApi)]
@@ -303,8 +303,10 @@ impl ApiDoc {
 
         doc.info = openapi::Info::new("Rauthy Single Sign-on", &format!("v{}", RAUTHY_VERSION));
 
-        // let desc = r#""#;
-        // doc.info.description = Some(desc.to_string());
+        doc.external_docs = Some(ExternalDocs::new("https://sebadob.github.io/rauthy/"));
+
+        let desc = "OpenID Connect Single Sign-On Identity & Access Management";
+        doc.info.description = Some(desc.to_string());
 
         // let mut contact = Contact::new();
         // contact.name = Some("".to_string());
@@ -318,11 +320,6 @@ impl ApiDoc {
             "https://"
         };
 
-        // let scheme = if app_state.listen_scheme == ListenScheme::Http {
-        //     "http://"
-        // } else {
-        //     "https://"
-        // };
         let pub_url = &app_state.public_url;
         let url = format!("{}{}/auth/v1", scheme, pub_url);
         doc.servers = Some(vec![Server::new(url)]);

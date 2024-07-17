@@ -367,7 +367,10 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
     let swagger = SwaggerUi::new("/docs/v1/swagger-ui/{_:.*}")
         .url("/docs/v1/api-doc/openapi.json", ApiDoc::build(&app_state))
         .config(
-            utoipa_swagger_ui::Config::from("../api-doc/openapi.json").try_it_out_enabled(false),
+            utoipa_swagger_ui::Config::from("../api-doc/openapi.json")
+                .try_it_out_enabled(false)
+                .supported_submit_methods(["get"])
+                .filter(true),
         );
 
     // Prometheus metrics
