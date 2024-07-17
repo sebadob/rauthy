@@ -9,7 +9,7 @@ use rauthy_common::utils::real_ip_from_svc_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::future::{ready, Ready};
 use std::rc::Rc;
-use tracing::warn;
+use tracing::{debug, warn};
 
 pub struct CsrfProtectionMiddleware;
 
@@ -79,6 +79,13 @@ where
                         .get("sec-fetch-mode")
                         .map(|h| h.to_str().unwrap_or_default())
                         .unwrap_or_default();
+
+                    debug!("sec-fetch-dest: {}, sec-fetch-mode: {}", dest, mode);
+
+                    // allow images fetches like favicon
+                    if dest == "image" && mode == "no-cors" {
+                        return service.call(req).await;
+                    }
 
                     // allow navigation to this site but no embedding
                     if mode == "navigate" && !["embed", "iframe", "object"].contains(&dest) {
