@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Forward Authentication - Rauthy Documentation</title>
+        <title>JSON Web Keys - Rauthy Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/production_config.html"><strong aria-hidden="true">3.</strong> Production Config</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.1.</strong> Password Hashing</a></li><li class="chapter-item expanded "><a href="../config/passkeys.html"><strong aria-hidden="true">3.2.</strong> Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">3.3.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/logging.html"><strong aria-hidden="true">3.4.</strong> Logging and Auditing</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">3.5.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">3.6.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/sessions.html"><strong aria-hidden="true">3.7.</strong> Sessions</a></li><li class="chapter-item expanded "><a href="../config/user_reg.html"><strong aria-hidden="true">3.8.</strong> User Registration</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">3.9.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/forward_auth.html" class="active"><strong aria-hidden="true">3.10.</strong> Forward Authentication</a></li><li class="chapter-item expanded "><a href="../config/bootstrap.html"><strong aria-hidden="true">3.11.</strong> Bootstrapping</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">3.12.</strong> Database Migrations</a></li></ol></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">4.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html"><strong aria-hidden="true">4.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../work/index.html"><strong aria-hidden="true">5.</strong> Working with Rauthy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../work/api_keys.html"><strong aria-hidden="true">5.1.</strong> API Keys</a></li><li class="chapter-item expanded "><a href="../work/ip_blacklist.html"><strong aria-hidden="true">5.2.</strong> IP Blacklisting</a></li><li class="chapter-item expanded "><a href="../work/ephemeral_clients.html"><strong aria-hidden="true">5.3.</strong> Ephemeral Clients</a></li><li class="chapter-item expanded "><a href="../work/jwks.html"><strong aria-hidden="true">5.4.</strong> JSON Web Keys</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">6.</strong> Reference Config</a></li><li class="chapter-item expanded "><a href="../swagger.html"><strong aria-hidden="true">7.</strong> Swagger UI</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../getting_started/main.html"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting_started/docker.html"><strong aria-hidden="true">2.1.</strong> Docker</a></li><li class="chapter-item expanded "><a href="../getting_started/k8s.html"><strong aria-hidden="true">2.2.</strong> Kubernetes</a></li><li class="chapter-item expanded "><a href="../getting_started/first_start.html"><strong aria-hidden="true">2.3.</strong> First Start</a></li></ol></li><li class="chapter-item expanded "><a href="../config/production_config.html"><strong aria-hidden="true">3.</strong> Production Config</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../config/argon2.html"><strong aria-hidden="true">3.1.</strong> Password Hashing</a></li><li class="chapter-item expanded "><a href="../config/passkeys.html"><strong aria-hidden="true">3.2.</strong> Passkeys</a></li><li class="chapter-item expanded "><a href="../config/encryption.html"><strong aria-hidden="true">3.3.</strong> Encryption</a></li><li class="chapter-item expanded "><a href="../config/logging.html"><strong aria-hidden="true">3.4.</strong> Logging and Auditing</a></li><li class="chapter-item expanded "><a href="../config/backup.html"><strong aria-hidden="true">3.5.</strong> Backups</a></li><li class="chapter-item expanded "><a href="../config/tls.html"><strong aria-hidden="true">3.6.</strong> TLS</a></li><li class="chapter-item expanded "><a href="../config/sessions.html"><strong aria-hidden="true">3.7.</strong> Sessions</a></li><li class="chapter-item expanded "><a href="../config/user_reg.html"><strong aria-hidden="true">3.8.</strong> User Registration</a></li><li class="chapter-item expanded "><a href="../config/ha.html"><strong aria-hidden="true">3.9.</strong> High Availability</a></li><li class="chapter-item expanded "><a href="../config/forward_auth.html"><strong aria-hidden="true">3.10.</strong> Forward Authentication</a></li><li class="chapter-item expanded "><a href="../config/bootstrap.html"><strong aria-hidden="true">3.11.</strong> Bootstrapping</a></li><li class="chapter-item expanded "><a href="../config/db_migration.html"><strong aria-hidden="true">3.12.</strong> Database Migrations</a></li></ol></li><li class="chapter-item expanded "><a href="../auth_providers/index.html"><strong aria-hidden="true">4.</strong> Authentication Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../auth_providers/github.html"><strong aria-hidden="true">4.1.</strong> Github</a></li></ol></li><li class="chapter-item expanded "><a href="../work/index.html"><strong aria-hidden="true">5.</strong> Working with Rauthy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../work/api_keys.html"><strong aria-hidden="true">5.1.</strong> API Keys</a></li><li class="chapter-item expanded "><a href="../work/ip_blacklist.html"><strong aria-hidden="true">5.2.</strong> IP Blacklisting</a></li><li class="chapter-item expanded "><a href="../work/ephemeral_clients.html"><strong aria-hidden="true">5.3.</strong> Ephemeral Clients</a></li><li class="chapter-item expanded "><a href="../work/jwks.html" class="active"><strong aria-hidden="true">5.4.</strong> JSON Web Keys</a></li></ol></li><li class="chapter-item expanded "><a href="../config/config.html"><strong aria-hidden="true">6.</strong> Reference Config</a></li><li class="chapter-item expanded "><a href="../swagger.html"><strong aria-hidden="true">7.</strong> Swagger UI</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -174,70 +174,73 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="forward-authentication"><a class="header" href="#forward-authentication">Forward Authentication</a></h1>
-<p>If you want to secure applications running behind a reverse proxy that do not have authn / authz on their own in terms
-of being able to use OIDC flows or similar with them, you can use something like the <a href="https://traefik.io/">Traefik</a>
-middleware <a href="https://doc.traefik.io/traefik/middlewares/http/forwardauth/">ForwardAuth</a>. Other proxies support this as
-well.</p>
-<p>Incoming requests can be intercepted and forwarded to Rauthy first. It will check for a valid <code>Bearer</code> token in the
-<code>Authorization</code> header. If it is valid, Rauthy will return an <code>HTTP 200 Ok</code> and will append additional headers with
-information about the user to the request. These headers could easily be read by a downstream application.</p>
-<p>The forward auth headers are disabled by default, because they can leak information, if you do not set up your internal
-environment carefully. You can enable the feature with</p>
-<pre><code># You can enable authn/authz headers which would be added to the response
-# of the `/auth/v1/oidc/forward_auth` endpoint. With  `AUTH_HEADERS_ENABLE=true`,
-# the headers below will be added to authenticated requests. These could
-# be used on legacy downstream applications, that don't support OIDC on
-# their own.
-# However, be careful when using this, since this kind of authn/authz has
-# a lot of pitfalls out of the scope of Rauthy.
-# default: false
-AUTH_HEADERS_ENABLE=false
-
+                        <h1 id="json-web-keys"><a class="header" href="#json-web-keys">JSON Web Keys</a></h1>
+<p>JSON Web Keys (JWKs) are used to sign JWT tokens. Multiple JWKs form a JSON Web Key Set (JWKS). These are private
+/ public key pairs Rauthy generates internally in a cryptographically secure way. All of them are generated at
+once, one for each algorithm Rauthy supports signing tokens with, which are</p>
+<ul>
+<li>RS256</li>
+<li>RS384</li>
+<li>RS512</li>
+<li>EdDSA</li>
+</ul>
+<p>The <strong>RSA</strong> algorithms exist for compatibility. The <code>RS256</code> is the only mandatory algorithm by the OIDC RFC and
+the <code>RS384</code>and <code>RS512</code> basically come for free, when you implement <code>RS256</code>. However, these algorithms, produce
+pretty big signatures and are very slow to generate.</p>
+<p>Rauthy does not support for <strong>ECDSA</strong> keys, because they are the worst option in this scenario in my opinion.
+<code>ECDSA</code> keys have the advantage that they produce way smaller signatures than <code>RSA</code> keys and can be generated pretty
+fast, but are slow at token validations. Tokens need to be validated with each single request, so you want to this
+to be as fast as possible (without sacrificing security of course).</p>
+<p>The best option is <strong>EdDSA</strong>, which uses <code>ed25519</code> keys. It is the fastest option at signing and validation, fast to
+generate and produces the smallest signatures and therefore total token size. These are the default when you create
+a new client, but some applications do not support them. If you have trouble logging in because of a problem with the
+signature, try to change it to <code>RS256</code>.</p>
+<h2 id="key-rotation"><a class="header" href="#key-rotation">Key Rotation</a></h2>
+<p>As long as your private key's do not leak, you technically do not need to rotate keys and generate new ones.
+However, it is good practice to do this regularly. Usually, you don't need to care about this. Rauthy rotates its JWKS
+<strong>automatically</strong> with default settings. This will happen on each 1. of the month at 03:30 in the morning.<br />
+You can change this behavior with the following setting:</p>
+<pre><code># JWKS auto rotate cronjob. This will (by default) rotate all JWKs every
+# 1. day of the month. If you need smaller intervals, you may adjust this
+# value. For security reasons, you cannot fully disable it.
+# In a HA deployment, this job will only be executed on the current cache
+# leader at that time.
+# Format: "sec min hour day_of_month month day_of_week year"
+# default: "0 30 3 1 * * *"
+JWK_AUTOROTATE_CRON="0 30 3 1 * * *"
 </code></pre>
-<p>You can also change the header names containing the information, if you need to support some older application that
-needs special naming for them:</p>
-<pre><code># Configure the header names being used for the different values.
-# You can change them to your needs, if you cannot easily change your
-# downstream apps.
-# default: x-forwarded-user
-AUTH_HEADER_USER=x-forwarded-user
-# default: x-forwarded-user-roles
-AUTH_HEADER_ROLES=x-forwarded-user-roles
-# default: x-forwarded-user-groups
-AUTH_HEADER_GROUPS=x-forwarded-user-groups
-# default: x-forwarded-user-email
-AUTH_HEADER_EMAIL=x-forwarded-user-email
-# default: x-forwarded-user-email-verified
-AUTH_HEADER_EMAIL_VERIFIED=x-forwarded-user-email-verified
-# default: x-forwarded-user-family-name
-AUTH_HEADER_FAMILY_NAME=x-forwarded-user-family-name
-# default: x-forwarded-user-given-name
-AUTH_HEADER_GIVEN_NAME=x-forwarded-user-given-name
-# default: x-forwarded-user-mfa
-AUTH_HEADER_MFA=x-forwarded-user-mfa
-</code></pre>
-<div id="admonition-caution" class="admonition admonish-warning">
+<p>If you however had a secret's leak or something like this, you can of course rotate <strong>manually</strong>. You just need to log
+in to the Admin UI:<br />
+<code>Config</code> -&gt; <code>JWKS</code> -&gt; <code>Rotate Keys</code></p>
+<div id="admonition-info" class="admonition admonish-info">
 <div class="admonition-title">
-<p>Caution</p>
-<p><a class="admonition-anchor-link" href="#admonition-caution"></a></p>
+<p>Info</p>
+<p><a class="admonition-anchor-link" href="#admonition-info"></a></p>
 </div>
 <div>
-<p>This feature makes it really easy for any application behind your reverse proxy to serve protected resources, but you
-really only use it, if you cannot use a proper OIDC client or something like that.</p>
-<p>Auth forward has many pitfalls and you need to be careful with your whole setup when using it. A direct token validation
-inside your downstream application should always be preferred.</p>
+<p>When Rauthy does a key rotation, the old keys will not be deleted immediately, because they will be needed for some
+additional time to verify existing tokens.</p>
+<p>A rotation generates new keys which will then be used for any upcoming token signatures. The old keys will be
+auto-deleted after 30 days, you don't need to care about cleanup.</p>
 </div>
 </div>
+<h2 id="rotation-event"><a class="header" href="#rotation-event">Rotation Event</a></h2>
+<p>Rauthy creates a new event when keys are rotated. The default level is <code>notice</code>. If you want to change this,
+you can do so with:</p>
+<pre><code># The level for the generated Event after the JWKS has been rotated
+# default: notice
+EVENT_LEVEL_JWKS_ROTATE=notice
+</code></pre>
+
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../config/ha.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../work/ephemeral_clients.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../config/bootstrap.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../config/config.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -247,11 +250,11 @@ inside your downstream application should always be preferred.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../config/ha.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../work/ephemeral_clients.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../config/bootstrap.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../config/config.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

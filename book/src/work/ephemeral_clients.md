@@ -31,7 +31,7 @@ be deleted automatically. Usually, when an app registers via DCR, the client wil
 login.
 ```
 
-As the third option, Rauthy gives you the option to use **Ephemeral Clients**. These are disabled by default, because
+As the third option, Rauthy gives you the ability to use **Ephemeral Clients**. These are disabled by default, because
 they are not a default OIDC feature yet (There is an open Draft to include them though). Ephemeral Clients provide
 way fewer configuration options, but make it possible that user can self-manage their own clients without any additional
 upfront tasks on Rauthy's side. This means as long as you have an account on a Rauthy instance with this feature
