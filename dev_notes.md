@@ -9,7 +9,6 @@
 - custom scopes
 - mention i18n possibilities
 - E-Mail templates
-- Swagger UI (no external by default)
 
 ## Stage 1 - essentials
 

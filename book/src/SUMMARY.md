@@ -28,6 +28,7 @@
     - [API Keys](work/api_keys.md)
     - [IP Blacklisting](work/ip_blacklist.md)
     - [Ephemeral Clients](work/ephemeral_clients.md)
+    - [JSON Web Keys](work/jwks.md)
 
 - [Reference Config](./config/config.md)
 - [Swagger UI](swagger.md)
