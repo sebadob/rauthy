@@ -42,11 +42,11 @@ pub struct NewUserRequest {
     /// Validation: `email`
     #[validate(email)]
     pub email: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,32}`
-    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,32}"))]
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
+    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{1,32}"))]
     pub family_name: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,32}`
-    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,32}"))]
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
+    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{1,32}"))]
     pub given_name: String,
     pub language: Language,
     /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
@@ -63,11 +63,11 @@ pub struct NewUserRequest {
 pub struct NewUserRegistrationRequest {
     #[validate(email)]
     pub email: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,32}`
-    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,32}"))]
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
+    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{1,32}"))]
     pub family_name: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,32}`
-    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,32}"))]
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
+    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{1,32}"))]
     pub given_name: String,
     /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
     #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]
@@ -79,8 +79,8 @@ pub struct NewUserRegistrationRequest {
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct PasskeyRequest {
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,32}`
-    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,32}"))]
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
+    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{1,32}"))]
     pub name: String,
 }
 
@@ -218,8 +218,8 @@ pub struct WebauthnAuthFinishRequest {
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct WebauthnRegStartRequest {
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,32}`
-    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,32}"))]
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
+    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{1,32}"))]
     pub passkey_name: String,
 
     /// Validation: `email`
@@ -232,8 +232,8 @@ pub struct WebauthnRegStartRequest {
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct WebauthnRegFinishRequest {
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,32}`
-    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,32}"))]
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
+    #[validate(regex(path = "RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{1,32}"))]
     pub passkey_name: String,
     /// Note: `ToSchema` does currently not exist for `webauthn_rs::prelude::PublicKeyCredential`
     #[schema(value_type = str)]

@@ -137,7 +137,7 @@ lazy_static! {
     pub static ref RE_SEARCH: Regex = Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+$").unwrap();
     pub static ref RE_STREET: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-.\s]{0,48}$").unwrap();
     pub static ref RE_URI: Regex = Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+$").unwrap();
-    pub static ref RE_USER_NAME: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-\s]{2,32}$").unwrap();
+    pub static ref RE_USER_NAME: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-\s]{1,32}$").unwrap();
     pub static ref RE_TOKEN_68: Regex = Regex::new(r"^[a-zA-Z0-9-._~+/]+=*$").unwrap();
     pub static ref RE_TOKEN_ENDPOINT_AUTH_METHOD: Regex = Regex::new(r"^(client_secret_post|client_secret_basic|none)$").unwrap();
 
