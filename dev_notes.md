@@ -4,7 +4,6 @@
 
 ## Documentation TODO
 
-- S3
 - secrets migration
 - custom scopes
 - mention i18n possibilities
