@@ -29,6 +29,7 @@
     - [IP Blacklisting](work/ip_blacklist.md)
     - [Ephemeral Clients](work/ephemeral_clients.md)
     - [JSON Web Keys](work/jwks.md)
+    - [E-Mail Templates](work/email_templates.md)
 
 - [Reference Config](./config/config.md)
 - [Swagger UI](swagger.md)
