@@ -4,10 +4,10 @@
 
 ## Documentation TODO
 
-- secrets migration
 - custom scopes
-- mention i18n possibilities
 - E-Mail templates
+- custom events listener
+- mention i18n possibilities
 
 ## Stage 1 - essentials
 
