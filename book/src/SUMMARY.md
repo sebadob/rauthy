@@ -26,10 +26,11 @@
 
 - [Working with Rauthy](work/index.md)
     - [API Keys](work/api_keys.md)
-    - [IP Blacklisting](work/ip_blacklist.md)
+    - [Custom Scopes and Attributes](work/custom_scopes_attributes.md)
     - [Ephemeral Clients](work/ephemeral_clients.md)
-    - [JSON Web Keys](work/jwks.md)
     - [E-Mail Templates](work/email_templates.md)
+    - [IP Blacklisting](work/ip_blacklist.md)
+    - [JSON Web Keys](work/jwks.md)
 
 - [Reference Config](./config/config.md)
 - [Swagger UI](swagger.md)
