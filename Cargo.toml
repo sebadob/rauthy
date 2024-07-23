@@ -40,7 +40,7 @@ chacha20poly1305 = { version = "0.10", features = ["std"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 cidr = "0.2.2"
 cron = "0.12"
-cryptr = { version = "0.4", features = ["s3", "streaming"] }
+cryptr = { version = "0.5.1", features = ["s3", "streaming"] }
 css-color = "0.2"
 derive_more = "0.99"
 dotenvy = "0.15"

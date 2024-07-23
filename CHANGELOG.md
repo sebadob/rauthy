@@ -1,5 +1,15 @@
 # Changelog
 
+## UNRELEASED
+
+TODO
+
+# `S3_DANGER_ACCEPT_INVALID_CERTS` renamed
+
+The config var `S3_DANGER_ACCEPT_INVALID_CERTS` has been renamed to `S3_DANGER_ALLOW_INSECURE`. This is not a breaking
+change right now, because for now Rauthy will accept both versions to not introduce a breaking change, but the
+deprecated values will be removed after v0.24.
+
 ## v0.24.0
 
 Many thousands of lines have been refactored internally to provide better maintainability in the future.

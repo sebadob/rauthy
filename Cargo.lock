@@ -682,6 +682,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-compression"
+version = "0.4.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fec134f64e2bc57411226dfc4e52dec859ddfc7e711fc5e07b612584f000e4aa"
+dependencies = [
+ "brotli",
+ "futures-core",
+ "memchr",
+ "pin-project-lite",
+ "tokio",
+]
+
+[[package]]
 name = "async-stream"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1398,9 +1411,9 @@ dependencies = [
 
 [[package]]
 name = "cryptr"
-version = "0.4.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "224acbc822f82e449afa50744febaf86a1697c7aa2c5d4c46e4b807654d07a00"
+checksum = "f9c2b9e47752779aac395e3f3b8ef72e5dde166440544a3ce947a026d520fada"
 dependencies = [
  "argon2",
  "async-stream",
@@ -1416,7 +1429,7 @@ dependencies = [
  "rand",
  "regex",
  "reqwest 0.12.5",
- "rusty-s3",
+ "s3-simple",
  "serde",
  "thiserror",
  "tokio",
@@ -3286,6 +3299,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "md5"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "490cc448043f947bae3cbee9c203358d62dbee0db12107a74be5c30ccfd09771"
+
+[[package]]
 name = "mediatype"
 version = "0.19.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4059,6 +4078,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "quick-xml"
+version = "0.36.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96a05e2e8efddfa51a84ca47cec303fac86c8541b686d37cac5efc0e094417bc"
+dependencies = [
+ "memchr",
+ "serde",
+]
+
+[[package]]
 name = "quinn"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4659,6 +4688,7 @@ version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c7d6d2a27d57148378eb5e111173f4276ad26340ecc5c49a4a2152167a2d6a37"
 dependencies = [
+ "async-compression",
  "base64 0.22.1",
  "bytes",
  "futures-channel",
@@ -5137,7 +5167,7 @@ dependencies = [
  "hmac",
  "md-5",
  "percent-encoding",
- "quick-xml",
+ "quick-xml 0.30.0",
  "serde",
  "serde_json",
  "sha2",
@@ -5151,6 +5181,34 @@ name = "ryu"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3cb5ba0dc43242ce17de99c180e96db90b235b8a9fdc9543c96d2209116bd9f"
+
+[[package]]
+name = "s3-simple"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "523a322bb2fa80f48db68c4f3469daad2cc0126e57049ebe89c7f06433dd1f86"
+dependencies = [
+ "base64 0.22.1",
+ "bytes",
+ "chrono",
+ "dotenvy",
+ "flume",
+ "futures-util",
+ "hex",
+ "hmac",
+ "http 1.1.0",
+ "md5",
+ "percent-encoding",
+ "quick-xml 0.36.1",
+ "reqwest 0.12.5",
+ "serde",
+ "sha2",
+ "thiserror",
+ "time",
+ "tokio",
+ "tracing",
+ "url",
+]
 
 [[package]]
 name = "same-file"
@@ -6054,12 +6112,8 @@ checksum = "9cf6b47b3771c49ac75ad09a6162f53ad4b8088b76ac60e8ec1455b31a189fe1"
 dependencies = [
  "bytes",
  "futures-core",
- "futures-io",
  "futures-sink",
- "futures-util",
- "hashbrown 0.14.5",
  "pin-project-lite",
- "slab",
  "tokio",
 ]
 
