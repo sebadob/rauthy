@@ -4069,16 +4069,6 @@ checksum = "a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3"
 
 [[package]]
 name = "quick-xml"
-version = "0.30.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eff6510e86862b57b210fd8cbe8ed3f0d7d600b9c2863cd4549a2e033c66e956"
-dependencies = [
- "memchr",
- "serde",
-]
-
-[[package]]
-name = "quick-xml"
 version = "0.36.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96a05e2e8efddfa51a84ca47cec303fac86c8541b686d37cac5efc0e094417bc"
@@ -4413,7 +4403,6 @@ dependencies = [
  "rio_turtle",
  "rsa",
  "rstest",
- "rusty-s3",
  "semver",
  "serde",
  "serde_json",
@@ -5158,25 +5147,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "955d28af4278de8121b7ebeb796b6a45735dc01436d898801014aced2773a3d6"
 
 [[package]]
-name = "rusty-s3"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31aa883f1b986a5249641e574ca0e11ac4fb9970b009c6fbb96fedaf4fa78db8"
-dependencies = [
- "base64 0.21.7",
- "hmac",
- "md-5",
- "percent-encoding",
- "quick-xml 0.30.0",
- "serde",
- "serde_json",
- "sha2",
- "time",
- "url",
- "zeroize",
-]
-
-[[package]]
 name = "ryu"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5199,7 +5169,7 @@ dependencies = [
  "http 1.1.0",
  "md5",
  "percent-encoding",
- "quick-xml 0.36.1",
+ "quick-xml",
  "reqwest 0.12.5",
  "serde",
  "sha2",
