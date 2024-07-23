@@ -6,6 +6,6 @@ use validator::Validate;
 #[derive(Serialize, Deserialize, Validate, ToSchema)]
 pub struct NewGroupRequest {
     /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
-    #[validate(regex(path = "RE_GROUPS", code = "^[a-z0-9-_/,:*]{2,64}$"))]
+    #[validate(regex(path = "*RE_GROUPS", code = "^[a-z0-9-_/,:*]{2,64}$"))]
     pub group: String,
 }

@@ -41,10 +41,10 @@ pub struct EventsListenParams {
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct EventsRequest {
     /// Unix timestamp in seconds
-    #[validate(range(min = 1672527600, max = 4070905200))]
+    #[validate(range(min = 1719784800))]
     pub from: i64,
     /// Unix timestamp in seconds
-    #[validate(range(min = 1672527600, max = 4070905200))]
+    #[validate(range(min = 1719784800))]
     pub until: Option<i64>,
     pub level: EventLevel,
     pub typ: Option<EventType>,

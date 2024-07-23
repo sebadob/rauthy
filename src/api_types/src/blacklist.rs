@@ -8,8 +8,10 @@ pub struct IpBlacklistRequest {
     /// Validation: Ipv4Addr
     #[schema(value_type = str)]
     pub ip: Ipv4Addr,
-    /// Unix timestamp in seconds in the future (max year 2099)
-    #[validate(range(min = 1672527600, max = 4070905200))]
+    // TODO max validation for inner i64 is broken in the macro in v0.18.1
+    // #[validate(range(min = 1719784800, max = 4070905200))]
+    /// Unix timestamp
+    #[validate(range(min = 1719784800))]
     pub exp: i64,
 }
 

@@ -1,12 +1,12 @@
 use crate::app_state::DbPool;
 use chrono::Utc;
-use cryptr::stream::writer::s3_writer::{Bucket, Credentials, UrlStyle};
+use cryptr::stream::s3::{
+    AccessKeyId, AccessKeySecret, Bucket, BucketOptions, Credentials, Region,
+};
 use cryptr::{EncValue, FileReader, FileWriter, S3Reader, S3Writer, StreamReader, StreamWriter};
 use rauthy_common::constants::{DATABASE_URL, DB_TYPE, RAUTHY_VERSION};
 use rauthy_common::DbType;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rusty_s3::actions::ListObjectsV2;
-use rusty_s3::S3Action;
 use sqlx::pool::PoolOptions;
 use std::env;
 use std::path::Path;
@@ -22,7 +22,6 @@ pub mod db_migrate;
 pub mod db_migrate_dev;
 
 static BUCKET: OnceLock<Bucket> = OnceLock::new();
-static CREDENTIALS: OnceLock<Credentials> = OnceLock::new();
 static ACCEPT_INVALID_CERTS: OnceLock<bool> = OnceLock::new();
 
 pub async fn backup_db(db: &DbPool) -> Result<(), ErrorResponse> {
@@ -118,13 +117,6 @@ async fn s3_backup(file_path: &str) -> Result<(), ErrorResponse> {
         }
         Some(b) => b,
     };
-    let credentials = CREDENTIALS
-        .get()
-        .expect("CREDENTIALS to be set up correctly");
-    let danger_accept_invalid_certs = ACCEPT_INVALID_CERTS
-        .get()
-        .expect("ACCEPT_INVALID_CERTS to be set up correctly");
-
     // execute backup
     let reader = StreamReader::File(FileReader {
         path: file_path,
@@ -137,13 +129,15 @@ async fn s3_backup(file_path: &str) -> Result<(), ErrorResponse> {
         Utc::now().timestamp()
     );
     let writer = StreamWriter::S3(S3Writer {
-        credentials: Some(credentials),
         bucket,
         object: &object,
-        danger_accept_invalid_certs: *danger_accept_invalid_certs,
     });
 
-    info!("Pushing backup to S3 storage {}", bucket.region());
+    info!(
+        "Pushing backup to S3 storage {} / {}",
+        bucket.name,
+        bucket.region.as_str()
+    );
     EncValue::encrypt_stream(reader, writer).await?;
     info!("S3 backup push successful");
 
@@ -181,60 +175,55 @@ pub async fn s3_backup_init_test() {
 
     // read env vars
     let region = env::var("S3_REGION").expect("Found S3_URL but no S3_REGION\n");
-    let use_path_style = env::var("S3_PATH_STYLE")
+    let path_style = env::var("S3_PATH_STYLE")
         .unwrap_or_else(|_| "false".to_string())
         .parse::<bool>()
         .expect("Cannot parse S3_PATH_STYLE to bool\n");
     let bucket = env::var("S3_BUCKET").expect("Found S3_URL but no S3_BUCKET\n");
     let access_key = env::var("S3_ACCESS_KEY").expect("Found S3_URL but no S3_ACCESS_KEY\n");
     let secret = env::var("S3_ACCESS_SECRET").expect("Found S3_URL but no S3_ACCESS_SECRET\n");
+
+    // TODO deprecate and remove after v0.24
     let danger_accept_invalid_certs = env::var("S3_DANGER_ACCEPT_INVALID_CERTS")
         .unwrap_or_else(|_| "false".to_string())
         .parse::<bool>()
         .expect("Cannot parse S3_DANGER_ACCEPT_INVALID_CERTS to bool\n");
 
-    let credentials = Credentials::new(access_key, secret);
-    let path_style = if use_path_style {
-        UrlStyle::Path
-    } else {
-        UrlStyle::VirtualHost
-    };
+    if danger_accept_invalid_certs {
+        warn!(
+            "`S3_DANGER_ACCEPT_INVALID_CERTS` has been deprecated and renamed to \
+        `S3_DANGER_ALLOW_INSECURE`. You need to adopt your config for versions afters v0.24"
+        );
+        env::set_var("S3_DANGER_ALLOW_INSECURE", "true");
+    }
+
     info!("S3 backups are configured for '{}'", region);
+    let options = BucketOptions {
+        path_style,
+        list_objects_v2: true,
+    };
     let bucket = Bucket::new(
         s3_url.parse().expect("Invalid format for S3_URL"),
-        path_style,
         bucket,
-        region,
+        Region(region),
+        Credentials {
+            access_key_id: AccessKeyId(access_key),
+            access_key_secret: AccessKeySecret(secret),
+        },
+        Some(options),
     )
     .expect("Cannot build S3 Bucket object from given configuration");
 
-    // test the connection to be able to panic early
-    let action = ListObjectsV2::new(&bucket, Some(&credentials)).sign(Duration::from_secs(10));
-    let client = if danger_accept_invalid_certs {
-        cryptr::stream::http_client_insecure()
-    } else {
-        cryptr::stream::http_client()
-    };
-    match client.get(action).send().await {
-        Ok(resp) => {
-            if resp.status().is_success() {
-                info!("S3 connection test was successful");
-            } else {
-                let body = resp.text().await.unwrap_or_default();
-                panic!(
-                    "\nCannot connect to S3 storage - check your configuration and access rights\n\n{}\n",
-                    body
-                );
-            }
-        }
-        Err(err) => {
-            panic!("Cannot connect to S3 storage: {}", err);
-        }
+    // test the connection
+    if let Err(err) = bucket.head("").await {
+        error!(
+            "Error connecting to configured S3 bucket {}: {}",
+            bucket.name, err
+        );
     }
 
     // save values for backups
     let _ = BUCKET.set(bucket);
-    let _ = CREDENTIALS.set(credentials);
     let _ = ACCEPT_INVALID_CERTS.set(danger_accept_invalid_certs);
 }
 
@@ -286,10 +275,8 @@ Proceeding in 10 seconds ...
         s3_backup_init_test().await;
 
         let reader = StreamReader::S3(S3Reader {
-            credentials: Some(CREDENTIALS.get().unwrap()),
             bucket: BUCKET.get().unwrap(),
             object: object.trim_end(),
-            danger_accept_invalid_certs: *ACCEPT_INVALID_CERTS.get().unwrap(),
             print_progress: true,
         });
         let writer = StreamWriter::File(FileWriter {

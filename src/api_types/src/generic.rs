@@ -5,7 +5,7 @@ use validator::Validate;
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
 pub struct EncKeyMigrateRequest {
-    #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub key_id: String,
 }
 
@@ -41,7 +41,7 @@ pub struct PaginationParams {
     pub offset: Option<u16>,
     pub backwards: Option<bool>,
     /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub continuation_token: Option<String>,
 }
 
@@ -90,7 +90,7 @@ pub struct SearchParams {
     /// Index
     pub idx: SearchParamsIdx,
     /// The actual search query - validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+`
-    #[validate(regex(path = "RE_SEARCH", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+"))]
+    #[validate(regex(path = "*RE_SEARCH", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+"))]
     pub q: String,
     pub limit: Option<u16>,
 }

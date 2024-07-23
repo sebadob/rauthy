@@ -260,10 +260,16 @@ impl From<actix_multipart::MultipartError> for ErrorResponse {
 
         let text = match value {
             MultipartError::MissingField(_) => "MultipartError::MissingField",
-            MultipartError::NoContentDisposition => "MultipartError::NoContentDisposition",
-            MultipartError::NoContentType => "MultipartError::NoContentType",
-            MultipartError::ParseContentType => "MultipartError::ParseContentType",
-            MultipartError::Boundary => "MultipartError::Boundary",
+            MultipartError::ContentDispositionMissing => {
+                "MultipartError::ContentDispositionMissing"
+            }
+            MultipartError::ContentTypeIncompatible => "MultipartError::ContentTypeIncompatible",
+            MultipartError::ContentDispositionNameMissing => {
+                "MultipartError::ContentDispositionNameMissing"
+            }
+            MultipartError::ContentTypeMissing => "MultipartError::ContentTypeMissing",
+            MultipartError::ContentTypeParse => "MultipartError::ContentTypeParse",
+            MultipartError::BoundaryMissing => "MultipartError::BoundaryMissing",
             MultipartError::Nested => "MultipartError::Nested",
             MultipartError::Incomplete => "MultipartError::Incomplete",
             MultipartError::Parse(_) => "MultipartError::Parse",
@@ -271,7 +277,7 @@ impl From<actix_multipart::MultipartError> for ErrorResponse {
             MultipartError::NotConsumed => "MultipartError::NotConsumed",
             MultipartError::Field { .. } => "MultipartError::Field",
             MultipartError::DuplicateField(_) => "MultipartError::DuplicateField",
-            MultipartError::UnsupportedField(_) => "MultipartError::UnsupportedField",
+            MultipartError::UnknownField(_) => "MultipartError::UnknownField",
             _ => "MultipartError::Unknown",
         };
 
