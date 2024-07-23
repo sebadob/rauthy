@@ -7,7 +7,7 @@ use validator::Validate;
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
 pub struct ScopeRequest {
     /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
-    #[validate(regex(path = "RE_GROUPS", code = "^[a-z0-9-_/,:*]{2,64}$"))]
+    #[validate(regex(path = "*RE_GROUPS", code = "^[a-z0-9-_/,:*]{2,64}$"))]
     pub scope: String,
     /// Validation: `^[a-zA-Z0-9-_/]{2,128}$`
     #[validate(custom(function = "validate_vec_attr"))]

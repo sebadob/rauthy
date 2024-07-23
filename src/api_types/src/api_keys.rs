@@ -36,10 +36,12 @@ pub struct ApiKeyAccess {
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct ApiKeyRequest {
     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
-    #[validate(regex(path = "RE_API_KEY", code = "^[a-zA-Z0-9_-/]{2,24}$"))]
+    #[validate(regex(path = "*RE_API_KEY", code = "^[a-zA-Z0-9_-/]{2,24}$"))]
     pub name: String,
-    /// Unix timestamp in seconds in the future (max year 2099)
-    #[validate(range(min = 1672527600, max = 4070905200))]
+    // TODO max validation for inner i64 is broken in the macro in v0.18.1
+    // #[validate(range(min = 1719784800, max = 4070905200))]
+    /// Unix timestamp
+    #[validate(range(min = 1719784800))]
     pub exp: Option<i64>,
     pub access: Vec<ApiKeyAccess>,
 }

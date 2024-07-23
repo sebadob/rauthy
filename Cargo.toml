@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.24.0"
+version = "0.24.1-20240724"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -27,7 +27,7 @@ actix-web = { version = "4", features = ["rustls-0_23"] }
 actix-web-actors = "4"
 actix-web-lab = "0.20"
 actix-web-prom = "0.8.0"
-actix-web-validator = "5"
+actix-web-validator = "6"
 anyhow = "1"
 argon2 = { version = "0.5", features = ["std", "zeroize"] }
 askama = { version = "0.12", features = ["with-actix-web"] }
@@ -35,7 +35,7 @@ askama_actix = "0.14"
 async-trait = "0.1.74"
 base64 = "0.22.0"
 bincode = "1"
-cached = "0.51.0"
+cached = "0.53.1"
 chacha20poly1305 = { version = "0.10", features = ["std"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 cidr = "0.2.2"
@@ -48,7 +48,7 @@ ed25519-compact = { version = "2.0.4", features = ["ed25519"] }
 flume = "0.11"
 futures = "0.3"
 futures-util = "0.3"
-gethostname = "0.4"
+gethostname = "0.5.0"
 hex = { version = "0.4", features = ["serde"] }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
@@ -93,6 +93,8 @@ serde_json = "1"
 serde_json_path = "0.6.7"
 serde_with = { version = "3.8.1", features = ["macros"] }
 spow = "0.3"
+# matrix-sdk block upgrade to 0.8 -> maybe drop matrix-sdk and do everything manually,
+# since it has been creating problems a few times already
 sqlx = { version = "0.7", features = ["macros", "migrate", "postgres", "runtime-tokio", "sqlite", "tls-rustls", "uuid"] }
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
 tracing = { version = "0.1", features = ["attributes"] }
@@ -102,7 +104,7 @@ utoipa = { version = "4", features = ["actix_extras", "chrono", "openapi_extensi
 utoipa-swagger-ui = { version = "7.0.1", features = ["actix-web"] }
 uuid = { version = "1", features = ["serde", "v4"] }
 # v0.18 breaks a lot of things - sticking to 0.16 for now
-validator = { version = "0.16", features = ["derive"] }
+validator = { version = "0.18", features = ["derive"] }
 webauthn-rs = { version = "0.5", features = [
     "danger-allow-state-serialisation", "danger-credential-internals"
 ] }

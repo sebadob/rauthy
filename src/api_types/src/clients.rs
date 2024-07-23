@@ -70,10 +70,10 @@ pub struct DynamicClientRequest {
     #[validate(custom(function = "validate_vec_grant_types"))]
     pub grant_types: Vec<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
+    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
     pub client_name: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub client_uri: Option<String>,
     /// Validation: `Vec<^[a-zA-Z0-9\+.@/]{0,48}$>`
     #[validate(custom(function = "validate_vec_contact"))]
@@ -82,7 +82,7 @@ pub struct DynamicClientRequest {
     pub id_token_signed_response_alg: Option<JwkKeyPairAlg>,
     /// Validation: `^(client_secret_post|client_secret_basic|none)$`
     #[validate(regex(
-        path = "RE_TOKEN_ENDPOINT_AUTH_METHOD",
+        path = "*RE_TOKEN_ENDPOINT_AUTH_METHOD",
         code = "client_secret_post|client_secret_basic|none"
     ))]
     pub token_endpoint_auth_method: Option<String>,
@@ -119,7 +119,7 @@ pub struct DynamicClientRequest {
     // - initiate_login_uri
     // - request_uris (may come in the future with `request_uri` during login)
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub post_logout_redirect_uri: Option<String>,
 }
 
@@ -128,15 +128,15 @@ pub struct DynamicClientRequest {
 pub struct EphemeralClientRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$`
     #[validate(regex(
-        path = "RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID_EPHEMERAL",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
     pub client_id: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
+    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
     pub client_name: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub client_uri: Option<String>,
     /// Validation: `Vec<^[a-zA-Z0-9\+.@/]{0,48}$>`
     #[validate(custom(function = "validate_vec_contact"))]
@@ -154,7 +154,7 @@ pub struct EphemeralClientRequest {
     #[validate(range(min = 60, max = 86400))]
     pub default_max_age: Option<i32>,
     /// Validation: `[a-z0-9-_/:\s*]{0,512}`
-    #[validate(regex(path = "RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s*]{0,512}"))]
+    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s*]{0,512}"))]
     pub scope: Option<String>,
     pub require_auth_time: Option<bool>,
 
@@ -167,13 +167,13 @@ pub struct EphemeralClientRequest {
 #[derive(Debug, Validate, Serialize, Deserialize, ToSchema)]
 pub struct NewClientRequest {
     /// Validation: `^[a-z0-9-_/]{2,128}$`
-    #[validate(regex(path = "RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
+    #[validate(regex(path = "*RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
     pub id: String,
     /// Validation: None - will not be deserialized
     #[serde(skip_deserializing)]
     pub secret: Option<Vec<u8>>,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
+    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
     pub name: Option<String>,
     /// Validation: bool
     pub confidential: bool,
@@ -189,12 +189,12 @@ pub struct NewClientRequest {
 pub struct UpdateClientRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,256}$`
     #[validate(regex(
-        path = "RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID_EPHEMERAL",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
     pub id: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
+    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
     pub name: Option<String>,
     pub confidential: bool,
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
@@ -231,7 +231,7 @@ pub struct UpdateClientRequest {
     pub challenges: Option<Vec<String>>,
     pub force_mfa: bool,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub client_uri: Option<String>,
     /// Validation: `Vec<^[a-zA-Z0-9\+.@/]{0,48}$>`
     #[validate(custom(function = "validate_vec_contact"))]

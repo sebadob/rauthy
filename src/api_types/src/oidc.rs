@@ -33,33 +33,33 @@ pub struct AddressClaim {
 pub struct AuthRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
-        path = "RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID_EPHEMERAL",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
     pub client_id: String,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub redirect_uri: String,
     /// Validation: `[a-z0-9-_/]{2,128}`
-    #[validate(regex(path = "RE_LOWERCASE", code = "[a-z0-9-_/]{2,128}"))]
+    #[validate(regex(path = "*RE_LOWERCASE", code = "[a-z0-9-_/]{2,128}"))]
     pub response_type: String,
     /// Validation: `[a-z0-9-_/:\s*]{0,512}`
-    #[validate(regex(path = "RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s*]{0,512}"))]
+    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s*]{0,512}"))]
     #[serde(default = "default_scope")]
     pub scope: String,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub state: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub code_challenge: Option<String>,
     /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub code_challenge_method: Option<String>,
     #[validate(range(min = 0))]
     pub max_age: Option<i64>,
     /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub prompt: Option<String>,
 }
 
@@ -71,19 +71,19 @@ fn default_scope() -> String {
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct AuthCodeRequest {
     /// Validation: `^[a-z0-9-_/]{2,128}$`
-    #[validate(regex(path = "RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
+    #[validate(regex(path = "*RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
     pub grant_type: String,
     /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub code: String,
     /// Validation: `^[a-z0-9-_/]{2,128}$`
-    #[validate(regex(path = "RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
+    #[validate(regex(path = "*RE_LOWERCASE", code = "^[a-z0-9-_/]{2,128}$"))]
     pub client_id: String,
     /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub client_secret: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$"))]
     pub redirect_uri: Option<String>,
 }
 
@@ -110,27 +110,27 @@ pub struct LoginRequest {
     pub password: Option<String>,
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
-        path = "RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID_EPHEMERAL",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
     ))]
     pub client_id: String,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub redirect_uri: String,
     /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_scopes"))]
     pub scopes: Option<Vec<String>>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub state: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub nonce: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub code_challenge: Option<String>,
     /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub code_challenge_method: Option<String>,
 }
 
@@ -138,63 +138,63 @@ pub struct LoginRequest {
 pub struct LoginRefreshRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
-        path = "RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID_EPHEMERAL",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
     ))]
     pub client_id: String,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub redirect_uri: String,
     /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_scopes"))]
     pub scopes: Option<Vec<String>>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub state: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub nonce: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub code_challenge: Option<String>,
     /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub code_challenge_method: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
 pub struct LogoutRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub id_token_hint: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub post_logout_redirect_uri: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub state: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
 pub struct DeviceGrantRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$"))]
     pub client_id: String,
     /// Validation: max length is 256
     #[validate(length(max = 256))]
     pub client_secret: Option<String>,
     /// Validation: `[a-z0-9-_/:\s*]{0,512}`
-    #[validate(regex(path = "RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s*]{0,512}"))]
+    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-z0-9-_/:\\s*]{0,512}"))]
     pub scope: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
 pub struct DeviceVerifyRequest {
     /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub user_code: String,
     /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]
     pub pow: String,
     /// If `DeviceAcceptedRequest::Pending`, information about the request will be returned.
     /// If `DeviceAcceptedRequest::Accept` - the device will get a Token Set
@@ -206,27 +206,27 @@ pub struct DeviceVerifyRequest {
 pub struct TokenRequest {
     /// Validation: `^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$`
     #[validate(regex(
-        path = "RE_GRANT_TYPES",
+        path = "*RE_GRANT_TYPES",
         code = "^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$"
     ))]
     pub grant_type: String,
     /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub code: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub redirect_uri: Option<String>,
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
-        path = "RE_CLIENT_ID_EPHEMERAL",
+        path = "*RE_CLIENT_ID_EPHEMERAL",
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
     ))]
     pub client_id: Option<String>,
     /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub client_secret: Option<String>,
     /// Validation: `[a-zA-Z0-9-\\._~+/=]+`
-    #[validate(regex(path = "RE_CODE_VERIFIER", code = "[a-zA-Z0-9-\\._~+/=]+"))]
+    #[validate(regex(path = "*RE_CODE_VERIFIER", code = "[a-zA-Z0-9-\\._~+/=]+"))]
     pub code_verifier: Option<String>,
     /// Validation: max length is 256
     #[validate(length(max = 256))]
@@ -238,7 +238,7 @@ pub struct TokenRequest {
     #[validate(length(max = 256))]
     pub password: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub refresh_token: Option<String>,
 }
 
@@ -280,7 +280,7 @@ impl TokenRequest {
 #[derive(Serialize, Deserialize, Validate, ToSchema)]
 pub struct TokenValidationRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
-    #[validate(regex(path = "RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub token: String,
 }
 
