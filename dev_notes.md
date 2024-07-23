@@ -4,9 +4,6 @@
 
 ## Documentation TODO
 
-- custom scopes
-- E-Mail templates
-- custom events listener
 - mention i18n possibilities
 
 ## Stage 1 - essentials
