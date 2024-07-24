@@ -1,14 +1,51 @@
 # Changelog
 
-## UNRELEASED
+## 0.24.1
 
-TODO
+The last weeks were mostly for updating the documentation and including all the new features that came to Rauthy in
+the last months. Some small things are still missing, but it's almost there.
+
+Apart from that, this is an important update because it fixes some security issues in external dependencies.
+
+### Security
+
+Security issues in external crates have been fixed:
+
+- moderate [matrix-sdk-crypto](https://github.com/sebadob/rauthy/security/dependabot/54)
+- moderate [openssl](https://github.com/sebadob/rauthy/security/dependabot/55)
+- low [vodozemac](https://github.com/sebadob/rauthy/security/dependabot/53)
+
+### Changes
 
 # `S3_DANGER_ACCEPT_INVALID_CERTS` renamed
 
 The config var `S3_DANGER_ACCEPT_INVALID_CERTS` has been renamed to `S3_DANGER_ALLOW_INSECURE`. This is not a breaking
 change right now, because for now Rauthy will accept both versions to not introduce a breaking change, but the
 deprecated values will be removed after v0.24.
+
+### S3 Compatibility
+
+Quite a few internal dependencies have been updated to the latest versions (where it made sense).
+
+One of them was my own [cryptr](https://github.com/sebadob/cryptr). This was using the `rusty-s3` crate beforehand,
+which is a nice one when working with S3 storages, but had 2 issues. One of them is that it is using pre-signed URLs.
+That is not a flaw in the first place, just a design decision to become network agnostic. The other one was that it
+signed the URL in a way that would make the request not compatible with [Garage](https://garagehq.deuxfleurs.fr/).  
+I migrated `cryptr` to my own [s3-simple](https://github.com/sebadob/s3-simple) which solves these issues.
+
+This update brings compatibility with the `garage` s3 storage for Rauthy's S3 backup feature.
+
+[f1eab35](https://github.com/sebadob/rauthy/commit/f1eab35dcbf195ed38d11756e1df69f42e05e7e0)
+
+### Bugfixes
+
+- Fetching the favicon (and possibly other images) was forbidden because of the new CSRF middleware from some weeks
+  ago.
+  [76cd728](https://github.com/sebadob/rauthy/commit/76cd7281fcd1493c9f0cbb208c3fa7ef93814422)
+- The UI and the backend had a difference in input validation for `given_name` and `family_name` which could make
+  some buttons in the UI get stuck. This has been fixed and the validation for these 2 is the same everywhere and at
+  least 1 single character is required now.
+  [19d512a](https://github.com/sebadob/rauthy/commit/19d512ad6ea930467f51d7b704252d3edee7ef1c)
 
 ## v0.24.0
 
