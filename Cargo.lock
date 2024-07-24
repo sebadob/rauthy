@@ -4179,7 +4179,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.24.1-20240724"
+version = "0.24.1"
 dependencies = [
  "actix-service",
  "actix-web",
@@ -4220,7 +4220,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.24.1-20240724"
+version = "0.24.1"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4242,7 +4242,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.24.1-20240724"
+version = "0.24.1"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4268,7 +4268,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.24.1-20240724"
+version = "0.24.1"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4302,7 +4302,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.24.1-20240724"
+version = "0.24.1"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4333,7 +4333,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.24.1-20240724"
+version = "0.24.1"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4352,7 +4352,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.24.1-20240724"
+version = "0.24.1"
 dependencies = [
  "accept-language",
  "actix",
@@ -4424,7 +4424,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.24.1-20240724"
+version = "0.24.1"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4443,7 +4443,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.24.1-20240724"
+version = "0.24.1"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4461,7 +4461,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.24.1-20240724"
+version = "0.24.1"
 dependencies = [
  "actix-web",
  "argon2",
