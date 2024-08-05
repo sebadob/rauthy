@@ -376,10 +376,10 @@ async fn test_client_credentials_flow() -> Result<(), Box<dyn Error>> {
     assert!(ts.id_token.is_none());
     assert!(ts.refresh_token.is_none());
 
-    let req = TokenValidationRequest {
-        token: ts.access_token,
+    let payload = TokenValidationRequest {
+        token: ts.access_token.clone(),
     };
-    validate_token(req).await?;
+    validate_token(&ts.access_token, payload).await?;
 
     Ok(())
 }
@@ -523,10 +523,10 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     assert_eq!(ts.expires_in, 60);
 
     // validate against the backend
-    let req = TokenValidationRequest {
+    let payload = TokenValidationRequest {
         token: ts.access_token.to_owned(),
     };
-    validate_token(req).await?;
+    validate_token(&ts.access_token, payload).await?;
 
     // refresh it
     time::sleep(Duration::from_secs(1)).await;
@@ -667,10 +667,10 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
 
     let ts = res.json::<TokenSet>().await?;
     assert_eq!(ts.token_type, JwtTokenType::DPoP);
-    let req = TokenValidationRequest {
+    let payload = TokenValidationRequest {
         token: ts.access_token.to_owned(),
     };
-    let token_info = validate_token(req).await?;
+    let token_info = validate_token(&ts.access_token, payload).await?;
     assert!(token_info.cnf.is_some());
     assert_eq!(token_info.cnf.unwrap().jkt, fingerprint);
 
@@ -708,10 +708,10 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
 
     let ts = res.json::<TokenSet>().await?;
     assert_eq!(ts.token_type, JwtTokenType::DPoP);
-    let req = TokenValidationRequest {
+    let payload = TokenValidationRequest {
         token: ts.access_token.to_owned(),
     };
-    let token_info = validate_token(req).await?;
+    let token_info = validate_token(&ts.access_token, payload).await?;
     assert!(token_info.cnf.is_some());
     assert_eq!(token_info.cnf.unwrap().jkt, fingerprint);
 
@@ -1033,11 +1033,15 @@ async fn test_token_introspection() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn validate_token(req: TokenValidationRequest) -> Result<TokenInfo, Box<dyn Error>> {
+async fn validate_token(
+    access_token: &str,
+    payload: TokenValidationRequest,
+) -> Result<TokenInfo, Box<dyn Error>> {
     let url_valid = format!("{}/oidc/introspect", get_backend_url());
     let res = reqwest::Client::new()
         .post(&url_valid)
-        .form(&req)
+        .header(AUTHORIZATION, format!("Bearer {}", access_token))
+        .form(&payload)
         .send()
         .await?;
     assert_eq!(res.status(), 200);

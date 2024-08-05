@@ -17,10 +17,10 @@ application. If so, you can disable the authentication on this endpoint with
 ```
 # Can be set to `true` to disable authorization on `/oidc/introspect`.
 # This should usually never be done, but since the auth on that endpoint is not
-# really standardized, you may run into issues with your client app.
-# If so, please open an issue about it.
+# really standardized, you may run into issues with your client app. If so, 
+# please open an issue about it.
 # default: false
-DISABLE_INTROSPECT_AUTH=true
+DANGER_DISABLE_INTROSPECT_AUTH=true
 ```
 
 #### Config Read
