@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## NIGHTLY 0.25.0-20240805
 
 ### Changes
 
@@ -42,7 +42,8 @@ How Rauthy parses config variables now correctly:
 
 ### Bugfixes
 
-- The token introspection endpoint was only accepting requests with `Json` data, when it should have instead been with `Form` data.
+- The token introspection endpoint was only accepting requests with `Json` data, when it should have instead been
+  with `Form` data.
 
 ## 0.24.1
 
