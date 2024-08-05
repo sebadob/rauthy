@@ -31,6 +31,7 @@
     - [E-Mail Templates](work/email_templates.md)
     - [IP Blacklisting](work/ip_blacklist.md)
     - [JSON Web Keys](work/jwks.md)
+    - [I18n](work/i18n.md)
 
 - [Reference Config](./config/config.md)
 - [Swagger UI](swagger.md)

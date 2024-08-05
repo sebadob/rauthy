@@ -1,5 +1,26 @@
 # Changelog
 
+## UNRELEASE
+
+### Changes
+
+#### Config Read
+
+The current behavior of reading in config variables was not working as intended.
+
+Rauthy reads the `rauthy.cfg` as a file first and the environment variables afterward. This makes it possible to
+configure it in any way you like and even mix and match.  
+However, the idea was that any existing variables in the environment should overwrite config variables and therefore
+have the higher priority. This was exactly the other way around up until `v0.24.1` and has been fixed now.
+
+How Rauthy parses config variables now correctly:
+
+1. read `rauthy.cfg`
+2. read env var
+3. all existing env vars will overwrite existing vars from `rauthy.cfg` and therefore have the higher priority
+
+[]()
+
 ## 0.24.1
 
 The last weeks were mostly for updating the documentation and including all the new features that came to Rauthy in
@@ -17,13 +38,13 @@ Security issues in external crates have been fixed:
 
 ### Changes
 
-# `S3_DANGER_ACCEPT_INVALID_CERTS` renamed
+#### `S3_DANGER_ACCEPT_INVALID_CERTS` renamed
 
 The config var `S3_DANGER_ACCEPT_INVALID_CERTS` has been renamed to `S3_DANGER_ALLOW_INSECURE`. This is not a breaking
 change right now, because for now Rauthy will accept both versions to not introduce a breaking change, but the
 deprecated values will be removed after v0.24.
 
-### S3 Compatibility
+#### S3 Compatibility
 
 Quite a few internal dependencies have been updated to the latest versions (where it made sense).
 
