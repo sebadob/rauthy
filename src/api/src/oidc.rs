@@ -926,11 +926,11 @@ pub async fn post_token(
     .await
 }
 
-/// The tokenInfo endpoint for the OIDC standard.
+/// DEPRECATED -> use /oidc/introspect instead
 #[utoipa::path(
     post,
     path = "/oidc/tokenInfo",
-    tag = "oidc",
+    tag = "deprecated",
     request_body = TokenValidationRequest,
     responses(
         (status = 200, description = "Ok", body = TokenInfo),
@@ -941,11 +941,43 @@ pub async fn post_token(
 #[post("/oidc/tokenInfo")]
 pub async fn post_token_info(
     data: web::Data<AppState>,
-    req_data: actix_web_validator::Json<TokenValidationRequest>,
+    req: HttpRequest,
+    req_data: actix_web_validator::Form<TokenValidationRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    token_info::get_token_info(&data, &req_data.token)
-        .await
-        .map(|i| HttpResponse::Ok().json(i))
+    match token_info::get_token_info(&data, &req, &req_data.token).await {
+        Ok(info) => Ok(HttpResponse::Ok().json(info)),
+        Err(err) => {
+            error!("{:?}", err);
+            Err(err)
+        }
+    }
+}
+
+/// The token introspection endpoint for OAuth2
+#[utoipa::path(
+    post,
+    path = "/oidc/introspect",
+    tag = "oidc",
+    request_body = TokenValidationRequest,
+    responses(
+    (status = 200, description = "Ok", body = TokenInfo),
+    (status = 401, description = "Unauthorized", body = ErrorResponse),
+    (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[post("/oidc/introspect")]
+pub async fn post_token_introspect(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+    req_data: actix_web_validator::Form<TokenValidationRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    match token_info::get_token_info(&data, &req, &req_data.token).await {
+        Ok(info) => Ok(HttpResponse::Ok().json(info)),
+        Err(err) => {
+            error!("{:?}", err);
+            Err(err)
+        }
+    }
 }
 
 // // TODO remove?

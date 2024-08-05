@@ -625,6 +625,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(scopes::delete_scope)
                             .service(oidc::post_token)
                             .service(oidc::post_token_info)
+                            .service(oidc::post_token_introspect)
                             .service(oidc::get_userinfo)
                             .service(oidc::post_userinfo)
                             .service(oidc::get_forward_auth)

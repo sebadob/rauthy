@@ -182,7 +182,7 @@ postgres-start:
       --restart unless-stopped \
       postgres:16.2
 
-    sleep 1
+    sleep 3
     just migrate-postgres
 
 # Stops mailcrab
