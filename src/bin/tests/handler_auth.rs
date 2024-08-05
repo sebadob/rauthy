@@ -14,7 +14,7 @@ use rauthy_api_types::oidc::{
 use rauthy_common::constants::{
     APPLICATION_JSON, DPOP_TOKEN_ENDPOINT, HEADER_DPOP_NONCE, TOKEN_DPOP,
 };
-use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_encode, get_rand};
+use rauthy_common::utils::{base64_encode, base64_url_encode, base64_url_no_pad_encode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::dpop_proof::{DPoPClaims, DPoPHeader};
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPairType, JWKS};
@@ -959,14 +959,89 @@ async fn test_auth_headers() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+#[tokio::test]
+async fn test_token_introspection() -> Result<(), Box<dyn Error>> {
+    let backend_url = get_backend_url();
+    let client = reqwest::Client::new();
+
+    // get a token to validate
+    let url_token = format!("{}/oidc/token", backend_url);
+    let body = TokenRequest {
+        grant_type: "password".to_string(),
+        code: None,
+        redirect_uri: None,
+        client_id: Some(CLIENT_ID.to_string()),
+        client_secret: Some(CLIENT_SECRET.to_string()),
+        code_verifier: None,
+        device_code: None,
+        username: Some(USERNAME.to_string()),
+        password: Some(PASSWORD.to_string()),
+        refresh_token: None,
+    };
+    let res = client.post(&url_token).form(&body).send().await?;
+    assert!(res.status().is_success());
+    let ts = res.json::<TokenSet>().await?;
+
+    // make sure introspection is fine
+    let mut payload = TokenValidationRequest {
+        token: ts.access_token.clone(),
+    };
+    let url = format!("{}/oidc/introspect", backend_url);
+
+    // without proper auth should fail
+    let res = client.post(&url).form(&payload).send().await?;
+    assert_eq!(res.status().as_u16(), 401);
+
+    // with valid bearer auth
+    let header = format!("Bearer {}", ts.access_token);
+    let res = client
+        .post(&url)
+        .header(AUTHORIZATION, header)
+        .form(&payload)
+        .send()
+        .await?;
+    assert!(res.status().is_success());
+    let info = res.json::<TokenInfo>().await?;
+    assert!(info.active);
+
+    // with valid basic auth - client_id:client_secret
+    let plain = format!("{}:{}", CLIENT_ID, CLIENT_SECRET);
+    let encoded = base64_encode(plain.as_bytes());
+    let header = format!("Basic {}", encoded);
+    let res = client
+        .post(&url)
+        .header(AUTHORIZATION, &header)
+        .form(&payload)
+        .send()
+        .await?;
+    assert!(res.status().is_success());
+    let info = res.json::<TokenInfo>().await?;
+    assert!(info.active);
+
+    // make sure requests with invalid tokens return inactive
+    payload.token = base64_encode(b"IAmTotallyInvalid");
+    let res = client
+        .post(&url)
+        .header(AUTHORIZATION, header)
+        .form(&payload)
+        .send()
+        .await?;
+    assert!(res.status().is_success());
+    let info = res.json::<TokenInfo>().await?;
+    assert!(!info.active);
+
+    Ok(())
+}
+
 async fn validate_token(req: TokenValidationRequest) -> Result<TokenInfo, Box<dyn Error>> {
     let url_valid = format!("{}/oidc/introspect", get_backend_url());
     let res = reqwest::Client::new()
         .post(&url_valid)
-        .json(&req)
+        .form(&req)
         .send()
         .await?;
     assert_eq!(res.status(), 200);
     let info = res.json::<TokenInfo>().await.unwrap();
+    assert!(info.active);
     Ok(info)
 }
