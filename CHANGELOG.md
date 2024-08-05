@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASE
+## UNRELEASED
 
 ### Changes
 
@@ -19,7 +19,7 @@ How Rauthy parses config variables now correctly:
 2. read env var
 3. all existing env vars will overwrite existing vars from `rauthy.cfg` and therefore have the higher priority
 
-[]()
+[28b2457](https://github.com/sebadob/rauthy/commit/28b2457a53bf31163e94a363f2009b811e1b0b76)
 
 ## 0.24.1
 
