@@ -83,7 +83,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         dotenvy::from_filename("rauthy.test.cfg").ok();
     } else {
         dotenvy::from_filename("rauthy.cfg").expect("'rauthy.cfg' error");
-        dotenvy::dotenv().ok();
+        dotenvy::dotenv_override().ok();
     }
 
     let log_level = setup_logging();
