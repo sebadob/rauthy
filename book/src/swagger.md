@@ -17,6 +17,15 @@ If you want to test certain endpoints, I suggest you <b>create an API Key</b> fo
 you like.
 ```
 
+```admonish hint
+If you just want to take a look at the SwaggerUI when you have no running Rauthy instance yet, I have a test / dev 
+instance running which exposes the API docs: 
+<a href="https://iam.sebadob.dev/docs/v1/swagger-ui/" target="_blank">Swagger UI</a>
+
+Please note that this is a testing instance and it might not be online all the time or be running the latest nightly
+build, but everything should be fine most of the time.
+```
+
 ## External Access
 
 If you open the Rauthy Admin UI and navigate to `Docs`, you will find a link to the Swagger UI that each Rauthy instance
