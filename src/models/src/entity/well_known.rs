@@ -99,7 +99,7 @@ impl WellKnown {
         let authorization_endpoint = format!("{}/oidc/authorize", issuer);
         let device_authorization_endpoint = format!("{}/oidc/device", issuer);
         let token_endpoint = format!("{}/oidc/token", issuer);
-        let introspection_endpoint = format!("{}/oidc/tokenInfo", issuer);
+        let introspection_endpoint = format!("{}/oidc/introspect", issuer);
         let userinfo_endpoint = format!("{}/oidc/userinfo", issuer);
         let registration_endpoint =
             ENABLE_DYN_CLIENT_REG.then_some(format!("{}/clients_dyn", issuer));

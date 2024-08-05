@@ -4,6 +4,25 @@
 
 ### Changes
 
+#### Token Introspection
+
+The introspection endpoint has been fixed in case of the encoding like mentioned in bugfixes.  
+Additionally, authorization has been added to this endpoint. It will now make sure that the request also includes
+an `AUTHORIZATION` header with either a valid `Bearer JwtToken` or `Basic B64EncodedClientId:ClientSecret` to prevent
+token scanning.
+
+The way of authorization on this endpoint is not really standardized, so you may run into issues with your client
+application. If so, you can disable the authentication on this endpoint with
+
+```
+# Can be set to `true` to disable authorization on `/oidc/introspect`.
+# This should usually never be done, but since the auth on that endpoint is not
+# really standardized, you may run into issues with your client app.
+# If so, please open an issue about it.
+# default: false
+DISABLE_INTROSPECT_AUTH=true
+```
+
 #### Config Read
 
 The current behavior of reading in config variables was not working as intended.
@@ -20,6 +39,10 @@ How Rauthy parses config variables now correctly:
 3. all existing env vars will overwrite existing vars from `rauthy.cfg` and therefore have the higher priority
 
 [28b2457](https://github.com/sebadob/rauthy/commit/28b2457a53bf31163e94a363f2009b811e1b0b76)
+
+### Bugfixe
+
+- The token introspection endpoint was only accepting `Json` instead of `Form` requests
 
 ## 0.24.1
 

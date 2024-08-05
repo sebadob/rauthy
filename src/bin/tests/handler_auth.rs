@@ -960,7 +960,7 @@ async fn test_auth_headers() -> Result<(), Box<dyn Error>> {
 }
 
 async fn validate_token(req: TokenValidationRequest) -> Result<TokenInfo, Box<dyn Error>> {
-    let url_valid = format!("{}/oidc/tokenInfo", get_backend_url());
+    let url_valid = format!("{}/oidc/introspect", get_backend_url());
     let res = reqwest::Client::new()
         .post(&url_valid)
         .json(&req)
