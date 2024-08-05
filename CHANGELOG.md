@@ -40,7 +40,7 @@ How Rauthy parses config variables now correctly:
 
 [28b2457](https://github.com/sebadob/rauthy/commit/28b2457a53bf31163e94a363f2009b811e1b0b76)
 
-### Bugfixe
+### Bugfixes
 
 - The token introspection endpoint was only accepting `Json` instead of `Form` requests
 
