@@ -942,7 +942,7 @@ pub async fn post_token(
 pub async fn post_token_info(
     data: web::Data<AppState>,
     req: HttpRequest,
-    req_data: actix_web_validator::Json<TokenValidationRequest>,
+    req_data: actix_web_validator::Form<TokenValidationRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     match token_info::get_token_info(&data, &req, &req_data.token).await {
         Ok(info) => Ok(HttpResponse::Ok().json(info)),
@@ -969,7 +969,7 @@ pub async fn post_token_info(
 pub async fn post_token_introspect(
     data: web::Data<AppState>,
     req: HttpRequest,
-    req_data: actix_web_validator::Json<TokenValidationRequest>,
+    req_data: actix_web_validator::Form<TokenValidationRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     match token_info::get_token_info(&data, &req, &req_data.token).await {
         Ok(info) => Ok(HttpResponse::Ok().json(info)),
