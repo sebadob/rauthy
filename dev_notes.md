@@ -4,7 +4,7 @@
 
 ## Documentation TODO
 
-- mention i18n possibilities
+-> events view wide -> button height 30px -> error with overflow
 
 ## Stage 1 - essentials
 
