@@ -411,15 +411,23 @@ pub struct SessionInfoResponse<'a> {
     pub state: SessionState,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Default, Serialize, Deserialize, ToSchema)]
 pub struct TokenInfo {
     pub active: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sub: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub aud: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub username: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub iat: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nbf: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub exp: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
