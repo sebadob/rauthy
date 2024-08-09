@@ -8,7 +8,7 @@
 
 The introspection endpoint has been fixed in case of the encoding like mentioned in bugfixes.  
 Additionally, authorization has been added to this endpoint. It will now make sure that the request also includes
-an `AUTHORIZATION` header with either a valid `Bearer JwtToken` or `Basic B64EncodedClientId:ClientSecret` to prevent
+an `AUTHORIZATION` header with either a valid `Bearer JwtToken` or `Basic ClientId:ClientSecret` to prevent
 token scanning.
 
 The way of authorization on this endpoint is not really standardized, so you may run into issues with your client
@@ -22,6 +22,9 @@ application. If so, you can disable the authentication on this endpoint with
 # default: false
 DANGER_DISABLE_INTROSPECT_AUTH=true
 ```
+
+[]()
+[]()
 
 #### Config Read
 
