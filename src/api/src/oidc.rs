@@ -954,15 +954,25 @@ pub async fn post_token_info(
 }
 
 /// The token introspection endpoint for OAuth2
+///
+/// By default, this endpoint requires authorization.
+/// You can authorize in 2 different ways:
+/// 1. `Basic` auth with `client_id:client_secret`
+/// 2. `Bearer` JWT token
+///
+/// If your client application can't provide any, you can disable authorization for this endpoint
+/// by setting `DANGER_DISABLE_INTROSPECT_AUTH=true` in the Rauthy config.
+/// Only do this, if you know what you are doing and have other ways to prevent public access to
+/// this endpoint.
 #[utoipa::path(
     post,
     path = "/oidc/introspect",
     tag = "oidc",
     request_body = TokenValidationRequest,
     responses(
-    (status = 200, description = "Ok", body = TokenInfo),
-    (status = 401, description = "Unauthorized", body = ErrorResponse),
-    (status = 404, description = "NotFound", body = ErrorResponse),
+        (status = 200, description = "Ok", body = TokenInfo),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
     ),
 )]
 #[post("/oidc/introspect")]
