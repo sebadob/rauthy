@@ -1,6 +1,6 @@
 # Changelog
 
-## NIGHTLY 0.25.0-20240805
+## UNRELEASED
 
 ### Changes
 
@@ -23,7 +23,30 @@ application. If so, you can disable the authentication on this endpoint with
 DANGER_DISABLE_INTROSPECT_AUTH=true
 ```
 
-[]()
+[2e84ceb](https://github.com/sebadob/rauthy/commit/2e84ceb062c677e863f5ad524c7fe8b2af21449b)
+[7087a59](https://github.com/sebadob/rauthy/commit/7087a5998f5c687c6b7bd90a0771451ddec9068e)
+
+#### API Routes Normalization
+
+In preparation for a clean v1.0.0, some older API routes have been fixed regarding their casing and naming.
+The "current" or old routes and names will be available for exactly one release and will be phased out afterward
+to have a smooth migration, just in case someone uses these renamed routes.
+
+- `/oidc/tokenInfo` -> `/oidc/introspect`
+- `/oidc/rotateJwk` -> `/oidc/rotate_jwk`
+
+Since I don't like `kebab-case`, most API routes are written in `snake_case`, with 2 exceptions that follow RFC namings:
+
+- `openid-configuration`
+- `web-identity`
+
+All the `*info` routes like `userinfo` or `sessioninfo` are not `kebab_case` on purpose, just to match other IdPs and
+RFCs a bit more.
+
+There is not a single `camelCase` anymore in the API routes to avoid confusion and issues in situations where you could
+mistake an uppercase `I` as a lowercase `l`. The current `camelCase` endpoints only exist for a smoother migration and
+will be phased out with the next bigger release.
+
 []()
 
 #### Config Read
