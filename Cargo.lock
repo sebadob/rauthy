@@ -79,7 +79,7 @@ dependencies = [
  "brotli",
  "bytes",
  "bytestring",
- "derive_more",
+ "derive_more 0.99.18",
  "encoding_rs",
  "flate2",
  "futures-core",
@@ -121,7 +121,7 @@ dependencies = [
  "actix-multipart-derive",
  "actix-utils",
  "actix-web",
- "derive_more",
+ "derive_more 0.99.18",
  "futures-core",
  "futures-util",
  "httparse",
@@ -253,7 +253,7 @@ dependencies = [
  "bytestring",
  "cfg-if",
  "cookie",
- "derive_more",
+ "derive_more 0.99.18",
  "encoding_rs",
  "futures-core",
  "futures-util",
@@ -306,9 +306,9 @@ dependencies = [
 
 [[package]]
 name = "actix-web-lab"
-version = "0.20.2"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7675c1a84eec1b179c844cdea8488e3e409d8e4984026e92fa96c87dd86f33c6"
+checksum = "2a965e3e826aa4737af33666aa09ed949aa1837706fda2adee07039347be50d6"
 dependencies = [
  "actix-http",
  "actix-router",
@@ -318,16 +318,16 @@ dependencies = [
  "actix-web-lab-derive",
  "ahash",
  "arc-swap",
- "async-trait",
  "bytes",
  "bytestring",
  "csv",
- "derive_more",
+ "derive_more 1.0.0",
+ "form_urlencoded",
  "futures-core",
  "futures-util",
  "http 0.2.12",
  "impl-more",
- "itertools 0.12.1",
+ "itertools 0.13.0",
  "local-channel",
  "mediatype",
  "mime",
@@ -337,6 +337,7 @@ dependencies = [
  "serde",
  "serde_html_form",
  "serde_json",
+ "serde_path_to_error",
  "tokio",
  "tokio-stream",
  "tracing",
@@ -344,9 +345,9 @@ dependencies = [
 
 [[package]]
 name = "actix-web-lab-derive"
-version = "0.20.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9aa0b287c8de4a76b691f29dbb5451e8dd5b79d777eaf87350c9b0cbfdb5e968"
+checksum = "008f98f5a68eeacf5e6d44ed74ce03c1b906baa53eabfb41faf0f5f40bd685f8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1683,6 +1684,27 @@ dependencies = [
  "quote",
  "rustc_version",
  "syn 2.0.72",
+]
+
+[[package]]
+name = "derive_more"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a9b99b9cbbe49445b21764dc0625032a89b145a2642e67603e1c936f5458d05"
+dependencies = [
+ "derive_more-impl",
+]
+
+[[package]]
+name = "derive_more-impl"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb7330aeadfbe296029522e6c40f315320aba36fc43a5b3632f3795348f3bd22"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.72",
+ "unicode-xid",
 ]
 
 [[package]]
@@ -4179,7 +4201,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.25.0-20240809"
+version = "0.25.0-20240824"
 dependencies = [
  "actix-service",
  "actix-web",
@@ -4220,7 +4242,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.25.0-20240809"
+version = "0.25.0-20240824"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4242,7 +4264,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.25.0-20240809"
+version = "0.25.0-20240824"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4268,7 +4290,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.25.0-20240809"
+version = "0.25.0-20240824"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4279,7 +4301,7 @@ dependencies = [
  "chrono",
  "cryptr",
  "css-color",
- "derive_more",
+ "derive_more 1.0.0",
  "flume",
  "image",
  "oxiri",
@@ -4302,7 +4324,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.25.0-20240809"
+version = "0.25.0-20240824"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4333,7 +4355,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.25.0-20240809"
+version = "0.25.0-20240824"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4352,7 +4374,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.25.0-20240809"
+version = "0.25.0-20240824"
 dependencies = [
  "accept-language",
  "actix",
@@ -4371,7 +4393,7 @@ dependencies = [
  "chrono",
  "cryptr",
  "css-color",
- "derive_more",
+ "derive_more 1.0.0",
  "dotenvy",
  "ed25519-compact",
  "flume",
@@ -4424,7 +4446,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.25.0-20240809"
+version = "0.25.0-20240824"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4443,7 +4465,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.25.0-20240809"
+version = "0.25.0-20240824"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4461,7 +4483,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.25.0-20240809"
+version = "0.25.0-20240824"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4470,7 +4492,7 @@ dependencies = [
  "chacha20poly1305",
  "chrono",
  "cryptr",
- "derive_more",
+ "derive_more 1.0.0",
  "jwt-simple",
  "pretty_assertions",
  "rand",
@@ -5354,6 +5376,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.72",
+]
+
+[[package]]
+name = "serde_path_to_error"
+version = "0.1.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af99884400da37c88f5e9146b7f1fd0fbcae8f6eec4e9da38b67d05486f814a6"
+dependencies = [
+ "itoa",
+ "serde",
 ]
 
 [[package]]

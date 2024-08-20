@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.25.0-20240809"
+version = "0.25.0-20240824"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -25,7 +25,7 @@ actix-multipart = "0.7.2"
 actix-service = "2"
 actix-web = { version = "4", features = ["rustls-0_23"] }
 actix-web-actors = "4"
-actix-web-lab = "0.20"
+actix-web-lab = "0.22"
 actix-web-prom = "0.8.0"
 actix-web-validator = "6"
 anyhow = "1"
@@ -42,7 +42,7 @@ cidr = "0.2.2"
 cron = "0.12"
 cryptr = { version = "0.5.1", features = ["s3", "streaming"] }
 css-color = "0.2"
-derive_more = "0.99"
+derive_more = "1"
 dotenvy = "0.15"
 ed25519-compact = { version = "2.0.4", features = ["ed25519"] }
 flume = "0.11"
