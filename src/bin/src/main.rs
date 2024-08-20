@@ -545,6 +545,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(oidc::get_logout)
                             .service(oidc::post_logout)
                             .service(oidc::rotate_jwk)
+                            .service(oidc::rotate_jwk_deprecated)
                             .service(oidc::post_session)
                             .service(oidc::get_session_info)
                             .service(oidc::get_session_xsrf)

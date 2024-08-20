@@ -292,7 +292,7 @@ export async function postProviderLookup(data) {
 }
 
 export async function postRotateJwk() {
-    const res = await fetch(`/auth/v1/oidc/rotateJwk`, {
+    const res = await fetch(`/auth/v1/oidc/rotate_jwk`, {
         method: 'POST',
         headers: getHeaders(),
     });
