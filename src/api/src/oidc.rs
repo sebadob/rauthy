@@ -699,15 +699,27 @@ pub async fn post_logout(
 /// - rauthy_admin
 #[utoipa::path(
     post,
-    path = "/oidc/rotateJwk",
+    path = "/oidc/rotate_jwk",
     tag = "oidc",
     responses(
         (status = 200, description = "Ok"),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
     ),
 )]
-#[post("/oidc/rotateJwk")]
+#[post("/oidc/rotate_jwk")]
 pub async fn rotate_jwk(
+    data: web::Data<AppState>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
+
+    JWKS::rotate(&data)
+        .await
+        .map(|_| HttpResponse::Ok().finish())
+}
+
+#[post("/oidc/rotateJwk")]
+pub async fn rotate_jwk_deprecated(
     data: web::Data<AppState>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {

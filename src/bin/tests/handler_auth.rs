@@ -52,7 +52,7 @@ async fn test_certs() -> Result<(), Box<dyn Error>> {
     //     aw!(reqwest::get(&url)).unwrap();
     // }
     // rotate JWKs
-    let url_rotate = format!("{}/oidc/rotateJwk", backend_url);
+    let url_rotate = format!("{}/oidc/rotate_jwk", backend_url);
     let res = reqwest::Client::new()
         .post(&url_rotate)
         .headers(auth_headers.clone())
