@@ -44,10 +44,10 @@ All the `*info` routes like `userinfo` or `sessioninfo` are not `kebab_case` on 
 RFCs a bit more.
 
 There is not a single `camelCase` anymore in the API routes to avoid confusion and issues in situations where you could
-mistake an uppercase `I` as a lowercase `l`. The current `camelCase` endpoints only exist for a smoother migration and
-will be phased out with the next bigger release.
+for instance mistake an uppercase `I` as a lowercase `l`. The current `camelCase` endpoints only exist for a smoother
+migration and will be phased out with the next bigger release.
 
-[]()
+[107f148](https://github.com/sebadob/rauthy/commit/107f14807760e56a1671e587fa9b08284589f932)
 
 #### Config Read
 
