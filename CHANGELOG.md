@@ -1,5 +1,22 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### Migration to `ruma`
+
+To send out Matrix notifications, Rauthy was using the `matrix-sdk` up until now. This crate however comes with a huge
+list of dependencies and at the same time pushes too few updates. I had quite a few issues with it in the past because
+it was blocking me from updating other dependencies.  
+To solve this issue, I decided to drop `matrix-sdk` in favor of `ruma`, which it is using under the hood anyway. With
+`ruma`, I needed to do a bit more work myself since it's more low level, but at the same time I was able to reduce the
+list of total dependencies Rauthy has by ~90 crates.  
+This made it possible to finally bump other dependencies and to start the internal switch
+from [redhac](https://github.com/sebadob/redhac) to [Hiqlite](https://github.com/sebadob/hiqlite) for caching.
+
+[]()
+
 ## v0.25.0
 
 ### Changes
