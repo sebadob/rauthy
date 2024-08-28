@@ -114,6 +114,9 @@ impl EventNotifier {
                 })
                 .unwrap_or(EventLevel::Notice);
 
+            let server_url = env::var("EVENT_MATRIX_SERVER_URL")
+                .unwrap_or_else(|_| "https://matrix-client.matrix.org".to_string());
+
             let room_id = env::var("EVENT_MATRIX_ROOM_ID")
                 .expect("EVENT_MATRIX_USER_ID is given but no EVENT_MATRIX_ROOM_ID");
 
@@ -131,6 +134,7 @@ impl EventNotifier {
             let root_ca_path = env::var("EVENT_MATRIX_ROOT_CA_PATH").ok();
 
             match NotifierMatrix::try_new(
+                server_url,
                 &user_id,
                 &room_id,
                 access_token,

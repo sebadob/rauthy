@@ -50,6 +50,7 @@ futures = "0.3"
 futures-util = "0.3"
 gethostname = "0.5.0"
 hex = { version = "0.4", features = ["serde"] }
+#hiqlite = { git = "https://github.com/sebadob/hiqlite" }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
 image = { version = "0.25.1", default-features = false, features = [
@@ -60,9 +61,6 @@ jwt-simple = { version = "0.12.6", default-features = false, features = ["pure-r
 lazy_static = "1"
 lettre = { version = "0.11", default-features = false, features = [
     "builder", "smtp-transport", "tokio1-rustls-tls", "tracing"
-] }
-matrix-sdk = { version = "0.7.1", default-features = false, features = [
-    "e2e-encryption", "markdown", "rustls-tls"
 ] }
 mime = "0.3.17"
 mime_guess = "2"
@@ -83,6 +81,7 @@ ring = "0.17"
 rio_api = "0.8.4"
 rio_turtle = "0.8.4"
 rsa = { version = "0.9.3", features = ["serde", "sha2"] }
+ruma = { version = "0.10.1", features = ["client-api-c", "client-ext-client-api", "client-reqwest", "markdown", "rand"] }
 rustls = { version = "0.23", default-features = false, features = ["logging", "std", "tls12", "ring"] }
 rustls-pki-types = "1.4.1"
 rustls-pemfile = "2.1.2"
@@ -92,9 +91,8 @@ serde_json = "1"
 serde_json_path = "0.6.7"
 serde_with = { version = "3.8.1", features = ["macros"] }
 spow = "0.3"
-# matrix-sdk block upgrade to 0.8 -> maybe drop matrix-sdk and do everything manually,
-# since it has been creating problems a few times already
-sqlx = { version = "0.7", features = ["macros", "migrate", "postgres", "runtime-tokio", "sqlite", "tls-rustls", "uuid"] }
+# pinned to 0.8.0 because 0.8.1 has been yanked
+sqlx = { version = "=0.8.0", features = ["macros", "migrate", "postgres", "runtime-tokio", "sqlite", "tls-rustls", "uuid"] }
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
 tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "tracing"] }

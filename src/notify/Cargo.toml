@@ -12,8 +12,9 @@ rauthy-error = { path = "../error" }
 async-trait = { workspace = true }
 chrono = { workspace = true }
 flume = { workspace = true }
-matrix-sdk = { workspace = true }
+futures-util = { workspace = true }
 reqwest = { workspace = true }
+ruma = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tracing = { workspace = true }
