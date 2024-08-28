@@ -420,3 +420,13 @@ impl From<std::fmt::Error> for ErrorResponse {
         )
     }
 }
+
+impl From<ruma::client::Error<reqwest::Error, ruma::api::client::Error>> for ErrorResponse {
+    fn from(value: ruma::client::Error<reqwest::Error, ruma::api::client::Error>) -> Self {
+        trace!("{:?}", value);
+        ErrorResponse::new(
+            ErrorResponseType::Connection,
+            format!("matrix error: {:?}", value),
+        )
+    }
+}
