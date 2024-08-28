@@ -1,7 +1,7 @@
 # Rauthy
 
 **CAUTION:**  
-There has not been any third party security audit for this project.  
+There has not been any third party security audit for this project.
 Use this software at your own risk!
 
 **INFO:**  
@@ -69,13 +69,13 @@ come in the future.
 Unlike many other options, `rauthy` does have an Admin UI which can be used to basically do almost any operation you
 might need to administrate the whole application and its users. There is also an account dashboard for each individual
 user, where users will get a basic overview over their account and can self-manage som values, password, passkeys, and
-so son.  
+so on.  
 Some Screenshots and further introduction will follow in the future.
 
 ### Client Branding
 
-You have a simple way to create some kind of branding or stylized look for the Login page for each client.  
-The whole color theme can be changed and each client can have its own custom logo.  
+You have a simple way to create some kind of branding or stylized look for the Login page for each client.
+The whole color theme can be changed and each client can have its own custom logo.
 Additionally, if you modify the branding for the default `rauthy` client, it will not only change the look for the Login
 page, but also for the Account and Admin page.
 
@@ -105,7 +105,7 @@ Benchmarks for v1.0.0 have not been done yet, but after some first basic tests a
 can confirm that Rauthy has no issues handling millions of users. The first very basic tests have been done with SQLite
 and ~11 million users. All parts and functions kept being fast and responsive with the only exception that the
 user-search in the admin UI was slowed down with such a high user count. It took ~2-3 seconds at that point to get a
-result, which should be no issue at all so far (Postgres tests have not been done yet).  
+result, which should be no issue at all so far (Postgres tests have not been done yet).
 The only limiting factor at that point will be your configuration and needs for password hashing security. It really
 depends on how many resources you want to use for hashing (more resources == more secure) and how many concurrent logins
 at the exact same time you need to support.
@@ -113,7 +113,7 @@ at the exact same time you need to support.
 ### Already in production
 
 Rauthy is already being used in production, and it works with all typical OIDC clients (so far). It was just not an
-open source project for quite some time.  
+open source project for quite some time.
 Keycloak was a rough inspiration in certain places and if something is working with Keycloak, it does with `rauthy` too
 (again, so far).
 
