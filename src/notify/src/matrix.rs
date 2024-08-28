@@ -281,39 +281,5 @@ impl Notify for NotifierMatrix {
                 }
             }
         }
-
-        //
-        // if let Some(room) = self.client.get_room(&self.room_id) {
-        //     if let Err(err) = room.send(build_msg()).await {
-        //         error!("Sending Matrix Notification: {:?} - retrying once", err);
-        //
-        //         tokio::time::sleep(Duration::from_secs(1)).await;
-        //
-        //         if self.logged_in_check_sync().await.is_err() {
-        //             error!(
-        //                 "Matrix Notification Client is not logged in anymore when it was.\
-        //                 This should never happen."
-        //             );
-        //             if let Err(err) = self.logged_in_check_sync().await {
-        //                 error!("Unable to log back in again to Matrix: {:?}", err)
-        //             } else {
-        //                 let _ = self.logged_in_check_sync().await;
-        //                 room.send(build_msg()).await.map_err(|err| {
-        //                     ErrorResponse::new(
-        //                         ErrorResponseType::Connection,
-        //                         format!("Matrix connection error: {:?}", err),
-        //                     )
-        //                 })?;
-        //             }
-        //         }
-        //     }
-        //
-        //     Ok(())
-        // } else {
-        //     Err(ErrorResponse::new(
-        //         ErrorResponseType::Connection,
-        //         "Matrix Notification Room went away - check your config".to_string(),
-        //     ))
-        // }
     }
 }
