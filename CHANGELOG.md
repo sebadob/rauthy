@@ -17,6 +17,16 @@ list of total dependencies Rauthy has by ~90 crates.
 This made it possible to finally bump other dependencies and to start the internal switch
 from [redhac](https://github.com/sebadob/redhac) to [Hiqlite](https://github.com/sebadob/hiqlite) for caching.
 
+**IMPORTANT:**  
+If you are using a self-hosted homeserver or anything else than the official `matrix.org` servers for Matrix event
+notifications, you must set a newly introduced config variable:
+
+```
+# URL of your Matrix server.
+# default: https://matrix.org
+#EVENT_MATRIX_SERVER_URL=https://matrix.org
+```
+
 []()
 
 ## v0.25.0
