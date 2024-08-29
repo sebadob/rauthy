@@ -166,7 +166,7 @@ mailcrab-start:
       --net host \
       --name {{container_mailcrab}} \
       --restart unless-stopped \
-      marlonb/mailcrab
+      docker.io/marlonb/mailcrab
 
 # Stops mailcrab
 mailcrab-stop:
@@ -183,7 +183,7 @@ postgres-start:
       --net host \
       --name {{container_postgres}} \
       --restart unless-stopped \
-      postgres:16.2
+      docker.io/library/postgres:16.2-alpine
 
     sleep 3
     just migrate-postgres
