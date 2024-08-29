@@ -29,6 +29,7 @@ impl SsrJson for I18nAuthorize<'_> {
         match lang {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
+            Language::ZhHans => Self::build_zh_hans(),
         }
     }
 
@@ -82,6 +83,29 @@ hinzufügen."#,
             provide_mfa: "Bitte stellen Sie Ihr MFA Gerät zur Verfügung",
             request_expires: "Anfrage läuft ab",
             sign_up: "Benutzer Registrierung",
+        }
+    }
+
+    fn build_zh_hans() -> Self {
+        Self {
+            client_force_mfa: r#"本次登陆强制使用多因子认证以增强安全性。
+要完成登陆，请登入您的账户并添加一个登陆密钥。"#,
+            email: "电子邮件地址",
+            email_bad_format: "错误的电子邮件地址格式",
+            email_required: "电子邮件地址必填。",
+            email_sent_msg: "如果您的电子邮件存在，我们已发送请求邮件。",
+            http_429: "过多无效输入，已锁定至：",
+            invalid_credentials: "无效证明",
+            invalid_key_used: "无效密钥",
+            login: "登陆",
+            mfa_ack: "已确认",
+            password: "密码",
+            password_forgotten: "忘记密码",
+            password_request: "请求",
+            password_required: "密码必填。",
+            provide_mfa: "请使用MFA设备登陆",
+            request_expires: "请求过期",
+            sign_up: "用户注册",
         }
     }
 }

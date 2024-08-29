@@ -14,6 +14,7 @@ impl SsrJson for I18nEmailConfirmChange<'_> {
         match lang {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
+            Language::ZhHans => Self::build_zh_hans(),
         }
     }
 
@@ -36,6 +37,14 @@ impl I18nEmailConfirmChange<'_> {
             subject: "E-Mail Wechsel bestätigt für",
             msg: "Ihre E-Mail Adresse wurde erfolgreich geändert zu:",
             msg_from_admin: "Diese Änderung wurde durch einen Administrator durchgeführt.",
+        }
+    }
+
+    fn build_zh_hans() -> Self {
+        Self {
+            subject: "电子邮件地址已更新：",
+            msg: "您的电子邮件地址已成功更新为：",
+            msg_from_admin: "此操作由管理员完成。",
         }
     }
 }

@@ -15,6 +15,7 @@ impl SsrJson for I18nEmailConfirmChangeHtml<'_> {
         match lang {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
+            Language::ZhHans => Self::build_zh_hans(),
         }
     }
 
@@ -39,6 +40,15 @@ impl I18nEmailConfirmChangeHtml<'_> {
             text_changed: "Ihre E-Mail Adresse wurde erfolgreich geändert von",
             text_login: "Sie können sich jetzt mit der neuen Adresse einloggen.",
             to: "zu",
+        }
+    }
+
+    fn build_zh_hans() -> Self {
+        Self {
+            title: "电子邮件地址已更新",
+            text_changed: "您的电子邮件地址已从",
+            text_login: "您现在可以使用您的新地址进行登陆。",
+            to: "更新为",
         }
     }
 }

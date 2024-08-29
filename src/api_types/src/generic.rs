@@ -33,6 +33,7 @@ pub enum I18nContent {
 pub enum Language {
     En,
     De,
+    ZhHans,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]

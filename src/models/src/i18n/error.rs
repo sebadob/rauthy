@@ -21,6 +21,7 @@ impl I18nError<'_> {
         match lang {
             Language::En => Self::build_en(status_code, details_text.map(|t| t.into())),
             Language::De => Self::build_de(status_code, details_text.map(|t| t.into())),
+            Language::ZhHans => Self::build_zh_hans(status_code, details_text.map(|t| t.into())),
         }
     }
 }
@@ -30,6 +31,7 @@ impl SsrJson for I18nError<'_> {
         match lang {
             Language::En => Self::build_en(StatusCode::NOT_FOUND, None),
             Language::De => Self::build_de(StatusCode::NOT_FOUND, None),
+            Language::ZhHans => Self::build_zh_hans(StatusCode::NOT_FOUND, None),
         }
     }
 
@@ -71,6 +73,26 @@ impl I18nError<'_> {
             error: status_code.to_string(),
             error_text,
             details: "Details Anzeigen",
+            details_text,
+        }
+    }
+
+    fn build_zh_hans(status_code: StatusCode, details_text: Option<Cow<'static, str>>) -> Self {
+        let error_text = match status_code {
+            StatusCode::BAD_REQUEST => {
+                "您的请求异常，请参见详情。"
+            }
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
+                "拒绝访问——您未被允许访问此资源。"
+            }
+            StatusCode::INTERNAL_SERVER_ERROR => "内部服务器错误",
+            _ => "找不到请求的资源",
+        };
+
+        Self {
+            error: status_code.to_string(),
+            error_text,
+            details: "显示详情",
             details_text,
         }
     }

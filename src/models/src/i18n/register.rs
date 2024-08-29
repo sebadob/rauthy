@@ -25,6 +25,7 @@ impl SsrJson for I18nRegister<'_> {
         match lang {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
+            Language::ZhHans => Self::build_zh_hans(),
         }
     }
 
@@ -44,7 +45,7 @@ impl I18nRegister<'_> {
             email_check: "Please check your E-Mail inbox",
             family_name: "Family Name",
             given_name: "Given Name",
-            regex_name: "Name with 2 - 32 non-special characters",
+            regex_name: "Name should have 2 - 32 non-special characters",
             register: "Register",
             required: "Required",
             success: "Registration successful",
@@ -67,6 +68,24 @@ impl I18nRegister<'_> {
             required: "Notwendig",
             success: "Registrierung erfolgreich",
             user_reg: "Benutzer Registrierung",
+        }
+    }
+
+    fn build_zh_hans() -> Self {
+        Self {
+            domain_allowed: "允许的域名：",
+            domain_err: "此电子邮件域名不被允许",
+            domain_restricted: "电子邮件域名被限制",
+            email: "电子邮件",
+            email_bad_format: "错误的电子邮件地址格式",
+            email_check: "请检查您的电子邮件收件箱",
+            family_name: "姓氏",
+            given_name: "名字",
+            regex_name: "名字应有2-32个非特殊字符。",
+            register: "注册",
+            required: "必填",
+            success: "注册成功",
+            user_reg: "用户注册",
         }
     }
 }

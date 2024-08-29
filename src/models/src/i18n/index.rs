@@ -15,6 +15,7 @@ impl SsrJson for I18nIndex<'_> {
         match lang {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
+            Language::ZhHans => Self::build_zh_hans(),
         }
     }
 
@@ -37,6 +38,14 @@ impl I18nIndex<'_> {
             register: "Registrieren",
             account_login: "Account",
             admin_login: "Admin",
+        }
+    }
+
+    fn build_zh_hans() -> Self {
+        Self {
+            register: "注册",
+            account_login: "登陆",
+            admin_login: "管理",
         }
     }
 }
