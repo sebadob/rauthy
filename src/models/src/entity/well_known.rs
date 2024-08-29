@@ -164,7 +164,7 @@ impl WellKnown {
         ];
 
         let service_documentation = "https://sebadob.github.io/rauthy/".to_string();
-        let ui_locales_supported = vec!["de".to_string(), "en".to_string()];
+        let ui_locales_supported = vec!["de".to_string(), "en".to_string(), "zh-hans".to_string()];
 
         WellKnown {
             issuer: String::from(issuer),

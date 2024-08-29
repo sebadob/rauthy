@@ -15,6 +15,7 @@ impl SsrJson for I18nLogout<'_> {
         match lang {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
+            Language::ZhHans => Self::build_zh_hans(),
         }
     }
 
@@ -38,6 +39,14 @@ impl I18nLogout<'_> {
             confirm_msg:
                 "Sind Sie sicher, dass Sie sich ausloggen und die Session beenden möchten?",
             cancel: "Abbrechen",
+        }
+    }
+
+    fn build_zh_hans() -> Self {
+        Self {
+            logout: "退出登录",
+            confirm_msg: "您确定要退出登录并结束会话吗？",
+            cancel: "取消",
         }
     }
 }

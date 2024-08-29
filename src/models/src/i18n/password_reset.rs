@@ -36,6 +36,7 @@ impl SsrJson for I18nPasswordReset<'_> {
         match lang {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
+            Language::ZhHans => Self::build_zh_hans(),
         }
     }
 
@@ -60,8 +61,8 @@ impl I18nPasswordReset<'_> {
             new_acc_desc_1:
                 "You have the option between two account types: passwordless or traditional password",
             new_acc_desc_2: r#"The passwordless account is always preferred, because it provides
-a way stronger security. You will need at least one passkey (Yubikey, Apple Touch ID, Windows Hello,
-...) to create such an account. Your device must embreace the Fido2 standard. For more information
+a way with stronger security. You will need at least one passkey (Yubikey, Apple Touch ID, Windows Hello,
+...) to create such an account. Your device must embrace the FIDO2 standard. For more information
 about this, you may follow this link: "#,
             new_account: "New Account",
             password_reset: "Password Reset",
@@ -112,6 +113,37 @@ FIDO2 Standard gerecht wird. Für weitere Informationen können Sie diesem Link 
             success_passkey_2: r#"Bitte loggen Sie sich direkt in Ihren Account ein und registrieren
 Sie mindestens einen weiteren Backup Passkey. Ein passwortloser Account kann nicht den Passwort
 Reset via E-Mail nutzen für den Fall, dass der derzeitige Passkey abhanden kommt."#,
+        }
+    }
+
+    pub fn build_zh_hans() -> Self {
+        Self {
+            password_policy: I18nPasswordPolicy::build_zh_hans(),
+
+            account_login: "账户登录",
+            bad_format: "格式错误",
+            fido_link: "https://fidoalliance.org/fido2/?lang=zh-hans",
+            generate: "生成",
+            mfa: I18nAccountMfa::build_zh_hans(),
+            new_acc_desc_1:
+                "您可以在无密码账户和传统的密码账户之中选择其一。",
+            new_acc_desc_2: r#"无密码账户应被优先考虑，因为其提供更强的安全性。
+您需要至少一个支持FIDO2标准的通行密钥（Yubikey、Apple Touch ID或Windows Hello等）以完成账户创建。
+获取更多信息："#,
+            new_account: "新账户",
+            password_reset: "密码重置",
+            password: "密码",
+            passwordless: "FIDO通行密钥",
+            password_confirm: "密码确认",
+            password_no_match: "密码不匹配",
+            required: "必填",
+            save: "保存",
+            success_1: "密码已成功更新。",
+            success_2: "您将被重定向。",
+            success_3: "如果您未被重定向，请点击此链接：",
+            success_passkey_1: "您的通行密钥已成功注册。",
+            success_passkey_2: r#"请登入您的账户并尽快注册一个备份密钥。
+对于仅密钥登陆的账户，在丢失您当前的密钥时，您无法通过电子邮件进行密码重置。"#,
         }
     }
 }

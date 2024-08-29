@@ -63,7 +63,7 @@
         <LangSelector absolute absoluteRight updateBackend/>
 
         <div class="headerPhone">
-            <h3>{t.user} {t.account}</h3>
+            <h3>{t.account}</h3>
         </div>
 
         <div class="container">
@@ -93,7 +93,7 @@
         <LangSelector absolute updateBackend/>
 
         <div class="header">
-            <h3>{t.user} {t.account}</h3>
+            <h3>{t.account}</h3>
         </div>
 
         <div class="container">

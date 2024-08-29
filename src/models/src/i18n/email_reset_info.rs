@@ -16,6 +16,7 @@ impl SsrJson for I18nEmailResetInfo<'_> {
         match lang {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
+            Language::ZhHans => Self::build_zh_hans(),
         }
     }
 
@@ -42,6 +43,16 @@ impl I18nEmailResetInfo<'_> {
             expires_2: " läuft demnächst ab:",
             update: "Sie können es hier erneuern:",
             button_text: "Passwort Erneuern",
+        }
+    }
+
+    fn build_zh_hans() -> Self {
+        Self {
+            subject: "您的密码即将过期",
+            expires_1: "",
+            expires_2: "的密码即将过期：",
+            update: "您可以在此处更新密码：",
+            button_text: "更新密码",
         }
     }
 }

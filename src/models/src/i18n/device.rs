@@ -27,6 +27,7 @@ impl SsrJson for I18nDevice<'_> {
         match lang {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
+            Language::ZhHans => Self::build_zh_hans(),
         }
     }
 
@@ -42,7 +43,7 @@ impl I18nDevice<'_> {
             auto_redirect_account: "You will be redirected to your account now",
             close_window: "You can close this window now.",
             decline: "Decline",
-            desc: "Please enter the {{count}} character user code from your device.",
+            desc: "Please enter the {{count}} characters user code from your device.",
             desc_scopes: "The device requests access to:",
             err_too_short: "Input too short",
             err_too_long: "Input too long",
@@ -73,6 +74,26 @@ impl I18nDevice<'_> {
             title: "Gerät Authorisierung",
             user_code: "Benutzer Code",
             wrong_or_expired: "Ungültiger oder abgelaufener Code",
+        }
+    }
+
+    fn build_zh_hans() -> Self {
+        Self {
+            accept: "接受",
+            auto_redirect_account: "您将被自动重定向至您的账户。",
+            close_window: "您现在可以关闭此窗口了。",
+            decline: "拒绝",
+            desc: "请输入来自您的设备的{{count}}位用户代码。",
+            desc_scopes: "此设备请求访问：",
+            err_too_short: "输入过短",
+            err_too_long: "输入过长",
+            invalid_input: "无效输入",
+            is_accepted: "请求已被接受。",
+            is_declined: "请求已被拒绝。",
+            submit: "提交",
+            title: "设备授权",
+            user_code: "用户代码",
+            wrong_or_expired: "代码错误或已过期",
         }
     }
 }

@@ -171,7 +171,7 @@
     </div>
 
     <div class="row">
-        <div class={classLabel}><b>{t.user} {t.enabled}:</b></div>
+        <div class={classLabel}><b>{t.userEnabled}:</b></div>
         <CheckIcon check={user.enabled}/>
     </div>
 
@@ -191,7 +191,7 @@
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.user} {t.created}:</b></div>
+        <div class={classLabel}><b>{t.userCreated}:</b></div>
         <span class="value">{formatDateFromTs(user.created_at)}</span>
     </div>
 

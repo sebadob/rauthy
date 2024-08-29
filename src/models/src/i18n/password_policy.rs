@@ -39,4 +39,17 @@ impl I18nPasswordPolicy<'_> {
             not_recent: "Keins der letzten Passwörter",
         }
     }
+
+    pub(crate) fn build_zh_hans() -> Self {
+        Self {
+            password_policy: "密码要求",
+            length_min: "最小长度",
+            length_max: "最长长度",
+            lowercase_min: "最少小写字母",
+            uppercase_min: "最少大写字母",
+            digits_min: "最少数字",
+            special_min: "最少特殊字符",
+            not_recent: "不是最近使用过的密码之一",
+        }
+    }
 }

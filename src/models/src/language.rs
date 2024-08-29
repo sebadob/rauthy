@@ -15,17 +15,19 @@ use tracing::debug;
 pub enum Language {
     En,
     De,
+    ZhHans,
 }
 
 impl Language {
-    fn all_available<'a>() -> [&'a str; 4] {
-        ["en", "en-US", "de", "de-DE"]
+    fn all_available<'a>() -> [&'a str; 6] {
+        ["en", "en-US", "de", "de-DE", "zh", "zh-Hans"]
     }
 
     pub fn as_str(&self) -> &str {
         match self {
             Language::En => "en",
             Language::De => "de",
+            Language::ZhHans => "zh-Hans",
         }
     }
 }
@@ -59,6 +61,7 @@ impl From<&str> for Language {
         match value {
             "de" | "de-DE" => Self::De,
             "en" | "en-US" => Self::En,
+            "zh" | "zh-hans" | "zh-Hans" => Self::ZhHans,
             _ => Self::default(),
         }
     }
@@ -97,6 +100,7 @@ impl From<rauthy_api_types::generic::Language> for Language {
         match value {
             rauthy_api_types::generic::Language::En => Self::En,
             rauthy_api_types::generic::Language::De => Self::De,
+            rauthy_api_types::generic::Language::ZhHans => Self::ZhHans,
         }
     }
 }
@@ -106,6 +110,7 @@ impl From<Language> for rauthy_api_types::generic::Language {
         match value {
             Language::En => Self::En,
             Language::De => Self::De,
+            Language::ZhHans => Self::ZhHans,
         }
     }
 }
