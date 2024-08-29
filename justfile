@@ -7,6 +7,7 @@ export DEV_HOST := `echo $PUB_URL | cut -d':' -f1`
 export USER :=  `echo "$(id -u):$(id -g)"`
 
 docker := `echo ${DOCKER:-docker}`
+map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
 
 arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
 
@@ -34,7 +35,7 @@ _run +args:
     @{{docker}} run --rm -it \
       -v $HOME/.cargo/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
-      -u $USER \
+      {{map_docker_user}} \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
       --name rauthy \
@@ -44,7 +45,7 @@ _run-pg +args:
     @{{docker}} run --rm -it \
       -v $HOME/.cargo/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
-      -u $USER \
+      {{map_docker_user}} \
       -e DATABASE_URL={{db_url_postgres}} \
       --net host \
       --name rauthy-postgres \
@@ -55,7 +56,7 @@ _run-ui +args:
       -v $HOME/.cargo/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       -e npm_config_cache=/work/.npm_cache \
-      -u $USER \
+      {{map_docker_user}} \
       --net host \
       -w/work/frontend \
       --name rauthy-ui \
@@ -65,7 +66,7 @@ _run-bg +args:
     @{{docker}} run --rm -d \
       -v $HOME/.cargo/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
-      -u $USER \
+      {{map_docker_user}} \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
       --name {{container_test_backend}} \
@@ -75,7 +76,7 @@ _run-bg-pg +args:
     @{{docker}} run --rm -d \
       -v $HOME/.cargo/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
-      -u $USER \
+      {{map_docker_user}} \
       -e DATABASE_URL={{db_url_postgres}} \
       --net host \
       --name {{container_test_backend}} \
@@ -124,7 +125,7 @@ create-root-ca:
 # Intermediate CA DEV password: 123SuperMegaSafe
 create-end-entity-tls:
     # create the new certificate
-    {{docker}} run --rm -it -v ./tls/ca:/ca -u $USER \
+    {{docker}} run --rm -it -v ./tls/ca:/ca {{map_docker_user}} \
           ghcr.io/sebadob/nioca \
           x509 \
           --cn 'localhost' \
@@ -271,7 +272,7 @@ test-backend: test-backend-stop migrate prepare
     {{docker}} run --rm -it \
       -v $HOME/.cargo/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
-      -u $USER \
+      {{map_docker_user}} \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
       --name {{container_test_backend}} \
