@@ -6,6 +6,9 @@ export TODAY := `date +%Y%m%d`
 export DEV_HOST := `echo $PUB_URL | cut -d':' -f1`
 export USER :=  `echo "$(id -u):$(id -g)"`
 
+docker := `echo ${DOCKER:-docker}`
+map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
+
 arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
 
 builder_image := "ghcr.io/sebadob/rauthy-builder"
@@ -29,51 +32,51 @@ default:
     @just --list
 
 _run +args:
-    @docker run --rm -it \
+    @{{docker}} run --rm -it \
       -v $HOME/.cargo/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
-      -u $USER \
+      {{map_docker_user}} \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
       --name rauthy \
       {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
 
 _run-pg +args:
-    @docker run --rm -it \
+    @{{docker}} run --rm -it \
       -v $HOME/.cargo/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
-      -u $USER \
+      {{map_docker_user}} \
       -e DATABASE_URL={{db_url_postgres}} \
       --net host \
       --name rauthy-postgres \
       {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
 
 _run-ui +args:
-    @docker run --rm -it \
+    @{{docker}} run --rm -it \
       -v $HOME/.cargo/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       -e npm_config_cache=/work/.npm_cache \
-      -u $USER \
+      {{map_docker_user}} \
       --net host \
       -w/work/frontend \
       --name rauthy-ui \
       {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
 
 _run-bg +args:
-    @docker run --rm -d \
+    @{{docker}} run --rm -d \
       -v $HOME/.cargo/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
-      -u $USER \
+      {{map_docker_user}} \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
       --name {{container_test_backend}} \
       {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
 
 _run-bg-pg +args:
-    @docker run --rm -d \
+    @{{docker}} run --rm -d \
       -v $HOME/.cargo/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
-      -u $USER \
+      {{map_docker_user}} \
       -e DATABASE_URL={{db_url_postgres}} \
       --net host \
       --name {{container_test_backend}} \
@@ -90,7 +93,7 @@ _run-bg-pg +args:
     just postgres-stop || echo ">>> Postgres is not running - nothing to do"
     just mailcrab-stop || echo ">>> Mailcrab is not running - nothing to do"
     echo "Trying to cleanup orphaned containers"
-    docker rm container rauthy || echo ">>> No orphaned 'rauthy' container found"
+    {{docker}} rm container rauthy || echo ">>> No orphaned 'rauthy' container found"
 
 @clean:
     just _run cargo clean
@@ -103,14 +106,14 @@ create-root-ca:
     #chmod 0766 tls/ca
 
     # Root CA
-    docker run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
+    {{docker}} run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
           ghcr.io/sebadob/nioca \
           x509 \
           --stage root \
           --clean
 
     # Intermediate CA
-    docker run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
+    {{docker}} run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
           ghcr.io/sebadob/nioca \
           x509 \
           --stage intermediate
@@ -122,7 +125,7 @@ create-root-ca:
 # Intermediate CA DEV password: 123SuperMegaSafe
 create-end-entity-tls:
     # create the new certificate
-    docker run --rm -it -v ./tls/ca:/ca -u $USER \
+    {{docker}} run --rm -it -v ./tls/ca:/ca {{map_docker_user}} \
           ghcr.io/sebadob/nioca \
           x509 \
           --cn 'localhost' \
@@ -149,8 +152,8 @@ docker-buildx-setup:
     clear
 
     # create 'rauthy_builder' buildx instance
-    docker buildx create --name rauthy_builder --bootstrap --use
-    docker buildx inspect rauthy_builder
+    {{docker}} buildx create --name rauthy_builder --bootstrap --use
+    {{docker}} buildx inspect rauthy_builder
 
 
 # Execute an `npm install` for the frontend inside the container. Only needed for the first setup or after an update.
@@ -159,36 +162,36 @@ npm-install:
 
 # Starts mailcrab
 mailcrab-start:
-    docker run -d \
+    {{docker}} run -d \
       --net host \
       --name {{container_mailcrab}} \
       --restart unless-stopped \
-      marlonb/mailcrab
+      docker.io/marlonb/mailcrab
 
 # Stops mailcrab
 mailcrab-stop:
-    docker stop {{container_mailcrab}}
-    docker rm {{container_mailcrab}}
+    {{docker}} stop {{container_mailcrab}}
+    {{docker}} rm {{container_mailcrab}}
 
 
 # Starts mailcrab
 postgres-start:
-    docker run -d \
+    {{docker}} run -d \
       -v {{invocation_directory()}}/postgres/init-script:/docker-entrypoint-initdb.d \
       -v {{invocation_directory()}}/postgres/sql-scripts:/scripts/ \
       -e POSTGRES_PASSWORD=123SuperSafe \
       --net host \
       --name {{container_postgres}} \
       --restart unless-stopped \
-      postgres:16.2
+      docker.io/library/postgres:16.2-alpine
 
     sleep 3
     just migrate-postgres
 
 # Stops mailcrab
 postgres-stop:
-    docker stop {{container_postgres}}
-    docker rm {{container_postgres}}
+    {{docker}} stop {{container_postgres}}
+    {{docker}} rm {{container_postgres}}
 
 
 # Just uses `cargo fmt --all`
@@ -266,10 +269,10 @@ test-backend: test-backend-stop migrate prepare
     clear
 
     just _run cargo build
-    docker run --rm -it \
+    {{docker}} run --rm -it \
       -v $HOME/.cargo/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
-      -u $USER \
+      {{map_docker_user}} \
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
       --name {{container_test_backend}} \
@@ -278,7 +281,7 @@ test-backend: test-backend-stop migrate prepare
 
 # stops a possibly running test backend that may have spawned in the background for integration tests
 test-backend-stop:
-    docker stop {{container_test_backend}} || exit 0
+    {{docker}} stop {{container_test_backend}} || exit 0
 
 # runs a single test with sqlite - needs the backend being started manually
 test *test:
@@ -416,7 +419,7 @@ build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
     rm -rf data/backup
 
     echo "build sqlite release"
-    docker buildx build \
+    {{docker}} buildx build \
         -t {{image}}:$TAG-lite \
         --platform linux/amd64,linux/arm64 \
         --build-arg="IMAGE={{builder_image}}" \
@@ -442,7 +445,7 @@ build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
     fi
 
     echo "build postgres release"
-    docker buildx build \
+    {{docker}} buildx build \
         -t {{image}}:$TAG \
         --platform linux/amd64,linux/arm64 \
         --build-arg="IMAGE={{builder_image}}" \
@@ -459,8 +462,8 @@ build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    docker pull ghcr.io/cross-rs/x86_64-unknown-linux-musl:edge
-    docker buildx build \
+    {{docker}} pull ghcr.io/cross-rs/x86_64-unknown-linux-musl:edge
+    {{docker}} buildx build \
           -t {{image}}:amd64-$TODAY \
           -f Dockerfile_builder \
           --platform linux/amd64 \
@@ -468,8 +471,8 @@ build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
           --{{push}} \
           .
 
-    docker pull ghcr.io/cross-rs/aarch64-unknown-linux-musl:edge
-    docker buildx build \
+    {{docker}} pull ghcr.io/cross-rs/aarch64-unknown-linux-musl:edge
+    {{docker}} buildx build \
           -t {{image}}:arm64-$TODAY \
           -f Dockerfile_builder \
           --platform linux/arm64 \
@@ -519,9 +522,9 @@ publish-latest:
     set -euxo pipefail
 
     # the `latest` image will always point to the postgres x86 version, which is used the most (probably)
-    docker pull ghcr.io/sebadob/rauthy:$TAG
-    docker tag ghcr.io/sebadob/rauthy:$TAG ghcr.io/sebadob/rauthy:latest
-    docker push ghcr.io/sebadob/rauthy:latest
+    {{docker}} pull ghcr.io/sebadob/rauthy:$TAG
+    {{docker}} tag ghcr.io/sebadob/rauthy:$TAG ghcr.io/sebadob/rauthy:latest
+    {{docker}} push ghcr.io/sebadob/rauthy:latest
 
 
 # should be run before submitting a PR to make sure everything is fine

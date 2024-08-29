@@ -18,3 +18,4 @@ book/book
 out/
 .test_pid
 .npm_cache
+.sqlx
