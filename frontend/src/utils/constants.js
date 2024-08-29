@@ -18,11 +18,23 @@ export const REGEX_PHONE = /^\+[0-9\s]{0,32}$/gm;
 export const REGEX_STREET = /^[a-zA-Z0-9À-ÿ-.\s]{0,48}$/gm;
 export const REGEX_CITY = /^[a-zA-Z0-9À-ÿ-]{0,48}$/gm;
 export const REGEX_API_KEY = /^[a-zA-Z0-9_/-]{2,24}$/gm;
-export const REGEX_NAME = /^[\w\sÀ-ÿ\-]{1,32}$/gm;
+// This regex includes:
+//   ASCII alphabet, numeric characters
+//   single white space characters
+//   hyphen-minus '-'
+//   Unicode BMP:
+//     - some letters in Latin-1 Supplement
+//     - all of Katakana, CJK Unified Ideographs, CJK Unified Ideographs Ext A,
+//         CJK Radicals Supplement, Katakana Phonetic Extensions
+//     - most of Hiragana, CJK Compatibility Ideographs, 
+//         Kangxi Radicals
+//     - a part of Halfwidth and Fullwidth Forms
+//   Unicode SMP and SIP planes are not included due to JavaScript regex limitations
+export const REGEX_NAME = /^[\w\sÀ-ÿ\-\u3041-\u3096\u30A0-\u30FF\u3400-\u4DB5\u4E00-\u9FCB\uF900-\uFA6A\u2E80-\u2FD5\uFF66-\uFF9F\uFFA1-\uFFDC\u31F0-\u31FF]{1,32}$/gm;
 export const REGEX_ATTR_DESC = /^[a-zA-Z0-9\-_/\s]{0,128}$/gm;
 export const REGEX_ATTR_KEY = /^[a-zA-Z0-9\-_/]{2,32}$/gm;
 export const REGEX_CLIENT_ID = /^[a-zA-Z0-9\-_/]{2,128}$/gm;
-export const REGEX_CLIENT_NAME = /^[a-zA-Z0-9À-ÿ\-\s]{0,128}$/m;
+export const REGEX_CLIENT_NAME = /^[a-zA-Z0-9À-ÿ\-\s\u3041-\u3096\u30A0-\u30FF\u3400-\u4DB5\u4E00-\u9FCB\uF900-\uFA6A\u2E80-\u2FD5\uFF66-\uFF9F\uFFA1-\uFFDC\u31F0-\u31FF]{0,128}$/m;
 export const REGEX_CONTACT = /^[a-zA-Z0-9+.@/:]{0,48}$/gm;
 export const REGEX_LOWERCASE_SPACE = /^[a-z0-9-_\/\s]{2,128}$/gm;
 export const REGEX_PROVIDER_SCOPE = /^[a-z0-9-_\/:\s]{0,128}$/gm;
