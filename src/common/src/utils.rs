@@ -256,8 +256,8 @@ mod tests {
         assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.9").unwrap(), false).is_err());
         assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.12").unwrap(), false).is_err());
 
-        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.0.8").unwrap(), true).is_ok());
-        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.0.8").unwrap(), false).is_err());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.0.0.8").unwrap(), true).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.0.0.8").unwrap(), false).is_err());
         assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.11").unwrap(), true).is_ok());
         assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.9").unwrap(), true).is_err());
     }
