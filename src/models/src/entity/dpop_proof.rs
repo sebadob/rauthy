@@ -250,19 +250,19 @@ impl DPoPProof {
     /// 3. All required claims per Section 4.2 are contained in the JWT.
     /// 4. The typ JOSE Header Parameter has the value dpop+jwt.
     /// 5. The alg JOSE Header Parameter indicates a registered asymmetric digital
-    /// signature algorithm [IANA.JOSE.ALGS], is not none, is supported by the
-    /// application, and is acceptable per local policy.
+    ///    signature algorithm [IANA.JOSE.ALGS], is not none, is supported by the
+    ///    application, and is acceptable per local policy.
     /// 6. The JWT signature verifies with the public key contained in the jwk
-    /// JOSE Header Parameter.
+    ///    JOSE Header Parameter.
     /// 7. The jwk JOSE Header Parameter does not contain a private key.
     /// 8. The htm claim matches the HTTP method of the current request.
     /// 9. The htu claim matches the HTTP URI value for the HTTP request in
-    /// which the JWT was received, ignoring any query and fragment parts.
+    ///    which the JWT was received, ignoring any query and fragment parts.
     /// 10. If the server provided a nonce value to the client,
-    /// the nonce claim matches the server-provided nonce value.
+    ///     the nonce claim matches the server-provided nonce value.
     /// 11. The creation time of the JWT, as determined by either the iat
-    /// claim or a server managed timestamp via the nonce claim, is within an
-    /// acceptable window (see Section 11.1).
+    ///     claim or a server managed timestamp via the nonce claim, is within an
+    ///     acceptable window (see Section 11.1).
     /// 12. If presented to a protected resource in conjunction with an access token:
     /// - ensure that the value of the ath claim equals the hash of that access token, and
     /// - confirm that the public key to which the access token is bound matches the
