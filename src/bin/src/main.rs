@@ -35,7 +35,7 @@ use rauthy_models::events::listener::EventListener;
 use rauthy_models::events::notifier::EventNotifier;
 use rauthy_models::events::{init_event_vars, ip_blacklist_handler};
 use rauthy_models::migration::check_restore_backup;
-use rauthy_models::{email, ListenScheme};
+use rauthy_models::{cache, email, ListenScheme};
 use spow::pow::Pow;
 use std::error::Error;
 use std::net::Ipv4Addr;
@@ -117,6 +117,10 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
     }
 
     // caches
+    cache::start_cache()
+        .await
+        .expect("Error starting the cache layer");
+
     let (tx_health_state, mut cache_config) = redhac::CacheConfig::new();
 
     // "infinity" cache

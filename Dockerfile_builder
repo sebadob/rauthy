@@ -1,6 +1,6 @@
 ARG IMAGE
 
-FROM --platform=$BUILDPLATFORM $IMAGE as stage1
+FROM --platform=$BUILDPLATFORM $IMAGE as rust
 
 # docker buildx args automatically available
 ARG BUILDPLATFORM
@@ -43,6 +43,10 @@ cargo install sqlx-cli --no-default-features --features rustls,sqlite,postgres
 
 rm -rf /home/.rustup/tmp
 rm -rf /home/.cargo/registry
+
+# avoid access rights conflicts for different users later on
+chmod -R 777 /home/.cargo
+
 EOF
 
 # any user should be able to use rust from that directory for best DX
@@ -52,10 +56,11 @@ RUN chmod a+rwx -R /home
 ############################################
 ############################################
 
-FROM --platform=$BUILDPLATFORM $IMAGE as stage2
+FROM --platform=$BUILDPLATFORM $IMAGE as openssl
 
 ENV LD_LIBRARY_PATH="${PATH}:/usr/local/lib64:${LD_LIBRARY_PATH}"
 ENV PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig"
+ENV MAKEFLAGS="-j32"
 
 WORKDIR /root
 
@@ -66,10 +71,10 @@ apt update
 apt install -y build-essential checkinstall zlib1g-dev vim
 rm -rf /var/lib/apt/lists/*
 
-curl -LO https://github.com/openssl/openssl/releases/download/openssl-3.3.0/openssl-3.3.0.tar.gz
-tar xvf openssl-3.3.0.tar.gz
+curl -LO https://github.com/openssl/openssl/releases/download/openssl-3.3.1/openssl-3.3.1.tar.gz
+tar xvf openssl-3.3.1.tar.gz
 
-cd openssl-3.3.0
+cd openssl-3.3.1
 ./config
 make
 make test
@@ -105,12 +110,6 @@ ENV CC_x86_64_unknown_linux_musl=x86_64-linux-musl-gcc
 ENV LD_LIBRARY_PATH="${PATH}:/usr/local/lib64:${LD_LIBRARY_PATH}"
 ENV PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig"
 
-# rust and tools
-COPY --from=stage1 /usr/local/bin/target /usr/local/bin/target
-COPY --from=stage1 /home/.cargo /home/.cargo
-COPY --from=stage1 /home/.rustup /home/.rustup
-COPY --from=stage1 /home/.profile /home/.profile
-
 # node and npm
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt install -y nodejs && \
@@ -128,15 +127,19 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
 #COPY --from=stage1 /var/lib/dpkg/alternatives/nodejs /var/lib/dpkg/alternatives/nodejs
 #COPY --from=stage1 /usr/lib/node_modules /usr/lib/node_modules
 
+# rust and tools
+COPY --from=rust /usr/local/bin/target /usr/local/bin/target
+COPY --from=rust /home /home
+
 # openssl
-COPY --from=stage2 /etc/ld.so.conf.d/lib64.conf /etc/ld.so.conf.d/lib64.conf
-COPY --from=stage2 /usr/local/lib64 /usr/local/lib64
-COPY --from=stage2 /usr/local/include/openssl /usr/local/include/openssl
-COPY --from=stage2 /usr/local/bin/openssl /usr/local/bin/openssl
-COPY --from=stage2 /usr/local/bin/c_rehash /usr/local/bin/c_rehash
-COPY --from=stage2 /usr/local/ssl /usr/local/ssl
-COPY --from=stage2 /usr/local/share/man /usr/local/share/man
-COPY --from=stage2 /usr/local/share/doc/openssl /usr/local/share/doc/openssl
+COPY --from=openssl /etc/ld.so.conf.d/lib64.conf /etc/ld.so.conf.d/lib64.conf
+COPY --from=openssl /usr/local/lib64 /usr/local/lib64
+COPY --from=openssl /usr/local/include/openssl /usr/local/include/openssl
+COPY --from=openssl /usr/local/bin/openssl /usr/local/bin/openssl
+COPY --from=openssl /usr/local/bin/c_rehash /usr/local/bin/c_rehash
+COPY --from=openssl /usr/local/ssl /usr/local/ssl
+COPY --from=openssl /usr/local/share/man /usr/local/share/man
+COPY --from=openssl /usr/local/share/doc/openssl /usr/local/share/doc/openssl
 
 RUN ldconfig
 

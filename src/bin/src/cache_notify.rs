@@ -4,6 +4,7 @@ use redhac::{CacheMethod, CacheNotify};
 use tokio::sync::mpsc;
 use tracing::debug;
 
+// TODO remove after redhac migration has been completed
 pub async fn handle_notify(_data: web::Data<AppState>, mut rx: mpsc::Receiver<CacheNotify>) {
     while let Some(msg) = rx.recv().await {
         match msg.method {

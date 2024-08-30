@@ -12,8 +12,7 @@ map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
 arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
 
 builder_image := "ghcr.io/sebadob/rauthy-builder"
-#builder_tag_date := "20240620"
-builder_tag_date := "20240505"
+builder_tag_date := "20240830"
 
 container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
@@ -468,6 +467,7 @@ build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
           -f Dockerfile_builder \
           --platform linux/amd64 \
           --build-arg="IMAGE=ghcr.io/cross-rs/x86_64-unknown-linux-musl:edge" \
+          --no-cache \
           --{{push}} \
           .
 

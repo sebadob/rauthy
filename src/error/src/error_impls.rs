@@ -430,3 +430,10 @@ impl From<ruma::client::Error<reqwest::Error, ruma::api::client::Error>> for Err
         )
     }
 }
+
+impl From<hiqlite::Error> for ErrorResponse {
+    fn from(value: hiqlite::Error) -> Self {
+        trace!("{:?}", value);
+        ErrorResponse::new(ErrorResponseType::Database, format!("{}", value))
+    }
+}

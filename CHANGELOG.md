@@ -27,7 +27,7 @@ notifications, you must set a newly introduced config variable:
 #EVENT_MATRIX_SERVER_URL=https://matrix.org
 ```
 
-[]()
+[0b50376](https://github.com/sebadob/rauthy/commit/0b5037610d475e7ad6fc0a8bf3b851330088cab1)
 
 ## v0.25.0
 

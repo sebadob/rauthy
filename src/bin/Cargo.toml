@@ -25,6 +25,7 @@ chrono = { workspace = true }
 cryptr = { workspace = true }
 dotenvy = { workspace = true }
 flume = { workspace = true }
+hiqlite = { workspace = true }
 num_cpus = { workspace = true }
 prometheus = { workspace = true }
 redhac = { workspace = true }
