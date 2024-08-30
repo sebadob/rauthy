@@ -129,6 +129,7 @@ pub async fn grant_type_authorization_code(
             }
         }
     }
+
     // We will not perform another `redirect_uri` check at this point, like stated in the RFC.
     // It is just unnecessary because of the way Rauthy handles the flow init during GET /authorize.
     //

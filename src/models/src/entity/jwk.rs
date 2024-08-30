@@ -660,7 +660,7 @@ impl JwkKeyPair {
         }
 
         let jwk = JwkKeyPair::decrypt(jwks.first().unwrap(), key_pair_alg)?;
-        client.put(Cache::App, idx, &jwks, CACHE_TTL_APP).await?;
+        client.put(Cache::App, idx, &jwk, CACHE_TTL_APP).await?;
 
         Ok(jwk)
     }

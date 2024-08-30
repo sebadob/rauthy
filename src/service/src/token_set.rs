@@ -357,6 +357,7 @@ impl TokenSet {
         // sign the token
         let key_pair_alg = JwkKeyPairAlg::from_str(&client.id_token_alg)?;
         let kp = JwkKeyPair::find_latest(data, key_pair_alg).await?;
+
         sign_jwt!(kp, claims)
     }
 
