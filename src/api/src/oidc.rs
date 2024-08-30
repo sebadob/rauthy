@@ -435,19 +435,31 @@ pub async fn post_device_auth(
                 });
             }
             Ok(ip) => {
-                if let Some(dt) = DeviceIpRateLimit::is_limited(&data, ip.to_string()).await {
-                    return HttpResponse::TooManyRequests()
-                        .insert_header((HEADER_RETRY_NOT_BEFORE, dt.timestamp()))
-                        .json(OAuth2ErrorResponse {
+                match DeviceIpRateLimit::is_limited(ip.to_string()).await {
+                    Ok(dt) => {
+                        if let Some(dt) = dt {
+                            return HttpResponse::TooManyRequests()
+                                .insert_header((HEADER_RETRY_NOT_BEFORE, dt.timestamp()))
+                                .json(OAuth2ErrorResponse {
+                                    error: OAuth2ErrorTypeResponse::InvalidRequest,
+                                    error_description: Some(Cow::from(format!(
+                                        "no further requests allowed before: {}",
+                                        dt
+                                    ))),
+                                });
+                        }
+                    }
+                    Err(_) => {
+                        return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
                             error: OAuth2ErrorTypeResponse::InvalidRequest,
-                            error_description: Some(Cow::from(format!(
-                                "no further requests allowed before: {}",
-                                dt
-                            ))),
+                            error_description: Some(Cow::from(
+                                "Internal Server Error - Cache Lookup",
+                            )),
                         });
+                    }
                 }
 
-                if let Err(err) = DeviceIpRateLimit::insert(&data, ip.to_string()).await {
+                if let Err(err) = DeviceIpRateLimit::insert(ip.to_string()).await {
                     error!(
                         "Error inserting IP into the cache for rate-limiting: {:?}",
                         err
@@ -511,7 +523,7 @@ pub async fn post_device_auth(
     }
 
     // we are good - create the code
-    let code = match DeviceAuthCode::new(&data, scopes, client.id, payload.client_secret).await {
+    let code = match DeviceAuthCode::new(scopes, client.id, payload.client_secret).await {
         Ok(code) => code,
         Err(err) => {
             return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
@@ -550,7 +562,6 @@ pub async fn post_device_auth(
 #[post("/oidc/device/verify")]
 #[tracing::instrument(level = "debug", skip_all, fields(user_code = payload.user_code))]
 pub async fn post_device_verify(
-    data: web::Data<AppState>,
     payload: actix_web_validator::Json<DeviceVerifyRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -560,9 +571,9 @@ pub async fn post_device_verify(
     debug!("{:?}", payload);
 
     let challenge = Pow::validate(&payload.pow)?;
-    PowEntity::check_prevent_reuse(&data, challenge.to_string()).await?;
+    PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
-    let mut device_code = DeviceAuthCode::find(&data, payload.user_code)
+    let mut device_code = DeviceAuthCode::find(payload.user_code)
         .await?
         .ok_or_else(|| {
             ErrorResponse::new(
@@ -574,11 +585,11 @@ pub async fn post_device_verify(
     match payload.device_accepted {
         DeviceAcceptedRequest::Accept => {
             device_code.verified_by = Some(principal.user_id()?.to_string());
-            device_code.save(&data).await?;
+            device_code.save().await?;
             Ok(HttpResponse::Accepted().finish())
         }
         DeviceAcceptedRequest::Decline => {
-            device_code.delete(&data).await?;
+            device_code.delete().await?;
             Ok(HttpResponse::NoContent().finish())
         }
         DeviceAcceptedRequest::Pending => Ok(HttpResponse::Ok().json(DeviceVerifyResponse {

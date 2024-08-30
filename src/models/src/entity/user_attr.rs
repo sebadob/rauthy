@@ -1,4 +1,5 @@
 use crate::app_state::{AppState, DbTxn};
+use crate::cache::{Cache, DB};
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
 use actix_web::web;
@@ -6,9 +7,8 @@ use rauthy_api_types::users::{
     UserAttrConfigRequest, UserAttrConfigValueResponse, UserAttrValueResponse,
     UserAttrValuesUpdateRequest,
 };
-use rauthy_common::constants::{CACHE_NAME_USERS, IDX_USER_ATTR_CONFIG};
+use rauthy_common::constants::{CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_ATTR_CONFIG};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::FromRow;
@@ -24,6 +24,11 @@ pub struct UserAttrConfigEntity {
 
 // CRUD
 impl UserAttrConfigEntity {
+    #[inline(always)]
+    fn cache_idx(name: &str) -> String {
+        format!("{}_{}", IDX_USER_ATTR_CONFIG, name)
+    }
+
     pub async fn create(
         data: &web::Data<AppState>,
         new_attr: UserAttrConfigRequest,
@@ -57,21 +62,16 @@ impl UserAttrConfigEntity {
             desc: new_attr.desc.clone(),
         };
         attrs.push(slf.clone());
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            IDX_USER_ATTR_CONFIG.to_string(),
-            &data.caches.ha_cache_config,
-            &attrs,
-            AckLevel::Leader,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, IDX_USER_ATTR_CONFIG, &attrs, CACHE_TTL_APP)
+            .await?;
 
         Ok(slf)
     }
 
     pub async fn delete(data: &web::Data<AppState>, name: String) -> Result<(), ErrorResponse> {
         // we do this empty check beforehand to avoid much more unnecessary work if it does not exist anyway
-        Self::find(data, name.clone()).await?;
+        let slf = Self::find(data, name.clone()).await?;
 
         let mut txn = data.db.begin().await?;
 
@@ -124,13 +124,10 @@ impl UserAttrConfigEntity {
             }
         }
 
-        cache_remove(
-            CACHE_NAME_USERS.to_string(),
-            name.clone(),
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
+        let client = DB::client();
+        client
+            .delete(Cache::App, Self::cache_idx(&slf.name))
+            .await?;
 
         UserAttrValueEntity::delete_all_by_key(data, &name, &mut txn).await?;
 
@@ -145,71 +142,48 @@ impl UserAttrConfigEntity {
             .into_iter()
             .filter(|a| a.name != name)
             .collect::<Vec<Self>>();
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            IDX_USER_ATTR_CONFIG.to_string(),
-            &data.caches.ha_cache_config,
-            &attrs,
-            AckLevel::Quorum,
-        )
-        .await?;
+
+        client
+            .put(Cache::App, IDX_USER_ATTR_CONFIG, &attrs, CACHE_TTL_APP)
+            .await?;
 
         Ok(())
     }
 
     pub async fn find(data: &web::Data<AppState>, name: String) -> Result<Self, ErrorResponse> {
-        let attr_opt = cache_get!(
-            Self,
-            CACHE_NAME_USERS.to_string(),
-            name.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(attr_opt) = attr_opt {
-            return Ok(attr_opt);
+        let client = DB::client();
+        if let Some(slf) = client.get(Cache::App, Self::cache_idx(&name)).await? {
+            return Ok(slf);
         }
 
         let attr = sqlx::query_as!(Self, "SELECT * FROM user_attr_config WHERE name = $1", name)
             .fetch_one(&data.db)
             .await?;
 
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            name,
-            &data.caches.ha_cache_config,
-            &attr,
-            AckLevel::Leader,
-        )
-        .await?;
+        client
+            .put(
+                Cache::App,
+                Self::cache_idx(&attr.name),
+                &attr,
+                CACHE_TTL_APP,
+            )
+            .await?;
         Ok(attr)
     }
 
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        let attrs = cache_get!(
-            Vec<Self>,
-            CACHE_NAME_USERS.to_string(),
-            IDX_USER_ATTR_CONFIG.to_string(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(attrs) = attrs {
-            return Ok(attrs);
+        let client = DB::client();
+        if let Some(slf) = client.get(Cache::App, IDX_USER_ATTR_CONFIG).await? {
+            return Ok(slf);
         }
 
         let res = sqlx::query_as!(Self, "SELECT * FROM user_attr_config")
             .fetch_all(&data.db)
             .await?;
 
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            IDX_USER_ATTR_CONFIG.to_string(),
-            &data.caches.ha_cache_config,
-            &res,
-            AckLevel::Leader,
-        )
-        .await?;
+        client
+            .put(Cache::App, IDX_USER_ATTR_CONFIG, &res, CACHE_TTL_APP)
+            .await?;
         Ok(res)
     }
 
@@ -318,24 +292,14 @@ impl UserAttrConfigEntity {
             })
             .collect::<Vec<Self>>();
 
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            IDX_USER_ATTR_CONFIG.to_string(),
-            &data.caches.ha_cache_config,
-            &attrs,
-            AckLevel::Quorum,
-        )
-        .await?;
+        let client = DB::client();
+        client
+            .put(Cache::App, IDX_USER_ATTR_CONFIG, &attrs, CACHE_TTL_APP)
+            .await?;
 
         if let Some(idxs) = cache_idxs {
             for idx in idxs {
-                cache_remove(
-                    CACHE_NAME_USERS.to_string(),
-                    idx,
-                    &data.caches.ha_cache_config,
-                    AckLevel::Quorum,
-                )
-                .await?;
+                client.delete(Cache::User, idx).await?;
             }
         }
 
@@ -398,14 +362,9 @@ impl UserAttrValueEntity {
                 .map(|a| Self::cache_idx(&a.user_id))
                 .collect::<Vec<String>>();
 
+        let client = DB::client();
         for idx in cache_idxs {
-            cache_remove(
-                CACHE_NAME_USERS.to_string(),
-                idx,
-                &data.caches.ha_cache_config,
-                AckLevel::Quorum,
-            )
-            .await?;
+            client.delete(Cache::User, idx).await?;
         }
 
         sqlx::query!("DELETE FROM user_attr_values WHERE key = $1", key)
@@ -420,16 +379,10 @@ impl UserAttrValueEntity {
         user_id: &str,
     ) -> Result<Vec<Self>, ErrorResponse> {
         let idx = Self::cache_idx(user_id);
-        let attrs = cache_get!(
-            Vec<Self>,
-            CACHE_NAME_USERS.to_string(),
-            idx.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(attrs) = attrs {
-            return Ok(attrs);
+        let client = DB::client();
+
+        if let Some(slf) = client.get(Cache::User, &idx).await? {
+            return Ok(slf);
         }
 
         let res = sqlx::query_as!(
@@ -440,14 +393,7 @@ impl UserAttrValueEntity {
         .fetch_all(&data.db)
         .await?;
 
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &res,
-            AckLevel::Leader,
-        )
-        .await?;
+        client.put(Cache::User, idx, &res, CACHE_TTL_USER).await?;
 
         Ok(res)
     }
@@ -513,14 +459,9 @@ impl UserAttrValueEntity {
         .await?;
 
         let idx = Self::cache_idx(user_id);
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &res,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::User, idx, &res, CACHE_TTL_USER)
+            .await?;
 
         Ok(res)
     }

@@ -1,4 +1,5 @@
 use crate::app_state::AppState;
+use crate::cache::{Cache, DB};
 use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::{Algorithm, Argon2, PasswordHasher, Version};
@@ -7,10 +8,9 @@ use rauthy_api_types::generic::{
     PasswordHashTimesRequest, PasswordPolicyRequest, PasswordPolicyResponse,
 };
 use rauthy_common::constants::{
-    ARGON2ID_M_COST_MIN, ARGON2ID_T_COST_MIN, CACHE_NAME_12HR, IDX_PASSWORD_RULES,
+    ARGON2ID_M_COST_MIN, ARGON2ID_T_COST_MIN, CACHE_TTL_APP, IDX_PASSWORD_RULES,
 };
 use rauthy_error::ErrorResponse;
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
 use std::cmp::max;
@@ -124,16 +124,9 @@ pub struct PasswordPolicy {
 // CRUD
 impl PasswordPolicy {
     pub async fn find(data: &web::Data<AppState>) -> Result<Self, ErrorResponse> {
-        let policy = cache_get!(
-            PasswordPolicy,
-            CACHE_NAME_12HR.to_string(),
-            IDX_PASSWORD_RULES.to_string(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(policy) = policy {
-            return Ok(policy);
+        let client = DB::client();
+        if let Some(slf) = client.get(Cache::App, IDX_PASSWORD_RULES).await? {
+            return Ok(slf);
         }
 
         let res = sqlx::query("SELECT data FROM config WHERE id = 'password_policy'")
@@ -142,14 +135,9 @@ impl PasswordPolicy {
         let bytes: Vec<u8> = res.get("data");
         let policy = bincode::deserialize::<Self>(&bytes)?;
 
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_PASSWORD_RULES.to_string(),
-            &data.caches.ha_cache_config,
-            &policy,
-            AckLevel::Quorum,
-        )
-        .await?;
+        client
+            .put(Cache::App, IDX_PASSWORD_RULES, &policy, CACHE_TTL_APP)
+            .await?;
 
         Ok(policy)
     }
@@ -164,14 +152,9 @@ impl PasswordPolicy {
         .execute(&data.db)
         .await?;
 
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_PASSWORD_RULES.to_string(),
-            &data.caches.ha_cache_config,
-            &self,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, IDX_PASSWORD_RULES, self, CACHE_TTL_APP)
+            .await?;
 
         Ok(())
     }

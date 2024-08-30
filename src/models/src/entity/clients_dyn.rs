@@ -1,13 +1,13 @@
 use crate::app_state::{AppState, DbTxn};
+use crate::cache::{Cache, DB};
 use crate::entity::clients::Client;
 use actix_web::web;
 use chrono::Utc;
 use cryptr::EncValue;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_CLIENTS_DYN, DYN_CLIENT_SECRET_AUTO_ROTATE,
+    CACHE_TTL_DYN_CLIENT, CACHE_TTL_IP_RATE_LIMIT, DYN_CLIENT_SECRET_AUTO_ROTATE,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, FromRow};
 use std::net::IpAddr;
@@ -53,30 +53,19 @@ impl ClientDyn {
 
     /// This only deletes a `ClientDyn` from the cache.
     /// The deletion at database level happens via the foreign key cascade.
-    pub async fn delete_from_cache(
-        data: &web::Data<AppState>,
-        id: &str,
-    ) -> Result<(), ErrorResponse> {
-        cache_remove(
-            CACHE_NAME_12HR.to_string(),
-            ClientDyn::get_cache_entry(id),
-            &data.caches.ha_cache_config,
-            AckLevel::Leader,
-        )
-        .await?;
-
+    pub async fn delete_from_cache(id: &str) -> Result<(), ErrorResponse> {
+        DB::client()
+            .delete(Cache::App, ClientDyn::get_cache_entry(id))
+            .await?;
         Ok(())
     }
 
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
-        if let Some(slf) = cache_get!(
-            Self,
-            CACHE_NAME_12HR.to_string(),
-            ClientDyn::get_cache_entry(&id),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?
+        let client = DB::client();
+
+        if let Some(slf) = client
+            .get(Cache::ClientDynamic, ClientDyn::get_cache_entry(&id))
+            .await?
         {
             return Ok(slf);
         }
@@ -85,21 +74,20 @@ impl ClientDyn {
             .fetch_one(&data.db)
             .await?;
 
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            ClientDyn::get_cache_entry(&slf.id),
-            &data.caches.ha_cache_config,
-            &slf,
-            AckLevel::Leader,
-        )
-        .await?;
+        client
+            .put(
+                Cache::ClientDynamic,
+                ClientDyn::get_cache_entry(&slf.id),
+                &slf,
+                *CACHE_TTL_DYN_CLIENT,
+            )
+            .await?;
 
         Ok(slf)
     }
 
     pub async fn update(
         &mut self,
-        data: &web::Data<AppState>,
         txn: &mut DbTxn<'_>,
         token_endpoint_auth_method: String,
     ) -> Result<(), ErrorResponse> {
@@ -123,14 +111,14 @@ impl ClientDyn {
         .execute(&mut **txn)
         .await?;
 
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            ClientDyn::get_cache_entry(&self.id),
-            &data.caches.ha_cache_config,
-            &self,
-            AckLevel::Leader,
-        )
-        .await?;
+        DB::client()
+            .put(
+                Cache::ClientDynamic,
+                ClientDyn::get_cache_entry(&self.id),
+                self,
+                *CACHE_TTL_DYN_CLIENT,
+            )
+            .await?;
 
         Ok(())
     }
@@ -151,39 +139,35 @@ impl ClientDyn {
 }
 
 impl ClientDyn {
+    #[inline]
     pub fn get_cache_entry(id: &str) -> String {
         format!("client_dyn_{}", id)
     }
 
     /// Returns an Err(_) if the IP is currently existing inside the cache.
     /// If not, the IP will be cached with an Ok(()).
-    pub async fn rate_limit_ip(
-        data: &web::Data<AppState>,
-        ip: IpAddr,
-    ) -> Result<(), ErrorResponse> {
-        if let Some(ts) = cache_get!(
-            i64,
-            CACHE_NAME_CLIENTS_DYN.to_string(),
-            ip.to_string(),
-            &data.caches.ha_cache_config,
-            true
-        )
-        .await?
-        {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::TooManyRequests(ts),
-                format!("You hit a rate limit. You may try again at: {}", ts),
-            ));
-        } else {
-            let now = Utc::now().timestamp();
-            cache_insert(
-                CACHE_NAME_CLIENTS_DYN.to_string(),
-                ip.to_string(),
-                &data.caches.ha_cache_config,
-                &now,
-                AckLevel::Once,
-            )
-            .await?;
+    pub async fn rate_limit_ip(ip: IpAddr) -> Result<(), ErrorResponse> {
+        let client = DB::client();
+
+        let ts: Option<i64> = client.get(Cache::IPRateLimit, ip.to_string()).await?;
+        match ts {
+            Some(ts) => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::TooManyRequests(ts),
+                    format!("You hit a rate limit. You may try again at: {}", ts),
+                ));
+            }
+            None => {
+                let now = Utc::now().timestamp();
+                client
+                    .put(
+                        Cache::IPRateLimit,
+                        ip.to_string(),
+                        &now,
+                        *CACHE_TTL_IP_RATE_LIMIT,
+                    )
+                    .await?;
+            }
         }
 
         Ok(())

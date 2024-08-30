@@ -1,13 +1,13 @@
 use crate::app_state::{AppState, DbTxn};
+use crate::cache::{Cache, DB};
 use crate::entity::clients::Client;
 use crate::entity::user_attr::UserAttrConfigEntity;
 use crate::entity::well_known::WellKnown;
 use actix_web::web;
 use rauthy_api_types::scopes::{ScopeRequest, ScopeResponse};
-use rauthy_common::constants::{CACHE_NAME_12HR, IDX_CLIENTS, IDX_SCOPES};
+use rauthy_common::constants::{CACHE_TTL_APP, IDX_CLIENTS, IDX_SCOPES};
 use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::collections::HashSet;
@@ -71,14 +71,9 @@ impl Scope {
             .await?;
 
         scopes.push(new_scope.clone());
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_SCOPES.to_string(),
-            &data.caches.ha_cache_config,
-            &scopes,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, IDX_SCOPES, &scopes, CACHE_TTL_APP)
+            .await?;
 
         WellKnown::rebuild(data).await?;
 
@@ -108,14 +103,9 @@ impl Scope {
             });
 
         // no need to evict the cache if no clients are updated
+        let client = DB::client();
         if !clients.is_empty() {
-            cache_remove(
-                CACHE_NAME_12HR.to_string(),
-                IDX_CLIENTS.to_string(),
-                &data.caches.ha_cache_config,
-                AckLevel::Quorum,
-            )
-            .await?;
+            client.delete(Cache::App, IDX_CLIENTS).await?;
         }
 
         let mut txn = data.db.begin().await?;
@@ -135,14 +125,9 @@ impl Scope {
             .into_iter()
             .filter(|s| s.id != scope.id)
             .collect::<Vec<Scope>>();
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_SCOPES.to_string(),
-            &data.caches.ha_cache_config,
-            &scopes,
-            AckLevel::Quorum,
-        )
-        .await?;
+        client
+            .put(Cache::App, IDX_SCOPES, &scopes, CACHE_TTL_APP)
+            .await?;
 
         WellKnown::rebuild(data).await?;
 
@@ -159,30 +144,18 @@ impl Scope {
 
     // Returns all existing scopes
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        let scopes = cache_get!(
-            Vec<Scope>,
-            CACHE_NAME_12HR.to_string(),
-            IDX_SCOPES.to_string(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(scopes) = scopes {
-            return Ok(scopes);
+        let client = DB::client();
+        if let Some(slf) = client.get(Cache::App, IDX_SCOPES).await? {
+            return Ok(slf);
         }
 
         let res = sqlx::query_as!(Self, "SELECT * FROM scopes")
             .fetch_all(&data.db)
             .await?;
 
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_SCOPES.to_string(),
-            &data.caches.ha_cache_config,
-            &res,
-            AckLevel::Leader,
-        )
-        .await?;
+        client
+            .put(Cache::App, IDX_SCOPES, &res, CACHE_TTL_APP)
+            .await?;
         Ok(res)
     }
 
@@ -229,13 +202,7 @@ impl Scope {
 
             // no need to evict the cache if no clients are updated
             if !clients.is_empty() {
-                cache_remove(
-                    CACHE_NAME_12HR.to_string(),
-                    IDX_CLIENTS.to_string(),
-                    &data.caches.ha_cache_config,
-                    AckLevel::Leader,
-                )
-                .await?;
+                DB::client().delete(Cache::App, IDX_CLIENTS).await?;
             }
 
             // Not awaiting all at once to prevent resource spikes
@@ -288,14 +255,9 @@ impl Scope {
             })
             .collect::<Vec<Scope>>();
 
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_SCOPES.to_string(),
-            &data.caches.ha_cache_config,
-            &scopes,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, IDX_SCOPES, &scopes, CACHE_TTL_APP)
+            .await?;
 
         if is_name_update {
             WellKnown::rebuild(data).await?;
@@ -335,14 +297,9 @@ impl Scope {
             })
             .collect::<Vec<Scope>>();
 
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_SCOPES.to_string(),
-            &data.caches.ha_cache_config,
-            &scopes,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, IDX_SCOPES, &scopes, CACHE_TTL_APP)
+            .await?;
 
         Ok(())
     }
@@ -354,8 +311,7 @@ impl Scope {
         existing_attrs: &HashSet<String>,
     ) -> Option<String> {
         req_attrs.as_ref()?;
-        let res = req_attrs
-            .unwrap()
+        let res = req_attrs?
             .drain(..)
             .filter(|a| !a.is_empty() && existing_attrs.contains(a))
             .collect::<Vec<String>>()

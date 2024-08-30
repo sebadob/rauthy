@@ -1,10 +1,10 @@
 use crate::app_state::AppState;
+use crate::cache::{Cache, DB};
 use actix_web::web;
 use jwt_simple::prelude::{Deserialize, Serialize};
 use rauthy_api_types::users::{UserValuesRequest, UserValuesResponse};
-use rauthy_common::constants::{CACHE_NAME_USERS, IDX_USERS_VALUES};
+use rauthy_common::constants::{CACHE_TTL_USER, IDX_USERS_VALUES};
 use rauthy_error::ErrorResponse;
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use sqlx::FromRow;
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -24,16 +24,10 @@ impl UserValues {
         user_id: &str,
     ) -> Result<Option<Self>, ErrorResponse> {
         let idx = format!("{}_{}", IDX_USERS_VALUES, user_id);
-        if let Ok(Some(values)) = cache_get!(
-            Option<Self>,
-            CACHE_NAME_USERS.to_string(),
-            idx.to_string(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await
-        {
-            return Ok(values);
+        let client = DB::client();
+
+        if let Some(slf) = client.get(Cache::User, &idx).await? {
+            return Ok(Some(slf));
         }
 
         let slf = sqlx::query_as::<_, Self>("SELECT * FROM users_values WHERE id = $1")
@@ -41,14 +35,9 @@ impl UserValues {
             .fetch_optional(&data.db)
             .await?;
 
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &slf,
-            AckLevel::Leader,
-        )
-        .await?;
+        if let Some(v) = slf.as_ref() {
+            client.put(Cache::User, idx, v, CACHE_TTL_USER).await?;
+        }
 
         Ok(slf)
     }
@@ -99,14 +88,9 @@ impl UserValues {
             city: values.city,
             country: values.country,
         });
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &slf,
-            AckLevel::Leader,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::User, idx, &slf, CACHE_TTL_USER)
+            .await?;
 
         Ok(slf)
     }

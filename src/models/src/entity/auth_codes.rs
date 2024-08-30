@@ -1,9 +1,7 @@
-use crate::app_state::AppState;
-use actix_web::web;
-use rauthy_common::constants::CACHE_NAME_AUTH_CODES;
+use crate::cache::{Cache, DB};
+use rauthy_common::constants::CACHE_TTL_AUTH_CODE;
 use rauthy_common::utils::get_rand;
 use rauthy_error::ErrorResponse;
-use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
 use std::ops::Add;
 use time::OffsetDateTime;
@@ -25,41 +23,23 @@ pub struct AuthCode {
 // CRUD
 impl AuthCode {
     // Deletes an Authorization Code from the cache
-    pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_del(
-            CACHE_NAME_AUTH_CODES.to_string(),
-            self.id.clone(),
-            &data.caches.ha_cache_config,
-        )
-        .await
-        .map_err(ErrorResponse::from)
+    pub async fn delete(&self) -> Result<(), ErrorResponse> {
+        DB::client()
+            .delete(Cache::AuthCode, self.id.clone())
+            .await?;
+        Ok(())
     }
 
     // Returns an Authorization code from the cache
-    pub async fn find(
-        data: &web::Data<AppState>,
-        id: String,
-    ) -> Result<Option<Self>, ErrorResponse> {
-        cache_get!(
-            AuthCode,
-            CACHE_NAME_AUTH_CODES.to_string(),
-            id,
-            &data.caches.ha_cache_config,
-            true
-        )
-        .await
-        .map_err(ErrorResponse::from)
+    pub async fn find(id: String) -> Result<Option<Self>, ErrorResponse> {
+        Ok(DB::client().get(Cache::AuthCode, id).await?)
     }
 
     // Saves an Authorization Code
-    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_put(
-            CACHE_NAME_AUTH_CODES.to_string(),
-            self.id.clone(),
-            &data.caches.ha_cache_config,
-            self,
-        )
-        .await?;
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
+        DB::client()
+            .put(Cache::AuthCode, self.id.clone(), self, *CACHE_TTL_AUTH_CODE)
+            .await?;
         Ok(())
     }
 }

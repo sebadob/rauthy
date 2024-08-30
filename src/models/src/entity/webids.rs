@@ -1,9 +1,9 @@
 use crate::app_state::AppState;
+use crate::cache::{Cache, DB};
 use actix_web::web;
 use rauthy_api_types::users::WebIdResponse;
-use rauthy_common::constants::{CACHE_NAME_USERS, PUB_URL_WITH_SCHEME};
+use rauthy_common::constants::{CACHE_TTL_USER, PUB_URL_WITH_SCHEME};
 use rauthy_error::ErrorResponse;
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use rio_api::formatter::TriplesFormatter;
 use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
 use rio_api::parser::TriplesParser;
@@ -32,16 +32,9 @@ impl WebId {
 
     /// Returns the WebId from the database, if it exists, and a default otherwise.
     pub async fn find(data: &web::Data<AppState>, user_id: String) -> Result<Self, ErrorResponse> {
-        if let Some(web_id) = cache_get!(
-            Self,
-            CACHE_NAME_USERS.to_string(),
-            Self::cache_idx(&user_id),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?
-        {
-            return Ok(web_id);
+        let client = DB::client();
+        if let Some(slf) = client.get(Cache::User, Self::cache_idx(&user_id)).await? {
+            return Ok(slf);
         }
 
         let slf = match query_as!(Self, "SELECT * FROM webids WHERE user_id = $1", user_id)
@@ -59,14 +52,14 @@ impl WebId {
             }
         };
 
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            Self::cache_idx(&slf.user_id),
-            &data.caches.ha_cache_config,
-            &slf,
-            AckLevel::Leader,
-        )
-        .await?;
+        client
+            .put(
+                Cache::User,
+                Self::cache_idx(&slf.user_id),
+                &slf,
+                CACHE_TTL_USER,
+            )
+            .await?;
 
         Ok(slf)
     }
@@ -89,14 +82,14 @@ impl WebId {
         );
         q.execute(&data.db).await?;
 
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            Self::cache_idx(&web_id.user_id),
-            &data.caches.ha_cache_config,
-            &web_id,
-            AckLevel::Leader,
-        )
-        .await?;
+        DB::client()
+            .put(
+                Cache::User,
+                Self::cache_idx(&web_id.user_id),
+                &web_id,
+                CACHE_TTL_USER,
+            )
+            .await?;
 
         Ok(())
     }
@@ -122,7 +115,7 @@ impl WebId {
             ttl_parser.parse_all(&mut |t| ntriples_fmt.format(&t))?;
 
             // as long as the formatter itself is not buggy, this String conversion should never panic
-            Some(String::from_utf8(ntriples_fmt.finish().unwrap()).expect("Must be valid string."))
+            Some(String::from_utf8(ntriples_fmt.finish()?).expect("Must be valid string."))
         } else {
             None
         };

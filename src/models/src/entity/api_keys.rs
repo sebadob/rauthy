@@ -1,12 +1,12 @@
 use crate::app_state::{AppState, DbPool};
+use crate::cache::{Cache, DB};
 use actix_web::web;
 use chrono::Utc;
 use cryptr::{EncKeys, EncValue};
 use rauthy_api_types::api_keys::ApiKeyResponse;
-use rauthy_common::constants::{API_KEY_LENGTH, CACHE_NAME_12HR};
+use rauthy_common::constants::{API_KEY_LENGTH, CACHE_TTL_APP};
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
 use ring::digest;
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, FromRow};
@@ -63,7 +63,7 @@ impl ApiKeyEntity {
             .execute(&data.db)
             .await?;
 
-        Self::cache_invalidate(data, name).await?;
+        Self::cache_invalidate(name).await?;
         Ok(())
     }
 
@@ -109,7 +109,7 @@ impl ApiKeyEntity {
         .execute(&data.db)
         .await?;
 
-        Self::cache_invalidate(data, name).await?;
+        Self::cache_invalidate(name).await?;
 
         let secret_fmt = format!("{}${}", name, secret_plain);
         Ok(secret_fmt)
@@ -145,7 +145,7 @@ impl ApiKeyEntity {
         .execute(&data.db)
         .await?;
 
-        Self::cache_invalidate(data, name).await?;
+        Self::cache_invalidate(name).await?;
 
         Ok(())
     }
@@ -164,7 +164,7 @@ impl ApiKeyEntity {
         .execute(&data.db)
         .await?;
 
-        Self::cache_invalidate(data, &self.name).await?;
+        Self::cache_invalidate(&self.name).await?;
 
         Ok(())
     }
@@ -175,15 +175,10 @@ impl ApiKeyEntity {
         format!("api_key_{}", name)
     }
 
-    async fn cache_invalidate(data: &web::Data<AppState>, name: &str) -> Result<(), ErrorResponse> {
+    #[inline]
+    async fn cache_invalidate(name: &str) -> Result<(), ErrorResponse> {
         let idx = Self::cache_idx(name);
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-        )
-        .await?;
-
+        DB::client().delete(Cache::App, idx).await?;
         Ok(())
     }
 
@@ -196,26 +191,13 @@ impl ApiKeyEntity {
             ErrorResponse::new(ErrorResponseType::BadRequest, "Malformed API-Key")
         })?;
 
+        let client = DB::client();
         let idx = Self::cache_idx(name);
-        let api_key = if let Some(key) = cache_get!(
-            ApiKey,
-            CACHE_NAME_12HR.to_string(),
-            idx.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?
-        {
+        let api_key = if let Some(key) = client.get(Cache::App, &idx).await? {
             key
         } else {
             let key = Self::find(data, name).await?.into_api_key()?;
-            cache_put(
-                CACHE_NAME_12HR.to_string(),
-                idx,
-                &data.caches.ha_cache_config,
-                &key,
-            )
-            .await?;
+            client.put(Cache::App, idx, &key, CACHE_TTL_APP).await?;
             key
         };
 

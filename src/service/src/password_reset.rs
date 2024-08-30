@@ -168,7 +168,7 @@ pub async fn handle_put_user_password_reset<'a>(
                 ));
             }
             Some(code) => {
-                let svc_req = WebauthnServiceReq::find(data, code).await?;
+                let svc_req = WebauthnServiceReq::find(code).await?;
                 if svc_req.user_id != user.id {
                     // TODO delete the whole ML too?
                     return Err(ErrorResponse::new(
@@ -177,7 +177,7 @@ pub async fn handle_put_user_password_reset<'a>(
                     ));
                 }
 
-                svc_req.delete(data).await?;
+                svc_req.delete().await?;
             }
         }
     }

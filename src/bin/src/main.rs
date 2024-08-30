@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+use crate::cache_notify::handle_notify;
+use crate::logging::setup_logging;
 use actix_web::rt::System;
 use actix_web::{middleware, web, App, HttpServer};
 use actix_web_prom::PrometheusMetricsBuilder;
@@ -14,8 +16,8 @@ use rauthy_common::constants::{
     CACHE_NAME_SESSIONS, CACHE_NAME_USERS, CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA,
     DEVICE_GRANT_CODE_CACHE_SIZE, DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_RATE_LIMIT,
     DPOP_NONCE_EXP, DYN_CLIENT_RATE_LIMIT_SEC, DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG,
-    ENABLE_WEB_ID, EPHEMERAL_CLIENTS_CACHE_LIFETIME, POW_EXP, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL,
-    SWAGGER_UI_INTERNAL, UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
+    ENABLE_WEB_ID, POW_EXP, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
+    UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::password_hasher;
 use rauthy_common::utils::UseDummyAddress;
@@ -29,6 +31,7 @@ use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_middlewares::logging::RauthyLoggingMiddleware;
 use rauthy_middlewares::principal::RauthyPrincipalMiddleware;
 use rauthy_models::app_state::{AppState, Caches};
+use rauthy_models::cache::DB;
 use rauthy_models::email::EMail;
 use rauthy_models::events::event::Event;
 use rauthy_models::events::health_watch::watch_health;
@@ -36,7 +39,7 @@ use rauthy_models::events::listener::EventListener;
 use rauthy_models::events::notifier::EventNotifier;
 use rauthy_models::events::{init_event_vars, ip_blacklist_handler};
 use rauthy_models::migration::check_restore_backup;
-use rauthy_models::{cache, email, ListenScheme};
+use rauthy_models::{email, ListenScheme};
 use spow::pow::Pow;
 use std::error::Error;
 use std::net::Ipv4Addr;
@@ -47,9 +50,6 @@ use tokio::sync::mpsc;
 use tokio::time;
 use tracing::{debug, error, info};
 use utoipa_swagger_ui::SwaggerUi;
-
-use crate::cache_notify::handle_notify;
-use crate::logging::setup_logging;
 
 mod cache_notify;
 mod dummy_data;
@@ -118,9 +118,7 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
     }
 
     // caches
-    cache::start_cache()
-        .await
-        .expect("Error starting the cache layer");
+    DB::init().await.expect("Error starting the cache layer");
 
     let (tx_health_state, mut cache_config) = redhac::CacheConfig::new();
 
@@ -174,7 +172,7 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
     // ephemeral clients
     cache_config.spawn_cache(
         CACHE_NAME_EPHEMERAL_CLIENTS.to_string(),
-        redhac::TimedCache::with_lifespan(*EPHEMERAL_CLIENTS_CACHE_LIFETIME),
+        redhac::TimedCache::with_lifespan(3600),
         None,
     );
 
@@ -242,6 +240,7 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
         Some(32),
     );
 
+    // TODO do not migrate to hiqlite -> pointless! a simple `watch` channel will be just fine
     // login delay cache
     cache_config.spawn_cache(
         CACHE_NAME_LOGIN_DELAY.to_string(),
@@ -650,7 +649,10 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
             app = app.service(swagger.clone());
         }
 
-        if matches!(app_state.listen_scheme, ListenScheme::UnixHttp | ListenScheme::UnixHttps) {
+        if matches!(
+            app_state.listen_scheme,
+            ListenScheme::UnixHttp | ListenScheme::UnixHttps
+        ) {
             app = app.app_data(UseDummyAddress);
         }
 

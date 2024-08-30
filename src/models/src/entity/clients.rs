@@ -1,4 +1,5 @@
 use crate::app_state::{AppState, DbTxn};
+use crate::cache::{Cache, DB};
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::jwk::JwkKeyPairAlg;
 use crate::entity::scopes::Scope;
@@ -13,16 +14,13 @@ use rauthy_api_types::clients::{
     NewClientRequest,
 };
 use rauthy_common::constants::{
-    ADMIN_FORCE_MFA, APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_EPHEMERAL_CLIENTS,
+    ADMIN_FORCE_MFA, APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_EPHEMERAL_CLIENT,
     DYN_CLIENT_DEFAULT_TOKEN_LIFETIME, DYN_CLIENT_SECRET_AUTO_ROTATE, ENABLE_EPHEMERAL_CLIENTS,
     EPHEMERAL_CLIENTS_ALLOWED_FLOWS, EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA,
-    IDX_CLIENTS, PROXY_MODE, RAUTHY_VERSION,
+    PROXY_MODE, RAUTHY_VERSION,
 };
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{
-    cache_get, cache_get_from, cache_get_value, cache_insert, cache_put, cache_remove, AckLevel,
-};
 use reqwest::header::CONTENT_TYPE;
 use reqwest::{tls, Url};
 use serde::{Deserialize, Serialize};
@@ -73,6 +71,7 @@ pub struct Client {
 
 // CRUD
 impl Client {
+    #[inline]
     pub fn get_cache_entry(id: &str) -> String {
         format!("client_{}", id)
     }
@@ -126,18 +125,6 @@ impl Client {
         if rows == 0 {
             error!("Error inserting client - no rows affected");
         }
-
-        // TODO remove all clients cache fully? -> admin UI only?
-        // let mut clients = Client::find_all(data).await?;
-        // clients.push(client.clone());
-        // cache_insert(
-        //     CACHE_NAME_12HR.to_string(),
-        //     IDX_CLIENTS.to_string(),
-        //     &data.caches.ha_cache_config,
-        //     &clients,
-        //     AckLevel::Leader,
-        // )
-        // .await?;
 
         Ok(client)
     }
@@ -204,17 +191,13 @@ impl Client {
             .execute(&data.db)
             .await?;
 
-        cache_remove(
-            CACHE_NAME_12HR.to_string(),
-            Client::get_cache_entry(&self.id),
-            &data.caches.ha_cache_config,
-            AckLevel::Leader,
-        )
-        .await?;
+        DB::client()
+            .delete(Cache::App, Client::get_cache_entry(&self.id))
+            .await?;
 
         // We only clean up the cache. The database uses foreign key a cascade.
         if self.is_dynamic() {
-            ClientDyn::delete_from_cache(data, &self.id).await?;
+            ClientDyn::delete_from_cache(&self.id).await?;
         }
 
         Ok(())
@@ -222,33 +205,26 @@ impl Client {
 
     // Returns a client by id without its secret.
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
-        let client = cache_get!(
-            Client,
-            CACHE_NAME_12HR.to_string(),
-            Client::get_cache_entry(&id),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(client) = client {
-            return Ok(client);
-        }
+        let client = DB::client();
+        if let Some(slf) = client.get(Cache::App, Client::get_cache_entry(&id)).await? {
+            return Ok(slf);
+        };
 
-        let client = sqlx::query_as::<_, Self>("select * from clients where id = $1")
+        let slf = sqlx::query_as::<_, Self>("select * from clients where id = $1")
             .bind(&id)
             .fetch_one(&data.db)
             .await?;
 
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            Client::get_cache_entry(&client.id),
-            &data.caches.ha_cache_config,
-            &client,
-            AckLevel::Leader,
-        )
-        .await?;
+        client
+            .put(
+                Cache::App,
+                Client::get_cache_entry(&slf.id),
+                &slf,
+                CACHE_TTL_APP,
+            )
+            .await?;
 
-        Ok(client)
+        Ok(slf)
     }
 
     // Returns all existing clients with the secrets.
@@ -272,29 +248,23 @@ impl Client {
             return Self::find(data, id).await;
         }
 
-        if let Some(client) = cache_get!(
-            Client,
-            CACHE_NAME_EPHEMERAL_CLIENTS.to_string(),
-            id.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?
-        {
-            return Ok(client);
+        let client = DB::client();
+        if let Some(slf) = client.get(Cache::ClientEphemeral, &id).await? {
+            return Ok(slf);
         }
 
-        let client = Self::ephemeral_from_url(&id).await?;
+        let slf = Self::ephemeral_from_url(&id).await?;
 
-        cache_put(
-            CACHE_NAME_EPHEMERAL_CLIENTS.to_string(),
-            id,
-            &data.caches.ha_cache_config,
-            &client,
-        )
-        .await?;
+        client
+            .put(
+                Cache::ClientEphemeral,
+                id,
+                &slf,
+                *CACHE_TTL_EPHEMERAL_CLIENT,
+            )
+            .await?;
 
-        Ok(client)
+        Ok(slf)
     }
 
     pub async fn save(
@@ -337,37 +307,15 @@ impl Client {
             q.execute(&data.db).await?;
         }
 
-        cache_put(
-            CACHE_NAME_12HR.to_string(),
-            Client::get_cache_entry(&self.id),
-            &data.caches.ha_cache_config,
-            &self,
-        )
-        .await?;
-
-        let mut found_self = false;
-        let mut clients = Client::find_all(data)
-            .await?
-            .into_iter()
-            .map(|mut c| {
-                if c.id == self.id {
-                    found_self = true;
-                    c = self.clone();
-                }
-                c
-            })
-            .collect::<Vec<Self>>();
-        if !found_self {
-            clients.push(self.clone());
-        }
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_CLIENTS.to_string(),
-            &data.caches.ha_cache_config,
-            &clients,
-            AckLevel::Quorum,
-        )
-        .await?;
+        // TODO this may lead to incorrect data in case of a failing txn? -> check
+        DB::client()
+            .put(
+                Cache::App,
+                Client::get_cache_entry(&self.id),
+                self,
+                CACHE_TTL_APP,
+            )
+            .await?;
 
         Ok(())
     }
@@ -400,7 +348,7 @@ impl Client {
         let mut txn = data.db.begin().await?;
         new_client.save(data, Some(&mut txn)).await?;
         client_dyn
-            .update(data, &mut txn, token_endpoint_auth_method)
+            .update(&mut txn, token_endpoint_auth_method)
             .await?;
         txn.commit().await?;
 

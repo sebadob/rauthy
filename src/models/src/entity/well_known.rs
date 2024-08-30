@@ -1,9 +1,9 @@
 use crate::app_state::AppState;
+use crate::cache::{Cache, DB};
 use crate::entity::scopes::Scope;
 use actix_web::web;
-use rauthy_common::constants::{CACHE_NAME_12HR, ENABLE_DYN_CLIENT_REG, GRANT_TYPE_DEVICE_CODE};
+use rauthy_common::constants::{CACHE_TTL_APP, ENABLE_DYN_CLIENT_REG, GRANT_TYPE_DEVICE_CODE};
 use rauthy_error::ErrorResponse;
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -40,35 +40,22 @@ const IDX: &str = ".well-known";
 
 impl WellKnown {
     pub async fn json(data: &web::Data<AppState>) -> Result<String, ErrorResponse> {
-        if let Some(wk) = cache_get!(
-            String,
-            CACHE_NAME_12HR.to_string(),
-            IDX.to_string(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?
-        {
-            Ok(wk)
-        } else {
-            let scopes = Scope::find_all(data)
-                .await?
-                .into_iter()
-                .map(|s| s.name)
-                .collect::<Vec<String>>();
-            let slf = Self::new(&data.issuer, scopes);
-            let json = serde_json::to_string(&slf).unwrap();
-
-            cache_put(
-                CACHE_NAME_12HR.to_string(),
-                IDX.to_string(),
-                &data.caches.ha_cache_config,
-                &json,
-            )
-            .await?;
-
-            Ok(json)
+        let client = DB::client();
+        if let Some(slf) = client.get(Cache::App, IDX).await? {
+            return Ok(slf);
         }
+
+        let scopes = Scope::find_all(data)
+            .await?
+            .into_iter()
+            .map(|s| s.name)
+            .collect::<Vec<String>>();
+        let slf = Self::new(&data.issuer, scopes);
+        let json = serde_json::to_string(&slf).unwrap();
+
+        client.put(Cache::App, IDX, &json, CACHE_TTL_APP).await?;
+
+        Ok(json)
     }
 
     /// Rebuilds the WellKnown, serializes it as json and updates it inside the cache.
@@ -82,13 +69,9 @@ impl WellKnown {
         let slf = Self::new(&data.issuer, scopes);
         let json = serde_json::to_string(&slf).unwrap();
 
-        cache_put(
-            CACHE_NAME_12HR.to_string(),
-            IDX.to_string(),
-            &data.caches.ha_cache_config,
-            &json,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, IDX, &json, CACHE_TTL_APP)
+            .await?;
 
         Ok(())
     }

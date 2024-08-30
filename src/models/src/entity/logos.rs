@@ -1,13 +1,13 @@
 use crate::app_state::AppState;
+use crate::cache::{Cache, DB};
 use actix_web::web;
 use image::imageops::FilterType;
 use image::ImageFormat;
 use jwt_simple::prelude::{Deserialize, Serialize};
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CONTENT_TYPE_WEBP, IDX_AUTH_PROVIDER_LOGO, IDX_CLIENT_LOGO,
+    CACHE_TTL_APP, CONTENT_TYPE_WEBP, IDX_AUTH_PROVIDER_LOGO, IDX_CLIENT_LOGO,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use sqlx::{query, query_as};
 use std::io::Cursor;
 use tracing::debug;
@@ -134,12 +134,9 @@ impl Logo {
             }
         };
 
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            Self::cache_idx(typ, id),
-            &data.caches.ha_cache_config,
-        )
-        .await?;
+        DB::client()
+            .delete(Cache::App, Self::cache_idx(typ, id))
+            .await?;
 
         Ok(())
     }
@@ -160,7 +157,6 @@ impl Logo {
         // To make the upsert not fail if a switch between svg and jpg/png happens, we will
         // technically not do an upsert, but actually delete + insert.
 
-        tracing::debug!("\n\ncontent_type: {}\n", content_type.as_ref());
         match content_type.as_ref() {
             "image/svg+xml" => {
                 Self::upsert_svg(data, id, logo, content_type.to_string(), &typ).await
@@ -346,14 +342,14 @@ impl Logo {
         .await?;
 
         if with_cache {
-            cache_insert(
-                CACHE_NAME_12HR.to_string(),
-                Self::cache_idx(typ, &self.id),
-                &data.caches.ha_cache_config,
-                &self,
-                AckLevel::Quorum,
-            )
-            .await?;
+            DB::client()
+                .put(
+                    Cache::App,
+                    Self::cache_idx(typ, &self.id),
+                    self,
+                    CACHE_TTL_APP,
+                )
+                .await?;
         }
 
         Ok(())
@@ -406,34 +402,23 @@ impl Logo {
         id: &str,
         typ: &LogoType,
     ) -> Result<Self, ErrorResponse> {
-        if let Some(res) = cache_get!(
-            Self,
-            CACHE_NAME_12HR.to_string(),
-            Self::cache_idx(typ, id),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?
-        {
-            return Ok(res);
+        let client = DB::client();
+        if let Some(slf) = client.get(Cache::App, Self::cache_idx(typ, id)).await? {
+            return Ok(slf);
         }
 
         let slf = Self::find(data, id, LogoRes::Small, typ).await?;
 
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            Self::cache_idx(typ, id),
-            &data.caches.ha_cache_config,
-            &slf,
-            AckLevel::Quorum,
-        )
-        .await?;
+        client
+            .put(Cache::App, Self::cache_idx(typ, id), &slf, CACHE_TTL_APP)
+            .await?;
 
         Ok(slf)
     }
 }
 
 impl Logo {
+    #[inline]
     fn cache_idx(typ: &LogoType, id: &str) -> String {
         match typ {
             LogoType::Client => format!("{}_{}", IDX_CLIENT_LOGO, id),

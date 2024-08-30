@@ -257,6 +257,11 @@ prepare: migrate
     just _run cargo sqlx prepare --workspace
 
 
+# run `sqlx prepare` locally to get rid of `sqlx::query!()` warnings
+prepare-local: migrate
+    cargo sqlx prepare --workspace
+
+
 # prepare DB migrations for Postgres for compile-time checked queries
 prepare-postgres: migrate-postgres
     just _run-pg cargo sqlx prepare --workspace -- --features postgres

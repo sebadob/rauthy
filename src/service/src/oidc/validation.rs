@@ -129,7 +129,7 @@ pub async fn validate_refresh_token(
     // validate DPoP proof
     let (dpop_fingerprint, dpop_nonce) = if let Some(cnf) = claims.custom.cnf {
         // if the refresh token contains the 'cnf' header, we must validate the DPoP as well
-        if let Some(proof) = DPoPProof::opt_validated_from(data, req, &header_origin).await? {
+        if let Some(proof) = DPoPProof::opt_validated_from(req, &header_origin).await? {
             let fingerprint = proof.jwk_fingerprint()?;
             if fingerprint != cnf.jkt {
                 return Err(ErrorResponse::new(

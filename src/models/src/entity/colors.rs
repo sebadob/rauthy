@@ -1,9 +1,9 @@
 use crate::app_state::AppState;
+use crate::cache::{Cache, DB};
 use actix_web::web;
 use rauthy_api_types::clients::ColorsRequest;
-use rauthy_common::constants::CACHE_NAME_12HR;
+use rauthy_common::constants::CACHE_TTL_APP;
 use rauthy_error::ErrorResponse;
-use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
@@ -21,12 +21,9 @@ impl ColorEntity {
             .execute(&data.db)
             .await?;
 
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            Self::cache_idx(client_id),
-            &data.caches.ha_cache_config,
-        )
-        .await?;
+        DB::client()
+            .delete(Cache::App, Self::cache_idx(client_id))
+            .await?;
 
         Ok(())
     }
@@ -36,16 +33,10 @@ impl ColorEntity {
         client_id: &str,
     ) -> Result<Colors, ErrorResponse> {
         let idx = Self::cache_idx(client_id);
-        if let Some(colors) = cache_get!(
-            Colors,
-            CACHE_NAME_12HR.to_string(),
-            idx.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?
-        {
-            return Ok(colors);
+        let client = DB::client();
+
+        if let Some(slf) = client.get(Cache::App, &idx).await? {
+            return Ok(slf);
         }
 
         let res = sqlx::query_as!(Self, "SELECT * FROM colors WHERE client_id = $1", client_id)
@@ -56,13 +47,7 @@ impl ColorEntity {
             Some(entity) => entity.colors()?,
         };
 
-        cache_put(
-            CACHE_NAME_12HR.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &colors,
-        )
-        .await?;
+        client.put(Cache::App, idx, &colors, CACHE_TTL_APP).await?;
 
         Ok(colors)
     }
@@ -92,31 +77,29 @@ impl ColorEntity {
             client_id,
             col_bytes,
         );
-
         q.execute(&data.db).await?;
 
-        cache_put(
-            CACHE_NAME_12HR.to_string(),
-            Self::cache_idx(client_id),
-            &data.caches.ha_cache_config,
-            &cols,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, Self::cache_idx(client_id), &cols, CACHE_TTL_APP)
+            .await?;
 
         Ok(())
     }
 }
 
 impl ColorEntity {
+    #[inline]
     pub fn colors(&self) -> Result<Colors, ErrorResponse> {
         Colors::from_bytes(self.data.as_slice())
     }
 
+    #[inline]
     fn cache_idx(client_id: &str) -> String {
         format!("colors_{}", client_id)
     }
 }
 
+// TODO String -> Cow<_> would be a nice improvement in default cases
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize, FromRow, ToSchema)]
 pub struct Colors {
     pub act1: String,

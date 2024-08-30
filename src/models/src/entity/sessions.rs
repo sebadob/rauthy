@@ -1,5 +1,6 @@
 use crate::api_cookie::ApiCookie;
 use crate::app_state::AppState;
+use crate::cache::{Cache, DB};
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
 use actix_web::cookie::{time, Cookie, SameSite};
@@ -8,12 +9,11 @@ use actix_web::{cookie, web, HttpRequest};
 use chrono::Utc;
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_SESSIONS, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER,
-    IDX_SESSION, SESSION_LIFETIME_FED_CM,
+    CACHE_TTL_SESSION, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER, IDX_SESSION,
+    SESSION_LIFETIME_FED_CM,
 };
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
 use sqlx::sqlite::SqliteRow;
@@ -128,13 +128,9 @@ impl Session {
             .execute(&data.db)
             .await?;
 
-        cache_remove(
-            CACHE_NAME_SESSIONS.to_string(),
-            Session::cache_idx(&self.id),
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .delete(Cache::Session, Session::cache_idx(&self.id))
+            .await?;
 
         Ok(())
     }
@@ -153,14 +149,11 @@ impl Session {
             .execute(&data.db)
             .await?;
 
+        let client = DB::client();
         for s in sessions {
-            cache_remove(
-                CACHE_NAME_SESSIONS.to_string(),
-                Session::cache_idx(&s.id),
-                &data.caches.ha_cache_config,
-                AckLevel::Quorum,
-            )
-            .await?;
+            client
+                .delete(Cache::Session, Session::cache_idx(&s.id))
+                .await?;
         }
 
         Ok(())
@@ -169,16 +162,10 @@ impl Session {
     // Returns a session by id
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
         let idx = Session::cache_idx(&id);
-        let session = cache_get!(
-            Session,
-            CACHE_NAME_SESSIONS.to_string(),
-            idx.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(session) = session {
-            return Ok(session);
+        let client = DB::client();
+
+        if let Some(slf) = client.get(Cache::Session, &idx).await? {
+            return Ok(slf);
         }
 
         let session = sqlx::query_as!(
@@ -189,14 +176,9 @@ impl Session {
         .fetch_one(&data.db)
         .await?;
 
-        cache_insert(
-            CACHE_NAME_SESSIONS.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &session,
-            AckLevel::Leader,
-        )
-        .await?;
+        client
+            .put(Cache::Session, idx, &session, CACHE_TTL_SESSION)
+            .await?;
 
         Ok(session)
     }
@@ -335,14 +317,11 @@ impl Session {
             }
         }
 
+        let client = DB::client();
         for id in removed {
-            cache_remove(
-                CACHE_NAME_SESSIONS.to_string(),
-                Session::cache_idx(&id),
-                &data.caches.ha_cache_config,
-                AckLevel::Quorum,
-            )
-            .await?;
+            client
+                .delete(Cache::Session, Session::cache_idx(&id))
+                .await?;
         }
 
         Ok(())
@@ -369,14 +348,11 @@ impl Session {
             }
         }
 
+        let client = DB::client();
         for id in removed {
-            cache_remove(
-                CACHE_NAME_SESSIONS.to_string(),
-                Session::cache_idx(&id),
-                &data.caches.ha_cache_config,
-                AckLevel::Quorum,
-            )
-            .await?;
+            client
+                .delete(Cache::Session, Session::cache_idx(&id))
+                .await?;
         }
 
         Ok(())
@@ -421,17 +397,16 @@ impl Session {
             self.last_seen,
             self.remote_ip,
         );
-
         q.execute(&data.db).await?;
 
-        cache_insert(
-            CACHE_NAME_SESSIONS.to_string(),
-            Session::cache_idx(&self.id),
-            &data.caches.ha_cache_config,
-            &self,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .put(
+                Cache::Session,
+                Session::cache_idx(&self.id),
+                self,
+                CACHE_TTL_SESSION,
+            )
+            .await?;
 
         Ok(())
     }
@@ -511,6 +486,7 @@ impl Session {
         }
     }
 
+    #[inline(always)]
     fn cache_idx(id: &String) -> String {
         format!("{}{}", IDX_SESSION, id)
     }
@@ -625,13 +601,7 @@ impl Session {
             .execute(&data.db)
             .await?;
 
-        cache_remove(
-            CACHE_NAME_12HR.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client().delete(Cache::Session, idx).await?;
 
         Ok(ApiCookie::build(COOKIE_SESSION, &self.id, 0))
     }

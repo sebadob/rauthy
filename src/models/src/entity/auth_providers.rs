@@ -949,7 +949,7 @@ impl AuthProviderCallback {
             scopes,
             code_lifetime,
         );
-        code.save(data).await?;
+        code.save().await?;
 
         // location header
         let mut loc = format!("{}?code={}", slf.req_redirect_uri, code.id);
@@ -977,7 +977,7 @@ impl AuthProviderCallback {
                     .as_ref()
                     .map(|h| h.1.to_str().unwrap().to_string()),
             }
-            .save(data)
+                .save()
             .await?;
 
             AuthStep::AwaitWebauthn(step)
@@ -985,7 +985,7 @@ impl AuthProviderCallback {
             AuthStep::LoggedIn(AuthStepLoggedIn {
                 user_id: user.id,
                 email: user.email,
-                header_loc: (header::LOCATION, HeaderValue::from_str(&loc).unwrap()),
+                header_loc: (header::LOCATION, HeaderValue::from_str(&loc)?),
                 header_csrf: Session::get_csrf_header(&session.csrf_token),
                 header_origin,
             })

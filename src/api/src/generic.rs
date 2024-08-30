@@ -539,8 +539,8 @@ pub async fn ping() -> impl Responder {
     ),
 )]
 #[post("/pow")]
-pub async fn post_pow(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
-    let pow = PowEntity::create(&data).await?;
+pub async fn post_pow() -> Result<HttpResponse, ErrorResponse> {
+    let pow = PowEntity::create().await?;
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
         .body(pow.to_string()))

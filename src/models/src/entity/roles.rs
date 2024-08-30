@@ -1,11 +1,11 @@
 use crate::app_state::AppState;
+use crate::cache::{Cache, DB};
 use crate::entity::users::User;
 use actix_web::web;
 use rauthy_api_types::roles::NewRoleRequest;
-use rauthy_common::constants::{CACHE_NAME_12HR, IDX_ROLES, IDX_USERS};
+use rauthy_common::constants::{CACHE_TTL_APP, IDX_ROLES};
 use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
@@ -46,14 +46,9 @@ impl Role {
         .await?;
 
         roles.push(new_role.clone());
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_ROLES.to_string(),
-            &data.caches.ha_cache_config,
-            &roles,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, IDX_ROLES, &roles, CACHE_TTL_APP)
+            .await?;
 
         Ok(new_role)
     }
@@ -83,20 +78,10 @@ impl Role {
                 users.push(u);
             });
 
-        // no need to evict the cache if no users are updated
-        if !users.is_empty() {
-            cache_remove(
-                CACHE_NAME_12HR.to_string(),
-                IDX_USERS.to_string(),
-                &data.caches.ha_cache_config,
-                AckLevel::Quorum,
-            )
-            .await?;
-        }
-
         let mut txn = data.db.begin().await?;
 
         for user in users {
+            // TODO wrap inside single txn after hiqlite migrations
             user.save(data, None, Some(&mut txn)).await?;
         }
 
@@ -112,14 +97,9 @@ impl Role {
             .into_iter()
             .filter(|r| r.id != role.id)
             .collect::<Vec<Role>>();
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_ROLES.to_string(),
-            &data.caches.ha_cache_config,
-            &roles,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, IDX_ROLES, &roles, CACHE_TTL_APP)
+            .await?;
 
         Ok(())
     }
@@ -135,30 +115,18 @@ impl Role {
 
     // Returns all existing roles
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        let roles = cache_get!(
-            Vec<Role>,
-            CACHE_NAME_12HR.to_string(),
-            IDX_ROLES.to_string(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(roles) = roles {
-            return Ok(roles);
+        let client = DB::client();
+        if let Some(slf) = client.get(Cache::App, IDX_ROLES).await? {
+            return Ok(slf);
         }
 
         let res = sqlx::query_as!(Self, "SELECT * FROM roles")
             .fetch_all(&data.db)
             .await?;
 
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_ROLES.to_string(),
-            &data.caches.ha_cache_config,
-            &res,
-            AckLevel::Leader,
-        )
-        .await?;
+        client
+            .put(Cache::App, IDX_ROLES, &res, CACHE_TTL_APP)
+            .await?;
         Ok(res)
     }
 
@@ -180,17 +148,6 @@ impl Role {
                 u.roles = u.roles.replace(&role.name, &new_name);
                 users.push(u);
             });
-
-        // no need to evict the cache if no users are updated
-        if !users.is_empty() {
-            cache_remove(
-                CACHE_NAME_12HR.to_string(),
-                IDX_USERS.to_string(),
-                &data.caches.ha_cache_config,
-                AckLevel::Leader,
-            )
-            .await?;
-        }
 
         let mut txn = data.db.begin().await?;
 
@@ -219,14 +176,9 @@ impl Role {
                 r
             })
             .collect::<Vec<Role>>();
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_ROLES.to_string(),
-            &data.caches.ha_cache_config,
-            &roles,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, IDX_ROLES, &roles, CACHE_TTL_APP)
+            .await?;
 
         Ok(new_role)
     }

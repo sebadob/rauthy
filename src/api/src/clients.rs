@@ -181,7 +181,7 @@ pub async fn post_clients_dyn(
         }
     } else {
         let ip = real_ip_from_req(&req)?;
-        ClientDyn::rate_limit_ip(&data, ip).await?;
+        ClientDyn::rate_limit_ip(ip).await?;
     }
 
     Client::create_dynamic(&data, payload.into_inner())

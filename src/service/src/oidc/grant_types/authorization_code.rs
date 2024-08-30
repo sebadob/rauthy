@@ -56,7 +56,7 @@ pub async fn grant_type_authorization_code(
     // check for DPoP header
     let mut headers = Vec::new();
     let dpop_fingerprint =
-        if let Some(proof) = DPoPProof::opt_validated_from(data, &req, &header_origin).await? {
+        if let Some(proof) = DPoPProof::opt_validated_from(&req, &header_origin).await? {
             if let Some(nonce) = &proof.claims.nonce {
                 headers.push((
                     HeaderName::from_str(HEADER_DPOP_NONCE).unwrap(),
@@ -73,7 +73,7 @@ pub async fn grant_type_authorization_code(
 
     // get the oidc code from the cache
     let idx = req_data.code.as_ref().unwrap().to_owned();
-    let code = match AuthCode::find(data, idx).await? {
+    let code = match AuthCode::find(idx).await? {
         None => {
             warn!(
                 "'auth_code' could not be found inside the cache - Host: {}",
@@ -160,7 +160,7 @@ pub async fn grant_type_authorization_code(
         session.last_seen = OffsetDateTime::now_utc().unix_timestamp();
         session.state = SessionState::Auth;
         if let Err(err) = session.validate_user_expiry(&user) {
-            code.delete(data).await?;
+            code.delete().await?;
             return Err(err);
         }
         session.validate_user_expiry(&user)?;
@@ -169,7 +169,7 @@ pub async fn grant_type_authorization_code(
         session.groups = user.groups;
         session.save(data).await?;
     }
-    code.delete(data).await?;
+    code.delete().await?;
 
     // update timestamp if it is a dynamic client
     if client.is_dynamic() {
