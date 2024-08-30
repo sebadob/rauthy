@@ -202,7 +202,9 @@ lazy_static! {
 
     pub static ref PUB_URL: String = env::var("PUB_URL").expect("PUB_URL env var is not set");
     pub static ref PUB_URL_WITH_SCHEME: String = {
-        let scheme = if env::var("LISTEN_SCHEME").as_deref() == Ok("http") && !*PROXY_MODE {
+        let listen_scheme = env::var("LISTEN_SCHEME");
+        let scheme = if (listen_scheme.as_deref() == Ok("http") && !*PROXY_MODE)
+            || listen_scheme.as_deref() == Ok("unix_http") {
             "http"
         } else {
             "https"
@@ -211,7 +213,9 @@ lazy_static! {
     };
 
     pub static ref PROVIDER_CALLBACK_URI: String = {
-        let scheme = if env::var("LISTEN_SCHEME").as_deref() == Ok("http") && !*PROXY_MODE {
+        let listen_scheme = env::var("LISTEN_SCHEME");
+        let scheme = if (listen_scheme.as_deref() == Ok("http") && !*PROXY_MODE)
+            || listen_scheme.as_deref() == Ok("unix_http") {
             "http"
         } else {
             "https"

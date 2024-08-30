@@ -679,6 +679,10 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                 .run()
                 .await
         }
+
+        ListenScheme::UnixHttp | ListenScheme::UnixHttps => {
+            server.bind_uds(listen_addr)?.run().await
+        }
     }
 }
 

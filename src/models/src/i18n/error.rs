@@ -79,12 +79,8 @@ impl I18nError<'_> {
 
     fn build_zh_hans(status_code: StatusCode, details_text: Option<Cow<'static, str>>) -> Self {
         let error_text = match status_code {
-            StatusCode::BAD_REQUEST => {
-                "您的请求异常，请参见详情。"
-            }
-            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
-                "拒绝访问——您未被允许访问此资源。"
-            }
+            StatusCode::BAD_REQUEST => "您的请求异常，请参见详情。",
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => "拒绝访问——您未被允许访问此资源。",
             StatusCode::INTERNAL_SERVER_ERROR => "内部服务器错误",
             _ => "找不到请求的资源",
         };

@@ -315,7 +315,9 @@ impl ApiDoc {
         // contact.email = Some(ADMIN);
         // doc.info.contact = Some(contact);
 
-        let scheme = if !*PROXY_MODE && app_state.listen_scheme == ListenScheme::Http {
+        let scheme = if (!*PROXY_MODE && app_state.listen_scheme == ListenScheme::Http)
+            || app_state.listen_scheme == ListenScheme::UnixHttp
+        {
             "http://"
         } else {
             "https://"

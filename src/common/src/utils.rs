@@ -7,9 +7,9 @@ use gethostname::gethostname;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use std::env;
 use std::net::IpAddr;
 use std::str::FromStr;
+use std::{env, net::Ipv4Addr};
 use tracing::{error, trace};
 
 const B64_URL_SAFE: engine::GeneralPurpose = general_purpose::URL_SAFE;
@@ -82,6 +82,12 @@ pub fn new_store_id() -> String {
     get_rand(24)
 }
 
+// 192.0.0.8 is the IPv4 dummy address, according to RFC 7600.
+// On the Internet, according to IANA registry, this address cannot be
+// a destination address and is never global-reachable.
+// So nobody can establish a TCP connection with this as source address.
+const DUMMY_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(192, 0, 0, 8));
+
 // TODO unify real_ip_from_req and real_ip_from_svc_req by using an impl Trait
 #[inline(always)]
 pub fn real_ip_from_req(req: &HttpRequest) -> Result<IpAddr, ErrorResponse> {
@@ -114,10 +120,7 @@ pub fn real_ip_from_svc_req(req: &ServiceRequest) -> Result<IpAddr, ErrorRespons
 #[inline(always)]
 fn parse_peer_addr(peer_addr: Option<&str>) -> Result<IpAddr, ErrorResponse> {
     match peer_addr {
-        None => Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "No IP Addr in Connection Info - this should only happen in tests",
-        )),
+        None => Ok(DUMMY_ADDRESS),
         Some(peer) => match IpAddr::from_str(peer) {
             Ok(ip) => Ok(ip),
             Err(err) => Err(ErrorResponse::new(
@@ -130,6 +133,9 @@ fn parse_peer_addr(peer_addr: Option<&str>) -> Result<IpAddr, ErrorResponse> {
 
 #[inline(always)]
 fn check_trusted_proxy(peer_ip: &IpAddr) -> Result<(), ErrorResponse> {
+    if *peer_ip == DUMMY_ADDRESS {
+        return Ok(());
+    }
     for cidr in &*TRUSTED_PROXIES {
         if cidr.contains(peer_ip) {
             return Ok(());

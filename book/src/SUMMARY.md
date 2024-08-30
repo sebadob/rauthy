@@ -20,6 +20,7 @@
     - [Forward Authentication](config/forward_auth.md)
     - [Bootstrapping](config/bootstrap.md)
     - [Database Migrations](config/db_migration.md)
+    - [UNIX Doamin Sockets](config/unix_socket.md)
 
 - [Authentication Providers](auth_providers/index.md)
     - [Github](./auth_providers/github.md)

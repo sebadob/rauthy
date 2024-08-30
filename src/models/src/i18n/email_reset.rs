@@ -40,7 +40,8 @@ static TPL_ZH_HANS_RESET_SUBJECT: Lazy<Option<String>> =
     Lazy::new(|| env::var("TPL_ZH_HANS_RESET_SUBJECT").ok());
 static TPL_ZH_HANS_RESET_HEADER: Lazy<Option<String>> =
     Lazy::new(|| env::var("TPL_ZH_HANS_RESET_HEADER").ok());
-static TPL_ZH_HANS_RESET_TEXT: Lazy<Option<String>> = Lazy::new(|| env::var("TPL_ZH_HANS_RESET_TEXT").ok());
+static TPL_ZH_HANS_RESET_TEXT: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_ZH_HANS_RESET_TEXT").ok());
 static TPL_ZH_HANS_RESET_CLICK_LINK: Lazy<Option<String>> =
     Lazy::new(|| env::var("TPL_ZH_HANS_RESET_CLICK_LINK").ok());
 static TPL_ZH_HANS_RESET_VALIDITY: Lazy<Option<String>> =
@@ -137,10 +138,12 @@ impl I18nEmailReset<'_> {
             click_link: TPL_ZH_HANS_RESET_CLICK_LINK
                 .as_deref()
                 .unwrap_or("点击下方链接以打开密码重置表单。"),
-            validity: TPL_ZH_HANS_RESET_VALIDITY.as_deref().unwrap_or(
-                "出于安全考虑，此链接仅在短时间内有效。",
-            ),
-            expires: TPL_ZH_HANS_RESET_EXPIRES.as_deref().unwrap_or("链接过期时间"),
+            validity: TPL_ZH_HANS_RESET_VALIDITY
+                .as_deref()
+                .unwrap_or("出于安全考虑，此链接仅在短时间内有效。"),
+            expires: TPL_ZH_HANS_RESET_EXPIRES
+                .as_deref()
+                .unwrap_or("链接过期时间"),
             button_text: TPL_ZH_HANS_RESET_BUTTON.as_deref().unwrap_or("重置密码"),
             footer: TPL_ZH_HANS_RESET_FOOTER.as_deref(),
         }
