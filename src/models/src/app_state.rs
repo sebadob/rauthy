@@ -68,30 +68,40 @@ impl AppState {
 
         // server listen address
         let listen_addr = env::var("LISTEN_ADDRESS").unwrap_or_else(|_| String::from("0.0.0.0"));
-        let (listen_scheme, port) = match env::var("LISTEN_SCHEME")
+        let listen_scheme = match env::var("LISTEN_SCHEME")
             .unwrap_or_else(|_| String::from("http_https"))
             .as_str()
         {
             "http" => {
                 let port = env::var("LISTEN_PORT_HTTP").unwrap_or_else(|_| "8080".to_string());
-                (ListenScheme::Http, port)
+                info!("Listen URL: http://{}:{}", listen_addr, port);
+                ListenScheme::Http
             }
             "https" => {
                 let port = env::var("LISTEN_PORT_HTTPS").unwrap_or_else(|_| "8443".to_string());
-                (ListenScheme::Https, port)
+                info!("Listen URL: https://{}:{}", listen_addr, port);
+                ListenScheme::Https
             }
             "http_https" => {
                 let port_http = env::var("LISTEN_PORT_HTTP").unwrap_or_else(|_| "8080".to_string());
                 let port_https =
                     env::var("LISTEN_PORT_HTTPS").unwrap_or_else(|_| "8443".to_string());
                 let port = format!("{{{}|{}}}", port_http, port_https);
-                (ListenScheme::HttpHttps, port)
+                info!("Listen URL: {{http|https}}://{}:{}", listen_addr, port);
+                ListenScheme::HttpHttps
+            }
+            "unix_http" => {
+                info!("Listen URL: unix+http:{}", listen_addr);
+                ListenScheme::UnixHttp
+            }
+            "unix_https" => {
+                info!("Listen URL: unix+https:{}", listen_addr);
+                ListenScheme::UnixHttps
             }
             _ => panic!(
                 "'LISTEN_SCHEME' environment variable not correctly set (http | https | http_https)"
             ),
         };
-        info!("Listen URL: {}://{}:{}", listen_scheme, listen_addr, port);
 
         // public url
         let public_url = env::var("PUB_URL").expect("PUB_URL env var is not set");
@@ -125,7 +135,7 @@ impl AppState {
 
         let issuer_scheme = if matches!(
             listen_scheme,
-            ListenScheme::HttpHttps | ListenScheme::Https
+            ListenScheme::HttpHttps | ListenScheme::Https | ListenScheme::UnixHttps
         ) || *PROXY_MODE
         {
             "https"

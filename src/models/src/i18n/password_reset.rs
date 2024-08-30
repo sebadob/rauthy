@@ -125,8 +125,7 @@ Reset via E-Mail nutzen für den Fall, dass der derzeitige Passkey abhanden komm
             fido_link: "https://fidoalliance.org/fido2/?lang=zh-hans",
             generate: "生成",
             mfa: I18nAccountMfa::build_zh_hans(),
-            new_acc_desc_1:
-                "您可以在无密码账户和传统的密码账户之中选择其一。",
+            new_acc_desc_1: "您可以在无密码账户和传统的密码账户之中选择其一。",
             new_acc_desc_2: r#"无密码账户应被优先考虑，因为其提供更强的安全性。
 您需要至少一个支持FIDO2标准的通行密钥（Yubikey、Apple Touch ID或Windows Hello等）以完成账户创建。
 获取更多信息："#,

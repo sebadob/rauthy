@@ -954,7 +954,8 @@ POW_EXP=30
 #LISTEN_PORT_HTTPS=8443
 
 # The scheme to use locally, valid values:
-# http | https | http_https (default: http_https)
+# http | https | http_https | unix_http | unix_https (default: http_https)
+# For more details about the UNIX domain socket, check out its documentation page.
 LISTEN_SCHEME=http
 
 # The Public URL of the whole deployment

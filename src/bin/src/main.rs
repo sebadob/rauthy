@@ -18,6 +18,7 @@ use rauthy_common::constants::{
     SWAGGER_UI_INTERNAL, UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::password_hasher;
+use rauthy_common::utils::UseDummyAddress;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
     api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
@@ -649,6 +650,10 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
             app = app.service(swagger.clone());
         }
 
+        if matches!(app_state.listen_scheme, ListenScheme::UnixHttp | ListenScheme::UnixHttps) {
+            app = app.app_data(UseDummyAddress);
+        }
+
         app
     })
     // overwrites the number of worker threads -> default == available cpu cores
@@ -682,6 +687,10 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                 )?
                 .run()
                 .await
+        }
+
+        ListenScheme::UnixHttp | ListenScheme::UnixHttps => {
+            server.bind_uds(listen_addr)?.run().await
         }
     }
 }

@@ -60,6 +60,8 @@ pub enum ListenScheme {
     Http,
     Https,
     HttpHttps,
+    UnixHttp,
+    UnixHttps,
 }
 
 impl Display for ListenScheme {
@@ -68,6 +70,8 @@ impl Display for ListenScheme {
             ListenScheme::Http => write!(f, "http"),
             ListenScheme::Https => write!(f, "https"),
             ListenScheme::HttpHttps => write!(f, "{{http|https}}"),
+            ListenScheme::UnixHttp => write!(f, "unix+http"),
+            ListenScheme::UnixHttps => write!(f, "unix+https"),
         }
     }
 }

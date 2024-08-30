@@ -1176,6 +1176,8 @@ pub fn is_origin_external<'a>(
             ListenScheme::Http => scheme == "http",
             ListenScheme::Https => scheme == "https",
             ListenScheme::HttpHttps => scheme == "http" || scheme == "https",
+            ListenScheme::UnixHttp => scheme == "http",
+            ListenScheme::UnixHttps => scheme == "https",
         }
     };
     if !scheme_ok {
