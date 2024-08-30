@@ -8,6 +8,7 @@ export USER :=  `echo "$(id -u):$(id -g)"`
 
 docker := `echo ${DOCKER:-docker}`
 map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
+cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
 
 arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
 
@@ -32,7 +33,7 @@ default:
 
 _run +args:
     @{{docker}} run --rm -it \
-      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
+      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       {{map_docker_user}} \
       -e DATABASE_URL={{db_url_sqlite}} \
@@ -42,7 +43,7 @@ _run +args:
 
 _run-pg +args:
     @{{docker}} run --rm -it \
-      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
+      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       {{map_docker_user}} \
       -e DATABASE_URL={{db_url_postgres}} \
@@ -52,7 +53,7 @@ _run-pg +args:
 
 _run-ui +args:
     @{{docker}} run --rm -it \
-      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
+      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       -e npm_config_cache=/work/.npm_cache \
       {{map_docker_user}} \
@@ -63,7 +64,7 @@ _run-ui +args:
 
 _run-bg +args:
     @{{docker}} run --rm -d \
-      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
+      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       {{map_docker_user}} \
       -e DATABASE_URL={{db_url_sqlite}} \
@@ -73,7 +74,7 @@ _run-bg +args:
 
 _run-bg-pg +args:
     @{{docker}} run --rm -d \
-      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
+      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       {{map_docker_user}} \
       -e DATABASE_URL={{db_url_postgres}} \
@@ -269,7 +270,7 @@ test-backend: test-backend-stop migrate prepare
 
     just _run cargo build
     {{docker}} run --rm -it \
-      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
+      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       {{map_docker_user}} \
       -e DATABASE_URL={{db_url_sqlite}} \
