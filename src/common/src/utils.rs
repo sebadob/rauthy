@@ -88,16 +88,21 @@ pub fn new_store_id() -> String {
 // So nobody can establish a TCP connection with this as source address.
 const DUMMY_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(192, 0, 0, 8));
 
+// A marker to be added as a app data to indicate that
+// dummy address should be enabled for UNIX domain socket support
+pub struct UseDummyAddress;
+
 // TODO unify real_ip_from_req and real_ip_from_svc_req by using an impl Trait
 #[inline(always)]
 pub fn real_ip_from_req(req: &HttpRequest) -> Result<IpAddr, ErrorResponse> {
-    let peer_ip = parse_peer_addr(req.connection_info().peer_addr())?;
+    let use_dummy_addr = req.app_data::<UseDummyAddress>().is_some();
+    let peer_ip = parse_peer_addr(req.connection_info().peer_addr(), use_dummy_addr)?;
     if let Some(ip) = ip_from_cust_header(req.headers()) {
-        check_trusted_proxy(&peer_ip)?;
+        check_trusted_proxy(&peer_ip, use_dummy_addr)?;
         Ok(ip)
     } else if *PROXY_MODE {
-        check_trusted_proxy(&peer_ip)?;
-        parse_peer_addr(req.connection_info().realip_remote_addr())
+        check_trusted_proxy(&peer_ip, use_dummy_addr)?;
+        parse_peer_addr(req.connection_info().realip_remote_addr(), false)
     } else {
         Ok(peer_ip)
     }
@@ -105,22 +110,32 @@ pub fn real_ip_from_req(req: &HttpRequest) -> Result<IpAddr, ErrorResponse> {
 
 #[inline(always)]
 pub fn real_ip_from_svc_req(req: &ServiceRequest) -> Result<IpAddr, ErrorResponse> {
-    let peer_ip = parse_peer_addr(req.connection_info().peer_addr())?;
+    let use_dummy_addr = req.app_data::<UseDummyAddress>().is_some();
+    let peer_ip = parse_peer_addr(req.connection_info().peer_addr(), use_dummy_addr)?;
     if let Some(ip) = ip_from_cust_header(req.headers()) {
-        check_trusted_proxy(&peer_ip)?;
+        check_trusted_proxy(&peer_ip, use_dummy_addr)?;
         Ok(ip)
     } else if *PROXY_MODE {
-        check_trusted_proxy(&peer_ip)?;
-        parse_peer_addr(req.connection_info().realip_remote_addr())
+        check_trusted_proxy(&peer_ip, use_dummy_addr)?;
+        parse_peer_addr(req.connection_info().realip_remote_addr(), false)
     } else {
         Ok(peer_ip)
     }
 }
 
 #[inline(always)]
-fn parse_peer_addr(peer_addr: Option<&str>) -> Result<IpAddr, ErrorResponse> {
+fn parse_peer_addr(peer_addr: Option<&str>, use_dummy_addr: bool) -> Result<IpAddr, ErrorResponse> {
     match peer_addr {
-        None => Ok(DUMMY_ADDRESS),
+        None => {
+            if use_dummy_addr {
+                Ok(DUMMY_ADDRESS)
+            } else {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "No IP Addr in Connection Info - this should only happen in tests",
+                ))
+            }
+        }
         Some(peer) => match IpAddr::from_str(peer) {
             Ok(ip) => Ok(ip),
             Err(err) => Err(ErrorResponse::new(
@@ -132,8 +147,8 @@ fn parse_peer_addr(peer_addr: Option<&str>) -> Result<IpAddr, ErrorResponse> {
 }
 
 #[inline(always)]
-fn check_trusted_proxy(peer_ip: &IpAddr) -> Result<(), ErrorResponse> {
-    if *peer_ip == DUMMY_ADDRESS {
+fn check_trusted_proxy(peer_ip: &IpAddr, use_dummy_addr: bool) -> Result<(), ErrorResponse> {
+    if use_dummy_addr && *peer_ip == DUMMY_ADDRESS {
         return Ok(());
     }
     for cidr in &*TRUSTED_PROXIES {
@@ -223,22 +238,27 @@ mod tests {
 
         println!("{:?}", build_trusted_proxies());
 
-        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.100.1").unwrap()).is_ok());
-        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.100.255").unwrap()).is_ok());
-        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.99.1").unwrap()).is_err());
-        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.99.255").unwrap()).is_err());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.100.1").unwrap(), false).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.100.255").unwrap(), false).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.99.1").unwrap(), false).is_err());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.99.255").unwrap(), false).is_err());
 
-        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.0.96").unwrap()).is_ok());
-        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.0.111").unwrap()).is_ok());
-        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.0.95").unwrap()).is_err());
-        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.0.112").unwrap()).is_err());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.0.96").unwrap(), false).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.0.111").unwrap(), false).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.0.95").unwrap(), false).is_err());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.0.112").unwrap(), false).is_err());
 
-        assert!(check_trusted_proxy(&IpAddr::from_str("172.16.0.1").unwrap()).is_ok());
-        assert!(check_trusted_proxy(&IpAddr::from_str("172.16.0.2").unwrap()).is_err());
+        assert!(check_trusted_proxy(&IpAddr::from_str("172.16.0.1").unwrap(), false).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("172.16.0.2").unwrap(), false).is_err());
 
-        assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.10").unwrap()).is_ok());
-        assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.11").unwrap()).is_ok());
-        assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.9").unwrap()).is_err());
-        assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.12").unwrap()).is_err());
+        assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.10").unwrap(), false).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.11").unwrap(), false).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.9").unwrap(), false).is_err());
+        assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.12").unwrap(), false).is_err());
+
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.0.8").unwrap(), true).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("192.168.0.8").unwrap(), false).is_err());
+        assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.11").unwrap(), true).is_ok());
+        assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.9").unwrap(), true).is_err());
     }
 }

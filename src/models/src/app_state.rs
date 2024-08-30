@@ -91,11 +91,11 @@ impl AppState {
                 ListenScheme::HttpHttps
             }
             "unix_http" => {
-                info!("Listen URL: unix+http://{}", listen_addr);
+                info!("Listen URL: unix+http:{}", listen_addr);
                 ListenScheme::UnixHttp
             }
             "unix_https" => {
-                info!("Listen URL: unix+https://{}", listen_addr);
+                info!("Listen URL: unix+https:{}", listen_addr);
                 ListenScheme::UnixHttps
             }
             _ => panic!(
