@@ -33,7 +33,7 @@ default:
 
 _run +args:
     @{{docker}} run --rm -it \
-      -v $HOME/.cargo/registry:{{container_cargo_registry}} \
+      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       {{map_docker_user}} \
       -e DATABASE_URL={{db_url_sqlite}} \
@@ -43,7 +43,7 @@ _run +args:
 
 _run-pg +args:
     @{{docker}} run --rm -it \
-      -v $HOME/.cargo/registry:{{container_cargo_registry}} \
+      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       {{map_docker_user}} \
       -e DATABASE_URL={{db_url_postgres}} \
@@ -53,7 +53,7 @@ _run-pg +args:
 
 _run-ui +args:
     @{{docker}} run --rm -it \
-      -v $HOME/.cargo/registry:{{container_cargo_registry}} \
+      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       -e npm_config_cache=/work/.npm_cache \
       {{map_docker_user}} \
@@ -64,7 +64,7 @@ _run-ui +args:
 
 _run-bg +args:
     @{{docker}} run --rm -d \
-      -v $HOME/.cargo/registry:{{container_cargo_registry}} \
+      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       {{map_docker_user}} \
       -e DATABASE_URL={{db_url_sqlite}} \
@@ -74,7 +74,7 @@ _run-bg +args:
 
 _run-bg-pg +args:
     @{{docker}} run --rm -d \
-      -v $HOME/.cargo/registry:{{container_cargo_registry}} \
+      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       {{map_docker_user}} \
       -e DATABASE_URL={{db_url_postgres}} \
@@ -270,7 +270,7 @@ test-backend: test-backend-stop migrate prepare
 
     just _run cargo build
     {{docker}} run --rm -it \
-      -v $HOME/.cargo/registry:{{container_cargo_registry}} \
+      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       {{map_docker_user}} \
       -e DATABASE_URL={{db_url_sqlite}} \

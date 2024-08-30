@@ -55,6 +55,8 @@ pub fn get_backend_url() -> String {
         .to_lowercase()
     {
         x if x == "https" || x == "http" || x == "http_https" => x,
+        x if x == "unix_http" => "http".to_string(),
+        x if x == "unix_https" => "https".to_string(),
         _ => panic!("Bad 'LISTEN_SCHEME'"),
     };
     let host = env::var("PUB_URL").expect("PUB_URL env var is not set");
