@@ -1,17 +1,11 @@
 use crate::app_state::DbPool;
+use crate::cache::DB;
 use crate::entity::is_db_alive;
 use crate::events::event::Event;
-use rauthy_common::constants::HA_MODE;
-use redhac::{QuorumHealth, QuorumHealthState};
 use std::time::Duration;
-use tokio::sync::watch;
 use tracing::debug;
 
-pub async fn watch_health(
-    db: DbPool,
-    tx_events: flume::Sender<Event>,
-    rx_cache: watch::Receiver<Option<QuorumHealthState>>,
-) {
+pub async fn watch_health(db: DbPool, tx_events: flume::Sender<Event>) {
     debug!("Rauthy health watcher started");
 
     let mut interval = tokio::time::interval(Duration::from_secs(30));
@@ -21,32 +15,7 @@ pub async fn watch_health(
     loop {
         interval.tick().await;
 
-        let hs = rx_cache.borrow().clone();
-        let cache_healthy = match hs {
-            // non-HA cache is always healthy in non-HA mode
-            None => !*HA_MODE,
-
-            Some(hs) => {
-                if hs.health != QuorumHealth::Good {
-                    // wait for a few seconds and try again before alerting
-                    tokio::time::sleep(Duration::from_secs(10)).await;
-
-                    // cannot be None anymore at this point
-                    let hs = rx_cache.borrow().clone().unwrap();
-                    if hs.health != QuorumHealth::Good && was_healthy_after_startup {
-                        tx_events
-                            .send_async(Event::rauthy_unhealthy_cache())
-                            .await
-                            .unwrap();
-                        false
-                    } else {
-                        true
-                    }
-                } else {
-                    true
-                }
-            }
-        };
+        let cache_healthy = DB::client().is_healthy_cache().await.is_ok();
 
         let db_healthy = if !is_db_alive(&db).await {
             // wait for a few seconds and try again before alerting

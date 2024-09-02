@@ -51,7 +51,6 @@ pub struct AppState {
     pub tx_events: flume::Sender<Event>,
     pub tx_events_router: flume::Sender<EventRouterMsg>,
     pub tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
-    pub caches: Caches,
     pub webauthn: Arc<Webauthn>,
 }
 
@@ -61,7 +60,6 @@ impl AppState {
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
         tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
-        caches: Caches,
     ) -> anyhow::Result<Self> {
         dotenvy::dotenv().ok();
         debug!("New AppState on {:?}", std::thread::current().id());
@@ -194,7 +192,6 @@ impl AppState {
             tx_email,
             tx_events,
             tx_events_router,
-            caches,
             tx_ip_blacklist,
             webauthn,
         })
@@ -380,10 +377,4 @@ impl AppState {
 #[derive(Debug, Clone)]
 pub struct Argon2Params {
     pub params: argon2::Params,
-}
-
-/// Hold the cache sender channels for the application
-#[derive(Debug, Clone)]
-pub struct Caches {
-    pub ha_cache_config: redhac::CacheConfig,
 }
