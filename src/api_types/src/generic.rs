@@ -142,12 +142,7 @@ pub struct HealthResponse {
     pub is_db_alive: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(value_type = str)]
-    pub cache_health: Option<redhac::QuorumHealth>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[schema(value_type = str)]
-    pub cache_state: Option<redhac::QuorumState>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cache_connected_hosts: Option<usize>,
+    pub cache_healthy: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]

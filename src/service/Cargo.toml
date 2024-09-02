@@ -22,7 +22,6 @@ derive_more = { workspace = true }
 jwt-simple = { workspace = true }
 rand = { workspace = true }
 rand_core = { workspace = true }
-redhac = { workspace = true }
 ring = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

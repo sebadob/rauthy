@@ -65,7 +65,8 @@ pub const CACHE_NAME_WEBAUTHN: &str = "webauthn";
 pub const CACHE_NAME_WEBAUTHN_DATA: &str = "webauthn-data";
 
 pub const CACHE_TTL_APP: Option<i64> = Some(43200);
-pub const CACHE_TTL_AUTH_PROVIDER: Option<i64> = Some(UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as i64);
+pub const CACHE_TTL_AUTH_PROVIDER_CALLBACK: Option<i64> =
+    Some(UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as i64);
 pub const CACHE_TTL_SESSION: Option<i64> = Some(14400);
 // TODO maybe add a size limit to hiqlite to fix users cache, or simply always append?
 // No size limit means the cache could grow infinitely in theory, at least until every user from

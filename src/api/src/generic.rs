@@ -624,7 +624,7 @@ pub async fn get_health(data: web::Data<AppState>) -> impl Responder {
         None => {
             let body = HealthResponse {
                 is_db_alive,
-                cache_health: None,
+                cache_healthy: None,
                 cache_state: None,
                 cache_connected_hosts: None,
             };
@@ -641,7 +641,7 @@ pub async fn get_health(data: web::Data<AppState>) -> impl Responder {
 
             let body = HealthResponse {
                 is_db_alive,
-                cache_health: Some(hs.health),
+                cache_healthy: Some(hs.health),
                 cache_state: Some(hs.state),
                 cache_connected_hosts: Some(hs.connected_hosts),
             };

@@ -13,7 +13,6 @@ rauthy-service = { path = "../service" }
 actix-web = { workspace = true }
 chrono = { workspace = true }
 cron = { workspace = true }
-redhac = { workspace = true }
 semver = { workspace = true }
 sqlx = { workspace = true }
 time = { workspace = true }

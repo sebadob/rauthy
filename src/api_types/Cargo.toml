@@ -12,7 +12,6 @@ rauthy-error = { path = "../error" }
 actix-web = { workspace = true }
 chrono = { workspace = true }
 css-color = { workspace = true }
-redhac = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_with = { workspace = true }
