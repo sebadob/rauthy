@@ -1,16 +1,13 @@
-use crate::is_ha_leader;
 use actix_web::web;
 use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_models::app_state::AppState;
+use rauthy_models::cache::DB;
 use rauthy_models::entity::app_version::LatestAppVersion;
 use rauthy_models::events::event::Event;
-use redhac::QuorumHealthState;
 use semver::Version;
 use std::env;
 use std::time::Duration;
-use tokio::sync::watch::Receiver;
 use tracing::{debug, error, info, warn};
-use rauthy_models::cache::DB;
 
 /// Checks for newly available Rauthy app versions
 pub async fn app_version_check(data: web::Data<AppState>) {
@@ -41,17 +38,9 @@ async fn check_app_version(
     data: &web::Data<AppState>,
     last_version_notification: &mut Option<Version>,
 ) {
-    // will return None in a non-HA deployment
-
-    if DB::client().lead
-
-    if let Some(is_ha_leader) = is_ha_leader(rx_health) {
-        if !is_ha_leader {
-            debug!(
-                "Running HA mode without being the leader - skipping app_version_check scheduler"
-            );
-            return;
-        }
+    if !DB::client().is_leader_cache().await {
+        debug!("Running HA mode without being the leader - skipping app_version_check scheduler");
+        return;
     }
 
     debug!("Running app_version_check scheduler");

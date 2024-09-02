@@ -1,9 +1,7 @@
 use actix_web::web;
 use rauthy_models::app_state::AppState;
 use rauthy_models::migration::s3_backup_init_test;
-use redhac::{QuorumHealthState, QuorumState};
 use std::time::Duration;
-use tokio::sync::watch::Receiver;
 use tokio::time;
 use tracing::info;
 
@@ -27,26 +25,16 @@ pub async fn spawn(data: web::Data<AppState>) {
     s3_backup_init_test().await;
 
     tokio::spawn(backup::db_backup(data.db.clone()));
-    tokio::spawn(dyn_clients::dyn_client_cleanup(
-        data.clone(),
-    ));
-    tokio::spawn(events::events_cleanup(data.db.clone());
-    tokio::spawn(devices::devices_cleanup(data.db.clone());
-    tokio::spawn(magic_links::magic_link_cleanup(
-        data.db.clone(),
-    ));
-    tokio::spawn(tokens::refresh_tokens_cleanup(
-        data.db.clone(),
-    ));
-    tokio::spawn(sessions::sessions_cleanup(
-        data.db.clone(),
-    ));
-    tokio::spawn(jwks::jwks_auto_rotate(data.clone());
-    tokio::spawn(jwks::jwks_cleanup(data.clone());
-    tokio::spawn(passwords::password_expiry_checker(
-        data.clone(),
-    ));
-    tokio::spawn(users::user_expiry_checker(data.clone());
+    tokio::spawn(dyn_clients::dyn_client_cleanup(data.clone()));
+    tokio::spawn(events::events_cleanup(data.db.clone()));
+    tokio::spawn(devices::devices_cleanup(data.db.clone()));
+    tokio::spawn(magic_links::magic_link_cleanup(data.db.clone()));
+    tokio::spawn(tokens::refresh_tokens_cleanup(data.db.clone()));
+    tokio::spawn(sessions::sessions_cleanup(data.db.clone()));
+    tokio::spawn(jwks::jwks_auto_rotate(data.clone()));
+    tokio::spawn(jwks::jwks_cleanup(data.clone()));
+    tokio::spawn(passwords::password_expiry_checker(data.clone()));
+    tokio::spawn(users::user_expiry_checker(data.clone()));
     tokio::spawn(app_version::app_version_check(data));
 }
 
@@ -60,11 +48,4 @@ async fn sleep_schedule_next(schedule: &cron::Schedule) {
 
     // we are adding a future date here --> safe to cast from i64 to u64
     time::sleep(Duration::from_secs(until.num_seconds() as u64)).await;
-}
-
-fn is_ha_leader(rx_health: &Receiver<Option<QuorumHealthState>>) -> Option<bool> {
-    let health_state = rx_health.borrow();
-    health_state
-        .as_ref()
-        .map(|state| state.state == QuorumState::Leader)
 }

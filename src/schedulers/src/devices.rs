@@ -1,11 +1,8 @@
-use crate::is_ha_leader;
 use chrono::Utc;
 use rauthy_models::app_state::DbPool;
 use rauthy_models::cache::DB;
-use redhac::QuorumHealthState;
 use std::ops::Sub;
 use std::time::Duration;
-use tokio::sync::watch::Receiver;
 use tracing::{debug, error};
 
 /// Cleans up fully expired devices. These need to do a full re-authentication anyway.
@@ -16,19 +13,10 @@ pub async fn devices_cleanup(db: DbPool) {
     loop {
         interval.tick().await;
 
-        // will return None in a non-HA deployment
-        if !DB::client().is_leader_cache() {
+        if !DB::client().is_leader_cache().await {
             debug!("Running HA mode without being the leader - skipping devices_cleanup scheduler");
             continue;
         }
-        // if let Some(is_ha_leader) = is_ha_leader(&rx_health) {
-        //     if !is_ha_leader {
-        //         debug!(
-        //             "Running HA mode without being the leader - skipping devices_cleanup scheduler"
-        //         );
-        //         continue;
-        //     }
-        // }
 
         debug!("Running devices_cleanup scheduler");
 
