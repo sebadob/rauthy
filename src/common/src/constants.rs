@@ -49,21 +49,6 @@ pub const EVENTS_LATEST_LIMIT: u16 = 100;
 pub const GRANT_TYPE_DEVICE_CODE: &str = "urn:ietf:params:oauth:grant-type:device_code";
 pub const UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS: u16 = 300;
 
-pub const CACHE_NAME_12HR: &str = "12hr";
-pub const CACHE_NAME_AUTH_CODES: &str = "auth-codes";
-pub const CACHE_NAME_DEVICE_CODES: &str = "device-codes";
-pub const CACHE_NAME_AUTH_PROVIDER_CALLBACK: &str = "auth-provider-callback";
-pub const CACHE_NAME_CLIENTS_DYN: &str = "clients-dyn";
-pub const CACHE_NAME_DPOP_NONCES: &str = "dpop-nonces";
-pub const CACHE_NAME_EPHEMERAL_CLIENTS: &str = "ephemeral-clients";
-pub const CACHE_NAME_IP_RATE_LIMIT: &str = "ip_rate_limit";
-pub const CACHE_NAME_LOGIN_DELAY: &str = "login-dly";
-pub const CACHE_NAME_SESSIONS: &str = "sessions";
-pub const CACHE_NAME_POW: &str = "pow";
-pub const CACHE_NAME_USERS: &str = "users";
-pub const CACHE_NAME_WEBAUTHN: &str = "webauthn";
-pub const CACHE_NAME_WEBAUTHN_DATA: &str = "webauthn-data";
-
 pub const CACHE_TTL_APP: Option<i64> = Some(43200);
 pub const CACHE_TTL_AUTH_PROVIDER_CALLBACK: Option<i64> =
     Some(UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as i64);
