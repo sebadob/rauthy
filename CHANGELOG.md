@@ -2,6 +2,21 @@
 
 ## UNRELEASED
 
+### Breaking
+
+#### `/auth/v1/health` Response Change
+
+The response for `/auth/v1/health` because of the internal migration from `redhac` to `hiqlite` mentioned below.
+If you did not care about the response body, there is nothing to do for you. The body itself returns different values
+now:
+
+```rust
+struct HealthResponse {
+    db_healthy: bool,
+    cache_healthy: bool,
+}
+```
+
 ### Changes
 
 #### Migration to `ruma`
@@ -28,6 +43,24 @@ notifications, you must set a newly introduced config variable:
 ```
 
 [0b50376](https://github.com/sebadob/rauthy/commit/0b5037610d475e7ad6fc0a8bf3b851330088cab1)
+
+#### Internal Migration from `redhac` to `hiqlite`
+
+The internal cache layer has been migrated from [redhac](https://github.com/sebadob/redhac)
+to [Hiqlite](https://github.com/sebadob/hiqlite).
+
+A few weeks ago, I started rewriting the whole persistence layer from scratch in a separate project. `redhac` is working
+fine, but it has some issues I wanted to get rid of.
+
+- its network layer is way too complicated which makes it very hard to maintain
+- there is no "sync from other nodes" functionality, which is not a problem on its own, but leads to the following
+- for security reasons, the whole cache is invalidated when a node has a temporary network issue
+- it is very sensitive to even short term network issues and leader changes happen too often for my taste
+
+I started the [Hiqlite](https://github.com/sebadob/hiqlite) project some time ago to get rid of these things and have
+additional features. It is outsourced to make it generally usable in other contexts as well.
+
+[]()
 
 ## v0.25.0
 
