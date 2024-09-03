@@ -19,8 +19,8 @@ strip = true
 panic = "abort"
 
 [patch.crates-io]
+# TODO release new `hiqlite` version with latest fixes before releasing new rauthy version
 hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
-#hiqlite = { path = "../hiqlite/hiqlite" }
 
 [workspace.dependencies]
 accept-language = "3"

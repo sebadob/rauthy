@@ -19,15 +19,21 @@ pub struct UserValues {
 }
 
 impl UserValues {
+    #[inline(always)]
+    fn cache_idx(user_id: &str) -> String {
+        format!("{}_{}", IDX_USERS_VALUES, user_id)
+    }
+
     pub async fn find(
         data: &web::Data<AppState>,
         user_id: &str,
     ) -> Result<Option<Self>, ErrorResponse> {
-        let idx = format!("{}_{}", IDX_USERS_VALUES, user_id);
+        let idx = Self::cache_idx(user_id);
         let client = DB::client();
 
-        if let Some(slf) = client.get(Cache::User, &idx).await? {
-            return Ok(Some(slf));
+        let opt: Option<Option<Self>> = client.get(Cache::User, &idx).await?;
+        if let Some(slf) = opt {
+            return Ok(slf);
         }
 
         let slf = sqlx::query_as::<_, Self>("SELECT * FROM users_values WHERE id = $1")
@@ -35,9 +41,9 @@ impl UserValues {
             .fetch_optional(&data.db)
             .await?;
 
-        if let Some(v) = slf.as_ref() {
-            client.put(Cache::User, idx, v, CACHE_TTL_USER).await?;
-        }
+        // if let Some(v) = slf.as_ref() {
+        client.put(Cache::User, idx, &slf, CACHE_TTL_USER).await?;
+        // }
 
         Ok(slf)
     }
@@ -78,7 +84,7 @@ impl UserValues {
 
         q.execute(&data.db).await?;
 
-        let idx = format!("{}_{}", IDX_USERS_VALUES, user_id);
+        let idx = Self::cache_idx(&user_id);
         let slf = Some(Self {
             id: user_id,
             birthdate: values.birthdate,

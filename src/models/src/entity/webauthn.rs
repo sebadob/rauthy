@@ -89,6 +89,12 @@ impl PasskeyEntity {
             .delete(Cache::Webauthn, Self::cache_idx_user(&entity.user_id))
             .await?;
         client
+            .delete(
+                Cache::Webauthn,
+                Self::cache_idx_user_with_uv(&entity.user_id),
+            )
+            .await?;
+        client
             .delete(Cache::Webauthn, Self::cache_idx_creds(&entity.user_id))
             .await?;
 
@@ -127,6 +133,9 @@ impl PasskeyEntity {
             .await?;
         client
             .delete(Cache::Webauthn, Self::cache_idx_user(user_id))
+            .await?;
+        client
+            .delete(Cache::Webauthn, Self::cache_idx_user_with_uv(user_id))
             .await?;
         client
             .delete(Cache::Webauthn, Self::cache_idx_creds(user_id))
@@ -218,7 +227,7 @@ impl PasskeyEntity {
         data: &web::Data<AppState>,
         user_id: &str,
     ) -> Result<Vec<Self>, ErrorResponse> {
-        let idx = Self::cache_idx_user(user_id);
+        let idx = Self::cache_idx_user_with_uv(user_id);
         let client = DB::client();
 
         if let Some(slf) = client.get(Cache::Webauthn, &idx).await? {
@@ -264,9 +273,11 @@ impl PasskeyEntity {
             )
             .await?;
 
-        // TODO instead of invalidating, we could update in advance
         client
             .delete(Cache::Webauthn, Self::cache_idx_user(&self.user_id))
+            .await?;
+        client
+            .delete(Cache::Webauthn, Self::cache_idx_user_with_uv(&self.user_id))
             .await?;
 
         Ok(())
@@ -280,16 +291,25 @@ impl PasskeyEntity {
     }
 
     /// Index for a single passkey for a user
+    #[inline]
     fn cache_idx_single(user_id: &str, name: &str) -> String {
         format!("{}{}{}", IDX_WEBAUTHN, user_id, name)
     }
 
     /// Index for all passkeys a user has
+    #[inline]
     fn cache_idx_user(user_id: &str) -> String {
         format!("{}{}", IDX_WEBAUTHN, user_id)
     }
 
+    /// Index for all passkeys a user has
+    #[inline]
+    fn cache_idx_user_with_uv(user_id: &str) -> String {
+        format!("{}_UV_{}", IDX_WEBAUTHN, user_id)
+    }
+
     /// Index for credentials for a user
+    #[inline]
     fn cache_idx_creds(user_id: &str) -> String {
         format!("{}{}_creds", IDX_WEBAUTHN, user_id)
     }
@@ -577,7 +597,7 @@ pub async fn auth_start(
             add_data.delete().await?;
 
             // cannot be serialized with bincode -> no deserialize from any
-            let auth_state_json = serde_json::to_string(&auth_state).unwrap();
+            let auth_state_json = serde_json::to_string(&auth_state)?;
             let auth_data = WebauthnData {
                 code: get_rand(48),
                 auth_state_json,

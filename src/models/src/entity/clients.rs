@@ -72,7 +72,7 @@ pub struct Client {
 // CRUD
 impl Client {
     #[inline]
-    pub fn get_cache_entry(id: &str) -> String {
+    pub fn cache_idx(id: &str) -> String {
         format!("client_{}", id)
     }
 
@@ -192,7 +192,7 @@ impl Client {
             .await?;
 
         DB::client()
-            .delete(Cache::App, Client::get_cache_entry(&self.id))
+            .delete(Cache::App, Client::cache_idx(&self.id))
             .await?;
 
         // We only clean up the cache. The database uses foreign key a cascade.
@@ -206,7 +206,7 @@ impl Client {
     // Returns a client by id without its secret.
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
         let client = DB::client();
-        if let Some(slf) = client.get(Cache::App, Client::get_cache_entry(&id)).await? {
+        if let Some(slf) = client.get(Cache::App, Client::cache_idx(&id)).await? {
             return Ok(slf);
         };
 
@@ -216,12 +216,7 @@ impl Client {
             .await?;
 
         client
-            .put(
-                Cache::App,
-                Client::get_cache_entry(&slf.id),
-                &slf,
-                CACHE_TTL_APP,
-            )
+            .put(Cache::App, Client::cache_idx(&slf.id), &slf, CACHE_TTL_APP)
             .await?;
 
         Ok(slf)
@@ -309,12 +304,7 @@ impl Client {
 
         // TODO this may lead to incorrect data in case of a failing txn? -> check
         DB::client()
-            .put(
-                Cache::App,
-                Client::get_cache_entry(&self.id),
-                self,
-                CACHE_TTL_APP,
-            )
+            .put(Cache::App, Client::cache_idx(&self.id), self, CACHE_TTL_APP)
             .await?;
 
         Ok(())
