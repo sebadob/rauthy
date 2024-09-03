@@ -10,12 +10,13 @@ use rauthy_api_types::generic::{
     PasswordPolicyRequest, PasswordPolicyResponse, SearchParams, SearchParamsType,
 };
 use rauthy_common::constants::{
-    APPLICATION_JSON, CACHE_NAME_LOGIN_DELAY, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML,
-    IDX_LOGIN_TIME, RAUTHY_VERSION, SUSPICIOUS_REQUESTS_BLACKLIST, SUSPICIOUS_REQUESTS_LOG,
+    APPLICATION_JSON, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, IDX_LOGIN_TIME, RAUTHY_VERSION,
+    SUSPICIOUS_REQUESTS_BLACKLIST, SUSPICIOUS_REQUESTS_LOG,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;
+use rauthy_models::cache::{Cache, DB};
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::app_version::LatestAppVersion;
 use rauthy_models::entity::auth_providers::AuthProviderTemplate;
@@ -44,7 +45,6 @@ use rauthy_models::templates::{
     AdminSessionsHtml, AdminUsersHtml, DeviceHtml, FedCMHtml, IndexHtml, ProvidersHtml,
 };
 use rauthy_service::{encryption, suspicious_request_block};
-use redhac::{cache_get, cache_get_from, cache_get_value, QuorumHealth, QuorumState};
 use semver::Version;
 use std::borrow::Cow;
 use std::ops::Add;
@@ -410,15 +410,11 @@ pub async fn get_login_time(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Generic, AccessRights::Read)?;
 
-    let login_time = cache_get!(
-        u32,
-        CACHE_NAME_LOGIN_DELAY.to_string(),
-        IDX_LOGIN_TIME.to_string(),
-        &data.caches.ha_cache_config,
-        false
-    )
-    .await?
-    .unwrap_or(2000);
+    let login_time: u32 = DB::client()
+        .get(Cache::App, IDX_LOGIN_TIME)
+        .await?
+        .unwrap_or(2000);
+
     let argon2_params = Argon2ParamsResponse {
         m_cost: data.argon2_params.params.m_cost(),
         t_cost: data.argon2_params.params.t_cost(),
@@ -618,44 +614,22 @@ pub async fn post_update_language(
 )]
 #[get("/health")]
 pub async fn get_health(data: web::Data<AppState>) -> impl Responder {
-    let is_db_alive = is_db_alive(&data.db).await;
+    let db_healthy = is_db_alive(&data.db).await;
+    let cache_healthy = DB::client().is_healthy_cache().await.is_ok();
 
-    match data.caches.ha_cache_config.rx_health_state.borrow().clone() {
-        None => {
-            let body = HealthResponse {
-                is_db_alive,
-                cache_healthy: None,
-                cache_state: None,
-                cache_connected_hosts: None,
-            };
-            if is_db_alive {
-                HttpResponse::Ok().json(body)
-            } else {
-                HttpResponse::InternalServerError().json(body)
-            }
-        }
-        Some(hs) => {
-            let is_bad = hs.health == QuorumHealth::Bad
-                || hs.state == QuorumState::Undefined
-                || hs.state == QuorumState::Retry;
+    let body = HealthResponse {
+        db_healthy,
+        cache_healthy,
+    };
 
-            let body = HealthResponse {
-                is_db_alive,
-                cache_healthy: Some(hs.health),
-                cache_state: Some(hs.state),
-                cache_connected_hosts: Some(hs.connected_hosts),
-            };
-
-            if is_bad {
-                HttpResponse::InternalServerError().json(body)
-            } else {
-                HttpResponse::Ok().json(body)
-            }
-        }
+    if db_healthy && cache_healthy {
+        HttpResponse::Ok().json(body)
+    } else {
+        HttpResponse::InternalServerError().json(body)
     }
 }
 
-/// Ready endpoint for kubernetes / docker health checks
+/// Ready endpoint for kubernetes / docker ready checks.
 #[utoipa::path(
     get,
     path = "/ready",
@@ -666,16 +640,9 @@ pub async fn get_health(data: web::Data<AppState>) -> impl Responder {
     ),
 )]
 #[get("/ready")]
-pub async fn get_ready(data: web::Data<AppState>) -> impl Responder {
-    match data.caches.ha_cache_config.rx_health_state.borrow().clone() {
-        None => {}
-        Some(hs) => {
-            if hs.health == redhac::QuorumHealth::Bad {
-                return HttpResponse::ServiceUnavailable().finish();
-            }
-        }
-    };
-
+pub async fn get_ready() -> impl Responder {
+    // TODO we probably only want to return OK, because with Hiqlite, we would not even get here
+    // if it would not be ready.
     HttpResponse::Ok().finish()
 }
 

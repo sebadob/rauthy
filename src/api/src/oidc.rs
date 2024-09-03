@@ -296,15 +296,7 @@ pub async fn post_authorize(
     };
 
     let ip = real_ip_from_req(&req)?;
-    login_delay::handle_login_delay(
-        &data,
-        ip,
-        start,
-        &data.caches.ha_cache_config,
-        res,
-        has_password_been_hashed,
-    )
-    .await
+    login_delay::handle_login_delay(&data, ip, start, res, has_password_been_hashed).await
 }
 
 /// Immediate login refresh with valid session
@@ -938,15 +930,7 @@ pub async fn post_token(
         }
     };
 
-    login_delay::handle_login_delay(
-        &data,
-        ip,
-        start,
-        &data.caches.ha_cache_config,
-        res,
-        has_password_been_hashed,
-    )
-    .await
+    login_delay::handle_login_delay(&data, ip, start, res, has_password_been_hashed).await
 }
 
 /// DEPRECATED -> use /oidc/introspect instead

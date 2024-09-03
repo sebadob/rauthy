@@ -4,13 +4,15 @@
 
 ## Documentation TODO
 
--> events view wide -> button height 30px -> error with overflow
+- `HealthResponse` response has been changed with Hiqlite -> breaking change
 
 ## Stage 1 - essentials
 
 [x] finished
 
 ## Stage 2 - features - do before v1.0.0
+
+-> events view wide -> button height 30px -> error with overflow
 
 - input validation in account view broken for first / last name -> backend requests 2 chars +
 - find a nice way to simply always expose the swagger UI for rauthy admins only without config
