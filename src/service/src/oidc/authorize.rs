@@ -161,7 +161,7 @@ pub async fn post_authorize(
                 .as_ref()
                 .map(|h| h.1.to_str().unwrap().to_string()),
         }
-            .save()
+        .save()
         .await?;
 
         Ok(AuthStep::AwaitWebauthn(step))
