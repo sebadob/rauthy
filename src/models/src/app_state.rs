@@ -206,6 +206,8 @@ impl AppState {
         #[cfg(feature = "postgres")]
         let pool = {
             if *DB_TYPE == DbType::Sqlite {
+                debug!("DATABASE_URL: {}", *DATABASE_URL);
+
                 let msg = r#"
     You are trying to connect to a SQLite instance with the 'Postgres'
     version of Rauthy. You need to either change to a SQLite database or use the '*-lite'

@@ -178,7 +178,7 @@ impl Principal {
     #[inline(always)]
     pub fn validate_session_auth(&self) -> Result<&Session, ErrorResponse> {
         if let Some(session) = &self.session {
-            if session.state == SessionState::Auth {
+            if session.state()? == SessionState::Auth {
                 Ok(session)
             } else {
                 trace!("Validating the session failed - was not in auth state");
@@ -199,7 +199,8 @@ impl Principal {
     #[inline(always)]
     pub fn validate_session_auth_or_init(&self) -> Result<(), ErrorResponse> {
         if let Some(session) = &self.session {
-            if session.state == SessionState::Auth || session.state == SessionState::Init {
+            let state = session.state()?;
+            if state == SessionState::Auth || state == SessionState::Init {
                 Ok(())
             } else {
                 trace!("Validating the session failed - was not in init or auth state");
@@ -222,7 +223,7 @@ impl Principal {
         if self
             .session
             .as_ref()
-            .map(|s| s.state == SessionState::Init)
+            .map(|s| s.state == SessionState::Init.as_str())
             .unwrap_or(false)
         {
             Ok(())

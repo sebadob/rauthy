@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.26.0-20240903"
+version = "0.26.0-20240904"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -21,6 +21,7 @@ panic = "abort"
 [patch.crates-io]
 # TODO release new `hiqlite` version with latest fixes before releasing new rauthy version
 hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
+#hiqlite = { path = "../hiqlite/hiqlite", package = "hiqlite" }
 
 [workspace.dependencies]
 accept-language = "3"

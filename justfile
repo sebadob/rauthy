@@ -259,7 +259,7 @@ prepare: migrate
 
 # run `sqlx prepare` locally to get rid of `sqlx::query!()` warnings
 prepare-local: migrate
-    cargo sqlx prepare --workspace
+    DATABASE_URL={{db_url_sqlite}} cargo sqlx prepare --workspace
 
 
 # prepare DB migrations for Postgres for compile-time checked queries
@@ -411,14 +411,14 @@ build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
     set -euxo pipefail
 
     # sqlite
-    #if [ {{no-test}} != "no-test" ]; then
-    #    echo "make sure clippy is fine with sqlite"
-    #    just _run cargo clippy -- -D warnings
-    #    echo "run tests against sqlite"
-    #    just test-sqlite
-    #else
-    #    just prepare
-    #fi
+    if [ {{no-test}} != "no-test" ]; then
+        echo "make sure clippy is fine with sqlite"
+        just _run cargo clippy -- -D warnings
+        echo "run tests against sqlite"
+        just test-sqlite
+    else
+        just prepare
+    fi
 
     # make sure any big testing sqlite backups are cleaned up to speed up docker build
     rm -rf data/backup
@@ -429,7 +429,6 @@ build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
         --platform linux/amd64,linux/arm64 \
         --build-arg="IMAGE={{builder_image}}" \
         --build-arg="IMAGE_DATE={{builder_tag_date}}" \
-        --build-arg="DATABASE_URL={{db_url_sqlite}}" \
         --build-arg="FEATURES=default" \
         --build-arg="MODE={{mode}}" \
         --push \
@@ -437,10 +436,6 @@ build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
 
     # postgres
     if [ {{no-test}} != "no-test" ]; then
-        # restart postgres to clean it up for the tests
-        just postgres-stop || echo ">>> Postgres is not running - nothing to do"
-        just postgres-start || echo ">>> Postgres is already running - nothing to do"
-
         echo "make sure clippy is fine with postgres"
         just _run-pg cargo clippy --features postgres -- -D warnings
         echo "run tests against postgres"
@@ -453,9 +448,9 @@ build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
     {{docker}} buildx build \
         -t {{image}}:$TAG \
         --platform linux/amd64,linux/arm64 \
+        --network host \
         --build-arg="IMAGE={{builder_image}}" \
         --build-arg="IMAGE_DATE={{builder_tag_date}}" \
-        --build-arg="DATABASE_URL={{db_url_postgres}}" \
         --build-arg="FEATURES=postgres" \
         --build-arg="MODE={{mode}}" \
         --push \

@@ -927,7 +927,7 @@ impl AuthProviderCallback {
                     .as_ref()
                     .map(|h| h.1.to_str().unwrap().to_string()),
             }
-                .save()
+            .save()
             .await?;
 
             AuthStep::AwaitWebauthn(step)

@@ -206,7 +206,7 @@ impl Client {
     // Returns a client by id without its secret.
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
         let client = DB::client();
-        if let Some(slf) = client.get(Cache::App, Client::cache_idx(&id)).await? {
+        if let Some(slf) = client.get(Cache::App, Self::cache_idx(&id)).await? {
             return Ok(slf);
         };
 
@@ -216,7 +216,7 @@ impl Client {
             .await?;
 
         client
-            .put(Cache::App, Client::cache_idx(&slf.id), &slf, CACHE_TTL_APP)
+            .put(Cache::App, Self::cache_idx(&slf.id), &slf, CACHE_TTL_APP)
             .await?;
 
         Ok(slf)

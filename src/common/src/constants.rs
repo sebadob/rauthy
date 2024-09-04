@@ -113,6 +113,7 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
         .expect("DEV_DPOP_HTTP cannot be parsed to bool - bad format");
+    // TODO get rid of the HA_MODE and use Hiqlite for events all the time
     pub static ref HA_MODE: bool =
         env::var("HA_MODE").map(|s| s.to_lowercase() == "true").unwrap_or(false);
 

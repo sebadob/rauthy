@@ -162,7 +162,7 @@ impl EventListener {
         rx: flume::Receiver<EventRouterMsg>,
         tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
     ) {
-        debug!("EventListener::router_si has been started");
+        debug!("EventListener::router has been started");
 
         let mut clients: HashMap<String, (i16, mpsc::Sender<sse::Event>)> =
             HashMap::with_capacity(4);

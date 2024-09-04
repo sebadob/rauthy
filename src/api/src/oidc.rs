@@ -250,7 +250,9 @@ pub async fn post_authorize(
     payload: actix_web_validator::Json<LoginRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
+    debug!("Validating session in auth or init state");
     principal.validate_session_auth_or_init()?;
+    debug!("session is in auth or init state");
 
     // TODO refactor login delay to use Instant, which is a bit cleaner
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
@@ -770,7 +772,7 @@ pub async fn post_session(
         groups: session.groups.as_deref().map(|v| v.into()),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
-        state: SessionState::from(&session.state),
+        state: SessionState::from(session.state()?),
     };
 
     if *EXPERIMENTAL_FED_CM_ENABLE {
@@ -822,7 +824,11 @@ pub async fn get_session_info(data: web::Data<AppState>, principal: ReqPrincipal
         groups: session.groups.as_deref().map(|v| v.into()),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
-        state: SessionState::from(&session.state),
+        state: SessionState::from(
+            session
+                .state()
+                .unwrap_or(rauthy_models::entity::sessions::SessionState::Unknown),
+        ),
     };
 
     HttpResponse::Ok()
@@ -870,7 +876,7 @@ pub async fn get_session_xsrf(
         groups: session.groups.as_deref().map(|v| v.into()),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
-        state: SessionState::from(&session.state),
+        state: SessionState::from(session.state()?),
     };
     Ok(HttpResponse::Ok().json(info))
 }
