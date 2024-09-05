@@ -1,6 +1,7 @@
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
+use chrono::Utc;
 use rauthy_api_types::clients::EphemeralClientRequest;
 use rauthy_api_types::fed_cm::{FedCMAssertionRequest, FedCMClientMetadataRequest};
 use rauthy_common::constants::{
@@ -294,9 +295,7 @@ pub async fn post_fed_cm_token(
         &user,
         &data,
         &client,
-        // TODO this might be incorrect as well. Fix after Hiqlite migration when we have the 100%
-        // correct value inside the DB as well
-        AuthTime::now(),
+        AuthTime::given(user.last_login.unwrap_or_else(|| Utc::now().timestamp())),
         None,
         payload.nonce.map(TokenNonce),
         // TODO add something like `fedcm` to the scopes? Maybe depending on new allowed flow?

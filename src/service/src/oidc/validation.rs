@@ -202,6 +202,7 @@ pub async fn validate_refresh_token(
         // TODO this is not 100% correct but will make the migration from older to new refresh
         // tokens smooth. In a future release, the `auth_time` can be set to required in the claims.
         // Optional for now to still accept older tokens.
+        // As soon as no old refresh tokens exist anymore, this branch will never be used anyway.
         AuthTime::now()
     };
 

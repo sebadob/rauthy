@@ -3,6 +3,7 @@ use crate::token_set::{
 };
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest};
+use chrono::Utc;
 use rauthy_api_types::oidc::TokenRequest;
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_common::utils::{base64_url_encode, real_ip_from_req};
@@ -148,7 +149,7 @@ pub async fn grant_type_authorization_code(
         &user,
         data,
         &client,
-        AuthTime::now(),
+        AuthTime::given(user.last_login.unwrap_or_else(|| Utc::now().timestamp())),
         dpop_fingerprint,
         code.nonce.clone().map(TokenNonce),
         Some(TokenScopes(code.scopes.join(" "))),
