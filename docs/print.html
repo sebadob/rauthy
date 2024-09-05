@@ -3756,6 +3756,43 @@ CACHE_USERS_LIFESPAN=28800
 #SCHED_USER_EXP_DELETE_MINS=7200
 
 #####################################
+######### DEVICE GRANT ##############
+#####################################
+
+# The lifetime in secods  of auth codes for the Device Authorization
+# Grant flow. You may increase the default of 300 seconds, if you have
+# "slow users" and they are simply not fast enough with the verification.
+# default: 300
+DEVICE_GRANT_CODE_LIFETIME=300
+
+# The length of the `user_code` the user has to enter manually for
+# auth request validation. This must be &lt; 64 characters.
+# default: 8
+DEVICE_GRANT_USER_CODE_LENGTH=8
+
+# Specifies the rate-limit in seconds per IP for starting new Device
+# Authorization Grant flows. This is especially important for public
+# clients, because a code request for this flow will actually create
+# cached data. If this would happen on an unrestricted, open endpoint,
+# the application could easily be DoS'ed.
+# If you use the `device_code` grant with confidential clients only,
+# you can leave this unset, which will not rate-limit the endpoint.
+# default: not set
+DEVICE_GRANT_RATE_LIMIT=1
+
+# The interval in seconds which devices are told to use when they
+# poll the token endpoint during Device Authorization Grant flow.
+# default: 5
+DEVICE_GRANT_POLL_INTERVAL=5
+
+# You can define a global lifetime in hours for refresh tokens issued
+# from a Device Authorization Grant flow. You might want to have a
+# higher lifetime than normal refresh tokens, because they might be
+# used in IoT devices which may be offline for longer periods of time.
+# default: 72
+DEVICE_GRANT_REFRESH_TOKEN_LIFETIME=72
+
+#####################################
 ############## DPOP #################
 #####################################
 
