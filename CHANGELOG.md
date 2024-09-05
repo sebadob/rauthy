@@ -121,7 +121,13 @@ fine, but it has some issues I wanted to get rid of.
 I started the [Hiqlite](https://github.com/sebadob/hiqlite) project some time ago to get rid of these things and have
 additional features. It is outsourced to make it generally usable in other contexts as well.
 
-[]()
+[0919767](https://github.com/sebadob/rauthy/commit/09197670e6491f83a8b739c0f195d4b842abe771)
+
+### Bugfix
+
+- The `refresh_token` grant type on the `/token` endpoint did not set the original `auth_time` for the `id_token`, but
+  instead calculated it from `now()` each time.
+  []()
 
 ## v0.25.0
 
