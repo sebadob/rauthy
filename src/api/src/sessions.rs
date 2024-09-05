@@ -72,36 +72,25 @@ pub async fn get_sessions(
         }
     } else {
         let sessions = Session::find_all(&data).await?;
-        let resp = sessions
-            .iter()
-            .map(|s| SessionResponse {
+
+        let mut resp = Vec::with_capacity(sessions.len());
+        for s in &sessions {
+            resp.push(SessionResponse {
                 id: &s.id,
                 user_id: s.user_id.as_deref(),
                 is_mfa: s.is_mfa,
-                state: SessionState::from(&s.state),
+                state: SessionState::from(
+                    s.state()
+                        .unwrap_or(rauthy_models::entity::sessions::SessionState::Unknown),
+                ),
                 exp: s.exp,
                 last_seen: s.last_seen,
                 remote_ip: s.remote_ip.as_deref(),
             })
-            .collect::<Vec<SessionResponse>>();
+        }
+
         Ok(HttpResponse::Ok().json(resp))
     }
-
-    // // TODO cleanup when pagination is working properly
-    // let sessions = Session::find_all(&data).await?;
-    // let resp = sessions
-    //     .iter()
-    //     .map(|s| SessionResponse {
-    //         id: &s.id,
-    //         user_id: s.user_id.as_deref(),
-    //         is_mfa: s.is_mfa,
-    //         state: &s.state,
-    //         exp: s.exp,
-    //         last_seen: s.last_seen,
-    //         remote_ip: s.remote_ip.as_deref(),
-    //     })
-    //     .collect::<Vec<SessionResponse>>();
-    // Ok(HttpResponse::Ok().json(resp))
 }
 
 /// Invalidates all existing sessions and therefore logs out every single user.

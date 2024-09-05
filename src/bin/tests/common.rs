@@ -95,6 +95,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
     // we need a session in Init state
     let url_session = format!("{}/oidc/session", backend_url);
     let res = client.post(&url_session).send().await.unwrap();
+    assert!(res.status().is_success());
     let headers = cookie_csrf_headers_from_res_direct(res).await.unwrap();
 
     let req_login = LoginRequest {

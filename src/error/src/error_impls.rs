@@ -10,7 +10,6 @@ use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
 use cryptr::CryptrError;
 use css_color::ParseColorError;
 use image::ImageError;
-use redhac::CacheError;
 use rio_turtle::TurtleError;
 use serde_json::Error;
 use serde_json_path::ParseError;
@@ -178,16 +177,6 @@ impl From<BlockingError> for ErrorResponse {
         ErrorResponse::new(
             ErrorResponseType::Internal,
             "Database Pool is gone, please re-try later",
-        )
-    }
-}
-
-impl From<CacheError> for ErrorResponse {
-    fn from(e: CacheError) -> Self {
-        trace!("{:?}", e);
-        ErrorResponse::new(
-            ErrorResponseType::Internal,
-            format!("Internal Cache error: {:?}", e),
         )
     }
 }
@@ -428,5 +417,12 @@ impl From<ruma::client::Error<reqwest::Error, ruma::api::client::Error>> for Err
             ErrorResponseType::Connection,
             format!("matrix error: {:?}", value),
         )
+    }
+}
+
+impl From<hiqlite::Error> for ErrorResponse {
+    fn from(value: hiqlite::Error) -> Self {
+        trace!("{:?}", value);
+        ErrorResponse::new(ErrorResponseType::Database, format!("{}", value))
     }
 }

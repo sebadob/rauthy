@@ -9,7 +9,8 @@ use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::ListenScheme;
 use anyhow::Context;
 use argon2::Params;
-use rauthy_common::constants::{DATABASE_URL, DB_TYPE, DEV_MODE, HA_MODE, PROXY_MODE};
+use hiqlite::NodeConfig;
+use rauthy_common::constants::{DATABASE_URL, DB_TYPE, DEV_MODE, PROXY_MODE};
 use rauthy_common::DbType;
 use sqlx::pool::PoolOptions;
 use sqlx::ConnectOptions;
@@ -51,7 +52,6 @@ pub struct AppState {
     pub tx_events: flume::Sender<Event>,
     pub tx_events_router: flume::Sender<EventRouterMsg>,
     pub tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
-    pub caches: Caches,
     pub webauthn: Arc<Webauthn>,
 }
 
@@ -61,7 +61,6 @@ impl AppState {
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
         tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
-        caches: Caches,
     ) -> anyhow::Result<Self> {
         dotenvy::dotenv().ok();
         debug!("New AppState on {:?}", std::thread::current().id());
@@ -194,7 +193,6 @@ impl AppState {
             tx_email,
             tx_events,
             tx_events_router,
-            caches,
             tx_ip_blacklist,
             webauthn,
         })
@@ -209,6 +207,8 @@ impl AppState {
         #[cfg(feature = "postgres")]
         let pool = {
             if *DB_TYPE == DbType::Sqlite {
+                debug!("DATABASE_URL: {}", *DATABASE_URL);
+
                 let msg = r#"
     You are trying to connect to a SQLite instance with the 'Postgres'
     version of Rauthy. You need to either change to a SQLite database or use the '*-lite'
@@ -240,7 +240,7 @@ impl AppState {
                 panic!("{msg}");
             }
 
-            let pool = Self::connect_sqlite(&DATABASE_URL, db_max_conn, false).await?;
+            let pool = Self::connect_sqlite(&DATABASE_URL, db_max_conn).await?;
             if DATABASE_URL.ends_with(":memory:") {
                 info!("Using in-memory SQLite");
             } else {
@@ -267,14 +267,14 @@ impl AppState {
         }
 
         if let Ok(from) = env::var("MIGRATE_DB_FROM") {
-            if *HA_MODE {
+            if is_multi_replica_deployment() {
                 error!(
                     r#"
-    You cannot use 'MIGRATE_DB_FROM' with an active 'HA_MODE'.
-    You need to disable 'HA_MODE' and scale down to a single replica, before you can then activate
-    'MIGRATE_DB_FROM' again. This will prevent you from overlaps and conflicts.
-    After the migration has been done, you remove the 'MIGRATE_DB_FROM' and can activate 'HA_MODE'
-    again"#
+    You cannot use 'MIGRATE_DB_FROM' with a multi replica deployment.
+    You need to change your config to only have a single node in `HQL_NODES`, before you can then
+    activate 'MIGRATE_DB_FROM' again. This will prevent you from overlaps and conflicts.
+    After the migration has been done, you remove the 'MIGRATE_DB_FROM' and add more nodes again.
+                "#
                 );
             } else {
                 warn!(
@@ -292,7 +292,7 @@ impl AppState {
                 sleep(Duration::from_secs(10)).await;
 
                 if from.starts_with("sqlite:") {
-                    let pool_from = Self::connect_sqlite(&from, 1, true).await?;
+                    let pool_from = Self::connect_sqlite(&from, 1).await?;
                     if let Err(err) = db_migrate::migrate_from_sqlite(pool_from, &pool).await {
                         panic!("Error during db migration: {:?}", err);
                     }
@@ -326,15 +326,8 @@ impl AppState {
     pub async fn connect_sqlite(
         addr: &str,
         max_conn: u32,
-        migration_only: bool,
+        // migration_only: bool,
     ) -> anyhow::Result<sqlx::SqlitePool> {
-        // HA_MODE must not be enabled while using SQLite
-        if !migration_only && *HA_MODE {
-            let msg = "HA_MODE must not be enabled while using SQLite";
-            error!("{msg}");
-            panic!("{msg}");
-        }
-
         let opts = sqlx::sqlite::SqliteConnectOptions::from_str(addr)?
             .create_if_missing(true)
             .busy_timeout(Duration::from_millis(100))
@@ -373,6 +366,11 @@ impl AppState {
     }
 }
 
+/// Helper to check if the current deployment is using multiple nodes
+fn is_multi_replica_deployment() -> bool {
+    NodeConfig::from_env().nodes.len() > 1
+}
+
 /// Holds the `argon2::Params` for the application.
 ///
 /// This has been simplified a lot by now and it may be unwrapped and inserted into the
@@ -380,10 +378,4 @@ impl AppState {
 #[derive(Debug, Clone)]
 pub struct Argon2Params {
     pub params: argon2::Params,
-}
-
-/// Hold the cache sender channels for the application
-#[derive(Debug, Clone)]
-pub struct Caches {
-    pub ha_cache_config: redhac::CacheConfig,
 }

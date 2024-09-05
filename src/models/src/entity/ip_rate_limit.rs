@@ -1,11 +1,9 @@
-use crate::app_state::AppState;
-use actix_web::web;
+use crate::cache::{Cache, DB};
 use chrono::{DateTime, Utc};
-use rauthy_common::constants::CACHE_NAME_IP_RATE_LIMIT;
 use rauthy_common::constants::DEVICE_GRANT_RATE_LIMIT;
 use rauthy_error::ErrorResponse;
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use serde::{Deserialize, Serialize};
+use std::ops::Add;
 
 /// Caution: The `exp` on this struct does not define the timeout. It is only used
 /// to return information back to the limited client when it is allowed to poll again.
@@ -17,27 +15,18 @@ pub struct DeviceIpRateLimit {
 }
 
 impl DeviceIpRateLimit {
-    pub async fn insert(data: &web::Data<AppState>, ip: String) -> Result<(), ErrorResponse> {
-        cache_insert(
-            CACHE_NAME_IP_RATE_LIMIT.to_string(),
-            ip.clone(),
-            &data.caches.ha_cache_config,
-            &*DEVICE_GRANT_RATE_LIMIT,
-            AckLevel::Quorum,
-        )
-        .await?;
+    pub async fn insert(ip: String) -> Result<(), ErrorResponse> {
+        let limit_secs = DEVICE_GRANT_RATE_LIMIT.unwrap_or(1) as i64;
+        let limit = Utc::now().add(chrono::Duration::seconds(limit_secs));
+        DB::client()
+            .put(Cache::IPRateLimit, ip, &limit, Some(limit_secs))
+            .await?;
+
         Ok(())
     }
 
-    pub async fn is_limited(data: &web::Data<AppState>, ip: String) -> Option<DateTime<Utc>> {
-        cache_get!(
-            DateTime<Utc>,
-            CACHE_NAME_IP_RATE_LIMIT.to_string(),
-            ip,
-            &data.caches.ha_cache_config,
-            true
-        )
-        .await
-        .unwrap_or_default()
+    pub async fn is_limited(ip: String) -> Result<Option<DateTime<Utc>>, ErrorResponse> {
+        let dt = DB::client().get(Cache::IPRateLimit, ip).await?;
+        Ok(dt)
     }
 }

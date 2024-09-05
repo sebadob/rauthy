@@ -1,6 +1,82 @@
 # Changelog
 
-## UNRELEASED
+## NIGHTLY
+
+### Breaking
+
+#### Cache Config
+
+The whole `CACHE` section in the config has been changed:
+
+```
+#####################################
+############## CACHE ################
+#####################################
+
+# Can be set to 'k8s' to try to split off the node id from the hostname
+# when Hiqlite is running as a StatefulSet inside Kubernetes.
+# Will be ignored if `HQL_NODE_ID_FROM=k8s`
+#HQL_NODE_ID_FROM=k8s
+
+# The node id must exist in the nodes and there must always be
+# at least a node with ID 1
+HQL_NODE_ID=1
+
+# All cluster member nodes.
+# To make setting the env var easy, the values are separated by `\s`
+# while nodes are separated by `\n`
+# in the following format:
+#
+# id addr_raft addr_api
+# id addr_raft addr_api
+# id addr_raft addr_api
+#
+# 2 nodes must be separated by 2 `\n`
+HQL_NODES="
+1 localhost:8100 localhost:8200
+"
+
+# If set to `true`, all SQL statements will be logged for debugging
+# purposes.
+# default: false
+#HQL_LOG_STATEMENTS=false
+
+# If given, these keys / certificates will be used to establish
+# TLS connections between nodes.
+#HQL_TLS_RAFT_KEY=tls/key.pem
+#HQL_TLS_RAFT_CERT=tls/cert-chain.pem
+#HQL_TLS_RAFT_DANGER_TLS_NO_VERIFY=true
+
+#HQL_TLS_API_KEY=tls/key.pem
+#HQL_TLS_API_CERT=tls/cert-chain.pem
+#HQL_TLS_API_DANGER_TLS_NO_VERIFY=true
+
+# Secrets for Raft internal authentication as well as for the API.
+# These must be at least 16 characters long and you should provide
+# different ones for both variables.
+HQL_SECRET_RAFT=SuperSecureSecret1337
+HQL_SECRET_API=SuperSecureSecret1337
+
+# You can either parse `ENC_KEYS` and `ENC_KEY_ACTIVE` from the
+# environment with setting this value to `env`, or parse them from
+# a file on disk with `file:path/to/enc/keys/file`
+# default: env
+#HQL_ENC_KEYS_FROM=env
+```
+
+#### `/auth/v1/health` Response Change
+
+The response for `/auth/v1/health` has been changed.
+
+If you did not care about the response body, there is nothing to do for you. The body itself returns different values
+now:
+
+```rust
+struct HealthResponse {
+    db_healthy: bool,
+    cache_healthy: bool,
+}
+```
 
 ### Changes
 
@@ -26,6 +102,24 @@ notifications, you must set a newly introduced config variable:
 # default: https://matrix.org
 #EVENT_MATRIX_SERVER_URL=https://matrix.org
 ```
+
+[0b50376](https://github.com/sebadob/rauthy/commit/0b5037610d475e7ad6fc0a8bf3b851330088cab1)
+
+#### Internal Migration from `redhac` to `hiqlite`
+
+The internal cache layer has been migrated from [redhac](https://github.com/sebadob/redhac)
+to [Hiqlite](https://github.com/sebadob/hiqlite).
+
+A few weeks ago, I started rewriting the whole persistence layer from scratch in a separate project. `redhac` is working
+fine, but it has some issues I wanted to get rid of.
+
+- its network layer is way too complicated which makes it very hard to maintain
+- there is no "sync from other nodes" functionality, which is not a problem on its own, but leads to the following
+- for security reasons, the whole cache is invalidated when a node has a temporary network issue
+- it is very sensitive to even short term network issues and leader changes happen too often for my taste
+
+I started the [Hiqlite](https://github.com/sebadob/hiqlite) project some time ago to get rid of these things and have
+additional features. It is outsourced to make it generally usable in other contexts as well.
 
 []()
 

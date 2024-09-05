@@ -1,13 +1,12 @@
 use actix_web::{web, HttpResponse};
 use chrono::Utc;
-use rauthy_common::constants::{CACHE_NAME_LOGIN_DELAY, IDX_LOGIN_TIME};
+use rauthy_common::constants::IDX_LOGIN_TIME;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
+use rauthy_models::cache::{Cache, DB};
 use rauthy_models::events::event::Event;
 use rauthy_models::events::ip_blacklist_handler::{IpBlacklistReq, IpFailedLoginCheck};
 use rauthy_models::templates::TooManyRequestsHtml;
-use redhac::{cache_get, cache_put};
-use redhac::{cache_get_from, cache_get_value};
 use std::net::IpAddr;
 use std::ops::{Add, Sub};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -25,19 +24,14 @@ pub async fn handle_login_delay(
     data: &web::Data<AppState>,
     peer_ip: IpAddr,
     start: Duration,
-    cache_config: &redhac::CacheConfig,
     res: Result<HttpResponse, ErrorResponse>,
     has_password_been_hashed: bool,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let success_time = cache_get!(
-        i64,
-        CACHE_NAME_LOGIN_DELAY.to_string(),
-        IDX_LOGIN_TIME.to_string(),
-        cache_config,
-        false
-    )
-    .await?
-    .unwrap_or(2000);
+    let client = DB::client();
+    let success_time: i64 = client
+        .get(Cache::App, IDX_LOGIN_TIME)
+        .await?
+        .unwrap_or(2000);
 
     let end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let delta = end - start;
@@ -54,13 +48,9 @@ pub async fn handle_login_delay(
             if has_password_been_hashed {
                 let new_time = (success_time + delta.as_millis() as i64) / 2;
 
-                cache_put(
-                    CACHE_NAME_LOGIN_DELAY.to_string(),
-                    IDX_LOGIN_TIME.to_string(),
-                    cache_config,
-                    &new_time,
-                )
-                .await?;
+                client
+                    .put(Cache::App, IDX_LOGIN_TIME, &new_time, Some(i64::MAX))
+                    .await?;
 
                 debug!("New login_success_time: {}", new_time);
             }

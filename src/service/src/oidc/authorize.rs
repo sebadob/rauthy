@@ -128,7 +128,7 @@ pub async fn post_authorize(
         scopes,
         code_lifetime,
     );
-    code.save(data).await?;
+    code.save().await?;
 
     // build location header
     let mut loc = format!("{}?code={}", req_data.redirect_uri, code.id);
@@ -161,7 +161,7 @@ pub async fn post_authorize(
                 .as_ref()
                 .map(|h| h.1.to_str().unwrap().to_string()),
         }
-        .save(data)
+        .save()
         .await?;
 
         Ok(AuthStep::AwaitWebauthn(step))
@@ -212,7 +212,7 @@ pub async fn post_authorize_refresh(
         scopes,
         code_lifetime,
     );
-    code.save(data).await?;
+    code.save().await?;
 
     // build location header
     let header_loc = if let Some(s) = req_data.state {
@@ -242,7 +242,7 @@ pub async fn post_authorize_refresh(
                 .as_ref()
                 .map(|h| h.1.to_str().unwrap().to_string()),
         };
-        login_req.save(data).await?;
+        login_req.save().await?;
 
         Ok(AuthStep::AwaitWebauthn(step))
     } else {

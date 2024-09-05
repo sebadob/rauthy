@@ -17,8 +17,8 @@ css-color = { workspace = true }
 cryptr = { workspace = true }
 derive_more = { workspace = true }
 flume = { workspace = true }
+hiqlite = { workspace = true }
 image = { workspace = true }
-redhac = { workspace = true }
 reqwest = { workspace = true }
 rio_turtle = { workspace = true }
 ruma = { workspace = true }

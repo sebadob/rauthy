@@ -1,5 +1,6 @@
 use crate::api_cookie::ApiCookie;
 use crate::app_state::AppState;
+use crate::cache::{Cache, DB};
 use crate::entity::auth_codes::AuthCode;
 use crate::entity::clients::Client;
 use crate::entity::sessions::Session;
@@ -24,7 +25,7 @@ use rauthy_api_types::auth_providers::{
 };
 use rauthy_api_types::users::UserValuesRequest;
 use rauthy_common::constants::{
-    APPLICATION_JSON, CACHE_NAME_12HR, CACHE_NAME_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
+    APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_AUTH_PROVIDER_CALLBACK, COOKIE_UPSTREAM_CALLBACK,
     IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_CALLBACK_URI,
     PROVIDER_CALLBACK_URI_ENCODED, PROVIDER_LINK_COOKIE, RAUTHY_VERSION,
     UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_REQ_EXP,
@@ -34,7 +35,6 @@ use rauthy_common::utils::{
     new_store_id,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use reqwest::header::{ACCEPT, AUTHORIZATION};
 use reqwest::tls;
 use ring::digest;
@@ -230,57 +230,34 @@ impl AuthProvider {
         .await?;
 
         Self::invalidate_cache_all(data).await?;
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            Self::cache_idx(&slf.id),
-            &data.caches.ha_cache_config,
-            &slf,
-            AckLevel::Quorum,
-        )
-        .await?;
+
+        DB::client()
+            .put(Cache::App, Self::cache_idx(&slf.id), &slf, CACHE_TTL_APP)
+            .await?;
 
         Ok(slf)
     }
 
     pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
-        if let Some(res) = cache_get!(
-            Self,
-            CACHE_NAME_12HR.to_string(),
-            Self::cache_idx(id),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?
-        {
-            return Ok(res);
+        let client = DB::client();
+        if let Some(slf) = client.get(Cache::App, Self::cache_idx(id)).await? {
+            return Ok(slf);
         }
 
         let slf = query_as!(Self, "SELECT * FROM auth_providers WHERE id = $1", id)
             .fetch_one(&data.db)
             .await?;
 
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            Self::cache_idx(id),
-            &data.caches.ha_cache_config,
-            &slf,
-            AckLevel::Quorum,
-        )
-        .await?;
+        client
+            .put(Cache::App, Self::cache_idx(id), &slf, CACHE_TTL_APP)
+            .await?;
 
         Ok(slf)
     }
 
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        if let Some(res) = cache_get!(
-            Vec<Self>,
-            CACHE_NAME_12HR.to_string(),
-            Self::cache_idx("all"),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?
-        {
+        let client = DB::client();
+        if let Some(res) = client.get(Cache::App, Self::cache_idx("all")).await? {
             return Ok(res);
         }
 
@@ -289,14 +266,9 @@ impl AuthProvider {
             .await?;
 
         // needed for rendering each single login page -> always cache this
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            Self::cache_idx("all"),
-            &data.caches.ha_cache_config,
-            &res,
-            AckLevel::Quorum,
-        )
-        .await?;
+        client
+            .put(Cache::App, Self::cache_idx("all"), &res, CACHE_TTL_APP)
+            .await?;
 
         Ok(res)
     }
@@ -322,12 +294,7 @@ impl AuthProvider {
             .await?;
 
         Self::invalidate_cache_all(data).await?;
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            Self::cache_idx(id),
-            &data.caches.ha_cache_config,
-        )
-        .await?;
+        DB::client().delete(Cache::App, Self::cache_idx(id)).await?;
 
         Ok(())
     }
@@ -372,21 +339,16 @@ impl AuthProvider {
         .await?;
 
         Self::invalidate_cache_all(data).await?;
-
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            Self::cache_idx(&self.id),
-            &data.caches.ha_cache_config,
-            &self,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, Self::cache_idx(&self.id), self, CACHE_TTL_APP)
+            .await?;
 
         Ok(())
     }
 }
 
 impl AuthProvider {
+    #[inline(always)]
     fn cache_idx(id: &str) -> String {
         format!("{}_{}", IDX_AUTH_PROVIDER, id)
     }
@@ -462,12 +424,9 @@ impl AuthProvider {
     }
 
     async fn invalidate_cache_all(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            Self::cache_idx("all"),
-            &data.caches.ha_cache_config,
-        )
-        .await?;
+        DB::client()
+            .delete(Cache::App, Self::cache_idx("all"))
+            .await?;
 
         // Directly update the template cache preemptively.
         // This is needed all the time anyway.
@@ -639,29 +598,20 @@ pub struct AuthProviderCallback {
 
 // CRUD
 impl AuthProviderCallback {
-    pub async fn delete(
-        data: &web::Data<AppState>,
-        callback_id: String,
-    ) -> Result<(), ErrorResponse> {
-        cache_del(
-            CACHE_NAME_AUTH_PROVIDER_CALLBACK.to_string(),
-            callback_id,
-            &data.caches.ha_cache_config,
-        )
-        .await?;
+    pub async fn delete(callback_id: String) -> Result<(), ErrorResponse> {
+        DB::client()
+            .delete(Cache::AuthProviderCallback, callback_id)
+            .await?;
+
         Ok(())
     }
 
-    async fn find(data: &web::Data<AppState>, callback_id: String) -> Result<Self, ErrorResponse> {
-        match cache_get!(
-            Self,
-            CACHE_NAME_AUTH_PROVIDER_CALLBACK.to_string(),
-            callback_id,
-            &data.caches.ha_cache_config,
-            true
-        )
-        .await?
-        {
+    async fn find(callback_id: String) -> Result<Self, ErrorResponse> {
+        let opt: Option<Self> = DB::client()
+            .get(Cache::AuthProviderCallback, callback_id)
+            .await?;
+
+        match opt {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
                 "Callback Code not found - timeout reached?",
@@ -670,16 +620,16 @@ impl AuthProviderCallback {
         }
     }
 
-    async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_insert(
-            CACHE_NAME_AUTH_PROVIDER_CALLBACK.to_string(),
-            self.callback_id.clone(),
-            &data.caches.ha_cache_config,
-            &self,
-            // Once is good enough and faster -> random ID each time cannot produce conflicts
-            AckLevel::Once,
-        )
-        .await?;
+    async fn save(&self) -> Result<(), ErrorResponse> {
+        DB::client()
+            .put(
+                Cache::AuthProviderCallback,
+                self.callback_id.clone(),
+                self,
+                CACHE_TTL_AUTH_PROVIDER_CALLBACK,
+            )
+            .await?;
+
         Ok(())
     }
 }
@@ -734,7 +684,7 @@ impl AuthProviderCallback {
             UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as i64,
         );
 
-        slf.save(data).await?;
+        slf.save().await?;
 
         Ok((
             cookie,
@@ -760,7 +710,7 @@ impl AuthProviderCallback {
 
         // validate state
         if callback_id != payload.state {
-            Self::delete(data, callback_id).await?;
+            Self::delete(callback_id).await?;
 
             error!("`state` does not match");
             return Err(ErrorResponse::new(
@@ -771,9 +721,9 @@ impl AuthProviderCallback {
         debug!("callback state is valid");
 
         // validate csrf token
-        let slf = Self::find(data, callback_id).await?;
+        let slf = Self::find(callback_id).await?;
         if slf.xsrf_token != payload.xsrf_token {
-            Self::delete(data, slf.callback_id).await?;
+            Self::delete(slf.callback_id).await?;
 
             error!("invalid CSRF token");
             return Err(ErrorResponse::new(
@@ -787,7 +737,7 @@ impl AuthProviderCallback {
         let hash = digest::digest(&digest::SHA256, payload.pkce_verifier.as_bytes());
         let hash_base64 = base64_url_encode(hash.as_ref());
         if slf.pkce_challenge != hash_base64 {
-            Self::delete(data, slf.callback_id).await?;
+            Self::delete(slf.callback_id).await?;
 
             error!("invalid PKCE verifier");
             return Err(ErrorResponse::new(
@@ -950,7 +900,7 @@ impl AuthProviderCallback {
             scopes,
             code_lifetime,
         );
-        code.save(data).await?;
+        code.save().await?;
 
         // location header
         let mut loc = format!("{}?code={}", slf.req_redirect_uri, code.id);
@@ -978,7 +928,7 @@ impl AuthProviderCallback {
                     .as_ref()
                     .map(|h| h.1.to_str().unwrap().to_string()),
             }
-            .save(data)
+            .save()
             .await?;
 
             AuthStep::AwaitWebauthn(step)
@@ -986,7 +936,7 @@ impl AuthProviderCallback {
             AuthStep::LoggedIn(AuthStepLoggedIn {
                 user_id: user.id,
                 email: user.email,
-                header_loc: (header::LOCATION, HeaderValue::from_str(&loc).unwrap()),
+                header_loc: (header::LOCATION, HeaderValue::from_str(&loc)?),
                 header_csrf: Session::get_csrf_header(&session.csrf_token),
                 header_origin,
             })
@@ -1011,16 +961,9 @@ impl AuthProviderTemplate {
     pub async fn get_all_json_template(
         data: &web::Data<AppState>,
     ) -> Result<Option<String>, ErrorResponse> {
-        if let Some(res) = cache_get!(
-            Option<String>,
-            CACHE_NAME_12HR.to_string(),
-            IDX_AUTH_PROVIDER_TEMPLATE.to_string(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?
-        {
-            return Ok(res);
+        let client = DB::client();
+        if let Some(slf) = client.get(Cache::App, IDX_AUTH_PROVIDER_TEMPLATE).await? {
+            return Ok(slf);
         }
 
         let providers = AuthProvider::find_all(data)
@@ -1039,30 +982,23 @@ impl AuthProviderTemplate {
         } else {
             Some(serde_json::to_string(&providers)?)
         };
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_AUTH_PROVIDER_TEMPLATE.to_string(),
-            &data.caches.ha_cache_config,
-            &json,
-            AckLevel::Quorum,
-        )
-        .await?;
+        client
+            .put(Cache::App, IDX_AUTH_PROVIDER_TEMPLATE, &json, CACHE_TTL_APP)
+            .await?;
 
         Ok(json)
     }
 
-    async fn invalidate_cache(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            IDX_AUTH_PROVIDER_TEMPLATE.to_string(),
-            &data.caches.ha_cache_config,
-        )
-        .await?;
+    async fn invalidate_cache() -> Result<(), ErrorResponse> {
+        DB::client()
+            .delete(Cache::App, IDX_AUTH_PROVIDER_TEMPLATE)
+            .await?;
+
         Ok(())
     }
 
     async fn update_cache(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        Self::invalidate_cache(data).await?;
+        Self::invalidate_cache().await?;
         Self::get_all_json_template(data).await?;
         Ok(())
     }

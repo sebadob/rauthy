@@ -9,7 +9,6 @@ ARG TARGETPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
 
-ARG DATABASE_URL="sqlite:data/rauthy.db"
 ARG FEATURES="default"
 ARG MODE="release"
 
@@ -17,29 +16,21 @@ RUN echo "Building on $BUILDPLATFORM for $TARGETOS/$TARGETARCH in $MODE mode wit
 
 RUN mkdir -p out && mkdir empty
 
-COPY data ./data
-COPY migrations ./migrations
-COPY src ./src
-COPY static ./static
-COPY templates ./templates
-COPY tls ./tls
-COPY .env .
-COPY Cargo.lock .
-COPY Cargo.toml .
-COPY rauthy.cfg .
-COPY rauthy.deploy.cfg .
-COPY rauthy.test.cfg .
+COPY . .
+
 #RUN --mount=type=cache,target=/usr/local/cargo/registry <<EOF
 
 RUN <<EOF
 #!/bin/bash
+set -e
+
 if [ "release" = "$MODE" ]; then
-  DATABASE_URL=$DATABASE_URL cargo build --release --features $FEATURES --target $(target)
+  cargo build --release --features $FEATURES --target $(target)
 else
-  DATABASE_URL=$DATABASE_URL cargo build --features $FEATURES --target $(target)
+  cargo build --features $FEATURES --target $(target)
 fi
 
-cp target/$(target)/$MODE/rauthy out/rauthy
+mv target/$(target)/$MODE/rauthy out/rauthy
 EOF
 
 FROM --platform=$TARGETPLATFORM scratch

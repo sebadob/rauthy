@@ -1,4 +1,3 @@
-use crate::is_ha_leader;
 use actix_web::web;
 use chrono::Utc;
 use rauthy_common::constants::{
@@ -6,19 +5,15 @@ use rauthy_common::constants::{
     ENABLE_DYN_CLIENT_REG,
 };
 use rauthy_models::app_state::AppState;
+use rauthy_models::cache::DB;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
-use redhac::QuorumHealthState;
 use sqlx::query_as;
 use std::time::Duration;
-use tokio::sync::watch::Receiver;
 use tracing::{debug, error, info};
 
 /// Cleans up unused dynamically registered clients
-pub async fn dyn_client_cleanup(
-    data: web::Data<AppState>,
-    rx_health: Receiver<Option<QuorumHealthState>>,
-) {
+pub async fn dyn_client_cleanup(data: web::Data<AppState>) {
     if !*ENABLE_DYN_CLIENT_REG {
         info!(
             "Dynamic client registration is not enabled - exiting dynamic_client_cleanup scheduler"
@@ -37,14 +32,11 @@ pub async fn dyn_client_cleanup(
     loop {
         interval.tick().await;
 
-        // will return None in a non-HA deployment
-        if let Some(is_ha_leader) = is_ha_leader(&rx_health) {
-            if !is_ha_leader {
-                debug!(
+        if !DB::client().is_leader_cache().await {
+            debug!(
                     "Running HA mode without being the leader - skipping dynamic_client_cleanup scheduler"
                 );
-                continue;
-            }
+            continue;
         }
         debug!("Running dynamic_client_cleanup scheduler");
 

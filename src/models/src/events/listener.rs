@@ -1,14 +1,13 @@
 use crate::app_state::DbPool;
+use crate::cache::DB;
 use crate::events::event::{Event, EventLevel, EventType};
 use crate::events::ip_blacklist_handler::{IpBlacklist, IpBlacklistReq, IpLoginFailedSet};
 use crate::events::notifier::EventNotifier;
 use crate::events::EVENT_PERSIST_LEVEL;
 use actix_web_lab::sse;
 use chrono::DateTime;
-use rauthy_common::constants::HA_MODE;
-use rauthy_common::constants::{DATABASE_URL, EVENTS_LATEST_LIMIT};
+use rauthy_common::constants::EVENTS_LATEST_LIMIT;
 use rauthy_error::ErrorResponse;
-use sqlx::postgres::PgListener;
 use std::collections::{HashMap, VecDeque};
 use std::time::Duration;
 use tokio::sync::mpsc;
@@ -17,7 +16,7 @@ use tracing::{debug, error, info};
 
 #[derive(Debug, Clone)]
 pub enum EventRouterMsg {
-    Event(String),
+    Event(Event),
     ClientReg {
         ip: String,
         tx: mpsc::Sender<sse::Event>,
@@ -39,27 +38,18 @@ impl EventListener {
     ) -> Result<(), ErrorResponse> {
         debug!("EventListener::listen has been started");
 
-        // having a local copy is a tiny bit faster and needs one less memory lookup
-        let is_ha = *HA_MODE;
-
-        if is_ha {
-            tokio::spawn(Self::pg_listener(tx_router.clone()));
-        }
         tokio::spawn(Self::router(db.clone(), rx_router, tx_ip_blacklist));
+        tokio::spawn(Self::raft_events_listener(tx_router));
 
         while let Ok(event) = rx_event.recv_async().await {
-            if is_ha {
-                tokio::spawn(Self::handle_event_ha(event, db.clone()));
-            } else {
-                tokio::spawn(Self::handle_event_si(event, db.clone(), tx_router.clone()));
-            }
+            tokio::spawn(Self::handle_event(event, db.clone()));
         }
 
         Ok(())
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
-    async fn handle_event_si(event: Event, db: DbPool, tx: flume::Sender<EventRouterMsg>) {
+    async fn handle_event(event: Event, db: DbPool) {
         // insert into DB
         if &event.level.value() >= EVENT_PERSIST_LEVEL.get().unwrap() {
             while let Err(err) = event.insert(&db).await {
@@ -68,42 +58,17 @@ impl EventListener {
             }
         }
 
-        // forward to event router
-        if let Err(err) = tx.send_async(EventRouterMsg::Event(event.as_json())).await {
-            error!(
-                "Error sending Event {:?} internally - this should never happen!",
-                err
-            );
-        }
-
-        // send notification
-        while let Err(err) = EventNotifier::send(&event).await {
-            error!("Sending Event Notification: {:?}", err);
-            time::sleep(Duration::from_secs(1)).await;
-        }
-    }
-
-    #[tracing::instrument(level = "debug", skip_all)]
-    async fn handle_event_ha(event: Event, db: DbPool) {
-        // insert into DB
-        if &event.level.value() >= EVENT_PERSIST_LEVEL.get().unwrap() {
-            while let Err(err) = event.insert(&db).await {
-                error!("Inserting Event into Database: {:?}", err);
-                time::sleep(Duration::from_secs(1)).await;
-            }
-        }
-
-        // notify postgres listeners
-        while let Err(err) = sqlx::query(
-            r#"SELECT pg_notify(chan, payload)
-            FROM (VALUES ('events', $1)) NOTIFIES(chan, payload)"#,
-        )
-        .bind(event.as_json())
-        .execute(&db)
-        .await
-        {
+        // notify raft members
+        let mut fails = 0;
+        while let Err(err) = DB::client().notify(&event).await {
             error!("Publishing Event on Postgres channel: {:?}", err);
-            time::sleep(Duration::from_secs(1)).await;
+
+            if fails > 10 {
+                break;
+            } else {
+                fails += 1;
+                time::sleep(Duration::from_secs(1)).await;
+            }
         }
 
         // send notification
@@ -114,55 +79,77 @@ impl EventListener {
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
-    async fn pg_listener(tx: flume::Sender<EventRouterMsg>) {
+    async fn raft_events_listener(tx: flume::Sender<EventRouterMsg>) {
         debug!("EventListener::router_ha has been started");
 
-        loop {
-            let mut listener = match PgListener::connect(&DATABASE_URL).await {
-                Ok(l) => l,
-                Err(err) => {
-                    error!(
-                        "Error opening Postgres connection for PgListener: {:?}",
-                        err
-                    );
-                    time::sleep(Duration::from_secs(5)).await;
-                    continue;
-                }
-            };
-            if let Err(err) = listener.listen("events").await {
-                error!("Error listening to 'events' channel on Postgres: {:?}", err);
-                time::sleep(Duration::from_secs(5)).await;
-                continue;
+        while let Ok(event) = DB::client().listen::<Event>().await {
+            debug!("{:?}", event);
+
+            // forward to event router -> payload is already an Event in JSON format
+            if let Err(err) = tx.send_async(EventRouterMsg::Event(event)).await {
+                error!(
+                    "Error sending Event {:?} internally - this should never happen!",
+                    err
+                );
             }
-
-            while let Ok(msg) = listener.recv().await {
-                debug!("{:?}", msg);
-
-                // forward to event router -> payload is already an Event in JSON format
-                if let Err(err) = tx
-                    .send_async(EventRouterMsg::Event(msg.payload().to_string()))
-                    .await
-                {
-                    error!(
-                        "Error sending Event {:?} internally - this should never happen!",
-                        err
-                    );
-                }
-            }
-
-            // try to do an unlisten on all channels even if we had an error and should be
-            // disconnected anyway
-            let _ = listener.unlisten_all().await;
         }
+
+        info!("raft_events_listener exiting");
     }
 
+    // #[tracing::instrument(level = "debug", skip_all)]
+    // async fn pg_listener(tx: flume::Sender<EventRouterMsg>) {
+    //     debug!("EventListener::router_ha has been started");
+    //
+    //     loop {
+    //         let mut listener = match PgListener::connect(&DATABASE_URL).await {
+    //             Ok(l) => l,
+    //             Err(err) => {
+    //                 error!(
+    //                     "Error opening Postgres connection for PgListener: {:?}",
+    //                     err
+    //                 );
+    //                 time::sleep(Duration::from_secs(5)).await;
+    //                 continue;
+    //             }
+    //         };
+    //         if let Err(err) = listener.listen("events").await {
+    //             error!("Error listening to 'events' channel on Postgres: {:?}", err);
+    //             time::sleep(Duration::from_secs(5)).await;
+    //             continue;
+    //         }
+    //
+    //         while let Ok(msg) = listener.recv().await {
+    //             debug!("{:?}", msg);
+    //
+    //             // forward to event router -> payload is already an Event in JSON format
+    //             if let Err(err) = tx
+    //                 .send_async(EventRouterMsg::Event(msg.payload().to_string()))
+    //                 .await
+    //             {
+    //                 error!(
+    //                     "Error sending Event {:?} internally - this should never happen!",
+    //                     err
+    //                 );
+    //             }
+    //         }
+    //
+    //         // try to do an unlisten on all channels even if we had an error and should be
+    //         // disconnected anyway
+    //         let _ = listener.unlisten_all().await;
+    //     }
+    // }
+
+    /// The router that will listen to Events coming in via Hiqlite and listen for Client
+    /// Registrations via SSE endpoint. It will serialize incoming Events to SSE payload in JSON
+    /// format and forward them to all registered clients.
     #[tracing::instrument(level = "debug", skip_all)]
     async fn router(
         db: DbPool,
         rx: flume::Receiver<EventRouterMsg>,
         tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
     ) {
-        debug!("EventListener::router_si has been started");
+        debug!("EventListener::router has been started");
 
         let mut clients: HashMap<String, (i16, mpsc::Sender<sse::Event>)> =
             HashMap::with_capacity(4);
@@ -186,15 +173,16 @@ impl EventListener {
                 EventRouterMsg::Event(event) => {
                     debug!("received new event in EventListener::router: {:?}", event);
 
+                    let sse_payload =
+                        sse::Event::Data(sse::Data::new(serde_json::to_string(&event).unwrap()));
+
                     // deserialize the event and check for important updates
-                    let evt = serde_json::from_str::<Event>(&event)
-                        .expect("Event to deserialize correctly");
-                    match evt.typ {
+                    match event.typ {
                         EventType::InvalidLogins => {
                             tx_ip_blacklist
                                 .send_async(IpBlacklistReq::LoginFailedSet(IpLoginFailedSet {
-                                    ip: evt.ip.unwrap_or_default(),
-                                    invalid_logins: evt.data.unwrap_or_default() as u32,
+                                    ip: event.ip.unwrap_or_default(),
+                                    invalid_logins: event.data.unwrap_or_default() as u32,
                                 }))
                                 .await
                                 .unwrap();
@@ -202,8 +190,8 @@ impl EventListener {
                         EventType::IpBlacklisted => {
                             tx_ip_blacklist
                                 .send_async(IpBlacklistReq::Blacklist(IpBlacklist {
-                                    ip: evt.ip.unwrap_or_default(),
-                                    exp: DateTime::from_timestamp(evt.data.unwrap(), 0)
+                                    ip: event.ip.unwrap_or_default(),
+                                    exp: DateTime::from_timestamp(event.data.unwrap(), 0)
                                         .unwrap_or_default(),
                                 }))
                                 .await
@@ -212,7 +200,7 @@ impl EventListener {
                         EventType::IpBlacklistRemoved => {
                             tx_ip_blacklist
                                 .send_async(IpBlacklistReq::BlacklistDelete(
-                                    evt.ip.unwrap_or_default(),
+                                    event.ip.unwrap_or_default(),
                                 ))
                                 .await
                                 .unwrap();
@@ -233,8 +221,7 @@ impl EventListener {
 
                     // pre-compute the payload
                     // the incoming data is already in JSON format
-                    let payload = sse::Event::Data(sse::Data::new(event));
-                    let event_level_value = evt.level.value();
+                    let event_level_value = event.level.value();
 
                     // send payload to all clients
                     for (ip, (client_level, tx)) in &clients {
@@ -243,7 +230,8 @@ impl EventListener {
                             continue;
                         }
 
-                        match time::timeout(Duration::from_secs(5), tx.send(payload.clone())).await
+                        match time::timeout(Duration::from_secs(5), tx.send(sse_payload.clone()))
+                            .await
                         {
                             Ok(tx_res) => {
                                 if let Err(err) = tx_res {
@@ -268,7 +256,7 @@ impl EventListener {
                     if events.len() > EVENTS_LATEST_LIMIT as usize {
                         events.pop_front();
                     }
-                    events.push_back((event_level_value, payload));
+                    events.push_back((event_level_value, sse_payload));
 
                     while let Some(ip) = ips_to_remove.pop() {
                         clients.remove(&ip);

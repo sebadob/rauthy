@@ -20,7 +20,6 @@ chrono = { workspace = true }
 cryptr = { workspace = true }
 mime_guess = { workspace = true }
 num_cpus = { workspace = true }
-redhac = { workspace = true }
 rust-embed = { version = "8", features = ["actix-web", "tokio"] }
 semver = { workspace = true }
 spow = { workspace = true }

@@ -29,7 +29,7 @@ pub async fn grant_type_device_code(
         }
         Some(dc) => dc,
     };
-    let mut code = match DeviceAuthCode::find_by_device_code(data, device_code).await {
+    let mut code = match DeviceAuthCode::find_by_device_code(device_code).await {
         Ok(Some(code)) => code,
         Ok(None) | Err(_) => {
             return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
@@ -83,7 +83,7 @@ pub async fn grant_type_device_code(
             warn!("deleting device oidc code request early because of not respected poll interval");
             error = OAuth2ErrorTypeResponse::AccessDenied;
             error_description = Cow::from("poll interval has not been respected");
-            if let Err(err) = code.delete(data).await {
+            if let Err(err) = code.delete().await {
                 // this should never happen
                 error!("Error deleting DeviceAuthCode from the cache: {:}", err);
             }
@@ -132,7 +132,7 @@ pub async fn grant_type_device_code(
             None
         };
 
-        if let Err(err) = code.delete(data).await {
+        if let Err(err) = code.delete().await {
             // should really never happen - in cache only
             error!("Error deleting DeviceAuthCode: {:?}", err);
         }
@@ -186,7 +186,7 @@ pub async fn grant_type_device_code(
     }
 
     code.last_poll = now;
-    if let Err(err) = code.save(data).await {
+    if let Err(err) = code.save().await {
         // this should never happen
         error!("Error saving the DeviceAuthCode: {:?}", err);
     }

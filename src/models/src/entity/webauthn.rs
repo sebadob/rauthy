@@ -1,5 +1,6 @@
 use crate::api_cookie::ApiCookie;
 use crate::app_state::{AppState, DbTxn};
+use crate::cache::{Cache, DB};
 use crate::entity::users::{AccountType, User};
 use actix_web::cookie::Cookie;
 use actix_web::http::header;
@@ -12,13 +13,12 @@ use rauthy_api_types::users::{
     WebauthnLoginFinishResponse, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_common::constants::{
-    CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA, COOKIE_MFA, IDX_WEBAUTHN, WEBAUTHN_FORCE_UV,
+    CACHE_TTL_WEBAUTHN, CACHE_TTL_WEBAUTHN_DATA, COOKIE_MFA, IDX_WEBAUTHN, WEBAUTHN_FORCE_UV,
     WEBAUTHN_NO_PASSWORD_EXPIRY, WEBAUTHN_RENEW_EXP, WEBAUTHN_REQ_EXP,
 };
 use rauthy_common::utils::base64_decode;
 use rauthy_common::utils::{base64_encode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::ops::Add;
@@ -46,7 +46,6 @@ pub struct PasskeyEntity {
 // CRUD
 impl PasskeyEntity {
     pub async fn create(
-        data: &web::Data<AppState>,
         user_id: String,
         passkey_user_id: Uuid,
         name: String,
@@ -55,7 +54,7 @@ impl PasskeyEntity {
         txn: &mut DbTxn<'_>,
     ) -> Result<(), ErrorResponse> {
         // json, because bincode does not support deserialize from any, which would be the case here
-        let passkey = serde_json::to_string(&pk).unwrap();
+        let passkey = serde_json::to_string(&pk)?;
         let now = OffsetDateTime::now_utc().unix_timestamp();
 
         let entity = Self {
@@ -85,20 +84,19 @@ impl PasskeyEntity {
         .execute(&mut **txn)
         .await?;
 
-        cache_remove(
-            CACHE_NAME_WEBAUTHN.to_string(),
-            Self::cache_idx_user(&entity.user_id),
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
-        cache_remove(
-            CACHE_NAME_WEBAUTHN.to_string(),
-            Self::cache_idx_creds(&entity.user_id),
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
+        let client = DB::client();
+        client
+            .delete(Cache::Webauthn, Self::cache_idx_user(&entity.user_id))
+            .await?;
+        client
+            .delete(
+                Cache::Webauthn,
+                Self::cache_idx_user_with_uv(&entity.user_id),
+            )
+            .await?;
+        client
+            .delete(Cache::Webauthn, Self::cache_idx_creds(&entity.user_id))
+            .await?;
 
         Ok(())
     }
@@ -129,27 +127,19 @@ impl PasskeyEntity {
             q.execute(&data.db).await?;
         }
 
-        cache_remove(
-            CACHE_NAME_WEBAUTHN.to_string(),
-            Self::cache_idx_single(user_id, name),
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
-        cache_remove(
-            CACHE_NAME_WEBAUTHN.to_string(),
-            Self::cache_idx_user(user_id),
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
-        cache_remove(
-            CACHE_NAME_WEBAUTHN.to_string(),
-            Self::cache_idx_creds(user_id),
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
+        let client = DB::client();
+        client
+            .delete(Cache::Webauthn, Self::cache_idx_single(user_id, name))
+            .await?;
+        client
+            .delete(Cache::Webauthn, Self::cache_idx_user(user_id))
+            .await?;
+        client
+            .delete(Cache::Webauthn, Self::cache_idx_user_with_uv(user_id))
+            .await?;
+        client
+            .delete(Cache::Webauthn, Self::cache_idx_creds(user_id))
+            .await?;
 
         Ok(())
     }
@@ -160,16 +150,10 @@ impl PasskeyEntity {
         name: &str,
     ) -> Result<Self, ErrorResponse> {
         let idx = Self::cache_idx_single(user_id, name);
-        let pk = cache_get!(
-            PasskeyEntity,
-            CACHE_NAME_WEBAUTHN.to_string(),
-            idx.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(pk) = pk {
-            return Ok(pk);
+        let client = DB::client();
+
+        if let Some(slf) = client.get(Cache::Webauthn, &idx).await? {
+            return Ok(slf);
         }
 
         let pk = sqlx::query_as!(
@@ -181,14 +165,9 @@ impl PasskeyEntity {
         .fetch_one(&data.db)
         .await?;
 
-        cache_insert(
-            CACHE_NAME_WEBAUTHN.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &pk,
-            AckLevel::Leader,
-        )
-        .await?;
+        client
+            .put(Cache::Webauthn, idx, &pk, *CACHE_TTL_WEBAUTHN)
+            .await?;
 
         Ok(pk)
     }
@@ -198,16 +177,11 @@ impl PasskeyEntity {
         user_id: &str,
     ) -> Result<Vec<CredentialID>, ErrorResponse> {
         let idx = Self::cache_idx_creds(user_id);
-        let pk = cache_get!(
-            Vec<Vec<u8>>,
-            CACHE_NAME_WEBAUTHN.to_string(),
-            idx.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(pk) = pk {
-            return Ok(pk.into_iter().map(CredentialID::from).collect());
+        let client = DB::client();
+
+        let opt: Option<Vec<Vec<u8>>> = client.get(Cache::Webauthn, &idx).await?;
+        if let Some(bytes) = opt {
+            return Ok(bytes.into_iter().map(CredentialID::from).collect());
         }
 
         let creds = sqlx::query!(
@@ -220,14 +194,9 @@ impl PasskeyEntity {
         .map(|row| row.credential_id)
         .collect::<Vec<Vec<u8>>>();
 
-        cache_insert(
-            CACHE_NAME_WEBAUTHN.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &creds,
-            AckLevel::Leader,
-        )
-        .await?;
+        client
+            .put(Cache::Webauthn, idx, &creds, *CACHE_TTL_WEBAUTHN)
+            .await?;
 
         Ok(creds.into_iter().map(CredentialID::from).collect())
     }
@@ -237,30 +206,19 @@ impl PasskeyEntity {
         user_id: &str,
     ) -> Result<Vec<Self>, ErrorResponse> {
         let idx = Self::cache_idx_user(user_id);
-        let pk = cache_get!(
-            Vec<PasskeyEntity>,
-            CACHE_NAME_WEBAUTHN.to_string(),
-            idx.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(pk) = pk {
-            return Ok(pk);
+        let client = DB::client();
+
+        if let Some(slf) = client.get(Cache::Webauthn, &idx).await? {
+            return Ok(slf);
         }
 
         let pks = sqlx::query_as!(Self, "SELECT * FROM passkeys WHERE user_id = $1", user_id)
             .fetch_all(&data.db)
             .await?;
 
-        cache_insert(
-            CACHE_NAME_WEBAUTHN.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &pks,
-            AckLevel::Leader,
-        )
-        .await?;
+        client
+            .put(Cache::Webauthn, idx, &pks, *CACHE_TTL_WEBAUTHN)
+            .await?;
 
         Ok(pks)
     }
@@ -269,17 +227,11 @@ impl PasskeyEntity {
         data: &web::Data<AppState>,
         user_id: &str,
     ) -> Result<Vec<Self>, ErrorResponse> {
-        let idx = Self::cache_idx_user(user_id);
-        let pk = cache_get!(
-            Vec<PasskeyEntity>,
-            CACHE_NAME_WEBAUTHN.to_string(),
-            idx.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(pk) = pk {
-            return Ok(pk);
+        let idx = Self::cache_idx_user_with_uv(user_id);
+        let client = DB::client();
+
+        if let Some(slf) = client.get(Cache::Webauthn, &idx).await? {
+            return Ok(slf);
         }
 
         let pks = sqlx::query_as!(
@@ -290,23 +242,14 @@ impl PasskeyEntity {
         .fetch_all(&data.db)
         .await?;
 
-        cache_insert(
-            CACHE_NAME_WEBAUTHN.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &pks,
-            AckLevel::Leader,
-        )
-        .await?;
+        client
+            .put(Cache::Webauthn, idx, &pks, *CACHE_TTL_WEBAUTHN)
+            .await?;
 
         Ok(pks)
     }
 
-    pub async fn update_passkey(
-        &self,
-        data: &web::Data<AppState>,
-        txn: &mut DbTxn<'_>,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn update_passkey(&self, txn: &mut DbTxn<'_>) -> Result<(), ErrorResponse> {
         sqlx::query!(
             r#"UPDATE passkeys
             SET passkey = $1, last_used = $2
@@ -319,23 +262,23 @@ impl PasskeyEntity {
         .execute(&mut **txn)
         .await?;
 
-        cache_insert(
-            CACHE_NAME_WEBAUTHN.to_string(),
-            Self::cache_idx_single(&self.user_id, &self.name),
-            &data.caches.ha_cache_config,
-            &self,
-            AckLevel::Quorum,
-        )
-        .await?;
+        let client = DB::client();
 
-        // TODO instead of invalidating, we could update in advance
-        cache_remove(
-            CACHE_NAME_WEBAUTHN.to_string(),
-            Self::cache_idx_user(&self.user_id),
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
+        client
+            .put(
+                Cache::Webauthn,
+                Self::cache_idx_single(&self.user_id, &self.name),
+                self,
+                *CACHE_TTL_WEBAUTHN,
+            )
+            .await?;
+
+        client
+            .delete(Cache::Webauthn, Self::cache_idx_user(&self.user_id))
+            .await?;
+        client
+            .delete(Cache::Webauthn, Self::cache_idx_user_with_uv(&self.user_id))
+            .await?;
 
         Ok(())
     }
@@ -347,14 +290,26 @@ impl PasskeyEntity {
         serde_json::from_str(&self.passkey).unwrap()
     }
 
+    /// Index for a single passkey for a user
+    #[inline]
     fn cache_idx_single(user_id: &str, name: &str) -> String {
         format!("{}{}{}", IDX_WEBAUTHN, user_id, name)
     }
 
+    /// Index for all passkeys a user has
+    #[inline]
     fn cache_idx_user(user_id: &str) -> String {
         format!("{}{}", IDX_WEBAUTHN, user_id)
     }
 
+    /// Index for all passkeys a user has
+    #[inline]
+    fn cache_idx_user_with_uv(user_id: &str) -> String {
+        format!("{}_UV_{}", IDX_WEBAUTHN, user_id)
+    }
+
+    /// Index for credentials for a user
+    #[inline]
     fn cache_idx_creds(user_id: &str) -> String {
         format!("{}{}_creds", IDX_WEBAUTHN, user_id)
     }
@@ -425,27 +380,15 @@ pub struct WebauthnData {
 
 // CURD
 impl WebauthnData {
-    pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_remove(
-            CACHE_NAME_WEBAUTHN_DATA.to_string(),
-            self.code.clone(),
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
+    pub async fn delete(&self) -> Result<(), ErrorResponse> {
+        DB::client()
+            .delete(Cache::Webauthn, self.code.clone())
+            .await?;
         Ok(())
     }
 
-    pub async fn find(data: &web::Data<AppState>, code: String) -> Result<Self, ErrorResponse> {
-        let res = cache_get!(
-            WebauthnData,
-            CACHE_NAME_WEBAUTHN_DATA.to_string(),
-            code,
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-
+    pub async fn find(code: String) -> Result<Self, ErrorResponse> {
+        let res: Option<Self> = DB::client().get(Cache::Webauthn, code).await?;
         match res {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
@@ -455,16 +398,15 @@ impl WebauthnData {
         }
     }
 
-    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_insert(
-            CACHE_NAME_WEBAUTHN_DATA.to_string(),
-            self.code.clone(),
-            &data.caches.ha_cache_config,
-            &self,
-            AckLevel::Quorum,
-        )
-        .await?;
-
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
+        DB::client()
+            .put(
+                Cache::Webauthn,
+                self.code.clone(),
+                &self,
+                *CACHE_TTL_WEBAUTHN_DATA,
+            )
+            .await?;
         Ok(())
     }
 }
@@ -479,9 +421,9 @@ pub enum WebauthnAdditionalData {
 }
 
 impl WebauthnAdditionalData {
-    pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn delete(&self) -> Result<(), ErrorResponse> {
         match self {
-            Self::Login(d) => d.delete(data).await,
+            Self::Login(d) => d.delete().await,
             Self::Service(_uid) => Ok(()),
             Self::Test => Ok(()),
         }
@@ -526,27 +468,15 @@ pub struct WebauthnLoginReq {
 
 // CRUD
 impl WebauthnLoginReq {
-    pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_remove(
-            CACHE_NAME_WEBAUTHN_DATA.to_string(),
-            self.code.clone(),
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
+    pub async fn delete(&self) -> Result<(), ErrorResponse> {
+        DB::client()
+            .delete(Cache::Webauthn, self.code.clone())
+            .await?;
         Ok(())
     }
 
-    pub async fn find(data: &web::Data<AppState>, code: String) -> Result<Self, ErrorResponse> {
-        let res = cache_get!(
-            WebauthnLoginReq,
-            CACHE_NAME_WEBAUTHN_DATA.to_string(),
-            code,
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-
+    pub async fn find(code: String) -> Result<Self, ErrorResponse> {
+        let res: Option<Self> = DB::client().get(Cache::Webauthn, code).await?;
         match res {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
@@ -556,16 +486,15 @@ impl WebauthnLoginReq {
         }
     }
 
-    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_insert(
-            CACHE_NAME_WEBAUTHN_DATA.to_string(),
-            self.code.clone(),
-            &data.caches.ha_cache_config,
-            &self,
-            AckLevel::Quorum,
-        )
-        .await?;
-
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
+        DB::client()
+            .put(
+                Cache::Webauthn,
+                self.code.clone(),
+                self,
+                *CACHE_TTL_WEBAUTHN_DATA,
+            )
+            .await?;
         Ok(())
     }
 }
@@ -585,27 +514,15 @@ impl WebauthnServiceReq {
         }
     }
 
-    pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_remove(
-            CACHE_NAME_WEBAUTHN_DATA.to_string(),
-            self.code.clone(),
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
+    pub async fn delete(&self) -> Result<(), ErrorResponse> {
+        DB::client()
+            .delete(Cache::Webauthn, self.code.clone())
+            .await?;
         Ok(())
     }
 
-    pub async fn find(data: &web::Data<AppState>, code: String) -> Result<Self, ErrorResponse> {
-        let res = cache_get!(
-            Self,
-            CACHE_NAME_WEBAUTHN_DATA.to_string(),
-            code,
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-
+    pub async fn find(code: String) -> Result<Self, ErrorResponse> {
+        let res = DB::client().get(Cache::Webauthn, code).await?;
         match res {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
@@ -615,16 +532,15 @@ impl WebauthnServiceReq {
         }
     }
 
-    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_insert(
-            CACHE_NAME_WEBAUTHN_DATA.to_string(),
-            self.code.clone(),
-            &data.caches.ha_cache_config,
-            &self,
-            AckLevel::Quorum,
-        )
-        .await?;
-
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
+        DB::client()
+            .put(
+                Cache::Webauthn,
+                self.code.clone(),
+                self,
+                *CACHE_TTL_WEBAUTHN_DATA,
+            )
+            .await?;
         Ok(())
     }
 }
@@ -637,12 +553,12 @@ pub async fn auth_start(
     // This app_data will be returned to the client upon successful webauthn authentication
     let add_data = match purpose {
         MfaPurpose::Login(code) => {
-            let d = WebauthnLoginReq::find(data, code).await?;
+            let d = WebauthnLoginReq::find(code).await?;
             WebauthnAdditionalData::Login(d)
         }
         MfaPurpose::PasswordNew | MfaPurpose::PasswordReset => {
             let svc_req = WebauthnServiceReq::new(user_id.clone());
-            svc_req.save(data).await?;
+            svc_req.save().await?;
             WebauthnAdditionalData::Service(svc_req)
         }
         MfaPurpose::Test => WebauthnAdditionalData::Test,
@@ -678,16 +594,16 @@ pub async fn auth_start(
             if force_uv {
                 rcr.public_key.user_verification = UserVerificationPolicy::Required;
             }
-            add_data.delete(data).await?;
+            add_data.delete().await?;
 
             // cannot be serialized with bincode -> no deserialize from any
-            let auth_state_json = serde_json::to_string(&auth_state).unwrap();
+            let auth_state_json = serde_json::to_string(&auth_state)?;
             let auth_data = WebauthnData {
                 code: get_rand(48),
                 auth_state_json,
                 data: add_data,
             };
-            auth_data.save(data).await?;
+            auth_data.save().await?;
 
             Ok(WebauthnAuthStartResponse {
                 code: auth_data.code,
@@ -712,8 +628,8 @@ pub async fn auth_finish(
     user_id: String,
     req: WebauthnAuthFinishRequest,
 ) -> Result<WebauthnAdditionalData, ErrorResponse> {
-    let auth_data = WebauthnData::find(data, req.code).await?;
-    let auth_state = serde_json::from_str(&auth_data.auth_state_json).unwrap();
+    let auth_data = WebauthnData::find(req.code).await?;
+    let auth_state = serde_json::from_str(&auth_data.auth_state_json)?;
 
     let mut user = User::find(data, user_id).await?;
     let force_uv = user.account_type() == AccountType::Passkey || *WEBAUTHN_FORCE_UV;
@@ -740,7 +656,7 @@ pub async fn auth_finish(
                 let mut pk = pk_entity.get_pk();
                 if let Some(updated) = pk.update_credential(&auth_result) {
                     if updated {
-                        pk_entity.passkey = serde_json::to_string(&pk).unwrap();
+                        pk_entity.passkey = serde_json::to_string(&pk)?;
                     }
 
                     let now = OffsetDateTime::now_utc().unix_timestamp();
@@ -750,7 +666,7 @@ pub async fn auth_finish(
                     user.failed_login_attempts = None;
 
                     let mut txn = data.db.begin().await?;
-                    pk_entity.update_passkey(data, &mut txn).await?;
+                    pk_entity.update_passkey(&mut txn).await?;
                     user.save(data, None, Some(&mut txn)).await?;
                     txn.commit().await?;
                 }
@@ -817,19 +733,14 @@ pub async fn reg_start(
                 user_id: user.id.clone(),
                 passkey_user_id,
                 // the reg_state cannot be serialized with bincode -> missing deserialize from Any
-                reg_state: serde_json::to_string(&reg_state).unwrap(),
+                reg_state: serde_json::to_string(&reg_state)?,
             };
 
             // persist the reg_state
             let idx = format!("reg_{:?}_{}", req.passkey_name, user.id);
-            cache_insert(
-                CACHE_NAME_WEBAUTHN.to_string(),
-                idx,
-                &data.caches.ha_cache_config,
-                &reg_data,
-                AckLevel::Quorum,
-            )
-            .await?;
+            DB::client()
+                .put(Cache::Webauthn, idx, &reg_data, *CACHE_TTL_WEBAUTHN)
+                .await?;
 
             Ok(ccr)
         }
@@ -852,30 +763,20 @@ pub async fn reg_finish(
     let mut user = User::find(data, id).await?;
 
     let idx = format!("reg_{:?}_{}", req.passkey_name, user.id);
-    let res = cache_get!(
-        WebauthnReg,
-        CACHE_NAME_WEBAUTHN.to_string(),
-        idx.clone(),
-        &data.caches.ha_cache_config,
-        true
-    )
-    .await?;
+    let client = DB::client();
+
+    let res: Option<WebauthnReg> = client.get(Cache::Webauthn, &idx).await?;
     if res.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "Webauthn Registration Request not found",
         ));
     }
-    cache_remove(
-        CACHE_NAME_WEBAUTHN.to_string(),
-        idx,
-        &data.caches.ha_cache_config,
-        AckLevel::Quorum,
-    )
-    .await?;
+
+    client.delete(Cache::Webauthn, idx).await?;
     let reg_data = res.unwrap();
 
-    let reg_state = serde_json::from_str::<PasskeyRegistration>(&reg_data.reg_state).unwrap();
+    let reg_state = serde_json::from_str::<PasskeyRegistration>(&reg_data.reg_state)?;
     match data
         .webauthn
         .finish_passkey_registration(&req.data, &reg_state)
@@ -907,7 +808,6 @@ pub async fn reg_finish(
             }
 
             PasskeyEntity::create(
-                data,
                 user.id.clone(),
                 reg_data.passkey_user_id,
                 req.passkey_name,

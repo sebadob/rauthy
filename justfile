@@ -8,12 +8,12 @@ export USER :=  `echo "$(id -u):$(id -g)"`
 
 docker := `echo ${DOCKER:-docker}`
 map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
+cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
 
 arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
 
 builder_image := "ghcr.io/sebadob/rauthy-builder"
-#builder_tag_date := "20240620"
-builder_tag_date := "20240505"
+builder_tag_date := "20240830"
 
 container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
@@ -33,7 +33,7 @@ default:
 
 _run +args:
     @{{docker}} run --rm -it \
-      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
+      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       {{map_docker_user}} \
       -e DATABASE_URL={{db_url_sqlite}} \
@@ -43,7 +43,7 @@ _run +args:
 
 _run-pg +args:
     @{{docker}} run --rm -it \
-      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
+      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       {{map_docker_user}} \
       -e DATABASE_URL={{db_url_postgres}} \
@@ -53,7 +53,7 @@ _run-pg +args:
 
 _run-ui +args:
     @{{docker}} run --rm -it \
-      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
+      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       -e npm_config_cache=/work/.npm_cache \
       {{map_docker_user}} \
@@ -64,7 +64,7 @@ _run-ui +args:
 
 _run-bg +args:
     @{{docker}} run --rm -d \
-      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
+      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       {{map_docker_user}} \
       -e DATABASE_URL={{db_url_sqlite}} \
@@ -74,7 +74,7 @@ _run-bg +args:
 
 _run-bg-pg +args:
     @{{docker}} run --rm -d \
-      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
+      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       {{map_docker_user}} \
       -e DATABASE_URL={{db_url_postgres}} \
@@ -257,6 +257,11 @@ prepare: migrate
     just _run cargo sqlx prepare --workspace
 
 
+# run `sqlx prepare` locally to get rid of `sqlx::query!()` warnings
+prepare-local: migrate
+    DATABASE_URL={{db_url_sqlite}} cargo sqlx prepare --workspace
+
+
 # prepare DB migrations for Postgres for compile-time checked queries
 prepare-postgres: migrate-postgres
     just _run-pg cargo sqlx prepare --workspace -- --features postgres
@@ -270,7 +275,7 @@ test-backend: test-backend-stop migrate prepare
 
     just _run cargo build
     {{docker}} run --rm -it \
-      -v $CARGO_HOME/registry:{{container_cargo_registry}} \
+      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
       -v {{invocation_directory()}}/:/work/ \
       {{map_docker_user}} \
       -e DATABASE_URL={{db_url_sqlite}} \
@@ -406,14 +411,14 @@ build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
     set -euxo pipefail
 
     # sqlite
-    #if [ {{no-test}} != "no-test" ]; then
-    #    echo "make sure clippy is fine with sqlite"
-    #    just _run cargo clippy -- -D warnings
-    #    echo "run tests against sqlite"
-    #    just test-sqlite
-    #else
-    #    just prepare
-    #fi
+    if [ {{no-test}} != "no-test" ]; then
+        echo "make sure clippy is fine with sqlite"
+        just _run cargo clippy -- -D warnings
+        echo "run tests against sqlite"
+        just test-sqlite
+    else
+        just prepare
+    fi
 
     # make sure any big testing sqlite backups are cleaned up to speed up docker build
     rm -rf data/backup
@@ -424,7 +429,6 @@ build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
         --platform linux/amd64,linux/arm64 \
         --build-arg="IMAGE={{builder_image}}" \
         --build-arg="IMAGE_DATE={{builder_tag_date}}" \
-        --build-arg="DATABASE_URL={{db_url_sqlite}}" \
         --build-arg="FEATURES=default" \
         --build-arg="MODE={{mode}}" \
         --push \
@@ -432,10 +436,6 @@ build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
 
     # postgres
     if [ {{no-test}} != "no-test" ]; then
-        # restart postgres to clean it up for the tests
-        just postgres-stop || echo ">>> Postgres is not running - nothing to do"
-        just postgres-start || echo ">>> Postgres is already running - nothing to do"
-
         echo "make sure clippy is fine with postgres"
         just _run-pg cargo clippy --features postgres -- -D warnings
         echo "run tests against postgres"
@@ -448,9 +448,9 @@ build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
     {{docker}} buildx build \
         -t {{image}}:$TAG \
         --platform linux/amd64,linux/arm64 \
+        --network host \
         --build-arg="IMAGE={{builder_image}}" \
         --build-arg="IMAGE_DATE={{builder_tag_date}}" \
-        --build-arg="DATABASE_URL={{db_url_postgres}}" \
         --build-arg="FEATURES=postgres" \
         --build-arg="MODE={{mode}}" \
         --push \
@@ -468,6 +468,7 @@ build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
           -f Dockerfile_builder \
           --platform linux/amd64 \
           --build-arg="IMAGE=ghcr.io/cross-rs/x86_64-unknown-linux-musl:edge" \
+          --no-cache \
           --{{push}} \
           .
 

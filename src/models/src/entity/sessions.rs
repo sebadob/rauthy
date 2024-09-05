@@ -1,5 +1,6 @@
 use crate::api_cookie::ApiCookie;
 use crate::app_state::AppState;
+use crate::cache::{Cache, DB};
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
 use actix_web::cookie::{time, Cookie, SameSite};
@@ -8,23 +9,19 @@ use actix_web::{cookie, web, HttpRequest};
 use chrono::Utc;
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_SESSIONS, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER,
-    IDX_SESSION, SESSION_LIFETIME_FED_CM,
+    CACHE_TTL_SESSION, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER, IDX_SESSION,
+    SESSION_LIFETIME_FED_CM,
 };
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgRow;
-use sqlx::sqlite::SqliteRow;
-use sqlx::{query_as, FromRow, Row};
+use sqlx::{query_as, FromRow};
 use std::borrow::Cow;
 use std::net::IpAddr;
 use std::ops::Add;
 use std::str::FromStr;
 use time::OffsetDateTime;
 use tracing::{error, warn};
-use utoipa::ToSchema;
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct Session {
@@ -34,14 +31,13 @@ pub struct Session {
     pub roles: Option<String>,
     pub groups: Option<String>,
     pub is_mfa: bool,
-    #[sqlx(flatten)]
-    pub state: SessionState,
+    pub state: String,
     pub exp: i64,
     pub last_seen: i64,
-    pub remote_ip: Option<String>, // TODO should we maybe force a linked remote_ip all the time?
+    pub remote_ip: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SessionState {
     Open,
     Init,
@@ -50,28 +46,8 @@ pub enum SessionState {
     Unknown,
 }
 
-impl From<String> for SessionState {
-    fn from(value: String) -> Self {
-        Self::from_str(value.as_str()).unwrap()
-    }
-}
-
-impl FromRow<'_, SqliteRow> for SessionState {
-    fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::error::Error> {
-        let s = row.try_get("state").unwrap();
-        Ok(Self::from_str(s).expect("Corrupted 'state' in 'sessions'"))
-    }
-}
-
-impl FromRow<'_, PgRow> for SessionState {
-    fn from_row(row: &'_ PgRow) -> Result<Self, sqlx::error::Error> {
-        let s = row.try_get("state").unwrap();
-        Ok(Self::from_str(s).expect("Corrupted 'state' in 'sessions'"))
-    }
-}
-
 impl FromStr for SessionState {
-    type Err = ();
+    type Err = ErrorResponse;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let res = match s {
@@ -97,8 +73,8 @@ impl From<rauthy_api_types::sessions::SessionState> for SessionState {
     }
 }
 
-impl From<&SessionState> for rauthy_api_types::sessions::SessionState {
-    fn from(value: &SessionState) -> Self {
+impl From<SessionState> for rauthy_api_types::sessions::SessionState {
+    fn from(value: SessionState) -> Self {
         match value {
             SessionState::Open => Self::Open,
             SessionState::Init => Self::Init,
@@ -128,13 +104,9 @@ impl Session {
             .execute(&data.db)
             .await?;
 
-        cache_remove(
-            CACHE_NAME_SESSIONS.to_string(),
-            Session::cache_idx(&self.id),
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .delete(Cache::Session, Session::cache_idx(&self.id))
+            .await?;
 
         Ok(())
     }
@@ -143,24 +115,21 @@ impl Session {
         data: &web::Data<AppState>,
         user_id: &str,
     ) -> Result<(), ErrorResponse> {
+        // TODO refactor to EXECUTE RETURNING that works with PG + SQLite
         let sessions: Vec<Self> =
             sqlx::query_as!(Self, "SELECT * FROM sessions WHERE user_id = $1", user_id)
                 .fetch_all(&data.db)
                 .await?;
 
-        // we do not use any fancy 'returning' statement here for compatibility with sqlite
         sqlx::query!("DELETE FROM sessions WHERE user_id = $1", user_id)
             .execute(&data.db)
             .await?;
 
+        let client = DB::client();
         for s in sessions {
-            cache_remove(
-                CACHE_NAME_SESSIONS.to_string(),
-                Session::cache_idx(&s.id),
-                &data.caches.ha_cache_config,
-                AckLevel::Quorum,
-            )
-            .await?;
+            client
+                .delete(Cache::Session, Session::cache_idx(&s.id))
+                .await?;
         }
 
         Ok(())
@@ -169,16 +138,10 @@ impl Session {
     // Returns a session by id
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
         let idx = Session::cache_idx(&id);
-        let session = cache_get!(
-            Session,
-            CACHE_NAME_SESSIONS.to_string(),
-            idx.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(session) = session {
-            return Ok(session);
+        let client = DB::client();
+
+        if let Some(slf) = client.get(Cache::Session, &idx).await? {
+            return Ok(slf);
         }
 
         let session = sqlx::query_as!(
@@ -189,14 +152,9 @@ impl Session {
         .fetch_one(&data.db)
         .await?;
 
-        cache_insert(
-            CACHE_NAME_SESSIONS.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &session,
-            AckLevel::Leader,
-        )
-        .await?;
+        client
+            .put(Cache::Session, idx, &session, CACHE_TTL_SESSION)
+            .await?;
 
         Ok(session)
     }
@@ -335,14 +293,11 @@ impl Session {
             }
         }
 
+        let client = DB::client();
         for id in removed {
-            cache_remove(
-                CACHE_NAME_SESSIONS.to_string(),
-                Session::cache_idx(&id),
-                &data.caches.ha_cache_config,
-                AckLevel::Quorum,
-            )
-            .await?;
+            client
+                .delete(Cache::Session, Session::cache_idx(&id))
+                .await?;
         }
 
         Ok(())
@@ -369,14 +324,11 @@ impl Session {
             }
         }
 
+        let client = DB::client();
         for id in removed {
-            cache_remove(
-                CACHE_NAME_SESSIONS.to_string(),
-                Session::cache_idx(&id),
-                &data.caches.ha_cache_config,
-                AckLevel::Quorum,
-            )
-            .await?;
+            client
+                .delete(Cache::Session, Session::cache_idx(&id))
+                .await?;
         }
 
         Ok(())
@@ -384,7 +336,7 @@ impl Session {
 
     /// Saves a Session
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        let state_str = self.state.as_str();
+        let state_str = &self.state;
 
         #[cfg(not(feature = "postgres"))]
         let q = sqlx::query!(
@@ -421,17 +373,16 @@ impl Session {
             self.last_seen,
             self.remote_ip,
         );
-
         q.execute(&data.db).await?;
 
-        cache_insert(
-            CACHE_NAME_SESSIONS.to_string(),
-            Session::cache_idx(&self.id),
-            &data.caches.ha_cache_config,
-            &self,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .put(
+                Cache::Session,
+                Session::cache_idx(&self.id),
+                self,
+                CACHE_TTL_SESSION,
+            )
+            .await?;
 
         Ok(())
     }
@@ -502,7 +453,7 @@ impl Session {
             roles: None,
             groups: None,
             is_mfa: false, // cannot be known at the creation stage
-            state: SessionState::Init,
+            state: SessionState::Init.as_str().to_string(),
             exp: now
                 .add(time::Duration::seconds(exp_in as i64))
                 .unix_timestamp(),
@@ -511,6 +462,7 @@ impl Session {
         }
     }
 
+    #[inline(always)]
     fn cache_idx(id: &String) -> String {
         format!("{}{}", IDX_SESSION, id)
     }
@@ -558,7 +510,7 @@ impl Session {
             roles,
             groups,
             is_mfa: false, // cannot be known at the creation stage
-            state: SessionState::Init,
+            state: SessionState::Init.as_str().to_string(),
             exp,
             last_seen: now.unix_timestamp(),
             remote_ip,
@@ -616,7 +568,7 @@ impl Session {
         let idx = Session::cache_idx(&self.id);
 
         self.exp = OffsetDateTime::now_utc().unix_timestamp();
-        self.state = SessionState::LoggedOut;
+        self.state = SessionState::LoggedOut.as_str().to_string();
 
         sqlx::query("update sessions set exp = $1, state = $2 where id = $3")
             .bind(self.exp)
@@ -625,15 +577,15 @@ impl Session {
             .execute(&data.db)
             .await?;
 
-        cache_remove(
-            CACHE_NAME_12HR.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client().delete(Cache::Session, idx).await?;
 
         Ok(ApiCookie::build(COOKIE_SESSION, &self.id, 0))
+    }
+
+    #[inline(always)]
+    pub fn state(&self) -> Result<SessionState, ErrorResponse> {
+        SessionState::from_str(self.state.as_str())
+            .map_err(|_| ErrorResponse::new(ErrorResponseType::Internal, "invalid SessionState"))
     }
 
     /// Checks if the current session is valid: has not expired and has not timed out (last_seen)
@@ -645,11 +597,19 @@ impl Session {
         if self.last_seen < now - session_timeout as i64 {
             return false;
         }
-        if self.state == SessionState::Unknown {
+
+        let state = match self.state() {
+            Ok(s) => s,
+            Err(err) => {
+                error!("{}", err.message);
+                return false;
+            }
+        };
+        if state == SessionState::Unknown {
             return false;
         }
         if let Some(ip) = remote_ip {
-            if (self.state == SessionState::Open || self.state == SessionState::Auth)
+            if (state == SessionState::Open || state == SessionState::Auth)
                 && self.remote_ip != Some(ip.to_string())
             {
                 let session_ip = self.remote_ip.as_deref().unwrap_or("UNKNOWN");

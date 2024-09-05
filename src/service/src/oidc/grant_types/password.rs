@@ -50,7 +50,7 @@ pub async fn grant_type_password(
 
     let mut headers = Vec::new();
     let dpop_fingerprint =
-        if let Some(proof) = DPoPProof::opt_validated_from(data, &req, &header_origin).await? {
+        if let Some(proof) = DPoPProof::opt_validated_from(&req, &header_origin).await? {
             if let Some(nonce) = &proof.claims.nonce {
                 headers.push((
                     HeaderName::from_str(HEADER_DPOP_NONCE).unwrap(),

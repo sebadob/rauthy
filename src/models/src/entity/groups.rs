@@ -1,11 +1,11 @@
 use crate::app_state::AppState;
+use crate::cache::{Cache, DB};
 use crate::entity::users::User;
 use actix_web::web;
 use rauthy_api_types::groups::NewGroupRequest;
-use rauthy_common::constants::{CACHE_NAME_12HR, IDX_GROUPS, IDX_USERS};
+use rauthy_common::constants::{CACHE_TTL_APP, IDX_GROUPS};
 use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
@@ -47,14 +47,9 @@ impl Group {
         .await?;
 
         groups.push(new_group.clone());
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_GROUPS.to_string(),
-            &data.caches.ha_cache_config,
-            &groups,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, IDX_GROUPS, &groups, CACHE_TTL_APP)
+            .await?;
 
         Ok(new_group)
     }
@@ -75,20 +70,10 @@ impl Group {
                 users.push(u);
             });
 
-        // no need to evict the cache if no users are updated
-        if !users.is_empty() {
-            cache_remove(
-                CACHE_NAME_12HR.to_string(),
-                IDX_USERS.to_string(),
-                &data.caches.ha_cache_config,
-                AckLevel::Quorum,
-            )
-            .await?;
-        }
-
         let mut txn = data.db.begin().await?;
 
         // TODO better smt like 'await_all' or less resource usage?
+        // TODO -> wrap in big single txn once migration to hiqlite is done
         for user in users {
             user.save(data, None, Some(&mut txn)).await?;
         }
@@ -96,7 +81,6 @@ impl Group {
         sqlx::query!("DELETE FROM groups WHERE id = $1", group.id)
             .execute(&mut *txn)
             .await?;
-
         txn.commit().await?;
 
         let groups = Group::find_all(data)
@@ -104,14 +88,9 @@ impl Group {
             .into_iter()
             .filter(|g| g.id != group.id)
             .collect::<Vec<Group>>();
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_GROUPS.to_string(),
-            &data.caches.ha_cache_config,
-            &groups,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, IDX_GROUPS, &groups, CACHE_TTL_APP)
+            .await?;
 
         Ok(())
     }
@@ -121,36 +100,24 @@ impl Group {
         let res = sqlx::query_as!(Self, "SELECT * FROM groups WHERE id = $1", id,)
             .fetch_one(&data.db)
             .await?;
-
         Ok(res)
     }
 
     // Returns all existing groups
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        let groups = cache_get!(
-            Vec<Group>,
-            CACHE_NAME_12HR.to_string(),
-            IDX_GROUPS.to_string(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(groups) = groups {
-            return Ok(groups);
+        let client = DB::client();
+        if let Some(slf) = client.get(Cache::App, IDX_GROUPS).await? {
+            return Ok(slf);
         }
 
         let res = sqlx::query_as!(Self, "SELECT * FROM groups")
             .fetch_all(&data.db)
             .await?;
 
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_GROUPS.to_string(),
-            &data.caches.ha_cache_config,
-            &res,
-            AckLevel::Leader,
-        )
-        .await?;
+        client
+            .put(Cache::App, IDX_GROUPS, &res, CACHE_TTL_APP)
+            .await?;
+
         Ok(res)
     }
 
@@ -173,21 +140,11 @@ impl Group {
                 users.push(u);
             });
 
-        // no need to evict the cache if no users are updated
-        if !users.is_empty() {
-            cache_remove(
-                CACHE_NAME_12HR.to_string(),
-                IDX_USERS.to_string(),
-                &data.caches.ha_cache_config,
-                AckLevel::Quorum,
-            )
-            .await?;
-        }
-
-        // TODO better smt like 'await_all' or less resource usage?
         let mut txn = data.db.begin().await?;
 
         for user in users {
+            // TODO better smt like 'await_all' or less resource usage?
+            // TODO -> wrap in big single txn once migration to hiqlite is done
             user.save(data, None, Some(&mut txn)).await?;
         }
 
@@ -203,7 +160,6 @@ impl Group {
         )
         .execute(&mut *txn)
         .await?;
-
         txn.commit().await?;
 
         let groups = Group::find_all(data)
@@ -216,14 +172,9 @@ impl Group {
                 g
             })
             .collect::<Vec<Group>>();
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_GROUPS.to_string(),
-            &data.caches.ha_cache_config,
-            &groups,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, IDX_GROUPS, &groups, CACHE_TTL_APP)
+            .await?;
 
         Ok(new_group)
     }

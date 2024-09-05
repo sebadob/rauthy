@@ -1,15 +1,14 @@
-use crate::app_state::AppState;
+use crate::cache::{Cache, DB};
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg};
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::{http, web, HttpRequest};
+use actix_web::{http, HttpRequest};
 use chrono::{DateTime, Utc};
 use rauthy_common::constants::{
-    CACHE_NAME_DPOP_NONCES, DPOP_FORCE_NONCE, DPOP_NONCE_EXP, DPOP_TOKEN_ENDPOINT, RE_TOKEN_68,
+    CACHE_TTL_DPOP_NONCE, DPOP_FORCE_NONCE, DPOP_NONCE_EXP, DPOP_TOKEN_ENDPOINT, RE_TOKEN_68,
     TOKEN_DPOP,
 };
 use rauthy_common::utils::{base64_url_no_pad_decode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
 use std::ops::{Add, Sub};
 use tracing::error;
@@ -23,66 +22,53 @@ pub struct DPoPNonce {
 
 impl DPoPNonce {
     /// Creates a new DPoP nonce, inserts it into the cache and returns its value.
-    pub async fn new_value(data: &web::Data<AppState>) -> Result<String, ErrorResponse> {
+    pub async fn new_value() -> Result<String, ErrorResponse> {
         let exp = Utc::now().add(chrono::Duration::seconds(*DPOP_NONCE_EXP as i64));
         let slf = Self {
             exp,
             value: get_rand(32),
         };
 
-        cache_put(
-            CACHE_NAME_DPOP_NONCES.to_string(),
-            "latest".to_string(),
-            &data.caches.ha_cache_config,
-            &slf,
-        )
-        .await?;
+        let client = DB::client();
+        client
+            .put(Cache::DPoPNonce, "latest", &slf, *CACHE_TTL_DPOP_NONCE)
+            .await?;
+
         // we need by its own value additionally, because the "latest" may be overwritten
         // before its expiration
-        cache_put(
-            CACHE_NAME_DPOP_NONCES.to_string(),
-            slf.value.clone(),
-            &data.caches.ha_cache_config,
-            &slf,
-        )
-        .await?;
+        client
+            .put(
+                Cache::DPoPNonce,
+                slf.value.clone(),
+                &slf,
+                *CACHE_TTL_DPOP_NONCE,
+            )
+            .await?;
 
         Ok(slf.value)
     }
 
     /// Checks the validity of the given DPoP nonce value
-    pub async fn is_valid(data: &web::Data<AppState>, value: String) -> bool {
-        cache_get!(
-            Self,
-            CACHE_NAME_DPOP_NONCES.to_string(),
-            value,
-            &data.caches.ha_cache_config,
-            true
-        )
-        .await
-        .is_ok()
+    pub async fn is_valid(value: String) -> bool {
+        let slf: Result<Option<Self>, hiqlite::Error> =
+            DB::client().get(Cache::DPoPNonce, value).await;
+        slf.is_ok()
     }
 
     /// Always returns the value of the latest valid DPoP nonce which is valid for at least
     /// 15 more seconds or longer.
-    pub async fn get_latest(data: &web::Data<AppState>) -> Result<String, ErrorResponse> {
-        if let Some(slf) = cache_get!(
-            Self,
-            CACHE_NAME_DPOP_NONCES.to_string(),
-            "latest".to_string(),
-            &data.caches.ha_cache_config,
-            true
-        )
-        .await?
-        {
-            let now_minus_15 = Utc::now().sub(chrono::Duration::seconds(15));
-            if slf.exp < now_minus_15 {
-                Self::new_value(data).await
-            } else {
-                Ok(slf.value)
+    pub async fn get_latest() -> Result<String, ErrorResponse> {
+        let slf: Option<Self> = DB::client().get(Cache::DPoPNonce, "latest").await?;
+        match slf {
+            None => Self::new_value().await,
+            Some(slf) => {
+                let now_minus_15 = Utc::now().sub(chrono::Duration::seconds(15));
+                if slf.exp < now_minus_15 {
+                    Self::new_value().await
+                } else {
+                    Ok(slf.value)
+                }
             }
-        } else {
-            Self::new_value(data).await
         }
     }
 }
@@ -203,7 +189,6 @@ impl DPoPProof {
     /// Tries to extract a DPoP header from the given HttpRequest and validates the given JWK
     /// if it exists.
     pub async fn opt_validated_from(
-        data: &web::Data<AppState>,
         req: &HttpRequest,
         header_origin: &Option<(HeaderName, HeaderValue)>,
     ) -> Result<Option<Self>, ErrorResponse> {
@@ -228,7 +213,7 @@ impl DPoPProof {
                     if let Err(msg) = slf.validate(b64) {
                         return Err(ErrorResponse::new(ErrorResponseType::DPoP(origin), msg));
                     }
-                    if let Err(nonce) = slf.validate_nonce(data).await {
+                    if let Err(nonce) = slf.validate_nonce().await {
                         return Err(ErrorResponse::new(
                             ErrorResponseType::UseDpopNonce((origin, nonce)),
                             "DPoP 'nonce' is required in DPoP proof",
@@ -250,19 +235,19 @@ impl DPoPProof {
     /// 3. All required claims per Section 4.2 are contained in the JWT.
     /// 4. The typ JOSE Header Parameter has the value dpop+jwt.
     /// 5. The alg JOSE Header Parameter indicates a registered asymmetric digital
-    /// signature algorithm [IANA.JOSE.ALGS], is not none, is supported by the
-    /// application, and is acceptable per local policy.
+    ///    signature algorithm [IANA.JOSE.ALGS], is not none, is supported by the
+    ///    application, and is acceptable per local policy.
     /// 6. The JWT signature verifies with the public key contained in the jwk
-    /// JOSE Header Parameter.
+    ///    JOSE Header Parameter.
     /// 7. The jwk JOSE Header Parameter does not contain a private key.
     /// 8. The htm claim matches the HTTP method of the current request.
     /// 9. The htu claim matches the HTTP URI value for the HTTP request in
-    /// which the JWT was received, ignoring any query and fragment parts.
+    ///    which the JWT was received, ignoring any query and fragment parts.
     /// 10. If the server provided a nonce value to the client,
-    /// the nonce claim matches the server-provided nonce value.
+    ///     the nonce claim matches the server-provided nonce value.
     /// 11. The creation time of the JWT, as determined by either the iat
-    /// claim or a server managed timestamp via the nonce claim, is within an
-    /// acceptable window (see Section 11.1).
+    ///     claim or a server managed timestamp via the nonce claim, is within an
+    ///     acceptable window (see Section 11.1).
     /// 12. If presented to a protected resource in conjunction with an access token:
     /// - ensure that the value of the ath claim equals the hash of that access token, and
     /// - confirm that the public key to which the access token is bound matches the
@@ -332,26 +317,20 @@ impl DPoPProof {
         Ok(())
     }
 
-    pub async fn validate_nonce(&self, data: &web::Data<AppState>) -> Result<(), String> {
+    pub async fn validate_nonce(&self) -> Result<(), String> {
         if let Some(nonce) = &self.claims.nonce {
-            if !DPoPNonce::is_valid(data, nonce.clone()).await {
-                let latest = match DPoPNonce::get_latest(data).await {
-                    Ok(v) => v,
-                    Err(err) => {
-                        error!("Cache lookup error during DPoP nonce generation: {:?}", err);
-                        err.message.to_string()
-                    }
-                };
+            if !DPoPNonce::is_valid(nonce.clone()).await {
+                let latest = DPoPNonce::get_latest().await.unwrap_or_else(|err| {
+                    error!("Cache lookup error during DPoP nonce generation: {:?}", err);
+                    err.message.to_string()
+                });
                 return Err(latest);
             }
         } else if *DPOP_FORCE_NONCE {
-            let latest = match DPoPNonce::get_latest(data).await {
-                Ok(v) => v,
-                Err(err) => {
-                    error!("Cache lookup error during DPoP nonce generation: {:?}", err);
-                    err.message.to_string()
-                }
-            };
+            let latest = DPoPNonce::get_latest().await.unwrap_or_else(|err| {
+                error!("Cache lookup error during DPoP nonce generation: {:?}", err);
+                err.message.to_string()
+            });
             return Err(latest);
         };
 

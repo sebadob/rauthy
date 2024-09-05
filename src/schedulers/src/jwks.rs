@@ -1,36 +1,27 @@
-use crate::{is_ha_leader, sleep_schedule_next};
+use crate::sleep_schedule_next;
 use actix_web::web;
-use rauthy_common::constants::{CACHE_NAME_12HR, IDX_JWK_KID};
+use rauthy_common::constants::IDX_JWK_KID;
 use rauthy_models::app_state::AppState;
+use rauthy_models::cache::{Cache, DB};
 use rauthy_models::entity::jwk::{Jwk, JWKS};
-use redhac::{cache_del, QuorumHealthState};
 use std::collections::HashSet;
 use std::ops::Sub;
 use std::str::FromStr;
 use std::time::Duration;
 use time::OffsetDateTime;
-use tokio::sync::watch::Receiver;
 use tracing::{debug, error, info};
 
 /// Auto-Rotates JWKS
-pub async fn jwks_auto_rotate(
-    data: web::Data<AppState>,
-    rx_health: Receiver<Option<QuorumHealthState>>,
-) {
+pub async fn jwks_auto_rotate(data: web::Data<AppState>) {
     // sec min hour day_of_month month day_of_week year
     let schedule = cron::Schedule::from_str("0 30 3 1 * * *").unwrap();
 
     loop {
         sleep_schedule_next(&schedule).await;
 
-        // will return None in a non-HA deployment
-        if let Some(is_ha_leader) = is_ha_leader(&rx_health) {
-            if !is_ha_leader {
-                debug!(
-                    "Running HA mode without being the leader - skipping jwks_cleanup scheduler"
-                );
-                continue;
-            }
+        if !DB::client().is_leader_cache().await {
+            debug!("Running HA mode without being the leader - skipping jwks_cleanup scheduler");
+            continue;
         }
 
         if let Err(err) = JWKS::rotate(&data).await {
@@ -40,23 +31,15 @@ pub async fn jwks_auto_rotate(
 }
 
 /// Cleans up old / expired JWKSs
-pub async fn jwks_cleanup(
-    data: web::Data<AppState>,
-    rx_health: Receiver<Option<QuorumHealthState>>,
-) {
+pub async fn jwks_cleanup(data: web::Data<AppState>) {
     let mut interval = tokio::time::interval(Duration::from_secs(3600 * 24));
 
     loop {
         interval.tick().await;
 
-        // will return None in a non-HA deployment
-        if let Some(is_ha_leader) = is_ha_leader(&rx_health) {
-            if !is_ha_leader {
-                debug!(
-                    "Running HA mode without being the leader - skipping jwks_cleanup scheduler"
-                );
-                continue;
-            }
+        if !DB::client().is_leader_cache().await {
+            debug!("Running HA mode without being the leader - skipping jwks_cleanup scheduler");
+            continue;
         }
 
         debug!("Running jwks_cleanup scheduler");
@@ -114,12 +97,9 @@ pub async fn jwks_cleanup(
             }
 
             let idx = format!("{}{}", IDX_JWK_KID, kid);
-            let _ = cache_del(
-                CACHE_NAME_12HR.to_string(),
-                idx,
-                &data.caches.ha_cache_config,
-            )
-            .await;
+            if let Err(err) = DB::client().delete(Cache::App, idx).await {
+                error!("Error deleting JWK from cache: {}", err);
+            }
         }
         info!("Cleaned up old JWKs: {}", count);
     }

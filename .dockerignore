@@ -1,13 +1,14 @@
 .devcontainer
 .github
-.sqlx
+.helix
 .idea
+.lapce
 .gitignore
 
+book
 docs
 frontend
 postgres
-book
 rauthy-client
 target
 README.md

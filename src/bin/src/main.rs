@@ -2,21 +2,13 @@
 
 #![forbid(unsafe_code)]
 
+use crate::logging::setup_logging;
 use actix_web::rt::System;
 use actix_web::{middleware, web, App, HttpServer};
 use actix_web_prom::PrometheusMetricsBuilder;
 use cryptr::EncKeys;
 use prometheus::Registry;
-use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_AUTH_CODES, CACHE_NAME_AUTH_PROVIDER_CALLBACK,
-    CACHE_NAME_CLIENTS_DYN, CACHE_NAME_DEVICE_CODES, CACHE_NAME_DPOP_NONCES,
-    CACHE_NAME_EPHEMERAL_CLIENTS, CACHE_NAME_IP_RATE_LIMIT, CACHE_NAME_LOGIN_DELAY, CACHE_NAME_POW,
-    CACHE_NAME_SESSIONS, CACHE_NAME_USERS, CACHE_NAME_WEBAUTHN, CACHE_NAME_WEBAUTHN_DATA,
-    DEVICE_GRANT_CODE_CACHE_SIZE, DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_RATE_LIMIT,
-    DPOP_NONCE_EXP, DYN_CLIENT_RATE_LIMIT_SEC, DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG,
-    ENABLE_WEB_ID, EPHEMERAL_CLIENTS_CACHE_LIFETIME, POW_EXP, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL,
-    SWAGGER_UI_INTERNAL, UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_DATA_EXP, WEBAUTHN_REQ_EXP,
-};
+use rauthy_common::constants::{RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL};
 use rauthy_common::password_hasher;
 use rauthy_common::utils::UseDummyAddress;
 use rauthy_handlers::openapi::ApiDoc;
@@ -28,7 +20,8 @@ use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_middlewares::logging::RauthyLoggingMiddleware;
 use rauthy_middlewares::principal::RauthyPrincipalMiddleware;
-use rauthy_models::app_state::{AppState, Caches};
+use rauthy_models::app_state::AppState;
+use rauthy_models::cache::DB;
 use rauthy_models::email::EMail;
 use rauthy_models::events::event::Event;
 use rauthy_models::events::health_watch::watch_health;
@@ -48,10 +41,6 @@ use tokio::time;
 use tracing::{debug, error, info};
 use utoipa_swagger_ui::SwaggerUi;
 
-use crate::cache_notify::handle_notify;
-use crate::logging::setup_logging;
-
-mod cache_notify;
 mod dummy_data;
 mod logging;
 mod tls;
@@ -82,6 +71,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if args.len() > 1 && args[1] == "test" {
         test_mode = true;
         dotenvy::from_filename("rauthy.test.cfg").ok();
+        dotenvy::dotenv().ok();
     } else {
         dotenvy::from_filename("rauthy.cfg").expect("'rauthy.cfg' error");
         dotenvy::dotenv_override().ok();
@@ -117,163 +107,31 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
         panic!("{:?}", err);
     }
 
-    // caches
-    let (tx_health_state, mut cache_config) = redhac::CacheConfig::new();
-
-    // "infinity" cache
-    cache_config.spawn_cache(
-        CACHE_NAME_12HR.to_string(),
-        redhac::TimedCache::with_lifespan(43200),
-        Some(32),
-    );
-
-    // auth codes
-    cache_config.spawn_cache(
-        CACHE_NAME_AUTH_CODES.to_string(),
-        redhac::TimedCache::with_lifespan(300 + *WEBAUTHN_REQ_EXP),
-        Some(64),
-    );
-
-    // device codes
-    cache_config.spawn_cache(
-        CACHE_NAME_DEVICE_CODES.to_string(),
-        redhac::TimedSizedCache::with_size_and_lifespan(
-            *DEVICE_GRANT_CODE_CACHE_SIZE as usize,
-            *DEVICE_GRANT_CODE_LIFETIME as u64,
-        ),
-        Some(64),
-    );
-
-    // auth provider callbacks
-    cache_config.spawn_cache(
-        CACHE_NAME_AUTH_PROVIDER_CALLBACK.to_string(),
-        redhac::TimedCache::with_lifespan(UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as u64),
-        Some(64),
-    );
-
-    // dynamic clients
-    if *ENABLE_DYN_CLIENT_REG && DYN_CLIENT_REG_TOKEN.is_none() {
-        cache_config.spawn_cache(
-            CACHE_NAME_CLIENTS_DYN.to_string(),
-            redhac::TimedCache::with_lifespan(*DYN_CLIENT_RATE_LIMIT_SEC),
-            None,
-        );
-    }
-
-    // DPoP nonces
-    cache_config.spawn_cache(
-        CACHE_NAME_DPOP_NONCES.to_string(),
-        redhac::TimedCache::with_lifespan(*DPOP_NONCE_EXP as u64),
-        None,
-    );
-
-    // ephemeral clients
-    cache_config.spawn_cache(
-        CACHE_NAME_EPHEMERAL_CLIENTS.to_string(),
-        redhac::TimedCache::with_lifespan(*EPHEMERAL_CLIENTS_CACHE_LIFETIME),
-        None,
-    );
-
-    // IP rate limiter for device_code's
-    if let Some(rate_limit) = *DEVICE_GRANT_RATE_LIMIT {
-        cache_config.spawn_cache(
-            CACHE_NAME_IP_RATE_LIMIT.to_string(),
-            redhac::TimedCache::with_lifespan(rate_limit as u64),
-            None,
-        );
-    }
-
-    // sessions
-    let sessions_lifetime = env::var("SESSION_LIFETIME")
-        .unwrap_or_else(|_| String::from("14400"))
-        .trim()
-        .parse::<u64>()
-        .expect("SESSION_LIFETIME cannot be parsed to u64 - bad format");
-    cache_config.spawn_cache(
-        CACHE_NAME_SESSIONS.to_string(),
-        redhac::TimedCache::with_lifespan(sessions_lifetime),
-        Some(64),
-    );
-
-    // PoWs
-    cache_config.spawn_cache(
-        CACHE_NAME_POW.to_string(),
-        redhac::TimedCache::with_lifespan(*POW_EXP as u64),
-        Some(16),
-    );
-
-    // Users
-    let users_lifespan = env::var("CACHE_USERS_LIFESPAN")
-        .unwrap_or_else(|_| String::from("28800"))
-        .trim()
-        .parse::<u64>()
-        .expect("CACHE_USERS_LIFESPAN cannot be parsed to u64 - bad format");
-    let users_size = env::var("CACHE_USERS_SIZE")
-        .unwrap_or_else(|_| String::from("100"))
-        .trim()
-        .parse::<usize>()
-        .expect("CACHE_USERS_SIZE cannot be parsed to usize - bad format");
-    // We need to multiply the possible cache entries here, since not only user entities will
-    // be saved inside this cache, but also custom attributes, web_id's and custom users_values
-    let users_size_adjust = if *ENABLE_WEB_ID {
-        users_size * 4
-    } else {
-        users_size * 3
-    };
-    cache_config.spawn_cache(
-        CACHE_NAME_USERS.to_string(),
-        redhac::TimedCache::with_lifespan_and_capacity(users_lifespan, users_size_adjust),
-        Some(16),
-    );
-
-    // webauthn requests
-    cache_config.spawn_cache(
-        CACHE_NAME_WEBAUTHN.to_string(),
-        redhac::TimedCache::with_lifespan(*WEBAUTHN_REQ_EXP),
-        Some(32),
-    );
-    cache_config.spawn_cache(
-        CACHE_NAME_WEBAUTHN_DATA.to_string(),
-        redhac::TimedCache::with_lifespan(*WEBAUTHN_DATA_EXP),
-        Some(32),
-    );
-
-    // login delay cache
-    cache_config.spawn_cache(
-        CACHE_NAME_LOGIN_DELAY.to_string(),
-        redhac::SizedCache::with_size(1),
-        Some(16),
-    );
-
-    // The ha cache must be started after all entries have been added to the cache map
-    let (tx_notify, rx_notify) = mpsc::channel(64);
-    redhac::start_cluster(tx_health_state, &mut cache_config, Some(tx_notify), None).await?;
+    debug!("Starting Cache layer");
+    DB::init().await.expect("Error starting the cache layer");
 
     // email sending
+    debug!("Starting E-Mail handler");
     let (tx_email, rx_email) = mpsc::channel::<EMail>(16);
     tokio::spawn(email::sender(rx_email, test_mode));
-
-    // build the application state
-    let caches = Caches {
-        ha_cache_config: cache_config.clone(),
-    };
 
     let (tx_events, rx_events) = flume::unbounded();
     let (tx_events_router, rx_events_router) = flume::unbounded();
     let (tx_ip_blacklist, rx_ip_blacklist) = flume::unbounded();
 
+    debug!("Initializing AppState");
     let app_state = web::Data::new(
         AppState::new(
             tx_email.clone(),
             tx_events.clone(),
             tx_events_router.clone(),
             tx_ip_blacklist.clone(),
-            caches,
         )
         .await?,
     );
 
     // events listener
+    debug!("Starting Events handler");
     init_event_vars().unwrap();
     EventNotifier::init_notifiers(tx_email).await.unwrap();
     tokio::spawn(EventListener::listen(
@@ -285,19 +143,18 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
     ));
 
     // spawn password hash limiter
+    debug!("Starting Password Hasher");
     tokio::spawn(password_hasher::run());
 
     // spawn ip blacklist handler
+    debug!("Starting Blacklist handler");
     tokio::spawn(ip_blacklist_handler::run(tx_ip_blacklist, rx_ip_blacklist));
 
-    // spawn remote cache notification service
-    tokio::spawn(handle_notify(app_state.clone(), rx_notify));
-
     // spawn health watcher
+    debug!("Starting health watch");
     tokio::spawn(watch_health(
         app_state.db.clone(),
         app_state.tx_events.clone(),
-        app_state.caches.ha_cache_config.rx_health_state.clone(),
     ));
 
     // schedulers
@@ -309,14 +166,14 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
             info!("Schedulers are disabled");
         }
         _ => {
+            debug!("Starting Schedulers");
             tokio::spawn(rauthy_schedulers::spawn(app_state.clone()));
         }
     };
 
     // make sure, that all caches are cleared from possible inconsistent leftovers from the migrations
-    if let Err(err) = redhac::clear_caches(&cache_config).await {
-        error!("Error clearing cache after migrations: {}", err.error);
-    }
+    debug!("Clearing all caches");
+    DB::client().clear_cache_all().await?;
 
     // actix web
     let state = app_state.clone();
@@ -340,7 +197,7 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
     }
 
     actix.join().unwrap().unwrap();
-    app_state.caches.ha_cache_config.shutdown().await.unwrap();
+    DB::client().shutdown().await.unwrap();
 
     Ok(())
 }
@@ -646,7 +503,10 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
             app = app.service(swagger.clone());
         }
 
-        if matches!(app_state.listen_scheme, ListenScheme::UnixHttp | ListenScheme::UnixHttps) {
+        if matches!(
+            app_state.listen_scheme,
+            ListenScheme::UnixHttp | ListenScheme::UnixHttps
+        ) {
             app = app.app_data(UseDummyAddress);
         }
 

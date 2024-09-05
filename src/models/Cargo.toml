@@ -42,6 +42,7 @@ ed25519-compact = { workspace = true }
 flume = { workspace = true }
 futures-util = { workspace = true }
 hex = { workspace = true }
+hiqlite = { workspace = true }
 hmac-sha256 = { workspace = true }
 hmac-sha512 = { workspace = true }
 image = { workspace = true }
@@ -50,6 +51,7 @@ jwt-simple = { workspace = true }
 lettre = { workspace = true }
 mime = { workspace = true }
 num_cpus = { workspace = true }
+num-traits = { workspace = true }
 ## Add openssl-sys as a direct dependency, so it can be cross compiled to
 ## x86_64-unknown-linux-musl using the "vendored" feature below
 openssl = { workspace = true }
@@ -57,12 +59,12 @@ openssl-sys = { workspace = true }
 once_cell = { workspace = true }
 rand = { workspace = true }
 rand_core = { workspace = true }
-redhac = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }
 ring = { workspace = true }
 rio_api = { workspace = true }
 rio_turtle = { workspace = true }
+rust-embed = { workspace = true }
 rsa = { workspace = true }
 semver = { workspace = true }
 serde = { workspace = true }
@@ -71,6 +73,7 @@ serde_json_path = { workspace = true }
 serde_with = { workspace = true }
 spow = { workspace = true }
 sqlx = { workspace = true }
+strum = { workspace = true }
 time = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }

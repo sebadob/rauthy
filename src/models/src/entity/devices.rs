@@ -1,19 +1,19 @@
 use crate::app_state::AppState;
+use crate::cache::{Cache, DB};
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use actix_web::web;
 use chrono::{DateTime, Utc};
 use rauthy_api_types::users::DeviceResponse;
 use rauthy_common::constants::{
-    CACHE_NAME_DEVICE_CODES, DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_USER_CODE_LENGTH,
+    CACHE_TTL_DEVICE_CODE, DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_USER_CODE_LENGTH,
     DEVICE_KEY_LENGTH, PUB_URL_WITH_SCHEME,
 };
 use rauthy_common::utils::get_rand;
 use rauthy_error::ErrorResponse;
-use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, FromRow};
 use std::ops::{Add, Sub};
-use tracing::{debug, info};
+use tracing::info;
 
 #[derive(Debug, FromRow)]
 pub struct DeviceEntity {
@@ -161,7 +161,6 @@ pub struct DeviceAuthCode {
 impl DeviceAuthCode {
     /// DeviceAuthCode's live inside the cache only
     pub async fn new(
-        data: &web::Data<AppState>,
         scopes: Option<String>,
         client_id: String,
         client_secret: Option<String>,
@@ -181,43 +180,30 @@ impl DeviceAuthCode {
             warnings: 0,
         };
 
-        cache_put(
-            CACHE_NAME_DEVICE_CODES.to_string(),
-            slf.user_code().to_string(),
-            &data.caches.ha_cache_config,
-            &slf,
-        )
-        .await?;
+        DB::client()
+            .put(
+                Cache::DeviceCode,
+                slf.user_code().to_string(),
+                &slf,
+                *CACHE_TTL_DEVICE_CODE,
+            )
+            .await?;
 
         Ok(slf)
     }
 
-    pub async fn find_by_device_code(
-        data: &web::Data<AppState>,
-        device_code: &str,
-    ) -> Result<Option<Self>, ErrorResponse> {
+    pub async fn find_by_device_code(device_code: &str) -> Result<Option<Self>, ErrorResponse> {
         let key = &device_code[..(*DEVICE_GRANT_USER_CODE_LENGTH as usize)];
-        Self::find(data, key.to_string()).await
+        Self::find(key.to_string()).await
     }
 
-    pub async fn find(
-        data: &web::Data<AppState>,
-        user_code: String,
-    ) -> Result<Option<Self>, ErrorResponse> {
-        match cache_get!(
-            Self,
-            CACHE_NAME_DEVICE_CODES.to_string(),
-            user_code,
-            &data.caches.ha_cache_config,
-            true
-        )
-        .await?
-        {
+    pub async fn find(user_code: String) -> Result<Option<Self>, ErrorResponse> {
+        let slf: Option<Self> = DB::client().get(Cache::DeviceCode, user_code).await?;
+        match slf {
             None => Ok(None),
             Some(slf) => {
-                debug!("\n\n{:?}\n", slf);
                 if slf.exp < Utc::now() {
-                    slf.delete(data).await?;
+                    slf.delete().await?;
                     Ok(None)
                 } else {
                     Ok(Some(slf))
@@ -226,30 +212,29 @@ impl DeviceAuthCode {
         }
     }
 
-    pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_del(
-            CACHE_NAME_DEVICE_CODES.to_string(),
-            self.user_code().to_string(),
-            &data.caches.ha_cache_config,
-        )
-        .await?;
+    pub async fn delete(&self) -> Result<(), ErrorResponse> {
+        DB::client()
+            .delete(Cache::DeviceCode, self.user_code().to_string())
+            .await?;
         Ok(())
     }
 
-    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        cache_put(
-            CACHE_NAME_DEVICE_CODES.to_string(),
-            self.user_code().to_string(),
-            &data.caches.ha_cache_config,
-            self,
-        )
-        .await?;
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
+        DB::client()
+            .put(
+                Cache::DeviceCode,
+                self.user_code().to_string(),
+                self,
+                *CACHE_TTL_DEVICE_CODE,
+            )
+            .await?;
         Ok(())
     }
 }
 
 impl DeviceAuthCode {
     /// Validates the given `user_code`
+    #[inline]
     pub fn user_code(&self) -> &str {
         &self.device_code[..(*DEVICE_GRANT_USER_CODE_LENGTH as usize)]
     }

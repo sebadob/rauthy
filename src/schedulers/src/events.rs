@@ -1,15 +1,13 @@
-use crate::is_ha_leader;
 use chrono::Utc;
 use rauthy_models::app_state::DbPool;
-use redhac::QuorumHealthState;
+use rauthy_models::cache::DB;
 use std::env;
 use std::ops::Sub;
 use std::time::Duration;
-use tokio::sync::watch::Receiver;
 use tracing::{debug, error};
 
 /// Cleans up all Events that exceed the configured EVENT_CLEANUP_DAYS
-pub async fn events_cleanup(db: DbPool, rx_health: Receiver<Option<QuorumHealthState>>) {
+pub async fn events_cleanup(db: DbPool) {
     let mut interval = tokio::time::interval(Duration::from_secs(3600));
 
     let cleanup_days = env::var("EVENT_CLEANUP_DAYS")
@@ -20,14 +18,9 @@ pub async fn events_cleanup(db: DbPool, rx_health: Receiver<Option<QuorumHealthS
     loop {
         interval.tick().await;
 
-        // will return None in a non-HA deployment
-        if let Some(is_ha_leader) = is_ha_leader(&rx_health) {
-            if !is_ha_leader {
-                debug!(
-                    "Running HA mode without being the leader - skipping events_cleanup scheduler"
-                );
-                continue;
-            }
+        if !DB::client().is_leader_cache().await {
+            debug!("Running HA mode without being the leader - skipping events_cleanup scheduler");
+            continue;
         }
 
         debug!("Running events_cleanup scheduler");

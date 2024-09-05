@@ -1,4 +1,5 @@
 use crate::app_state::{AppState, Argon2Params, DbTxn};
+use crate::cache::{Cache, DB};
 use crate::email::{send_email_change_info_new, send_email_confirm_change, send_pwd_reset};
 use crate::entity::colors::ColorEntity;
 use crate::entity::continuation_token::ContinuationToken;
@@ -23,15 +24,12 @@ use rauthy_api_types::users::{
     UserAccountTypeResponse, UserResponse, UserResponseSimple, UserValuesResponse,
 };
 use rauthy_common::constants::{
-    CACHE_NAME_12HR, CACHE_NAME_USERS, IDX_USERS, RAUTHY_ADMIN_ROLE, USER_COUNT_IDX,
+    CACHE_TTL_APP, CACHE_TTL_USER, IDX_USERS, IDX_USER_COUNT, RAUTHY_ADMIN_ROLE,
     WEBAUTHN_NO_PASSWORD_EXPIRY,
 };
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
 use rauthy_common::utils::{new_store_id, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{
-    cache_del, cache_get, cache_get_from, cache_get_value, cache_insert, cache_remove, AckLevel,
-};
 use serde::{Deserialize, Serialize};
 use sqlx::{query_as, FromRow};
 use std::ops::Add;
@@ -90,15 +88,9 @@ pub struct User {
 // CRUD
 impl User {
     pub async fn count(data: &web::Data<AppState>) -> Result<i64, ErrorResponse> {
-        if let Some(count) = cache_get!(
-            i64,
-            CACHE_NAME_12HR.to_string(),
-            USER_COUNT_IDX.to_string(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?
-        {
+        let client = DB::client();
+
+        if let Some(count) = client.get(Cache::App, IDX_USER_COUNT).await? {
             return Ok(count);
         }
 
@@ -112,14 +104,9 @@ impl User {
         #[cfg(not(feature = "postgres"))]
         let count = res.count as i64;
 
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            USER_COUNT_IDX.to_string(),
-            &data.caches.ha_cache_config,
-            &count,
-            AckLevel::Once,
-        )
-        .await?;
+        client
+            .put(Cache::App, IDX_USER_COUNT, &count, CACHE_TTL_APP)
+            .await?;
 
         Ok(count)
     }
@@ -129,14 +116,9 @@ impl User {
         // theoretically, we could have overlaps here, but we don't really care
         // -> used for dynamic pagination only and SQLite has limited query features
         count += 1;
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            USER_COUNT_IDX.to_string(),
-            &data.caches.ha_cache_config,
-            &count,
-            AckLevel::Once,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, IDX_USER_COUNT, &count, CACHE_TTL_APP)
+            .await?;
         Ok(())
     }
 
@@ -145,14 +127,9 @@ impl User {
         // theoretically, we could have overlaps here, but we don't really care
         // -> used for dynamic pagination only and SQLite has limited query features
         count -= 1;
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            USER_COUNT_IDX.to_string(),
-            &data.caches.ha_cache_config,
-            &count,
-            AckLevel::Once,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, IDX_USER_COUNT, &count, CACHE_TTL_APP)
+            .await?;
         Ok(())
     }
 
@@ -220,23 +197,13 @@ impl User {
             .execute(&data.db)
             .await?;
 
+        let client = DB::client();
+
         let idx = format!("{}_{}", IDX_USERS, &self.id);
-        cache_remove(
-            CACHE_NAME_USERS.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
+        client.delete(Cache::User, idx).await?;
 
         let idx = format!("{}_{}", IDX_USERS, &self.email);
-        cache_remove(
-            CACHE_NAME_USERS.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            AckLevel::Quorum,
-        )
-        .await?;
+        client.delete(Cache::User, idx).await?;
 
         Self::count_dec(data).await?;
 
@@ -246,15 +213,9 @@ impl User {
     // Checks if a user exists in the database without fetching data
     pub async fn exists(data: &web::Data<AppState>, id: String) -> Result<(), ErrorResponse> {
         let idx = format!("{}_{}", IDX_USERS, id);
-        let user_opt = cache_get!(
-            User,
-            CACHE_NAME_USERS.to_string(),
-            idx.to_string(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if user_opt.is_some() {
+
+        let opt: Option<Self> = DB::client().get(Cache::User, idx).await?;
+        if opt.is_some() {
             return Ok(());
         }
 
@@ -267,30 +228,17 @@ impl User {
 
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
         let idx = format!("{}_{}", IDX_USERS, id);
-        let user_opt = cache_get!(
-            User,
-            CACHE_NAME_USERS.to_string(),
-            idx.to_string(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(user_opt) = user_opt {
-            return Ok(user_opt);
+        let client = DB::client();
+
+        if let Some(slf) = client.get(Cache::User, &idx).await? {
+            return Ok(slf);
         }
 
         let user = sqlx::query_as!(Self, "SELECT * FROM users WHERE id = $1", id)
             .fetch_one(&data.db)
             .await?;
 
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &user,
-            AckLevel::Leader,
-        )
-        .await?;
+        client.put(Cache::User, idx, &user, CACHE_TTL_USER).await?;
         Ok(user)
     }
 
@@ -301,30 +249,17 @@ impl User {
         let email = email.to_lowercase();
 
         let idx = format!("{}_{}", IDX_USERS, email);
-        let user_opt = cache_get!(
-            User,
-            CACHE_NAME_USERS.to_string(),
-            idx.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(user_opt) = user_opt {
-            return Ok(user_opt);
+        let client = DB::client();
+
+        if let Some(slf) = client.get(Cache::User, &idx).await? {
+            return Ok(slf);
         }
 
         let user = sqlx::query_as!(Self, "SELECT * FROM users WHERE email = $1", email)
             .fetch_one(&data.db)
             .await?;
 
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &user,
-            AckLevel::Leader,
-        )
-        .await?;
+        client.put(Cache::User, idx, &user, CACHE_TTL_USER).await?;
         Ok(user)
     }
 
@@ -623,35 +558,18 @@ impl User {
             RefreshToken::invalidate_for_user(data, &self.id).await?;
         }
 
+        let client = DB::client();
+
         if let Some(email) = old_email {
             let idx = format!("{}_{}", IDX_USERS, email);
-            cache_del(
-                CACHE_NAME_USERS.to_string(),
-                idx,
-                &data.caches.ha_cache_config,
-            )
-            .await?;
+            client.delete(Cache::User, idx).await?;
         }
 
         let idx = format!("{}_{}", IDX_USERS, &self.id);
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &self,
-            AckLevel::Quorum,
-        )
-        .await?;
+        client.put(Cache::User, idx, self, CACHE_TTL_USER).await?;
 
         let idx = format!("{}_{}", IDX_USERS, &self.email);
-        cache_insert(
-            CACHE_NAME_USERS.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &self,
-            AckLevel::Quorum,
-        )
-        .await?;
+        client.put(Cache::User, idx, self, CACHE_TTL_USER).await?;
 
         Ok(())
     }
@@ -807,14 +725,14 @@ impl User {
             if let Some(pwd_curr) = upd_user.password_current {
                 user.validate_password(data, pwd_curr).await?;
             } else if let Some(mfa_code) = upd_user.mfa_code {
-                let svc_req = WebauthnServiceReq::find(data, mfa_code).await?;
+                let svc_req = WebauthnServiceReq::find(mfa_code).await?;
                 if svc_req.user_id != user.id {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::Forbidden,
                         "User ID does not match",
                     ));
                 }
-                svc_req.delete(data).await?;
+                svc_req.delete().await?;
             } else {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
@@ -1548,7 +1466,7 @@ mod tests {
         assert_eq!(session.is_valid(10, None), false);
 
         // new sessions should always be in state 1 -> initializing
-        assert_eq!(session.state, SessionState::Init);
+        assert_eq!(session.state, SessionState::Init.as_str());
 
         assert!(session.csrf_token.len() > 0);
 

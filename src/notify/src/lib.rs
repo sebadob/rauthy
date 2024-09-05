@@ -99,6 +99,5 @@ impl Notification {
 
 #[async_trait]
 pub trait Notify {
-    // TODO think about adding smt like notify_all with batch messages
     async fn notify(&self, notification: &Notification) -> Result<(), ErrorResponse>;
 }

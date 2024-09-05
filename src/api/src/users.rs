@@ -341,7 +341,7 @@ pub async fn post_users_register(
 
     // validate the PoW
     let challenge = Pow::validate(&req_data.pow)?;
-    PowEntity::check_prevent_reuse(&data, challenge.to_string()).await?;
+    PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
     let lang = Language::try_from(&req).unwrap_or_default();
     let user = User::create_from_reg(&data, req_data.into_inner(), lang).await?;

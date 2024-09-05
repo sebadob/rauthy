@@ -1,21 +1,16 @@
-use crate::is_ha_leader;
 use actix_web::web;
 use rauthy_models::app_state::AppState;
+use rauthy_models::cache::DB;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
-use redhac::QuorumHealthState;
 use std::env;
 use std::time::Duration;
 use time::OffsetDateTime;
-use tokio::sync::watch::Receiver;
 use tracing::{debug, error, info};
 
 // Checks for expired users
-pub async fn user_expiry_checker(
-    data: web::Data<AppState>,
-    rx_health: Receiver<Option<QuorumHealthState>>,
-) {
+pub async fn user_expiry_checker(data: web::Data<AppState>) {
     let secs = env::var("SCHED_USER_EXP_MINS")
         .unwrap_or_else(|_| "60".to_string())
         .parse::<u64>()
@@ -35,12 +30,11 @@ pub async fn user_expiry_checker(
     loop {
         interval.tick().await;
 
-        // will return None in a non-HA deployment
-        if let Some(is_ha_leader) = is_ha_leader(&rx_health) {
-            if !is_ha_leader {
-                debug!("Running HA mode without being the leader - skipping user_expiry_checker scheduler");
-                continue;
-            }
+        if !DB::client().is_leader_cache().await {
+            debug!(
+                "Running HA mode without being the leader - skipping user_expiry_checker scheduler"
+            );
+            continue;
         }
 
         debug!("Running user_expiry_checker scheduler");

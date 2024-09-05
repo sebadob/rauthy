@@ -18,6 +18,7 @@ static NOTIFIER_SLACK: OnceLock<(i16, NotifierSlack)> = OnceLock::new();
 pub struct EventNotifier;
 
 impl EventNotifier {
+    /// Sends an `Event` to configured notifiers like for instance E-Mail or Matrix.
     pub async fn send(event: &Event) -> Result<(), ErrorResponse> {
         match event.level {
             EventLevel::Info | EventLevel::Notice => info!("{}", event),

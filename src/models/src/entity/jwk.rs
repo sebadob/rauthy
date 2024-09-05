@@ -1,4 +1,5 @@
 use crate::app_state::{AppState, DbPool};
+use crate::cache::{Cache, DB};
 use crate::events::event::Event;
 use actix_web::web;
 use cryptr::{EncKeys, EncValue};
@@ -7,10 +8,9 @@ use jwt_simple::algorithms::{
     Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
 };
 use rauthy_api_types::oidc::{JWKSCerts, JWKSPublicKeyCerts};
-use rauthy_common::constants::{CACHE_NAME_12HR, IDX_JWKS, IDX_JWK_KID, IDX_JWK_LATEST};
+use rauthy_common::constants::{CACHE_TTL_APP, IDX_JWKS, IDX_JWK_KID, IDX_JWK_LATEST};
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{cache_del, cache_get, cache_get_from, cache_get_value, cache_put};
 use rsa::BigUint;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
@@ -152,16 +152,10 @@ pub struct JWKS {
 // CRUD
 impl JWKS {
     pub async fn find_pk(data: &web::Data<AppState>) -> Result<JWKS, ErrorResponse> {
-        if let Some(jwks) = cache_get!(
-            JWKS,
-            CACHE_NAME_12HR.to_string(),
-            IDX_JWKS.to_string(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?
-        {
-            return Ok(jwks);
+        let client = DB::client();
+
+        if let Some(slf) = client.get(Cache::App, IDX_JWKS).await? {
+            return Ok(slf);
         }
 
         let res = sqlx::query_as!(Jwk, "SELECT * FROM jwks")
@@ -181,13 +175,9 @@ impl JWKS {
             jwks.add_jwk(&kp);
         }
 
-        cache_put(
-            CACHE_NAME_12HR.to_string(),
-            IDX_JWKS.to_string(),
-            &data.caches.ha_cache_config,
-            &jwks,
-        )
-        .await?;
+        client
+            .put(Cache::App, IDX_JWKS, &jwks, CACHE_TTL_APP)
+            .await?;
 
         Ok(jwks)
     }
@@ -279,38 +269,34 @@ impl JWKS {
         entity.save(&data.db).await?;
 
         // clear all latest_jwk from cache
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS256.as_str()),
-            &data.caches.ha_cache_config,
-        )
-        .await?;
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS384.as_str()),
-            &data.caches.ha_cache_config,
-        )
-        .await?;
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS512.as_str()),
-            &data.caches.ha_cache_config,
-        )
-        .await?;
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::EdDSA.as_str()),
-            &data.caches.ha_cache_config,
-        )
-        .await?;
+        let client = DB::client();
+        client
+            .delete(
+                Cache::App,
+                format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS256.as_str()),
+            )
+            .await?;
+        client
+            .delete(
+                Cache::App,
+                format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS384.as_str()),
+            )
+            .await?;
+        client
+            .delete(
+                Cache::App,
+                format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::RS512.as_str()),
+            )
+            .await?;
+        client
+            .delete(
+                Cache::App,
+                format!("{}{}", IDX_JWK_LATEST, JwkKeyPairAlg::EdDSA.as_str()),
+            )
+            .await?;
 
         // clear the all_certs / JWKS cache
-        cache_del(
-            CACHE_NAME_12HR.to_string(),
-            IDX_JWKS.to_string(),
-            &data.caches.ha_cache_config,
-        )
-        .await?;
+        client.delete(Cache::App, IDX_JWKS).await?;
 
         info!("Finished JWKS rotation");
 
@@ -632,16 +618,10 @@ impl JwkKeyPair {
     // Returns a JWK by a given Key Identifier (kid)
     pub async fn find(data: &web::Data<AppState>, kid: String) -> Result<Self, ErrorResponse> {
         let idx = format!("{}{}", IDX_JWK_KID, kid);
-        let jwk_opt = cache_get!(
-            JwkKeyPair,
-            CACHE_NAME_12HR.to_string(),
-            idx.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(jwk_opt) = jwk_opt {
-            return Ok(jwk_opt);
+        let client = DB::client();
+
+        if let Some(slf) = client.get(Cache::App, &idx).await? {
+            return Ok(slf);
         }
 
         let jwk = sqlx::query_as!(Jwk, "SELECT * FROM jwks WHERE kid = $1", kid,)
@@ -649,14 +629,7 @@ impl JwkKeyPair {
             .await?;
 
         let kp = JwkKeyPair::decrypt(&jwk, jwk.signature.clone())?;
-
-        cache_put(
-            CACHE_NAME_12HR.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &kp,
-        )
-        .await?;
+        client.put(Cache::App, idx, &kp, CACHE_TTL_APP).await?;
 
         Ok(kp)
     }
@@ -668,16 +641,10 @@ impl JwkKeyPair {
         key_pair_alg: JwkKeyPairAlg,
     ) -> Result<Self, ErrorResponse> {
         let idx = format!("{}{}", IDX_JWK_LATEST, key_pair_alg.as_str());
-        let jwk_opt = cache_get!(
-            JwkKeyPair,
-            CACHE_NAME_12HR.to_string(),
-            idx.clone(),
-            &data.caches.ha_cache_config,
-            false
-        )
-        .await?;
-        if let Some(jwk_opt) = jwk_opt {
-            return Ok(jwk_opt);
+        let client = DB::client();
+
+        if let Some(slf) = client.get(Cache::App, &idx).await? {
+            return Ok(slf);
         }
 
         let mut jwks = sqlx::query_as!(Jwk, "SELECT * FROM jwks")
@@ -693,14 +660,7 @@ impl JwkKeyPair {
         }
 
         let jwk = JwkKeyPair::decrypt(jwks.first().unwrap(), key_pair_alg)?;
-
-        cache_put(
-            CACHE_NAME_12HR.to_string(),
-            idx,
-            &data.caches.ha_cache_config,
-            &jwk,
-        )
-        .await?;
+        client.put(Cache::App, idx, &jwk, CACHE_TTL_APP).await?;
 
         Ok(jwk)
     }

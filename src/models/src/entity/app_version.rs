@@ -1,9 +1,9 @@
 use crate::app_state::AppState;
+use crate::cache::{Cache, DB};
 use actix_web::web;
 use chrono::Utc;
-use rauthy_common::constants::{CACHE_NAME_12HR, IDX_APP_VERSION, RAUTHY_VERSION};
+use rauthy_common::constants::{CACHE_TTL_APP, IDX_APP_VERSION, RAUTHY_VERSION};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use redhac::{cache_get, cache_get_from, cache_get_value, cache_insert, AckLevel};
 use reqwest::header::ACCEPT;
 use serde::{Deserialize, Serialize};
 use serde_json::value;
@@ -20,17 +20,11 @@ pub struct LatestAppVersion {
 
 impl LatestAppVersion {
     pub async fn find(app_state: &web::Data<AppState>) -> Option<Self> {
-        if let Ok(Some(slf)) = cache_get!(
-            Self,
-            CACHE_NAME_12HR.to_string(),
-            IDX_APP_VERSION.to_string(),
-            &app_state.caches.ha_cache_config,
-            false
-        )
-        .await
-        {
+        let client = DB::client();
+
+        if let Ok(Some(slf)) = client.get(Cache::App, IDX_APP_VERSION).await {
             return Some(slf);
-        };
+        }
 
         let res = query!("select data from config where id = 'latest_version'")
             .fetch_optional(&app_state.db)
@@ -43,14 +37,9 @@ impl LatestAppVersion {
                     .data
                     .expect("to get 'data' back from the AppVersion query");
                 if let Ok(slf) = bincode::deserialize::<Self>(&data) {
-                    if let Err(err) = cache_insert(
-                        CACHE_NAME_12HR.to_string(),
-                        IDX_APP_VERSION.to_string(),
-                        &app_state.caches.ha_cache_config,
-                        &slf,
-                        AckLevel::Quorum,
-                    )
-                    .await
+                    if let Err(err) = client
+                        .put(Cache::App, IDX_APP_VERSION, &slf, CACHE_TTL_APP)
+                        .await
                     {
                         error!("Inserting LatestAppVersion into cache: {:?}", err);
                     }
@@ -60,7 +49,21 @@ impl LatestAppVersion {
                     None
                 }
             }
-            None => None,
+            None => {
+                if let Err(err) = client
+                    .put(
+                        Cache::App,
+                        IDX_APP_VERSION,
+                        &None::<Option<Self>>,
+                        CACHE_TTL_APP,
+                    )
+                    .await
+                {
+                    error!("Inserting LatestAppVersion into cache: {:?}", err);
+                }
+
+                None
+            }
         }
     }
 
@@ -89,14 +92,9 @@ impl LatestAppVersion {
         );
         q.execute(&app_state.db).await?;
 
-        cache_insert(
-            CACHE_NAME_12HR.to_string(),
-            IDX_APP_VERSION.to_string(),
-            &app_state.caches.ha_cache_config,
-            &slf,
-            AckLevel::Quorum,
-        )
-        .await?;
+        DB::client()
+            .put(Cache::App, IDX_APP_VERSION, &slf, CACHE_TTL_APP)
+            .await?;
 
         Ok(())
     }
