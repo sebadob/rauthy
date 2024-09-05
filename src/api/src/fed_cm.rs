@@ -19,7 +19,7 @@ use rauthy_models::entity::fed_cm::{
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::ListenScheme;
-use rauthy_service::token_set::{AuthCodeFlow, DeviceCodeFlow, TokenNonce, TokenSet};
+use rauthy_service::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenNonce, TokenSet};
 use tracing::{debug, error, warn};
 
 const HEADER_ALLOW_CREDENTIALS: (&str, &str) = ("access-control-allow-credentials", "true");
@@ -294,6 +294,7 @@ pub async fn post_fed_cm_token(
         &user,
         &data,
         &client,
+        AuthTime(None),
         None,
         payload.nonce.map(TokenNonce),
         // TODO add something like `fedcm` to the scopes? Maybe depending on new allowed flow?

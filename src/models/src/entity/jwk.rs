@@ -1031,6 +1031,7 @@ mod tests {
                 azp: "some_azp".to_string(),
                 typ: JwtTokenType::Refresh,
                 uid: "user_id_13337".to_string(),
+                auth_time: None,
                 cnf: None,
                 did: None,
             },

@@ -1,4 +1,6 @@
-use crate::token_set::{AuthCodeFlow, DeviceCodeFlow, DpopFingerprint, TokenScopes, TokenSet};
+use crate::token_set::{
+    AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, TokenScopes, TokenSet,
+};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest};
 use jwt_simple::claims;
@@ -194,30 +196,18 @@ pub async fn validate_refresh_token(
     user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
     user.save(data, None, None).await?;
 
-    let ts = if let Some(s) = rt_scope {
-        TokenSet::from_user(
-            &user,
-            data,
-            &client,
-            dpop_fingerprint,
-            None,
-            Some(TokenScopes(s)),
-            AuthCodeFlow::No,
-            DeviceCodeFlow::No,
-        )
-        .await
-    } else {
-        TokenSet::from_user(
-            &user,
-            data,
-            &client,
-            dpop_fingerprint,
-            None,
-            None,
-            AuthCodeFlow::No,
-            DeviceCodeFlow::No,
-        )
-        .await
-    }?;
+    let ts = TokenSet::from_user(
+        &user,
+        data,
+        &client,
+        AuthTime(claims.custom.auth_time),
+        dpop_fingerprint,
+        None,
+        rt_scope.map(TokenScopes),
+        AuthCodeFlow::No,
+        DeviceCodeFlow::No,
+    )
+    .await?;
+
     Ok((ts, dpop_nonce))
 }

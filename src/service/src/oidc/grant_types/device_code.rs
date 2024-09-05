@@ -1,4 +1,4 @@
-use crate::token_set::{AuthCodeFlow, DeviceCodeFlow, TokenScopes, TokenSet};
+use crate::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenScopes, TokenSet};
 use actix_web::{web, HttpResponse};
 use chrono::Utc;
 use rauthy_api_types::oidc::{OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenRequest};
@@ -164,6 +164,7 @@ pub async fn grant_type_device_code(
             &user,
             data,
             &client,
+            AuthTime(None),
             None,
             None,
             code.scopes.map(TokenScopes),

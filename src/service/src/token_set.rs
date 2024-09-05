@@ -79,6 +79,20 @@ pub enum AuthCodeFlow {
     No,
 }
 
+#[derive(Debug, Clone)]
+pub struct AuthTime(pub Option<i64>);
+
+impl AuthTime {
+    /// Returns the inner value, if it exists, and `now()` otherwise.
+    pub fn get(&self) -> i64 {
+        if let Some(ts) = self.0 {
+            ts
+        } else {
+            Utc::now().timestamp()
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum DeviceCodeFlow {
     Yes(String),
@@ -199,6 +213,7 @@ impl TokenSet {
         user: &User,
         data: &web::Data<AppState>,
         client: &Client,
+        auth_time: AuthTime,
         dpop_fingerprint: Option<DpopFingerprint>,
         at_hash: AtHash,
         lifetime: i64,
@@ -207,33 +222,21 @@ impl TokenSet {
         scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
         auth_code_flow: AuthCodeFlow,
     ) -> Result<String, ErrorResponse> {
-        let now_ts = Utc::now().timestamp();
+        let amr = if user.has_webauthn_enabled() && auth_code_flow == AuthCodeFlow::Yes {
+            JwtAmrValue::Mfa.to_string()
+        } else {
+            JwtAmrValue::Pwd.to_string()
+        };
 
-        // TODO the `auth_time` here is a bit inaccurate currently. The accuracy could be improved
-        // with future DB migrations by adding something like a `last_auth` column for each user.
-        // It is unclear right now, if we even need it right now.
-        let (amr, auth_time) = match user.has_webauthn_enabled() {
-            true => {
-                if auth_code_flow == AuthCodeFlow::Yes {
-                    // With active MFA, the auth_time is always 'now', because it must be re-validated each time
-                    (JwtAmrValue::Mfa.to_string(), now_ts)
-                } else {
-                    (
-                        JwtAmrValue::Pwd.to_string(),
-                        now_ts - *SESSION_LIFETIME as i64,
-                    )
-                }
-            }
-            false => {
-                if auth_code_flow == AuthCodeFlow::Yes {
-                    (JwtAmrValue::Pwd.to_string(), now_ts)
-                } else {
-                    (
-                        JwtAmrValue::Pwd.to_string(),
-                        now_ts - *SESSION_LIFETIME as i64,
-                    )
-                }
-            }
+        let auth_time = if auth_code_flow == AuthCodeFlow::Yes {
+            auth_time.get()
+        } else if let Some(ts) = auth_time.0 {
+            ts
+        } else {
+            // TODO the `auth_time` here is a bit inaccurate currently. The accuracy could be improved
+            // with future DB migrations by adding something like a `last_auth` column for each user.
+            // It is unclear right now, if we even need it right now.
+            Utc::now().timestamp() - *SESSION_LIFETIME as i64
         };
 
         let webid =
@@ -368,6 +371,7 @@ impl TokenSet {
         data: &web::Data<AppState>,
         dpop_fingerprint: Option<DpopFingerprint>,
         client: &Client,
+        auth_time: AuthTime,
         access_token_lifetime: i64,
         scope: Option<TokenScopes>,
         is_mfa: bool,
@@ -383,6 +387,7 @@ impl TokenSet {
             azp: client.id.clone(),
             typ: JwtTokenType::Refresh,
             uid: user.id.clone(),
+            auth_time: auth_time.0,
             cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
             did: did.clone(),
         };
@@ -473,6 +478,7 @@ impl TokenSet {
         user: &User,
         data: &web::Data<AppState>,
         client: &Client,
+        auth_time: AuthTime,
         dpop_fingerprint: Option<DpopFingerprint>,
         nonce: Option<TokenNonce>,
         scopes: Option<TokenScopes>,
@@ -583,6 +589,7 @@ impl TokenSet {
             user,
             data,
             client,
+            auth_time.clone(),
             dpop_fingerprint.clone(),
             at_hash,
             lifetime,
@@ -599,6 +606,7 @@ impl TokenSet {
                     data,
                     dpop_fingerprint,
                     client,
+                    auth_time,
                     lifetime,
                     scopes.map(TokenScopes),
                     user.has_webauthn_enabled(),
