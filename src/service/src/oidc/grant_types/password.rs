@@ -97,7 +97,7 @@ pub async fn grant_type_password(
                 &user,
                 data,
                 &client,
-                AuthTime(None),
+                AuthTime::now(),
                 dpop_fingerprint,
                 None,
                 None,

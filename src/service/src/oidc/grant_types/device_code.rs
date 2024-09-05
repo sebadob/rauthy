@@ -164,7 +164,7 @@ pub async fn grant_type_device_code(
             &user,
             data,
             &client,
-            AuthTime(None),
+            AuthTime::now(),
             None,
             None,
             code.scopes.map(TokenScopes),

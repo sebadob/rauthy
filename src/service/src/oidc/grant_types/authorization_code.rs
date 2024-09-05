@@ -19,7 +19,10 @@ use std::str::FromStr;
 use time::OffsetDateTime;
 use tracing::warn;
 
-#[tracing::instrument(skip_all, fields(client_id = req_data.client_id, username = req_data.username))]
+#[tracing::instrument(
+    skip_all,
+    fields(client_id = req_data.client_id, username = req_data.username)
+)]
 pub async fn grant_type_authorization_code(
     data: &web::Data<AppState>,
     req: HttpRequest,
@@ -145,7 +148,7 @@ pub async fn grant_type_authorization_code(
         &user,
         data,
         &client,
-        AuthTime(None),
+        AuthTime::now(),
         dpop_fingerprint,
         code.nonce.clone().map(TokenNonce),
         Some(TokenScopes(code.scopes.join(" "))),

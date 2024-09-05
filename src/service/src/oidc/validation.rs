@@ -196,11 +196,20 @@ pub async fn validate_refresh_token(
     user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
     user.save(data, None, None).await?;
 
+    let auth_time = if let Some(ts) = claims.custom.auth_time {
+        AuthTime::given(ts)
+    } else {
+        // TODO this is not 100% correct but will make the migration from older to new refresh
+        // tokens smooth. In a future release, the `auth_time` can be set to required in the claims.
+        // Optional for now to still accept older tokens.
+        AuthTime::now()
+    };
+
     let ts = TokenSet::from_user(
         &user,
         data,
         &client,
-        AuthTime(claims.custom.auth_time),
+        auth_time,
         dpop_fingerprint,
         None,
         rt_scope.map(TokenScopes),

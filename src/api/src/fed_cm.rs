@@ -294,7 +294,9 @@ pub async fn post_fed_cm_token(
         &user,
         &data,
         &client,
-        AuthTime(None),
+        // TODO this might be incorrect as well. Fix after Hiqlite migration when we have the 100%
+        // correct value inside the DB as well
+        AuthTime::now(),
         None,
         payload.nonce.map(TokenNonce),
         // TODO add something like `fedcm` to the scopes? Maybe depending on new allowed flow?
