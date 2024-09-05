@@ -113,9 +113,6 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
         .expect("DEV_DPOP_HTTP cannot be parsed to bool - bad format");
-    // TODO get rid of the HA_MODE and use Hiqlite for events all the time
-    pub static ref HA_MODE: bool =
-        env::var("HA_MODE").map(|s| s.to_lowercase() == "true").unwrap_or(false);
 
     pub static ref RE_ATTR: Regex = Regex::new(r"^[a-zA-Z0-9-_/]{2,32}$").unwrap();
     pub static ref RE_ATTR_DESC: Regex = Regex::new(r"^[a-zA-Z0-9-_/\s]{0,128}$").unwrap();
@@ -244,10 +241,6 @@ lazy_static! {
         PROVIDER_CALLBACK_URI.replace(':', "%3A").replace('/', "%2F")
     };
 
-    pub static ref DEVICE_GRANT_CODE_CACHE_SIZE: u32 = env::var("DEVICE_GRANT_CODE_CACHE_SIZE")
-        .unwrap_or_else(|_| String::from("1000"))
-        .parse::<u32>()
-        .expect("DEVICE_GRANT_CODE_CACHE_SIZE cannot be parsed to u32 - bad format");
     pub static ref DEVICE_GRANT_CODE_LIFETIME: u16 = env::var("DEVICE_GRANT_CODE_LIFETIME")
         .unwrap_or_else(|_| String::from("300"))
         .parse::<u16>()

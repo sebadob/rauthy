@@ -2,7 +2,7 @@
 
 ## CURRENT WORK
 
-- switch events routing from PG listen / notify to Hiqlite
+- update the book with new k8s readyness and liveness probes
 
 ## Documentation TODO
 
