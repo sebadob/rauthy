@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## NIGHTLY
 
 ### Breaking
 
