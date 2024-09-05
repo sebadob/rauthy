@@ -131,6 +131,7 @@ pub struct WellKnownLookup {
     pub userinfo_endpoint: String,
     pub jwks_uri: String,
     pub scopes_supported: Vec<String>,
+    #[serde(default)]
     pub code_challenge_methods_supported: Vec<String>,
 }
 
