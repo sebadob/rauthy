@@ -6,7 +6,6 @@ use jwt_simple::prelude::{coarsetime, UnixTimeStamp};
 use rauthy_api_types::oidc::JktClaim;
 use rauthy_common::constants::{
     DEVICE_GRANT_REFRESH_TOKEN_LIFETIME, ENABLE_SOLID_AUD, ENABLE_WEB_ID, REFRESH_TOKEN_LIFETIME,
-    SESSION_LIFETIME,
 };
 use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -77,6 +76,23 @@ impl AtHash {
 pub enum AuthCodeFlow {
     Yes,
     No,
+}
+
+#[derive(Debug, Clone)]
+pub struct AuthTime(i64);
+
+impl AuthTime {
+    pub fn now() -> Self {
+        Self(Utc::now().timestamp())
+    }
+
+    pub fn given(ts: i64) -> Self {
+        Self(ts)
+    }
+
+    pub fn get(&self) -> i64 {
+        self.0
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -199,6 +215,7 @@ impl TokenSet {
         user: &User,
         data: &web::Data<AppState>,
         client: &Client,
+        auth_time: AuthTime,
         dpop_fingerprint: Option<DpopFingerprint>,
         at_hash: AtHash,
         lifetime: i64,
@@ -207,33 +224,10 @@ impl TokenSet {
         scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
         auth_code_flow: AuthCodeFlow,
     ) -> Result<String, ErrorResponse> {
-        let now_ts = Utc::now().timestamp();
-
-        // TODO the `auth_time` here is a bit inaccurate currently. The accuracy could be improved
-        // with future DB migrations by adding something like a `last_auth` column for each user.
-        // It is unclear right now, if we even need it right now.
-        let (amr, auth_time) = match user.has_webauthn_enabled() {
-            true => {
-                if auth_code_flow == AuthCodeFlow::Yes {
-                    // With active MFA, the auth_time is always 'now', because it must be re-validated each time
-                    (JwtAmrValue::Mfa.to_string(), now_ts)
-                } else {
-                    (
-                        JwtAmrValue::Pwd.to_string(),
-                        now_ts - *SESSION_LIFETIME as i64,
-                    )
-                }
-            }
-            false => {
-                if auth_code_flow == AuthCodeFlow::Yes {
-                    (JwtAmrValue::Pwd.to_string(), now_ts)
-                } else {
-                    (
-                        JwtAmrValue::Pwd.to_string(),
-                        now_ts - *SESSION_LIFETIME as i64,
-                    )
-                }
-            }
+        let amr = if user.has_webauthn_enabled() && auth_code_flow == AuthCodeFlow::Yes {
+            JwtAmrValue::Mfa.to_string()
+        } else {
+            JwtAmrValue::Pwd.to_string()
         };
 
         let webid =
@@ -243,7 +237,14 @@ impl TokenSet {
             azp: client.id.clone(),
             typ: JwtTokenType::Id,
             amr: vec![amr],
-            auth_time,
+            // TODO the `auth_time` here is a bit inaccurate currently. The accuracy could be improved
+            // with future DB migrations by adding something like a `last_auth` column for each user.
+            // It is unclear right now, if we even need it right now.
+            // A bit incorrect value might exist here in case a user does a refresh with an existing
+            // session with just a password or the need to refresh WebAuthn.
+            // -> add a new column to the `users` table with the Hiqlite migration to keep track
+            // of the 100% exact value.
+            auth_time: auth_time.get(),
             at_hash: at_hash.0,
             preferred_username: user.email.clone(),
             email: None,
@@ -368,6 +369,7 @@ impl TokenSet {
         data: &web::Data<AppState>,
         dpop_fingerprint: Option<DpopFingerprint>,
         client: &Client,
+        auth_time: AuthTime,
         access_token_lifetime: i64,
         scope: Option<TokenScopes>,
         is_mfa: bool,
@@ -383,6 +385,7 @@ impl TokenSet {
             azp: client.id.clone(),
             typ: JwtTokenType::Refresh,
             uid: user.id.clone(),
+            auth_time: Some(auth_time.get()),
             cnf: dpop_fingerprint.map(|jkt| JktClaim { jkt: jkt.0 }),
             did: did.clone(),
         };
@@ -473,6 +476,7 @@ impl TokenSet {
         user: &User,
         data: &web::Data<AppState>,
         client: &Client,
+        auth_time: AuthTime,
         dpop_fingerprint: Option<DpopFingerprint>,
         nonce: Option<TokenNonce>,
         scopes: Option<TokenScopes>,
@@ -583,6 +587,7 @@ impl TokenSet {
             user,
             data,
             client,
+            auth_time.clone(),
             dpop_fingerprint.clone(),
             at_hash,
             lifetime,
@@ -599,6 +604,7 @@ impl TokenSet {
                     data,
                     dpop_fingerprint,
                     client,
+                    auth_time,
                     lifetime,
                     scopes.map(TokenScopes),
                     user.has_webauthn_enabled(),

@@ -14,7 +14,9 @@ use rauthy_api_types::oidc::{
 use rauthy_common::constants::{
     APPLICATION_JSON, DPOP_TOKEN_ENDPOINT, HEADER_DPOP_NONCE, TOKEN_DPOP,
 };
-use rauthy_common::utils::{base64_encode, base64_url_encode, base64_url_no_pad_encode, get_rand};
+use rauthy_common::utils::{
+    base64_encode, base64_url_encode, base64_url_no_pad_decode, base64_url_no_pad_encode, get_rand,
+};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::dpop_proof::{DPoPClaims, DPoPHeader};
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPairType, JWKS};
@@ -475,6 +477,8 @@ async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
 
 #[tokio::test]
 async fn test_password_flow() -> Result<(), Box<dyn Error>> {
+    let before = Utc::now().timestamp();
+
     let url = format!("{}/oidc/token", get_backend_url());
     let mut body = TokenRequest {
         grant_type: "password".to_string(),
@@ -528,8 +532,16 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     };
     validate_token(&ts.access_token, payload).await?;
 
+    // make sure `auth_time` is handled properly
+    let auth_time_refresh = auth_time_from_token(ts.refresh_token.as_ref().unwrap());
+    assert!(before <= auth_time_refresh);
+    assert!(auth_time_refresh <= Utc::now().timestamp());
+
+    let auth_time_orig = auth_time_from_token(ts.id_token.as_ref().unwrap());
+    assert_eq!(auth_time_refresh, auth_time_orig);
+
     // refresh it
-    time::sleep(Duration::from_secs(1)).await;
+    time::sleep(Duration::from_secs(2)).await;
     let req = TokenRequest {
         grant_type: "refresh_token".to_string(),
         code: None,
@@ -556,6 +568,13 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     assert_ne!(ts.refresh_token, new_ts.refresh_token);
     assert_ne!(ts.access_token, new_ts.access_token);
     assert_ne!(ts.id_token, new_ts.id_token);
+
+    let auth_time = auth_time_from_token(new_ts.id_token.as_ref().unwrap());
+    assert_eq!(auth_time_orig, auth_time);
+
+    let auth_time_refresh_new = auth_time_from_token(ts.refresh_token.as_ref().unwrap());
+    // the `auth_time` for the refresh token must always stay the original one
+    assert_eq!(auth_time_orig, auth_time_refresh_new);
 
     Ok(())
 }
@@ -1031,6 +1050,16 @@ async fn test_token_introspection() -> Result<(), Box<dyn Error>> {
     assert!(!info.active);
 
     Ok(())
+}
+
+fn auth_time_from_token(id_token: &str) -> i64 {
+    let (_, rest) = id_token.split_once('.').unwrap_or(("", ""));
+    let (claims_b64, _) = rest.split_once('.').unwrap_or(("", ""));
+    let bytes = base64_url_no_pad_decode(claims_b64).unwrap();
+    let s = String::from_utf8_lossy(&bytes);
+    let claims = serde_json::from_str::<serde_json::Value>(s.as_ref()).unwrap();
+    let at = claims.get("auth_time").unwrap();
+    at.as_i64().unwrap()
 }
 
 async fn validate_token(

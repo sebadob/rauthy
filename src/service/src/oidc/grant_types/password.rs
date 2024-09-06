@@ -1,4 +1,4 @@
-use crate::token_set::{AuthCodeFlow, DeviceCodeFlow, DpopFingerprint, TokenSet};
+use crate::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, TokenSet};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest};
 use rauthy_api_types::oidc::TokenRequest;
@@ -97,6 +97,7 @@ pub async fn grant_type_password(
                 &user,
                 data,
                 &client,
+                AuthTime::now(),
                 dpop_fingerprint,
                 None,
                 None,

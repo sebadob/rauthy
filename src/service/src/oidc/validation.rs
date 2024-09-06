@@ -1,4 +1,6 @@
-use crate::token_set::{AuthCodeFlow, DeviceCodeFlow, DpopFingerprint, TokenScopes, TokenSet};
+use crate::token_set::{
+    AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, TokenScopes, TokenSet,
+};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest};
 use jwt_simple::claims;
@@ -194,30 +196,28 @@ pub async fn validate_refresh_token(
     user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
     user.save(data, None, None).await?;
 
-    let ts = if let Some(s) = rt_scope {
-        TokenSet::from_user(
-            &user,
-            data,
-            &client,
-            dpop_fingerprint,
-            None,
-            Some(TokenScopes(s)),
-            AuthCodeFlow::No,
-            DeviceCodeFlow::No,
-        )
-        .await
+    let auth_time = if let Some(ts) = claims.custom.auth_time {
+        AuthTime::given(ts)
     } else {
-        TokenSet::from_user(
-            &user,
-            data,
-            &client,
-            dpop_fingerprint,
-            None,
-            None,
-            AuthCodeFlow::No,
-            DeviceCodeFlow::No,
-        )
-        .await
-    }?;
+        // TODO this is not 100% correct but will make the migration from older to new refresh
+        // tokens smooth. In a future release, the `auth_time` can be set to required in the claims.
+        // Optional for now to still accept older tokens.
+        // As soon as no old refresh tokens exist anymore, this branch will never be used anyway.
+        AuthTime::now()
+    };
+
+    let ts = TokenSet::from_user(
+        &user,
+        data,
+        &client,
+        auth_time,
+        dpop_fingerprint,
+        None,
+        rt_scope.map(TokenScopes),
+        AuthCodeFlow::No,
+        DeviceCodeFlow::No,
+    )
+    .await?;
+
     Ok((ts, dpop_nonce))
 }

@@ -1,8 +1,9 @@
 use crate::token_set::{
-    AuthCodeFlow, DeviceCodeFlow, DpopFingerprint, TokenNonce, TokenScopes, TokenSet,
+    AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, TokenNonce, TokenScopes, TokenSet,
 };
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest};
+use chrono::Utc;
 use rauthy_api_types::oidc::TokenRequest;
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_common::utils::{base64_url_encode, real_ip_from_req};
@@ -19,7 +20,10 @@ use std::str::FromStr;
 use time::OffsetDateTime;
 use tracing::warn;
 
-#[tracing::instrument(skip_all, fields(client_id = req_data.client_id, username = req_data.username))]
+#[tracing::instrument(
+    skip_all,
+    fields(client_id = req_data.client_id, username = req_data.username)
+)]
 pub async fn grant_type_authorization_code(
     data: &web::Data<AppState>,
     req: HttpRequest,
@@ -145,6 +149,7 @@ pub async fn grant_type_authorization_code(
         &user,
         data,
         &client,
+        AuthTime::given(user.last_login.unwrap_or_else(|| Utc::now().timestamp())),
         dpop_fingerprint,
         code.nonce.clone().map(TokenNonce),
         Some(TokenScopes(code.scopes.join(" "))),

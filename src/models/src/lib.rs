@@ -236,6 +236,8 @@ pub struct JwtRefreshClaims {
     pub typ: JwtTokenType,
     pub uid: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth_time: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cnf: Option<JktClaim>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub did: Option<String>,
