@@ -4,6 +4,13 @@
 
 ### Breaking
 
+#### Deprecated API Routes Removal
+
+The following API routes have been deprecated in the last version and have now been fully removed:
+
+- `/oidc/tokenInfo`
+- `/oidc/rotateJwk`
+
 #### Cache Config
 
 The whole `CACHE` section in the config has been changed:
@@ -64,6 +71,8 @@ HQL_SECRET_API=SuperSecureSecret1337
 #HQL_ENC_KEYS_FROM=env
 ```
 
+[0919767](https://github.com/sebadob/rauthy/commit/09197670e6491f83a8b739c0f195d4b842abe771)
+
 #### `/auth/v1/health` Response Change
 
 The response for `/auth/v1/health` has been changed.
@@ -77,6 +86,8 @@ struct HealthResponse {
     cache_healthy: bool,
 }
 ```
+
+[0919767](https://github.com/sebadob/rauthy/commit/09197670e6491f83a8b739c0f195d4b842abe771)
 
 ### Changes
 
@@ -127,7 +138,7 @@ additional features. It is outsourced to make it generally usable in other conte
 
 - The `refresh_token` grant type on the `/token` endpoint did not set the original `auth_time` for the `id_token`, but
   instead calculated it from `now()` each time.
-  []()
+  [aa6e07d](https://github.com/sebadob/rauthy/commit/aa6e07db8822e72e28329b0ecea52e6113851d4a)
 
 ## v0.25.0
 

@@ -723,18 +723,6 @@ pub async fn rotate_jwk(
         .map(|_| HttpResponse::Ok().finish())
 }
 
-#[post("/oidc/rotateJwk")]
-pub async fn rotate_jwk_deprecated(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
-
-    JWKS::rotate(&data)
-        .await
-        .map(|_| HttpResponse::Ok().finish())
-}
-
 /// Create a new session
 ///
 /// You can use this endpoint to create a new session outside the `/authorize` page when logging
@@ -937,33 +925,6 @@ pub async fn post_token(
     };
 
     login_delay::handle_login_delay(&data, ip, start, res, has_password_been_hashed).await
-}
-
-/// DEPRECATED -> use /oidc/introspect instead
-#[utoipa::path(
-    post,
-    path = "/oidc/tokenInfo",
-    tag = "deprecated",
-    request_body = TokenValidationRequest,
-    responses(
-        (status = 200, description = "Ok", body = TokenInfo),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-        (status = 404, description = "NotFound", body = ErrorResponse),
-    ),
-)]
-#[post("/oidc/tokenInfo")]
-pub async fn post_token_info(
-    data: web::Data<AppState>,
-    req: HttpRequest,
-    req_data: actix_web_validator::Form<TokenValidationRequest>,
-) -> Result<HttpResponse, ErrorResponse> {
-    match token_info::get_token_info(&data, &req, &req_data.token).await {
-        Ok(info) => Ok(HttpResponse::Ok().json(info)),
-        Err(err) => {
-            error!("{:?}", err);
-            Err(err)
-        }
-    }
 }
 
 /// The token introspection endpoint for OAuth2

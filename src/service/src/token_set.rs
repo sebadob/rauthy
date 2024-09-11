@@ -237,13 +237,6 @@ impl TokenSet {
             azp: client.id.clone(),
             typ: JwtTokenType::Id,
             amr: vec![amr],
-            // TODO the `auth_time` here is a bit inaccurate currently. The accuracy could be improved
-            // with future DB migrations by adding something like a `last_auth` column for each user.
-            // It is unclear right now, if we even need it right now.
-            // A bit incorrect value might exist here in case a user does a refresh with an existing
-            // session with just a password or the need to refresh WebAuthn.
-            // -> add a new column to the `users` table with the Hiqlite migration to keep track
-            // of the 100% exact value.
             auth_time: auth_time.get(),
             at_hash: at_hash.0,
             preferred_username: user.email.clone(),
