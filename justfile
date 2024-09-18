@@ -433,6 +433,7 @@ build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
     echo "build sqlite release"
     {{docker}} buildx build \
         -t {{image}}:$TAG-lite \
+        -f Dockerfile_gnu \
         --platform linux/amd64,linux/arm64 \
         --build-arg="IMAGE={{builder_image}}" \
         --build-arg="IMAGE_DATE={{builder_tag_date}}" \
@@ -455,6 +456,7 @@ build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
     echo "build postgres release"
     {{docker}} buildx build \
         -t {{image}}:$TAG \
+        -f Dockerfile_gnu \
         --platform linux/amd64,linux/arm64 \
         --network host \
         --build-arg="IMAGE={{builder_image}}" \
