@@ -71,10 +71,10 @@ apt update
 apt install -y build-essential checkinstall zlib1g-dev vim
 rm -rf /var/lib/apt/lists/*
 
-curl -LO https://github.com/openssl/openssl/releases/download/openssl-3.3.1/openssl-3.3.1.tar.gz
-tar xvf openssl-3.3.1.tar.gz
+curl -LO https://github.com/openssl/openssl/releases/download/openssl-3.3.2/openssl-3.3.2.tar.gz
+tar xvf openssl-3.3.2.tar.gz
 
-cd openssl-3.3.1
+cd openssl-3.3.2
 ./config
 make
 make test
