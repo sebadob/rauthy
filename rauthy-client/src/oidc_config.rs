@@ -34,7 +34,7 @@ pub enum ClaimMapping {
     Any,
     /// Return true if one of the `JwtClaim` is in the role or group, based on the `JwtClaimTyp`.
     Or(Vec<JwtClaim>),
-    /// Return true if all of the `JwtClaim` is in the role or group, based on the `JwtClaimTyp`.
+    /// Return true if all the `JwtClaim`s are in the role or group, based on the `JwtClaimTyp`.
     And(Vec<JwtClaim>),
     /// It doesn't matter which role or group a user have, it returns always `false`.
     None,

@@ -2300,8 +2300,9 @@ dependencies = [
 
 [[package]]
 name = "hiqlite"
-version = "0.1.0"
-source = "git+https://github.com/sebadob/hiqlite.git#0ecfd12b999d381ce2a8264a0245425333d7a3e8"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f99a4b07e39b212c595b44010e55a609867b146d95a7bafe99655315594bf618"
 dependencies = [
  "axum",
  "axum-server",
@@ -3413,9 +3414,9 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "openraft"
-version = "0.9.15"
+version = "0.9.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f633802689f2dcce7c4be2419b657aeb3d579f92f93a99cb92985aa8f21d64c"
+checksum = "0f04a57ce93dda863229cc4ec5598f5c6d7e97cf71464c14e8488f763e0bcbb6"
 dependencies = [
  "anyerror",
  "byte-unit",
