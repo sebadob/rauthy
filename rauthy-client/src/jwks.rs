@@ -29,26 +29,6 @@ impl JwksMsg {
     }
 }
 
-// /// The struct for the `.well-known` endpoint for automatic OIDC discovery
-// #[derive(Clone, Debug, Deserialize)]
-// struct WellKnown {
-//     pub issuer: String,
-//     pub authorization_endpoint: String,
-//     pub token_endpoint: String,
-//     pub introspection_endpoint: String,
-//     pub userinfo_endpoint: String,
-//     pub end_session_endpoint: String,
-//     pub jwks_uri: String,
-//     pub grant_types_supported: Vec<String>,
-//     pub response_types_supported: Vec<String>,
-//     pub id_token_signing_alg_values_supported: Vec<String>,
-//     pub token_endpoint_auth_signing_alg_values_supported: Vec<String>,
-//     pub claims_supported: Vec<String>,
-//     pub scopes_supported: Vec<String>,
-//     pub code_challenge_methods_supported: Vec<String>,
-//     pub dpop_signing_alg_values_supported: Vec<String>,
-// }
-
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub(crate) enum JwkKeyPairAlg {
     RS256,
