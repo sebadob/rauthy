@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM rust:1.81.0-bookworm AS rust
+FROM rust:1.81.0-bookworm AS rust
 
 # docker buildx args automatically available
 ARG BUILDPLATFORM
@@ -21,6 +21,7 @@ apt install -y npm
 apt-get clean
 
 rustup component add clippy
+rustup component add rustfmt
 
 cargo install just
 cargo install sd
