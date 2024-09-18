@@ -1,0 +1,43 @@
+FROM --platform=$BUILDPLATFORM rust:1.81.0-bookworm AS rust
+
+# docker buildx args automatically available
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
+WORKDIR /home
+
+RUN <<EOF
+set -e
+
+if [[ "$CARGO_HOME" != "/usr/local/cargo" ]]; then
+  echo "CARGO_HOME has been changed to $CARGO_HOME -> update `container_cargo_registry` in justfile"
+  exit 1
+fi
+
+apt update
+apt install -y npm
+apt-get clean
+
+rustup component add clippy
+rustup component add rustfmt
+
+cargo install just
+cargo install sd
+cargo install mdbook
+cargo install mdbook-admonish
+cargo install sqlx-cli --no-default-features --features rustls,sqlite,postgres
+
+# we will mount the registry from the host later on
+rm -rf $CARGO_HOME/registry
+rm -rf /usr/local/rustup/tmp
+
+# avoid access rights conflicts for different users later on
+chmod -R 777 $CARGO_HOME
+
+EOF
+
+WORKDIR /work
+
+CMD ["/bin/bash"]
