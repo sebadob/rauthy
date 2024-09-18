@@ -10,15 +10,13 @@ docker := `echo ${DOCKER:-docker}`
 map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
 cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
 
-arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
-
 builder_image := "ghcr.io/sebadob/rauthy-builder"
 builder_tag_date := "20240918"
 
 container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_test_backend := "rauthy-test-backend"
-container_cargo_registry := "/home/.cargo/registry"
+container_cargo_registry := "/usr/local/cargo/registry"
 
 db_url_sqlite := "sqlite:data/rauthy.db"
 db_url_postgres := "postgresql://rauthy:123SuperSafe@$DEV_HOST:5432/rauthy"
@@ -31,6 +29,15 @@ db_url_postgres := "postgresql://rauthy:123SuperSafe@$DEV_HOST:5432/rauthy"
 default:
     @just --list
 
+_debug-container:
+    {{docker}} run --rm -it \
+      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
+      -v {{invocation_directory()}}/:/work/ \
+      {{map_docker_user}} \
+      -e DATABASE_URL={{db_url_sqlite}} \
+      --net host \
+      {{builder_image}}:{{builder_tag_date}}
+
 _run +args:
     @{{docker}} run --rm -it \
       -v {{cargo_home}}/registry:{{container_cargo_registry}} \
@@ -39,7 +46,7 @@ _run +args:
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
       --name rauthy \
-      {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
+      {{builder_image}}:{{builder_tag_date}} {{args}}
 
 _run-pg +args:
     @{{docker}} run --rm -it \
@@ -49,7 +56,7 @@ _run-pg +args:
       -e DATABASE_URL={{db_url_postgres}} \
       --net host \
       --name rauthy-postgres \
-      {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
+      {{builder_image}}:{{builder_tag_date}} {{args}}
 
 _run-ui +args:
     @{{docker}} run --rm -it \
@@ -60,7 +67,7 @@ _run-ui +args:
       --net host \
       -w/work/frontend \
       --name rauthy-ui \
-      {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
+      {{builder_image}}:{{builder_tag_date}} {{args}}
 
 _run-bg +args:
     @{{docker}} run --rm -d \
@@ -70,7 +77,7 @@ _run-bg +args:
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
       --name {{container_test_backend}} \
-      {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
+      {{builder_image}}:{{builder_tag_date}} {{args}}
 
 _run-bg-pg +args:
     @{{docker}} run --rm -d \
@@ -80,7 +87,7 @@ _run-bg-pg +args:
       -e DATABASE_URL={{db_url_postgres}} \
       --net host \
       --name {{container_test_backend}} \
-      {{builder_image}}:{{arch}}-{{builder_tag_date}} {{args}}
+      {{builder_image}}:{{builder_tag_date}} {{args}}
 
 # start the backend containers for local dev
 @backend:
@@ -281,7 +288,7 @@ test-backend: test-backend-stop migrate prepare
       -e DATABASE_URL={{db_url_sqlite}} \
       --net host \
       --name {{container_test_backend}} \
-      {{builder_image}}:{{arch}}-{{builder_tag_date}} cargo run test
+      {{builder_image}}:{{builder_tag_date}} cargo run test
 
 
 # stops a possibly running test backend that may have spawned in the background for integration tests
@@ -431,6 +438,7 @@ build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
         --build-arg="IMAGE_DATE={{builder_tag_date}}" \
         --build-arg="FEATURES=default" \
         --build-arg="MODE={{mode}}" \
+        --no-cache \
         --push \
         .
 
@@ -453,6 +461,7 @@ build mode="release" no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
         --build-arg="IMAGE_DATE={{builder_tag_date}}" \
         --build-arg="FEATURES=postgres" \
         --build-arg="MODE={{mode}}" \
+        --no-cache \
         --push \
         .
 
@@ -462,22 +471,10 @@ build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    {{docker}} pull ghcr.io/cross-rs/x86_64-unknown-linux-musl:edge
     {{docker}} buildx build \
-          -t {{image}}:amd64-$TODAY \
-          -f Dockerfile_builder \
-          --platform linux/amd64 \
-          --build-arg="IMAGE=ghcr.io/cross-rs/x86_64-unknown-linux-musl:edge" \
-          --no-cache \
-          --{{push}} \
-          .
-
-    {{docker}} pull ghcr.io/cross-rs/aarch64-unknown-linux-musl:edge
-    {{docker}} buildx build \
-          -t {{image}}:arm64-$TODAY \
-          -f Dockerfile_builder \
-          --platform linux/arm64 \
-          --build-arg="IMAGE=ghcr.io/cross-rs/aarch64-unknown-linux-musl:edge" \
+          -t {{image}}:$TODAY \
+          -f Dockerfile_builder_gnu \
+          --platform linux/amd64,linux/arm64 \
           --no-cache \
           --{{push}} \
           .

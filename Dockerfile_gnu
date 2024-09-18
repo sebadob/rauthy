@@ -1,0 +1,51 @@
+ARG IMAGE
+ARG IMAGE_DATE
+
+#FROM --platform=$BUILDPLATFORM $IMAGE:$TARGETARCH-$IMAGE_DATE AS builder
+FROM --platform=$BUILDPLATFORM $IMAGE:$IMAGE_DATE AS builder
+
+# docker buildx args automatically available
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
+ARG FEATURES="default"
+ARG MODE="release"
+
+RUN echo "Building on $BUILDPLATFORM for $TARGETOS/$TARGETARCH in $MODE mode" && sleep 3
+
+RUN mkdir -p out && mkdir empty
+
+COPY . .
+
+#RUN --mount=type=cache,target=/usr/local/cargo/registry <<EOF
+
+RUN <<EOF
+#!/bin/bash
+set -e
+
+if [ "release" = "$MODE" ]; then
+  cargo build --release --features $FEATURES
+else
+  cargo build --features $FEATURES
+fi
+
+mv target/$MODE/rauthy out/rauthy
+EOF
+
+#FROM scratch
+FROM --platform=$BUILDPLATFORM gcr.io/distroless/cc-debian12:nonroot
+
+WORKDIR /app
+
+COPY --from=builder /work/out/rauthy ./rauthy
+COPY --from=builder /work/empty ./data
+
+COPY --from=builder /work/tls/ca-chain.pem ./tls/ca-chain.pem
+COPY --from=builder /work/tls/cert-chain.pem ./tls/cert-chain.pem
+COPY --from=builder /work/tls/key.pem ./tls/key.pem
+
+COPY --from=builder /work/rauthy.deploy.cfg ./rauthy.cfg
+
+CMD ["/app/rauthy"]

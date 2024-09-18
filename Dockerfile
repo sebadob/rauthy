@@ -1,6 +1,7 @@
 ARG IMAGE
 ARG IMAGE_DATE
 
+#FROM --platform=$BUILDPLATFORM $IMAGE:$TARGETARCH-$IMAGE_DATE AS builder
 FROM --platform=$BUILDPLATFORM $IMAGE:$TARGETARCH-$IMAGE_DATE AS builder
 
 # docker buildx args automatically available
@@ -33,7 +34,7 @@ fi
 mv target/$(target)/$MODE/rauthy out/rauthy
 EOF
 
-FROM --platform=$TARGETPLATFORM scratch
+FROM --platform=$BUILDPLATFORM scratch
 
 ARG TARGET_USER="10001:10001"
 
