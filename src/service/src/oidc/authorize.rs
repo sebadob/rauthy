@@ -28,7 +28,7 @@ pub async fn post_authorize(
 ) -> Result<AuthStep, ErrorResponse> {
     let mut user = User::find_by_email(data, req_data.email)
         .await
-        .inspect_err(|err| {
+        .inspect_err(|_| {
             // The UI does not show the password input form when there is no user yet.
             // To prevent username enumeration, we should not add a login delay if a user does not
             // even exist, when the UI is in that phase where the user does not provide any
@@ -99,7 +99,7 @@ pub async fn post_authorize(
 
     // client validations
     let client = Client::find_maybe_ephemeral(data, req_data.client_id).await?;
-    client.validate_mfa(&user).inspect_err(|err| {
+    client.validate_mfa(&user).inspect_err(|_| {
         // in this case, we do not want to add a login delay
         // the user password was correct, we only need a passkey being added to the account
         *user_needs_mfa = true;

@@ -100,7 +100,6 @@ use utoipa::{openapi, OpenApi};
         oidc::get_session_info,
         oidc::get_session_xsrf,
         oidc::post_token,
-        oidc::post_token_info,
         oidc::post_token_introspect,
         oidc::post_validate_token,
         oidc::get_userinfo,
