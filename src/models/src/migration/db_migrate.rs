@@ -57,13 +57,13 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
 
         (
             format!(
-                "{issuer}/oidc/*,http://localhost:5173/*,https://{}:5173/*",
+                "{issuer}/oidc/callback,http://localhost:5173/*,https://{}:5173/*",
                 ip
             ),
             Some(origin),
         )
     } else {
-        (format!("{issuer}/*"), None)
+        (format!("{issuer}/oidc/callback"), None)
     };
 
     // we will actually skip non-mandatory values in the query below
