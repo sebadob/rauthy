@@ -63,15 +63,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
     // This sleep is just a test. On some terminals, the banner gets mixed up with the first other
     // logs. We don't care about Rauthys startup time being 1ms longer.
-    time::sleep(Duration::from_millis(1)).await;
+    time::sleep(Duration::from_micros(100)).await;
 
     // setup logging
     let mut test_mode = false;
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 && args[1] == "test" {
         test_mode = true;
-        dotenvy::from_filename("rauthy.test.cfg").ok();
-        dotenvy::dotenv().ok();
+        dotenvy::from_filename_override("rauthy.test.cfg").ok();
     } else {
         dotenvy::from_filename("rauthy.cfg").expect("'rauthy.cfg' error");
         dotenvy::dotenv_override().ok();
