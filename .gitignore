@@ -8,6 +8,7 @@ rauthy-client/examples/*/.idea
 .helix
 .lapce
 .env
+.test_pid
 data
 frontend/.next
 frontend/node_modules
@@ -16,6 +17,5 @@ static/v1
 templates/html/
 book/book
 out/
-.test_pid
 .npm_cache
 .sqlx
