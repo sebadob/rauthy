@@ -24,7 +24,7 @@
     let progress = tweened(data.exp, {
         duration: data.exp * 1000,
     })
-
+    
     // close this component automatically, when the request has expired
     onMount(() => {
         let timer = setTimeout(() => {
