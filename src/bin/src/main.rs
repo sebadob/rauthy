@@ -170,10 +170,6 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
         }
     };
 
-    // make sure, that all caches are cleared from possible inconsistent leftovers from the migrations
-    debug!("Clearing all caches");
-    DB::client().clear_cache_all().await?;
-
     // actix web
     let state = app_state.clone();
     let actix = thread::spawn(move || {
