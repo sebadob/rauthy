@@ -12,7 +12,7 @@ map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
 cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
 
 builder_image := "ghcr.io/sebadob/rauthy-builder"
-builder_tag_date := "20240919"
+builder_tag_date := "20240923"
 
 container_network := "rauthy-dev"
 container_mailcrab := "rauthy-mailcrab"
@@ -373,7 +373,7 @@ build no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
         just test-sqlite
     fi
 
-     make sure any big testing sqlite backups are cleaned up to speed up docker build
+    # make sure any big testing sqlite backups are cleaned up to speed up docker build
     rm -rf data/backup out
     mkdir -p out/empty
 
@@ -389,7 +389,7 @@ build no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
       {{map_docker_user}} \
       -e {{db_url_sqlite}} \
       --net host \
-      {{builder_image}}:amd64-{{builder_tag_date}} \
+      {{builder_image}}:{{builder_tag_date}} \
       cargo build --release --target x86_64-unknown-linux-gnu
     cp target/x86_64-unknown-linux-gnu/release/rauthy out/rauthy_amd64
 
@@ -424,7 +424,7 @@ build no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
       -w /work \
       {{map_docker_user}} \
       --net {{container_network}} \
-      {{builder_image}}:amd64-{{builder_tag_date}} \
+      {{builder_image}}:{{builder_tag_date}} \
       cargo build --release --features postgres --target x86_64-unknown-linux-gnu
     cp target/x86_64-unknown-linux-gnu/release/rauthy out/rauthy_amd64
 
@@ -447,22 +447,29 @@ build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
 
     # using bookworm instead of bullseye because of the newer, bug free gcc
     {{docker}} build \
-          -t {{image}}:amd64-$TODAY \
+          -t {{image}}:$TODAY \
           -f Dockerfile_builder \
           --build-arg="IMAGE=rust:1.81-bookworm" \
-          --no-cache \
           .
-
-    {{docker}} pull ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main
-    {{docker}} build \
-          -t {{image}}:arm64-$TODAY \
-          -f Dockerfile_builder \
-          --build-arg="IMAGE=ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main" \
-          --no-cache \
-          .
-
-    {{docker}} push {{image}}:amd64-$TODAY
-    {{docker}} push {{image}}:arm64-$TODAY
+    {{docker}} push {{image}}:$TODAY
+#    # using bookworm instead of bullseye because of the newer, bug free gcc
+#    {{docker}} build \
+#          -t {{image}}:amd64-$TODAY \
+#          -f Dockerfile_builder \
+#          --build-arg="IMAGE=rust:1.81-bookworm" \
+#          --no-cache \
+#          .
+#
+#    {{docker}} pull ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main
+#    {{docker}} build \
+#          -t {{image}}:arm64-$TODAY \
+#          -f Dockerfile_builder \
+#          --build-arg="IMAGE=ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main" \
+#          --no-cache \
+#          .
+#
+#    {{docker}} push {{image}}:amd64-$TODAY
+#    {{docker}} push {{image}}:arm64-$TODAY
 
 
 # makes sure everything is fine
