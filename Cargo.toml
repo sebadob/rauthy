@@ -93,7 +93,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_json_path = "0.6.7"
 serde_with = { version = "3.8.1", features = ["macros"] }
-spow = "0.3"
+spow = { version = "0.4", features = ["server"] }
 # pinned to 0.8.0 because 0.8.1 has been yanked
 sqlx = { version = "=0.8.0", features = ["macros", "migrate", "postgres", "runtime-tokio", "sqlite", "tls-rustls", "uuid"] }
 strum = { version = "0.26.3", features = ["derive"] }
