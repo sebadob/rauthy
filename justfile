@@ -43,7 +43,6 @@ setup:
     cargo install mdbook
     cargo install mdbook-admonish
     cargo install sqlx-cli --no-default-features --features rustls,sqlite,postgres
-    cargo install cross --git https://github.com/cross-rs/cross
 
     echo "npm install to set up the frontend"
     cd frontend/
@@ -393,7 +392,15 @@ build no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
       cargo build --release --target x86_64-unknown-linux-gnu
     cp target/x86_64-unknown-linux-gnu/release/rauthy out/rauthy_amd64
 
-    {{db_url_sqlite}} cross build --release --target aarch64-unknown-linux-gnu
+    {{docker}} run \
+      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
+      -v {{invocation_directory()}}/:/work/ \
+      -w /work \
+      {{map_docker_user}} \
+      -e {{db_url_sqlite}} \
+      --net host \
+      {{builder_image}}:{{builder_tag_date}} \
+      cargo build --release --target aarch64-unknown-linux-gnu
     cp target/aarch64-unknown-linux-gnu/release/rauthy out/rauthy_arm64
 
     {{docker}} buildx build \
@@ -428,7 +435,14 @@ build no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
       cargo build --release --features postgres --target x86_64-unknown-linux-gnu
     cp target/x86_64-unknown-linux-gnu/release/rauthy out/rauthy_amd64
 
-    cross build --release --features postgres --target aarch64-unknown-linux-gnu
+    {{docker}} run \
+      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
+      -v {{invocation_directory()}}/:/work/ \
+      -w /work \
+      {{map_docker_user}} \
+      --net {{container_network}} \
+      {{builder_image}}:{{builder_tag_date}} \
+      cargo build --release --features postgres --target aarch64-unknown-linux-gnu
     cp target/aarch64-unknown-linux-gnu/release/rauthy out/rauthy_arm64
 
     {{docker}} buildx build \

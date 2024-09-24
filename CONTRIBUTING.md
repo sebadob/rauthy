@@ -25,11 +25,13 @@ This document should help you to contribute to Rauthy and setting up your local 
 
 ### Prerequisites
 
-To work with this project, you need to have 3 things available on your system:
+To work with this project, you need to have a few things available on your system. Most tools can be installed
+automatically. As a prerequisite though, you need at least to have
 
-- BASH
-- docker
 - [just](https://github.com/casey/just)
+- a BASH shell
+- at least Rust v1.81
+- `npm`
 
 ### Initial Setup
 
@@ -38,7 +40,8 @@ checked queries for each of these. This means you will not be able to easily do 
 Instead, you will use [just](https://github.com/casey/just) for everything, which will handle all the additional
 stuff behind the scenes for you.
 
-After a fresh clone, you can type
+Because the initial setup requires a few tools and install steps, there is a `setup` just recipe which does all the
+work for you. After a fresh clone, you can type
 
 ```
 just
@@ -48,34 +51,26 @@ to see all available public recipes. Internal ones do exist as well, but you mos
 
 Rauthy is using compile-time checked templating with [askama](https://crates.io/crates/askama) and the UI will be
 compiled into static HTML files during the build process. To make the initial database migrations (and therefore the
-compiler) happy, the first thing we need to do is to build the HTML files. This is kind of a chicken and egg problem.
+compiler) happy, the first thing we need to do is to build the HTML files. This is kind of a chicken-and-egg problem.
+You also need a local dev mail server to receive E-Mails / Events and a Postgres instance.
 
-The first thing you should do is
-
-```
-just npm-install
-```
-
-which will install all dependencies from inside a container to build and run the Svelte UI, followed by a
+All of this setup is done automatically by simply calling
 
 ```
-just build-ui
+just setup
 ```
 
-which will build the UI into static HTML files and populate the `templates/html` folder to make askama happy.
+The `setup` recipe will install all necessary tools and dependencies:
 
-The next thing is to start the backend containers with
+- `just`
+- `sd`
+- `mdbook` + `mdbook-admonish`
+- `sqlx-cli`
 
-```
-just backend
-```
+It will then compile the frontend to static HTML to make the templating engine happy.  
+Afterward, it will create a docker network named `rauthy-dev` and start `mailcrab` and `postgres` containers.
 
-which will start a [mailcrab](https://github.com/tweedegolf/mailcrab) container, so you can receive E-Mails from Rauthy
-without the need to set up any additional SMTP server. You can access the UI via `http://<your_host_ip>:1080`.
-It will also start a Postgres database in another container. You can access it with the user `rauthy` and default
-password `123SuperSafe`, but the access is already pre-configured.  
-This command will also apply all existing database migrations to both a local SQLite file and the newly started
-Postgres container. This is the reason we needed to build the UI files beforehand.
+As the last step, it will do a `cargo build` to make sure there are not compile errors.
 
 ### Config
 
@@ -146,6 +141,47 @@ The default admin and password with `DEV_MODE=true` are always:
 admin@localhost.de
 123SuperSafe
 ```
+
+### Dev Backend
+
+Everything necessary for local dev is handled by the `just setup` step above. However, o start the test / dev backend
+after you have stopped it maybe, you can
+
+```
+just backend-start
+```
+
+which will start a [mailcrab](https://github.com/tweedegolf/mailcrab) container, so you can receive E-Mails from Rauthy
+without the need to set up any additional SMTP server. You can access the UI via `http://<your_host_ip>:1080`.
+It will also start a Postgres database in another container. You can access it with the user `rauthy` and default
+password `123SuperSafe`, but the access is already pre-configured.
+
+This command will also apply all existing database migrations to both a local SQLite file and the newly started
+Postgres container. This is the reason we needed to build the UI files beforehand.
+
+### Rebuilding the UI
+
+If you are working with the UI, you need to
+
+```
+just run
+``` 
+
+to start the backend, and do another
+
+```
+just run ui
+```
+
+in another terminal to start the `npm` dev server. The UI will then be available on port `5173` during local
+development. To test the UI served via the backend after you are finished, you can
+
+```
+just build-ui
+```
+
+which will build the UI into static HTML files and populate the `templates/html` folder to make the `askama`
+templating engine happy.
 
 ## Before Submitting a PR
 
