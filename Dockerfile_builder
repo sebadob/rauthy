@@ -2,6 +2,7 @@ ARG IMAGE
 
 FROM $IMAGE AS openssl
 
+ENV DEBIAN_FRONTEND=noninteractive
 ENV LD_LIBRARY_PATH="${PATH}:/usr/local/lib64"
 ENV PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig"
 ENV MAKEFLAGS="-j32"
@@ -35,6 +36,7 @@ EOF
 
 FROM $IMAGE
 
+ENV DEBIAN_FRONTEND=noninteractive
 ENV PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig
 ENV LD_LIBRARY_PATH="${PATH}:/usr/local/lib64"
 ENV PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig"
