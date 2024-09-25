@@ -91,6 +91,14 @@ struct HealthResponse {
 
 ### Changes
 
+#### ZH-Hans Translations
+
+Translations for `ZH-Hans` have been added to Rauthy. These exist in all places other than the Admin UI, just like the
+existing ones already.
+
+[ec6c2c3](https://github.com/sebadob/rauthy/commit/ec6c2c3bb4e8b41fa0cd2a60ccc4043d051c17a5)  
+[fcba3c7](https://github.com/sebadob/rauthy/commit/fcba3c7cd7bce7e15d911c0f9d7f55f852e7c424)
+
 #### Migration to `ruma`
 
 To send out Matrix notifications, Rauthy was using the `matrix-sdk` up until now. This crate however comes with a huge
@@ -132,7 +140,31 @@ fine, but it has some issues I wanted to get rid of.
 I started the [Hiqlite](https://github.com/sebadob/hiqlite) project some time ago to get rid of these things and have
 additional features. It is outsourced to make it generally usable in other contexts as well.
 
+This first step will also make it possible to only have a single container image in the future without the need to
+decide between Postgres and SQLite via the tag.
+
 [0919767](https://github.com/sebadob/rauthy/commit/09197670e6491f83a8b739c0f195d4b842abe771)
+
+#### Local Development
+
+The way the container images are built, the builder for the images is built and also the whole `justfile` have been
+changed quite a bit. This will not concern you if you are not working with the code.
+
+The way of wrapping and executing everything inside a container, even during local dev, became tedious to maintain,
+especially for different architectures and I wanted to get rid of the burden of maintenance, because it did not provide
+that many benefits. Postgres and Mailcrab will of course still run in containers, but the code itself for backend and
+frontend will be built and executed locally.
+
+The reason I started doing all of this inside containers beforehand was to not need a few additional tool installed
+locally to make everything work, but the high maintenance was not worth it in the end. This change now reduced the
+size of the Rauthy builder image from 2x ~4.5GB down to 1x ~1.9GB, which already is a big improvement. Additionally,
+you don't even need to download the builder image at all when you are not creating a production build, while beforehand
+you always needed the builder image in any case.
+
+To encounter the necessary dev tools installation and first time setup, I instead added a new `just` recipe called
+`setup` which will do everything necessary, as long as you have the prerequisites available (which you needed before
+as well anyway, apart from `npm`). This has been updated in the
+[CONTRIBUTING.md](https://github.com/sebadob/rauthy/blob/main/CONTRIBUTING.md).
 
 ### Bugfix
 
