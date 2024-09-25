@@ -238,7 +238,7 @@ pub async fn delete_provider_link(
     path = "/providers/minimal",
     tag = "providers",
     responses(
-        (status = 200, description = "OK", body = ProviderResponse),
+        (status = 200, description = "OK"),
     ),
 )]
 #[get("/providers/minimal")]
@@ -340,12 +340,7 @@ pub async fn get_provider_delete_safe(
     }
 }
 
-/// PUT upload an image / icon for an auth provider
-///
-/// The image can only be max 10MB in size and will be minified automatically.
-///
-/// **Permissions**
-/// - `rauthy_admin`
+/// GET the uploaded image an auth provider
 #[utoipa::path(
     get,
     path = "/providers/{id}/img",
