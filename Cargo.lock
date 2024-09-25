@@ -2300,8 +2300,9 @@ dependencies = [
 
 [[package]]
 name = "hiqlite"
-version = "0.2.0"
-source = "git+https://github.com/sebadob/hiqlite.git#406c4085f7046a481607cb1d69963f0a9f5c4008"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfb166eb6265081e066226bad9ae7524299625958769d4b29759f28d17649e60"
 dependencies = [
  "axum",
  "axum-server",
