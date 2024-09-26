@@ -99,6 +99,32 @@ existing ones already.
 [ec6c2c3](https://github.com/sebadob/rauthy/commit/ec6c2c3bb4e8b41fa0cd2a60ccc4043d051c17a5)  
 [fcba3c7](https://github.com/sebadob/rauthy/commit/fcba3c7cd7bce7e15d911c0f9d7f55f852e7c424)
 
+#### More stable health checks in HA
+
+For HA deployments, the `/health` checks are more stable now.  
+The quorum is also checked, which will detect network segmentations. To achieve this and still make it possible to use
+the health check in situations like Kubernetes rollouts, a delay has been added, which will simply always return `true`
+after a fresh app start. This initial delay make it possible to use the endpoint inside Kubernetes and will not prevent
+from scheduling the other nodes. This solves a chicken-and-egg problem.
+
+You usually do not need to care about it, but this value can of course be configured:
+
+```
+# Defines the time in seconds after which the `/health` endpoint 
+# includes HA quorum checks. The initial delay solves problems 
+# like Kubernetes StatefulSet starts that include the health 
+# endpoint in the scheduling routine. In these cases, the scheduler 
+# will not start other Pods if the first does not become healthy.
+# 
+# This is a chicken-and-egg problem which the delay solves.
+# There is usually no need to adjust this value.
+#
+# default: 30
+#HEALTH_CHECK_DELAY_SECS=30
+```
+
+[5d1ddca](https://github.com/sebadob/rauthy/commit/5d1ddcac2222b77f9a38baf93b44f896f5ba7933)
+
 #### Migration to `ruma`
 
 To send out Matrix notifications, Rauthy was using the `matrix-sdk` up until now. This crate however comes with a huge
