@@ -1,7 +1,7 @@
 use crate::entity::api_keys::{AccessGroup, AccessRights, ApiKey};
 use crate::entity::sessions::{Session, SessionState};
 use actix_web::{web, HttpRequest};
-use rauthy_common::constants::{ADMIN_FORCE_MFA, ROLE_ADMIN};
+use rauthy_common::constants::{ADMIN_FORCE_MFA, RAUTHY_ADMIN_ROLE};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::trace;
 
@@ -45,7 +45,7 @@ impl Principal {
 
     #[inline(always)]
     pub fn is_admin(&self) -> bool {
-        self.roles.contains(&*ROLE_ADMIN)
+        self.roles.contains(&*RAUTHY_ADMIN_ROLE)
     }
 
     #[inline(always)]
