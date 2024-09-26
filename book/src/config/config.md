@@ -408,6 +408,18 @@ CACHE_USERS_LIFESPAN=28800
 # !!! USE WITH CARE !!!
 #MIGRATE_DB_FROM=sqlite:data/rauthy.db
 
+# Defines the time in seconds after which the `/health` endpoint 
+# includes HA quorum checks. The initial delay solves problems 
+# like Kubernetes StatefulSet starts that include the health 
+# endpoint in the scheduling routine. In these cases, the scheduler 
+# will not start other Pods if the first does not become healthy.
+# 
+# This is a chicken-and-egg problem which the delay solves.
+# There is usually no need to adjust this value.
+#
+# default: 30
+#HEALTH_CHECK_DELAY_SECS=30
+
 # Disables the housekeeping schedulers (default: false)
 #SCHED_DISABLE=true
 
