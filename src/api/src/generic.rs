@@ -10,8 +10,8 @@ use rauthy_api_types::generic::{
     PasswordPolicyRequest, PasswordPolicyResponse, SearchParams, SearchParamsType,
 };
 use rauthy_common::constants::{
-    APPLICATION_JSON, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, IDX_LOGIN_TIME, RAUTHY_VERSION,
-    SUSPICIOUS_REQUESTS_BLACKLIST, SUSPICIOUS_REQUESTS_LOG,
+    APPLICATION_JSON, APP_START, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEALTH_CHECK_DELAY_SECS,
+    IDX_LOGIN_TIME, RAUTHY_VERSION, SUSPICIOUS_REQUESTS_BLACKLIST, SUSPICIOUS_REQUESTS_LOG,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::ErrorResponse;
@@ -47,9 +47,9 @@ use rauthy_models::templates::{
 use rauthy_service::{encryption, suspicious_request_block};
 use semver::Version;
 use std::borrow::Cow;
-use std::ops::Add;
+use std::ops::{Add, Sub};
 use std::str::FromStr;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 #[get("/")]
 pub async fn get_index(
@@ -614,18 +614,26 @@ pub async fn post_update_language(
 )]
 #[get("/health")]
 pub async fn get_health(data: web::Data<AppState>) -> impl Responder {
-    let db_healthy = is_db_alive(&data.db).await;
-    let cache_healthy = DB::client().is_healthy_cache().await.is_ok();
-
-    let body = HealthResponse {
-        db_healthy,
-        cache_healthy,
-    };
-
-    if db_healthy && cache_healthy {
-        HttpResponse::Ok().json(body)
+    if Utc::now().sub(*APP_START).num_seconds() < *HEALTH_CHECK_DELAY_SECS as i64 {
+        info!("Early health check within the HEALTH_CHECK_DELAY_SECS timeframe - returning true");
+        HttpResponse::Ok().json(HealthResponse {
+            db_healthy: true,
+            cache_healthy: true,
+        })
     } else {
-        HttpResponse::InternalServerError().json(body)
+        let db_healthy = is_db_alive(&data.db).await;
+        let cache_healthy = DB::client().is_healthy_cache().await.is_ok();
+
+        let body = HealthResponse {
+            db_healthy,
+            cache_healthy,
+        };
+
+        if db_healthy && cache_healthy {
+            HttpResponse::Ok().json(body)
+        } else {
+            HttpResponse::InternalServerError().json(body)
+        }
     }
 }
 
