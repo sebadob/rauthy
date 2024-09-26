@@ -1,6 +1,7 @@
 use crate::utils::build_trusted_proxies;
 use crate::DbType;
 use actix_web::http::Uri;
+use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::env;
@@ -16,7 +17,6 @@ pub enum CookieMode {
 }
 
 pub const RAUTHY_VERSION: &str = env!("CARGO_PKG_VERSION");
-
 pub const CONTENT_TYPE_WEBP: &str = "image/webp";
 pub const HEADER_DPOP_NONCE: &str = "DPoP-Nonce";
 pub const HEADER_ALLOW_ALL_ORIGINS: (&str, &str) = ("access-control-allow-origin", "*");
@@ -88,6 +88,8 @@ pub const IDX_WEBAUTHN: &str = "webauthn_";
 
 // TODO drop `lazy_static` and use rust 1.80 built-in features
 lazy_static! {
+    pub static ref APP_START: DateTime<Utc> = Utc::now();
+
     pub static ref CACHE_TTL_AUTH_CODE: Option<i64> = Some(300 + *WEBAUTHN_REQ_EXP as i64);
     pub static ref CACHE_TTL_DEVICE_CODE: Option<i64> = Some(*DEVICE_GRANT_CODE_LIFETIME as i64);
     pub static ref CACHE_TTL_DYN_CLIENT: Option<i64> = Some(*DYN_CLIENT_RATE_LIMIT_SEC as i64);
@@ -102,9 +104,10 @@ lazy_static! {
     pub static ref CACHE_TTL_WEBAUTHN_DATA: Option<i64> = Some(*WEBAUTHN_DATA_EXP as i64);
 
     pub static ref RAUTHY_ADMIN_ROLE: String = "rauthy_admin".to_string();
+
     pub static ref DATABASE_URL: String = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
     pub static ref DB_TYPE: DbType = DbType::from_str(&DATABASE_URL).unwrap();
-    pub static ref ROLE_ADMIN: String = "rauthy_admin".to_string();
+
     pub static ref DEV_MODE: bool = env::var("DEV_MODE")
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
@@ -186,6 +189,11 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("x-forwarded-user-given-name"));
     pub static ref AUTH_HEADER_MFA: String = env::var("AUTH_HEADER_MFA")
         .unwrap_or_else(|_| String::from("x-forwarded-user-mfa"));
+
+     pub static ref HEALTH_CHECK_DELAY_SECS: u16 = env::var("HEALTH_CHECK_DELAY_SECS")
+        .unwrap_or_else(|_| "30".to_string())
+        .parse::<u16>()
+        .expect("HEALTH_CHECK_DELAY_SECS cannot be parsed to u16 - bad format");
 
     pub static ref COOKIE_MODE: CookieMode = {
         let var = env::var("COOKIE_MODE").unwrap_or_else(|_| "host".to_string());
