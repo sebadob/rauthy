@@ -17,7 +17,7 @@ use rauthy_common::constants::{
     ADMIN_FORCE_MFA, APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_EPHEMERAL_CLIENT,
     DYN_CLIENT_DEFAULT_TOKEN_LIFETIME, DYN_CLIENT_SECRET_AUTO_ROTATE, ENABLE_EPHEMERAL_CLIENTS,
     EPHEMERAL_CLIENTS_ALLOWED_FLOWS, EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA,
-    PROXY_MODE, RAUTHY_VERSION,
+    PROXY_MODE, RAUTHY_VERSION, ORIGIN_SCHEME_ACCEPT_ANY,
 };
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -1118,7 +1118,7 @@ pub fn is_origin_external<'a>(
             ListenScheme::UnixHttps => scheme == "https",
         }
     };
-    if !scheme_ok {
+    if !scheme_ok && !*ORIGIN_SCHEME_ACCEPT_ANY {
         warn!(pub_url, "Not matching scheme for HttpHeader::ORIGIN");
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
