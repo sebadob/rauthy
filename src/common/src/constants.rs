@@ -229,10 +229,11 @@ lazy_static! {
         };
         format!("{}://{}", scheme, *PUB_URL)
     };
-    pub static ref ORIGIN_SCHEME_ACCEPT_ANY: bool = env::var("ORIGIN_SCHEME_ACCEPT_ANY")
-        .unwrap_or_else(|_| String::from("false"))
-        .parse::<bool>()
-        .expect("ORIGIN_SCHEME_ACCEPT_ANY cannot be parsed to bool - bad format");
+    pub static ref ADDITIONAL_ALLOWED_ORIGIN_SCHEMES: Vec<String> = env::var("ADDITIONAL_ALLOWED_ORIGIN_SCHEMES")
+        .unwrap_or_else(|_| String::from(""))
+        .split(' ')
+        .map(|scheme| scheme.to_string())
+        .collect();
 
     pub static ref PROVIDER_CALLBACK_URI: String = {
         let listen_scheme = env::var("LISTEN_SCHEME");
