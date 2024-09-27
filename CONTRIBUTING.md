@@ -57,7 +57,6 @@ You also need a local dev mail server to receive E-Mails / Events and a Postgres
 All of this setup is done automatically by simply calling
 
 ```
-just migrate
 just setup
 ```
 
