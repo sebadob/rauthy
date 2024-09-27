@@ -44,6 +44,9 @@ setup:
     cargo install mdbook-admonish
     cargo install sqlx-cli --no-default-features --features rustls,sqlite,postgres
 
+    echo "Creating SQLite database"
+    just migrate
+
     echo "npm install to set up the frontend"
     cd frontend/
     npm install
@@ -153,8 +156,7 @@ mailcrab-stop:
 # Starts mailcrab
 postgres-start:
     {{docker}} run -d \
-      -v {{invocation_directory()}}/postgres/init-script:/docker-entrypoint-initdb.d \
-      -v {{invocation_directory()}}/postgres/sql-scripts:/scripts/ \
+      -v {{invocation_directory()}}/postgres/sql-scripts:/docker-entrypoint-initdb.d \
       -e POSTGRES_PASSWORD=123SuperSafe \
       --net {{container_network}} \
       -p 5432:5432 \
