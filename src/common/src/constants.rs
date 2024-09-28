@@ -141,7 +141,15 @@ lazy_static! {
     pub static ref RE_LOWERCASE: Regex = Regex::new(r"^[a-z0-9-_/]{2,128}$").unwrap();
     pub static ref RE_LOWERCASE_SPACE: Regex = Regex::new(r"^[a-z0-9-_/\s]{2,128}$").unwrap();
     pub static ref RE_MFA_CODE: Regex = Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap();
-    pub static ref RE_ORIGIN: Regex = Regex::new(r"^(http|https)://[a-z0-9.:-]+$").unwrap();
+    pub static ref RE_ORIGIN: Regex = {
+        let additional_schemes = ADDITIONAL_ALLOWED_ORIGIN_SCHEMES.join("|");
+        let pattern = if additional_schemes.is_empty() {
+            r"^(http|https)://[a-z0-9.:-]+$".to_string()
+        } else {
+            format!("^(http|https|{})://[a-z0-9.:-]+$", additional_schemes)
+        };
+        Regex::new(&pattern).unwrap()
+    };
     pub static ref RE_PEM: Regex = Regex::new(r"^(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)$").unwrap();
     pub static ref RE_PHONE: Regex = Regex::new(r"^\+[0-9]{0,32}$").unwrap();
     // we have a pretty high upper limit for characters here just to be sure that even if
