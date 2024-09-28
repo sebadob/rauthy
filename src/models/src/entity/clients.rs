@@ -1161,7 +1161,7 @@ mod tests {
             secret_kid: None,
             redirect_uris: "".to_string(),
             post_logout_redirect_uris: None,
-            allowed_origins: Some("http://localhost:8081,http://localhost:8082".to_string()),
+            allowed_origins: Some("http://localhost:8081,http://localhost:8082,sample://localhost".to_string()),
             flows_enabled: "authorization_code,password".to_string(),
             access_token_alg: "EdDSA".to_string(),
             id_token_alg: "RS256".to_string(),
@@ -1298,6 +1298,12 @@ mod tests {
 
         let req = TestRequest::default()
             .insert_header((header::ORIGIN, "http://localhost:8083"))
+            .to_http_request();
+        let res = client.validate_origin(&req, &listen_scheme, pub_url);
+        assert!(res.is_err());
+
+        let req = TestRequest::default()
+            .insert_header((header::ORIGIN, "sample://localhost"))
             .to_http_request();
         let res = client.validate_origin(&req, &listen_scheme, pub_url);
         assert!(res.is_err());
