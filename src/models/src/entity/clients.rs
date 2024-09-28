@@ -1116,7 +1116,7 @@ pub fn is_origin_external<'a>(
             ListenScheme::HttpHttps => scheme == "http" || scheme == "https",
             ListenScheme::UnixHttp => scheme == "http",
             ListenScheme::UnixHttps => scheme == "https",
-        } || ADDITIONAL_ALLOWED_ORIGIN_SCHEMES.contains(&scheme.to_string()))
+        } || ADDITIONAL_ALLOWED_ORIGIN_SCHEMES.iter().any(|s| s.as_str() == scheme))
     };
     if !scheme_ok {
         warn!(pub_url, "Not matching scheme for HttpHeader::ORIGIN");
