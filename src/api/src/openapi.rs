@@ -238,7 +238,7 @@ use utoipa::{openapi, OpenApi};
             AppVersionResponse,
             BlacklistResponse,
             BlacklistedIp,
-            CsrfTokenResponse,
+            PasswordResetResponse,
             LoginTimeResponse,
             ClientResponse,
             DeviceCodeResponse,

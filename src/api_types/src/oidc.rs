@@ -1,4 +1,5 @@
 use crate::cust_validation::validate_vec_scopes;
+use crate::generic::PasswordPolicyResponse;
 use crate::sessions::SessionState;
 use actix_web::http::header;
 use actix_web::HttpRequest;
@@ -88,8 +89,9 @@ pub struct AuthCodeRequest {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
-pub struct CsrfTokenResponse {
+pub struct PasswordResetResponse {
     pub csrf_token: String,
+    pub password_policy: PasswordPolicyResponse,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
