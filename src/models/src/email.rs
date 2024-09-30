@@ -605,10 +605,20 @@ async fn conn_test_smtp_insecure(
             );
             Ok(conn)
         }
-        Ok(false) | Err(_) => {
+        Ok(false) => {
             error!(
                 "Could not connect to insecure SMTP relay on {}:{}",
                 smtp_url, port
+            );
+            Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                "Could not connect to localhost SMTP relay",
+            ))
+        }
+        Err(err) => {
+            error!(
+                "Could not connect to insecure SMTP relay on {}:{} -> {:?}",
+                smtp_url, port, err
             );
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
