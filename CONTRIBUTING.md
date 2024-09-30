@@ -36,7 +36,7 @@ automatically. As a prerequisite though, you need at least to have
 ### Initial Setup
 
 The internal setup of this project is a bit more complex because of support for different databases and compile-time
-checked queries for each of these. This means you will not be able to easily do something like `cargo run`.  
+checked queries for each of these. This means you will not be able to easily do something like `cargo run`.
 Instead, you will use [just](https://github.com/casey/just) for everything, which will handle all the additional
 stuff behind the scenes for you.
 
@@ -67,7 +67,7 @@ The `setup` recipe will install all necessary tools and dependencies:
 - `mdbook` + `mdbook-admonish`
 - `sqlx-cli`
 
-It will then compile the frontend to static HTML to make the templating engine happy.  
+It will then compile the frontend to static HTML to make the templating engine happy.
 Afterward, it will create a docker network named `rauthy-dev` and start `mailcrab` and `postgres` containers.
 
 As the last step, it will do a `cargo build` to make sure there are not compile errors.
@@ -99,14 +99,14 @@ Once prerequisites are met, the rest should be really simple:
 just run
 ```
 
-will start Rauthy with a SQLite backend serving the statically built HTML UI, all on port `8443` by default.  
+will start Rauthy with a SQLite backend serving the statically built HTML UI, all on port `8443` by default.
 If you want to work on the frontend too, execute in another terminal:
 
 ```
 just run ui
 ```
 
-which will make the Svelte UI in dev mode available via port `5173` on your machine.  
+which will make the Svelte UI in dev mode available via port `5173` on your machine.
 There is only one thing about the UI in dev mode: The way the static file adapter from svelte is set up right now,
 you will not be able to access http://localhost:5173/auth/v1, you actually would need to append `/index` here once.
 The rest works just the same and as expected: http://localhost:5173/auth/v1/index
@@ -126,7 +126,7 @@ to point back to the UI in dev mode.
 
 #### Note
 
-The whole dev setup and pipelines have gotten a full rework just recently.  
+The whole dev setup and pipelines have gotten a full rework just recently.
 It should be working right away (hopefully), but I am pretty sure that there are still some rough edges in some cases.
 Please let me know if you have problems somewhere.
 
@@ -165,7 +165,7 @@ If you are working with the UI, you need to
 
 ```
 just run
-``` 
+```
 
 to start the backend, and do another
 

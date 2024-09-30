@@ -17,7 +17,7 @@ use rauthy_common::constants::{
     ADMIN_FORCE_MFA, APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_EPHEMERAL_CLIENT,
     DYN_CLIENT_DEFAULT_TOKEN_LIFETIME, DYN_CLIENT_SECRET_AUTO_ROTATE, ENABLE_EPHEMERAL_CLIENTS,
     EPHEMERAL_CLIENTS_ALLOWED_FLOWS, EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA,
-    PROXY_MODE, RAUTHY_VERSION,
+    ADDITIONAL_ALLOWED_ORIGIN_SCHEMES, PROXY_MODE, RAUTHY_VERSION,
 };
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -1110,13 +1110,13 @@ pub fn is_origin_external<'a>(
     let scheme_ok = if *PROXY_MODE && scheme == "https" {
         true
     } else {
-        match listen_scheme {
+        (match listen_scheme {
             ListenScheme::Http => scheme == "http",
             ListenScheme::Https => scheme == "https",
             ListenScheme::HttpHttps => scheme == "http" || scheme == "https",
             ListenScheme::UnixHttp => scheme == "http",
             ListenScheme::UnixHttps => scheme == "https",
-        }
+        } || ADDITIONAL_ALLOWED_ORIGIN_SCHEMES.iter().any(|s| s.as_str() == scheme))
     };
     if !scheme_ok {
         warn!(pub_url, "Not matching scheme for HttpHeader::ORIGIN");
@@ -1161,7 +1161,7 @@ mod tests {
             secret_kid: None,
             redirect_uris: "".to_string(),
             post_logout_redirect_uris: None,
-            allowed_origins: Some("http://localhost:8081,http://localhost:8082".to_string()),
+            allowed_origins: Some("http://localhost:8081,http://localhost:8082,sample://localhost".to_string()),
             flows_enabled: "authorization_code,password".to_string(),
             access_token_alg: "EdDSA".to_string(),
             id_token_alg: "RS256".to_string(),
@@ -1298,6 +1298,12 @@ mod tests {
 
         let req = TestRequest::default()
             .insert_header((header::ORIGIN, "http://localhost:8083"))
+            .to_http_request();
+        let res = client.validate_origin(&req, &listen_scheme, pub_url);
+        assert!(res.is_err());
+
+        let req = TestRequest::default()
+            .insert_header((header::ORIGIN, "sample://localhost"))
             .to_http_request();
         let res = client.validate_origin(&req, &listen_scheme, pub_url);
         assert!(res.is_err());

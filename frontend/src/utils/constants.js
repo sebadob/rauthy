@@ -26,7 +26,7 @@ export const REGEX_API_KEY = /^[a-zA-Z0-9_/-]{2,24}$/gm;
 //     - some letters in Latin-1 Supplement
 //     - all of Katakana, CJK Unified Ideographs, CJK Unified Ideographs Ext A,
 //         CJK Radicals Supplement, Katakana Phonetic Extensions
-//     - most of Hiragana, CJK Compatibility Ideographs, 
+//     - most of Hiragana, CJK Compatibility Ideographs,
 //         Kangxi Radicals
 //     - a part of Halfwidth and Fullwidth Forms
 //   Unicode SMP and SIP planes are not included due to JavaScript regex limitations
@@ -38,7 +38,7 @@ export const REGEX_CLIENT_NAME = /^[a-zA-Z0-9À-ÿ\-\s\u3041-\u3096\u30A0-\u30FF
 export const REGEX_CONTACT = /^[a-zA-Z0-9+.@/:]{0,48}$/gm;
 export const REGEX_LOWERCASE_SPACE = /^[a-z0-9-_\/\s]{2,128}$/gm;
 export const REGEX_PROVIDER_SCOPE = /^[a-z0-9-_\/:\s]{0,128}$/gm;
-export const REGEX_ORIGIN = /^(http|https):\/\/[a-z0-9.:-]+$/m;
+export const REGEX_ORIGIN = /^[a-z0-9.:-]+:\/\/[a-z0-9.:-]+$/m;
 export const REGEX_PEM = /^(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+/=\n]+(-----END CERTIFICATE-----)$/gm;
 export const REGEX_ROLES = /^[a-z0-9\-_/:*]{2,64}$/gm;
 export const REGEX_URI = /^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]*$/gm;
