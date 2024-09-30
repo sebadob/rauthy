@@ -91,6 +91,7 @@ use utoipa::{openapi, OpenApi};
 
         oidc::get_authorize,
         oidc::post_authorize,
+        oidc::post_authorize_refresh,
         oidc::get_certs,
         oidc::get_cert_by_kid,
         oidc::post_device_auth,
