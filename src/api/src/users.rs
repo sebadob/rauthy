@@ -3,8 +3,8 @@ use actix_web::http::header::{ACCEPT, LOCATION};
 use actix_web::http::StatusCode;
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
 use actix_web_validator::{Json, Query};
-use rauthy_api_types::generic::PaginationParams;
-use rauthy_api_types::oidc::CsrfTokenResponse;
+use rauthy_api_types::generic::{PaginationParams, PasswordPolicyResponse};
+use rauthy_api_types::oidc::PasswordResetResponse;
 use rauthy_api_types::users::{
     DeviceRequest, DeviceResponse, MfaPurpose, NewUserRegistrationRequest, NewUserRequest,
     PasskeyResponse, PasswordResetRequest, RequestResetRequest, UpdateUserRequest,
@@ -585,7 +585,7 @@ pub async fn get_user_email_confirm(
     path = "/users/{id}/reset/{reset_id}",
     tag = "users",
     responses(
-        (status = 200, description = "Ok", body = CsrfTokenResponse),
+        (status = 200, description = "Ok", body = PasswordResetResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
@@ -608,11 +608,22 @@ pub async fn get_user_password_reset(
     match password_reset::handle_get_pwd_reset(&data, req, user_id, reset_id, no_html).await {
         Ok((content, cookie)) => {
             if no_html {
+                let password_policy = match PasswordPolicy::find(&data).await {
+                    Ok(policy) => PasswordPolicyResponse::from(policy),
+                    Err(err) => {
+                        let colors = ColorEntity::find_rauthy(&data).await.unwrap_or_default();
+                        let status = err.status_code();
+                        let body = Error3Html::build(&colors, &lang, status, Some(err.message));
+                        return ErrorHtml::response(body, status);
+                    }
+                };
+
                 HttpResponse::Ok()
                     .cookie(cookie)
                     .insert_header(HEADER_JSON)
-                    .json(CsrfTokenResponse {
+                    .json(PasswordResetResponse {
                         csrf_token: content,
+                        password_policy,
                     })
             } else {
                 HttpResponse::Ok()
