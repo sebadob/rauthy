@@ -142,6 +142,7 @@ docker-buildx-setup:
 mailcrab-start:
     {{docker}} run -d \
       --net {{container_network}} \
+      -p 1025:1025 \
       -p 1080:1080 \
       --name {{container_mailcrab}} \
       --restart unless-stopped \
