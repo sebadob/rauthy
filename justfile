@@ -44,9 +44,6 @@ setup:
     cargo install mdbook-admonish
     cargo install sqlx-cli --no-default-features --features rustls,sqlite,postgres
 
-    echo "Creating SQLite database"
-    just migrate
-
     echo "npm install to set up the frontend"
     cd frontend/
     npm install
@@ -62,6 +59,7 @@ setup:
 
     echo "Starting Postgres and Mailcrab containers"
     just backend-start
+    just migrate
 
     {{db_url_sqlite}} cargo build
 
