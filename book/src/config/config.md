@@ -1030,6 +1030,14 @@ PROXY_MODE=false
 #192.168.14.0/24
 #"
 
+# To bring support for applications using deep-linking, you can set custom URL 
+# schemes to be accepted when present in the `Origin` header. For instance, a
+# Tauri app would set `tauri://` instead of `https://`.
+#
+# Provide the value as a space separated list of Strings, like for instance:
+# "tauri myapp"
+#ADDITIONAL_ALLOWED_ORIGIN_SCHEMES="tauri myapp"
+
 # To enable or disable the additional HTTP server to expose the /metrics endpoint
 # default: true
 #METRICS_ENABLE=true
