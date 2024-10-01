@@ -1,4 +1,4 @@
-# UNIX Doamin Sockets
+# UNIX Domain Sockets
 
 Rauthy supports listening on a UNIX domain socket. To enable this feature, you will need to specify the following configurations.
 
