@@ -99,6 +99,27 @@ existing ones already.
 [ec6c2c3](https://github.com/sebadob/rauthy/commit/ec6c2c3bb4e8b41fa0cd2a60ccc4043d051c17a5)  
 [fcba3c7](https://github.com/sebadob/rauthy/commit/fcba3c7cd7bce7e15d911c0f9d7f55f852e7c424)
 
+#### Support for deep-linking client apps like Tauri
+
+Up until v0.25, it was not possible to set the `Allowed Origin` for a client in a way that Rauthy would allow access
+for instance from inside a Tauri app. The reason is that Tauri (and most probably others) do not set an HTTP / HTTPS
+scheme in the `Origin` header, but something like `tauri://`.
+
+Rauthy has now support for such situations with adjusted validation for the Origin values and a new config variable
+to allow specific, additional `Origin` schemes:
+
+```
+# To bring support for applications using deep-linking, you can set custom URL
+# schemes to be accepted when present in the `Origin` header. For instance, a
+# Tauri app would set `tauri://` instead of `https://`.
+#
+# Provide the value as a space separated list of Strings, like for instance:
+# "tauri myapp"
+ADDITIONAL_ALLOWED_ORIGIN_SCHEMES="tauri myapp"
+```
+
+[d52f76c](https://github.com/sebadob/rauthy/commit/d52f76c71b350a08bb67080e620b87bf55d00389)
+
 #### More stable health checks in HA
 
 For HA deployments, the `/health` checks are more stable now.  
