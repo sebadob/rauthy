@@ -59,10 +59,9 @@ touched again.
 
 ### Highly Available
 
-Even though it makes extensive use of caching, you can run it in HA mode. It uses its own embedded distributed HA cache
-called [redhac](https://crates.io/crates/redhac), which cares about cache eviction on remote hosts.
-You can choose between a *SQLite* for single instance deployments and a *Postgres*, if you need HA. MySQL support might
-come in the future.
+Even though it makes extensive use of caching, you can run it in HA mode. It creates its own embedded HA cache
+using [Hiqlite](https://github.com/sebadob/hiqlite). You can choose between a *SQLite* for single instance deployments
+and a *Postgres*, if you need HA.
 
 ### Admin UI + User Account Dashboard
 
