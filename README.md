@@ -192,7 +192,7 @@ the application yourself with docker on your localhost. Rauthy has pretty strict
 browsers treat `localhost` as being secure, therefore you should allow insecure cookies for testing locally:
 
 ```
-docker run --rm -e COOKIE_MODE=danger-insecure -p 8080:8080 ghcr.io/sebadob/rauthy:0.25.0-lite
+docker run --rm -e COOKIE_MODE=danger-insecure -p 8080:8080 ghcr.io/sebadob/rauthy:0.26.0-lite
 ```
 
 ## Contributing
