@@ -303,11 +303,11 @@ AUTH_HEADER_MFA=x-forwarded-user-mfa
 
 # Can be set to 'k8s' to try to split off the node id from the hostname
 # when Hiqlite is running as a StatefulSet inside Kubernetes.
-# Will be ignored if `HQL_NODE_ID_FROM=k8s`
 #HQL_NODE_ID_FROM=k8s
 
 # The node id must exist in the nodes and there must always be
 # at least a node with ID 1
+# Will be ignored if `HQL_NODE_ID_FROM=k8s`
 HQL_NODE_ID=1
 
 # All cluster member nodes.
@@ -329,7 +329,7 @@ HQL_NODES="
 # default: false
 HQL_LOG_STATEMENTS=true
 
-# Secrets for Raft internal authentication as well as for the API.
+# Secrets for Raft internal authentication as well as for the Hiqlite API.
 # These must be at least 16 characters long and you should provide
 # different ones for both variables.
 HQL_SECRET_RAFT=SuperSecureSecret1337
