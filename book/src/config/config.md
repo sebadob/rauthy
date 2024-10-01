@@ -1110,43 +1110,15 @@ PROXY_MODE=false
 
 ## CACHE TLS
 
-# Enable / disable TLS for the cache communication
-# (default: true)
-CACHE_TLS=true
+# If given, these keys / certificates will be used to establish
+# TLS connections between nodes.
+HQL_TLS_RAFT_KEY=tls/key.pem
+HQL_TLS_RAFT_CERT=tls/cert-chain.pem
+HQL_TLS_RAFT_DANGER_TLS_NO_VERIFY=true
 
-# The path to the server TLS certificate PEM file
-# default: tls/redhac.cert-chain.pem
-CACHE_TLS_SERVER_CERT=tls/cert-chain.pem
-# The path to the server TLS key PEM file
-# default: tls/redhac.key.pem
-CACHE_TLS_SERVER_KEY=tls/key.pem
-
-# The path to the client mTLS certificate PEM file. This is optional.
-#CACHE_TLS_CLIENT_CERT=tls/cert-chain.pem
-# The path to the client mTLS key PEM file. This is optional.
-#CACHE_TLS_CLIENT_KEY=tls/key.pem
-
-# If not empty, the PEM file from the specified location will be
-# added as the CA certificate chain for validating
-# the servers TLS certificate. This is optional.
-#CACHE_TLS_CA_SERVER=tls/ca-chain.pem
-# If not empty, the PEM file from the specified location will
-# be added as the CA certificate chain for validating
-# the clients mTLS certificate. This is optional.
-#CACHE_TLS_CA_CLIENT=tls/ca-chain.pem
-
-# The domain / CN the client should validate the certificate
-# against. This domain MUST be inside the
-# 'X509v3 Subject Alternative Name' when you take a look at
-# the servers certificate with the openssl tool.
-# default: redhac.local
-CACHE_TLS_CLIENT_VALIDATE_DOMAIN=redhac.local
-
-# Can be used if you need to overwrite the SNI when the
-# client connects to the server, for instance if you are
-# behind a loadbalancer which combines multiple certificates.
-# default: ""
-#CACHE_TLS_SNI_OVERWRITE=
+HQL_TLS_API_KEY=tls/key.pem
+HQL_TLS_API_CERT=tls/cert-chain.pem
+HQL_TLS_API_DANGER_TLS_NO_VERIFY=true
 
 #####################################
 ############# WEBAUTHN ##############
