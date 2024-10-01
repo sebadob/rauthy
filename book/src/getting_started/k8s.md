@@ -56,6 +56,12 @@ If you use SQLite, you can include the DATABASE_URL in the config, since it does
 never do this for Postgres!
 ```
 
+```admonish note
+I recommend to just always set `HQL_NODE_ID_FROM=k8s` when deploying a StatefulSet. This will parse the Raft NodeID 
+automatically from the K8s Pod / Hostname and you don't have to worry about the `HQL_NODE_ID`. For instance, a Pod
+named `rauthy-0` will be translated to `HQL_NODE_ID=1` automatically.
+```
+
 ### Create and apply secrets
 
 ```
@@ -85,6 +91,12 @@ stringData:
   # Special characters could cause problems in the connection
   # string.
   DATABASE_URL:
+
+  # Secrets for Raft internal authentication as well as for the Hiqlite API.
+  # These must be at least 16 characters long and you should provide
+  # different ones for both variables.
+  HQL_SECRET_RAFT:
+  HQL_SECRET_API:
 
   # You need to define at least one valid encryption key.
   # These keys are used in various places, like for instance
@@ -152,6 +164,19 @@ The `ENC_KEY_ID` would be
 d4d1a581
 ```
 
+You can generate safe values for both ´HQL_SECRET_RAFT` and `HQL_SECRET_API` in many ways. You can just provide a random
+alphanumeric value, which for instance:
+
+```
+cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48
+```
+
+or you can use the above `openssl` command again, even though Hiqlite does not need or utilize base64:
+
+```
+openssl rand -base64 48
+```
+
 ### Create and apply the stateful set
 
 ```
@@ -208,7 +233,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.25.0-lite
+          image: ghcr.io/sebadob/rauthy:0.26.0-lite
           imagePullPolicy: IfNotPresent
           securityContext:
             # User ID 10001 is actually built into the container at the creation for
@@ -223,18 +248,25 @@ spec:
             - containerPort: 8080
             - containerPort: 8443
           env:
-            #- name: CACHE_AUTH_TOKEN
-            #  valueFrom:
-            #    secretKeyRef:
-            #      name: rauthy-secrets
-            #      key: CACHE_AUTH_TOKEN
-
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: rauthy-secrets
                   key: DATABASE_URL
 
+            # You must set both Hiqlite secrets even for a single node deployment
+            - name: HQL_SECRET_RAFT
+              valueFrom:
+                secretKeyRef:
+                  name: rauthy-secrets
+                  key: HQL_SECRET_RAFT
+            - name: HQL_SECRET_API
+              valueFrom:
+                secretKeyRef:
+                  name: rauthy-secrets
+                  key: HQL_SECRET_API
+
+            # Encryption keys used for encryption in many places
             - name: ENC_KEYS
               valueFrom:
                 secretKeyRef:

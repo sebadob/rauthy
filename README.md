@@ -59,10 +59,9 @@ touched again.
 
 ### Highly Available
 
-Even though it makes extensive use of caching, you can run it in HA mode. It uses its own embedded distributed HA cache
-called [redhac](https://crates.io/crates/redhac), which cares about cache eviction on remote hosts.
-You can choose between a *SQLite* for single instance deployments and a *Postgres*, if you need HA. MySQL support might
-come in the future.
+Even though it makes extensive use of caching, you can run it in HA mode. It creates its own embedded HA cache
+using [Hiqlite](https://github.com/sebadob/hiqlite). You can choose between a *SQLite* for single instance deployments
+and a *Postgres*, if you need HA.
 
 ### Admin UI + User Account Dashboard
 
@@ -192,7 +191,7 @@ the application yourself with docker on your localhost. Rauthy has pretty strict
 browsers treat `localhost` as being secure, therefore you should allow insecure cookies for testing locally:
 
 ```
-docker run --rm -e COOKIE_MODE=danger-insecure -p 8080:8080 ghcr.io/sebadob/rauthy:0.25.0-lite
+docker run --rm -e COOKIE_MODE=danger-insecure -p 8080:8080 ghcr.io/sebadob/rauthy:0.26.0-lite
 ```
 
 ## Contributing

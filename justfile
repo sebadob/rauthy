@@ -23,10 +23,6 @@ file_test_pid := ".test_pid"
 db_url_sqlite := "DATABASE_URL=sqlite:data/rauthy.db"
 db_url_postgres := "DATABASE_URL=postgresql://rauthy:123SuperSafe@$DEV_HOST:5432/rauthy"
 
-## All scripts in the file with a leading `_` are meant for internal use only.
-## The ones with 2 `__` in front are meant to be executed inside a dev / builder container only,
-## as they require specific tooling and environmental setup.
-
 [private]
 default:
     @just --list

@@ -12,7 +12,7 @@ docker run --rm \
     -e COOKIE_MODE=danger-insecure \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.25.0-lite
+    ghcr.io/sebadob/rauthy:0.26.0-lite
 ```
 
 This will start the container in interactive mode with an in-memory SQLite database. Just take a look at the log at the
@@ -26,7 +26,7 @@ docker run -d \
     -e DATABASE_URL=sqlite:data/rauthy.db \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.25.0-lite
+    ghcr.io/sebadob/rauthy:0.26.0-lite
 ```
 
 ```admonish note
@@ -124,7 +124,7 @@ docker run -d \
     -v $(pwd)/rauthy/data:/app/data \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.25.0-lite
+    ghcr.io/sebadob/rauthy:0.26.0-lite
 ```
 
 **6. Restrict DB files access even more**  

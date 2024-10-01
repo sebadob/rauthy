@@ -190,7 +190,7 @@ fully functioning and production ready private Root Certificate Authority (CA).<
 </div>
 </div>
 <p>I suggest to use <code>docker</code> for this task. Otherwise, you can use the <code>nioca</code> binary directly on any linux machine.
-If you want a permanent way of generating certificates for yourself, take a look at Rauthy's <code>justfile</code> and copy
+If you want a permanent way of generating certificates for yourself, take a look at Rauthys <code>justfile</code> and copy
 and adjust the recipes <code>create-root-ca</code> and <code>create-end-entity-tls</code> to your liking.<br />
 If you just want to get everything started quickly, follow these steps:</p>
 <h3 id="create-an-alias-for-the-docker-command"><a class="header" href="#create-an-alias-for-the-docker-command">Create an alias for the <code>docker</code> command</a></h3>
@@ -206,7 +206,8 @@ You can define as many of them as you like.</p>
     --cn 'Rauthy Default' \
     --o 'Rauthy OIDC' \
     --alt-name-dns localhost \
-    --alt-name-dns redhac.local \
+    --alt-name-dns rauthy.rauthy \
+    --alt-name-dns rauthy.rauthy.svc.cluster.local \
     --usages-ext server-auth \
     --usages-ext client-auth \
     --stage full \
@@ -236,55 +237,20 @@ key.pem
 <p>For this example, we will be using the same certificates for both the internal cache mTLS connections and the
 public facing HTTPS server.</p>
 <h3 id="cache"><a class="header" href="#cache">Cache</a></h3>
-<p>The cache layer (optionally) creates an mTLS connection and validates client certificates, if they are configured.<br />
-To enable TLS at all, set</p>
-<pre><code>CACHE_TLS=true
-</code></pre>
-<p>By default, <code>redhac</code> expects certificates to be in <code>/app/tls/</code> with the common name / SNI <code>redhac.local</code>.<br />
-The certificates need to be in the PEM format and you can provide different certificates for the server and client part,
-if you like.</p>
-<p>If this differs from your setup, you can set the following config variables:</p>
-<pre><code># The path to the server TLS certificate PEM file (default: tls/redhac.local.cert.pem)
-CACHE_TLS_SERVER_CERT=tls/cert-chain.pem
-# The path to the server TLS key PEM file (default: tls/redhac.local.key.pem)
-CACHE_TLS_SERVER_KEY=tls/key.pem
-# If not empty, the PEM file from the specified location will be added as the CA certificate chain for validating
-# the servers TLS certificate (default: tls/ca-chain.cert.pem)
-CACHE_TLS_CA_SERVER=tls/ca-chain.pem
+<p>The cache layer (optionally) uses TLS, if you provide certificates. Simply provide the following values from the <code>TLS</code>
+section in the reference config:</p>
+<pre><code># If given, these keys / certificates will be used to establish
+# TLS connections between nodes.
+HQL_TLS_RAFT_KEY=tls/hiqlite/tls.key
+HQL_TLS_RAFT_CERT=tls/hiqlite/tls.crt
+#HQL_TLS_RAFT_DANGER_TLS_NO_VERIFY=false
 
-# The path to the client mTLS certificate PEM file (default: tls/redhac.local.cert.pem)
-CACHE_TLS_CLIENT_CERT=tls/cert-chain.pem
-# The path to the client mTLS key PEM file (default: tls/redhac.local.key.pem)
-CACHE_TLS_CLIENT_KEY=tls/key.pem
-# If not empty, the PEM file from the specified location will be added as the CA certificate chain for validating
-# the clients mTLS certificate (default: tls/ca-chain.cert.pem)
-CACHE_TLS_CA_CLIENT=tls/ca-chain.pem
-
-# The domain / CN the client should validate the certificate against. This domain MUST be inside the
-# 'X509v3 Subject Alternative Name' when you take a look at the servers certificate with the openssl tool.
-# default: redhac.local
-CACHE_TLS_CLIENT_VALIDATE_DOMAIN=redhac.local
-
-# Can be used, if you need to overwrite the SNI when the client connects to the server, for instance if you are behind
-# a loadbalancer which combines multiple certificates. (default: "")
-#CACHE_TLS_SNI_OVERWRITE=
+HQL_TLS_API_KEY=tls/hiqlite/tls.key
+HQL_TLS_API_CERT=tls/hiqlite/tls.crt
+#HQL_TLS_API_DANGER_TLS_NO_VERIFY=false
 </code></pre>
-<h3 id="server"><a class="header" href="#server">Server</a></h3>
-<p>The TLS configuration for the REST API is much simpler.<br />
-By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and <code>/app/tls/tls.crt</code>, which is the
-default naming for a Kubernetes TLS secret. The expected format is PEM, but you could provide the key in DER format too,
-if you rename the file-ending to <code>*.der</code>.</p>
-<p>You can change the default path for the files with the config variables <code>TLS_CERT</code> and <code>TLS_KEY</code>.</p>
-<h3 id="kubernetes"><a class="header" href="#kubernetes">Kubernetes</a></h3>
-<p>If you did not follow the above procedure to generate the CA and certificates, you may need to rename the files in the
-following command, to create the Kubernetes secrets.</p>
-<p><strong>Secrets - REST API</strong></p>
-<pre><code>kubectl -n rauthy create secret tls rauthy-tls --key="key.pem" --cert="cert-chain.pem"
-</code></pre>
-<p><strong>Secrets - <code>redhac</code> cache</strong></p>
-<pre><code>kubectl -n rauthy create secret tls redhac-tls-server --key="key.pem" --cert="cert-chain.pem" &amp;&amp; \
-kubectl -n rauthy create secret generic redhac-server-ca --from-file ca-chain.pem
-</code></pre>
+<p>There is no problem using the same certificates for both networks, but you can optionally even separate them if you need
+to. You could even re-use the Server TLS, if your DNS setup allows for this.</p>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
 <div id="admonition-note-title">
@@ -293,12 +259,39 @@ kubectl -n rauthy create secret generic redhac-server-ca --from-file ca-chain.pe
 <a class="admonition-anchor-link" href="#admonition-note"></a>
 </div>
 <div>
-<p>We create the <code>redhac-tls-server</code> here with the exact same values. If you really want to harden your setup in production,
-you should provide a different set of certificates for the internal mTLS connection.</p>
+<p>At the time of writing, it does not accept a custom Root CA yet. In this case you have to set the
+<code>*_DANGER_TLS_NO_VERIFY</code> to <code>true</code></p>
+</div>
+</div>
+<h3 id="rauthy-server--api"><a class="header" href="#rauthy-server--api">Rauthy Server / API</a></h3>
+<p>By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and <code>/app/tls/tls.crt</code>, which is the
+default naming for a Kubernetes TLS secret. The expected format is PEM, but you could provide the key in DER format too,
+if you rename the file-ending to <code>*.der</code>.</p>
+<p>You can change the default path for the files with the config variables <code>TLS_CERT</code> and <code>TLS_KEY</code>.</p>
+<h3 id="kubernetes"><a class="header" href="#kubernetes">Kubernetes</a></h3>
+<p>If you did not follow the above procedure to generate the CA and certificates, you may need to rename the files in the
+following command, to create the Kubernetes secrets.</p>
+<p><strong>Secrets - Rauthy Server / API</strong></p>
+<pre><code>kubectl -n rauthy create secret tls rauthy-tls --key="key.pem" --cert="cert-chain.pem"
+</code></pre>
+<p><strong>Secrets - <code>hiqlite</code> cache</strong></p>
+<pre><code>kubectl -n rauthy create secret tls hiqlite-tls --key="key.pem" --cert="cert-chain.pem"
+</code></pre>
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
+<div class="admonition-title">
+<div id="admonition-note-1-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note-1"></a>
+</div>
+<div>
+<p>We create the <code>hiqlite-tls</code> here with the exact same values. You could of course either use different certificates, or
+not create a separate secret at all and just re-use the Rauthy TLS certificates, if you DNS setup allows for proper
+validation in this case.</p>
 </div>
 </div>
 <h4 id="config-adjustments---rest-api"><a class="header" href="#config-adjustments---rest-api">Config Adjustments - REST API</a></h4>
-<p>We need to configure the newly created Kubernetes secrets in the <code>std.yaml</code> from the
+<p>We need to configure the newly created Kubernetes secrets in the <code>sts.yaml</code> from the
 <a href="../getting_started/k8s.html#create-and-apply-the-stateful-set">Kubernetes</a> setup.</p>
 <ol>
 <li>In the <code>spec.template.spec.volumes</code> section, we need to mount the volumes from secrets:</li>
@@ -308,13 +301,10 @@ you should provide a different set of certificates for the internal mTLS connect
   secret:
     secretName: rauthy-tls
 </code></pre>
-<p><strong><code>redhac</code> cache</strong>:</p>
-<pre><code class="language-yaml">- name: redhac-tls-server
+<p><strong><code>hiqlite</code> cache</strong>:</p>
+<pre><code class="language-yaml">- name: hiqlite-tls
   secret:
-    secretName: redhac-tls-server
-- name: redhac-server-ca
-  secret:
-    secretName: redhac-server-ca
+    secretName: hiqlite-tls
 </code></pre>
 <ol start="2">
 <li>In the <code>spec.template.spec.containers.[rauthy].volumeMounts</code> section, add::</li>
@@ -324,12 +314,9 @@ you should provide a different set of certificates for the internal mTLS connect
   name: rauthy-tls
   readOnly: true
 </code></pre>
-<p><strong><code>redhac</code> cache</strong>:</p>
-<pre><code class="language-yaml">- mountPath: /app/tls/redhac/certs
-  name: redhac-tls-server
-  readOnly: true
-- mountPath: /app/tls/redhac/ca
-  name: redhac-server-ca
+<p><strong><code>hiqlite</code> cache</strong>:</p>
+<pre><code class="language-yaml">- mountPath: /app/tls/hiqlite/
+  name: hiqlite-tls
   readOnly: true
 </code></pre>
 <p>After having modified the config from above and the <code>sts.yaml</code> now, just apply both:</p>
