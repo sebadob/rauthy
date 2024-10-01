@@ -301,73 +301,45 @@ AUTH_HEADER_MFA=x-forwarded-user-mfa
 ############## CACHE ################
 #####################################
 
-# If the cache should start in HA mode or standalone
-# accepts 'true|false', defaults to 'false'
-#HA_MODE=false
+# Can be set to 'k8s' to try to split off the node id from the hostname
+# when Hiqlite is running as a StatefulSet inside Kubernetes.
+# Will be ignored if `HQL_NODE_ID_FROM=k8s`
+#HQL_NODE_ID_FROM=k8s
 
-# The connection strings (with hostnames) of the HA instances
-# as a CSV.
-# Format: 'scheme://hostname:port'
-#HA_HOSTS="http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000"
+# The node id must exist in the nodes and there must always be
+# at least a node with ID 1
+HQL_NODE_ID=1
 
-# Overwrite the hostname which is used to identify each cache member.
-# Useful in scenarios, where for instance all members are on the same host with
-# different ports or for testing.
-#HOSTNAME_OVERWRITE="rauthy-0.rauthy:8080"
+# All cluster member nodes.
+# To make setting the env var easy, the values are separated by `\s`
+# while nodes are separated by `\n`
+# in the following format:
+#
+# id addr_raft addr_api
+# id addr_raft addr_api
+# id addr_raft addr_api
+#
+# 2 nodes must be separated by 2 `\n`
+HQL_NODES="
+1 localhost:8100 localhost:8200
+"
 
-## Define buffer sizes for channels between the components
-# Buffer for client requests on the incoming stream - server
-# side (default: 128)
-# Make sense to have the CACHE_BUF_SERVER set to:
-# `(number of total HA cache hosts - 1) * CACHE_BUF_CLIENT`
-# In a non-HA deployment, set the same size for both
-#CACHE_BUF_SERVER=128
-# Buffer for client requests to remote servers for all cache
-# operations (default: 128)
-#CACHE_BUF_CLIENT=128
+# If set to `true`, all SQL statements will be logged for debugging
+# purposes.
+# default: false
+HQL_LOG_STATEMENTS=true
 
-# The max cache size for users. If you can afford it memory-wise,
-# make it possible to fit all active users inside the cache.
-# The cache size you provide here should roughly match the
-# amount of users you want to be able to cache actively. Depending
-# on your setup (WebIDs, custom attributes, ...), this number
-# will be multiplied internally  by 3 or 4 to create multiple cache
-# entries for each user.
-# default: 100
-CACHE_USERS_SIZE=100
-# The lifespan of the users cache in seconds. Cache eviction on
-# updates will be handled automatically.
-# default: 28800
-CACHE_USERS_LIFESPAN=28800
+# Secrets for Raft internal authentication as well as for the API.
+# These must be at least 16 characters long and you should provide
+# different ones for both variables.
+HQL_SECRET_RAFT=SuperSecureSecret1337
+HQL_SECRET_API=SuperSecureSecret1337
 
-# Secret token, which is used to authenticate the cache members
-#CACHE_AUTH_TOKEN=SomeSuperSecretAndVerySafeToken1337
-
-## Connections Timeouts
-
-# The Server sends out keepalive pings with configured timeouts
-# The keepalive ping interval in seconds (default: 5)
-#CACHE_KEEPALIVE_INTERVAL=5
-# The keepalive ping timeout in seconds (default: 5)
-#CACHE_KEEPALIVE_TIMEOUT=5
-
-# The timeout for the leader election. If a newly saved leader
-# request has not reached quorum after the timeout, the leader
-# will be reset and a new request will be sent out.
-# CAUTION:
-# This should not be lower than CACHE_RECONNECT_TIMEOUT_UPPER,
-# since cold starts and elections will be problematic in that
-# case.
-# value in seconds, default: 15
-#CACHE_ELECTION_TIMEOUT=15
-
-# These 2 values define the reconnect timeout for the HA Cache
-# Clients. The values are in ms and a random between these 2
-# will be chosen each time to avoid conflicts and race conditions
-# (default: 2500)
-#CACHE_RECONNECT_TIMEOUT_LOWER=2500
-# (default: 5000)
-#CACHE_RECONNECT_TIMEOUT_UPPER=5000
+# You can either parse `ENC_KEYS` and `ENC_KEY_ACTIVE` from the
+# environment with setting this value to `env`, or parse them from
+# a file on disk with `file:path/to/enc/keys/file`
+# default: env
+#HQL_ENC_KEYS_FROM=env
 
 #####################################
 ############ DATABASE ###############
