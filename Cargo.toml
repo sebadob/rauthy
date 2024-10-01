@@ -30,7 +30,7 @@ actix-service = "2"
 actix-web = { version = "4", features = ["rustls-0_23"] }
 actix-web-actors = "4"
 actix-web-lab = "0.22"
-actix-web-prom = "0.8.0"
+actix-web-prom = "0.9.0"
 actix-web-validator = "6"
 anyhow = "1"
 argon2 = { version = "0.5", features = ["std", "zeroize"] }
@@ -42,7 +42,7 @@ bincode = "1"
 cached = "0.53.1"
 chacha20poly1305 = { version = "0.10", features = ["std"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
-cidr = "0.2.2"
+cidr = "0.3.0"
 cron = "0.12"
 cryptr = { version = "0.5.1", features = ["s3", "streaming"] }
 css-color = "0.2"
