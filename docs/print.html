@@ -607,6 +607,19 @@ If you use SQLite, you can include the DATABASE_URL in the config, since it does
 never do this for Postgres!</p>
 </div>
 </div>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="getting_started/k8s.html#admonition-note"></a>
+</div>
+<div>
+<p>I recommend to just always set <code>HQL_NODE_ID_FROM=k8s</code> when deploying a StatefulSet. This will parse the Raft NodeID
+automatically from the K8s Pod / Hostname and you don't have to worry about the <code>HQL_NODE_ID</code>. For instance, a Pod
+named <code>rauthy-0</code> will be translated to <code>HQL_NODE_ID=1</code> automatically.</p>
+</div>
+</div>
 <h3 id="create-and-apply-secrets"><a class="header" href="#create-and-apply-secrets">Create and apply secrets</a></h3>
 <pre><code>touch secrets.yaml
 </code></pre>
@@ -631,6 +644,12 @@ stringData:
   # Special characters could cause problems in the connection
   # string.
   DATABASE_URL:
+
+  # Secrets for Raft internal authentication as well as for the Hiqlite API.
+  # These must be at least 16 characters long and you should provide
+  # different ones for both variables.
+  HQL_SECRET_RAFT:
+  HQL_SECRET_API:
 
   # You need to define at least one valid encryption key.
   # These keys are used in various places, like for instance
@@ -685,6 +704,13 @@ d4d1a581/mNIqEpxz4UudPggRpF1QJtjVdZ6JEeVAHepDLZZYI2M=
 </code></pre>
 <p>The <code>ENC_KEY_ID</code> would be</p>
 <pre><code>d4d1a581
+</code></pre>
+<p>You can generate safe values for both ´HQL_SECRET_RAFT<code>and</code>HQL_SECRET_API` in many ways. You can just provide a random
+alphanumeric value, which for instance:</p>
+<pre><code>cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48
+</code></pre>
+<p>or you can use the above <code>openssl</code> command again, even though Hiqlite does not need or utilize base64:</p>
+<pre><code>openssl rand -base64 48
 </code></pre>
 <h3 id="create-and-apply-the-stateful-set"><a class="header" href="#create-and-apply-the-stateful-set">Create and apply the stateful set</a></h3>
 <pre><code>touch sts.yaml
@@ -752,18 +778,25 @@ spec:
             - containerPort: 8080
             - containerPort: 8443
           env:
-            #- name: CACHE_AUTH_TOKEN
-            #  valueFrom:
-            #    secretKeyRef:
-            #      name: rauthy-secrets
-            #      key: CACHE_AUTH_TOKEN
-
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: rauthy-secrets
                   key: DATABASE_URL
 
+            # You must set both Hiqlite secrets even for a single node deployment
+            - name: HQL_SECRET_RAFT
+              valueFrom:
+                secretKeyRef:
+                  name: rauthy-secrets
+                  key: HQL_SECRET_RAFT
+            - name: HQL_SECRET_API
+              valueFrom:
+                secretKeyRef:
+                  name: rauthy-secrets
+                  key: HQL_SECRET_API
+
+            # Encryption keys used for encryption in many places
             - name: ENC_KEYS
               valueFrom:
                 secretKeyRef:
@@ -1755,7 +1788,7 @@ fully functioning and production ready private Root Certificate Authority (CA).<
 </div>
 </div>
 <p>I suggest to use <code>docker</code> for this task. Otherwise, you can use the <code>nioca</code> binary directly on any linux machine.
-If you want a permanent way of generating certificates for yourself, take a look at Rauthy's <code>justfile</code> and copy
+If you want a permanent way of generating certificates for yourself, take a look at Rauthys <code>justfile</code> and copy
 and adjust the recipes <code>create-root-ca</code> and <code>create-end-entity-tls</code> to your liking.<br />
 If you just want to get everything started quickly, follow these steps:</p>
 <h3 id="create-an-alias-for-the-docker-command"><a class="header" href="#create-an-alias-for-the-docker-command">Create an alias for the <code>docker</code> command</a></h3>
@@ -1771,7 +1804,8 @@ You can define as many of them as you like.</p>
     --cn 'Rauthy Default' \
     --o 'Rauthy OIDC' \
     --alt-name-dns localhost \
-    --alt-name-dns redhac.local \
+    --alt-name-dns rauthy.rauthy \
+    --alt-name-dns rauthy.rauthy.svc.cluster.local \
     --usages-ext server-auth \
     --usages-ext client-auth \
     --stage full \
@@ -1801,55 +1835,20 @@ key.pem
 <p>For this example, we will be using the same certificates for both the internal cache mTLS connections and the
 public facing HTTPS server.</p>
 <h3 id="cache"><a class="header" href="#cache">Cache</a></h3>
-<p>The cache layer (optionally) creates an mTLS connection and validates client certificates, if they are configured.<br />
-To enable TLS at all, set</p>
-<pre><code>CACHE_TLS=true
-</code></pre>
-<p>By default, <code>redhac</code> expects certificates to be in <code>/app/tls/</code> with the common name / SNI <code>redhac.local</code>.<br />
-The certificates need to be in the PEM format and you can provide different certificates for the server and client part,
-if you like.</p>
-<p>If this differs from your setup, you can set the following config variables:</p>
-<pre><code># The path to the server TLS certificate PEM file (default: tls/redhac.local.cert.pem)
-CACHE_TLS_SERVER_CERT=tls/cert-chain.pem
-# The path to the server TLS key PEM file (default: tls/redhac.local.key.pem)
-CACHE_TLS_SERVER_KEY=tls/key.pem
-# If not empty, the PEM file from the specified location will be added as the CA certificate chain for validating
-# the servers TLS certificate (default: tls/ca-chain.cert.pem)
-CACHE_TLS_CA_SERVER=tls/ca-chain.pem
+<p>The cache layer (optionally) uses TLS, if you provide certificates. Simply provide the following values from the <code>TLS</code>
+section in the reference config:</p>
+<pre><code># If given, these keys / certificates will be used to establish
+# TLS connections between nodes.
+HQL_TLS_RAFT_KEY=tls/hiqlite/tls.key
+HQL_TLS_RAFT_CERT=tls/hiqlite/tls.crt
+#HQL_TLS_RAFT_DANGER_TLS_NO_VERIFY=false
 
-# The path to the client mTLS certificate PEM file (default: tls/redhac.local.cert.pem)
-CACHE_TLS_CLIENT_CERT=tls/cert-chain.pem
-# The path to the client mTLS key PEM file (default: tls/redhac.local.key.pem)
-CACHE_TLS_CLIENT_KEY=tls/key.pem
-# If not empty, the PEM file from the specified location will be added as the CA certificate chain for validating
-# the clients mTLS certificate (default: tls/ca-chain.cert.pem)
-CACHE_TLS_CA_CLIENT=tls/ca-chain.pem
-
-# The domain / CN the client should validate the certificate against. This domain MUST be inside the
-# 'X509v3 Subject Alternative Name' when you take a look at the servers certificate with the openssl tool.
-# default: redhac.local
-CACHE_TLS_CLIENT_VALIDATE_DOMAIN=redhac.local
-
-# Can be used, if you need to overwrite the SNI when the client connects to the server, for instance if you are behind
-# a loadbalancer which combines multiple certificates. (default: "")
-#CACHE_TLS_SNI_OVERWRITE=
+HQL_TLS_API_KEY=tls/hiqlite/tls.key
+HQL_TLS_API_CERT=tls/hiqlite/tls.crt
+#HQL_TLS_API_DANGER_TLS_NO_VERIFY=false
 </code></pre>
-<h3 id="server"><a class="header" href="#server">Server</a></h3>
-<p>The TLS configuration for the REST API is much simpler.<br />
-By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and <code>/app/tls/tls.crt</code>, which is the
-default naming for a Kubernetes TLS secret. The expected format is PEM, but you could provide the key in DER format too,
-if you rename the file-ending to <code>*.der</code>.</p>
-<p>You can change the default path for the files with the config variables <code>TLS_CERT</code> and <code>TLS_KEY</code>.</p>
-<h3 id="kubernetes-1"><a class="header" href="#kubernetes-1">Kubernetes</a></h3>
-<p>If you did not follow the above procedure to generate the CA and certificates, you may need to rename the files in the
-following command, to create the Kubernetes secrets.</p>
-<p><strong>Secrets - REST API</strong></p>
-<pre><code>kubectl -n rauthy create secret tls rauthy-tls --key="key.pem" --cert="cert-chain.pem"
-</code></pre>
-<p><strong>Secrets - <code>redhac</code> cache</strong></p>
-<pre><code>kubectl -n rauthy create secret tls redhac-tls-server --key="key.pem" --cert="cert-chain.pem" &amp;&amp; \
-kubectl -n rauthy create secret generic redhac-server-ca --from-file ca-chain.pem
-</code></pre>
+<p>There is no problem using the same certificates for both networks, but you can optionally even separate them if you need
+to. You could even re-use the Server TLS, if your DNS setup allows for this.</p>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
 <div id="admonition-note-title">
@@ -1858,12 +1857,39 @@ kubectl -n rauthy create secret generic redhac-server-ca --from-file ca-chain.pe
 <a class="admonition-anchor-link" href="config/tls.html#admonition-note"></a>
 </div>
 <div>
-<p>We create the <code>redhac-tls-server</code> here with the exact same values. If you really want to harden your setup in production,
-you should provide a different set of certificates for the internal mTLS connection.</p>
+<p>At the time of writing, it does not accept a custom Root CA yet. In this case you have to set the
+<code>*_DANGER_TLS_NO_VERIFY</code> to <code>true</code></p>
+</div>
+</div>
+<h3 id="rauthy-server--api"><a class="header" href="#rauthy-server--api">Rauthy Server / API</a></h3>
+<p>By default, rauthy will expect a certificate and a key file in <code>/app/tls/tls.key</code> and <code>/app/tls/tls.crt</code>, which is the
+default naming for a Kubernetes TLS secret. The expected format is PEM, but you could provide the key in DER format too,
+if you rename the file-ending to <code>*.der</code>.</p>
+<p>You can change the default path for the files with the config variables <code>TLS_CERT</code> and <code>TLS_KEY</code>.</p>
+<h3 id="kubernetes-1"><a class="header" href="#kubernetes-1">Kubernetes</a></h3>
+<p>If you did not follow the above procedure to generate the CA and certificates, you may need to rename the files in the
+following command, to create the Kubernetes secrets.</p>
+<p><strong>Secrets - Rauthy Server / API</strong></p>
+<pre><code>kubectl -n rauthy create secret tls rauthy-tls --key="key.pem" --cert="cert-chain.pem"
+</code></pre>
+<p><strong>Secrets - <code>hiqlite</code> cache</strong></p>
+<pre><code>kubectl -n rauthy create secret tls hiqlite-tls --key="key.pem" --cert="cert-chain.pem"
+</code></pre>
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
+<div class="admonition-title">
+<div id="admonition-note-1-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="config/tls.html#admonition-note-1"></a>
+</div>
+<div>
+<p>We create the <code>hiqlite-tls</code> here with the exact same values. You could of course either use different certificates, or
+not create a separate secret at all and just re-use the Rauthy TLS certificates, if you DNS setup allows for proper
+validation in this case.</p>
 </div>
 </div>
 <h4 id="config-adjustments---rest-api"><a class="header" href="#config-adjustments---rest-api">Config Adjustments - REST API</a></h4>
-<p>We need to configure the newly created Kubernetes secrets in the <code>std.yaml</code> from the
+<p>We need to configure the newly created Kubernetes secrets in the <code>sts.yaml</code> from the
 <a href="config/../getting_started/k8s.html#create-and-apply-the-stateful-set">Kubernetes</a> setup.</p>
 <ol>
 <li>In the <code>spec.template.spec.volumes</code> section, we need to mount the volumes from secrets:</li>
@@ -1873,13 +1899,10 @@ you should provide a different set of certificates for the internal mTLS connect
   secret:
     secretName: rauthy-tls
 </code></pre>
-<p><strong><code>redhac</code> cache</strong>:</p>
-<pre><code class="language-yaml">- name: redhac-tls-server
+<p><strong><code>hiqlite</code> cache</strong>:</p>
+<pre><code class="language-yaml">- name: hiqlite-tls
   secret:
-    secretName: redhac-tls-server
-- name: redhac-server-ca
-  secret:
-    secretName: redhac-server-ca
+    secretName: hiqlite-tls
 </code></pre>
 <ol start="2">
 <li>In the <code>spec.template.spec.containers.[rauthy].volumeMounts</code> section, add::</li>
@@ -1889,12 +1912,9 @@ you should provide a different set of certificates for the internal mTLS connect
   name: rauthy-tls
   readOnly: true
 </code></pre>
-<p><strong><code>redhac</code> cache</strong>:</p>
-<pre><code class="language-yaml">- mountPath: /app/tls/redhac/certs
-  name: redhac-tls-server
-  readOnly: true
-- mountPath: /app/tls/redhac/ca
-  name: redhac-server-ca
+<p><strong><code>hiqlite</code> cache</strong>:</p>
+<pre><code class="language-yaml">- mountPath: /app/tls/hiqlite/
+  name: hiqlite-tls
   readOnly: true
 </code></pre>
 <p>After having modified the config from above and the <code>sts.yaml</code> now, just apply both:</p>
@@ -2319,79 +2339,72 @@ Keep in mind, that the <code>POW_EXP</code> should be a high as necessary but al
 <p>Some values, like authentication codes for instance, do live in the cache only. Additionally, there might come an
 option with a future version which offers a special in-memory only mode in some situations.</p>
 <p>Because of this, all instances create and share a single HA cache layer, which means at the same time, that you cannot
-just scale up the replicas infinitely. The optimal amount of replicas for a HA mode would be 3, or if you need even higher
-resilience 5. More replicas should work just fine, but this has never been really tested and the performance will
-degrade at some point.</p>
-<p>To achieve the HA caching layer embedded directly into the application, I created a library (or crate in Rust terms)
-called <code>redhac</code>.<br />
-This crate will create each a gRPC server and a client part and each node will connect to all other ones. Once quorum
-has been reached, a leader will be elected, which then will execute all insert requests by default to avoid overlaps
-or inconsistencies and to guarantee a configured level of safety. Different so called <code>AckLevel</code> are available, like
-<code>Quorum</code>, <code>Once</code> and <code>Leader</code> in addition to a direct cache put without any safeties.<br />
-Rauthy uses different levels in different situations to provide real HA and sync all caches between the pods. This
-means that you can loose a pod and still have the in-cache-only values available on the other ones.</p>
-<p>This syncing of the cache is the reason why write performance will degrade, if you scale up too many replicas, which should
-not really be necessary anyway. The best HA performance will be achieved with 3 replicas and then scaling up the
-resources for each pod before adding more replicas.</p>
-<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
-<p>The way to configure the <code>HA_MODE</code> is optimized for a Kubernetes deployment but may seem a bit odd at the same time,
-if you deploy somewhere else. You need to the following values in the config file:</p>
-<h3 id="ha_mode"><a class="header" href="#ha_mode"><code>HA_MODE</code></a></h3>
-<p>The first one is easy, just set <code>HA_MODE=true</code></p>
-<h3 id="ha_hosts"><a class="header" href="#ha_hosts"><code>HA_HOSTS</code></a></h3>
-<p>The <code>HA_HOSTS</code> is working in a way, that it is really easy inside Kubernetes to configure it, as long as a
-StatefulSet is used for the deployment.</p>
-<p>The way a cache node finds its members is by the <code>HA_HOSTS</code> and its own <code>HOSTNAME</code>.<br />
-In the <code>HA_HOSTS</code>, add every cache member. For instance, if you want to use 3 replicas in HA mode which are running
-and are deployed as a StatefulSet with the name <code>rauthy</code> again:</p>
-<pre><code>HA_HOSTS="http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000"
-</code></pre>
-<p>The way it works:</p>
-<ol>
-<li>A node gets its own hostname from the OS<br />
-This is the reason, why you use a StatefulSet for the deployment, even without any volumes attached. For StatefulSet
-called <code>rauthy</code>, the replicas will always have the names <code>rauthy-0</code>, <code>rauthy-1</code>, ..., which are at the same time the
-hostnames inside the pod.</li>
-<li>Find "me" inside the <code>HA_HOSTS</code> variable<br />
-If the hostname cannot be found in the <code>HA_HOSTS</code>, the application will panic and exit because of a misconfiguration.</li>
-<li>Use the port from the "me"-Entry that was found for the server part<br />
-This means you do not need to specify the port in another variable which eliminates the risk of having inconsistencies
-or a bad config in that case.</li>
-<li>Extract "me" from the <code>HA_HOSTS</code>, take the leftover nodes as all cache members and connect to them</li>
-<li>Once a quorum has been reached, a leader will be elected<br />
-From that point on, the cache will start accepting requests</li>
-<li>If the leader is lost - elect a new one - No values will be lost</li>
-<li>If quorum is lost, the cache will be invalidated<br />
-This happens for security reasons to provide cache inconsistencies. Better invalidate the cache and fetch the values
-fresh from the DB or other cache members than working with possibly invalid values, which is especially true in an
-authn / authz situation.</li>
-</ol>
-<div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
+just scale up the replicas infinitely without adjusting the config. The optimal amount of replicas for a HA mode would
+be 3, or if you need even higher resilience 5. More replicas should work just fine, but this has never been really
+tested and the performance will degrade at some point.</p>
+<p>The Cache layer uses another project of mine called <a href="https://github.com/sebadob/hiqlite">Hiqlite</a>. It uses the Raft
+algorithm under the hood to achieve consistency.</p>
+<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
-<div id="admonition-hint-title">
-<p>Hint</p>
+<div id="admonition-caution-title">
+<p>Caution</p>
 </div>
-<a class="admonition-anchor-link" href="config/ha.html#admonition-hint"></a>
+<a class="admonition-anchor-link" href="config/ha.html#admonition-caution"></a>
 </div>
 <div>
-<p>If you are in an environment where the described mechanism with extracting the hostname would not work, for instance
-you want a HA deployment with just different docker hosts, you can set the <code>HOSTNAME_OVERWRITE</code> for each instance to
-match one of the <code>HA_HOSTS</code> entries.</p>
+<p>Even though everything is authenticated, you should not expose the
+Hiqlite ports to the public, if not really necessary for some reason. You configure these ports with the <code>HQL_NODES</code>
+config value in the <code>CACHE</code> section.</p>
 </div>
 </div>
-<h3 id="cache_auth_token"><a class="header" href="#cache_auth_token"><code>CACHE_AUTH_TOKEN</code></a></h3>
-<p>You need to set a secret for the <code>CACHE_AUTH_TOKEN</code> which was left out in the
-<a href="config/../getting_started/k8s.html#create-and-apply-secrets">Getting Started</a></p>
-<p>Just create a secret and add it in the same way:</p>
-<pre><code>echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48)" | base64
+<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
+<p>Earlier versions of Rauthy have been using <a href="https://github.com/sebadob/redhac">redhac</a> for the HA cache layer. While
+<code>redhac</code> was working fine, it had a few design issues I wanted to get rid of. Since <code>v0.26.0</code>, Rauthy uses the above
+mentioned <a href="https://github.com/sebadob/hiqlite">Hiqlite</a> instead. You only need to configure a few variables:</p>
+<h3 id="hql_node_id"><a class="header" href="#hql_node_id"><code>HQL_NODE_ID</code></a></h3>
+<p>The <code>HQL_NODE_ID</code> is mandatory, even for a single replica deployment with only a single node in <code>HQL_NODES</code>.
+If you deploy Rauthy as a StatefulSet inside Kubernetes, you can ignore this value and just set <code>HQL_NODE_ID_FROM</code>
+below. If you deploy anywere else or you are not using a StatefulSet, you need to set the <code>HQL_NODE_ID</code> to tell Rauthy
+which node of the Raft cluster it should be.</p>
+<pre><code># The node id must exist in the nodes and there must always be
+# at least a node with ID 1
+# Will be ignored if `HQL_NODE_ID_FROM=k8s`
+HQL_NODE_ID=1
+</code></pre>
+<h3 id="hql_node_id_from"><a class="header" href="#hql_node_id_from"><code>HQL_NODE_ID_FROM</code></a></h3>
+<p>If you deploy to Kubernetes as a StatefulSet, you should ignore the <code>HQL_NODE_ID</code> and just set <code>HQL_NODE_ID_FROM=k8s</code>.
+This will parse the correct NodeID from the Pod hostname, so you don't have to worry about it.</p>
+<pre><code># Can be set to 'k8s' to try to split off the node id from the hostname
+# when Hiqlite is running as a StatefulSet inside Kubernetes.
+#HQL_NODE_ID_FROM=k8s
+</code></pre>
+<h3 id="hql_nodes"><a class="header" href="#hql_nodes"><code>HQL_NODES</code></a></h3>
+<p>Using this value, you defined the Cache / Raft members. This must be given even if you just deploy a single instance.
+The description from the reference config should be clear enough:</p>
+<pre><code># All cluster member nodes.
+# To make setting the env var easy, the values are separated by `\s`
+# while nodes are separated by `\n`
+# in the following format:
+#
+# id addr_raft addr_api
+# id addr_raft addr_api
+# id addr_raft addr_api
+#
+# 2 nodes must be separated by 2 `\n`
+HQL_NODES="
+1 localhost:8100 localhost:8200
+"
+</code></pre>
+<h3 id="hql_secret_raft--hql_secret_api"><a class="header" href="#hql_secret_raft--hql_secret_api"><code>HQL_SECRET_RAFT</code> + <code>HQL_SECRET_API</code></a></h3>
+<p>Since you need both <code>HQL_SECRET_RAFT</code> and <code>HQL_SECRET_API</code> in any case, there is nothing to change here. These define
+the secrets being used internally to authenticate against the Raft or the API server for <code>Hiqlite</code>.
+You can generate safe values with for instance</p>
+<pre><code>cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48
 </code></pre>
 <h3 id="tls-1"><a class="header" href="#tls-1">TLS</a></h3>
 <p>If you are using a service mesh like for instance <a href="https://linkerd.io/">linkerd</a> which creates mTLS connections between
-all pods by default, you can use the HA cache with just plain HTTP, since linkerd will encapsulate the traffic anyway.</p>
-<p>You may then set</p>
-<pre><code>CACHE_TLS=false
-</code></pre>
-<p>to disable the use of TLS certificates between cache member.</p>
+all pods by default, you can use the HA cache with just plain HTTP, since <code>linkerd</code> will encapsulate the traffic anyway.
+In this case, there is nothing to do.</p>
 <p>However, if you do not have encryption between pods by default, I would highly recommend, that you use <a href="config/tls.html">TLS</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="forward-authentication"><a class="header" href="#forward-authentication">Forward Authentication</a></h1>
 <p>If you want to secure applications running behind a reverse proxy that do not have authn / authz on their own in terms
@@ -3632,73 +3645,45 @@ AUTH_HEADER_MFA=x-forwarded-user-mfa
 ############## CACHE ################
 #####################################
 
-# If the cache should start in HA mode or standalone
-# accepts 'true|false', defaults to 'false'
-#HA_MODE=false
+# Can be set to 'k8s' to try to split off the node id from the hostname
+# when Hiqlite is running as a StatefulSet inside Kubernetes.
+#HQL_NODE_ID_FROM=k8s
 
-# The connection strings (with hostnames) of the HA instances
-# as a CSV.
-# Format: 'scheme://hostname:port'
-#HA_HOSTS="http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000"
+# The node id must exist in the nodes and there must always be
+# at least a node with ID 1
+# Will be ignored if `HQL_NODE_ID_FROM=k8s`
+HQL_NODE_ID=1
 
-# Overwrite the hostname which is used to identify each cache member.
-# Useful in scenarios, where for instance all members are on the same host with
-# different ports or for testing.
-#HOSTNAME_OVERWRITE="rauthy-0.rauthy:8080"
+# All cluster member nodes.
+# To make setting the env var easy, the values are separated by `\s`
+# while nodes are separated by `\n`
+# in the following format:
+#
+# id addr_raft addr_api
+# id addr_raft addr_api
+# id addr_raft addr_api
+#
+# 2 nodes must be separated by 2 `\n`
+HQL_NODES="
+1 localhost:8100 localhost:8200
+"
 
-## Define buffer sizes for channels between the components
-# Buffer for client requests on the incoming stream - server
-# side (default: 128)
-# Make sense to have the CACHE_BUF_SERVER set to:
-# `(number of total HA cache hosts - 1) * CACHE_BUF_CLIENT`
-# In a non-HA deployment, set the same size for both
-#CACHE_BUF_SERVER=128
-# Buffer for client requests to remote servers for all cache
-# operations (default: 128)
-#CACHE_BUF_CLIENT=128
+# If set to `true`, all SQL statements will be logged for debugging
+# purposes.
+# default: false
+HQL_LOG_STATEMENTS=true
 
-# The max cache size for users. If you can afford it memory-wise,
-# make it possible to fit all active users inside the cache.
-# The cache size you provide here should roughly match the
-# amount of users you want to be able to cache actively. Depending
-# on your setup (WebIDs, custom attributes, ...), this number
-# will be multiplied internally  by 3 or 4 to create multiple cache
-# entries for each user.
-# default: 100
-CACHE_USERS_SIZE=100
-# The lifespan of the users cache in seconds. Cache eviction on
-# updates will be handled automatically.
-# default: 28800
-CACHE_USERS_LIFESPAN=28800
+# Secrets for Raft internal authentication as well as for the Hiqlite API.
+# These must be at least 16 characters long and you should provide
+# different ones for both variables.
+HQL_SECRET_RAFT=SuperSecureSecret1337
+HQL_SECRET_API=SuperSecureSecret1337
 
-# Secret token, which is used to authenticate the cache members
-#CACHE_AUTH_TOKEN=SomeSuperSecretAndVerySafeToken1337
-
-## Connections Timeouts
-
-# The Server sends out keepalive pings with configured timeouts
-# The keepalive ping interval in seconds (default: 5)
-#CACHE_KEEPALIVE_INTERVAL=5
-# The keepalive ping timeout in seconds (default: 5)
-#CACHE_KEEPALIVE_TIMEOUT=5
-
-# The timeout for the leader election. If a newly saved leader
-# request has not reached quorum after the timeout, the leader
-# will be reset and a new request will be sent out.
-# CAUTION:
-# This should not be lower than CACHE_RECONNECT_TIMEOUT_UPPER,
-# since cold starts and elections will be problematic in that
-# case.
-# value in seconds, default: 15
-#CACHE_ELECTION_TIMEOUT=15
-
-# These 2 values define the reconnect timeout for the HA Cache
-# Clients. The values are in ms and a random between these 2
-# will be chosen each time to avoid conflicts and race conditions
-# (default: 2500)
-#CACHE_RECONNECT_TIMEOUT_LOWER=2500
-# (default: 5000)
-#CACHE_RECONNECT_TIMEOUT_UPPER=5000
+# You can either parse `ENC_KEYS` and `ENC_KEY_ACTIVE` from the
+# environment with setting this value to `env`, or parse them from
+# a file on disk with `file:path/to/enc/keys/file`
+# default: env
+#HQL_ENC_KEYS_FROM=env
 
 #####################################
 ############ DATABASE ###############
@@ -4469,43 +4454,15 @@ PROXY_MODE=false
 
 ## CACHE TLS
 
-# Enable / disable TLS for the cache communication
-# (default: true)
-CACHE_TLS=true
+# If given, these keys / certificates will be used to establish
+# TLS connections between nodes.
+HQL_TLS_RAFT_KEY=tls/key.pem
+HQL_TLS_RAFT_CERT=tls/cert-chain.pem
+HQL_TLS_RAFT_DANGER_TLS_NO_VERIFY=true
 
-# The path to the server TLS certificate PEM file
-# default: tls/redhac.cert-chain.pem
-CACHE_TLS_SERVER_CERT=tls/cert-chain.pem
-# The path to the server TLS key PEM file
-# default: tls/redhac.key.pem
-CACHE_TLS_SERVER_KEY=tls/key.pem
-
-# The path to the client mTLS certificate PEM file. This is optional.
-#CACHE_TLS_CLIENT_CERT=tls/cert-chain.pem
-# The path to the client mTLS key PEM file. This is optional.
-#CACHE_TLS_CLIENT_KEY=tls/key.pem
-
-# If not empty, the PEM file from the specified location will be
-# added as the CA certificate chain for validating
-# the servers TLS certificate. This is optional.
-#CACHE_TLS_CA_SERVER=tls/ca-chain.pem
-# If not empty, the PEM file from the specified location will
-# be added as the CA certificate chain for validating
-# the clients mTLS certificate. This is optional.
-#CACHE_TLS_CA_CLIENT=tls/ca-chain.pem
-
-# The domain / CN the client should validate the certificate
-# against. This domain MUST be inside the
-# 'X509v3 Subject Alternative Name' when you take a look at
-# the servers certificate with the openssl tool.
-# default: redhac.local
-CACHE_TLS_CLIENT_VALIDATE_DOMAIN=redhac.local
-
-# Can be used if you need to overwrite the SNI when the
-# client connects to the server, for instance if you are
-# behind a loadbalancer which combines multiple certificates.
-# default: ""
-#CACHE_TLS_SNI_OVERWRITE=
+HQL_TLS_API_KEY=tls/key.pem
+HQL_TLS_API_CERT=tls/cert-chain.pem
+HQL_TLS_API_DANGER_TLS_NO_VERIFY=true
 
 #####################################
 ############# WEBAUTHN ##############
