@@ -164,6 +164,19 @@ The `ENC_KEY_ID` would be
 d4d1a581
 ```
 
+You can generate safe values for both ´HQL_SECRET_RAFT` and `HQL_SECRET_API` in many ways. You can just provide a random
+alphanumeric value, which for instance:
+
+```
+cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48
+```
+
+or you can use the above `openssl` command again, even though Hiqlite does not need or utilize base64:
+
+```
+openssl rand -base64 48
+```
+
 ### Create and apply the stateful set
 
 ```
