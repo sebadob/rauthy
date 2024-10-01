@@ -1,6 +1,6 @@
 # Changelog
 
-## NIGHTLY
+## 0.26.0
 
 ### Breaking
 
