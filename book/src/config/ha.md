@@ -6,93 +6,85 @@ Some values, like authentication codes for instance, do live in the cache only. 
 option with a future version which offers a special in-memory only mode in some situations.
 
 Because of this, all instances create and share a single HA cache layer, which means at the same time, that you cannot
-just scale up the replicas infinitely. The optimal amount of replicas for a HA mode would be 3, or if you need even higher 
-resilience 5. More replicas should work just fine, but this has never been really tested and the performance will
-degrade at some point.
+just scale up the replicas infinitely without adjusting the config. The optimal amount of replicas for a HA mode would
+be 3, or if you need even higher resilience 5. More replicas should work just fine, but this has never been really
+tested and the performance will degrade at some point.
 
-To achieve the HA caching layer embedded directly into the application, I created a library (or crate in Rust terms)
-called `redhac`.  
-This crate will create each a gRPC server and a client part and each node will connect to all other ones. Once quorum
-has been reached, a leader will be elected, which then will execute all insert requests by default to avoid overlaps
-or inconsistencies and to guarantee a configured level of safety. Different so called `AckLevel` are available, like
-`Quorum`, `Once` and `Leader` in addition to a direct cache put without any safeties.  
-Rauthy uses different levels in different situations to provide real HA and sync all caches between the pods. This
-means that you can loose a pod and still have the in-cache-only values available on the other ones.
+The Cache layer uses another project of mine called [Hiqlite](https://github.com/sebadob/hiqlite). It uses the Raft
+algorithm under the hood to achieve consistency.
 
-This syncing of the cache is the reason why write performance will degrade, if you scale up too many replicas, which should
-not really be necessary anyway. The best HA performance will be achieved with 3 replicas and then scaling up the 
-resources for each pod before adding more replicas.
+```admonish caution
+Even though everything is authenticated, you should not expose the
+Hiqlite ports to the public, if not really necessary for some reason. You configure these ports with the `HQL_NODES`
+config value in the `CACHE` section.
+```
 
 ## Configuration
 
-The way to configure the `HA_MODE` is optimized for a Kubernetes deployment but may seem a bit odd at the same time,
-if you deploy somewhere else. You need to the following values in the config file:
+Earlier versions of Rauthy have been using [redhac](https://github.com/sebadob/redhac) for the HA cache layer. While
+`redhac` was working fine, it had a few design issues I wanted to get rid of. Since `v0.26.0`, Rauthy uses the above
+mentioned [Hiqlite](https://github.com/sebadob/hiqlite) instead. You only need to configure a few variables:
 
-### `HA_MODE`
+### `HQL_NODE_ID`
 
-The first one is easy, just set `HA_MODE=true`
-
-### `HA_HOSTS`
-
-The `HA_HOSTS` is working in a way, that it is really easy inside Kubernetes to configure it, as long as a 
-StatefulSet is used for the deployment.
-
-The way a cache node finds its members is by the `HA_HOSTS` and its own `HOSTNAME`.  
-In the `HA_HOSTS`, add every cache member. For instance, if you want to use 3 replicas in HA mode which are running
-and are deployed as a StatefulSet with the name `rauthy` again:
+The `HQL_NODE_ID` is mandatory, even for a single replica deployment with only a single node in `HQL_NODES`.
+If you deploy Rauthy as a StatefulSet inside Kubernetes, you can ignore this value and just set `HQL_NODE_ID_FROM`
+below. If you deploy anywere else or you are not using a StatefulSet, you need to set the `HQL_NODE_ID` to tell Rauthy
+which node of the Raft cluster it should be.
 
 ```
-HA_HOSTS="http://rauthy-0.rauthy:8000, http://rauthy-1.rauthy:8000, http://rauthy-2.rauthy:8000"
+# The node id must exist in the nodes and there must always be
+# at least a node with ID 1
+# Will be ignored if `HQL_NODE_ID_FROM=k8s`
+HQL_NODE_ID=1
 ```
 
-The way it works:
+### `HQL_NODE_ID_FROM`
 
-1. A node gets its own hostname from the OS  
-This is the reason, why you use a StatefulSet for the deployment, even without any volumes attached. For StatefulSet
-called `rauthy`, the replicas will always have the names `rauthy-0`, `rauthy-1`, ..., which are at the same time the
-hostnames inside the pod.
-2. Find "me" inside the `HA_HOSTS` variable  
-If the hostname cannot be found in the `HA_HOSTS`, the application will panic and exit because of a misconfiguration.
-3. Use the port from the "me"-Entry that was found for the server part  
-This means you do not need to specify the port in another variable which eliminates the risk of having inconsistencies
-or a bad config in that case.
-4. Extract "me" from the `HA_HOSTS`, take the leftover nodes as all cache members and connect to them
-5. Once a quorum has been reached, a leader will be elected  
-From that point on, the cache will start accepting requests
-6. If the leader is lost - elect a new one - No values will be lost
-7. If quorum is lost, the cache will be invalidated  
-This happens for security reasons to provide cache inconsistencies. Better invalidate the cache and fetch the values
-fresh from the DB or other cache members than working with possibly invalid values, which is especially true in an
-authn / authz situation.
-
-```admonish hint
-If you are in an environment where the described mechanism with extracting the hostname would not work, for instance
-you want a HA deployment with just different docker hosts, you can set the `HOSTNAME_OVERWRITE` for each instance to
-match one of the `HA_HOSTS` entries.
-```
-
-### `CACHE_AUTH_TOKEN`
-
-You need to set a secret for the `CACHE_AUTH_TOKEN` which was left out in the
-[Getting Started](../getting_started/k8s.md#create-and-apply-secrets)
-
-Just create a secret and add it in the same way:
+If you deploy to Kubernetes as a StatefulSet, you should ignore the `HQL_NODE_ID` and just set `HQL_NODE_ID_FROM=k8s`.
+This will parse the correct NodeID from the Pod hostname, so you don't have to worry about it.
 
 ```
-echo "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48)" | base64
+# Can be set to 'k8s' to try to split off the node id from the hostname
+# when Hiqlite is running as a StatefulSet inside Kubernetes.
+#HQL_NODE_ID_FROM=k8s
+```
+
+### `HQL_NODES`
+
+Using this value, you defined the Cache / Raft members. This must be given even if you just deploy a single instance.
+The description from the reference config should be clear enough:
+
+```
+# All cluster member nodes.
+# To make setting the env var easy, the values are separated by `\s`
+# while nodes are separated by `\n`
+# in the following format:
+#
+# id addr_raft addr_api
+# id addr_raft addr_api
+# id addr_raft addr_api
+#
+# 2 nodes must be separated by 2 `\n`
+HQL_NODES="
+1 localhost:8100 localhost:8200
+"
+```
+
+### `HQL_SECRET_RAFT` + `HQL_SECRET_API`
+
+Since you need both `HQL_SECRET_RAFT` and `HQL_SECRET_API` in any case, there is nothing to change here. These define
+the secrets being used internally to authenticate against the Raft or the API server for `Hiqlite`.
+You can generate safe values with for instance
+
+```
+cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c48
 ```
 
 ### TLS
 
 If you are using a service mesh like for instance [linkerd](https://linkerd.io/) which creates mTLS connections between
-all pods by default, you can use the HA cache with just plain HTTP, since linkerd will encapsulate the traffic anyway.
-
-You may then set
-
-```
-CACHE_TLS=false
-```
-
-to disable the use of TLS certificates between cache member.
+all pods by default, you can use the HA cache with just plain HTTP, since `linkerd` will encapsulate the traffic anyway.
+In this case, there is nothing to do.
 
 However, if you do not have encryption between pods by default, I would highly recommend, that you use [TLS](tls.md). 
