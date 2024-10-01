@@ -203,6 +203,7 @@ use utoipa::{openapi, OpenApi};
             EventLevel,
             EventsListenParams,
             EventsRequest,
+            LoginRefreshRequest,
             NewGroupRequest,
             NewUserRequest,
             NewUserRegistrationRequest,
