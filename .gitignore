@@ -19,3 +19,4 @@ book/book
 out/
 .npm_cache
 .sqlx
+pnpm-lock.yaml
