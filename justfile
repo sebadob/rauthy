@@ -45,9 +45,9 @@ setup:
     npm install
     cd ..
 
-    if ! docker network inspect rauthy-dev; then
+    if ! {{docker}} network inspect rauthy-dev; then
       echo "Creating rauthy-dev container network"
-      docker network create rauthy-dev
+      {{docker}} network create rauthy-dev
     fi
 
     echo "Building the UI and static HTML"
