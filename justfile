@@ -36,7 +36,7 @@ setup:
 
     echo "Installing necessary tools: just, sd, mdbook, mdbook-admonish, sqlx-cli"
     readarray -t cargopkgs < <(cargo install --list | cut -d' ' -f1 | sort | uniq)
-    for pkg in just sd mdbook mdbook-admonish sqlx-cli; do
+    for pkg in just sd mdbook mdbook-admonish; do
         if command -v "$pkg" &>/dev/null; then
             if printf '%s\0' "${cargopkgs[@]}" | grep -qw "$pkg"; then
                 cargo install "$pkg"
