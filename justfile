@@ -46,7 +46,7 @@ setup:
         fi
     done
     if command -v sqlx &>/dev/null; then
-        if printf '%s\0' "${cargopkgs[@]}" | grep -qw "$pkg"; then
+        if printf '%s\0' "${cargopkgs[@]}" | grep -qw sqlx-cli; then
             cargo install sqlx-cli --no-default-features --features rustls,sqlite,postgres
         fi
     else
