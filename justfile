@@ -34,11 +34,11 @@ setup:
     clear
 
     echo "Installing necessary tools: just, sd, mdbook, mdbook-admonish, sqlx-cli"
-    cargo install just
-    cargo install sd
-    cargo install mdbook
-    cargo install mdbook-admonish
-    cargo install sqlx-cli --no-default-features --features rustls,sqlite,postgres
+    command -v just &>/dev/null || cargo install just
+    command -v sd &>/dev/null || cargo install sd
+    command -v mdbook &>/dev/null || cargo install mdbook
+    command -v mdbook-admonish &>/dev/null || cargo install mdbook-admonish
+    command -v sqlx &>/dev/null || cargo install sqlx-cli --no-default-features --features rustls,sqlite,postgres
 
     echo "npm install to set up the frontend"
     cd frontend/
