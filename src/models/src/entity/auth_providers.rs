@@ -662,8 +662,14 @@ impl AuthProviderCallback {
         };
 
         let mut location = format!(
-            "{}?client_id={}&redirect_uri={}&response_type=code&scope={}&state={}",
+            "{}{}client_id={}&redirect_uri={}&response_type=code&scope={}&state={}",
             provider.authorization_endpoint,
+            // append parameters if there are already some parameters
+            if provider.authorization_endpoint.contains('?') {
+                '&'
+            } else {
+                '?'
+            },
             provider.client_id,
             *PROVIDER_CALLBACK_URI_ENCODED,
             provider.scope,
