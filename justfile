@@ -9,6 +9,7 @@ export USER :=  `echo "$(id -u):$(id -g)"`
 arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
 docker := `echo ${DOCKER:-docker}`
 map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
+npm := `echo ${NPM:-npm}`
 cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
 
 builder_image := "ghcr.io/sebadob/rauthy-builder"
@@ -42,7 +43,7 @@ setup:
 
     echo "npm install to set up the frontend"
     cd frontend/
-    npm install
+    {{npm}} install
     cd ..
 
     if ! {{docker}} network inspect rauthy-dev; then
@@ -215,7 +216,7 @@ run ty="sqlite":
       {{db_url_postgres}} cargo run --features postgres
     elif [[ {{ty}} == "ui" ]]; then
       cd frontend
-      npm run dev -- --host=0.0.0.0
+      {{npm}} run dev -- --host=0.0.0.0
     elif [[ {{ty}} == "sqlite" ]]; then
       {{db_url_sqlite}} cargo run
     fi
@@ -311,7 +312,7 @@ build-ui:
 
     # build the frontend
     cd frontend
-    npm run build
+    {{npm}} run build
     cd ..
 
     # set correct values in html outputs for pre-rendering
@@ -537,4 +538,4 @@ update-deps:
     #!/usr/bin/env bash
     {{db_url_sqlite}} cargo update
     cd frontend
-    npm update
+    {{npm}} update
