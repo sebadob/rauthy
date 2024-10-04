@@ -2059,7 +2059,7 @@ them with the following config variables:</p>
 <pre><code># Session lifetime in seconds - the session can not be
 # extended beyond this time and a new login will be forced.
 # This is the session for the authorization code flow. 
-# (default: 14400)
+# default: 14400
 SESSION_LIFETIME=14400
 
 # If 'true', a 2FA / MFA check will be done with each automatic
@@ -2068,7 +2068,7 @@ SESSION_LIFETIME=14400
 # maximum amount of security.
 # If 'false', the user will not get an MFA prompt with an active
 # session at the authorization endpoint.
-# (default: false)
+# default: false
 SESSION_RENEW_MFA=false
 
 # Session timeout in seconds
@@ -2077,6 +2077,7 @@ SESSION_RENEW_MFA=false
 # the credentials again.
 # This is the value which can extend the session, until it hits
 # its maximum lifetime set with SESSION_LIFETIME.
+# default: 5400
 SESSION_TIMEOUT=5400
 </code></pre>
 <h2 id="security"><a class="header" href="#security">Security</a></h2>
@@ -2672,7 +2673,7 @@ switch to the correct rauthy image as well. Rauthy v0.14 and beyond has differen
 again afterwards.</p>
 </div>
 </div>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="unix-doamin-sockets"><a class="header" href="#unix-doamin-sockets">UNIX Doamin Sockets</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="unix-domain-sockets"><a class="header" href="#unix-domain-sockets">UNIX Domain Sockets</a></h1>
 <p>Rauthy supports listening on a UNIX domain socket. To enable this feature, you will need to specify the following configurations.</p>
 <pre><code>LISTEN_SCHEME=unix_http/unix_https
 LISTEN_ADDRESS=path_to_server.sock
@@ -4224,7 +4225,7 @@ EVENT_LEVEL_FAILED_LOGIN=info
 # Session lifetime in seconds - the session can not be
 # extended beyond this time and a new login will be forced.
 # This is the session for the authorization code flow. 
-# (default: 14400)
+# default: 14400
 #SESSION_LIFETIME=14400
 
 # If 'true', a 2FA / MFA check will be done with each automatic
@@ -4233,7 +4234,7 @@ EVENT_LEVEL_FAILED_LOGIN=info
 # maximum amount of security.
 # If 'false', the user will not get an MFA prompt with an active
 # session at the authorization endpoint.
-# (default: false)
+# default: false
 #SESSION_RENEW_MFA=false
 
 # Session timeout in seconds
@@ -4242,6 +4243,7 @@ EVENT_LEVEL_FAILED_LOGIN=info
 # the credentials again.
 # This is the value which can extend the session, until it hits
 # its maximum lifetime set with SESSION_LIFETIME.
+# default: 5400
 #SESSION_TIMEOUT=5400
 
 # ML: magic link
