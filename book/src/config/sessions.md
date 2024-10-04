@@ -145,7 +145,7 @@ them with the following config variables:
 # Session lifetime in seconds - the session can not be
 # extended beyond this time and a new login will be forced.
 # This is the session for the authorization code flow. 
-# (default: 14400)
+# default: 14400
 SESSION_LIFETIME=14400
 
 # If 'true', a 2FA / MFA check will be done with each automatic
@@ -154,7 +154,7 @@ SESSION_LIFETIME=14400
 # maximum amount of security.
 # If 'false', the user will not get an MFA prompt with an active
 # session at the authorization endpoint.
-# (default: false)
+# default: false
 SESSION_RENEW_MFA=false
 
 # Session timeout in seconds
@@ -163,6 +163,7 @@ SESSION_RENEW_MFA=false
 # the credentials again.
 # This is the value which can extend the session, until it hits
 # its maximum lifetime set with SESSION_LIFETIME.
+# default: 5400
 SESSION_TIMEOUT=5400
 ```
 
