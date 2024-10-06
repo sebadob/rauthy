@@ -39,7 +39,7 @@ pub async fn backup_db(db: &DbPool) -> Result<(), ErrorResponse> {
         )
     })?;
 
-    let backup_file_path = format!("{}/rauthy.db", path_base);
+    let backup_file_path = format!("{}rauthy.db", path_base);
     if DATABASE_URL.starts_with("sqlite:") {
         let q = format!("VACUUM main INTO '{}'", backup_file_path);
         sqlx::query(&q)
