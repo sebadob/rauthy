@@ -285,6 +285,7 @@ pub struct DynamicClientResponse {
     pub client_secret: Option<String>,
     // TODO can we "trust" in a client doing a PUT on Self before en expiry to
     // implement proper forced secret rotation from time to time? -> not mentioned in RFC
+    /// Unix timestamp in seconds
     pub client_secret_expires_at: i64,
 
     pub redirect_uris: Vec<String>,

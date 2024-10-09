@@ -57,7 +57,7 @@ pub struct NewUserRequest {
     pub roles: Vec<String>,
     // TODO max validation for inner i64 is broken in the macro in v0.18.1
     // #[validate(range(min = 1719784800, max = 4070905200))]
-    /// Unix timestamp
+    /// Unix timestamp in seconds
     #[validate(range(min = 1719784800))]
     pub user_expires: Option<i64>,
 }
@@ -135,7 +135,7 @@ pub struct UpdateUserRequest {
     pub email_verified: bool,
     // TODO max validation for inner i64 is broken in the macro in v0.18.1
     // #[validate(range(min = 1719784800, max = 4070905200))]
-    /// Unix timestamp
+    /// Unix timestamp in seconds
     #[validate(range(min = 1719784800))]
     pub user_expires: Option<i64>,
     #[validate(nested)]
@@ -261,8 +261,11 @@ pub struct DeviceResponse {
     pub client_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_id: Option<String>,
+    /// Unix timestamp in seconds
     pub created: i64,
+    /// Unix timestamp in seconds
     pub access_exp: i64,
+    /// Unix timestamp in seconds
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refresh_exp: Option<i64>,
     pub peer_ip: String,
@@ -272,9 +275,9 @@ pub struct DeviceResponse {
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PasskeyResponse {
     pub name: String,
-    /// format: `NaiveDateTime`
+    /// Unix timestamp in seconds
     pub registered: i64,
-    /// format: `NaiveDateTime`
+    /// Unix timestamp in seconds
     pub last_used: i64,
     pub user_verified: Option<bool>,
 }
@@ -367,20 +370,19 @@ pub struct UserResponse {
     pub groups: Option<Vec<String>>,
     pub enabled: bool,
     pub email_verified: bool,
-    /// format: `NaiveDateTime`
+    /// Unix timestamp in seconds
     #[serde(skip_serializing_if = "Option::is_none")]
     pub password_expires: Option<i64>,
-    /// format: `NaiveDateTime`
-    #[schema(value_type = str)]
+    /// Unix timestamp in seconds
     pub created_at: i64,
-    /// format: `NaiveDateTime`
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Unix timestamp in seconds
     pub last_login: Option<i64>,
-    /// format: `NaiveDateTime`
+    /// Unix timestamp in seconds
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_failed_login: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub failed_login_attempts: Option<i64>,
+    /// Unix timestamp in seconds
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_expires: Option<i64>,
     pub account_type: UserAccountTypeResponse,

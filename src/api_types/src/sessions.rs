@@ -17,7 +17,9 @@ pub struct SessionResponse<'a> {
     pub user_id: Option<&'a str>,
     pub is_mfa: bool,
     pub state: SessionState,
+    /// Unix timestamp in seconds
     pub exp: i64,
+    /// Unix timestamp in seconds
     pub last_seen: i64,
     pub remote_ip: Option<&'a str>,
 }
