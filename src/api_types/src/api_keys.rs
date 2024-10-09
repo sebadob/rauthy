@@ -40,7 +40,7 @@ pub struct ApiKeyRequest {
     pub name: String,
     // TODO max validation for inner i64 is broken in the macro in v0.18.1
     // #[validate(range(min = 1719784800, max = 4070905200))]
-    /// Unix timestamp
+    /// Unix timestamp in seconds
     #[validate(range(min = 1719784800))]
     pub exp: Option<i64>,
     pub access: Vec<ApiKeyAccess>,
@@ -54,9 +54,9 @@ pub struct ApiKeysResponse {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ApiKeyResponse {
     pub name: String,
-    /// unix timestamp
+    /// Unix timestamp in seconds
     pub created: i64,
-    /// unix timestamp
+    /// Unix timestamp in seconds
     pub expires: Option<i64>,
     pub access: Vec<ApiKeyAccess>,
 }
