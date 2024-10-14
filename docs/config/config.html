@@ -1098,6 +1098,11 @@ EVENT_LEVEL_FAILED_LOGIN=info
 # Accepts: error, info, debug, trace (default: info)
 #LOG_LEVEL=info
 
+# The log level for the `Hiqlite` persistence layer.
+# At the time of writing, only the cache will use `hiqlite`
+# default: info
+LOG_LEVEL_DATABASE=info
+
 # This is a special config which allows the configuration of
 # customized access logs. These logs will be logged with each
 # request in addition to the normal LOG_LEVEL logs.
@@ -1116,6 +1121,16 @@ EVENT_LEVEL_FAILED_LOGIN=info
 # - Off
 # default: Modifying
 #LOG_LEVEL_ACCESS=Basic
+
+# You can change the log output format to JSON, if you set:
+# `LOG_FMT=json`.
+# Keep in mind, that some logs will include escaped values,
+# for instance when `Text` already logs a JSON in debug level.
+# Some other logs like an Event for instance will be formatted 
+# as Text anyway. If you need to auto-parse events, please consider 
+# using an API token and listen ot them actively.
+# default: text
+#LOG_FMT=text
 
 #####################################
 ################ MFA ################
