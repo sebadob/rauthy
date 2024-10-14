@@ -1,5 +1,36 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### Upstream Auth Provider Query Params
+
+Some upstream auth providers need custom query params appended to their authorization endpoint URL.
+Rauthy will now accept URLs in the auth provider config with pre-defined query params, as long as they
+don't interfere with OIDC default params.
+
+[7dee26a](https://github.com/sebadob/rauthy/commit/7dee26af0ab757cd80395652fe03f82ffbc2c8bc)
+
+#### Option Log Fmt as JSON
+
+To make automatic parsing of logs possible (to some extent), you now have the ability to change the logging output from
+text to json with the following new config variable:
+
+```
+# You can change the log output format to JSON, if you set:
+# `LOG_FMT=json`.
+# Keep in mind, that some logs will include escaped values,
+# for instance when `Text` already logs a JSON in debug level.
+# Some other logs like an Event for instance will be formatted 
+# as Text anyway. If you need to auto-parse events, please consider 
+# using an API token and listen ot them actively.
+# default: text
+#LOG_FMT=text
+```
+
+[]()
+
 ## 0.26.0
 
 ### Breaking
