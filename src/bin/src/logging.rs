@@ -20,12 +20,22 @@ pub fn setup_logging() -> tracing::Level {
         env::set_var("RUST_BACKTRACE", "1");
     }
 
-    let subscriber = tracing_subscriber::FmtSubscriber::builder()
-        .with_max_level(log_level)
-        .with_env_filter(filter)
-        .finish();
-
-    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+    if env::var("LOG_FMT").ok() == Some("json".to_string()) {
+        let subscriber = tracing_subscriber::FmtSubscriber::builder()
+            .json()
+            .with_max_level(log_level)
+            .with_env_filter(filter)
+            .finish();
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("setting default subscriber failed");
+    } else {
+        let subscriber = tracing_subscriber::FmtSubscriber::builder()
+            .with_max_level(log_level)
+            .with_env_filter(filter)
+            .finish();
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("setting default subscriber failed");
+    };
 
     log_level
 }

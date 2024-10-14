@@ -98,7 +98,7 @@ sqlx = { version = "0.8.2", features = ["macros", "migrate", "postgres", "runtim
 strum = { version = "0.26.3", features = ["derive"] }
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
 tracing = { version = "0.1", features = ["attributes"] }
-tracing-subscriber = { version = "0.3", features = ["env-filter", "tracing"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "tracing"] }
 tokio = { version = "1", features = ["full"] }
 utoipa = { version = "4", features = ["actix_extras", "chrono", "openapi_extensions"] }
 utoipa-swagger-ui = { version = "=7.0.1", features = ["actix-web"] }
