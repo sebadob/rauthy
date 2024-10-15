@@ -1,5 +1,5 @@
 use crate::app_state::AppState;
-use crate::cache::{Cache, DB};
+use crate::hiqlite::{Cache, DB};
 use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::{Algorithm, Argon2, PasswordHasher, Version};

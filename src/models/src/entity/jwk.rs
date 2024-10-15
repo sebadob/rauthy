@@ -1,6 +1,6 @@
 use crate::app_state::{AppState, DbPool};
-use crate::cache::{Cache, DB};
 use crate::events::event::Event;
+use crate::hiqlite::{Cache, DB};
 use actix_web::web;
 use cryptr::{EncKeys, EncValue};
 use jwt_simple::algorithms;

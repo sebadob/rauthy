@@ -5,6 +5,10 @@ use std::sync::OnceLock;
 
 static CLIENT: OnceLock<hiqlite::Client> = OnceLock::new();
 
+#[derive(rust_embed::Embed)]
+#[folder = "../../migrations/hiqlite"]
+struct Migrations;
+
 /// Cache Index for the `hiqlite` cache layer
 #[derive(Debug, Serialize, Deserialize, hiqlite::EnumIter, hiqlite::ToPrimitive)]
 pub enum Cache {
@@ -33,6 +37,7 @@ impl DB {
 
         let config = NodeConfig::from_env();
         let client = hiqlite::start_node_with_cache::<Cache>(config).await?;
+        client.migrate::<Migrations>().await?;
 
         let _ = CLIENT.set(client);
 

@@ -29,7 +29,7 @@ text to json with the following new config variable:
 #LOG_FMT=text
 ```
 
-[]()
+[1ef1353](https://github.com/sebadob/rauthy/commit/1ef1353162655fb5dc54396b02c73ef80ff0506a)
 
 ## 0.26.0
 

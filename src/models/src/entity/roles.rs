@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
-use crate::cache::{Cache, DB};
 use crate::entity::users::User;
+use crate::hiqlite::{Cache, DB};
 use actix_web::web;
 use rauthy_api_types::roles::NewRoleRequest;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_ROLES};

@@ -1,6 +1,6 @@
 use crate::app_state::{AppState, DbTxn};
-use crate::cache::{Cache, DB};
 use crate::entity::clients::Client;
+use crate::hiqlite::{Cache, DB};
 use actix_web::web;
 use chrono::Utc;
 use cryptr::EncValue;

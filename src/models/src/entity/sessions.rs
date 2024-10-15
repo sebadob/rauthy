@@ -1,8 +1,8 @@
 use crate::api_cookie::ApiCookie;
 use crate::app_state::AppState;
-use crate::cache::{Cache, DB};
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
+use crate::hiqlite::{Cache, DB};
 use actix_web::cookie::{time, Cookie, SameSite};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{cookie, web, HttpRequest};

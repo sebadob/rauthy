@@ -1,5 +1,5 @@
 use crate::app_state::AppState;
-use crate::cache::{Cache, DB};
+use crate::hiqlite::{Cache, DB};
 use actix_web::web;
 use chrono::Utc;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_APP_VERSION, RAUTHY_VERSION};
