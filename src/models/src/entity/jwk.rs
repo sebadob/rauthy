@@ -3,12 +3,14 @@ use crate::events::event::Event;
 use crate::hiqlite::{Cache, DB};
 use actix_web::web;
 use cryptr::{EncKeys, EncValue};
+use hiqlite::{params, Param};
 use jwt_simple::algorithms;
 use jwt_simple::algorithms::{
     Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
 };
 use rauthy_api_types::oidc::{JWKSCerts, JWKSPublicKeyCerts};
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_JWKS, IDX_JWK_KID, IDX_JWK_LATEST};
+use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rsa::BigUint;
@@ -110,17 +112,36 @@ pub struct Jwk {
 impl Jwk {
     pub async fn save(&self, db: &DbPool) -> Result<(), ErrorResponse> {
         let sig_str = self.signature.as_str();
-        sqlx::query!(
-            r#"INSERT INTO jwks (kid, created_at, signature, enc_key_id, jwk)
-            VALUES ($1, $2, $3, $4, $5)"#,
-            self.kid,
-            self.created_at,
-            sig_str,
-            self.enc_key_id,
-            self.jwk,
-        )
-        .execute(db)
-        .await?;
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    r#"INSERT INTO
+                    jwks (kid, created_at, signature, enc_key_id, jwk)
+                    VALUES ($1, $2, $3, $4, $5)"#,
+                    params!(
+                        self.kid.clone(),
+                        self.created_at,
+                        sig_str,
+                        self.enc_key_id.clone(),
+                        self.jwk.clone()
+                    ),
+                )
+                .await?;
+        } else {
+            sqlx::query!(
+                r#"INSERT INTO
+                jwks (kid, created_at, signature, enc_key_id, jwk)
+                VALUES ($1, $2, $3, $4, $5)"#,
+                self.kid,
+                self.created_at,
+                sig_str,
+                self.enc_key_id,
+                self.jwk,
+            )
+            .execute(db)
+            .await?;
+        }
+
         Ok(())
     }
 }

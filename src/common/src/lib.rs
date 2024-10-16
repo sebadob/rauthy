@@ -3,6 +3,8 @@
 // needed because the lazy_static! initialization of constants grew quite a bit
 #![recursion_limit = "256"]
 
+use crate::constants::DB_TYPE;
+use std::env;
 use std::str::FromStr;
 
 pub mod constants;
@@ -13,21 +15,37 @@ pub mod utils;
 pub enum DbType {
     Sqlite,
     Postgres,
-    // Mysql,
+    Hiqlite,
 }
 
 impl FromStr for DbType {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let res = if s.starts_with("sqlite:") {
+        let res = if env::var("HIQLITE") == Ok("true".to_string()) {
+            Self::Hiqlite
+        } else if s.starts_with("sqlite:") {
             Self::Sqlite
         } else if s.starts_with("postgresql://") {
             Self::Postgres
         } else {
             panic!("You provided an unknown database type, please check the DATABASE_URL");
         };
-
         Ok(res)
     }
+}
+
+#[inline(always)]
+pub fn is_hiqlite() -> bool {
+    *DB_TYPE == DbType::Hiqlite
+}
+
+#[inline(always)]
+pub fn is_sqlite() -> bool {
+    *DB_TYPE == DbType::Sqlite
+}
+
+#[inline(always)]
+pub fn is_postgres() -> bool {
+    *DB_TYPE == DbType::Postgres
 }

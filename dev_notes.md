@@ -2,7 +2,12 @@
 
 ## CURRENT WORK
 
-- update the book with new k8s readyness and liveness probes
+- `MIGRATE_DB_FROM` for Hiqlite
+
+### After finished Hiqlite migration
+
+- fix `DbType::from_str`
+- cleanup `DbPool` creation in `AppState`
 
 ## Documentation TODO
 
