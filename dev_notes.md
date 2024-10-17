@@ -2,12 +2,14 @@
 
 ## CURRENT WORK
 
+- migrate each model step by step
 - `MIGRATE_DB_FROM` for Hiqlite
 
 ### After finished Hiqlite migration
 
 - fix `DbType::from_str`
 - cleanup `DbPool` creation in `AppState`
+- remove the `sqlite` feature from `sqlx` to really make sure nothing has been forgotten
 
 ## Documentation TODO
 
