@@ -1,12 +1,9 @@
-use crate::app_state::{AppState, DbTxn};
-use crate::entity::clients::Client;
+use crate::app_state::AppState;
 use crate::hiqlite::{Cache, DB};
 use actix_web::web;
 use chrono::Utc;
 use cryptr::EncValue;
-use rauthy_common::constants::{
-    CACHE_TTL_DYN_CLIENT, CACHE_TTL_IP_RATE_LIMIT, DYN_CLIENT_SECRET_AUTO_ROTATE,
-};
+use rauthy_common::constants::{CACHE_TTL_DYN_CLIENT, CACHE_TTL_IP_RATE_LIMIT};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, FromRow};
@@ -22,35 +19,6 @@ pub struct ClientDyn {
 }
 
 impl ClientDyn {
-    pub async fn create(
-        txn: &mut DbTxn<'_>,
-        id: String,
-        token_endpoint_auth_method: String,
-    ) -> Result<Self, ErrorResponse> {
-        let (_secret_plain, registration_token) = Client::generate_new_secret()?;
-        let created = Utc::now().timestamp();
-
-        query!(
-            r#"INSERT INTO
-            clients_dyn (id, created, registration_token, token_endpoint_auth_method)
-            VALUES ($1, $2, $3, $4)"#,
-            id,
-            created,
-            registration_token,
-            token_endpoint_auth_method,
-        )
-        .execute(&mut **txn)
-        .await?;
-
-        Ok(Self {
-            id,
-            created,
-            last_used: None,
-            registration_token,
-            token_endpoint_auth_method,
-        })
-    }
-
     /// This only deletes a `ClientDyn` from the cache.
     /// The deletion at database level happens via the foreign key cascade.
     pub async fn delete_from_cache(id: &str) -> Result<(), ErrorResponse> {
@@ -84,43 +52,6 @@ impl ClientDyn {
             .await?;
 
         Ok(slf)
-    }
-
-    pub async fn update(
-        &mut self,
-        txn: &mut DbTxn<'_>,
-        token_endpoint_auth_method: String,
-    ) -> Result<(), ErrorResponse> {
-        self.token_endpoint_auth_method = token_endpoint_auth_method;
-        self.last_used = Some(Utc::now().timestamp());
-
-        if *DYN_CLIENT_SECRET_AUTO_ROTATE {
-            let (_secret_plain, registration_token) = Client::generate_new_secret()?;
-            self.registration_token = registration_token;
-        }
-
-        query!(
-            r#"UPDATE clients_dyn
-            SET registration_token = $1, token_endpoint_auth_method = $2, last_used = $3
-            WHERE id = $4"#,
-            self.registration_token,
-            self.token_endpoint_auth_method,
-            self.last_used,
-            self.id,
-        )
-        .execute(&mut **txn)
-        .await?;
-
-        DB::client()
-            .put(
-                Cache::ClientDynamic,
-                ClientDyn::get_cache_entry(&self.id),
-                self,
-                *CACHE_TTL_DYN_CLIENT,
-            )
-            .await?;
-
-        Ok(())
     }
 
     pub async fn update_used(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {

@@ -11,6 +11,10 @@
 - cleanup `DbPool` creation in `AppState`
 - remove the `sqlite` feature from `sqlx` to really make sure nothing has been forgotten
 
+#### Update for the Changelog
+
+- POST /clients does not return the created client anymore
+
 ## Documentation TODO
 
 - `HealthResponse` response has been changed with Hiqlite -> breaking change

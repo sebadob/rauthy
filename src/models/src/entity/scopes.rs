@@ -110,8 +110,8 @@ impl Scope {
 
         let mut txn = data.db.begin().await?;
 
-        for client in clients {
-            client.save(data, Some(&mut txn)).await?;
+        for client in &clients {
+            client.save_txn(&mut txn).await?;
         }
 
         sqlx::query!("delete from scopes where id = $1", id)
@@ -119,6 +119,10 @@ impl Scope {
             .await?;
 
         txn.commit().await?;
+
+        for client in clients {
+            client.save_cache().await?;
+        }
 
         let scopes = Scope::find_all(data)
             .await?
@@ -185,9 +189,9 @@ impl Scope {
         let mut txn = data.db.begin().await?;
 
         // if the name has changed, we need to update all connected clients
+        let mut clients = vec![];
         let is_name_update = if scope.name != scope_req.scope {
             // find all clients with the old_name assigned
-            let mut clients = vec![];
             Client::find_all(data)
                 .await?
                 .into_iter()
@@ -206,8 +210,8 @@ impl Scope {
             }
 
             // Not awaiting all at once to prevent resource spikes
-            for client in clients {
-                client.save(data, Some(&mut txn)).await?;
+            for client in &clients {
+                client.save_txn(&mut txn).await?;
             }
 
             true
@@ -243,6 +247,10 @@ impl Scope {
         .await?;
 
         txn.commit().await?;
+
+        for client in clients {
+            client.save_cache().await?;
+        }
 
         let scopes = Scope::find_all(data)
             .await?

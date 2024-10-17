@@ -8,17 +8,20 @@ use crate::ListenScheme;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest};
+use chrono::Utc;
 use cryptr::{utils, EncKeys, EncValue};
+use hiqlite::{params, Param, Params};
 use rauthy_api_types::clients::{
     ClientResponse, DynamicClientRequest, DynamicClientResponse, EphemeralClientRequest,
     NewClientRequest,
 };
 use rauthy_common::constants::{
     ADDITIONAL_ALLOWED_ORIGIN_SCHEMES, ADMIN_FORCE_MFA, APPLICATION_JSON, CACHE_TTL_APP,
-    CACHE_TTL_EPHEMERAL_CLIENT, DYN_CLIENT_DEFAULT_TOKEN_LIFETIME, DYN_CLIENT_SECRET_AUTO_ROTATE,
-    ENABLE_EPHEMERAL_CLIENTS, EPHEMERAL_CLIENTS_ALLOWED_FLOWS, EPHEMERAL_CLIENTS_ALLOWED_SCOPES,
-    EPHEMERAL_CLIENTS_FORCE_MFA, PROXY_MODE, RAUTHY_VERSION,
+    CACHE_TTL_DYN_CLIENT, CACHE_TTL_EPHEMERAL_CLIENT, DYN_CLIENT_DEFAULT_TOKEN_LIFETIME,
+    DYN_CLIENT_SECRET_AUTO_ROTATE, ENABLE_EPHEMERAL_CLIENTS, EPHEMERAL_CLIENTS_ALLOWED_FLOWS,
+    EPHEMERAL_CLIENTS_ALLOWED_SCOPES, EPHEMERAL_CLIENTS_FORCE_MFA, PROXY_MODE, RAUTHY_VERSION,
 };
+use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::CONTENT_TYPE;
@@ -76,10 +79,11 @@ impl Client {
         format!("client_{}", id)
     }
 
+    // have less cloning
     pub async fn create(
         data: &web::Data<AppState>,
         mut client_req: NewClientRequest,
-    ) -> Result<Self, ErrorResponse> {
+    ) -> Result<(), ErrorResponse> {
         let kid = if client_req.confidential {
             let (_cleartext, enc) = Self::generate_new_secret()?;
             client_req.secret = Some(enc);
@@ -90,43 +94,75 @@ impl Client {
         let mut client = Client::from(client_req);
         client.secret_kid = kid;
 
-        let rows =  sqlx::query!(
-            r#"insert into clients (id, name, enabled, confidential, secret, secret_kid,
-            redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg,
-            id_token_alg, auth_code_lifetime, access_token_lifetime, scopes, default_scopes,
-            challenge, force_mfa, client_uri, contacts)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-            $18, $19, $20)"#,
-            client.id,
-            client.name,
-            client.enabled,
-            client.confidential,
-            client.secret,
-            client.secret_kid,
-            client.redirect_uris,
-            client.post_logout_redirect_uris,
-            client.allowed_origins,
-            client.flows_enabled,
-            client.access_token_alg,
-            client.id_token_alg,
-            client.auth_code_lifetime,
-            client.access_token_lifetime,
-            client.scopes,
-            client.default_scopes,
-            client.challenge,
-            client.force_mfa,
-            client.client_uri,
-            client.contacts,
-        )
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    r#"
+INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
+post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
+auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
+client_uri, contacts)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+$18, $19, $20)"#,
+                    params!(
+                        client.id,
+                        client.name,
+                        client.enabled,
+                        client.confidential,
+                        client.secret,
+                        client.secret_kid,
+                        client.redirect_uris,
+                        client.post_logout_redirect_uris,
+                        client.allowed_origins,
+                        client.flows_enabled,
+                        client.access_token_alg,
+                        client.id_token_alg,
+                        client.auth_code_lifetime,
+                        client.access_token_lifetime,
+                        client.scopes,
+                        client.default_scopes,
+                        client.challenge,
+                        client.force_mfa,
+                        client.client_uri,
+                        client.contacts
+                    ),
+                )
+                .await?;
+        } else {
+            sqlx::query!(
+                r#"
+    INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
+    post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
+    auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
+    client_uri, contacts)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+    $18, $19, $20)"#,
+                client.id,
+                client.name,
+                client.enabled,
+                client.confidential,
+                client.secret,
+                client.secret_kid,
+                client.redirect_uris,
+                client.post_logout_redirect_uris,
+                client.allowed_origins,
+                client.flows_enabled,
+                client.access_token_alg,
+                client.id_token_alg,
+                client.auth_code_lifetime,
+                client.access_token_lifetime,
+                client.scopes,
+                client.default_scopes,
+                client.challenge,
+                client.force_mfa,
+                client.client_uri,
+                client.contacts,
+            )
             .execute(&data.db)
-            .await?
-            .rows_affected();
-
-        if rows == 0 {
-            error!("Error inserting client - no rows affected");
+            .await?;
         }
 
-        Ok(client)
+        Ok(())
     }
 
     pub async fn create_dynamic(
@@ -140,66 +176,140 @@ impl Client {
 
         let client = Self::try_from_dyn_reg(client_req)?;
 
-        let mut txn = data.db.begin().await?;
+        let created = Utc::now().timestamp();
+        let (_secret_plain, registration_token) = Self::generate_new_secret()?;
 
-        sqlx::query!(
-            r#"INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid,
-            redirect_uris, post_logout_redirect_uris, allowed_origins, flows_enabled,
-            access_token_alg, id_token_alg, auth_code_lifetime, access_token_lifetime,
-            scopes, default_scopes, challenge, force_mfa, client_uri, contacts)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-            $18, $19, $20)"#,
-            client.id,
-            client.name,
-            client.enabled,
-            client.confidential,
-            client.secret,
-            client.secret_kid,
-            client.redirect_uris,
-            client.post_logout_redirect_uris,
-            client.allowed_origins,
-            client.flows_enabled,
-            client.access_token_alg,
-            client.id_token_alg,
-            client.auth_code_lifetime,
-            client.access_token_lifetime,
-            client.scopes,
-            client.default_scopes,
-            client.challenge,
-            client.force_mfa,
-            client.client_uri,
-            client.contacts,
-        )
-        .execute(&mut *txn)
-        .await?;
+        if is_hiqlite() {
+            DB::client().txn([
+                (r#"
+INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
+post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
+auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
+client_uri, contacts)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#,
+                params!(
+                    client.id.clone(),
+                    client.name.clone(),
+                    client.enabled,
+                    client.confidential,
+                    client.secret.clone(),
+                    client.secret_kid.clone(),
+                    client.redirect_uris.clone(),
+                    client.post_logout_redirect_uris.clone(),
+                    client.allowed_origins.clone(),
+                    client.flows_enabled.clone(),
+                    client.access_token_alg.clone(),
+                    client.id_token_alg.clone(),
+                    client.auth_code_lifetime,
+                    client.access_token_lifetime,
+                    client.scopes.clone(),
+                    client.default_scopes.clone(),
+                    client.challenge.clone(),
+                    client.force_mfa,
+                    client.client_uri.clone(),
+                    client.contacts.clone()
+                )),
+                (r#"
+INSERT INTO
+clients_dyn (id, created, registration_token, token_endpoint_auth_method)
+VALUES ($1, $2, $3, $4)"#,
+                params!(
+                    client.id.clone(),
+                    created,
+                    registration_token.clone(),
+                    token_endpoint_auth_method.clone()
+                ))
+            ]).await?;
+        } else {
+            let mut txn = data.db.begin().await?;
 
-        let client_dyn = ClientDyn::create(
-            &mut txn,
-            client.id.clone(),
-            token_endpoint_auth_method.clone(),
-        )
-        .await?;
+            sqlx::query!(
+                r#"
+INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
+post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
+auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
+client_uri, contacts)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#,
+                client.id,
+                client.name,
+                client.enabled,
+                client.confidential,
+                client.secret,
+                client.secret_kid,
+                client.redirect_uris,
+                client.post_logout_redirect_uris,
+                client.allowed_origins,
+                client.flows_enabled,
+                client.access_token_alg,
+                client.id_token_alg,
+                client.auth_code_lifetime,
+                client.access_token_lifetime,
+                client.scopes,
+                client.default_scopes,
+                client.challenge,
+                client.force_mfa,
+                client.client_uri,
+                client.contacts,
+            )
+            .execute(&mut *txn)
+            .await?;
 
-        txn.commit().await?;
+            sqlx::query!(
+                r#"
+INSERT INTO
+clients_dyn (id, created, registration_token, token_endpoint_auth_method)
+VALUES ($1, $2, $3, $4)"#,
+                client.id,
+                created,
+                registration_token,
+                token_endpoint_auth_method,
+            )
+            .execute(&mut *txn)
+            .await?;
+
+            txn.commit().await?;
+        };
+
+        let client_dyn = ClientDyn {
+            id: client.id.clone(),
+            created,
+            last_used: None,
+            registration_token,
+            token_endpoint_auth_method,
+        };
 
         client.into_dynamic_client_response(data, client_dyn, true)
     }
 
     // Deletes a client
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        sqlx::query!("delete from clients where id = $1", self.id,)
-            .execute(&data.db)
-            .await?;
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    "DELETE FROM clients WHERE id = $1",
+                    params!(self.id.clone()),
+                )
+                .await?;
+        } else {
+            sqlx::query!("DELETE FROM clients WHERE id = $1", self.id,)
+                .execute(&data.db)
+                .await?;
+        }
 
-        DB::client()
-            .delete(Cache::App, Client::cache_idx(&self.id))
-            .await?;
+        self.delete_cache().await?;
 
         // We only clean up the cache. The database uses foreign key a cascade.
         if self.is_dynamic() {
             ClientDyn::delete_from_cache(&self.id).await?;
         }
 
+        Ok(())
+    }
+
+    pub async fn delete_cache(&self) -> Result<(), ErrorResponse> {
+        DB::client()
+            .delete(Cache::App, Client::cache_idx(&self.id))
+            .await?;
         Ok(())
     }
 
@@ -210,10 +320,16 @@ impl Client {
             return Ok(slf);
         };
 
-        let slf = sqlx::query_as::<_, Self>("select * from clients where id = $1")
-            .bind(&id)
-            .fetch_one(&data.db)
-            .await?;
+        let slf = if is_hiqlite() {
+            client
+                .query_as_one("SELECT * FROM clients WHERE id = $1", params!(id))
+                .await?
+        } else {
+            sqlx::query_as::<_, Self>("SELECT * FROM clients WHERE id = $1")
+                .bind(&id)
+                .fetch_one(&data.db)
+                .await?
+        };
 
         client
             .put(Cache::App, Self::cache_idx(&slf.id), &slf, CACHE_TTL_APP)
@@ -224,9 +340,15 @@ impl Client {
 
     // Returns all existing clients with the secrets.
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        let clients = sqlx::query_as("select * from clients")
-            .fetch_all(&data.db)
-            .await?;
+        let clients = if is_hiqlite() {
+            DB::client()
+                .query_as("SELECT * FROM clients", params!())
+                .await?
+        } else {
+            sqlx::query_as("SELECT * FROM clients")
+                .fetch_all(&data.db)
+                .await?
+        };
 
         Ok(clients)
     }
@@ -262,18 +384,51 @@ impl Client {
         Ok(slf)
     }
 
-    pub async fn save(
-        &self,
-        data: &web::Data<AppState>,
-        txn: Option<&mut DbTxn<'_>>,
-    ) -> Result<(), ErrorResponse> {
-        let q = sqlx::query!(
-            r#"update clients set name = $1, enabled = $2, confidential = $3, secret = $4,
-            secret_kid = $5, redirect_uris = $6, post_logout_redirect_uris = $7, allowed_origins = $8,
-            flows_enabled = $9, access_token_alg = $10, id_token_alg = $11, auth_code_lifetime = $12,
-            access_token_lifetime = $13, scopes = $14, default_scopes = $15,
-            challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19
-            where id = $20"#,
+    pub async fn save_prepared<'a>(self) -> Result<(&'a str, Params), ErrorResponse> {
+        self.delete_cache().await?;
+
+        Ok((
+            r#"
+UPDATE clients
+SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
+post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
+id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
+default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19
+WHERE id = $20"#,
+            params!(
+                self.name,
+                self.enabled,
+                self.confidential,
+                self.secret,
+                self.secret_kid,
+                self.redirect_uris,
+                self.post_logout_redirect_uris,
+                self.allowed_origins,
+                self.flows_enabled,
+                self.access_token_alg,
+                self.id_token_alg,
+                self.auth_code_lifetime,
+                self.access_token_lifetime,
+                self.scopes,
+                self.default_scopes,
+                self.challenge,
+                self.force_mfa,
+                self.client_uri,
+                self.contacts,
+                self.id
+            ),
+        ))
+    }
+
+    pub async fn save_txn(&self, txn: &mut DbTxn<'_>) -> Result<(), ErrorResponse> {
+        sqlx::query!(
+            r#"
+UPDATE clients
+SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
+post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
+id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
+default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19
+WHERE id = $20"#,
             self.name,
             self.enabled,
             self.confidential,
@@ -294,15 +449,91 @@ impl Client {
             self.client_uri,
             self.contacts,
             self.id,
-        );
+        )
+        .execute(&mut **txn)
+        .await?;
 
-        if let Some(txn) = txn {
-            q.execute(&mut **txn).await?;
+        self.delete_cache().await?;
+
+        Ok(())
+    }
+
+    pub async fn save_cache(&self) -> Result<(), ErrorResponse> {
+        DB::client()
+            .put(Cache::App, Client::cache_idx(&self.id), self, CACHE_TTL_APP)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    r#"
+UPDATE clients
+SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
+post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
+id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
+default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19
+WHERE id = $20"#,
+                    params!(
+                        self.name.clone(),
+                        self.enabled,
+                        self.confidential,
+                        self.secret.clone(),
+                        self.secret_kid.clone(),
+                        self.redirect_uris.clone(),
+                        self.post_logout_redirect_uris.clone(),
+                        self.allowed_origins.clone(),
+                        self.flows_enabled.clone(),
+                        self.access_token_alg.clone(),
+                        self.id_token_alg.clone(),
+                        self.auth_code_lifetime,
+                        self.access_token_lifetime,
+                        self.scopes.clone(),
+                        self.default_scopes.clone(),
+                        self.challenge.clone(),
+                        self.force_mfa,
+                        self.client_uri.clone(),
+                        self.contacts.clone(),
+                        self.id.clone()
+                    ),
+                )
+                .await?;
         } else {
-            q.execute(&data.db).await?;
+            sqlx::query!(
+                r#"
+UPDATE clients
+SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
+post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
+id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
+default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19
+WHERE id = $20"#,
+                self.name,
+                self.enabled,
+                self.confidential,
+                self.secret,
+                self.secret_kid,
+                self.redirect_uris,
+                self.post_logout_redirect_uris,
+                self.allowed_origins,
+                self.flows_enabled,
+                self.access_token_alg,
+                self.id_token_alg,
+                self.auth_code_lifetime,
+                self.access_token_lifetime,
+                self.scopes,
+                self.default_scopes,
+                self.challenge,
+                self.force_mfa,
+                self.client_uri,
+                self.contacts,
+                self.id,
+            )
+            .execute(&data.db)
+            .await?;
         }
 
-        // TODO this may lead to incorrect data in case of a failing txn? -> check
         DB::client()
             .put(Cache::App, Client::cache_idx(&self.id), self, CACHE_TTL_APP)
             .await?;
@@ -335,12 +566,62 @@ impl Client {
         new_client.scopes = current.scopes;
         new_client.default_scopes = current.default_scopes;
 
-        let mut txn = data.db.begin().await?;
-        new_client.save(data, Some(&mut txn)).await?;
-        client_dyn
-            .update(&mut txn, token_endpoint_auth_method)
+        client_dyn.token_endpoint_auth_method = token_endpoint_auth_method;
+        client_dyn.last_used = Some(Utc::now().timestamp());
+
+        if *DYN_CLIENT_SECRET_AUTO_ROTATE {
+            let (_secret_plain, registration_token) = Client::generate_new_secret()?;
+            client_dyn.registration_token = registration_token;
+        }
+
+        if is_hiqlite() {
+            let prepared = new_client.clone().save_prepared().await?;
+            DB::client()
+                .txn([
+                    prepared,
+                    (
+                        r#"
+UPDATE clients_dyn
+SET registration_token = $1, token_endpoint_auth_method = $2, last_used = $3
+WHERE id = $4"#,
+                        params!(
+                            client_dyn.registration_token.clone(),
+                            client_dyn.token_endpoint_auth_method.clone(),
+                            client_dyn.last_used,
+                            client_dyn.id.clone()
+                        ),
+                    ),
+                ])
+                .await?;
+        } else {
+            let mut txn = data.db.begin().await?;
+
+            new_client.save_txn(&mut txn).await?;
+            sqlx::query!(
+                r#"
+UPDATE clients_dyn
+SET registration_token = $1, token_endpoint_auth_method = $2, last_used = $3
+WHERE id = $4"#,
+                client_dyn.registration_token,
+                client_dyn.token_endpoint_auth_method,
+                client_dyn.last_used,
+                client_dyn.id,
+            )
+            .execute(&mut *txn)
             .await?;
-        txn.commit().await?;
+
+            txn.commit().await?;
+        }
+
+        new_client.save_cache().await?;
+        DB::client()
+            .put(
+                Cache::ClientDynamic,
+                ClientDyn::get_cache_entry(&client_dyn.id),
+                &client_dyn,
+                *CACHE_TTL_DYN_CLIENT,
+            )
+            .await?;
 
         new_client.into_dynamic_client_response(data, client_dyn, *DYN_CLIENT_SECRET_AUTO_ROTATE)
     }
@@ -371,7 +652,7 @@ impl Client {
                 let s = format!("{},", scope);
                 self.scopes = self.scopes.replace(&s, "");
             } else {
-                self.scopes = String::from("");
+                self.scopes = String::default();
             }
         } else {
             // the scope is at the end or in the middle
@@ -392,7 +673,7 @@ impl Client {
                 let s = format!("{},", scope);
                 self.default_scopes = self.default_scopes.replace(&s, "");
             } else {
-                self.default_scopes = String::from("");
+                self.default_scopes = String::default();
             }
         } else {
             // the scope is at the end or in the middle
@@ -734,7 +1015,7 @@ impl Client {
         if self.challenge.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                String::from("'code_challenge' not allowed"),
+                "'code_challenge' not allowed",
             ));
         }
         if code_challenge_method.is_empty()
@@ -770,7 +1051,7 @@ impl Client {
             error!("Cannot validate 'client_secret' for public client");
             return Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
-                String::from("Cannot validate 'client_secret' for public client"),
+                "Cannot validate 'client_secret' for public client",
             ));
         }
 
@@ -792,7 +1073,7 @@ impl Client {
 
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                String::from("Invalid 'client_secret'"),
+                "Invalid 'client_secret'",
             ));
         }
         Ok(())
