@@ -17,10 +17,10 @@ use utoipa::ToSchema;
 
 pub mod api_cookie;
 pub mod app_state;
-pub mod cache;
 pub mod email;
 pub mod entity;
 pub mod events;
+pub mod hiqlite;
 pub mod i18n;
 pub mod language;
 pub mod migration;

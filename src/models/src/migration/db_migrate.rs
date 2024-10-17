@@ -2,6 +2,7 @@ use actix_web::web;
 use argon2::password_hash::SaltString;
 use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
 use cryptr::{EncKeys, EncValue};
+use hiqlite::{params, Param};
 use jwt_simple::algorithms::{
     Ed25519KeyPair, EdDSAKeyPairLike, RS256KeyPair, RS384KeyPair, RS512KeyPair, RSAKeyPairLike,
 };
@@ -18,7 +19,7 @@ use rauthy_common::constants::{
     ADMIN_FORCE_MFA, DB_TYPE, DEV_MODE, PUB_URL, PUB_URL_WITH_SCHEME, RAUTHY_ADMIN_EMAIL,
 };
 use rauthy_common::utils::{base64_decode, get_rand};
-use rauthy_common::DbType;
+use rauthy_common::{is_hiqlite, DbType};
 use rauthy_error::ErrorResponse;
 
 use crate::app_state::DbPool;
@@ -43,6 +44,7 @@ use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
+use crate::hiqlite::DB;
 
 pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse> {
     debug!("Executing anti_lockout_check");
@@ -96,33 +98,65 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
     // saved for `rauthy` before.
     // Update only here and prevent `rauthy` deletion as a special check on DELETE /client
 
-    sqlx::query!(
-        r#"update clients set enabled = $1, confidential = $2, redirect_uris = $3,
-        post_logout_redirect_uris = $4, allowed_origins = $5, flows_enabled = $6,
-        access_token_alg = $7, id_token_alg = $8, auth_code_lifetime = $9,
-        access_token_lifetime = $10, scopes = $11, default_scopes = $12, challenge = $13,
-        force_mfa= $14, client_uri = $15, contacts = $16
-        where id = $17"#,
-        rauthy.enabled,
-        rauthy.confidential,
-        rauthy.redirect_uris,
-        rauthy.post_logout_redirect_uris,
-        rauthy.allowed_origins,
-        rauthy.flows_enabled,
-        rauthy.access_token_alg,
-        rauthy.id_token_alg,
-        rauthy.auth_code_lifetime,
-        rauthy.access_token_lifetime,
-        rauthy.scopes,
-        rauthy.default_scopes,
-        rauthy.challenge,
-        rauthy.force_mfa,
-        rauthy.client_uri,
-        rauthy.contacts,
-        rauthy.id,
-    )
-    .execute(db)
-    .await?;
+    if is_hiqlite() {
+        DB::client()
+            .execute(
+                r#"UPDATE clients SET enabled = $1, confidential = $2, redirect_uris = $3,
+                post_logout_redirect_uris = $4, allowed_origins = $5, flows_enabled = $6,
+                access_token_alg = $7, id_token_alg = $8, auth_code_lifetime = $9,
+                access_token_lifetime = $10, scopes = $11, default_scopes = $12, challenge = $13,
+                force_mfa = $14, client_uri = $15, contacts = $16
+                WHERE id = $17"#,
+                params!(
+                    rauthy.enabled,
+                    rauthy.confidential,
+                    rauthy.redirect_uris,
+                    rauthy.post_logout_redirect_uris,
+                    rauthy.allowed_origins,
+                    rauthy.flows_enabled,
+                    rauthy.access_token_alg,
+                    rauthy.id_token_alg,
+                    rauthy.auth_code_lifetime,
+                    rauthy.access_token_lifetime,
+                    rauthy.scopes,
+                    rauthy.default_scopes,
+                    rauthy.challenge,
+                    rauthy.force_mfa,
+                    rauthy.client_uri,
+                    rauthy.contacts,
+                    rauthy.id
+                ),
+            )
+            .await?;
+    } else {
+        sqlx::query!(
+            r#"update clients set enabled = $1, confidential = $2, redirect_uris = $3,
+            post_logout_redirect_uris = $4, allowed_origins = $5, flows_enabled = $6,
+            access_token_alg = $7, id_token_alg = $8, auth_code_lifetime = $9,
+            access_token_lifetime = $10, scopes = $11, default_scopes = $12, challenge = $13,
+            force_mfa = $14, client_uri = $15, contacts = $16
+            where id = $17"#,
+            rauthy.enabled,
+            rauthy.confidential,
+            rauthy.redirect_uris,
+            rauthy.post_logout_redirect_uris,
+            rauthy.allowed_origins,
+            rauthy.flows_enabled,
+            rauthy.access_token_alg,
+            rauthy.id_token_alg,
+            rauthy.auth_code_lifetime,
+            rauthy.access_token_lifetime,
+            rauthy.scopes,
+            rauthy.default_scopes,
+            rauthy.challenge,
+            rauthy.force_mfa,
+            rauthy.client_uri,
+            rauthy.contacts,
+            rauthy.id,
+        )
+        .execute(db)
+        .await?;
+    }
 
     Ok(())
 }
@@ -134,9 +168,16 @@ pub async fn migrate_init_prod(
     issuer: &str,
 ) -> Result<(), ErrorResponse> {
     // check if the database is un-initialized by looking at the jwks table, which should be empty
-    let jwks = sqlx::query_as::<_, Jwk>("select * from jwks")
-        .fetch_all(db)
-        .await?;
+    let jwks = if is_hiqlite() {
+        DB::client()
+            .query_as("SELECT * FROM JWKS", params!())
+            .await?
+    } else {
+        sqlx::query_as::<_, Jwk>("select * from jwks")
+            .fetch_all(db)
+            .await?
+    };
+
     if jwks.is_empty() {
         info!("Initializing empty production database");
 
@@ -146,15 +187,23 @@ pub async fn migrate_init_prod(
         // - generate a new set of JWKs
 
         // cleanup
-        sqlx::query!("delete from clients where id = 'init_client'")
+        if is_hiqlite() {
+            DB::client()
+                .execute("DELETE FROM clients WHERE id = 'init_client'", params!())
+                .await?;
+            DB::client().execute("DELETE FROM users WHERE email IN ('init_admin@localhost.de', 'test_admin@localhost.de')", params!())
+                .await?;
+        } else {
+            sqlx::query!("delete from clients where id = 'init_client'")
+                .execute(db)
+                .await?;
+
+            sqlx::query!(
+                "delete from users where email in ('init_admin@localhost.de', 'test_admin@localhost.de')",
+            )
             .execute(db)
             .await?;
-
-        sqlx::query!(
-            "delete from users where email in ('init_admin@localhost.de', 'test_admin@localhost.de')",
-        )
-        .execute(db)
-        .await?;
+        }
 
         // check if we should use manually provided bootstrap values
         let email =
@@ -212,13 +261,24 @@ pub async fn migrate_init_prod(
             }
         };
 
-        sqlx::query!(
-            "UPDATE users SET email = $1, password = $2 WHERE email = 'admin@localhost.de'",
-            email,
-            hash
-        )
-        .execute(db)
-        .await?;
+        if is_hiqlite() {
+            // TODO we could grab a possibly existing `RAUTHY_ADMIN_EMAIL` and initialize a custom
+            // admin
+            DB::client()
+                .execute(
+                    "UPDATE users SET email = $1, password = $2 WHERE email = 'admin@localhost.de'",
+                    params!(email, hash),
+                )
+                .await?;
+        } else {
+            sqlx::query!(
+                "UPDATE users SET email = $1, password = $2 WHERE email = 'admin@localhost.de'",
+                email,
+                hash
+            )
+            .execute(db)
+            .await?;
+        }
 
         // now check if we should bootstrap an API Key
         if let Ok(api_key_raw) = env::var("BOOTSTRAP_API_KEY") {
@@ -247,13 +307,22 @@ pub async fn migrate_init_prod(
                     .into_bytes()
                     .to_vec();
 
-                query!(
-                    r#"UPDATE api_keys SET secret = $1 WHERE name = $2"#,
-                    secret_enc,
-                    key_name,
-                )
-                .execute(db)
-                .await?;
+                if is_hiqlite() {
+                    DB::client()
+                        .execute(
+                            "UPDATE api_keys SET secret = $1 WHERE name = $2",
+                            params!(secret_enc, key_name),
+                        )
+                        .await?;
+                } else {
+                    query!(
+                        "UPDATE api_keys SET secret = $1 WHERE name = $2",
+                        secret_enc,
+                        key_name,
+                    )
+                    .execute(db)
+                    .await?;
+                }
             }
         }
 
@@ -793,6 +862,9 @@ pub async fn migrate_from_sqlite(
             }
             DbType::Postgres => {
                 sqlx::query("insert into user_attr_config (name, \"desc\") values ($1, $2)")
+            }
+            DbType::Hiqlite => {
+                todo!("Migration from Hiqlite has not been implemented yet");
             }
         }
         .bind(b.name)
@@ -1387,6 +1459,9 @@ pub async fn migrate_from_postgres(
             }
             DbType::Postgres => {
                 sqlx::query("insert into user_attr_config (name, \"desc\") values ($1, $2)")
+            }
+            DbType::Hiqlite => {
+                todo!("Migration from Hiqlite has not been implemented yet");
             }
         }
         .bind(b.name)

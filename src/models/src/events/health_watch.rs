@@ -1,7 +1,7 @@
 use crate::app_state::DbPool;
-use crate::cache::DB;
 use crate::entity::is_db_alive;
 use crate::events::event::Event;
+use crate::hiqlite::DB;
 use std::time::Duration;
 use tracing::debug;
 
