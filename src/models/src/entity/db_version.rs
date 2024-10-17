@@ -50,19 +50,6 @@ impl DbVersion {
                     )
                     .await?;
             } else {
-                // #[cfg(not(feature = "postgres"))]
-                // let q = query!(
-                //     "INSERT OR REPLACE INTO config (id, data) VALUES ('db_version', $1)",
-                //     data,
-                // );
-                // #[cfg(feature = "postgres")]
-                // let q = query!(
-                //     r#"INSERT INTO config (id, data)
-                //     VALUES ('db_version', $1)
-                //     ON CONFLICT(id) DO UPDATE SET data = $1"#,
-                //     data,
-                // );
-                // q.execute(db).await?;
                 query!(
                     r#"INSERT INTO config (id, data)
                     VALUES ('db_version', $1)
@@ -163,28 +150,30 @@ impl DbVersion {
         // which is already checked above
 
         // the passkeys table was introduced with v0.15.0
-        #[cfg(feature = "postgres")]
-        let mut is_db_v0_15_0 =
-            query!("SELECT * FROM pg_tables WHERE tablename = 'passkeys' LIMIT 1")
-                .fetch_one(db)
-                .await
-                .is_err();
-        #[cfg(not(feature = "postgres"))]
-        let mut is_db_v0_15_0 = query!(
-            "SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'passkeys' LIMIT 1"
-        )
-        .fetch_one(db)
-        .await
-        .is_err();
-        if is_hiqlite() {
-            is_db_v0_15_0 = DB::client()
+        let is_db_v0_15_0 = if is_hiqlite() {
+            DB::client()
                 .query_raw(
                     "SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'passkeys' LIMIT 1",
                     params!(),
                 )
                 .await
-                .is_err();
-        }
+                .is_err()
+        } else {
+            #[cfg(feature = "postgres")]
+            let is_db_v0_15_0 =
+                query!("SELECT * FROM pg_tables WHERE tablename = 'passkeys' LIMIT 1")
+                    .fetch_one(db)
+                    .await
+                    .is_err();
+            #[cfg(not(feature = "postgres"))]
+            let is_db_v0_15_0 = query!(
+                "SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'passkeys' LIMIT 1"
+            )
+            .fetch_one(db)
+            .await
+            .is_err();
+            is_db_v0_15_0
+        };
         if is_db_v0_15_0 {
             panic!(
                 "Your database is Rauthy v0.15.0. You need to upgrade to Rauthy v0.16 first.\n\
@@ -194,27 +183,30 @@ impl DbVersion {
 
         // To check for any DB older than 0.15.0, we check for the existence of the 'clients' table
         // which is there since the very beginning.
-        #[cfg(feature = "postgres")]
-        let mut is_db_pre_v0_15_0 =
-            query!("SELECT * FROM pg_tables WHERE tablename = 'clients' LIMIT 1")
-                .fetch_one(db)
-                .await
-                .is_err();
-        #[cfg(not(feature = "postgres"))]
-        let mut is_db_pre_v0_15_0 =
-            query!("SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'clients' LIMIT 1")
-                .fetch_one(db)
-                .await
-                .is_err();
-        if is_hiqlite() {
-            is_db_pre_v0_15_0 = DB::client()
+        let is_db_pre_v0_15_0 = if is_hiqlite() {
+            DB::client()
                 .query_raw(
                     "SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'clients' LIMIT 1",
                     params!(),
                 )
                 .await
-                .is_err();
-        }
+                .is_err()
+        } else {
+            #[cfg(feature = "postgres")]
+            let is_db_pre_v0_15_0 =
+                query!("SELECT * FROM pg_tables WHERE tablename = 'clients' LIMIT 1")
+                    .fetch_one(db)
+                    .await
+                    .is_err();
+            #[cfg(not(feature = "postgres"))]
+            let is_db_pre_v0_15_0 = query!(
+                "SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'clients' LIMIT 1"
+            )
+            .fetch_one(db)
+            .await
+            .is_err();
+            is_db_pre_v0_15_0
+        };
         if is_db_pre_v0_15_0 {
             panic!(
                 "Your database is older than Rauthy v0.15.0. You need to upgrade to Rauthy v0.15 first.\n\
