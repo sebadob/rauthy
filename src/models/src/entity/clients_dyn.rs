@@ -3,7 +3,9 @@ use crate::hiqlite::{Cache, DB};
 use actix_web::web;
 use chrono::Utc;
 use cryptr::EncValue;
+use hiqlite::params;
 use rauthy_common::constants::{CACHE_TTL_DYN_CLIENT, CACHE_TTL_IP_RATE_LIMIT};
+use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, FromRow};
@@ -38,9 +40,15 @@ impl ClientDyn {
             return Ok(slf);
         }
 
-        let slf = query_as!(Self, "SELECT * FROM clients_dyn WHERE id = $1", id)
-            .fetch_one(&data.db)
-            .await?;
+        let slf = if is_hiqlite() {
+            DB::client()
+                .query_as_one("SELECT * FROM clients_dyn WHERE id = $1", params!(id))
+                .await?
+        } else {
+            query_as!(Self, "SELECT * FROM clients_dyn WHERE id = $1", id)
+                .fetch_one(&data.db)
+                .await?
+        };
 
         client
             .put(
@@ -57,13 +65,22 @@ impl ClientDyn {
     pub async fn update_used(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
 
-        query!(
-            "UPDATE clients_dyn SET last_used = $1 WHERE id = $2",
-            now,
-            id
-        )
-        .execute(&data.db)
-        .await?;
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    "UPDATE clients_dyn SET last_used = $1 WHERE id = $2",
+                    params!(now, id),
+                )
+                .await?;
+        } else {
+            query!(
+                "UPDATE clients_dyn SET last_used = $1 WHERE id = $2",
+                now,
+                id
+            )
+            .execute(&data.db)
+            .await?;
+        }
 
         Ok(())
     }
