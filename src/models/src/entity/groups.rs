@@ -2,7 +2,7 @@ use crate::app_state::AppState;
 use crate::entity::users::User;
 use crate::hiqlite::{Cache, DB};
 use actix_web::web;
-use hiqlite::{params, Param};
+use hiqlite::{params, Param, Params};
 use rauthy_api_types::groups::NewGroupRequest;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_GROUPS};
 use rauthy_common::is_hiqlite;
@@ -68,28 +68,38 @@ impl Group {
     // Deletes a group
     pub async fn delete(data: &web::Data<AppState>, id: String) -> Result<(), ErrorResponse> {
         let group = Group::find(data, id).await?;
+        let users = User::find_with_group(data, group.name.clone()).await?;
 
-        // before deleting a group, cleanup every user
-        // get all users with the to-be-deleted-group assigned
-        let mut users = vec![];
-        User::find_all(data)
-            .await?
-            .into_iter()
-            .filter(|u| u.groups.is_some() && u.groups.as_ref().unwrap().contains(&group.name))
-            .for_each(|mut u| {
-                u.delete_group(&group.name);
-                users.push(u);
-            });
+        // Hiqlite is a lot more capable and efficient in this case.
+        if is_hiqlite() {
+            let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
 
-        let mut txn = data.db.begin().await?;
-        for user in users {
-            user.save_txn(data, None, &mut txn).await?;
+            for mut user in users {
+                user.delete_group(&group.name);
+                user.save_txn_append(&mut txn);
+            }
+
+            txn.push((
+                "DELETE FROM groups WHERE id = $1",
+                params!(group.id.clone()),
+            ));
+
+            for res in DB::client().txn(txn).await? {
+                let rows_affected = res?;
+                debug_assert!(rows_affected == 1);
+            }
+        } else {
+            let mut txn = data.db.begin().await?;
+            for mut user in users {
+                user.delete_group(&group.name);
+                user.save_txn(&mut txn).await?;
+            }
+
+            sqlx::query!("DELETE FROM groups WHERE id = $1", group.id)
+                .execute(&mut *txn)
+                .await?;
+            txn.commit().await?;
         }
-
-        sqlx::query!("DELETE FROM groups WHERE id = $1", group.id)
-            .execute(&mut *txn)
-            .await?;
-        txn.commit().await?;
 
         let groups = Group::find_all(data)
             .await?
@@ -110,9 +120,16 @@ impl Group {
 
     // Returns a single group by id
     pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
-        let res = sqlx::query_as!(Self, "SELECT * FROM groups WHERE id = $1", id,)
-            .fetch_one(&data.db)
-            .await?;
+        let res = if is_hiqlite() {
+            DB::client()
+                .query_as_one("SELECT * FROM groups WHERE id = $1", params!(id))
+                .await?
+        } else {
+            sqlx::query_as!(Self, "SELECT * FROM groups WHERE id = $1", id,)
+                .fetch_one(&data.db)
+                .await?
+        };
+
         Ok(res)
     }
 
@@ -123,9 +140,13 @@ impl Group {
             return Ok(slf);
         }
 
-        let res = sqlx::query_as!(Self, "SELECT * FROM groups")
-            .fetch_all(&data.db)
-            .await?;
+        let res = if is_hiqlite() {
+            client.query_as("SELECT * FROM groups", params!()).await?
+        } else {
+            sqlx::query_as!(Self, "SELECT * FROM groups")
+                .fetch_all(&data.db)
+                .await?
+        };
 
         client
             .put(Cache::App, IDX_GROUPS, &res, CACHE_TTL_APP)
@@ -141,36 +162,51 @@ impl Group {
         new_name: String,
     ) -> Result<Self, ErrorResponse> {
         let group = Group::find(data, id).await?;
-
-        // find all users with the old_name assigned
-        let mut users = vec![];
-        User::find_all(data)
-            .await?
-            .into_iter()
-            .filter(|u| u.groups.is_some() && u.groups.as_ref().unwrap().contains(&group.name))
-            .for_each(|mut u| {
-                u.groups = Some(u.groups.as_ref().unwrap().replace(&group.name, &new_name));
-                users.push(u);
-            });
-
-        let mut txn = data.db.begin().await?;
-        for user in users {
-            user.save_txn(data, None, &mut txn).await?;
-        }
+        let users = User::find_with_group(data, group.name.clone()).await?;
 
         let new_group = Group {
             id: group.id.clone(),
             name: new_name,
         };
 
-        sqlx::query!(
-            "UPDATE groups SET name = $1 WHERE id = $2",
-            new_group.name,
-            new_group.id,
-        )
-        .execute(&mut *txn)
-        .await?;
-        txn.commit().await?;
+        if is_hiqlite() {
+            let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
+
+            for mut user in users {
+                user.groups = Some(
+                    user.groups
+                        .as_ref()
+                        .unwrap()
+                        .replace(&group.name, &new_group.name),
+                );
+                user.save_txn_append(&mut txn);
+            }
+
+            txn.push((
+                "UPDATE groups SET name = $1 WHERE id = $2",
+                params!(new_group.name.clone(), new_group.id.clone()),
+            ));
+
+            for res in DB::client().txn(txn).await? {
+                let rows_affected = res?;
+                debug_assert!(rows_affected == 1);
+            }
+        } else {
+            let mut txn = data.db.begin().await?;
+            for mut user in users {
+                user.delete_group(&group.name);
+                user.save_txn(&mut txn).await?;
+            }
+
+            sqlx::query!(
+                "UPDATE groups SET name = $1 WHERE id = $2",
+                new_group.name,
+                new_group.id,
+            )
+            .execute(&mut *txn)
+            .await?;
+            txn.commit().await?;
+        }
 
         let groups = Group::find_all(data)
             .await?

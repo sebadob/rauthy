@@ -18,6 +18,7 @@ use crate::templates::UserEmailChangeConfirmHtml;
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;
 use chrono::Utc;
+use hiqlite::{params, Param, Params};
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_api_types::users::{
     NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
@@ -298,6 +299,18 @@ impl User {
         Ok(res)
     }
 
+    /// This is a very expensive query using `LIKE`, use only when necessary.
+    pub async fn find_with_group(
+        data: &web::Data<AppState>,
+        group_name: String,
+    ) -> Result<Vec<Self>, ErrorResponse> {
+        let like = format!("%{group_name}%");
+        let res = sqlx::query_as!(Self, "SELECT * FROM users WHERE groups LIKE $1", like)
+            .fetch_all(&data.db)
+            .await?;
+        Ok(res)
+    }
+
     pub async fn find_expired(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
         let now = OffsetDateTime::now_utc()
             .add(time::Duration::seconds(10))
@@ -508,24 +521,55 @@ impl User {
         Ok(slf)
     }
 
-    pub async fn save_txn(
-        &self,
-        data: &web::Data<AppState>,
-        old_email: Option<String>,
-        txn: &mut DbTxn<'_>,
-    ) -> Result<(), ErrorResponse> {
-        if old_email.is_some() {
-            User::is_email_free(data, self.email.clone()).await?;
-        }
+    /// Appends multiple necessary transaction queries to update a user to the given `Vec<_>`.
+    ///
+    /// CAUTION:
+    /// DO NOT use this function to update a user's `email` or `enabled` state!
+    pub fn save_txn_append(self, txn: &mut Vec<(&str, Params)>) {
+        txn.push((
+            r#"
+UPDATE USERS SET
+email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
+email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
+failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
+auth_provider_id = $16, federation_uid = $17
+WHERE id = $18"#,
+            params!(
+                self.email,
+                self.given_name,
+                self.family_name,
+                self.password,
+                self.roles,
+                self.groups,
+                self.enabled,
+                self.email_verified,
+                self.password_expires,
+                self.last_login,
+                self.last_failed_login,
+                self.failed_login_attempts,
+                self.language.as_str().to_string(),
+                self.webauthn_user_id,
+                self.user_expires,
+                self.auth_provider_id,
+                self.federation_uid,
+                self.id
+            ),
+        ));
+    }
 
+    /// CAUTION:
+    /// DO NOT use this function to update a user's `email` or `enabled` state!
+    pub async fn save_txn(&self, txn: &mut DbTxn<'_>) -> Result<(), ErrorResponse> {
         let lang = self.language.as_str();
+
         sqlx::query(
-            r#"UPDATE USERS SET
-            email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6,
-            enabled = $7, email_verified = $8, password_expires = $9, last_login = $10,
-            last_failed_login = $11, failed_login_attempts = $12, language = $13,
-            webauthn_user_id = $14, user_expires = $15, auth_provider_id = $16, federation_uid = $17
-            WHERE id = $18"#,
+            r#"
+UPDATE USERS SET
+email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
+email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
+failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
+auth_provider_id = $16, federation_uid = $17
+WHERE id = $18"#,
         )
         .bind(&self.email)
         .bind(&self.given_name)
@@ -547,25 +591,6 @@ impl User {
         .bind(&self.id)
         .execute(&mut **txn)
         .await?;
-
-        // invalidate all possibly existing sessions and refresh tokens, if the user has been disabled
-        if !self.enabled {
-            Session::invalidate_for_user(data, &self.id).await?;
-            RefreshToken::invalidate_for_user(data, &self.id).await?;
-        }
-
-        // let client = DB::client();
-        //
-        // if let Some(email) = old_email {
-        //     let idx = format!("{}_{}", IDX_USERS, email);
-        //     client.delete(Cache::User, idx).await?;
-        // }
-        //
-        // let idx = format!("{}_{}", IDX_USERS, &self.id);
-        // client.put(Cache::User, idx, self, CACHE_TTL_USER).await?;
-        //
-        // let idx = format!("{}_{}", IDX_USERS, &self.email);
-        // client.put(Cache::User, idx, self, CACHE_TTL_USER).await?;
 
         Ok(())
     }

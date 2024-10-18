@@ -7,6 +7,7 @@
 
 ### After finished Hiqlite migration
 
+- check changed session invalidation functions
 - fix `DbType::from_str`
 - cleanup `DbPool` creation in `AppState`
 - remove the `sqlite` feature from `sqlx` to really make sure nothing has been forgotten

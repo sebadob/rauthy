@@ -15,7 +15,7 @@ use rauthy_common::constants::{
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::{query_as, FromRow};
+use sqlx::{query_as, FromRow, Row};
 use std::borrow::Cow;
 use std::net::IpAddr;
 use std::ops::Add;
@@ -159,8 +159,7 @@ impl Session {
         Ok(session)
     }
 
-    // not cached, since this is only used in the admin ui
-    /// Returns all sessions and an empty Vec if not a single session exists
+    // not cached -> only used in the admin ui and can get very big
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
         let sessions = sqlx::query_as!(Self, "SELECT * FROM sessions ORDER BY exp DESC")
             .fetch_all(&data.db)
@@ -303,32 +302,20 @@ impl Session {
         Ok(())
     }
 
-    /// Invalidates all sessions for the given user_id by setting the expiry to `now()`
+    /// If any sessions have been deleted, `Vec<SessionId>` will be returned for cache invalidation.
     pub async fn invalidate_for_user(
         data: &web::Data<AppState>,
         uid: &str,
     ) -> Result<(), ErrorResponse> {
-        let now = OffsetDateTime::now_utc().unix_timestamp();
-        let sessions = Session::find_all(data).await?;
-        let mut removed = Vec::default();
-
-        for mut s in sessions {
-            if s.user_id.is_none() {
-                continue;
-            }
-
-            if s.user_id.as_ref().unwrap().as_str() == uid {
-                s.exp = now;
-                s.save(data).await?;
-                removed.push(s.id);
-            }
-        }
+        let rows = sqlx::query("DELETE FROM sessions WHERE user_id = $1 RETURNING id")
+            .bind(uid)
+            .fetch_all(&data.db)
+            .await?;
 
         let client = DB::client();
-        for id in removed {
-            client
-                .delete(Cache::Session, Session::cache_idx(&id))
-                .await?;
+        for row in rows {
+            let sid: String = row.get("id");
+            client.delete(Cache::Session, sid).await?;
         }
 
         Ok(())

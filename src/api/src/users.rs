@@ -903,7 +903,7 @@ pub async fn delete_webauthn(
             }
         }
 
-        user.save_txn(&data, None, &mut txn).await?;
+        user.save_txn(&mut txn).await?;
         txn.commit().await?;
     } else {
         txn.commit().await?;

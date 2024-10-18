@@ -82,7 +82,7 @@ impl Role {
 
         for user in users {
             // TODO wrap inside single txn after hiqlite migrations
-            user.save_txn(data, None, &mut txn).await?;
+            user.save_txn(&mut txn).await?;
         }
 
         sqlx::query!("DELETE FROM roles WHERE id = $1", id)
@@ -152,7 +152,7 @@ impl Role {
         let mut txn = data.db.begin().await?;
 
         for user in users {
-            user.save_txn(data, None, &mut txn).await?;
+            user.save_txn(&mut txn).await?;
         }
 
         let new_role = Role { id, name: new_name };
