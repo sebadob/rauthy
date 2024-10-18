@@ -1,7 +1,10 @@
 use crate::api_cookie::ApiCookie;
 use crate::app_state::AppState;
+use crate::hiqlite::DB;
 use actix_web::{web, HttpRequest};
+use hiqlite::{params, Param};
 use rauthy_common::constants::{PASSWORD_RESET_COOKIE_BINDING, PWD_CSRF_HEADER, PWD_RESET_COOKIE};
+use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -114,26 +117,51 @@ impl MagicLink {
             usage: usage.to_string(),
         };
 
-        sqlx::query!(
-            r#"INSERT INTO magic_links (id, user_id, csrf_token, exp, used, usage)
-            VALUES ($1, $2, $3, $4, $5, $6)"#,
-            link.id,
-            link.user_id,
-            link.csrf_token,
-            link.exp,
-            false,
-            link.usage,
-        )
-        .execute(&data.db)
-        .await?;
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    r#"
+INSERT INTO magic_links (id, user_id, csrf_token, exp, used, usage)
+VALUES ($1, $2, $3, $4, $5, $6)"#,
+                    params!(
+                        link.id.clone(),
+                        link.user_id.clone(),
+                        link.csrf_token.clone(),
+                        link.exp,
+                        false,
+                        link.usage.clone()
+                    ),
+                )
+                .await?;
+        } else {
+            sqlx::query!(
+                r#"
+    INSERT INTO magic_links (id, user_id, csrf_token, exp, used, usage)
+    VALUES ($1, $2, $3, $4, $5, $6)"#,
+                link.id,
+                link.user_id,
+                link.csrf_token,
+                link.exp,
+                false,
+                link.usage,
+            )
+            .execute(&data.db)
+            .await?;
+        }
 
         Ok(link)
     }
 
     pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
-        let res = sqlx::query_as!(Self, "SELECT * FROM magic_links WHERE id = $1", id)
-            .fetch_one(&data.db)
-            .await?;
+        let res = if is_hiqlite() {
+            DB::client()
+                .query_as_one("SELECT * FROM magic_links WHERE id = $1", params!(id))
+                .await?
+        } else {
+            sqlx::query_as!(Self, "SELECT * FROM magic_links WHERE id = $1", id)
+                .fetch_one(&data.db)
+                .await?
+        };
 
         Ok(res)
     }
@@ -142,13 +170,22 @@ impl MagicLink {
         data: &web::Data<AppState>,
         user_id: String,
     ) -> Result<MagicLink, ErrorResponse> {
-        let res = sqlx::query_as!(
-            Self,
-            "SELECT * FROM magic_links WHERE user_id = $1",
-            user_id
-        )
-        .fetch_one(&data.db)
-        .await?;
+        let res = if is_hiqlite() {
+            DB::client()
+                .query_as_one(
+                    "SELECT * FROM magic_links WHERE user_id = $1",
+                    params!(user_id),
+                )
+                .await?
+        } else {
+            sqlx::query_as!(
+                Self,
+                "SELECT * FROM magic_links WHERE user_id = $1",
+                user_id
+            )
+            .fetch_one(&data.db)
+            .await?
+        };
 
         Ok(res)
     }
@@ -157,26 +194,44 @@ impl MagicLink {
         data: &web::Data<AppState>,
         user_id: &str,
     ) -> Result<(), ErrorResponse> {
-        sqlx::query!(
-            "DELETE FROM magic_links WHERE user_id = $1 AND USAGE LIKE 'email_change$%'",
-            user_id,
-        )
-        .execute(&data.db)
-        .await?;
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    "DELETE FROM magic_links WHERE user_id = $1 AND USAGE LIKE 'email_change$%'",
+                    params!(user_id),
+                )
+                .await?;
+        } else {
+            sqlx::query!(
+                "DELETE FROM magic_links WHERE user_id = $1 AND USAGE LIKE 'email_change$%'",
+                user_id,
+            )
+            .execute(&data.db)
+            .await?;
+        };
 
         Ok(())
     }
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        sqlx::query!(
-            "UPDATE magic_links SET cookie = $1, exp = $2, used = $3 WHERE id = $4",
-            self.cookie,
-            self.exp,
-            self.used,
-            self.id,
-        )
-        .execute(&data.db)
-        .await?;
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    "UPDATE magic_links SET cookie = $1, exp = $2, used = $3 WHERE id = $4",
+                    params!(self.cookie.clone(), self.exp, self.used, self.id.clone()),
+                )
+                .await?;
+        } else {
+            sqlx::query!(
+                "UPDATE magic_links SET cookie = $1, exp = $2, used = $3 WHERE id = $4",
+                self.cookie,
+                self.exp,
+                self.used,
+                self.id,
+            )
+            .execute(&data.db)
+            .await?;
+        }
 
         Ok(())
     }
