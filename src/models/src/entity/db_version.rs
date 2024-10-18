@@ -16,19 +16,30 @@ pub struct DbVersion {
 }
 
 impl DbVersion {
-    pub async fn find(db: &DbPool) -> Option<Self> {
-        let res = query!("SELECT data FROM config WHERE id = 'db_version'")
-            .fetch_optional(db)
-            .await
-            .ok()?;
-        match res {
-            Some(res) => {
-                let data = res
-                    .data
-                    .expect("to get 'data' back from the AppVersion query");
-                bincode::deserialize::<Self>(&data).ok()
+    pub async fn find(db: &DbPool) -> Result<Option<Self>, ErrorResponse> {
+        if is_hiqlite() {
+            let mut rows = DB::client()
+                .query_raw("SELECT data FROM config WHERE id = 'db_version'", params!())
+                .await?;
+            if rows.is_empty() {
+                return Ok(None);
             }
-            None => None,
+            let bytes: Vec<u8> = rows.remove(0).get("data");
+            let version = bincode::deserialize::<Self>(&bytes)?;
+            Ok(Some(version))
+        } else {
+            let res = query!("SELECT data FROM config WHERE id = 'db_version'")
+                .fetch_optional(db)
+                .await?;
+            match res {
+                Some(record) => {
+                    let data = record
+                        .data
+                        .expect("to get 'data' back from the AppVersion query");
+                    Ok(Some(bincode::deserialize::<Self>(&data)?))
+                }
+                None => Ok(None),
+            }
         }
     }
 
@@ -81,7 +92,7 @@ impl DbVersion {
                 .is_ok()
         };
 
-        let db_version = match Self::find(db).await {
+        let db_version = match Self::find(db).await? {
             None => {
                 debug!(" No Current DB Version found");
                 if db_exists {
