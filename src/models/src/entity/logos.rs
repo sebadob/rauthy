@@ -1,12 +1,14 @@
 use crate::app_state::AppState;
 use crate::hiqlite::{Cache, DB};
 use actix_web::web;
+use hiqlite::{params, Param};
 use image::imageops::FilterType;
 use image::ImageFormat;
 use jwt_simple::prelude::{Deserialize, Serialize};
 use rauthy_common::constants::{
     CACHE_TTL_APP, CONTENT_TYPE_WEBP, IDX_AUTH_PROVIDER_LOGO, IDX_CLIENT_LOGO,
 };
+use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use sqlx::{query, query_as};
 use std::io::Cursor;
@@ -120,17 +122,32 @@ impl Logo {
     ) -> Result<(), ErrorResponse> {
         match typ {
             LogoType::Client => {
-                query!("DELETE FROM client_logos WHERE client_id = $1", id)
-                    .execute(&data.db)
-                    .await?
+                if is_hiqlite() {
+                    DB::client()
+                        .execute("DELETE FROM client_logos WHERE client_id = $1", params!(id))
+                        .await?;
+                } else {
+                    query!("DELETE FROM client_logos WHERE client_id = $1", id)
+                        .execute(&data.db)
+                        .await?;
+                }
             }
             LogoType::AuthProvider => {
-                query!(
-                    "DELETE FROM auth_provider_logos WHERE auth_provider_id = $1",
-                    id
-                )
-                .execute(&data.db)
-                .await?
+                if is_hiqlite() {
+                    DB::client()
+                        .execute(
+                            "DELETE FROM auth_provider_logos WHERE auth_provider_id = $1",
+                            params!(id),
+                        )
+                        .await?;
+                } else {
+                    query!(
+                        "DELETE FROM auth_provider_logos WHERE auth_provider_id = $1",
+                        id
+                    )
+                    .execute(&data.db)
+                    .await?;
+                }
             }
         };
 
@@ -284,62 +301,63 @@ impl Logo {
     ) -> Result<(), ErrorResponse> {
         let res = self.res.as_str();
 
-        // SVGs don't have a resolution -> just save one version
-        #[cfg(not(feature = "postgres"))]
-        match typ {
-            LogoType::Client => {
-                query!(
-                    r#"INSERT OR REPLACE INTO
-                    client_logos (client_id, res, content_type, data)
-                    VALUES ($1, $2, $3, $4)"#,
-                    self.id,
-                    res,
-                    self.content_type,
-                    self.data,
-                )
-            }
-            LogoType::AuthProvider => {
-                query!(
-                    r#"INSERT OR REPLACE INTO
-                    auth_provider_logos (auth_provider_id, res, content_type, data)
-                    VALUES ($1, $2, $3, $4)"#,
-                    self.id,
-                    res,
-                    self.content_type,
-                    self.data,
-                )
-            }
-        }
-        .execute(&data.db)
-        .await?;
+        if is_hiqlite() {
+            let sql = match typ {
+                LogoType::Client => {
+                    r#"
+INSERT INTO client_logos (client_id, res, content_type, data)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(client_id, res) DO UPDATE SET content_type = $3, data = $4"#
+                }
+                LogoType::AuthProvider => {
+                    r#"
+INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(auth_provider_id, res) DO UPDATE SET content_type = $3, data = $4"#
+                }
+            };
 
-        #[cfg(feature = "postgres")]
-        match typ {
-            LogoType::Client => {
-                query!(
-                    r#"INSERT INTO client_logos (client_id, res, content_type, data)
-                    VALUES ($1, $2, $3, $4)
-                    ON CONFLICT(client_id, res) DO UPDATE SET content_type = $3, data = $4"#,
-                    self.id,
-                    res,
-                    self.content_type,
-                    self.data,
+            DB::client()
+                .execute(
+                    sql,
+                    params!(
+                        self.id.clone(),
+                        res,
+                        self.content_type.clone(),
+                        self.data.clone()
+                    ),
                 )
+                .await?;
+        } else {
+            match typ {
+                LogoType::Client => {
+                    query!(
+                        r#"
+INSERT INTO client_logos (client_id, res, content_type, data)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(client_id, res) DO UPDATE SET content_type = $3, data = $4"#,
+                        self.id,
+                        res,
+                        self.content_type,
+                        self.data,
+                    )
+                }
+                LogoType::AuthProvider => {
+                    query!(
+                        r#"
+INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(auth_provider_id, res) DO UPDATE SET content_type = $3, data = $4"#,
+                        self.id,
+                        res,
+                        self.content_type,
+                        self.data,
+                    )
+                }
             }
-            LogoType::AuthProvider => {
-                query!(
-                    r#"INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data)
-                    VALUES ($1, $2, $3, $4)
-                    ON CONFLICT(auth_provider_id, res) DO UPDATE SET content_type = $3, data = $4"#,
-                    self.id,
-                    res,
-                    self.content_type,
-                    self.data,
-                )
-            }
+            .execute(&data.db)
+            .await?;
         }
-        .execute(&data.db)
-        .await?;
 
         if with_cache {
             DB::client()
@@ -364,32 +382,54 @@ impl Logo {
         let res = res.as_str();
         let res_svg = LogoRes::Svg.as_str();
 
-        let slf = match typ {
-            LogoType::Client => {
-                query_as!(
-                    Self,
-                    r#"SELECT client_id as id, res, content_type, data
-                    FROM client_logos
-                    WHERE client_id = $1 AND (res = $2 OR res = $3)"#,
-                    id,
-                    res,
-                    res_svg,
-                )
-                .fetch_one(&data.db)
+        let slf = if is_hiqlite() {
+            let sql = match typ {
+                LogoType::Client => {
+                    r#"
+SELECT client_id as id, res, content_type, data
+FROM client_logos
+WHERE client_id = $1 AND (res = $2 OR res = $3)"#
+                }
+                LogoType::AuthProvider => {
+                    r#"
+SELECT auth_provider_id as id, res, content_type, data
+FROM auth_provider_logos
+WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#
+                }
+            };
+            DB::client()
+                .query_as_one(sql, params!(id, res, res_svg))
                 .await?
-            }
-            LogoType::AuthProvider => {
-                query_as!(
-                    Self,
-                    r#"SELECT auth_provider_id as id, res, content_type, data
-                    FROM auth_provider_logos
-                    WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
-                    id,
-                    res,
-                    res_svg,
-                )
-                .fetch_one(&data.db)
-                .await?
+        } else {
+            match typ {
+                LogoType::Client => {
+                    query_as!(
+                        Self,
+                        r#"
+SELECT client_id as id, res, content_type, data
+FROM client_logos
+WHERE client_id = $1 AND (res = $2 OR res = $3)"#,
+                        id,
+                        res,
+                        res_svg,
+                    )
+                    .fetch_one(&data.db)
+                    .await?
+                }
+                LogoType::AuthProvider => {
+                    query_as!(
+                        Self,
+                        r#"
+SELECT auth_provider_id as id, res, content_type, data
+FROM auth_provider_logos
+WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
+                        id,
+                        res,
+                        res_svg,
+                    )
+                    .fetch_one(&data.db)
+                    .await?
+                }
             }
         };
 
