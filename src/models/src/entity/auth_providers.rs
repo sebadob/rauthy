@@ -263,7 +263,7 @@ RETURNING *"#,
                     ),
                 )
                 .await?
-                .remove(0)
+                .remove(0)?
         } else {
             query!(
                 r#"
