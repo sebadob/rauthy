@@ -1439,7 +1439,7 @@ impl AuthProviderIdClaims<'_> {
                 user.last_failed_login = Some(now);
                 user.failed_login_attempts =
                     Some(user.failed_login_attempts.unwrap_or_default() + 1);
-                user.save(data, old_email, None).await?;
+                user.save(data, old_email).await?;
 
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
@@ -1492,7 +1492,7 @@ impl AuthProviderIdClaims<'_> {
             user.last_failed_login = None;
             user.failed_login_attempts = None;
 
-            user.save(data, old_email, None).await?;
+            user.save(data, old_email).await?;
             user
         } else {
             // Create a new federated user

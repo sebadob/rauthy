@@ -667,7 +667,7 @@ pub async fn auth_finish(
 
                     let mut txn = data.db.begin().await?;
                     pk_entity.update_passkey(&mut txn).await?;
-                    user.save(data, None, Some(&mut txn)).await?;
+                    user.save_txn(data, None, &mut txn).await?;
                     txn.commit().await?;
                 }
             }
@@ -804,7 +804,7 @@ pub async fn reg_finish(
                 if user.password.is_none() || *WEBAUTHN_NO_PASSWORD_EXPIRY {
                     user.password_expires = None;
                 }
-                user.save(data, None, Some(&mut txn)).await?;
+                user.save_txn(data, None, &mut txn).await?;
             }
 
             PasskeyEntity::create(

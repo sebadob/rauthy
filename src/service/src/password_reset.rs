@@ -139,7 +139,7 @@ pub async fn handle_put_user_passkey_finish<'a>(
     // we are re-fetching the user on purpose here to not need to modify the general webauthn fn
     let mut user = User::find(data, user_id).await?;
     user.email_verified = true;
-    user.save(data, None, None).await?;
+    user.save(data, None).await?;
 
     // delete the cookie
     let cookie = ApiCookie::build(PWD_RESET_COOKIE, "", 0);
@@ -191,7 +191,7 @@ pub async fn handle_put_user_password_reset<'a>(
     // all good
     ml.invalidate(data).await?;
     user.email_verified = true;
-    user.save(data, None, None).await?;
+    user.save(data, None).await?;
 
     let ip = match real_ip_from_req(&req).ok() {
         None => {

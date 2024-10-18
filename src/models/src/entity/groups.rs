@@ -2,8 +2,10 @@ use crate::app_state::AppState;
 use crate::entity::users::User;
 use crate::hiqlite::{Cache, DB};
 use actix_web::web;
+use hiqlite::{params, Param};
 use rauthy_api_types::groups::NewGroupRequest;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_GROUPS};
+use rauthy_common::is_hiqlite;
 use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -38,13 +40,22 @@ impl Group {
             name: group_req.group,
         };
 
-        sqlx::query!(
-            "INSERT INTO groups (id, name) VALUES ($1, $2)",
-            new_group.id,
-            new_group.name,
-        )
-        .execute(&data.db)
-        .await?;
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    "INSERT INTO groups (id, name) VALUES ($1, $2)",
+                    params!(new_group.id.clone(), new_group.name.clone()),
+                )
+                .await?;
+        } else {
+            sqlx::query!(
+                "INSERT INTO groups (id, name) VALUES ($1, $2)",
+                new_group.id,
+                new_group.name,
+            )
+            .execute(&data.db)
+            .await?;
+        }
 
         groups.push(new_group.clone());
         DB::client()
@@ -71,11 +82,8 @@ impl Group {
             });
 
         let mut txn = data.db.begin().await?;
-
-        // TODO better smt like 'await_all' or less resource usage?
-        // TODO -> wrap in big single txn once migration to hiqlite is done
         for user in users {
-            user.save(data, None, Some(&mut txn)).await?;
+            user.save_txn(data, None, &mut txn).await?;
         }
 
         sqlx::query!("DELETE FROM groups WHERE id = $1", group.id)
@@ -88,7 +96,12 @@ impl Group {
             .into_iter()
             .filter(|g| g.id != group.id)
             .collect::<Vec<Group>>();
-        DB::client()
+
+        let client = DB::client();
+        // clearing users cache is more safe and less resource intensive than trying to
+        // update each single entry
+        client.clear_cache(Cache::User).await?;
+        client
             .put(Cache::App, IDX_GROUPS, &groups, CACHE_TTL_APP)
             .await?;
 
@@ -141,11 +154,8 @@ impl Group {
             });
 
         let mut txn = data.db.begin().await?;
-
         for user in users {
-            // TODO better smt like 'await_all' or less resource usage?
-            // TODO -> wrap in big single txn once migration to hiqlite is done
-            user.save(data, None, Some(&mut txn)).await?;
+            user.save_txn(data, None, &mut txn).await?;
         }
 
         let new_group = Group {
@@ -172,7 +182,10 @@ impl Group {
                 g
             })
             .collect::<Vec<Group>>();
-        DB::client()
+
+        let client = DB::client();
+        client.clear_cache(Cache::User).await?;
+        client
             .put(Cache::App, IDX_GROUPS, &groups, CACHE_TTL_APP)
             .await?;
 
