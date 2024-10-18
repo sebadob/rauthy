@@ -1,5 +1,4 @@
 use crate::app_state::{AppState, Argon2Params, DbTxn};
-use crate::cache::{Cache, DB};
 use crate::email::{send_email_change_info_new, send_email_confirm_change, send_pwd_reset};
 use crate::entity::colors::ColorEntity;
 use crate::entity::continuation_token::ContinuationToken;
@@ -13,11 +12,13 @@ use crate::entity::sessions::Session;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
 use crate::events::event::Event;
+use crate::hiqlite::{Cache, DB};
 use crate::language::Language;
 use crate::templates::UserEmailChangeConfirmHtml;
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;
 use chrono::Utc;
+use hiqlite::{params, Param, Params};
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_api_types::users::{
     NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
@@ -298,6 +299,18 @@ impl User {
         Ok(res)
     }
 
+    /// This is a very expensive query using `LIKE`, use only when necessary.
+    pub async fn find_with_group(
+        data: &web::Data<AppState>,
+        group_name: String,
+    ) -> Result<Vec<Self>, ErrorResponse> {
+        let like = format!("%{group_name}%");
+        let res = sqlx::query_as!(Self, "SELECT * FROM users WHERE groups LIKE $1", like)
+            .fetch_all(&data.db)
+            .await?;
+        Ok(res)
+    }
+
     pub async fn find_expired(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
         let now = OffsetDateTime::now_utc()
             .add(time::Duration::seconds(10))
@@ -503,29 +516,60 @@ impl User {
 
         slf.auth_provider_id = None;
         slf.federation_uid = None;
-        slf.save(data, None, None).await?;
+        slf.save(data, None).await?;
 
         Ok(slf)
     }
 
-    pub async fn save(
-        &self,
-        data: &web::Data<AppState>,
-        old_email: Option<String>,
-        txn: Option<&mut DbTxn<'_>>,
-    ) -> Result<(), ErrorResponse> {
-        if old_email.is_some() {
-            User::is_email_free(data, self.email.clone()).await?;
-        }
+    /// Appends multiple necessary transaction queries to update a user to the given `Vec<_>`.
+    ///
+    /// CAUTION:
+    /// DO NOT use this function to update a user's `email` or `enabled` state!
+    pub fn save_txn_append(self, txn: &mut Vec<(&str, Params)>) {
+        txn.push((
+            r#"
+UPDATE USERS SET
+email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
+email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
+failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
+auth_provider_id = $16, federation_uid = $17
+WHERE id = $18"#,
+            params!(
+                self.email,
+                self.given_name,
+                self.family_name,
+                self.password,
+                self.roles,
+                self.groups,
+                self.enabled,
+                self.email_verified,
+                self.password_expires,
+                self.last_login,
+                self.last_failed_login,
+                self.failed_login_attempts,
+                self.language.as_str().to_string(),
+                self.webauthn_user_id,
+                self.user_expires,
+                self.auth_provider_id,
+                self.federation_uid,
+                self.id
+            ),
+        ));
+    }
 
+    /// CAUTION:
+    /// DO NOT use this function to update a user's `email` or `enabled` state!
+    pub async fn save_txn(&self, txn: &mut DbTxn<'_>) -> Result<(), ErrorResponse> {
         let lang = self.language.as_str();
-        let q = sqlx::query(
-            r#"UPDATE USERS SET
-            email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6,
-            enabled = $7, email_verified = $8, password_expires = $9, last_login = $10,
-            last_failed_login = $11, failed_login_attempts = $12, language = $13,
-            webauthn_user_id = $14, user_expires = $15, auth_provider_id = $16, federation_uid = $17
-            WHERE id = $18"#,
+
+        sqlx::query(
+            r#"
+UPDATE USERS SET
+email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
+email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
+failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
+auth_provider_id = $16, federation_uid = $17
+WHERE id = $18"#,
         )
         .bind(&self.email)
         .bind(&self.given_name)
@@ -544,15 +588,53 @@ impl User {
         .bind(self.user_expires)
         .bind(&self.auth_provider_id)
         .bind(&self.federation_uid)
-        .bind(&self.id);
+        .bind(&self.id)
+        .execute(&mut **txn)
+        .await?;
 
-        if let Some(txn) = txn {
-            q.execute(&mut **txn).await?;
-        } else {
-            q.execute(&data.db).await?;
+        Ok(())
+    }
+
+    pub async fn save(
+        &self,
+        data: &web::Data<AppState>,
+        old_email: Option<String>,
+    ) -> Result<(), ErrorResponse> {
+        if old_email.is_some() {
+            User::is_email_free(data, self.email.clone()).await?;
         }
 
-        // invalidate all possibly existing sessions and refresh tokens, if the user has been disabled
+        let lang = self.language.as_str();
+        sqlx::query(
+            r#"
+UPDATE USERS SET
+email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
+email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
+failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
+auth_provider_id = $16, federation_uid = $17
+WHERE id = $18"#,
+        )
+        .bind(&self.email)
+        .bind(&self.given_name)
+        .bind(&self.family_name)
+        .bind(&self.password)
+        .bind(&self.roles)
+        .bind(&self.groups)
+        .bind(self.enabled)
+        .bind(self.email_verified)
+        .bind(self.password_expires)
+        .bind(self.last_login)
+        .bind(self.last_failed_login)
+        .bind(self.failed_login_attempts)
+        .bind(lang)
+        .bind(self.webauthn_user_id.clone())
+        .bind(self.user_expires)
+        .bind(&self.auth_provider_id)
+        .bind(&self.federation_uid)
+        .bind(&self.id)
+        .execute(&data.db)
+        .await?;
+
         if !self.enabled {
             Session::invalidate_for_user(data, &self.id).await?;
             RefreshToken::invalidate_for_user(data, &self.id).await?;
@@ -660,7 +742,7 @@ impl User {
         user.email_verified = upd_user.email_verified;
         user.user_expires = upd_user.user_expires;
 
-        user.save(data, old_email.clone(), None).await?;
+        user.save(data, old_email.clone()).await?;
 
         if upd_user.password.is_some() {
             data.tx_events
@@ -837,7 +919,7 @@ impl User {
         user.password = None;
         user.password_expires = None;
 
-        user.save(data, None, None).await?;
+        user.save(data, None).await?;
         Ok(())
     }
 }
@@ -1061,7 +1143,7 @@ impl User {
         let old_email = user.email;
         user.email = new_email;
         user.email_verified = true;
-        user.save(data, Some(old_email.clone()), None).await?;
+        user.save(data, Some(old_email.clone())).await?;
         ml.invalidate(data).await?;
 
         // finally, invalidate all existing sessions with the old email

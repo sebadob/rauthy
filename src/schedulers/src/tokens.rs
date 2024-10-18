@@ -1,5 +1,5 @@
 use rauthy_models::app_state::DbPool;
-use rauthy_models::cache::DB;
+use rauthy_models::hiqlite::DB;
 use std::time::Duration;
 use time::OffsetDateTime;
 use tracing::{debug, error};

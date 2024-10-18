@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
-use crate::cache::{Cache, DB};
 use crate::entity::users::User;
+use crate::hiqlite::{Cache, DB};
 use actix_web::web;
 use rauthy_api_types::roles::NewRoleRequest;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_ROLES};
@@ -82,7 +82,7 @@ impl Role {
 
         for user in users {
             // TODO wrap inside single txn after hiqlite migrations
-            user.save(data, None, Some(&mut txn)).await?;
+            user.save_txn(&mut txn).await?;
         }
 
         sqlx::query!("DELETE FROM roles WHERE id = $1", id)
@@ -152,7 +152,7 @@ impl Role {
         let mut txn = data.db.begin().await?;
 
         for user in users {
-            user.save(data, None, Some(&mut txn)).await?;
+            user.save_txn(&mut txn).await?;
         }
 
         let new_role = Role { id, name: new_name };

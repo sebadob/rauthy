@@ -86,7 +86,7 @@ pub async fn grant_type_password(
                 user.password = Some(new_hash);
             }
 
-            user.save(data, None, None).await?;
+            user.save(data, None).await?;
 
             // update timestamp if it is a dynamic client
             if client.is_dynamic() {
@@ -117,7 +117,7 @@ pub async fn grant_type_password(
             user.last_failed_login = Some(OffsetDateTime::now_utc().unix_timestamp());
             user.failed_login_attempts = Some(&user.failed_login_attempts.unwrap_or(0) + 1);
 
-            user.save(data, None, None).await?;
+            user.save(data, None).await?;
 
             // TODO add expo increasing sleeps after failed login attempts here?
             Err(err)

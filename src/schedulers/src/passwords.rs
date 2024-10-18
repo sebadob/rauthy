@@ -1,9 +1,9 @@
 use crate::sleep_schedule_next;
 use actix_web::web;
 use rauthy_models::app_state::AppState;
-use rauthy_models::cache::DB;
 use rauthy_models::email::send_pwd_reset_info;
 use rauthy_models::entity::users::User;
+use rauthy_models::hiqlite::DB;
 use std::ops::Add;
 use std::str::FromStr;
 use time::OffsetDateTime;

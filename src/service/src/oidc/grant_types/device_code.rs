@@ -149,7 +149,7 @@ pub async fn grant_type_device_code(
             // The very first name will just always be the id.
             // This is a better UX than asking for a custom name each time.
             // TODO add an optional `name` param to the initial device request?
-            name: id,
+            name: id.clone(),
         };
         if let Err(err) = device.insert(data).await {
             error!("{:?}", err);
@@ -158,7 +158,7 @@ pub async fn grant_type_device_code(
                 error_description: Some(Cow::from(err.to_string())),
             });
         }
-        debug!("New Device has been created: {:?}", device);
+        debug!("New Device with ID {} has been created", id);
 
         let ts = match TokenSet::from_user(
             &user,
@@ -169,7 +169,7 @@ pub async fn grant_type_device_code(
             None,
             code.scopes.map(TokenScopes),
             AuthCodeFlow::No,
-            DeviceCodeFlow::Yes(device.id),
+            DeviceCodeFlow::Yes(id),
         )
         .await
         {

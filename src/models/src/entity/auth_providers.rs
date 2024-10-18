@@ -1,12 +1,12 @@
 use crate::api_cookie::ApiCookie;
 use crate::app_state::AppState;
-use crate::cache::{Cache, DB};
 use crate::entity::auth_codes::AuthCode;
 use crate::entity::clients::Client;
 use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::WebauthnLoginReq;
+use crate::hiqlite::{Cache, DB};
 use crate::language::Language;
 use crate::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
 use actix_web::cookie::Cookie;
@@ -15,6 +15,7 @@ use actix_web::http::header::HeaderValue;
 use actix_web::{web, HttpRequest};
 use cryptr::utils::secure_random_alnum;
 use cryptr::EncValue;
+use hiqlite::{params, Param, Row};
 use image::EncodableLayout;
 use itertools::Itertools;
 use rauthy_api_types::auth_providers::{
@@ -30,6 +31,7 @@ use rauthy_common::constants::{
     PROVIDER_CALLBACK_URI_ENCODED, PROVIDER_LINK_COOKIE, RAUTHY_VERSION,
     UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS, WEBAUTHN_REQ_EXP,
 };
+use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{
     base64_decode, base64_encode, base64_url_encode, base64_url_no_pad_decode, get_rand,
     new_store_id,
@@ -192,42 +194,109 @@ pub struct AuthProvider {
     pub root_pem: Option<String>,
 }
 
+impl<'r> From<hiqlite::Row<'r>> for AuthProvider {
+    fn from(mut row: Row<'r>) -> Self {
+        let typ_str: String = row.get("typ");
+        let typ = AuthProviderType::from(typ_str);
+
+        Self {
+            id: row.get("id"),
+            name: row.get("name"),
+            enabled: row.get("enabled"),
+            typ,
+            issuer: row.get("issuer"),
+            authorization_endpoint: row.get("authorization_endpoint"),
+            token_endpoint: row.get("token_endpoint"),
+            userinfo_endpoint: row.get("userinfo_endpoint"),
+            client_id: row.get("client_id"),
+            secret: row.get("secret"),
+            scope: row.get("scope"),
+            admin_claim_path: row.get("admin_claim_path"),
+            admin_claim_value: row.get("admin_claim_value"),
+            mfa_claim_path: row.get("mfa_claim_path"),
+            mfa_claim_value: row.get("mfa_claim_value"),
+            allow_insecure_requests: row.get("allow_insecure_requests"),
+            use_pkce: row.get("use_pkce"),
+            root_pem: row.get("root_pem"),
+        }
+    }
+}
+
 impl AuthProvider {
     pub async fn create(
         data: &web::Data<AppState>,
         payload: ProviderRequest,
     ) -> Result<Self, ErrorResponse> {
-        let slf = Self::try_from_id_req(new_store_id(), payload)?;
+        let mut slf = Self::try_from_id_req(new_store_id(), payload)?;
         let typ = slf.typ.as_str();
 
-        query!(
-            r#"INSERT INTO
-            auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
-            userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
-            mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem)
-            VALUES
-            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#,
-            slf.id,
-            slf.name,
-            slf.enabled,
-            typ,
-            slf.issuer,
-            slf.authorization_endpoint,
-            slf.token_endpoint,
-            slf.userinfo_endpoint,
-            slf.client_id,
-            slf.secret,
-            slf.scope,
-            slf.admin_claim_path,
-            slf.admin_claim_value,
-            slf.mfa_claim_path,
-            slf.mfa_claim_value,
-            slf.allow_insecure_requests,
-            slf.use_pkce,
-            slf.root_pem,
-        )
-        .execute(&data.db)
-        .await?;
+        slf = if is_hiqlite() {
+            DB::client()
+                .execute_returning_map(
+                    r#"
+INSERT INTO
+auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
+userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
+mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem)
+VALUES
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+RETURNING *"#,
+                    params!(
+                        slf.id,
+                        slf.name,
+                        slf.enabled,
+                        typ,
+                        slf.issuer,
+                        slf.authorization_endpoint,
+                        slf.token_endpoint,
+                        slf.userinfo_endpoint,
+                        slf.client_id,
+                        slf.secret,
+                        slf.scope,
+                        slf.admin_claim_path,
+                        slf.admin_claim_value,
+                        slf.mfa_claim_path,
+                        slf.mfa_claim_value,
+                        slf.allow_insecure_requests,
+                        slf.use_pkce,
+                        slf.root_pem
+                    ),
+                )
+                .await?
+                .remove(0)?
+        } else {
+            query!(
+                r#"
+INSERT INTO
+auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
+userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
+mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem)
+VALUES
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#,
+                slf.id,
+                slf.name,
+                slf.enabled,
+                typ,
+                slf.issuer,
+                slf.authorization_endpoint,
+                slf.token_endpoint,
+                slf.userinfo_endpoint,
+                slf.client_id,
+                slf.secret,
+                slf.scope,
+                slf.admin_claim_path,
+                slf.admin_claim_value,
+                slf.mfa_claim_path,
+                slf.mfa_claim_value,
+                slf.allow_insecure_requests,
+                slf.use_pkce,
+                slf.root_pem,
+            )
+            .execute(&data.db)
+            .await?;
+
+            slf
+        };
 
         Self::invalidate_cache_all(data).await?;
 
@@ -244,9 +313,15 @@ impl AuthProvider {
             return Ok(slf);
         }
 
-        let slf = query_as!(Self, "SELECT * FROM auth_providers WHERE id = $1", id)
-            .fetch_one(&data.db)
-            .await?;
+        let slf = if is_hiqlite() {
+            client
+                .query_map_one("SELECT * FROM auth_providers WHERE id = $1", params!(id))
+                .await?
+        } else {
+            query_as!(Self, "SELECT * FROM auth_providers WHERE id = $1", id)
+                .fetch_one(&data.db)
+                .await?
+        };
 
         client
             .put(Cache::App, Self::cache_idx(id), &slf, CACHE_TTL_APP)
@@ -261,9 +336,15 @@ impl AuthProvider {
             return Ok(res);
         }
 
-        let res = query_as!(Self, "SELECT * FROM auth_providers")
-            .fetch_all(&data.db)
-            .await?;
+        let res = if is_hiqlite() {
+            client
+                .query_map("SELECT * FROM auth_providers", params!())
+                .await?
+        } else {
+            query_as!(Self, "SELECT * FROM auth_providers")
+                .fetch_all(&data.db)
+                .await?
+        };
 
         // needed for rendering each single login page -> always cache this
         client
@@ -277,21 +358,36 @@ impl AuthProvider {
         data: &web::Data<AppState>,
         id: &str,
     ) -> Result<Vec<ProviderLinkedUserResponse>, ErrorResponse> {
-        let users = query_as!(
-            ProviderLinkedUserResponse,
-            "SELECT id, email FROM users WHERE auth_provider_id = $1",
-            id
-        )
-        .fetch_all(&data.db)
-        .await?;
+        let users = if is_hiqlite() {
+            DB::client()
+                .query_as(
+                    "SELECT id, email FROM users WHERE auth_provider_id = $1",
+                    params!(id),
+                )
+                .await?
+        } else {
+            query_as!(
+                ProviderLinkedUserResponse,
+                "SELECT id, email FROM users WHERE auth_provider_id = $1",
+                id
+            )
+            .fetch_all(&data.db)
+            .await?
+        };
 
         Ok(users)
     }
 
     pub async fn delete(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
-        query!("DELETE FROM auth_providers WHERE id = $1", id)
-            .execute(&data.db)
-            .await?;
+        if is_hiqlite() {
+            DB::client()
+                .execute("DELETE FROM auth_providers WHERE id = $1", params!(id))
+                .await?;
+        } else {
+            query!("DELETE FROM auth_providers WHERE id = $1", id)
+                .execute(&data.db)
+                .await?;
+        }
 
         Self::invalidate_cache_all(data).await?;
         DB::client().delete(Cache::App, Self::cache_idx(id)).await?;
@@ -309,34 +405,70 @@ impl AuthProvider {
 
     pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         let typ = self.typ.as_str();
-        query!(
-            r#"UPDATE auth_providers
-            SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
-            token_endpoint = $6, userinfo_endpoint = $7, client_id = $8, secret = $9, scope = $10,
-            admin_claim_path = $11, admin_claim_value = $12, mfa_claim_path = $13,
-            mfa_claim_value = $14, allow_insecure_requests = $15, use_pkce = $16, root_pem = $17
-            WHERE id = $18"#,
-            self.name,
-            self.enabled,
-            self.issuer,
-            typ,
-            self.authorization_endpoint,
-            self.token_endpoint,
-            self.userinfo_endpoint,
-            self.client_id,
-            self.secret,
-            self.scope,
-            self.admin_claim_path,
-            self.admin_claim_value,
-            self.mfa_claim_path,
-            self.mfa_claim_value,
-            self.allow_insecure_requests,
-            self.use_pkce,
-            self.root_pem,
-            self.id,
-        )
-        .execute(&data.db)
-        .await?;
+
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    r#"
+UPDATE auth_providers
+SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
+token_endpoint = $6, userinfo_endpoint = $7, client_id = $8, secret = $9, scope = $10,
+admin_claim_path = $11, admin_claim_value = $12, mfa_claim_path = $13, mfa_claim_value = $14,
+allow_insecure_requests = $15, use_pkce = $16, root_pem = $17
+WHERE id = $18"#,
+                    params!(
+                        self.name.clone(),
+                        self.enabled,
+                        self.issuer.clone(),
+                        typ.to_string(),
+                        self.authorization_endpoint.clone(),
+                        self.token_endpoint.clone(),
+                        self.userinfo_endpoint.clone(),
+                        self.client_id.clone(),
+                        self.secret.clone(),
+                        self.scope.clone(),
+                        self.admin_claim_path.clone(),
+                        self.admin_claim_value.clone(),
+                        self.mfa_claim_path.clone(),
+                        self.mfa_claim_value.clone(),
+                        self.allow_insecure_requests,
+                        self.use_pkce,
+                        self.root_pem.clone(),
+                        self.id.clone()
+                    ),
+                )
+                .await?;
+        } else {
+            query!(
+                r#"
+UPDATE auth_providers
+SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
+token_endpoint = $6, userinfo_endpoint = $7, client_id = $8, secret = $9, scope = $10,
+admin_claim_path = $11, admin_claim_value = $12, mfa_claim_path = $13, mfa_claim_value = $14,
+allow_insecure_requests = $15, use_pkce = $16, root_pem = $17
+WHERE id = $18"#,
+                self.name,
+                self.enabled,
+                self.issuer,
+                typ,
+                self.authorization_endpoint,
+                self.token_endpoint,
+                self.userinfo_endpoint,
+                self.client_id,
+                self.secret,
+                self.scope,
+                self.admin_claim_path,
+                self.admin_claim_value,
+                self.mfa_claim_path,
+                self.mfa_claim_value,
+                self.allow_insecure_requests,
+                self.use_pkce,
+                self.root_pem,
+                self.id,
+            )
+            .execute(&data.db)
+            .await?;
+        }
 
         Self::invalidate_cache_all(data).await?;
         DB::client()
@@ -1307,7 +1439,7 @@ impl AuthProviderIdClaims<'_> {
                 user.last_failed_login = Some(now);
                 user.failed_login_attempts =
                     Some(user.failed_login_attempts.unwrap_or_default() + 1);
-                user.save(data, old_email, None).await?;
+                user.save(data, old_email).await?;
 
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
@@ -1360,7 +1492,7 @@ impl AuthProviderIdClaims<'_> {
             user.last_failed_login = None;
             user.failed_login_attempts = None;
 
-            user.save(data, old_email, None).await?;
+            user.save(data, old_email).await?;
             user
         } else {
             // Create a new federated user

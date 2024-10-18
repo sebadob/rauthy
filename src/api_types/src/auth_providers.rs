@@ -168,7 +168,7 @@ pub struct ProviderResponse {
     pub root_pem: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ProviderLinkedUserResponse {
     pub id: String,
     pub email: String,

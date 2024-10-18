@@ -41,7 +41,7 @@ pub async fn migrate_encryption_alg(
 
         client.secret = Some(enc);
         client.secret_kid = Some(new_kid.to_string());
-        client.save(data, None).await?;
+        client.save(data).await?;
         modified += 1;
     }
     info!("Finished clients secrets migration to key id: {}", new_kid);

@@ -70,16 +70,9 @@ impl RefreshToken {
         data: &web::Data<AppState>,
         user_id: &str,
     ) -> Result<(), ErrorResponse> {
-        let now = Utc::now().timestamp();
-
-        sqlx::query!(
-            "UPDATE refresh_tokens SET exp = $1 WHERE exp > $1 AND user_id = $2",
-            now,
-            user_id
-        )
-        .execute(&data.db)
-        .await?;
-
+        sqlx::query!("DELETE FROM refresh_tokens WHERE user_id = $1", user_id)
+            .execute(&data.db)
+            .await?;
         Ok(())
     }
 

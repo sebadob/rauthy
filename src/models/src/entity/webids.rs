@@ -1,5 +1,5 @@
 use crate::app_state::AppState;
-use crate::cache::{Cache, DB};
+use crate::hiqlite::{Cache, DB};
 use actix_web::web;
 use rauthy_api_types::users::WebIdResponse;
 use rauthy_common::constants::{CACHE_TTL_USER, PUB_URL_WITH_SCHEME};

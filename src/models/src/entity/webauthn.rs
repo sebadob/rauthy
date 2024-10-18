@@ -1,7 +1,7 @@
 use crate::api_cookie::ApiCookie;
 use crate::app_state::{AppState, DbTxn};
-use crate::cache::{Cache, DB};
 use crate::entity::users::{AccountType, User};
+use crate::hiqlite::{Cache, DB};
 use actix_web::cookie::Cookie;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
@@ -667,7 +667,7 @@ pub async fn auth_finish(
 
                     let mut txn = data.db.begin().await?;
                     pk_entity.update_passkey(&mut txn).await?;
-                    user.save(data, None, Some(&mut txn)).await?;
+                    user.save_txn(&mut txn).await?;
                     txn.commit().await?;
                 }
             }
@@ -804,7 +804,7 @@ pub async fn reg_finish(
                 if user.password.is_none() || *WEBAUTHN_NO_PASSWORD_EXPIRY {
                     user.password_expires = None;
                 }
-                user.save(data, None, Some(&mut txn)).await?;
+                user.save_txn(&mut txn).await?;
             }
 
             PasskeyEntity::create(

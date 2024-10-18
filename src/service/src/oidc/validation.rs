@@ -194,7 +194,7 @@ pub async fn validate_refresh_token(
 
     // set last login
     user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
-    user.save(data, None, None).await?;
+    user.save(data, None).await?;
 
     let auth_time = if let Some(ts) = claims.custom.auth_time {
         AuthTime::given(ts)

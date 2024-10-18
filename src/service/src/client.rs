@@ -58,7 +58,7 @@ pub async fn update_client(
     client.contacts = client_req.contacts.map(|c| c.join(","));
     client.client_uri = client_req.client_uri;
 
-    client.save(data, None).await?;
+    client.save(data).await?;
     Ok(client)
 }
 
@@ -95,7 +95,7 @@ pub async fn generate_new_secret(
 
     client.confidential = true;
     client.secret = Some(enc);
-    client.save(data, None).await?;
+    client.save(data).await?;
 
     Ok(ClientSecretResponse {
         id: client.id,
