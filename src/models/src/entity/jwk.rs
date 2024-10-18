@@ -179,9 +179,13 @@ impl JWKS {
             return Ok(slf);
         }
 
-        let res = sqlx::query_as!(Jwk, "SELECT * FROM jwks")
-            .fetch_all(&data.db)
-            .await?;
+        let res = if is_hiqlite() {
+            client.query_as("SELECT * FROM jwks", params!()).await?
+        } else {
+            sqlx::query_as!(Jwk, "SELECT * FROM jwks")
+                .fetch_all(&data.db)
+                .await?
+        };
 
         let mut jwks = JWKS::default();
         for cert in res {
@@ -645,9 +649,15 @@ impl JwkKeyPair {
             return Ok(slf);
         }
 
-        let jwk = sqlx::query_as!(Jwk, "SELECT * FROM jwks WHERE kid = $1", kid,)
-            .fetch_one(&data.db)
-            .await?;
+        let jwk = if is_hiqlite() {
+            client
+                .query_as_one("SELECT * FROM jwks WHERE kid = $1", params!(kid))
+                .await?
+        } else {
+            sqlx::query_as!(Jwk, "SELECT * FROM jwks WHERE kid = $1", kid,)
+                .fetch_one(&data.db)
+                .await?
+        };
 
         let kp = JwkKeyPair::decrypt(&jwk, jwk.signature.clone())?;
         client.put(Cache::App, idx, &kp, CACHE_TTL_APP).await?;
@@ -655,6 +665,7 @@ impl JwkKeyPair {
         Ok(kp)
     }
 
+    // TODO add an index (signature, created_at) with the next round of DB migrations
     // Returns the latest JWK (especially important after a [JWK Rotation](crate::api::rotate_jwk)
     // by a given algorithm.
     pub async fn find_latest(
@@ -668,19 +679,35 @@ impl JwkKeyPair {
             return Ok(slf);
         }
 
-        let mut jwks = sqlx::query_as!(Jwk, "SELECT * FROM jwks")
-            .fetch_all(&data.db)
+        let signature = key_pair_alg.as_str().to_string();
+        let jwk_latest = if is_hiqlite() {
+            client
+                .query_as_one(
+                    r#"
+SELECT * FROM jwks
+WHERE signature = $1
+ORDER BY created_at DESC
+LIMIT 1
+"#,
+                    params!(signature),
+                )
+                .await?
+        } else {
+            sqlx::query_as!(
+                Jwk,
+                r#"
+SELECT * FROM jwks
+WHERE signature = $1
+ORDER BY created_at DESC
+LIMIT 1
+"#,
+                signature
+            )
+            .fetch_one(&data.db)
             .await?
-            .into_iter()
-            .filter(|jwk| jwk.signature == key_pair_alg)
-            .collect::<Vec<Jwk>>();
+        };
 
-        jwks.sort_by(|a, b| a.created_at.cmp(&b.created_at));
-        if jwks.is_empty() {
-            panic!("No latest JWK found - database corrupted?");
-        }
-
-        let jwk = JwkKeyPair::decrypt(jwks.first().unwrap(), key_pair_alg)?;
+        let jwk = JwkKeyPair::decrypt(&jwk_latest, key_pair_alg)?;
         client.put(Cache::App, idx, &jwk, CACHE_TTL_APP).await?;
 
         Ok(jwk)
@@ -739,6 +766,13 @@ pub enum JwkKeyPairAlg {
     EdDSA,
 }
 
+impl<'r> From<hiqlite::Row<'r>> for JwkKeyPairAlg {
+    fn from(mut row: hiqlite::Row<'r>) -> Self {
+        let sig: String = row.get("signature");
+        JwkKeyPairAlg::from_str(&sig).expect("corrupted signature in database")
+    }
+}
+
 impl Default for JwkKeyPairAlg {
     fn default() -> Self {
         Self::EdDSA
@@ -759,7 +793,7 @@ impl From<String> for JwkKeyPairAlg {
 
 impl FromRow<'_, SqliteRow> for JwkKeyPairAlg {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, Error> {
-        let sig = row.try_get("signature").unwrap();
+        let sig = row.try_get("signature")?;
         let slf = JwkKeyPairAlg::from_str(sig).expect("corrupted signature in database");
         Ok(slf)
     }
@@ -767,7 +801,7 @@ impl FromRow<'_, SqliteRow> for JwkKeyPairAlg {
 
 impl FromRow<'_, PgRow> for JwkKeyPairAlg {
     fn from_row(row: &'_ PgRow) -> Result<Self, Error> {
-        let sig = row.try_get("signature").unwrap();
+        let sig = row.try_get("signature")?;
         let slf = JwkKeyPairAlg::from_str(sig).expect("corrupted signature in database");
         Ok(slf)
     }

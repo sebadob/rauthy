@@ -11,6 +11,7 @@
 - fix `DbType::from_str`
 - cleanup `DbPool` creation in `AppState`
 - remove the `sqlite` feature from `sqlx` to really make sure nothing has been forgotten
+- add an index (signature, created_at) to `jwks`
 
 #### Update for the Changelog
 
