@@ -70,12 +70,6 @@ pub async fn handle_put_user_passkey_start<'a>(
     // validate user_id / given email address
     debug!("getting user");
     let user = User::find(data, user_id).await?;
-    if req_data.email != Some(user.email) {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            String::from("E-Mail does not match for this user"),
-        ));
-    }
 
     debug!("getting magic link");
     // unwrap is safe -> checked in API endpoint already
