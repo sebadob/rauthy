@@ -15,7 +15,7 @@ use rauthy_api_types::users::{
 };
 use rauthy_common::constants::{
     COOKIE_MFA, ENABLE_WEB_ID, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, OPEN_USER_REG,
-    PWD_RESET_COOKIE, SSP_THRESHOLD, TEXT_TURTLE, USER_REG_DOMAIN_BLACKLIST,
+    PWD_CSRF_HEADER, PWD_RESET_COOKIE, SSP_THRESHOLD, TEXT_TURTLE, USER_REG_DOMAIN_BLACKLIST,
     USER_REG_DOMAIN_RESTRICTION,
 };
 use rauthy_common::utils::real_ip_from_req;
@@ -943,7 +943,7 @@ pub async fn post_webauthn_reg_start(
 ) -> Result<HttpResponse, ErrorResponse> {
     // If we have a magic link ID in the payload, we do not validate the active session / principal.
     // This is mandatory to make registering a passkey for a completely new account work.
-    if req_data.magic_link_id.is_some() && req_data.email.is_some() {
+    if req_data.magic_link_id.is_some() && req.headers().get(PWD_CSRF_HEADER).is_some() {
         password_reset::handle_put_user_passkey_start(
             &data,
             req,
