@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## 0.26.1
 
 ### Changes
 
@@ -30,6 +30,12 @@ text to json with the following new config variable:
 ```
 
 [1ef1353](https://github.com/sebadob/rauthy/commit/1ef1353162655fb5dc54396b02c73ef80ff0506a)
+
+### Bugfix
+
+- With relaxing requirements for password resets for new users, a bug has been introduced that would prevent
+  a user from registering an only-passkey account when doing the very first "password reset".
+  [de2cfea](https://github.com/sebadob/rauthy/commit/de2cfea107cff4fb98fc81be692d0b83cf597398)
 
 ## 0.26.0
 

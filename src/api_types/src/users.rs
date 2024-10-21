@@ -227,10 +227,6 @@ pub struct WebauthnRegStartRequest {
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{1,32}"))]
     pub passkey_name: String,
-
-    /// Validation: `email`
-    #[validate(email)]
-    pub email: Option<String>,
     /// Validation: `[a-zA-Z0-9]{64}`
     #[validate(regex(path = "*RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
     pub magic_link_id: Option<String>,

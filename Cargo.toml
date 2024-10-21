@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.26.0"
+version = "0.26.1"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -29,7 +29,7 @@ actix-multipart = "0.7.2"
 actix-service = "2"
 actix-web = { version = "4", features = ["rustls-0_23"] }
 actix-web-actors = "4"
-actix-web-lab = "0.22"
+actix-web-lab = "0.23"
 actix-web-prom = "0.9.0"
 actix-web-validator = "6"
 anyhow = "1"
