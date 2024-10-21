@@ -302,10 +302,21 @@ impl User {
     /// This is a very expensive query using `LIKE`, use only when necessary.
     pub async fn find_with_group(
         data: &web::Data<AppState>,
-        group_name: String,
+        group_name: &str,
     ) -> Result<Vec<Self>, ErrorResponse> {
         let like = format!("%{group_name}%");
         let res = sqlx::query_as!(Self, "SELECT * FROM users WHERE groups LIKE $1", like)
+            .fetch_all(&data.db)
+            .await?;
+        Ok(res)
+    }
+
+    pub async fn find_with_role(
+        data: &web::Data<AppState>,
+        role_name: &str,
+    ) -> Result<Vec<Self>, ErrorResponse> {
+        let like = format!("%{role_name}%");
+        let res = sqlx::query_as!(Self, "SELECT * FROM users WHERE roles LIKE $1", like)
             .fetch_all(&data.db)
             .await?;
         Ok(res)

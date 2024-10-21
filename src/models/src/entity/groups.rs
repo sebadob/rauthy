@@ -68,9 +68,8 @@ impl Group {
     // Deletes a group
     pub async fn delete(data: &web::Data<AppState>, id: String) -> Result<(), ErrorResponse> {
         let group = Group::find(data, id).await?;
-        let users = User::find_with_group(data, group.name.clone()).await?;
+        let users = User::find_with_group(data, &group.name).await?;
 
-        // Hiqlite is a lot more capable and efficient in this case.
         if is_hiqlite() {
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
 
@@ -90,14 +89,15 @@ impl Group {
             }
         } else {
             let mut txn = data.db.begin().await?;
+
             for mut user in users {
                 user.delete_group(&group.name);
                 user.save_txn(&mut txn).await?;
             }
-
             sqlx::query!("DELETE FROM groups WHERE id = $1", group.id)
                 .execute(&mut *txn)
                 .await?;
+
             txn.commit().await?;
         }
 
@@ -162,9 +162,9 @@ impl Group {
         new_name: String,
     ) -> Result<Self, ErrorResponse> {
         let group = Group::find(data, id).await?;
-        let users = User::find_with_group(data, group.name.clone()).await?;
+        let users = User::find_with_group(data, &group.name).await?;
 
-        let new_group = Group {
+        let new_group = Self {
             id: group.id.clone(),
             name: new_name,
         };
@@ -193,11 +193,11 @@ impl Group {
             }
         } else {
             let mut txn = data.db.begin().await?;
+
             for mut user in users {
                 user.delete_group(&group.name);
                 user.save_txn(&mut txn).await?;
             }
-
             sqlx::query!(
                 "UPDATE groups SET name = $1 WHERE id = $2",
                 new_group.name,
@@ -205,6 +205,7 @@ impl Group {
             )
             .execute(&mut *txn)
             .await?;
+
             txn.commit().await?;
         }
 
