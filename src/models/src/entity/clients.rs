@@ -188,26 +188,26 @@ auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, fo
 client_uri, contacts)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#,
                 params!(
-                    client.id.clone(),
-                    client.name.clone(),
+                    &client.id,
+                    &client.name,
                     client.enabled,
                     client.confidential,
-                    client.secret.clone(),
-                    client.secret_kid.clone(),
-                    client.redirect_uris.clone(),
-                    client.post_logout_redirect_uris.clone(),
-                    client.allowed_origins.clone(),
-                    client.flows_enabled.clone(),
-                    client.access_token_alg.clone(),
-                    client.id_token_alg.clone(),
+                    &client.secret,
+                    &client.secret_kid,
+                    &client.redirect_uris,
+                    &client.post_logout_redirect_uris,
+                    &client.allowed_origins,
+                    &client.flows_enabled,
+                    &client.access_token_alg,
+                    &client.id_token_alg,
                     client.auth_code_lifetime,
                     client.access_token_lifetime,
-                    client.scopes.clone(),
-                    client.default_scopes.clone(),
-                    client.challenge.clone(),
+                    &client.scopes,
+                    &client.default_scopes,
+                    &client.challenge,
                     client.force_mfa,
-                    client.client_uri.clone(),
-                    client.contacts.clone()
+                    &client.client_uri,
+                    &client.contacts
                 )),
                 (r#"
 INSERT INTO
@@ -285,10 +285,7 @@ VALUES ($1, $2, $3, $4)"#,
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
-                .execute(
-                    "DELETE FROM clients WHERE id = $1",
-                    params!(self.id.clone()),
-                )
+                .execute("DELETE FROM clients WHERE id = $1", params!(&self.id))
                 .await?;
         } else {
             sqlx::query!("DELETE FROM clients WHERE id = $1", self.id,)
@@ -308,8 +305,13 @@ VALUES ($1, $2, $3, $4)"#,
 
     pub async fn delete_cache(&self) -> Result<(), ErrorResponse> {
         DB::client()
-            .delete(Cache::App, Client::cache_idx(&self.id))
+            .delete(Cache::App, Self::cache_idx(&self.id))
             .await?;
+        Ok(())
+    }
+
+    pub async fn delete_cache_for(id: &str) -> Result<(), ErrorResponse> {
+        DB::client().delete(Cache::App, Self::cache_idx(id)).await?;
         Ok(())
     }
 
@@ -338,7 +340,6 @@ VALUES ($1, $2, $3, $4)"#,
         Ok(slf)
     }
 
-    // Returns all existing clients with the secrets.
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
         let clients = if is_hiqlite() {
             DB::client()
@@ -384,10 +385,31 @@ VALUES ($1, $2, $3, $4)"#,
         Ok(slf)
     }
 
-    pub async fn save_prepared<'a>(self) -> Result<(&'a str, Params), ErrorResponse> {
-        self.delete_cache().await?;
+    pub async fn find_with_scope(
+        data: &web::Data<AppState>,
+        scope_name: &str,
+    ) -> Result<Vec<Self>, ErrorResponse> {
+        let like = format!("%{scope_name}%");
 
-        Ok((
+        let clients = if is_hiqlite() {
+            DB::client()
+                .query_as(
+                    "SELECT * FROM clients WHERE scopes = $1 OR default_Scopes = $1",
+                    params!(like),
+                )
+                .await?
+        } else {
+            sqlx::query_as("SELECT * FROM clients WHERE scopes = $1 OR default_Scopes = $1")
+                .bind(like)
+                .fetch_all(&data.db)
+                .await?
+        };
+
+        Ok(clients)
+    }
+
+    pub fn save_txn_append(&self, txn: &mut Vec<(&str, Params)>) {
+        txn.push((
             r#"
 UPDATE clients
 SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
@@ -396,28 +418,28 @@ id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scope
 default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19
 WHERE id = $20"#,
             params!(
-                self.name,
+                &self.name,
                 self.enabled,
                 self.confidential,
-                self.secret,
-                self.secret_kid,
-                self.redirect_uris,
-                self.post_logout_redirect_uris,
-                self.allowed_origins,
-                self.flows_enabled,
-                self.access_token_alg,
-                self.id_token_alg,
+                &self.secret,
+                &self.secret_kid,
+                &self.redirect_uris,
+                &self.post_logout_redirect_uris,
+                &self.allowed_origins,
+                &self.flows_enabled,
+                &self.access_token_alg,
+                &self.id_token_alg,
                 self.auth_code_lifetime,
                 self.access_token_lifetime,
-                self.scopes,
-                self.default_scopes,
-                self.challenge,
+                &self.scopes,
+                &self.default_scopes,
+                &self.challenge,
                 self.force_mfa,
-                self.client_uri,
-                self.contacts,
-                self.id
+                &self.client_uri,
+                &self.contacts,
+                &self.id
             ),
-        ))
+        ));
     }
 
     pub async fn save_txn(&self, txn: &mut DbTxn<'_>) -> Result<(), ErrorResponse> {
@@ -452,8 +474,6 @@ WHERE id = $20"#,
         )
         .execute(&mut **txn)
         .await?;
-
-        self.delete_cache().await?;
 
         Ok(())
     }
@@ -575,24 +595,22 @@ WHERE id = $20"#,
         }
 
         if is_hiqlite() {
-            let prepared = new_client.clone().save_prepared().await?;
-            DB::client()
-                .txn([
-                    prepared,
-                    (
-                        r#"
+            let mut txn = Vec::with_capacity(2);
+            new_client.save_txn_append(&mut txn);
+            txn.push((
+                r#"
 UPDATE clients_dyn
 SET registration_token = $1, token_endpoint_auth_method = $2, last_used = $3
 WHERE id = $4"#,
-                        params!(
-                            client_dyn.registration_token.clone(),
-                            client_dyn.token_endpoint_auth_method.clone(),
-                            client_dyn.last_used,
-                            client_dyn.id.clone()
-                        ),
-                    ),
-                ])
-                .await?;
+                params!(
+                    client_dyn.registration_token.clone(),
+                    client_dyn.token_endpoint_auth_method.clone(),
+                    client_dyn.last_used,
+                    client_dyn.id.clone()
+                ),
+            ));
+
+            DB::client().txn(txn).await?;
         } else {
             let mut txn = data.db.begin().await?;
 
