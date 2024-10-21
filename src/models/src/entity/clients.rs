@@ -394,12 +394,12 @@ VALUES ($1, $2, $3, $4)"#,
         let clients = if is_hiqlite() {
             DB::client()
                 .query_as(
-                    "SELECT * FROM clients WHERE scopes = $1 OR default_Scopes = $1",
+                    "SELECT * FROM clients WHERE scopes = $1 OR default_scopes = $1",
                     params!(like),
                 )
                 .await?
         } else {
-            sqlx::query_as("SELECT * FROM clients WHERE scopes = $1 OR default_Scopes = $1")
+            sqlx::query_as("SELECT * FROM clients WHERE scopes = $1 OR default_scopes = $1")
                 .bind(like)
                 .fetch_all(&data.db)
                 .await?
