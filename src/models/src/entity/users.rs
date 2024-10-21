@@ -1064,7 +1064,7 @@ impl User {
                 }
 
                 Err(_) => {
-                    RecentPasswordsEntity::create(data, &self.id, &new_hash).await?;
+                    RecentPasswordsEntity::create(data, &self.id, new_hash.clone()).await?;
                 }
             }
         }

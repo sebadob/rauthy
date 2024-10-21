@@ -136,8 +136,8 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
         } else {
             sqlx::query!(
                 r#"
-    INSERT INTO magic_links (id, user_id, csrf_token, exp, used, usage)
-    VALUES ($1, $2, $3, $4, $5, $6)"#,
+INSERT INTO magic_links (id, user_id, csrf_token, exp, used, usage)
+VALUES ($1, $2, $3, $4, $5, $6)"#,
                 link.id,
                 link.user_id,
                 link.csrf_token,
