@@ -28,7 +28,11 @@ pub struct Scope {
 
 // CRUD
 impl Scope {
-    // Inserts a new scope into the database
+    pub async fn clear_cache() -> Result<(), ErrorResponse> {
+        DB::client().delete(Cache::App, IDX_SCOPES).await?;
+        Ok(())
+    }
+
     pub async fn create(
         data: &web::Data<AppState>,
         scope_req: ScopeRequest,
@@ -166,7 +170,6 @@ VALUES ($1, $2, $3, $4)"#,
         Ok(())
     }
 
-    // Returns a single scope by id
     pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
@@ -181,7 +184,6 @@ VALUES ($1, $2, $3, $4)"#,
         Ok(res)
     }
 
-    // Returns all existing scopes
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
         let client = DB::client();
         if let Some(slf) = client.get(Cache::App, IDX_SCOPES).await? {
@@ -340,55 +342,42 @@ WHERE id = $4"#,
         Ok(new_scope)
     }
 
+    /// If you use this in a transactions, you MUST `Scope::clear_cache()` after successful commit!
     pub async fn update_mapping_only(
-        data: &web::Data<AppState>,
         id: &str,
         attr_include_access: Option<String>,
         attr_include_id: Option<String>,
         txn: &mut DbTxn<'_>,
     ) -> Result<(), ErrorResponse> {
-        if is_hiqlite() {
-            //             DB::client()
-            //                 .execute(
-            //                     r#"
-            // UPDATE scopes
-            // SET attr_include_access = $1, attr_include_id = $2
-            // WHERE id = $3"#,
-            //                     params!(attr_include_access, attr_include_id, id),
-            //                 )
-            //                 .await?;
-            todo!("needs rework and split for hiqlite txn append in user_attrs");
-        } else {
-            sqlx::query!(
-                r#"
+        sqlx::query!(
+            r#"
     UPDATE scopes
     SET attr_include_access = $1, attr_include_id = $2
     WHERE id = $3"#,
-                attr_include_access,
-                attr_include_id,
-                id,
-            )
-            .execute(&mut **txn)
-            .await?;
-        }
-
-        let scopes = Scope::find_all(data)
-            .await?
-            .into_iter()
-            .map(|mut s| {
-                if s.id == id {
-                    s.attr_include_access.clone_from(&attr_include_access);
-                    s.attr_include_id.clone_from(&attr_include_id);
-                }
-                s
-            })
-            .collect::<Vec<Scope>>();
-
-        DB::client()
-            .put(Cache::App, IDX_SCOPES, &scopes, CACHE_TTL_APP)
-            .await?;
+            attr_include_access,
+            attr_include_id,
+            id,
+        )
+        .execute(&mut **txn)
+        .await?;
 
         Ok(())
+    }
+
+    /// If you use this in a transactions, you MUST `Scope::clear_cache()` after successful commit!
+    pub fn update_mapping_only_append(
+        id: &str,
+        attr_include_access: Option<String>,
+        attr_include_id: Option<String>,
+        txn: &mut Vec<(&str, Params)>,
+    ) {
+        txn.push((
+            r#"
+    UPDATE scopes
+    SET attr_include_access = $1, attr_include_id = $2
+    WHERE id = $3"#,
+            params!(attr_include_access, attr_include_id, id),
+        ));
     }
 }
 
