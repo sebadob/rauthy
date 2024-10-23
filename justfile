@@ -1,26 +1,22 @@
-set dotenv-load
-set positional-arguments
+set dotenv-load := true
+set positional-arguments := true
 
 export TAG := `cat Cargo.toml | grep '^version =' | cut -d " " -f3 | xargs`
 export TODAY := `date +%Y%m%d`
 export DEV_HOST := `echo ${PUB_URL:-localhost:8080} | cut -d':' -f1`
-export USER :=  `echo "$(id -u):$(id -g)"`
-
+export USER := `echo "$(id -u):$(id -g)"`
 arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
 docker := `echo ${DOCKER:-docker}`
 map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
 npm := `echo ${NPM:-npm}`
 cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
-
 builder_image := "ghcr.io/sebadob/rauthy-builder"
 builder_tag_date := "20240923"
-
 container_network := "rauthy-dev"
 container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
 file_test_pid := ".test_pid"
-
 db_url_sqlite := "DATABASE_URL=sqlite:data/rauthy.db"
 db_url_postgres := "DATABASE_URL=postgresql://rauthy:123SuperSafe@$DEV_HOST:5432/rauthy"
 
@@ -55,12 +51,12 @@ setup:
 
     echo "npm install to set up the frontend"
     cd frontend/
-    {{npm}} install
+    {{ npm }} install
     cd ..
 
-    if ! {{docker}} network inspect rauthy-dev; then
+    if ! {{ docker }} network inspect rauthy-dev; then
       echo "Creating rauthy-dev container network"
-      {{docker}} network create rauthy-dev
+      {{ docker }} network create rauthy-dev
     fi
 
     echo "Building the UI and static HTML"
@@ -70,7 +66,7 @@ setup:
     just backend-start
     just migrate
 
-    {{db_url_sqlite}} cargo build
+    {{ db_url_sqlite }} cargo build
 
 # start the backend containers for local dev
 @backend-start:
@@ -82,8 +78,7 @@ setup:
     just postgres-stop || echo ">>> Postgres is not running - nothing to do"
     just mailcrab-stop || echo ">>> Mailcrab is not running - nothing to do"
     echo "Trying to cleanup orphaned containers"
-    {{docker}} rm container rauthy || echo ">>> No orphaned 'rauthy' container found"
-
+    {{ docker }} rm container rauthy || echo ">>> No orphaned 'rauthy' container found"
 
 # Creates a new Root + Intermediate CA for development and testing TLS certificates
 create-root-ca:
@@ -93,26 +88,26 @@ create-root-ca:
     #chmod 0766 tls/ca
 
     # Root CA
-    {{docker}} run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
+    {{ docker }} run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
           ghcr.io/sebadob/nioca \
           x509 \
           --stage root \
           --clean
 
     # Intermediate CA
-    {{docker}} run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
+    {{ docker }} run --rm -it -v ./tls/ca:/ca -u $(id -u ${USER}):$(id -g ${USER}) \
           ghcr.io/sebadob/nioca \
           x509 \
           --stage intermediate
 
     cp tls/ca/x509/intermediate/ca-chain.pem tls/ca-chain.pem
 
-
 # Create a new End Entity TLS certificate for development and testing
+
 # Intermediate CA DEV password: 123SuperMegaSafe
 create-end-entity-tls:
     # create the new certificate
-    {{docker}} run --rm -it -v ./tls/ca:/ca {{map_docker_user}} \
+    {{ docker }} run --rm -it -v ./tls/ca:/ca {{ map_docker_user }} \
           ghcr.io/sebadob/nioca \
           x509 \
           --cn 'localhost' \
@@ -131,44 +126,41 @@ create-end-entity-tls:
     cp tls/ca/x509/end_entity/$(cat tls/ca/x509/end_entity/serial)/cert-chain.pem tls/cert-chain.pem
     cp tls/ca/x509/end_entity/$(cat tls/ca/x509/end_entity/serial)/key.pem tls/key.pem
 
-
 # This may be executed if you don't have a local `docker buildx` setup and want to create a release container build
 docker-buildx-setup:
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
 
-    if ! {{docker}} buildx inspect rauthy_builder; then
+    if ! {{ docker }} buildx inspect rauthy_builder; then
         # create 'rauthy_builder' buildx instance
-        {{docker}} buildx create --name rauthy_builder --bootstrap --use
-        {{docker}} buildx inspect rauthy_builder
+        {{ docker }} buildx create --name rauthy_builder --bootstrap --use
+        {{ docker }} buildx inspect rauthy_builder
     fi
-
 
 # Starts mailcrab
 mailcrab-start:
-    {{docker}} run -d \
-      --net {{container_network}} \
+    {{ docker }} run -d \
+      --net {{ container_network }} \
       -p 1025:1025 \
       -p 1080:1080 \
-      --name {{container_mailcrab}} \
+      --name {{ container_mailcrab }} \
       --restart unless-stopped \
       docker.io/marlonb/mailcrab
 
 # Stops mailcrab
 mailcrab-stop:
-    {{docker}} stop {{container_mailcrab}}
-    {{docker}} rm {{container_mailcrab}}
-
+    {{ docker }} stop {{ container_mailcrab }}
+    {{ docker }} rm {{ container_mailcrab }}
 
 # Starts mailcrab
 postgres-start:
-    {{docker}} run -d \
-      -v {{invocation_directory()}}/postgres/sql-scripts:/docker-entrypoint-initdb.d \
+    {{ docker }} run -d \
+      -v {{ invocation_directory() }}/postgres/sql-scripts:/docker-entrypoint-initdb.d \
       -e POSTGRES_PASSWORD=123SuperSafe \
-      --net {{container_network}} \
+      --net {{ container_network }} \
       -p 5432:5432 \
-      --name {{container_postgres}} \
+      --name {{ container_postgres }} \
       --restart unless-stopped \
       docker.io/library/postgres:16.2-alpine
 
@@ -177,30 +169,26 @@ postgres-start:
 
 # Stops mailcrab
 postgres-stop:
-    {{docker}} stop {{container_postgres}}
-    {{docker}} rm {{container_postgres}}
-
+    {{ docker }} stop {{ container_postgres }}
+    {{ docker }} rm {{ container_postgres }}
 
 # Just uses `cargo fmt --all`
 fmt:
     cargo fmt --all
-
 
 # clippy with sqlite features
 clippy:
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    {{db_url_sqlite}} cargo clippy
-
+    {{ db_url_sqlite }} cargo clippy
 
 # clippy with postgres features
 clippy-postgres:
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    {{db_url_postgres}} cargo clippy --features postgres
-
+    {{ db_url_postgres }} cargo clippy --features postgres
 
 # re-create and migrate the sqlite database with sqlx
 migrate:
@@ -209,14 +197,12 @@ migrate:
 
     mkdir -p data/
     rm -f data/rauthy.db*
-    {{db_url_sqlite}} sqlx database create
-    {{db_url_sqlite}} sqlx migrate run --source migrations/sqlite
-
+    {{ db_url_sqlite }} sqlx database create
+    {{ db_url_sqlite }} sqlx migrate run --source migrations/sqlite
 
 # migrate the postgres database with sqlx
 migrate-postgres:
-    {{db_url_postgres}} sqlx migrate run --source migrations/postgres
-
+    {{ db_url_postgres }} sqlx migrate run --source migrations/postgres
 
 # runs any of: none (sqlite), postgres, ui
 run ty="sqlite":
@@ -224,36 +210,33 @@ run ty="sqlite":
     set -euxo pipefail
     clear
 
-    if [[ {{ty}} == "postgres" ]]; then
-      {{db_url_postgres}} cargo run --features postgres
-    elif [[ {{ty}} == "ui" ]]; then
+    if [[ {{ ty }} == "postgres" ]]; then
+      {{ db_url_postgres }} cargo run --features postgres
+    elif [[ {{ ty }} == "ui" ]]; then
       cd frontend
-      {{npm}} run dev -- --host=0.0.0.0
-    elif [[ {{ty}} == "sqlite" ]]; then
-      {{db_url_sqlite}} cargo run
+      {{ npm }} run dev -- --host=0.0.0.0
+    elif [[ {{ ty }} == "sqlite" ]]; then
+      {{ db_url_sqlite }} cargo run
     fi
-
 
 # prints out the currently set version
 version:
     #!/usr/bin/env bash
     echo "v$TAG"
 
-
 # only starts the backend in test mode with sqlite database for easier test debugging
 test-backend: test-backend-stop migrate
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    {{db_url_sqlite}} cargo run test
-
+    {{ db_url_sqlite }} cargo run test
 
 # stops a possibly running test backend that may have spawned in the background for integration tests
 test-backend-stop:
     #!/usr/bin/env bash
-    if [ -f {{file_test_pid}} ]; then
-      kill $(cat {{file_test_pid}})
-      rm {{file_test_pid}}
+    if [ -f {{ file_test_pid }} ]; then
+      kill $(cat {{ file_test_pid }})
+      rm {{ file_test_pid }}
     fi
 
 # runs a single test with sqlite - needs the backend being started manually
@@ -261,19 +244,18 @@ test *test:
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    {{db_url_sqlite}} cargo test {{test}}
-
+    {{ db_url_sqlite }} cargo test {{ test }}
 
 # runs the full set of tests with in-memory sqlite
 test-sqlite *test: test-backend-stop migrate
     #!/usr/bin/env bash
     clear
 
-    {{db_url_sqlite}} cargo build
-    {{db_url_sqlite}} ./target/debug/rauthy test &
-    echo $! > {{file_test_pid}}
+    {{ db_url_sqlite }} cargo build
+    {{ db_url_sqlite }} ./target/debug/rauthy test &
+    echo $! > {{ file_test_pid }}
 
-    if {{db_url_sqlite}} cargo test {{test}}; then
+    if {{ db_url_sqlite }} cargo test {{ test }}; then
       echo "All SQLite tests successful"
       just test-backend-stop
     else
@@ -281,18 +263,17 @@ test-sqlite *test: test-backend-stop migrate
       just test-backend-stop
       exit 1
     fi
-
 
 # runs the full set of tests with postgres
 test-postgres test="": test-backend-stop postgres-stop postgres-start
     #!/usr/bin/env bash
     clear
 
-    {{db_url_postgres}} cargo build --features postgres
-    {{db_url_postgres}} ./target/debug/rauthy test &
-    echo $! > {{file_test_pid}}
+    {{ db_url_postgres }} cargo build --features postgres
+    {{ db_url_postgres }} ./target/debug/rauthy test &
+    echo $! > {{ file_test_pid }}
 
-    if {{db_url_postgres}} cargo test --features postgres {{test}}; then
+    if {{ db_url_postgres }} cargo test --features postgres {{ test }}; then
       echo "All SQLite tests successful"
       just test-backend-stop
     else
@@ -300,7 +281,6 @@ test-postgres test="": test-backend-stop postgres-stop postgres-start
       just test-backend-stop
       exit 1
     fi
-
 
 # builds the frontend and exports to static html
 build-ui:
@@ -324,7 +304,7 @@ build-ui:
 
     # build the frontend
     cd frontend
-    {{npm}} run build
+    {{ npm }} run build
     cd ..
 
     # set correct values in html outputs for pre-rendering
@@ -360,7 +340,6 @@ build-ui:
         done;
     done
 
-
 # builds the rauthy book
 build-docs:
     #!/usr/bin/env bash
@@ -368,16 +347,15 @@ build-docs:
     cd book
     mdbook build -d ../docs
 
-
 # Build the final container image. Skip tests with `no-test`.
 build no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
     #!/usr/bin/env bash
     set -euxo pipefail
 
     # sqlite
-    if [ {{no-test}} != "no-test" ]; then
+    if [ {{ no-test }} != "no-test" ]; then
         echo "make sure clippy is fine with sqlite"
-        {{db_url_sqlite}} cargo clippy -- -D warnings
+        {{ db_url_sqlite }} cargo clippy -- -D warnings
         echo "run tests against sqlite"
         just test-sqlite
     fi
@@ -391,30 +369,30 @@ build no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
     ## `gcc`which has a known `memcmp` issue, which they decided to ignore:
     ## https://github.com/cross-rs/cross/security/advisories/GHSA-2r9g-5qvw-fgmf
     ## https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95189
-    {{docker}} run \
-      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
-      -v {{invocation_directory()}}/:/work/ \
+    {{ docker }} run \
+      -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
+      -v {{ invocation_directory() }}/:/work/ \
       -w /work \
-      {{map_docker_user}} \
-      -e {{db_url_sqlite}} \
+      {{ map_docker_user }} \
+      -e {{ db_url_sqlite }} \
       --net host \
-      {{builder_image}}:{{builder_tag_date}} \
+      {{ builder_image }}:{{ builder_tag_date }} \
       cargo build --release --target x86_64-unknown-linux-gnu
     cp target/x86_64-unknown-linux-gnu/release/rauthy out/rauthy_amd64
 
-    {{docker}} run \
-      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
-      -v {{invocation_directory()}}/:/work/ \
+    {{ docker }} run \
+      -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
+      -v {{ invocation_directory() }}/:/work/ \
       -w /work \
-      {{map_docker_user}} \
-      -e {{db_url_sqlite}} \
+      {{ map_docker_user }} \
+      -e {{ db_url_sqlite }} \
       --net host \
-      {{builder_image}}:{{builder_tag_date}} \
+      {{ builder_image }}:{{ builder_tag_date }} \
       cargo build --release --target aarch64-unknown-linux-gnu
     cp target/aarch64-unknown-linux-gnu/release/rauthy out/rauthy_arm64
 
-    {{docker}} buildx build \
-        -t {{image}}:$TAG-lite \
+    {{ docker }} buildx build \
+        -t {{ image }}:$TAG-lite \
         --platform linux/amd64,linux/arm64 \
         --push \
         .
@@ -422,47 +400,46 @@ build no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
     rm -rf out/rauthy_*
 
     # postgres
-    if [ {{no-test}} != "no-test" ]; then
+    if [ {{ no-test }} != "no-test" ]; then
         echo "make sure clippy is fine with postgres"
-        {{db_url_postgres}} cargo clippy --features postgres -- -D warnings
+        {{ db_url_postgres }} cargo clippy --features postgres -- -D warnings
         echo "run tests against postgres"
         just test-postgres
     fi
 
     echo "build postgres release"
-    {{db_url_postgres}} cargo sqlx prepare --workspace -- --features postgres
+    {{ db_url_postgres }} cargo sqlx prepare --workspace -- --features postgres
     # IMPORTANT: We can't use `cross` for the x86 build because it uses a way too old
     # `gcc`which has a known `memcmp` issue, which they decided to ignore:
     # https://github.com/cross-rs/cross/security/advisories/GHSA-2r9g-5qvw-fgmf
     # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95189
-    {{docker}} run \
-      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
-      -v {{invocation_directory()}}/:/work/ \
+    {{ docker }} run \
+      -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
+      -v {{ invocation_directory() }}/:/work/ \
       -w /work \
-      {{map_docker_user}} \
-      --net {{container_network}} \
-      {{builder_image}}:{{builder_tag_date}} \
+      {{ map_docker_user }} \
+      --net {{ container_network }} \
+      {{ builder_image }}:{{ builder_tag_date }} \
       cargo build --release --features postgres --target x86_64-unknown-linux-gnu
     cp target/x86_64-unknown-linux-gnu/release/rauthy out/rauthy_amd64
 
-    {{docker}} run \
-      -v {{cargo_home}}/registry:{{container_cargo_registry}} \
-      -v {{invocation_directory()}}/:/work/ \
+    {{ docker }} run \
+      -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
+      -v {{ invocation_directory() }}/:/work/ \
       -w /work \
-      {{map_docker_user}} \
-      --net {{container_network}} \
-      {{builder_image}}:{{builder_tag_date}} \
+      {{ map_docker_user }} \
+      --net {{ container_network }} \
+      {{ builder_image }}:{{ builder_tag_date }} \
       cargo build --release --features postgres --target aarch64-unknown-linux-gnu
     cp target/aarch64-unknown-linux-gnu/release/rauthy out/rauthy_arm64
 
-    {{docker}} buildx build \
-        -t {{image}}:$TAG \
+    {{ docker }} buildx build \
+        -t {{ image }}:$TAG \
         --platform linux/amd64,linux/arm64 \
         --push \
         .
 
     rm -rf out/
-
 
 # specify a custom image for building locally and change `push` to `load` to not push but only load it into your local docker context
 build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
@@ -470,12 +447,13 @@ build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
     set -euxo pipefail
 
     # using bookworm instead of bullseye because of the newer, bug free gcc
-    {{docker}} build \
-          -t {{image}}:$TODAY \
+    {{ docker }} build \
+          -t {{ image }}:$TODAY \
           -f Dockerfile_builder \
           --build-arg="IMAGE=rust:1.81-bookworm" \
           .
-    {{docker}} push {{image}}:$TODAY
+    {{ docker }} push {{ image }}:$TODAY
+
 #    # using bookworm instead of bullseye because of the newer, bug free gcc
 #    {{docker}} build \
 #          -t {{image}}:amd64-$TODAY \
@@ -495,21 +473,19 @@ build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
 #    {{docker}} push {{image}}:amd64-$TODAY
 #    {{docker}} push {{image}}:arm64-$TODAY
 
-
 # makes sure everything is fine
 is-clean:
     #!/usr/bin/env bash
     set -euxo pipefail
 
     # exit early if clippy emits warnings
-    {{db_url_sqlite}} cargo clippy -- -D warnings
-    {{db_url_postgres}} cargo clippy --features postgres -- -D warnings
+    {{ db_url_sqlite }} cargo clippy -- -D warnings
+    {{ db_url_postgres }} cargo clippy --features postgres -- -D warnings
 
     # make sure everything has been committed
     git diff --exit-code
 
     echo all good
-
 
 # sets a new git tag and pushes it
 release:
@@ -522,12 +498,10 @@ release:
     git tag "v$TAG"
     git push origin "v$TAG"
 
-
 # publishes the application images - full pipeline incl clippy and testing  you can provide a custom image name as variable
 publish: build-docs fmt build
     #!/usr/bin/env bash
     set -euxo pipefail
-
 
 # publishes the application images - full pipeline incl clippy and testing
 publish-latest:
@@ -535,10 +509,9 @@ publish-latest:
     set -euxo pipefail
 
     # the `latest` image will always point to the postgres x86 version, which is used the most (probably)
-    {{docker}} pull ghcr.io/sebadob/rauthy:$TAG
-    {{docker}} tag ghcr.io/sebadob/rauthy:$TAG ghcr.io/sebadob/rauthy:latest
-    {{docker}} push ghcr.io/sebadob/rauthy:latest
-
+    {{ docker }} pull ghcr.io/sebadob/rauthy:$TAG
+    {{ docker }} tag ghcr.io/sebadob/rauthy:$TAG ghcr.io/sebadob/rauthy:latest
+    {{ docker }} push ghcr.io/sebadob/rauthy:latest
 
 # should be run before submitting a PR to make sure everything is fine
 pre-pr-checks: build-ui fmt test-sqlite test-postgres clippy clippy-postgres
@@ -548,6 +521,6 @@ pre-pr-checks: build-ui fmt test-sqlite test-postgres clippy clippy-postgres
 # does a `cargo update` + `npm update` for the UI
 update-deps:
     #!/usr/bin/env bash
-    {{db_url_sqlite}} cargo update
+    {{ db_url_sqlite }} cargo update
     cd frontend
-    {{npm}} update
+    {{ npm }} update
