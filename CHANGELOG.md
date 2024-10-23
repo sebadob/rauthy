@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.26.2
+
+### Bugfix
+
+This patch reverts an unintended change to the `user:group` inside the container images.
+This will fix issues with migrations from existing deployments using SQLite with manually managed
+volume access rights.
+
+v0.26.0 changed from `scratch` to `gcr.io/distroless/cc-debian12:nonroot` as the base image for the final deployment.
+The distroless image however sets a user of `65532` by default, while it always has been `10001:10001` before.
+The affected versions are
+
+- `0.26.0`
+- `0.26.1`
+
+Starting from this release (`0.26.2`), the user inside the container will be the same one as before:
+
+`10001:10001`
+
+[839724001710cb095f39ff7df6be00708a01801a](https://github.com/sebadob/rauthy/pull/596/commits/839724001710cb095f39ff7df6be00708a01801a)
+
 ## 0.26.1
 
 ### Changes

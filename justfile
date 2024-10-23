@@ -18,7 +18,6 @@ container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
 file_test_pid := ".test_pid"
 db_url_sqlite := "DATABASE_URL=sqlite:data/rauthy.db"
-db_url_hiqlite := "DATABASE_URL=hiqlite:data"
 db_url_postgres := "DATABASE_URL=postgresql://rauthy:123SuperSafe@$DEV_HOST:5432/rauthy"
 
 [private]
@@ -218,8 +217,6 @@ run ty="sqlite":
       {{ npm }} run dev -- --host=0.0.0.0
     elif [[ {{ ty }} == "sqlite" ]]; then
       {{ db_url_sqlite }} cargo run
-    elif [[ {{ ty }} == "hiqlite" ]]; then
-      {{ db_url_sqlite }} HIQLITE=true cargo run
     fi
 
 # prints out the currently set version
