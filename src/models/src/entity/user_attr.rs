@@ -515,7 +515,7 @@ impl UserAttrValueEntity {
 INSERT INTO user_attr_values (user_id, key, value)
 VALUES ($1, $2, $3)
 ON CONFLICT(user_id, key) DO UPDATE SET value = $3"#,
-                        params!(user_id, value.key),
+                        params!(user_id, value.key, v),
                     ));
                 }
             }

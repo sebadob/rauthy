@@ -28,6 +28,7 @@ use rauthy_common::constants::{
     CACHE_TTL_APP, CACHE_TTL_USER, IDX_USERS, IDX_USER_COUNT, RAUTHY_ADMIN_ROLE,
     WEBAUTHN_NO_PASSWORD_EXPIRY,
 };
+use rauthy_common::is_hiqlite;
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
 use rauthy_common::utils::{new_store_id, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -95,15 +96,23 @@ impl User {
             return Ok(count);
         }
 
-        let res = sqlx::query!("SELECT COUNT (*) count FROM users")
-            .fetch_one(&data.db)
-            .await?;
-
-        // sqlite returns an i32 for count while postgres returns an Option<i64>
-        #[cfg(feature = "postgres")]
-        let count = res.count.unwrap_or_default();
-        #[cfg(not(feature = "postgres"))]
-        let count = res.count as i64;
+        let count = if is_hiqlite() {
+            client
+                .query_raw("SELECT COUNT (*) AS count count FROM users", params!())
+                .await?
+                .remove(0)
+                .get("count")
+        } else {
+            let res = sqlx::query!("SELECT COUNT (*) count FROM users")
+                .fetch_one(&data.db)
+                .await?;
+            // sqlite returns an i32 for count while postgres returns an Option<i64>
+            #[cfg(feature = "postgres")]
+            let count = res.count.unwrap_or_default();
+            #[cfg(not(feature = "postgres"))]
+            let count = res.count as i64;
+            count
+        };
 
         client
             .put(Cache::App, IDX_USER_COUNT, &count, CACHE_TTL_APP)
@@ -190,15 +199,18 @@ impl User {
 
     // Deletes a user
     pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        // Clean up all possibly existing sessions from the cache
         Session::delete_by_user(data, &self.id).await?;
 
-        // Delete the user itself
-        sqlx::query!("DELETE FROM users WHERE id = $1", self.id)
-            .execute(&data.db)
-            .await?;
-
         let client = DB::client();
+        if is_hiqlite() {
+            client
+                .execute("DELETE FROM users WHERE id = $1", params!(&self.id))
+                .await?;
+        } else {
+            sqlx::query!("DELETE FROM users WHERE id = $1", self.id)
+                .execute(&data.db)
+                .await?;
+        }
 
         let idx = format!("{}_{}", IDX_USERS, &self.id);
         client.delete(Cache::User, idx).await?;
@@ -220,9 +232,21 @@ impl User {
             return Ok(());
         }
 
-        sqlx::query!("SELECT id FROM users WHERE id = $1", id)
-            .fetch_one(&data.db)
-            .await?;
+        if is_hiqlite() {
+            let rows = DB::client()
+                .query_raw("SELECT 1 FROM users WHERE id = $1", params!(id))
+                .await?;
+            if rows.is_empty() {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::NotFound,
+                    "user does not exist",
+                ));
+            }
+        } else {
+            sqlx::query!("SELECT id FROM users WHERE id = $1", id)
+                .fetch_one(&data.db)
+                .await?;
+        }
 
         Ok(())
     }
@@ -235,12 +259,18 @@ impl User {
             return Ok(slf);
         }
 
-        let user = sqlx::query_as!(Self, "SELECT * FROM users WHERE id = $1", id)
-            .fetch_one(&data.db)
-            .await?;
+        let slf = if is_hiqlite() {
+            client
+                .query_as_one("SELECT * FROM users WHERE id = $1", params!(id))
+                .await?
+        } else {
+            sqlx::query_as!(Self, "SELECT * FROM users WHERE id = $1", id)
+                .fetch_one(&data.db)
+                .await?
+        };
 
-        client.put(Cache::User, idx, &user, CACHE_TTL_USER).await?;
-        Ok(user)
+        client.put(Cache::User, idx, &slf, CACHE_TTL_USER).await?;
+        Ok(slf)
     }
 
     pub async fn find_by_email(
@@ -256,12 +286,18 @@ impl User {
             return Ok(slf);
         }
 
-        let user = sqlx::query_as!(Self, "SELECT * FROM users WHERE email = $1", email)
-            .fetch_one(&data.db)
-            .await?;
+        let slf = if is_hiqlite() {
+            client
+                .query_as_one("SELECT * FROM users WHERE email = $1", params!(email))
+                .await?
+        } else {
+            sqlx::query_as!(Self, "SELECT * FROM users WHERE email = $1", email)
+                .fetch_one(&data.db)
+                .await?
+        };
 
-        client.put(Cache::User, idx, &user, CACHE_TTL_USER).await?;
-        Ok(user)
+        client.put(Cache::User, idx, &slf, CACHE_TTL_USER).await?;
+        Ok(slf)
     }
 
     pub async fn find_by_federation(
@@ -269,33 +305,60 @@ impl User {
         auth_provider_id: &str,
         federation_uid: &str,
     ) -> Result<Self, ErrorResponse> {
-        let user = sqlx::query_as!(
-            Self,
-            "SELECT * FROM users WHERE auth_provider_id = $1 AND federation_uid = $2",
-            auth_provider_id,
-            federation_uid
-        )
-        .fetch_one(&data.db)
-        .await?;
-        Ok(user)
+        let slf = if is_hiqlite() {
+            DB::client()
+                .query_as_one(
+                    "SELECT * FROM users WHERE auth_provider_id = $1 AND federation_uid = $2",
+                    params!(auth_provider_id, federation_uid),
+                )
+                .await?
+        } else {
+            sqlx::query_as!(
+                Self,
+                "SELECT * FROM users WHERE auth_provider_id = $1 AND federation_uid = $2",
+                auth_provider_id,
+                federation_uid
+            )
+            .fetch_one(&data.db)
+            .await?
+        };
+
+        Ok(slf)
     }
 
     pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        let res = sqlx::query_as!(Self, "SELECT * FROM users ORDER BY created_at ASC")
-            .fetch_all(&data.db)
-            .await?;
+        let res = if is_hiqlite() {
+            DB::client()
+                .query_as("SELECT * FROM users ORDER BY created_at ASC", params!())
+                .await?
+        } else {
+            sqlx::query_as!(Self, "SELECT * FROM users ORDER BY created_at ASC")
+                .fetch_all(&data.db)
+                .await?
+        };
+
         Ok(res)
     }
 
     pub async fn find_all_simple(
         data: &web::Data<AppState>,
     ) -> Result<Vec<UserResponseSimple>, ErrorResponse> {
-        let res = sqlx::query_as!(
-            UserResponseSimple,
-            "SELECT id, email, created_at, last_login FROM users ORDER BY created_at ASC"
-        )
-        .fetch_all(&data.db)
-        .await?;
+        let res = if is_hiqlite() {
+            DB::client()
+                .query_as(
+                    "SELECT id, email, created_at, last_login FROM users ORDER BY created_at ASC",
+                    params!(),
+                )
+                .await?
+        } else {
+            sqlx::query_as!(
+                UserResponseSimple,
+                "SELECT id, email, created_at, last_login FROM users ORDER BY created_at ASC"
+            )
+            .fetch_all(&data.db)
+            .await?
+        };
+
         Ok(res)
     }
 
@@ -305,30 +368,53 @@ impl User {
         group_name: &str,
     ) -> Result<Vec<Self>, ErrorResponse> {
         let like = format!("%{group_name}%");
-        let res = sqlx::query_as!(Self, "SELECT * FROM users WHERE groups LIKE $1", like)
-            .fetch_all(&data.db)
-            .await?;
+
+        let res = if is_hiqlite() {
+            DB::client()
+                .query_as("SELECT * FROM users WHERE groups LIKE $1", params!(like))
+                .await?
+        } else {
+            sqlx::query_as!(Self, "SELECT * FROM users WHERE groups LIKE $1", like)
+                .fetch_all(&data.db)
+                .await?
+        };
+
         Ok(res)
     }
 
+    /// This is a very expensive query using `LIKE`, use only when necessary.
     pub async fn find_with_role(
         data: &web::Data<AppState>,
         role_name: &str,
     ) -> Result<Vec<Self>, ErrorResponse> {
         let like = format!("%{role_name}%");
-        let res = sqlx::query_as!(Self, "SELECT * FROM users WHERE roles LIKE $1", like)
-            .fetch_all(&data.db)
-            .await?;
+
+        let res = if is_hiqlite() {
+            DB::client()
+                .query_as("SELECT * FROM users WHERE roles LIKE $1", params!(like))
+                .await?
+        } else {
+            sqlx::query_as!(Self, "SELECT * FROM users WHERE roles LIKE $1", like)
+                .fetch_all(&data.db)
+                .await?
+        };
+
         Ok(res)
     }
 
     pub async fn find_expired(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
-        let now = OffsetDateTime::now_utc()
-            .add(time::Duration::seconds(10))
-            .unix_timestamp();
-        let res = sqlx::query_as!(Self, "SELECT * FROM users WHERE user_expires < $1", now)
-            .fetch_all(&data.db)
-            .await?;
+        let now = Utc::now().add(chrono::Duration::seconds(10)).timestamp();
+
+        let res = if is_hiqlite() {
+            DB::client()
+                .query_as("SELECT * FROM users WHERE user_expires < $1", params!(now))
+                .await?
+        } else {
+            sqlx::query_as!(Self, "SELECT * FROM users WHERE user_expires < $1", now)
+                .fetch_all(&data.db)
+                .await?
+        };
+
         Ok(res)
     }
 
@@ -366,145 +452,210 @@ impl User {
         mut offset: i64,
         backwards: bool,
     ) -> Result<(Vec<UserResponseSimple>, Option<ContinuationToken>), ErrorResponse> {
-        let mut res = Vec::with_capacity(page_size as usize);
-        let mut latest_ts = 0;
-
-        if let Some(token) = continuation_token {
+        let res = if let Some(token) = continuation_token {
             if backwards {
                 offset += page_size;
-                let mut rows = sqlx::query!(
-                    r#"SELECT id, email, created_at, last_login
-                    FROM users
-                    WHERE created_at <= $1 AND id != $2
-                    ORDER BY created_at DESC
-                    LIMIT $3
-                    OFFSET $4"#,
-                    token.ts,
-                    token.id,
-                    page_size,
-                    offset,
-                )
-                .fetch_all(&data.db)
-                .await?;
 
-                rows.reverse();
+                if is_hiqlite() {
+                    let mut res = DB::client()
+                        .query_as(
+                            r#"
+SELECT id, email, created_at, last_login
+FROM users
+WHERE created_at <= $1 AND id != $2
+ORDER BY created_at DESC
+LIMIT $3
+OFFSET $4"#,
+                            params!(token.ts, token.id, page_size, offset),
+                        )
+                        .await?;
 
-                for row in rows {
-                    res.push(UserResponseSimple {
-                        id: row.id,
-                        email: row.email,
-                        created_at: row.created_at,
-                        last_login: row.last_login,
-                    });
-                    latest_ts = row.created_at;
+                    res.reverse();
+                    res
+                } else {
+                    let mut res = sqlx::query_as!(
+                        UserResponseSimple,
+                        r#"
+SELECT id, email, created_at, last_login
+FROM users
+WHERE created_at <= $1 AND id != $2
+ORDER BY created_at DESC
+LIMIT $3
+OFFSET $4"#,
+                        token.ts,
+                        token.id,
+                        page_size,
+                        offset,
+                    )
+                    .fetch_all(&data.db)
+                    .await?;
+
+                    res.reverse();
+                    res
                 }
             } else {
-                let rows = sqlx::query!(
-                    r#"SELECT id, email, created_at, last_login
-                    FROM users
-                    WHERE created_at >= $1 AND id != $2
-                    ORDER BY created_at ASC
-                    LIMIT $3
-                    OFFSET $4"#,
-                    token.ts,
-                    token.id,
-                    page_size,
-                    offset,
-                )
-                .fetch_all(&data.db)
-                .await?;
-
-                for row in rows {
-                    res.push(UserResponseSimple {
-                        id: row.id,
-                        email: row.email,
-                        created_at: row.created_at,
-                        last_login: row.last_login,
-                    });
-                    latest_ts = row.created_at;
+                #[allow(clippy::collapsible_else_if)]
+                if is_hiqlite() {
+                    DB::client()
+                        .query_as(
+                            r#"
+SELECT id, email, created_at, last_login
+FROM users
+WHERE created_at <= $1 AND id != $2
+ORDER BY created_at DESC
+LIMIT $3
+OFFSET $4"#,
+                            params!(token.ts, token.id, page_size, offset),
+                        )
+                        .await?
+                } else {
+                    sqlx::query_as!(
+                        UserResponseSimple,
+                        r#"
+SELECT id, email, created_at, last_login
+FROM users
+WHERE created_at >= $1 AND id != $2
+ORDER BY created_at ASC
+LIMIT $3
+OFFSET $4"#,
+                        token.ts,
+                        token.id,
+                        page_size,
+                        offset,
+                    )
+                    .fetch_all(&data.db)
+                    .await?
                 }
-            };
+            }
         } else if backwards {
             // backwards without any continuation token will simply
             // serve the last elements without any other conditions
-            let mut rows = sqlx::query!(
-                r#"SELECT id, email, created_at, last_login
-                   FROM users
-                   ORDER BY created_at DESC
-                   LIMIT $1
-                   OFFSET $2"#,
-                page_size,
-                offset,
-            )
-            .fetch_all(&data.db)
-            .await?;
 
-            rows.reverse();
+            if is_hiqlite() {
+                let mut res = DB::client()
+                    .query_as(
+                        r#"
+SELECT id, email, created_at, last_login
+FROM users
+ORDER BY created_at DESC
+LIMIT $1
+OFFSET $2"#,
+                        params!(page_size, offset),
+                    )
+                    .await?;
 
-            for row in rows {
-                res.push(UserResponseSimple {
-                    id: row.id,
-                    email: row.email,
-                    created_at: row.created_at,
-                    last_login: row.last_login,
-                });
-                latest_ts = row.created_at;
+                res.reverse();
+                res
+            } else {
+                let mut res = sqlx::query_as!(
+                    UserResponseSimple,
+                    r#"
+SELECT id, email, created_at, last_login
+FROM users
+ORDER BY created_at DESC
+LIMIT $1
+OFFSET $2"#,
+                    page_size,
+                    offset,
+                )
+                .fetch_all(&data.db)
+                .await?;
+
+                res.reverse();
+                res
             }
         } else {
-            let rows = sqlx::query!(
-                r#"SELECT id, email, created_at, last_login
-                   FROM users
-                   ORDER BY created_at ASC
-                   LIMIT $1
-                   OFFSET $2"#,
-                page_size,
-                offset,
-            )
-            .fetch_all(&data.db)
-            .await?;
-
-            for row in rows {
-                res.push(UserResponseSimple {
-                    id: row.id,
-                    email: row.email,
-                    created_at: row.created_at,
-                    last_login: row.last_login,
-                });
-                latest_ts = row.created_at;
+            #[allow(clippy::collapsible_else_if)]
+            if is_hiqlite() {
+                DB::client()
+                    .query_as(
+                        r#"
+SELECT id, email, created_at, last_login
+FROM users
+ORDER BY created_at ASC
+LIMIT $1
+OFFSET $2"#,
+                        params!(page_size, offset),
+                    )
+                    .await?
+            } else {
+                sqlx::query_as!(
+                    UserResponseSimple,
+                    r#"
+SELECT id, email, created_at, last_login
+FROM users
+ORDER BY created_at ASC
+LIMIT $1
+OFFSET $2"#,
+                    page_size,
+                    offset,
+                )
+                .fetch_all(&data.db)
+                .await?
             }
         };
 
         let token = res
             .last()
-            .map(|entry| ContinuationToken::new(entry.id.clone(), latest_ts));
+            .map(|entry| ContinuationToken::new(entry.id.clone(), entry.created_at));
 
         Ok((res, token))
     }
 
     pub async fn insert(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
         let lang = new_user.language.as_str();
-        sqlx::query!(
-            r#"INSERT INTO USERS
-            (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-            last_login, language, user_expires, auth_provider_id, federation_uid)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
-            new_user.id,
-            new_user.email,
-            new_user.given_name,
-            new_user.family_name,
-            new_user.roles,
-            new_user.groups,
-            new_user.enabled,
-            new_user.email_verified,
-            new_user.created_at,
-            new_user.last_login,
-            lang,
-            new_user.user_expires,
-            new_user.auth_provider_id,
-            new_user.federation_uid,
-        )
-        .execute(&data.db)
-        .await?;
+
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    r#"
+INSERT INTO USERS
+(id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
+last_login, language, user_expires, auth_provider_id, federation_uid)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
+                    params!(
+                        &new_user.id,
+                        &new_user.email,
+                        &new_user.given_name,
+                        &new_user.family_name,
+                        &new_user.roles,
+                        &new_user.groups,
+                        new_user.enabled,
+                        new_user.email_verified,
+                        new_user.created_at,
+                        new_user.last_login,
+                        lang,
+                        new_user.user_expires,
+                        &new_user.auth_provider_id,
+                        &new_user.federation_uid
+                    ),
+                )
+                .await?;
+        } else {
+            sqlx::query!(
+                r#"
+INSERT INTO USERS
+(id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
+last_login, language, user_expires, auth_provider_id, federation_uid)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
+                new_user.id,
+                new_user.email,
+                new_user.given_name,
+                new_user.family_name,
+                new_user.roles,
+                new_user.groups,
+                new_user.enabled,
+                new_user.email_verified,
+                new_user.created_at,
+                new_user.last_login,
+                lang,
+                new_user.user_expires,
+                new_user.auth_provider_id,
+                new_user.federation_uid,
+            )
+            .execute(&data.db)
+            .await?;
+        }
 
         Self::count_inc(data).await?;
 
@@ -616,42 +767,76 @@ WHERE id = $18"#,
         }
 
         let lang = self.language.as_str();
-        sqlx::query(
-            r#"
+        let client = DB::client();
+
+        if is_hiqlite() {
+            client
+                .execute(
+                    r#"
 UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
 auth_provider_id = $16, federation_uid = $17
 WHERE id = $18"#,
-        )
-        .bind(&self.email)
-        .bind(&self.given_name)
-        .bind(&self.family_name)
-        .bind(&self.password)
-        .bind(&self.roles)
-        .bind(&self.groups)
-        .bind(self.enabled)
-        .bind(self.email_verified)
-        .bind(self.password_expires)
-        .bind(self.last_login)
-        .bind(self.last_failed_login)
-        .bind(self.failed_login_attempts)
-        .bind(lang)
-        .bind(self.webauthn_user_id.clone())
-        .bind(self.user_expires)
-        .bind(&self.auth_provider_id)
-        .bind(&self.federation_uid)
-        .bind(&self.id)
-        .execute(&data.db)
-        .await?;
+                    params!(
+                        &self.email,
+                        &self.given_name,
+                        &self.family_name,
+                        &self.password,
+                        &self.roles,
+                        &self.groups,
+                        self.enabled,
+                        self.email_verified,
+                        self.password_expires,
+                        self.last_login,
+                        self.last_failed_login,
+                        self.failed_login_attempts,
+                        lang,
+                        &self.webauthn_user_id,
+                        self.user_expires,
+                        &self.auth_provider_id,
+                        &self.federation_uid,
+                        &self.id
+                    ),
+                )
+                .await?;
+        } else {
+            sqlx::query(
+                r#"
+UPDATE USERS SET
+email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
+email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
+failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
+auth_provider_id = $16, federation_uid = $17
+WHERE id = $18"#,
+            )
+            .bind(&self.email)
+            .bind(&self.given_name)
+            .bind(&self.family_name)
+            .bind(&self.password)
+            .bind(&self.roles)
+            .bind(&self.groups)
+            .bind(self.enabled)
+            .bind(self.email_verified)
+            .bind(self.password_expires)
+            .bind(self.last_login)
+            .bind(self.last_failed_login)
+            .bind(self.failed_login_attempts)
+            .bind(lang)
+            .bind(self.webauthn_user_id.clone())
+            .bind(self.user_expires)
+            .bind(&self.auth_provider_id)
+            .bind(&self.federation_uid)
+            .bind(&self.id)
+            .execute(&data.db)
+            .await?;
+        }
 
         if !self.enabled {
             Session::invalidate_for_user(data, &self.id).await?;
             RefreshToken::invalidate_for_user(data, &self.id).await?;
         }
-
-        let client = DB::client();
 
         if let Some(email) = old_email {
             let idx = format!("{}_{}", IDX_USERS, email);
@@ -678,32 +863,62 @@ WHERE id = $18"#,
 
         let res = match idx {
             SearchParamsIdx::Id | SearchParamsIdx::UserId => {
-                query_as!(
-                    UserResponseSimple,
-                    r#"SELECT id, email, created_at, last_login
-                    FROM users
-                    WHERE id LIKE $1
-                    ORDER BY created_at ASC
-                    LIMIT $2"#,
-                    q,
-                    limit
-                )
-                .fetch_all(&data.db)
-                .await?
+                if is_hiqlite() {
+                    DB::client()
+                        .query_as(
+                            r#"
+SELECT id, email, created_at, last_login
+FROM users
+WHERE id LIKE $1
+ORDER BY created_at ASC
+LIMIT $2"#,
+                            params!(q, limit),
+                        )
+                        .await?
+                } else {
+                    query_as!(
+                        UserResponseSimple,
+                        r#"
+SELECT id, email, created_at, last_login
+FROM users
+WHERE id LIKE $1
+ORDER BY created_at ASC
+LIMIT $2"#,
+                        q,
+                        limit
+                    )
+                    .fetch_all(&data.db)
+                    .await?
+                }
             }
             SearchParamsIdx::Email => {
-                query_as!(
-                    UserResponseSimple,
-                    r#"SELECT id, email, created_at, last_login
-                    FROM users
-                    WHERE email LIKE $1
-                    ORDER BY created_at ASC
-                    LIMIT $2"#,
-                    q,
-                    limit
-                )
-                .fetch_all(&data.db)
-                .await?
+                if is_hiqlite() {
+                    DB::client()
+                        .query_as(
+                            r#"
+SELECT id, email, created_at, last_login
+FROM users
+WHERE email LIKE $1
+ORDER BY created_at ASC
+LIMIT $2"#,
+                            params!(q, limit),
+                        )
+                        .await?
+                } else {
+                    query_as!(
+                        UserResponseSimple,
+                        r#"
+SELECT id, email, created_at, last_login
+FROM users
+WHERE email LIKE $1
+ORDER BY created_at ASC
+LIMIT $2"#,
+                        q,
+                        limit
+                    )
+                    .fetch_all(&data.db)
+                    .await?
+                }
             }
             _ => {
                 return Err(ErrorResponse::new(
@@ -795,11 +1010,23 @@ WHERE id = $18"#,
 
     pub async fn update_language(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
         let lang = self.language.as_str();
-        sqlx::query(r#"update users set language = $1 where id = $2"#)
-            .bind(lang)
-            .bind(&self.id)
+
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    "UPDATE users SET language = $1 WHERE id = $2",
+                    params!(lang, &self.id),
+                )
+                .await?;
+        } else {
+            sqlx::query!(
+                "UPDATE users SET language = $1 WHERE id = $2",
+                lang,
+                self.id
+            )
             .execute(&data.db)
             .await?;
+        }
 
         Ok(())
     }
@@ -901,7 +1128,6 @@ WHERE id = $18"#,
     ) -> Result<(), ErrorResponse> {
         let mut user = User::find(data, id.clone()).await?;
 
-        // only allow conversion for password type accounts
         if user.account_type() != AccountType::Password {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -909,7 +1135,6 @@ WHERE id = $18"#,
             ));
         }
 
-        // check webauthn enabled
         if !user.has_webauthn_enabled() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -917,7 +1142,6 @@ WHERE id = $18"#,
             ));
         }
 
-        // only allow passkeys with active UV
         let pks = PasskeyEntity::find_for_user_with_uv(data, &user.id).await?;
         if pks.is_empty() {
             return Err(ErrorResponse::new(
@@ -926,7 +1150,6 @@ WHERE id = $18"#,
             ));
         }
 
-        // all good -> delete password
         user.password = None;
         user.password_expires = None;
 
@@ -962,7 +1185,6 @@ impl User {
     ) -> Result<(), ErrorResponse> {
         let rules = PasswordPolicy::find(data).await?;
 
-        // check length
         if plain_pwd.len() < rules.length_min as usize {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -976,7 +1198,6 @@ impl User {
             ));
         }
 
-        // check min character counts
         let mut count_lower = 0;
         let mut count_upper = 0;
         let mut count_digit = 0;
@@ -1041,7 +1262,6 @@ impl User {
         let new_hash = HashPassword::hash_password(plain_pwd.to_string()).await?;
         let mut new_recent = Vec::new();
 
-        // check recently used passwords
         if let Some(recent_req) = rules.not_recently_used {
             match RecentPasswordsEntity::find(data, &self.id).await {
                 Ok(mut most_recent) => {
@@ -1059,7 +1279,6 @@ impl User {
                             ));
                         }
 
-                        // build up the new most recent passwords value
                         new_recent.push(old_hash);
 
                         // check if we have more recent passwords than needed
@@ -1069,7 +1288,6 @@ impl User {
                         }
                     }
 
-                    // all good - update most recent passwords
                     most_recent.passwords = format!("{}\n{}", new_hash, new_recent.join("\n"));
                     most_recent.save(data).await?;
                 }
