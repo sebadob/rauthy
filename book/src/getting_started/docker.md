@@ -12,7 +12,7 @@ docker run --rm \
     -e COOKIE_MODE=danger-insecure \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.26.0-lite
+    ghcr.io/sebadob/rauthy:0.26.2-lite
 ```
 
 This will start the container in interactive mode with an in-memory SQLite database. Just take a look at the log at the
@@ -23,15 +23,15 @@ If you want to test a bit more in depth, you can change to an on-disk database e
 ```
 docker run -d \
     -e COOKIE_MODE=danger-insecure \
-    -e DATABASE_URL=sqlite:data/rauthy.db \
+    -e DATABASE_URL=sqlite:/app/data/rauthy.db \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.26.0-lite
+    ghcr.io/sebadob/rauthy:0.26.2-lite
 ```
 
 ```admonish note
 The second command does not start in interactive mode and it does not delete the container on exit.  
-This means the data will be persisted, as long as the container itself is no erased and you can shutdown and
+This means the data will be persisted, as long as the container itself is not erased and you can shutdown and
 restart to your liking without using test data.
 ```
 
@@ -124,7 +124,7 @@ docker run -d \
     -v $(pwd)/rauthy/data:/app/data \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.26.0-lite
+    ghcr.io/sebadob/rauthy:0.26.2-lite
 ```
 
 **6. Restrict DB files access even more**  
