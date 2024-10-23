@@ -696,7 +696,7 @@
                     <p>If you want to test a bit more in depth, you can change to an on-disk database easily:</p>
                     <pre><code>docker run -d \
     -e COOKIE_MODE=danger-insecure \
-    -e DATABASE_URL=sqlite:/app/data/rauthy.db \
+    -e DATABASE_URL=sqlite:data/rauthy.db \
     -p 8080:8080 \
     --name rauthy \
     ghcr.io/sebadob/rauthy:0.26.2-lite
