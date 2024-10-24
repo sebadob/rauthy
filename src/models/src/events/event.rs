@@ -7,8 +7,11 @@ use crate::events::{
     EVENT_LEVEL_RAUTHY_START, EVENT_LEVEL_RAUTHY_UNHEALTHY, EVENT_LEVEL_SECRETS_MIGRATED,
     EVENT_LEVEL_USER_EMAIL_CHANGE, EVENT_LEVEL_USER_PASSWORD_RESET,
 };
+use crate::hiqlite::DB;
 use chrono::{DateTime, Timelike, Utc};
+use hiqlite::{params, Param};
 use rauthy_common::constants::EMAIL_SUB_PREFIX;
+use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_local_hostname, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::{Notification, NotificationLevel};
@@ -397,19 +400,40 @@ impl Event {
         let level = self.level.value();
         let typ = self.typ.value();
 
-        query!(
-            r#"INSERT INTO events (id, timestamp, level, typ, ip, data, text)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
-            self.id,
-            self.timestamp,
-            level,
-            typ,
-            self.ip,
-            self.data,
-            self.text,
-        )
-        .execute(db)
-        .await?;
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    r#"
+INSERT INTO events (id, timestamp, level, typ, ip, data, text)
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+                    params!(
+                        &self.id,
+                        self.timestamp,
+                        level,
+                        typ,
+                        &self.ip,
+                        self.data,
+                        &self.text
+                    ),
+                )
+                .await?;
+        } else {
+            query!(
+                r#"
+    INSERT INTO events (id, timestamp, level, typ, ip, data, text)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+                self.id,
+                self.timestamp,
+                level,
+                typ,
+                self.ip,
+                self.data,
+                self.text,
+            )
+            .execute(db)
+            .await?;
+        }
+
         Ok(())
     }
 
@@ -429,43 +453,80 @@ impl Event {
 
         let res = if let Some(typ) = typ {
             let typ = typ.value();
-            query_as!(
-                Self,
-                r#"SELECT * FROM events
-                WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3 AND typ = $4
-                ORDER BY timestamp DESC"#,
-                from,
-                until,
-                level,
-                typ,
-            )
-            .fetch_all(db)
-            .await
+            if is_hiqlite() {
+                DB::client()
+                    .query_as(
+                        r#"
+SELECT * FROM events
+WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3 AND typ = $4
+ORDER BY timestamp DESC"#,
+                        params!(from, until, level, typ),
+                    )
+                    .await?
+            } else {
+                query_as!(
+                    Self,
+                    r#"
+    SELECT * FROM events
+    WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3 AND typ = $4
+    ORDER BY timestamp DESC"#,
+                    from,
+                    until,
+                    level,
+                    typ,
+                )
+                .fetch_all(db)
+                .await?
+            }
         } else {
-            query_as!(
-                Self,
-                r#"SELECT * FROM events
-                WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3
-                ORDER BY timestamp DESC"#,
-                from,
-                until,
-                level,
-            )
-            .fetch_all(db)
-            .await
-        }?;
+            #[allow(clippy::collapsible_else_if)]
+            if is_hiqlite() {
+                DB::client()
+                    .query_as(
+                        r#"
+SELECT * FROM events
+WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3
+ORDER BY timestamp DESC"#,
+                        params!(from, until, level),
+                    )
+                    .await?
+            } else {
+                query_as!(
+                    Self,
+                    r#"
+    SELECT * FROM events
+    WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3
+    ORDER BY timestamp DESC"#,
+                    from,
+                    until,
+                    level,
+                )
+                .fetch_all(db)
+                .await?
+            }
+        };
 
         Ok(res)
     }
 
     pub async fn find_latest(db: &DbPool, limit: i64) -> Result<Vec<Self>, ErrorResponse> {
-        let res = query_as!(
-            Self,
-            "SELECT * FROM events ORDER BY timestamp DESC LIMIT $1",
-            limit
-        )
-        .fetch_all(db)
-        .await?;
+        let res = if is_hiqlite() {
+            DB::client()
+                .query_as(
+                    "SELECT * FROM events ORDER BY timestamp DESC LIMIT $1",
+                    params!(limit),
+                )
+                .await?
+        } else {
+            query_as!(
+                Self,
+                "SELECT * FROM events ORDER BY timestamp DESC LIMIT $1",
+                limit
+            )
+            .fetch_all(db)
+            .await?
+        };
+
         Ok(res)
     }
 
