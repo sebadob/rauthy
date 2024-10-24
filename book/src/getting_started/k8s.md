@@ -477,7 +477,7 @@ spec:
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
-  name: rauthy-https
+  name: rauthy-http
   namespace: rauthy
 spec:
   entryPoints:
