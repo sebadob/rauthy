@@ -1,8 +1,10 @@
 use crate::app_state::AppState;
 use crate::hiqlite::{Cache, DB};
 use actix_web::web;
+use hiqlite::{params, Param};
 use rauthy_api_types::users::WebIdResponse;
 use rauthy_common::constants::{CACHE_TTL_USER, PUB_URL_WITH_SCHEME};
+use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use rio_api::formatter::TriplesFormatter;
 use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
@@ -37,19 +39,24 @@ impl WebId {
             return Ok(slf);
         }
 
-        let slf = match query_as!(Self, "SELECT * FROM webids WHERE user_id = $1", user_id)
-            .fetch_one(&data.db)
-            .await
-        {
-            Ok(row) => row,
-            Err(_) => {
-                // if there is no custom data available, just return defaults
-                Self {
+        let slf = if is_hiqlite() {
+            client
+                .query_as_one("SELECT * FROM webids WHERE user_id = $1", params!(&user_id))
+                .await
+                .unwrap_or(Self {
                     user_id,
                     custom_triples: None,
                     expose_email: false,
-                }
-            }
+                })
+        } else {
+            query_as!(Self, "SELECT * FROM webids WHERE user_id = $1", user_id)
+                .fetch_one(&data.db)
+                .await
+                .unwrap_or(Self {
+                    user_id,
+                    custom_triples: None,
+                    expose_email: false,
+                })
         };
 
         client
@@ -65,22 +72,31 @@ impl WebId {
     }
 
     pub async fn upsert(data: &web::Data<AppState>, web_id: WebId) -> Result<(), ErrorResponse> {
-        #[cfg(not(feature = "postgres"))]
-        let q = query!(
-            "INSERT OR REPLACE INTO webids (user_id, custom_triples, expose_email) VALUES ($1, $2, $3)",
-            web_id.user_id,
-            web_id.custom_triples,
-            web_id.expose_email,
-        );
-        #[cfg(feature = "postgres")]
-        let q = query!(
-            r#"INSERT INTO webids (user_id, custom_triples, expose_email) VALUES ($1, $2, $3)
-            ON CONFLICT(user_id) DO UPDATE SET custom_triples = $2, expose_email = $3"#,
-            web_id.user_id,
-            web_id.custom_triples,
-            web_id.expose_email,
-        );
-        q.execute(&data.db).await?;
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    r#"
+INSERT INTO webids (user_id, custom_triples, expose_email)
+VALUES ($1, $2, $3)
+ON CONFLICT(user_id) DO UPDATE
+SET custom_triples = $2, expose_email = $3"#,
+                    params!(&web_id.user_id, &web_id.custom_triples, web_id.expose_email),
+                )
+                .await?;
+        } else {
+            query!(
+                r#"
+    INSERT INTO webids (user_id, custom_triples, expose_email)
+    VALUES ($1, $2, $3)
+    ON CONFLICT(user_id) DO UPDATE
+    SET custom_triples = $2, expose_email = $3"#,
+                web_id.user_id,
+                web_id.custom_triples,
+                web_id.expose_email,
+            )
+            .execute(&data.db)
+            .await?;
+        }
 
         DB::client()
             .put(
