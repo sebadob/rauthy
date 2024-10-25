@@ -17,6 +17,5 @@ cron = { workspace = true }
 hiqlite = { workspace = true }
 semver = { workspace = true }
 sqlx = { workspace = true }
-time = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }

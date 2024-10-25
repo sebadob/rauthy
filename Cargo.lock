@@ -4384,7 +4384,6 @@ dependencies = [
  "rauthy-service",
  "semver",
  "sqlx",
- "time",
  "tokio",
  "tracing",
 ]
