@@ -1,4 +1,6 @@
 use chrono::Utc;
+use hiqlite::{params, Error, Param};
+use rauthy_common::is_hiqlite;
 use rauthy_models::app_state::DbPool;
 use rauthy_models::hiqlite::DB;
 use std::ops::Sub;
@@ -21,19 +23,44 @@ pub async fn devices_cleanup(db: DbPool) {
         debug!("Running devices_cleanup scheduler");
 
         let threshold = Utc::now().sub(chrono::Duration::days(1)).timestamp();
-        let res = sqlx::query!(
-            r#"DELETE FROM devices
-            WHERE access_exp < $1
-            AND (refresh_exp is null OR refresh_exp < $1)"#,
-            threshold
-        )
-        .execute(&db)
-        .await;
-        match res {
-            Ok(r) => {
-                debug!("Cleaned up {} expired devices", r.rows_affected());
+        if is_hiqlite() {
+            let res = DB::client()
+                .execute(
+                    r#"
+DELETE FROM devices
+WHERE access_exp < $1
+AND (refresh_exp is null OR refresh_exp < $1)"#,
+                    params!(threshold),
+                )
+                .await;
+
+            match res {
+                Ok(rows_affected) => {
+                    debug!("Cleaned up {} expired devices", rows_affected);
+                }
+                Err(err) => {
+                    error!("devices_cleanup error: {:?}", err)
+                }
             }
-            Err(err) => error!("devices_cleanup error: {:?}", err),
-        }
+        } else {
+            let res = sqlx::query!(
+                r#"
+    DELETE FROM devices
+    WHERE access_exp < $1
+    AND (refresh_exp is null OR refresh_exp < $1)"#,
+                threshold
+            )
+            .execute(&db)
+            .await;
+
+            match res {
+                Ok(r) => {
+                    debug!("Cleaned up {} expired devices", r.rows_affected());
+                }
+                Err(err) => {
+                    error!("devices_cleanup error: {:?}", err)
+                }
+            }
+        };
     }
 }
