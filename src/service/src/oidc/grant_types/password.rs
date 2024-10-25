@@ -1,6 +1,7 @@
 use crate::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, TokenSet};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest};
+use chrono::Utc;
 use rauthy_api_types::oidc::TokenRequest;
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_common::password_hasher::HashPassword;
@@ -12,7 +13,6 @@ use rauthy_models::entity::clients_dyn::ClientDyn;
 use rauthy_models::entity::dpop_proof::DPoPProof;
 use rauthy_models::entity::users::User;
 use std::str::FromStr;
-use time::OffsetDateTime;
 use tracing::{info, warn};
 
 #[tracing::instrument(skip_all, fields(client_id = req_data.client_id, username = req_data.username))]
@@ -73,7 +73,7 @@ pub async fn grant_type_password(
 
     match user.validate_password(data, password.clone()).await {
         Ok(_) => {
-            user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
+            user.last_login = Some(Utc::now().timestamp());
             user.last_failed_login = None;
             user.failed_login_attempts = None;
 
@@ -114,7 +114,7 @@ pub async fn grant_type_password(
                 user.email
             );
 
-            user.last_failed_login = Some(OffsetDateTime::now_utc().unix_timestamp());
+            user.last_failed_login = Some(Utc::now().timestamp());
             user.failed_login_attempts = Some(&user.failed_login_attempts.unwrap_or(0) + 1);
 
             user.save(data, None).await?;

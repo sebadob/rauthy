@@ -10,8 +10,8 @@
 - [x] migrate `middlewares`
 - [ ] migrate `models` (below-mentioned migration/* and app_state missing)
 - [x] migrate `notify`
-- [ ] migrate `schedulers`
-- [ ] migrate `service`
+- [x] migrate `schedulers`
+- [x] migrate `service`
 
 - migrate each model step by step
 - create proper direct query for users in `src/schedulers/src/passwords.rs`

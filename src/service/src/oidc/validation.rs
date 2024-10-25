@@ -3,6 +3,7 @@ use crate::token_set::{
 };
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{web, HttpRequest};
+use chrono::Utc;
 use jwt_simple::claims;
 use jwt_simple::claims::JWTClaims;
 use jwt_simple::common::VerificationOptions;
@@ -17,7 +18,6 @@ use rauthy_models::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_models::entity::users::User;
 use rauthy_models::{validate_jwt, JwtRefreshClaims, JwtTokenType};
 use std::collections::HashSet;
-use time::OffsetDateTime;
 use tracing::debug;
 
 /// Validates request parameters for the authorization and refresh endpoints
@@ -157,7 +157,7 @@ pub async fn validate_refresh_token(
 
     // validate that it exists in the db and invalidate it afterward
     let (_, validation_str) = refresh_token.split_at(refresh_token.len() - 49);
-    let now = OffsetDateTime::now_utc().unix_timestamp();
+    let now = Utc::now().timestamp();
     let exp_at_secs = now + data.refresh_grace_time as i64;
     let rt_scope = if let Some(device_id) = &claims.custom.did {
         let mut rt = RefreshTokenDevice::find(data, validation_str).await?;
@@ -193,7 +193,7 @@ pub async fn validate_refresh_token(
     debug!("Refresh Token - all good!");
 
     // set last login
-    user.last_login = Some(OffsetDateTime::now_utc().unix_timestamp());
+    user.last_login = Some(Utc::now().timestamp());
     user.save(data, None).await?;
 
     let auth_time = if let Some(ts) = claims.custom.auth_time {

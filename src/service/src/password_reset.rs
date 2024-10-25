@@ -1,4 +1,5 @@
 use actix_web::{cookie, web, HttpRequest, HttpResponse};
+use chrono::Utc;
 use rauthy_api_types::users::{
     PasswordResetRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
@@ -17,7 +18,6 @@ use rauthy_models::entity::webauthn::WebauthnServiceReq;
 use rauthy_models::events::event::Event;
 use rauthy_models::language::Language;
 use rauthy_models::templates::PwdResetHtml;
-use time::OffsetDateTime;
 use tracing::{debug, error};
 
 pub async fn handle_get_pwd_reset<'a>(
@@ -54,7 +54,7 @@ pub async fn handle_get_pwd_reset<'a>(
     ml.cookie = Some(cookie_val);
     ml.save(data).await?;
 
-    let age_secs = ml.exp - OffsetDateTime::now_utc().unix_timestamp();
+    let age_secs = ml.exp - Utc::now().timestamp();
     let cookie = ApiCookie::build(PWD_RESET_COOKIE, ml.cookie.unwrap(), age_secs);
 
     Ok((content, cookie))
