@@ -1,6 +1,9 @@
 use crate::sleep_schedule_next;
 use actix_web::web;
+use chrono::Utc;
+use hiqlite::params;
 use rauthy_common::constants::IDX_JWK_KID;
+use rauthy_common::is_hiqlite;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::jwk::{Jwk, JWKS};
 use rauthy_models::hiqlite::{Cache, DB};
@@ -8,7 +11,6 @@ use std::collections::HashSet;
 use std::ops::Sub;
 use std::str::FromStr;
 use std::time::Duration;
-use time::OffsetDateTime;
 use tracing::{debug, error, info};
 
 /// Auto-Rotates JWKS
@@ -45,14 +47,20 @@ pub async fn jwks_cleanup(data: web::Data<AppState>) {
         debug!("Running jwks_cleanup scheduler");
 
         // clean up all JWKs older than 90 days
-        let cleanup_threshold = OffsetDateTime::now_utc()
-            .sub(::time::Duration::seconds(3600 * 24 * 90))
-            .unix_timestamp();
+        let cleanup_threshold = Utc::now().sub(chrono::Duration::days(90)).timestamp();
 
         // find all existing jwks
-        let res = sqlx::query_as::<_, Jwk>("select * from jwks order by created_at asc")
-            .fetch_all(&data.db)
-            .await;
+        let res = if is_hiqlite() {
+            DB::client()
+                .query_as("SELECT * FROM jwks ORDER BY created_at asc", params!())
+                .await
+                .map_err(|err| err.to_string())
+        } else {
+            sqlx::query_as::<_, Jwk>("SELECT * FROM jwks ORDER BY created_at asc")
+                .fetch_all(&data.db)
+                .await
+                .map_err(|err| err.to_string())
+        };
 
         let jwks_all = match res {
             Ok(jwks) => jwks,
@@ -87,13 +95,24 @@ pub async fn jwks_cleanup(data: web::Data<AppState>) {
         // finally, delete all expired JWKs
         let count = to_delete.len();
         for kid in to_delete {
-            if let Err(err) = sqlx::query("delete from jwks where kid = $1")
-                .bind(&kid)
-                .execute(&data.db)
-                .await
-            {
-                error!("Cannot clean up JWK {} in jwks_cleanup: {}", kid, err);
-                continue;
+            if is_hiqlite() {
+                if let Err(err) = DB::client()
+                    .execute("DELETE FROM jwks WHERE kid = $1", params!())
+                    .await
+                {
+                    error!("Cannot clean up JWK {} in jwks_cleanup: {}", kid, err);
+                    continue;
+                }
+            } else {
+                #[allow(clippy::collapsible_else_if)]
+                if let Err(err) = sqlx::query("DELETE FROM jwks WHERE kid = $1")
+                    .bind(&kid)
+                    .execute(&data.db)
+                    .await
+                {
+                    error!("Cannot clean up JWK {} in jwks_cleanup: {}", kid, err);
+                    continue;
+                }
             }
 
             let idx = format!("{}{}", IDX_JWK_KID, kid);
