@@ -1,5 +1,5 @@
 use chrono::Utc;
-use hiqlite::{params, Error, Param};
+use hiqlite::{params, Param};
 use rauthy_common::is_hiqlite;
 use rauthy_models::app_state::DbPool;
 use rauthy_models::hiqlite::DB;

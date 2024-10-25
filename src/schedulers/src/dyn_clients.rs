@@ -1,9 +1,11 @@
 use actix_web::web;
 use chrono::Utc;
+use hiqlite::params;
 use rauthy_common::constants::{
     DYN_CLIENT_CLEANUP_INTERVAL, DYN_CLIENT_CLEANUP_MINUTES, DYN_CLIENT_REG_TOKEN,
     ENABLE_DYN_CLIENT_REG,
 };
+use rauthy_common::is_hiqlite;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
@@ -40,16 +42,27 @@ pub async fn dyn_client_cleanup(data: web::Data<AppState>) {
         }
         debug!("Running dynamic_client_cleanup scheduler");
 
-        let clients: Vec<ClientDyn> = match query_as!(
-            ClientDyn,
-            "SELECT * FROM clients_dyn WHERE last_used = null"
-        )
-        .fetch_all(&data.db)
-        .await
-        {
+        let clients_res = if is_hiqlite() {
+            DB::client()
+                .query_as(
+                    "SELECT * FROM clients_dyn WHERE last_used = null",
+                    params!(),
+                )
+                .await
+                .map_err(|err| err.to_string())
+        } else {
+            query_as!(
+                ClientDyn,
+                "SELECT * FROM clients_dyn WHERE last_used = null"
+            )
+            .fetch_all(&data.db)
+            .await
+            .map_err(|err| err.to_string())
+        };
+        let clients: Vec<ClientDyn> = match clients_res {
             Ok(c) => c,
             Err(err) => {
-                error!("{:?}", err);
+                error!("{}", err);
                 continue;
             }
         };
