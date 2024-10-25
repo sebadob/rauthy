@@ -28,8 +28,7 @@ pub async fn refresh_tokens_cleanup(db: DbPool) {
             {
                 error!("Refresh Token Cleanup Error: {:?}", err)
             }
-        }
-        if let Err(err) = sqlx::query("DELETE FROM refresh_tokens WHERE exp < $1")
+        } else if let Err(err) = sqlx::query("DELETE FROM refresh_tokens WHERE exp < $1")
             .bind(now)
             .execute(&db)
             .await

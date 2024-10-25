@@ -103,16 +103,13 @@ pub async fn jwks_cleanup(data: web::Data<AppState>) {
                     error!("Cannot clean up JWK {} in jwks_cleanup: {}", kid, err);
                     continue;
                 }
-            } else {
-                #[allow(clippy::collapsible_else_if)]
-                if let Err(err) = sqlx::query("DELETE FROM jwks WHERE kid = $1")
-                    .bind(&kid)
-                    .execute(&data.db)
-                    .await
-                {
-                    error!("Cannot clean up JWK {} in jwks_cleanup: {}", kid, err);
-                    continue;
-                }
+            } else if let Err(err) = sqlx::query("DELETE FROM jwks WHERE kid = $1")
+                .bind(&kid)
+                .execute(&data.db)
+                .await
+            {
+                error!("Cannot clean up JWK {} in jwks_cleanup: {}", kid, err);
+                continue;
             }
 
             let idx = format!("{}{}", IDX_JWK_KID, kid);
