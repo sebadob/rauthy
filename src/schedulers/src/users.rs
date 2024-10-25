@@ -1,4 +1,5 @@
 use actix_web::web;
+use chrono::Utc;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
@@ -6,7 +7,6 @@ use rauthy_models::entity::users::User;
 use rauthy_models::hiqlite::DB;
 use std::env;
 use std::time::Duration;
-use time::OffsetDateTime;
 use tracing::{debug, error, info};
 
 // Checks for expired users
@@ -41,9 +41,8 @@ pub async fn user_expiry_checker(data: web::Data<AppState>) {
 
         match User::find_expired(&data).await {
             Ok(users) => {
-                let now = OffsetDateTime::now_utc().unix_timestamp();
-                // could possibly be optimized (if necessary) by collecting all IDs and use a
-                // non-prepared statement
+                let now = Utc::now().timestamp();
+
                 for user in users {
                     debug!("Found expired user {}: {}", user.id, user.email);
 
