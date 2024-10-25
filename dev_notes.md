@@ -2,8 +2,23 @@
 
 ## CURRENT WORK
 
+- [ ] migrate `api`
+- [x] migrate `api_types`
+- [x] migrate `bin`
+- [x] migrate `common`
+- [x] migrate `error`
+- [x] migrate `middlewares`
+- [ ] migrate `models` (below-mentioned migration/* and app_state missing)
+- [x] migrate `notify`
+- [ ] migrate `schedulers`
+- [ ] migrate `service`
+
 - migrate each model step by step
-- `MIGRATE_DB_FROM` for Hiqlite
+- `MIGRATE_DB_FROM` for Hiqlite -> implement backup restore from local fs in Hiqlite
+- modules left for the end, after main tasks are finished:
+    - `src/models/src/migration/mod.rs`
+    - `src/models/src/migration/db_migrate.rs`
+    - `src/models/src/app_state.rs`
 
 ### After finished Hiqlite migration
 

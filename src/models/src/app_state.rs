@@ -25,6 +25,7 @@ use tracing::{debug, error, info, warn};
 use webauthn_rs::prelude::Url;
 use webauthn_rs::Webauthn;
 
+// TODO we can get rid of these feature separations after hiqlite migrations is complete
 #[cfg(feature = "postgres")]
 pub type DbPool = sqlx::PgPool;
 #[cfg(not(feature = "postgres"))]
@@ -314,8 +315,7 @@ impl AppState {
                         panic!("Error during db migration: {:?}", err);
                     }
                 } else if from.starts_with("hiqlite:") {
-                    // TODO
-                    panic!("MIGRATE_DB_FROM has not been implemented for Hiqlite yet");
+                    todo!("MIGRATE_DB_FROM has not been implemented for Hiqlite yet");
                 } else {
                     panic!(
                         "You provided an unknown database type, please check the MIGRATE_DB_FROM"

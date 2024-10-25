@@ -24,6 +24,7 @@ pub mod db_migrate_dev;
 static BUCKET: OnceLock<Bucket> = OnceLock::new();
 static ACCEPT_INVALID_CERTS: OnceLock<bool> = OnceLock::new();
 
+// TODO we can most probably get rid of this completely -> it's built into hiqlite directly
 pub async fn backup_db(db: &DbPool) -> Result<(), ErrorResponse> {
     let start = Instant::now();
     info!("Starting database backup");

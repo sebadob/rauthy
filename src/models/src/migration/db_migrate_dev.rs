@@ -21,7 +21,7 @@ pub async fn migrate_dev_data(db: &DbPool) -> Result<(), ErrorResponse> {
             Err(_) => true,
         }
     } else {
-        match sqlx::query_as::<_, Jwk>("select * from jwks")
+        match sqlx::query_as::<_, Jwk>("SELECT * FROM jwks")
             .fetch_all(db)
             .await
         {
@@ -145,9 +145,10 @@ pub async fn migrate_dev_data(db: &DbPool) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute(
-                    r#"INSERT INTO
-                    jwks (kid, created_at, signature, enc_key_id, jwk)
-                    VALUES ($1, $2, $3, $4, $5)"#,
+                    r#"
+INSERT INTO
+jwks (kid, created_at, signature, enc_key_id, jwk)
+VALUES ($1, $2, $3, $4, $5)"#,
                     params!(
                         jwk.kid,
                         jwk.created_at,
@@ -159,8 +160,10 @@ pub async fn migrate_dev_data(db: &DbPool) -> Result<(), ErrorResponse> {
                 .await?;
         } else {
             let _ = sqlx::query(
-                r#"insert into jwks (kid, created_at, signature, enc_key_id, jwk)
-                values ($1, $2, $3, $4, $5)"#,
+                r#"
+INSERT INTO
+jwks (kid, created_at, signature, enc_key_id, jwk)
+VALUES ($1, $2, $3, $4, $5)"#,
             )
             .bind(&jwk.kid)
             .bind(jwk.created_at)
@@ -184,16 +187,19 @@ pub async fn migrate_dev_data(db: &DbPool) -> Result<(), ErrorResponse> {
     if is_hiqlite() {
         DB::client()
             .execute(
-                r#"INSERT INTO
-            magic_links (id, user_id, csrf_token, exp, used, usage)
-            VALUES ($1, $2, $3, $4, $5, $6)"#,
+                r#"
+INSERT INTO
+magic_links (id, user_id, csrf_token, exp, used, usage)
+VALUES ($1, $2, $3, $4, $5, $6)"#,
                 params!(ml.id, ml.user_id, ml.csrf_token, ml.exp, false, ml.usage),
             )
             .await?;
     } else {
         let _ = sqlx::query(
-            r#"insert into magic_links (id, user_id, csrf_token, exp, used, usage)
-            values ($1, $2, $3, $4, $5, $6)"#,
+            r#"
+INSERT INTO
+magic_links (id, user_id, csrf_token, exp, used, usage)
+VALUES ($1, $2, $3, $4, $5, $6)"#,
         )
         .bind(&ml.id)
         .bind(&ml.user_id)

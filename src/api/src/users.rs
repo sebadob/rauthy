@@ -39,8 +39,6 @@ use rauthy_models::language::Language;
 use rauthy_models::templates::{Error1Html, Error3Html, ErrorHtml, UserRegisterHtml};
 use rauthy_service::password_reset;
 use spow::pow::Pow;
-use std::ops::Add;
-use time::OffsetDateTime;
 use tracing::{error, warn};
 
 /// Returns all existing users

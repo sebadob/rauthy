@@ -101,12 +101,12 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
     if is_hiqlite() {
         DB::client()
             .execute(
-                r#"UPDATE clients SET enabled = $1, confidential = $2, redirect_uris = $3,
-                post_logout_redirect_uris = $4, allowed_origins = $5, flows_enabled = $6,
-                access_token_alg = $7, id_token_alg = $8, auth_code_lifetime = $9,
-                access_token_lifetime = $10, scopes = $11, default_scopes = $12, challenge = $13,
-                force_mfa = $14, client_uri = $15, contacts = $16
-                WHERE id = $17"#,
+                r#"
+UPDATE clients SET enabled = $1, confidential = $2, redirect_uris = $3,
+post_logout_redirect_uris = $4, allowed_origins = $5, flows_enabled = $6, access_token_alg = $7,
+id_token_alg = $8, auth_code_lifetime = $9, access_token_lifetime = $10, scopes = $11,
+default_scopes = $12, challenge = $13, force_mfa = $14, client_uri = $15, contacts = $16
+WHERE id = $17"#,
                 params!(
                     rauthy.enabled,
                     rauthy.confidential,
@@ -130,12 +130,12 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
             .await?;
     } else {
         sqlx::query!(
-            r#"update clients set enabled = $1, confidential = $2, redirect_uris = $3,
-            post_logout_redirect_uris = $4, allowed_origins = $5, flows_enabled = $6,
-            access_token_alg = $7, id_token_alg = $8, auth_code_lifetime = $9,
-            access_token_lifetime = $10, scopes = $11, default_scopes = $12, challenge = $13,
-            force_mfa = $14, client_uri = $15, contacts = $16
-            where id = $17"#,
+            r#"
+UPDATE clients SET enabled = $1, confidential = $2, redirect_uris = $3,
+post_logout_redirect_uris = $4, allowed_origins = $5, flows_enabled = $6, access_token_alg = $7,
+id_token_alg = $8, auth_code_lifetime = $9, access_token_lifetime = $10, scopes = $11,
+default_scopes = $12, challenge = $13, force_mfa = $14, client_uri = $15, contacts = $16
+WHERE id = $17"#,
             rauthy.enabled,
             rauthy.confidential,
             rauthy.redirect_uris,
@@ -173,7 +173,7 @@ pub async fn migrate_init_prod(
             .query_as("SELECT * FROM JWKS", params!())
             .await?
     } else {
-        sqlx::query_as::<_, Jwk>("select * from jwks")
+        sqlx::query_as::<_, Jwk>("SELECT * FROM JWKS")
             .fetch_all(db)
             .await?
     };
@@ -194,12 +194,12 @@ pub async fn migrate_init_prod(
             DB::client().execute("DELETE FROM users WHERE email IN ('init_admin@localhost.de', 'test_admin@localhost.de')", params!())
                 .await?;
         } else {
-            sqlx::query!("delete from clients where id = 'init_client'")
+            sqlx::query!("DELETE FROM clients WHERE id = 'init_client'")
                 .execute(db)
                 .await?;
 
             sqlx::query!(
-                "delete from users where email in ('init_admin@localhost.de', 'test_admin@localhost.de')",
+                "DELETE FROM users WHERE email IN ('init_admin@localhost.de', 'test_admin@localhost.de')",
             )
             .execute(db)
             .await?;
