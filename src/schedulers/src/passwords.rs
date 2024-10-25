@@ -13,6 +13,7 @@ use tracing::{debug, error};
 /// Runs once every night at 04:30.
 pub async fn password_expiry_checker(data: web::Data<AppState>) {
     // sec min hour day_of_month month day_of_week year
+    // TODO convert to interval that runs multiple times a day + keep track of sent warnings?
     let schedule = cron::Schedule::from_str("0 30 4 * * * *").unwrap();
 
     loop {

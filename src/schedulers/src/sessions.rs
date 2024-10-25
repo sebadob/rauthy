@@ -1,3 +1,5 @@
+use hiqlite::{params, Param};
+use rauthy_common::is_hiqlite;
 use rauthy_models::app_state::DbPool;
 use rauthy_models::hiqlite::DB;
 use std::ops::Sub;
@@ -25,14 +27,19 @@ pub async fn sessions_cleanup(db: DbPool) {
             .sub(::time::Duration::hours(24))
             .unix_timestamp();
 
-        let res = sqlx::query("delete from sessions where exp < $1")
+        if is_hiqlite() {
+            if let Err(err) = DB::client()
+                .execute("DELETE FROM sessions WHERE exp < $1", params!(thres))
+                .await
+            {
+                error!("Session Cleanup Error: {:?}", err)
+            }
+        } else if let Err(err) = sqlx::query("DELETE FROM sessions WHERE exp < $1")
             .bind(thres)
             .execute(&db)
-            .await;
-
-        match res {
-            Ok(_) => {}
-            Err(err) => error!("Session Cleanup Error: {:?}", err),
+            .await
+        {
+            error!("Session Cleanup Error: {:?}", err)
         }
     }
 }
