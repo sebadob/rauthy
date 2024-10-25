@@ -1,10 +1,11 @@
+use chrono::Utc;
 use hiqlite::{params, Param};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::DbPool;
 use rauthy_models::hiqlite::DB;
+use std::ops::Sub;
 use std::time::Duration;
-use time::OffsetDateTime;
 use tracing::{debug, error};
 
 /// Cleans up old / expired magic links and deletes users, that have never used their
@@ -26,7 +27,7 @@ pub async fn magic_link_cleanup(db: DbPool) {
         debug!("Running magic_link_cleanup scheduler");
 
         // allow 300 seconds of clock skew before cleaning up magic links
-        let exp = OffsetDateTime::now_utc().unix_timestamp() - 300;
+        let exp = Utc::now().sub(chrono::Duration::seconds(300)).timestamp();
 
         // Check for expired and unused magic links that are bound to a user which has no password
         // at all. These users should be deleted since they never cared about the (very important)

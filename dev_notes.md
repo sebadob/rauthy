@@ -14,6 +14,7 @@
 - [ ] migrate `service`
 
 - migrate each model step by step
+- create proper direct query for users in `src/schedulers/src/passwords.rs`
 - `MIGRATE_DB_FROM` for Hiqlite -> implement backup restore from local fs in Hiqlite
 - modules left for the end, after main tasks are finished:
     - `src/models/src/migration/mod.rs`
