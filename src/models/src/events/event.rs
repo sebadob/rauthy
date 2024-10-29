@@ -9,7 +9,7 @@ use crate::events::{
 };
 use crate::hiqlite::DB;
 use chrono::{DateTime, Timelike, Utc};
-use hiqlite::{params, Param};
+use hiqlite::{params, Param, Row};
 use rauthy_common::constants::EMAIL_SUB_PREFIX;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_local_hostname, get_rand};
@@ -311,6 +311,20 @@ pub struct Event {
     pub text: Option<String>,
 }
 
+impl<'r> From<hiqlite::Row<'r>> for Event {
+    fn from(mut row: Row<'r>) -> Self {
+        Self {
+            id: row.get("id"),
+            timestamp: row.get("timestamp"),
+            level: EventLevel::from(row.get::<i64>("level")),
+            typ: EventType::from(row.get::<i64>("typ")),
+            ip: row.get("ip"),
+            data: row.get("data"),
+            text: row.get("text"),
+        }
+    }
+}
+
 impl From<&Event> for Notification {
     fn from(value: &Event) -> Self {
         let icon = match value.level {
@@ -455,7 +469,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
             let typ = typ.value();
             if is_hiqlite() {
                 DB::client()
-                    .query_as(
+                    .query_map(
                         r#"
 SELECT * FROM events
 WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3 AND typ = $4
@@ -482,7 +496,7 @@ ORDER BY timestamp DESC"#,
             #[allow(clippy::collapsible_else_if)]
             if is_hiqlite() {
                 DB::client()
-                    .query_as(
+                    .query_map(
                         r#"
 SELECT * FROM events
 WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3
@@ -512,7 +526,7 @@ ORDER BY timestamp DESC"#,
     pub async fn find_latest(db: &DbPool, limit: i64) -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
-                .query_as(
+                .query_map(
                     "SELECT * FROM events ORDER BY timestamp DESC LIMIT $1",
                     params!(limit),
                 )

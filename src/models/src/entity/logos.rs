@@ -1,7 +1,7 @@
 use crate::app_state::AppState;
 use crate::hiqlite::{Cache, DB};
 use actix_web::web;
-use hiqlite::{params, Param};
+use hiqlite::{params, Param, Row};
 use image::imageops::FilterType;
 use image::ImageFormat;
 use jwt_simple::prelude::{Deserialize, Serialize};
@@ -112,6 +112,17 @@ pub struct Logo {
     pub res: LogoRes,
     pub content_type: String,
     pub data: Vec<u8>,
+}
+
+impl<'r> From<hiqlite::Row<'r>> for Logo {
+    fn from(mut row: Row<'r>) -> Self {
+        Self {
+            id: row.get("id"),
+            res: LogoRes::from(row.get::<String>("res")),
+            content_type: row.get::<String>("content_type"),
+            data: row.get("data"),
+        }
+    }
 }
 
 impl Logo {
@@ -335,7 +346,8 @@ ON CONFLICT(auth_provider_id, res) DO UPDATE SET content_type = $3, data = $4"#
                         r#"
 INSERT INTO client_logos (client_id, res, content_type, data)
 VALUES ($1, $2, $3, $4)
-ON CONFLICT(client_id, res) DO UPDATE SET content_type = $3, data = $4"#,
+ON CONFLICT(client_id, res) DO UPDATE
+SET content_type = $3, data = $4"#,
                         self.id,
                         res,
                         self.content_type,
@@ -347,7 +359,8 @@ ON CONFLICT(client_id, res) DO UPDATE SET content_type = $3, data = $4"#,
                         r#"
 INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data)
 VALUES ($1, $2, $3, $4)
-ON CONFLICT(auth_provider_id, res) DO UPDATE SET content_type = $3, data = $4"#,
+ON CONFLICT(auth_provider_id, res) DO UPDATE
+SET content_type = $3, data = $4"#,
                         self.id,
                         res,
                         self.content_type,
@@ -398,7 +411,7 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#
                 }
             };
             DB::client()
-                .query_as_one(sql, params!(id, res, res_svg))
+                .query_map_one(sql, params!(id, res, res_svg))
                 .await?
         } else {
             match typ {
