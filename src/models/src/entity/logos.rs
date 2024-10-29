@@ -119,7 +119,7 @@ impl<'r> From<hiqlite::Row<'r>> for Logo {
         Self {
             id: row.get("id"),
             res: LogoRes::from(row.get::<String>("res")),
-            content_type: row.get::<String>("content_type"),
+            content_type: row.get("content_type"),
             data: row.get("data"),
         }
     }
@@ -399,13 +399,13 @@ SET content_type = $3, data = $4"#,
             let sql = match typ {
                 LogoType::Client => {
                     r#"
-SELECT client_id as id, res, content_type, data
+SELECT client_id AS id, res, content_type, data
 FROM client_logos
 WHERE client_id = $1 AND (res = $2 OR res = $3)"#
                 }
                 LogoType::AuthProvider => {
                     r#"
-SELECT auth_provider_id as id, res, content_type, data
+SELECT auth_provider_id AS id, res, content_type, data
 FROM auth_provider_logos
 WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#
                 }
@@ -419,7 +419,7 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#
                     query_as!(
                         Self,
                         r#"
-SELECT client_id as id, res, content_type, data
+SELECT client_id AS id, res, content_type, data
 FROM client_logos
 WHERE client_id = $1 AND (res = $2 OR res = $3)"#,
                         id,
@@ -433,7 +433,7 @@ WHERE client_id = $1 AND (res = $2 OR res = $3)"#,
                     query_as!(
                         Self,
                         r#"
-SELECT auth_provider_id as id, res, content_type, data
+SELECT auth_provider_id AS id, res, content_type, data
 FROM auth_provider_logos
 WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
                         id,

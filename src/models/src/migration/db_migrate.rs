@@ -988,7 +988,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
     Ok(())
 }
 
-pub async fn migrate_postgres_to_hiqlite(db_from: sqlx::PgPool) -> Result<(), ErrorResponse> {
+pub async fn migrate_sqlx_to_hiqlite(db_from: DbPool) -> Result<(), ErrorResponse> {
     info!("Starting migration from existing SQLite to Hiqlite");
     let hql = DB::client();
 

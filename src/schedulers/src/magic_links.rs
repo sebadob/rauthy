@@ -50,7 +50,7 @@ DELETE FROM users
 WHERE id IN (
     SELECT DISTINCT user_id
     FROM magic_links
-    WHERE exp < 1683003398 AND used = false)
+    WHERE exp < $1 AND used = false)
 AND password IS NULL"#,
             params!(exp),
         )
@@ -76,7 +76,7 @@ DELETE FROM users
 WHERE id IN (
     SELECT DISTINCT user_id
     FROM magic_links
-    WHERE exp < 1683003398 AND used = false)
+    WHERE exp < $1 AND used = false)
 AND password IS NULL"#,
     )
     .bind(exp)

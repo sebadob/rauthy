@@ -315,7 +315,9 @@ impl AppState {
                         panic!("Error during db migration: {:?}", err);
                     }
                 } else if from.starts_with("hiqlite:") {
-                    todo!("MIGRATE_DB_FROM has not been implemented for Hiqlite yet");
+                    if let Err(err) = db_migrate::migrate_hiqlite_to_sqlx(&pool).await {
+                        panic!("Error during db migration: {:?}", err);
+                    }
                 } else {
                     panic!(
                         "You provided an unknown database type, please check the MIGRATE_DB_FROM"
@@ -382,6 +384,7 @@ impl AppState {
 }
 
 /// Helper to check if the current deployment is using multiple nodes
+#[inline]
 fn is_multi_replica_deployment() -> bool {
     NodeConfig::from_env().nodes.len() > 1
 }

@@ -21,10 +21,11 @@ mod users;
 pub async fn spawn(data: web::Data<AppState>) {
     info!("Starting schedulers");
 
+    // TODO remove after hiqlite migration - has backup functionality built in
     // initialize and possibly panic early if anything is mis-configured regarding the s3 storage
-    s3_backup_init_test().await;
+    // s3_backup_init_test().await;
+    // tokio::spawn(backup::db_backup(data.db.clone()));
 
-    tokio::spawn(backup::db_backup(data.db.clone()));
     tokio::spawn(dyn_clients::dyn_client_cleanup(data.clone()));
     tokio::spawn(events::events_cleanup(data.db.clone()));
     tokio::spawn(devices::devices_cleanup(data.db.clone()));

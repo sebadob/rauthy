@@ -190,6 +190,15 @@ clippy-postgres:
     clear
     {{ db_url_postgres }} cargo clippy --features postgres
 
+# delete the local hiqlite database
+delete-hiqlite:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    mkdir -p data/
+    rm -rf data/logs
+    rm -rf data/state_machine
+
 # re-create and migrate the sqlite database with sqlx
 migrate:
     #!/usr/bin/env bash

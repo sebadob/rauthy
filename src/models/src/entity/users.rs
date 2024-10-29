@@ -98,7 +98,7 @@ impl User {
 
         let count = if is_hiqlite() {
             client
-                .query_raw("SELECT COUNT (*) AS count count FROM users", params!())
+                .query_raw("SELECT COUNT (*) AS count FROM users", params!())
                 .await?
                 .remove(0)
                 .get("count")
