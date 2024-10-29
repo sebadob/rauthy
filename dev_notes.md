@@ -2,7 +2,7 @@
 
 ## CURRENT WORK
 
-- [ ] migrate `api`
+- [x] migrate `api`
 - [x] migrate `api_types`
 - [x] migrate `bin`
 - [x] migrate `common`

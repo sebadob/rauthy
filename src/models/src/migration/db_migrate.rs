@@ -15,13 +15,6 @@ use time::OffsetDateTime;
 use tracing::{debug, info};
 use validator::Validate;
 
-use rauthy_common::constants::{
-    ADMIN_FORCE_MFA, DB_TYPE, DEV_MODE, PUB_URL, PUB_URL_WITH_SCHEME, RAUTHY_ADMIN_EMAIL,
-};
-use rauthy_common::utils::{base64_decode, get_rand};
-use rauthy_common::{is_hiqlite, DbType};
-use rauthy_error::ErrorResponse;
-
 use crate::app_state::DbPool;
 use crate::entity::api_keys::ApiKeyEntity;
 use crate::entity::auth_providers::AuthProvider;
@@ -45,6 +38,12 @@ use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::hiqlite::DB;
+use rauthy_common::constants::{
+    ADMIN_FORCE_MFA, DB_TYPE, DEV_MODE, PUB_URL, PUB_URL_WITH_SCHEME, RAUTHY_ADMIN_EMAIL,
+};
+use rauthy_common::utils::{base64_decode, get_rand};
+use rauthy_common::{is_hiqlite, DbType};
+use rauthy_error::ErrorResponse;
 
 pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse> {
     debug!("Executing anti_lockout_check");
@@ -83,7 +82,7 @@ pub async fn anti_lockout(db: &DbPool, issuer: &str) -> Result<(), ErrorResponse
         access_token_alg: "EdDSA".to_string(),
         id_token_alg: "EdDSA".to_string(),
         auth_code_lifetime: 10,
-        access_token_lifetime: 10, // The token is actually not used for the Admin UI -> session only
+        access_token_lifetime: 10, // The token is not used for the Admin UI -> session only
         scopes: "openid".to_string(),
         default_scopes: "openid".to_string(),
         challenge: Some("S256".to_string()),
@@ -415,6 +414,577 @@ pub async fn migrate_init_prod(
 // This is a limitation of `sqlx`, because we would be referencing 2 different database
 // types at the same time.
 // Be careful when you update these!
+
+/// This function will only exist temporarily until sqlx::Sqlite has been dropped.
+/// This is for the automatic migration possibility from existing SQLite databases to
+/// the new Hiqlite.
+pub async fn migrate_sqlite_to_hiqlite(db_from: sqlx::SqlitePool) -> Result<(), ErrorResponse> {
+    info!("Starting migration from existing SQLite to Hiqlite");
+    let hql = DB::client();
+
+    // CONFIG
+    debug!("Migrating table: config");
+    let before = sqlx::query_as::<_, ConfigEntity>("SELECT * FROM config")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM config", params!()).await?;
+    for b in before {
+        hql.execute(
+            "INSERT INTO config (id, data) VALUES ($1, $2)",
+            params!(b.id, b.data),
+        )
+        .await?;
+    }
+
+    // API KEYS
+    debug!("Migrating table: api_keys");
+    let before = sqlx::query_as::<_, ApiKeyEntity>("SELECT * FROM api_keys")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM api_keys", params!()).await?;
+    for b in before {
+        hql.execute(
+            r#"
+INSERT INTO
+api_keys (name, secret, created, expires, enc_key_id, access)
+VALUES ($1, $2, $3, $4, $5, $6)"#,
+            params!(
+                b.name,
+                b.secret,
+                b.created,
+                b.expires,
+                b.enc_key_id,
+                b.access
+            ),
+        )
+        .await?;
+    }
+
+    // The users table has a FK to auth_providers - the order is important here!
+    // AUTH PROVIDERS
+    debug!("Migrating table: auth_providers");
+    let before = sqlx::query_as::<_, AuthProvider>("select * from auth_providers")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM auth_providers", params!()).await?;
+    for b in before {
+        hql.execute(
+            r#"
+INSERT INTO
+auth_providers (id, enabled, name, typ, issuer, authorization_endpoint, token_endpoint,
+userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value, mfa_claim_path,
+mfa_claim_value, allow_insecure_requests, use_pkce, root_pem)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#,
+            params!(
+                b.id,
+                b.enabled,
+                b.name,
+                b.typ.as_str(),
+                b.issuer,
+                b.authorization_endpoint,
+                b.token_endpoint,
+                b.userinfo_endpoint,
+                b.client_id,
+                b.secret,
+                b.scope,
+                b.admin_claim_path,
+                b.admin_claim_value,
+                b.mfa_claim_path,
+                b.mfa_claim_value,
+                b.allow_insecure_requests,
+                b.use_pkce,
+                b.root_pem
+            ),
+        )
+        .await?;
+    }
+
+    // AUTH PROVIDER LOGOS
+    debug!("Migrating table: auth_provider_logos");
+    let before = sqlx::query(
+        "select auth_provider_id as id, res, content_type, data from auth_provider_logos",
+    )
+    .fetch_all(&db_from)
+    .await?;
+    hql.execute("DELETE FROM auth_provider_logos", params!())
+        .await?;
+    for b in before {
+        let id: String = b.get("id");
+        let res: String = b.get("res");
+        let content_type: String = b.get("content_type");
+        let data: Vec<u8> = b.get("data");
+
+        hql.execute(
+            r#"
+INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT(auth_provider_id, res) DO UPDATE
+SET content_type = $3, data = $4"#,
+            params!(id, res, content_type, data),
+        )
+        .await?;
+    }
+
+    // USERS
+    debug!("Migrating table: users");
+    let before = sqlx::query_as::<_, User>("select * from users")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM users", params!()).await?;
+    for b in before {
+        hql.execute(
+            r#"
+INSERT INTO users
+(id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
+password_expires, created_at, last_login, last_failed_login, failed_login_attempts, language,
+webauthn_user_id, user_expires, auth_provider_id, federation_uid)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"#,
+            params!(
+                b.id,
+                b.email,
+                b.given_name,
+                b.family_name,
+                b.password,
+                b.roles,
+                b.groups,
+                b.enabled,
+                b.email_verified,
+                b.password_expires,
+                b.created_at,
+                b.last_login,
+                b.last_failed_login,
+                b.failed_login_attempts,
+                b.language.as_str(),
+                b.webauthn_user_id,
+                b.user_expires,
+                b.auth_provider_id,
+                b.federation_uid
+            ),
+        )
+        .await?;
+    }
+
+    // PASSKEYS
+    debug!("Migrating table: passkeys");
+    let before = sqlx::query_as::<_, PasskeyEntity>("SELECT * FROM passkeys")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM passkeys", params!()).await?;
+    for b in before {
+        hql.execute(
+            r#"
+INSERT INTO passkeys
+(user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+            params!(
+                b.user_id,
+                b.name,
+                b.passkey_user_id,
+                b.passkey,
+                b.credential_id,
+                b.registered,
+                b.last_used,
+                b.user_verified
+            ),
+        )
+        .await?;
+    }
+
+    // Do not change the order - tables below have FKs to clients
+    // CLIENTS
+    debug!("Migrating table: clients");
+    let before = sqlx::query_as::<_, Client>("select * from clients")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM clients", params!()).await?;
+    for b in before {
+        hql.execute(
+            r#"
+INSERT INTO clients
+(id, name, enabled, confidential, secret, secret_kid, redirect_uris, post_logout_redirect_uris,
+allowed_origins, flows_enabled, access_token_alg, id_token_alg, auth_code_lifetime,
+access_token_lifetime, scopes, default_scopes, challenge, force_mfa, client_uri, contacts)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#,
+        params!(
+            b.id,
+            b.name,
+            b.enabled,
+            b.confidential,
+            b.secret,
+            b.secret_kid,
+            b.redirect_uris,
+            b.post_logout_redirect_uris,
+            b.allowed_origins,
+            b.flows_enabled,
+            b.access_token_alg,
+            b.id_token_alg,
+            b.auth_code_lifetime,
+            b.access_token_lifetime,
+            b.scopes,
+            b.default_scopes,
+            b.challenge,
+            b.force_mfa,
+            b.client_uri,
+            b.contacts
+        )).await?;
+    }
+
+    // CLIENTS DYN
+    debug!("Migrating table: clients_dyn");
+    let before = sqlx::query_as::<_, ClientDyn>("select * from clients_dyn")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM clients_dyn", params!()).await?;
+    for b in before {
+        hql.execute(
+            r#"
+INSERT INTO
+clients_dyn (id, created, registration_token, token_endpoint_auth_method)
+VALUES ($1, $2, $3, $4)"#,
+            params!(
+                b.id,
+                b.created,
+                b.registration_token,
+                b.token_endpoint_auth_method
+            ),
+        )
+        .await?;
+    }
+
+    // CLIENT LOGOS
+    debug!("Migrating table: client_logos");
+    let before = sqlx::query("select * from client_logos")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM client_logos", params!()).await?;
+    for b in before {
+        let id: String = b.get("client_id");
+        let res: String = b.get("res");
+        let content_type: String = b.get("content_type");
+        let data: Vec<u8> = b.get("data");
+
+        hql.execute(
+            r#"
+INSERT INTO client_logos (client_id, res, content_type, data)
+VALUES ($1, $2, $3, $4)"#,
+            params!(id, res, content_type, data),
+        )
+        .await?;
+    }
+
+    // COLORS
+    debug!("Migrating table: colors");
+    let before = sqlx::query_as::<_, ColorEntity>("select * from colors")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM colors", params!()).await?;
+    for b in before {
+        hql.execute(
+            "INSERT INTO colors (client_id, data) VALUES ($1, $2)",
+            params!(b.client_id, b.data),
+        )
+        .await?;
+    }
+
+    // GROUPS
+    debug!("Migrating table: groups");
+    let before = sqlx::query_as::<_, Group>("select * from groups")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM groups", params!()).await?;
+    for b in before {
+        hql.execute(
+            "INSERT INTO groups (id, name) VALUES ($1, $2)",
+            params!(b.id, b.name),
+        )
+        .await?;
+    }
+
+    // JWKS
+    debug!("Migrating table: jwks");
+    let before = sqlx::query_as::<_, Jwk>("select * from jwks")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM jwks", params!()).await?;
+    for b in before {
+        hql.execute(
+            r#"
+INSERT INTO jwks (kid, created_at, signature, enc_key_id, jwk)
+VALUES ($1, $2, $3, $4, $5)"#,
+            params!(
+                b.kid,
+                b.created_at,
+                b.signature.as_str(),
+                &b.enc_key_id,
+                b.jwk
+            ),
+        )
+        .await?;
+    }
+
+    // MAGIC LINKS
+    debug!("Migrating table: magic_links");
+    let before = sqlx::query_as::<_, MagicLink>("select * from magic_links")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM magic_links", params!()).await?;
+    for b in before {
+        hql.execute(
+            r#"
+INSERT INTO magic_links
+(id, user_id, csrf_token, cookie, exp, used, usage)
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+            params!(
+                b.id,
+                b.user_id,
+                b.csrf_token,
+                b.cookie,
+                b.exp,
+                b.used,
+                b.usage
+            ),
+        )
+        .await?;
+    }
+
+    // PASSWORD POLICY
+    debug!("Migrating table: password_policy");
+    let res = sqlx::query("select data from config where id = 'password_policy'")
+        .fetch_one(&db_from)
+        .await?;
+    let bytes: Vec<u8> = res.get("data");
+    hql.execute(
+        "UPDATE config SET data = $1 WHERE id = 'password_policy'",
+        params!(bytes),
+    )
+    .await?;
+
+    // REFRESH TOKENS
+    debug!("Migrating table: refresh_tokens");
+    let before = sqlx::query_as::<_, RefreshToken>("select * from refresh_tokens")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM refresh_tokens", params!()).await?;
+    for b in before {
+        hql.execute(
+            r#"
+INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope)
+VALUES ($1, $2, $3, $4, $5)"#,
+            params!(b.id, b.user_id, b.nbf, b.exp, b.scope),
+        )
+        .await?;
+    }
+
+    // ROLES
+    debug!("Migrating table: roles");
+    let before = sqlx::query_as::<_, Role>("select * from roles")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM roles", params!()).await?;
+    for b in before {
+        hql.execute(
+            "INSERT INTO roles (id, name) VALUES ($1, $2)",
+            params!(b.id, b.name),
+        )
+        .await?;
+    }
+
+    // SCOPES
+    debug!("Migrating table: scopes");
+    let before = sqlx::query_as::<_, Scope>("select * from scopes")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM scopes", params!()).await?;
+    for b in before {
+        hql.execute(
+            r#"
+INSERT INTO scopes (id, name, attr_include_access, attr_include_id)
+VALUES ($1, $2, $3, $4)"#,
+            params!(b.id, b.name, b.attr_include_access, b.attr_include_id),
+        )
+        .await?;
+    }
+
+    // EVENTS
+    let before = sqlx::query("select * from events")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM events", params!()).await?;
+    for b in before {
+        let id: String = b.get("id");
+        let timestamp: i64 = b.get("timestamp");
+        let level: i16 = b.get("level");
+        let typ: i16 = b.get("typ");
+        let ip: Option<String> = b.get("ip");
+        let data: Option<i64> = b.get("data");
+        let text: Option<String> = b.get("text");
+
+        hql.execute(
+            r#"
+INSERT INTO events (id, timestamp, level, typ, ip, data, text)
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+            params!(id, timestamp, level, typ, ip, data, text),
+        )
+        .await?;
+    }
+
+    // USER ATTR CONFIG
+    debug!("Migrating table: user_attr_config");
+    let before = sqlx::query_as::<_, UserAttrConfigEntity>("select * from user_attr_config")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELET FROM user_attr_config", params!())
+        .await?;
+    for b in before {
+        hql.execute(
+            "INSET INTO user_attr_config (name, desc) VALUES ($1, $2)",
+            params!(b.name, b.desc),
+        )
+        .await?;
+    }
+
+    // USER ATTR VALUES
+    debug!("Migrating table: user_attr_values");
+    let before = sqlx::query_as::<_, UserAttrValueEntity>("select * from user_attr_values")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM user_attr_values", params!())
+        .await?;
+    for b in before {
+        hql.execute(
+            "INSERT INTO user_attr_values (user_id, key, value) VALUES ($1, $2, $3)",
+            params!(b.user_id, b.key, b.value),
+        )
+        .await?;
+    }
+
+    // USERS VALUES
+    debug!("Migrating table: users_values");
+    let before = sqlx::query_as::<_, UserValues>("select * from users_values")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM users_values", params!()).await?;
+    for b in before {
+        hql.execute(
+            r#"
+INSERT INTO
+users_values (id, birthdate, phone, street, zip, city, country)
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+            params!(
+                b.id,
+                b.birthdate,
+                b.phone,
+                b.street,
+                b.zip,
+                b.city,
+                b.country
+            ),
+        )
+        .await?;
+    }
+
+    // DEVICES
+    debug!("Migrating table: devices");
+    let before = sqlx::query_as::<_, DeviceEntity>("select * from devices")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM devices", params!()).await?;
+    for b in before {
+        hql.execute(
+            r#"
+INSERT INTO devices
+(id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+            params!(
+                b.id,
+                b.client_id,
+                b.user_id,
+                b.created,
+                b.access_exp,
+                b.refresh_exp,
+                b.peer_ip,
+                b.name
+            ),
+        )
+        .await?;
+    }
+
+    // REFRESH TOKENS DEVICES
+    debug!("Migrating table: devices");
+    let before = sqlx::query_as::<_, RefreshTokenDevice>("select * from refresh_tokens_devices")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM refresh_tokens_devices", params!())
+        .await?;
+    for b in before {
+        hql.execute(
+            r#"
+INSERT INTO refresh_tokens_devices
+(id, device_id, user_id, nbf, exp, scope)
+VALUES ($1, $2, $3, $4, $5, $6)"#,
+            params!(b.id, b.device_id, b.user_id, b.nbf, b.exp, b.scope),
+        )
+        .await?;
+    }
+
+    // SESSIONS
+    debug!("Migrating table: sessions");
+    let before = sqlx::query_as::<_, Session>("select * from sessions")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM sessions", params!()).await?;
+    for b in before {
+        hql.execute(
+            r#"
+INSERT INTO
+sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
+            params!(
+                b.id,
+                b.csrf_token,
+                b.user_id,
+                b.roles,
+                b.groups,
+                b.is_mfa,
+                b.state,
+                b.exp,
+                b.last_seen
+            ),
+        )
+        .await?;
+    }
+
+    // RECENT PASSWORDS
+    debug!("Migrating table: recent_passwords");
+    let before = sqlx::query_as::<_, RecentPasswordsEntity>("select * from recent_passwords")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM recent_passwords", params!())
+        .await?;
+    for b in before {
+        hql.execute(
+            "INSERT INTO recent_passwords (user_id, passwords) VALUES ($1, $2)",
+            params!(b.user_id, b.passwords),
+        )
+        .await?;
+    }
+
+    // WEBIDS
+    debug!("Migrating table: webids");
+    let before = sqlx::query_as::<_, WebId>("select * from webids")
+        .fetch_all(&db_from)
+        .await?;
+    hql.execute("DELETE FROM webids", params!()).await?;
+    for b in before {
+        hql.execute(
+            "INSERT INTO webids (user_id, custom_triples, expose_email) VALUES ($1, $2, $3)",
+            params!(b.user_id, b.custom_triples, b.expose_email),
+        )
+        .await?;
+    }
+
+    Ok(())
+}
 
 /// Migrates `MIGRATE_DB_FROM` to `DATABASE_URL`
 pub async fn migrate_from_sqlite(
@@ -1032,7 +1602,7 @@ pub async fn migrate_from_postgres(
 
     // CONFIG
     debug!("Migrating table: config");
-    let before = sqlx::query_as::<_, ConfigEntity>("SELECT id, data FROM rauthy.config")
+    let before = sqlx::query_as::<_, ConfigEntity>("SELECT * FROM rauthy.config")
         .fetch_all(&db_from)
         .await?;
     sqlx::query("DELETE FROM config").execute(db_to).await?;

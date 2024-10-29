@@ -2438,7 +2438,7 @@ dependencies = [
  "serde_json",
  "serde_rusqlite",
  "sha2",
- "spow 0.3.0",
+ "spow",
  "strum",
  "thiserror",
  "tokio",
@@ -4135,7 +4135,7 @@ dependencies = [
  "rustls-pki-types",
  "serde",
  "serde_json",
- "spow 0.4.0",
+ "spow",
  "tokio",
  "tokio-test",
  "tracing",
@@ -4216,7 +4216,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_json_path",
- "spow 0.4.0",
+ "spow",
  "sqlx",
  "time",
  "tokio",
@@ -4246,7 +4246,7 @@ dependencies = [
  "rauthy-service",
  "rust-embed",
  "semver",
- "spow 0.4.0",
+ "spow",
  "time",
  "tokio",
  "tokio-test",
@@ -4335,7 +4335,7 @@ dependencies = [
  "serde_json",
  "serde_json_path",
  "serde_with",
- "spow 0.4.0",
+ "spow",
  "sqlx",
  "strum",
  "time",
@@ -5488,21 +5488,6 @@ checksum = "d91ed6c858b01f942cd56b37a94b3e0a1798290327d1236e4d9cf4eaca44d29d"
 dependencies = [
  "base64ct",
  "der",
-]
-
-[[package]]
-name = "spow"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67d1c6fc95df640d86cdac717d82614498f55cc48949d667885ae70575adaaf4"
-dependencies = [
- "base64 0.22.1",
- "chrono",
- "getrandom",
- "nom",
- "serde",
- "sha2",
- "thiserror",
 ]
 
 [[package]]
