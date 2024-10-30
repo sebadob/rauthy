@@ -969,7 +969,8 @@ pub async fn post_webauthn_reg_start(
 /// Finishes the registration process for a new WebAuthn Device for this user
 ///
 /// **Permissions**
-/// - authenticated and logged in user for this very {id}
+/// - authenticated and logged-in user for this very {id}
+/// - valid MagicLink code during password reset
 #[utoipa::path(
     post,
     path = "/users/{id}/webauthn/register/finish",

@@ -40,7 +40,7 @@ impl UserValues {
 
         let slf = if is_hiqlite() {
             client
-                .query_as_one("SELECT * FROM users_values WHERE id = $1", params!(user_id))
+                .query_as_optional("SELECT * FROM users_values WHERE id = $1", params!(user_id))
                 .await?
         } else {
             sqlx::query_as::<_, Self>("SELECT * FROM users_values WHERE id = $1")

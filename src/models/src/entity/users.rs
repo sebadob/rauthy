@@ -89,6 +89,19 @@ pub struct User {
 
 // CRUD
 impl User {
+    /// Invalidates the cache for the given user
+    pub async fn invalidate_cache(user_id: &str, email: &str) -> Result<(), ErrorResponse> {
+        let client = DB::client();
+
+        let idx = format!("{}_{}", IDX_USERS, &user_id);
+        client.delete(Cache::User, idx).await?;
+
+        let idx = format!("{}_{}", IDX_USERS, &email);
+        client.delete(Cache::User, idx).await?;
+
+        Ok(())
+    }
+
     pub async fn count(data: &web::Data<AppState>) -> Result<i64, ErrorResponse> {
         let client = DB::client();
 
@@ -212,12 +225,7 @@ impl User {
                 .await?;
         }
 
-        let idx = format!("{}_{}", IDX_USERS, &self.id);
-        client.delete(Cache::User, idx).await?;
-
-        let idx = format!("{}_{}", IDX_USERS, &self.email);
-        client.delete(Cache::User, idx).await?;
-
+        Self::invalidate_cache(&self.id, &self.email).await?;
         Self::count_dec(data).await?;
 
         Ok(())
@@ -686,7 +694,12 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
     /// Appends multiple necessary transaction queries to update a user to the given `Vec<_>`.
     ///
     /// CAUTION:
-    /// DO NOT use this function to update a user's `email` or `enabled` state!
+    /// You MUST clear the updated users from the cache after a successful txn commit!
+    /// Either clear the whole `Cache::User` cache or use `User::invalidate_cache()`.
+    ///
+    /// CAUTION:
+    /// DO NOT use this function to update a user's `email` or `enabled` state, as this would
+    /// need additional cache cleanup and E-Mail handling!
     pub fn save_txn_append(self, txn: &mut Vec<(&str, Params)>) {
         txn.push((
             r#"
@@ -719,6 +732,10 @@ WHERE id = $18"#,
         ));
     }
 
+    /// CAUTION:
+    /// You MUST clear the updated users from the cache after a successful txn commit!
+    /// Either clear the whole `Cache::User` cache or use `User::invalidate_cache()`.
+    ///
     /// CAUTION:
     /// DO NOT use this function to update a user's `email` or `enabled` state!
     pub async fn save_txn(&self, txn: &mut DbTxn<'_>) -> Result<(), ErrorResponse> {
@@ -929,6 +946,30 @@ LIMIT $2"#,
         };
 
         Ok(res)
+    }
+
+    pub async fn set_email_verified(
+        data: &web::Data<AppState>,
+        user_id: String,
+        email_verified: bool,
+    ) -> Result<(), ErrorResponse> {
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    "UPDATE users SET email_verified = $1 WHERE id = $2",
+                    params!(email_verified, user_id),
+                )
+                .await?;
+        } else {
+            sqlx::query!(
+                "UPDATE users SET email_verified = $1 WHERE id = $2",
+                email_verified,
+                user_id
+            )
+            .execute(&data.db)
+            .await?;
+        }
+        Ok(())
     }
 
     pub async fn update(

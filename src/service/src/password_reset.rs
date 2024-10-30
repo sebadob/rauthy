@@ -130,10 +130,7 @@ pub async fn handle_put_user_passkey_finish<'a>(
     debug!("invalidating magic link pwd");
     // all good
     ml.invalidate(data).await?;
-    // we are re-fetching the user on purpose here to not need to modify the general webauthn fn
-    let mut user = User::find(data, user_id).await?;
-    user.email_verified = true;
-    user.save(data, None).await?;
+    User::set_email_verified(data, user_id, true).await?;
 
     // delete the cookie
     let cookie = ApiCookie::build(PWD_RESET_COOKIE, "", 0);

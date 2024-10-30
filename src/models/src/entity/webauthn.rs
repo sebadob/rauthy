@@ -48,17 +48,19 @@ pub struct PasskeyEntity {
 
 // CRUD
 impl PasskeyEntity {
+    /// If the `User` is `Some(_)`, a `User::save()` will be included in the `txn`
     pub async fn create(
+        data: &web::Data<AppState>,
         user_id: String,
+        user: Option<User>,
         passkey_user_id: Uuid,
         name: String,
         pk: Passkey,
         user_verified: bool,
-        txn: &mut DbTxn<'_>,
     ) -> Result<(), ErrorResponse> {
         // json, because bincode does not support deserialize from any, which would be the case here
         let passkey = serde_json::to_string(&pk)?;
-        let now = OffsetDateTime::now_utc().unix_timestamp();
+        let now = Utc::now().timestamp();
 
         let entity = Self {
             user_id,
@@ -71,32 +73,48 @@ impl PasskeyEntity {
             user_verified: Some(user_verified),
         };
 
+        let user_email = user.as_ref().map(|u| u.email.clone());
         let client = DB::client();
+
         if is_hiqlite() {
-            client
-                .execute(
-                    r#"
+            let mut txn = Vec::with_capacity(2);
+
+            if let Some(user) = user {
+                debug_assert!(user.webauthn_user_id.is_some());
+                user.save_txn_append(&mut txn);
+            }
+
+            txn.push((
+                r#"
 INSERT INTO passkeys
 (user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
-                    params!(
-                        &entity.user_id,
-                        entity.name,
-                        entity.passkey_user_id,
-                        entity.passkey,
-                        entity.credential_id,
-                        now,
-                        now,
-                        entity.user_verified
-                    ),
-                )
-                .await?;
+                params!(
+                    &entity.user_id,
+                    entity.name,
+                    entity.passkey_user_id,
+                    entity.passkey,
+                    entity.credential_id,
+                    now,
+                    now,
+                    entity.user_verified
+                ),
+            ));
+
+            client.txn(txn).await?;
         } else {
+            let mut txn = data.db.begin().await?;
+
+            if let Some(user) = user {
+                debug_assert!(user.webauthn_user_id.is_some());
+                user.save_txn(&mut txn).await?;
+            }
+
             sqlx::query!(
                 r#"
-    INSERT INTO passkeys
-    (user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+INSERT INTO passkeys
+(user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 entity.user_id,
                 entity.name,
                 entity.passkey_user_id,
@@ -106,10 +124,15 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 now,
                 entity.user_verified,
             )
-            .execute(&mut **txn)
+            .execute(&mut *txn)
             .await?;
+
+            txn.commit().await?;
         }
 
+        if let Some(email) = user_email {
+            User::invalidate_cache(&entity.user_id, &email).await?;
+        }
         client
             .delete(Cache::Webauthn, Self::cache_idx_user(&entity.user_id))
             .await?;
@@ -165,51 +188,54 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
     ) -> Result<(), ErrorResponse> {
         // if we delete a passkey, we must check if this is the last existing one for the user
         let pk_count = Self::count_for_user(data, user_id.clone()).await?;
+
         let mut user_to_save: Option<User> = None;
+        let mut user_email: Option<String> = None;
 
         if pk_count < 2 {
             let mut user = User::find(data, user_id.clone()).await?;
             user.webauthn_user_id = None;
 
-            // in this case, we need to check against the current password policy, if the password
-            // should expire again
+            // in this case, we need to check against the current password policy,
+            // if the password should expire again
             let policy = PasswordPolicy::find(data).await?;
             if let Some(valid_days) = policy.valid_days {
                 if user.password.is_some() {
                     user.password_expires = Some(
-                        OffsetDateTime::now_utc()
-                            .add(time::Duration::days(valid_days as i64))
-                            .unix_timestamp(),
+                        Utc::now()
+                            .add(chrono::Duration::days(valid_days as i64))
+                            .timestamp(),
                     );
                 } else {
                     user.password_expires = None;
                 }
             }
 
+            user_email = Some(user.email.clone());
             user_to_save = Some(user);
         }
 
         if is_hiqlite() {
             let mut txn = Vec::with_capacity(2);
 
-            Self::delete_by_id_name_append(user_id.clone(), name.clone(), &mut txn);
             if let Some(user) = user_to_save {
                 user.save_txn_append(&mut txn);
             }
+            Self::delete_by_id_name_append(user_id.clone(), name.clone(), &mut txn);
 
             DB::client().txn(txn).await?;
         } else {
             let mut txn = data.db.begin().await?;
 
-            Self::delete_by_id_name(&user_id, &name, &mut txn).await?;
             if let Some(user) = user_to_save {
                 user.save_txn(&mut txn).await?;
             }
+            Self::delete_by_id_name(&user_id, &name, &mut txn).await?;
 
             txn.commit().await?;
         }
 
-        Self::clear_caches_by_id_name(&user_id, &name).await?;
+        Self::clear_caches_by_id_name(&user_id, user_email, &name).await?;
 
         Ok(())
     }
@@ -239,8 +265,17 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
         ));
     }
 
-    async fn clear_caches_by_id_name(user_id: &str, name: &str) -> Result<(), ErrorResponse> {
+    async fn clear_caches_by_id_name(
+        user_id: &str,
+        user_email: Option<String>,
+        name: &str,
+    ) -> Result<(), ErrorResponse> {
         let client = DB::client();
+
+        if let Some(email) = user_email {
+            User::invalidate_cache(&user_id, &email).await?;
+        }
+
         client
             .delete(Cache::Webauthn, Self::cache_idx_single(user_id, name))
             .await?;
@@ -417,9 +452,9 @@ WHERE user_id = $3 AND name = $4"#,
         } else {
             sqlx::query!(
                 r#"
-    UPDATE passkeys
-    SET passkey = $1, last_used = $2
-    WHERE user_id = $3 AND name = $4"#,
+UPDATE passkeys
+SET passkey = $1, last_used = $2
+WHERE user_id = $3 AND name = $4"#,
                 self.passkey,
                 self.last_used,
                 self.user_id,
@@ -963,28 +998,29 @@ pub async fn reg_finish(
                 ));
             }
 
-            let mut txn = data.db.begin().await?;
-
-            if user.webauthn_user_id.is_none() {
+            let user_id = user.id.clone();
+            let create_user = if user.webauthn_user_id.is_none() {
                 user.webauthn_user_id = Some(reg_data.passkey_user_id.to_string());
                 if user.password.is_none() || *WEBAUTHN_NO_PASSWORD_EXPIRY {
                     user.password_expires = None;
                 }
-                user.save_txn(&mut txn).await?;
-            }
+                Some(user)
+            } else {
+                None
+            };
 
             PasskeyEntity::create(
-                user.id.clone(),
+                data,
+                user_id.clone(),
+                create_user,
                 reg_data.passkey_user_id,
                 req.passkey_name,
                 pk,
                 cred.user_verified,
-                &mut txn,
             )
             .await?;
-            txn.commit().await?;
 
-            info!("New PasskeyEntity saved successfully for user {}", user.id);
+            info!("New PasskeyEntity saved successfully for user {}", user_id);
         }
         Err(err) => {
             error!("Webauthn Reg Finish: {:?}", err);
