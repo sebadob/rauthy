@@ -185,6 +185,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .json(&cust_attr_mod)
         .send()
         .await?;
+
     assert_eq!(res.status(), 200);
     let attr = res.json::<UserAttrConfigEntity>().await?;
     assert_eq!(attr.name, cust_attr_mod.name);

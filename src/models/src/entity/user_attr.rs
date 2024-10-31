@@ -127,7 +127,7 @@ impl UserAttrConfigEntity {
         }
 
         let client = DB::client();
-        let user_attr_cache_clear_keys;
+        let user_attr_cache_cleanup_keys;
 
         if is_hiqlite() {
             // we can't know the exact capacity upfront, the +8 just reserves some additional space
@@ -142,7 +142,7 @@ impl UserAttrConfigEntity {
                 );
             }
 
-            user_attr_cache_clear_keys =
+            user_attr_cache_cleanup_keys =
                 UserAttrValueEntity::delete_all_by_key_append(&name, &mut txn).await?;
 
             txn.push((
@@ -159,7 +159,7 @@ impl UserAttrConfigEntity {
                     .await?;
             }
 
-            user_attr_cache_clear_keys =
+            user_attr_cache_cleanup_keys =
                 UserAttrValueEntity::delete_all_by_key(data, &name, &mut txn).await?;
 
             sqlx::query!("DELETE FROM user_attr_config WHERE name  = $1", name)
@@ -169,14 +169,13 @@ impl UserAttrConfigEntity {
             txn.commit().await?;
         }
 
-        for key in user_attr_cache_clear_keys {
+        for key in user_attr_cache_cleanup_keys {
             UserAttrValueEntity::clear_cache(key).await?;
         }
 
         client
             .delete(Cache::App, Self::cache_idx(&slf.name))
             .await?;
-
         Self::clear_cache_all().await?;
         Scope::clear_cache().await?;
 
@@ -246,21 +245,24 @@ impl UserAttrConfigEntity {
         let mut scope_updates = Vec::new();
 
         // we only need to update pre-computed data in other places if the name changes
-        let user_attr_cache_clear_keys = if name != req_data.name {
+        let user_attr_ids_cleanup = if name != req_data.name {
             let user_attr_cache_clear_idxs = if is_hiqlite() {
                 client
-                    .query_raw("SELECT id FROM user_attr_values WHERE key = $1", params!())
+                    .query_raw(
+                        "SELECT user_id FROM user_attr_values WHERE key = $1",
+                        params!(&name),
+                    )
                     .await?
                     .into_iter()
-                    .map(|mut row| row.get::<String>("id"))
+                    .map(|mut row| row.get::<String>("user_id"))
                     .collect::<Vec<_>>()
             } else {
-                sqlx::query("SELECT id FROM user_attr_values WHERE key = $1")
+                sqlx::query("SELECT user_id FROM user_attr_values WHERE key = $1")
                     .bind(&name)
                     .fetch_all(&data.db)
                     .await?
                     .into_iter()
-                    .map(|row| row.get("id"))
+                    .map(|row| row.get("user_id"))
                     .collect::<Vec<_>>()
             };
 
@@ -347,11 +349,12 @@ impl UserAttrConfigEntity {
             txn.commit().await?;
         }
 
-        // TODO double check after hiqlite migration if these are enough clears
-        for key in user_attr_cache_clear_keys {
+        for user_id in user_attr_ids_cleanup {
+            let key = UserAttrValueEntity::cache_idx(&user_id);
             UserAttrValueEntity::clear_cache(key).await?;
         }
         Self::clear_cache_all().await?;
+        Scope::clear_cache().await?;
 
         Ok(slf)
     }
@@ -399,8 +402,8 @@ pub struct UserAttrValueEntity {
 }
 
 impl UserAttrValueEntity {
-    pub async fn clear_cache(key: String) -> Result<(), ErrorResponse> {
-        DB::client().delete(Cache::User, key).await?;
+    pub async fn clear_cache(cache_idx: String) -> Result<(), ErrorResponse> {
+        DB::client().delete(Cache::User, cache_idx).await?;
         Ok(())
     }
 

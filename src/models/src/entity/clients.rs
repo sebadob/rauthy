@@ -83,7 +83,7 @@ impl Client {
     pub async fn create(
         data: &web::Data<AppState>,
         mut client_req: NewClientRequest,
-    ) -> Result<(), ErrorResponse> {
+    ) -> Result<Self, ErrorResponse> {
         let kid = if client_req.confidential {
             let (_cleartext, enc) = Self::generate_new_secret()?;
             client_req.secret = Some(enc);
@@ -105,26 +105,26 @@ client_uri, contacts)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
 $18, $19, $20)"#,
                     params!(
-                        client.id,
-                        client.name,
+                        &client.id,
+                        &client.name,
                         client.enabled,
                         client.confidential,
-                        client.secret,
-                        client.secret_kid,
-                        client.redirect_uris,
-                        client.post_logout_redirect_uris,
-                        client.allowed_origins,
-                        client.flows_enabled,
-                        client.access_token_alg,
-                        client.id_token_alg,
+                        &client.secret,
+                        &client.secret_kid,
+                        &client.redirect_uris,
+                        &client.post_logout_redirect_uris,
+                        &client.allowed_origins,
+                        &client.flows_enabled,
+                        &client.access_token_alg,
+                        &client.id_token_alg,
                         client.auth_code_lifetime,
                         client.access_token_lifetime,
-                        client.scopes,
-                        client.default_scopes,
-                        client.challenge,
+                        &client.scopes,
+                        &client.default_scopes,
+                        &client.challenge,
                         client.force_mfa,
-                        client.client_uri,
-                        client.contacts
+                        &client.client_uri,
+                        &client.contacts
                     ),
                 )
                 .await?;
@@ -162,7 +162,7 @@ $18, $19, $20)"#,
             .await?;
         }
 
-        Ok(())
+        Ok(client)
     }
 
     pub async fn create_dynamic(

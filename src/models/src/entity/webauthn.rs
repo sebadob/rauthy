@@ -273,7 +273,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
         let client = DB::client();
 
         if let Some(email) = user_email {
-            User::invalidate_cache(&user_id, &email).await?;
+            User::invalidate_cache(user_id, &email).await?;
         }
 
         client

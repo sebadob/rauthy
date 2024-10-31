@@ -140,8 +140,8 @@ pub async fn post_clients(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Create)?;
 
-    Client::create(&data, client.into_inner()).await?;
-    Ok(HttpResponse::Created().finish())
+    let client = Client::create(&data, client.into_inner()).await?;
+    Ok(HttpResponse::Ok().json(ClientResponse::from(client)))
 }
 
 /// OIDC Dynamic Client Registration (if enabled)
