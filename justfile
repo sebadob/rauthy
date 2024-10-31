@@ -220,7 +220,7 @@ migrate-postgres:
     {{ db_url_postgres }} sqlx migrate run --source migrations/postgres
 
 # runs any of: none (sqlite), postgres, ui
-run ty="sqlite":
+run ty="hiqlite":
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
@@ -230,6 +230,8 @@ run ty="sqlite":
     elif [[ {{ ty }} == "ui" ]]; then
       cd frontend
       {{ npm }} run dev -- --host=0.0.0.0
+    elif [[ {{ ty }} == "hiqlite" ]]; then
+      {{ db_url_hiqlite }} cargo run
     elif [[ {{ ty }} == "sqlite" ]]; then
       {{ db_url_sqlite }} cargo run
     fi
