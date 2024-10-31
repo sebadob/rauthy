@@ -1,413 +1,413 @@
-create table api_keys
+CREATE TABLE api_keys
 (
-    name       TEXT    not null
-        constraint api_keys_pk
-            primary key,
-    secret     BLOB    not null,
-    created    INTEGER not null,
+    name       TEXT    NOT NULL
+        CONSTRAINT api_keys_pk
+            PRIMARY KEY,
+    secret     BLOB    NOT NULL,
+    created    INTEGER NOT NULL,
     expires    INTEGER,
-    enc_key_id TEXT    not null,
-    access     BLOB    not null
-);
+    enc_key_id TEXT    NOT NULL,
+    access     BLOB    NOT NULL
+) STRICT;
 
-create index api_keys_enc_key_id_index
-    on api_keys (enc_key_id);
+CREATE INDEX api_keys_enc_key_id_index
+    ON api_keys (enc_key_id);
 
-create index api_keys_expires_index
-    on api_keys (expires);
+CREATE INDEX api_keys_expires_index
+    ON api_keys (expires);
 
-create table auth_providers
+CREATE TABLE auth_providers
 (
-    id                      TEXT    not null
-        constraint auth_providers_pk
-            primary key,
-    enabled                 INTEGER not null,
-    name                    TEXT    not null,
-    typ                     TEXT    not null,
-    issuer                  TEXT    not null,
-    authorization_endpoint  TEXT    not null,
-    token_endpoint          TEXT    not null,
-    userinfo_endpoint       TEXT    not null,
-    client_id               TEXT    not null,
+    id                      TEXT    NOT NULL
+        CONSTRAINT auth_providers_pk
+            PRIMARY KEY,
+    enabled                 INTEGER NOT NULL,
+    name                    TEXT    NOT NULL,
+    typ                     TEXT    NOT NULL,
+    issuer                  TEXT    NOT NULL,
+    authorization_endpoint  TEXT    NOT NULL,
+    token_endpoint          TEXT    NOT NULL,
+    userinfo_endpoint       TEXT    NOT NULL,
+    client_id               TEXT    NOT NULL,
     secret                  BLOB,
-    scope                   TEXT    not null,
+    scope                   TEXT    NOT NULL,
     admin_claim_path        TEXT,
     admin_claim_value       TEXT,
     mfa_claim_path          TEXT,
     mfa_claim_value         TEXT,
-    allow_insecure_requests INTEGER not null,
-    use_pkce                INTEGER not null,
+    allow_insecure_requests INTEGER NOT NULL,
+    use_pkce                INTEGER NOT NULL,
     root_pem                TEXT
-);
+) STRICT;
 
-create table auth_provider_logos
+CREATE TABLE auth_provider_logos
 (
-    auth_provider_id TEXT not null
-        constraint auth_provider_logos_auth_providers_id_fk
-            references auth_providers
-            on update cascade on delete cascade,
-    res              TEXT not null,
-    content_type     TEXT not null,
-    data             BLOB not null,
-    constraint auth_provider_logos_pk
-        primary key (auth_provider_id, res)
-);
+    auth_provider_id TEXT NOT NULL
+        CONSTRAINT auth_provider_logos_auth_providers_id_fk
+            REFERENCES auth_providers
+            ON UPDATE CASCADE ON DELETE CASCADE,
+    res              TEXT NOT NULL,
+    content_type     TEXT NOT NULL,
+    data             BLOB NOT NULL,
+    CONSTRAINT auth_provider_logos_pk
+        PRIMARY KEY (auth_provider_id, res)
+) STRICT;
 
-create table clients
+CREATE TABLE clients
 (
-    id                        TEXT    not null
-        constraint clients_pk
-            primary key,
+    id                        TEXT    NOT NULL
+        CONSTRAINT clients_pk
+            PRIMARY KEY,
     name                      TEXT,
-    enabled                   INTEGER not null,
-    confidential              INTEGER not null,
+    enabled                   INTEGER NOT NULL,
+    confidential              INTEGER NOT NULL,
     secret                    BLOB,
     secret_kid                TEXT,
-    redirect_uris             TEXT    not null,
+    redirect_uris             TEXT    NOT NULL,
     post_logout_redirect_uris TEXT,
     allowed_origins           TEXT,
-    flows_enabled             TEXT    not null,
-    access_token_alg          TEXT    not null,
-    id_token_alg              TEXT    not null,
-    auth_code_lifetime        INTEGER not null,
-    access_token_lifetime     INTEGER not null,
-    scopes                    TEXT    not null,
-    default_scopes            TEXT    not null,
+    flows_enabled             TEXT    NOT NULL,
+    access_token_alg          TEXT    NOT NULL,
+    id_token_alg              TEXT    NOT NULL,
+    auth_code_lifetime        INTEGER NOT NULL,
+    access_token_lifetime     INTEGER NOT NULL,
+    scopes                    TEXT    NOT NULL,
+    default_scopes            TEXT    NOT NULL,
     challenge                 TEXT,
-    force_mfa                 INTEGER not null,
+    force_mfa                 INTEGER NOT NULL,
     client_uri                TEXT,
     contacts                  TEXT
-);
+) STRICT;
 
-create table client_logos
+CREATE TABLE client_logos
 (
-    client_id    TEXT not null
-        constraint client_logos_client_id_fk
-            references clients
-            on update cascade on delete cascade,
-    res          TEXT not null,
-    content_type TEXT not null,
-    data         BLOB not null,
-    constraint client_logos_pk
-        primary key (client_id, res)
-);
+    client_id    TEXT NOT NULL
+        CONSTRAINT client_logos_client_id_fk
+            REFERENCES clients
+            ON UPDATE CASCADE ON DELETE CASCADE,
+    res          TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    data         BLOB NOT NULL,
+    CONSTRAINT client_logos_pk
+        PRIMARY KEY (client_id, res)
+) STRICT;
 
-create table clients_dyn
+CREATE TABLE clients_dyn
 (
-    id                         TEXT    not null
-        constraint clients_dyn_pk
-            primary key
-        constraint clients_dyn_clients_id_fk
-            references clients
-            on update cascade on delete cascade,
-    created                    INTEGER not null,
+    id                         TEXT    NOT NULL
+        CONSTRAINT clients_dyn_pk
+            PRIMARY KEY
+        CONSTRAINT clients_dyn_clients_id_fk
+            REFERENCES clients
+            ON UPDATE CASCADE ON DELETE CASCADE,
+    created                    INTEGER NOT NULL,
     last_used                  INTEGER,
-    registration_token         BLOB    not null,
-    token_endpoint_auth_method TEXT    not null
-);
+    registration_token         BLOB    NOT NULL,
+    token_endpoint_auth_method TEXT    NOT NULL
+) STRICT;
 
-create index clients_dyn_last_used_index
-    on clients_dyn (last_used);
+CREATE INDEX clients_dyn_last_used_index
+    ON clients_dyn (last_used);
 
-create table colors
+CREATE TABLE colors
 (
-    client_id TEXT not null
-        constraint colors_pk
-            primary key
-        constraint colors_clients_id_fk
-            references clients
-            on update cascade on delete cascade,
-    data      BLOB not null
-);
+    client_id TEXT NOT NULL
+        CONSTRAINT colors_pk
+            PRIMARY KEY
+        CONSTRAINT colors_clients_id_fk
+            REFERENCES clients
+            ON UPDATE CASCADE ON DELETE CASCADE,
+    data      BLOB NOT NULL
+) STRICT;
 
-create table config
+CREATE TABLE config
 (
     id   TEXT
-        constraint config_pk
-            primary key,
+        CONSTRAINT config_pk
+            PRIMARY KEY,
     data BLOB
-);
+) STRICT;
 
-create table events
+CREATE TABLE events
 (
-    id        TEXT    not null,
-    timestamp INTEGER not null,
-    typ       INTEGER not null,
-    level     INTEGER not null,
+    id        TEXT    NOT NULL,
+    timestamp INTEGER NOT NULL,
+    typ       INTEGER NOT NULL,
+    level     INTEGER NOT NULL,
     ip        TEXT,
     data      INTEGER,
     TEXT      TEXT,
-    constraint events_pk
-        primary key (id, timestamp)
-);
+    CONSTRAINT events_pk
+        PRIMARY KEY (id, timestamp)
+) STRICT;
 
-create index events_timestamp_index
-    on events (timestamp desc);
+CREATE INDEX events_timestamp_index
+    ON events (timestamp desc);
 
-create table groups
+CREATE TABLE groups
 (
-    id   TEXT not null
-        constraint groups_pk
-            primary key,
-    name TEXT not null
-);
+    id   TEXT NOT NULL
+        CONSTRAINT groups_pk
+            PRIMARY KEY,
+    name TEXT NOT NULL
+) STRICT;
 
-create table jwks
+CREATE TABLE jwks
 (
-    kid        TEXT    not null
-        constraint jwks_pk
-            primary key,
-    created_at INTEGER not null,
-    signature  TEXT    not null,
-    enc_key_id TEXT    not null,
-    jwk        BLOB    not null
-);
+    kid        TEXT    NOT NULL
+        CONSTRAINT jwks_pk
+            PRIMARY KEY,
+    created_at INTEGER NOT NULL,
+    signature  TEXT    NOT NULL,
+    enc_key_id TEXT    NOT NULL,
+    jwk        BLOB    NOT NULL
+) STRICT;
 
-create table roles
+CREATE TABLE roles
 (
-    id   TEXT not null
-        constraint roles_pk
-            primary key,
-    name TEXT not null
-);
+    id   TEXT NOT NULL
+        CONSTRAINT roles_pk
+            PRIMARY KEY,
+    name TEXT NOT NULL
+) STRICT;
 
-create table scopes
+CREATE TABLE scopes
 (
-    id                  TEXT not null
-        constraint scopes_pk
-            primary key,
-    name                TEXT not null,
+    id                  TEXT NOT NULL
+        CONSTRAINT scopes_pk
+            PRIMARY KEY,
+    name                TEXT NOT NULL,
     attr_include_access TEXT,
     attr_include_id     TEXT
-);
+) STRICT;
 
-create table user_attr_config
+CREATE TABLE user_attr_config
 (
-    name TEXT not null
-        constraint user_attr_config_pk
-            primary key,
+    name TEXT NOT NULL
+        CONSTRAINT user_attr_config_pk
+            PRIMARY KEY,
     desc TEXT
-);
+) STRICT;
 
-create table users
+CREATE TABLE users
 (
-    id                    TEXT              not null
-        constraint users_pk
-            primary key,
-    email                 TEXT              not null
-        constraint users_email
-            unique,
-    given_name            TEXT              not null,
-    family_name           TEXT              not null,
+    id                    TEXT              NOT NULL
+        CONSTRAINT users_pk
+            PRIMARY KEY,
+    email                 TEXT              NOT NULL
+        CONSTRAINT users_email
+            UNIQUE,
+    given_name            TEXT              NOT NULL,
+    family_name           TEXT              NOT NULL,
     password              TEXT,
-    roles                 TEXT              not null,
+    roles                 TEXT              NOT NULL,
     groups                TEXT,
-    enabled               INTEGER           not null,
-    email_verified        INTEGER           not null,
+    enabled               INTEGER           NOT NULL,
+    email_verified        INTEGER           NOT NULL,
     password_expires      INTEGER,
-    created_at            INTEGER           not null,
+    created_at            INTEGER           NOT NULL,
     last_login            INTEGER,
     last_failed_login     INTEGER,
     failed_login_attempts INTEGER,
-    language              TEXT default 'en' not null,
+    language              TEXT DEFAULT 'en' NOT NULL,
     webauthn_user_id      TEXT,
     user_expires          INTEGER,
     auth_provider_id      TEXT
-        constraint users_auth_providers_id_fk
-            references auth_providers
-            on update cascade on delete set null,
+        CONSTRAINT users_auth_providers_id_fk
+            REFERENCES auth_providers
+            ON UPDATE CASCADE ON DELETE set null,
     federation_uid        TEXT,
-    constraint users_federation_key
-        unique (auth_provider_id, federation_uid)
-);
+    CONSTRAINT users_federation_key
+        UNIQUE (auth_provider_id, federation_uid)
+) STRICT;
 
-create table devices
+CREATE TABLE devices
 (
-    id          TEXT    not null
-        constraint devices_pk
-            primary key,
-    client_id   TEXT    not null
-        constraint devices_clients_id_fk
-            references clients
-            on update cascade on delete cascade,
+    id          TEXT    NOT NULL
+        CONSTRAINT devices_pk
+            PRIMARY KEY,
+    client_id   TEXT    NOT NULL
+        CONSTRAINT devices_clients_id_fk
+            REFERENCES clients
+            ON UPDATE CASCADE ON DELETE CASCADE,
     user_id     TEXT
-        constraint devices_users_id_fk
-            references users
-            on update cascade on delete cascade,
-    created     INTEGER not null,
-    access_exp  INTEGER not null,
+        CONSTRAINT devices_users_id_fk
+            REFERENCES users
+            ON UPDATE CASCADE ON DELETE CASCADE,
+    created     INTEGER NOT NULL,
+    access_exp  INTEGER NOT NULL,
     refresh_exp INTEGER,
-    peer_ip     TEXT    not null,
-    name        TEXT    not null
-);
+    peer_ip     TEXT    NOT NULL,
+    name        TEXT    NOT NULL
+) STRICT;
 
-create index devices_access_exp_refresh_exp_index
-    on devices (access_exp, refresh_exp);
+CREATE INDEX devices_access_exp_refresh_exp_index
+    ON devices (access_exp, refresh_exp);
 
-create table magic_links
+CREATE TABLE magic_links
 (
-    id         TEXT    not null
-        constraint magic_links_pk
-            primary key,
-    user_id    TEXT    not null
-        references users
-            on update cascade on delete cascade,
-    csrf_token TEXT    not null,
+    id         TEXT    NOT NULL
+        CONSTRAINT magic_links_pk
+            PRIMARY KEY,
+    user_id    TEXT    NOT NULL
+        REFERENCES users
+            ON UPDATE CASCADE ON DELETE CASCADE,
+    csrf_token TEXT    NOT NULL,
     cookie     TEXT,
-    exp        INTEGER not null,
-    used       INTEGER not null,
-    usage      TEXT    not null
-);
+    exp        INTEGER NOT NULL,
+    used       INTEGER NOT NULL,
+    usage      TEXT    NOT NULL
+) STRICT;
 
-create index magic_links_exp_index
-    on magic_links (exp);
+CREATE INDEX magic_links_exp_index
+    ON magic_links (exp);
 
-create index magic_links_user_id_index
-    on magic_links (user_id);
+CREATE INDEX magic_links_user_id_index
+    ON magic_links (user_id);
 
-create table passkeys
+CREATE TABLE passkeys
 (
-    user_id         TEXT    not null
-        constraint passkeys_users_id_fk
-            references users
-            on update cascade on delete cascade,
-    name            TEXT    not null,
-    passkey_user_id TEXT    not null,
-    passkey         TEXT    not null,
-    credential_id   BLOB    not null,
-    registered      INTEGER not null,
-    last_used       INTEGER not null,
+    user_id         TEXT    NOT NULL
+        CONSTRAINT passkeys_users_id_fk
+            REFERENCES users
+            ON UPDATE CASCADE ON DELETE CASCADE,
+    name            TEXT    NOT NULL,
+    passkey_user_id TEXT    NOT NULL,
+    passkey         TEXT    NOT NULL,
+    credential_id   BLOB    NOT NULL,
+    registered      INTEGER NOT NULL,
+    last_used       INTEGER NOT NULL,
     user_verified   INTEGER,
-    constraint passkeys_pk
-        primary key (user_id, name)
-);
+    CONSTRAINT passkeys_pk
+        PRIMARY KEY (user_id, name)
+) STRICT;
 
-create unique index passkeys_credential_id_index
-    on passkeys (credential_id);
+CREATE UNIQUE INDEX passkeys_credential_id_index
+    ON passkeys (credential_id);
 
-create index passkeys_passkey_user_id_index
-    on passkeys (passkey_user_id);
+CREATE INDEX passkeys_passkey_user_id_index
+    ON passkeys (passkey_user_id);
 
-create table recent_passwords
+CREATE TABLE recent_passwords
 (
-    user_id   TEXT not null
-        constraint recent_passwords_pk
-            primary key
-        references users
-            on update cascade on delete cascade,
-    passwords TEXT not null
-);
+    user_id   TEXT NOT NULL
+        CONSTRAINT recent_passwords_pk
+            PRIMARY KEY
+        REFERENCES users
+            ON UPDATE CASCADE ON DELETE CASCADE,
+    passwords TEXT NOT NULL
+) STRICT;
 
-create table refresh_tokens
+CREATE TABLE refresh_tokens
 (
-    id      TEXT                  not null
-        constraint refresh_tokens_pk
-            primary key,
-    user_id TEXT                  not null
-        references users
-            on update cascade on delete cascade,
-    nbf     INTEGER               not null,
-    exp     INTEGER               not null,
+    id      TEXT                  NOT NULL
+        CONSTRAINT refresh_tokens_pk
+            PRIMARY KEY,
+    user_id TEXT                  NOT NULL
+        REFERENCES users
+            ON UPDATE CASCADE ON DELETE CASCADE,
+    nbf     INTEGER               NOT NULL,
+    exp     INTEGER               NOT NULL,
     scope   TEXT,
-    is_mfa  INTEGER default false not null
-);
+    is_mfa  INTEGER DEFAULT false NOT NULL
+) STRICT;
 
-create index refresh_tokens_exp_index
-    on refresh_tokens (exp);
+CREATE INDEX refresh_tokens_exp_index
+    ON refresh_tokens (exp);
 
-create index refresh_tokens_user_id_index
-    on refresh_tokens (user_id);
+CREATE INDEX refresh_tokens_user_id_index
+    ON refresh_tokens (user_id);
 
-create table refresh_tokens_devices
+CREATE TABLE refresh_tokens_devices
 (
-    id        TEXT    not null
-        constraint refresh_tokens_devices_pk
-            primary key,
-    device_id TEXT    not null
-        constraint refresh_tokens_devices_devices_id_fk
-            references devices
-            on update cascade on delete cascade,
-    user_id   TEXT    not null
-        constraint refresh_tokens_users_user_id_fk
-            references users
-            on update cascade on delete cascade,
-    nbf       INTEGER not null,
-    exp       INTEGER not null,
+    id        TEXT    NOT NULL
+        CONSTRAINT refresh_tokens_devices_pk
+            PRIMARY KEY,
+    device_id TEXT    NOT NULL
+        CONSTRAINT refresh_tokens_devices_devices_id_fk
+            REFERENCES devices
+            ON UPDATE CASCADE ON DELETE CASCADE,
+    user_id   TEXT    NOT NULL
+        CONSTRAINT refresh_tokens_users_user_id_fk
+            REFERENCES users
+            ON UPDATE CASCADE ON DELETE CASCADE,
+    nbf       INTEGER NOT NULL,
+    exp       INTEGER NOT NULL,
     scope     TEXT
-);
+) STRICT;
 
-create index refresh_tokens_devices_exp_index
-    on refresh_tokens_devices (exp);
+CREATE INDEX refresh_tokens_devices_exp_index
+    ON refresh_tokens_devices (exp);
 
-create table sessions
+CREATE TABLE sessions
 (
-    id         TEXT    not null
-        constraint sessions_pk
-            primary key,
-    csrf_token TEXT    not null,
+    id         TEXT    NOT NULL
+        CONSTRAINT sessions_pk
+            PRIMARY KEY,
+    csrf_token TEXT    NOT NULL,
     user_id    TEXT
-        references users
-            on update cascade on delete cascade,
+        REFERENCES users
+            ON UPDATE CASCADE ON DELETE CASCADE,
     roles      TEXT,
     groups     TEXT,
-    is_mfa     INTEGER not null,
-    state      TEXT    not null,
-    exp        INTEGER not null,
-    last_seen  INTEGER not null,
+    is_mfa     INTEGER NOT NULL,
+    state      TEXT    NOT NULL,
+    exp        INTEGER NOT NULL,
+    last_seen  INTEGER NOT NULL,
     remote_ip  TEXT
-);
+) STRICT;
 
-create index sessions_exp_index
-    on sessions (exp);
+CREATE INDEX sessions_exp_index
+    ON sessions (exp);
 
-create table user_attr_values
+CREATE TABLE user_attr_values
 (
-    user_id TEXT not null
-        constraint user_attr_values_users_id_fk
-            references users
-            on update cascade on delete cascade,
-    key     TEXT not null
-        references user_attr_config
-            on update cascade on delete cascade,
-    value   BLOB not null,
-    constraint user_attr_values_pk
-        primary key (user_id, key)
-);
+    user_id TEXT NOT NULL
+        CONSTRAINT user_attr_values_users_id_fk
+            REFERENCES users
+            ON UPDATE CASCADE ON DELETE CASCADE,
+    key     TEXT NOT NULL
+        REFERENCES user_attr_config
+            ON UPDATE CASCADE ON DELETE CASCADE,
+    value   BLOB NOT NULL,
+    CONSTRAINT user_attr_values_pk
+        PRIMARY KEY (user_id, key)
+) STRICT;
 
-create index users_created_at_index
-    on users (created_at);
+CREATE INDEX users_created_at_index
+    ON users (created_at);
 
-create unique index users_email_uindex
-    on users (email);
+CREATE UNIQUE INDEX users_email_uindex
+    ON users (email);
 
-create unique index users_webauthn_user_id_index
-    on users (webauthn_user_id);
+CREATE UNIQUE INDEX users_webauthn_user_id_index
+    ON users (webauthn_user_id);
 
-create table users_values
+CREATE TABLE users_values
 (
-    id        TEXT not null
-        constraint users_values_pk
-            primary key
-        constraint users_values_users_id_fk
-            references users
-            on update cascade on delete cascade,
+    id        TEXT NOT NULL
+        CONSTRAINT users_values_pk
+            PRIMARY KEY
+        CONSTRAINT users_values_users_id_fk
+            REFERENCES users
+            ON UPDATE CASCADE ON DELETE CASCADE,
     birthdate TEXT,
     phone     TEXT,
     street    TEXT,
     zip       INTEGER,
     city      TEXT,
     country   TEXT
-);
+) STRICT;
 
-create table webids
+CREATE TABLE webids
 (
-    user_id        TEXT    not null
-        constraint webids_pk
-            primary key
-        constraint webids_users_id_fk
-            references users
-            on update cascade on delete cascade,
+    user_id        TEXT    NOT NULL
+        CONSTRAINT webids_pk
+            PRIMARY KEY
+        CONSTRAINT webids_users_id_fk
+            REFERENCES users
+            ON UPDATE CASCADE ON DELETE CASCADE,
     custom_triples TEXT,
-    expose_email   INTEGER not null
-);
+    expose_email   INTEGER NOT NULL
+) STRICT;
 
