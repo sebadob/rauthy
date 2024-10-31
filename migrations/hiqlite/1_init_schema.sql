@@ -215,7 +215,7 @@ CREATE TABLE users
     auth_provider_id      TEXT
         CONSTRAINT users_auth_providers_id_fk
             REFERENCES auth_providers
-            ON UPDATE CASCADE ON DELETE set null,
+            ON UPDATE CASCADE ON DELETE set NULL,
     federation_uid        TEXT,
     CONSTRAINT users_federation_key
         UNIQUE (auth_provider_id, federation_uid)
