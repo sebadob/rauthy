@@ -17,6 +17,12 @@ container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
 file_test_pid := ".test_pid"
+
+# The sqlite db url will only be present until the migration has been completed
+# to avoid errors from sqlx, because the current pool setup has not been adjusted yet.
+# This will be the very last step of the migration.
+
+db_url_hiqlite := "DATABASE_URL=sqlite:data/rauthy.db HIQLITE=true"
 db_url_sqlite := "DATABASE_URL=sqlite:data/rauthy.db"
 db_url_postgres := "DATABASE_URL=postgresql://rauthy:123SuperSafe@$DEV_HOST:5432/rauthy"
 
@@ -233,12 +239,12 @@ version:
     #!/usr/bin/env bash
     echo "v$TAG"
 
-# only starts the backend in test mode with sqlite database for easier test debugging
-test-backend: test-backend-stop migrate
+# only starts the backend in test mode with hiqlite database for easier test debugging
+test-backend: test-backend-stop migrate delete-hiqlite
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    {{ db_url_sqlite }} cargo run test
+    {{ db_url_hiqlite }} cargo run test
 
 # stops a possibly running test backend that may have spawned in the background for integration tests
 test-backend-stop:
@@ -248,14 +254,35 @@ test-backend-stop:
       rm {{ file_test_pid }}
     fi
 
-# runs a single test with sqlite - needs the backend being started manually
+# runs a single test with hiqlite - needs the backend being started manually
 test *test:
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    {{ db_url_sqlite }} cargo test {{ test }}
+    {{ db_url_hiqlite }} cargo test {{ test }}
 
-# runs the full set of tests with in-memory sqlite
+# runs the full set of tests with sqlite
+test-hiqlite *test: test-backend-stop migrate delete-hiqlite
+    #!/usr/bin/env bash
+    clear
+
+    {{ db_url_hiqlite }} cargo build
+    {{ db_url_hiqlite }} ./target/debug/rauthy test &
+    echo $! > {{ file_test_pid }}
+
+    # a fresh Hiqlite instance needs ~1 - 1.5 seconds for the raft initialization
+    sleep 3
+
+    if {{ db_url_hiqlite }} cargo test {{ test }}; then
+      echo "All SQLite tests successful"
+      just test-backend-stop
+    else
+      echo "Failed Tests"
+      just test-backend-stop
+      exit 1
+    fi
+
+# runs the full set of tests with sqlite
 test-sqlite *test: test-backend-stop migrate
     #!/usr/bin/env bash
     clear
