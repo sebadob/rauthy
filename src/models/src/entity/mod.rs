@@ -1,4 +1,7 @@
 use crate::app_state::DbPool;
+use crate::hiqlite::DB;
+use hiqlite::params;
+use rauthy_common::is_hiqlite;
 use sqlx::query;
 
 pub mod api_keys;
@@ -36,5 +39,9 @@ pub mod webids;
 pub mod well_known;
 
 pub async fn is_db_alive(db: &DbPool) -> bool {
-    query("SELECT 1").execute(db).await.is_ok()
+    if is_hiqlite() {
+        DB::client().query_raw("SELECT 1", params!()).await.is_ok()
+    } else {
+        query("SELECT 1").execute(db).await.is_ok()
+    }
 }
