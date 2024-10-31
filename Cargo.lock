@@ -3972,9 +3972,9 @@ dependencies = [
 
 [[package]]
 name = "pulldown-cmark"
-version = "0.10.3"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76979bea66e7875e7509c4ec5300112b316af87fa7a252ca91c448b32dfe3993"
+checksum = "f86ba2052aebccc42cbbb3ed234b8b13ce76f75c3551a303cb2bcffcff12bb14"
 dependencies = [
  "bitflags 2.6.0",
  "memchr",
@@ -3984,9 +3984,9 @@ dependencies = [
 
 [[package]]
 name = "pulldown-cmark-escape"
-version = "0.10.1"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd348ff538bc9caeda7ee8cad2d1d48236a1f443c1fa3913c6a02fe0043b1dd3"
+checksum = "007d8adb5ddab6f8e3f491ac63566a7d5002cc7ed73901f72057943fa71ae1ae"
 
 [[package]]
 name = "quick-error"
@@ -4105,7 +4105,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.26.2"
+version = "0.27.0-20241031"
 dependencies = [
  "actix-service",
  "actix-web",
@@ -4146,7 +4146,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.26.2"
+version = "0.27.0-20241031"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4167,7 +4167,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.26.2"
+version = "0.27.0-20241031"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4193,7 +4193,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.26.2"
+version = "0.27.0-20241031"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4228,7 +4228,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.26.2"
+version = "0.27.0-20241031"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4258,7 +4258,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.26.2"
+version = "0.27.0-20241031"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4277,7 +4277,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.26.2"
+version = "0.27.0-20241031"
 dependencies = [
  "accept-language",
  "actix",
@@ -4352,7 +4352,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.26.2"
+version = "0.27.0-20241031"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4372,7 +4372,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.26.2"
+version = "0.27.0-20241031"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4390,7 +4390,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.26.2"
+version = "0.27.0-20241031"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4697,9 +4697,9 @@ dependencies = [
 
 [[package]]
 name = "ruma"
-version = "0.10.1"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a555b3e7ca84892ef6e81eadb42c783b76ffb939d6ad9781a9da7023a501521"
+checksum = "d719b9e1ce5b34a1e0b6e2ba4707f7923ce7fb3474881d771466456d68f3e485"
 dependencies = [
  "assign",
  "js_int",
@@ -4713,9 +4713,9 @@ dependencies = [
 
 [[package]]
 name = "ruma-client"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "392cc73f9301e16692de7b6ddc8db2b3c392ab7bbbe5cab800f28ff49dfc2607"
+checksum = "98b28c843d376e011b98e66c91a3921c174d987440792cdd3ea61cf59e29bfe0"
 dependencies = [
  "as_variant",
  "assign",
@@ -4732,9 +4732,9 @@ dependencies = [
 
 [[package]]
 name = "ruma-client-api"
-version = "0.18.0"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa7ec9d6b5fe002fc018b1daa36f888e80a670ffa7f7778d025e90478c0838ad"
+checksum = "325e054db8d5545c00767d9868356d61e63f2c6cb8b54768346d66696ea4ad48"
 dependencies = [
  "as_variant",
  "assign",
@@ -4750,14 +4750,15 @@ dependencies = [
  "serde_html_form",
  "serde_json",
  "thiserror",
+ "url",
  "web-time",
 ]
 
 [[package]]
 name = "ruma-common"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ba97203cc4cab8dc10e62fe8156ae5c61d2553f37c3037759fbae601982fb7b"
+checksum = "4717eb215175df5087fdd79da2c9a4198c9a50fe747db0afbc23c8ac18a25da8"
 dependencies = [
  "as_variant",
  "base64 0.22.1",
@@ -4786,9 +4787,9 @@ dependencies = [
 
 [[package]]
 name = "ruma-events"
-version = "0.28.1"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fddef15eca0faee500016850a8473fb8c07b17b056b2ae5352ef67cf917102e3"
+checksum = "969cfed397d22f0338d99457409aa9c9dd4def4a5ce8d6567e914a320bad30da"
 dependencies = [
  "as_variant",
  "indexmap 2.6.0",
@@ -4805,14 +4806,15 @@ dependencies = [
  "thiserror",
  "tracing",
  "url",
+ "web-time",
  "wildmatch",
 ]
 
 [[package]]
 name = "ruma-identifiers-validation"
-version = "0.9.5"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fa38974f5901ed4e00e10aec57b9ad3b4d6d6c1a1ae683c51b88700b9f4ffba"
+checksum = "2e7f9b534a65698d7db3c08d94bf91de0046fe6c7893a7b360502f65e7011ac4"
 dependencies = [
  "js_int",
  "thiserror",
@@ -4820,10 +4822,11 @@ dependencies = [
 
 [[package]]
 name = "ruma-macros"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d36857a3350ea611ecc9968dcc4f3d5a03227a6c3fcbb446e8530e3be8852282"
+checksum = "c8d57d3cb20e8e758e8f7c5e408ce831d46758003b615100099852e468631934"
 dependencies = [
+ "cfg-if",
  "once_cell",
  "proc-macro-crate",
  "proc-macro2",

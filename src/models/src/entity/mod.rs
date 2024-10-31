@@ -40,7 +40,11 @@ pub mod well_known;
 
 pub async fn is_db_alive(db: &DbPool) -> bool {
     if is_hiqlite() {
-        DB::client().query_raw("SELECT 1", params!()).await.is_ok()
+        // execute returning instead of query to make sure the leader is reachable in HA deployment
+        DB::client()
+            .execute_returning("SELECT 1", params!())
+            .await
+            .is_ok()
     } else {
         query("SELECT 1").execute(db).await.is_ok()
     }
