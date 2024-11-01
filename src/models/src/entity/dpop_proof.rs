@@ -1,5 +1,5 @@
-use crate::cache::{Cache, DB};
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg};
+use crate::hiqlite::{Cache, DB};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{http, HttpRequest};
 use chrono::{DateTime, Utc};

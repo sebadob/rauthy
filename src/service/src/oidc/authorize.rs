@@ -94,7 +94,7 @@ pub async fn post_authorize(
         user.last_login = Some(Utc::now().timestamp());
         user.last_failed_login = None;
         user.failed_login_attempts = None;
-        user.save(data, None, None).await?;
+        user.save(data, None).await?;
     }
 
     // client validations

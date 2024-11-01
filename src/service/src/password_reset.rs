@@ -1,4 +1,5 @@
 use actix_web::{cookie, web, HttpRequest, HttpResponse};
+use chrono::Utc;
 use rauthy_api_types::users::{
     PasswordResetRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
@@ -17,7 +18,6 @@ use rauthy_models::entity::webauthn::WebauthnServiceReq;
 use rauthy_models::events::event::Event;
 use rauthy_models::language::Language;
 use rauthy_models::templates::PwdResetHtml;
-use time::OffsetDateTime;
 use tracing::{debug, error};
 
 pub async fn handle_get_pwd_reset<'a>(
@@ -54,7 +54,7 @@ pub async fn handle_get_pwd_reset<'a>(
     ml.cookie = Some(cookie_val);
     ml.save(data).await?;
 
-    let age_secs = ml.exp - OffsetDateTime::now_utc().unix_timestamp();
+    let age_secs = ml.exp - Utc::now().timestamp();
     let cookie = ApiCookie::build(PWD_RESET_COOKIE, ml.cookie.unwrap(), age_secs);
 
     Ok((content, cookie))
@@ -130,10 +130,7 @@ pub async fn handle_put_user_passkey_finish<'a>(
     debug!("invalidating magic link pwd");
     // all good
     ml.invalidate(data).await?;
-    // we are re-fetching the user on purpose here to not need to modify the general webauthn fn
-    let mut user = User::find(data, user_id).await?;
-    user.email_verified = true;
-    user.save(data, None, None).await?;
+    User::set_email_verified(data, user_id, true).await?;
 
     // delete the cookie
     let cookie = ApiCookie::build(PWD_RESET_COOKIE, "", 0);
@@ -185,7 +182,7 @@ pub async fn handle_put_user_password_reset<'a>(
     // all good
     ml.invalidate(data).await?;
     user.email_verified = true;
-    user.save(data, None, None).await?;
+    user.save(data, None).await?;
 
     let ip = match real_ip_from_req(&req).ok() {
         None => {

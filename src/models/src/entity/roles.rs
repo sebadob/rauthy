@@ -1,9 +1,11 @@
 use crate::app_state::AppState;
-use crate::cache::{Cache, DB};
 use crate::entity::users::User;
+use crate::hiqlite::{Cache, DB};
 use actix_web::web;
+use hiqlite::{params, Param, Params};
 use rauthy_api_types::roles::NewRoleRequest;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_ROLES};
+use rauthy_common::is_hiqlite;
 use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -37,13 +39,23 @@ impl Role {
             id: new_store_id(),
             name: role_req.role,
         };
-        sqlx::query!(
-            "INSERT INTO roles (id, name) VALUES ($1, $2)",
-            new_role.id,
-            new_role.name,
-        )
-        .execute(&data.db)
-        .await?;
+
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    "INSERT INTO roles (id, name) VALUES ($1, $2)",
+                    params!(new_role.id.clone(), new_role.name.clone()),
+                )
+                .await?;
+        } else {
+            sqlx::query!(
+                "INSERT INTO roles (id, name) VALUES ($1, $2)",
+                new_role.id,
+                new_role.name,
+            )
+            .execute(&data.db)
+            .await?;
+        }
 
         roles.push(new_role.clone());
         DB::client()
@@ -65,39 +77,47 @@ impl Role {
             ));
         }
 
-        // before deleting a role, cleanup every user
-        // get all users with the to-be-deleted-role assigned
-        let mut users = vec![];
-        // TODO wrap in transaction after migration
-        User::find_all(data)
-            .await?
-            .into_iter()
-            .filter(|u| u.roles.contains(&role.name))
-            .for_each(|mut u| {
-                u.delete_role(&role.name);
-                users.push(u);
-            });
+        let users = User::find_with_role(data, &role.name).await?;
 
-        let mut txn = data.db.begin().await?;
+        if is_hiqlite() {
+            let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
 
-        for user in users {
-            // TODO wrap inside single txn after hiqlite migrations
-            user.save(data, None, Some(&mut txn)).await?;
+            for mut user in users {
+                user.delete_role(&role.name);
+                user.save_txn_append(&mut txn);
+            }
+
+            txn.push(("DELETE FROM roles WHERE id = $1", params!(role.id.clone())));
+
+            for res in DB::client().txn(txn).await? {
+                let rows_affected = res?;
+                debug_assert!(rows_affected == 1);
+            }
+        } else {
+            let mut txn = data.db.begin().await?;
+
+            for mut user in users {
+                user.delete_role(&role.name);
+                user.save_txn(&mut txn).await?;
+            }
+            sqlx::query!("DELETE FROM roles WHERE id = $1", id)
+                .execute(&mut *txn)
+                .await?;
+
+            txn.commit().await?;
         }
-
-        sqlx::query!("DELETE FROM roles WHERE id = $1", id)
-            .execute(&mut *txn)
-            .await?;
-
-        txn.commit().await?;
-        // DATA_STORE.del(Cf::Roles, role.id.clone()).await?;
 
         let roles = Role::find_all(data)
             .await?
             .into_iter()
             .filter(|r| r.id != role.id)
             .collect::<Vec<Role>>();
-        DB::client()
+
+        let client = DB::client();
+        // clearing users cache is more safe and less resource intensive than trying to
+        // update each single entry
+        client.clear_cache(Cache::User).await?;
+        client
             .put(Cache::App, IDX_ROLES, &roles, CACHE_TTL_APP)
             .await?;
 
@@ -106,9 +126,15 @@ impl Role {
 
     // Returns a single role by id
     pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
-        let res = sqlx::query_as!(Self, "SELECT * FROM roles WHERE id = $1", id)
-            .fetch_one(&data.db)
-            .await?;
+        let res = if is_hiqlite() {
+            DB::client()
+                .query_as_one("SELECT * FROM roles WHERE id = $1", params!(id))
+                .await?
+        } else {
+            sqlx::query_as!(Self, "SELECT * FROM roles WHERE id = $1", id)
+                .fetch_one(&data.db)
+                .await?
+        };
 
         Ok(res)
     }
@@ -120,9 +146,15 @@ impl Role {
             return Ok(slf);
         }
 
-        let res = sqlx::query_as!(Self, "SELECT * FROM roles")
-            .fetch_all(&data.db)
-            .await?;
+        let res = if is_hiqlite() {
+            DB::client()
+                .query_as("SELECT * FROM roles", params!())
+                .await?
+        } else {
+            sqlx::query_as!(Self, "SELECT * FROM roles")
+                .fetch_all(&data.db)
+                .await?
+        };
 
         client
             .put(Cache::App, IDX_ROLES, &res, CACHE_TTL_APP)
@@ -137,34 +169,47 @@ impl Role {
         new_name: String,
     ) -> Result<Self, ErrorResponse> {
         let role = Role::find(data, &id).await?;
+        let users = User::find_with_role(data, &role.name).await?;
 
-        // find all users with the old_name assigned
-        let mut users = vec![];
-        User::find_all(data)
-            .await?
-            .into_iter()
-            .filter(|u| u.roles.contains(&role.name))
-            .for_each(|mut u| {
-                u.roles = u.roles.replace(&role.name, &new_name);
-                users.push(u);
-            });
+        let new_role = Self {
+            id: role.id.clone(),
+            name: new_name,
+        };
 
-        let mut txn = data.db.begin().await?;
+        if is_hiqlite() {
+            let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
 
-        for user in users {
-            user.save(data, None, Some(&mut txn)).await?;
+            for mut user in users {
+                user.roles = user.roles.replace(&role.name, &new_role.name);
+                user.save_txn_append(&mut txn);
+            }
+
+            txn.push((
+                "UPDATE roles SET name = $1 WHERE id = $2",
+                params!(new_role.name.clone(), new_role.id.clone()),
+            ));
+
+            for res in DB::client().txn(txn).await? {
+                let rows_affected = res?;
+                debug_assert!(rows_affected == 1);
+            }
+        } else {
+            let mut txn = data.db.begin().await?;
+
+            for mut user in users {
+                user.delete_role(&role.name);
+                user.save_txn(&mut txn).await?;
+            }
+            sqlx::query!(
+                "UPDATE roles SET name = $1 WHERE id = $2",
+                new_role.name,
+                new_role.id,
+            )
+            .execute(&mut *txn)
+            .await?;
+
+            txn.commit().await?;
         }
-
-        let new_role = Role { id, name: new_name };
-        sqlx::query!(
-            "UPDATE roles SET name = $1 WHERE id = $2",
-            new_role.name,
-            new_role.id,
-        )
-        .execute(&mut *txn)
-        .await?;
-
-        txn.commit().await?;
 
         let roles = Role::find_all(data)
             .await?
@@ -176,6 +221,9 @@ impl Role {
                 r
             })
             .collect::<Vec<Role>>();
+
+        let client = DB::client();
+        client.clear_cache(Cache::User).await?;
         DB::client()
             .put(Cache::App, IDX_ROLES, &roles, CACHE_TTL_APP)
             .await?;

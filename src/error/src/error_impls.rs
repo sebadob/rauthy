@@ -233,6 +233,60 @@ impl From<sqlx::Error> for ErrorResponse {
     }
 }
 
+impl From<hiqlite::Error> for ErrorResponse {
+    fn from(value: hiqlite::Error) -> Self {
+        trace!("{:?}", value);
+        // tracing::warn!("{:?}", value);
+
+        let (error, msg) = match value {
+            hiqlite::Error::BadRequest(err) => (ErrorResponseType::BadRequest, err),
+            // hiqlite::Error::Bincode(err) => todo!(),
+            // hiqlite::Error::Cache(err) => todo!(),
+            // hiqlite::Error::Channel(err) => todo!(),
+            hiqlite::Error::CheckIsLeaderError(err) => {
+                (ErrorResponseType::Connection, err.to_string().into())
+            }
+            hiqlite::Error::ClientWriteError(err) => {
+                (ErrorResponseType::Connection, err.to_string().into())
+            }
+            // hiqlite::Error::Config(err) => todo!(),
+            hiqlite::Error::Connect(err) => (ErrorResponseType::Connection, err.to_string().into()),
+            // hiqlite::Error::Cryptr(err) => todo!(),
+            hiqlite::Error::ConstraintViolation(err) => {
+                (ErrorResponseType::BadRequest, err.to_string().into())
+            }
+            // hiqlite::Error::Error(err) => todo!(),
+            // hiqlite::Error::InitializeError(err) => todo!(),
+            hiqlite::Error::LeaderChange(err) => {
+                (ErrorResponseType::Connection, err.to_string().into())
+            }
+            // hiqlite::Error::QueryParams(err) => todo!(),
+            hiqlite::Error::QueryReturnedNoRows(err) => {
+                (ErrorResponseType::NotFound, err.to_string().into())
+            }
+            // hiqlite::Error::PrepareStatement(err) => todo!(),
+            // hiqlite::Error::RaftError(err) => todo!(),
+            // hiqlite::Error::RaftErrorFatal(err) => todo!(),
+            hiqlite::Error::Request(err) => (ErrorResponseType::Connection, err.to_string().into()),
+            hiqlite::Error::S3(err) => (ErrorResponseType::Connection, err.to_string().into()),
+            // hiqlite::Error::SnapshotError(err) => todo!(),
+            hiqlite::Error::Sqlite(err) => (ErrorResponseType::Database, err.to_string().into()),
+            hiqlite::Error::Timeout(err) => (ErrorResponseType::Connection, err.to_string().into()),
+            // hiqlite::Error::Token(err) => todo!(),
+            hiqlite::Error::Transaction(err) => {
+                (ErrorResponseType::Database, err.to_string().into())
+            }
+            // hiqlite::Error::Unauthorized(err) => todo!(),
+            hiqlite::Error::WebSocket(err) => {
+                (ErrorResponseType::Connection, err.to_string().into())
+            }
+            err => (ErrorResponseType::Database, err.to_string().into()),
+        };
+
+        ErrorResponse::new(error, msg)
+    }
+}
+
 impl From<ParseColorError> for ErrorResponse {
     fn from(value: ParseColorError) -> Self {
         trace!("{:?}", value);
@@ -417,12 +471,5 @@ impl From<ruma::client::Error<reqwest::Error, ruma::api::client::Error>> for Err
             ErrorResponseType::Connection,
             format!("matrix error: {:?}", value),
         )
-    }
-}
-
-impl From<hiqlite::Error> for ErrorResponse {
-    fn from(value: hiqlite::Error) -> Self {
-        trace!("{:?}", value);
-        ErrorResponse::new(ErrorResponseType::Database, format!("{}", value))
     }
 }

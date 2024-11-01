@@ -23,13 +23,13 @@ use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
 use rauthy_middlewares::logging::RauthyLoggingMiddleware;
 use rauthy_middlewares::principal::RauthyPrincipalMiddleware;
 use rauthy_models::app_state::AppState;
-use rauthy_models::cache::DB;
 use rauthy_models::email::EMail;
 use rauthy_models::events::event::Event;
 use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::listener::EventListener;
 use rauthy_models::events::notifier::EventNotifier;
 use rauthy_models::events::{init_event_vars, ip_blacklist_handler};
+use rauthy_models::hiqlite::DB;
 use rauthy_models::migration::check_restore_backup;
 use rauthy_models::{email, ListenScheme};
 use spow::pow::Pow;
@@ -108,7 +108,7 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
         panic!("{:?}", err);
     }
 
-    debug!("Starting Cache layer");
+    debug!("Starting the persistence layer");
     DB::init().await.expect("Error starting the cache layer");
 
     // email sending

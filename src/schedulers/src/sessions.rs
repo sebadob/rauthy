@@ -1,8 +1,10 @@
+use chrono::Utc;
+use hiqlite::{params, Param};
+use rauthy_common::is_hiqlite;
 use rauthy_models::app_state::DbPool;
-use rauthy_models::cache::DB;
+use rauthy_models::hiqlite::DB;
 use std::ops::Sub;
 use std::time::Duration;
-use time::OffsetDateTime;
 use tracing::{debug, error};
 
 // Cleans up old / expired Sessions
@@ -21,18 +23,21 @@ pub async fn sessions_cleanup(db: DbPool) {
 
         debug!("Running sessions_cleanup scheduler");
 
-        let thres = OffsetDateTime::now_utc()
-            .sub(::time::Duration::hours(24))
-            .unix_timestamp();
+        let thres = Utc::now().sub(chrono::Duration::hours(24)).timestamp();
 
-        let res = sqlx::query("delete from sessions where exp < $1")
+        if is_hiqlite() {
+            if let Err(err) = DB::client()
+                .execute("DELETE FROM sessions WHERE exp < $1", params!(thres))
+                .await
+            {
+                error!("Session Cleanup Error: {:?}", err)
+            }
+        } else if let Err(err) = sqlx::query("DELETE FROM sessions WHERE exp < $1")
             .bind(thres)
             .execute(&db)
-            .await;
-
-        match res {
-            Ok(_) => {}
-            Err(err) => error!("Session Cleanup Error: {:?}", err),
+            .await
+        {
+            error!("Session Cleanup Error: {:?}", err)
         }
     }
 }

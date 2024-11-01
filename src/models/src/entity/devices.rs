@@ -1,13 +1,15 @@
 use crate::app_state::AppState;
-use crate::cache::{Cache, DB};
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
+use crate::hiqlite::{Cache, DB};
 use actix_web::web;
 use chrono::{DateTime, Utc};
+use hiqlite::{params, Param};
 use rauthy_api_types::users::DeviceResponse;
 use rauthy_common::constants::{
     CACHE_TTL_DEVICE_CODE, DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_USER_CODE_LENGTH,
     DEVICE_KEY_LENGTH, PUB_URL_WITH_SCHEME,
 };
+use rauthy_common::is_hiqlite;
 use rauthy_common::utils::get_rand;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
@@ -15,7 +17,7 @@ use sqlx::{query, query_as, FromRow};
 use std::ops::{Add, Sub};
 use tracing::info;
 
-#[derive(Debug, FromRow)]
+#[derive(Debug, Deserialize, FromRow)]
 pub struct DeviceEntity {
     pub id: String,
     pub client_id: String,
@@ -28,29 +30,58 @@ pub struct DeviceEntity {
 }
 
 impl DeviceEntity {
-    pub async fn insert(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        query!(
-            r#"INSERT INTO devices
-            (id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
-            self.id,
-            self.client_id,
-            self.user_id,
-            self.created,
-            self.access_exp,
-            self.refresh_exp,
-            self.peer_ip,
-            self.name,
-        )
-        .execute(&data.db)
-        .await?;
+    pub async fn insert(self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    r#"
+INSERT INTO devices
+(id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+                    params!(
+                        self.id,
+                        self.client_id,
+                        self.user_id,
+                        self.created,
+                        self.access_exp,
+                        self.refresh_exp,
+                        self.peer_ip,
+                        self.name
+                    ),
+                )
+                .await?;
+        } else {
+            query!(
+                r#"
+    INSERT INTO devices
+    (id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+                self.id,
+                self.client_id,
+                self.user_id,
+                self.created,
+                self.access_exp,
+                self.refresh_exp,
+                self.peer_ip,
+                self.name,
+            )
+            .execute(&data.db)
+            .await?;
+        }
+
         Ok(())
     }
 
     pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
-        let slf = query_as!(Self, "SELECT * FROM devices WHERE id = $1", id)
-            .fetch_one(&data.db)
-            .await?;
+        let slf = if is_hiqlite() {
+            DB::client()
+                .query_as_one("SELECT * FROM devices WHERE id = $1", params!(id))
+                .await?
+        } else {
+            query_as!(Self, "SELECT * FROM devices WHERE id = $1", id)
+                .fetch_one(&data.db)
+                .await?
+        };
         Ok(slf)
     }
 
@@ -58,9 +89,15 @@ impl DeviceEntity {
         data: &web::Data<AppState>,
         user_id: &str,
     ) -> Result<Vec<Self>, ErrorResponse> {
-        let res = query_as!(Self, "SELECT * FROM devices WHERE user_id = $1", user_id)
-            .fetch_all(&data.db)
-            .await?;
+        let res = if is_hiqlite() {
+            DB::client()
+                .query_as("SELECT * FROM devices WHERE user_id = $1", params!(user_id))
+                .await?
+        } else {
+            query_as!(Self, "SELECT * FROM devices WHERE user_id = $1", user_id)
+                .fetch_all(&data.db)
+                .await?
+        };
         Ok(res)
     }
 
@@ -70,22 +107,43 @@ impl DeviceEntity {
             .sub(chrono::Duration::try_hours(1).unwrap())
             .timestamp();
 
-        let res = query!(
-            r#"DELETE FROM devices
-            WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
-            exp
-        )
-        .execute(&data.db)
-        .await?;
-        info!("Cleaned up {} expires devices", res.rows_affected());
+        let rows_affected = if is_hiqlite() {
+            DB::client()
+                .execute(
+                    r#"
+DELETE FROM devices
+WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
+                    params!(exp),
+                )
+                .await?
+        } else {
+            let res = query!(
+                r#"
+DELETE FROM devices
+WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
+                exp
+            )
+            .execute(&data.db)
+            .await?
+            .rows_affected();
+            res as usize
+        };
+        info!("Cleaned up {} expires devices", rows_affected);
 
         Ok(())
     }
 
     pub async fn invalidate(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
-        query!("DELETE FROM devices WHERE id = $1", id)
-            .execute(&data.db)
-            .await?;
+        if is_hiqlite() {
+            DB::client()
+                .execute("DELETE FROM devices WHERE id = $1", params!(id))
+                .await?;
+        } else {
+            query!("DELETE FROM devices WHERE id = $1", id)
+                .execute(&data.db)
+                .await?;
+        }
+
         // we don't need to manually clean up refresh_tokens because of FK cascades
         Ok(())
     }
@@ -95,12 +153,23 @@ impl DeviceEntity {
         device_id: &str,
     ) -> Result<(), ErrorResponse> {
         RefreshTokenDevice::invalidate_all_for_device(data, device_id).await?;
-        query!(
-            "UPDATE devices SET refresh_exp = null WHERE id = $1",
-            device_id,
-        )
-        .execute(&data.db)
-        .await?;
+
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    "UPDATE devices SET refresh_exp = null WHERE id = $1",
+                    params!(device_id),
+                )
+                .await?;
+        } else {
+            query!(
+                "UPDATE devices SET refresh_exp = null WHERE id = $1",
+                device_id,
+            )
+            .execute(&data.db)
+            .await?;
+        }
+
         Ok(())
     }
 
@@ -110,14 +179,24 @@ impl DeviceEntity {
         user_id: &str,
         name: &str,
     ) -> Result<(), ErrorResponse> {
-        query!(
-            "UPDATE devices SET name = $1 WHERE id = $2 AND user_id = $3",
-            name,
-            device_id,
-            user_id
-        )
-        .execute(&data.db)
-        .await?;
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    "UPDATE devices SET name = $1 WHERE id = $2 AND user_id = $3",
+                    params!(name, device_id, user_id),
+                )
+                .await?;
+        } else {
+            query!(
+                "UPDATE devices SET name = $1 WHERE id = $2 AND user_id = $3",
+                name,
+                device_id,
+                user_id
+            )
+            .execute(&data.db)
+            .await?;
+        }
+
         Ok(())
     }
 }

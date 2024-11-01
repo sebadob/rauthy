@@ -17,7 +17,6 @@ use rauthy_models::entity::sessions::{Session, SessionState};
 use rauthy_models::entity::users::User;
 use ring::digest;
 use std::str::FromStr;
-use time::OffsetDateTime;
 use tracing::warn;
 
 #[tracing::instrument(
@@ -96,7 +95,7 @@ pub async fn grant_type_authorization_code(
         warn!(err);
         return Err(ErrorResponse::new(ErrorResponseType::Unauthorized, err));
     }
-    if code.exp < OffsetDateTime::now_utc().unix_timestamp() {
+    if code.exp < Utc::now().timestamp() {
         warn!("The Authorization Code has expired");
         return Err(ErrorResponse::new(
             ErrorResponseType::SessionExpired,
@@ -163,7 +162,7 @@ pub async fn grant_type_authorization_code(
         let sid = code.session_id.as_ref().unwrap().clone();
         let mut session = Session::find(data, sid).await?;
 
-        session.last_seen = OffsetDateTime::now_utc().unix_timestamp();
+        session.last_seen = Utc::now().timestamp();
         session.state = SessionState::Auth.as_str().to_string();
         if let Err(err) = session.validate_user_expiry(&user) {
             code.delete().await?;

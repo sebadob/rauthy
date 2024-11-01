@@ -39,8 +39,6 @@ use rauthy_models::language::Language;
 use rauthy_models::templates::{Error1Html, Error3Html, ErrorHtml, UserRegisterHtml};
 use rauthy_service::password_reset;
 use spow::pow::Pow;
-use std::ops::Add;
-use time::OffsetDateTime;
 use tracing::{error, warn};
 
 /// Returns all existing users
@@ -878,36 +876,38 @@ pub async fn delete_webauthn(
         warn!("Passkey delete from admin for user {} for key {}", id, name);
     }
 
-    // if we delete a passkey, we must check if this is the last existing one for the user
-    let pks = PasskeyEntity::find_for_user(&data, &id).await?;
-
-    let mut txn = data.db.begin().await?;
-
-    PasskeyEntity::delete_by_id_name(&data, &id, &name, Some(&mut txn)).await?;
-    if pks.len() < 2 {
-        let mut user = User::find(&data, id).await?;
-        user.webauthn_user_id = None;
-
-        // in this case, we need to check against the current password policy, if the password
-        // should expire again
-        let policy = PasswordPolicy::find(&data).await?;
-        if let Some(valid_days) = policy.valid_days {
-            if user.password.is_some() {
-                user.password_expires = Some(
-                    OffsetDateTime::now_utc()
-                        .add(time::Duration::days(valid_days as i64))
-                        .unix_timestamp(),
-                );
-            } else {
-                user.password_expires = None;
-            }
-        }
-
-        user.save(&data, None, Some(&mut txn)).await?;
-        txn.commit().await?;
-    } else {
-        txn.commit().await?;
-    }
+    PasskeyEntity::delete(&data, id, name).await?;
+    // // if we delete a passkey, we must check if this is the last existing one for the user
+    // let pks = PasskeyEntity::find_for_user(&data, &id).await?;
+    //
+    // let mut txn = data.db.begin().await?;
+    //
+    // PasskeyEntity::delete_by_id_name(&id, &name, &mut txn).await?;
+    // if pks.len() < 2 {
+    //     let mut user = User::find(&data, id).await?;
+    //     user.webauthn_user_id = None;
+    //
+    //     // in this case, we need to check against the current password policy, if the password
+    //     // should expire again
+    //     let policy = PasswordPolicy::find(&data).await?;
+    //     if let Some(valid_days) = policy.valid_days {
+    //         if user.password.is_some() {
+    //             user.password_expires = Some(
+    //                 OffsetDateTime::now_utc()
+    //                     .add(time::Duration::days(valid_days as i64))
+    //                     .unix_timestamp(),
+    //             );
+    //         } else {
+    //             user.password_expires = None;
+    //         }
+    //     }
+    //
+    //     user.save_txn(&mut txn).await?;
+    //     txn.commit().await?;
+    // } else {
+    //     txn.commit().await?;
+    // }
+    // PasskeyEntity::clear_caches_by_id_name(&id, &name).await?;
 
     // make sure to delete any existing MFA cookie when a key is deleted
     let cookie = ApiCookie::build(COOKIE_MFA, "", 0);
@@ -969,7 +969,8 @@ pub async fn post_webauthn_reg_start(
 /// Finishes the registration process for a new WebAuthn Device for this user
 ///
 /// **Permissions**
-/// - authenticated and logged in user for this very {id}
+/// - authenticated and logged-in user for this very {id}
+/// - valid MagicLink code during password reset
 #[utoipa::path(
     post,
     path = "/users/{id}/webauthn/register/finish",

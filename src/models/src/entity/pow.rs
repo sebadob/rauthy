@@ -1,4 +1,4 @@
-use crate::cache::{Cache, DB};
+use crate::hiqlite::{Cache, DB};
 use rauthy_common::constants::{CACHE_TTL_POW, POW_DIFFICULTY, POW_EXP};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use spow::pow::Pow;

@@ -11,7 +11,7 @@ use anyhow::Context;
 use argon2::Params;
 use hiqlite::NodeConfig;
 use rauthy_common::constants::{DATABASE_URL, DB_TYPE, DEV_MODE, PROXY_MODE};
-use rauthy_common::DbType;
+use rauthy_common::{is_hiqlite, DbType};
 use sqlx::pool::PoolOptions;
 use sqlx::ConnectOptions;
 use std::env;
@@ -25,6 +25,7 @@ use tracing::{debug, error, info, warn};
 use webauthn_rs::prelude::Url;
 use webauthn_rs::Webauthn;
 
+// TODO we can get rid of these feature separations after hiqlite migrations is complete
 #[cfg(feature = "postgres")]
 pub type DbPool = sqlx::PgPool;
 #[cfg(not(feature = "postgres"))]
@@ -142,6 +143,7 @@ impl AppState {
             "http"
         };
         let issuer = format!("{}://{}/auth/v1", issuer_scheme, public_url);
+        debug!("Issuer: {}", issuer);
 
         let session_lifetime = env::var("SESSION_LIFETIME")
             .unwrap_or_else(|_| String::from("14400"))
@@ -176,7 +178,9 @@ impl AppState {
             .rp_name(&rp_name);
         let webauthn = Arc::new(builder.build().expect("Invalid configuration"));
 
+        debug!("Creating DB Pool now");
         let db = Self::new_db_pool(&argon2_params.params, &issuer).await?;
+        debug!("DB Pool created");
 
         Ok(Self {
             db,
@@ -240,9 +244,17 @@ impl AppState {
                 panic!("{msg}");
             }
 
-            let pool = Self::connect_sqlite(&DATABASE_URL, db_max_conn).await?;
-            if DATABASE_URL.ends_with(":memory:") {
+            // TODO remove when Hiqlite migration is finished -> just a workaround for now
+            let mut db_url = DATABASE_URL.to_string();
+            if is_hiqlite() {
+                db_url = db_url.replace("hiqlite:", "sqlite:");
+            }
+
+            let pool = Self::connect_sqlite(&db_url, db_max_conn).await?;
+            if db_url.ends_with(":memory:") {
                 info!("Using in-memory SQLite");
+            } else if is_hiqlite() {
+                info!("Using Hiqlite");
             } else {
                 info!("Using on-disk SQLite");
             }
@@ -268,6 +280,7 @@ impl AppState {
 
         if let Ok(from) = env::var("MIGRATE_DB_FROM") {
             if is_multi_replica_deployment() {
+                // TODO does this error make sense or might we be able to do it anyway?
                 error!(
                     r#"
     You cannot use 'MIGRATE_DB_FROM' with a multi replica deployment.
@@ -299,6 +312,10 @@ impl AppState {
                 } else if from.starts_with("postgresql://") {
                     let pool_from = Self::connect_postgres(&from, 1).await?;
                     if let Err(err) = db_migrate::migrate_from_postgres(pool_from, &pool).await {
+                        panic!("Error during db migration: {:?}", err);
+                    }
+                } else if from.starts_with("hiqlite:") {
+                    if let Err(err) = db_migrate::migrate_hiqlite_to_sqlx(&pool).await {
                         panic!("Error during db migration: {:?}", err);
                     }
                 } else {
@@ -367,6 +384,7 @@ impl AppState {
 }
 
 /// Helper to check if the current deployment is using multiple nodes
+#[inline]
 fn is_multi_replica_deployment() -> bool {
     NodeConfig::from_env().nodes.len() > 1
 }

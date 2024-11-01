@@ -1,21 +1,35 @@
 use crate::app_state::DbPool;
 use crate::entity::jwk::Jwk;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
+use crate::hiqlite::DB;
+use chrono::Utc;
+use hiqlite::{params, Param};
+use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use std::ops::Add;
-use time::OffsetDateTime;
 use tracing::warn;
 
 pub async fn migrate_dev_data(db: &DbPool) -> Result<(), ErrorResponse> {
     warn!("Migrating DEV DATA - DO NOT USE IN PRODUCTION!");
 
-    let needs_migration = match sqlx::query_as::<_, Jwk>("select * from jwks")
-        .fetch_all(db)
-        .await
-    {
-        Ok(res) => res.is_empty(),
-        Err(_) => true,
+    let needs_migration = if is_hiqlite() {
+        match DB::client()
+            .query_as::<Jwk, _>("SELECT * FROM jwks", params!())
+            .await
+        {
+            Ok(res) => res.is_empty(),
+            Err(_) => true,
+        }
+    } else {
+        match sqlx::query_as::<_, Jwk>("SELECT * FROM jwks")
+            .fetch_all(db)
+            .await
+        {
+            Ok(res) => res.is_empty(),
+            Err(_) => true,
+        }
     };
+
     if !needs_migration {
         return Ok(());
     }
@@ -128,17 +142,37 @@ pub async fn migrate_dev_data(db: &DbPool) -> Result<(), ErrorResponse> {
     jwks.push(entity);
 
     for jwk in jwks {
-        let _ = sqlx::query(
-            r#"insert into jwks (kid, created_at, signature, enc_key_id, jwk)
-            values ($1, $2, $3, $4, $5)"#,
-        )
-        .bind(&jwk.kid)
-        .bind(jwk.created_at)
-        .bind(jwk.signature.as_str())
-        .bind(&jwk.enc_key_id)
-        .bind(&jwk.jwk)
-        .execute(db)
-        .await;
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    r#"
+INSERT INTO
+jwks (kid, created_at, signature, enc_key_id, jwk)
+VALUES ($1, $2, $3, $4, $5)"#,
+                    params!(
+                        jwk.kid,
+                        jwk.created_at,
+                        jwk.signature.as_str().to_string(),
+                        jwk.enc_key_id,
+                        jwk.jwk
+                    ),
+                )
+                .await?;
+        } else {
+            let _ = sqlx::query(
+                r#"
+INSERT INTO
+jwks (kid, created_at, signature, enc_key_id, jwk)
+VALUES ($1, $2, $3, $4, $5)"#,
+            )
+            .bind(&jwk.kid)
+            .bind(jwk.created_at)
+            .bind(jwk.signature.as_str())
+            .bind(&jwk.enc_key_id)
+            .bind(&jwk.jwk)
+            .execute(db)
+            .await;
+        }
     }
 
     let ml = MagicLink {
@@ -146,24 +180,36 @@ pub async fn migrate_dev_data(db: &DbPool) -> Result<(), ErrorResponse> {
         user_id: "2PYV3STNz3MN7VnPjJVcPQap".to_string(),
         csrf_token: "8jINPnFznLF9o905QuE2n9CD4rTraQO4E4fOWPZTAkbgNHqM".to_string(),
         cookie: None,
-        exp: OffsetDateTime::now_utc()
-            .add(::time::Duration::days(1))
-            .unix_timestamp(),
+        exp: Utc::now().add(chrono::Duration::days(1)).timestamp(),
         used: false,
         usage: MagicLinkUsage::PasswordReset(None).to_string(),
     };
-    let _ = sqlx::query(
-        r#"insert into magic_links (id, user_id, csrf_token, exp, used, usage)
-        values ($1, $2, $3, $4, $5, $6)"#,
-    )
-    .bind(&ml.id)
-    .bind(&ml.user_id)
-    .bind(&ml.csrf_token)
-    .bind(ml.exp)
-    .bind(false)
-    .bind(ml.usage)
-    .execute(db)
-    .await;
+    if is_hiqlite() {
+        DB::client()
+            .execute(
+                r#"
+INSERT INTO
+magic_links (id, user_id, csrf_token, exp, used, usage)
+VALUES ($1, $2, $3, $4, $5, $6)"#,
+                params!(ml.id, ml.user_id, ml.csrf_token, ml.exp, false, ml.usage),
+            )
+            .await?;
+    } else {
+        let _ = sqlx::query(
+            r#"
+INSERT INTO
+magic_links (id, user_id, csrf_token, exp, used, usage)
+VALUES ($1, $2, $3, $4, $5, $6)"#,
+        )
+        .bind(&ml.id)
+        .bind(&ml.user_id)
+        .bind(&ml.csrf_token)
+        .bind(ml.exp)
+        .bind(false)
+        .bind(ml.usage)
+        .execute(db)
+        .await;
+    }
 
     Ok(())
 }

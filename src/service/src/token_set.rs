@@ -28,7 +28,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::ops::Add;
 use std::str::FromStr;
-use time::OffsetDateTime;
 use utoipa::ToSchema;
 
 pub enum AtHashAlg {
@@ -536,7 +535,7 @@ impl TokenSet {
 
         // set the correct lifetime
         let lifetime = if let Some(ts) = user.user_expires {
-            let now = OffsetDateTime::now_utc().unix_timestamp();
+            let now = Utc::now().timestamp();
             let diff = ts - now;
             if diff < 1 {
                 return Err(ErrorResponse::new(

@@ -7,14 +7,15 @@ license.workspace = true
 
 [dependencies]
 rauthy-common = { path = "../common" }
+rauthy-error = { path = "../error" }
 rauthy-models = { path = "../models" }
 rauthy-service = { path = "../service" }
 
 actix-web = { workspace = true }
 chrono = { workspace = true }
 cron = { workspace = true }
+hiqlite = { workspace = true }
 semver = { workspace = true }
 sqlx = { workspace = true }
-time = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }

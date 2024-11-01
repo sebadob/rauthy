@@ -1,9 +1,11 @@
 use crate::app_state::AppState;
-use crate::cache::{Cache, DB};
+use crate::hiqlite::{Cache, DB};
 use actix_web::web;
+use hiqlite::{params, Param};
 use jwt_simple::prelude::{Deserialize, Serialize};
 use rauthy_api_types::users::{UserValuesRequest, UserValuesResponse};
 use rauthy_common::constants::{CACHE_TTL_USER, IDX_USERS_VALUES};
+use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use sqlx::FromRow;
 
@@ -36,14 +38,18 @@ impl UserValues {
             return Ok(slf);
         }
 
-        let slf = sqlx::query_as::<_, Self>("SELECT * FROM users_values WHERE id = $1")
-            .bind(user_id)
-            .fetch_optional(&data.db)
-            .await?;
+        let slf = if is_hiqlite() {
+            client
+                .query_as_optional("SELECT * FROM users_values WHERE id = $1", params!(user_id))
+                .await?
+        } else {
+            sqlx::query_as::<_, Self>("SELECT * FROM users_values WHERE id = $1")
+                .bind(user_id)
+                .fetch_optional(&data.db)
+                .await?
+        };
 
-        // if let Some(v) = slf.as_ref() {
         client.put(Cache::User, idx, &slf, CACHE_TTL_USER).await?;
-        // }
 
         Ok(slf)
     }
@@ -53,36 +59,45 @@ impl UserValues {
         user_id: String,
         values: UserValuesRequest,
     ) -> Result<Option<Self>, ErrorResponse> {
-        #[cfg(not(feature = "postgres"))]
-        let q = sqlx::query!(
-            r#"INSERT OR REPLACE INTO
-                users_values (id, birthdate, phone, street, zip, city, country)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
-            user_id,
-            values.birthdate,
-            values.phone,
-            values.street,
-            values.zip,
-            values.city,
-            values.country,
-        );
-        #[cfg(feature = "postgres")]
-        let q = sqlx::query!(
-            r#"INSERT INTO
-                users_values (id, birthdate, phone, street, zip, city, country)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
-                ON CONFLICT(id) DO UPDATE
-                SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7"#,
-            user_id,
-            values.birthdate,
-            values.phone,
-            values.street,
-            values.zip,
-            values.city,
-            values.country,
-        );
-
-        q.execute(&data.db).await?;
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    r#"
+INSERT INTO
+users_values (id, birthdate, phone, street, zip, city, country)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+ON CONFLICT(id) DO UPDATE
+SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7"#,
+                    params!(
+                        &user_id,
+                        &values.birthdate,
+                        &values.phone,
+                        &values.street,
+                        values.zip,
+                        &values.city,
+                        &values.country
+                    ),
+                )
+                .await?;
+        } else {
+            sqlx::query!(
+                r#"
+INSERT INTO
+users_values (id, birthdate, phone, street, zip, city, country)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+ON CONFLICT(id) DO UPDATE
+SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7"#,
+                user_id,
+                values.birthdate,
+                values.phone,
+                values.street,
+                values.zip,
+                values.city,
+                values.country,
+            )
+            .execute(&data.db)
+            .await?;
+        }
 
         let idx = Self::cache_idx(&user_id);
         let slf = Some(Self {
