@@ -1,9 +1,9 @@
 use actix_web::web;
 use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_models::app_state::AppState;
+use rauthy_models::database::DB;
 use rauthy_models::entity::app_version::LatestAppVersion;
 use rauthy_models::events::event::Event;
-use rauthy_models::hiqlite::DB;
 use semver::Version;
 use std::env;
 use std::time::Duration;

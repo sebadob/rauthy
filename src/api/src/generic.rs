@@ -16,6 +16,7 @@ use rauthy_common::constants::{
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;
+use rauthy_models::database::{Cache, DB};
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::app_version::LatestAppVersion;
 use rauthy_models::entity::auth_providers::AuthProviderTemplate;
@@ -27,7 +28,6 @@ use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
 use rauthy_models::events::ip_blacklist_handler::{IpBlacklist, IpBlacklistReq};
-use rauthy_models::hiqlite::{Cache, DB};
 use rauthy_models::i18n::account::I18nAccount;
 use rauthy_models::i18n::authorize::I18nAuthorize;
 use rauthy_models::i18n::device::I18nDevice;

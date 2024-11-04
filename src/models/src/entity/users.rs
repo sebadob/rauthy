@@ -1,4 +1,5 @@
 use crate::app_state::{AppState, Argon2Params, DbTxn};
+use crate::database::{Cache, DB};
 use crate::email::{send_email_change_info_new, send_email_confirm_change, send_pwd_reset};
 use crate::entity::colors::ColorEntity;
 use crate::entity::continuation_token::ContinuationToken;
@@ -12,7 +13,6 @@ use crate::entity::sessions::Session;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
 use crate::events::event::Event;
-use crate::hiqlite::{Cache, DB};
 use crate::language::Language;
 use crate::templates::UserEmailChangeConfirmHtml;
 use actix_web::{web, HttpRequest};

@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
+use crate::database::{Cache, DB};
 use crate::entity::scopes::Scope;
-use crate::hiqlite::{Cache, DB};
 use actix_web::web;
 use rauthy_common::constants::{CACHE_TTL_APP, ENABLE_DYN_CLIENT_REG, GRANT_TYPE_DEVICE_CODE};
 use rauthy_error::ErrorResponse;

@@ -1,4 +1,5 @@
 use crate::app_state::DbPool;
+use crate::database::DB;
 use crate::events::{
     EVENT_LEVEL_FAILED_LOGIN, EVENT_LEVEL_FAILED_LOGINS_10, EVENT_LEVEL_FAILED_LOGINS_15,
     EVENT_LEVEL_FAILED_LOGINS_20, EVENT_LEVEL_FAILED_LOGINS_25, EVENT_LEVEL_FAILED_LOGINS_7,
@@ -7,7 +8,6 @@ use crate::events::{
     EVENT_LEVEL_RAUTHY_START, EVENT_LEVEL_RAUTHY_UNHEALTHY, EVENT_LEVEL_SECRETS_MIGRATED,
     EVENT_LEVEL_USER_EMAIL_CHANGE, EVENT_LEVEL_USER_PASSWORD_RESET,
 };
-use crate::hiqlite::DB;
 use chrono::{DateTime, Timelike, Utc};
 use hiqlite::{params, Param, Row};
 use rauthy_common::constants::EMAIL_SUB_PREFIX;
@@ -17,7 +17,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::{Notification, NotificationLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteRow;
-use sqlx::{query, query_as, Row};
+use sqlx::{query, query_as, Row as SqlxRow};
 use std::fmt::{Display, Formatter};
 use std::net::IpAddr;
 use std::str::FromStr;

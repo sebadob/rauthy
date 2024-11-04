@@ -1,5 +1,5 @@
 use crate::app_state::AppState;
-use crate::hiqlite::DB;
+use crate::database::DB;
 use actix_web::web;
 use chrono::{DateTime, Utc};
 use hiqlite::{params, Param};

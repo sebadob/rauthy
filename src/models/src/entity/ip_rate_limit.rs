@@ -1,4 +1,4 @@
-use crate::hiqlite::{Cache, DB};
+use crate::database::{Cache, DB};
 use chrono::{DateTime, Utc};
 use rauthy_common::constants::DEVICE_GRANT_RATE_LIMIT;
 use rauthy_error::ErrorResponse;

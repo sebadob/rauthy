@@ -1,6 +1,6 @@
-use crate::app_state::{AppState, DbPool};
+use crate::app_state::AppState;
+use crate::database::{Cache, DB};
 use crate::events::event::Event;
-use crate::hiqlite::{Cache, DB};
 use actix_web::web;
 use cryptr::{EncKeys, EncValue};
 use hiqlite::{params, Param};
@@ -238,7 +238,7 @@ impl JWKS {
             enc_key_id: enc_key_active.to_string(),
             jwk,
         };
-        entity.save(&data.db).await?;
+        entity.save().await?;
 
         // RS384
         let jwk_plain = web::block(|| {
@@ -257,7 +257,7 @@ impl JWKS {
             enc_key_id: enc_key_active.to_string(),
             jwk,
         };
-        entity.save(&data.db).await?;
+        entity.save().await?;
 
         // RSA512
         let jwk_plain = web::block(|| {
@@ -276,7 +276,7 @@ impl JWKS {
             enc_key_id: enc_key_active.to_string(),
             jwk,
         };
-        entity.save(&data.db).await?;
+        entity.save().await?;
 
         // Ed25519
         let jwk_plain =
@@ -291,7 +291,7 @@ impl JWKS {
             enc_key_id: enc_key_active.to_string(),
             jwk,
         };
-        entity.save(&data.db).await?;
+        entity.save().await?;
 
         // clear all latest_jwk from cache
         let client = DB::client();

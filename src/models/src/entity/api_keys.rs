@@ -1,5 +1,5 @@
-use crate::app_state::{AppState, DbPool};
-use crate::hiqlite::{Cache, DB};
+use crate::app_state::AppState;
+use crate::database::{Cache, DB};
 use actix_web::web;
 use chrono::Utc;
 use cryptr::{EncKeys, EncValue};

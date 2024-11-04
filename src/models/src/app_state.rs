@@ -11,7 +11,7 @@ use anyhow::Context;
 use argon2::Params;
 use hiqlite::NodeConfig;
 use rauthy_common::constants::{DATABASE_URL, DB_TYPE, DEV_MODE, PROXY_MODE};
-use rauthy_common::{is_hiqlite, DbType};
+use rauthy_common::DbType;
 use sqlx::pool::PoolOptions;
 use sqlx::ConnectOptions;
 use std::env;
@@ -273,7 +273,7 @@ impl AppState {
 
         // migrate DB data
         if !*DEV_MODE {
-            migrate_init_prod(&pool, argon2_params.clone(), issuer)
+            migrate_init_prod(argon2_params.clone(), issuer)
                 .await
                 .map_err(|err| anyhow::Error::msg(err.message))?;
         }
@@ -315,7 +315,7 @@ impl AppState {
                         panic!("Error during db migration: {:?}", err);
                     }
                 } else if from.starts_with("hiqlite:") {
-                    if let Err(err) = db_migrate::migrate_hiqlite_to_sqlx(&pool).await {
+                    if let Err(err) = db_migrate::migrate_hiqlite_to_sqlx().await {
                         panic!("Error during db migration: {:?}", err);
                     }
                 } else {
@@ -325,10 +325,10 @@ impl AppState {
                 };
             }
         } else if *DEV_MODE {
-            migrate_dev_data(&pool).await.expect("Migrating DEV DATA");
+            migrate_dev_data().await.expect("Migrating DEV DATA");
         }
 
-        if let Err(err) = db_migrate::anti_lockout(&pool, issuer).await {
+        if let Err(err) = db_migrate::anti_lockout(issuer).await {
             error!("Error when applying anti-lockout check: {:?}", err);
         }
 

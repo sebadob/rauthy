@@ -5,8 +5,8 @@ use crate::migration::db_migrate::migrate_init_prod;
 use crate::migration::db_migrate_dev::migrate_dev_data;
 use actix_web::web;
 use hiqlite::NodeConfig;
-use rauthy_common::constants::{DATABASE_URL, DB_TYPE, DEV_MODE};
-use rauthy_common::{is_hiqlite, is_postgres, DbType};
+use rauthy_common::constants::{DATABASE_URL, DEV_MODE};
+use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::pool::PoolOptions;
@@ -79,7 +79,7 @@ impl DB {
     ///
     /// # Panics
     /// On logic errors in the code, as this must never be called with no configured Postgres DB.
-    pub fn conn() -> &'static PgPool {
+    pub fn conn<'a>() -> &'a PgPool {
         PG_POOL
             .get()
             .expect("DB::conn() must never be called with no configured Postgres DB")
@@ -89,7 +89,7 @@ impl DB {
     ///
     /// # Panics
     /// On logic errors in the code, as this must never be called with no configured Postgres DB.
-    pub async fn txn() -> Result<sqlx::Transaction<Postgres>, ErrorResponse> {
+    pub async fn txn<'a>() -> Result<sqlx::Transaction<'a, Postgres>, ErrorResponse> {
         let txn = PG_POOL
             .get()
             .expect("DB::txn() must never be called with no configured Postgres DB")
@@ -155,9 +155,7 @@ impl DB {
 
         // migrate dynamic DB data
         if !*DEV_MODE {
-            migrate_init_prod(app_state.argon2_params.params.clone(), &app_state.issuer)
-                .await
-                .map_err(|err| anyhow::Error::msg(err.message))?;
+            migrate_init_prod(app_state.argon2_params.params.clone(), &app_state.issuer).await?;
         }
 
         if let Ok(from) = env::var("MIGRATE_DB_FROM") {
@@ -187,10 +185,11 @@ impl DB {
                 sleep(Duration::from_secs(10)).await;
 
                 if from.starts_with("sqlite:") {
-                    let pool_from = Self::connect_sqlite(&from, 1).await?;
-                    if let Err(err) = db_migrate::migrate_from_sqlite(pool_from, &pool).await {
-                        panic!("Error during db migration: {:?}", err);
-                    }
+                    todo!("migrate from sqlite")
+                    // let pool_from = Self::connect_sqlite(&from, 1).await?;
+                    // if let Err(err) = db_migrate::migrate_from_sqlite(pool_from, &pool).await {
+                    //     panic!("Error during db migration: {:?}", err);
+                    // }
                 } else if from.starts_with("postgresql://") {
                     let pool_from = Self::connect_postgres(&from, 1).await?;
                     if let Err(err) = db_migrate::migrate_sqlx_to_hiqlite(pool_from).await {
@@ -216,9 +215,7 @@ impl DB {
         }
 
         // update the DbVersion after successful pool creation and migrations
-        DbVersion::upsert(db_version)
-            .await
-            .map_err(|err| anyhow::Error::msg(err.message))?;
+        DbVersion::upsert(db_version).await?;
 
         Ok(())
     }

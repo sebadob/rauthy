@@ -1,9 +1,9 @@
 use crate::app_state::DbPool;
+use crate::database::DB;
 use crate::events::event::{Event, EventLevel, EventType};
 use crate::events::ip_blacklist_handler::{IpBlacklist, IpBlacklistReq, IpLoginFailedSet};
 use crate::events::notifier::EventNotifier;
 use crate::events::EVENT_PERSIST_LEVEL;
-use crate::hiqlite::DB;
 use actix_web_lab::sse;
 use chrono::DateTime;
 use rauthy_common::constants::EVENTS_LATEST_LIMIT;

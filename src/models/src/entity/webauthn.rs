@@ -1,8 +1,8 @@
 use crate::api_cookie::ApiCookie;
 use crate::app_state::{AppState, DbTxn};
+use crate::database::{Cache, DB};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::users::{AccountType, User};
-use crate::hiqlite::{Cache, DB};
 use actix_web::cookie::Cookie;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;

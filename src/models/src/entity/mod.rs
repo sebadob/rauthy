@@ -1,5 +1,5 @@
 use crate::app_state::DbPool;
-use crate::hiqlite::DB;
+use crate::database::DB;
 use hiqlite::params;
 use rauthy_common::is_hiqlite;
 use sqlx::query;

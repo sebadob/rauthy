@@ -1,10 +1,10 @@
 use actix_web::web;
 use chrono::Utc;
 use rauthy_models::app_state::AppState;
+use rauthy_models::database::DB;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
-use rauthy_models::hiqlite::DB;
 use std::env;
 use std::time::Duration;
 use tracing::{debug, error, info};

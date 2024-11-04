@@ -1,5 +1,5 @@
 use crate::app_state::AppState;
-use crate::hiqlite::{Cache, DB};
+use crate::database::{Cache, DB};
 use actix_web::web;
 use hiqlite::{params, Param};
 use jwt_simple::prelude::{Deserialize, Serialize};

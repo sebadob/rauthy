@@ -1,12 +1,12 @@
 use crate::api_cookie::ApiCookie;
 use crate::app_state::AppState;
+use crate::database::{Cache, DB};
 use crate::entity::auth_codes::AuthCode;
 use crate::entity::clients::Client;
 use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::WebauthnLoginReq;
-use crate::hiqlite::{Cache, DB};
 use crate::language::Language;
 use crate::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
 use actix_web::cookie::Cookie;

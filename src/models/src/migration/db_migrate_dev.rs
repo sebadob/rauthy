@@ -1,7 +1,6 @@
-use crate::app_state::DbPool;
+use crate::database::DB;
 use crate::entity::jwk::Jwk;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
-use crate::hiqlite::DB;
 use chrono::Utc;
 use hiqlite::{params, Param};
 use rauthy_common::is_hiqlite;
@@ -167,10 +166,10 @@ VALUES ($1, $2, $3, $4, $5)"#,
             )
             .bind(&jwk.kid)
             .bind(jwk.created_at)
-            .bind(jwk.signature.as_str())
+            .bind(jwk.signature.as_str().to_string())
             .bind(&jwk.enc_key_id)
             .bind(&jwk.jwk)
-            .execute(db)
+            .execute(DB::conn())
             .await;
         }
     }
@@ -207,7 +206,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
         .bind(ml.exp)
         .bind(false)
         .bind(ml.usage)
-        .execute(db)
+        .execute(DB::conn())
         .await;
     }
 

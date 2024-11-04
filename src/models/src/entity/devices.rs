@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
+use crate::database::{Cache, DB};
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
-use crate::hiqlite::{Cache, DB};
 use actix_web::web;
 use chrono::{DateTime, Utc};
 use hiqlite::{params, Param};

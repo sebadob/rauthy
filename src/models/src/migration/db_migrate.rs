@@ -16,6 +16,7 @@ use tracing::{debug, info};
 use validator::Validate;
 
 use crate::app_state::DbPool;
+use crate::database::DB;
 use crate::entity::api_keys::ApiKeyEntity;
 use crate::entity::auth_providers::AuthProvider;
 use crate::entity::clients::Client;
@@ -39,7 +40,6 @@ use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::events::event::Event;
-use crate::hiqlite::DB;
 use rauthy_common::constants::{
     ADMIN_FORCE_MFA, DB_TYPE, DEV_MODE, PUB_URL, PUB_URL_WITH_SCHEME, RAUTHY_ADMIN_EMAIL,
 };
@@ -222,7 +222,7 @@ INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data)
 VALUES ($1, $2, $3, $4)
 ON CONFLICT(auth_provider_id, res) DO UPDATE
 SET content_type = $3, data = $4"#,
-                    params!(b.id, b.res, b.content_type, b.data),
+                    params!(b.id, b.res.as_str(), b.content_type, b.data),
                 )
                 .await?;
         }
@@ -238,7 +238,7 @@ VALUES ($1, $2, $3, $4)
 ON CONFLICT(auth_provider_id, res) DO UPDATE
 SET content_type = $3, data = $4"#,
                 b.id,
-                b.res,
+                b.res.as_str(),
                 b.content_type,
                 b.data,
             )
@@ -335,7 +335,7 @@ async fn insert_client_logos(data_before: Vec<Logo>) -> Result<(), ErrorResponse
                     r#"
 INSERT INTO client_logos (client_id, res, content_type, data)
 VALUES ($1, $2, $3, $4)"#,
-                    params!(b.id, b.res, b.content_type, b.data),
+                    params!(b.id, b.res.as_str(), b.content_type, b.data),
                 )
                 .await?;
         }
@@ -349,7 +349,7 @@ VALUES ($1, $2, $3, $4)"#,
 INSERT INTO client_logos (client_id, res, content_type, data)
 VALUES ($1, $2, $3, $4)"#,
                 b.id,
-                b.res,
+                b.res.as_str(),
                 b.content_type,
                 b.data
             )
@@ -604,7 +604,15 @@ async fn insert_events(data_before: Vec<Event>) -> Result<(), ErrorResponse> {
                     r#"
 INSERT INTO events (id, timestamp, level, typ, ip, data, text)
 VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
-                    params!(b.id, b.timestamp, b.level, b.typ, b.ip, b.data, b.text),
+                    params!(
+                        b.id,
+                        b.timestamp,
+                        b.level.value(),
+                        b.typ.value(),
+                        b.ip,
+                        b.data,
+                        b.text
+                    ),
                 )
                 .await?;
         }
@@ -619,8 +627,8 @@ INSERT INTO events (id, timestamp, level, typ, ip, data, text)
 VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
                 b.id,
                 b.timestamp,
-                b.level,
-                b.typ,
+                b.level.value(),
+                b.typ.value(),
                 b.ip,
                 b.data,
                 b.text
@@ -1052,7 +1060,7 @@ async fn insert_user_attr_config(
         for b in data_before {
             DB::client()
                 .execute(
-                    "INSET INTO user_attr_config (name, desc) VALUES ($1, $2)",
+                    "INSERT INTO user_attr_config (name, desc) VALUES ($1, $2)",
                     params!(b.name, b.desc),
                 )
                 .await?;
@@ -1063,7 +1071,7 @@ async fn insert_user_attr_config(
             .await?;
         for b in data_before {
             sqlx::query!(
-                "INSET INTO user_attr_config (name, desc) VALUES ($1, $2)",
+                "INSERT INTO user_attr_config (name, \"desc\") VALUES ($1, $2)",
                 b.name,
                 b.desc
             )
@@ -1932,7 +1940,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
         .await?;
     for b in before {
         hql.execute(
-            "INSET INTO user_attr_config (name, desc) VALUES ($1, $2)",
+            "INSERT INTO user_attr_config (name, desc) VALUES ($1, $2)",
             params!(b.name, b.desc),
         )
         .await?;
@@ -2500,7 +2508,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
         .await?;
     for b in before {
         hql.execute(
-            "INSET INTO user_attr_config (name, desc) VALUES ($1, $2)",
+            "INSERT INTO user_attr_config (name, desc) VALUES ($1, $2)",
             params!(b.name, b.desc),
         )
         .await?;
