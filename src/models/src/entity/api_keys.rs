@@ -25,7 +25,6 @@ pub struct ApiKeyEntity {
 
 impl ApiKeyEntity {
     pub async fn create(
-        db: &DbPool,
         name: String,
         expires: Option<i64>,
         access: Vec<ApiKeyAccess>,
@@ -73,7 +72,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 enc_key_active,
                 access_enc,
             )
-            .execute(db)
+            .execute(DB::conn())
             .await?;
         }
 

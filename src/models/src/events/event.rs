@@ -16,7 +16,8 @@ use rauthy_common::utils::{get_local_hostname, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::{Notification, NotificationLevel};
 use serde::{Deserialize, Serialize};
-use sqlx::{query, query_as};
+use sqlx::sqlite::SqliteRow;
+use sqlx::{query, query_as, Row};
 use std::fmt::{Display, Formatter};
 use std::net::IpAddr;
 use std::str::FromStr;
@@ -318,6 +319,20 @@ impl<'r> From<hiqlite::Row<'r>> for Event {
             timestamp: row.get("timestamp"),
             level: EventLevel::from(row.get::<i64>("level")),
             typ: EventType::from(row.get::<i64>("typ")),
+            ip: row.get("ip"),
+            data: row.get("data"),
+            text: row.get("text"),
+        }
+    }
+}
+
+impl From<SqliteRow> for Event {
+    fn from(row: SqliteRow) -> Self {
+        Self {
+            id: row.get("id"),
+            timestamp: row.get("timestamp"),
+            level: EventLevel::from(row.get::<i64, _>("level")),
+            typ: EventType::from(row.get::<i64, _>("typ")),
             ip: row.get("ip"),
             data: row.get("data"),
             text: row.get("text"),

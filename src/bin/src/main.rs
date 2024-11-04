@@ -131,6 +131,11 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
         .await?,
     );
 
+    debug!("Applying database migrations");
+    DB::migrate(&app_state)
+        .await
+        .expect("Database migration error");
+
     // events listener
     debug!("Starting Events handler");
     init_event_vars().unwrap();

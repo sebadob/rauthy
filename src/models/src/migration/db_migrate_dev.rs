@@ -9,7 +9,7 @@ use rauthy_error::ErrorResponse;
 use std::ops::Add;
 use tracing::warn;
 
-pub async fn migrate_dev_data(db: &DbPool) -> Result<(), ErrorResponse> {
+pub async fn migrate_dev_data() -> Result<(), ErrorResponse> {
     warn!("Migrating DEV DATA - DO NOT USE IN PRODUCTION!");
 
     let needs_migration = if is_hiqlite() {
@@ -22,7 +22,7 @@ pub async fn migrate_dev_data(db: &DbPool) -> Result<(), ErrorResponse> {
         }
     } else {
         match sqlx::query_as::<_, Jwk>("SELECT * FROM jwks")
-            .fetch_all(db)
+            .fetch_all(DB::conn())
             .await
         {
             Ok(res) => res.is_empty(),

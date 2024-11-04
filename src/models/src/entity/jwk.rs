@@ -110,7 +110,7 @@ pub struct Jwk {
 
 // CRUD
 impl Jwk {
-    pub async fn save(&self, db: &DbPool) -> Result<(), ErrorResponse> {
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
         let sig_str = self.signature.as_str();
         if is_hiqlite() {
             DB::client()
@@ -138,7 +138,7 @@ impl Jwk {
                 self.enc_key_id,
                 self.jwk,
             )
-            .execute(db)
+            .execute(DB::conn())
             .await?;
         }
 

@@ -267,7 +267,7 @@ impl AppState {
 
         // before we do any db migrations, we need to check the current DB version
         // for compatibility
-        let db_version = DbVersion::check_app_version(&pool)
+        let db_version = DbVersion::check_app_version()
             .await
             .map_err(|err| anyhow::Error::msg(err.message))?;
 
@@ -333,7 +333,7 @@ impl AppState {
         }
 
         // update the DbVersion after successful pool creation and migrations
-        DbVersion::upsert(&pool, db_version)
+        DbVersion::upsert(db_version)
             .await
             .map_err(|err| anyhow::Error::msg(err.message))?;
 
