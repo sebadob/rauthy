@@ -16,8 +16,9 @@ use rauthy_common::utils::{get_local_hostname, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::{Notification, NotificationLevel};
 use serde::{Deserialize, Serialize};
+use sqlx::error::BoxDynError;
 use sqlx::sqlite::SqliteRow;
-use sqlx::{query, query_as, Row as SqlxRow};
+use sqlx::{query, query_as, Database, Error, FromRow, Row as SqlxRow};
 use std::fmt::{Display, Formatter};
 use std::net::IpAddr;
 use std::str::FromStr;
@@ -326,9 +327,9 @@ impl<'r> From<hiqlite::Row<'r>> for Event {
     }
 }
 
-impl From<SqliteRow> for Event {
-    fn from(row: SqliteRow) -> Self {
-        Self {
+impl<'r> FromRow<'r, SqliteRow> for Event {
+    fn from_row(row: &'r SqliteRow) -> Result<Self, Error> {
+        Ok(Self {
             id: row.get("id"),
             timestamp: row.get("timestamp"),
             level: EventLevel::from(row.get::<i64, _>("level")),
@@ -336,7 +337,7 @@ impl From<SqliteRow> for Event {
             ip: row.get("ip"),
             data: row.get("data"),
             text: row.get("text"),
-        }
+        })
     }
 }
 
@@ -496,9 +497,9 @@ ORDER BY timestamp DESC"#,
                 query_as!(
                     Self,
                     r#"
-    SELECT * FROM events
-    WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3 AND typ = $4
-    ORDER BY timestamp DESC"#,
+SELECT * FROM events
+WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3 AND typ = $4
+ORDER BY timestamp DESC"#,
                     from,
                     until,
                     level,
@@ -507,32 +508,29 @@ ORDER BY timestamp DESC"#,
                 .fetch_all(db)
                 .await?
             }
-        } else {
-            #[allow(clippy::collapsible_else_if)]
-            if is_hiqlite() {
-                DB::client()
-                    .query_map(
-                        r#"
+        } else if is_hiqlite() {
+            DB::client()
+                .query_map(
+                    r#"
 SELECT * FROM events
 WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3
 ORDER BY timestamp DESC"#,
-                        params!(from, until, level),
-                    )
-                    .await?
-            } else {
-                query_as!(
-                    Self,
-                    r#"
-    SELECT * FROM events
-    WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3
-    ORDER BY timestamp DESC"#,
-                    from,
-                    until,
-                    level,
+                    params!(from, until, level),
                 )
-                .fetch_all(db)
                 .await?
-            }
+        } else {
+            query_as!(
+                Self,
+                r#"
+SELECT * FROM events
+WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3
+ORDER BY timestamp DESC"#,
+                from,
+                until,
+                level,
+            )
+            .fetch_all(db)
+            .await?
         };
 
         Ok(res)
