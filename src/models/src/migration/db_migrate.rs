@@ -3850,10 +3850,7 @@ pub async fn migrate_hiqlite_to_sqlx() -> Result<(), ErrorResponse> {
 // }
 
 /// Migrates `MIGRATE_DB_FROM` to `DATABASE_URL`
-pub async fn migrate_from_sqlite(
-    db_from: sqlx::SqlitePool,
-    db_to: &DbPool,
-) -> Result<(), ErrorResponse> {
+pub async fn migrate_from_sqlite(db_from: sqlx::SqlitePool) -> Result<(), ErrorResponse> {
     info!("Starting migration to another DB");
 
     // CONFIG
@@ -3999,17 +3996,6 @@ pub async fn migrate_from_sqlite(
         .fetch_all(&db_from)
         .await?;
     insert_user_attr_values(before).await?;
-    sqlx::query("delete from user_attr_values")
-        .execute(db_to)
-        .await?;
-    for b in before {
-        sqlx::query("insert into user_attr_values (user_id, key, value) values ($1, $2, $3)")
-            .bind(b.user_id)
-            .bind(b.key)
-            .bind(b.value)
-            .execute(db_to)
-            .await?;
-    }
 
     // USERS VALUES
     debug!("Migrating table: users_values");

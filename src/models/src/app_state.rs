@@ -306,7 +306,7 @@ impl AppState {
 
                 if from.starts_with("sqlite:") {
                     let pool_from = Self::connect_sqlite(&from, 1).await?;
-                    if let Err(err) = db_migrate::migrate_from_sqlite(pool_from, &pool).await {
+                    if let Err(err) = db_migrate::migrate_from_sqlite(pool_from).await {
                         panic!("Error during db migration: {:?}", err);
                     }
                 } else if from.starts_with("postgresql://") {
