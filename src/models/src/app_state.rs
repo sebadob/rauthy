@@ -4,8 +4,8 @@ use crate::events::event::Event;
 use crate::events::ip_blacklist_handler::IpBlacklistReq;
 use crate::events::listener::EventRouterMsg;
 use crate::migration::db_migrate;
-use crate::migration::db_migrate::migrate_init_prod;
 use crate::migration::db_migrate_dev::migrate_dev_data;
+use crate::migration::{anti_lockout, init_prod};
 use crate::ListenScheme;
 use anyhow::Context;
 use argon2::Params;
@@ -273,7 +273,7 @@ impl AppState {
 
         // migrate DB data
         if !*DEV_MODE {
-            migrate_init_prod(argon2_params.clone(), issuer)
+            init_prod::migrate_init_prod(argon2_params.clone(), issuer)
                 .await
                 .map_err(|err| anyhow::Error::msg(err.message))?;
         }
@@ -328,7 +328,7 @@ impl AppState {
             migrate_dev_data().await.expect("Migrating DEV DATA");
         }
 
-        if let Err(err) = db_migrate::anti_lockout(issuer).await {
+        if let Err(err) = anti_lockout::anti_lockout(issuer).await {
             error!("Error when applying anti-lockout check: {:?}", err);
         }
 

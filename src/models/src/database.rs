@@ -1,8 +1,7 @@
 use crate::app_state::AppState;
 use crate::entity::db_version::DbVersion;
-use crate::migration::db_migrate;
-use crate::migration::db_migrate::migrate_init_prod;
 use crate::migration::db_migrate_dev::migrate_dev_data;
+use crate::migration::{anti_lockout, db_migrate, init_prod};
 use actix_web::web;
 use hiqlite::NodeConfig;
 use rauthy_common::constants::{DATABASE_URL, DEV_MODE};
@@ -155,7 +154,8 @@ impl DB {
 
         // migrate dynamic DB data
         if !*DEV_MODE {
-            migrate_init_prod(app_state.argon2_params.params.clone(), &app_state.issuer).await?;
+            init_prod::migrate_init_prod(app_state.argon2_params.params.clone(), &app_state.issuer)
+                .await?;
         }
 
         if let Ok(from) = env::var("MIGRATE_DB_FROM") {
@@ -210,7 +210,7 @@ impl DB {
             migrate_dev_data().await.expect("Migrating DEV DATA");
         }
 
-        if let Err(err) = db_migrate::anti_lockout(&app_state.issuer).await {
+        if let Err(err) = anti_lockout::anti_lockout(&app_state.issuer).await {
             error!("Error when applying anti-lockout check: {:?}", err);
         }
 
