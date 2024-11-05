@@ -2398,6 +2398,7 @@ dependencies = [
 [[package]]
 name = "hiqlite"
 version = "0.2.1"
+source = "git+https://github.com/sebadob/hiqlite.git#175fcd53da9d27aab05435633c8095ba0e3b6eb3"
 dependencies = [
  "argon2",
  "axum",
