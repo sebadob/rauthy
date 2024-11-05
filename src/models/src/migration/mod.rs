@@ -20,6 +20,7 @@ use tracing::{debug, error, info, warn};
 
 pub mod db_migrate;
 pub mod db_migrate_dev;
+mod inserts;
 
 static BUCKET: OnceLock<Bucket> = OnceLock::new();
 static ACCEPT_INVALID_CERTS: OnceLock<bool> = OnceLock::new();
