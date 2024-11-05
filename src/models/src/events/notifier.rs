@@ -77,6 +77,7 @@ impl EventNotifier {
             );
 
             let notifier = NotifierEmail {
+                notification_recipient_name: "Rauthy Admin".to_string(),
                 notification_email: email,
                 tx_email,
             };
@@ -174,6 +175,7 @@ impl EventNotifier {
 
 #[derive(Debug)]
 struct NotifierEmail {
+    notification_recipient_name: String,
     notification_email: String,
     tx_email: mpsc::Sender<EMail>,
 }
@@ -182,6 +184,7 @@ struct NotifierEmail {
 impl Notify for NotifierEmail {
     async fn notify(&self, notification: &Notification) -> Result<(), ErrorResponse> {
         email::send_email_notification(
+            self.notification_recipient_name.clone(),
             self.notification_email.clone(),
             &self.tx_email,
             notification,

@@ -12,7 +12,7 @@ use askama_actix::Template;
 use chrono::DateTime;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication;
-use lettre::{AsyncSmtpTransport, AsyncTransport};
+use lettre::{message, AsyncSmtpTransport, AsyncTransport};
 use rauthy_common::constants::{
     EMAIL_SUB_PREFIX, SMTP_FROM, SMTP_PASSWORD, SMTP_URL, SMTP_USERNAME,
 };
@@ -26,6 +26,7 @@ use tracing::{debug, error, info, warn};
 
 #[derive(Debug)]
 pub struct EMail {
+    pub recipient_name: String,
     pub address: String,
     pub subject: String,
     pub text: String,
@@ -152,6 +153,7 @@ pub struct EmailResetInfoTxt<'a> {
 }
 
 pub async fn send_email_notification(
+    recipient_name: String,
     address: String,
     tx_email: &mpsc::Sender<EMail>,
     notification: &Notification,
@@ -169,6 +171,7 @@ pub async fn send_email_notification(
     };
 
     let req = EMail {
+        recipient_name,
         address,
         subject: notification.head.to_string(),
         text: text.render().expect("Template rendering: EMailEventTxt"),
@@ -219,6 +222,7 @@ pub async fn send_email_change_info_new(
     };
 
     let req = EMail {
+        recipient_name: format!("{} {}", user.given_name, user.family_name),
         address: new_email.clone(),
         subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
         text: text
@@ -272,6 +276,7 @@ pub async fn send_email_confirm_change(
     };
 
     let req = EMail {
+        recipient_name: format!("{} {}", user.given_name, user.family_name),
         address: email_addr.to_string(),
         subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
         text: text
@@ -362,6 +367,7 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
     };
 
     let req = EMail {
+        recipient_name: format!("{} {}", user.given_name, user.family_name),
         address: user.email.to_string(),
         subject: format!("{} - {}", *EMAIL_SUB_PREFIX, subject),
         text: text.render().expect("Template rendering: EmailResetTxt"),
@@ -406,6 +412,7 @@ pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
     };
 
     let req = EMail {
+        recipient_name: format!("{} {}", user.given_name, user.family_name),
         address: user.email.to_string(),
         subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
         text: text
@@ -492,30 +499,26 @@ pub async fn sender(mut rx: Receiver<EMail>, test_mode: bool) {
         conn.unwrap()
     };
 
+    let from: message::Mailbox = SMTP_FROM
+        .parse()
+        .expect("SMTP_FROM could not be parsed correctly");
+
     loop {
         debug!("Listening for incoming send E-Mail requests");
         if let Some(req) = rx.recv().await {
             debug!("New E-Mail for address: {:?}", req.address);
 
-            let to = format!("{} <{}>", req.subject, req.address);
+            let to = format!("{} <{}>", req.recipient_name, req.address);
 
             let email = if let Some(html) = req.html {
                 lettre::Message::builder()
-                    .from(
-                        SMTP_FROM
-                            .parse()
-                            .expect("SMTP_FROM could not be parsed correctly"),
-                    )
+                    .from(from.clone())
                     .to(to.parse().unwrap())
                     .subject(req.subject)
                     .multipart(MultiPart::alternative_plain_html(req.text, html))
             } else {
                 lettre::Message::builder()
-                    .from(
-                        SMTP_FROM
-                            .parse()
-                            .expect("SMTP_FROM could not be parsed correctly"),
-                    )
+                    .from(from.clone())
                     .to(to.parse().unwrap())
                     .subject(req.subject)
                     .singlepart(SinglePart::plain(req.text))

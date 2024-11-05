@@ -19,8 +19,8 @@ strip = true
 panic = "abort"
 
 [patch.crates-io]
-#hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
-hiqlite = { path = "../hiqlite/hiqlite", package = "hiqlite" }
+hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
+#hiqlite = { path = "../../hiqlite/hiqlite", package = "hiqlite" }
 
 [workspace.dependencies]
 accept-language = "3"
