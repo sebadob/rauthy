@@ -9,7 +9,7 @@ use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::pool::PoolOptions;
-use sqlx::{ConnectOptions, PgPool, Postgres};
+use sqlx::{ConnectOptions, PgPool, Postgres, SqlitePool};
 use std::env;
 use std::str::FromStr;
 use std::sync::OnceLock;
@@ -19,7 +19,7 @@ use tracing::log::LevelFilter;
 use tracing::{debug, error, info, warn};
 
 static CLIENT: OnceLock<hiqlite::Client> = OnceLock::new();
-static PG_POOL: OnceLock<sqlx::PgPool> = OnceLock::new();
+static PG_POOL: OnceLock<PgPool> = OnceLock::new();
 
 #[derive(rust_embed::Embed)]
 #[folder = "../../migrations/hiqlite"]
@@ -110,6 +110,24 @@ impl DB {
         Ok(pool)
     }
 
+    pub async fn connect_sqlite(addr: &str) -> Result<SqlitePool, ErrorResponse> {
+        let opts = sqlx::sqlite::SqliteConnectOptions::from_str(addr)?
+            .create_if_missing(false)
+            .foreign_keys(true)
+            .auto_vacuum(sqlx::sqlite::SqliteAutoVacuum::Incremental)
+            .synchronous(sqlx::sqlite::SqliteSynchronous::Normal)
+            .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal);
+
+        let pool = PoolOptions::new()
+            .min_connections(1)
+            .max_connections(1)
+            .acquire_timeout(Duration::from_secs(10))
+            .connect_with(opts)
+            .await?;
+
+        Ok(pool)
+    }
+
     async fn init_connect_postgres() -> Result<(), ErrorResponse> {
         let db_max_conn = env::var("DATABASE_MAX_CONN")
             .unwrap_or_else(|_| "5".to_string())
@@ -185,18 +203,17 @@ impl DB {
                 sleep(Duration::from_secs(10)).await;
 
                 if from.starts_with("sqlite:") {
-                    todo!("migrate from sqlite")
-                    // let pool_from = Self::connect_sqlite(&from, 1).await?;
-                    // if let Err(err) = db_migrate::migrate_from_sqlite(pool_from, &pool).await {
-                    //     panic!("Error during db migration: {:?}", err);
-                    // }
+                    let pool = Self::connect_sqlite(&from).await?;
+                    if let Err(err) = db_migrate::migrate_from_sqlite(pool).await {
+                        panic!("Error during db migration: {:?}", err);
+                    }
                 } else if from.starts_with("postgresql://") {
-                    let pool_from = Self::connect_postgres(&from, 1).await?;
-                    if let Err(err) = db_migrate::migrate_sqlx_to_hiqlite(pool_from).await {
+                    let pool = Self::connect_postgres(&from, 1).await?;
+                    if let Err(err) = db_migrate::migrate_from_postgres(pool).await {
                         panic!("Error during db migration: {:?}", err);
                     }
                 } else if from.starts_with("hiqlite:") {
-                    todo!("make migrate_from_hiqlite actually work");
+                    todo!("use direct sqlite connection for migrations");
                     // if let Err(err) = db_migrate::migrate_hiqlite_to_sqlx().await {
                     //     panic!("Error during db migration: {:?}", err);
                     // }

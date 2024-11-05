@@ -311,13 +311,14 @@ impl AppState {
                     }
                 } else if from.starts_with("postgresql://") {
                     let pool_from = Self::connect_postgres(&from, 1).await?;
-                    if let Err(err) = db_migrate::migrate_from_postgres(pool_from, &pool).await {
+                    if let Err(err) = db_migrate::migrate_from_postgres(pool_from).await {
                         panic!("Error during db migration: {:?}", err);
                     }
                 } else if from.starts_with("hiqlite:") {
-                    if let Err(err) = db_migrate::migrate_hiqlite_to_sqlx().await {
-                        panic!("Error during db migration: {:?}", err);
-                    }
+                    todo!("use direct sqlite connection for migrations");
+                    // if let Err(err) = db_migrate::migrate_from_hiqlite().await {
+                    //     panic!("Error during db migration: {:?}", err);
+                    // }
                 } else {
                     panic!(
                         "You provided an unknown database type, please check the MIGRATE_DB_FROM"

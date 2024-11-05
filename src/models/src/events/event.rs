@@ -16,6 +16,7 @@ use rauthy_common::utils::{get_local_hostname, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::{Notification, NotificationLevel};
 use serde::{Deserialize, Serialize};
+use sqlx::postgres::PgRow;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{query, query_as, Error, FromRow, Row as SqlxRow};
 use std::fmt::{Display, Formatter};
@@ -323,6 +324,20 @@ impl<'r> From<hiqlite::Row<'r>> for Event {
             data: row.get("data"),
             text: row.get("text"),
         }
+    }
+}
+
+impl<'r> FromRow<'r, PgRow> for Event {
+    fn from_row(row: &'r PgRow) -> Result<Self, Error> {
+        Ok(Self {
+            id: row.get("id"),
+            timestamp: row.get("timestamp"),
+            level: EventLevel::from(row.get::<i64, _>("level")),
+            typ: EventType::from(row.get::<i64, _>("typ")),
+            ip: row.get("ip"),
+            data: row.get("data"),
+            text: row.get("text"),
+        })
     }
 }
 
