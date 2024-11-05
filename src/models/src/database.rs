@@ -163,11 +163,7 @@ impl DB {
                     )
                 })?;
         } else {
-            // TODO add link to release notes / migration instruction after
-            // Hiqlite migration has been finished, or catch this situation very early in `main.rs`.
-            panic!(
-                "A direct SQLite connection is not supported anymore. Please migrate to Hiqlite"
-            );
+            unreachable!();
         }
 
         // migrate dynamic DB data
@@ -191,11 +187,11 @@ impl DB {
                 warn!(
                     r#"
 
-        Migrating data from 'MIGRATE_DB_FROM'
-        This will overwrite possibly existing data in the current database!
-        Make sure, that the 'MIGRATE_DB_FROM' was created with the same rauthy verion
+    Migrating data from 'MIGRATE_DB_FROM'
+    This will overwrite possibly existing data in the current database!
+    Make sure, that the 'MIGRATE_DB_FROM' was created with the same rauthy verion
 
-        Proceeding in 10 seconds...
+    Proceeding in 10 seconds...
 
                 "#
                 );
@@ -212,11 +208,6 @@ impl DB {
                     if let Err(err) = db_migrate::migrate_from_postgres(pool).await {
                         panic!("Error during db migration: {:?}", err);
                     }
-                } else if from.starts_with("hiqlite:") {
-                    todo!("use direct sqlite connection for migrations");
-                    // if let Err(err) = db_migrate::migrate_hiqlite_to_sqlx().await {
-                    //     panic!("Error during db migration: {:?}", err);
-                    // }
                 } else {
                     panic!(
                         "You provided an unknown database type, please check the MIGRATE_DB_FROM"

@@ -11,8 +11,8 @@ use prometheus::Registry;
 use rauthy_common::constants::{
     APP_START, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
 };
-use rauthy_common::password_hasher;
 use rauthy_common::utils::UseDummyAddress;
+use rauthy_common::{is_sqlite, password_hasher};
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
     api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
@@ -109,6 +109,36 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
     }
 
     debug!("Starting the persistence layer");
+    // Keep this check in place until v1.0.0 as info for migrations from older versions.
+    if is_sqlite() {
+        // TODO add link to release notes / migration instruction link after
+        // Hiqlite migration has been finished.
+        panic!(
+            r#"
+
+A direct SQLite connection is not supported anymore. The `DATABASE_URL` is only used for
+Postgres connections. You can migrate your SQLite database to either Postgres or Hiqlite.
+Hiqlite uses SQLite under the hood, but provides a Raft layer on top to make it highly available,
+faster, and more resilient.
+
+You can migrate your existing SQLite database using the `MIGRATE_DB_FROM` config variable:
+
+        # If specified, the currently configured Database will be DELETED and OVERWRITTEN with a
+        # migration from the given database with this variable. Can be used to migrate between
+        # different databases.
+        # !!! USE WITH CARE !!!
+        #MIGRATE_DB_FROM=sqlite:data/rauthy.db
+
+To migrate to Postgres, simply set the `DATABASE_URL` to a Postgres database.
+To migrate to Hiqlite, there are a few new config variables you can set. The most important is
+to set
+
+        HIQLITE=true
+
+TODO add link to the book after migration
+"#
+        );
+    }
     DB::init().await.expect("Error starting the cache layer");
 
     // email sending

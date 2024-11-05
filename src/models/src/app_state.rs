@@ -293,11 +293,11 @@ impl AppState {
                 warn!(
                     r#"
 
-        Migrating data from 'MIGRATE_DB_FROM'
-        This will overwrite possibly existing data in the current database!
-        Make sure, that the 'MIGRATE_DB_FROM' was created with the same rauthy verion
+    Migrating data from 'MIGRATE_DB_FROM'
+    This will overwrite possibly existing data in the current database!
+    Make sure, that the 'MIGRATE_DB_FROM' was created with the same rauthy verion
 
-        Proceeding in 10 seconds...
+    Proceeding in 10 seconds...
 
                 "#
                 );
@@ -314,11 +314,6 @@ impl AppState {
                     if let Err(err) = db_migrate::migrate_from_postgres(pool_from).await {
                         panic!("Error during db migration: {:?}", err);
                     }
-                } else if from.starts_with("hiqlite:") {
-                    todo!("use direct sqlite connection for migrations");
-                    // if let Err(err) = db_migrate::migrate_from_hiqlite().await {
-                    //     panic!("Error during db migration: {:?}", err);
-                    // }
                 } else {
                     panic!(
                         "You provided an unknown database type, please check the MIGRATE_DB_FROM"
