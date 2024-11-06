@@ -1,6 +1,5 @@
 use actix_web::web;
 use rauthy_models::app_state::AppState;
-use rauthy_models::migration::s3_backup_init_test;
 use std::time::Duration;
 use tokio::time;
 use tracing::info;

@@ -1,8 +1,8 @@
 use crate::api_cookie::ApiCookie;
 use crate::app_state::{AppState, DbTxn};
+use crate::database::{Cache, DB};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::users::{AccountType, User};
-use crate::hiqlite::{Cache, DB};
 use actix_web::cookie::Cookie;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
@@ -162,20 +162,14 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 .await?
                 .get("count")
         } else {
-            let res = sqlx::query!(
+            sqlx::query!(
                 "SELECT COUNT (*) AS count FROM passkeys WHERE user_id = $1",
                 user_id
             )
             .fetch_one(&data.db)
-            .await?;
-
-            // sqlite returns an i32 for count while postgres returns an Option<i64>
-            #[cfg(feature = "postgres")]
-            let count = res.count.unwrap_or_default();
-            #[cfg(not(feature = "postgres"))]
-            let count = res.count as i64;
-
-            count
+            .await?
+            .count
+            .unwrap_or_default()
         };
 
         Ok(count)

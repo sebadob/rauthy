@@ -1,4 +1,5 @@
 use crate::app_state::DbPool;
+use crate::database::DB;
 use crate::events::{
     EVENT_LEVEL_FAILED_LOGIN, EVENT_LEVEL_FAILED_LOGINS_10, EVENT_LEVEL_FAILED_LOGINS_15,
     EVENT_LEVEL_FAILED_LOGINS_20, EVENT_LEVEL_FAILED_LOGINS_25, EVENT_LEVEL_FAILED_LOGINS_7,
@@ -7,7 +8,6 @@ use crate::events::{
     EVENT_LEVEL_RAUTHY_START, EVENT_LEVEL_RAUTHY_UNHEALTHY, EVENT_LEVEL_SECRETS_MIGRATED,
     EVENT_LEVEL_USER_EMAIL_CHANGE, EVENT_LEVEL_USER_PASSWORD_RESET,
 };
-use crate::hiqlite::DB;
 use chrono::{DateTime, Timelike, Utc};
 use hiqlite::{params, Param, Row};
 use rauthy_common::constants::EMAIL_SUB_PREFIX;
@@ -16,7 +16,9 @@ use rauthy_common::utils::{get_local_hostname, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::{Notification, NotificationLevel};
 use serde::{Deserialize, Serialize};
-use sqlx::{query, query_as};
+use sqlx::postgres::PgRow;
+use sqlx::sqlite::SqliteRow;
+use sqlx::{query, query_as, Error, FromRow, Row as SqlxRow};
 use std::fmt::{Display, Formatter};
 use std::net::IpAddr;
 use std::str::FromStr;
@@ -325,6 +327,34 @@ impl<'r> From<hiqlite::Row<'r>> for Event {
     }
 }
 
+impl<'r> FromRow<'r, PgRow> for Event {
+    fn from_row(row: &'r PgRow) -> Result<Self, Error> {
+        Ok(Self {
+            id: row.get("id"),
+            timestamp: row.get("timestamp"),
+            level: EventLevel::from(row.get::<i16, _>("level")),
+            typ: EventType::from(row.get::<i16, _>("typ")),
+            ip: row.get("ip"),
+            data: row.get("data"),
+            text: row.get("text"),
+        })
+    }
+}
+
+impl<'r> FromRow<'r, SqliteRow> for Event {
+    fn from_row(row: &'r SqliteRow) -> Result<Self, Error> {
+        Ok(Self {
+            id: row.get("id"),
+            timestamp: row.get("timestamp"),
+            level: EventLevel::from(row.get::<i64, _>("level")),
+            typ: EventType::from(row.get::<i64, _>("typ")),
+            ip: row.get("ip"),
+            data: row.get("data"),
+            text: row.get("text"),
+        })
+    }
+}
+
 impl From<&Event> for Notification {
     fn from(value: &Event) -> Self {
         let icon = match value.level {
@@ -434,8 +464,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
         } else {
             query!(
                 r#"
-    INSERT INTO events (id, timestamp, level, typ, ip, data, text)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+INSERT INTO events (id, timestamp, level, typ, ip, data, text)
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
                 self.id,
                 self.timestamp,
                 level,
@@ -481,9 +511,9 @@ ORDER BY timestamp DESC"#,
                 query_as!(
                     Self,
                     r#"
-    SELECT * FROM events
-    WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3 AND typ = $4
-    ORDER BY timestamp DESC"#,
+SELECT * FROM events
+WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3 AND typ = $4
+ORDER BY timestamp DESC"#,
                     from,
                     until,
                     level,
@@ -492,32 +522,29 @@ ORDER BY timestamp DESC"#,
                 .fetch_all(db)
                 .await?
             }
-        } else {
-            #[allow(clippy::collapsible_else_if)]
-            if is_hiqlite() {
-                DB::client()
-                    .query_map(
-                        r#"
+        } else if is_hiqlite() {
+            DB::client()
+                .query_map(
+                    r#"
 SELECT * FROM events
 WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3
 ORDER BY timestamp DESC"#,
-                        params!(from, until, level),
-                    )
-                    .await?
-            } else {
-                query_as!(
-                    Self,
-                    r#"
-    SELECT * FROM events
-    WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3
-    ORDER BY timestamp DESC"#,
-                    from,
-                    until,
-                    level,
+                    params!(from, until, level),
                 )
-                .fetch_all(db)
                 .await?
-            }
+        } else {
+            query_as!(
+                Self,
+                r#"
+SELECT * FROM events
+WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3
+ORDER BY timestamp DESC"#,
+                from,
+                until,
+                level,
+            )
+            .fetch_all(db)
+            .await?
         };
 
         Ok(res)

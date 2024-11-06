@@ -7,9 +7,9 @@ use rauthy_common::constants::{
 };
 use rauthy_common::is_hiqlite;
 use rauthy_models::app_state::AppState;
+use rauthy_models::database::DB;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
-use rauthy_models::hiqlite::DB;
 use sqlx::query_as;
 use std::time::Duration;
 use tracing::{debug, error, info};

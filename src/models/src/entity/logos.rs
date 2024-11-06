@@ -1,5 +1,5 @@
 use crate::app_state::AppState;
-use crate::hiqlite::{Cache, DB};
+use crate::database::{Cache, DB};
 use actix_web::web;
 use hiqlite::{params, Param, Row};
 use image::imageops::FilterType;
@@ -66,8 +66,10 @@ const RAUTHY_DEFAULT_SVG: &str = r#"<?xml version="1.0" encoding="UTF-8" standal
     </defs>
 </svg>"#;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "lowercase")]
+#[sqlx(type_name = "varchar")]
+#[sqlx(rename_all = "lowercase")]
 pub enum LogoRes {
     Small,
     Medium,
@@ -106,7 +108,7 @@ pub enum LogoType {
     AuthProvider,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Logo {
     pub id: String,
     pub res: LogoRes,

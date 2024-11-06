@@ -55,7 +55,6 @@ pub async fn get_api_keys(
 )]
 #[post("/api_keys")]
 pub async fn post_api_key(
-    data: web::Data<AppState>,
     principal: ReqPrincipal,
     payload: Json<ApiKeyRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -63,7 +62,7 @@ pub async fn post_api_key(
 
     let req = payload.into_inner();
     let access = req.access.into_iter().map(|a| a.into()).collect();
-    let secret = ApiKeyEntity::create(&data.db, req.name, req.exp, access).await?;
+    let secret = ApiKeyEntity::create(req.name, req.exp, access).await?;
 
     Ok(HttpResponse::Ok()
         .content_type(TEXT_PLAIN_UTF_8)

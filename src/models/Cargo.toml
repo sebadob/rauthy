@@ -9,10 +9,6 @@ license.workspace = true
 # needed to make tests work with the `sqlite` feature which seems to enable some broken doctest in the webauthn-rs crate
 doctest = false
 
-[features]
-default = []
-postgres = []
-
 [dependencies]
 rauthy-api-types = { path = "../api_types" }
 rauthy-common = { path = "../common" }

@@ -2,7 +2,7 @@ use chrono::Utc;
 use hiqlite::{params, Param};
 use rauthy_common::is_hiqlite;
 use rauthy_models::app_state::DbPool;
-use rauthy_models::hiqlite::DB;
+use rauthy_models::database::DB;
 use std::ops::Sub;
 use std::time::Duration;
 use tracing::{debug, error};

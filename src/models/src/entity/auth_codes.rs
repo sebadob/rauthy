@@ -1,4 +1,4 @@
-use crate::hiqlite::{Cache, DB};
+use crate::database::{Cache, DB};
 use rauthy_common::constants::CACHE_TTL_AUTH_CODE;
 use rauthy_common::utils::get_rand;
 use rauthy_error::ErrorResponse;
