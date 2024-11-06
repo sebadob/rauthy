@@ -215,7 +215,7 @@ version:
     echo "v$TAG"
 
 # only starts the backend in test mode with hiqlite database for easier test debugging
-test-backend: test-backend-stop migrate delete-hiqlite
+test-backend: test-backend-stop delete-hiqlite
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
@@ -237,7 +237,7 @@ test *test:
     {{ hiqlite }} cargo test {{ test }}
 
 # runs the full set of tests with sqlite
-test-hiqlite *test: test-backend-stop migrate delete-hiqlite
+test-hiqlite *test: test-backend-stop delete-hiqlite
     #!/usr/bin/env bash
     clear
 
@@ -340,68 +340,17 @@ build-docs:
     cd book
     mdbook build -d ../docs
 
-# Build the final container image. Skip tests with `no-test`.
-build no-test="test" image="ghcr.io/sebadob/rauthy": build-ui
+# sqlx prepare for the workspace
+prepare:
+    cargo sqlx prepare --workspace
+
+# Build the final container image.
+build image="ghcr.io/sebadob/rauthy": build-ui prepare
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # hiqlite
-    if [ {{ no-test }} != "no-test" ]; then
-        echo "make sure clippy is fine with sqlite"
-        {{ hiqlite }} cargo clippy -- -D warnings
-        echo "run tests against sqlite"
-        just test-sqlite
-    fi
-
-    # make sure any big testing sqlite backups are cleaned up to speed up docker build
-    rm -rf data/backup out
     mkdir -p out/empty
 
-    echo "build sqlite release"
-    ## IMPORTANT: We can't use `cross` for the x86 build because it uses a way too old
-    ## `gcc`which has a known `memcmp` issue, which they decided to ignore:
-    ## https://github.com/cross-rs/cross/security/advisories/GHSA-2r9g-5qvw-fgmf
-    ## https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95189
-    {{ docker }} run \
-      -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
-      -v {{ invocation_directory() }}/:/work/ \
-      -w /work \
-      {{ map_docker_user }} \
-      -e {{ hiqlite }} \
-      --net host \
-      {{ builder_image }}:{{ builder_tag_date }} \
-      cargo build --release --target x86_64-unknown-linux-gnu
-    cp target/x86_64-unknown-linux-gnu/release/rauthy out/rauthy_amd64
-
-    {{ docker }} run \
-      -v {{ cargo_home }}/registry:{{ container_cargo_registry }} \
-      -v {{ invocation_directory() }}/:/work/ \
-      -w /work \
-      {{ map_docker_user }} \
-      -e {{ hiqlite }} \
-      --net host \
-      {{ builder_image }}:{{ builder_tag_date }} \
-      cargo build --release --target aarch64-unknown-linux-gnu
-    cp target/aarch64-unknown-linux-gnu/release/rauthy out/rauthy_arm64
-
-    {{ docker }} buildx build \
-        -t {{ image }}:$TAG-lite \
-        --platform linux/amd64,linux/arm64 \
-        --push \
-        .
-
-    rm -rf out/rauthy_*
-
-    # postgres
-    if [ {{ no-test }} != "no-test" ]; then
-        echo "make sure clippy is fine with postgres"
-        cargo clippy -- -D warnings
-        echo "run tests against postgres"
-        just test-postgres
-    fi
-
-    echo "build postgres release"
-    cargo sqlx prepare --workspace
     # IMPORTANT: We can't use `cross` for the x86 build because it uses a way too old
     # `gcc`which has a known `memcmp` issue, which they decided to ignore:
     # https://github.com/cross-rs/cross/security/advisories/GHSA-2r9g-5qvw-fgmf
@@ -439,32 +388,12 @@ build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    # using bookworm instead of bullseye because of the newer, bug free gcc
     {{ docker }} build \
           -t {{ image }}:$TODAY \
           -f Dockerfile_builder \
           --build-arg="IMAGE=rust:1.81-bookworm" \
           .
     {{ docker }} push {{ image }}:$TODAY
-
-#    # using bookworm instead of bullseye because of the newer, bug free gcc
-#    {{docker}} build \
-#          -t {{image}}:amd64-$TODAY \
-#          -f Dockerfile_builder \
-#          --build-arg="IMAGE=rust:1.81-bookworm" \
-#          --no-cache \
-#          .
-#
-#    {{docker}} pull ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main
-#    {{docker}} build \
-#          -t {{image}}:arm64-$TODAY \
-#          -f Dockerfile_builder \
-#          --build-arg="IMAGE=ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main" \
-#          --no-cache \
-#          .
-#
-#    {{docker}} push {{image}}:amd64-$TODAY
-#    {{docker}} push {{image}}:arm64-$TODAY
 
 # makes sure everything is fine
 is-clean:
@@ -491,7 +420,7 @@ release:
     git push origin "v$TAG"
 
 # publishes the application images - full pipeline incl clippy and testing  you can provide a custom image name as variable
-publish: build-docs fmt build
+publish: build-docs fmt test-hiqlite test-postgres build
     #!/usr/bin/env bash
     set -euxo pipefail
 
@@ -506,7 +435,7 @@ publish-latest:
     {{ docker }} push ghcr.io/sebadob/rauthy:latest
 
 # should be run before submitting a PR to make sure everything is fine
-pre-pr-checks: build-ui fmt test-sqlite test-postgres clippy clippy-postgres
+pre-pr-checks: build-ui fmt test-hiqlite test-postgres clippy clippy
     #!/usr/bin/env bash
     set -euxo pipefail
 
