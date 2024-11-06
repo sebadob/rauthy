@@ -332,8 +332,8 @@ impl<'r> FromRow<'r, PgRow> for Event {
         Ok(Self {
             id: row.get("id"),
             timestamp: row.get("timestamp"),
-            level: EventLevel::from(row.get::<i64, _>("level")),
-            typ: EventType::from(row.get::<i64, _>("typ")),
+            level: EventLevel::from(row.get::<i16, _>("level")),
+            typ: EventType::from(row.get::<i16, _>("typ")),
             ip: row.get("ip"),
             data: row.get("data"),
             text: row.get("text"),
@@ -464,8 +464,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
         } else {
             query!(
                 r#"
-    INSERT INTO events (id, timestamp, level, typ, ip, data, text)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+INSERT INTO events (id, timestamp, level, typ, ip, data, text)
+VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
                 self.id,
                 self.timestamp,
                 level,

@@ -136,7 +136,7 @@ CREATE TABLE events
     level     INTEGER NOT NULL,
     ip        TEXT,
     data      INTEGER,
-    TEXT      TEXT,
+    text      TEXT,
     CONSTRAINT events_pk
         PRIMARY KEY (id, timestamp)
 ) STRICT;

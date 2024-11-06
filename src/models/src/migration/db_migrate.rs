@@ -23,7 +23,7 @@ use crate::entity::webids::WebId;
 use crate::events::event::Event;
 use crate::migration::inserts;
 use rauthy_error::ErrorResponse;
-use sqlx::Row;
+use sqlx::{FromRow, Row};
 use tracing::{debug, info};
 
 /// Migrates `MIGRATE_DB_FROM` to current database
@@ -157,6 +157,7 @@ pub async fn migrate_from_sqlite(db_from: sqlx::SqlitePool) -> Result<(), ErrorR
     inserts::scopes(before).await?;
 
     // EVENTS
+    debug!("Migrating table: events");
     let before = sqlx::query_as::<_, Event>("SELECT * FROM events")
         .fetch_all(&db_from)
         .await?;
@@ -351,9 +352,13 @@ pub async fn migrate_from_postgres(db_from: sqlx::PgPool) -> Result<(), ErrorRes
     inserts::scopes(before).await?;
 
     // EVENTS
-    let before = sqlx::query_as::<_, Event>("SELECT * FROM events")
+    debug!("Migrating table: events");
+    let before = sqlx::query("SELECT * FROM events")
         .fetch_all(&db_from)
-        .await?;
+        .await?
+        .into_iter()
+        .map(|row| Event::from_row(&row).unwrap())
+        .collect::<Vec<_>>();
     inserts::events(before).await?;
 
     // USER ATTR CONFIG
