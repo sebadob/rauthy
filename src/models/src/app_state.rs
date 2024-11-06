@@ -18,16 +18,8 @@ use tracing::{debug, error, info};
 use webauthn_rs::prelude::Url;
 use webauthn_rs::Webauthn;
 
-// TODO we can get rid of these feature separations after hiqlite migrations is complete
-#[cfg(feature = "postgres")]
 pub type DbPool = sqlx::PgPool;
-#[cfg(not(feature = "postgres"))]
-pub type DbPool = sqlx::SqlitePool;
-
-#[cfg(feature = "postgres")]
 pub type DbTxn<'a> = sqlx::Transaction<'a, sqlx::Postgres>;
-#[cfg(not(feature = "postgres"))]
-pub type DbTxn<'a> = sqlx::Transaction<'a, sqlx::Sqlite>;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
@@ -201,7 +193,6 @@ impl AppState {
             .parse::<u32>()
             .expect("Error parsing DATABASE_MAX_CONN to u32");
 
-        #[cfg(feature = "postgres")]
         let pool = {
             if *DB_TYPE == DbType::Sqlite {
                 debug!("DATABASE_URL: {}", *DATABASE_URL);
@@ -222,38 +213,6 @@ impl AppState {
             sqlx::migrate!("../../migrations/postgres")
                 .run(&pool)
                 .await?;
-
-            pool
-        };
-
-        #[cfg(not(feature = "postgres"))]
-        let pool = {
-            if *DB_TYPE == DbType::Postgres {
-                let msg = r#"
-    You are trying to connect to a Postgres instance with the 'SQLite'
-    version of Rauthy. You need to either change to a Postgres database or use the default
-    Postgres container image of Rauthy."#;
-                error!("{msg}");
-                panic!("{msg}");
-            }
-
-            // TODO remove when Hiqlite migration is finished -> just a workaround for now
-            let mut db_url = DATABASE_URL.to_string();
-            if is_hiqlite() {
-                db_url = db_url.replace("hiqlite:", "sqlite:");
-            }
-
-            let pool = Self::connect_sqlite(&db_url, db_max_conn).await?;
-            if db_url.ends_with(":memory:") {
-                info!("Using in-memory SQLite");
-            } else if is_hiqlite() {
-                info!("Using Hiqlite");
-            } else {
-                info!("Using on-disk SQLite");
-            }
-
-            debug!("Migrating data from ../../migrations/sqlite");
-            sqlx::migrate!("../../migrations/sqlite").run(&pool).await?;
 
             pool
         };

@@ -167,21 +167,10 @@ impl DbVersion {
                 .await
                 .is_err()
         } else {
-            #[cfg(feature = "postgres")]
-            let is_db_v0_15_0 =
-                query!("SELECT * FROM pg_tables WHERE tablename = 'passkeys' LIMIT 1")
-                    .fetch_one(DB::conn())
-                    .await
-                    .is_err();
-            #[cfg(not(feature = "postgres"))]
-            todo!("remove SQLite features after Hiqlite migration");
-            // let is_db_v0_15_0 = query!(
-            //     "SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'passkeys' LIMIT 1"
-            // )
-            // .fetch_one(db)
-            // .await
-            // .is_err();
-            is_db_v0_15_0
+            query!("SELECT * FROM pg_tables WHERE tablename = 'passkeys' LIMIT 1")
+                .fetch_one(DB::conn())
+                .await
+                .is_err()
         };
         if is_db_v0_15_0 {
             panic!(
@@ -201,20 +190,10 @@ impl DbVersion {
                 .await
                 .is_err()
         } else {
-            #[cfg(feature = "postgres")]
-            let is_db_pre_v0_15_0 =
-                query!("SELECT * FROM pg_tables WHERE tablename = 'clients' LIMIT 1")
-                    .fetch_one(DB::conn())
-                    .await
-                    .is_err();
-            #[cfg(not(feature = "postgres"))]
-            let is_db_pre_v0_15_0 = query!(
-                "SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'clients' LIMIT 1"
-            )
-            .fetch_one(db)
-            .await
-            .is_err();
-            is_db_pre_v0_15_0
+            query!("SELECT * FROM pg_tables WHERE tablename = 'clients' LIMIT 1")
+                .fetch_one(DB::conn())
+                .await
+                .is_err()
         };
         if is_db_pre_v0_15_0 {
             panic!(

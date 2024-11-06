@@ -116,15 +116,11 @@ impl User {
                 .remove(0)
                 .get("count")
         } else {
-            let res = sqlx::query!("SELECT COUNT (*) count FROM users")
+            sqlx::query!("SELECT COUNT (*) count FROM users")
                 .fetch_one(&data.db)
-                .await?;
-            // sqlite returns an i32 for count while postgres returns an Option<i64>
-            #[cfg(feature = "postgres")]
-            let count = res.count.unwrap_or_default();
-            #[cfg(not(feature = "postgres"))]
-            let count = res.count as i64;
-            count
+                .await?
+                .count
+                .unwrap_or_default()
         };
 
         client
