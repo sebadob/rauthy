@@ -47,7 +47,7 @@ pub async fn migrate_from_sqlite(db_from: sqlx::SqlitePool) -> Result<(), ErrorR
     // The users table has a FK to auth_providers - the order is important here!
     // AUTH PROVIDERS
     debug!("Migrating table: auth_providers");
-    let before = sqlx::query_as::<_, AuthProvider>("select * from auth_providers")
+    let before = sqlx::query_as::<_, AuthProvider>("SELECT * FROM auth_providers")
         .fetch_all(&db_from)
         .await?;
     inserts::auth_providers(before).await?;
@@ -55,7 +55,7 @@ pub async fn migrate_from_sqlite(db_from: sqlx::SqlitePool) -> Result<(), ErrorR
     // AUTH PROVIDER LOGOS
     debug!("Migrating table: auth_provider_logos");
     let before = sqlx::query_as::<_, Logo>(
-        "select auth_provider_id as id, res, content_type, data from auth_provider_logos",
+        "SELECT auth_provider_id AS id, res, content_type, data FROM auth_provider_logos",
     )
     .fetch_all(&db_from)
     .await?;
@@ -63,7 +63,7 @@ pub async fn migrate_from_sqlite(db_from: sqlx::SqlitePool) -> Result<(), ErrorR
 
     // USERS
     debug!("Migrating table: users");
-    let before = sqlx::query_as::<_, User>("select * from users")
+    let before = sqlx::query_as::<_, User>("SELECT * FROM users")
         .fetch_all(&db_from)
         .await?;
     inserts::users(before).await?;
@@ -78,56 +78,58 @@ pub async fn migrate_from_sqlite(db_from: sqlx::SqlitePool) -> Result<(), ErrorR
     // Do not change the order - tables below have FKs to clients
     // CLIENTS
     debug!("Migrating table: clients");
-    let before = sqlx::query_as::<_, Client>("select * from clients")
+    let before = sqlx::query_as::<_, Client>("SELECT * FROM clients")
         .fetch_all(&db_from)
         .await?;
     inserts::clients(before).await?;
 
     // CLIENTS DYN
     debug!("Migrating table: clients_dyn");
-    let before = sqlx::query_as::<_, ClientDyn>("select * from clients_dyn")
+    let before = sqlx::query_as::<_, ClientDyn>("SELECT * FROM clients_dyn")
         .fetch_all(&db_from)
         .await?;
     inserts::clients_dyn(before).await?;
 
     // CLIENT LOGOS
     debug!("Migrating table: client_logos");
-    let before = sqlx::query_as::<_, Logo>("select * from client_logos")
-        .fetch_all(&db_from)
-        .await?;
+    let before = sqlx::query_as::<_, Logo>(
+        "SELECT client_id AS id, res, content_type, data FROM client_logos",
+    )
+    .fetch_all(&db_from)
+    .await?;
     inserts::client_logos(before).await?;
 
     // COLORS
     debug!("Migrating table: colors");
-    let before = sqlx::query_as::<_, ColorEntity>("select * from colors")
+    let before = sqlx::query_as::<_, ColorEntity>("SELECT * FROM colors")
         .fetch_all(&db_from)
         .await?;
     inserts::colors(before).await?;
 
     // GROUPS
     debug!("Migrating table: groups");
-    let before = sqlx::query_as::<_, Group>("select * from groups")
+    let before = sqlx::query_as::<_, Group>("SELECT * FROM groups")
         .fetch_all(&db_from)
         .await?;
     inserts::groups(before).await?;
 
     // JWKS
     debug!("Migrating table: jwks");
-    let before = sqlx::query_as::<_, Jwk>("select * from jwks")
+    let before = sqlx::query_as::<_, Jwk>("SELECT * FROM jwks")
         .fetch_all(&db_from)
         .await?;
     inserts::jwks(before).await?;
 
     // MAGIC LINKS
     debug!("Migrating table: magic_links");
-    let before = sqlx::query_as::<_, MagicLink>("select * from magic_links")
+    let before = sqlx::query_as::<_, MagicLink>("SELECT * FROM magic_links")
         .fetch_all(&db_from)
         .await?;
     inserts::magic_links(before).await?;
 
     // PASSWORD POLICY
     debug!("Migrating table: password_policy");
-    let res = sqlx::query("select data from config where id = 'password_policy'")
+    let res = sqlx::query("SELECT data FROM config WHERE id = 'password_policy'")
         .fetch_one(&db_from)
         .await?;
     let bytes: Vec<u8> = res.get("data");
@@ -135,83 +137,83 @@ pub async fn migrate_from_sqlite(db_from: sqlx::SqlitePool) -> Result<(), ErrorR
 
     // REFRESH TOKENS
     debug!("Migrating table: refresh_tokens");
-    let before = sqlx::query_as::<_, RefreshToken>("select * from refresh_tokens")
+    let before = sqlx::query_as::<_, RefreshToken>("SELECT * FROM refresh_tokens")
         .fetch_all(&db_from)
         .await?;
     inserts::refresh_tokens(before).await?;
 
     // ROLES
     debug!("Migrating table: roles");
-    let before = sqlx::query_as::<_, Role>("select * from roles")
+    let before = sqlx::query_as::<_, Role>("SELECT * FROM roles")
         .fetch_all(&db_from)
         .await?;
     inserts::roles(before).await?;
 
     // SCOPES
     debug!("Migrating table: scopes");
-    let before = sqlx::query_as::<_, Scope>("select * from scopes")
+    let before = sqlx::query_as::<_, Scope>("SELECT * FROM scopes")
         .fetch_all(&db_from)
         .await?;
     inserts::scopes(before).await?;
 
     // EVENTS
-    let before = sqlx::query_as::<_, Event>("select * from events")
+    let before = sqlx::query_as::<_, Event>("SELECT * FROM events")
         .fetch_all(&db_from)
         .await?;
     inserts::events(before).await?;
 
     // USER ATTR CONFIG
     debug!("Migrating table: user_attr_config");
-    let before = sqlx::query_as::<_, UserAttrConfigEntity>("select * from user_attr_config")
+    let before = sqlx::query_as::<_, UserAttrConfigEntity>("SELECT * FROM user_attr_config")
         .fetch_all(&db_from)
         .await?;
     inserts::user_attr_config(before).await?;
 
     // USER ATTR VALUES
     debug!("Migrating table: user_attr_values");
-    let before = sqlx::query_as::<_, UserAttrValueEntity>("select * from user_attr_values")
+    let before = sqlx::query_as::<_, UserAttrValueEntity>("SELECT * FROM user_attr_values")
         .fetch_all(&db_from)
         .await?;
     inserts::user_attr_values(before).await?;
 
     // USERS VALUES
     debug!("Migrating table: users_values");
-    let before = sqlx::query_as::<_, UserValues>("select * from users_values")
+    let before = sqlx::query_as::<_, UserValues>("SELECT * FROM users_values")
         .fetch_all(&db_from)
         .await?;
     inserts::users_values(before).await?;
 
     // DEVICES
     debug!("Migrating table: devices");
-    let before = sqlx::query_as::<_, DeviceEntity>("select * from devices")
+    let before = sqlx::query_as::<_, DeviceEntity>("SELECT * FROM devices")
         .fetch_all(&db_from)
         .await?;
     inserts::devices(before).await?;
 
     // REFRESH TOKENS DEVICES
     debug!("Migrating table: devices");
-    let before = sqlx::query_as::<_, RefreshTokenDevice>("select * from refresh_tokens_devices")
+    let before = sqlx::query_as::<_, RefreshTokenDevice>("SELECT * FROM refresh_tokens_devices")
         .fetch_all(&db_from)
         .await?;
     inserts::refresh_tokens_devices(before).await?;
 
     // SESSIONS
     debug!("Migrating table: sessions");
-    let before = sqlx::query_as::<_, Session>("select * from sessions")
+    let before = sqlx::query_as::<_, Session>("SELECT * FROM sessions")
         .fetch_all(&db_from)
         .await?;
     inserts::sessions(before).await?;
 
     // RECENT PASSWORDS
     debug!("Migrating table: recent_passwords");
-    let before = sqlx::query_as::<_, RecentPasswordsEntity>("select * from recent_passwords")
+    let before = sqlx::query_as::<_, RecentPasswordsEntity>("SELECT * FROM recent_passwords")
         .fetch_all(&db_from)
         .await?;
     inserts::recent_passwords(before).await?;
 
     // WEBIDS
     debug!("Migrating table: webids");
-    let before = sqlx::query_as::<_, WebId>("select * from webids")
+    let before = sqlx::query_as::<_, WebId>("SELECT * FROM webids")
         .fetch_all(&db_from)
         .await?;
     inserts::webids(before).await?;
@@ -239,7 +241,7 @@ pub async fn migrate_from_postgres(db_from: sqlx::PgPool) -> Result<(), ErrorRes
     // The users table has a FK to auth_providers - the order is important here!
     // AUTH PROVIDERS
     debug!("Migrating table: auth_providers");
-    let before = sqlx::query_as::<_, AuthProvider>("select * from auth_providers")
+    let before = sqlx::query_as::<_, AuthProvider>("SELECT * FROM auth_providers")
         .fetch_all(&db_from)
         .await?;
     inserts::auth_providers(before).await?;
@@ -247,7 +249,7 @@ pub async fn migrate_from_postgres(db_from: sqlx::PgPool) -> Result<(), ErrorRes
     // AUTH PROVIDER LOGOS
     debug!("Migrating table: auth_provider_logos");
     let before = sqlx::query_as::<_, Logo>(
-        "select auth_provider_id as id, res, content_type, data from auth_provider_logos",
+        "SELECT auth_provider_id AS id, res, content_type, data FROM auth_provider_logos",
     )
     .fetch_all(&db_from)
     .await?;
@@ -255,7 +257,7 @@ pub async fn migrate_from_postgres(db_from: sqlx::PgPool) -> Result<(), ErrorRes
 
     // USERS
     debug!("Migrating table: users");
-    let before = sqlx::query_as::<_, User>("select * from users")
+    let before = sqlx::query_as::<_, User>("SELECT * FROM users")
         .fetch_all(&db_from)
         .await?;
     inserts::users(before).await?;
@@ -270,56 +272,58 @@ pub async fn migrate_from_postgres(db_from: sqlx::PgPool) -> Result<(), ErrorRes
     // Do not change the order - tables below have FKs to clients
     // CLIENTS
     debug!("Migrating table: clients");
-    let before = sqlx::query_as::<_, Client>("select * from clients")
+    let before = sqlx::query_as::<_, Client>("SELECT * FROM clients")
         .fetch_all(&db_from)
         .await?;
     inserts::clients(before).await?;
 
     // CLIENTS DYN
     debug!("Migrating table: clients_dyn");
-    let before = sqlx::query_as::<_, ClientDyn>("select * from clients_dyn")
+    let before = sqlx::query_as::<_, ClientDyn>("SELECT * FROM clients_dyn")
         .fetch_all(&db_from)
         .await?;
     inserts::clients_dyn(before).await?;
 
     // CLIENT LOGOS
     debug!("Migrating table: client_logos");
-    let before = sqlx::query_as::<_, Logo>("select * from client_logos")
-        .fetch_all(&db_from)
-        .await?;
+    let before = sqlx::query_as::<_, Logo>(
+        "SELECT client_id AS id, res, content_type, data FROM client_logos",
+    )
+    .fetch_all(&db_from)
+    .await?;
     inserts::client_logos(before).await?;
 
     // COLORS
     debug!("Migrating table: colors");
-    let before = sqlx::query_as::<_, ColorEntity>("select * from colors")
+    let before = sqlx::query_as::<_, ColorEntity>("SELECT * FROM colors")
         .fetch_all(&db_from)
         .await?;
     inserts::colors(before).await?;
 
     // GROUPS
     debug!("Migrating table: groups");
-    let before = sqlx::query_as::<_, Group>("select * from groups")
+    let before = sqlx::query_as::<_, Group>("SELECT * FROM groups")
         .fetch_all(&db_from)
         .await?;
     inserts::groups(before).await?;
 
     // JWKS
     debug!("Migrating table: jwks");
-    let before = sqlx::query_as::<_, Jwk>("select * from jwks")
+    let before = sqlx::query_as::<_, Jwk>("SELECT * FROM jwks")
         .fetch_all(&db_from)
         .await?;
     inserts::jwks(before).await?;
 
     // MAGIC LINKS
     debug!("Migrating table: magic_links");
-    let before = sqlx::query_as::<_, MagicLink>("select * from magic_links")
+    let before = sqlx::query_as::<_, MagicLink>("SELECT * FROM magic_links")
         .fetch_all(&db_from)
         .await?;
     inserts::magic_links(before).await?;
 
     // PASSWORD POLICY
     debug!("Migrating table: password_policy");
-    let res = sqlx::query("select data from config where id = 'password_policy'")
+    let res = sqlx::query("SELECT data FROM config WHERE id = 'password_policy'")
         .fetch_one(&db_from)
         .await?;
     let bytes: Vec<u8> = res.get("data");
@@ -327,83 +331,83 @@ pub async fn migrate_from_postgres(db_from: sqlx::PgPool) -> Result<(), ErrorRes
 
     // REFRESH TOKENS
     debug!("Migrating table: refresh_tokens");
-    let before = sqlx::query_as::<_, RefreshToken>("select * from refresh_tokens")
+    let before = sqlx::query_as::<_, RefreshToken>("SELECT * FROM refresh_tokens")
         .fetch_all(&db_from)
         .await?;
     inserts::refresh_tokens(before).await?;
 
     // ROLES
     debug!("Migrating table: roles");
-    let before = sqlx::query_as::<_, Role>("select * from roles")
+    let before = sqlx::query_as::<_, Role>("SELECT * FROM roles")
         .fetch_all(&db_from)
         .await?;
     inserts::roles(before).await?;
 
     // SCOPES
     debug!("Migrating table: scopes");
-    let before = sqlx::query_as::<_, Scope>("select * from scopes")
+    let before = sqlx::query_as::<_, Scope>("SELECT * FROM scopes")
         .fetch_all(&db_from)
         .await?;
     inserts::scopes(before).await?;
 
     // EVENTS
-    let before = sqlx::query_as::<_, Event>("select * from events")
+    let before = sqlx::query_as::<_, Event>("SELECT * FROM events")
         .fetch_all(&db_from)
         .await?;
     inserts::events(before).await?;
 
     // USER ATTR CONFIG
     debug!("Migrating table: user_attr_config");
-    let before = sqlx::query_as::<_, UserAttrConfigEntity>("select * from user_attr_config")
+    let before = sqlx::query_as::<_, UserAttrConfigEntity>("SELECT * FROM user_attr_config")
         .fetch_all(&db_from)
         .await?;
     inserts::user_attr_config(before).await?;
 
     // USER ATTR VALUES
     debug!("Migrating table: user_attr_values");
-    let before = sqlx::query_as::<_, UserAttrValueEntity>("select * from user_attr_values")
+    let before = sqlx::query_as::<_, UserAttrValueEntity>("SELECT * FROM user_attr_values")
         .fetch_all(&db_from)
         .await?;
     inserts::user_attr_values(before).await?;
 
     // USERS VALUES
     debug!("Migrating table: users_values");
-    let before = sqlx::query_as::<_, UserValues>("select * from users_values")
+    let before = sqlx::query_as::<_, UserValues>("SELECT * FROM users_values")
         .fetch_all(&db_from)
         .await?;
     inserts::users_values(before).await?;
 
     // DEVICES
     debug!("Migrating table: devices");
-    let before = sqlx::query_as::<_, DeviceEntity>("select * from devices")
+    let before = sqlx::query_as::<_, DeviceEntity>("SELECT * FROM devices")
         .fetch_all(&db_from)
         .await?;
     inserts::devices(before).await?;
 
     // REFRESH TOKENS DEVICES
     debug!("Migrating table: devices");
-    let before = sqlx::query_as::<_, RefreshTokenDevice>("select * from refresh_tokens_devices")
+    let before = sqlx::query_as::<_, RefreshTokenDevice>("SELECT * FROM refresh_tokens_devices")
         .fetch_all(&db_from)
         .await?;
     inserts::refresh_tokens_devices(before).await?;
 
     // SESSIONS
     debug!("Migrating table: sessions");
-    let before = sqlx::query_as::<_, Session>("select * from sessions")
+    let before = sqlx::query_as::<_, Session>("SELECT * FROM sessions")
         .fetch_all(&db_from)
         .await?;
     inserts::sessions(before).await?;
 
     // RECENT PASSWORDS
     debug!("Migrating table: recent_passwords");
-    let before = sqlx::query_as::<_, RecentPasswordsEntity>("select * from recent_passwords")
+    let before = sqlx::query_as::<_, RecentPasswordsEntity>("SELECT * FROM recent_passwords")
         .fetch_all(&db_from)
         .await?;
     inserts::recent_passwords(before).await?;
 
     // WEBIDS
     debug!("Migrating table: webids");
-    let before = sqlx::query_as::<_, WebId>("select * from webids")
+    let before = sqlx::query_as::<_, WebId>("SELECT * FROM webids")
         .fetch_all(&db_from)
         .await?;
     inserts::webids(before).await?;

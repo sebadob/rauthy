@@ -313,11 +313,12 @@ pub async fn clients_dyn(data_before: Vec<ClientDyn>) -> Result<(), ErrorRespons
                 .execute(
                     r#"
 INSERT INTO
-clients_dyn (id, created, registration_token, token_endpoint_auth_method)
-VALUES ($1, $2, $3, $4)"#,
+clients_dyn (id, created, last_used, registration_token, token_endpoint_auth_method)
+VALUES ($1, $2, $3, $4, $5)"#,
                     params!(
                         b.id,
                         b.created,
+                        b.last_used,
                         b.registration_token,
                         b.token_endpoint_auth_method
                     ),
@@ -332,10 +333,11 @@ VALUES ($1, $2, $3, $4)"#,
             sqlx::query!(
                 r#"
 INSERT INTO
-clients_dyn (id, created, registration_token, token_endpoint_auth_method)
-VALUES ($1, $2, $3, $4)"#,
+clients_dyn (id, created, last_used, registration_token, token_endpoint_auth_method)
+VALUES ($1, $2, $3, $4, $5)"#,
                 b.id,
                 b.created,
+                b.last_used,
                 b.registration_token,
                 b.token_endpoint_auth_method
             )

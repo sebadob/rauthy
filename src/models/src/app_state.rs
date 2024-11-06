@@ -1,16 +1,10 @@
 use crate::email::EMail;
-use crate::entity::db_version::DbVersion;
 use crate::events::event::Event;
 use crate::events::ip_blacklist_handler::IpBlacklistReq;
 use crate::events::listener::EventRouterMsg;
-use crate::migration::db_migrate;
-use crate::migration::db_migrate_dev::migrate_dev_data;
-use crate::migration::{anti_lockout, init_prod};
 use crate::ListenScheme;
 use anyhow::Context;
-use argon2::Params;
-use hiqlite::NodeConfig;
-use rauthy_common::constants::{DATABASE_URL, DB_TYPE, DEV_MODE, PROXY_MODE};
+use rauthy_common::constants::{DATABASE_URL, DB_TYPE, PROXY_MODE};
 use rauthy_common::DbType;
 use sqlx::pool::PoolOptions;
 use sqlx::ConnectOptions;
@@ -19,9 +13,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
-use tokio::time::sleep;
 use tracing::log::LevelFilter;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 use webauthn_rs::prelude::Url;
 use webauthn_rs::Webauthn;
 
@@ -179,7 +172,7 @@ impl AppState {
         let webauthn = Arc::new(builder.build().expect("Invalid configuration"));
 
         debug!("Creating DB Pool now");
-        let db = Self::new_db_pool(&argon2_params.params, &issuer).await?;
+        let db = Self::new_db_pool().await?;
         debug!("DB Pool created");
 
         Ok(Self {
@@ -202,7 +195,7 @@ impl AppState {
         })
     }
 
-    pub async fn new_db_pool(argon2_params: &Params, issuer: &str) -> anyhow::Result<DbPool> {
+    pub async fn new_db_pool() -> anyhow::Result<DbPool> {
         let db_max_conn = env::var("DATABASE_MAX_CONN")
             .unwrap_or_else(|_| String::from("5"))
             .parse::<u32>()
@@ -265,74 +258,6 @@ impl AppState {
             pool
         };
 
-        // before we do any db migrations, we need to check the current DB version
-        // for compatibility
-        let db_version = DbVersion::check_app_version()
-            .await
-            .map_err(|err| anyhow::Error::msg(err.message))?;
-
-        // migrate DB data
-        if !*DEV_MODE {
-            init_prod::migrate_init_prod(argon2_params.clone(), issuer)
-                .await
-                .map_err(|err| anyhow::Error::msg(err.message))?;
-        }
-
-        if let Ok(from) = env::var("MIGRATE_DB_FROM") {
-            if is_multi_replica_deployment() {
-                // TODO does this error make sense or might we be able to do it anyway?
-                error!(
-                    r#"
-    You cannot use 'MIGRATE_DB_FROM' with a multi replica deployment.
-    You need to change your config to only have a single node in `HQL_NODES`, before you can then
-    activate 'MIGRATE_DB_FROM' again. This will prevent you from overlaps and conflicts.
-    After the migration has been done, you remove the 'MIGRATE_DB_FROM' and add more nodes again.
-                "#
-                );
-            } else {
-                warn!(
-                    r#"
-
-    Migrating data from 'MIGRATE_DB_FROM'
-    This will overwrite possibly existing data in the current database!
-    Make sure, that the 'MIGRATE_DB_FROM' was created with the same rauthy verion
-
-    Proceeding in 10 seconds...
-
-                "#
-                );
-
-                sleep(Duration::from_secs(10)).await;
-
-                if from.starts_with("sqlite:") {
-                    let pool_from = Self::connect_sqlite(&from, 1).await?;
-                    if let Err(err) = db_migrate::migrate_from_sqlite(pool_from).await {
-                        panic!("Error during db migration: {:?}", err);
-                    }
-                } else if from.starts_with("postgresql://") {
-                    let pool_from = Self::connect_postgres(&from, 1).await?;
-                    if let Err(err) = db_migrate::migrate_from_postgres(pool_from).await {
-                        panic!("Error during db migration: {:?}", err);
-                    }
-                } else {
-                    panic!(
-                        "You provided an unknown database type, please check the MIGRATE_DB_FROM"
-                    );
-                };
-            }
-        } else if *DEV_MODE {
-            migrate_dev_data().await.expect("Migrating DEV DATA");
-        }
-
-        if let Err(err) = anti_lockout::anti_lockout(issuer).await {
-            error!("Error when applying anti-lockout check: {:?}", err);
-        }
-
-        // update the DbVersion after successful pool creation and migrations
-        DbVersion::upsert(db_version)
-            .await
-            .map_err(|err| anyhow::Error::msg(err.message))?;
-
         Ok(pool)
     }
 
@@ -377,12 +302,6 @@ impl AppState {
 
         Ok(pool)
     }
-}
-
-/// Helper to check if the current deployment is using multiple nodes
-#[inline]
-fn is_multi_replica_deployment() -> bool {
-    NodeConfig::from_env().nodes.len() > 1
 }
 
 /// Holds the `argon2::Params` for the application.
