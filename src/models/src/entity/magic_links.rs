@@ -100,7 +100,6 @@ pub struct MagicLink {
 // CRUD
 impl MagicLink {
     pub async fn create(
-        data: &web::Data<AppState>,
         user_id: String,
         lifetime_minutes: i64,
         usage: MagicLinkUsage,
@@ -145,31 +144,28 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 false,
                 link.usage,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
         Ok(link)
     }
 
-    pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
+    pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as_one("SELECT * FROM magic_links WHERE id = $1", params!(id))
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM magic_links WHERE id = $1", id)
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await?
         };
 
         Ok(res)
     }
 
-    pub async fn find_by_user(
-        data: &web::Data<AppState>,
-        user_id: String,
-    ) -> Result<MagicLink, ErrorResponse> {
+    pub async fn find_by_user(user_id: String) -> Result<MagicLink, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as_one(
@@ -183,17 +179,14 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 "SELECT * FROM magic_links WHERE user_id = $1",
                 user_id
             )
-            .fetch_one(&data.db)
+            .fetch_one(DB::conn())
             .await?
         };
 
         Ok(res)
     }
 
-    pub async fn invalidate_all_email_change(
-        data: &web::Data<AppState>,
-        user_id: &str,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn invalidate_all_email_change(user_id: &str) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute(
@@ -206,14 +199,14 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 "DELETE FROM magic_links WHERE user_id = $1 AND USAGE LIKE 'email_change$%'",
                 user_id,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         };
 
         Ok(())
     }
 
-    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute(
@@ -229,7 +222,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 self.used,
                 self.id,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
@@ -238,9 +231,9 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
 }
 
 impl MagicLink {
-    pub async fn invalidate(&mut self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn invalidate(&mut self) -> Result<(), ErrorResponse> {
         self.exp = OffsetDateTime::now_utc().unix_timestamp() - 10;
-        self.save(data).await
+        self.save().await
     }
 
     pub fn validate(

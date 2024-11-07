@@ -21,20 +21,19 @@ use rauthy_models::templates::PwdResetHtml;
 use tracing::{debug, error};
 
 pub async fn handle_get_pwd_reset<'a>(
-    data: &web::Data<AppState>,
     req: HttpRequest,
     user_id: String,
     reset_id: String,
     no_html: bool,
 ) -> Result<(String, cookie::Cookie<'a>), ErrorResponse> {
-    let mut ml = MagicLink::find(data, &reset_id).await?;
+    let mut ml = MagicLink::find(&reset_id).await?;
     ml.validate(&user_id, &req, false)?;
 
-    let user = User::find(data, ml.user_id.clone()).await?;
+    let user = User::find(ml.user_id.clone()).await?;
 
     // get the html and insert values
-    let rules = PasswordPolicy::find(data).await?;
-    let colors = ColorEntity::find_rauthy(data).await?;
+    let rules = PasswordPolicy::find().await?;
+    let colors = ColorEntity::find_rauthy().await?;
     let lang = Language::try_from(&req).unwrap_or_default();
 
     let content = if no_html {
@@ -52,7 +51,7 @@ pub async fn handle_get_pwd_reset<'a>(
     // generate a cookie value and save it to the magic link
     let cookie_val = get_rand(48);
     ml.cookie = Some(cookie_val);
-    ml.save(data).await?;
+    ml.save().await?;
 
     let age_secs = ml.exp - Utc::now().timestamp();
     let cookie = ApiCookie::build(PWD_RESET_COOKIE, ml.cookie.unwrap(), age_secs);
@@ -69,12 +68,12 @@ pub async fn handle_put_user_passkey_start<'a>(
 ) -> Result<HttpResponse, ErrorResponse> {
     // validate user_id / given email address
     debug!("getting user");
-    let user = User::find(data, user_id).await?;
+    let user = User::find(user_id).await?;
 
     debug!("getting magic link");
     // unwrap is safe -> checked in API endpoint already
     let ml_id = req_data.magic_link_id.as_ref().unwrap();
-    let ml = MagicLink::find(data, ml_id).await?;
+    let ml = MagicLink::find(ml_id).await?;
     ml.validate(&user.id, &req, true)?;
 
     // if we register a new passkey, we need to make sure that the magic link is for a new user
@@ -102,7 +101,7 @@ pub async fn handle_put_user_passkey_finish<'a>(
 ) -> Result<HttpResponse, ErrorResponse> {
     // unwrap is safe -> checked in API endpoint already
     let ml_id = req_data.magic_link_id.as_ref().unwrap();
-    let mut ml = MagicLink::find(data, ml_id).await?;
+    let mut ml = MagicLink::find(ml_id).await?;
     ml.validate(&user_id, &req, true)?;
 
     // finish webauthn request -> always force UV for passkey only accounts
@@ -129,8 +128,8 @@ pub async fn handle_put_user_passkey_finish<'a>(
 
     debug!("invalidating magic link pwd");
     // all good
-    ml.invalidate(data).await?;
-    User::set_email_verified(data, user_id, true).await?;
+    ml.invalidate().await?;
+    User::set_email_verified(user_id, true).await?;
 
     // delete the cookie
     let cookie = ApiCookie::build(PWD_RESET_COOKIE, "", 0);
@@ -146,7 +145,7 @@ pub async fn handle_put_user_password_reset<'a>(
     req_data: PasswordResetRequest,
 ) -> Result<(cookie::Cookie<'a>, Option<String>), ErrorResponse> {
     // validate user_id
-    let mut user = User::find(data, user_id).await?;
+    let mut user = User::find(user_id).await?;
 
     // check MFA code
     if user.has_webauthn_enabled() {
@@ -173,16 +172,16 @@ pub async fn handle_put_user_password_reset<'a>(
         }
     }
 
-    let mut ml = MagicLink::find(data, &req_data.magic_link_id).await?;
+    let mut ml = MagicLink::find(&req_data.magic_link_id).await?;
     ml.validate(&user.id, &req, true)?;
 
     // validate password
-    user.apply_password_rules(data, &req_data.password).await?;
+    user.apply_password_rules(&req_data.password).await?;
 
     // all good
-    ml.invalidate(data).await?;
+    ml.invalidate().await?;
     user.email_verified = true;
-    user.save(data, None).await?;
+    user.save(None).await?;
 
     let ip = match real_ip_from_req(&req).ok() {
         None => {
@@ -200,7 +199,7 @@ pub async fn handle_put_user_password_reset<'a>(
         .unwrap();
 
     // delete all existing user sessions to have a clean flow
-    Session::invalidate_for_user(data, &user.id).await?;
+    Session::invalidate_for_user(&user.id).await?;
 
     // check if we got a custom `redirect_uri` during registration
     let redirect_uri = match MagicLinkUsage::try_from(&ml.usage)? {

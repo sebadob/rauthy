@@ -33,7 +33,7 @@ pub async fn password_expiry_checker(data: web::Data<AppState>) {
         let lower = now.add(chrono::Duration::days(9)).timestamp();
         let upper = now.add(chrono::Duration::days(10)).timestamp();
 
-        match User::find_all(&data).await {
+        match User::find_all().await {
             Ok(users) => {
                 // TODO convert into proper query directly after hiqlite migration
                 let users_to_notify = users

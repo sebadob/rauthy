@@ -112,7 +112,7 @@ pub struct FedCMIdPBranding {
 
 impl FedCMIdPBranding {
     async fn new(data: &web::Data<AppState>) -> Result<Self, ErrorResponse> {
-        let colors = ColorEntity::find_rauthy(data).await?;
+        let colors = ColorEntity::find_rauthy().await?;
         let rauthy_icon = FedCMIdPIcon::rauthy_logo(&data.issuer);
 
         Ok(Self {

@@ -67,7 +67,7 @@ pub async fn grant_type_password(
 
     // This Error must be the same if user does not exist AND passwords do not match to prevent
     // username enumeration
-    let mut user = User::find_by_email(data, String::from(email)).await?;
+    let mut user = User::find_by_email(String::from(email)).await?;
     user.check_enabled()?;
     user.check_expired()?;
 
@@ -86,11 +86,11 @@ pub async fn grant_type_password(
                 user.password = Some(new_hash);
             }
 
-            user.save(data, None).await?;
+            user.save(None).await?;
 
             // update timestamp if it is a dynamic client
             if client.is_dynamic() {
-                ClientDyn::update_used(data, &client.id).await?;
+                ClientDyn::update_used(&client.id).await?;
             }
 
             let ts = TokenSet::from_user(
@@ -117,7 +117,7 @@ pub async fn grant_type_password(
             user.last_failed_login = Some(Utc::now().timestamp());
             user.failed_login_attempts = Some(&user.failed_login_attempts.unwrap_or(0) + 1);
 
-            user.save(data, None).await?;
+            user.save(None).await?;
 
             // TODO add expo increasing sleeps after failed login attempts here?
             Err(err)

@@ -49,8 +49,8 @@ pub async fn update_client(
     client.auth_code_lifetime = client_req.auth_code_lifetime;
     client.access_token_lifetime = client_req.access_token_lifetime;
 
-    client.scopes = Client::sanitize_scopes(data, client_req.scopes).await?;
-    client.default_scopes = Client::sanitize_scopes(data, client_req.default_scopes).await?;
+    client.scopes = Client::sanitize_scopes(client_req.scopes).await?;
+    client.default_scopes = Client::sanitize_scopes(client_req.default_scopes).await?;
 
     client.challenge = client_req.challenges.map(|c| c.join(","));
     client.force_mfa = client_req.force_mfa;

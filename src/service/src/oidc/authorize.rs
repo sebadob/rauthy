@@ -26,17 +26,15 @@ pub async fn post_authorize(
     add_login_delay: &mut bool,
     user_needs_mfa: &mut bool,
 ) -> Result<AuthStep, ErrorResponse> {
-    let mut user = User::find_by_email(data, req_data.email)
-        .await
-        .inspect_err(|_| {
-            // The UI does not show the password input form when there is no user yet.
-            // To prevent username enumeration, we should not add a login delay if a user does not
-            // even exist, when the UI is in that phase where the user does not provide any
-            // password.
-            if req_data.password.is_none() {
-                *add_login_delay = false;
-            }
-        })?;
+    let mut user = User::find_by_email(req_data.email).await.inspect_err(|_| {
+        // The UI does not show the password input form when there is no user yet.
+        // To prevent username enumeration, we should not add a login delay if a user does not
+        // even exist, when the UI is in that phase where the user does not provide any
+        // password.
+        if req_data.password.is_none() {
+            *add_login_delay = false;
+        }
+    })?;
 
     let mfa_cookie =
         if let Ok(c) = WebauthnCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA)) {
@@ -94,7 +92,7 @@ pub async fn post_authorize(
         user.last_login = Some(Utc::now().timestamp());
         user.last_failed_login = None;
         user.failed_login_attempts = None;
-        user.save(data, None).await?;
+        user.save(None).await?;
     }
 
     // client validations
@@ -138,7 +136,7 @@ pub async fn post_authorize(
     // TODO should we allow to skip this step if set so in the config?
     // check if we need to validate the 2nd factor
     if user.has_webauthn_enabled() {
-        session.set_mfa(data, true).await?;
+        session.set_mfa(true).await?;
 
         let step = AuthStepAwaitWebauthn {
             code: get_rand(48),
@@ -175,7 +173,6 @@ pub async fn post_authorize(
 }
 
 pub async fn post_authorize_refresh(
-    data: &web::Data<AppState>,
     session: &Session,
     client: Client,
     header_origin: Option<(HeaderName, HeaderValue)>,
@@ -187,7 +184,7 @@ pub async fn post_authorize_refresh(
             "No linked user_id for already validated session",
         )
     })?;
-    let user = User::find(data, user_id.clone()).await?;
+    let user = User::find(user_id.clone()).await?;
     user.check_enabled()?;
     user.check_expired()?;
 

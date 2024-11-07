@@ -17,7 +17,7 @@ pub async fn get_logout_html(
     data: &web::Data<AppState>,
     lang: &Language,
 ) -> Result<String, ErrorResponse> {
-    let colors = ColorEntity::find_rauthy(data).await?;
+    let colors = ColorEntity::find_rauthy().await?;
 
     if logout_request.id_token_hint.is_none() {
         return Ok(LogoutHtml::build(&session.csrf_token, false, &colors, lang));

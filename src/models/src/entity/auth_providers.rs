@@ -232,7 +232,7 @@ impl AuthProvider {
 
         slf = if is_hiqlite() {
             DB::client()
-                .execute_returning_map(
+                .execute_returning_map_one(
                     r#"
 INSERT INTO
 auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
@@ -263,7 +263,6 @@ RETURNING *"#,
                     ),
                 )
                 .await?
-                .remove(0)?
         } else {
             query!(
                 r#"
@@ -292,7 +291,7 @@ VALUES
                 slf.use_pkce,
                 slf.root_pem,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
 
             slf
@@ -319,7 +318,7 @@ VALUES
                 .await?
         } else {
             query_as!(Self, "SELECT * FROM auth_providers WHERE id = $1", id)
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await?
         };
 
@@ -342,7 +341,7 @@ VALUES
                 .await?
         } else {
             query_as!(Self, "SELECT * FROM auth_providers")
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
 
@@ -371,7 +370,7 @@ VALUES
                 "SELECT id, email FROM users WHERE auth_provider_id = $1",
                 id
             )
-            .fetch_all(&data.db)
+            .fetch_all(DB::conn())
             .await?
         };
 
@@ -385,7 +384,7 @@ VALUES
                 .await?;
         } else {
             query!("DELETE FROM auth_providers WHERE id = $1", id)
-                .execute(&data.db)
+                .execute(DB::conn())
                 .await?;
         }
 
@@ -466,7 +465,7 @@ WHERE id = $18"#,
                 self.root_pem,
                 self.id,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
@@ -951,9 +950,7 @@ impl AuthProviderCallback {
                 if let Some(id_token) = ts.id_token {
                     let claims_bytes = AuthProviderIdClaims::self_as_bytes_from_token(&id_token)?;
                     let claims = AuthProviderIdClaims::try_from(claims_bytes.as_slice())?;
-                    claims
-                        .validate_update_user(data, &provider, &link_cookie)
-                        .await?
+                    claims.validate_update_user(&provider, &link_cookie).await?
                 } else if let Some(access_token) = ts.access_token {
                     // the id_token only exists, if we actually have an OIDC provider.
                     // If we only get an access token, we need to do another request to the
@@ -970,9 +967,7 @@ impl AuthProviderCallback {
 
                     let res_bytes = res.bytes().await?;
                     let claims = AuthProviderIdClaims::try_from(res_bytes.as_bytes())?;
-                    claims
-                        .validate_update_user(data, &provider, &link_cookie)
-                        .await?
+                    claims.validate_update_user(&provider, &link_cookie).await?
                 } else {
                     let err = "Neither `access_token` nor `id_token` existed";
                     error!("{}", err);
@@ -1012,7 +1007,7 @@ impl AuthProviderCallback {
                     "MFA is required for this client",
                 ));
             }
-            session.set_mfa(data, true).await?;
+            session.set_mfa(true).await?;
         }
         client.validate_redirect_uri(&slf.req_redirect_uri)?;
         client.validate_code_challenge(&slf.req_code_challenge, &slf.req_code_challenge_method)?;
@@ -1239,7 +1234,6 @@ impl AuthProviderIdClaims<'_> {
 
     async fn validate_update_user(
         &self,
-        data: &web::Data<AppState>,
         provider: &AuthProvider,
         link_cookie: &Option<AuthProviderLinkCookie>,
     ) -> Result<(User, ProviderMfaLogin), ErrorResponse> {
@@ -1270,7 +1264,7 @@ impl AuthProviderIdClaims<'_> {
         // Any json number would become a String too, which is what we need for compatibility.
         .to_string();
 
-        let user_opt = match User::find_by_federation(data, &provider.id, &claims_user_id).await {
+        let user_opt = match User::find_by_federation(&provider.id, &claims_user_id).await {
             Ok(user) => {
                 debug!(
                     "found already existing user by federation lookup: {:?}",
@@ -1286,7 +1280,7 @@ impl AuthProviderIdClaims<'_> {
                 // On conflict, the DB would return an error anyway, but the error message is
                 // rather cryptic for a normal user.
                 if let Ok(mut user) =
-                    User::find_by_email(data, self.email.as_ref().unwrap().to_string()).await
+                    User::find_by_email(self.email.as_ref().unwrap().to_string()).await
                 {
                     // TODO check if creating a new link for an existing user is allowed
                     if let Some(link) = link_cookie {
@@ -1439,7 +1433,7 @@ impl AuthProviderIdClaims<'_> {
                 user.last_failed_login = Some(now);
                 user.failed_login_attempts =
                     Some(user.failed_login_attempts.unwrap_or_default() + 1);
-                user.save(data, old_email).await?;
+                user.save(old_email).await?;
 
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
@@ -1492,7 +1486,7 @@ impl AuthProviderIdClaims<'_> {
             user.last_failed_login = None;
             user.failed_login_attempts = None;
 
-            user.save(data, old_email).await?;
+            user.save(old_email).await?;
             user
         } else {
             // Create a new federated user
@@ -1521,12 +1515,12 @@ impl AuthProviderIdClaims<'_> {
                 federation_uid: Some(claims_user_id.to_string()),
                 ..Default::default()
             };
-            User::create_federated(data, new_user).await?
+            User::create_federated(new_user).await?
         };
 
         // check if we got additional values from the token
         let mut found_values = false;
-        let mut user_values = match UserValues::find(data, &user.id).await? {
+        let mut user_values = match UserValues::find(&user.id).await? {
             Some(values) => UserValuesRequest {
                 birthdate: values.birthdate,
                 phone: values.phone,
@@ -1565,7 +1559,7 @@ impl AuthProviderIdClaims<'_> {
             found_values = true;
         }
         if found_values {
-            UserValues::upsert(data, user.id.clone(), user_values).await?;
+            UserValues::upsert(user.id.clone(), user_values).await?;
         }
 
         Ok((user, provider_mfa_login))

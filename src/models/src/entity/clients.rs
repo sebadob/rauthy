@@ -158,7 +158,7 @@ $18, $19, $20)"#,
                 client.client_uri,
                 client.contacts,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
@@ -221,7 +221,7 @@ VALUES ($1, $2, $3, $4)"#,
                 ))
             ]).await?;
         } else {
-            let mut txn = data.db.begin().await?;
+            let mut txn = DB::txn().await?;
 
             sqlx::query!(
                 r#"
@@ -289,7 +289,7 @@ VALUES ($1, $2, $3, $4)"#,
                 .await?;
         } else {
             sqlx::query!("DELETE FROM clients WHERE id = $1", self.id,)
-                .execute(&data.db)
+                .execute(DB::conn())
                 .await?;
         }
 
@@ -329,7 +329,7 @@ VALUES ($1, $2, $3, $4)"#,
         } else {
             sqlx::query_as::<_, Self>("SELECT * FROM clients WHERE id = $1")
                 .bind(&id)
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await?
         };
 
@@ -347,7 +347,7 @@ VALUES ($1, $2, $3, $4)"#,
                 .await?
         } else {
             sqlx::query_as("SELECT * FROM clients")
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
 
@@ -385,10 +385,7 @@ VALUES ($1, $2, $3, $4)"#,
         Ok(slf)
     }
 
-    pub async fn find_with_scope(
-        data: &web::Data<AppState>,
-        scope_name: &str,
-    ) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_with_scope(scope_name: &str) -> Result<Vec<Self>, ErrorResponse> {
         let like = format!("%{scope_name}%");
 
         let clients = if is_hiqlite() {
@@ -401,7 +398,7 @@ VALUES ($1, $2, $3, $4)"#,
         } else {
             sqlx::query_as("SELECT * FROM clients WHERE scopes = $1 OR default_scopes = $1")
                 .bind(like)
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
 
@@ -550,7 +547,7 @@ WHERE id = $20"#,
                 self.contacts,
                 self.id,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
@@ -612,7 +609,7 @@ WHERE id = $4"#,
 
             DB::client().txn(txn).await?;
         } else {
-            let mut txn = data.db.begin().await?;
+            let mut txn = DB::txn().await?;
 
             new_client.save_txn(&mut txn).await?;
             sqlx::query!(
@@ -830,12 +827,9 @@ impl Client {
 
     /// Sanitizes the current scopes and deletes everything, which does not exist in the `scopes`
     /// table in the database
-    pub async fn sanitize_scopes(
-        data: &web::Data<AppState>,
-        scps: Vec<String>,
-    ) -> Result<String, ErrorResponse> {
+    pub async fn sanitize_scopes(scps: Vec<String>) -> Result<String, ErrorResponse> {
         let mut res = String::with_capacity(scps.len());
-        Scope::find_all(data).await?.into_iter().for_each(|s| {
+        Scope::find_all().await?.into_iter().for_each(|s| {
             if scps.contains(&s.name) {
                 res.push_str(s.name.as_str());
                 res.push(',');

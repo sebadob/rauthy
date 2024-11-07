@@ -18,7 +18,7 @@ pub struct ColorEntity {
 
 // CRUD
 impl ColorEntity {
-    pub async fn delete(data: &web::Data<AppState>, client_id: &str) -> Result<(), ErrorResponse> {
+    pub async fn delete(client_id: &str) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute(
@@ -28,7 +28,7 @@ impl ColorEntity {
                 .await?;
         } else {
             sqlx::query!("DELETE FROM colors WHERE client_id = $1", client_id,)
-                .execute(&data.db)
+                .execute(DB::conn())
                 .await?;
         }
 
@@ -39,10 +39,7 @@ impl ColorEntity {
         Ok(())
     }
 
-    pub async fn find(
-        data: &web::Data<AppState>,
-        client_id: &str,
-    ) -> Result<Colors, ErrorResponse> {
+    pub async fn find(client_id: &str) -> Result<Colors, ErrorResponse> {
         let idx = Self::cache_idx(client_id);
         let client = DB::client();
 
@@ -60,7 +57,7 @@ impl ColorEntity {
                 .ok()
         } else {
             sqlx::query_as!(Self, "SELECT * FROM colors WHERE client_id = $1", client_id)
-                .fetch_optional(&data.db)
+                .fetch_optional(DB::conn())
                 .await?
         };
         let colors = match res {
@@ -73,15 +70,11 @@ impl ColorEntity {
         Ok(colors)
     }
 
-    pub async fn find_rauthy(data: &web::Data<AppState>) -> Result<Colors, ErrorResponse> {
-        Self::find(data, "rauthy").await
+    pub async fn find_rauthy() -> Result<Colors, ErrorResponse> {
+        Self::find("rauthy").await
     }
 
-    pub async fn update(
-        data: &web::Data<AppState>,
-        client_id: &str,
-        req: ColorsRequest,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn update(client_id: &str, req: ColorsRequest) -> Result<(), ErrorResponse> {
         let cols = Colors::from(req);
         let col_bytes = cols.as_bytes();
 
@@ -106,7 +99,7 @@ SET data = $2"#,
                 client_id,
                 col_bytes,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 

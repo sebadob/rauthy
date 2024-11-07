@@ -62,7 +62,7 @@ pub async fn grant_type_credentials(
 
     // update timestamp if it is a dynamic client
     if client.is_dynamic() {
-        ClientDyn::update_used(data, &client.id).await?;
+        ClientDyn::update_used(&client.id).await?;
     }
 
     let ts = TokenSet::for_client_credentials(data, &client, dpop_fingerprint).await?;

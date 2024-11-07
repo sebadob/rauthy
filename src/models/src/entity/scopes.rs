@@ -38,7 +38,7 @@ impl Scope {
         scope_req: ScopeRequest,
     ) -> Result<Self, ErrorResponse> {
         // check for already existing scope
-        let mut scopes = Scope::find_all(data).await?;
+        let mut scopes = Scope::find_all().await?;
         for s in &scopes {
             if s.name == scope_req.scope {
                 return Err(ErrorResponse::new(
@@ -58,7 +58,7 @@ impl Scope {
         }
 
         // check configured custom attributes and clean them up
-        let attrs = UserAttrConfigEntity::find_all_as_set(data).await?;
+        let attrs = UserAttrConfigEntity::find_all_as_set().await?;
         let attr_include_access = Self::clean_up_attrs(scope_req.attr_include_access, &attrs);
         let attr_include_id = Self::clean_up_attrs(scope_req.attr_include_id, &attrs);
 
@@ -93,7 +93,7 @@ VALUES ($1, $2, $3, $4)"#,
                 new_scope.attr_include_access,
                 new_scope.attr_include_id,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
@@ -108,7 +108,7 @@ VALUES ($1, $2, $3, $4)"#,
     }
 
     pub async fn delete(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
-        let scope = Scope::find(data, id).await?;
+        let scope = Scope::find(id).await?;
         if scope.name == "openid" {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -116,7 +116,7 @@ VALUES ($1, $2, $3, $4)"#,
             ));
         }
 
-        let mut clients = Client::find_with_scope(data, &scope.name).await?;
+        let mut clients = Client::find_with_scope(&scope.name).await?;
 
         if is_hiqlite() {
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(clients.len() + 1);
@@ -132,7 +132,7 @@ VALUES ($1, $2, $3, $4)"#,
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = data.db.begin().await?;
+            let mut txn = DB::txn().await?;
 
             for client in &mut clients {
                 client.delete_scope(&scope.name);
@@ -145,7 +145,7 @@ VALUES ($1, $2, $3, $4)"#,
             txn.commit().await?;
         }
 
-        let scopes = Scope::find_all(data)
+        let scopes = Scope::find_all()
             .await?
             .into_iter()
             .filter(|s| s.id != scope.id)
@@ -170,21 +170,21 @@ VALUES ($1, $2, $3, $4)"#,
         Ok(())
     }
 
-    pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
+    pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as_one("SELECT * FROM scopes WHERE id = $1", params!(id))
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM scopes WHERE id = $1", id)
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await?
         };
 
         Ok(res)
     }
 
-    pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let client = DB::client();
         if let Some(slf) = client.get(Cache::App, IDX_SCOPES).await? {
             return Ok(slf);
@@ -196,13 +196,14 @@ VALUES ($1, $2, $3, $4)"#,
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM scopes")
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
 
         client
             .put(Cache::App, IDX_SCOPES, &res, CACHE_TTL_APP)
             .await?;
+
         Ok(res)
     }
 
@@ -212,7 +213,7 @@ VALUES ($1, $2, $3, $4)"#,
         id: &str,
         scope_req: ScopeRequest,
     ) -> Result<Self, ErrorResponse> {
-        let scope = Scope::find(data, id).await?;
+        let scope = Scope::find(id).await?;
         if scope.name == "openid" {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -232,7 +233,7 @@ VALUES ($1, $2, $3, $4)"#,
         // we only need to update clients with pre-computed values if the name
         // has been changed, but can skip them if it's about the attribute mapping
         let clients = if scope.name != scope_req.scope {
-            let clients = Client::find_with_scope(data, &scope.name)
+            let clients = Client::find_with_scope(&scope.name)
                 .await?
                 .into_iter()
                 .map(|mut c| {
@@ -249,7 +250,7 @@ VALUES ($1, $2, $3, $4)"#,
 
         debug!("scope_req: {:?}", scope_req);
         // check configured custom attributes and clean them up
-        let attrs = UserAttrConfigEntity::find_all_as_set(data).await?;
+        let attrs = UserAttrConfigEntity::find_all_as_set().await?;
         let attr_include_access = Self::clean_up_attrs(scope_req.attr_include_access, &attrs);
         let attr_include_id = Self::clean_up_attrs(scope_req.attr_include_id, &attrs);
         debug!("attr_include_access: {:?}", attr_include_access);
@@ -289,7 +290,7 @@ WHERE id = $4"#,
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = data.db.begin().await?;
+            let mut txn = DB::txn().await?;
 
             if let Some(clients) = &clients {
                 for client in clients {
@@ -318,7 +319,7 @@ WHERE id = $4"#,
             }
         }
 
-        let scopes = Scope::find_all(data)
+        let scopes = Scope::find_all()
             .await?
             .into_iter()
             .map(|mut s| {

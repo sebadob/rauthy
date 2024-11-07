@@ -33,7 +33,7 @@ impl WebId {
     }
 
     /// Returns the WebId from the database, if it exists, and a default otherwise.
-    pub async fn find(data: &web::Data<AppState>, user_id: String) -> Result<Self, ErrorResponse> {
+    pub async fn find(user_id: String) -> Result<Self, ErrorResponse> {
         let client = DB::client();
         if let Some(slf) = client.get(Cache::User, Self::cache_idx(&user_id)).await? {
             return Ok(slf);
@@ -50,7 +50,7 @@ impl WebId {
                 })
         } else {
             query_as!(Self, "SELECT * FROM webids WHERE user_id = $1", user_id)
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await
                 .unwrap_or(Self {
                     user_id,
@@ -71,7 +71,7 @@ impl WebId {
         Ok(slf)
     }
 
-    pub async fn upsert(data: &web::Data<AppState>, web_id: WebId) -> Result<(), ErrorResponse> {
+    pub async fn upsert(web_id: WebId) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute(
@@ -94,7 +94,7 @@ SET custom_triples = $2, expose_email = $3"#,
                 web_id.custom_triples,
                 web_id.expose_email,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 

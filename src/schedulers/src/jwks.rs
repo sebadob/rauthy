@@ -33,7 +33,7 @@ pub async fn jwks_auto_rotate(data: web::Data<AppState>) {
 }
 
 /// Cleans up old / expired JWKSs
-pub async fn jwks_cleanup(data: web::Data<AppState>) {
+pub async fn jwks_cleanup() {
     let mut interval = tokio::time::interval(Duration::from_secs(3600 * 24));
 
     loop {
@@ -57,7 +57,7 @@ pub async fn jwks_cleanup(data: web::Data<AppState>) {
                 .map_err(|err| err.to_string())
         } else {
             sqlx::query_as::<_, Jwk>("SELECT * FROM jwks ORDER BY created_at asc")
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await
                 .map_err(|err| err.to_string())
         };
@@ -105,7 +105,7 @@ pub async fn jwks_cleanup(data: web::Data<AppState>) {
                 }
             } else if let Err(err) = sqlx::query("DELETE FROM jwks WHERE kid = $1")
                 .bind(&kid)
-                .execute(&data.db)
+                .execute(DB::conn())
                 .await
             {
                 error!("Cannot clean up JWK {} in jwks_cleanup: {}", kid, err);

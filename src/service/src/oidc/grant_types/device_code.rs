@@ -95,7 +95,7 @@ pub async fn grant_type_device_code(
 
     // check validation
     if let Some(verified_by) = &code.verified_by {
-        let user = match User::find(data, verified_by.clone()).await {
+        let user = match User::find(verified_by.clone()).await {
             Ok(user) => user,
             Err(err) => {
                 // at this point, this should never fail - only if the DB went down in the meantime
@@ -151,7 +151,7 @@ pub async fn grant_type_device_code(
             // TODO add an optional `name` param to the initial device request?
             name: id.clone(),
         };
-        if let Err(err) = device.insert(data).await {
+        if let Err(err) = device.insert().await {
             error!("{:?}", err);
             return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
                 error: OAuth2ErrorTypeResponse::InvalidRequest,

@@ -71,7 +71,7 @@ pub async fn get_authorize(
     req_data: actix_web_validator::Query<AuthRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let colors = ColorEntity::find(&data, &req_data.client_id)
+    let colors = ColorEntity::find(&req_data.client_id)
         .await
         .unwrap_or_default();
     let lang = Language::try_from(&req).unwrap_or_default();
@@ -116,7 +116,7 @@ pub async fn get_authorize(
     // check if the user needs to do the Webauthn login each time
     let mut action = FrontendAction::None;
     if let Ok(mfa_cookie) = WebauthnCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA)) {
-        if let Ok(user) = User::find_by_email(&data, mfa_cookie.email.clone()).await {
+        if let Ok(user) = User::find_by_email(mfa_cookie.email.clone()).await {
             // we need to check this, because a user could deactivate MFA in another browser or
             // be deleted while still having existing mfa cookies somewhere else
             if user.has_webauthn_enabled() {
@@ -180,7 +180,7 @@ pub async fn get_authorize(
         Session::new(*SESSION_LIFETIME, Some(real_ip_from_req(&req)?))
     };
 
-    if let Err(err) = session.save(&data).await {
+    if let Err(err) = session.save().await {
         let status = err.status_code();
         let body = Error1Html::build(&colors, &lang, status, Some(err.message));
         return Ok(ErrorHtml::response(body, status));
@@ -336,25 +336,17 @@ pub async fn post_authorize_refresh(
     )
     .await?;
 
-    let auth_step = authorize::post_authorize_refresh(
-        &data,
-        session,
-        client,
-        header_origin,
-        req_data.into_inner(),
-    )
-    .await?;
+    let auth_step =
+        authorize::post_authorize_refresh(session, client, header_origin, req_data.into_inner())
+            .await?;
     map_auth_step(auth_step, &req).await
 }
 
 #[get("/oidc/callback")]
-pub async fn get_callback_html(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_callback_html(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     // TODO can we even be more strict and request session auth here?
     principal.validate_session_auth_or_init()?;
-    let colors = ColorEntity::find_rauthy(&data).await?;
+    let colors = ColorEntity::find_rauthy().await?;
     let body = CallbackHtml::build(&colors);
     Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
@@ -369,8 +361,8 @@ pub async fn get_callback_html(
     responses((status = 200, description = "Ok")),
 )]
 #[get("/oidc/certs")]
-pub async fn get_certs(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
-    let jwks = JWKS::find_pk(&data).await?;
+pub async fn get_certs() -> Result<HttpResponse, ErrorResponse> {
+    let jwks = JWKS::find_pk().await?;
     let res = JWKSCerts::from(jwks);
     Ok(HttpResponse::Ok()
         .insert_header((
@@ -390,11 +382,8 @@ pub async fn get_certs(data: web::Data<AppState>) -> Result<HttpResponse, ErrorR
     responses((status = 200, description = "Ok")),
 )]
 #[get("/oidc/certs/{kid}")]
-pub async fn get_cert_by_kid(
-    data: web::Data<AppState>,
-    kid: web::Path<String>,
-) -> Result<HttpResponse, ErrorResponse> {
-    let kp = JwkKeyPair::find(&data, kid.into_inner()).await?;
+pub async fn get_cert_by_kid(kid: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
+    let kp = JwkKeyPair::find(kid.into_inner()).await?;
     let pub_key = JWKSPublicKey::from_key_pair(&kp);
     Ok(HttpResponse::Ok().json(JWKSPublicKeyCerts::from(pub_key)))
 }
@@ -656,7 +645,6 @@ pub async fn get_logout(
 )]
 #[post("/oidc/logout")]
 pub async fn post_logout(
-    data: web::Data<AppState>,
     req_data: actix_web_validator::Query<LogoutRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -667,7 +655,7 @@ pub async fn post_logout(
         0,
         SameSite::None,
     );
-    let cookie = session.invalidate(&data).await?;
+    let cookie = session.invalidate().await?;
 
     if req_data.post_logout_redirect_uri.is_some() {
         let state = if req_data.state.is_some() {
@@ -746,7 +734,7 @@ pub async fn post_session(
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     let session = Session::new(*SESSION_LIFETIME, real_ip_from_req(&req).ok());
-    session.save(&data).await?;
+    session.save().await?;
     let cookie = session.client_cookie();
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)

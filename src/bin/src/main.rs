@@ -222,10 +222,7 @@ TODO add link to the book after migration
         } else {
             100_000
         };
-        tokio::spawn(crate::dummy_data::insert_dummy_data(
-            app_state.clone(),
-            amount,
-        ));
+        tokio::spawn(crate::dummy_data::insert_dummy_data(amount));
     }
 
     actix.join().unwrap().unwrap();

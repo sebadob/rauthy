@@ -10,7 +10,7 @@ use std::time::Duration;
 use tracing::{debug, error, info};
 
 // Checks for expired users
-pub async fn user_expiry_checker(data: web::Data<AppState>) {
+pub async fn user_expiry_checker() {
     let secs = env::var("SCHED_USER_EXP_MINS")
         .unwrap_or_else(|_| "60".to_string())
         .parse::<u64>()
@@ -39,7 +39,7 @@ pub async fn user_expiry_checker(data: web::Data<AppState>) {
 
         debug!("Running user_expiry_checker scheduler");
 
-        match User::find_expired(&data).await {
+        match User::find_expired().await {
             Ok(users) => {
                 let now = Utc::now().timestamp();
 
@@ -58,7 +58,7 @@ pub async fn user_expiry_checker(data: web::Data<AppState>) {
                     };
 
                     // invalidate all sessions
-                    if let Err(err) = Session::invalidate_for_user(&data, &user.id).await {
+                    if let Err(err) = Session::invalidate_for_user(&user.id).await {
                         error!(
                             "Error invalidating sessions for user {}: {:?}",
                             user.id, err
@@ -66,7 +66,7 @@ pub async fn user_expiry_checker(data: web::Data<AppState>) {
                     }
 
                     // invalidate all refresh tokens
-                    if let Err(err) = RefreshToken::invalidate_for_user(&data, &user.id).await {
+                    if let Err(err) = RefreshToken::invalidate_for_user(&user.id).await {
                         error!(
                             "Error invalidating refresh tokens for user {}: {:?}",
                             user.id, err
@@ -82,7 +82,7 @@ pub async fn user_expiry_checker(data: web::Data<AppState>) {
                                 user.id,
                                 expired_since_secs / 60
                             );
-                            if let Err(err) = user.delete(&data).await {
+                            if let Err(err) = user.delete().await {
                                 error!(
                                     "Error during auto cleanup - deleting user {}: {:?}",
                                     user.id, err

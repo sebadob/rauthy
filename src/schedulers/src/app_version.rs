@@ -47,9 +47,7 @@ async fn check_app_version(
 
     match LatestAppVersion::lookup().await {
         Ok((latest_version, url)) => {
-            if let Err(err) =
-                LatestAppVersion::upsert(data, latest_version.clone(), url.clone()).await
-            {
+            if let Err(err) = LatestAppVersion::upsert(latest_version.clone(), url.clone()).await {
                 error!("Inserting LatestAppVersion into database: {:?}", err);
             }
 
@@ -65,7 +63,7 @@ async fn check_app_version(
                     info!("A new Rauthy App Version is available: {}", latest_version);
 
                     if let Err(err) =
-                        LatestAppVersion::upsert(data, latest_version.clone(), url.clone()).await
+                        LatestAppVersion::upsert(latest_version.clone(), url.clone()).await
                     {
                         error!("Saving LatestAppVersion into DB: {:?}", err);
                     }

@@ -149,11 +149,8 @@ pub async fn post_provider_login(
 }
 
 #[get("/providers/callback")]
-pub async fn get_provider_callback_html(
-    data: web::Data<AppState>,
-    req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
-    let colors = ColorEntity::find_rauthy(&data).await?;
+pub async fn get_provider_callback_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    let colors = ColorEntity::find_rauthy().await?;
     let lang = Language::try_from(&req).unwrap_or_default();
     let body = ProviderCallbackHtml::build(&colors, &lang);
 
@@ -218,14 +215,11 @@ pub async fn post_provider_callback(
     ),
 )]
 #[delete("/providers/link")]
-pub async fn delete_provider_link(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn delete_provider_link(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth()?;
 
     let user_id = principal.user_id()?.to_string();
-    let user = User::provider_unlink(&data, user_id).await?;
+    let user = User::provider_unlink(user_id).await?;
     Ok(HttpResponse::Ok().json(user))
 }
 
@@ -350,12 +344,9 @@ pub async fn get_provider_delete_safe(
     ),
 )]
 #[get("/providers/{id}/img")]
-pub async fn get_provider_img(
-    data: web::Data<AppState>,
-    id: web::Path<String>,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_provider_img(id: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
     let id = id.into_inner();
-    let logo = Logo::find_cached(&data, &id, &LogoType::AuthProvider).await?;
+    let logo = Logo::find_cached(&id, &LogoType::AuthProvider).await?;
 
     Ok(HttpResponse::Ok()
         .insert_header((CONTENT_TYPE, logo.content_type))
@@ -383,7 +374,6 @@ pub async fn get_provider_img(
 )]
 #[put("/providers/{id}/img")]
 pub async fn put_provider_img(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
     mut payload: actix_multipart::Multipart,
@@ -417,7 +407,6 @@ pub async fn put_provider_img(
 
     // content_type unwrap cannot panic -> checked above
     Logo::upsert(
-        &data,
         id.into_inner(),
         buf,
         content_type.unwrap(),
@@ -453,7 +442,7 @@ pub async fn post_provider_link(
     principal.validate_session_auth()?;
 
     let user_id = principal.user_id()?.to_string();
-    let user = User::find(&data, user_id).await?;
+    let user = User::find(user_id).await?;
 
     // make sure the user is currently un-linked
     if user.auth_provider_id.is_some() {

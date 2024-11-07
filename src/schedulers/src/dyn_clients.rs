@@ -55,7 +55,7 @@ pub async fn dyn_client_cleanup(data: web::Data<AppState>) {
                 ClientDyn,
                 "SELECT * FROM clients_dyn WHERE last_used = null"
             )
-            .fetch_all(&data.db)
+            .fetch_all(DB::conn())
             .await
             .map_err(|err| err.to_string())
         };

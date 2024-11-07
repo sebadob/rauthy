@@ -172,7 +172,7 @@ pub struct JWKS {
 
 // CRUD
 impl JWKS {
-    pub async fn find_pk(data: &web::Data<AppState>) -> Result<JWKS, ErrorResponse> {
+    pub async fn find_pk() -> Result<JWKS, ErrorResponse> {
         let client = DB::client();
 
         if let Some(slf) = client.get(Cache::App, IDX_JWKS).await? {
@@ -183,7 +183,7 @@ impl JWKS {
             client.query_as("SELECT * FROM jwks", params!()).await?
         } else {
             sqlx::query_as!(Jwk, "SELECT * FROM jwks")
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
 
@@ -641,7 +641,7 @@ impl JwkKeyPair {
     }
 
     // Returns a JWK by a given Key Identifier (kid)
-    pub async fn find(data: &web::Data<AppState>, kid: String) -> Result<Self, ErrorResponse> {
+    pub async fn find(kid: String) -> Result<Self, ErrorResponse> {
         let idx = format!("{}{}", IDX_JWK_KID, kid);
         let client = DB::client();
 
@@ -655,7 +655,7 @@ impl JwkKeyPair {
                 .await?
         } else {
             sqlx::query_as!(Jwk, "SELECT * FROM jwks WHERE kid = $1", kid,)
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await?
         };
 
@@ -668,10 +668,7 @@ impl JwkKeyPair {
     // TODO add an index (signature, created_at) with the next round of DB migrations
     // Returns the latest JWK (especially important after a [JWK Rotation](crate::api::rotate_jwk)
     // by a given algorithm.
-    pub async fn find_latest(
-        data: &web::Data<AppState>,
-        key_pair_alg: JwkKeyPairAlg,
-    ) -> Result<Self, ErrorResponse> {
+    pub async fn find_latest(key_pair_alg: JwkKeyPairAlg) -> Result<Self, ErrorResponse> {
         let idx = format!("{}{}", IDX_JWK_LATEST, key_pair_alg.as_str());
         let client = DB::client();
 
@@ -703,7 +700,7 @@ LIMIT 1
 "#,
                 signature
             )
-            .fetch_one(&data.db)
+            .fetch_one(DB::conn())
             .await?
         };
 

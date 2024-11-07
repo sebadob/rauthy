@@ -21,7 +21,6 @@ pub struct RefreshToken {
 // CRUD
 impl RefreshToken {
     pub async fn create(
-        data: &web::Data<AppState>,
         id: String,
         user_id: String,
         nbf: DateTime<Utc>,
@@ -41,37 +40,37 @@ impl RefreshToken {
             is_mfa,
         };
 
-        rt.save(data).await?;
+        rt.save().await?;
         Ok(rt)
     }
 
-    pub async fn delete(self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn delete(self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute("DELETE FROM refresh_tokens WHERE id = $1", params!(self.id))
                 .await?;
         } else {
             sqlx::query!("DELETE FROM refresh_tokens WHERE id = $1", self.id)
-                .execute(&data.db)
+                .execute(DB::conn())
                 .await?;
         }
         Ok(())
     }
 
-    pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as("SELECT * FROM refresh_tokens", params!())
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM refresh_tokens")
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
         Ok(res)
     }
 
-    pub async fn invalidate_all(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn invalidate_all() -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
 
         if is_hiqlite() {
@@ -83,17 +82,14 @@ impl RefreshToken {
                 .await?;
         } else {
             sqlx::query!("UPDATE refresh_tokens SET exp = $1 WHERE exp > $1", now)
-                .execute(&data.db)
+                .execute(DB::conn())
                 .await?;
         }
 
         Ok(())
     }
 
-    pub async fn invalidate_for_user(
-        data: &web::Data<AppState>,
-        user_id: &str,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn invalidate_for_user(user_id: &str) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute(
@@ -103,13 +99,13 @@ impl RefreshToken {
                 .await?;
         } else {
             sqlx::query!("DELETE FROM refresh_tokens WHERE user_id = $1", user_id)
-                .execute(&data.db)
+                .execute(DB::conn())
                 .await?;
         }
         Ok(())
     }
 
-    pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
+    pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let now = Utc::now().timestamp();
 
         let slf = if is_hiqlite() {
@@ -129,7 +125,7 @@ impl RefreshToken {
                 id,
                 now
             )
-            .fetch_one(&data.db)
+            .fetch_one(DB::conn())
             .await
             .map_err(|_| {
                 ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token does not exist")
@@ -138,7 +134,7 @@ impl RefreshToken {
         Ok(slf)
     }
 
-    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute(
@@ -169,7 +165,7 @@ ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5"#,
                 self.scope,
                 self.is_mfa,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
@@ -178,17 +174,14 @@ ON CONFLICT(id) DO UPDATE SET user_id = $2, nbf = $3, exp = $4, scope = $5"#,
 }
 
 impl RefreshToken {
-    pub async fn invalidate_all_for_user(
-        data: &web::Data<AppState>,
-        id: &str,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn invalidate_all_for_user(id: &str) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute("DELETE FROM refresh_tokens WHERE user_id = $1", params!(id))
                 .await?;
         } else {
             sqlx::query!("DELETE FROM refresh_tokens WHERE user_id = $1", id)
-                .execute(&data.db)
+                .execute(DB::conn())
                 .await?;
         }
 

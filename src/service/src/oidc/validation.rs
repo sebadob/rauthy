@@ -75,7 +75,7 @@ pub async fn validate_token<T: serde::Serialize + for<'de> ::serde::Deserialize<
     let kid = JwkKeyPair::kid_from_token(token)?;
 
     // retrieve jwk for kid
-    let kp = JwkKeyPair::find(data, kid).await?;
+    let kp = JwkKeyPair::find(kid).await?;
     validate_jwt!(T, kp, token, options)
 
     // TODO check roles if we add more users / roles
@@ -99,7 +99,7 @@ pub async fn validate_refresh_token(
     let kid = JwkKeyPair::kid_from_token(refresh_token)?;
 
     // retrieve jwk for kid
-    let kp = JwkKeyPair::find(data, kid).await?;
+    let kp = JwkKeyPair::find(kid).await?;
     let claims: JWTClaims<JwtRefreshClaims> =
         validate_jwt!(JwtRefreshClaims, kp, refresh_token, options)?;
 
@@ -151,7 +151,7 @@ pub async fn validate_refresh_token(
         (None, None)
     };
 
-    let mut user = User::find(data, uid).await?;
+    let mut user = User::find(uid).await?;
     user.check_enabled()?;
     user.check_expired()?;
 
@@ -160,7 +160,7 @@ pub async fn validate_refresh_token(
     let now = Utc::now().timestamp();
     let exp_at_secs = now + data.refresh_grace_time as i64;
     let rt_scope = if let Some(device_id) = &claims.custom.did {
-        let mut rt = RefreshTokenDevice::find(data, validation_str).await?;
+        let mut rt = RefreshTokenDevice::find(validation_str).await?;
 
         if &rt.device_id != device_id {
             return Err(ErrorResponse::new(
@@ -177,14 +177,14 @@ pub async fn validate_refresh_token(
 
         if rt.exp > exp_at_secs + 1 {
             rt.exp = exp_at_secs;
-            rt.save(data).await?;
+            rt.save().await?;
         }
         rt.scope
     } else {
-        let mut rt = RefreshToken::find(data, validation_str).await?;
+        let mut rt = RefreshToken::find(validation_str).await?;
         if rt.exp > exp_at_secs + 1 {
             rt.exp = exp_at_secs;
-            rt.save(data).await?;
+            rt.save().await?;
         }
         rt.scope
     };
@@ -194,7 +194,7 @@ pub async fn validate_refresh_token(
 
     // set last login
     user.last_login = Some(Utc::now().timestamp());
-    user.save(data, None).await?;
+    user.save(None).await?;
 
     let auth_time = if let Some(ts) = claims.custom.auth_time {
         AuthTime::given(ts)

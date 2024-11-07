@@ -22,13 +22,10 @@ use rauthy_models::entity::api_keys::ApiKeyEntity;
     ),
 )]
 #[get("/api_keys")]
-pub async fn get_api_keys(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_api_keys(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
-    let entities = ApiKeyEntity::find_all(&data).await?;
+    let entities = ApiKeyEntity::find_all().await?;
     let mut keys = Vec::with_capacity(entities.len());
     for entity in entities {
         let key = entity.into_api_key()?;
@@ -86,7 +83,6 @@ pub async fn post_api_key(
 )]
 #[put("/api_keys/{name}")]
 pub async fn put_api_key(
-    data: web::Data<AppState>,
     principal: ReqPrincipal,
     name: web::Path<String>,
     payload: Json<ApiKeyRequest>,
@@ -103,7 +99,7 @@ pub async fn put_api_key(
     }
 
     let access = req.access.into_iter().map(|a| a.into()).collect();
-    ApiKeyEntity::update(&data, &name, req.exp, access).await?;
+    ApiKeyEntity::update(&name, req.exp, access).await?;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -124,14 +120,13 @@ pub async fn put_api_key(
 )]
 #[delete("/api_keys/{name}")]
 pub async fn delete_api_key(
-    data: web::Data<AppState>,
     principal: ReqPrincipal,
     name: web::Path<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
     let name = name.into_inner();
-    ApiKeyEntity::delete(&data, &name).await?;
+    ApiKeyEntity::delete(&name).await?;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -190,14 +185,13 @@ pub async fn get_api_key_test(
 )]
 #[put("/api_keys/{name}/secret")]
 pub async fn put_api_key_secret(
-    data: web::Data<AppState>,
     principal: ReqPrincipal,
     name: web::Path<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
     let name = name.into_inner();
-    let secret = ApiKeyEntity::generate_secret(&data, &name).await?;
+    let secret = ApiKeyEntity::generate_secret(&name).await?;
 
     Ok(HttpResponse::Ok()
         .content_type(TEXT_PLAIN_UTF_8)

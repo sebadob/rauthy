@@ -26,10 +26,7 @@ impl UserValues {
         format!("{}_{}", IDX_USERS_VALUES, user_id)
     }
 
-    pub async fn find(
-        data: &web::Data<AppState>,
-        user_id: &str,
-    ) -> Result<Option<Self>, ErrorResponse> {
+    pub async fn find(user_id: &str) -> Result<Option<Self>, ErrorResponse> {
         let idx = Self::cache_idx(user_id);
         let client = DB::client();
 
@@ -45,7 +42,7 @@ impl UserValues {
         } else {
             sqlx::query_as::<_, Self>("SELECT * FROM users_values WHERE id = $1")
                 .bind(user_id)
-                .fetch_optional(&data.db)
+                .fetch_optional(DB::conn())
                 .await?
         };
 
@@ -55,7 +52,6 @@ impl UserValues {
     }
 
     pub async fn upsert(
-        data: &web::Data<AppState>,
         user_id: String,
         values: UserValuesRequest,
     ) -> Result<Option<Self>, ErrorResponse> {
@@ -95,7 +91,7 @@ SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7"#
                 values.city,
                 values.country,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 

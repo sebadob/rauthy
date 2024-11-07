@@ -30,7 +30,7 @@ pub struct DeviceEntity {
 }
 
 impl DeviceEntity {
-    pub async fn insert(self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn insert(self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute(
@@ -65,44 +65,41 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 self.peer_ip,
                 self.name,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
         Ok(())
     }
 
-    pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
+    pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let slf = if is_hiqlite() {
             DB::client()
                 .query_as_one("SELECT * FROM devices WHERE id = $1", params!(id))
                 .await?
         } else {
             query_as!(Self, "SELECT * FROM devices WHERE id = $1", id)
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await?
         };
         Ok(slf)
     }
 
-    pub async fn find_for_user(
-        data: &web::Data<AppState>,
-        user_id: &str,
-    ) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_for_user(user_id: &str) -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as("SELECT * FROM devices WHERE user_id = $1", params!(user_id))
                 .await?
         } else {
             query_as!(Self, "SELECT * FROM devices WHERE user_id = $1", user_id)
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
         Ok(res)
     }
 
     /// Deletes all devices where access and refresh token expirations are in the past
-    pub async fn delete_expired(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn delete_expired() -> Result<(), ErrorResponse> {
         let exp = Utc::now()
             .sub(chrono::Duration::try_hours(1).unwrap())
             .timestamp();
@@ -123,7 +120,7 @@ DELETE FROM devices
 WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
                 exp
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?
             .rows_affected();
             res as usize
@@ -133,14 +130,14 @@ WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
         Ok(())
     }
 
-    pub async fn invalidate(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
+    pub async fn invalidate(id: &str) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute("DELETE FROM devices WHERE id = $1", params!(id))
                 .await?;
         } else {
             query!("DELETE FROM devices WHERE id = $1", id)
-                .execute(&data.db)
+                .execute(DB::conn())
                 .await?;
         }
 
@@ -148,11 +145,8 @@ WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
         Ok(())
     }
 
-    pub async fn revoke_refresh_tokens(
-        data: &web::Data<AppState>,
-        device_id: &str,
-    ) -> Result<(), ErrorResponse> {
-        RefreshTokenDevice::invalidate_all_for_device(data, device_id).await?;
+    pub async fn revoke_refresh_tokens(device_id: &str) -> Result<(), ErrorResponse> {
+        RefreshTokenDevice::invalidate_all_for_device(device_id).await?;
 
         if is_hiqlite() {
             DB::client()
@@ -166,7 +160,7 @@ WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
                 "UPDATE devices SET refresh_exp = null WHERE id = $1",
                 device_id,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
@@ -174,7 +168,6 @@ WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
     }
 
     pub async fn update_name(
-        data: &web::Data<AppState>,
         device_id: &str,
         user_id: &str,
         name: &str,
@@ -193,7 +186,7 @@ WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#,
                 device_id,
                 user_id
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 

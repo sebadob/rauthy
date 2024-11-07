@@ -32,9 +32,9 @@ pub async fn spawn(data: web::Data<AppState>) {
     tokio::spawn(tokens::refresh_tokens_cleanup(data.db.clone()));
     tokio::spawn(sessions::sessions_cleanup(data.db.clone()));
     tokio::spawn(jwks::jwks_auto_rotate(data.clone()));
-    tokio::spawn(jwks::jwks_cleanup(data.clone()));
+    tokio::spawn(jwks::jwks_cleanup());
     tokio::spawn(passwords::password_expiry_checker(data.clone()));
-    tokio::spawn(users::user_expiry_checker(data.clone()));
+    tokio::spawn(users::user_expiry_checker());
     tokio::spawn(app_version::app_version_check(data));
 }
 

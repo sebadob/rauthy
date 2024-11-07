@@ -217,7 +217,7 @@ pub async fn get_clients_dyn(
 
     let bearer = helpers::get_bearer_token_from_header(req.headers())?;
     let id = id.into_inner();
-    let client_dyn = ClientDyn::find(&data, id.clone()).await?;
+    let client_dyn = ClientDyn::find(id.clone()).await?;
     client_dyn.validate_token(&bearer)?;
 
     let client = Client::find(&data, id).await?;
@@ -251,7 +251,7 @@ pub async fn put_clients_dyn(
 
     let bearer = helpers::get_bearer_token_from_header(req.headers())?;
     let id = id.into_inner();
-    let client_dyn = ClientDyn::find(&data, id.clone()).await?;
+    let client_dyn = ClientDyn::find(id.clone()).await?;
     client_dyn.validate_token(&bearer)?;
 
     let resp = Client::update_dynamic(&data, payload.into_inner(), client_dyn).await?;
@@ -305,13 +305,12 @@ pub async fn put_clients(
 )]
 #[get("/clients/{id}/colors")]
 pub async fn get_client_colors(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Read)?;
 
-    ColorEntity::find(&data, id.as_str())
+    ColorEntity::find(id.as_str())
         .await
         .map(|c| HttpResponse::Ok().json(c))
 }
@@ -334,7 +333,6 @@ pub async fn get_client_colors(
 )]
 #[put("/clients/{id}/colors")]
 pub async fn put_client_colors(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
     req_data: actix_web_validator::Json<ColorsRequest>,
@@ -343,7 +341,7 @@ pub async fn put_client_colors(
 
     let colors = req_data.into_inner();
     colors.validate_css()?;
-    ColorEntity::update(&data, id.as_str(), colors).await?;
+    ColorEntity::update(id.as_str(), colors).await?;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -364,13 +362,12 @@ pub async fn put_client_colors(
 )]
 #[delete("/clients/{id}/colors")]
 pub async fn delete_client_colors(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Delete)?;
 
-    ColorEntity::delete(&data, id.as_str()).await?;
+    ColorEntity::delete(id.as_str()).await?;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -388,19 +385,16 @@ pub async fn delete_client_colors(
     ),
 )]
 #[get("/clients/{id}/logo")]
-pub async fn get_client_logo(
-    data: web::Data<AppState>,
-    id: web::Path<String>,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_client_logo(id: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
     let id = id.into_inner();
     debug!("Looking up client logo for id {}", id);
-    let logo = match Logo::find_cached(&data, &id, &LogoType::Client).await {
+    let logo = match Logo::find_cached(&id, &LogoType::Client).await {
         Ok(logo) => logo,
         Err(_) => {
             debug!("no specific logo for id {} - using Rauthy default", id);
             // If this client does not have a custom logo, we will always serve
             // Rauthy's logo as default
-            Logo::find_cached(&data, "rauthy", &LogoType::Client).await?
+            Logo::find_cached("rauthy", &LogoType::Client).await?
         }
     };
 
@@ -430,7 +424,6 @@ pub async fn get_client_logo(
 )]
 #[put("/clients/{id}/logo")]
 pub async fn put_client_logo(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
     mut payload: actix_multipart::Multipart,
@@ -464,7 +457,6 @@ pub async fn put_client_logo(
 
     // content_type unwrap cannot panic -> checked above
     Logo::upsert(
-        &data,
         id.into_inner(),
         buf,
         content_type.unwrap(),
@@ -490,16 +482,15 @@ delete,
 )]
 #[delete("/clients/{id}/logo")]
 pub async fn delete_client_logo(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Delete)?;
 
     if id.as_str() == "rauthy" {
-        Logo::upsert_rauthy_default(&data).await?;
+        Logo::upsert_rauthy_default().await?;
     } else {
-        Logo::delete(&data, id.as_str(), &LogoType::Client).await?;
+        Logo::delete(id.as_str(), &LogoType::Client).await?;
     }
 
     Ok(HttpResponse::Ok().finish())

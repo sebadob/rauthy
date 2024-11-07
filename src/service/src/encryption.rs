@@ -51,7 +51,7 @@ pub async fn migrate_encryption_alg(
 
     // migrate ApiKey's
     info!("Starting ApiKeys migration to key id: {}", new_kid);
-    let api_keys = ApiKeyEntity::find_all(data)
+    let api_keys = ApiKeyEntity::find_all()
         .await?
         .into_iter()
         // filter out all keys that already use the new key
@@ -72,7 +72,7 @@ pub async fn migrate_encryption_alg(
 
         api_key.enc_key_id = new_kid.to_string();
 
-        api_key.save(data).await?;
+        api_key.save().await?;
         modified += 1;
     }
     info!("Finished ApiKeys migration to key id: {}", new_kid);
