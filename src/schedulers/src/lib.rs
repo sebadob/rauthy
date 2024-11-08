@@ -5,7 +5,6 @@ use tokio::time;
 use tracing::info;
 
 mod app_version;
-mod backup;
 mod devices;
 mod dyn_clients;
 mod events;
@@ -19,11 +18,6 @@ mod users;
 /// Spawn all Rauthy schedulers and periodic tasks
 pub async fn spawn(data: web::Data<AppState>) {
     info!("Starting schedulers");
-
-    // TODO remove after hiqlite migration - has backup functionality built in
-    // initialize and possibly panic early if anything is mis-configured regarding the s3 storage
-    // s3_backup_init_test().await;
-    // tokio::spawn(backup::db_backup(data.db.clone()));
 
     tokio::spawn(dyn_clients::dyn_client_cleanup());
     tokio::spawn(events::events_cleanup());
