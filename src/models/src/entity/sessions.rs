@@ -376,27 +376,22 @@ OFFSET $2"#,
 
     /// Invalidates all sessions by setting the expiry to `now()`
     pub async fn invalidate_all() -> Result<(), ErrorResponse> {
-        let now = OffsetDateTime::now_utc().unix_timestamp();
-        let sessions = Session::find_all().await?;
-        let mut removed = Vec::default();
+        let now = Utc::now().timestamp() - 1;
 
-        // TODO refactor into single query with `RETURNING`
-        for mut s in sessions {
-            if s.exp > now {
-                s.exp = now;
-                if let Err(err) = s.save().await {
-                    error!("Error invalidating session: {}", err);
-                }
-                removed.push(s.id);
-            }
-        }
+        let rows_affected = if is_hiqlite() {
+            DB::client()
+                .execute("UPDATE sessions SET exp = $1 WHERE exp > $1", params!(now))
+                .await? as u64
+        } else {
+            sqlx::query!("UPDATE sessions SET exp = $1 WHERE exp > $1", now)
+                .execute(DB::conn())
+                .await?
+                .rows_affected()
+        };
+        // at least the session used to invalidate all will always exist
+        debug_assert!(rows_affected > 0);
 
-        let client = DB::client();
-        for id in removed {
-            client
-                .delete(Cache::Session, Session::cache_idx(&id))
-                .await?;
-        }
+        DB::client().clear_cache(Cache::Session).await?;
 
         Ok(())
     }

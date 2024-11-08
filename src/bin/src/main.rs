@@ -59,8 +59,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         dotenvy::dotenv_override().ok();
     }
 
-    let log_level = setup_logging();
-
     if !logging::is_log_fmt_json() {
         println!(
             r#"
@@ -76,11 +74,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                                                  d8'
             "#
         );
-        // This sleep is just a test. On some terminals, the banner gets mixed up with the first other
-        // logs. We don't care about Rauthys startup time being 1ms longer.
+        // On some terminals, the banner gets mixed up
+        // with the first other logs without this short sleep.
         time::sleep(Duration::from_micros(20)).await;
     }
 
+    let log_level = setup_logging();
     info!("{} - Starting Rauthy v{}", *APP_START, RAUTHY_VERSION);
     info!("Log Level set to '{}'", log_level);
     if test_mode {
@@ -124,11 +123,11 @@ faster, and more resilient.
 
 You can migrate your existing SQLite database using the `MIGRATE_DB_FROM` config variable:
 
-        # If specified, the currently configured Database will be DELETED and OVERWRITTEN with a
-        # migration from the given database with this variable. Can be used to migrate between
-        # different databases.
-        # !!! USE WITH CARE !!!
-        #MIGRATE_DB_FROM=sqlite:data/rauthy.db
+    # If specified, the currently configured Database will be DELETED and OVERWRITTEN with a
+    # migration from the given database with this variable. Can be used to migrate between
+    # different databases.
+    # !!! USE WITH CARE !!!
+    #MIGRATE_DB_FROM=sqlite:data/rauthy.db
 
 To migrate to Postgres, simply set the `DATABASE_URL` to a Postgres database.
 To migrate to Hiqlite, there are a few new config variables you can set. The most important is
@@ -140,7 +139,9 @@ TODO add link to the book after migration
 "#
         );
     }
-    DB::init().await.expect("Error starting the cache layer");
+    DB::init()
+        .await
+        .expect("Error starting the database / cache layer");
 
     // email sending
     debug!("Starting E-Mail handler");

@@ -28,7 +28,7 @@ pub async fn devices_cleanup() {
                     r#"
 DELETE FROM devices
 WHERE access_exp < $1
-AND (refresh_exp is null OR refresh_exp < $1)"#,
+AND (refresh_exp IS NULL OR refresh_exp < $1)"#,
                     params!(threshold),
                 )
                 .await;
@@ -46,7 +46,7 @@ AND (refresh_exp is null OR refresh_exp < $1)"#,
                 r#"
     DELETE FROM devices
     WHERE access_exp < $1
-    AND (refresh_exp is null OR refresh_exp < $1)"#,
+    AND (refresh_exp IS NULL OR refresh_exp < $1)"#,
                 threshold
             )
             .execute(DB::conn())
