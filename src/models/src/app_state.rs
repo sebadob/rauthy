@@ -17,7 +17,7 @@ pub type DbTxn<'a> = sqlx::Transaction<'a, sqlx::Postgres>;
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub public_url: String,
-    pub argon2_params: Argon2Params,
+    pub argon2_params: argon2::Params,
     pub issuer: String,
     pub listen_addr: String,
     pub listen_scheme: ListenScheme,
@@ -97,13 +97,12 @@ impl AppState {
             .unwrap_or_else(|_| String::from("8"))
             .parse::<u32>()
             .expect("Could not parse ARGON2_P_COST value");
-        let params = argon2::Params::new(argon2_m_cost, argon2_t_cost, argon2_p_cost, None)
+        let argon2_params = argon2::Params::new(argon2_m_cost, argon2_t_cost, argon2_p_cost, None)
             .expect("Unable to build Argon2id params");
         debug!(
             "Argon2id Params: m_cost: {}, t_cost: {}, p_cost: {}",
             argon2_m_cost, argon2_t_cost, argon2_p_cost
         );
-        let argon2_params = Argon2Params { params };
 
         let refresh_grace_time = env::var("REFRESH_TOKEN_GRACE_TIME")
             .unwrap_or_else(|_| String::from('5'))
@@ -248,13 +247,4 @@ impl AppState {
     //
     //     Ok(pool)
     // }
-}
-
-/// Holds the `argon2::Params` for the application.
-///
-/// This has been simplified a lot by now and it may be unwrapped and inserted into the
-/// [AppState](AppState) directly later on. Needs some refactoring though.
-#[derive(Debug, Clone)]
-pub struct Argon2Params {
-    pub params: argon2::Params,
 }

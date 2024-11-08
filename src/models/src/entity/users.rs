@@ -1,4 +1,4 @@
-use crate::app_state::{AppState, Argon2Params, DbTxn};
+use crate::app_state::{AppState, DbTxn};
 use crate::database::{Cache, DB};
 use crate::email::{send_email_change_info_new, send_email_confirm_change, send_pwd_reset};
 use crate::entity::colors::ColorEntity;
@@ -1524,7 +1524,7 @@ impl User {
         }
     }
 
-    pub fn is_argon2_uptodate(&self, params: &Argon2Params) -> Result<bool, ErrorResponse> {
+    pub fn is_argon2_uptodate(&self, params: &argon2::Params) -> Result<bool, ErrorResponse> {
         if self.password.is_none() {
             error!(
                 "Trying to validate argon2 params with not set password for user '{:?}'",
@@ -1540,9 +1540,9 @@ impl User {
         let curr_params =
             argon2::Params::try_from(&hash).expect("Could not extract params from hash");
 
-        if curr_params.m_cost() == params.params.m_cost()
-            && curr_params.t_cost() == params.params.t_cost()
-            && curr_params.p_cost() == params.params.p_cost()
+        if curr_params.m_cost() == params.m_cost()
+            && curr_params.t_cost() == params.t_cost()
+            && curr_params.p_cost() == params.p_cost()
         {
             return Ok(true);
         }
@@ -1891,21 +1891,19 @@ mod tests {
 
         // argon2 params
         // defaults: argon2_m_cost = 16384, argon2_t_cost = 3, argon2_p_cost = 2
-        let mut wrapped_params = Argon2Params {
-            params: argon2::Params::new(16384, 3, 2, None).unwrap(),
-        };
+        let mut wrapped_params = argon2::Params::new(16384, 3, 2, None)?;
         let res = user.is_argon2_uptodate(&wrapped_params)?;
         assert_eq!(res, true);
 
-        wrapped_params.params = argon2::Params::new(8192, 3, 2, None).unwrap();
+        wrapped_params = argon2::Params::new(8192, 3, 2, None)?;
         let res = user.is_argon2_uptodate(&wrapped_params)?;
         assert_eq!(res, false);
 
-        wrapped_params.params = argon2::Params::new(16384, 4, 2, None).unwrap();
+        wrapped_params = argon2::Params::new(16384, 4, 2, None)?;
         let res = user.is_argon2_uptodate(&wrapped_params)?;
         assert_eq!(res, false);
 
-        wrapped_params.params = argon2::Params::new(16384, 3, 5, None).unwrap();
+        wrapped_params = argon2::Params::new(16384, 3, 5, None)?;
         let res = user.is_argon2_uptodate(&wrapped_params)?;
         assert_eq!(res, false);
 

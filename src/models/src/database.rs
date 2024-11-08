@@ -168,7 +168,7 @@ impl DB {
 
         // migrate dynamic DB data
         if !*DEV_MODE {
-            init_prod::migrate_init_prod(app_state.argon2_params.params.clone(), &app_state.issuer)
+            init_prod::migrate_init_prod(app_state.argon2_params.clone(), &app_state.issuer)
                 .await?;
         }
 

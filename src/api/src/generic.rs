@@ -385,9 +385,9 @@ pub async fn get_login_time(
         .unwrap_or(2000);
 
     let argon2_params = Argon2ParamsResponse {
-        m_cost: data.argon2_params.params.m_cost(),
-        t_cost: data.argon2_params.params.t_cost(),
-        p_cost: data.argon2_params.params.p_cost(),
+        m_cost: data.argon2_params.m_cost(),
+        t_cost: data.argon2_params.t_cost(),
+        p_cost: data.argon2_params.p_cost(),
     };
     let resp = LoginTimeResponse {
         argon2_params,
