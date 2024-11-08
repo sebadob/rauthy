@@ -1,14 +1,13 @@
 use chrono::Utc;
 use hiqlite::{params, Param};
 use rauthy_common::is_hiqlite;
-use rauthy_models::app_state::DbPool;
 use rauthy_models::database::DB;
 use std::ops::Sub;
 use std::time::Duration;
 use tracing::{debug, error};
 
 // Cleans up old / expired Sessions
-pub async fn sessions_cleanup(db: DbPool) {
+pub async fn sessions_cleanup() {
     let mut interval = tokio::time::interval(Duration::from_secs(3595 * 2));
 
     loop {
@@ -34,7 +33,7 @@ pub async fn sessions_cleanup(db: DbPool) {
             }
         } else if let Err(err) = sqlx::query("DELETE FROM sessions WHERE exp < $1")
             .bind(thres)
-            .execute(&db)
+            .execute(DB::conn())
             .await
         {
             error!("Session Cleanup Error: {:?}", err)

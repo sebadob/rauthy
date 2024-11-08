@@ -175,7 +175,6 @@ TODO add link to the book after migration
         tx_events_router,
         rx_events_router,
         rx_events,
-        app_state.db.clone(),
     ));
 
     // spawn password hash limiter
@@ -188,10 +187,7 @@ TODO add link to the book after migration
 
     // spawn health watcher
     debug!("Starting health watch");
-    tokio::spawn(watch_health(
-        app_state.db.clone(),
-        app_state.tx_events.clone(),
-    ));
+    tokio::spawn(watch_health(app_state.tx_events.clone()));
 
     // schedulers
     match env::var("SCHED_DISABLE")

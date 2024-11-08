@@ -1,4 +1,3 @@
-use crate::app_state::DbPool;
 use crate::database::DB;
 use crate::events::event::{Event, EventLevel, EventType};
 use crate::events::ip_blacklist_handler::{IpBlacklist, IpBlacklistReq, IpLoginFailedSet};
@@ -34,25 +33,24 @@ impl EventListener {
         tx_router: flume::Sender<EventRouterMsg>,
         rx_router: flume::Receiver<EventRouterMsg>,
         rx_event: flume::Receiver<Event>,
-        db: DbPool,
     ) -> Result<(), ErrorResponse> {
         debug!("EventListener::listen has been started");
 
-        tokio::spawn(Self::router(db.clone(), rx_router, tx_ip_blacklist));
+        tokio::spawn(Self::router(rx_router, tx_ip_blacklist));
         tokio::spawn(Self::raft_events_listener(tx_router));
 
         while let Ok(event) = rx_event.recv_async().await {
-            tokio::spawn(Self::handle_event(event, db.clone()));
+            tokio::spawn(Self::handle_event(event));
         }
 
         Ok(())
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
-    async fn handle_event(event: Event, db: DbPool) {
+    async fn handle_event(event: Event) {
         // insert into DB
         if &event.level.value() >= EVENT_PERSIST_LEVEL.get().unwrap() {
-            while let Err(err) = event.insert(&db).await {
+            while let Err(err) = event.insert().await {
                 error!("Inserting Event into Database: {:?}", err);
                 time::sleep(Duration::from_secs(1)).await;
             }
@@ -145,7 +143,6 @@ impl EventListener {
     /// format and forward them to all registered clients.
     #[tracing::instrument(level = "debug", skip_all)]
     async fn router(
-        db: DbPool,
         rx: flume::Receiver<EventRouterMsg>,
         tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
     ) {
@@ -155,7 +152,7 @@ impl EventListener {
             HashMap::with_capacity(4);
         let mut ips_to_remove = Vec::with_capacity(1);
         // Event::find_latest returns the latest events ordered by timestamp desc
-        let mut events = Event::find_latest(&db, EVENTS_LATEST_LIMIT as i64)
+        let mut events = Event::find_latest(EVENTS_LATEST_LIMIT as i64)
             .await
             .unwrap_or_default()
             .into_iter()

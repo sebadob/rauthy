@@ -584,7 +584,7 @@ pub async fn get_health() -> impl Responder {
             cache_healthy: true,
         })
     } else {
-        let db_healthy = is_db_alive(DB::conn()).await;
+        let db_healthy = is_db_alive().await;
         let cache_healthy = DB::client().is_healthy_cache().await.is_ok();
 
         let body = HealthResponse {

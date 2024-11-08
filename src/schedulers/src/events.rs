@@ -1,7 +1,6 @@
 use chrono::Utc;
 use hiqlite::{params, Param};
 use rauthy_common::is_hiqlite;
-use rauthy_models::app_state::DbPool;
 use rauthy_models::database::DB;
 use std::env;
 use std::ops::Sub;
@@ -9,7 +8,7 @@ use std::time::Duration;
 use tracing::{debug, error};
 
 /// Cleans up all Events that exceed the configured EVENT_CLEANUP_DAYS
-pub async fn events_cleanup(db: DbPool) {
+pub async fn events_cleanup() {
     let mut interval = tokio::time::interval(Duration::from_secs(3600));
 
     let cleanup_days = env::var("EVENT_CLEANUP_DAYS")
@@ -47,7 +46,7 @@ pub async fn events_cleanup(db: DbPool) {
             }
         } else {
             let res = sqlx::query!("DELETE FROM events WHERE timestamp < $1", threshold)
-                .execute(&db)
+                .execute(DB::conn())
                 .await;
 
             match res {

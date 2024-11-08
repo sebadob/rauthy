@@ -1,11 +1,10 @@
-use crate::app_state::DbPool;
 use crate::database::DB;
 use crate::entity::is_db_alive;
 use crate::events::event::Event;
 use std::time::Duration;
 use tracing::debug;
 
-pub async fn watch_health(db: DbPool, tx_events: flume::Sender<Event>) {
+pub async fn watch_health(tx_events: flume::Sender<Event>) {
     debug!("Rauthy health watcher started");
 
     let mut interval = tokio::time::interval(Duration::from_secs(30));
@@ -17,12 +16,12 @@ pub async fn watch_health(db: DbPool, tx_events: flume::Sender<Event>) {
 
         let cache_healthy = DB::client().is_healthy_cache().await.is_ok();
 
-        let db_healthy = if !is_db_alive(&db).await {
+        let db_healthy = if !is_db_alive().await {
             // wait for a few seconds and try again before alerting
             tokio::time::sleep(Duration::from_secs(10)).await;
 
             // do not send
-            if !is_db_alive(&db).await && was_healthy_after_startup {
+            if !is_db_alive().await && was_healthy_after_startup {
                 tx_events
                     .send_async(Event::rauthy_unhealthy_db())
                     .await

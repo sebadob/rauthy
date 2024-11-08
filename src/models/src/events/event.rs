@@ -1,4 +1,3 @@
-use crate::app_state::DbPool;
 use crate::database::DB;
 use crate::events::{
     EVENT_LEVEL_FAILED_LOGIN, EVENT_LEVEL_FAILED_LOGINS_10, EVENT_LEVEL_FAILED_LOGINS_15,
@@ -440,7 +439,7 @@ impl Display for Event {
 }
 
 impl Event {
-    pub async fn insert(&self, db: &DbPool) -> Result<(), ErrorResponse> {
+    pub async fn insert(&self) -> Result<(), ErrorResponse> {
         let level = self.level.value();
         let typ = self.typ.value();
 
@@ -474,7 +473,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
                 self.data,
                 self.text,
             )
-            .execute(db)
+            .execute(DB::conn())
             .await?;
         }
 
@@ -482,7 +481,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
     }
 
     pub async fn find_all(
-        db: &DbPool,
         mut from: i64,
         mut until: i64,
         level: EventLevel,
@@ -519,7 +517,7 @@ ORDER BY timestamp DESC"#,
                     level,
                     typ,
                 )
-                .fetch_all(db)
+                .fetch_all(DB::conn())
                 .await?
             }
         } else if is_hiqlite() {
@@ -543,14 +541,14 @@ ORDER BY timestamp DESC"#,
                 until,
                 level,
             )
-            .fetch_all(db)
+            .fetch_all(DB::conn())
             .await?
         };
 
         Ok(res)
     }
 
-    pub async fn find_latest(db: &DbPool, limit: i64) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_latest(limit: i64) -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
                 .query_map(
@@ -564,7 +562,7 @@ ORDER BY timestamp DESC"#,
                 "SELECT * FROM events ORDER BY timestamp DESC LIMIT $1",
                 limit
             )
-            .fetch_all(db)
+            .fetch_all(DB::conn())
             .await?
         };
 
