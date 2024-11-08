@@ -362,14 +362,14 @@ pub async fn get_user_by_id(
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_session_auth()?;
-
     let id = path.into_inner();
+
     // principal must either be an admin or have the same user id
     let api_key_or_admin = principal
         .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)
         .is_ok();
     if !api_key_or_admin {
+        principal.validate_session_auth()?;
         principal.is_user(&id)?;
     }
 
