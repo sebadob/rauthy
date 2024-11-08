@@ -78,7 +78,6 @@ pub const IDX_MFA_LOGIN_REQ: &str = "mfa_login_req_";
 pub const IDX_PASSWORD_RULES: &str = "password_rules_";
 pub const IDX_ROLES: &str = "roles_";
 pub const IDX_SCOPES: &str = "scopes_";
-pub const IDX_SESSION: &str = "session_";
 pub const IDX_SESSIONS: &str = "sessions";
 pub const IDX_USERS: &str = "users_";
 pub const IDX_USER_COUNT: &str = "users_count_total";

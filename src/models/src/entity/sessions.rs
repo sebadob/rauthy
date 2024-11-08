@@ -2,15 +2,14 @@ use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
-use actix_web::cookie::{time, Cookie, SameSite};
+use actix_web::cookie::{time, SameSite};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{cookie, web, HttpRequest};
 use chrono::Utc;
 use hiqlite::{params, Param};
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_common::constants::{
-    CACHE_TTL_SESSION, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER, IDX_SESSION,
-    SESSION_LIFETIME_FED_CM,
+    CACHE_TTL_SESSION, COOKIE_SESSION, COOKIE_SESSION_FED_CM, CSRF_HEADER, SESSION_LIFETIME_FED_CM,
 };
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::get_rand;
@@ -100,7 +99,7 @@ impl SessionState {
 
 // CRUD
 impl Session {
-    pub async fn delete(&self) -> Result<(), ErrorResponse> {
+    pub async fn delete(self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute("DELETE FROM sessions WHERE id = $1", params!(&self.id))
@@ -111,9 +110,7 @@ impl Session {
                 .await?;
         }
 
-        DB::client()
-            .delete(Cache::Session, Session::cache_idx(&self.id))
-            .await?;
+        DB::client().delete(Cache::Session, self.id).await?;
 
         Ok(())
     }
@@ -149,9 +146,7 @@ impl Session {
 
         let client = DB::client();
         for id in sids {
-            client
-                .delete(Cache::Session, Session::cache_idx(&id))
-                .await?;
+            client.delete(Cache::Session, id).await?;
         }
 
         Ok(())
@@ -159,10 +154,9 @@ impl Session {
 
     // Returns a session by id
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        let idx = Session::cache_idx(&id);
         let client = DB::client();
 
-        if let Some(slf) = client.get(Cache::Session, &idx).await? {
+        if let Some(slf) = client.get(Cache::Session, id.clone()).await? {
             return Ok(slf);
         }
 
@@ -184,7 +178,7 @@ impl Session {
         };
 
         client
-            .put(Cache::Session, idx, &slf, CACHE_TTL_SESSION)
+            .put(Cache::Session, slf.id.clone(), &slf, CACHE_TTL_SESSION)
             .await?;
 
         Ok(slf)
@@ -485,12 +479,7 @@ remote_ip = $10"#,
         }
 
         DB::client()
-            .put(
-                Cache::Session,
-                Session::cache_idx(&self.id),
-                self,
-                CACHE_TTL_SESSION,
-            )
+            .put(Cache::Session, self.id.clone(), self, CACHE_TTL_SESSION)
             .await?;
 
         Ok(())
@@ -593,11 +582,6 @@ impl Session {
         }
     }
 
-    #[inline(always)]
-    fn cache_idx(id: &String) -> String {
-        format!("{}{}", IDX_SESSION, id)
-    }
-
     /// exp_in will be the time in seconds when the session will expire
     pub fn try_new(
         user: &User,
@@ -692,22 +676,31 @@ impl Session {
         )
     }
 
-    pub async fn invalidate(&mut self) -> Result<Cookie, ErrorResponse> {
-        let idx = Session::cache_idx(&self.id);
+    pub async fn invalidate(self) -> Result<(), ErrorResponse> {
+        let now = Utc::now().timestamp() - 1;
+        let state = SessionState::LoggedOut.as_str().to_string();
 
-        self.exp = OffsetDateTime::now_utc().unix_timestamp();
-        self.state = SessionState::LoggedOut.as_str().to_string();
-
-        sqlx::query("update sessions set exp = $1, state = $2 where id = $3")
-            .bind(self.exp)
-            .bind(self.state.as_str())
-            .bind(&self.id)
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    "UPDATE sessions SET exp = $1, state = $2 WHERE id = $3",
+                    params!(now, state, self.id.clone()),
+                )
+                .await?;
+        } else {
+            sqlx::query!(
+                "UPDATE sessions SET exp = $1, state = $2 WHERE id = $3",
+                now,
+                state,
+                &self.id
+            )
             .execute(DB::conn())
             .await?;
+        }
 
-        DB::client().delete(Cache::Session, idx).await?;
+        DB::client().delete(Cache::Session, self.id).await?;
 
-        Ok(ApiCookie::build(COOKIE_SESSION, &self.id, 0))
+        Ok(())
     }
 
     #[inline(always)]
