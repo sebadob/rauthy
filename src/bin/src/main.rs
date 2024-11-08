@@ -49,25 +49,6 @@ mod tls;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    println!(
-        r#"
-                                          88
-                                    ,d    88
-                                    88    88
-8b,dPPYba, ,adPPYYba, 88       88 MM88MMM 88,dPPYba,  8b       d8
-88P'   "Y8 ""     `Y8 88       88   88    88P'    "8a `8b     d8'
-88         ,adPPPPP88 88       88   88    88       88  `8b   d8'
-88         88,    ,88 "8a,   ,a88   88,   88       88   `8b,d8'
-88         `"8bbdP"Y8  `"YbbdP'Y8   "Y888 88       88     Y88'
-                                                          d8'
-                                                         d8'
-    "#
-    );
-    // This sleep is just a test. On some terminals, the banner gets mixed up with the first other
-    // logs. We don't care about Rauthys startup time being 1ms longer.
-    time::sleep(Duration::from_micros(100)).await;
-
-    // setup logging
     let mut test_mode = false;
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 && args[1] == "test" {
@@ -79,6 +60,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let log_level = setup_logging();
+
+    if !logging::is_log_fmt_json() {
+        println!(
+            r#"
+                                                  88
+                                            ,d    88
+                                            88    88
+        8b,dPPYba, ,adPPYYba, 88       88 MM88MMM 88,dPPYba,  8b       d8
+        88P'   "Y8 ""     `Y8 88       88   88    88P'    "8a `8b     d8'
+        88         ,adPPPPP88 88       88   88    88       88  `8b   d8'
+        88         88,    ,88 "8a,   ,a88   88,   88       88   `8b,d8'
+        88         `"8bbdP"Y8  `"YbbdP'Y8   "Y888 88       88     Y88'
+                                                                  d8'
+                                                                 d8'
+            "#
+        );
+        // This sleep is just a test. On some terminals, the banner gets mixed up with the first other
+        // logs. We don't care about Rauthys startup time being 1ms longer.
+        time::sleep(Duration::from_micros(20)).await;
+    }
 
     info!("{} - Starting Rauthy v{}", *APP_START, RAUTHY_VERSION);
     info!("Log Level set to '{}'", log_level);

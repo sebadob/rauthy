@@ -20,7 +20,7 @@ pub fn setup_logging() -> tracing::Level {
         env::set_var("RUST_BACKTRACE", "1");
     }
 
-    if env::var("LOG_FMT").ok() == Some("json".to_string()) {
+    if is_log_fmt_json() {
         let subscriber = tracing_subscriber::FmtSubscriber::builder()
             .json()
             .with_max_level(log_level)
@@ -38,6 +38,12 @@ pub fn setup_logging() -> tracing::Level {
     };
 
     log_level
+}
+
+pub fn is_log_fmt_json() -> bool {
+    env::var("LOG_FMT")
+        .map(|fmt| &fmt == "json")
+        .unwrap_or(false)
 }
 
 fn read_level(env_var: &str) -> Level {
