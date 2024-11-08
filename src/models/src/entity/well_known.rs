@@ -45,13 +45,13 @@ impl WellKnown {
             return Ok(slf);
         }
 
-        let scopes = Scope::find_all(data)
+        let scopes = Scope::find_all()
             .await?
             .into_iter()
             .map(|s| s.name)
             .collect::<Vec<String>>();
         let slf = Self::new(&data.issuer, scopes);
-        let json = serde_json::to_string(&slf).unwrap();
+        let json = serde_json::to_string(&slf)?;
 
         client.put(Cache::App, IDX, &json, CACHE_TTL_APP).await?;
 
@@ -61,13 +61,13 @@ impl WellKnown {
     /// Rebuilds the WellKnown, serializes it as json and updates it inside the cache.
     /// Should be called after any update on the Scopes.
     pub async fn rebuild(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        let scopes = Scope::find_all(data)
+        let scopes = Scope::find_all()
             .await?
             .into_iter()
             .map(|s| s.name)
             .collect::<Vec<String>>();
         let slf = Self::new(&data.issuer, scopes);
-        let json = serde_json::to_string(&slf).unwrap();
+        let json = serde_json::to_string(&slf)?;
 
         DB::client()
             .put(Cache::App, IDX, &json, CACHE_TTL_APP)

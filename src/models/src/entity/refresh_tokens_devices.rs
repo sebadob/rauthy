@@ -1,6 +1,4 @@
-use crate::app_state::AppState;
 use crate::database::DB;
-use actix_web::web;
 use chrono::{DateTime, Utc};
 use hiqlite::{params, Param};
 use rauthy_common::is_hiqlite;
@@ -22,7 +20,6 @@ pub struct RefreshTokenDevice {
 // CRUD
 impl RefreshTokenDevice {
     pub async fn create(
-        data: &web::Data<AppState>,
         id: String,
         device_id: String,
         user_id: String,
@@ -39,11 +36,11 @@ impl RefreshTokenDevice {
             scope,
         };
 
-        rt.save(data).await?;
+        rt.save().await?;
         Ok(rt)
     }
 
-    pub async fn delete(self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn delete(self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute(
@@ -53,26 +50,26 @@ impl RefreshTokenDevice {
                 .await?;
         } else {
             sqlx::query!("DELETE FROM refresh_tokens_devices WHERE id = $1", self.id)
-                .execute(&data.db)
+                .execute(DB::conn())
                 .await?;
         }
         Ok(())
     }
 
-    pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as("SELECT * FROM refresh_tokens_devices", params!())
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM refresh_tokens_devices")
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
         Ok(res)
     }
 
-    pub async fn invalidate_all(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn invalidate_all() -> Result<(), ErrorResponse> {
         let now = OffsetDateTime::now_utc().unix_timestamp();
 
         if is_hiqlite() {
@@ -87,17 +84,14 @@ impl RefreshTokenDevice {
                 "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1",
                 now
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
         Ok(())
     }
 
-    pub async fn invalidate_for_user(
-        data: &web::Data<AppState>,
-        user_id: &str,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn invalidate_for_user(user_id: &str) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
 
         if is_hiqlite() {
@@ -113,14 +107,14 @@ impl RefreshTokenDevice {
                 now,
                 user_id
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
         Ok(())
     }
 
-    pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
+    pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let now = Utc::now().timestamp();
 
         if is_hiqlite() {
@@ -143,7 +137,7 @@ impl RefreshTokenDevice {
                 id,
                 now
             )
-            .fetch_one(&data.db)
+            .fetch_one(DB::conn())
             .await
             .map_err(|_| {
                 ErrorResponse::new(
@@ -154,10 +148,7 @@ impl RefreshTokenDevice {
         }
     }
 
-    pub async fn invalidate_all_for_device(
-        data: &web::Data<AppState>,
-        device_id: &str,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn invalidate_all_for_device(device_id: &str) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute(
@@ -170,17 +161,14 @@ impl RefreshTokenDevice {
                 "DELETE FROM refresh_tokens_devices WHERE device_id = $1",
                 device_id
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
         Ok(())
     }
 
-    pub async fn invalidate_all_for_user(
-        data: &web::Data<AppState>,
-        user_id: &str,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn invalidate_all_for_user(user_id: &str) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute(
@@ -193,14 +181,14 @@ impl RefreshTokenDevice {
                 "DELETE FROM refresh_tokens_devices WHERE user_id = $1",
                 user_id
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
         Ok(())
     }
 
-    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute(
@@ -235,7 +223,7 @@ SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6"#,
                 self.exp,
                 self.scope,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 

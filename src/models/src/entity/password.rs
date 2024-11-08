@@ -1,4 +1,3 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use actix_web::web;
 use argon2::password_hash::SaltString;
@@ -125,7 +124,7 @@ pub struct PasswordPolicy {
 
 // CRUD
 impl PasswordPolicy {
-    pub async fn find(data: &web::Data<AppState>) -> Result<Self, ErrorResponse> {
+    pub async fn find() -> Result<Self, ErrorResponse> {
         let client = DB::client();
         if let Some(slf) = client.get(Cache::App, IDX_PASSWORD_RULES).await? {
             return Ok(slf);
@@ -142,7 +141,7 @@ impl PasswordPolicy {
                 .get("data")
         } else {
             sqlx::query("SELECT data FROM config WHERE id = 'password_policy'")
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await?
                 .get("data")
         };
@@ -155,8 +154,8 @@ impl PasswordPolicy {
         Ok(policy)
     }
 
-    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        let slf = bincode::serialize(&self).unwrap();
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
+        let slf = bincode::serialize(&self)?;
 
         if is_hiqlite() {
             DB::client()
@@ -170,7 +169,7 @@ impl PasswordPolicy {
                 "UPDATE config SET data = $1 WHERE id = 'password_policy'",
                 slf
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
@@ -218,11 +217,7 @@ pub struct RecentPasswordsEntity {
 }
 
 impl RecentPasswordsEntity {
-    pub async fn create(
-        data: &web::Data<AppState>,
-        user_id: &str,
-        passwords: String,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn create(user_id: &str, passwords: String) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute(
@@ -236,14 +231,14 @@ impl RecentPasswordsEntity {
                 user_id,
                 passwords,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
         Ok(())
     }
 
-    pub async fn find(data: &web::Data<AppState>, user_id: &str) -> Result<Self, ErrorResponse> {
+    pub async fn find(user_id: &str) -> Result<Self, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as_one(
@@ -257,13 +252,13 @@ impl RecentPasswordsEntity {
                 "SELECT * FROM recent_passwords WHERE user_id = $1",
                 user_id,
             )
-            .fetch_one(&data.db)
+            .fetch_one(DB::conn())
             .await?
         };
         Ok(res)
     }
 
-    pub async fn save(self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn save(self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute(
@@ -277,7 +272,7 @@ impl RecentPasswordsEntity {
                 self.passwords,
                 self.user_id,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
         Ok(())

@@ -3,18 +3,11 @@ use crate::events::event::Event;
 use crate::events::ip_blacklist_handler::IpBlacklistReq;
 use crate::events::listener::EventRouterMsg;
 use crate::ListenScheme;
-use anyhow::Context;
-use rauthy_common::constants::{DATABASE_URL, DB_TYPE, PROXY_MODE};
-use rauthy_common::DbType;
-use sqlx::pool::PoolOptions;
-use sqlx::ConnectOptions;
+use rauthy_common::constants::PROXY_MODE;
 use std::env;
-use std::str::FromStr;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::sync::mpsc;
-use tracing::log::LevelFilter;
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 use webauthn_rs::prelude::Url;
 use webauthn_rs::Webauthn;
 
@@ -23,7 +16,6 @@ pub type DbTxn<'a> = sqlx::Transaction<'a, sqlx::Postgres>;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
-    pub db: DbPool,
     pub public_url: String,
     pub argon2_params: Argon2Params,
     pub issuer: String,
@@ -163,12 +155,7 @@ impl AppState {
             .rp_name(&rp_name);
         let webauthn = Arc::new(builder.build().expect("Invalid configuration"));
 
-        debug!("Creating DB Pool now");
-        let db = Self::new_db_pool().await?;
-        debug!("DB Pool created");
-
         Ok(Self {
-            db,
             public_url,
             argon2_params,
             issuer,
@@ -187,80 +174,80 @@ impl AppState {
         })
     }
 
-    pub async fn new_db_pool() -> anyhow::Result<DbPool> {
-        let db_max_conn = env::var("DATABASE_MAX_CONN")
-            .unwrap_or_else(|_| String::from("5"))
-            .parse::<u32>()
-            .expect("Error parsing DATABASE_MAX_CONN to u32");
+    // pub async fn new_db_pool() -> anyhow::Result<DbPool> {
+    //     let db_max_conn = env::var("DATABASE_MAX_CONN")
+    //         .unwrap_or_else(|_| String::from("5"))
+    //         .parse::<u32>()
+    //         .expect("Error parsing DATABASE_MAX_CONN to u32");
+    //
+    //     let pool = {
+    //         if *DB_TYPE == DbType::Sqlite {
+    //             debug!("DATABASE_URL: {}", *DATABASE_URL);
+    //
+    //             let msg = r#"
+    // You are trying to connect to a SQLite instance with the 'Postgres'
+    // version of Rauthy. You need to either change to a SQLite database or use the '*-lite'
+    // container image of Rauthy."#;
+    //             error!("{msg}");
+    //             panic!("{msg}");
+    //         }
+    //
+    //         info!("Trying to connect to Postgres instance");
+    //         let pool = Self::connect_postgres(&DATABASE_URL, db_max_conn).await?;
+    //         info!("Database Connection established");
+    //
+    //         debug!("Migrating data from ../../migrations/postgres");
+    //         sqlx::migrate!("../../migrations/postgres")
+    //             .run(&pool)
+    //             .await?;
+    //
+    //         pool
+    //     };
+    //
+    //     Ok(pool)
+    // }
 
-        let pool = {
-            if *DB_TYPE == DbType::Sqlite {
-                debug!("DATABASE_URL: {}", *DATABASE_URL);
-
-                let msg = r#"
-    You are trying to connect to a SQLite instance with the 'Postgres'
-    version of Rauthy. You need to either change to a SQLite database or use the '*-lite'
-    container image of Rauthy."#;
-                error!("{msg}");
-                panic!("{msg}");
-            }
-
-            info!("Trying to connect to Postgres instance");
-            let pool = Self::connect_postgres(&DATABASE_URL, db_max_conn).await?;
-            info!("Database Connection established");
-
-            debug!("Migrating data from ../../migrations/postgres");
-            sqlx::migrate!("../../migrations/postgres")
-                .run(&pool)
-                .await?;
-
-            pool
-        };
-
-        Ok(pool)
-    }
-
-    pub async fn connect_sqlite(
-        addr: &str,
-        max_conn: u32,
-        // migration_only: bool,
-    ) -> anyhow::Result<sqlx::SqlitePool> {
-        let opts = sqlx::sqlite::SqliteConnectOptions::from_str(addr)?
-            .create_if_missing(true)
-            .busy_timeout(Duration::from_millis(100))
-            .foreign_keys(true)
-            .auto_vacuum(sqlx::sqlite::SqliteAutoVacuum::Incremental)
-            .synchronous(sqlx::sqlite::SqliteSynchronous::Normal)
-            .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal);
-
-        let pool = PoolOptions::new()
-            .min_connections(2)
-            .max_connections(max_conn)
-            .acquire_timeout(Duration::from_secs(10))
-            .connect_with(opts)
-            .await
-            .context("failed to connect to sqlite")?;
-
-        info!("Database Connection Pool created successfully");
-
-        Ok(pool)
-    }
-
-    pub async fn connect_postgres(addr: &str, max_conn: u32) -> anyhow::Result<sqlx::PgPool> {
-        let opts = sqlx::postgres::PgConnectOptions::from_str(addr)?
-            .log_slow_statements(LevelFilter::Debug, Duration::from_secs(3));
-        let pool = PoolOptions::new()
-            .min_connections(2)
-            .max_connections(max_conn)
-            .acquire_timeout(Duration::from_secs(10))
-            .connect_with(opts)
-            .await
-            .context("failed to connect to postgres")?;
-
-        info!("Database Connection Pool created successfully");
-
-        Ok(pool)
-    }
+    // pub async fn connect_sqlite(
+    //     addr: &str,
+    //     max_conn: u32,
+    //     // migration_only: bool,
+    // ) -> anyhow::Result<sqlx::SqlitePool> {
+    //     let opts = sqlx::sqlite::SqliteConnectOptions::from_str(addr)?
+    //         .create_if_missing(true)
+    //         .busy_timeout(Duration::from_millis(100))
+    //         .foreign_keys(true)
+    //         .auto_vacuum(sqlx::sqlite::SqliteAutoVacuum::Incremental)
+    //         .synchronous(sqlx::sqlite::SqliteSynchronous::Normal)
+    //         .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal);
+    //
+    //     let pool = PoolOptions::new()
+    //         .min_connections(2)
+    //         .max_connections(max_conn)
+    //         .acquire_timeout(Duration::from_secs(10))
+    //         .connect_with(opts)
+    //         .await
+    //         .context("failed to connect to sqlite")?;
+    //
+    //     info!("Database Connection Pool created successfully");
+    //
+    //     Ok(pool)
+    // }
+    //
+    // pub async fn connect_postgres(addr: &str, max_conn: u32) -> anyhow::Result<sqlx::PgPool> {
+    //     let opts = sqlx::postgres::PgConnectOptions::from_str(addr)?
+    //         .log_slow_statements(LevelFilter::Debug, Duration::from_secs(3));
+    //     let pool = PoolOptions::new()
+    //         .min_connections(2)
+    //         .max_connections(max_conn)
+    //         .acquire_timeout(Duration::from_secs(10))
+    //         .connect_with(opts)
+    //         .await
+    //         .context("failed to connect to postgres")?;
+    //
+    //     info!("Database Connection Pool created successfully");
+    //
+    //     Ok(pool)
+    // }
 }
 
 /// Holds the `argon2::Params` for the application.

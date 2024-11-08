@@ -21,13 +21,10 @@ use rauthy_models::entity::scopes::Scope;
     ),
 )]
 #[get("/scopes")]
-pub async fn get_scopes(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_scopes(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Scopes, AccessRights::Read)?;
 
-    Scope::find_all(&data).await.map(|scp| {
+    Scope::find_all().await.map(|scp| {
         let res = scp
             .into_iter()
             .map(ScopeResponse::from)

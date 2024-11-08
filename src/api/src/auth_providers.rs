@@ -35,13 +35,10 @@ use tracing::debug;
     ),
 )]
 #[post("/providers")]
-pub async fn post_providers(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn post_providers(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
-    let providers = AuthProvider::find_all(&data).await?;
+    let providers = AuthProvider::find_all().await?;
     let mut resp = Vec::with_capacity(providers.len());
     for provider in providers {
         resp.push(ProviderResponse::try_from(provider)?);
@@ -66,7 +63,6 @@ pub async fn post_providers(
 )]
 #[post("/providers/create")]
 pub async fn post_provider(
-    data: web::Data<AppState>,
     payload: Json<ProviderRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -79,7 +75,7 @@ pub async fn post_provider(
         ));
     }
 
-    let provider = AuthProvider::create(&data, payload.into_inner()).await?;
+    let provider = AuthProvider::create(payload.into_inner()).await?;
     Ok(HttpResponse::Ok().json(ProviderResponse::try_from(provider)?))
 }
 
@@ -133,14 +129,13 @@ pub async fn post_provider_lookup(
 )]
 #[post("/providers/login")]
 pub async fn post_provider_login(
-    data: web::Data<AppState>,
     payload: Json<ProviderLoginRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
 
     let payload = payload.into_inner();
-    let (cookie, xsrf_token, location) = AuthProviderCallback::login_start(&data, payload).await?;
+    let (cookie, xsrf_token, location) = AuthProviderCallback::login_start(payload).await?;
 
     Ok(HttpResponse::Accepted()
         .insert_header((LOCATION, location))
@@ -149,11 +144,8 @@ pub async fn post_provider_login(
 }
 
 #[get("/providers/callback")]
-pub async fn get_provider_callback_html(
-    data: web::Data<AppState>,
-    req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
-    let colors = ColorEntity::find_rauthy(&data).await?;
+pub async fn get_provider_callback_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    let colors = ColorEntity::find_rauthy().await?;
     let lang = Language::try_from(&req).unwrap_or_default();
     let body = ProviderCallbackHtml::build(&colors, &lang);
 
@@ -218,14 +210,11 @@ pub async fn post_provider_callback(
     ),
 )]
 #[delete("/providers/link")]
-pub async fn delete_provider_link(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn delete_provider_link(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth()?;
 
     let user_id = principal.user_id()?.to_string();
-    let user = User::provider_unlink(&data, user_id).await?;
+    let user = User::provider_unlink(user_id).await?;
     Ok(HttpResponse::Ok().json(user))
 }
 
@@ -242,12 +231,10 @@ pub async fn delete_provider_link(
     ),
 )]
 #[get("/providers/minimal")]
-pub async fn get_providers_minimal(
-    data: web::Data<AppState>,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_providers_minimal() -> Result<HttpResponse, ErrorResponse> {
     // unauthorized - does not leak any sensitive information other than shown in the
     // default login page anyway
-    match AuthProviderTemplate::get_all_json_template(&data).await? {
+    match AuthProviderTemplate::get_all_json_template().await? {
         None => Ok(HttpResponse::Ok().insert_header(HEADER_JSON).body("[]")),
         Some(tpl) => Ok(HttpResponse::Ok().insert_header(HEADER_JSON).body(tpl)),
     }
@@ -268,7 +255,6 @@ pub async fn get_providers_minimal(
 )]
 #[put("/providers/{id}")]
 pub async fn put_provider(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     payload: Json<ProviderRequest>,
     principal: ReqPrincipal,
@@ -282,7 +268,7 @@ pub async fn put_provider(
         ));
     }
 
-    AuthProvider::update(&data, id.into_inner(), payload.into_inner()).await?;
+    AuthProvider::update(id.into_inner(), payload.into_inner()).await?;
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -300,13 +286,12 @@ pub async fn put_provider(
 )]
 #[delete("/providers/{id}")]
 pub async fn delete_provider(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
-    AuthProvider::delete(&data, &id.into_inner()).await?;
+    AuthProvider::delete(&id.into_inner()).await?;
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -326,13 +311,12 @@ pub async fn delete_provider(
 )]
 #[get("/providers/{id}/delete_safe")]
 pub async fn get_provider_delete_safe(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
-    let linked_users = AuthProvider::find_linked_users(&data, &id.into_inner()).await?;
+    let linked_users = AuthProvider::find_linked_users(&id.into_inner()).await?;
     if linked_users.is_empty() {
         Ok(HttpResponse::Ok().json(linked_users))
     } else {
@@ -350,12 +334,9 @@ pub async fn get_provider_delete_safe(
     ),
 )]
 #[get("/providers/{id}/img")]
-pub async fn get_provider_img(
-    data: web::Data<AppState>,
-    id: web::Path<String>,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_provider_img(id: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
     let id = id.into_inner();
-    let logo = Logo::find_cached(&data, &id, &LogoType::AuthProvider).await?;
+    let logo = Logo::find_cached(&id, &LogoType::AuthProvider).await?;
 
     Ok(HttpResponse::Ok()
         .insert_header((CONTENT_TYPE, logo.content_type))
@@ -383,7 +364,6 @@ pub async fn get_provider_img(
 )]
 #[put("/providers/{id}/img")]
 pub async fn put_provider_img(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
     mut payload: actix_multipart::Multipart,
@@ -417,7 +397,6 @@ pub async fn put_provider_img(
 
     // content_type unwrap cannot panic -> checked above
     Logo::upsert(
-        &data,
         id.into_inner(),
         buf,
         content_type.unwrap(),
@@ -445,7 +424,6 @@ pub async fn put_provider_img(
 )]
 #[post("/providers/{id}/link")]
 pub async fn post_provider_link(
-    data: web::Data<AppState>,
     provider_id: web::Path<String>,
     principal: ReqPrincipal,
     payload: Json<ProviderLoginRequest>,
@@ -453,7 +431,7 @@ pub async fn post_provider_link(
     principal.validate_session_auth()?;
 
     let user_id = principal.user_id()?.to_string();
-    let user = User::find(&data, user_id).await?;
+    let user = User::find(user_id).await?;
 
     // make sure the user is currently un-linked
     if user.auth_provider_id.is_some() {
@@ -472,7 +450,7 @@ pub async fn post_provider_link(
 
     // directly redirect to the provider login page
     let (login_cookie, xsrf_token, location) =
-        AuthProviderCallback::login_start(&data, payload.into_inner()).await?;
+        AuthProviderCallback::login_start(payload.into_inner()).await?;
 
     Ok(HttpResponse::Accepted()
         .insert_header((LOCATION, location))

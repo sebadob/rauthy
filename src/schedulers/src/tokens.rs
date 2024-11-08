@@ -1,12 +1,11 @@
 use chrono::Utc;
 use hiqlite::{params, Param};
 use rauthy_common::is_hiqlite;
-use rauthy_models::app_state::DbPool;
 use rauthy_models::database::DB;
 use std::time::Duration;
 use tracing::{debug, error};
 
-pub async fn refresh_tokens_cleanup(db: DbPool) {
+pub async fn refresh_tokens_cleanup() {
     let mut interval = tokio::time::interval(Duration::from_secs(3600 * 3));
 
     loop {
@@ -30,7 +29,7 @@ pub async fn refresh_tokens_cleanup(db: DbPool) {
             }
         } else if let Err(err) = sqlx::query("DELETE FROM refresh_tokens WHERE exp < $1")
             .bind(now)
-            .execute(&db)
+            .execute(DB::conn())
             .await
         {
             error!("Refresh Token Cleanup Error: {:?}", err)

@@ -2,7 +2,6 @@ use chrono::Utc;
 use hiqlite::{params, Param};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::DbPool;
 use rauthy_models::database::DB;
 use std::ops::Sub;
 use std::time::Duration;
@@ -11,7 +10,7 @@ use tracing::{debug, error};
 /// Cleans up old / expired magic links and deletes users, that have never used their
 /// 'set first ever password' magic link to keep the database clean in case of an open user registration.
 /// Runs every 6 hours.
-pub async fn magic_link_cleanup(db: DbPool) {
+pub async fn magic_link_cleanup() {
     let mut interval = tokio::time::interval(Duration::from_secs(3600 * 6));
 
     loop {
@@ -36,7 +35,7 @@ pub async fn magic_link_cleanup(db: DbPool) {
             if let Err(err) = cleanup_hiqlite(exp).await {
                 error!("{:?}", err);
             }
-        } else if let Err(err) = cleanup_sqlx(&db, exp).await {
+        } else if let Err(err) = cleanup_sqlx(exp).await {
             error!("{:?}", err);
         }
     }
@@ -69,7 +68,7 @@ AND password IS NULL"#,
     Ok(())
 }
 
-async fn cleanup_sqlx(db: &DbPool, exp: i64) -> Result<(), ErrorResponse> {
+async fn cleanup_sqlx(exp: i64) -> Result<(), ErrorResponse> {
     let res = sqlx::query(
         r#"
 DELETE FROM users
@@ -80,7 +79,7 @@ WHERE id IN (
 AND password IS NULL"#,
     )
     .bind(exp)
-    .execute(db)
+    .execute(DB::conn())
     .await?;
     debug!(
         "Cleaned up {} users which did not use their initial password reset magic link",
@@ -90,7 +89,7 @@ AND password IS NULL"#,
     // now we can just delete all expired magic links
     let res = sqlx::query("DELETE FROM magic_links WHERE exp < $1")
         .bind(exp)
-        .execute(db)
+        .execute(DB::conn())
         .await?;
     debug!(
         "Cleaned up {} expired and used magic links",

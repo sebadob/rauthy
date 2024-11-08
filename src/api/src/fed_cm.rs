@@ -39,14 +39,11 @@ const HEADER_ALLOW_CREDENTIALS: (&str, &str) = ("access-control-allow-credential
 )]
 #[get("/fed_cm/accounts")]
 #[tracing::instrument(level = "debug", skip_all)]
-pub async fn get_fed_cm_accounts(
-    req: HttpRequest,
-    data: web::Data<AppState>,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_fed_cm_accounts(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     is_fed_cm_enabled()?;
     is_web_identity_fetch(&req)?;
 
-    let (login_status, user_id) = login_status_from_req(&data, &req).await;
+    let (login_status, user_id) = login_status_from_req(&req).await;
     if login_status == FedCMLoginStatus::LoggedOut {
         return Ok(HttpResponse::Unauthorized()
             .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
@@ -55,7 +52,7 @@ pub async fn get_fed_cm_accounts(
             }));
     }
 
-    let user = User::find_for_fed_cm_validated(&data, user_id).await?;
+    let user = User::find_for_fed_cm_validated(user_id).await?;
     let account = FedCMAccount::build(user);
     let accounts = FedCMAccounts {
         accounts: vec![account],
@@ -96,7 +93,7 @@ pub async fn get_fed_cm_client_meta(
         ));
     }
 
-    let client = Client::find_maybe_ephemeral(&data, params.client_id).await?;
+    let client = Client::find_maybe_ephemeral(params.client_id).await?;
     if !client.enabled {
         return Err(ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("client-disabled".to_string()),
@@ -202,13 +199,13 @@ pub async fn get_fed_client_config() -> HttpResponse {
 )]
 #[tracing::instrument(level = "debug", skip_all)]
 #[get("/fed_cm/status")]
-pub async fn get_fed_cm_status(req: HttpRequest, data: web::Data<AppState>) -> HttpResponse {
+pub async fn get_fed_cm_status(req: HttpRequest) -> HttpResponse {
     if is_fed_cm_enabled().is_err() {
         HttpResponse::Unauthorized()
             .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
             .finish()
     } else {
-        let (login_status, _) = login_status_from_req(&data, &req).await;
+        let (login_status, _) = login_status_from_req(&req).await;
         if login_status == FedCMLoginStatus::LoggedOut {
             HttpResponse::Unauthorized()
                 .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
@@ -246,7 +243,7 @@ pub async fn post_fed_cm_token(
     is_fed_cm_enabled()?;
     is_web_identity_fetch(&req)?;
 
-    let (login_status, user_id) = login_status_from_req(&data, &req).await;
+    let (login_status, user_id) = login_status_from_req(&req).await;
     if login_status == FedCMLoginStatus::LoggedOut {
         return Ok(HttpResponse::Unauthorized()
             .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
@@ -256,7 +253,7 @@ pub async fn post_fed_cm_token(
     let payload = payload.into_inner();
 
     // find and check the client
-    let client = match Client::find_maybe_ephemeral(&data, payload.client_id).await {
+    let client = match Client::find_maybe_ephemeral(payload.client_id).await {
         Ok(c) => c,
         Err(err) => {
             error!("Error looking up maybe ephemeral client: {:?}", err);
@@ -278,7 +275,7 @@ pub async fn post_fed_cm_token(
     debug!("built origin header for client: {:?}", origin_header.1);
 
     // find and check the user
-    let user = User::find_for_fed_cm_validated(&data, user_id).await?;
+    let user = User::find_for_fed_cm_validated(user_id).await?;
     if payload.account_id != user.id {
         debug!(
             "payload.account_id != user.id -> {} != {}",
@@ -433,17 +430,14 @@ fn client_origin_header(
 }
 
 #[inline(always)]
-async fn login_status_from_req(
-    data: &web::Data<AppState>,
-    req: &HttpRequest,
-) -> (FedCMLoginStatus, String) {
+async fn login_status_from_req(req: &HttpRequest) -> (FedCMLoginStatus, String) {
     match ApiCookie::from_req(req, COOKIE_SESSION_FED_CM) {
         None => {
             debug!("FedCM session cookie not found -> user_id is logged-out",);
             (FedCMLoginStatus::LoggedOut, String::default())
         }
         Some(sid) => {
-            let session = match Session::find(data, sid).await {
+            let session = match Session::find(sid).await {
                 Ok(s) => s,
                 Err(_) => {
                     debug!("FedCM session not found -> user_id is logged-out",);

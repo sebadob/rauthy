@@ -1,4 +1,3 @@
-use actix_web::web;
 use chrono::Utc;
 use hiqlite::params;
 use rauthy_common::constants::{
@@ -6,7 +5,6 @@ use rauthy_common::constants::{
     ENABLE_DYN_CLIENT_REG,
 };
 use rauthy_common::is_hiqlite;
-use rauthy_models::app_state::AppState;
 use rauthy_models::database::DB;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
@@ -15,7 +13,7 @@ use std::time::Duration;
 use tracing::{debug, error, info};
 
 /// Cleans up unused dynamically registered clients
-pub async fn dyn_client_cleanup(data: web::Data<AppState>) {
+pub async fn dyn_client_cleanup() {
     if !*ENABLE_DYN_CLIENT_REG {
         info!(
             "Dynamic client registration is not enabled - exiting dynamic_client_cleanup scheduler"
@@ -55,7 +53,7 @@ pub async fn dyn_client_cleanup(data: web::Data<AppState>) {
                 ClientDyn,
                 "SELECT * FROM clients_dyn WHERE last_used = null"
             )
-            .fetch_all(&data.db)
+            .fetch_all(DB::conn())
             .await
             .map_err(|err| err.to_string())
         };
@@ -72,9 +70,9 @@ pub async fn dyn_client_cleanup(data: web::Data<AppState>) {
         for client in clients {
             if client.created < threshold {
                 info!("Cleaning up unused dynamic client {}", client.id);
-                match Client::find(&data, client.id).await {
+                match Client::find(client.id).await {
                     Ok(c) => {
-                        if let Err(err) = c.delete(&data).await {
+                        if let Err(err) = c.delete().await {
                             error!("Error deleting unused client: {:?}", err);
                             continue;
                         }

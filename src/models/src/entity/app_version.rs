@@ -1,6 +1,4 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
-use actix_web::web;
 use chrono::Utc;
 use hiqlite::{params, Param};
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_APP_VERSION, RAUTHY_VERSION};
@@ -21,7 +19,7 @@ pub struct LatestAppVersion {
 }
 
 impl LatestAppVersion {
-    pub async fn find(app_state: &web::Data<AppState>) -> Option<Self> {
+    pub async fn find() -> Option<Self> {
         let client = DB::client();
 
         if let Ok(Some(slf)) = client.get(Cache::App, IDX_APP_VERSION).await {
@@ -38,7 +36,7 @@ impl LatestAppVersion {
                 .ok()
         } else {
             query!("select data from config where id = 'latest_version'")
-                .fetch_optional(&app_state.db)
+                .fetch_optional(DB::conn())
                 .await
                 .ok()?
                 .map(|r| {
@@ -78,7 +76,6 @@ impl LatestAppVersion {
     }
 
     pub async fn upsert(
-        app_state: &web::Data<AppState>,
         latest_version: semver::Version,
         release_url: String,
     ) -> Result<(), ErrorResponse> {
@@ -105,7 +102,7 @@ INSERT INTO config (id, data) VALUES ('latest_version', $1)
 ON CONFLICT(id) DO UPDATE SET data = $1"#,
                 data
             )
-            .execute(&app_state.db)
+            .execute(DB::conn())
             .await?;
         }
 

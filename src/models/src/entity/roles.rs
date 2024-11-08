@@ -1,7 +1,5 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::users::User;
-use actix_web::web;
 use hiqlite::{params, Param, Params};
 use rauthy_api_types::roles::NewRoleRequest;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_ROLES};
@@ -21,11 +19,8 @@ pub struct Role {
 // CRUD
 impl Role {
     // Inserts a new role into the database
-    pub async fn create(
-        data: &web::Data<AppState>,
-        role_req: NewRoleRequest,
-    ) -> Result<Self, ErrorResponse> {
-        let mut roles = Role::find_all(data).await?;
+    pub async fn create(role_req: NewRoleRequest) -> Result<Self, ErrorResponse> {
+        let mut roles = Role::find_all().await?;
         for s in &roles {
             if s.name == role_req.role {
                 return Err(ErrorResponse::new(
@@ -53,7 +48,7 @@ impl Role {
                 new_role.id,
                 new_role.name,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
@@ -66,8 +61,8 @@ impl Role {
     }
 
     // Deletes a role
-    pub async fn delete(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
-        let role = Role::find(data, id).await?;
+    pub async fn delete(id: &str) -> Result<(), ErrorResponse> {
+        let role = Role::find(id).await?;
 
         // prevent deletion of 'rauthy_admin'
         if role.name == "rauthy_admin" {
@@ -77,7 +72,7 @@ impl Role {
             ));
         }
 
-        let users = User::find_with_role(data, &role.name).await?;
+        let users = User::find_with_role(&role.name).await?;
 
         if is_hiqlite() {
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
@@ -94,7 +89,7 @@ impl Role {
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = data.db.begin().await?;
+            let mut txn = DB::txn().await?;
 
             for mut user in users {
                 user.delete_role(&role.name);
@@ -107,7 +102,7 @@ impl Role {
             txn.commit().await?;
         }
 
-        let roles = Role::find_all(data)
+        let roles = Role::find_all()
             .await?
             .into_iter()
             .filter(|r| r.id != role.id)
@@ -125,14 +120,14 @@ impl Role {
     }
 
     // Returns a single role by id
-    pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
+    pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as_one("SELECT * FROM roles WHERE id = $1", params!(id))
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM roles WHERE id = $1", id)
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await?
         };
 
@@ -140,7 +135,7 @@ impl Role {
     }
 
     // Returns all existing roles
-    pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let client = DB::client();
         if let Some(slf) = client.get(Cache::App, IDX_ROLES).await? {
             return Ok(slf);
@@ -152,7 +147,7 @@ impl Role {
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM roles")
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
 
@@ -163,13 +158,9 @@ impl Role {
     }
 
     // Updates a role
-    pub async fn update(
-        data: &web::Data<AppState>,
-        id: String,
-        new_name: String,
-    ) -> Result<Self, ErrorResponse> {
-        let role = Role::find(data, &id).await?;
-        let users = User::find_with_role(data, &role.name).await?;
+    pub async fn update(id: String, new_name: String) -> Result<Self, ErrorResponse> {
+        let role = Role::find(&id).await?;
+        let users = User::find_with_role(&role.name).await?;
 
         let new_role = Self {
             id: role.id.clone(),
@@ -194,7 +185,7 @@ impl Role {
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = data.db.begin().await?;
+            let mut txn = DB::txn().await?;
 
             for mut user in users {
                 user.delete_role(&role.name);
@@ -211,7 +202,7 @@ impl Role {
             txn.commit().await?;
         }
 
-        let roles = Role::find_all(data)
+        let roles = Role::find_all()
             .await?
             .into_iter()
             .map(|mut r| {
@@ -233,12 +224,9 @@ impl Role {
 }
 
 impl Role {
-    pub async fn sanitize(
-        data: &web::Data<AppState>,
-        rls: Vec<String>,
-    ) -> Result<String, ErrorResponse> {
+    pub async fn sanitize(rls: Vec<String>) -> Result<String, ErrorResponse> {
         let mut res = String::with_capacity(rls.len());
-        Role::find_all(data).await?.into_iter().for_each(|r| {
+        Role::find_all().await?.into_iter().for_each(|r| {
             if rls.contains(&r.name) {
                 res.push_str(r.name.as_str());
                 res.push(',');

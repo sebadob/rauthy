@@ -17,7 +17,7 @@ pub async fn get_logout_html(
     data: &web::Data<AppState>,
     lang: &Language,
 ) -> Result<String, ErrorResponse> {
-    let colors = ColorEntity::find_rauthy(data).await?;
+    let colors = ColorEntity::find_rauthy().await?;
 
     if logout_request.id_token_hint.is_none() {
         return Ok(LogoutHtml::build(&session.csrf_token, false, &colors, lang));
@@ -39,7 +39,7 @@ pub async fn get_logout_html(
     if logout_request.post_logout_redirect_uri.is_some() {
         // unwrap is safe since the token is valid already
         let client_id = claims.custom.azp;
-        let client = Client::find(data, client_id).await?;
+        let client = Client::find(client_id).await?;
         if client.post_logout_redirect_uris.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,

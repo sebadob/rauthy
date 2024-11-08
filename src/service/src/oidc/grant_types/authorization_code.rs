@@ -38,7 +38,7 @@ pub async fn grant_type_authorization_code(
 
     // check the client for external origin and oidc flow
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
-    let client = Client::find_maybe_ephemeral(data, client_id.clone())
+    let client = Client::find_maybe_ephemeral(client_id.clone())
         .await
         .map_err(|_| {
             ErrorResponse::new(
@@ -143,7 +143,7 @@ pub async fn grant_type_authorization_code(
     //
     // An additional check at this point does not provide any security benefit but only uses resources.
 
-    let user = User::find(data, code.user_id.clone()).await?;
+    let user = User::find(code.user_id.clone()).await?;
     let token_set = TokenSet::from_user(
         &user,
         data,
@@ -160,7 +160,7 @@ pub async fn grant_type_authorization_code(
     // update session metadata
     if code.session_id.is_some() {
         let sid = code.session_id.as_ref().unwrap().clone();
-        let mut session = Session::find(data, sid).await?;
+        let mut session = Session::find(sid).await?;
 
         session.last_seen = Utc::now().timestamp();
         session.state = SessionState::Auth.as_str().to_string();
@@ -172,13 +172,13 @@ pub async fn grant_type_authorization_code(
         session.user_id = Some(user.id);
         session.roles = Some(user.roles);
         session.groups = user.groups;
-        session.save(data).await?;
+        session.save().await?;
     }
     code.delete().await?;
 
     // update timestamp if it is a dynamic client
     if client.is_dynamic() {
-        ClientDyn::update_used(data, &client.id).await?;
+        ClientDyn::update_used(&client.id).await?;
     }
 
     Ok((token_set, headers))

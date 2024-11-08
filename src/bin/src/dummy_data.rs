@@ -1,14 +1,10 @@
-use actix_web::web;
 use rauthy_common::utils::get_rand;
 use rauthy_error::ErrorResponse;
-use rauthy_models::{app_state::AppState, entity::users::User, language::Language};
+use rauthy_models::{entity::users::User, language::Language};
 use std::time::Duration;
 use tracing::info;
 
-pub async fn insert_dummy_data(
-    app_state: web::Data<AppState>,
-    amount: u32,
-) -> Result<(), ErrorResponse> {
+pub async fn insert_dummy_data(amount: u32) -> Result<(), ErrorResponse> {
     tokio::time::sleep(Duration::from_secs(1)).await;
     info!(
         r#"
@@ -42,7 +38,7 @@ Will go on in 10 seconds...
             user_expires: None,
             ..Default::default()
         };
-        User::insert(&app_state, user).await?;
+        User::insert(user).await?;
     }
 
     Ok(())

@@ -38,13 +38,10 @@ use tracing::debug;
 )]
 #[tracing::instrument(skip_all)]
 #[get("/clients")]
-pub async fn get_clients(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_clients(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Read)?;
 
-    let clients = Client::find_all(&data).await?;
+    let clients = Client::find_all().await?;
 
     let mut res = Vec::new();
     clients
@@ -73,12 +70,11 @@ pub async fn get_clients(
 #[get("/clients/{id}")]
 pub async fn get_client_by_id(
     path: web::Path<String>,
-    data: web::Data<AppState>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Read)?;
 
-    Client::find(&data, path.into_inner())
+    Client::find(path.into_inner())
         .await
         .map(|c| HttpResponse::Ok().json(ClientResponse::from(c)))
 }
@@ -104,13 +100,12 @@ pub async fn get_client_by_id(
 )]
 #[post("/clients/{id}/secret")]
 pub async fn get_client_secret(
-    data: web::Data<AppState>,
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Read)?;
 
-    client::get_client_secret(path.into_inner(), &data)
+    client::get_client_secret(path.into_inner())
         .await
         .map(|c| HttpResponse::Ok().json(c))
 }
@@ -135,12 +130,11 @@ pub async fn get_client_secret(
 #[post("/clients")]
 pub async fn post_clients(
     client: actix_web_validator::Json<NewClientRequest>,
-    data: web::Data<AppState>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Create)?;
 
-    let client = Client::create(&data, client.into_inner()).await?;
+    let client = Client::create(client.into_inner()).await?;
     Ok(HttpResponse::Ok().json(ClientResponse::from(client)))
 }
 
@@ -217,10 +211,10 @@ pub async fn get_clients_dyn(
 
     let bearer = helpers::get_bearer_token_from_header(req.headers())?;
     let id = id.into_inner();
-    let client_dyn = ClientDyn::find(&data, id.clone()).await?;
+    let client_dyn = ClientDyn::find(id.clone()).await?;
     client_dyn.validate_token(&bearer)?;
 
-    let client = Client::find(&data, id).await?;
+    let client = Client::find(id).await?;
     let resp = client.into_dynamic_client_response(&data, client_dyn, false)?;
     Ok(HttpResponse::Ok().json(resp))
 }
@@ -251,7 +245,7 @@ pub async fn put_clients_dyn(
 
     let bearer = helpers::get_bearer_token_from_header(req.headers())?;
     let id = id.into_inner();
-    let client_dyn = ClientDyn::find(&data, id.clone()).await?;
+    let client_dyn = ClientDyn::find(id.clone()).await?;
     client_dyn.validate_token(&bearer)?;
 
     let resp = Client::update_dynamic(&data, payload.into_inner(), client_dyn).await?;
@@ -277,14 +271,13 @@ pub async fn put_clients_dyn(
 )]
 #[put("/clients/{id}")]
 pub async fn put_clients(
-    data: web::Data<AppState>,
     client: actix_web_validator::Json<UpdateClientRequest>,
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Update)?;
 
-    client::update_client(&data, path.into_inner(), client.into_inner())
+    client::update_client(path.into_inner(), client.into_inner())
         .await
         .map(|r| HttpResponse::Ok().json(ClientResponse::from(r)))
 }
@@ -305,13 +298,12 @@ pub async fn put_clients(
 )]
 #[get("/clients/{id}/colors")]
 pub async fn get_client_colors(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Read)?;
 
-    ColorEntity::find(&data, id.as_str())
+    ColorEntity::find(id.as_str())
         .await
         .map(|c| HttpResponse::Ok().json(c))
 }
@@ -334,7 +326,6 @@ pub async fn get_client_colors(
 )]
 #[put("/clients/{id}/colors")]
 pub async fn put_client_colors(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
     req_data: actix_web_validator::Json<ColorsRequest>,
@@ -343,7 +334,7 @@ pub async fn put_client_colors(
 
     let colors = req_data.into_inner();
     colors.validate_css()?;
-    ColorEntity::update(&data, id.as_str(), colors).await?;
+    ColorEntity::update(id.as_str(), colors).await?;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -364,13 +355,12 @@ pub async fn put_client_colors(
 )]
 #[delete("/clients/{id}/colors")]
 pub async fn delete_client_colors(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Delete)?;
 
-    ColorEntity::delete(&data, id.as_str()).await?;
+    ColorEntity::delete(id.as_str()).await?;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -388,19 +378,16 @@ pub async fn delete_client_colors(
     ),
 )]
 #[get("/clients/{id}/logo")]
-pub async fn get_client_logo(
-    data: web::Data<AppState>,
-    id: web::Path<String>,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_client_logo(id: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
     let id = id.into_inner();
     debug!("Looking up client logo for id {}", id);
-    let logo = match Logo::find_cached(&data, &id, &LogoType::Client).await {
+    let logo = match Logo::find_cached(&id, &LogoType::Client).await {
         Ok(logo) => logo,
         Err(_) => {
             debug!("no specific logo for id {} - using Rauthy default", id);
             // If this client does not have a custom logo, we will always serve
             // Rauthy's logo as default
-            Logo::find_cached(&data, "rauthy", &LogoType::Client).await?
+            Logo::find_cached("rauthy", &LogoType::Client).await?
         }
     };
 
@@ -430,7 +417,6 @@ pub async fn get_client_logo(
 )]
 #[put("/clients/{id}/logo")]
 pub async fn put_client_logo(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
     mut payload: actix_multipart::Multipart,
@@ -464,7 +450,6 @@ pub async fn put_client_logo(
 
     // content_type unwrap cannot panic -> checked above
     Logo::upsert(
-        &data,
         id.into_inner(),
         buf,
         content_type.unwrap(),
@@ -490,16 +475,15 @@ delete,
 )]
 #[delete("/clients/{id}/logo")]
 pub async fn delete_client_logo(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Delete)?;
 
     if id.as_str() == "rauthy" {
-        Logo::upsert_rauthy_default(&data).await?;
+        Logo::upsert_rauthy_default().await?;
     } else {
-        Logo::delete(&data, id.as_str(), &LogoType::Client).await?;
+        Logo::delete(id.as_str(), &LogoType::Client).await?;
     }
 
     Ok(HttpResponse::Ok().finish())
@@ -526,13 +510,12 @@ pub async fn delete_client_logo(
 )]
 #[put("/clients/{id}/secret")]
 pub async fn put_generate_client_secret(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
 
-    client::generate_new_secret(id.into_inner(), &data)
+    client::generate_new_secret(id.into_inner())
         .await
         .map(|r| HttpResponse::Ok().json(r))
 }
@@ -555,7 +538,6 @@ pub async fn put_generate_client_secret(
 )]
 #[delete("/clients/{id}")]
 pub async fn delete_client(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -570,7 +552,7 @@ pub async fn delete_client(
         ));
     }
 
-    let client = Client::find(&data, id).await?;
-    client.delete(&data).await?;
+    let client = Client::find(id).await?;
+    client.delete().await?;
     Ok(HttpResponse::Ok().finish())
 }

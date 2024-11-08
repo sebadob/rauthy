@@ -50,7 +50,6 @@ pub struct PasskeyEntity {
 impl PasskeyEntity {
     /// If the `User` is `Some(_)`, a `User::save()` will be included in the `txn`
     pub async fn create(
-        data: &web::Data<AppState>,
         user_id: String,
         user: Option<User>,
         passkey_user_id: Uuid,
@@ -103,7 +102,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
 
             client.txn(txn).await?;
         } else {
-            let mut txn = data.db.begin().await?;
+            let mut txn = DB::txn().await?;
 
             if let Some(user) = user {
                 debug_assert!(user.webauthn_user_id.is_some());
@@ -149,10 +148,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
         Ok(())
     }
 
-    pub async fn count_for_user(
-        data: &web::Data<AppState>,
-        user_id: String,
-    ) -> Result<i64, ErrorResponse> {
+    pub async fn count_for_user(user_id: String) -> Result<i64, ErrorResponse> {
         let count: i64 = if is_hiqlite() {
             DB::client()
                 .query_raw_one(
@@ -166,7 +162,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 "SELECT COUNT (*) AS count FROM passkeys WHERE user_id = $1",
                 user_id
             )
-            .fetch_one(&data.db)
+            .fetch_one(DB::conn())
             .await?
             .count
             .unwrap_or_default()
@@ -175,24 +171,20 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
         Ok(count)
     }
 
-    pub async fn delete(
-        data: &web::Data<AppState>,
-        user_id: String,
-        name: String,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn delete(user_id: String, name: String) -> Result<(), ErrorResponse> {
         // if we delete a passkey, we must check if this is the last existing one for the user
-        let pk_count = Self::count_for_user(data, user_id.clone()).await?;
+        let pk_count = Self::count_for_user(user_id.clone()).await?;
 
         let mut user_to_save: Option<User> = None;
         let mut user_email: Option<String> = None;
 
         if pk_count < 2 {
-            let mut user = User::find(data, user_id.clone()).await?;
+            let mut user = User::find(user_id.clone()).await?;
             user.webauthn_user_id = None;
 
             // in this case, we need to check against the current password policy,
             // if the password should expire again
-            let policy = PasswordPolicy::find(data).await?;
+            let policy = PasswordPolicy::find().await?;
             if let Some(valid_days) = policy.valid_days {
                 if user.password.is_some() {
                     user.password_expires = Some(
@@ -219,7 +211,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
 
             DB::client().txn(txn).await?;
         } else {
-            let mut txn = data.db.begin().await?;
+            let mut txn = DB::txn().await?;
 
             if let Some(user) = user_to_save {
                 user.save_txn(&mut txn).await?;
@@ -286,11 +278,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
         Ok(())
     }
 
-    pub async fn find(
-        data: &web::Data<AppState>,
-        user_id: &str,
-        name: &str,
-    ) -> Result<Self, ErrorResponse> {
+    pub async fn find(user_id: &str, name: &str) -> Result<Self, ErrorResponse> {
         let idx = Self::cache_idx_single(user_id, name);
         let client = DB::client();
 
@@ -312,7 +300,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 user_id,
                 name,
             )
-            .fetch_one(&data.db)
+            .fetch_one(DB::conn())
             .await?
         };
 
@@ -323,10 +311,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
         Ok(slf)
     }
 
-    pub async fn find_cred_ids_for_user(
-        data: &web::Data<AppState>,
-        user_id: &str,
-    ) -> Result<Vec<CredentialID>, ErrorResponse> {
+    pub async fn find_cred_ids_for_user(user_id: &str) -> Result<Vec<CredentialID>, ErrorResponse> {
         let idx = Self::cache_idx_creds(user_id);
         let client = DB::client();
 
@@ -350,7 +335,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 "SELECT credential_id FROM passkeys WHERE user_id = $1",
                 user_id
             )
-            .fetch_all(&data.db)
+            .fetch_all(DB::conn())
             .await?
             .into_iter()
             .map(|row| row.credential_id)
@@ -364,10 +349,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
         Ok(creds.into_iter().map(CredentialID::from).collect())
     }
 
-    pub async fn find_for_user(
-        data: &web::Data<AppState>,
-        user_id: &str,
-    ) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_for_user(user_id: &str) -> Result<Vec<Self>, ErrorResponse> {
         let idx = Self::cache_idx_user(user_id);
         let client = DB::client();
 
@@ -384,7 +366,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM passkeys WHERE user_id = $1", user_id)
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
 
@@ -395,10 +377,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
         Ok(pks)
     }
 
-    pub async fn find_for_user_with_uv(
-        data: &web::Data<AppState>,
-        user_id: &str,
-    ) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_for_user_with_uv(user_id: &str) -> Result<Vec<Self>, ErrorResponse> {
         let idx = Self::cache_idx_user_with_uv(user_id);
         let client = DB::client();
 
@@ -419,7 +398,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
                 "SELECT * FROM passkeys WHERE user_id = $1 AND user_verified = true",
                 user_id
             )
-            .fetch_all(&data.db)
+            .fetch_all(DB::conn())
             .await?
         };
 
@@ -759,17 +738,17 @@ pub async fn auth_start(
         MfaPurpose::Test => WebauthnAdditionalData::Test,
     };
 
-    let user = User::find(data, user_id).await?;
+    let user = User::find(user_id).await?;
     let force_uv = user.account_type() == AccountType::Passkey || *WEBAUTHN_FORCE_UV;
     let pks = if force_uv {
         // in this case, filter out all presence only keys
-        PasskeyEntity::find_for_user_with_uv(data, &user.id)
+        PasskeyEntity::find_for_user_with_uv(&user.id)
             .await?
             .iter()
             .map(|pk_entity| pk_entity.get_pk())
             .collect::<Vec<Passkey>>()
     } else {
-        PasskeyEntity::find_for_user(data, &user.id)
+        PasskeyEntity::find_for_user(&user.id)
             .await?
             .iter()
             .map(|pk_entity| pk_entity.get_pk())
@@ -826,10 +805,10 @@ pub async fn auth_finish(
     let auth_data = WebauthnData::find(req.code).await?;
     let auth_state = serde_json::from_str(&auth_data.auth_state_json)?;
 
-    let mut user = User::find(data, user_id).await?;
+    let mut user = User::find(user_id).await?;
     let force_uv = user.account_type() == AccountType::Passkey || *WEBAUTHN_FORCE_UV;
 
-    let pks = PasskeyEntity::find_for_user(data, &user.id).await?;
+    let pks = PasskeyEntity::find_for_user(&user.id).await?;
 
     match data
         .webauthn
@@ -860,7 +839,7 @@ pub async fn auth_finish(
                     user.last_failed_login = None;
                     user.failed_login_attempts = None;
 
-                    let mut txn = data.db.begin().await?;
+                    let mut txn = DB::txn().await?;
                     pk_entity.update_passkey(&mut txn).await?;
                     user.save_txn(&mut txn).await?;
                     txn.commit().await?;
@@ -893,13 +872,13 @@ pub async fn reg_start(
     user_id: String,
     req: WebauthnRegStartRequest,
 ) -> Result<CreationChallengeResponse, ErrorResponse> {
-    let user = User::find(data, user_id).await?;
+    let user = User::find(user_id).await?;
     let passkey_user_id = if let Some(id) = &user.webauthn_user_id {
         Uuid::from_str(id).expect("corrupted database: user.webauthn_user_id")
     } else {
         Uuid::new_v4()
     };
-    let cred_ids = PasskeyEntity::find_cred_ids_for_user(data, &user.id).await?;
+    let cred_ids = PasskeyEntity::find_cred_ids_for_user(&user.id).await?;
 
     match data.webauthn.start_passkey_registration(
         passkey_user_id,
@@ -955,7 +934,7 @@ pub async fn reg_finish(
     id: String,
     req: WebauthnRegFinishRequest,
 ) -> Result<(), ErrorResponse> {
-    let mut user = User::find(data, id).await?;
+    let mut user = User::find(id).await?;
 
     let idx = format!("reg_{:?}_{}", req.passkey_name, user.id);
     let client = DB::client();
@@ -1004,7 +983,6 @@ pub async fn reg_finish(
             };
 
             PasskeyEntity::create(
-                data,
                 user_id.clone(),
                 create_user,
                 reg_data.passkey_user_id,

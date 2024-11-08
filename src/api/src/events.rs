@@ -29,7 +29,6 @@ use validator::Validate;
 )]
 #[post("/events")]
 pub async fn post_events(
-    data: web::Data<AppState>,
     principal: ReqPrincipal,
     payload: Json<EventsRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -39,7 +38,6 @@ pub async fn post_events(
     let payload = payload.into_inner();
 
     let events = Event::find_all(
-        &data.db,
         payload.from,
         payload.until.unwrap_or_else(|| Utc::now().timestamp()),
         payload.level.into(),

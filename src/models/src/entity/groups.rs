@@ -1,7 +1,5 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::users::User;
-use actix_web::web;
 use hiqlite::{params, Param, Params};
 use rauthy_api_types::groups::NewGroupRequest;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_GROUPS};
@@ -21,11 +19,8 @@ pub struct Group {
 // CRUD
 impl Group {
     // Inserts a new group into the database
-    pub async fn create(
-        data: &web::Data<AppState>,
-        group_req: NewGroupRequest,
-    ) -> Result<Self, ErrorResponse> {
-        let mut groups = Group::find_all(data).await?;
+    pub async fn create(group_req: NewGroupRequest) -> Result<Self, ErrorResponse> {
+        let mut groups = Group::find_all().await?;
         for g in &groups {
             if g.name == group_req.group {
                 return Err(ErrorResponse::new(
@@ -53,7 +48,7 @@ impl Group {
                 new_group.id,
                 new_group.name,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
@@ -66,9 +61,9 @@ impl Group {
     }
 
     // Deletes a group
-    pub async fn delete(data: &web::Data<AppState>, id: String) -> Result<(), ErrorResponse> {
-        let group = Group::find(data, id).await?;
-        let users = User::find_with_group(data, &group.name).await?;
+    pub async fn delete(id: String) -> Result<(), ErrorResponse> {
+        let group = Group::find(id).await?;
+        let users = User::find_with_group(&group.name).await?;
 
         if is_hiqlite() {
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
@@ -88,7 +83,7 @@ impl Group {
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = data.db.begin().await?;
+            let mut txn = DB::txn().await?;
 
             for mut user in users {
                 user.delete_group(&group.name);
@@ -101,7 +96,7 @@ impl Group {
             txn.commit().await?;
         }
 
-        let groups = Group::find_all(data)
+        let groups = Group::find_all()
             .await?
             .into_iter()
             .filter(|g| g.id != group.id)
@@ -119,14 +114,14 @@ impl Group {
     }
 
     // Returns a single group by id
-    pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
+    pub async fn find(id: String) -> Result<Self, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as_one("SELECT * FROM groups WHERE id = $1", params!(id))
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM groups WHERE id = $1", id,)
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await?
         };
 
@@ -134,7 +129,7 @@ impl Group {
     }
 
     // Returns all existing groups
-    pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let client = DB::client();
         if let Some(slf) = client.get(Cache::App, IDX_GROUPS).await? {
             return Ok(slf);
@@ -144,7 +139,7 @@ impl Group {
             client.query_as("SELECT * FROM groups", params!()).await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM groups")
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
 
@@ -156,13 +151,9 @@ impl Group {
     }
 
     // Updates a group
-    pub async fn update(
-        data: &web::Data<AppState>,
-        id: String,
-        new_name: String,
-    ) -> Result<Self, ErrorResponse> {
-        let group = Group::find(data, id).await?;
-        let users = User::find_with_group(data, &group.name).await?;
+    pub async fn update(id: String, new_name: String) -> Result<Self, ErrorResponse> {
+        let group = Group::find(id).await?;
+        let users = User::find_with_group(&group.name).await?;
 
         let new_group = Self {
             id: group.id.clone(),
@@ -192,7 +183,7 @@ impl Group {
                 debug_assert!(rows_affected == 1);
             }
         } else {
-            let mut txn = data.db.begin().await?;
+            let mut txn = DB::txn().await?;
 
             for mut user in users {
                 user.delete_group(&group.name);
@@ -209,7 +200,7 @@ impl Group {
             txn.commit().await?;
         }
 
-        let groups = Group::find_all(data)
+        let groups = Group::find_all()
             .await?
             .into_iter()
             .map(|mut g| {
@@ -234,7 +225,6 @@ impl Group {
     // Sanitizes any bad data from an API request for adding / modifying groups and silently
     // dismissed all bad data.
     pub async fn sanitize(
-        data: &web::Data<AppState>,
         groups_opt: Option<Vec<String>>,
     ) -> Result<Option<String>, ErrorResponse> {
         if groups_opt.is_none() {
@@ -243,7 +233,7 @@ impl Group {
 
         let groups = groups_opt.unwrap();
         let mut res = String::with_capacity(groups.len());
-        Group::find_all(data).await?.into_iter().for_each(|g| {
+        Group::find_all().await?.into_iter().for_each(|g| {
             if groups.contains(&g.name) {
                 res.push_str(g.name.as_str());
                 res.push(',');

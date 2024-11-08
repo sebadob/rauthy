@@ -204,7 +204,7 @@ impl TokenSet {
 
         // sign the token
         let key_pair_alg = JwkKeyPairAlg::from_str(&client.access_token_alg)?;
-        let kp = JwkKeyPair::find_latest(data, key_pair_alg).await?;
+        let kp = JwkKeyPair::find_latest(key_pair_alg).await?;
         sign_jwt!(kp, claims)
     }
 
@@ -267,7 +267,7 @@ impl TokenSet {
             custom_claims.family_name = Some(user.family_name.clone());
             custom_claims.locale = Some(user.language.to_string());
 
-            user_values = UserValues::find(data, &user.id).await?;
+            user_values = UserValues::find(&user.id).await?;
             user_values_fetched = true;
 
             if let Some(values) = &user_values {
@@ -279,7 +279,7 @@ impl TokenSet {
 
         if scope.contains("address") {
             if !user_values_fetched {
-                user_values = UserValues::find(data, &user.id).await?;
+                user_values = UserValues::find(&user.id).await?;
                 user_values_fetched = true;
             }
 
@@ -290,7 +290,7 @@ impl TokenSet {
 
         if scope.contains("phone") {
             if !user_values_fetched {
-                user_values = UserValues::find(data, &user.id).await?;
+                user_values = UserValues::find(&user.id).await?;
                 // user_values_fetched = true;
             }
 
@@ -349,7 +349,7 @@ impl TokenSet {
 
         // sign the token
         let key_pair_alg = JwkKeyPairAlg::from_str(&client.id_token_alg)?;
-        let kp = JwkKeyPair::find_latest(data, key_pair_alg).await?;
+        let kp = JwkKeyPair::find_latest(key_pair_alg).await?;
 
         sign_jwt!(kp, claims)
     }
@@ -393,7 +393,7 @@ impl TokenSet {
 
         // sign the token
         let token = {
-            let kp = JwkKeyPair::find_latest(data, JwkKeyPairAlg::default()).await?;
+            let kp = JwkKeyPair::find_latest(JwkKeyPairAlg::default()).await?;
             sign_jwt!(kp, claims)
         }?;
 
@@ -405,7 +405,6 @@ impl TokenSet {
                 *DEVICE_GRANT_REFRESH_TOKEN_LIFETIME as i64,
             ));
             RefreshTokenDevice::create(
-                data,
                 validation_string,
                 device_id,
                 user.id.clone(),
@@ -417,7 +416,6 @@ impl TokenSet {
         } else {
             let exp = nbf.add(chrono::Duration::hours(*REFRESH_TOKEN_LIFETIME as i64));
             RefreshToken::create(
-                data,
                 validation_string,
                 user.id.clone(),
                 nbf,
@@ -488,7 +486,7 @@ impl TokenSet {
         let scps;
         let attrs;
         let (customs_access, customs_id) = if !cust.is_empty() {
-            scps = Some(Scope::find_all(data).await?);
+            scps = Some(Scope::find_all().await?);
 
             let mut customs_access = Vec::with_capacity(cust.len());
             let mut customs_id = Vec::with_capacity(cust.len());
@@ -506,7 +504,7 @@ impl TokenSet {
 
             // if there was any custom mapping, we need the additional user attributes
             attrs = if !customs_access.is_empty() || !customs_id.is_empty() {
-                let attrs = UserAttrValueEntity::find_for_user(data, &user.id).await?;
+                let attrs = UserAttrValueEntity::find_for_user(&user.id).await?;
                 let mut res = HashMap::with_capacity(attrs.len());
                 attrs.iter().for_each(|a| {
                     res.insert(a.key.clone(), a.value.clone());

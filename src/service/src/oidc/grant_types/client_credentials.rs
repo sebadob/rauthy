@@ -24,7 +24,7 @@ pub async fn grant_type_credentials(
     }
 
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
-    let client = Client::find(data, client_id).await?;
+    let client = Client::find(client_id).await?;
     if !client.confidential {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -62,7 +62,7 @@ pub async fn grant_type_credentials(
 
     // update timestamp if it is a dynamic client
     if client.is_dynamic() {
-        ClientDyn::update_used(data, &client.id).await?;
+        ClientDyn::update_used(&client.id).await?;
     }
 
     let ts = TokenSet::for_client_credentials(data, &client, dpop_fingerprint).await?;

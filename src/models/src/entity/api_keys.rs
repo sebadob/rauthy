@@ -1,6 +1,4 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
-use actix_web::web;
 use chrono::Utc;
 use cryptr::{EncKeys, EncValue};
 use hiqlite::{params, Param};
@@ -79,14 +77,14 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
         Ok(secret_fmt)
     }
 
-    pub async fn delete(data: &web::Data<AppState>, name: &str) -> Result<(), ErrorResponse> {
+    pub async fn delete(name: &str) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute("DELETE FROM api_keys WHERE name = $1", params!(name))
                 .await?;
         } else {
             query!("DELETE FROM api_keys WHERE name = $1", name)
-                .execute(&data.db)
+                .execute(DB::conn())
                 .await?;
         }
 
@@ -94,39 +92,36 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
         Ok(())
     }
 
-    pub async fn find(data: &web::Data<AppState>, name: &str) -> Result<Self, ErrorResponse> {
+    pub async fn find(name: &str) -> Result<Self, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as_one("SELECT * FROM api_keys WHERE name = $1", params!(name))
                 .await?
         } else {
             query_as!(Self, "SELECT * FROM api_keys WHERE name = $1", name)
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await?
         };
 
         Ok(res)
     }
 
-    pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as("SELECT * FROM api_keys", params!())
                 .await?
         } else {
             query_as!(Self, "SELECT * FROM api_keys")
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
 
         Ok(res)
     }
 
-    pub async fn generate_secret(
-        data: &web::Data<AppState>,
-        name: &str,
-    ) -> Result<String, ErrorResponse> {
-        let entity = ApiKeyEntity::find(data, name).await?;
+    pub async fn generate_secret(name: &str) -> Result<String, ErrorResponse> {
+        let entity = ApiKeyEntity::find(name).await?;
         let api_key = entity.into_api_key()?;
 
         // generate a new secret
@@ -160,7 +155,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
                 access_enc,
                 name,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
@@ -172,12 +167,11 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
 
     /// Updates the API Key. Does NOT update the secret in any way!
     pub async fn update(
-        data: &web::Data<AppState>,
         name: &str,
         expires: Option<i64>,
         access: Vec<ApiKeyAccess>,
     ) -> Result<(), ErrorResponse> {
-        let entity = ApiKeyEntity::find(data, name).await?;
+        let entity = ApiKeyEntity::find(name).await?;
         let api_key = entity.into_api_key()?;
 
         let secret_enc = EncValue::encrypt(&api_key.secret)?.into_bytes().to_vec();
@@ -215,7 +209,7 @@ WHERE name = $5"#,
                 access_enc,
                 name,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
@@ -224,7 +218,7 @@ WHERE name = $5"#,
         Ok(())
     }
 
-    pub async fn save(self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn save(self) -> Result<(), ErrorResponse> {
         let name = self.name.clone();
 
         if is_hiqlite() {
@@ -255,7 +249,7 @@ WHERE name = $5"#,
                 self.access,
                 self.name,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
@@ -279,10 +273,7 @@ impl ApiKeyEntity {
     }
 
     #[inline(always)]
-    pub async fn api_key_from_token_validated(
-        data: &web::Data<AppState>,
-        token: &str,
-    ) -> Result<ApiKey, ErrorResponse> {
+    pub async fn api_key_from_token_validated(token: &str) -> Result<ApiKey, ErrorResponse> {
         let (name, secret) = token.split_once('$').ok_or_else(|| {
             ErrorResponse::new(ErrorResponseType::BadRequest, "Malformed API-Key")
         })?;
@@ -292,7 +283,7 @@ impl ApiKeyEntity {
         let api_key = if let Some(key) = client.get(Cache::App, &idx).await? {
             key
         } else {
-            let key = Self::find(data, name).await?.into_api_key()?;
+            let key = Self::find(name).await?.into_api_key()?;
             client.put(Cache::App, idx, &key, CACHE_TTL_APP).await?;
             key
         };

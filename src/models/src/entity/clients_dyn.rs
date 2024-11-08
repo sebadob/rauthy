@@ -30,7 +30,7 @@ impl ClientDyn {
         Ok(())
     }
 
-    pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
+    pub async fn find(id: String) -> Result<Self, ErrorResponse> {
         let client = DB::client();
 
         if let Some(slf) = client
@@ -46,7 +46,7 @@ impl ClientDyn {
                 .await?
         } else {
             query_as!(Self, "SELECT * FROM clients_dyn WHERE id = $1", id)
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await?
         };
 
@@ -62,7 +62,7 @@ impl ClientDyn {
         Ok(slf)
     }
 
-    pub async fn update_used(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
+    pub async fn update_used(id: &str) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
 
         if is_hiqlite() {
@@ -78,7 +78,7 @@ impl ClientDyn {
                 now,
                 id
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 

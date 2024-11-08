@@ -66,7 +66,7 @@ where
                 .app_data::<web::Data<AppState>>()
                 .expect("Error getting AppData inside session middleware");
 
-            principal.api_key = get_api_key_from_headers(&req, data).await?;
+            principal.api_key = get_api_key_from_headers(&req).await?;
             if let Some(s) = get_session_from_cookie(&req, data).await? {
                 principal.roles = s.roles_as_vec().unwrap_or_default();
                 principal.session = Some(s);
@@ -89,10 +89,7 @@ where
 }
 
 #[inline(always)]
-async fn get_api_key_from_headers(
-    req: &ServiceRequest,
-    data: &web::Data<AppState>,
-) -> Result<Option<ApiKey>, ErrorResponse> {
+async fn get_api_key_from_headers(req: &ServiceRequest) -> Result<Option<ApiKey>, ErrorResponse> {
     let headers = req.headers();
     let auth_header = if let Some(Ok(header)) = headers.get("Authorization").map(|h| h.to_str()) {
         header
@@ -114,7 +111,7 @@ async fn get_api_key_from_headers(
     };
 
     if let Some(api_key_value) = api_key_value {
-        ApiKeyEntity::api_key_from_token_validated(data, api_key_value)
+        ApiKeyEntity::api_key_from_token_validated(api_key_value)
             .await
             .map(Some)
     } else {
@@ -134,7 +131,7 @@ async fn get_session_from_cookie(
         Some(session_id) => session_id,
     };
 
-    match Session::find(data, session_id).await {
+    match Session::find(session_id).await {
         Ok(mut session) => {
             let remote_ip = if *SESSION_VALIDATE_IP {
                 real_ip_from_svc_req(req).ok()
@@ -146,7 +143,7 @@ async fn get_session_from_cookie(
                 // only update the last_seen, if it is older than 10 seconds
                 if session.last_seen < now - 10 {
                     session.last_seen = now;
-                    session.save(data).await?;
+                    session.save().await?;
                 }
 
                 if req.method() != http::Method::GET && !is_path_csrf_exception(req.path()) {

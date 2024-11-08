@@ -73,7 +73,7 @@ async fn check_client_auth(
     };
     let header = header_value.to_str().unwrap_or_default();
 
-    let client = Client::find(data, client_id).await.map_err(|_| {
+    let client = Client::find(client_id).await.map_err(|_| {
         ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("client-not-found".to_string()),
             "client does not exist anymore".to_string(),

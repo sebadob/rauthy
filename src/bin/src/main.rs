@@ -175,7 +175,6 @@ TODO add link to the book after migration
         tx_events_router,
         rx_events_router,
         rx_events,
-        app_state.db.clone(),
     ));
 
     // spawn password hash limiter
@@ -188,10 +187,7 @@ TODO add link to the book after migration
 
     // spawn health watcher
     debug!("Starting health watch");
-    tokio::spawn(watch_health(
-        app_state.db.clone(),
-        app_state.tx_events.clone(),
-    ));
+    tokio::spawn(watch_health(app_state.tx_events.clone()));
 
     // schedulers
     match env::var("SCHED_DISABLE")
@@ -222,10 +218,7 @@ TODO add link to the book after migration
         } else {
             100_000
         };
-        tokio::spawn(crate::dummy_data::insert_dummy_data(
-            app_state.clone(),
-            amount,
-        ));
+        tokio::spawn(crate::dummy_data::insert_dummy_data(amount));
     }
 
     actix.join().unwrap().unwrap();

@@ -1,7 +1,6 @@
 use chrono::Utc;
 use hiqlite::{params, Param};
 use rauthy_common::is_hiqlite;
-use rauthy_models::app_state::DbPool;
 use rauthy_models::database::DB;
 use std::ops::Sub;
 use std::time::Duration;
@@ -9,7 +8,7 @@ use tracing::{debug, error};
 
 /// Cleans up fully expired devices. These need to do a full re-authentication anyway.
 /// All devices that are expired for at least 1 day will be removed.
-pub async fn devices_cleanup(db: DbPool) {
+pub async fn devices_cleanup() {
     let mut interval = tokio::time::interval(Duration::from_secs(24 * 3600));
 
     loop {
@@ -50,7 +49,7 @@ AND (refresh_exp is null OR refresh_exp < $1)"#,
     AND (refresh_exp is null OR refresh_exp < $1)"#,
                 threshold
             )
-            .execute(&db)
+            .execute(DB::conn())
             .await;
 
             match res {

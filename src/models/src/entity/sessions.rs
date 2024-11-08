@@ -1,5 +1,4 @@
 use crate::api_cookie::ApiCookie;
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;
@@ -38,23 +37,6 @@ pub struct Session {
     pub last_seen: i64,
     pub remote_ip: Option<String>,
 }
-
-// impl<'r> From<hiqlite::Row<'r>> for Session {
-//     fn from(mut row: hiqlite::Row<'r>) -> Self {
-//         Self {
-//             id: row.get("id"),
-//             csrf_token: row.get("csrf_token"),
-//             user_id: row.get("user_id"),
-//             roles: row.get("roles"),
-//             groups: row.get("groups"),
-//             is_mfa: row.get("is_mfa"),
-//             state: row.get("state"),
-//             exp: row.get("exp"),
-//             last_seen: row.get("last_seen"),
-//             remote_ip: row.get("remote_ip"),
-//         }
-//     }
-// }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SessionState {
@@ -118,14 +100,14 @@ impl SessionState {
 
 // CRUD
 impl Session {
-    pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn delete(&self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute("DELETE FROM sessions WHERE id = $1", params!(&self.id))
                 .await?;
         } else {
             sqlx::query!("DELETE FROM sessions WHERE id = $1", self.id)
-                .execute(&data.db)
+                .execute(DB::conn())
                 .await?;
         }
 
@@ -136,10 +118,7 @@ impl Session {
         Ok(())
     }
 
-    pub async fn delete_by_user(
-        data: &web::Data<AppState>,
-        user_id: &str,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn delete_by_user(user_id: &str) -> Result<(), ErrorResponse> {
         let sids: Vec<String> = if is_hiqlite() {
             let rows = DB::client()
                 .execute_returning(
@@ -158,7 +137,7 @@ impl Session {
                 "DELETE FROM sessions WHERE user_id = $1 RETURNING id",
                 user_id
             )
-            .fetch_all(&data.db)
+            .fetch_all(DB::conn())
             .await?;
 
             let mut ids = Vec::with_capacity(rows.len());
@@ -179,7 +158,7 @@ impl Session {
     }
 
     // Returns a session by id
-    pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
+    pub async fn find(id: String) -> Result<Self, ErrorResponse> {
         let idx = Session::cache_idx(&id);
         let client = DB::client();
 
@@ -200,7 +179,7 @@ impl Session {
                 "SELECT * FROM sessions WHERE id = $1 ORDER BY exp DESC",
                 id
             )
-            .fetch_one(&data.db)
+            .fetch_one(DB::conn())
             .await?
         };
 
@@ -212,21 +191,20 @@ impl Session {
     }
 
     // not cached -> only used in the admin ui and can get very big
-    pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let sessions = if is_hiqlite() {
             DB::client()
                 .query_as("SELECT * FROM sessions ORDER BY exp DESC", params!())
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM sessions ORDER BY exp DESC")
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
         Ok(sessions)
     }
 
     pub async fn find_paginated(
-        data: &web::Data<AppState>,
         continuation_token: Option<ContinuationToken>,
         page_size: i64,
         mut offset: i64,
@@ -269,7 +247,7 @@ OFFSET $4"#,
                         page_size,
                         offset,
                     )
-                    .fetch_all(&data.db)
+                    .fetch_all(DB::conn())
                     .await?
                 };
 
@@ -307,7 +285,7 @@ OFFSET $4"#,
                         page_size,
                         offset,
                     )
-                    .fetch_all(&data.db)
+                    .fetch_all(DB::conn())
                     .await?
                 };
 
@@ -343,7 +321,7 @@ OFFSET $2"#,
                     page_size,
                     offset,
                 )
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
             };
 
@@ -377,7 +355,7 @@ OFFSET $2"#,
                     page_size,
                     offset,
                 )
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
             };
 
@@ -397,16 +375,16 @@ OFFSET $2"#,
     }
 
     /// Invalidates all sessions by setting the expiry to `now()`
-    pub async fn invalidate_all(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn invalidate_all() -> Result<(), ErrorResponse> {
         let now = OffsetDateTime::now_utc().unix_timestamp();
-        let sessions = Session::find_all(data).await?;
+        let sessions = Session::find_all().await?;
         let mut removed = Vec::default();
 
         // TODO refactor into single query with `RETURNING`
         for mut s in sessions {
             if s.exp > now {
                 s.exp = now;
-                if let Err(err) = s.save(data).await {
+                if let Err(err) = s.save().await {
                     error!("Error invalidating session: {}", err);
                 }
                 removed.push(s.id);
@@ -424,10 +402,7 @@ OFFSET $2"#,
     }
 
     /// If any sessions have been deleted, `Vec<SessionId>` will be returned for cache invalidation.
-    pub async fn invalidate_for_user(
-        data: &web::Data<AppState>,
-        uid: &str,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn invalidate_for_user(uid: &str) -> Result<(), ErrorResponse> {
         let sids: Vec<String> = if is_hiqlite() {
             let rows = DB::client()
                 .execute_returning(
@@ -444,7 +419,7 @@ OFFSET $2"#,
         } else {
             let rows = sqlx::query("DELETE FROM sessions WHERE user_id = $1 RETURNING id")
                 .bind(uid)
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?;
 
             let mut ids = Vec::with_capacity(rows.len());
@@ -463,7 +438,7 @@ OFFSET $2"#,
     }
 
     /// Saves a Session
-    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
         let state_str = &self.state;
 
         if is_hiqlite() {
@@ -510,7 +485,7 @@ remote_ip = $10"#,
                 self.last_seen,
                 self.remote_ip,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
@@ -528,7 +503,6 @@ remote_ip = $10"#,
 
     /// Caution: Uses regex / LIKE on the database -> very costly query
     pub async fn search(
-        data: &web::Data<AppState>,
         idx: &SearchParamsIdx,
         q: &str,
         limit: i64,
@@ -549,7 +523,7 @@ remote_ip = $10"#,
                         q,
                         limit
                     )
-                    .fetch_all(&data.db)
+                    .fetch_all(DB::conn())
                     .await?
                 }
             }
@@ -568,7 +542,7 @@ remote_ip = $10"#,
                         q,
                         limit
                     )
-                    .fetch_all(&data.db)
+                    .fetch_all(DB::conn())
                     .await?
                 }
             }
@@ -585,7 +559,7 @@ remote_ip = $10"#,
                         q,
                         limit
                     )
-                    .fetch_all(&data.db)
+                    .fetch_all(DB::conn())
                     .await?
                 }
             }
@@ -723,10 +697,7 @@ impl Session {
         )
     }
 
-    pub async fn invalidate(
-        &mut self,
-        data: &web::Data<AppState>,
-    ) -> Result<Cookie, ErrorResponse> {
+    pub async fn invalidate(&mut self) -> Result<Cookie, ErrorResponse> {
         let idx = Session::cache_idx(&self.id);
 
         self.exp = OffsetDateTime::now_utc().unix_timestamp();
@@ -736,7 +707,7 @@ impl Session {
             .bind(self.exp)
             .bind(self.state.as_str())
             .bind(&self.id)
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
 
         DB::client().delete(Cache::Session, idx).await?;
@@ -816,13 +787,9 @@ impl Session {
     }
 
     #[inline]
-    pub async fn set_mfa(
-        &mut self,
-        data: &web::Data<AppState>,
-        value: bool,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn set_mfa(&mut self, value: bool) -> Result<(), ErrorResponse> {
         self.is_mfa = value;
-        self.save(data).await
+        self.save().await
     }
 
     #[inline(always)]

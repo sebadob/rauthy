@@ -2,7 +2,6 @@ use crate::ReqPrincipal;
 use actix_web::{delete, get, post, put, web, HttpResponse};
 use rauthy_api_types::roles::NewRoleRequest;
 use rauthy_error::ErrorResponse;
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::roles::Role;
 
@@ -21,13 +20,10 @@ use rauthy_models::entity::roles::Role;
     ),
 )]
 #[get("/roles")]
-pub async fn get_roles(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_roles(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Roles, AccessRights::Read)?;
 
-    Role::find_all(&data)
+    Role::find_all()
         .await
         .map(|rls| HttpResponse::Ok().json(rls))
 }
@@ -49,13 +45,12 @@ pub async fn get_roles(
 )]
 #[post("/roles")]
 pub async fn post_role(
-    data: web::Data<AppState>,
     role_req: actix_web_validator::Json<NewRoleRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Roles, AccessRights::Create)?;
 
-    Role::create(&data, role_req.into_inner())
+    Role::create(role_req.into_inner())
         .await
         .map(|r| HttpResponse::Ok().json(r))
 }
@@ -77,14 +72,13 @@ pub async fn post_role(
 )]
 #[put("/roles/{id}")]
 pub async fn put_role(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     role_req: actix_web_validator::Json<NewRoleRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Roles, AccessRights::Update)?;
 
-    Role::update(&data, id.into_inner(), role_req.role.to_owned())
+    Role::update(id.into_inner(), role_req.role.to_owned())
         .await
         .map(|r| HttpResponse::Ok().json(r))
 }
@@ -107,13 +101,12 @@ pub async fn put_role(
 )]
 #[delete("/roles/{id}")]
 pub async fn delete_role(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Roles, AccessRights::Delete)?;
 
-    Role::delete(&data, id.as_str())
+    Role::delete(id.as_str())
         .await
         .map(|_| HttpResponse::Ok().finish())
 }

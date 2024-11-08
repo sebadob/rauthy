@@ -89,7 +89,6 @@ pub struct User {
 
 // CRUD
 impl User {
-    /// Invalidates the cache for the given user
     pub async fn invalidate_cache(user_id: &str, email: &str) -> Result<(), ErrorResponse> {
         let client = DB::client();
 
@@ -102,7 +101,7 @@ impl User {
         Ok(())
     }
 
-    pub async fn count(data: &web::Data<AppState>) -> Result<i64, ErrorResponse> {
+    pub async fn count() -> Result<i64, ErrorResponse> {
         let client = DB::client();
 
         if let Some(count) = client.get(Cache::App, IDX_USER_COUNT).await? {
@@ -117,7 +116,7 @@ impl User {
                 .get("count")
         } else {
             sqlx::query!("SELECT COUNT (*) count FROM users")
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await?
                 .count
                 .unwrap_or_default()
@@ -130,8 +129,8 @@ impl User {
         Ok(count)
     }
 
-    async fn count_inc(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        let mut count = Self::count(data).await?;
+    async fn count_inc() -> Result<(), ErrorResponse> {
+        let mut count = Self::count().await?;
         // theoretically, we could have overlaps here, but we don't really care
         // -> used for dynamic pagination only and SQLite has limited query features
         count += 1;
@@ -141,8 +140,8 @@ impl User {
         Ok(())
     }
 
-    async fn count_dec(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        let mut count = Self::count(data).await?;
+    async fn count_dec() -> Result<(), ErrorResponse> {
+        let mut count = Self::count().await?;
         // theoretically, we could have overlaps here, but we don't really care
         // -> used for dynamic pagination only and SQLite has limited query features
         count -= 1;
@@ -152,16 +151,14 @@ impl User {
         Ok(())
     }
 
-    // Inserts a user into the database
     pub async fn create(
         data: &web::Data<AppState>,
         new_user: User,
         post_reset_redirect_uri: Option<String>,
     ) -> Result<Self, ErrorResponse> {
-        let slf = Self::insert(data, new_user).await?;
+        let slf = Self::insert(new_user).await?;
 
         let magic_link = MagicLink::create(
-            data,
             slf.id.clone(),
             data.ml_lt_pwd_first as i64,
             MagicLinkUsage::NewUser(post_reset_redirect_uri),
@@ -172,23 +169,19 @@ impl User {
         Ok(slf)
     }
 
-    pub async fn create_federated(
-        data: &web::Data<AppState>,
-        new_user: User,
-    ) -> Result<Self, ErrorResponse> {
-        Self::insert(data, new_user).await
+    pub async fn create_federated(new_user: User) -> Result<Self, ErrorResponse> {
+        Self::insert(new_user).await
     }
 
-    // Inserts a user into the database
     pub async fn create_from_new(
         data: &web::Data<AppState>,
         new_user_req: NewUserRequest,
     ) -> Result<User, ErrorResponse> {
-        let new_user = User::from_new_user_req(data, new_user_req).await?;
+        let new_user = User::from_new_user_req(new_user_req).await?;
         User::create(data, new_user, None).await
     }
 
-    // Inserts a user from the open registration endpoint into the database
+    /// Inserts a user from the open registration endpoint into the database
     pub async fn create_from_reg(
         data: &web::Data<AppState>,
         req_data: NewUserRegistrationRequest,
@@ -206,9 +199,8 @@ impl User {
         Ok(new_user)
     }
 
-    // Deletes a user
-    pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
-        Session::delete_by_user(data, &self.id).await?;
+    pub async fn delete(&self) -> Result<(), ErrorResponse> {
+        Session::delete_by_user(&self.id).await?;
 
         let client = DB::client();
         if is_hiqlite() {
@@ -217,18 +209,17 @@ impl User {
                 .await?;
         } else {
             sqlx::query!("DELETE FROM users WHERE id = $1", self.id)
-                .execute(&data.db)
+                .execute(DB::conn())
                 .await?;
         }
 
         Self::invalidate_cache(&self.id, &self.email).await?;
-        Self::count_dec(data).await?;
+        Self::count_dec().await?;
 
         Ok(())
     }
 
-    // Checks if a user exists in the database without fetching data
-    pub async fn exists(data: &web::Data<AppState>, id: String) -> Result<(), ErrorResponse> {
+    pub async fn exists(id: String) -> Result<(), ErrorResponse> {
         let idx = format!("{}_{}", IDX_USERS, id);
 
         let opt: Option<Self> = DB::client().get(Cache::User, idx).await?;
@@ -248,14 +239,14 @@ impl User {
             }
         } else {
             sqlx::query!("SELECT id FROM users WHERE id = $1", id)
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await?;
         }
 
         Ok(())
     }
 
-    pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
+    pub async fn find(id: String) -> Result<Self, ErrorResponse> {
         let idx = format!("{}_{}", IDX_USERS, id);
         let client = DB::client();
 
@@ -269,7 +260,7 @@ impl User {
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM users WHERE id = $1", id)
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await?
         };
 
@@ -277,10 +268,7 @@ impl User {
         Ok(slf)
     }
 
-    pub async fn find_by_email(
-        data: &web::Data<AppState>,
-        email: String,
-    ) -> Result<User, ErrorResponse> {
+    pub async fn find_by_email(email: String) -> Result<User, ErrorResponse> {
         let email = email.to_lowercase();
 
         let idx = format!("{}_{}", IDX_USERS, email);
@@ -296,7 +284,7 @@ impl User {
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM users WHERE email = $1", email)
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await?
         };
 
@@ -305,7 +293,6 @@ impl User {
     }
 
     pub async fn find_by_federation(
-        data: &web::Data<AppState>,
         auth_provider_id: &str,
         federation_uid: &str,
     ) -> Result<Self, ErrorResponse> {
@@ -323,30 +310,28 @@ impl User {
                 auth_provider_id,
                 federation_uid
             )
-            .fetch_one(&data.db)
+            .fetch_one(DB::conn())
             .await?
         };
 
         Ok(slf)
     }
 
-    pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as("SELECT * FROM users ORDER BY created_at ASC", params!())
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM users ORDER BY created_at ASC")
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
 
         Ok(res)
     }
 
-    pub async fn find_all_simple(
-        data: &web::Data<AppState>,
-    ) -> Result<Vec<UserResponseSimple>, ErrorResponse> {
+    pub async fn find_all_simple() -> Result<Vec<UserResponseSimple>, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as(
@@ -359,7 +344,7 @@ impl User {
                 UserResponseSimple,
                 "SELECT id, email, created_at, last_login FROM users ORDER BY created_at ASC"
             )
-            .fetch_all(&data.db)
+            .fetch_all(DB::conn())
             .await?
         };
 
@@ -367,10 +352,7 @@ impl User {
     }
 
     /// This is a very expensive query using `LIKE`, use only when necessary.
-    pub async fn find_with_group(
-        data: &web::Data<AppState>,
-        group_name: &str,
-    ) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_with_group(group_name: &str) -> Result<Vec<Self>, ErrorResponse> {
         let like = format!("%{group_name}%");
 
         let res = if is_hiqlite() {
@@ -379,7 +361,7 @@ impl User {
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM users WHERE groups LIKE $1", like)
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
 
@@ -387,10 +369,7 @@ impl User {
     }
 
     /// This is a very expensive query using `LIKE`, use only when necessary.
-    pub async fn find_with_role(
-        data: &web::Data<AppState>,
-        role_name: &str,
-    ) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_with_role(role_name: &str) -> Result<Vec<Self>, ErrorResponse> {
         let like = format!("%{role_name}%");
 
         let res = if is_hiqlite() {
@@ -399,14 +378,14 @@ impl User {
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM users WHERE roles LIKE $1", like)
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
 
         Ok(res)
     }
 
-    pub async fn find_expired(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_expired() -> Result<Vec<Self>, ErrorResponse> {
         let now = Utc::now().add(chrono::Duration::seconds(10)).timestamp();
 
         let res = if is_hiqlite() {
@@ -415,21 +394,18 @@ impl User {
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM users WHERE user_expires < $1", now)
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
 
         Ok(res)
     }
 
-    pub async fn find_for_fed_cm_validated(
-        data: &web::Data<AppState>,
-        user_id: String,
-    ) -> Result<Self, ErrorResponse> {
+    pub async fn find_for_fed_cm_validated(user_id: String) -> Result<Self, ErrorResponse> {
         // We will stick to the WWW-Authenticate header for now and use duplicated code from
         // some OAuth2 api for now until the spec has settled on an error behavior.
         debug!("Looking up FedCM user_id {}", user_id);
-        let slf = Self::find(data, user_id).await.map_err(|_| {
+        let slf = Self::find(user_id).await.map_err(|_| {
             debug!("FedCM user not found");
             ErrorResponse::new(
                 ErrorResponseType::WWWAuthenticate("user-not-found".to_string()),
@@ -450,7 +426,6 @@ impl User {
     }
 
     pub async fn find_paginated(
-        data: &web::Data<AppState>,
         continuation_token: Option<ContinuationToken>,
         page_size: i64,
         mut offset: i64,
@@ -491,7 +466,7 @@ OFFSET $4"#,
                         page_size,
                         offset,
                     )
-                    .fetch_all(&data.db)
+                    .fetch_all(DB::conn())
                     .await?;
 
                     res.reverse();
@@ -527,7 +502,7 @@ OFFSET $4"#,
                         page_size,
                         offset,
                     )
-                    .fetch_all(&data.db)
+                    .fetch_all(DB::conn())
                     .await?
                 }
             }
@@ -562,7 +537,7 @@ OFFSET $2"#,
                     page_size,
                     offset,
                 )
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?;
 
                 res.reverse();
@@ -594,7 +569,7 @@ OFFSET $2"#,
                     page_size,
                     offset,
                 )
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
             }
         };
@@ -606,7 +581,7 @@ OFFSET $2"#,
         Ok((res, token))
     }
 
-    pub async fn insert(data: &web::Data<AppState>, new_user: User) -> Result<Self, ErrorResponse> {
+    pub async fn insert(new_user: User) -> Result<Self, ErrorResponse> {
         let lang = new_user.language.as_str();
 
         if is_hiqlite() {
@@ -657,22 +632,19 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
                 new_user.auth_provider_id,
                 new_user.federation_uid,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
-        Self::count_inc(data).await?;
+        Self::count_inc().await?;
 
         Ok(new_user)
     }
 
-    pub async fn provider_unlink(
-        data: &web::Data<AppState>,
-        user_id: String,
-    ) -> Result<Self, ErrorResponse> {
+    pub async fn provider_unlink(user_id: String) -> Result<Self, ErrorResponse> {
         // we need to find the user first and validate that it has been set up properly
         // to work without a provider
-        let mut slf = Self::find(data, user_id).await?;
+        let mut slf = Self::find(user_id).await?;
         if slf.password.is_none() && !slf.has_webauthn_enabled() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -682,7 +654,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
 
         slf.auth_provider_id = None;
         slf.federation_uid = None;
-        slf.save(data, None).await?;
+        slf.save(None).await?;
 
         Ok(slf)
     }
@@ -770,13 +742,9 @@ WHERE id = $18"#,
         Ok(())
     }
 
-    pub async fn save(
-        &self,
-        data: &web::Data<AppState>,
-        old_email: Option<String>,
-    ) -> Result<(), ErrorResponse> {
+    pub async fn save(&self, old_email: Option<String>) -> Result<(), ErrorResponse> {
         if old_email.is_some() {
-            User::is_email_free(data, self.email.clone()).await?;
+            User::is_email_free(self.email.clone()).await?;
         }
 
         let lang = self.language.as_str();
@@ -842,13 +810,13 @@ WHERE id = $18"#,
             .bind(&self.auth_provider_id)
             .bind(&self.federation_uid)
             .bind(&self.id)
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
         if !self.enabled {
-            Session::invalidate_for_user(data, &self.id).await?;
-            RefreshToken::invalidate_for_user(data, &self.id).await?;
+            Session::invalidate_for_user(&self.id).await?;
+            RefreshToken::invalidate_for_user(&self.id).await?;
         }
 
         if let Some(email) = old_email {
@@ -867,7 +835,6 @@ WHERE id = $18"#,
 
     /// Caution: Uses regex / LIKE on the database -> very costly query
     pub async fn search(
-        data: &web::Data<AppState>,
         idx: &SearchParamsIdx,
         q: &str,
         limit: i64,
@@ -900,7 +867,7 @@ LIMIT $2"#,
                         q,
                         limit
                     )
-                    .fetch_all(&data.db)
+                    .fetch_all(DB::conn())
                     .await?
                 }
             }
@@ -929,7 +896,7 @@ LIMIT $2"#,
                         q,
                         limit
                     )
-                    .fetch_all(&data.db)
+                    .fetch_all(DB::conn())
                     .await?
                 }
             }
@@ -945,7 +912,6 @@ LIMIT $2"#,
     }
 
     pub async fn set_email_verified(
-        data: &web::Data<AppState>,
         user_id: String,
         email_verified: bool,
     ) -> Result<(), ErrorResponse> {
@@ -962,7 +928,7 @@ LIMIT $2"#,
                 email_verified,
                 user_id
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
         Ok(())
@@ -975,7 +941,7 @@ LIMIT $2"#,
         user: Option<User>,
     ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
         let mut user = match user {
-            None => User::find(data, id).await?,
+            None => User::find(id).await?,
             Some(user) => user,
         };
         upd_user.email = upd_user.email.to_lowercase();
@@ -994,18 +960,18 @@ LIMIT $2"#,
         }
 
         if let Some(password) = &upd_user.password {
-            user.apply_password_rules(data, password).await?;
+            user.apply_password_rules(password).await?;
         }
 
         let is_admin_before_update = user.is_admin();
-        user.roles = Role::sanitize(data, upd_user.roles).await?;
-        user.groups = Group::sanitize(data, upd_user.groups).await?;
+        user.roles = Role::sanitize(upd_user.roles).await?;
+        user.groups = Group::sanitize(upd_user.groups).await?;
 
         user.enabled = upd_user.enabled;
         user.email_verified = upd_user.email_verified;
         user.user_expires = upd_user.user_expires;
 
-        user.save(data, old_email.clone()).await?;
+        user.save(old_email.clone()).await?;
 
         if upd_user.password.is_some() {
             data.tx_events
@@ -1020,7 +986,7 @@ LIMIT $2"#,
         if let Some(old_email) = old_email.as_ref() {
             // if the user was saved successfully and the email was changed, invalidate all existing
             // sessions with the old address and send out notifications to the users addresses
-            Session::invalidate_for_user(data, &user.id).await?;
+            Session::invalidate_for_user(&user.id).await?;
 
             // send out confirmation E-Mails to both addresses
             send_email_confirm_change(data, &user, &user.email, &user.email, true).await;
@@ -1037,7 +1003,7 @@ LIMIT $2"#,
 
         // finally, update the custom users values
         let user_values = if let Some(values) = upd_user.user_values {
-            UserValues::upsert(data, user.id.clone(), values).await?
+            UserValues::upsert(user.id.clone(), values).await?
         } else {
             None
         };
@@ -1045,7 +1011,7 @@ LIMIT $2"#,
         Ok((user, user_values, is_new_admin))
     }
 
-    pub async fn update_language(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn update_language(&self) -> Result<(), ErrorResponse> {
         let lang = self.language.as_str();
 
         if is_hiqlite() {
@@ -1061,21 +1027,21 @@ LIMIT $2"#,
                 lang,
                 self.id
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         }
 
         Ok(())
     }
 
-    // Updates a user from himself. This is needed for the account page to make each user able to
-    // update its own data.
+    /// Updates a user from himself. This is needed for the account page to make each user able to
+    /// update its own data.
     pub async fn update_self_req(
         data: &web::Data<AppState>,
         id: String,
         upd_user: UpdateUserSelfRequest,
     ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
-        let user = User::find(data, id.clone()).await?;
+        let user = User::find(id.clone()).await?;
 
         let mut password = None;
         if let Some(pwd_new) = upd_user.password_new {
@@ -1104,10 +1070,9 @@ LIMIT $2"#,
             // email to old AND new address
             if email != user.email {
                 // invalidate possibly other existing MagicLinks of the same type
-                MagicLink::invalidate_all_email_change(data, &user.id).await?;
+                MagicLink::invalidate_all_email_change(&user.id).await?;
 
                 let ml = MagicLink::create(
-                    data,
                     user.id.clone(),
                     60,
                     MagicLinkUsage::EmailChange(email.clone()),
@@ -1159,11 +1124,8 @@ LIMIT $2"#,
 
     /// Converts a user account from as password account type to passkey only with all necessary
     /// checks included.
-    pub async fn convert_to_passkey(
-        data: &web::Data<AppState>,
-        id: String,
-    ) -> Result<(), ErrorResponse> {
-        let mut user = User::find(data, id.clone()).await?;
+    pub async fn convert_to_passkey(id: String) -> Result<(), ErrorResponse> {
+        let mut user = User::find(id.clone()).await?;
 
         if user.account_type() != AccountType::Password {
             return Err(ErrorResponse::new(
@@ -1179,7 +1141,7 @@ LIMIT $2"#,
             ));
         }
 
-        let pks = PasskeyEntity::find_for_user_with_uv(data, &user.id).await?;
+        let pks = PasskeyEntity::find_for_user_with_uv(&user.id).await?;
         if pks.is_empty() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
@@ -1190,7 +1152,7 @@ LIMIT $2"#,
         user.password = None;
         user.password_expires = None;
 
-        user.save(data, None).await?;
+        user.save(None).await?;
         Ok(())
     }
 }
@@ -1215,12 +1177,8 @@ impl User {
         }
     }
 
-    pub async fn apply_password_rules(
-        &mut self,
-        data: &web::Data<AppState>,
-        plain_pwd: &str,
-    ) -> Result<(), ErrorResponse> {
-        let rules = PasswordPolicy::find(data).await?;
+    pub async fn apply_password_rules(&mut self, plain_pwd: &str) -> Result<(), ErrorResponse> {
+        let rules = PasswordPolicy::find().await?;
 
         if plain_pwd.len() < rules.length_min as usize {
             return Err(ErrorResponse::new(
@@ -1300,7 +1258,7 @@ impl User {
         let mut new_recent = Vec::new();
 
         if let Some(recent_req) = rules.not_recently_used {
-            match RecentPasswordsEntity::find(data, &self.id).await {
+            match RecentPasswordsEntity::find(&self.id).await {
                 Ok(mut most_recent) => {
                     let mut iteration = 1;
                     for old_hash in most_recent.passwords.split('\n') {
@@ -1326,11 +1284,11 @@ impl User {
                     }
 
                     most_recent.passwords = format!("{}\n{}", new_hash, new_recent.join("\n"));
-                    most_recent.save(data).await?;
+                    most_recent.save().await?;
                 }
 
                 Err(_) => {
-                    RecentPasswordsEntity::create(data, &self.id, new_hash.clone()).await?;
+                    RecentPasswordsEntity::create(&self.id, new_hash.clone()).await?;
                 }
             }
         }
@@ -1383,7 +1341,7 @@ impl User {
         user_id: String,
         confirm_id: String,
     ) -> Result<String, ErrorResponse> {
-        let mut ml = MagicLink::find(data, &confirm_id).await?;
+        let mut ml = MagicLink::find(&confirm_id).await?;
         ml.validate(&user_id, &req, false)?;
 
         let usage = MagicLinkUsage::try_from(&ml.usage)?;
@@ -1398,10 +1356,10 @@ impl User {
             MagicLinkUsage::EmailChange(email) => email,
         };
 
-        let mut user = Self::find(data, user_id).await?;
+        let mut user = Self::find(user_id).await?;
 
         // build response HTML
-        let colors = ColorEntity::find_rauthy(data).await?;
+        let colors = ColorEntity::find_rauthy().await?;
         let lang = Language::try_from(&req).unwrap_or_default();
         let html = UserEmailChangeConfirmHtml::build(&colors, &lang, &user.email, &new_email);
 
@@ -1409,11 +1367,11 @@ impl User {
         let old_email = user.email;
         user.email = new_email;
         user.email_verified = true;
-        user.save(data, Some(old_email.clone())).await?;
-        ml.invalidate(data).await?;
+        user.save(Some(old_email.clone())).await?;
+        ml.invalidate().await?;
 
         // finally, invalidate all existing sessions with the old email
-        Session::invalidate_for_user(data, &user.id).await?;
+        Session::invalidate_for_user(&user.id).await?;
 
         // send out confirmation E-Mails to both addresses
         send_email_confirm_change(data, &user, &user.email, &user.email, false).await;
@@ -1485,12 +1443,9 @@ impl User {
         }
     }
 
-    pub async fn from_new_user_req(
-        data: &web::Data<AppState>,
-        new_user: NewUserRequest,
-    ) -> Result<Self, ErrorResponse> {
-        let roles = Role::sanitize(data, new_user.roles).await?;
-        let groups = Group::sanitize(data, new_user.groups).await?;
+    pub async fn from_new_user_req(new_user: NewUserRequest) -> Result<Self, ErrorResponse> {
+        let roles = Role::sanitize(new_user.roles).await?;
+        let groups = Group::sanitize(new_user.groups).await?;
 
         let user = Self {
             email: new_user.email.to_lowercase(),
@@ -1598,8 +1553,8 @@ impl User {
         self.get_roles().contains(&RAUTHY_ADMIN_ROLE)
     }
 
-    async fn is_email_free(data: &web::Data<AppState>, email: String) -> Result<(), ErrorResponse> {
-        match User::find_by_email(data, email).await {
+    async fn is_email_free(email: String) -> Result<(), ErrorResponse> {
+        match User::find_by_email(email).await {
             Ok(_) => Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "E-Mail is already in use".to_string(),
@@ -1650,7 +1605,7 @@ impl User {
             return Ok(());
         }
 
-        let ml_res = MagicLink::find_by_user(data, self.id.clone()).await;
+        let ml_res = MagicLink::find_by_user(self.id.clone()).await;
         // if an active magic link already exists - invalidate it.
         if let Ok(mut ml) = ml_res {
             if ml.exp > OffsetDateTime::now_utc().unix_timestamp() {
@@ -1658,7 +1613,7 @@ impl User {
                     "Password reset request with already existing valid magic link from: {}",
                     real_ip_from_req(&req)?
                 );
-                ml.invalidate(data).await?;
+                ml.invalidate().await?;
             }
         }
 
@@ -1667,8 +1622,7 @@ impl User {
         } else {
             MagicLinkUsage::PasswordReset(redirect_uri)
         };
-        let new_ml =
-            MagicLink::create(data, self.id.clone(), data.ml_lt_pwd_reset as i64, usage).await?;
+        let new_ml = MagicLink::create(self.id.clone(), data.ml_lt_pwd_reset as i64, usage).await?;
         send_pwd_reset(data, &new_ml, self).await;
 
         Ok(())
@@ -1699,7 +1653,6 @@ impl User {
                 // if the given password does match, send out a reset link to set a new one
                 return if self.match_passwords(plain_password.clone()).await? {
                     let magic_link = MagicLink::create(
-                        data,
                         self.id.clone(),
                         data.ml_lt_pwd_reset as i64,
                         MagicLinkUsage::PasswordReset(None),

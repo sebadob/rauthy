@@ -23,7 +23,7 @@ pub async fn migrate_encryption_alg(
 
     // migrate clients
     info!("Starting client secrets migration to key id: {}", new_kid);
-    let clients = Client::find_all(data)
+    let clients = Client::find_all()
         .await?
         .into_iter()
         // filter out all clients that already use the new key
@@ -41,7 +41,7 @@ pub async fn migrate_encryption_alg(
 
         client.secret = Some(enc);
         client.secret_kid = Some(new_kid.to_string());
-        client.save(data).await?;
+        client.save().await?;
         modified += 1;
     }
     info!("Finished clients secrets migration to key id: {}", new_kid);
@@ -51,7 +51,7 @@ pub async fn migrate_encryption_alg(
 
     // migrate ApiKey's
     info!("Starting ApiKeys migration to key id: {}", new_kid);
-    let api_keys = ApiKeyEntity::find_all(data)
+    let api_keys = ApiKeyEntity::find_all()
         .await?
         .into_iter()
         // filter out all keys that already use the new key
@@ -72,13 +72,13 @@ pub async fn migrate_encryption_alg(
 
         api_key.enc_key_id = new_kid.to_string();
 
-        api_key.save(data).await?;
+        api_key.save().await?;
         modified += 1;
     }
     info!("Finished ApiKeys migration to key id: {}", new_kid);
 
     // migrate auth providers
-    let providers = AuthProvider::find_all(data).await?;
+    let providers = AuthProvider::find_all().await?;
     for mut provider in providers {
         match AuthProvider::get_secret_cleartext(&provider.secret) {
             Ok(plaintext_opt) => {
@@ -88,7 +88,7 @@ pub async fn migrate_encryption_alg(
                             .into_bytes()
                             .to_vec(),
                     );
-                    provider.save(data).await?;
+                    provider.save().await?;
 
                     modified += 1;
                 };

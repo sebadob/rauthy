@@ -1,8 +1,7 @@
-use crate::app_state::{AppState, DbTxn};
+use crate::app_state::DbTxn;
 use crate::database::{Cache, DB};
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
-use actix_web::web;
 use hiqlite::{params, Param, Params};
 use rauthy_api_types::users::{
     UserAttrConfigRequest, UserAttrConfigValueResponse, UserAttrValueResponse,
@@ -38,11 +37,8 @@ impl UserAttrConfigEntity {
         Ok(())
     }
 
-    pub async fn create(
-        data: &web::Data<AppState>,
-        new_attr: UserAttrConfigRequest,
-    ) -> Result<Self, ErrorResponse> {
-        if Self::find(data, new_attr.name.clone()).await.is_ok() {
+    pub async fn create(new_attr: UserAttrConfigRequest) -> Result<Self, ErrorResponse> {
+        if Self::find(new_attr.name.clone()).await.is_ok() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "User attribute config does already exist",
@@ -62,11 +58,11 @@ impl UserAttrConfigEntity {
                 new_attr.name,
                 new_attr.desc,
             )
-            .execute(&data.db)
+            .execute(DB::conn())
             .await?;
         };
 
-        let mut attrs = UserAttrConfigEntity::find_all(data).await?;
+        let mut attrs = UserAttrConfigEntity::find_all().await?;
         let slf = Self {
             name: new_attr.name.clone(),
             desc: new_attr.desc.clone(),
@@ -79,12 +75,12 @@ impl UserAttrConfigEntity {
         Ok(slf)
     }
 
-    pub async fn delete(data: &web::Data<AppState>, name: String) -> Result<(), ErrorResponse> {
+    pub async fn delete(name: String) -> Result<(), ErrorResponse> {
         // we do this empty check beforehand to avoid much more unnecessary work if it does not exist anyway
-        let slf = Self::find(data, name.clone()).await?;
+        let slf = Self::find(name.clone()).await?;
 
         // delete all possible scope mappings
-        let scopes = Scope::find_all(data).await?;
+        let scopes = Scope::find_all().await?;
         let mut scope_updates = Vec::new();
         for s in scopes {
             let mut needs_update = false;
@@ -152,7 +148,7 @@ impl UserAttrConfigEntity {
 
             client.txn(txn).await?;
         } else {
-            let mut txn = data.db.begin().await?;
+            let mut txn = DB::txn().await?;
 
             for (id, attr_include_access, attr_include_id) in scope_updates {
                 Scope::update_mapping_only(&id, attr_include_access, attr_include_id, &mut txn)
@@ -160,7 +156,7 @@ impl UserAttrConfigEntity {
             }
 
             user_attr_cache_cleanup_keys =
-                UserAttrValueEntity::delete_all_by_key(data, &name, &mut txn).await?;
+                UserAttrValueEntity::delete_all_by_key(&name, &mut txn).await?;
 
             sqlx::query!("DELETE FROM user_attr_config WHERE name  = $1", name)
                 .execute(&mut *txn)
@@ -182,7 +178,7 @@ impl UserAttrConfigEntity {
         Ok(())
     }
 
-    pub async fn find(data: &web::Data<AppState>, name: String) -> Result<Self, ErrorResponse> {
+    pub async fn find(name: String) -> Result<Self, ErrorResponse> {
         let client = DB::client();
         if let Some(slf) = client.get(Cache::App, Self::cache_idx(&name)).await? {
             return Ok(slf);
@@ -197,7 +193,7 @@ impl UserAttrConfigEntity {
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM user_attr_config WHERE name = $1", name)
-                .fetch_one(&data.db)
+                .fetch_one(DB::conn())
                 .await?
         };
 
@@ -208,7 +204,7 @@ impl UserAttrConfigEntity {
         Ok(slf)
     }
 
-    pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let client = DB::client();
         if let Some(slf) = client.get(Cache::App, IDX_USER_ATTR_CONFIG).await? {
             return Ok(slf);
@@ -220,7 +216,7 @@ impl UserAttrConfigEntity {
                 .await?
         } else {
             sqlx::query_as!(Self, "SELECT * FROM user_attr_config")
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
         };
 
@@ -232,11 +228,10 @@ impl UserAttrConfigEntity {
     }
 
     pub async fn update(
-        data: &web::Data<AppState>,
         name: String,
         req_data: UserAttrConfigRequest,
     ) -> Result<Self, ErrorResponse> {
-        let mut slf = Self::find(data, name.clone()).await?;
+        let mut slf = Self::find(name.clone()).await?;
 
         slf.name.clone_from(&req_data.name);
         slf.desc.clone_from(&req_data.desc);
@@ -259,7 +254,7 @@ impl UserAttrConfigEntity {
             } else {
                 sqlx::query("SELECT user_id FROM user_attr_values WHERE key = $1")
                     .bind(&name)
-                    .fetch_all(&data.db)
+                    .fetch_all(DB::conn())
                     .await?
                     .into_iter()
                     .map(|row| row.get("user_id"))
@@ -267,7 +262,7 @@ impl UserAttrConfigEntity {
             };
 
             // update all possible scope mappings
-            let scopes = Scope::find_all(data).await?;
+            let scopes = Scope::find_all().await?;
             for scope in scopes {
                 let mut needs_update = false;
 
@@ -327,7 +322,7 @@ impl UserAttrConfigEntity {
 
             client.txn(txn).await?;
         } else {
-            let mut txn = data.db.begin().await?;
+            let mut txn = DB::txn().await?;
 
             for (id, attr_include_access, attr_include_id) in scope_updates {
                 Scope::update_mapping_only(&id, attr_include_access, attr_include_id, &mut txn)
@@ -361,10 +356,8 @@ impl UserAttrConfigEntity {
 }
 
 impl UserAttrConfigEntity {
-    pub async fn find_all_as_set(
-        data: &web::Data<AppState>,
-    ) -> Result<HashSet<String>, ErrorResponse> {
-        let attrs = Self::find_all(data).await?;
+    pub async fn find_all_as_set() -> Result<HashSet<String>, ErrorResponse> {
+        let attrs = Self::find_all().await?;
 
         let mut set = HashSet::with_capacity(attrs.len());
         for a in attrs {
@@ -410,13 +403,12 @@ impl UserAttrValueEntity {
     /// You MUST `UserAttrValueEntity::clear_cache()` for returned UserCacheKeys
     /// after successful txn commit!
     pub async fn delete_all_by_key(
-        data: &web::Data<AppState>,
         key: &str,
         txn: &mut DbTxn<'_>,
     ) -> Result<Vec<String>, ErrorResponse> {
         let cache_idxs =
             sqlx::query_as!(Self, "SELECT * FROM user_attr_values WHERE key = $1", key)
-                .fetch_all(&data.db)
+                .fetch_all(DB::conn())
                 .await?
                 .into_iter()
                 .map(|a| Self::cache_idx(&a.user_id))
@@ -450,10 +442,7 @@ impl UserAttrValueEntity {
         Ok(cache_idxs)
     }
 
-    pub async fn find_for_user(
-        data: &web::Data<AppState>,
-        user_id: &str,
-    ) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_for_user(user_id: &str) -> Result<Vec<Self>, ErrorResponse> {
         let idx = Self::cache_idx(user_id);
         let client = DB::client();
 
@@ -474,7 +463,7 @@ impl UserAttrValueEntity {
                 "SELECT * FROM user_attr_values WHERE user_id = $1",
                 user_id
             )
-            .fetch_all(&data.db)
+            .fetch_all(DB::conn())
             .await?
         };
 
@@ -484,13 +473,12 @@ impl UserAttrValueEntity {
     }
 
     pub async fn update_for_user(
-        data: &web::Data<AppState>,
         user_id: &str,
         req_data: UserAttrValuesUpdateRequest,
     ) -> Result<Vec<Self>, ErrorResponse> {
         // Not necessary for the operation and correctness, but look up the user first and return
         // an error, if it does not exist at all, for a better user experience.
-        User::exists(data, user_id.to_string()).await?;
+        User::exists(user_id.to_string()).await?;
 
         let delete_value = |value: &Value| {
             if let Some(s) = value.as_str() {
@@ -531,7 +519,7 @@ ON CONFLICT(user_id, key) DO UPDATE SET value = $3"#,
                 )
                 .await?
         } else {
-            let mut txn = data.db.begin().await?;
+            let mut txn = DB::txn().await?;
 
             for value in req_data.values {
                 if delete_value(&value.value) {
@@ -565,7 +553,7 @@ ON CONFLICT(user_id, key) DO UPDATE SET value = $3"#,
                 "SELECT * FROM user_attr_values WHERE user_id = $1",
                 user_id
             )
-            .fetch_all(&data.db)
+            .fetch_all(DB::conn())
             .await?
         };
 
