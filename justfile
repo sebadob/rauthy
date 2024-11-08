@@ -266,6 +266,8 @@ test-postgres test="": test-backend-stop postgres-stop postgres-start
     ./target/debug/rauthy test &
     echo $! > {{ file_test_pid }}
 
+    sleep 1
+
     if cargo test {{ test }}; then
       echo "All SQLite tests successful"
       just test-backend-stop
