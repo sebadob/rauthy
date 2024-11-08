@@ -15,7 +15,7 @@ use rauthy_api_types::sessions::SessionState;
 use rauthy_common::constants::{
     APPLICATION_JSON, AUTH_HEADERS_ENABLE, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED,
     AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
-    AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, COOKIE_SESSION_FED_CM,
+    AUTH_HEADER_ROLES, AUTH_HEADER_USER, COOKIE_MFA, COOKIE_SESSION, COOKIE_SESSION_FED_CM,
     DEVICE_GRANT_CODE_LIFETIME, DEVICE_GRANT_POLL_INTERVAL, DEVICE_GRANT_RATE_LIMIT,
     EXPERIMENTAL_FED_CM_ENABLE, GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE,
     OPEN_USER_REG, SESSION_LIFETIME,
@@ -530,7 +530,7 @@ pub async fn post_device_auth(
     HttpResponse::Ok().json(resp)
 }
 
-/// POST for vertifying an OAuth 2.0 Device Authorization Grant flow
+/// POST for verifying an OAuth 2.0 Device Authorization Grant flow
 #[utoipa::path(
     post,
     path = "/oidc/device/verify",
@@ -580,11 +580,11 @@ pub async fn post_device_verify(
     }
 }
 
-// Logout HTML page
-//
-// Returns an HTML page which can be used for logging the user out. Invalidates the session and deletes
-// all possibly existing refresh tokens from the database. Does an automatic logout if the
-// `id_token_hint` is given.
+/// Logout HTML page
+///
+/// Returns an HTML page which can be used for logging the user out. Invalidates the session and deletes
+/// all possibly existing refresh tokens from the database. Does an automatic logout if the
+/// `id_token_hint` is given.
 #[utoipa::path(
     get,
     path = "/oidc/logout",
@@ -623,9 +623,9 @@ pub async fn get_logout(
         }
     };
 
-    return HttpResponse::build(StatusCode::OK)
+    HttpResponse::build(StatusCode::OK)
         .append_header(HEADER_HTML)
-        .body(body);
+        .body(body)
 }
 
 /// Send the logout confirmation
@@ -647,14 +647,16 @@ pub async fn post_logout(
     req_data: actix_web_validator::Query<LogoutRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let mut session = principal.get_session()?.clone();
+    let session = principal.get_session()?.clone();
     let cookie_fed_cm = ApiCookie::build_with_same_site(
         COOKIE_SESSION_FED_CM,
         Cow::from(&session.id),
         0,
         SameSite::None,
     );
-    let cookie = session.invalidate().await?;
+    let sid = session.id.clone();
+    let cookie = ApiCookie::build(COOKIE_SESSION, &sid, 0);
+    session.invalidate().await?;
 
     if req_data.post_logout_redirect_uri.is_some() {
         let state = if req_data.state.is_some() {
@@ -674,10 +676,10 @@ pub async fn post_logout(
             .finish());
     }
 
-    return Ok(HttpResponse::build(StatusCode::OK)
+    Ok(HttpResponse::build(StatusCode::OK)
         .cookie(cookie)
         .cookie(cookie_fed_cm)
-        .finish());
+        .finish())
 }
 
 /// Rotate JWKs
@@ -951,32 +953,6 @@ pub async fn post_token_introspect(
     }
 }
 
-// // TODO remove?
-// /// DEPRECATED
-// ///
-// /// This is an older endpoint for refreshing tokens manually. This is not being used anymore an will
-// /// be removed soon in favor of the `refresh_token` flow on the [token](post_token) endpoint.
-// #[utoipa::path(
-//     post,
-//     path = "/oidc/token/refresh",
-//     tag = "deprecated",
-//     request_body = RefreshTokenRequest,
-//     responses(
-//         (status = 200, description = "Ok", body = TokenSet),
-//         (status = 401, description = "Unauthorized", body = ErrorResponse),
-//         (status = 404, description = "NotFound", body = ErrorResponse),
-//     ),
-// )]
-// #[post("/oidc/token/refresh")]
-// pub async fn post_refresh_token(
-//     req_data: actix_web_validator::Json<RefreshTokenRequest>,
-//     data: web::Data<AppState>,
-// ) -> Result<HttpResponse, ErrorResponse> {
-//     oidc::validate_refresh_token(None, &req_data.refresh_token, &data)
-//         .await
-//         .map(|token_set| HttpResponse::Ok().json(token_set))
-// }
-
 /// DEPRECATED
 ///
 /// This is an older endpoint for validating tokens manually. This is not being used anymore an will
@@ -1129,7 +1105,7 @@ pub async fn get_well_known(data: web::Data<AppState>) -> Result<HttpResponse, E
         .insert_header((CONTENT_TYPE, APPLICATION_JSON))
         .insert_header((
             header::ACCESS_CONTROL_ALLOW_ORIGIN,
-            HeaderValue::from_str("*").unwrap(),
+            HeaderValue::from_static("*"),
         ))
         .body(wk))
 }
