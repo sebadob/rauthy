@@ -113,15 +113,15 @@
     async function invalidateSessions() {
         deletingSessions = true;
         let res = await deleteAllSessions();
-        let body = await res.json();
         if (res.ok) {
             redirectToLogin();
         } else {
+            let body = await res.json();
             err = body.message;
         }
 
         now = new Date();
-        deletingSessions = true;
+        deletingSessions = false;
     }
 </script>
 
