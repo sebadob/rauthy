@@ -1,6 +1,4 @@
-use crate::app_state::AppState;
 use crate::database::DB;
-use actix_web::web;
 use chrono::{DateTime, Utc};
 use hiqlite::{params, Param};
 use rauthy_common::is_hiqlite;

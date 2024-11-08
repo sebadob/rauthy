@@ -1,7 +1,5 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
-use actix_web::web;
 use chrono::{DateTime, Utc};
 use hiqlite::{params, Param};
 use rauthy_api_types::users::DeviceResponse;

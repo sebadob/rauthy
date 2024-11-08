@@ -80,10 +80,7 @@ impl Client {
     }
 
     // have less cloning
-    pub async fn create(
-        data: &web::Data<AppState>,
-        mut client_req: NewClientRequest,
-    ) -> Result<Self, ErrorResponse> {
+    pub async fn create(mut client_req: NewClientRequest) -> Result<Self, ErrorResponse> {
         let kid = if client_req.confidential {
             let (_cleartext, enc) = Self::generate_new_secret()?;
             client_req.secret = Some(enc);
@@ -282,7 +279,7 @@ VALUES ($1, $2, $3, $4)"#,
     }
 
     // Deletes a client
-    pub async fn delete(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn delete(&self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute("DELETE FROM clients WHERE id = $1", params!(&self.id))
@@ -316,7 +313,7 @@ VALUES ($1, $2, $3, $4)"#,
     }
 
     // Returns a client by id without its secret.
-    pub async fn find(data: &web::Data<AppState>, id: String) -> Result<Self, ErrorResponse> {
+    pub async fn find(id: String) -> Result<Self, ErrorResponse> {
         let client = DB::client();
         if let Some(slf) = client.get(Cache::App, Self::cache_idx(&id)).await? {
             return Ok(slf);
@@ -340,7 +337,7 @@ VALUES ($1, $2, $3, $4)"#,
         Ok(slf)
     }
 
-    pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let clients = if is_hiqlite() {
             DB::client()
                 .query_as("SELECT * FROM clients", params!())
@@ -358,12 +355,9 @@ VALUES ($1, $2, $3, $4)"#,
     /// If allowed, it will dynamically build an ephemeral client and cache it, it the client_id
     /// is a URL. Otherwise, it will do a classic fetch from the database.
     /// This function should be used in places where we would possibly accept an ephemeral client.
-    pub async fn find_maybe_ephemeral(
-        data: &web::Data<AppState>,
-        id: String,
-    ) -> Result<Self, ErrorResponse> {
+    pub async fn find_maybe_ephemeral(id: String) -> Result<Self, ErrorResponse> {
         if !*ENABLE_EPHEMERAL_CLIENTS || Url::from_str(&id).is_err() {
-            return Self::find(data, id).await;
+            return Self::find(id).await;
         }
 
         let client = DB::client();
@@ -482,7 +476,7 @@ WHERE id = $20"#,
         Ok(())
     }
 
-    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute(
@@ -569,7 +563,7 @@ WHERE id = $20"#,
             .unwrap_or_else(|| "client_secret_basic".to_string());
 
         let mut new_client = Self::try_from_dyn_reg(client_req)?;
-        let current = Self::find(data, client_dyn.id.clone()).await?;
+        let current = Self::find(client_dyn.id.clone()).await?;
         if !current.is_dynamic() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,

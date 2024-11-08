@@ -1,6 +1,4 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
-use actix_web::web;
 use hiqlite::{params, Param};
 use rauthy_api_types::users::WebIdResponse;
 use rauthy_common::constants::{CACHE_TTL_USER, PUB_URL_WITH_SCHEME};

@@ -1,6 +1,4 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
-use actix_web::web;
 use chrono::Utc;
 use hiqlite::{params, Param};
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_APP_VERSION, RAUTHY_VERSION};

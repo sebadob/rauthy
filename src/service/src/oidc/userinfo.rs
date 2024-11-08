@@ -65,7 +65,7 @@ pub async fn get_userinfo(
         // skip this check if the client is ephemeral
         if !(claims.custom.azp.starts_with("http://") || claims.custom.azp.starts_with("https://"))
         {
-            let client = Client::find(data, claims.custom.azp).await.map_err(|_| {
+            let client = Client::find(claims.custom.azp).await.map_err(|_| {
                 ErrorResponse::new(
                     ErrorResponseType::WWWAuthenticate("client-not-found".to_string()),
                     "The client has not been found".to_string(),

@@ -96,7 +96,7 @@ pub async fn post_authorize(
     }
 
     // client validations
-    let client = Client::find_maybe_ephemeral(data, req_data.client_id).await?;
+    let client = Client::find_maybe_ephemeral(req_data.client_id).await?;
     client.validate_mfa(&user).inspect_err(|_| {
         // in this case, we do not want to add a login delay
         // the user password was correct, we only need a passkey being added to the account

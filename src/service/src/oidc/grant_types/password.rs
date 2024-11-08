@@ -38,7 +38,7 @@ pub async fn grant_type_password(
     let email = req_data.username.as_ref().unwrap();
     let password = req_data.password.unwrap();
 
-    let client = Client::find(data, client_id).await?;
+    let client = Client::find(client_id).await?;
     let header_origin = client.validate_origin(&req, &data.listen_scheme, &data.public_url)?;
     if client.confidential {
         let secret = client_secret.ok_or_else(|| {

@@ -30,7 +30,7 @@ pub async fn validate_auth_req_param(
     code_challenge_method: &Option<String>,
 ) -> Result<(Client, Option<(HeaderName, HeaderValue)>), ErrorResponse> {
     // client exists
-    let client = Client::find_maybe_ephemeral(data, String::from(client_id)).await?;
+    let client = Client::find_maybe_ephemeral(String::from(client_id)).await?;
 
     // allowed origin
     let header = client.validate_origin(req, &data.listen_scheme, &data.public_url)?;
@@ -118,7 +118,7 @@ pub async fn validate_refresh_token(
     let client = if let Some(c) = client_opt {
         c
     } else {
-        Client::find(data, claims.custom.azp.clone()).await?
+        Client::find(claims.custom.azp.clone()).await?
     };
     if client.id != claims.custom.azp {
         return Err(ErrorResponse::new(

@@ -39,7 +39,7 @@ pub async fn get_logout_html(
     if logout_request.post_logout_redirect_uri.is_some() {
         // unwrap is safe since the token is valid already
         let client_id = claims.custom.azp;
-        let client = Client::find(data, client_id).await?;
+        let client = Client::find(client_id).await?;
         if client.post_logout_redirect_uris.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,

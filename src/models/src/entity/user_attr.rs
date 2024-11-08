@@ -1,8 +1,7 @@
-use crate::app_state::{AppState, DbTxn};
+use crate::app_state::DbTxn;
 use crate::database::{Cache, DB};
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
-use actix_web::web;
 use hiqlite::{params, Param, Params};
 use rauthy_api_types::users::{
     UserAttrConfigRequest, UserAttrConfigValueResponse, UserAttrValueResponse,

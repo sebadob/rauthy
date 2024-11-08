@@ -1,20 +1,12 @@
-use actix_web::web;
 use rauthy_api_types::clients::{ClientSecretResponse, UpdateClientRequest};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 
-// Updates a client.<br>
-// A client secret will be automatically generated if the
-// [UpdateClientRequest](crate::models::request::UpdateClientRequest) is set to be confidential
-// while the currently existing client does not have it. It will be skipped, if it was
-// `confidential` already.
 pub async fn update_client(
-    data: &web::Data<AppState>,
     id: String,
     client_req: UpdateClientRequest,
 ) -> Result<Client, ErrorResponse> {
-    let mut client = Client::find(data, id).await?;
+    let mut client = Client::find(id).await?;
     if client.id != client_req.id {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -58,16 +50,13 @@ pub async fn update_client(
     client.contacts = client_req.contacts.map(|c| c.join(","));
     client.client_uri = client_req.client_uri;
 
-    client.save(data).await?;
+    client.save().await?;
     Ok(client)
 }
 
 /// Returns the clients secret in cleartext.
-pub async fn get_client_secret(
-    id: String,
-    data: &web::Data<AppState>,
-) -> Result<ClientSecretResponse, ErrorResponse> {
-    let client = Client::find(data, id).await?;
+pub async fn get_client_secret(id: String) -> Result<ClientSecretResponse, ErrorResponse> {
+    let client = Client::find(id).await?;
 
     if !client.confidential {
         return Err(ErrorResponse::new(
@@ -84,18 +73,13 @@ pub async fn get_client_secret(
     })
 }
 
-/// Generates a new client secret and returns it then as clear text wrapped in a
-/// [ClientSecretResponse](crate::models::response::ClientSecretResponse)
-pub async fn generate_new_secret(
-    id: String,
-    data: &web::Data<AppState>,
-) -> Result<ClientSecretResponse, ErrorResponse> {
-    let mut client = Client::find(data, id).await?;
+pub async fn generate_new_secret(id: String) -> Result<ClientSecretResponse, ErrorResponse> {
+    let mut client = Client::find(id).await?;
     let (clear, enc) = Client::generate_new_secret()?;
 
     client.confidential = true;
     client.secret = Some(enc);
-    client.save(data).await?;
+    client.save().await?;
 
     Ok(ClientSecretResponse {
         id: client.id,

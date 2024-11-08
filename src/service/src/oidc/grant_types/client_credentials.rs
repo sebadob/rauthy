@@ -24,7 +24,7 @@ pub async fn grant_type_credentials(
     }
 
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
-    let client = Client::find(data, client_id).await?;
+    let client = Client::find(client_id).await?;
     if !client.confidential {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,

@@ -223,10 +223,7 @@ impl<'r> From<hiqlite::Row<'r>> for AuthProvider {
 }
 
 impl AuthProvider {
-    pub async fn create(
-        data: &web::Data<AppState>,
-        payload: ProviderRequest,
-    ) -> Result<Self, ErrorResponse> {
+    pub async fn create(payload: ProviderRequest) -> Result<Self, ErrorResponse> {
         let mut slf = Self::try_from_id_req(new_store_id(), payload)?;
         let typ = slf.typ.as_str();
 
@@ -297,7 +294,7 @@ VALUES
             slf
         };
 
-        Self::invalidate_cache_all(data).await?;
+        Self::invalidate_cache_all().await?;
 
         DB::client()
             .put(Cache::App, Self::cache_idx(&slf.id), &slf, CACHE_TTL_APP)
@@ -306,7 +303,7 @@ VALUES
         Ok(slf)
     }
 
-    pub async fn find(data: &web::Data<AppState>, id: &str) -> Result<Self, ErrorResponse> {
+    pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let client = DB::client();
         if let Some(slf) = client.get(Cache::App, Self::cache_idx(id)).await? {
             return Ok(slf);
@@ -329,7 +326,7 @@ VALUES
         Ok(slf)
     }
 
-    pub async fn find_all(data: &web::Data<AppState>) -> Result<Vec<Self>, ErrorResponse> {
+    pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let client = DB::client();
         if let Some(res) = client.get(Cache::App, Self::cache_idx("all")).await? {
             return Ok(res);
@@ -354,7 +351,6 @@ VALUES
     }
 
     pub async fn find_linked_users(
-        data: &web::Data<AppState>,
         id: &str,
     ) -> Result<Vec<ProviderLinkedUserResponse>, ErrorResponse> {
         let users = if is_hiqlite() {
@@ -377,7 +373,7 @@ VALUES
         Ok(users)
     }
 
-    pub async fn delete(data: &web::Data<AppState>, id: &str) -> Result<(), ErrorResponse> {
+    pub async fn delete(id: &str) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
                 .execute("DELETE FROM auth_providers WHERE id = $1", params!(id))
@@ -388,21 +384,17 @@ VALUES
                 .await?;
         }
 
-        Self::invalidate_cache_all(data).await?;
+        Self::invalidate_cache_all().await?;
         DB::client().delete(Cache::App, Self::cache_idx(id)).await?;
 
         Ok(())
     }
 
-    pub async fn update(
-        data: &web::Data<AppState>,
-        id: String,
-        payload: ProviderRequest,
-    ) -> Result<(), ErrorResponse> {
-        Self::try_from_id_req(id, payload)?.save(data).await
+    pub async fn update(id: String, payload: ProviderRequest) -> Result<(), ErrorResponse> {
+        Self::try_from_id_req(id, payload)?.save().await
     }
 
-    pub async fn save(&self, data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
         let typ = self.typ.as_str();
 
         if is_hiqlite() {
@@ -469,7 +461,7 @@ WHERE id = $18"#,
             .await?;
         }
 
-        Self::invalidate_cache_all(data).await?;
+        Self::invalidate_cache_all().await?;
         DB::client()
             .put(Cache::App, Self::cache_idx(&self.id), self, CACHE_TTL_APP)
             .await?;
@@ -554,14 +546,14 @@ impl AuthProvider {
         })
     }
 
-    async fn invalidate_cache_all(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    async fn invalidate_cache_all() -> Result<(), ErrorResponse> {
         DB::client()
             .delete(Cache::App, Self::cache_idx("all"))
             .await?;
 
         // Directly update the template cache preemptively.
         // This is needed all the time anyway.
-        AuthProviderTemplate::update_cache(data).await?;
+        AuthProviderTemplate::update_cache().await?;
 
         Ok(())
     }
@@ -767,12 +759,11 @@ impl AuthProviderCallback {
 
 impl AuthProviderCallback {
     /// returns (encrypted cookie, xsrf token, location header, optional allowed origins)
-    pub async fn login_start(
-        data: &web::Data<AppState>,
+    pub async fn login_start<'a>(
         payload: ProviderLoginRequest,
-    ) -> Result<(Cookie, String, HeaderValue), ErrorResponse> {
-        let provider = AuthProvider::find(data, &payload.provider_id).await?;
-        let client = Client::find(data, payload.client_id).await?;
+    ) -> Result<(Cookie<'a>, String, HeaderValue), ErrorResponse> {
+        let provider = AuthProvider::find(&payload.provider_id).await?;
+        let client = Client::find(payload.client_id).await?;
 
         let slf = Self {
             callback_id: secure_random_alnum(32),
@@ -885,7 +876,7 @@ impl AuthProviderCallback {
         debug!("callback pkce verifier is valid");
 
         // request is valid -> fetch token for the user
-        let provider = AuthProvider::find(data, &slf.provider_id).await?;
+        let provider = AuthProvider::find(&slf.provider_id).await?;
         let client = AuthProvider::build_client(
             provider.allow_insecure_requests,
             provider.root_pem.as_deref(),
@@ -998,7 +989,7 @@ impl AuthProviderCallback {
         }
 
         // validate client values
-        let client = Client::find_maybe_ephemeral(data, slf.req_client_id).await?;
+        let client = Client::find_maybe_ephemeral(slf.req_client_id).await?;
         let force_mfa = client.force_mfa();
         if force_mfa {
             if provider_mfa_login == ProviderMfaLogin::No && !user.has_webauthn_enabled() {
@@ -1091,15 +1082,13 @@ pub struct AuthProviderTemplate {
 }
 
 impl AuthProviderTemplate {
-    pub async fn get_all_json_template(
-        data: &web::Data<AppState>,
-    ) -> Result<Option<String>, ErrorResponse> {
+    pub async fn get_all_json_template() -> Result<Option<String>, ErrorResponse> {
         let client = DB::client();
         if let Some(slf) = client.get(Cache::App, IDX_AUTH_PROVIDER_TEMPLATE).await? {
             return Ok(slf);
         }
 
-        let providers = AuthProvider::find_all(data)
+        let providers = AuthProvider::find_all()
             .await?
             .into_iter()
             // We don't want to even show disabled providers
@@ -1130,9 +1119,9 @@ impl AuthProviderTemplate {
         Ok(())
     }
 
-    async fn update_cache(data: &web::Data<AppState>) -> Result<(), ErrorResponse> {
+    async fn update_cache() -> Result<(), ErrorResponse> {
         Self::invalidate_cache().await?;
-        Self::get_all_json_template(data).await?;
+        Self::get_all_json_template().await?;
         Ok(())
     }
 }

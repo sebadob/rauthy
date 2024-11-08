@@ -1,7 +1,6 @@
 use crate::api_cookie::ApiCookie;
-use crate::app_state::AppState;
 use crate::database::DB;
-use actix_web::{web, HttpRequest};
+use actix_web::HttpRequest;
 use hiqlite::{params, Param};
 use rauthy_common::constants::{PASSWORD_RESET_COOKIE_BINDING, PWD_CSRF_HEADER, PWD_RESET_COOKIE};
 use rauthy_common::is_hiqlite;

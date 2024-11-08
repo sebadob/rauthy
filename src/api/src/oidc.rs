@@ -142,7 +142,7 @@ pub async fn get_authorize(
         return Ok(ErrorHtml::response(body, status));
     }
 
-    let auth_providers_json = AuthProviderTemplate::get_all_json_template(&data).await?;
+    let auth_providers_json = AuthProviderTemplate::get_all_json_template().await?;
     let tpl_data = Some(format!(
         "{}\n{}\n{}",
         client.name.unwrap_or_default(),
@@ -401,7 +401,6 @@ pub async fn get_cert_by_kid(kid: web::Path<String>) -> Result<HttpResponse, Err
 )]
 #[post("/oidc/device")]
 pub async fn post_device_auth(
-    data: web::Data<AppState>,
     req: HttpRequest,
     payload: actix_web_validator::Form<DeviceGrantRequest>,
 ) -> HttpResponse {
@@ -454,7 +453,7 @@ pub async fn post_device_auth(
 
     // find and validate the client
     let payload = payload.into_inner();
-    let client = match Client::find(&data, payload.client_id).await {
+    let client = match Client::find(payload.client_id).await {
         Ok(client) => client,
         Err(_) => {
             return HttpResponse::NotFound().json(OAuth2ErrorResponse {

@@ -107,7 +107,7 @@ pub async fn grant_type_device_code(
             }
         };
 
-        let client = match Client::find(data, code.client_id.clone()).await {
+        let client = match Client::find(code.client_id.clone()).await {
             Ok(client) => client,
             Err(err) => {
                 // at this point, this should never fail - only if the DB went down in the meantime

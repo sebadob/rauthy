@@ -93,7 +93,7 @@ pub async fn get_fed_cm_client_meta(
         ));
     }
 
-    let client = Client::find_maybe_ephemeral(&data, params.client_id).await?;
+    let client = Client::find_maybe_ephemeral(params.client_id).await?;
     if !client.enabled {
         return Err(ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("client-disabled".to_string()),
@@ -253,7 +253,7 @@ pub async fn post_fed_cm_token(
     let payload = payload.into_inner();
 
     // find and check the client
-    let client = match Client::find_maybe_ephemeral(&data, payload.client_id).await {
+    let client = match Client::find_maybe_ephemeral(payload.client_id).await {
         Ok(c) => c,
         Err(err) => {
             error!("Error looking up maybe ephemeral client: {:?}", err);

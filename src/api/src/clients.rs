@@ -38,13 +38,10 @@ use tracing::debug;
 )]
 #[tracing::instrument(skip_all)]
 #[get("/clients")]
-pub async fn get_clients(
-    data: web::Data<AppState>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_clients(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Read)?;
 
-    let clients = Client::find_all(&data).await?;
+    let clients = Client::find_all().await?;
 
     let mut res = Vec::new();
     clients
@@ -73,12 +70,11 @@ pub async fn get_clients(
 #[get("/clients/{id}")]
 pub async fn get_client_by_id(
     path: web::Path<String>,
-    data: web::Data<AppState>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Read)?;
 
-    Client::find(&data, path.into_inner())
+    Client::find(path.into_inner())
         .await
         .map(|c| HttpResponse::Ok().json(ClientResponse::from(c)))
 }
@@ -104,13 +100,12 @@ pub async fn get_client_by_id(
 )]
 #[post("/clients/{id}/secret")]
 pub async fn get_client_secret(
-    data: web::Data<AppState>,
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Read)?;
 
-    client::get_client_secret(path.into_inner(), &data)
+    client::get_client_secret(path.into_inner())
         .await
         .map(|c| HttpResponse::Ok().json(c))
 }
@@ -135,12 +130,11 @@ pub async fn get_client_secret(
 #[post("/clients")]
 pub async fn post_clients(
     client: actix_web_validator::Json<NewClientRequest>,
-    data: web::Data<AppState>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Create)?;
 
-    let client = Client::create(&data, client.into_inner()).await?;
+    let client = Client::create(client.into_inner()).await?;
     Ok(HttpResponse::Ok().json(ClientResponse::from(client)))
 }
 
@@ -220,7 +214,7 @@ pub async fn get_clients_dyn(
     let client_dyn = ClientDyn::find(id.clone()).await?;
     client_dyn.validate_token(&bearer)?;
 
-    let client = Client::find(&data, id).await?;
+    let client = Client::find(id).await?;
     let resp = client.into_dynamic_client_response(&data, client_dyn, false)?;
     Ok(HttpResponse::Ok().json(resp))
 }
@@ -277,14 +271,13 @@ pub async fn put_clients_dyn(
 )]
 #[put("/clients/{id}")]
 pub async fn put_clients(
-    data: web::Data<AppState>,
     client: actix_web_validator::Json<UpdateClientRequest>,
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Update)?;
 
-    client::update_client(&data, path.into_inner(), client.into_inner())
+    client::update_client(path.into_inner(), client.into_inner())
         .await
         .map(|r| HttpResponse::Ok().json(ClientResponse::from(r)))
 }
@@ -517,13 +510,12 @@ pub async fn delete_client_logo(
 )]
 #[put("/clients/{id}/secret")]
 pub async fn put_generate_client_secret(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
 
-    client::generate_new_secret(id.into_inner(), &data)
+    client::generate_new_secret(id.into_inner())
         .await
         .map(|r| HttpResponse::Ok().json(r))
 }
@@ -546,7 +538,6 @@ pub async fn put_generate_client_secret(
 )]
 #[delete("/clients/{id}")]
 pub async fn delete_client(
-    data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -561,7 +552,7 @@ pub async fn delete_client(
         ));
     }
 
-    let client = Client::find(&data, id).await?;
-    client.delete(&data).await?;
+    let client = Client::find(id).await?;
+    client.delete().await?;
     Ok(HttpResponse::Ok().finish())
 }

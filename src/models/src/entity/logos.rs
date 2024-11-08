@@ -1,4 +1,3 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use actix_web::web;
 use hiqlite::{params, Param, Row};

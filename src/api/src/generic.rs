@@ -119,13 +119,10 @@ pub async fn post_i18n(
 }
 
 #[get("/account")]
-pub async fn get_account_html(
-    data: web::Data<AppState>,
-    req: HttpRequest,
-) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_account_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     let colors = ColorEntity::find_rauthy().await?;
     let lang = Language::try_from(&req).unwrap_or_default();
-    let providers = AuthProviderTemplate::get_all_json_template(&data).await?;
+    let providers = AuthProviderTemplate::get_all_json_template().await?;
     let body = AccountHtml::build(&colors, &lang, providers);
 
     Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))

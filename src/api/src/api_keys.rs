@@ -4,7 +4,6 @@ use actix_web_validator::Json;
 use mime_guess::mime::TEXT_PLAIN_UTF_8;
 use rauthy_api_types::api_keys::{ApiKeyRequest, ApiKeyResponse, ApiKeysResponse};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::ApiKeyEntity;
 
 /// Returns all API Keys

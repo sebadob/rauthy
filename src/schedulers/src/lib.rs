@@ -25,7 +25,7 @@ pub async fn spawn(data: web::Data<AppState>) {
     // s3_backup_init_test().await;
     // tokio::spawn(backup::db_backup(data.db.clone()));
 
-    tokio::spawn(dyn_clients::dyn_client_cleanup(data.clone()));
+    tokio::spawn(dyn_clients::dyn_client_cleanup());
     tokio::spawn(events::events_cleanup(data.db.clone()));
     tokio::spawn(devices::devices_cleanup(data.db.clone()));
     tokio::spawn(magic_links::magic_link_cleanup(data.db.clone()));

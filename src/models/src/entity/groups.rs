@@ -1,7 +1,5 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::users::User;
-use actix_web::web;
 use hiqlite::{params, Param, Params};
 use rauthy_api_types::groups::NewGroupRequest;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_GROUPS};

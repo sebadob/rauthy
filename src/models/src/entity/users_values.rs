@@ -1,6 +1,4 @@
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
-use actix_web::web;
 use hiqlite::{params, Param};
 use jwt_simple::prelude::{Deserialize, Serialize};
 use rauthy_api_types::users::{UserValuesRequest, UserValuesResponse};

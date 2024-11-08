@@ -1,5 +1,4 @@
 use crate::api_cookie::ApiCookie;
-use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::users::User;

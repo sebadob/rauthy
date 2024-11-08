@@ -1,6 +1,4 @@
-use actix_web::web;
 use chrono::Utc;
-use rauthy_models::app_state::AppState;
 use rauthy_models::database::DB;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
@@ -9,7 +7,6 @@ use std::env;
 use std::time::Duration;
 use tracing::{debug, error, info};
 
-// Checks for expired users
 pub async fn user_expiry_checker() {
     let secs = env::var("SCHED_USER_EXP_MINS")
         .unwrap_or_else(|_| "60".to_string())
