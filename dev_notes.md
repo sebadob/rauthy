@@ -7,8 +7,6 @@
 ### After finished Hiqlite migration
 
 - check changed session invalidation functions
-- fix `DbType::from_str`
-- add an index (signature, created_at) to `jwks`
 
 ## Documentation TODO
 
