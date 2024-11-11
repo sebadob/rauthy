@@ -1,6 +1,9 @@
 use crate::sleep_schedule_next;
 use actix_web::web;
 use chrono::Utc;
+use hiqlite::{params, Param};
+use rauthy_common::is_hiqlite;
+use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::database::DB;
 use rauthy_models::email::send_pwd_reset_info;
@@ -33,20 +36,29 @@ pub async fn password_expiry_checker(data: web::Data<AppState>) {
         let lower = now.add(chrono::Duration::days(9)).timestamp();
         let upper = now.add(chrono::Duration::days(10)).timestamp();
 
-        match User::find_all().await {
-            Ok(users) => {
-                // TODO convert into proper query directly after hiqlite migration
-                let users_to_notify = users
-                    .into_iter()
-                    .filter(|user| {
-                        if let Some(exp) = user.password_expires {
-                            exp <= upper && exp > lower
-                        } else {
-                            false
-                        }
-                    })
-                    .collect::<Vec<User>>();
+        let expiring_users: Result<Vec<User>, ErrorResponse> = if is_hiqlite() {
+            DB::client()
+                .query_as(
+                    "SELECT * FROM users WHERE password_expires <= $1 AND password_expires > $2",
+                    params!(upper, lower),
+                )
+                .await
+                .map_err(ErrorResponse::from)
+        } else {
+            sqlx::query_as!(
+                User,
+                "SELECT * FROM users WHERE password_expires <= $1 AND password_expires > $2",
+                upper,
+                lower
+            )
+            .fetch_all(DB::conn())
+            .await
+            .map_err(ErrorResponse::from)
+        };
 
+        match expiring_users {
+            // match User::find_all().await {
+            Ok(users_to_notify) => {
                 for user in users_to_notify {
                     send_pwd_reset_info(&data, &user).await;
                     debug!("User {} notified about password expiry", user.email);

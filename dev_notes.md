@@ -2,12 +2,6 @@
 
 ## CURRENT WORK
 
-- create proper direct query for users in `src/schedulers/src/passwords.rs`
-
-### After finished Hiqlite migration
-
-- check changed session invalidation functions
-
 ## Documentation TODO
 
 - breaking: only a single container from now on
