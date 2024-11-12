@@ -5,6 +5,7 @@
 ## Documentation TODO
 
 - breaking: only a single container from now on
+- breaking: add `USER_REG_OPEN_REDIRECT` to the book
 - `HealthResponse` response has been changed with Hiqlite -> breaking change
 - database backup config has been changed slightly
 - restore from backup has changed slightly
