@@ -79,6 +79,9 @@ CREATE TABLE clients
     contacts                  TEXT
 ) STRICT;
 
+CREATE INDEX clients_client_uri_index
+    ON clients (client_uri);
+
 CREATE TABLE client_logos
 (
     client_id    TEXT NOT NULL

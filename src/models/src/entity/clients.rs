@@ -27,7 +27,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::CONTENT_TYPE;
 use reqwest::{tls, Url};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use sqlx::{FromRow, Row};
 use std::str::FromStr;
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -304,6 +304,7 @@ VALUES ($1, $2, $3, $4)"#,
         DB::client()
             .delete(Cache::App, Self::cache_idx(&self.id))
             .await?;
+
         Ok(())
     }
 
@@ -349,6 +350,30 @@ VALUES ($1, $2, $3, $4)"#,
         };
 
         Ok(clients)
+    }
+
+    /// Returns all registered `client_uri`s to be used during `USER_REG_OPEN_REDIRECT` checks.
+    pub async fn find_all_client_uris() -> Result<Vec<String>, ErrorResponse> {
+        let uris = if is_hiqlite() {
+            DB::client()
+                .query_raw(
+                    "SELECT client_uri FROM clients WHERE client_uri IS NOT NULL",
+                    params!(),
+                )
+                .await?
+                .into_iter()
+                .map(|mut r| r.get::<String>("client_uri"))
+                .collect::<Vec<_>>()
+        } else {
+            sqlx::query("SELECT client_uri FROM clients WHERE client_uri IS NOT NULL")
+                .fetch_all(DB::conn())
+                .await?
+                .into_iter()
+                .map(|r| r.get::<String, _>("client_uri"))
+                .collect::<Vec<_>>()
+        };
+
+        Ok(uris)
     }
 
     /// Accepts either a pre-registered client_id or a URL as such.

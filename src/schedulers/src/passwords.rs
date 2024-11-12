@@ -17,6 +17,7 @@ use tracing::{debug, error};
 pub async fn password_expiry_checker(data: web::Data<AppState>) {
     // sec min hour day_of_month month day_of_week year
     // TODO convert to interval that runs multiple times a day + keep track of sent warnings?
+    // -> would require persisting sent emails and other things though
     let schedule = cron::Schedule::from_str("0 30 4 * * * *").unwrap();
 
     loop {
@@ -57,7 +58,6 @@ pub async fn password_expiry_checker(data: web::Data<AppState>) {
         };
 
         match expiring_users {
-            // match User::find_all().await {
             Ok(users_to_notify) => {
                 for user in users_to_notify {
                     send_pwd_reset_info(&data, &user).await;
