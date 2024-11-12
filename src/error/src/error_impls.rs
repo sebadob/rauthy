@@ -16,6 +16,7 @@ use serde_json_path::ParseError;
 use spow::pow::PowError;
 use std::borrow::Cow;
 use std::string::FromUtf8Error;
+use svg_hush::FError;
 use time::OffsetDateTime;
 use tracing::{debug, error, trace};
 
@@ -470,6 +471,16 @@ impl From<ruma::client::Error<reqwest::Error, ruma::api::client::Error>> for Err
         ErrorResponse::new(
             ErrorResponseType::Connection,
             format!("matrix error: {:?}", value),
+        )
+    }
+}
+
+impl From<svg_hush::FError> for ErrorResponse {
+    fn from(value: FError) -> Self {
+        trace!("{:?}", value);
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("svg sanitization error: {:?}", value),
         )
     }
 }

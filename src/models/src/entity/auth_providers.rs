@@ -1077,8 +1077,6 @@ impl AuthProviderCallback {
 pub struct AuthProviderTemplate {
     pub id: String,
     pub name: String,
-    // pub logo: Option<Vec<u8>>,
-    // pub logo_type: Option<String>,
 }
 
 impl AuthProviderTemplate {
