@@ -70,7 +70,7 @@ pub struct DynamicClientRequest {
     #[validate(custom(function = "validate_vec_grant_types"))]
     pub grant_types: Vec<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
+    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{2,128}"))]
     pub client_name: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
@@ -133,7 +133,7 @@ pub struct EphemeralClientRequest {
     ))]
     pub client_id: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
+    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{2,128}"))]
     pub client_name: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
@@ -173,7 +173,7 @@ pub struct NewClientRequest {
     #[serde(skip_deserializing)]
     pub secret: Option<Vec<u8>>,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
+    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{2,128}"))]
     pub name: Option<String>,
     /// Validation: bool
     pub confidential: bool,
@@ -194,7 +194,7 @@ pub struct UpdateClientRequest {
     ))]
     pub id: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
+    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{2,128}"))]
     pub name: Option<String>,
     pub confidential: bool,
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`

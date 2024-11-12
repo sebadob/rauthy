@@ -158,10 +158,10 @@ struct NewUserRegistrationRequest {
     #[validate(email)]
     email: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{1,32}"))]
+    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{1,32}"))]
     family_name: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{1,32}"))]
+    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{1,32}"))]
     given_name: String,
     /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]
