@@ -96,6 +96,7 @@ serde_with = { version = "3.8.1", features = ["macros"] }
 spow = { version = "0.4", features = ["server"] }
 sqlx = { version = "0.8.2", features = ["macros", "migrate", "postgres", "runtime-tokio", "sqlite", "tls-rustls", "uuid"] }
 strum = { version = "0.26.3", features = ["derive"] }
+svg-hush = "0.9.4"
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
 tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "tracing"] }

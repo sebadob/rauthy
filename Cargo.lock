@@ -1719,6 +1719,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
 
 [[package]]
+name = "data-url"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c297a1c74b71ae29df00c3e22dd9534821d60eb9af5a0192823fa2acea70c2a"
+
+[[package]]
 name = "date_header"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4219,6 +4225,7 @@ dependencies = [
  "serde_json_path",
  "spow",
  "sqlx",
+ "svg-hush",
  "time",
  "tokio",
  "tokio-test",
@@ -4339,6 +4346,7 @@ dependencies = [
  "spow",
  "sqlx",
  "strum",
+ "svg-hush",
  "time",
  "tokio",
  "tokio-test",
@@ -5804,6 +5812,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "svg-hush"
+version = "0.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f755b9992346207ee132274476f9803953c3a9ba287b8cc899aa9aa200c2f4d"
+dependencies = [
+ "base64 0.13.1",
+ "data-url",
+ "once_cell",
+ "quick-error",
+ "url",
+ "xml-rs",
+]
+
+[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7031,6 +7053,12 @@ dependencies = [
  "thiserror",
  "time",
 ]
+
+[[package]]
+name = "xml-rs"
+version = "0.8.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af310deaae937e48a26602b730250b4949e125f468f11e6990be3e5304ddd96f"
 
 [[package]]
 name = "yansi"

@@ -2,7 +2,7 @@ use crate::database::{Cache, DB};
 use actix_web::web;
 use hiqlite::{params, Param, Row};
 use image::imageops::FilterType;
-use image::ImageFormat;
+use image::{EncodableLayout, ImageFormat};
 use jwt_simple::prelude::{Deserialize, Serialize};
 use rauthy_common::constants::{
     CACHE_TTL_APP, CONTENT_TYPE_WEBP, IDX_AUTH_PROVIDER_LOGO, IDX_CLIENT_LOGO,
@@ -11,6 +11,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use sqlx::{query, query_as};
 use std::io::Cursor;
+use svg_hush::data_url_filter;
 use tracing::debug;
 
 // The default height a client logo will be resized to
@@ -199,12 +200,18 @@ impl Logo {
     ) -> Result<(), ErrorResponse> {
         Self::delete(&id, typ).await?;
 
+        // sanitize all SVGs, even though they can only be uploaded by an admin
+        let mut filter = svg_hush::Filter::new();
+        filter.set_data_url_filter(data_url_filter::allow_standard_images);
+        let mut sanitized = Vec::with_capacity(logo.len());
+        filter.filter(&mut logo.as_bytes(), &mut sanitized)?;
+
         // SVG's don't have a resolution, save them as they are
         let slf = Self {
             id,
             res: LogoRes::Svg,
             content_type,
-            data: logo,
+            data: sanitized,
         };
         slf.upsert_self(typ, true).await
     }
