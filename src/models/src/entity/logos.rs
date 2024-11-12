@@ -194,7 +194,7 @@ impl Logo {
 
     async fn upsert_svg(
         id: String,
-        logo: Vec<u8>,
+        mut logo: Vec<u8>,
         content_type: String,
         typ: &LogoType,
     ) -> Result<(), ErrorResponse> {
@@ -205,7 +205,7 @@ impl Logo {
             id,
             res: LogoRes::Svg,
             content_type,
-            data: Self::sanitize_svg(&mut logo.as_bytes())?,
+            data: Self::sanitize_svg(logo.as_mut_slice())?,
         };
         slf.upsert_self(typ, true).await
     }
