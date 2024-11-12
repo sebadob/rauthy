@@ -16,13 +16,14 @@ use rauthy_api_types::users::{
 use rauthy_common::constants::{
     COOKIE_MFA, ENABLE_WEB_ID, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, OPEN_USER_REG,
     PWD_CSRF_HEADER, PWD_RESET_COOKIE, SSP_THRESHOLD, TEXT_TURTLE, USER_REG_DOMAIN_BLACKLIST,
-    USER_REG_DOMAIN_RESTRICTION,
+    USER_REG_DOMAIN_RESTRICTION, USER_REG_OPEN_REDIRECT,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::devices::DeviceEntity;
@@ -322,6 +323,23 @@ pub async fn post_users_register(
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "Domain is blacklisted",
+                ));
+            }
+        }
+    }
+    if let Some(redirect_uri) = &req_data.redirect_uri {
+        if !*USER_REG_OPEN_REDIRECT {
+            let mut allow = false;
+            for uri in Client::find_all_client_uris().await? {
+                if uri.starts_with(redirect_uri) {
+                    allow = true;
+                    break;
+                }
+            }
+            if !allow {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "given `redirect_uri` not allowed",
                 ));
             }
         }

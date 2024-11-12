@@ -389,6 +389,10 @@ lazy_static! {
             })
             .collect()
         );
+    pub static ref USER_REG_OPEN_REDIRECT: bool = env::var("USER_REG_DOMAIN_BLACKLIST")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .expect("Cannot parse USER_REG_OPEN_REDIRECT to bool");
 
     pub static ref PEER_IP_HEADER_NAME: Option<String> = env::var("PEER_IP_HEADER_NAME").ok();
 
