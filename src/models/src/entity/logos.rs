@@ -200,18 +200,12 @@ impl Logo {
     ) -> Result<(), ErrorResponse> {
         Self::delete(&id, typ).await?;
 
-        // sanitize all SVGs, even though they can only be uploaded by an admin
-        let mut filter = svg_hush::Filter::new();
-        filter.set_data_url_filter(data_url_filter::allow_standard_images);
-        let mut sanitized = Vec::with_capacity(logo.len());
-        filter.filter(&mut logo.as_bytes(), &mut sanitized)?;
-
         // SVG's don't have a resolution, save them as they are
         let slf = Self {
             id,
             res: LogoRes::Svg,
             content_type,
-            data: sanitized,
+            data: Self::sanitize_svg(&mut logo.as_bytes())?,
         };
         slf.upsert_self(typ, true).await
     }
@@ -458,5 +452,15 @@ impl Logo {
             LogoType::Client => format!("{}_{}", IDX_CLIENT_LOGO, id),
             LogoType::AuthProvider => format!("{}_{}", IDX_AUTH_PROVIDER_LOGO, id),
         }
+    }
+
+    fn sanitize_svg(source: &mut [u8]) -> Result<Vec<u8>, ErrorResponse> {
+        let mut filter = svg_hush::Filter::new();
+        filter.set_data_url_filter(data_url_filter::allow_standard_images);
+
+        let mut sanitized = Vec::with_capacity(source.len());
+        filter.filter(&mut source.as_bytes(), &mut sanitized)?;
+
+        Ok(sanitized)
     }
 }
