@@ -4,7 +4,6 @@
     import Button from "$lib/Button.svelte";
     import {
         REGEX_CLIENT_NAME,
-        REGEX_LOWERCASE_SPACE,
         REGEX_URI,
         REGEX_PEM,
         REGEX_PROVIDER_SCOPE
