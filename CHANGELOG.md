@@ -6,7 +6,9 @@
 
 #### Single Container Image
 
-TODO
+The different versions have been combined into a single container image. The image with the `-lite` extension simply
+does not exist anymore and all deployments can be done with just the base image. Since Postgres was the default before,
+you need to change your image name when you do not use Postgres as your database, just remove the `-lite`.
 
 #### Dropped `sqlx` SQLite in favor of [Hiqlite](https://github.com/sebadob/hiqlite)
 
@@ -61,7 +63,12 @@ HQL_BACKUP_CRON="0 30 2 * * * *"
 # Local backups older than the configured days will be cleaned up after
 # the backup cron job.
 # default: 30
-HQL_BACKUP_KEEP_DAYS=30
+#HQL_BACKUP_KEEP_DAYS=30
+
+# Backups older than the configured days will be cleaned up locally
+# after each `Client::backup()` and the cron job `HQL_BACKUP_CRON`.
+# default: 3
+#HQL_BACKUP_KEEP_DAYS_LOCAL=3
 
 # If you ever need to restore from a backup, the process is simple.
 # 1. Have the cluster shut down. This is probably the case anyway, if
@@ -137,7 +144,25 @@ variables, but mandatory are only a few.
 
 ###### Backups
 
-TODO
+Backups for the internal database work in the same way as before, but because I moved the backup functionality directly
+into [Hiqlite](https://github.com/sebadob/hiqlite), the variable names have been changed so they make sense if it is
+used in another context.
+
+- `BACKUP_TASK` -> `HQL_BACKUP_CRON`
+- `BACKUP_NAME` does not exist anymore, will be chosen automatically depending on the cluster leader name
+- `BACKUP_RETENTION_LOCAL` -> `HQL_BACKUP_KEEP_DAYS_LOCAL`
+- `RESTORE_BACKUP` -> `HQL_BACKUP_RESTORE`
+- `S3_URL` -> `HQL_S3_URL`
+- `S3_REGION` -> `HQL_S3_REGION`
+- `S3_PATH_STYLE` -> `HQL_S3_PATH_STYLE`
+- `S3_BUCKET` -> `HQL_S3_BUCKET`
+- `S3_ACCESS_KEY` -> `HQL_S3_KEY`
+- `S3_ACCESS_SECRET` -> `HQL_S3_SECRET`
+
+`S3_DANGER_ALLOW_INSECURE` stayed as it is.
+
+`BACKUP_RETENTION_LOCAL` is new and it will actually handle the backup cleanup on the S3 storage for you,
+without defining retention rules for the whole bucket.
 
 ###### Hiqlite Dashboard
 
