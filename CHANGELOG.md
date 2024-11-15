@@ -84,6 +84,7 @@ HQL_BACKUP_CRON="0 30 2 * * * *"
 #HQL_S3_URL=https://s3.example.com
 #HQL_S3_BUCKET=my_bucket
 #HQL_S3_REGION=example
+#HQL_S3_PATH_STYLE=true
 #HQL_S3_KEY=s3_key
 #HQL_S3_SECRET=s3_secret
 
