@@ -9,9 +9,9 @@ use rauthy_api_types::users::{
     DeviceRequest, DeviceResponse, MfaPurpose, NewUserRegistrationRequest, NewUserRequest,
     PasskeyResponse, PasswordResetRequest, RequestResetRequest, UpdateUserRequest,
     UpdateUserSelfRequest, UserAttrConfigRequest, UserAttrConfigResponse, UserAttrValueResponse,
-    UserAttrValuesResponse, UserAttrValuesUpdateRequest, WebIdRequest, WebIdResponse,
-    WebauthnAuthFinishRequest, WebauthnAuthStartRequest, WebauthnRegFinishRequest,
-    WebauthnRegStartRequest,
+    UserAttrValuesResponse, UserAttrValuesUpdateRequest, UserResponse, WebIdRequest, WebIdResponse,
+    WebauthnAuthFinishRequest, WebauthnAuthStartRequest, WebauthnAuthStartResponse,
+    WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_common::constants::{
     COOKIE_MFA, ENABLE_WEB_ID, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, OPEN_USER_REG,
@@ -33,7 +33,7 @@ use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::users_values::UserValues;
 use rauthy_models::entity::webauthn;
-use rauthy_models::entity::webauthn::PasskeyEntity;
+use rauthy_models::entity::webauthn::{PasskeyEntity, WebauthnAdditionalData};
 use rauthy_models::entity::webids::WebId;
 use rauthy_models::events::event::Event;
 use rauthy_models::language::Language;
