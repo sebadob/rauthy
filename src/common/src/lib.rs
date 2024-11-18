@@ -22,7 +22,12 @@ impl FromStr for DbType {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let res = if env::var("HIQLITE") == Ok("true".to_string()) {
+        let use_hiqlite = env::var("HIQLITE")
+            .unwrap_or_else(|_| "true".to_string())
+            .parse::<bool>()
+            .expect("Cannot parse HIQLITE as bool");
+
+        let res = if use_hiqlite {
             Self::Hiqlite
         } else if s.starts_with("sqlite:") {
             Self::Sqlite

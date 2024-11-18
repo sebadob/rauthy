@@ -30,7 +30,6 @@ use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::listener::EventListener;
 use rauthy_models::events::notifier::EventNotifier;
 use rauthy_models::events::{init_event_vars, ip_blacklist_handler};
-use rauthy_models::migration::check_restore_backup;
 use rauthy_models::{email, ListenScheme};
 use spow::pow::Pow;
 use std::error::Error;
@@ -100,12 +99,6 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
             );
             panic!("{}", err);
         }
-    }
-
-    // check if a backup should be restored
-    if let Err(err) = check_restore_backup().await {
-        error!("\nError restoring backup:\n\n{}\n", err.message);
-        panic!("{:?}", err);
     }
 
     debug!("Starting the persistence layer");

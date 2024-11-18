@@ -1,5 +1,264 @@
 # Changelog
 
+## UNRELEASED
+
+### Breaking
+
+#### Single Container Image
+
+The different versions have been combined into a single container image. The image with the `-lite` extension simply
+does not exist anymore and all deployments can be done with just the base image. Since Postgres was the default before,
+you need to change your image name when you do not use Postgres as your database, just remove the `-lite`.
+
+#### Dropped `sqlx` SQLite in favor of [Hiqlite](https://github.com/sebadob/hiqlite)
+
+From this version on, Rauthy will not support a default SQLite anymore. Instead, it will use
+[Hiqlite](https://github.com/sebadob/hiqlite), which under the hood uses SQLite again and is another project of mine.
+
+[Hiqlite](https://github.com/sebadob/hiqlite) will bring lots of advantages. It will use a few more resources than a
+direct, plain SQLite, but only ~10-15 MB of memory for small instances. In return, you will get higher consistency and
+never blocking writes to the database during high traffic. It also reduces the latency for all read statements by a huge
+margin compared to the solution before. Rauthy always enables the `dashboard` feature
+for [Hiqlite](https://github.com/sebadob/hiqlite), which will be available over the Hiqlite API port / server.
+
+The biggest feature it brings though is the ability to **run a HA cluster without any external dependencies**. You can
+use [Hiqlite](https://github.com/sebadob/hiqlite) on a single instance and it would "feel" the same as just a SQLite,
+but you can also spin up 3 or 5 nodes to get High Availability without the need for an external database. It uses the
+Raft algorithm to sync data while still using just a simple SQLite under the hood. The internal design of Hiqlite has
+been optimized a lot to provide way higher throughput as you would normally get when you just use a direct connection
+to a SQLite file. If you are interested more about the internals, take a look at
+the [hiqlite/README.md](https://github.com/sebadob/hiqlite/blob/main/README.md)
+or [hiqlite/ARCHITECTURE.md](https://github.com/sebadob/hiqlite/blob/main/ARCHITECTURE.md).
+
+With these features, Hiqlite will always be the preferred database solution for Rauthy. You should really not spin up
+a dedicated Postgres instance just for Rauthy, because it would just use too many resources, which is not necessary.
+If you have a Postgres up and running anyway, you can still opt-in to use it.
+
+This was a very big migration and tens of thousands of lines of code has been changed. All tests are passing and a lot
+of additional checks have been included. I could not find any leftover issues or errors, but please let me know if you
+find something.
+
+If you are using Rauthy with Postgres as database, you don't need to do that much. If however you use SQLite, no
+worries, Rauthy can handle the migration for you after adopting a few config variables. Even if you do the
+auto-migration from an existing SQLite to Hiqlite, Rauthy will keep the original SQLite file in place for additional
+safety, so you don't need to worry about a backup (as long as you set the config correctly of course). The next bigger
+release will maybe do cleanup work when everything worked fine for sure, or you can do it manually.
+
+##### New / Changed Config Variables
+
+There are quite a few new config variables and some old ones are gone. What you need to set to migration will be
+explained below.
+
+```
+#####################################
+############# BACKUPS ###############
+#####################################
+
+# When the auto-backup task should run.
+# Accepts cron syntax:
+# "sec min hour day_of_month month day_of_week year"
+# default: "0 30 2 * * * *"
+HQL_BACKUP_CRON="0 30 2 * * * *"
+
+# Local backups older than the configured days will be cleaned up after
+# the backup cron job.
+# default: 30
+#HQL_BACKUP_KEEP_DAYS=30
+
+# Backups older than the configured days will be cleaned up locally
+# after each `Client::backup()` and the cron job `HQL_BACKUP_CRON`.
+# default: 3
+#HQL_BACKUP_KEEP_DAYS_LOCAL=3
+
+# If you ever need to restore from a backup, the process is simple.
+# 1. Have the cluster shut down. This is probably the case anyway, if
+#    you need to restore from a backup.
+# 2. Provide the backup file name on S3 storage with the
+#    HQL_BACKUP_RESTORE value.
+# 3. Start up the cluster again.
+# 4. After the restart, make sure to remove the HQL_BACKUP_RESTORE
+#    env value.
+#HQL_BACKUP_RESTORE=
+
+# Access values for the S3 bucket where backups will be pushed to.
+#HQL_S3_URL=https://s3.example.com
+#HQL_S3_BUCKET=my_bucket
+#HQL_S3_REGION=example
+#HQL_S3_PATH_STYLE=true
+#HQL_S3_KEY=s3_key
+#HQL_S3_SECRET=s3_secret
+
+#####################################
+############ DATABASE ###############
+#####################################
+
+# Max DB connections for the Postgres pool.
+# Irrelevant for Hiqlite.
+# default: 5
+#DATABASE_MAX_CONN=5
+
+# If specified, the currently configured Database will be DELETED and 
+# OVERWRITTEN with a migration from the given database with this variable. 
+# Can be used to migrate between different databases.
+#
+# !!! USE WITH CARE !!!
+#
+#MIGRATE_DB_FROM=sqlite:data/rauthy.db
+#MIGRATE_DB_FROM=postgresql://postgres:123SuperSafe@localhost:5432/rauthy
+
+# Hiqlite is the default database for Rauthy.
+# You can opt-out and use Postgres instead by setting the proper
+# `DATABASE_URL=postgresql://...` by setting `HIQLITE=false`
+# default: true
+#HIQLITE=true
+
+# The data dir hiqlite will store raft logs and state machine data in.
+# default: data
+#HQL_DATA_DIR=data
+
+# The file name of the SQLite database in the state machine folder.
+# default: hiqlite.db
+#HQL_FILENAME_DB=hiqlite.db
+
+# If set to `true`, all SQL statements will be logged for debugging
+# purposes.
+# default: false
+#HQL_LOG_STATEMENTS=false
+
+# The password for the Hiqlite dashboard as b64 encoded Argon2ID hash.
+# '123SuperMegaSafe' in this example
+HQL_PASSWORD_DASHBOARD=JGFyZ29uMmlkJHY9MTkkbT0xOTQ1Nix0PTIscD0xJGQ2RlJDYTBtaS9OUnkvL1RubmZNa0EkVzJMeTQrc1dxZ0FGd0RyQjBZKy9iWjBQUlZlOTdUMURwQkk5QUoxeW1wRQ==
+```
+
+##### Migration (Postgres)
+
+If you use Rauthy with Postgres and want to keep doing that, the only thing you need to do is to opt-out of Hiqlite.
+
+```
+HIQLITE=false
+```
+
+##### Migration (SQLITE)
+
+If you use Rauthy with SQLite and want to migrate to Hiqlite, you can utilize all the above-mentioned new config
+variables, but mandatory are the following ones.
+
+###### Backups
+
+Backups for the internal database work in the same way as before, but because I moved the backup functionality directly
+into [Hiqlite](https://github.com/sebadob/hiqlite), the variable names have been changed so they make sense if it is
+used in another context.
+
+- `BACKUP_TASK` -> `HQL_BACKUP_CRON`
+- `BACKUP_NAME` does not exist anymore, will be chosen automatically depending on the cluster leader name
+- `BACKUP_RETENTION_LOCAL` -> `HQL_BACKUP_KEEP_DAYS_LOCAL`
+- `RESTORE_BACKUP` -> `HQL_BACKUP_RESTORE`
+- `S3_URL` -> `HQL_S3_URL`
+- `S3_REGION` -> `HQL_S3_REGION`
+- `S3_PATH_STYLE` -> `HQL_S3_PATH_STYLE`
+- `S3_BUCKET` -> `HQL_S3_BUCKET`
+- `S3_ACCESS_KEY` -> `HQL_S3_KEY`
+- `S3_ACCESS_SECRET` -> `HQL_S3_SECRET`
+
+`S3_DANGER_ALLOW_INSECURE` stayed as it is.
+
+`BACKUP_RETENTION_LOCAL` is new and it will actually handle the backup cleanup on the S3 storage for you,
+without defining retention rules for the whole bucket.
+
+###### Hiqlite Dashboard
+
+Rauthy comes with the `dashboard` feature from Hiqlite enabled. If you want to make use of it, you need to set the
+password for logging in. This is a static config variable, and it will only be a single password, no users / accounts.
+The main idea behind the dashboard is to have debugging capabilities in production, which is usually hard to do with
+a SQLite running inside a container.  
+You need to generate a random password (at least 16 characters), hash it with Argon2ID, and then base64 encode it.
+You can do all this manually, or use the `hiqlite` cli to generate a complete hiqlite config where you copy it from.
+
+**Manual:**
+
+Use an online tool like for instance https://argon2.online to generate an Argon2**ID** hash.
+Set the following options:
+
+- Salt: Random
+- Parallelism Factor: 2
+- Memory Cost: 32
+- Iterations: 2
+- Hash Length: 32
+- Argon2id
+
+Then copy the **Output in Encoded Form** and base64 encode it, for instance using https://www.base64encode.org.
+
+**`hiqlite` cli:**
+
+Currently, you can only install the `hiqlite` cli via `cargo`:
+
+- `cargo install hiqlite --features server`
+- `hiqlite generate-config -p YouRandomSecurePasswordAtLeast16Chars`
+- grab the password from the config, location written in the output
+
+###### Migration
+
+Unless you specified a custom target path on disk for SQLite(`HQL_DATA_DIR`)) before, you should be good with the
+configuration now. If you start up Rauthy now, it will be like a fresh install, which you most probably don't want.
+To migrate your current SQLite to Hiqlite at startup, you need to set the `MIGRATE_DB_FROM` once at startup. If you used
+the default path before, you need to set:
+
+```
+MIGRATE_DB_FROM=sqlite:data/rauthy.db
+```
+
+For a custom path, just adopt the value accordingly. This works as well by the way, if you want to migrate from Postgres
+to Hiqlite.
+
+**!!! CAUTION !!!**  
+You must remove this variable after Rauthy has been started successfully! Otherwise, it would do the migration again
+and again with each following restart and therefore remove everything that has happened in between!
+
+[#592](https://github.com/sebadob/rauthy/pull/592)
+[#601](https://github.com/sebadob/rauthy/pull/601)
+[#603](https://github.com/sebadob/rauthy/pull/603)
+
+### Changes
+
+#### Efficiency and speed improvements
+
+During the migration to Hiqlite, I stumbled about a few DB queries in different places that were low haging
+fruits for efficiency and speed improvements. I did these while migrating the code base. There were a few ones,
+for instance in situations like session invalidation, for password reminder cron jobs, roles / groups / scopes
+name updates, and so on. These do not affect the behavior, just the handling under the hood has been improved.
+
+#### SVG Sanitization
+
+Rauthy allows you to upload SVGs as either client or upstream IdP logos. This is an action, that only an authorized
+`rauthy_admin` role can do. However, as an additional defense in-depth and protection against an evil admin, Rauthy
+now sanitizes all uploaded SVGs, no matter what.
+
+[#615](https://github.com/sebadob/rauthy/pull/615)
+[#616](https://github.com/sebadob/rauthy/pull/616)
+
+#### Latin-1 Extended A added
+
+The allowed characters for input validation for:
+
+- user `given_name`
+- user `family_name`
+- client name
+
+have been expanded and will also allow characters from `Latin-1 Extended A`.
+
+[#617](https://github.com/sebadob/rauthy/pull/617)
+
+### Bugfix
+
+- When Rauthy sent E-Mails, the Name of the name of the recipient has not been set correctly
+  [#602](https://github.com/sebadob/rauthy/pull/602)
+- The banner should not be logged as plain text when `LOG_FMT=json` is set
+  [#605](https://github.com/sebadob/rauthy/pull/605)
+- When requesting a single user by its ID using an API key, you would get an invalid session error response.
+  This was due to an earlier migration a few versions back. The session check should be done only when no API key
+  is present to make this request work.
+  [#609](https://github.com/sebadob/rauthy/pull/609)
+
 ## 0.26.2
 
 ### Bugfix
