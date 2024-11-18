@@ -128,7 +128,8 @@ to set
 
         HIQLITE=true
 
-TODO add link to the book after migration
+Take a look at the changelog for more detailed information:
+https://github.com/sebadob/rauthy/blob/main/CHANGELOG.md#dropped-sqlx-sqlite-in-favor-of-hiqlite
 "#
         );
     }
