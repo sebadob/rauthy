@@ -141,7 +141,7 @@ HIQLITE=false
 ##### Migration (SQLITE)
 
 If you use Rauthy with SQLite and want to migrate to Hiqlite, you can utilize all the above-mentioned new config
-variables, but mandatory are only a few.
+variables, but mandatory are the following ones.
 
 ###### Backups
 
@@ -198,7 +198,21 @@ Currently, you can only install the `hiqlite` cli via `cargo`:
 
 ###### Migration
 
-TODO
+Unless you specified a custom target path on disk for SQLite(`HQL_DATA_DIR`)) before, you should be good with the
+configuration now. If you start up Rauthy now, it will be like a fresh install, which you most probably don't want.
+To migrate your current SQLite to Hiqlite at startup, you need to set the `MIGRATE_DB_FROM` once at startup. If you used
+the default path before, you need to set:
+
+```
+MIGRATE_DB_FROM=sqlite:data/rauthy.db
+```
+
+For a custom path, just adopt the value accordingly. This works as well by the way, if you want to migrate from Postgres
+to Hiqlite.
+
+**!!! CAUTION !!!**  
+You must remove this variable after Rauthy has been started successfully! Otherwise, it would do the migration again
+and again with each following restart and therefore remove everything that has happened in between!
 
 [#592](https://github.com/sebadob/rauthy/pull/592)
 [#601](https://github.com/sebadob/rauthy/pull/601)
