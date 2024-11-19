@@ -242,6 +242,7 @@ VALUES ($1, $2, $3, $4)"#,
                     c
                 })
                 .collect::<Vec<_>>();
+            debug!("\n\n{:?}\n", clients);
             Some(clients)
         } else {
             None
@@ -383,6 +384,7 @@ WHERE id = $4"#,
 }
 
 impl Scope {
+    #[inline]
     pub fn clean_up_attrs(
         req_attrs: Option<Vec<String>>,
         existing_attrs: &HashSet<String>,
@@ -414,6 +416,7 @@ impl Scope {
     /// Returns `true` if the given scope is not a default OIDC scope.
     /// Note: `groups` is not a default scope, but it will be handled like one for performance
     /// and efficiency reasons.
+    #[inline]
     pub fn is_custom(scope: &str) -> bool {
         scope != "openid" && scope != "profile" && scope != "email" && scope != "groups"
     }
