@@ -404,18 +404,19 @@ VALUES ($1, $2, $3, $4)"#,
         Ok(slf)
     }
 
+    /// This is an expensive query using `LIKE`, only use when necessary.
     pub async fn find_with_scope(scope_name: &str) -> Result<Vec<Self>, ErrorResponse> {
         let like = format!("%{scope_name}%");
 
         let clients = if is_hiqlite() {
             DB::client()
                 .query_as(
-                    "SELECT * FROM clients WHERE scopes = $1 OR default_scopes = $1",
+                    "SELECT * FROM clients WHERE scopes LIKE $1 OR default_scopes LIKE $1",
                     params!(like),
                 )
                 .await?
         } else {
-            sqlx::query_as("SELECT * FROM clients WHERE scopes = $1 OR default_scopes = $1")
+            sqlx::query_as("SELECT * FROM clients WHERE scopes LIKE $1 OR default_scopes LIKE $1")
                 .bind(like)
                 .fetch_all(DB::conn())
                 .await?
