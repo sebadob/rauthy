@@ -409,33 +409,82 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
         Ok(pks)
     }
 
-    pub async fn update_passkey(&self, txn: &mut DbTxn<'_>) -> Result<(), ErrorResponse> {
-        let client = DB::client();
+    //     pub async fn update_passkey(&self, txn: &mut DbTxn<'_>) -> Result<(), ErrorResponse> {
+    //         let client = DB::client();
+    //
+    //         if is_hiqlite() {
+    //             client
+    //                 .execute(
+    //                     r#"
+    // UPDATE passkeys
+    // SET passkey = $1, last_used = $2
+    // WHERE user_id = $3 AND name = $4"#,
+    //                     params!(&self.passkey, self.last_used, &self.user_id, &self.name),
+    //                 )
+    //                 .await?;
+    //         } else {
+    //             sqlx::query!(
+    //                 r#"
+    // UPDATE passkeys
+    // SET passkey = $1, last_used = $2
+    // WHERE user_id = $3 AND name = $4"#,
+    //                 self.passkey,
+    //                 self.last_used,
+    //                 self.user_id,
+    //                 self.name,
+    //             )
+    //             .execute(&mut **txn)
+    //             .await?;
+    //         }
+    //
+    //         client
+    //             .put(
+    //                 Cache::Webauthn,
+    //                 Self::cache_idx_single(&self.user_id, &self.name),
+    //                 self,
+    //                 *CACHE_TTL_WEBAUTHN,
+    //             )
+    //             .await?;
+    //
+    //         client
+    //             .delete(Cache::Webauthn, Self::cache_idx_user(&self.user_id))
+    //             .await?;
+    //         client
+    //             .delete(Cache::Webauthn, Self::cache_idx_user_with_uv(&self.user_id))
+    //             .await?;
+    //
+    //         Ok(())
+    //     }
 
-        if is_hiqlite() {
-            client
-                .execute(
-                    r#"
+    pub fn update_passkey_txn_append(&self, txn: &mut Vec<(&str, Params)>) {
+        txn.push((
+            r#"
 UPDATE passkeys
 SET passkey = $1, last_used = $2
 WHERE user_id = $3 AND name = $4"#,
-                    params!(&self.passkey, self.last_used, &self.user_id, &self.name),
-                )
-                .await?;
-        } else {
-            sqlx::query!(
-                r#"
+            params!(&self.passkey, self.last_used, &self.user_id, &self.name),
+        ));
+    }
+
+    pub async fn update_passkey_txn(&self, txn: &mut DbTxn<'_>) -> Result<(), ErrorResponse> {
+        sqlx::query!(
+            r#"
 UPDATE passkeys
 SET passkey = $1, last_used = $2
 WHERE user_id = $3 AND name = $4"#,
-                self.passkey,
-                self.last_used,
-                self.user_id,
-                self.name,
-            )
-            .execute(&mut **txn)
-            .await?;
-        }
+            self.passkey,
+            self.last_used,
+            self.user_id,
+            self.name,
+        )
+        .execute(&mut **txn)
+        .await?;
+
+        Ok(())
+    }
+
+    async fn update_caches_after_update(&self) -> Result<(), ErrorResponse> {
+        let client = DB::client();
 
         client
             .put(
@@ -825,28 +874,43 @@ pub async fn auth_finish(
                     "User Presence only is not allowed - Verification is needed",
                 ));
             }
+            let uid = user.id.clone();
 
-            for mut pk_entity in pks {
-                let mut pk = pk_entity.get_pk();
-                if let Some(updated) = pk.update_credential(&auth_result) {
-                    if updated {
-                        pk_entity.passkey = serde_json::to_string(&pk)?;
+            if auth_result.needs_update() {
+                for mut pk_entity in pks {
+                    let mut pk = pk_entity.get_pk();
+                    if let Some(updated) = pk.update_credential(&auth_result) {
+                        if updated {
+                            pk_entity.passkey = serde_json::to_string(&pk)?;
+                        }
+
+                        let now = OffsetDateTime::now_utc().unix_timestamp();
+                        pk_entity.last_used = now;
+                        user.last_login = Some(now);
+                        user.last_failed_login = None;
+                        user.failed_login_attempts = None;
+
+                        if is_hiqlite() {
+                            let mut txn = Vec::with_capacity(2);
+                            pk_entity.update_passkey_txn_append(&mut txn);
+                            user.save_txn_append(&mut txn);
+                            DB::client().txn(txn).await?;
+                        } else {
+                            let mut txn = DB::txn().await?;
+                            pk_entity.update_passkey_txn(&mut txn).await?;
+                            user.save_txn(&mut txn).await?;
+                            txn.commit().await?;
+                        }
+
+                        pk_entity.update_caches_after_update().await?;
+
+                        // there can only be exactly one key that needs the update
+                        break;
                     }
-
-                    let now = OffsetDateTime::now_utc().unix_timestamp();
-                    pk_entity.last_used = now;
-                    user.last_login = Some(now);
-                    user.last_failed_login = None;
-                    user.failed_login_attempts = None;
-
-                    let mut txn = DB::txn().await?;
-                    pk_entity.update_passkey(&mut txn).await?;
-                    user.save_txn(&mut txn).await?;
-                    txn.commit().await?;
                 }
             }
 
-            info!("Webauthn Authentication successful for user {}", user.id);
+            info!("Webauthn Authentication successful for user {}", uid);
 
             Ok(auth_data.data)
         }
