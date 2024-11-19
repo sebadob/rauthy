@@ -1591,17 +1591,6 @@ dependencies = [
 
 [[package]]
 name = "cron"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f8c3e73077b4b4a6ab1ea5047c37c57aee77657bc8ecd6f29b0af082d0b0c07"
-dependencies = [
- "chrono",
- "nom",
- "once_cell",
-]
-
-[[package]]
-name = "cron"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eee8b2b4516038bc0f1d3c9934bcb4a13dd316e04abbc63c96757a6d75978532"
@@ -2477,7 +2466,7 @@ dependencies = [
 [[package]]
 name = "hiqlite"
 version = "0.3.0-20241115"
-source = "git+https://github.com/sebadob/hiqlite.git#67b0c057819b7d981e208d006433a93660350dbc"
+source = "git+https://github.com/sebadob/hiqlite.git#43c109ee2bc0335c36b787f522f19fde9948385c"
 dependencies = [
  "argon2",
  "axum",
@@ -2487,7 +2476,7 @@ dependencies = [
  "byteorder",
  "bytes",
  "chrono",
- "cron 0.12.1",
+ "cron",
  "cryptr",
  "ctrlc",
  "deadpool",
@@ -2521,7 +2510,7 @@ dependencies = [
  "sha2",
  "spow",
  "strum",
- "thiserror 1.0.69",
+ "thiserror 2.0.3",
  "tokio",
  "tokio-rustls 0.26.0",
  "tower 0.5.1",
@@ -4290,7 +4279,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.27.0-20241118"
+version = "0.27.0-20241119"
 dependencies = [
  "actix-service",
  "actix-web",
@@ -4331,7 +4320,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.27.0-20241118"
+version = "0.27.0-20241119"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4352,7 +4341,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.27.0-20241118"
+version = "0.27.0-20241119"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4378,7 +4367,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.27.0-20241118"
+version = "0.27.0-20241119"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4414,7 +4403,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.27.0-20241118"
+version = "0.27.0-20241119"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4444,7 +4433,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.27.0-20241118"
+version = "0.27.0-20241119"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4463,7 +4452,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.27.0-20241118"
+version = "0.27.0-20241119"
 dependencies = [
  "accept-language",
  "actix",
@@ -4539,7 +4528,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.27.0-20241118"
+version = "0.27.0-20241119"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4559,11 +4548,11 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.27.0-20241118"
+version = "0.27.0-20241119"
 dependencies = [
  "actix-web",
  "chrono",
- "cron 0.13.0",
+ "cron",
  "hiqlite",
  "rauthy-common",
  "rauthy-error",
@@ -4577,7 +4566,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.27.0-20241118"
+version = "0.27.0-20241119"
 dependencies = [
  "actix-web",
  "argon2",
@@ -5185,9 +5174,9 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.38.40"
+version = "0.38.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99e4ea3e1cdc4b559b8e5650f9c8e5998e3e5c1343b4eaf034565f32318d63c0"
+checksum = "d7f649912bc1495e167a6edee79151c84b1bad49748cb4f1f1167f459f6224f6"
 dependencies = [
  "bitflags 2.6.0",
  "errno",
@@ -5336,9 +5325,9 @@ dependencies = [
 
 [[package]]
 name = "schannel"
-version = "0.1.26"
+version = "0.1.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01227be5826fa0690321a2ba6c5cd57a19cf3f6a09e76973b58e61de6ab9d1c1"
+checksum = "1f29ebaa345f945cec9fbbc532eb307f0fdad8161f281b6369539c8d84876b3d"
 dependencies = [
  "windows-sys 0.59.0",
 ]
@@ -6448,9 +6437,9 @@ dependencies = [
 
 [[package]]
 name = "tower-http"
-version = "0.6.1"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8437150ab6bbc8c5f0f519e3d5ed4aa883a83dd4cdd3d1b21f9482936046cb97"
+checksum = "403fa3b783d4b626a8ad51d766ab03cb6d2dbfc46b1c5d4448395e6628dc9697"
 dependencies = [
  "bitflags 2.6.0",
  "bytes",
