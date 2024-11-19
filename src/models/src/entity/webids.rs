@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
 use std::fmt::Debug;
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct WebId {
     pub user_id: String,
     pub expose_email: bool,

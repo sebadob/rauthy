@@ -134,12 +134,16 @@ impl DB {
             .parse::<u32>()
             .expect("Error parsing DATABASE_MAX_CONN to u32");
 
-        let pool = Self::connect_postgres(&DATABASE_URL, db_max_conn).await?;
-        info!("Postgres database connection pool created successfully");
+        if let Some(db_url) = DATABASE_URL.as_ref() {
+            let pool = Self::connect_postgres(db_url, db_max_conn).await?;
+            info!("Postgres database connection pool created successfully");
 
-        PG_POOL
-            .set(pool)
-            .expect("DB::init_postgres() must only be called once at startup");
+            PG_POOL
+                .set(pool)
+                .expect("DB::init_postgres() must only be called once at startup");
+        } else {
+            panic!("DATABASE_URL is not set");
+        }
 
         Ok(())
     }

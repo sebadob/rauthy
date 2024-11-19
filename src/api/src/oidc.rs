@@ -9,9 +9,10 @@ use rauthy_api_types::oidc::{
     AuthRequest, DeviceAcceptedRequest, DeviceCodeResponse, DeviceGrantRequest,
     DeviceVerifyRequest, DeviceVerifyResponse, JWKSCerts, JWKSPublicKeyCerts, LoginRefreshRequest,
     LoginRequest, LogoutRequest, OAuth2ErrorResponse, OAuth2ErrorTypeResponse, SessionInfoResponse,
-    TokenRequest, TokenValidationRequest,
+    TokenInfo, TokenRequest, TokenValidationRequest,
 };
 use rauthy_api_types::sessions::SessionState;
+use rauthy_api_types::users::{Userinfo, WebauthnLoginResponse};
 use rauthy_common::constants::{
     APPLICATION_JSON, AUTH_HEADERS_ENABLE, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED,
     AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
@@ -43,6 +44,7 @@ use rauthy_models::templates::{
 };
 use rauthy_models::JwtCommonClaims;
 use rauthy_service::oidc::{authorize, logout, token_info, userinfo, validation};
+use rauthy_service::token_set::TokenSet;
 use rauthy_service::{login_delay, oidc};
 use spow::pow::Pow;
 use std::borrow::Cow;
@@ -238,7 +240,7 @@ pub async fn get_authorize(
     request_body = LoginRequest,
     responses(
         (status = 200, description = "Correct credentials, but needs to continue with Webauthn MFA Login", body = WebauthnLoginResponse),
-        (status = 202, description = "Correct credentials and not MFA Login required, adds Location header"),
+        (status = 202, description = "Correct credentials and no MFA Login required, adds Location header"),
         (status = 400, description = "Missing / bad input data", body = ErrorResponse),
         (status = 401, description = "Bad input or CSRF Token error", body = ErrorResponse),
     ),

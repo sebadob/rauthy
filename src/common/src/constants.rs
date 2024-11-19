@@ -104,8 +104,8 @@ lazy_static! {
 
     pub static ref RAUTHY_ADMIN_ROLE: String = "rauthy_admin".to_string();
 
-    pub static ref DATABASE_URL: String = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
-    pub static ref DB_TYPE: DbType = DbType::from_str(&DATABASE_URL).unwrap();
+    pub static ref DATABASE_URL: Option<String> = env::var("DATABASE_URL").ok();
+    pub static ref DB_TYPE: DbType = DbType::from_str(DATABASE_URL.as_deref());
 
     pub static ref DEV_MODE: bool = env::var("DEV_MODE")
         .unwrap_or_else(|_| String::from("false"))
