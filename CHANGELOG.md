@@ -125,6 +125,25 @@ HQL_BACKUP_CRON="0 30 2 * * * *"
 # default: false
 #HQL_LOG_STATEMENTS=false
 
+# Enables immediate flush + sync to disk after each Log Store Batch.
+# The situations where you would need this are very rare, and you
+# should use it with care.
+#
+# The default is `false`, and a flush + sync will be done in 200ms
+# intervals. Even if the application should crash, the OS will take
+# care of flushing left-over buffers to disk and no data will get
+# lost. Only if something worse happens, you might lose the last
+# 200ms of commits.
+#
+# The only situation where you might want to enable this option is
+# when you are on a host that might lose power out of nowhere, and
+# it has no backup battery, or when your OS / disk itself is unstable.
+#
+# `sync_immediate` will greatly reduce the write throughput and put
+# a lot more pressure on the disk. If you have lots of writes, it
+# can pretty quickly kill your SSD for instance.
+#HQL_SYNC_IMMEDIATE=false
+
 # The password for the Hiqlite dashboard as b64 encoded Argon2ID hash.
 # '123SuperMegaSafe' in this example
 HQL_PASSWORD_DASHBOARD=JGFyZ29uMmlkJHY9MTkkbT0xOTQ1Nix0PTIscD0xJGQ2RlJDYTBtaS9OUnkvL1RubmZNa0EkVzJMeTQrc1dxZ0FGd0RyQjBZKy9iWjBQUlZlOTdUMURwQkk5QUoxeW1wRQ==
