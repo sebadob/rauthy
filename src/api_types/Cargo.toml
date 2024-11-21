@@ -20,6 +20,10 @@ utoipa = { workspace = true }
 validator = { workspace = true }
 webauthn-rs = { workspace = true }
 
+atrium-api = { workspace = true }
+atrium-identity = { workspace = true }
+atrium-oauth-client = { workspace = true }
+
 [dev-dependencies]
 pretty_assertions = "1"
 rstest = "0.18.2"
