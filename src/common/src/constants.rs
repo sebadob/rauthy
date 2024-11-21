@@ -509,3 +509,15 @@ lazy_static! {
         .parse::<bool>()
         .expect("WEBAUTHN_NO_PASSWORD_EXPIRY cannot be parsed to bool - bad format");
 }
+
+pub mod atproto {
+    use lazy_static::lazy_static;
+    use regex::Regex;
+
+    lazy_static! {
+        pub static ref RE_GRANT_TYPES: Regex =
+            Regex::new(r"^(authorization_code|refresh_token)$").unwrap();
+        pub static ref RE_SCOPE_SPACE: Regex =
+            Regex::new(r"^(atproto|transition:generic|transition:chat.bsky)$").unwrap();
+    }
+}

@@ -729,7 +729,7 @@ impl AuthProviderCallback {
         Ok(())
     }
 
-    async fn find(callback_id: String) -> Result<Self, ErrorResponse> {
+    pub(super) async fn find(callback_id: String) -> Result<Self, ErrorResponse> {
         let opt: Option<Self> = DB::client()
             .get(Cache::AuthProviderCallback, callback_id)
             .await?;
@@ -743,7 +743,7 @@ impl AuthProviderCallback {
         }
     }
 
-    async fn save(&self) -> Result<(), ErrorResponse> {
+    pub(super) async fn save(&self) -> Result<(), ErrorResponse> {
         DB::client()
             .put(
                 Cache::AuthProviderCallback,
@@ -1134,13 +1134,13 @@ pub struct AuthProviderAddressClaims<'a> {
 }
 
 #[derive(Debug, PartialEq)]
-enum ProviderMfaLogin {
+pub(super) enum ProviderMfaLogin {
     Yes,
     No,
 }
 
 #[derive(Debug, Deserialize)]
-struct AuthProviderIdClaims<'a> {
+pub(super) struct AuthProviderIdClaims<'a> {
     // pub iss: &'a str,
     // json values because some providers provide String, some int
     sub: Option<serde_json::Value>,
@@ -1178,6 +1178,24 @@ impl<'a> TryFrom<&'a [u8]> for AuthProviderIdClaims<'a> {
 }
 
 impl AuthProviderIdClaims<'_> {
+    pub(super) fn new(sub: &str) -> Self {
+        Self {
+            sub: Some(serde_json::Value::String(sub.to_owned())),
+            id: None,
+            uid: None,
+            email: None,
+            email_verified: None,
+            name: None,
+            given_name: None,
+            family_name: None,
+            address: None,
+            birthdate: None,
+            locale: None,
+            phone: None,
+            json_bytes: None,
+        }
+    }
+
     fn given_name(&self) -> &str {
         if let Some(given_name) = &self.given_name {
             given_name
@@ -1219,7 +1237,7 @@ impl AuthProviderIdClaims<'_> {
         Ok(json_bytes)
     }
 
-    async fn validate_update_user(
+    pub(super) async fn validate_update_user(
         &self,
         provider: &AuthProvider,
         link_cookie: &Option<AuthProviderLinkCookie>,
@@ -1611,7 +1629,7 @@ mod tests {
 
         let path = JsonPath::parse("$.foo.bar[*]").unwrap();
         let nodes = path.query(&value).all();
-        assert_eq!(nodes.get(0).unwrap().as_str(), Some("baz"));
+        assert_eq!(nodes.first().unwrap().as_str(), Some("baz"));
         assert_eq!(nodes.get(1).unwrap().as_str(), Some("bop"));
         assert_eq!(
             nodes.get(2).unwrap().as_number(),
@@ -1631,7 +1649,7 @@ mod tests {
         let path = JsonPath::parse("$.foo.bor").unwrap();
         let nodes = path.query(&value).all();
         assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes.get(0).unwrap().as_str(), Some("yes"));
+        assert_eq!(nodes.first().unwrap().as_str(), Some("yes"));
 
         // we cannot query for single values with the wildcard in the end
         // -> add 2 possible cases in the checking code for best UX
@@ -1643,7 +1661,7 @@ mod tests {
         let path = JsonPath::parse("$.*.bor").unwrap();
         let nodes = path.query(&value).all();
         assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes.get(0).unwrap().as_str(), Some("yes"));
+        assert_eq!(nodes.first().unwrap().as_str(), Some("yes"));
     }
 
     #[test]
