@@ -2,10 +2,34 @@
 
 This shows a full example config with (hopefully) every value nicely described.
 
+You can configure a lot here, but the most important variables you most-likely want to change when going into production
+are the following. Lines beginning with `!!!` are absolutely critical. The order matches their location in the
+reference config below.
+
+- `OPEN_USER_REG`, `USER_REG_DOMAIN_RESTRICTION`
+- `PEER_IP_HEADER_NAME` - when behind a CDN
+- `HQL_BACKUP_CRON`, `HQL_BACKUP_KEEP_DAYS`, `HQL_S3_URL`, `HQL_S3_BUCKET`, `HQL_S3_REGION`, `HQL_S3_PATH_STYLE`,
+  `HQL_S3_KEY`, `HQL_S3_SECRET` - for Hiqlite backups, does not matter when using Postgres
+- `BOOTSTRAP_ADMIN_EMAIL`
+- `HQL_NODE_ID_FROM` or `HQL_NODE_ID` + `HQL_NODES` - HA only
+- !!! `HQL_SECRET_RAFT` + `HQL_SECRET_API` - set even when not using HA
+- `DATABASE_URL` + `HIQLITE` - if you want to use Postgres
+- `RAUTHY_ADMIN_EMAIL`
+- `EMAIL_SUB_PREFIX`, `SMTP_URL`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`
+- !!! `ENC_KEY_ACTIVE` + `ENC_KEYS`
+- `MAX_HASH_THREADS`
+- any target in the `EVENTS / AUDIT` section
+- !!! `PUB_URL`
+- `PROXY_MODE` + `TRUSTED_PROXIES`
+- `TLS_CERT` + `TLS_KEY` - if you don't terminate TLS on your reverse proxy
+- `HQL_TLS_RAFT_KEY` + `HQL_TLS_RAFT_CERT`+  `HQL_TLS_API_KEY` + `HQL_TLS_API_CERT` - if you want to internally encrypt
+  database / cache traffic
+- !!! `RP_ID` + `RP_ORIGIN` + `RP_NAME`
+
 ```admonish caution
 When you go into production, make sure that you provide the included secrets / sensistive information in this
-file in an appropriate way. With docker, you can leave them inside this file, but when deploying with Kubernetes,
-extract these values, create Kubernetes Secrets and provide them as environment variables.
+file in an appropriate way. With docker, you can leave them inside this file (with proper access rights!), but when 
+deploying with Kubernetes, extract these values into Kubernetes Secrets.
 ```
 
 ```
@@ -14,8 +38,9 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 #####################################
 
 # If the User Registration endpoint should be accessible by anyone.
-# If not, an admin must create each new user. (default: false)
-#OPEN_USER_REG=true
+# If not, an admin must create each new user.
+# default: false
+#OPEN_USER_REG=false
 
 # If set to true, the `/userinfo` endpoint will do additional validations.
 # The non-strict mode will fetch the user by id from the `sub` claim and make
@@ -77,7 +102,7 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # disabled, this feature will not work. You can validate the IPs for each session
 # in the Admin UI. If these are correct, your setup is okay.
 #
-# (default: true)
+# default: true
 #SESSION_VALIDATE_IP=true
 
 # By default, Rauthy will log a warning into the logs, if an active password
@@ -99,7 +124,7 @@ extract these values, create Kubernetes Secrets and provide them as environment 
 # Cloudflare, which adds custom headers in this case.
 # For instance, if your requests are proxied through cloudflare, your would 
 # set `CF-Connecting-IP`.
-PEER_IP_HEADER_NAME="CF-Connecting-IP"
+#PEER_IP_HEADER_NAME="CF-Connecting-IP"
 
 # You can enable authn/authz headers which would be added to the response
 # of the `/auth/v1/oidc/forward_auth` endpoint. With  `AUTH_HEADERS_ENABLE=true`,
@@ -109,27 +134,27 @@ PEER_IP_HEADER_NAME="CF-Connecting-IP"
 # However, be careful when using this, since this kind of authn/authz has
 # a lot of pitfalls out of the scope of Rauthy.
 # default: false
-AUTH_HEADERS_ENABLE=true
+#AUTH_HEADERS_ENABLE=true
 
 # Configure the header names being used for the different values.
 # You can change them to your needs, if you cannot easily change your
 # downstream apps.
 # default: x-forwarded-user
-AUTH_HEADER_USER=x-forwarded-user
+#AUTH_HEADER_USER=x-forwarded-user
 # default: x-forwarded-user-roles
-AUTH_HEADER_ROLES=x-forwarded-user-roles
+#AUTH_HEADER_ROLES=x-forwarded-user-roles
 # default: x-forwarded-user-groups
-AUTH_HEADER_GROUPS=x-forwarded-user-groups
+#AUTH_HEADER_GROUPS=x-forwarded-user-groups
 # default: x-forwarded-user-email
-AUTH_HEADER_EMAIL=x-forwarded-user-email
+#AUTH_HEADER_EMAIL=x-forwarded-user-email
 # default: x-forwarded-user-email-verified
-AUTH_HEADER_EMAIL_VERIFIED=x-forwarded-user-email-verified
+#AUTH_HEADER_EMAIL_VERIFIED=x-forwarded-user-email-verified
 # default: x-forwarded-user-family-name
-AUTH_HEADER_FAMILY_NAME=x-forwarded-user-family-name
+#AUTH_HEADER_FAMILY_NAME=x-forwarded-user-family-name
 # default: x-forwarded-user-given-name
-AUTH_HEADER_GIVEN_NAME=x-forwarded-user-given-name
+#AUTH_HEADER_GIVEN_NAME=x-forwarded-user-given-name
 # default: x-forwarded-user-mfa
-AUTH_HEADER_MFA=x-forwarded-user-mfa
+#AUTH_HEADER_MFA=x-forwarded-user-mfa
 
 # You can set different security levels for Rauthy's cookies.
 # The safest option would be 'host', but may not be desirable when
@@ -168,61 +193,39 @@ AUTH_HEADER_MFA=x-forwarded-user-mfa
 ############# BACKUPS ###############
 #####################################
 
-# Cron job for automatic data store backups (default: "0 0 4 * * * *")
-# sec min hour day_of_month month day_of_week year
-#BACKUP_TASK="0 0 4 * * * *"
+# When the auto-backup task should run.
+# Accepts cron syntax:
+# "sec min hour day_of_month month day_of_week year"
+# default: "0 30 2 * * * *"
+#HQL_BACKUP_CRON="0 30 2 * * * *"
 
-# The name for the data store backups. The current timestamp
-# will always be appended automatically. (default: rauthy-backup-)
-#BACKUP_NAME="rauthy-backup-"
+# Local backups older than the configured days will be cleaned up after
+# the backup cron job.
+# default: 30
+#HQL_BACKUP_KEEP_DAYS=30
 
-# All backups older than the specified hours will be cleaned up
-# automatically (default: 720)
-#BACKUP_RETENTION_LOCAL=720
+# Backups older than the configured days will be cleaned up locally
+# after each `Client::backup()` and the cron job `HQL_BACKUP_CRON`.
+# default: 3
+#HQL_BACKUP_KEEP_DAYS_LOCAL=3
 
-# The following section will only be taken into account, when
-# SQLite is used as the main database. If you use Postgres, you
-# should use Postgres native tooling like for instance `pgbackrest`
-# to manage your backups.
-# If S3 access is configured, your SQLite backups will be encrypted
-# and pushed into the configured bucket.
-#S3_URL=
-#S3_REGION=
-#S3_PATH_STYLE=false
-#S3_BUCKET=my_s3_bucket_name
-#S3_ACCESS_KEY=
-#S3_ACCESS_SECRET=
-#S3_DANGER_ALLOW_INSECURE=false
+# If you ever need to restore from a backup, the process is simple.
+# 1. Have the cluster shut down. This is probably the case anyway, if
+#    you need to restore from a backup.
+# 2. Provide the backup file name on S3 storage with the
+#    HQL_BACKUP_RESTORE value.
+# 3. Start up the cluster again.
+# 4. After the restart, make sure to remove the HQL_BACKUP_RESTORE
+#    env value.
+#HQL_BACKUP_RESTORE=
 
-# Restores the given backup
-#
-# CAUTION: Be very careful with this option - it will overwrite
-# any existing database! The best way to use this option is to
-# provide it as an environment variable for a single start up
-# and then remove it directly after success.
-#
-# This only works when you are using a SQLite database!
-# If you are running on Postgres, you must use Postgres-native
-# tooling to handle your backups.
-#
-# You can either restore a local backup, or an encrypted one
-# from S3 storage.
-#
-# For restoring from a local backup, provide the folder name
-# of the backup you want to restore. Local SQLite backups are
-# always in `./data/backup/rauthy-backup-TIMESTAMP/` folders.
-# You only provide the backup folder name itself, in this case
-# it would be `rauthy-backup-TIMESTAMP` like this:
-# RESTORE_BACKUP=file:rauthy-backup-TIMESTAMP
-#
-# If you want to restore an encrypted backup from S3 storage,
-# you must provide the object name in the configured bucket.
-# For instance, let's say we have an object named
-# `rauthy-0.20.0-1703243039.cryptr` in our bucket, then the
-# format would be:
-# RESTORE_BACKUP=s3:rauthy-0.20.0-1703243039.cryptr
-#
-#RESTORE_BACKUP=
+# Access values for the S3 bucket where backups will be pushed to.
+HQL_S3_URL=https://s3.example.com
+HQL_S3_BUCKET=my_bucket
+HQL_S3_REGION=example
+HQL_S3_PATH_STYLE=true
+HQL_S3_KEY=s3_key
+HQL_S3_SECRET=s3_secret
 
 #####################################
 ############ BOOTSTRAP ##############
@@ -230,7 +233,7 @@ AUTH_HEADER_MFA=x-forwarded-user-mfa
 
 # If set, the email of the default admin will be changed
 # during the initialization of an empty production database.
-#BOOTSTRAP_ADMIN_EMAIL=admin@localhost.de
+BOOTSTRAP_ADMIN_EMAIL=admin@localhost.de
 
 # If set, this plain text password will be used for the
 # initial admin password instead of generating a random
@@ -298,7 +301,7 @@ AUTH_HEADER_MFA=x-forwarded-user-mfa
 #BOOTSTRAP_API_KEY_SECRET=twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh
 
 #####################################
-############## CACHE ################
+############# CLUSTER ###############
 #####################################
 
 # Can be set to 'k8s' to try to split off the node id from the hostname
@@ -319,17 +322,20 @@ HQL_NODE_ID=1
 # id addr_raft addr_api
 # id addr_raft addr_api
 #
-# 2 nodes must be separated by 2 `\n`
 HQL_NODES="
 1 localhost:8100 localhost:8200
 "
 
-# If set to `true`, all SQL statements will be logged for debugging
-# purposes.
-# default: false
-HQL_LOG_STATEMENTS=true
+# Sets the limit when the Raft will trigger the creation of a new
+# state machine snapshot and purge all logs that are included in
+# the snapshot.
+# Higher values can achieve more throughput in very write heavy
+# situations but will end up in more disk usage and longer
+# snapshot creations / log purges.
+# default: 10000
+#HQL_LOGS_UNTIL_SNAPSHOT=10000
 
-# Secrets for Raft internal authentication as well as for the Hiqlite API.
+# Secrets for Raft internal authentication as well as for the API.
 # These must be at least 16 characters long and you should provide
 # different ones for both variables.
 HQL_SECRET_RAFT=SuperSecureSecret1337
@@ -345,40 +351,82 @@ HQL_SECRET_API=SuperSecureSecret1337
 ############ DATABASE ###############
 #####################################
 
-# The database driver will be chosen at runtime depending on
-# the given DATABASE_URL format. Examples:
-# Sqlite: 'sqlite:data/rauthy.db' or 'sqlite::memory:'
-# Postgres: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
+# Connection string to connect to a Postgres database.
+# This will be ignore as long as `HIQLITE=true`.
 #
-# NOTE: The password in this case should be alphanumeric. Special
-# characters could cause problems in the connection string.
+# Format: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
 #
-# CAUTION:
-# To make the automatic migrations work with Postgres15, when
-# you do not want to just use the `postgres` user, You need
-# to have a user with the same name as the DB / schema. For
-# instance, the following would work without granting extra
-# access to the `public` schema which is disabled by default
-# since PG15:
+# NOTE: The password in this case should be alphanumeric.
+# Special characters could cause problems in the connection string.
 #
+# CAUTION: To make the automatic migrations work with Postgres 15+,
+# when you do not want to just use the `postgres` user, You need
+# to have a user with the same name as the DB / schema. For instance,
+# the following would work without granting extra access to the
+# `public` schema which is disabled by default since PG15:
 # database: rauthy
 # user: rauthy
 # schema: rauthy with owner rauthy
 #
-#DATABASE_URL=sqlite::memory:
-#DATABASE_URL=sqlite:data/rauthy.db
 #DATABASE_URL=postgresql://rauthy:123SuperSafe@localhost:5432/rauthy
 
-# Max DB connections - irrelevant for SQLite (default: 5)
-#DATABASE_MAX_CONN=5
+# Max DB connections for the Postgres pool.
+# Irrelevant for Hiqlite.
+# default: 20
+#DATABASE_MAX_CONN=20
 
-# If specified, the current Database, set with DATABASE_URL,
-# will be DELETED and OVERWRITTEN with a migration from the
-# given database with this variable. Can be used to migrate
-# between different databases.
-# 
+# If specified, the currently configured Database will be
+# DELETED and OVERWRITTEN with a migration from the given
+# database with this variable. Can be used to migrate between
+# different databases.
+# To migrate from Hiqlite, use the `sqlite:` prefix.
+#
 # !!! USE WITH CARE !!!
-#MIGRATE_DB_FROM=sqlite:data/rauthy.db
+#
+#MIGRATE_DB_FROM=sqlite:data/state_machine/db/hiqlite.db
+#MIGRATE_DB_FROM=postgresql://postgres:123SuperSafe@localhost:5432/rauthy
+
+# Hiqlite is the default database for Rauthy.
+# You can opt-out and use Postgres instead by setting the proper
+# `DATABASE_URL=postgresql://...` by setting `HIQLITE=false`
+# default: true
+#HIQLITE=true
+
+# The data dir hiqlite will store raft logs and state machine data in.
+# default: data
+#HQL_DATA_DIR=data
+
+# The file name of the SQLite database in the state machine folder.
+# default: hiqlite.db
+#HQL_FILENAME_DB=hiqlite.db
+
+# If set to `true`, all SQL statements will be logged for debugging
+# purposes.
+# default: false
+#HQL_LOG_STATEMENTS=false
+
+# Enables immediate flush + sync to disk after each Log Store Batch.
+# The situations where you would need this are very rare, and you
+# should use it with care.
+#
+# The default is `false`, and a flush + sync will be done in 200ms
+# intervals. Even if the application should crash, the OS will take
+# care of flushing left-over buffers to disk and no data will get
+# lost. Only if something worse happens, you might lose the last
+# 200ms of commits.
+#
+# The only situation where you might want to enable this option is
+# when you are on a host that might lose power out of nowhere, and
+# it has no backup battery, or when your OS / disk itself is unstable.
+#
+# `sync_immediate` will greatly reduce the write throughput and put
+# a lot more pressure on the disk. If you have lots of writes, it
+# can pretty quickly kill your SSD for instance.
+#HQL_SYNC_IMMEDIATE=false
+
+# The password for the Hiqlite dashboard as Argon2ID hash.
+# '123SuperMegaSafe' in this example
+#HQL_PASSWORD_DASHBOARD=JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ==
 
 # Defines the time in seconds after which the `/health` endpoint 
 # includes HA quorum checks. The initial delay solves problems 
@@ -416,12 +464,12 @@ HQL_SECRET_API=SuperSecureSecret1337
 # Grant flow. You may increase the default of 300 seconds, if you have
 # "slow users" and they are simply not fast enough with the verification.
 # default: 300
-DEVICE_GRANT_CODE_LIFETIME=300
+#DEVICE_GRANT_CODE_LIFETIME=300
 
 # The length of the `user_code` the user has to enter manually for
 # auth request validation. This must be < 64 characters.
 # default: 8
-DEVICE_GRANT_USER_CODE_LENGTH=8
+#DEVICE_GRANT_USER_CODE_LENGTH=8
 
 # Specifies the rate-limit in seconds per IP for starting new Device
 # Authorization Grant flows. This is especially important for public
@@ -431,19 +479,19 @@ DEVICE_GRANT_USER_CODE_LENGTH=8
 # If you use the `device_code` grant with confidential clients only,
 # you can leave this unset, which will not rate-limit the endpoint.
 # default: not set
-DEVICE_GRANT_RATE_LIMIT=1
+#DEVICE_GRANT_RATE_LIMIT=1
 
 # The interval in seconds which devices are told to use when they
 # poll the token endpoint during Device Authorization Grant flow.
 # default: 5
-DEVICE_GRANT_POLL_INTERVAL=5
+#DEVICE_GRANT_POLL_INTERVAL=5
 
 # You can define a global lifetime in hours for refresh tokens issued
 # from a Device Authorization Grant flow. You might want to have a
 # higher lifetime than normal refresh tokens, because they might be
 # used in IoT devices which may be offline for longer periods of time.
 # default: 72
-DEVICE_GRANT_REFRESH_TOKEN_LIFETIME=72
+#DEVICE_GRANT_REFRESH_TOKEN_LIFETIME=72
 
 #####################################
 ############## DPOP #################
@@ -452,14 +500,14 @@ DEVICE_GRANT_REFRESH_TOKEN_LIFETIME=72
 # May be set to 'false' to disable forcing the usage of 
 # DPoP nonce's.
 # default: true
-DPOP_FORCE_NONCE=true
+#DPOP_FORCE_NONCE=true
 
 # Lifetime in seconds for DPoP nonces. These are used to 
 # limit the lifetime of a client's DPoP proof. Do not set
 # lower than 30 seconds to avoid too many failed client 
 # token requests.
 # default: 900
-DPOP_NONCE_EXP=900
+#DPOP_NONCE_EXP=900
 
 #####################################
 ########## DYNAMIC CLIENTS ##########
@@ -628,7 +676,7 @@ ENC_KEY_ACTIVE=bVCyTsGaggVy5yqQ
 # https://sebadob.github.io/rauthy/config/argon2.html
 # M_COST should never be below 32768 in production
 ARGON2_M_COST=131072
-# T_COST should never be below 1 in production
+# T_COST must be greater than 0
 ARGON2_T_COST=4
 # P_COST should never be below 2 in production
 ARGON2_P_COST=8
@@ -1113,7 +1161,7 @@ PROXY_MODE=false
 ############### TLS #################
 #####################################
 
-## Rauthy TLS
+## UI + API TLS
 
 # Overwrite the path to the TLS certificate file in PEM
 # format for rauthy (default: tls/tls.crt)
@@ -1124,7 +1172,7 @@ PROXY_MODE=false
 # (default: tls/tls.key)
 #TLS_KEY=tls/tls.key
 
-## CACHE TLS
+## Database / Cache internal TLS
 
 # If given, these keys / certificates will be used to establish
 # TLS connections between nodes.
