@@ -76,6 +76,23 @@ deploying with Kubernetes, extract these values into Kubernetes Secrets.
 #evil.net
 #"
 
+# If set to `true`, any validation of the `redirect_uri` provided during
+# a user registration will be disabled.
+# Clients can use this feature to redirect the user back to their application
+# after a successful registration, so instead of ending up in the user
+# dashboard, they come back to the client app that initiated the registration.
+#
+# The given `redirect_uri` will be compared against all registered
+# `client_uri`s and will throw an error, if there is no match. However,
+# this check will prevent ephemeral clients from using this feature. Only
+# if you need it in combination with ephemeral clients, you should
+# set this option to `true`. Otherwise it is advised to set the correct
+# Client URI in the admin UI. The `redirect_uri` will be allowed if it starts
+# with any registered `client_uri`.
+#
+# default: false
+#USER_REG_OPEN_REDIRECT=true
+
 # If set to true, a violation inside the CSRF protection middleware based
 # on Sec-* headers will block invalid requests. Usually you always want this
 # enabled. You may only set it to false during the first testing phase if you

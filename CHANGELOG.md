@@ -284,6 +284,31 @@ and again with each following restart and therefore remove everything that has h
 [#601](https://github.com/sebadob/rauthy/pull/601)
 [#603](https://github.com/sebadob/rauthy/pull/603)
 
+#### User Registration - Redirect Hint
+
+As an additional hardening, the open redirect hint for user registrations has been locked down a bit by default.
+If you used this feature before, you should update `Client URI`s via the Admin UI, so all possible `redirect_uri`s
+you are using will still be considered valid, or opt-out of the additional hardening.
+
+```
+# If set to `true`, any validation of the `redirect_uri` provided during
+# a user registration will be disabled.
+# Clients can use this feature to redirect the user back to their application
+# after a successful registration, so instead of ending up in the user
+# dashboard, they come back to the client app that initiated the registration.
+#
+# The given `redirect_uri` will be compared against all registered
+# `client_uri`s and will throw an error, if there is no match. However,
+# this check will prevent ephemeral clients from using this feature. Only
+# if you need it in combination with ephemeral clients, you should
+# set this option to `true`. Otherwise it is advised to set the correct
+# Client URI in the admin UI. The `redirect_uri` will be allowed if it starts
+# with any registered `client_uri`.
+#
+# default: false
+#USER_REG_OPEN_REDIRECT=true
+```
+
 ### Changes
 
 #### Efficiency and speed improvements
