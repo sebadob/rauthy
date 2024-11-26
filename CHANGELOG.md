@@ -89,13 +89,60 @@ HQL_BACKUP_CRON="0 30 2 * * * *"
 #HQL_S3_SECRET=s3_secret
 
 #####################################
+############# CLUSTER ###############
+#####################################
+
+# Can be set to 'k8s' to try to split off the node id from the hostname
+# when Hiqlite is running as a StatefulSet inside Kubernetes.
+#HQL_NODE_ID_FROM=k8s
+
+# The node id must exist in the nodes and there must always be
+# at least a node with ID 1
+# Will be ignored if `HQL_NODE_ID_FROM=k8s`
+HQL_NODE_ID=1
+
+# All cluster member nodes.
+# To make setting the env var easy, the values are separated by `\s`
+# while nodes are separated by `\n`
+# in the following format:
+#
+# id addr_raft addr_api
+# id addr_raft addr_api
+# id addr_raft addr_api
+#
+HQL_NODES="
+1 localhost:8100 localhost:8200
+"
+
+# Sets the limit when the Raft will trigger the creation of a new
+# state machine snapshot and purge all logs that are included in
+# the snapshot.
+# Higher values can achieve more throughput in very write heavy
+# situations but will end up in more disk usage and longer
+# snapshot creations / log purges.
+# default: 10000
+#HQL_LOGS_UNTIL_SNAPSHOT=10000
+
+# Secrets for Raft internal authentication as well as for the API.
+# These must be at least 16 characters long and you should provide
+# different ones for both variables.
+HQL_SECRET_RAFT=SuperSecureSecret1337
+HQL_SECRET_API=SuperSecureSecret1337
+
+# You can either parse `ENC_KEYS` and `ENC_KEY_ACTIVE` from the
+# environment with setting this value to `env`, or parse them from
+# a file on disk with `file:path/to/enc/keys/file`
+# default: env
+#HQL_ENC_KEYS_FROM=env
+
+#####################################
 ############ DATABASE ###############
 #####################################
 
 # Max DB connections for the Postgres pool.
 # Irrelevant for Hiqlite.
-# default: 5
-#DATABASE_MAX_CONN=5
+# default: 20
+#DATABASE_MAX_CONN=20
 
 # If specified, the currently configured Database will be DELETED and 
 # OVERWRITTEN with a migration from the given database with this variable. 
