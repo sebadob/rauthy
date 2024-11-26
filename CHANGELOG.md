@@ -172,6 +172,21 @@ HQL_SECRET_API=SuperSecureSecret1337
 # default: false
 #HQL_LOG_STATEMENTS=false
 
+# The size of the pooled connections for local database reads.
+#
+# Do not confuse this with a pool size for network databases, as it
+# is much more efficient. You cant' really translate between them,
+# because it depends on many factors, but if you assume a factor of
+# 10 is a good start. This means, if you needed a (read) pool size
+# of 40 connections for something like a postgres before, you should
+# start at a `read_pool_size` of 4.
+#
+# Keep in mind that this pool is only used for reads and writes will
+# travel through the Raft and have their own dedicated connection.
+#
+# default: 4
+#HQL_READ_POOL_SIZE=4
+
 # Enables immediate flush + sync to disk after each Log Store Batch.
 # The situations where you would need this are very rare, and you
 # should use it with care.
