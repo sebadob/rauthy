@@ -967,7 +967,6 @@ EVENT_LEVEL_FAILED_LOGIN=info
 #LOG_LEVEL=info
 
 # The log level for the `Hiqlite` persistence layer.
-# At the time of writing, only the cache will use `hiqlite`
 # default: info
 LOG_LEVEL_DATABASE=info
 
