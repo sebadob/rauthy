@@ -75,10 +75,11 @@ The [reference config](../config/config.html) contains a `TLS` section with all 
 For this example, we will be using the same certificates for both the internal cache mTLS connections and the
 public facing HTTPS server.
 
-### Cache
+### Hiqlite
 
-The cache layer (optionally) uses TLS, if you provide certificates. Simply provide the following values from the `TLS`
-section in the reference config:
+Hiqlite can run the whole database layer, and it will always take care of caching. It can be configured to use TLS
+internally, if you provide certificates. Simply provide the following values from the `TLS` section in the reference
+config:
 
 ```
 # If given, these keys / certificates will be used to establish
