@@ -921,7 +921,7 @@ dependencies = [
  "hyper 1.5.1",
  "hyper-util",
  "pin-project-lite",
- "rustls 0.23.17",
+ "rustls 0.23.18",
  "rustls-pemfile 2.2.0",
  "rustls-pki-types",
  "tokio",
@@ -2503,7 +2503,7 @@ dependencies = [
  "rusqlite",
  "rust-embed",
  "rust_decimal",
- "rustls 0.23.17",
+ "rustls 0.23.18",
  "serde",
  "serde_json",
  "serde_rusqlite",
@@ -2732,7 +2732,7 @@ dependencies = [
  "http 1.1.0",
  "hyper 1.5.1",
  "hyper-util",
- "rustls 0.23.17",
+ "rustls 0.23.18",
  "rustls-pki-types",
  "tokio",
  "tokio-rustls 0.26.0",
@@ -3234,7 +3234,7 @@ dependencies = [
  "nom",
  "percent-encoding",
  "quoted_printable",
- "rustls 0.23.17",
+ "rustls 0.23.18",
  "rustls-pemfile 2.2.0",
  "rustls-pki-types",
  "socket2",
@@ -3268,7 +3268,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -4185,7 +4185,7 @@ dependencies = [
  "quinn-proto",
  "quinn-udp",
  "rustc-hash 2.0.0",
- "rustls 0.23.17",
+ "rustls 0.23.18",
  "socket2",
  "thiserror 2.0.3",
  "tokio",
@@ -4203,7 +4203,7 @@ dependencies = [
  "rand",
  "ring",
  "rustc-hash 2.0.0",
- "rustls 0.23.17",
+ "rustls 0.23.18",
  "rustls-pki-types",
  "slab",
  "thiserror 2.0.3",
@@ -4279,7 +4279,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.27.0-20241119"
+version = "0.27.0-20241120"
 dependencies = [
  "actix-service",
  "actix-web",
@@ -4304,7 +4304,7 @@ dependencies = [
  "rauthy-service",
  "reqwest",
  "ring",
- "rustls 0.23.17",
+ "rustls 0.23.18",
  "rustls-pemfile 2.2.0",
  "rustls-pki-types",
  "serde",
@@ -4320,7 +4320,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.27.0-20241119"
+version = "0.27.0-20241120"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4341,7 +4341,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.27.0-20241119"
+version = "0.27.0-20241120"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4367,7 +4367,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.27.0-20241119"
+version = "0.27.0-20241120"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4403,7 +4403,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.27.0-20241119"
+version = "0.27.0-20241120"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4433,7 +4433,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.27.0-20241119"
+version = "0.27.0-20241120"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4452,7 +4452,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.27.0-20241119"
+version = "0.27.0-20241120"
 dependencies = [
  "accept-language",
  "actix",
@@ -4528,7 +4528,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.27.0-20241119"
+version = "0.27.0-20241120"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4548,7 +4548,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.27.0-20241119"
+version = "0.27.0-20241120"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4566,7 +4566,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.27.0-20241119"
+version = "0.27.0-20241120"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4768,7 +4768,7 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "quinn",
- "rustls 0.23.17",
+ "rustls 0.23.18",
  "rustls-pemfile 2.2.0",
  "rustls-pki-types",
  "serde",
@@ -5199,9 +5199,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.17"
+version = "0.23.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f1a745511c54ba6d4465e8d5dfbd81b45791756de28d4981af70d6dca128f1e"
+checksum = "9c9cc1d47e243d655ace55ed38201c19ae02c148ae56412ab8750e8f0166ab7f"
 dependencies = [
  "aws-lc-rs",
  "log",
@@ -5798,7 +5798,7 @@ dependencies = [
  "once_cell",
  "paste",
  "percent-encoding",
- "rustls 0.23.17",
+ "rustls 0.23.18",
  "rustls-pemfile 2.2.0",
  "serde",
  "serde_json",
@@ -6328,7 +6328,7 @@ version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c7bc40d0e5a97695bb96e27995cd3a08538541b0a846f65bba7a359f36700d4"
 dependencies = [
- "rustls 0.23.17",
+ "rustls 0.23.18",
  "rustls-pki-types",
  "tokio",
 ]
