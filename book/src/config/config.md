@@ -352,7 +352,7 @@ HQL_SECRET_API=SuperSecureSecret1337
 #####################################
 
 # Connection string to connect to a Postgres database.
-# This will be ignore as long as `HIQLITE=true`.
+# This will be ignored as long as `HIQLITE=true`.
 #
 # Format: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
 #

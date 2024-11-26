@@ -18,7 +18,7 @@ docker run --rm \
 This will start the container in interactive mode with the [Hiqlite](https://github.com/sebadob/hiqlite) database. Just
 take a look at the log at the logs to see the Account Dashboard URL and new admin password, to get access.
 
-If you want to test a bit more in depth, you can change to an on-disk database easily:
+If you want to test a bit more in depth, you can keep the container between restarts:
 
 ```
 docker run -d \
@@ -93,8 +93,8 @@ To make this work with the default values, you have 2 options:
 - Change the access rights:
 
 ```
-chmod 0640 rauthy/rauthy.cfg
-chmod 0600 rauthy/data
+sudo chmod 0600 rauthy/rauthy.cfg
+sudo chmod 0700 rauthy/data
 sudo chown -R 10001:10001 rauthy
 ```
 
@@ -120,6 +120,9 @@ take care of this automatically during sub-directory creation, but the config in
 
 Take a look at the [reference config](../config/config.html) and adopt everything to your needs, but to not break this
 example, be sure to not change `HQL_DATA_DIR`.
+
+For an in-depth guide on a production ready config, check the [Production Config](../config/production_config.md)
+section.
 
 **5. Start the container with volume mounts**
 
