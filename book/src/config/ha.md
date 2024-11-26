@@ -22,14 +22,14 @@ config value in the `CACHE` section.
 ## Configuration
 
 Earlier versions of Rauthy have been using [redhac](https://github.com/sebadob/redhac) for the HA cache layer. While
-`redhac` was working fine, it had a few design issues I wanted to get rid of. Since `v0.26.0`, Rauthy uses the above
-mentioned [Hiqlite](https://github.com/sebadob/hiqlite) instead. You only need to configure a few variables:
+`redhac` was working fine, it had a few design issues I wanted to get rid of. Since `v0.26.0`, Rauthy uses the
+above-mentioned [Hiqlite](https://github.com/sebadob/hiqlite) instead. You only need to configure a few variables:
 
 ### `HQL_NODE_ID`
 
 The `HQL_NODE_ID` is mandatory, even for a single replica deployment with only a single node in `HQL_NODES`.
 If you deploy Rauthy as a StatefulSet inside Kubernetes, you can ignore this value and just set `HQL_NODE_ID_FROM`
-below. If you deploy anywere else or you are not using a StatefulSet, you need to set the `HQL_NODE_ID` to tell Rauthy
+below. If you deploy anywhere else, or you are not using a StatefulSet, you need to set the `HQL_NODE_ID` to tell Rauthy
 which node of the Raft cluster it should be.
 
 ```
