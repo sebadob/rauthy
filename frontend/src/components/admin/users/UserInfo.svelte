@@ -357,16 +357,12 @@
             CREATED
         </div>
         <div class="value">
-            {#if user.created_at}
-                {formatDateFromTs(user.created_at)}
-            {:else}
-                Never
-            {/if}
+            {formatDateFromTs(user.created_at)}
         </div>
     </div>
 
     <!-- Last Login-->
-    <div class="unit" style:margin-top="12px">
+    <div class="unit">
         <div class="label font-label">
             LAST LOGIN
         </div>
