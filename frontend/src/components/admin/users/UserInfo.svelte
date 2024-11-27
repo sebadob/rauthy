@@ -224,7 +224,7 @@
             LANGUAGE
         </div>
         <div style="margin-top: .085rem">
-            <OptionSelect bind:value={language} options={LANGUAGES} />
+            <OptionSelect bind:value={language} options={LANGUAGES}/>
         </div>
     </div>
 
@@ -350,6 +350,20 @@
             USER EXPIRES
         </Input>
     {/if}
+
+    <!-- Created At-->
+    <div class="unit" style:margin-top="12px">
+        <div class="label font-label">
+            CREATED
+        </div>
+        <div class="value">
+            {#if user.created_at}
+                {formatDateFromTs(user.created_at)}
+            {:else}
+                Never
+            {/if}
+        </div>
+    </div>
 
     <!-- Last Login-->
     <div class="unit" style:margin-top="12px">
