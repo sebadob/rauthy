@@ -186,6 +186,7 @@ HQL_SECRET_API=SuperSecureSecret1337
 #
 # default: 4
 #HQL_READ_POOL_SIZE=4
+
 # Enables immediate flush + sync to disk after each Log Store Batch.
 # The situations where you would need this are very rare, and you
 # should use it with care.
@@ -193,8 +194,10 @@ HQL_SECRET_API=SuperSecureSecret1337
 # The default is `false`, and a flush + sync will be done in 200ms
 # intervals. Even if the application should crash, the OS will take
 # care of flushing left-over buffers to disk and no data will get
-# lost. Only if something worse happens, you might lose the last
-# 200ms of commits.
+# lost. If something worse happens, you might lose the last 200ms 
+# of commits (on that node, not the whole cluster). This is only
+# important to know for single instance deployments. HA nodes will
+# sync data from other cluster members after a restart anyway.
 #
 # The only situation where you might want to enable this option is
 # when you are on a host that might lose power out of nowhere, and
@@ -205,9 +208,13 @@ HQL_SECRET_API=SuperSecureSecret1337
 # can pretty quickly kill your SSD for instance.
 #HQL_SYNC_IMMEDIATE=false
 
-# The password for the Hiqlite dashboard as b64 encoded Argon2ID hash.
+# The password for the Hiqlite dashboard as Argon2ID hash.
 # '123SuperMegaSafe' in this example
-HQL_PASSWORD_DASHBOARD=JGFyZ29uMmlkJHY9MTkkbT0xOTQ1Nix0PTIscD0xJGQ2RlJDYTBtaS9OUnkvL1RubmZNa0EkVzJMeTQrc1dxZ0FGd0RyQjBZKy9iWjBQUlZlOTdUMURwQkk5QUoxeW1wRQ==
+#
+# You only need to provide this value if you need to access the
+# Hiqlite debugging dashboard for whatever reason. If no password
+# hash is given, the dashboard will not be reachable.
+#HQL_PASSWORD_DASHBOARD=JGFyZ29uMmlkJHY9MTkkbT0xOTQ1Nix0PTIscD0xJGQ2RlJDYTBtaS9OUnkvL1RubmZNa0EkVzJMeTQrc1dxZ0FGd0RyQjBZKy9iWjBQUlZlOTdUMURwQkk5QUoxeW1wRQ==
 ```
 
 ##### Migration (Postgres)
