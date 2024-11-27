@@ -46,23 +46,24 @@ makes extensive use of caching for everything used in the authentication chain t
 are even cached for several hours and special care has been taken into account in case of cache eviction and
 invalidation.
 
-Rauthy comes in 2 flavors: with embedded [Hiqlite](https://github.com/sebadob/hiqlite), which is the default setting,
-or you can optionally use a Postgres as your database, if you already have an instance running anyway.
+Rauthy comes with two database options:
+
+- with embedded [Hiqlite](https://github.com/sebadob/hiqlite), which is the default setting
+- or you can optionally use a Postgres as your database, if you already have an instance running anyway.
 
 A deployment with the embedded [Hiqlite](https://github.com/sebadob/hiqlite), filled caches / buffers and a small set of
-clients and users configured typically settles around 61MB of memory. Using Postgres, it will end up at ~36MB, but then
-you have of course your Postgres consuming additional resources. This is pretty awesome when comparing it to other
-existing solutions out there. If a password from a login is hashed, the memory consumption will of course go up way
-higher than this, depending on your configured Argon2ID parameters.
+clients and users configured typically settles around 61MB of memory. Using Postgres, it will end up at ~43MB, but then
+you have of course your Postgres consuming additional resources. If a password from a login is hashed, the memory
+consumption will of course go up way higher than this, depending on your configured Argon2ID parameters.
 
-For achieving the speed and efficiency, some additional design tradeoffs were made. For instance, some things you
-configure statically via config file and not dynamically via UI, while most of them are configured once and then never
+For achieving the speed and efficiency, some additional design tradeoffs were made. For instance, some things can only
+be statically set via config file and not dynamically via UI, because most of them are configured once and then never
 touched again.
 
 ### Highly Available
 
 Even though it makes extensive use of caching, you can run it in HA mode. [Hiqlite](https://github.com/sebadob/hiqlite)
-creates its own embedded HA cache layer. A HA deployment is available with
+creates its own embedded HA cache and persistence layer. Such a deployment is possible with
 both [Hiqlite](https://github.com/sebadob/hiqlite) and Postgres.
 
 ### Admin UI + User Account Dashboard
@@ -81,12 +82,12 @@ can be changed and each client can have its own custom logo. Additionally, if yo
 ### Events and Auditing
 
 Rauthy comes with an Event- and Alerting-System. Events are generated in all kinds of scenarios. They can be sent via
-E-Mail, Matrix or Slack, depending on the severity and the configured level. You will see them in the Admin UI in real
-time, or you can subscribe to the events stream and externally handle them depending on your own business logic.
+E-Mail, Matrix or Slack, depending on the severity and the configured level. You will see them in the Admin UI in
+real-time, or you can subscribe to the events stream and externally handle them depending on your own business logic.
 
 ### Brute-Force and basic DoS protection
 
-Rauthy has brute force and basic DoS protection for the login endpoint. Your timeout will be artificially delayed after
+Rauthy has brute-force and basic DoS protection for the login endpoint. The timeout will be artificially delayed after
 enough invalid logins. It auto-blacklists IPs that exceeded too many invalid logins, with automatic expiry of the
 blacklisting. You can, if you like, manually blacklist certain IPs as well via the Admin UI.
 
@@ -176,11 +177,10 @@ open source project for quite some time.
 
 This is a non-exhaustive list of currently open TODO's
 
+- [ ] UI overhaul to make it "prettier" in certain places
 - [ ] Maybe get a nicer Rauthy Logo
 - [ ] experimental implementation of [dilithium](https://pq-crystals.org/dilithium/) singing algorithm to become quantum
   safe
-- [ ] maybe something like a `rauthy-migrate` project to make migrating an existing user's DB easier
-- [ ] UI overhaul to make it "prettier" in certain places
 
 ## Getting Started
 
