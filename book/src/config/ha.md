@@ -2,13 +2,11 @@
 
 Rauthy is capable of running in a High Availability Mode (HA).
 
-Some values, like authentication codes for instance, do live in the cache only. Additionally, there might come an
-option with a future version which offers a special in-memory only mode in some situations.
-
-Because of this, all instances create and share a single HA cache layer, which means at the same time, that you cannot
-just scale up the replicas infinitely without adjusting the config. The optimal amount of replicas for a HA mode would
-be 3, or if you need even higher resilience 5. More replicas should work just fine, but this has never been really
-tested and the performance will degrade at some point.
+Some values, like authentication codes for instance, do live in the cache only. Because of this, all instances create
+and share a single HA cache layer, which means at the same time, that you cannot just scale up the replicas infinitely
+without adjusting the config. The optimal amount of replicas for a HA mode would be 3, or if you need even higher
+resilience 5. More replicas should work just fine, but this has never been really tested and the latency will
+increase at some point.
 
 The Cache layer uses another project of mine called [Hiqlite](https://github.com/sebadob/hiqlite). It uses the Raft
 algorithm under the hood to achieve consistency.
@@ -16,7 +14,7 @@ algorithm under the hood to achieve consistency.
 ```admonish caution
 Even though everything is authenticated, you should not expose the
 Hiqlite ports to the public, if not really necessary for some reason. You configure these ports with the `HQL_NODES`
-config value in the `CACHE` section.
+config value in the `CLUSTER` section.
 ```
 
 ## Configuration
@@ -52,8 +50,8 @@ This will parse the correct NodeID from the Pod hostname, so you don't have to w
 
 ### `HQL_NODES`
 
-Using this value, you defined the Cache / Raft members. This must be given even if you just deploy a single instance.
-The description from the reference config should be clear enough:
+This value defines the Cache / Raft members. It must be given even if you just deploy a single instance. The description
+from the reference config should be clear enough:
 
 ```
 # All cluster member nodes.
