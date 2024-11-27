@@ -294,19 +294,26 @@ account dashboard, the user will be redirected to the same URI again.</li>
 </ol>
 <p>This makes it possible to use Rauthy as your upstream provider without the user really needing to interact with or
 know about it in detail, which again leads to less confusion.</p>
-<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
-<div class="admonition-title">
-<div id="admonition-note-1-title">
-<p>Note</p>
-</div>
-<a class="admonition-anchor-link" href="#admonition-note-1"></a>
-</div>
-<div>
-<p>If you want to complete this improved UX setup, you should set a <strong>Client URI</strong> for the client in the admin dashboard.
-When there is a valid value, a small home icon will be shown inside the login form, so a user can get back to the
-client's URI without possibly screwing up with incorrectly using the browsers back button.</p>
-</div>
-</div>
+<p>By default, the allowed <code>redirect_uri</code>s are restricted to all existing <code>client_uri</code>s in the database. They will be
+compared via <code>client_uri.startsWith(redirect_uri)</code>. If you want to opt-out of the additional redirect_uri checks and
+configure and open redirect to allow just anything, you can do so:</p>
+<pre><code># If set to `true`, any validation of the `redirect_uri` provided during
+# a user registration will be disabled.
+# Clients can use this feature to redirect the user back to their application
+# after a successful registration, so instead of ending up in the user
+# dashboard, they come back to the client app that initiated the registration.
+#
+# The given `redirect_uri` will be compared against all registered
+# `client_uri`s and will throw an error, if there is no match. However,
+# this check will prevent ephemeral clients from using this feature. Only
+# if you need it in combination with ephemeral clients, you should
+# set this option to `true`. Otherwise it is advised to set the correct
+# Client URI in the admin UI. The `redirect_uri` will be allowed if it starts
+# with any registered `client_uri`.
+#
+# default: false
+#USER_REG_OPEN_REDIRECT=true
+</code></pre>
 <h3 id="custom-frontend"><a class="header" href="#custom-frontend">Custom Frontend</a></h3>
 <p>Depending on your application, you may want to create your own frontend for the registration. For speed and efficiency
 reasons, Rauthy does not allow you to overwrite the existing templates, but you can host your own UI of course.</p>
@@ -325,10 +332,10 @@ reasons, Rauthy does not allow you to overwrite the existing templates, but you 
     #[validate(email)]
     email: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{1,32}"))]
+    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{1,32}"))]
     family_name: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ÿ-\\s]{1,32}"))]
+    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{1,32}"))]
     given_name: String,
     /// Validation: `[a-zA-Z0-9,.:/_\-&amp;?=~#!$'()*+%]+`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+"))]
