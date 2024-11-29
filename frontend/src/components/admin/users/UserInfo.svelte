@@ -13,7 +13,7 @@
         LANGUAGES,
         REGEX_BIRTHDATE,
         REGEX_CITY,
-        REGEX_NAME,
+        REGEX_NAME, REGEX_NAME_NULLABLE,
         REGEX_PHONE,
         REGEX_STREET
     } from "../../../utils/constants.js";
@@ -55,7 +55,7 @@
     const schema = yup.object().shape({
         email: yup.string().required('E-Mail is required').email("Bad E-Mail format"),
         given_name: yup.string().trim().required('Given Name is required').matches(REGEX_NAME, 'Invalid characters'),
-        family_name: yup.string().trim().required('Family Name is required').matches(REGEX_NAME, 'Invalid characters'),
+        family_name: yup.string().trim().matches(REGEX_NAME_NULLABLE, 'Invalid characters'),
     });
 
     let formErrorsValues = {};
@@ -90,7 +90,7 @@
         const req = {
             email: user.email,
             given_name: user.given_name,
-            family_name: user.family_name,
+            family_name: user.family_name || null,
             language: language.toLowerCase(),
             roles: user.roles,
             groups: user.groups,

@@ -31,6 +31,7 @@ export const REGEX_API_KEY = /^[a-zA-Z0-9_/-]{2,24}$/gm;
 //     - a part of Halfwidth and Fullwidth Forms
 //   Unicode SMP and SIP planes are not included due to JavaScript regex limitations
 export const REGEX_NAME = /^[\w\sÀ-ſ\-\u3041-\u3096\u30A0-\u30FF\u3400-\u4DB5\u4E00-\u9FCB\uF900-\uFA6A\u2E80-\u2FD5\uFF66-\uFF9F\uFFA1-\uFFDC\u31F0-\u31FF]{1,32}$/gm;
+export const REGEX_NAME_NULLABLE = /^[\w\sÀ-ſ\-\u3041-\u3096\u30A0-\u30FF\u3400-\u4DB5\u4E00-\u9FCB\uF900-\uFA6A\u2E80-\u2FD5\uFF66-\uFF9F\uFFA1-\uFFDC\u31F0-\u31FF]{0,32}$/gm;
 export const REGEX_ATTR_DESC = /^[a-zA-Z0-9\-_/\s]{0,128}$/gm;
 export const REGEX_ATTR_KEY = /^[a-zA-Z0-9\-_/]{2,32}$/gm;
 export const REGEX_CLIENT_ID = /^[a-zA-Z0-9\-_/]{2,128}$/gm;
