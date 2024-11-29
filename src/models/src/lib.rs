@@ -107,7 +107,7 @@ pub struct AddressClaim {
 impl AddressClaim {
     pub fn try_build(user: &User, values: &UserValues) -> Option<Self> {
         let mut slf = Self {
-            formatted: format!("{} {}\n", user.given_name, user.family_name),
+            formatted: format!("{}\n", user.email_recipient_name()),
             street_address: None,
             locality: None,
             postal_code: None,

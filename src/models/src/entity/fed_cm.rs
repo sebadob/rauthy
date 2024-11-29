@@ -35,7 +35,7 @@ pub struct FedCMAccount {
 
 impl FedCMAccount {
     pub fn build(user: User) -> Self {
-        let name = format!("{} {}", user.given_name, user.family_name);
+        let name = user.email_recipient_name();
         let login_hint = format!("login_hint={}", user.email);
 
         Self {

@@ -1189,14 +1189,14 @@ impl AuthProviderIdClaims<'_> {
         }
     }
 
-    fn family_name(&self) -> &str {
+    fn family_name(&self) -> Option<&str> {
         if let Some(family_name) = &self.family_name {
-            family_name
+            Some(family_name)
         } else if let Some(name) = &self.name {
             let (_, family_name) = name.split_once(' ').unwrap_or(("N/A", "N/A"));
-            family_name
+            Some(family_name)
         } else {
-            "N/A"
+            None
         }
     }
 
@@ -1440,8 +1440,8 @@ impl AuthProviderIdClaims<'_> {
                 user.given_name = given_name.to_string();
             }
             let family_name = self.family_name();
-            if user.family_name.as_str() != family_name {
-                user.family_name = family_name.to_string();
+            if user.family_name.as_deref() != family_name {
+                user.family_name = family_name.map(String::from);
             }
 
             // should this user be a rauthy admin?
@@ -1480,7 +1480,7 @@ impl AuthProviderIdClaims<'_> {
             let new_user = User {
                 email: self.email.as_ref().unwrap().to_string(),
                 given_name: self.given_name().to_string(),
-                family_name: self.family_name().to_string(),
+                family_name: self.family_name().map(String::from),
                 roles: should_be_rauthy_admin
                     .map(|should_be_admin| {
                         if should_be_admin {
