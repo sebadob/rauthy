@@ -1546,3 +1546,78 @@ impl UserRegisterHtml<'_> {
         .expect("rendering register.html")
     }
 }
+
+pub mod atproto {
+    use askama::Template;
+
+    use crate::{
+        entity::colors::Colors,
+        i18n::{authorize::I18nAuthorize, SsrJson},
+        language::Language,
+    };
+
+    use super::FrontendAction;
+
+    #[derive(Default, Template)]
+    #[template(path = "html/atproto/login.html")]
+    pub struct AuthorizeHtml<'a> {
+        pub lang: &'a str,
+        pub csrf_token: &'a str,
+        pub data: &'a str,
+        pub action: &'a str,
+        pub col_act1: &'a str,
+        pub col_act1a: &'a str,
+        pub col_act2: &'a str,
+        pub col_act2a: &'a str,
+        pub col_acnt: &'a str,
+        pub col_acnta: &'a str,
+        pub col_ok: &'a str,
+        pub col_err: &'a str,
+        pub col_glow: &'a str,
+        pub col_gmid: &'a str,
+        pub col_ghigh: &'a str,
+        pub col_text: &'a str,
+        pub col_bg: &'a str,
+        pub i18n: String,
+        pub auth_providers: String,
+    }
+
+    impl AuthorizeHtml<'_> {
+        pub fn build(
+            client_name: &Option<String>,
+            csrf_token: &str,
+            action: FrontendAction,
+            colors: &Colors,
+            lang: &Language,
+            auth_providers_json: Option<String>,
+        ) -> String {
+            let mut res = AuthorizeHtml {
+                lang: lang.as_str(),
+                csrf_token,
+                action: &action.to_string(),
+                col_act1: &colors.act1,
+                col_act1a: &colors.act1a,
+                col_act2: &colors.act2,
+                col_act2a: &colors.act2a,
+                col_acnt: &colors.acnt,
+                col_acnta: &colors.acnta,
+                col_ok: &colors.ok,
+                col_err: &colors.err,
+                col_glow: &colors.glow,
+                col_gmid: &colors.gmid,
+                col_ghigh: &colors.ghigh,
+                col_text: &colors.text,
+                col_bg: &colors.bg,
+                i18n: I18nAuthorize::build(lang).as_json(),
+                auth_providers: auth_providers_json.unwrap_or_default(),
+                ..Default::default()
+            };
+
+            if client_name.is_some() {
+                res.data = client_name.as_ref().unwrap();
+            }
+
+            res.render().unwrap()
+        }
+    }
+}

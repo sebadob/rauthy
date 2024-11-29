@@ -3,7 +3,7 @@ import wasm from "vite-plugin-wasm";
 import topLevelAwait from "vite-plugin-top-level-await";
 import fs from 'fs';
 
-const backend = 'http://127.0.0.1:8080';
+const backend = 'http://127.0.0.1:8888';
 
 /** @type {import('vite').UserConfig} */
 const config = {
@@ -52,6 +52,10 @@ const config = {
             '/auth/v1/version': backend,
             '/auth/webid/': backend,
             '/docs/v1/': backend,
+
+            '/auth/v1/atproto/client-metadata': backend,
+            '/auth/v1/atproto/login': backend,
+            '/auth/v1/atproto/callback': backend,
         }
     }
 };

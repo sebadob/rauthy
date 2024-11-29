@@ -1,12 +1,24 @@
+use crate::database::DB;
 use crate::email::EMail;
+use crate::entity::atproto::resolvers::DnsTxtResolver;
+use crate::entity::atproto::{init_oauth_client, Atproto};
+use crate::entity::jwk::JWKS;
 use crate::events::event::Event;
 use crate::events::ip_blacklist_handler::IpBlacklistReq;
 use crate::events::listener::EventRouterMsg;
 use crate::ListenScheme;
-use rauthy_common::constants::PROXY_MODE;
+use atrium_identity::did::{CommonDidResolver, CommonDidResolverConfig, DEFAULT_PLC_DIRECTORY_URL};
+use atrium_identity::handle::{AtprotoHandleResolver, AtprotoHandleResolverConfig};
+use atrium_oauth_client::{
+    AtprotoClientMetadata, AuthMethod, DefaultHttpClient, GrantType, KnownScope, OAuthClient,
+    OAuthClientConfig, OAuthResolverConfig, Scope,
+};
+use jose_jwk::JwkSet;
+use rauthy_api_types::oidc::JWKSCerts;
+use rauthy_common::constants::{DEV_MODE, PROXY_MODE};
 use std::env;
 use std::sync::Arc;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, RwLock};
 use tracing::{debug, info};
 use webauthn_rs::prelude::Url;
 use webauthn_rs::Webauthn;
@@ -31,6 +43,7 @@ pub struct AppState {
     pub tx_events_router: flume::Sender<EventRouterMsg>,
     pub tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
     pub webauthn: Arc<Webauthn>,
+    pub atproto: Arc<RwLock<Atproto>>,
 }
 
 impl AppState {
@@ -154,6 +167,12 @@ impl AppState {
             .rp_name(&rp_name);
         let webauthn = Arc::new(builder.build().expect("Invalid configuration"));
 
+        let atproto = Arc::new(RwLock::new(
+            init_oauth_client(public_url.clone(), None)
+                .await
+                .expect("failed to initialize oauth client for atproto"),
+        ));
+
         Ok(Self {
             public_url,
             argon2_params,
@@ -170,6 +189,7 @@ impl AppState {
             tx_events_router,
             tx_ip_blacklist,
             webauthn,
+            atproto,
         })
     }
 

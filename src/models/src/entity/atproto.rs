@@ -12,18 +12,17 @@ use atrium_identity::{
 };
 use atrium_oauth_client::{
     AtprotoClientMetadata, AuthMethod, AuthorizeOptions, CallbackParams, DefaultHttpClient,
-    GrantType, KnownScope, OAuthClientConfig, OAuthResolverConfig, Scope,
+    GrantType, KnownScope, OAuthClient, OAuthClientConfig, OAuthResolverConfig, Scope,
 };
 use cryptr::utils::secure_random_alnum;
-use rauthy_api_types::atproto;
+use jose_jwk::{Jwk, JwkSet};
+use rauthy_api_types::{atproto, oidc::JWKSCerts};
 use rauthy_common::constants::{
-        COOKIE_UPSTREAM_CALLBACK, PROVIDER_LINK_COOKIE,
-        UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
-    };
+    COOKIE_UPSTREAM_CALLBACK, DEV_MODE, PROVIDER_LINK_COOKIE, UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
+};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use resolvers::DnsTxtResolver;
 use serde::{Deserialize, Serialize};
-use tokio::sync::OnceCell;
 use tracing::{debug, error};
 
 use crate::{
@@ -39,42 +38,41 @@ use crate::{
 
 use super::{
     auth_providers::{AuthProviderCallback, AuthProviderType},
+    jwk::JWKS,
     sessions::Session,
 };
 
-type OAuthClient = atrium_oauth_client::OAuthClient<
+pub type Atproto = atrium_oauth_client::OAuthClient<
     DB,
     DB,
     CommonDidResolver<DefaultHttpClient>,
     AtprotoHandleResolver<DnsTxtResolver, DefaultHttpClient>,
 >;
 
-#[allow(clippy::type_complexity)]
-static CLIENT: OnceCell<OAuthClient> = OnceCell::const_new();
-
-async fn init_oauth_client(
+pub async fn init_oauth_client(
     public_url: String,
-    redirect_uri: String,
-) -> Result<OAuthClient, atrium_oauth_client::Error> {
+    keys: Option<Vec<Jwk>>,
+) -> Result<Atproto, ErrorResponse> {
     let http_client = Arc::new(DefaultHttpClient::default());
 
+    let scheme = (!*DEV_MODE).then(|| "https").unwrap_or("http");
+
     let client_metadata = AtprotoClientMetadata {
-        client_id: public_url.clone(),
-        client_uri: public_url.clone(),
-        redirect_uris: vec![redirect_uri],
-        token_endpoint_auth_method: AuthMethod::PrivateKeyJwt,
+        client_id: format!("{scheme}://{public_url}/auth/v1/atproto/client_metadata"),
+        client_uri: format!("{scheme}://{public_url}"),
+        redirect_uris: vec![format!("{scheme}://{public_url}/auth/v1/atproto/callback")],
+        token_endpoint_auth_method: (!*DEV_MODE)
+            .then(|| AuthMethod::PrivateKeyJwt)
+            .unwrap_or(AuthMethod::None),
         grant_types: vec![GrantType::AuthorizationCode, GrantType::RefreshToken],
-        scopes: [KnownScope::Atproto]
-            .into_iter()
-            .map(Scope::Known)
-            .collect(),
-        jwks_uri: Some(format!("{public_url}/oidc/certs")),
-        token_endpoint_auth_signing_alg: Some(String::from("ES256")),
+        scopes: vec![Scope::Known(KnownScope::Atproto)],
+        jwks_uri: None,
+        token_endpoint_auth_signing_alg: (!*DEV_MODE).then(|| "S256".to_owned()),
     };
 
-    OAuthClient::new(OAuthClientConfig {
+    let config = OAuthClientConfig {
         client_metadata: client_metadata.clone(),
-        keys: None,
+        keys,
         resolver: OAuthResolverConfig {
             did_resolver: CommonDidResolver::new(CommonDidResolverConfig {
                 plc_directory_url: DEFAULT_PLC_DIRECTORY_URL.to_string(),
@@ -89,7 +87,18 @@ async fn init_oauth_client(
         },
         state_store: DB,
         session_store: DB,
-    })
+    };
+
+    let client = OAuthClient::new(config).map_err(|error| {
+        error!(%error, "failed to initialize oauth client for atproto");
+
+        ErrorResponse::new(
+            ErrorResponseType::Internal,
+            "failed to initialize oauth client for atproto",
+        )
+    })?;
+
+    Ok(client)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -97,10 +106,10 @@ pub struct Callback {}
 
 impl Callback {
     /// returns (encrypted cookie, xsrf token, location header, optional allowed origins)
-    pub async fn login_start<'a>(
-        data: &'a web::Data<AppState>,
+    pub async fn login_start(
+        data: &web::Data<AppState>,
         payload: atproto::LoginRequest,
-    ) -> Result<(Cookie<'a>, String, HeaderValue), ErrorResponse> {
+    ) -> Result<(Cookie<'_>, String, HeaderValue), ErrorResponse> {
         let callback = AuthProviderCallback {
             callback_id: secure_random_alnum(32),
             xsrf_token: secure_random_alnum(32),
@@ -109,7 +118,7 @@ impl Callback {
             req_client_id: String::from("atproto"),
             req_scopes: None,
             req_redirect_uri: payload.redirect_uri.clone(),
-            req_state: None,
+            req_state: payload.state.clone(),
             req_nonce: None,
             req_code_challenge: None,
             req_code_challenge_method: None,
@@ -121,18 +130,40 @@ impl Callback {
 
         callback.save().await?;
 
-        let client = CLIENT
-            .get_or_try_init(|| async move {
-                init_oauth_client(data.public_url.clone(), payload.redirect_uri.clone()).await
-            })
-            .await
-            .unwrap();
+        if ((!*DEV_MODE) && (data.atproto.read().await).jwks().keys.is_empty()) {
+            let jwks = JWKS::find_pk().await?;
+
+            if jwks.keys.is_empty() {
+                JWKS::rotate(data).await?;
+            }
+            let jwks = JWKS::find_pk().await?;
+
+            let Ok(JwkSet { keys: new_keys }) = serde_json::to_string(&JWKSCerts::from(jwks))
+                .and_then(|s| serde_json::from_str(&s))
+            else {
+                panic!("invalid JwkSet");
+            };
+
+            *data.atproto.write().await =
+                init_oauth_client(data.public_url.clone(), Some(new_keys)).await?;
+        }
+
+        let atproto = data.atproto.read().await;
 
         let options = AuthorizeOptions {
             state: Some(callback.callback_id.clone()),
             ..Default::default()
         };
-        let location = client.authorize(&payload.at_id, options).await.unwrap();
+        let location = atproto
+            .authorize(&payload.at_identifier, options)
+            .await
+            .map_err(|error| {
+                error!(%error, "failed to build pushed authorization request for atproto");
+                ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "failed to build pushed authorization request for atproto",
+                )
+            })?;
 
         let cookie = ApiCookie::build(
             COOKIE_UPSTREAM_CALLBACK,
@@ -187,14 +218,7 @@ impl Callback {
         }
         debug!("callback csrf token is valid");
 
-        let req_redirect_uri = slf.req_redirect_uri.clone();
-
-        let client = CLIENT
-            .get_or_try_init(|| async move {
-                init_oauth_client(data.public_url.clone(), req_redirect_uri).await
-            })
-            .await
-            .unwrap();
+        let atproto = data.atproto.read().await;
 
         // request is valid -> fetch token for the user
         let params = CallbackParams {
@@ -203,11 +227,21 @@ impl Callback {
             iss: payload.iss.clone(),
         };
         // return early if we got any error
-        let (oauth_session, _) = client.callback(params).await.unwrap();
-        // error!("{}", err);
-        // return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
+        let (oauth_session, _) = atproto.callback(params).await.map_err(|error| {
+            error!(%error, "failed to complete authorization callback for atproto");
+            ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "failed to complete authorization callback for atproto",
+            )
+        })?;
 
-        let token_set = oauth_session.token_set().await.unwrap();
+        let token_set = oauth_session.token_set().await.map_err(|error| {
+            error!(%error, "failed to retrieve token set for atproto");
+            ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "failed to retrieve token set for atproto",
+            )
+        })?;
 
         // extract a possibly existing provider link cookie for
         // linking an existing account to a provider
@@ -244,7 +278,10 @@ impl Callback {
                     .signed_duration_since(Datetime::now().as_ref())
                     .num_seconds() as i32
             })
-            .unwrap();
+            .ok_or_else(|| {
+                error!("token set never expires!");
+                ErrorResponse::new(ErrorResponseType::Internal, "token set never expires!")
+            })?;
         let scopes = slf.req_scopes.iter().flatten().cloned().collect();
         let code = AuthCode::new(
             user.id.clone(),
@@ -278,7 +315,7 @@ impl Callback {
     }
 }
 
-mod resolvers {
+pub mod resolvers {
     use std::error::Error;
 
     use hickory_resolver::{proto::rr::rdata::TXT, TokioAsyncResolver};

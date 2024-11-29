@@ -1,28 +1,20 @@
-use rauthy_common::constants::{
-    RE_ALNUM, RE_CODE_CHALLENGE, RE_URI,
-};
+use rauthy_common::constants::{RE_ALNUM, RE_URI};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
 pub struct LoginRequest {
-    /// Validation: `^did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]$`
-    /// Validation: `^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$`
-    pub at_id: String,
+    /// Validation: 
+    /// `^(did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]|([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$`
+    pub at_identifier: String,
 
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
-    pub redirect_uri: String,
+    pub state: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
-    pub state: Option<String>,
-    /// Validation: `[a-zA-Z0-9-._~]{43,128}`
-    #[validate(regex(path = "*RE_CODE_CHALLENGE", code = "[a-zA-Z0-9-._~]{43,128}"))]
-    pub code_challenge: Option<String>,
-    /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
-    pub code_challenge_method: Option<String>,
+    pub redirect_uri: String,
 
     // values for the callback from upstream
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
