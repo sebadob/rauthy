@@ -204,7 +204,7 @@ CREATE TABLE users
         CONSTRAINT users_email
             UNIQUE,
     given_name            TEXT              NOT NULL,
-    family_name           TEXT              NOT NULL,
+    family_name           TEXT,
     password              TEXT,
     roles                 TEXT              NOT NULL,
     groups                TEXT,
