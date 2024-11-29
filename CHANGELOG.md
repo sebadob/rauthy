@@ -228,7 +228,7 @@ requested claims.
 However, if you used to communicate with the Rauthy API directly, you should be aware of this change. The
 `User.family_name` is now optional in all situations.
 
-[]()
+[#631](https://github.com/sebadob/rauthy/pull/631)
 
 ### Changes
 

@@ -82,7 +82,7 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
     // post a new user
     let new_user = NewUserRequest {
         given_name: "IT Test".to_string(),
-        family_name: "Testy".to_string(),
+        family_name: Some("Testy".to_string()),
         email: "alfred@batcave.io".to_string(),
         language: Language::En,
         roles: vec!["user".to_string()],
