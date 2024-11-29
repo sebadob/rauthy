@@ -27,12 +27,10 @@
 
     onMount(() => {
         // value for dev testing only
-        // providersAvailable = [{
-        //     "id": "7F6N7fb3el3P5XimjJSaeD2o",
-        //     "name": "Rauthy IAM"
-        // }];
+        // let tpl = '[{"id": "7F6N7fb3el3P5XimjJSaeD2o", "name": "Rauthy IAM"}]';
         let tpl = document?.getElementsByTagName("template").namedItem("auth_providers")?.innerHTML;
-        if (tpl) {
+        // the additional comparison is just for local dev and no big deal in prod
+        if (tpl && tpl !== '{{ auth_providers|safe }}') {
             providersAvailable = JSON.parse(tpl);
         }
     })

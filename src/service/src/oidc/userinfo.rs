@@ -89,7 +89,7 @@ pub async fn get_userinfo(
     let mut userinfo = Userinfo {
         id: user.id.clone(),
         sub: user.id.clone(),
-        name: format!("{} {}", &user.given_name, &user.family_name),
+        name: user.email_recipient_name(),
         roles,
         mfa_enabled: user.has_webauthn_enabled(),
 
@@ -128,7 +128,7 @@ pub async fn get_userinfo(
     if scope.contains("profile") {
         userinfo.preferred_username = Some(user.email.clone());
         userinfo.given_name = Some(user.given_name.clone());
-        userinfo.family_name = Some(user.family_name.clone());
+        userinfo.family_name = user.family_name.clone();
         userinfo.locale = Some(user.language.to_string());
 
         user_values = UserValues::find(&user.id).await?;

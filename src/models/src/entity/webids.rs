@@ -214,13 +214,13 @@ impl WebId {
                 value: &resp.given_name,
             },
         ))?;
-        formatter.format(&Self::triple(
-            t_user,
-            "http://xmlns.com/foaf/0.1/family_name",
-            Literal::Simple {
-                value: &resp.family_name,
-            },
-        ))?;
+        if let Some(value) = &resp.family_name {
+            formatter.format(&Self::triple(
+                t_user,
+                "http://xmlns.com/foaf/0.1/family_name",
+                Literal::Simple { value },
+            ))?;
+        }
 
         // foaf:mbox
         if webid.expose_email {
