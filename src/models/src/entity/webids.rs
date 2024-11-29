@@ -326,7 +326,7 @@ mod tests {
             issuer: "http://localhost:8080/auth/v1".to_string(),
             email: "mail@example.com".to_string(),
             given_name: "Given".to_string(),
-            family_name: "Family".to_string(),
+            family_name: Some("Family".to_string()),
             language: Language::En,
         };
 

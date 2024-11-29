@@ -1474,7 +1474,7 @@ impl User {
 
     pub fn get_roles(&self) -> Vec<String> {
         let mut res = Vec::new();
-        if self.roles.ne("") {
+        if !self.roles.is_empty() {
             self.roles
                 .split(',')
                 .for_each(|r| res.push(r.trim().to_owned()));
@@ -1584,7 +1584,7 @@ impl User {
     }
 
     pub fn push_role(&mut self, role: &str) {
-        if self.roles.ne("") {
+        if !self.roles.is_empty() {
             self.roles = format!("{},{}", self.roles, role);
         } else {
             role.clone_into(&mut self.roles);

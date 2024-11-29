@@ -297,7 +297,6 @@ use utoipa::{openapi, OpenApi};
         (name = "deprecated", description = "Deprecated endpoints - will be removed in a future version"),
     ),
 )]
-
 pub struct ApiDoc;
 
 impl ApiDoc {

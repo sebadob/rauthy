@@ -280,11 +280,7 @@ impl EventListener {
                             .collect::<Vec<&sse::Event>>();
 
                         let evt_len = events_filtered.len();
-                        let skip = if latest > evt_len {
-                            0
-                        } else {
-                            evt_len - latest
-                        };
+                        let skip = evt_len.saturating_sub(latest);
 
                         for event in events_filtered.iter().skip(skip) {
                             match time::timeout(Duration::from_secs(5), tx.send((*event).clone()))
