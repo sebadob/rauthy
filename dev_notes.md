@@ -2,22 +2,14 @@
 
 ## CURRENT WORK
 
-## Before v0.27.0 release
-
-- check if `REFRESH_TOKEN_GRACE_TIME` can be dropped with Hiqlite
-- randomize default admin user id on prod init + set email to `BOOTSTRAP_ADMIN_EMAIL` before password info logging
-
-### Documentation TODO
-
-- breaking: add `USER_REG_OPEN_REDIRECT` to the book
-- `HealthResponse` response has been changed with Hiqlite -> breaking change
-
 ## Stage 1 - essentials
 
 [x] finished
 
 ## Stage 2 - features - do before v1.0.0
 
+- check if `REFRESH_TOKEN_GRACE_TIME` can be dropped with Hiqlite
+- randomize default admin user id on prod init + set email to `BOOTSTRAP_ADMIN_EMAIL` before password info logging
 - "known host cookie" with connection between accounts and IPs to send out warnings in case
   of a login on a new device
 - credential stuffing detection

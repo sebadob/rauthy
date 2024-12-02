@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.27.0
 
 ### Breaking
 
@@ -225,7 +225,7 @@ If you use Rauthy with Postgres and want to keep doing that, the only thing you 
 HIQLITE=false
 ```
 
-##### Migration (SQLITE)
+##### Migration (SQLite)
 
 If you use Rauthy with SQLite and want to migrate to Hiqlite, you can utilize all the above-mentioned new config
 variables, but mandatory are the following ones.
@@ -249,7 +249,7 @@ used in another context.
 
 `S3_DANGER_ALLOW_INSECURE` stayed as it is.
 
-`BACKUP_RETENTION_LOCAL` is new and it will actually handle the backup cleanup on the S3 storage for you,
+`BACKUP_RETENTION_LOCAL` is new, and it will actually handle the backup cleanup on the S3 storage for you,
 without defining retention rules for the whole bucket.
 
 ###### Hiqlite Dashboard
