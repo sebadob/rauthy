@@ -89,13 +89,60 @@ HQL_BACKUP_CRON="0 30 2 * * * *"
 #HQL_S3_SECRET=s3_secret
 
 #####################################
+############# CLUSTER ###############
+#####################################
+
+# Can be set to 'k8s' to try to split off the node id from the hostname
+# when Hiqlite is running as a StatefulSet inside Kubernetes.
+#HQL_NODE_ID_FROM=k8s
+
+# The node id must exist in the nodes and there must always be
+# at least a node with ID 1
+# Will be ignored if `HQL_NODE_ID_FROM=k8s`
+HQL_NODE_ID=1
+
+# All cluster member nodes.
+# To make setting the env var easy, the values are separated by `\s`
+# while nodes are separated by `\n`
+# in the following format:
+#
+# id addr_raft addr_api
+# id addr_raft addr_api
+# id addr_raft addr_api
+#
+HQL_NODES="
+1 localhost:8100 localhost:8200
+"
+
+# Sets the limit when the Raft will trigger the creation of a new
+# state machine snapshot and purge all logs that are included in
+# the snapshot.
+# Higher values can achieve more throughput in very write heavy
+# situations but will end up in more disk usage and longer
+# snapshot creations / log purges.
+# default: 10000
+#HQL_LOGS_UNTIL_SNAPSHOT=10000
+
+# Secrets for Raft internal authentication as well as for the API.
+# These must be at least 16 characters long and you should provide
+# different ones for both variables.
+HQL_SECRET_RAFT=SuperSecureSecret1337
+HQL_SECRET_API=SuperSecureSecret1337
+
+# You can either parse `ENC_KEYS` and `ENC_KEY_ACTIVE` from the
+# environment with setting this value to `env`, or parse them from
+# a file on disk with `file:path/to/enc/keys/file`
+# default: env
+#HQL_ENC_KEYS_FROM=env
+
+#####################################
 ############ DATABASE ###############
 #####################################
 
 # Max DB connections for the Postgres pool.
 # Irrelevant for Hiqlite.
-# default: 5
-#DATABASE_MAX_CONN=5
+# default: 20
+#DATABASE_MAX_CONN=20
 
 # If specified, the currently configured Database will be DELETED and 
 # OVERWRITTEN with a migration from the given database with this variable. 
@@ -125,9 +172,49 @@ HQL_BACKUP_CRON="0 30 2 * * * *"
 # default: false
 #HQL_LOG_STATEMENTS=false
 
-# The password for the Hiqlite dashboard as b64 encoded Argon2ID hash.
+# The size of the pooled connections for local database reads.
+#
+# Do not confuse this with a pool size for network databases, as it
+# is much more efficient. You can't really translate between them,
+# because it depends on many things, but assuming a factor of 10 is 
+# a good start. This means, if you needed a (read) pool size of 40 
+# connections for something like a postgres before, you should start 
+# at a `read_pool_size` of 4.
+#
+# Keep in mind that this pool is only used for reads and writes will
+# travel through the Raft and have their own dedicated connection.
+#
+# default: 4
+#HQL_READ_POOL_SIZE=4
+
+# Enables immediate flush + sync to disk after each Log Store Batch.
+# The situations where you would need this are very rare, and you
+# should use it with care.
+#
+# The default is `false`, and a flush + sync will be done in 200ms
+# intervals. Even if the application should crash, the OS will take
+# care of flushing left-over buffers to disk and no data will get
+# lost. If something worse happens, you might lose the last 200ms 
+# of commits (on that node, not the whole cluster). This is only
+# important to know for single instance deployments. HA nodes will
+# sync data from other cluster members after a restart anyway.
+#
+# The only situation where you might want to enable this option is
+# when you are on a host that might lose power out of nowhere, and
+# it has no backup battery, or when your OS / disk itself is unstable.
+#
+# `sync_immediate` will greatly reduce the write throughput and put
+# a lot more pressure on the disk. If you have lots of writes, it
+# can pretty quickly kill your SSD for instance.
+#HQL_SYNC_IMMEDIATE=false
+
+# The password for the Hiqlite dashboard as Argon2ID hash.
 # '123SuperMegaSafe' in this example
-HQL_PASSWORD_DASHBOARD=JGFyZ29uMmlkJHY9MTkkbT0xOTQ1Nix0PTIscD0xJGQ2RlJDYTBtaS9OUnkvL1RubmZNa0EkVzJMeTQrc1dxZ0FGd0RyQjBZKy9iWjBQUlZlOTdUMURwQkk5QUoxeW1wRQ==
+#
+# You only need to provide this value if you need to access the
+# Hiqlite debugging dashboard for whatever reason. If no password
+# hash is given, the dashboard will not be reachable.
+#HQL_PASSWORD_DASHBOARD=JGFyZ29uMmlkJHY9MTkkbT0xOTQ1Nix0PTIscD0xJGQ2RlJDYTBtaS9OUnkvL1RubmZNa0EkVzJMeTQrc1dxZ0FGd0RyQjBZKy9iWjBQUlZlOTdUMURwQkk5QUoxeW1wRQ==
 ```
 
 ##### Migration (Postgres)
@@ -217,6 +304,31 @@ and again with each following restart and therefore remove everything that has h
 [#592](https://github.com/sebadob/rauthy/pull/592)
 [#601](https://github.com/sebadob/rauthy/pull/601)
 [#603](https://github.com/sebadob/rauthy/pull/603)
+
+#### User Registration - Redirect Hint
+
+As an additional hardening, the open redirect hint for user registrations has been locked down a bit by default.
+If you used this feature before, you should update `Client URI`s via the Admin UI, so all possible `redirect_uri`s
+you are using will still be considered valid, or opt-out of the additional hardening.
+
+```
+# If set to `true`, any validation of the `redirect_uri` provided during
+# a user registration will be disabled.
+# Clients can use this feature to redirect the user back to their application
+# after a successful registration, so instead of ending up in the user
+# dashboard, they come back to the client app that initiated the registration.
+#
+# The given `redirect_uri` will be compared against all registered
+# `client_uri`s and will throw an error, if there is no match. However,
+# this check will prevent ephemeral clients from using this feature. Only
+# if you need it in combination with ephemeral clients, you should
+# set this option to `true`. Otherwise it is advised to set the correct
+# Client URI in the admin UI. The `redirect_uri` will be allowed if it starts
+# with any registered `client_uri`.
+#
+# default: false
+#USER_REG_OPEN_REDIRECT=true
+```
 
 #### Optional User Family Name
 

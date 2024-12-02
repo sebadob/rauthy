@@ -130,7 +130,7 @@ impl DB {
 
     async fn init_connect_postgres() -> Result<(), ErrorResponse> {
         let db_max_conn = env::var("DATABASE_MAX_CONN")
-            .unwrap_or_else(|_| "5".to_string())
+            .unwrap_or_else(|_| "20".to_string())
             .parse::<u32>()
             .expect("Error parsing DATABASE_MAX_CONN to u32");
 

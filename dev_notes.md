@@ -2,14 +2,15 @@
 
 ## CURRENT WORK
 
-## Documentation TODO
+## Before v0.27.0 release
 
-- breaking: only a single container from now on
+- check if `REFRESH_TOKEN_GRACE_TIME` can be dropped with Hiqlite
+- randomize default admin user id on prod init + set email to `BOOTSTRAP_ADMIN_EMAIL` before password info logging
+
+### Documentation TODO
+
 - breaking: add `USER_REG_OPEN_REDIRECT` to the book
 - `HealthResponse` response has been changed with Hiqlite -> breaking change
-- database backup config has been changed slightly
-- restore from backup has changed slightly
-- write a small guide on how to migrate from existing sqlite to hiqlite
 
 ## Stage 1 - essentials
 

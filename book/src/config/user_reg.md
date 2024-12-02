@@ -132,10 +132,27 @@ The following things will happen:
 This makes it possible to use Rauthy as your upstream provider without the user really needing to interact with or
 know about it in detail, which again leads to less confusion.
 
-```admonish note
-If you want to complete this improved UX setup, you should set a **Client URI** for the client in the admin dashboard.
-When there is a valid value, a small home icon will be shown inside the login form, so a user can get back to the
-client's URI without possibly screwing up with incorrectly using the browsers back button.
+By default, the allowed `redirect_uri`s are restricted to all existing `client_uri`s in the database. They will be
+compared via `client_uri.startsWith(redirect_uri)`. If you want to opt-out of the additional redirect_uri checks and
+configure and open redirect to allow just anything, you can do so:
+
+```
+# If set to `true`, any validation of the `redirect_uri` provided during
+# a user registration will be disabled.
+# Clients can use this feature to redirect the user back to their application
+# after a successful registration, so instead of ending up in the user
+# dashboard, they come back to the client app that initiated the registration.
+#
+# The given `redirect_uri` will be compared against all registered
+# `client_uri`s and will throw an error, if there is no match. However,
+# this check will prevent ephemeral clients from using this feature. Only
+# if you need it in combination with ephemeral clients, you should
+# set this option to `true`. Otherwise it is advised to set the correct
+# Client URI in the admin UI. The `redirect_uri` will be allowed if it starts
+# with any registered `client_uri`.
+#
+# default: false
+#USER_REG_OPEN_REDIRECT=true
 ```
 
 ### Custom Frontend
