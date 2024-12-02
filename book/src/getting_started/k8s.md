@@ -52,8 +52,6 @@ Make sure to watch the indentation.
 ```admonish caution
 Do not include sensitive information like for instance the ENC_KEYS inside the normal Config.
 Use the secrets from the next step for this.  
-If you use SQLite, you can include the DATABASE_URL in the config, since it does not contain a password, but
-never do this for Postgres!
 ```
 
 ```admonish note
@@ -78,25 +76,40 @@ metadata:
   namespace: rauthy
 type: Opaque
 stringData:
-  # Secret token, which is used to authenticate the cache members.
-  # Only necessary when `HA_MODE=true`
-  #CACHE_AUTH_TOKEN=
-
-  # The database driver will be chosen at runtime depending on
-  # the given DATABASE_URL format. Examples:
-  # Sqlite: 'sqlite:data/rauthy.db' or 'sqlite::memory:'
-  # Postgres: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
-  #
-  # NOTE: The password in this case should be alphanumeric. 
-  # Special characters could cause problems in the connection
-  # string.
-  DATABASE_URL:
+  HQL_S3_KEY:
+  HQL_S3_SECRET:
 
   # Secrets for Raft internal authentication as well as for the Hiqlite API.
   # These must be at least 16 characters long and you should provide
   # different ones for both variables.
   HQL_SECRET_RAFT:
   HQL_SECRET_API:
+
+  # The password for the Hiqlite dashboard as Argon2ID hash.
+  # '123SuperMegaSafe' in this example
+  #
+  # You should only provide it, if you really need to access the DB
+  # directly for some reasons.
+  #HQL_PASSWORD_DASHBOARD=JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ==
+
+  # Connection string to connect to a Postgres database.
+  # This will be ignored as long as `HIQLITE=true`.
+  #
+  # Format: 'postgresql://User:PasswordWithoutSpecialCharacters@localhost:5432/DatabaseName'
+  #
+  # NOTE: The password in this case should be alphanumeric.
+  # Special characters could cause problems in the connection string.
+  #
+  # CAUTION: To make the automatic migrations work with Postgres 15+,
+  # when you do not want to just use the `postgres` user, You need
+  # to have a user with the same name as the DB / schema. For instance,
+  # the following would work without granting extra access to the
+  # `public` schema which is disabled by default since PG15:
+  # database: rauthy
+  # user: rauthy
+  # schema: rauthy with owner rauthy
+  #
+  #DATABASE_URL: postgresql://rauthy:123SuperSafe@localhost:5432/rauthy
 
   # You need to define at least one valid encryption key.
   # These keys are used in various places, like for instance
@@ -108,6 +121,7 @@ stringData:
   #   q6u26vXV/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=
   #   bVCyaggQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=
   ENC_KEYS: |-
+
   # This identifies the key ID from the `ENC_KEYS` list, that
   # should actively be used for new encryption's.
   ENC_KEY_ACTIVE:
@@ -141,9 +155,6 @@ stringData:
 All variables specified here should be out-commented in the `rauthy-config` from above.  
 Make sure that things like `CACHE_AUTH_TOKEN` and `ENC_KEYS` are generated in a secure random way.
 
-The `DATABASE_URL` with SQLite, like used in this example, does not contain sensitive information, but we will
-create it as a secret anyway to have an easier optional migration to postgres later on.
-
 Generate a new encryption key with ID in the correct format.
 
 ```
@@ -164,7 +175,7 @@ The `ENC_KEY_ID` would be
 d4d1a581
 ```
 
-You can generate safe values for both ´HQL_SECRET_RAFT` and `HQL_SECRET_API` in many ways. You can just provide a random
+You can generate safe values for both `HQL_SECRET_RAFT` and `HQL_SECRET_API` in many ways. You can just provide a random
 alphanumeric value, which for instance:
 
 ```
@@ -176,6 +187,9 @@ or you can use the above `openssl` command again, even though Hiqlite does not n
 ```
 openssl rand -base64 48
 ```
+
+If you plan on using S3 for backups, paste the proper values into `HQL_S3_KEY` and `HQL_S3_SECRET`, otherwise
+out-comment them.
 
 ### Create and apply the stateful set
 
@@ -195,11 +209,15 @@ spec:
   selector:
     app: rauthy
   ports:
-    # If you use the HA feature later on, the port over which the cache layer does
-    # communicate.
-    - name: cache
-      port: 8000
-      targetPort: 8000
+    # Ports 8100 and 8200 (by default) are used for the Hiqlite internal communication.
+    - name: hiqlite-raft
+      protocol: TCP
+      port: 8100
+      targetPort: 8100
+    - name: hiqlite-api
+      protocol: TCP
+      port: 8200
+      targetPort: 8200
     # Assuming that this example file will run behind a Kubernetes ingress and does
     # use HTTP internally.
     - name: http
@@ -242,18 +260,14 @@ spec:
             runAsGroup: 10001
             allowPrivilegeEscalation: false
           ports:
-            - containerPort: 8000
+            # Hiqlite internal ports
+            - containerPort: 8100
+            - containerPort: 8200
             # You may need to adjust this, if you decide to start in https only mode
             # or use another port
             - containerPort: 8080
             - containerPort: 8443
           env:
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: rauthy-secrets
-                  key: DATABASE_URL
-
             # You must set both Hiqlite secrets even for a single node deployment
             - name: HQL_SECRET_RAFT
               valueFrom:
@@ -265,6 +279,25 @@ spec:
                 secretKeyRef:
                   name: rauthy-secrets
                   key: HQL_SECRET_API
+
+            # If you don't want to use S3 for backups, out-comment these 2.
+            - name: HQL_S3_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rauthy-secrets
+                  key: HQL_S3_KEY
+            - name: HQL_S3_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: rauthy-secrets
+                  key: HQL_S3_SECRET
+
+            # Only out-comment if you use Postgres
+            #- name: DATABASE_URL
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: rauthy-secrets
+            #      key: DATABASE_URL
 
             # Encryption keys used for encryption in many places
             - name: ENC_KEYS
@@ -350,18 +383,18 @@ spec:
               # depends on your use case.
               cpu: 100m
             limits:
-              # Be careful with the memory limit. You must make sure, that the
-              # (very costly) password hashing has enough memory available. If not,
-              # the application will crash. You do not really need a memory limit,
-              # since Rust is not a garbage collected language. Better take a close
-              # look at what the container actually needs during
-              # prime time and set the requested resources above properly.
-              #memory:
-              # A CPU limit may make sense in case of DDoS attacks or something
-              # like this, if you do not have external rate limiting or other
-              # mechanisms. Otherwise, `MAX_HASH_THREADS` is the main mechanism 
-              # to limit resources.
-              cpu: 1000m
+            # Be careful with the memory limit. You must make sure, that the
+            # (very costly) password hashing has enough memory available. If not,
+            # the application will crash. You do not really need a memory limit,
+            # since Rust is not a garbage collected language. Better take a close
+            # look at what the container actually needs during
+            # prime time and set the requested resources above properly.
+            #memory:
+            # A CPU limit may make sense in case of DDoS attacks or something
+            # like this, if you do not have external rate limiting or other
+            # mechanisms. Otherwise, `MAX_HASH_THREADS` is the main mechanism 
+            # to limit resources.
+            #cpu: 1000m
       volumes:
         - name: rauthy-config
           configMap:
@@ -490,6 +523,29 @@ spec:
       services:
         - name: rauthy
           port: 8080
+```
+
+#### Hiqlite Internal TLS
+
+You can of course also provide TLS certificates for the Hiqlite internal communication. Two Independent networks are
+created: one for the Raft-Internal network traffic like heartbeats and data replication, and a second one for the
+"external" Hiqlite API. This is used by other Hiqlite cluster members for management purposes and to execute things
+like consistent queries on the leader node.
+
+You can provide TLS certificates for both of them independently via the following config variables:
+
+```
+## Hiqlite TLS
+
+# If given, these keys / certificates will be used to establish
+# TLS connections between nodes.
+HQL_TLS_RAFT_KEY=tls/key.pem
+HQL_TLS_RAFT_CERT=tls/cert-chain.pem
+HQL_TLS_RAFT_DANGER_TLS_NO_VERIFY=true
+
+HQL_TLS_API_KEY=tls/key.pem
+HQL_TLS_API_CERT=tls/cert-chain.pem
+HQL_TLS_API_DANGER_TLS_NO_VERIFY=true
 ```
 
 #### Additional steps

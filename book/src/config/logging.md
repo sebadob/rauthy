@@ -22,6 +22,21 @@ for logging information from different function runs or things that have been tr
 LOG_LEVEL=info
 ```
 
+### `LOG_LEVEL_DATABASE`
+
+The Hiqlite database logging is at the time of writing pretty verbose on purpose. The whole persistence layer with the
+Raft cluster setup has been written from the ground up. The amount of logging will be reduced in later versions, when
+the whole layer has been proven to be really solid, but for now you get more information just in case you need to debug
+something.
+
+You can reduce the default logging and for instance set it to `warn` or `error` only.
+
+```
+# The log level for the `Hiqlite` persistence layer.
+# default: info
+LOG_LEVEL_DATABASE=info
+```
+
 ### `LOG_LEVEL_ACCESS`
 
 For changing the logging behavior for access logs to the API endpoints, you will need to set the `LOG_LEVEL_ACCESS`.
@@ -47,6 +62,22 @@ to reduce duplicated log outputs.
 # - Off
 # default: Modifying
 LOG_LEVEL_ACCESS=Basic
+```
+
+### `LOG_FMT`
+
+Rauthy can output logs as JSON data with the following variable:
+
+```
+# You can change the log output format to JSON, if you set:
+# `LOG_FMT=json`.
+# Keep in mind, that some logs will include escaped values,
+# for instance when `Text` already logs a JSON in debug level.
+# Some other logs like an Event for instance will be formatted 
+# as Text anyway. If you need to auto-parse events, please consider 
+# using an API token and listen ot them actively.
+# default: text
+#LOG_FMT=text
 ```
 
 ## Events
@@ -92,13 +123,16 @@ it should post the events.
 # you should provide `EVENT_MATRIX_ACCESS_TOKEN`.
 # If both are given, the `EVENT_MATRIX_ACCESS_TOKEN` will be preferred.
 #
-# If left empty, no messages will be sent to Matrix.
+# If left empty, no messages will not be sent to Matrix.
 # Format: `@<user_id>:<server address>`
 #EVENT_MATRIX_USER_ID=
 # Format: `!<random string>:<server address>`
 #EVENT_MATRIX_ROOM_ID=
 #EVENT_MATRIX_ACCESS_TOKEN=
 #EVENT_MATRIX_USER_PASSWORD=
+# URL of your Matrix server.
+# default: https://matrix.org
+#EVENT_MATRIX_SERVER_URL=https://matrix.org
 # Optional path to a PEM Root CA certificate file for the Matrix client.
 #EVENT_MATRIX_ROOT_CA_PATH=path/to/my/root_ca_cert.pem
 # May be set to disable the TLS validation for the Matrix client.

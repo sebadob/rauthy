@@ -236,9 +236,10 @@ key.pem
 <p>The <a href="../config/config.html">reference config</a> contains a <code>TLS</code> section with all the values you can set.</p>
 <p>For this example, we will be using the same certificates for both the internal cache mTLS connections and the
 public facing HTTPS server.</p>
-<h3 id="cache"><a class="header" href="#cache">Cache</a></h3>
-<p>The cache layer (optionally) uses TLS, if you provide certificates. Simply provide the following values from the <code>TLS</code>
-section in the reference config:</p>
+<h3 id="hiqlite"><a class="header" href="#hiqlite">Hiqlite</a></h3>
+<p>Hiqlite can run the whole database layer, and it will always take care of caching. It can be configured to use TLS
+internally, if you provide certificates. Simply provide the following values from the <code>TLS</code> section in the reference
+config:</p>
 <pre><code># If given, these keys / certificates will be used to establish
 # TLS connections between nodes.
 HQL_TLS_RAFT_KEY=tls/hiqlite/tls.key

@@ -60,8 +60,3 @@ If you try to access an endpoint with an API Key that has insufficient access ri
 error message with description, which access rights you actually need.
 
 ![api key permission](../config/img/api_key_permission.png)
-
-```admonish hint
-When you set up a fresh Rauthy instance, you have the option to [bootstrap](../config/bootstrap.md#api-key) an API Key, 
-which is the only situation where you are allowed to do it without an active Rauthy admin session.
-```

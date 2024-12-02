@@ -175,19 +175,20 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="database-migrations"><a class="header" href="#database-migrations">Database Migrations</a></h1>
-<p>You can migrate easily between SQLite and Postgres, or just between different instances of them.</p>
-<p>Let's say you started out by evaluating Rauthy with a SQLite and a single instance deployment. Later on, you want to
-migrate to a HA setup, which requires you to use a Postgres.</p>
+<p>You can migrate easily between Hiqlite and Postgres, or just between different instances of the same database.</p>
+<p>Let's say you started out by evaluating Rauthy with the default Hiqlite and a single instance deployment. Later on, you
+want to migrate to Postgres for whatever reason. Or you started with Postgres and yuo want to reduce your memory
+footprint by switching to Hiqlite. All of this is easily possible.</p>
 <p><strong>Solution:</strong> <code>MIGRATE_DB_FROM</code></p>
 <p>If you set the <code>MIGRATE_DB_FROM</code> in Rauthy's config, it will perform a migration at the next restart.<br />
 The way it works is the following:</p>
 <ol>
 <li>At startup, have a look if <code>MIGRATE_DB_FROM</code> is configured</li>
 <li>If yes, then connect to the given database</li>
-<li>At the same time, connect to the database specified in the <code>DATABASE_URL</code></li>
-<li>Overwrite all existing data in <code>DATABASE_URL</code> with the data from the <code>MIGRATE_DB_FROM</code> database</li>
+<li>At the same time, connect to the database specified via <code>HIQLITE</code> and <code>DATABASE_URL</code></li>
+<li>Overwrite all existing data in the target database with the data from the <code>MIGRATE_DB_FROM</code> source</li>
 <li>Close the connection to <code>MIGRATE_DB_FROM</code></li>
-<li>Use the <code>DATABASE_URL</code> as the new database and start normal operation</li>
+<li>Start normal operation</li>
 </ol>
 <div id="admonition-danger" class="admonition admonish-danger" role="note" aria-labelledby="admonition-danger-title">
 <div class="admonition-title">
@@ -210,8 +211,8 @@ the next restart of the application. Remove the config variable immediately afte
 <a class="admonition-anchor-link" href="#admonition-info"></a>
 </div>
 <div>
-<p><strong>v0.14 and beyond:</strong> if you want to migrate to a different database, for instance from SQLite to Postgres, you need to
-switch to the correct rauthy image as well. Rauthy v0.14 and beyond has different container images for the databases.</p>
+<p><strong>any version below 0.27.0:</strong> if you want to migrate to a different database, for instance from SQLite to Postgres, you need to
+switch to the correct Rauthy image as well.</p>
 </div>
 </div>
 <div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">

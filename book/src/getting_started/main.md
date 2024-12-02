@@ -2,32 +2,26 @@
 
 ## Choose A Database
 
-You only need to answer a single question to decide, which database you should use:
+Rauthy's default database is [Hiqlite](https://github.com/sebadob/hiqlite). Under the hood, it's using SQLite, but it
+adds an additional layer on top making it highly-available using
+the [Raft Consensus Algorithm](https://raft.github.io/). Don't let the SQLite engine under the hood fool you, it will
+handle most probably anything you throw at it, as long as your disks are fast enough. Hiqlite can easily saturate a
+1GBit/s network connection with just database (write) traffic. All reads are local, which means they are way faster than
+with Postgres in any scenario.
 
-**Do you want / need a HA deployment?**
-
-If the answer is **Yes**, choose **Postgres**, **otherwise** choose **SQLite**.
-
-SQLite is no performance bottleneck at all. After some first very rough tests, it does not have problems with even
-millions of users. The bottleneck will always be the password hashing algorithm settings, your needs for how secure
-it should be and how many concurrent logins you want to be able to handle (more on that later).
+If you already have a Postgres up an running with everything set up anyway, you might want to choose it as your main DB,
+but I do not recommend deploying a Postgres instance just for Rauthy. This would be a waste of precious resources.
 
 ```admonish hint
-If you want to migrate from Postgres to SQLite at a later point, you can do this at any time very easily.
+If you want to migrate between databases at a later point, you can do this at any time very easily.
 Just take a look at the [Reference Config](../config/config.html) and the variable `MIGRATE_DB_FROM`. 
 ```
 
 ## Container Images
 
-Rauthy comes with different container images. The difference between them is not only x86 vs arm64, but the database
-driver under the hood as well. The reason is, that almost all SQL queries are checked at compile time. To make this
-possible, different images need to be created. Apart from the database driver, there is no difference between them.
-You also can't use the "wrong" image by accident. If you try to use a Postgres image with a SQLite database URL and
-vice versa, Rauthy will yell at you at startup and panic on purpose.
-
-- The "normal" container images can be used for Postgres
-- The `*-lite` images use an embedded SQLite
-- The `MIGRATE_DB_FROM` (explained later) can be used with any combination of image / database
+Rauthy versions before `0.27.0` had different container images depending on the database you choose. However, this is
+not the case anymore. There is only a single image which works with any configuration. It works on `x86_64` and `arm64`
+architectures.
 
 At the time of writing, you can run Rauthy either with [Docker](./docker.md) or inside [Kubernetes](./k8s.md).  
 Both *Getting Started* guides do not cover all set up you might want to do for going into production. Especially the
