@@ -1,7 +1,14 @@
 <script>
     import * as yup from "yup";
     import {extractFormErrors} from "../../utils/helpers.js";
-    import {REGEX_BIRTHDATE, REGEX_CITY, REGEX_NAME, REGEX_PHONE, REGEX_STREET} from "../../utils/constants.js";
+    import {
+        REGEX_BIRTHDATE,
+        REGEX_CITY,
+        REGEX_NAME,
+        REGEX_NAME_NULLABLE,
+        REGEX_PHONE,
+        REGEX_STREET
+    } from "../../utils/constants.js";
     import Button from "$lib/Button.svelte";
     import {fade} from 'svelte/transition';
     import {putUserSelf} from "../../utils/dataFetching.js";
@@ -29,7 +36,7 @@
     const schema = yup.object().shape({
         email: yup.string().required(t.validEmail).email(t.validEmail),
         givenName: yup.string().required(t.validGivenName).matches(REGEX_NAME, t.validGivenName),
-        familyName: yup.string().required(t.validFamilyName).matches(REGEX_NAME, t.validFamilyName),
+        familyName: yup.string().matches(REGEX_NAME_NULLABLE, t.validFamilyName),
     });
 
     let formErrorsValues = {};
@@ -61,7 +68,7 @@
         const data = {
             email: formValues.email,
             given_name: formValues.givenName,
-            family_name: formValues.familyName,
+            family_name: formValues.familyName || null,
             user_values: user.user_values,
         };
 

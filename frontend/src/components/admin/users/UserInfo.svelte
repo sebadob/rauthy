@@ -13,7 +13,7 @@
         LANGUAGES,
         REGEX_BIRTHDATE,
         REGEX_CITY,
-        REGEX_NAME,
+        REGEX_NAME, REGEX_NAME_NULLABLE,
         REGEX_PHONE,
         REGEX_STREET
     } from "../../../utils/constants.js";
@@ -55,7 +55,7 @@
     const schema = yup.object().shape({
         email: yup.string().required('E-Mail is required').email("Bad E-Mail format"),
         given_name: yup.string().trim().required('Given Name is required').matches(REGEX_NAME, 'Invalid characters'),
-        family_name: yup.string().trim().required('Family Name is required').matches(REGEX_NAME, 'Invalid characters'),
+        family_name: yup.string().trim().matches(REGEX_NAME_NULLABLE, 'Invalid characters'),
     });
 
     let formErrorsValues = {};
@@ -90,7 +90,7 @@
         const req = {
             email: user.email,
             given_name: user.given_name,
-            family_name: user.family_name,
+            family_name: user.family_name || null,
             language: language.toLowerCase(),
             roles: user.roles,
             groups: user.groups,
@@ -224,7 +224,7 @@
             LANGUAGE
         </div>
         <div style="margin-top: .085rem">
-            <OptionSelect bind:value={language} options={LANGUAGES} />
+            <OptionSelect bind:value={language} options={LANGUAGES}/>
         </div>
     </div>
 
@@ -351,8 +351,18 @@
         </Input>
     {/if}
 
-    <!-- Last Login-->
+    <!-- Created At-->
     <div class="unit" style:margin-top="12px">
+        <div class="label font-label">
+            CREATED
+        </div>
+        <div class="value">
+            {formatDateFromTs(user.created_at)}
+        </div>
+    </div>
+
+    <!-- Last Login-->
+    <div class="unit">
         <div class="label font-label">
             LAST LOGIN
         </div>

@@ -222,7 +222,7 @@ pub async fn send_email_change_info_new(
     };
 
     let req = EMail {
-        recipient_name: format!("{} {}", user.given_name, user.family_name),
+        recipient_name: user.email_recipient_name(),
         address: new_email.clone(),
         subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
         text: text
@@ -276,7 +276,7 @@ pub async fn send_email_confirm_change(
     };
 
     let req = EMail {
-        recipient_name: format!("{} {}", user.given_name, user.family_name),
+        recipient_name: user.email_recipient_name(),
         address: email_addr.to_string(),
         subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
         text: text
@@ -367,7 +367,7 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
     };
 
     let req = EMail {
-        recipient_name: format!("{} {}", user.given_name, user.family_name),
+        recipient_name: user.email_recipient_name(),
         address: user.email.to_string(),
         subject: format!("{} - {}", *EMAIL_SUB_PREFIX, subject),
         text: text.render().expect("Template rendering: EmailResetTxt"),
@@ -412,7 +412,7 @@ pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
     };
 
     let req = EMail {
-        recipient_name: format!("{} {}", user.given_name, user.family_name),
+        recipient_name: user.email_recipient_name(),
         address: user.email.to_string(),
         subject: format!("{} - {}", *EMAIL_SUB_PREFIX, i18n.subject),
         text: text

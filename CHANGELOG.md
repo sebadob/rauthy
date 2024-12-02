@@ -330,6 +330,18 @@ you are using will still be considered valid, or opt-out of the additional harde
 #USER_REG_OPEN_REDIRECT=true
 ```
 
+#### Optional User Family Name
+
+Since I received quite a few questions and requests regarding the mandatory `family_name` for users, I decided to change
+it and make it optional. This change should not affect you in any way if you only consumed `id_token`s, because the
+`family_name` inside them has been optional before already. Its existence in the `id_token` depends on allowed and
+requested claims.
+
+However, if you used to communicate with the Rauthy API directly, you should be aware of this change. The
+`User.family_name` is now optional in all situations.
+
+[#631](https://github.com/sebadob/rauthy/pull/631)
+
 ### Changes
 
 #### Efficiency and speed improvements

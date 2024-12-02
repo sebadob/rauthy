@@ -69,7 +69,7 @@ pub struct User {
     pub id: String,
     pub email: String,
     pub given_name: String,
-    pub family_name: String,
+    pub family_name: Option<String>,
     pub password: Option<String>,
     pub roles: String,
     pub groups: Option<String>,
@@ -1087,16 +1087,6 @@ LIMIT $2"#,
             false
         };
 
-        let given_name = if let Some(given_name) = upd_user.given_name {
-            given_name
-        } else {
-            user.given_name.clone()
-        };
-        let family_name = if let Some(family_name) = upd_user.family_name {
-            family_name
-        } else {
-            user.family_name.clone()
-        };
         let groups = if user.groups.is_some() {
             Some(user.get_groups())
         } else {
@@ -1105,8 +1095,8 @@ LIMIT $2"#,
         let req = UpdateUserRequest {
             // never update the email directly here, only via email confirmation action from the user
             email: user.email.clone(),
-            given_name,
-            family_name,
+            given_name: upd_user.given_name,
+            family_name: upd_user.family_name,
             language: upd_user.language,
             password,
             roles: user.get_roles(),
@@ -1443,6 +1433,14 @@ impl User {
         }
     }
 
+    pub fn email_recipient_name(&self) -> String {
+        if let Some(n) = &self.family_name {
+            format!("{} {}", self.given_name, n)
+        } else {
+            self.given_name.to_string()
+        }
+    }
+
     pub async fn from_new_user_req(new_user: NewUserRequest) -> Result<Self, ErrorResponse> {
         let roles = Role::sanitize(new_user.roles).await?;
         let groups = Group::sanitize(new_user.groups).await?;
@@ -1476,7 +1474,7 @@ impl User {
 
     pub fn get_roles(&self) -> Vec<String> {
         let mut res = Vec::new();
-        if self.roles.ne("") {
+        if !self.roles.is_empty() {
             self.roles
                 .split(',')
                 .for_each(|r| res.push(r.trim().to_owned()));
@@ -1586,7 +1584,7 @@ impl User {
     }
 
     pub fn push_role(&mut self, role: &str) {
-        if self.roles.ne("") {
+        if !self.roles.is_empty() {
             self.roles = format!("{},{}", self.roles, role);
         } else {
             role.clone_into(&mut self.roles);
@@ -1690,7 +1688,7 @@ impl Default for User {
             id: new_store_id(),
             email: String::default(),
             given_name: String::default(),
-            family_name: String::default(),
+            family_name: None,
             password: None,
             roles: String::default(),
             groups: None,
@@ -1734,7 +1732,7 @@ mod tests {
             id: "123".to_string(),
             email: "admin@localhost.de".to_string(),
             given_name: "Admin".to_string(),
-            family_name: "Rauthy".to_string(),
+            family_name: Some("Rauthy".to_string()),
             password: Some("SoSafeNOTHash".to_string()),
             roles: "rauthy_admin,admin".to_string(),
             groups: Some("admin,user".to_string()),
@@ -1796,7 +1794,7 @@ mod tests {
             id: "123".to_string(),
             email: "admin@localhost.de".to_string(),
             given_name: "Admin".to_string(),
-            family_name: "Rauthy".to_string(),
+            family_name: Some("Rauthy".to_string()),
             password: Some("$argon2id$v=19$m=16384,t=3,p=2$l8F0ar1wSQsce+OdPgYbhg$I2XrvC/XRW+22eI2ptBg5GQp3SHjgSQXsfstuTZne1I".to_string()),
             roles: "rauthy_admin,admin".to_string(),
             groups: Some("admin,user".to_string()),

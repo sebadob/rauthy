@@ -28,7 +28,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
     // post a new user
     let new_user = NewUserRequest {
         given_name: "Alfred".to_string(),
-        family_name: "Batman".to_string(),
+        family_name: Some("Batman".to_string()),
         email: "alfred@batcave.io".to_string(),
         language: Language::En,
         roles: vec![
@@ -56,7 +56,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
     let alfred = res.json::<UserResponse>().await?;
     assert_eq!(alfred.email, "alfred@batcave.io");
     assert_eq!(alfred.given_name, "Alfred");
-    assert_eq!(alfred.family_name, "Batman");
+    assert_eq!(alfred.family_name.as_deref(), Some("Batman"));
     assert!(alfred.roles.contains(&"admin".to_string()));
     assert!(alfred.roles.contains(&"user".to_string()));
     assert!(alfred.groups.is_some());

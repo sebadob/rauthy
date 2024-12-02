@@ -44,7 +44,7 @@ pub struct NewUserRequest {
     pub email: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{1,32}"))]
-    pub family_name: String,
+    pub family_name: Option<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{1,32}"))]
     pub given_name: String,
@@ -68,7 +68,7 @@ pub struct NewUserRegistrationRequest {
     pub email: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{1,32}"))]
-    pub family_name: String,
+    pub family_name: Option<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{1,32}"))]
     pub given_name: String,
@@ -115,12 +115,12 @@ pub struct UpdateUserRequest {
     /// Validation: `email`
     #[validate(email)]
     pub email: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{2,128}"))]
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{1,32}"))]
     pub given_name: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{2,128}"))]
-    pub family_name: String,
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{1,32}"))]
+    pub family_name: Option<String>,
     pub language: Option<Language>,
     /// Validation: Applies password policy - max 256 characters
     #[validate(length(max = 256))]
@@ -147,11 +147,11 @@ pub struct UpdateUserSelfRequest {
     /// Validation: `email`
     #[validate(email)]
     pub email: Option<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{2,128}"))]
-    pub given_name: Option<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{2,128}"))]
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{1,32}"))]
+    pub given_name: String,
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{1,32}"))]
     pub family_name: Option<String>,
     pub language: Option<Language>,
     pub password_current: Option<String>,
@@ -359,7 +359,7 @@ pub struct UserResponse {
     pub id: String,
     pub email: String,
     pub given_name: String,
-    pub family_name: String,
+    pub family_name: Option<String>,
     pub language: Language,
     pub roles: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -419,7 +419,7 @@ pub struct WebIdResponse {
     pub issuer: String,
     pub email: String,
     pub given_name: String,
-    pub family_name: String,
+    pub family_name: Option<String>,
     pub language: Language,
 }
 

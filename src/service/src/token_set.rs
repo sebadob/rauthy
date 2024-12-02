@@ -264,7 +264,7 @@ impl TokenSet {
 
         if scope.contains("profile") {
             custom_claims.given_name = Some(user.given_name.clone());
-            custom_claims.family_name = Some(user.family_name.clone());
+            custom_claims.family_name = user.family_name.clone();
             custom_claims.locale = Some(user.language.to_string());
 
             user_values = UserValues::find(&user.id).await?;
