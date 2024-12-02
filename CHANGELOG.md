@@ -249,7 +249,7 @@ used in another context.
 
 `S3_DANGER_ALLOW_INSECURE` stayed as it is.
 
-`BACKUP_RETENTION_LOCAL` is new and it will actually handle the backup cleanup on the S3 storage for you,
+`BACKUP_RETENTION_LOCAL` is new, and it will actually handle the backup cleanup on the S3 storage for you,
 without defining retention rules for the whole bucket.
 
 ###### Hiqlite Dashboard
