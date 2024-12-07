@@ -15,8 +15,7 @@ use rauthy_common::utils::UseDummyAddress;
 use rauthy_common::{is_sqlite, password_hasher};
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
-    api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
-    scopes, sessions, users,
+    api_keys, atproto, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles, scopes, sessions, users
 };
 use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -427,6 +426,10 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(oidc::post_session)
                             .service(oidc::get_session_info)
                             .service(oidc::get_session_xsrf)
+                            .service(atproto::get_client_metadata)
+                            .service(atproto::get_login)
+                            .service(atproto::post_login)
+                            .service(atproto::post_callback)
                             .service(clients::get_clients)
                             .service(clients::get_client_by_id)
                             .service(clients::get_client_colors)

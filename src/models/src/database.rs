@@ -3,6 +3,10 @@ use crate::entity::db_version::DbVersion;
 use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::migration::{anti_lockout, db_migrate, init_prod};
 use actix_web::web;
+use atrium_api::types::string::Did;
+use atrium_common::store::Store;
+use atrium_oauth_client::store::session::{Session, SessionStore};
+use atrium_oauth_client::store::state::{InternalStateData, StateStore};
 use hiqlite::NodeConfig;
 use rauthy_common::constants::{DATABASE_URL, DEV_MODE};
 use rauthy_common::{is_hiqlite, is_postgres};
@@ -32,6 +36,7 @@ pub enum Cache {
     AuthCode,
     DeviceCode,
     AuthProviderCallback,
+    Atproto,
     ClientDynamic,
     ClientEphemeral,
     DPoPNonce,
@@ -232,3 +237,47 @@ impl DB {
         Ok(())
     }
 }
+
+impl Store<String, InternalStateData> for DB {
+    type Error = hiqlite::Error;
+
+    async fn get(&self, key: &String) -> Result<Option<InternalStateData>, Self::Error> {
+        Self::client().get(Cache::Atproto, key).await
+    }
+    async fn set(&self, key: String, value: InternalStateData) -> Result<(), Self::Error> {
+        let ttl = rauthy_common::constants::CACHE_TTL_AUTH_PROVIDER_CALLBACK;
+
+        Self::client().put(Cache::Atproto, key, &value, ttl).await
+    }
+    async fn del(&self, key: &String) -> Result<(), Self::Error> {
+        Self::client().delete(Cache::Atproto, key.to_string()).await
+    }
+    async fn clear(&self) -> Result<(), Self::Error> {
+        Self::client().clear_cache(Cache::Atproto).await
+    }
+}
+
+impl StateStore for DB {}
+
+impl Store<Did, Session> for DB {
+    type Error = hiqlite::Error;
+
+    async fn get(&self, key: &Did) -> Result<Option<Session>, Self::Error> {
+        Self::client().get(Cache::Atproto, key.to_string()).await
+    }
+    async fn set(&self, key: Did, value: Session) -> Result<(), Self::Error> {
+        let ttl = rauthy_common::constants::CACHE_TTL_AUTH_PROVIDER_CALLBACK;
+
+        Self::client()
+            .put(Cache::Atproto, key.to_string(), &value, ttl)
+            .await
+    }
+    async fn del(&self, key: &Did) -> Result<(), Self::Error> {
+        Self::client().delete(Cache::Atproto, key.to_string()).await
+    }
+    async fn clear(&self) -> Result<(), Self::Error> {
+        Self::client().clear_cache(Cache::Atproto).await
+    }
+}
+
+impl SessionStore for DB {}

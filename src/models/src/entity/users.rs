@@ -1767,7 +1767,7 @@ mod tests {
         // new sessions should always be in state 1 -> initializing
         assert_eq!(session.state, SessionState::Init.as_str());
 
-        assert!(session.csrf_token.len() > 0);
+        assert!(!session.csrf_token.is_empty());
 
         assert_eq!(session.groups_as_vec(), Ok(vec!["admin", "user"]));
         assert_eq!(

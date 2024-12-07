@@ -1725,14 +1725,14 @@ mod tests {
         let uris = client.get_redirect_uris();
         assert_eq!(uris.len(), 1);
         assert_eq!(
-            uris.get(0).unwrap().as_str(),
+            uris.first().unwrap().as_str(),
             "https://decentphotos.example/callback",
         );
 
         let uris = client.get_post_logout_uris().unwrap();
         assert_eq!(uris.len(), 1);
         assert_eq!(
-            uris.get(0).unwrap().as_str(),
+            uris.first().unwrap().as_str(),
             "https://decentphotos.example/logout",
         );
     }

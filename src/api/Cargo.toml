@@ -30,6 +30,10 @@ utoipa = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
 validator = { workspace = true }
 
+atrium-api = { workspace = true }
+atrium-identity = { workspace = true }
+atrium-oauth-client = { workspace = true }
+
 [dev-dependencies]
 pretty_assertions = "1"
 tokio-test = "*"
