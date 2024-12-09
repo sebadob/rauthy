@@ -4,6 +4,7 @@ use rauthy_common::is_hiqlite;
 
 pub mod api_keys;
 pub mod app_version;
+pub mod atproto;
 pub mod auth_codes;
 mod auth_provider_cust_impl;
 pub mod auth_providers;
