@@ -82,6 +82,7 @@ webauthn-rs = { workspace = true }
 webauthn-rs-proto = { workspace = true }
 
 atrium-api = { workspace = true }
+atrium-common = { workspace = true }
 atrium-identity = { workspace = true }
 atrium-oauth-client = { workspace = true }
 
