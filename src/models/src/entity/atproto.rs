@@ -1,5 +1,18 @@
-use atrium_identity::handle::DnsTxtResolver as DnsTxtResolverTrait;
+use atrium_identity::{
+    did::CommonDidResolver,
+    handle::{AtprotoHandleResolver, DnsTxtResolver as DnsTxtResolverTrait},
+};
+use atrium_oauth_client::{DefaultHttpClient, OAuthClient};
 use hickory_resolver::{proto::rr::rdata::TXT, TokioAsyncResolver};
+
+use crate::database::DB;
+
+type AtprotoClient = OAuthClient<
+    DB,
+    DB,
+    CommonDidResolver<DefaultHttpClient>,
+    AtprotoHandleResolver<DnsTxtResolver, DefaultHttpClient>,
+>;
 
 struct DnsTxtResolver {
     resolver: TokioAsyncResolver,
