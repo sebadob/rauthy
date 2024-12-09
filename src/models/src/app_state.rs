@@ -1,8 +1,16 @@
+use crate::database::DB;
 use crate::email::EMail;
+use crate::entity::atproto::{AtprotoClient, DnsTxtResolver};
 use crate::events::event::Event;
 use crate::events::ip_blacklist_handler::IpBlacklistReq;
 use crate::events::listener::EventRouterMsg;
 use crate::ListenScheme;
+use atrium_identity::did::{CommonDidResolver, CommonDidResolverConfig, DEFAULT_PLC_DIRECTORY_URL};
+use atrium_identity::handle::{AtprotoHandleResolver, AtprotoHandleResolverConfig};
+use atrium_oauth_client::{
+    AtprotoClientMetadata, AuthMethod, DefaultHttpClient, GrantType, KnownScope, OAuthClient,
+    OAuthClientConfig, OAuthResolverConfig, Scope,
+};
 use rauthy_common::constants::PROXY_MODE;
 use std::env;
 use std::sync::Arc;
@@ -31,6 +39,7 @@ pub struct AppState {
     pub tx_events_router: flume::Sender<EventRouterMsg>,
     pub tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
     pub webauthn: Arc<Webauthn>,
+    pub atproto: Arc<AtprotoClient>,
 }
 
 impl AppState {
@@ -154,6 +163,52 @@ impl AppState {
             .rp_name(&rp_name);
         let webauthn = Arc::new(builder.build().expect("Invalid configuration"));
 
+        let atproto = {
+            let http_client = Arc::new(DefaultHttpClient::default());
+
+            let listen_scheme = match listen_scheme {
+                ListenScheme::Http | ListenScheme::UnixHttp => "http",
+                ListenScheme::Https | ListenScheme::HttpHttps | ListenScheme::UnixHttps => "https",
+            };
+
+            let client_metadata = AtprotoClientMetadata {
+                client_id: format!(
+                    "{listen_scheme}://{public_url}/auth/v1/atproto/client_metadata"
+                ),
+                client_uri: format!("{listen_scheme}://{public_url}"),
+                redirect_uris: vec![format!(
+                    "{listen_scheme}://{public_url}/auth/v1/atproto/callback"
+                )],
+                token_endpoint_auth_method: AuthMethod::None,
+                grant_types: vec![GrantType::AuthorizationCode],
+                scopes: vec![Scope::Known(KnownScope::Atproto)],
+                jwks_uri: None,
+                token_endpoint_auth_signing_alg: None,
+            };
+
+            Arc::new(
+                OAuthClient::new(OAuthClientConfig {
+                    client_metadata: client_metadata.clone(),
+                    keys: None,
+                    resolver: OAuthResolverConfig {
+                        did_resolver: CommonDidResolver::new(CommonDidResolverConfig {
+                            plc_directory_url: DEFAULT_PLC_DIRECTORY_URL.to_string(),
+                            http_client: http_client.clone(),
+                        }),
+                        handle_resolver: AtprotoHandleResolver::new(AtprotoHandleResolverConfig {
+                            dns_txt_resolver: DnsTxtResolver::default(),
+                            http_client: http_client.clone(),
+                        }),
+                        authorization_server_metadata: Default::default(),
+                        protected_resource_metadata: Default::default(),
+                    },
+                    state_store: DB,
+                    session_store: DB,
+                })
+                .expect("failed to initialize atproto client"),
+            )
+        };
+
         Ok(Self {
             public_url,
             argon2_params,
@@ -170,6 +225,7 @@ impl AppState {
             tx_events_router,
             tx_ip_blacklist,
             webauthn,
+            atproto,
         })
     }
 

@@ -7,14 +7,14 @@ use hickory_resolver::{proto::rr::rdata::TXT, TokioAsyncResolver};
 
 use crate::database::DB;
 
-type AtprotoClient = OAuthClient<
+pub type AtprotoClient = OAuthClient<
     DB,
     DB,
     CommonDidResolver<DefaultHttpClient>,
     AtprotoHandleResolver<DnsTxtResolver, DefaultHttpClient>,
 >;
 
-struct DnsTxtResolver {
+pub struct DnsTxtResolver {
     resolver: TokioAsyncResolver,
 }
 
