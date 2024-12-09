@@ -2,27 +2,33 @@ use atrium_identity::{
     did::CommonDidResolver,
     handle::{AtprotoHandleResolver, DnsTxtResolver as DnsTxtResolverTrait},
 };
-use atrium_oauth_client::{DefaultHttpClient, OAuthClient};
-use hickory_resolver::{proto::rr::rdata::TXT, TokioAsyncResolver};
+use atrium_oauth::{DefaultHttpClient, OAuthClient};
+use hickory_resolver::{
+    Resolver, TokioResolver, config::ResolverConfig, name_server::TokioConnectionProvider,
+    proto::rr::rdata::TXT,
+};
 
 use crate::database::DB;
 
-type AtprotoClient = OAuthClient<
+pub type AtprotoClient = OAuthClient<
     DB,
     DB,
     CommonDidResolver<DefaultHttpClient>,
     AtprotoHandleResolver<DnsTxtResolver, DefaultHttpClient>,
 >;
 
-struct DnsTxtResolver {
-    resolver: TokioAsyncResolver,
+pub struct DnsTxtResolver {
+    resolver: TokioResolver,
 }
 
 impl Default for DnsTxtResolver {
     fn default() -> Self {
         Self {
-            resolver: TokioAsyncResolver::tokio_from_system_conf()
-                .expect("failed to create resolver"),
+            resolver: Resolver::builder_with_config(
+                ResolverConfig::default(),
+                TokioConnectionProvider::default(),
+            )
+            .build(),
         }
     }
 }

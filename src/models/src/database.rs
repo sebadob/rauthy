@@ -4,11 +4,17 @@ use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::migration::{anti_lockout, db_migrate, init_prod};
 use crate::sqlx_refinery_migration::migrate_sqlx_to_refinery;
 use actix_web::web;
+use atrium_api::types::string::Did;
+use atrium_common::store::Store;
+use atrium_oauth::store::session::{Session, SessionStore};
+use atrium_oauth::store::state::{InternalStateData, StateStore};
 use futures_util::StreamExt;
 use hiqlite::NodeConfig;
 use hiqlite::cache_idx::CacheIndex;
 use hiqlite_macros::embed::*;
-use rauthy_common::constants::{DEV_MODE, RAUTHY_VERSION};
+use rauthy_common::constants::{
+    CACHE_TTL_AUTH_PROVIDER_CALLBACK, CACHE_TTL_SESSION, DEV_MODE, RAUTHY_VERSION,
+};
 use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::ErrorResponse;
 use std::env;
@@ -444,3 +450,60 @@ impl rustls::client::danger::ServerCertVerifier for NoTlsVerifier {
         ]
     }
 }
+
+impl Store<String, InternalStateData> for DB {
+    type Error = hiqlite::Error;
+
+    async fn get(&self, key: &String) -> Result<Option<InternalStateData>, Self::Error> {
+        Self::client().get(Cache::AuthProviderCallback, key).await
+    }
+
+    async fn set(&self, key: String, value: InternalStateData) -> Result<(), Self::Error> {
+        Self::client()
+            .put(
+                Cache::AuthProviderCallback,
+                key,
+                &value,
+                CACHE_TTL_AUTH_PROVIDER_CALLBACK,
+            )
+            .await
+    }
+
+    async fn del(&self, key: &String) -> Result<(), Self::Error> {
+        Self::client()
+            .delete(Cache::AuthProviderCallback, key.to_string())
+            .await
+    }
+
+    async fn clear(&self) -> Result<(), Self::Error> {
+        Self::client()
+            .clear_cache(Cache::AuthProviderCallback)
+            .await
+    }
+}
+
+impl StateStore for DB {}
+
+impl Store<Did, Session> for DB {
+    type Error = hiqlite::Error;
+
+    async fn get(&self, key: &Did) -> Result<Option<Session>, Self::Error> {
+        Self::client().get(Cache::Session, key.to_string()).await
+    }
+
+    async fn set(&self, key: Did, value: Session) -> Result<(), Self::Error> {
+        Self::client()
+            .put(Cache::Session, key.to_string(), &value, CACHE_TTL_SESSION)
+            .await
+    }
+
+    async fn del(&self, key: &Did) -> Result<(), Self::Error> {
+        Self::client().delete(Cache::Session, key.to_string()).await
+    }
+
+    async fn clear(&self) -> Result<(), Self::Error> {
+        Self::client().clear_cache(Cache::Session).await
+    }
+}
+
+impl SessionStore for DB {}
