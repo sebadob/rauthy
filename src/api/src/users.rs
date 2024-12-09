@@ -160,7 +160,7 @@ pub async fn post_users(
     path = "/users/attr",
     tag = "users",
     responses(
-        (status = 200, description = "Ok", body = UserAttrConfigResponse),
+        (status = 200, description = "Ok", body = [UserAttrConfigResponse]),
         (status = 403, description = "Forbidden"),
     ),
 )]
@@ -457,7 +457,7 @@ pub async fn put_user_attr(
     path = "/users/{id}/devices",
     tag = "users",
     responses(
-        (status = 200, description = "Ok", body = DeviceResponse),
+        (status = 200, description = "Ok", body = [DeviceResponse]),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
@@ -699,7 +699,7 @@ pub async fn put_user_password_reset(
     path = "/users/{id}/webauthn",
     tag = "users",
     responses(
-        (status = 200, description = "Ok"),
+        (status = 200, description = "Ok", body = [PasskeyResponse]),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),

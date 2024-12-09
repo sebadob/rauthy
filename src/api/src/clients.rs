@@ -30,7 +30,7 @@ use tracing::debug;
     path = "/clients",
     tag = "clients",
     responses(
-        (status = 200, description = "Ok", body = ClientResponse),
+        (status = 200, description = "Ok", body = [ClientResponse]),
         (status = 400, description = "BadRequest"),
         (status = 401, description = "Unauthorized"),
         (status = 403, description = "Forbidden"),
