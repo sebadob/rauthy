@@ -81,6 +81,12 @@ validator = { workspace = true }
 webauthn-rs = { workspace = true }
 webauthn-rs-proto = { workspace = true }
 
+atrium-api = { workspace = true }
+atrium-identity = { workspace = true }
+atrium-oauth-client = { workspace = true }
+
+hickory-resolver = { workspace = true }
+
 [dev-dependencies]
 pretty_assertions = "1"
 rstest = "0.18.2"
