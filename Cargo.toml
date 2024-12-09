@@ -110,3 +110,10 @@ webauthn-rs = { version = "0.5", features = [
     "danger-allow-state-serialisation", "danger-credential-internals"
 ] }
 webauthn-rs-proto = "0.5"
+
+atrium-api = { git = "https://github.com/avdb13/atrium", branch = "oauth-session" }
+atrium-common = { git = "https://github.com/avdb13/atrium", branch = "oauth-session" }
+atrium-identity = { git = "https://github.com/avdb13/atrium", branch = "oauth-session" }
+atrium-oauth-client = { git = "https://github.com/avdb13/atrium", branch = "oauth-session" }
+
+hickory-resolver = { version = "0.24.1", features = ["tokio", "tokio-rustls", "rustls"] }
