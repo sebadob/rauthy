@@ -360,7 +360,7 @@ pub async fn get_callback_html(principal: ReqPrincipal) -> Result<HttpResponse, 
     get,
     path = "/oidc/certs",
     tag = "oidc",
-    responses((status = 200, description = "Ok")),
+    responses((status = 200, description = "Ok", body = JWKSCerts)),
 )]
 #[get("/oidc/certs")]
 pub async fn get_certs() -> Result<HttpResponse, ErrorResponse> {
@@ -369,7 +369,7 @@ pub async fn get_certs() -> Result<HttpResponse, ErrorResponse> {
     Ok(HttpResponse::Ok()
         .insert_header((
             header::ACCESS_CONTROL_ALLOW_ORIGIN,
-            HeaderValue::from_str("*").unwrap(),
+            HeaderValue::from_static("*"),
         ))
         .json(res))
 }
@@ -381,7 +381,7 @@ pub async fn get_certs() -> Result<HttpResponse, ErrorResponse> {
     get,
     path = "/oidc/certs/{kid}",
     tag = "oidc",
-    responses((status = 200, description = "Ok")),
+    responses((status = 200, description = "Ok", body = JWKSPublicKeyCerts)),
 )]
 #[get("/oidc/certs/{kid}")]
 pub async fn get_cert_by_kid(kid: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
@@ -773,7 +773,7 @@ pub async fn post_session(
     path = "/oidc/sessioninfo",
     tag = "oidc",
     responses(
-        (status = 200, description = "Ok"),
+        (status = 200, description = "Ok", body = SessionInfoResponse),
     ),
 )]
 #[get("/oidc/sessioninfo")]
@@ -833,7 +833,7 @@ pub async fn get_session_info(data: web::Data<AppState>, principal: ReqPrincipal
     path = "/oidc/sessioninfo/xsrf",
     tag = "oidc",
     responses(
-        (status = 200, description = "Ok"),
+        (status = 200, description = "Ok", body = SessionInfoResponse),
     ),
 )]
 #[get("/oidc/sessioninfo/xsrf")]

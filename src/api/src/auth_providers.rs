@@ -29,7 +29,7 @@ use tracing::debug;
     path = "/providers",
     tag = "providers",
     responses(
-        (status = 200, description = "OK", body = ProviderResponse),
+        (status = 200, description = "OK", body = [ProviderResponse]),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
