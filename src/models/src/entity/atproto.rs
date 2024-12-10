@@ -20,6 +20,7 @@ use rauthy_common::constants::{
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use time::OffsetDateTime;
 use tracing::{debug, error};
+use utoipa::{PartialSchema, ToSchema};
 
 use crate::{
     api_cookie::ApiCookie,
@@ -53,6 +54,16 @@ impl Default for DnsTxtResolver {
             resolver: TokioAsyncResolver::tokio_from_system_conf()
                 .expect("failed to create resolver"),
         }
+    }
+}
+
+impl ToSchema for DnsTxtResolver {}
+
+impl PartialSchema for DnsTxtResolver {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        utoipa::openapi::RefOr::T(utoipa::openapi::Schema::Object(
+            utoipa::openapi::ObjectBuilder::new().build(),
+        ))
     }
 }
 
