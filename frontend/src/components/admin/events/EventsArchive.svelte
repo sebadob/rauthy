@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import {onMount} from "svelte";
     import {postEvents} from "../../../utils/dataFetchingAdmin.js";
     import {formatDateToDateInput, formatUtcTsFromDateInput} from "../../../utils/helpers.js";
@@ -10,19 +12,16 @@
     import Switch from "$lib/Switch.svelte";
 
     let err = '';
-    let events = [];
-    let resEvents = [];
+    let events = $state([]);
+    let resEvents = $state([]);
 
-    let from = formatDateToDateInput(new Date(new Date().getTime() - 3600 * 1000));
+    let from = $state(formatDateToDateInput(new Date(new Date().getTime() - 3600 * 1000)));
     /** @type {string | undefined} */
-    let until = undefined;
-    let level = 'Info';
-    let filter = false;
-    let typ = EVENT_TYPES[0];
+    let until = $state(undefined);
+    let level = $state('Info');
+    let filter = $state(false);
+    let typ = $state(EVENT_TYPES[0]);
 
-    $: if (from || until || level || filter || typ) {
-        fetchData();
-    }
 
     let searchOptions = [
         {
@@ -68,6 +67,11 @@
     function onSave() {
         fetchData();
     }
+    run(() => {
+        if (from || until || level || filter || typ) {
+            fetchData();
+        }
+    });
 </script>
 
 <div class="content">

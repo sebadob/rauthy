@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import {onMount} from "svelte";
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
     import Pagination from "$lib/Pagination.svelte";
@@ -12,19 +14,19 @@
     import IconStop from "$lib/icons/IconStop.svelte";
     import Tooltip from "$lib/Tooltip.svelte";
 
-    let err = '';
-    let errSave = '';
-    let blacklist = [];
-    let resBlacklist = [];
-    let resBlacklistPaginated = [];
+    let err = $state('');
+    let errSave = $state('');
+    let blacklist = $state([]);
+    let resBlacklist = $state([]);
+    let resBlacklistPaginated = $state([]);
     let refresh;
-    let showInputs = false;
+    let showInputs = $state(false);
 
-    let formValues = {
+    let formValues = $state({
         ip: '',
         exp: '',
-    }
-    let formErrors = {};
+    })
+    let formErrors = $state({});
     const schema = yup.object().shape({
         ip: yup.string()
             .required('IP is required')
@@ -46,10 +48,12 @@
         },
     ];
 
-    $: if (showInputs) {
-        errSave = '';
-        formValues.exp = new Date().toISOString().split('.')[0];
-    }
+    run(() => {
+        if (showInputs) {
+            errSave = '';
+            formValues.exp = new Date().toISOString().split('.')[0];
+        }
+    });
 
     onMount(() => {
         fetchBlacklist();
@@ -179,8 +183,8 @@
                                 role="button"
                                 tabindex="0"
                                 class="delete"
-                                on:click={() => deleteIp(entry.ip)}
-                                on:keypress={() => deleteIp(entry.ip)}
+                                onclick={() => deleteIp(entry.ip)}
+                                onkeypress={() => deleteIp(entry.ip)}
                         >
                             <IconStop color="var(--col-err)"/>
                         </div>

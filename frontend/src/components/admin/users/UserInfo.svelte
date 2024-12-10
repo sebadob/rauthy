@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import * as yup from "yup";
     import {
         extractFormErrors,
@@ -24,41 +26,42 @@
     import ItemTiles from "$lib/itemTiles/ItemTiles.svelte";
     import OptionSelect from "$lib/OptionSelect.svelte";
 
-    export let user = {};
-    export let onSave;
+    let { user = $bindable({}), onSave } = $props();
 
-    let err = '';
-    let success = false;
-    let timer;
-    let language = user.language.toUpperCase();
-    let limitLifetime = !!user.user_expires;
-    let userExpires = limitLifetime ? formatDateFromTs(user.user_expires, true) : undefined;
+    let err = $state('');
+    let success = $state(false);
+    let timer = $state();
+    let language = $state(user.language.toUpperCase());
+    let limitLifetime = $state(!!user.user_expires);
+    let userExpires = $state(limitLifetime ? formatDateFromTs(user.user_expires, true) : undefined);
 
-    let allRoles = [];
+    let allRoles = $state([]);
     globalRolesNames.subscribe(rls => {
         allRoles = rls;
     })
 
-    let allGroups = [];
+    let allGroups = $state([]);
     globalGroupsNames.subscribe(grps => {
         allGroups = grps;
     })
 
-    $: if (success) {
-        timer = setTimeout(() => {
-            success = false;
-            onSave();
-        }, 3000);
-    }
+    run(() => {
+        if (success) {
+            timer = setTimeout(() => {
+                success = false;
+                onSave();
+            }, 3000);
+        }
+    });
 
-    let formErrors = {};
+    let formErrors = $state({});
     const schema = yup.object().shape({
         email: yup.string().required('E-Mail is required').email("Bad E-Mail format"),
         given_name: yup.string().trim().required('Given Name is required').matches(REGEX_NAME, 'Invalid characters'),
         family_name: yup.string().trim().matches(REGEX_NAME_NULLABLE, 'Invalid characters'),
     });
 
-    let formErrorsValues = {};
+    let formErrorsValues = $state({});
     const schemaValues = yup.object().shape({
         birthdate: yup.string().nullable().trim().matches(REGEX_BIRTHDATE, 'Invalid characters'),
         phone: yup.string().nullable().trim().matches(REGEX_PHONE, 'Format: +...'),

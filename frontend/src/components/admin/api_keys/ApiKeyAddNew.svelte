@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import Button from "$lib/Button.svelte";
     import Input from "$lib/inputs/Input.svelte";
     import * as yup from "yup";
@@ -11,20 +13,19 @@
 
     const minDate = new Date().toISOString().split('.')[0];
 
-    export let apiKeys = [];
-    export let onSave = () => {};
+    let { apiKeys = [], onSave = () => {} } = $props();
 
-    let err = '';
-    let doesExpire = false;
+    let err = $state('');
+    let doesExpire = $state(false);
     // IMPORTANT: do NOT give a default here -> will be initialized inside ApiKeyAccessMatrix!
-    let finalizeMatrix;
+    let finalizeMatrix = $state();
 
-    let accessMatrix;
-    let formValues = {
+    let accessMatrix = $state();
+    let formValues = $state({
         name: '',
         exp: '',
-    }
-    let formErrors = {};
+    })
+    let formErrors = $state({});
     const schema = yup.object().shape({
         name: yup.string()
             .required('Name is required')
@@ -33,9 +34,11 @@
             .matches(REGEX_API_KEY, 'Format: [a-zA-Z0-9_/-]{2,24}'),
     });
 
-    $: if (doesExpire) {
-        formValues.exp = new Date().toISOString().split('.')[0];
-    }
+    run(() => {
+        if (doesExpire) {
+            formValues.exp = new Date().toISOString().split('.')[0];
+        }
+    });
 
     async function onSubmit() {
         err = '';

@@ -2,7 +2,7 @@
 
     import Devices from "../../common/Devices.svelte";
 
-    export let user;
+    let { user } = $props();
 
 </script>
 

@@ -4,13 +4,12 @@
     import {onMount} from "svelte";
     import Switch from "$lib/Switch.svelte";
 
-    export let provider = {};
-    export let onSave;
+    let { provider = {}, onSave } = $props();
 
-    let isLoading = true;
-    let err = '';
-    let forceDelete = false;
-    let linkedUsers = [];
+    let isLoading = $state(true);
+    let err = $state('');
+    let forceDelete = $state(false);
+    let linkedUsers = $state([]);
 
     onMount(async () => {
         let res = await getProviderDeleteSafe(provider.id);

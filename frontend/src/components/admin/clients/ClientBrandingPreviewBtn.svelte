@@ -1,29 +1,22 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import Loading from "$lib/Loading.svelte";
     import {onDestroy} from "svelte";
 
-    export let colors;
-    export let level;
+    let { colors, level } = $props();
 
-    let isHover = false;
-    let isLoading = false;
+    let isHover = $state(false);
+    let isLoading = $state(false);
 
-    let colBack;
-    let colBackHov;
-    let colTxt;
-    let border;
-    let timer;
-    let loadCol = 'white';
+    let colBack = $state();
+    let colBackHov = $state();
+    let colTxt = $state();
+    let border = $state();
+    let timer = $state();
+    let loadCol = $state('white');
 
-    $: if (isLoading) {
-        timer = setTimeout(() => {
-            isLoading = false;
-        }, 2000);
-    }
 
-    $: if (colors) {
-        extractColors();
-    }
 
     onDestroy(() => {
         clearTimeout(timer);
@@ -52,6 +45,18 @@
         }
     }
 
+    run(() => {
+        if (isLoading) {
+            timer = setTimeout(() => {
+                isLoading = false;
+            }, 2000);
+        }
+    });
+    run(() => {
+        if (colors) {
+            extractColors();
+        }
+    });
 </script>
 
 <div class="wrap">
@@ -63,10 +68,10 @@
             style:cursor="{isLoading ? 'default' : 'pointer'}"
             style:color={colTxt}
             style:background={isHover ? colBackHov : colBack}
-            on:focus={() => isHover = true}
-            on:blur={() => isHover = false}
-            on:click={() => isLoading = true}
-            on:keypress={() => isLoading = true}
+            onfocus={() => isHover = true}
+            onblur={() => isHover = false}
+            onclick={() => isLoading = true}
+            onkeypress={() => isLoading = true}
     >
         {#if isLoading}
             <div class="load">

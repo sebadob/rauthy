@@ -6,11 +6,11 @@
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
     import Pagination from "$lib/Pagination.svelte";
 
-    let err = '';
-    let roles = [];
-    let resRoles = [];
-    let resRolesPaginated = [];
-    let search = '';
+    let err = $state('');
+    let roles = $state([]);
+    let resRoles = $state([]);
+    let resRolesPaginated = $state([]);
+    let search = $state('');
 
     let searchOptions = [
         {

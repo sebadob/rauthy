@@ -4,8 +4,8 @@
     import ProviderTile from "./ProviderTile.svelte";
     import {postProviders} from "../../../utils/dataFetchingAdmin.js";
 
-    let err = '';
-    let providers = [];
+    let err = $state('');
+    let providers = $state([]);
 
     onMount(async () => {
         fetchData();

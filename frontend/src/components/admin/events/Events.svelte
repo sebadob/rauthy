@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import {onMount} from "svelte";
     import Event from "./Event.svelte";
     import EventsLegend from "./EventsLegend.svelte";
@@ -7,51 +9,24 @@
     import OptionSelect from "$lib/OptionSelect.svelte";
     import {EVENT_LEVELS} from "../../../utils/constants.js";
 
-    export let collapsed = true;
-    export let wide;
+    /**
+     * @typedef {Object} Props
+     * @property {boolean} [collapsed]
+     * @property {any} wide
+     */
+
+    /** @type {Props} */
+    let { collapsed = true, wide = $bindable() } = $props();
 
     let latest = 50;
-    let es;
-    let events = [];
-    let eventsFiltered = [];
-    let eventLevel;
-    let isHover = false;
+    let es = $state();
+    let events = $state([]);
+    let eventsFiltered = $state([]);
+    let eventLevel = $state();
+    let isHover = $state(false);
 
-    $: widthDefault = !collapsed && !wide || isHover;
-    $: widthCollapsed = collapsed && !wide && !isHover;
-    $: widthWide = !collapsed && wide;
 
-    $: if (events) {
-        switch (eventLevel) {
-            case 'Info':
-                eventsFiltered = events;
-                break;
-            case 'Notice':
-                eventsFiltered = events.filter(
-                    evt => evt.typ === 'Test'
-                        || evt.level === 'notice'
-                        || evt.level === 'warning'
-                        || evt.level === 'critical'
-                );
-                break;
-            case 'Warning':
-                eventsFiltered = events.filter(
-                    evt => evt.typ === 'Test' || evt.level === 'warning' || evt.level === 'critical'
-                );
-                break;
-            case 'Critical':
-                eventsFiltered = events.filter(evt => evt.typ === 'Test' || evt.level === 'critical');
-                break;
-        }
-    }
 
-    $: if (eventLevel) {
-        saveEventLevel(eventLevel);
-        if (es && es.readyState !== 2) {
-            es.close();
-        }
-        stream();
-    }
 
     onMount(async () => {
         eventLevel = await readSavedEventLevel();
@@ -93,6 +68,43 @@
         };
     }
 
+    let widthDefault = $derived(!collapsed && !wide || isHover);
+    let widthCollapsed = $derived(collapsed && !wide && !isHover);
+    let widthWide = $derived(!collapsed && wide);
+    run(() => {
+        if (events) {
+            switch (eventLevel) {
+                case 'Info':
+                    eventsFiltered = events;
+                    break;
+                case 'Notice':
+                    eventsFiltered = events.filter(
+                        evt => evt.typ === 'Test'
+                            || evt.level === 'notice'
+                            || evt.level === 'warning'
+                            || evt.level === 'critical'
+                    );
+                    break;
+                case 'Warning':
+                    eventsFiltered = events.filter(
+                        evt => evt.typ === 'Test' || evt.level === 'warning' || evt.level === 'critical'
+                    );
+                    break;
+                case 'Critical':
+                    eventsFiltered = events.filter(evt => evt.typ === 'Test' || evt.level === 'critical');
+                    break;
+            }
+        }
+    });
+    run(() => {
+        if (eventLevel) {
+            saveEventLevel(eventLevel);
+            if (es && es.readyState !== 2) {
+                es.close();
+            }
+            stream();
+        }
+    });
 </script>
 
 <div
@@ -101,8 +113,8 @@
         class:widthDefault
         class:widthCollapsed
         class:widthWide
-        on:mouseenter={() => isHover = true}
-        on:mouseleave={() => isHover = false}
+        onmouseenter={() => isHover = true}
+        onmouseleave={() => isHover = false}
 >
     <div class="upper">
         <div class="header">

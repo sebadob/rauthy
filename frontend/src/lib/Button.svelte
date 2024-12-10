@@ -1,49 +1,71 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import {createEventDispatcher} from "svelte";
     import Loading from "./Loading.svelte";
     import {fade} from "svelte/transition";
 
-    export let level = 2;
-    export let width = 'inherit';
-    export let selected = undefined;
-    export let isDisabled = false;
-    export let isLoading = false;
+    /**
+     * @typedef {Object} Props
+     * @property {number} [level]
+     * @property {string} [width]
+     * @property {any} [selected]
+     * @property {boolean} [isDisabled]
+     * @property {boolean} [isLoading]
+     * @property {import('svelte').Snippet} [children]
+     */
 
-    let showText = !isLoading;
-    let cls = 'button';
-    let loadCol = 'white';
+    /** @type {Props} */
+    let {
+        level = 2,
+        width = 'inherit',
+        selected = $bindable(undefined),
+        isDisabled = false,
+        isLoading = false,
+        children
+    } = $props();
 
-    $: disabled = isDisabled || isLoading;
+    let showText = $state(!isLoading);
+    let cls = $state('button');
+    let loadCol = $state('white');
 
-    $: if (level) {
-        switch (level) {
-            case 1:
-                cls = 'font-label l1';
-                break;
-            case 2:
-                cls = 'font-label l2';
-                break;
-            case 3:
-                cls = 'font-label l3';
-                loadCol = 'var(--col-acnt)';
-                break;
-            default:
-                cls = 'font-label l4';
-                loadCol = 'var(--col-acnt)';
+    let disabled = $derived(isDisabled || isLoading);
+
+    run(() => {
+        if (level) {
+            switch (level) {
+                case 1:
+                    cls = 'font-label l1';
+                    break;
+                case 2:
+                    cls = 'font-label l2';
+                    break;
+                case 3:
+                    cls = 'font-label l3';
+                    loadCol = 'var(--col-acnt)';
+                    break;
+                default:
+                    cls = 'font-label l4';
+                    loadCol = 'var(--col-acnt)';
+            }
         }
-    }
+    });
 
-    $: if (isLoading) {
-        setTimeout(() => {
-            showText = false;
-        }, 120);
-    }
+    run(() => {
+        if (isLoading) {
+            setTimeout(() => {
+                showText = false;
+            }, 120);
+        }
+    });
 
-    $: if (!isLoading) {
-        setTimeout(() => {
-            showText = true;
-        }, 120);
-    }
+    run(() => {
+        if (!isLoading) {
+            setTimeout(() => {
+                showText = true;
+            }, 120);
+        }
+    });
 
     const dispatch = createEventDispatcher();
 
@@ -61,8 +83,8 @@
         style:width={width}
         style:box-shadow="{selected ? 'inset 0 0 3px 2px var(--col-glow)' : ''}"
         style:cursor="{isLoading ? 'default' : 'pointer'}"
-        on:click={handleCLick}
-        on:keypress={handleCLick}
+        onclick={handleCLick}
+        onkeypress={handleCLick}
         { disabled }
 >
     {#if isLoading}
@@ -71,7 +93,7 @@
         </div>
     {:else if showText}
         <div in:fade class="txt">
-            <slot></slot>
+            {@render children?.()}
         </div>
     {/if}
 </button>

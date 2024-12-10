@@ -1,16 +1,24 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import {onMount} from "svelte";
     import IconEyeSlash from "$lib/icons/IconEyeSlash.svelte";
     import IconEye from "$lib/icons/IconEye.svelte";
     import {sleepAwait} from "../utils/helpers.js";
     import IconClipboard from "$lib/icons/IconClipboard.svelte";
 
-    export let value = '';
+    /**
+     * @typedef {Object} Props
+     * @property {string} [value]
+     */
+
+    /** @type {Props} */
+    let { value = '' } = $props();
 
     let hidden = '';
-    let text = '';
-    let txt;
-    let showValue = false;
+    let text = $state('');
+    let txt = $state();
+    let showValue = $state(false);
 
     const typingSpeed = 10;
 
@@ -21,11 +29,6 @@
         text = hidden;
     });
 
-    $: if (showValue) {
-        show();
-    } else {
-        hide();
-    }
 
     function copy() {
         navigator.clipboard.writeText(value);
@@ -48,6 +51,13 @@
     function toggle() {
         showValue = !showValue;
     }
+    run(() => {
+        if (showValue) {
+            show();
+        } else {
+            hide();
+        }
+    });
 </script>
 
 <div class="container">
@@ -55,11 +65,11 @@
         {text}
     </div>
 
-    <div class="btn" on:click={copy} on:keypress={copy}>
+    <div class="btn" onclick={copy} onkeypress={copy}>
         <IconClipboard/>
     </div>
 
-    <div class="btn" on:click={toggle} on:keypress={toggle}>
+    <div class="btn" onclick={toggle} onkeypress={toggle}>
         {#if showValue}
             <IconEye width={22}/>
         {:else}

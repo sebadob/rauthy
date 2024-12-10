@@ -4,11 +4,10 @@
     import Button from "$lib/Button.svelte";
     import {formatDateFromTs} from "../../../utils/helpers.js";
 
-    export let user = {};
-    export let onSave;
+    let { user = {}, onSave } = $props();
 
-    let err = '';
-    let passkeys = [];
+    let err = $state('');
+    let passkeys = $state([]);
 
     const btnWidth = "inherit";
 

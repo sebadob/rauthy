@@ -1,23 +1,39 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import IconPlus from "$lib/icons/IconPlus.svelte";
     import {slide} from "svelte/transition";
     import SearchBar from "../search/SearchBar.svelte";
 
-    export let items = [];
 
-    export let onSelect = (item) => {
-    };
 
-    export let mindWidth = 130;
-    export let maxHeight = items.length > 4 ? 175 : 120;
-    export let searchThreshold = 5;
+    /**
+     * @typedef {Object} Props
+     * @property {any} [items]
+     * @property {any} [onSelect]
+     * @property {number} [mindWidth]
+     * @property {any} [maxHeight]
+     * @property {number} [searchThreshold]
+     */
 
-    let resItems = [];
-    let show = false;
+    /** @type {Props} */
+    let {
+        items = $bindable([]),
+        onSelect = (item) => {
+    },
+        mindWidth = 130,
+        maxHeight = items.length > 4 ? 175 : 120,
+        searchThreshold = 5
+    } = $props();
 
-    $: if (items.length <= searchThreshold) {
-        resItems = items;
-    }
+    let resItems = $state([]);
+    let show = $state(false);
+
+    run(() => {
+        if (items.length <= searchThreshold) {
+            resItems = items;
+        }
+    });
 
     function handleSelect(item) {
         show = false;
@@ -31,8 +47,8 @@
             role="button"
             tabindex="0"
             class="icon"
-            on:click={() => show = !show}
-            on:keypress={() => show = !show}
+            onclick={() => show = !show}
+            onkeypress={() => show = !show}
     >
         <IconPlus/>
     </div>
@@ -58,8 +74,8 @@
                             role="button"
                             tabindex="0"
                             class="item"
-                            on:click={() => handleSelect(item)}
-                            on:keypress={() => handleSelect(item)}
+                            onclick={() => handleSelect(item)}
+                            onkeypress={() => handleSelect(item)}
                     >
                         {item}
                     </div>

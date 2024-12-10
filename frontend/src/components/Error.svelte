@@ -5,8 +5,8 @@
     import BrowserCheck from "./BrowserCheck.svelte";
     import LangSelector from "$lib/LangSelector.svelte";
 
-    let t;
-    let showDetails = false;
+    let t = $state();
+    let showDetails = $state(false);
 
 </script>
 
@@ -20,8 +20,8 @@
                     role="button"
                     tabindex="0"
                     class="showDetails"
-                    on:click={() => showDetails = !showDetails}
-                    on:keypress={() => showDetails = !showDetails}
+                    onclick={() => showDetails = !showDetails}
+                    onkeypress={() => showDetails = !showDetails}
             >
                 {t.details}
                 <div

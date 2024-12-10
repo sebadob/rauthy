@@ -8,21 +8,21 @@
     import Pagination from "$lib/Pagination.svelte";
     import PaginationServer from "$lib/PaginationServer.svelte";
 
-    let msg = '';
+    let msg = $state('');
 
-    let users = [];
-    let resUsers = [];
-    let resUsersPaginated = [];
-    let useServerSideIdx = '';
-    let isSearchFiltered = false;
-    let search = '';
+    let users = $state([]);
+    let resUsers = $state([]);
+    let resUsersPaginated = $state([]);
+    let useServerSideIdx = $state('');
+    let isSearchFiltered = $state(false);
+    let search = $state('');
 
-    let usersCountTotal = 0;
-    let sspPageSize = 15;
-    let sspContinuationToken = '';
-    let sspPage = 1;
+    let usersCountTotal = $state(0);
+    let sspPageSize = $state(15);
+    let sspContinuationToken = $state('');
+    let sspPage = $state(1);
 
-    let searchOptions = [
+    let searchOptions = $state([
         {
             label: 'E-Mail',
             callback: (item, search) => item.email.toLowerCase().includes(search.toLowerCase()),
@@ -31,8 +31,8 @@
             label: 'ID',
             callback: (item, search) => item.id.toLowerCase().includes(search.toLowerCase()),
         },
-    ];
-    let orderOptions = [
+    ]);
+    let orderOptions = $state([
         {
             label: 'E-Mail',
             callback: (a, b) => a.email.localeCompare(b.email),
@@ -55,7 +55,7 @@
                 return al < bl;
             }
         },
-    ];
+    ]);
 
     onMount(async () => {
         fetchUsers();

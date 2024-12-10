@@ -1,8 +1,7 @@
 <script>
     import {onMount} from "svelte";
 
-    export let apiKey;
-    export let accessMatrix;
+    let { apiKey, accessMatrix = $bindable() } = $props();
 
     const GROUPS = [
         'Blacklist',
@@ -113,8 +112,8 @@
                     role="button"
                     tabindex="0"
                     class="cell pointer"
-                    on:click={toggleOp.bind(this, i)}
-                    on:keypress={toggleOp.bind(this, i)}
+                    onclick={toggleOp.bind(this, i)}
+                    onkeypress={toggleOp.bind(this, i)}
             >
                 {OPS[i]}
             </div>
@@ -128,8 +127,8 @@
                         role="button"
                         tabindex="0"
                         class="label pointer"
-                        on:click={toggleGroup.bind(this, i)}
-                        on:keypress={toggleGroup.bind(this, i)}
+                        onclick={toggleGroup.bind(this, i)}
+                        onkeypress={toggleGroup.bind(this, i)}
                 >
                     {GROUPS[i]}
                 </div>

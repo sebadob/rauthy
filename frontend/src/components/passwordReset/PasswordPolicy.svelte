@@ -1,5 +1,17 @@
 <script>
-    export let t = {
+    import { run } from 'svelte/legacy';
+
+    /**
+     * @typedef {Object} Props
+     * @property {any} [t]
+     * @property {any} [policy]
+     * @property {string} [password]
+     * @property {boolean} [accepted]
+     */
+
+    /** @type {Props} */
+    let {
+        t = {
         passwordPolicy: {
             passwordPolicy: "Password Policy",
             lengthMin: "Length min",
@@ -10,12 +22,13 @@
             specialMin: "Special characters min",
             notRecent: "Not one of last recent passwords",
         }
-    };
-    export let policy = {};
-    export let password = '';
-    export let accepted = false;
+    },
+        policy = {},
+        password = '',
+        accepted = $bindable(false)
+    } = $props();
 
-    let errPolicy = [false, false, false, false, false, false];
+    let errPolicy = $state([false, false, false, false, false, false]);
 
     const checkPolicy = (pwd) => {
         if (!policy) {
@@ -83,9 +96,11 @@
         accepted = !err;
     }
 
-    $: if (password) {
-        checkPolicy(password);
-    }
+    run(() => {
+        if (password) {
+            checkPolicy(password);
+        }
+    });
 </script>
 
 {#if policy}

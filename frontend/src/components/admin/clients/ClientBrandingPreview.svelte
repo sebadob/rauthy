@@ -3,12 +3,10 @@
     import ClientBrandingPreviewInput from "./ClientBrandingPreviewInput.svelte";
     import ClientLogo from "../../ClientLogo.svelte";
 
-    export let clientId;
-    export let colors;
-    export let isLoading;
+    let { clientId = $bindable(), colors = $bindable(), isLoading } = $props();
 
-    let errEmail = 'This is an E-Mail error';
-    let errPwd = 'This is a password error';
+    let errEmail = $state('This is an E-Mail error');
+    let errPwd = $state('This is a password error');
 
 </script>
 

@@ -4,12 +4,12 @@
     import OptionSelect from "$lib/OptionSelect.svelte";
     import Button from "$lib/Button.svelte";
 
-    let err = '';
-    let isLoading = true;
-    let activeKey = '';
-    let migrateKey = '';
-    let keys = [];
-    let success = false;
+    let err = $state('');
+    let isLoading = $state(true);
+    let activeKey = $state('');
+    let migrateKey = $state('');
+    let keys = $state([]);
+    let success = $state(false);
 
     onMount(async () => {
         fetchData();

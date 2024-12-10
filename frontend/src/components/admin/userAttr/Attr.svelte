@@ -6,11 +6,11 @@
     import UserAttrTile from "./AttrTile.svelte";
     import Pagination from "$lib/Pagination.svelte";
 
-    let msg = '';
-    let attr = [];
-    let resAttr = [];
-    let resAttrPaginated = [];
-    let search = '';
+    let msg = $state('');
+    let attr = $state([]);
+    let resAttr = $state([]);
+    let resAttrPaginated = $state([]);
+    let search = $state('');
 
     let searchOptions = [
         {

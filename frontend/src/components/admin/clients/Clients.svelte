@@ -7,12 +7,12 @@
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
     import Pagination from "$lib/Pagination.svelte";
 
-    let msg = '';
+    let msg = $state('');
 
-    let clients = [];
-    let resClients = [];
-    let resClientsPaginated = [];
-    let search = '';
+    let clients = $state([]);
+    let resClients = $state([]);
+    let resClientsPaginated = $state([]);
+    let search = $state('');
 
     let searchOptions = [
         {

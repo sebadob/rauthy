@@ -3,13 +3,29 @@
     import {getKey} from "../utils/helpers.js";
     import {slide} from "svelte/transition";
 
-    export let name = getKey();
-    export let disabled = false;
-    export let error = '';
-    export let value;
-    export let width = '250px';
 
-    export let autocomplete = 'on';
+    /**
+     * @typedef {Object} Props
+     * @property {any} [name]
+     * @property {boolean} [disabled]
+     * @property {string} [error]
+     * @property {any} value
+     * @property {string} [width]
+     * @property {string} [autocomplete]
+     * @property {import('svelte').Snippet} [children]
+     */
+
+    /** @type {Props & { [key: string]: any }} */
+    let {
+        name = getKey(),
+        disabled = false,
+        error = '',
+        value = $bindable(),
+        width = '250px',
+        autocomplete = 'on',
+        children,
+        ...rest
+    } = $props();
 
     const dispatch = createEventDispatcher();
 
@@ -41,7 +57,7 @@
                 style:background={disabled ? 'var(--col-gmid)' : 'var(--col-bg)'}
         >
             <label for={name}>
-                <slot></slot>
+                {@render children?.()}
             </label>
         </div>
     </div>
@@ -52,10 +68,10 @@
             {disabled}
             {value}
             {autocomplete}
-            {...$$restProps}
-            on:input={onInput}
-            on:keypress={handleKeyPress}
-            on:blur={handleOnBlur}
+            {...rest}
+            oninput={onInput}
+            onkeypress={handleKeyPress}
+            onblur={handleOnBlur}
     />
 
     {#if error}

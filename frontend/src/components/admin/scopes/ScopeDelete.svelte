@@ -3,11 +3,10 @@
     import {deleteScope} from "../../../utils/dataFetchingAdmin";
     import {isDefaultScope} from "../../../utils/helpers.js";
 
-    export let scope = {};
-    export let onSave;
+    let { scope = {}, onSave } = $props();
 
-    let isLoading = false;
-    let err = '';
+    let isLoading = $state(false);
+    let err = $state('');
     let success = false;
 
     async function onSubmit() {

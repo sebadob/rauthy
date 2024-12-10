@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import * as yup from "yup";
     import {extractFormErrors} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
@@ -18,40 +20,26 @@
     import ImageUploadRaw from "../../ImageUploadRaw.svelte";
     import ProviderLogo from "../../ProviderLogo.svelte";
 
-    export let provider = {};
-    export let onSave;
+    let { provider = $bindable({}), onSave } = $props();
 
     const inputWidth = '25rem';
 
-    let isLoading = false;
-    let err = '';
-    let success = false;
-    let timer;
+    let isLoading = $state(false);
+    let err = $state('');
+    let success = $state(false);
+    let timer = $state();
     let isDefault = false;
-    let showRootPem = provider.root_pem;
-    let logo;
+    let showRootPem = $state(provider.root_pem);
+    let logo = $state();
 
-    $: if (success) {
-        timer = setTimeout(() => {
-            success = false;
-            onSave();
-        }, 2000);
-    }
 
-    $: if (provider.scope) {
-        provider.scope = provider.scope.replaceAll('+', ' ');
-    }
 
-    // This will trigger when the upload image button has been clicked
-    $: if (logo) {
-        uploadLogo(logo);
-    }
 
     onMount(() => {
         return () => clearTimeout(timer);
     });
 
-    let formErrors = {};
+    let formErrors = $state({});
     const schema = yup.object().shape({
         issuer: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         authorization_endpoint: yup.string().url(),
@@ -135,6 +123,25 @@
         }
     }
 
+    run(() => {
+        if (success) {
+            timer = setTimeout(() => {
+                success = false;
+                onSave();
+            }, 2000);
+        }
+    });
+    run(() => {
+        if (provider.scope) {
+            provider.scope = provider.scope.replaceAll('+', ' ');
+        }
+    });
+    // This will trigger when the upload image button has been clicked
+    run(() => {
+        if (logo) {
+            uploadLogo(logo);
+        }
+    });
 </script>
 
 <div class="container">

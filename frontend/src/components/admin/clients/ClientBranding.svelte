@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import Button from "$lib/Button.svelte";
     import {
         deleteClientColors,
@@ -16,17 +18,17 @@
     import ImageUploadRaw from "../../ImageUploadRaw.svelte";
     import ClientLogo from "../../ClientLogo.svelte";
 
-    export let client = {};
-    let colors;
-    let clientLogo;
+    let { client = {} } = $props();
+    let colors = $state();
+    let clientLogo = $state();
 
-    let isLoading = false;
-    let err = '';
-    let success = false;
-    let timer;
+    let isLoading = $state(false);
+    let err = $state('');
+    let success = $state(false);
+    let timer = $state();
 
-    let formErrors = {};
-    let formValues = {};
+    let formErrors = $state({});
+    let formValues = $state({});
     const schema = yup.object().shape({
         act1: yup.string().trim().matches(REGEX_CSS_COLOR, "only valid CSS color"),
         act1a: yup.string().trim().matches(REGEX_CSS_COLOR, "only valid CSS color"),
@@ -43,15 +45,7 @@
         bg: yup.string().trim().matches(REGEX_CSS_COLOR, "only valid CSS color"),
     });
 
-    $: if (success) {
-        timer = setTimeout(() => {
-            success = false;
-        }, 3000);
-    }
 
-    $: if (clientLogo) {
-        uploadLogo(clientLogo);
-    }
 
     onMount(async () => {
         await getColors();
@@ -144,6 +138,18 @@
         return true;
     }
 
+    run(() => {
+        if (success) {
+            timer = setTimeout(() => {
+                success = false;
+            }, 3000);
+        }
+    });
+    run(() => {
+        if (clientLogo) {
+            uploadLogo(clientLogo);
+        }
+    });
 </script>
 
 <div class="container">

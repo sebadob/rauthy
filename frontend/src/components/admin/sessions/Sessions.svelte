@@ -16,20 +16,20 @@
     import PaginationServer from "$lib/PaginationServer.svelte";
     import SessionRow from "./SessionRow.svelte";
 
-    let err = '';
-    let sessions = [];
-    let resSessions = [];
-    let resSessionsPaginated = [];
+    let err = $state('');
+    let sessions = $state([]);
+    let resSessions = $state([]);
+    let resSessionsPaginated = $state([]);
     let deletingSessions = false;
     // let deletingSessions = false;
-    let now = Date.now() / 1000;
+    let now = $state(Date.now() / 1000);
 
-    let useServerSideIdx = '';
-    let isSearchFiltered = false;
+    let useServerSideIdx = $state('');
+    let isSearchFiltered = $state(false);
 
-    let sspPageSize = 15;
-    let sspContinuationToken = '';
-    let sspPage = 1;
+    let sspPageSize = $state(15);
+    let sspContinuationToken = $state('');
+    let sspPage = $state(1);
 
     let searchOptions = [
         {

@@ -6,10 +6,10 @@
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
     import Pagination from "$lib/Pagination.svelte";
 
-    let err = '';
-    let groups = [];
-    let resGroups = [];
-    let resGroupsPaginated = [];
+    let err = $state('');
+    let groups = $state([]);
+    let resGroups = $state([]);
+    let resGroupsPaginated = $state([]);
 
     let searchOptions = [
         {

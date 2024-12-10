@@ -3,13 +3,28 @@
     import {fade} from "svelte/transition";
     import Input from "../inputs/Input.svelte";
 
-    export let validation = {};
-    export let name;
-    export let value;
-    export let width;
-    export let autocomplete = 'on';
+    /**
+     * @typedef {Object} Props
+     * @property {any} [validation]
+     * @property {any} name
+     * @property {any} value
+     * @property {any} width
+     * @property {string} [autocomplete]
+     * @property {import('svelte').Snippet} [children]
+     */
 
-    let error = '';
+    /** @type {Props & { [key: string]: any }} */
+    let {
+        validation = {},
+        name,
+        value = $bindable(),
+        width = $bindable(),
+        autocomplete = $bindable('on'),
+        children,
+        ...rest
+    } = $props();
+
+    let error = $state('');
 
     const dispatch = createEventDispatcher();
 
@@ -49,8 +64,8 @@
             bind:autocomplete
             on:input={handleInput}
             on:blur={handleBlur}
-            {...$$restProps}
+            {...rest}
     >
-        <slot></slot>
+        {@render children?.()}
     </Input>
 </div>

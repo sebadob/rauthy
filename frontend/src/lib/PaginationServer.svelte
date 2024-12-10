@@ -1,25 +1,42 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import OptionSelect from "./OptionSelect.svelte";
     import IconChevronRight from "./icons/IconChevronRight.svelte";
 
-    export let itemsTotal = 0;
-    export let sspPage = 1;
-    export let sspPageSize = 15;
-    export let sspContinuationToken = '';
-    export let fetchPageCallback = (offset, backwards) => {
-    };
-    export let sspPageSizeChange = (pageSize) => {
-    };
+    /**
+     * @typedef {Object} Props
+     * @property {number} [itemsTotal]
+     * @property {number} [sspPage]
+     * @property {number} [sspPageSize]
+     * @property {string} [sspContinuationToken]
+     * @property {any} [fetchPageCallback]
+     * @property {any} [sspPageSizeChange]
+     */
+
+    /** @type {Props} */
+    let {
+        itemsTotal = 0,
+        sspPage = 1,
+        sspPageSize = 15,
+        sspContinuationToken = '',
+        fetchPageCallback = (offset, backwards) => {
+    },
+        sspPageSizeChange = (pageSize) => {
+    }
+    } = $props();
 
     const options = [2, 3, 5, 7, 10, 15, 20, 30, 50, 100];
     const iconSize = 16;
 
-    let pageSize = sspPageSize;
+    let pageSize = $state(sspPageSize);
 
-    $: if (pageSize) {
-        console.log('page size change in pagination server');
-        sspPageSizeChange(pageSize);
-    }
+    run(() => {
+        if (pageSize) {
+            console.log('page size change in pagination server');
+            sspPageSizeChange(pageSize);
+        }
+    });
 
 </script>
 
@@ -29,8 +46,8 @@
                 role="button"
                 tabindex="0"
                 class="icon iconLeft"
-                on:click={() => fetchPageCallback(0, true)}
-                on:keypress={() => fetchPageCallback(0, true)}
+                onclick={() => fetchPageCallback(0, true)}
+                onkeypress={() => fetchPageCallback(0, true)}
         >
             <IconChevronRight width={iconSize}/>
         </div>
@@ -47,8 +64,8 @@
                 role="button"
                 tabindex="0"
                 class="icon iconRight"
-                on:click={() => fetchPageCallback(0, false)}
-                on:keypress={() => fetchPageCallback(0, false)}
+                onclick={() => fetchPageCallback(0, false)}
+                onkeypress={() => fetchPageCallback(0, false)}
         >
             <IconChevronRight width={iconSize}/>
         </div>

@@ -2,11 +2,10 @@
     import Button from "$lib/Button.svelte";
     import {deleteAttr} from "../../../utils/dataFetchingAdmin.js";
 
-    export let attr = {};
-    export let onSave;
+    let { attr = {}, onSave } = $props();
 
-    let isLoading = false;
-    let err = '';
+    let isLoading = $state(false);
+    let err = $state('');
     let success = false;
 
     async function onSubmit() {

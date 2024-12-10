@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import * as yup from "yup";
     import {extractFormErrors, isDefaultScope} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
@@ -8,34 +10,36 @@
     import ItemTiles from "$lib/itemTiles/ItemTiles.svelte";
     import Input from "$lib/inputs/Input.svelte";
 
-    export let attrs;
-    export let scope = {};
-    export let onSave;
+    let { attrs, scope = $bindable({}), onSave } = $props();
 
     let isLoading = false;
-    let err = '';
-    let success = false;
-    let timer;
-    let isDefault = false;
-    let allAttrs = [];
+    let err = $state('');
+    let success = $state(false);
+    let timer = $state();
+    let isDefault = $state(false);
+    let allAttrs = $state([]);
 
-    $: if (success) {
-        timer = setTimeout(() => {
-            success = false;
-            onSave();
-        }, 2000);
-    }
+    run(() => {
+        if (success) {
+            timer = setTimeout(() => {
+                success = false;
+                onSave();
+            }, 2000);
+        }
+    });
 
-    $: if (attrs) {
-        allAttrs = attrs.map(a => a.name);
-    }
+    run(() => {
+        if (attrs) {
+            allAttrs = attrs.map(a => a.name);
+        }
+    });
 
     onMount(() => {
         isDefault = isDefaultScope(scope.name);
         return () => clearTimeout(timer);
     });
 
-    let formErrors = {};
+    let formErrors = $state({});
     const schema = yup.object().shape({
         name: yup.string().trim().matches(REGEX_ROLES, "Can only contain: 'a-z0-9-_/:*', length: 2-64"),
     });

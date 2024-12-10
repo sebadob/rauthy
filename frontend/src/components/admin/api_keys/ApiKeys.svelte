@@ -8,12 +8,12 @@
     import ApiKeyAddNew from "./ApiKeyAddNew.svelte";
     import ApiKeyTile from "./ApiKeyTile.svelte";
 
-    let err = '';
-    let keys = [];
-    let resKeys = [];
-    let resKeysPaginated = [];
+    let err = $state('');
+    let keys = $state([]);
+    let resKeys = $state([]);
+    let resKeysPaginated = $state([]);
     let refresh;
-    let showAddNew = false;
+    let showAddNew = $state(false);
 
     const searchOptions = [
         {

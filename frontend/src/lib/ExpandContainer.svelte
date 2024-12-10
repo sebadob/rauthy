@@ -1,16 +1,32 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import IconChevronRight from "./icons/IconChevronRight.svelte";
     import {slide} from 'svelte/transition';
     import {spring} from "svelte/motion";
 
-    export let idx = 0;
-    export let show = false;
-    export let expandedCallback = () => {
-    };
+    /**
+     * @typedef {Object} Props
+     * @property {number} [idx]
+     * @property {boolean} [show]
+     * @property {any} [expandedCallback]
+     * @property {import('svelte').Snippet} [header]
+     * @property {import('svelte').Snippet} [body]
+     */
 
-    let isHover = false;
-    let element;
-    let bodyElement;
+    /** @type {Props} */
+    let {
+        idx = 0,
+        show = $bindable(false),
+        expandedCallback = () => {
+    },
+        header,
+        body
+    } = $props();
+
+    let isHover = $state(false);
+    let element = $state();
+    let bodyElement = $state();
     let borderLeft = idx % 2 === 0 ? '2px solid var(--col-acnt)' : '2px solid var(--col-acnta)';
 
     const rotate = spring(0, {
@@ -18,17 +34,7 @@
         damping: 0.4
     });
 
-    $: if (show) {
-        rotate.set(90);
-    } else {
-        rotate.set(0);
-    }
 
-    $: if (show && bodyElement) {
-        setTimeout(() => {
-            scrollBody();
-        }, 100);
-    }
 
     function toggle() {
         if (!show && expandedCallback) {
@@ -51,6 +57,20 @@
         }
     }
 
+    run(() => {
+        if (show) {
+            rotate.set(90);
+        } else {
+            rotate.set(0);
+        }
+    });
+    run(() => {
+        if (show && bodyElement) {
+            setTimeout(() => {
+                scrollBody();
+            }, 100);
+        }
+    });
 </script>
 
 <div
@@ -63,10 +83,10 @@
                 role="button"
                 tabindex="0"
                 class="expand"
-                on:mouseenter={() => isHover = true}
-                on:mouseleave={() => isHover = false}
-                on:click={toggle}
-                on:keypress={toggle}
+                onmouseenter={() => isHover = true}
+                onmouseleave={() => isHover = false}
+                onclick={toggle}
+                onkeypress={toggle}
         >
             <div style="rotate: {$rotate}deg">
                 <IconChevronRight color={isHover ? 'var(--col-act2a)' : 'var(--col-act2)'}/>
@@ -74,13 +94,13 @@
         </div>
 
         <div class="header">
-            <slot name="header"></slot>
+            {@render header?.()}
         </div>
     </div>
 
     {#if show}
         <div class="body" bind:this={bodyElement} transition:slide|global={{ duration: 200 }}>
-            <slot name="body"></slot>
+            {@render body?.()}
         </div>
     {/if}
 </div>

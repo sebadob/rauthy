@@ -2,11 +2,10 @@
     import Button from "$lib/Button.svelte";
     import {deleteUser} from "../../../utils/dataFetchingAdmin";
 
-    export let user = {};
-    export let onSave;
+    let { user = {}, onSave } = $props();
 
-    let isLoading = false;
-    let err = '';
+    let isLoading = $state(false);
+    let err = $state('');
     let success = false;
 
     async function onSubmit() {

@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import ExpandContainer from "$lib/ExpandContainer.svelte";
     import * as yup from "yup";
     import {REGEX_CLIENT_ID, REGEX_CLIENT_NAME, REGEX_URI} from "../../../utils/constants.js";
@@ -10,23 +12,22 @@
     import {postClient} from "../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";
 
-    export let idx = -1;
-    export let onSave;
-    let expandContainer;
+    let { idx = $bindable(-1), onSave } = $props();
+    let expandContainer = $state();
 
-    let client = {
+    let client = $state({
         id: '',
         name: '',
         confidential: true,
         redirect_uris: [],
-    }
+    })
 
-    let err = '';
+    let err = $state('');
     let isLoading = false;
-    let success = false;
-    let timer;
+    let success = $state(false);
+    let timer = $state();
 
-    let formErrors = {};
+    let formErrors = $state({});
 
     const schema = yup.object().shape({
         id: yup.string().required('Client ID is required').trim().matches(REGEX_CLIENT_ID, "Can only contain characters, numbers and '-'"),
@@ -34,20 +35,22 @@
     });
 
     // will bind to the validation function inside the ExpandableFormInputs component
-    let validateRedirectUris;
+    let validateRedirectUris = $state();
 
     // will bind to the validation function inside the ExpandableFormInputs component
-    let validatePostLogoutUris;
+    let validatePostLogoutUris = $state();
 
     const urlInputWidth = '330px';
 
-    $: if (success) {
-        timer = setTimeout(() => {
-            onSave();
-            success = false;
-            expandContainer = false;
-        }, 1500);
-    }
+    run(() => {
+        if (success) {
+            timer = setTimeout(() => {
+                onSave();
+                success = false;
+                expandContainer = false;
+            }, 1500);
+        }
+    });
 
     onMount(() => {
         return () => clearTimeout(timer);
@@ -93,86 +96,90 @@
 </script>
 
 <ExpandContainer bind:idx bind:show={expandContainer}>
-    <div class="header font-label" slot="header">
-        ADD NEW CLIENT
-    </div>
-
-    <div class="container" slot="body">
-        <Input
-                bind:value={client.id}
-                bind:error={formErrors.id}
-                autocomplete="off"
-                placeholder="Client ID"
-                on:input={validateForm}
-                width={urlInputWidth}
-        >
-            CLIENT ID
-        </Input>
-        <Input
-                bind:value={client.name}
-                bind:error={formErrors.name}
-                autocomplete="off"
-                placeholder="Client Name"
-                on:input={validateForm}
-                width={urlInputWidth}
-        >
-            NAME
-        </Input>
-
-        <ExpandableInput
-                style="width: {urlInputWidth}"
-                validation={{
-          required: true,
-          regex: REGEX_URI,
-          errMsg: "Only URL safe values: a-zA-Z0-9,.:/_-&?=~#!$'()*+%",
-        }}
-                bind:values={client.redirect_uris}
-                bind:validate={validateRedirectUris}
-                autocomplete="off"
-                optional
-                placeholder="Redirect URI"
-        >
-            REDIRECT URI
-        </ExpandableInput>
-        <ExpandableInput
-                style="width: {urlInputWidth}"
-                validation={{
-          required: true,
-          regex: REGEX_URI,
-          errMsg: "Only URL safe values: a-zA-Z0-9,.:/_-&?=~#!$'()*+%",
-        }}
-                bind:values={client.post_logout_redirect_uris}
-                bind:validate={validatePostLogoutUris}
-                autocomplete="off"
-                optional
-                placeholder="Post Logout Redirect URI"
-        >
-            POST LOGOUT REDIRECT URI
-        </ExpandableInput>
-
-        <div class="unit">
-            <div class="label font-label">
-                CONFIDENTIAL
-            </div>
-            <div class="value">
-                <Switch bind:selected={client.confidential}/>
-            </div>
+    {#snippet header()}
+        <div class="header font-label" >
+            ADD NEW CLIENT
         </div>
+    {/snippet}
 
-        <Button on:click={onSubmit} level={1} width="4rem">SAVE</Button>
+    {#snippet body()}
+        <div class="container" >
+            <Input
+                    bind:value={client.id}
+                    bind:error={formErrors.id}
+                    autocomplete="off"
+                    placeholder="Client ID"
+                    on:input={validateForm}
+                    width={urlInputWidth}
+            >
+                CLIENT ID
+            </Input>
+            <Input
+                    bind:value={client.name}
+                    bind:error={formErrors.name}
+                    autocomplete="off"
+                    placeholder="Client Name"
+                    on:input={validateForm}
+                    width={urlInputWidth}
+            >
+                NAME
+            </Input>
 
-        {#if success}
-            <div class="success">
-                Success
+            <ExpandableInput
+                    style="width: {urlInputWidth}"
+                    validation={{
+              required: true,
+              regex: REGEX_URI,
+              errMsg: "Only URL safe values: a-zA-Z0-9,.:/_-&?=~#!$'()*+%",
+            }}
+                    bind:values={client.redirect_uris}
+                    bind:validate={validateRedirectUris}
+                    autocomplete="off"
+                    optional
+                    placeholder="Redirect URI"
+            >
+                REDIRECT URI
+            </ExpandableInput>
+            <ExpandableInput
+                    style="width: {urlInputWidth}"
+                    validation={{
+              required: true,
+              regex: REGEX_URI,
+              errMsg: "Only URL safe values: a-zA-Z0-9,.:/_-&?=~#!$'()*+%",
+            }}
+                    bind:values={client.post_logout_redirect_uris}
+                    bind:validate={validatePostLogoutUris}
+                    autocomplete="off"
+                    optional
+                    placeholder="Post Logout Redirect URI"
+            >
+                POST LOGOUT REDIRECT URI
+            </ExpandableInput>
+
+            <div class="unit">
+                <div class="label font-label">
+                    CONFIDENTIAL
+                </div>
+                <div class="value">
+                    <Switch bind:selected={client.confidential}/>
+                </div>
             </div>
-        {/if}
 
-        {#if err}
-            <div class="mainErr err">
-                {err}
-            </div>
-        {/if}
-    </div>
+            <Button on:click={onSubmit} level={1} width="4rem">SAVE</Button>
+
+            {#if success}
+                <div class="success">
+                    Success
+                </div>
+            {/if}
+
+            {#if err}
+                <div class="mainErr err">
+                    {err}
+                </div>
+            {/if}
+        </div>
+    {/snippet}
 </ExpandContainer>
 
 <style>

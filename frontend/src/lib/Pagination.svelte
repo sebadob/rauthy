@@ -1,71 +1,78 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import OptionSelect from "./OptionSelect.svelte";
     import IconChevronRight from "./icons/IconChevronRight.svelte";
 
-    export let items = [];
-    export let resItems = [];
+    let { items = [], resItems = $bindable([]) } = $props();
 
     const options = [5, 7, 10, 15, 20, 30, 50, 100];
     const iconSize = 16;
 
-    let itemsArr = [];
-    let page = 1;
+    let itemsArr = $state([]);
+    let page = $state(1);
     let selectorSize = 5;
-    let chunkSize = 15;
-    let showLeft = false;
-    let showRight = false;
+    let chunkSize = $state(15);
+    let showLeft = $state(false);
+    let showRight = $state(false);
 
-    let pageLinks = [];
+    let pageLinks = $state([]);
 
-    $: if (chunkSize) {
-        page = 1;
-    }
-
-    $: if (chunkSize && items.length > 0) {
-        let res = [];
-        for (let i = 0; i < items.length; i += chunkSize) {
-            const chunk = items.slice(i, i + chunkSize);
-            res.push(chunk);
+    run(() => {
+        if (chunkSize) {
+            page = 1;
         }
-        itemsArr = res;
-        resItems = itemsArr[page - 1];
-    }
+    });
 
-    $: if (page) {
-        let links = [];
-        let countHalf = Math.floor(selectorSize / 2);
-
-        if (itemsArr.length <= selectorSize) {
-            for (let i = 1; i <= itemsArr.length; i++) {
-                links.push(i);
+    run(() => {
+        if (chunkSize && items.length > 0) {
+            let res = [];
+            for (let i = 0; i < items.length; i += chunkSize) {
+                const chunk = items.slice(i, i + chunkSize);
+                res.push(chunk);
             }
-            showLeft = false;
-            showRight = false;
-
-        } else if (page <= countHalf) {
-            for (let i = 1; i <= selectorSize; i++) {
-                links.push(i);
-            }
-            showLeft = false;
-            showRight = true;
-
-        } else if (page > itemsArr.length - countHalf - 1) {
-            for (let i = itemsArr.length - selectorSize; i <= itemsArr.length - 1; i++) {
-                links.push(i + 1);
-            }
-            showLeft = true;
-            showRight = false;
-
-        } else {
-            for (let i = page - countHalf; i < page - countHalf + selectorSize; i++) {
-                links.push(i);
-            }
-            showLeft = true;
-            showRight = true;
+            itemsArr = res;
+            resItems = itemsArr[page - 1];
         }
+    });
 
-        pageLinks = links;
-    }
+    run(() => {
+        if (page) {
+            let links = [];
+            let countHalf = Math.floor(selectorSize / 2);
+
+            if (itemsArr.length <= selectorSize) {
+                for (let i = 1; i <= itemsArr.length; i++) {
+                    links.push(i);
+                }
+                showLeft = false;
+                showRight = false;
+
+            } else if (page <= countHalf) {
+                for (let i = 1; i <= selectorSize; i++) {
+                    links.push(i);
+                }
+                showLeft = false;
+                showRight = true;
+
+            } else if (page > itemsArr.length - countHalf - 1) {
+                for (let i = itemsArr.length - selectorSize; i <= itemsArr.length - 1; i++) {
+                    links.push(i + 1);
+                }
+                showLeft = true;
+                showRight = false;
+
+            } else {
+                for (let i = page - countHalf; i < page - countHalf + selectorSize; i++) {
+                    links.push(i);
+                }
+                showLeft = true;
+                showRight = true;
+            }
+
+            pageLinks = links;
+        }
+    });
 
 </script>
 
@@ -75,8 +82,8 @@
                 role="button"
                 tabindex="0"
                 class="icon iconLeft"
-                on:click={() => page -= 1}
-                on:keypress={() => page -= 1}
+                onclick={() => page -= 1}
+                onkeypress={() => page -= 1}
         >
             <IconChevronRight width={iconSize}/>
         </div>
@@ -89,8 +96,8 @@
                     tabindex="0"
                     class="link noselect"
                     class:selected={page === no}
-                    on:click={() => page = no}
-                    on:keypress={() => page = no}
+                    onclick={() => page = no}
+                    onkeypress={() => page = no}
             >
                 {no}
             </div>
@@ -102,8 +109,8 @@
                 role="button"
                 tabindex="0"
                 class="icon iconRight"
-                on:click={() => page += 1}
-                on:keypress={() => page += 1}
+                onclick={() => page += 1}
+                onkeypress={() => page += 1}
         >
             <IconChevronRight width={iconSize}/>
         </div>

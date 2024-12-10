@@ -2,11 +2,11 @@
     import {onMount} from "svelte";
     import {getAppVersion} from "../utils/dataFetching.js";
 
-    let version = '';
+    let version = $state('');
     let lastCheck;
     let latestVersion;
-    let newVersionAvailable = false;
-    let updateUrl = '';
+    let newVersionAvailable = $state(false);
+    let updateUrl = $state('');
 
     onMount(() => {
         fetchVersion();

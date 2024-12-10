@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import PasswordPolicy from "../../passwordReset/PasswordPolicy.svelte";
     import {onMount} from "svelte";
@@ -7,31 +9,32 @@
     import {postPasswordResetRequest, putUser} from "../../../utils/dataFetchingAdmin.js";
     import {generatePassword} from "../../../utils/helpers.js";
 
-    export let user = {};
-    export let onSave;
+    let { user = {}, onSave } = $props();
 
     const btnWidth = "inherit";
 
-    let isLoading = false;
-    let errEmail = '';
-    let errPwd = '';
-    let successEmail = false;
-    let successPwd = false;
-    let timer;
-    let pwdWith = '330px';
+    let isLoading = $state(false);
+    let errEmail = $state('');
+    let errPwd = $state('');
+    let successEmail = $state(false);
+    let successPwd = $state(false);
+    let timer = $state();
+    let pwdWith = $state('330px');
 
-    let policy;
-    let accepted;
+    let policy = $state();
+    let accepted = $state();
 
-    let formValues = {new: '', verify: ''};
+    let formValues = $state({new: '', verify: ''});
     let formErrors = {};
 
-    $: if (successPwd) {
-        timer = setTimeout(() => {
-            successPwd = false;
-            onSave();
-        }, 3000);
-    }
+    run(() => {
+        if (successPwd) {
+            timer = setTimeout(() => {
+                successPwd = false;
+                onSave();
+            }, 3000);
+        }
+    });
 
     onMount(async () => {
         if (!policy) {

@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import ExpandContainer from "$lib/ExpandContainer.svelte";
     import Tooltip from "$lib/Tooltip.svelte";
     import UserInfo from "./UserInfo.svelte";
@@ -14,13 +16,19 @@
     import Loading from "$lib/Loading.svelte";
     import UserDevices from "./UserDevices.svelte";
 
-    export let userEmail = '';
-    export let userId = '';
-    export let onSave;
+    /**
+     * @typedef {Object} Props
+     * @property {string} [userEmail]
+     * @property {string} [userId]
+     * @property {any} onSave
+     */
 
-    let user;
-    let isLoading = true;
-    let expandContainer;
+    /** @type {Props} */
+    let { userEmail = '', userId = '', onSave = $bindable() } = $props();
+
+    let user = $state();
+    let isLoading = $state(true);
+    let expandContainer = $state();
 
     const tabBarItems = [
         'Info',
@@ -31,14 +39,10 @@
         'Logout',
         'Delete',
     ];
-    let selected = tabBarItems[0];
+    let selected = $state(tabBarItems[0]);
     const tabBarDur = 200;
     const tabBarDly = tabBarDur / 2;
 
-    // only fetch user details when the container is expanded
-    $: if (expandContainer) {
-        fetchUser();
-    }
 
     async function fetchUser() {
         const res = await getUser(userId);
@@ -56,67 +60,77 @@
         onSave();
     }
 
+    // only fetch user details when the container is expanded
+    run(() => {
+        if (expandContainer) {
+            fetchUser();
+        }
+    });
 </script>
 
 <ExpandContainer bind:show={expandContainer}>
-    <div class="header" slot="header">
-        <Tooltip text="User ID">
-            <div class="data font-mono">
-                {userId}
-            </div>
-        </Tooltip>
+    {#snippet header()}
+        <div class="header" >
+            <Tooltip text="User ID">
+                <div class="data font-mono">
+                    {userId}
+                </div>
+            </Tooltip>
 
-        <Tooltip text="E-Mail">
-            <div class="data">
-                {userEmail}
-            </div>
-        </Tooltip>
-    </div>
+            <Tooltip text="E-Mail">
+                <div class="data">
+                    {userEmail}
+                </div>
+            </Tooltip>
+        </div>
+    {/snippet}
 
-    <div slot="body">
-        {#if isLoading}
-            <Loading/>
-        {:else}
-            <TabBar labels={tabBarItems} bind:selected/>
+    {#snippet body()}
+        <div >
+            {#if isLoading}
+                <Loading/>
+            {:else}
+                <TabBar labels={tabBarItems} bind:selected/>
 
-            {#if selected === 'Info'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
-                     out:slide|global={{ duration: tabBarDur }}>
-                    <UserInfo bind:user bind:onSave/>
-                </div>
-            {:else if selected === 'Attributes'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
-                     out:slide|global={{ duration: tabBarDur }}>
-                    <UserAttr bind:user bind:onSave/>
-                </div>
-            {:else if selected === 'Password'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
-                     out:slide|global={{ duration: tabBarDur }}>
-                    <UserPassword bind:user bind:onSave/>
-                </div>
-            {:else if selected === 'MFA'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
-                     out:slide|global={{ duration: tabBarDur }}>
-                    <UserMfa bind:user bind:onSave/>
-                </div>
-            {:else if selected === 'Devices'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
-                     out:slide|global={{ duration: tabBarDur }}>
-                    <UserDevices bind:user/>
-                </div>
-            {:else if selected === 'Logout'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
-                     out:slide|global={{ duration: tabBarDur }}>
-                    <UserForceLogout bind:user/>
-                </div>
-            {:else if selected === 'Delete'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
-                     out:slide|global={{ duration: tabBarDur }}>
-                    <UserDelete bind:user onSave={onDelete}/>
-                </div>
+                {#if selected === 'Info'}
+                    <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                         out:slide|global={{ duration: tabBarDur }}>
+                        <UserInfo bind:user bind:onSave/>
+                    </div>
+                {:else if selected === 'Attributes'}
+                    <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                         out:slide|global={{ duration: tabBarDur }}>
+                        <UserAttr bind:user bind:onSave/>
+                    </div>
+                {:else if selected === 'Password'}
+                    <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                         out:slide|global={{ duration: tabBarDur }}>
+                        <UserPassword bind:user bind:onSave/>
+                    </div>
+                {:else if selected === 'MFA'}
+                    <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                         out:slide|global={{ duration: tabBarDur }}>
+                        <UserMfa bind:user bind:onSave/>
+                    </div>
+                {:else if selected === 'Devices'}
+                    <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                         out:slide|global={{ duration: tabBarDur }}>
+                        <UserDevices bind:user/>
+                    </div>
+                {:else if selected === 'Logout'}
+                    <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                         out:slide|global={{ duration: tabBarDur }}>
+                        <UserForceLogout bind:user/>
+                    </div>
+                {:else if selected === 'Delete'}
+                    <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                         out:slide|global={{ duration: tabBarDur }}>
+                        <UserDelete bind:user onSave={onDelete}/>
+                    </div>
+                {/if}
             {/if}
-        {/if}
-    </div>
+        </div>
+    {/snippet}
 </ExpandContainer>
 
 <style>

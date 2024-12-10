@@ -6,17 +6,37 @@
     import {getKey} from "../utils/helpers.js";
     import {slide} from "svelte/transition";
 
-    export let bindThis = undefined;
-    export let name = getKey();
-    export let disabled = false;
-    export let error = '';
-    export let showCopy = false;
-    export let value = '';
-    export let width = '250px';
-    export let maxWidth = 'inherit';
-    export let autocomplete = 'current-password';
 
-    export let type = 'password';
+    /**
+     * @typedef {Object} Props
+     * @property {any} [bindThis]
+     * @property {any} [name]
+     * @property {boolean} [disabled]
+     * @property {string} [error]
+     * @property {boolean} [showCopy]
+     * @property {string} [value]
+     * @property {string} [width]
+     * @property {string} [maxWidth]
+     * @property {string} [autocomplete]
+     * @property {string} [type]
+     * @property {import('svelte').Snippet} [children]
+     */
+
+    /** @type {Props & { [key: string]: any }} */
+    let {
+        bindThis = $bindable(undefined),
+        name = getKey(),
+        disabled = false,
+        error = '',
+        showCopy = false,
+        value = $bindable(''),
+        width = '250px',
+        maxWidth = 'inherit',
+        autocomplete = 'current-password',
+        type = $bindable('password'),
+        children,
+        ...rest
+    } = $props();
 
     const dispatch = createEventDispatcher();
 
@@ -56,7 +76,7 @@
                 style:background={disabled ? 'var(--col-gmid)' : 'var(--col-bg)'}
         >
             <label for={name}>
-                <slot></slot>
+                {@render children?.()}
             </label>
         </div>
     </div>
@@ -70,10 +90,10 @@
             {disabled}
             {value}
             {autocomplete}
-            {...$$restProps}
-            on:input={onInput}
-            on:keypress={handleKeyPress}
-            on:blur={handleOnBlur}
+            {...rest}
+            oninput={onInput}
+            onkeypress={handleKeyPress}
+            onblur={handleOnBlur}
     />
 
     <div class="rel">
@@ -82,8 +102,8 @@
                     role="button"
                     tabindex="0"
                     class="btn clip"
-                    on:click={copy}
-                    on:keypress={copy}
+                    onclick={copy}
+                    onkeypress={copy}
             >
                 <IconClipboard/>
             </div>
@@ -93,8 +113,8 @@
                 role="button"
                 tabindex="0"
                 class="btn show"
-                on:click={toggle}
-                on:keypress={toggle}
+                onclick={toggle}
+                onkeypress={toggle}
         >
             {#if type === 'password'}
                 <IconEyeSlash width={22}/>

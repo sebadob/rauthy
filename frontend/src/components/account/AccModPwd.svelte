@@ -7,17 +7,29 @@
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import Button from "$lib/Button.svelte";
 
-    export let t;
-    export let formValues = {};
-    export let btnWidth = "4rem";
-    export let hideCurrentPassword = false;
-    export let inputWidth;
+    /**
+     * @typedef {Object} Props
+     * @property {any} t
+     * @property {any} [formValues]
+     * @property {string} [btnWidth]
+     * @property {boolean} [hideCurrentPassword]
+     * @property {any} inputWidth
+     */
 
-    let accepted = false;
-    let err = '';
-    let policy;
-    let formErrors = {};
-    let showCopy;
+    /** @type {Props} */
+    let {
+        t = $bindable(),
+        formValues = $bindable({}),
+        btnWidth = "4rem",
+        hideCurrentPassword = false,
+        inputWidth
+    } = $props();
+
+    let accepted = $state(false);
+    let err = $state('');
+    let policy = $state();
+    let formErrors = $state({});
+    let showCopy = $derived(formValues.new?.length > 6 && formValues.new === formValues.verify);
 
     const schema = yup.object().shape({
         current: yup.string().required(t.passwordCurrReq),
@@ -33,7 +45,7 @@
             .required(t.passwordNoMatch),
     });
 
-    $: showCopy = formValues.new?.length > 6 && formValues.new === formValues.verify;
+    
 
     onMount(async () => {
         let res = await getPasswordPolicy();

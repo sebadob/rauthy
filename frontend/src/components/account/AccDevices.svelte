@@ -1,8 +1,7 @@
 <script>
     import Devices from "../common/Devices.svelte";
 
-    export let t;
-    export let sessionInfo;
+    let { t = $bindable(), sessionInfo = $bindable() } = $props();
 
 </script>
 

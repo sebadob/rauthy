@@ -3,14 +3,32 @@
     import {getKey} from "../utils/helpers.js";
     import {slide} from "svelte/transition";
 
-    export let rows = 10;
-    export let cols = 10;
-    export let name = getKey();
-    export let disabled = false;
-    export let error = '';
-    export let value = '' || null;
-    export let width = '32rem';
-    export let fixed = true;
+    /**
+     * @typedef {Object} Props
+     * @property {number} [rows]
+     * @property {number} [cols]
+     * @property {any} [name]
+     * @property {boolean} [disabled]
+     * @property {string} [error]
+     * @property {any} [value]
+     * @property {string} [width]
+     * @property {boolean} [fixed]
+     * @property {import('svelte').Snippet} [children]
+     */
+
+    /** @type {Props & { [key: string]: any }} */
+    let {
+        rows = 10,
+        cols = 10,
+        name = getKey(),
+        disabled = false,
+        error = '',
+        value = $bindable('' || null),
+        width = '32rem',
+        fixed = true,
+        children,
+        ...rest
+    } = $props();
 
     const dispatch = createEventDispatcher();
 
@@ -37,7 +55,7 @@
                 style:background={disabled ? 'var(--col-gmid)' : 'var(--col-bg)'}
         >
             <label for={name}>
-                <slot></slot>
+                {@render children?.()}
             </label>
         </div>
     </div>
@@ -50,11 +68,11 @@
             {value}
             {rows}
             {cols}
-            {...$$restProps}
-            on:input={onInput}
-            on:focus={handleOnFocus}
-            on:blur={onBlur}
-    />
+            {...rest}
+            oninput={onInput}
+            onfocus={handleOnFocus}
+            onblur={onBlur}
+></textarea>
 
     {#if error}
         <div

@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import * as yup from "yup";
     import {extractFormErrors} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
@@ -7,27 +9,28 @@
     import {putAttr} from "../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";
 
-    export let attr = {};
-    export let onSave;
+    let { attr = {}, onSave } = $props();
 
     let isLoading = false;
-    let err = '';
-    let success = false;
-    let timer;
+    let err = $state('');
+    let success = $state(false);
+    let timer = $state();
 
-    $: if (success) {
-        timer = setTimeout(() => {
-            success = false;
-            onSave();
-        }, 2000);
-    }
+    run(() => {
+        if (success) {
+            timer = setTimeout(() => {
+                success = false;
+                onSave();
+            }, 2000);
+        }
+    });
 
     onMount(() => {
         return () => clearTimeout(timer);
     });
 
-    let formErrors = {};
-    let formValues = {};
+    let formErrors = $state({});
+    let formValues = $state({});
 
     const schema = yup.object().shape({
         name: yup.string().trim().required('Name is required').matches(REGEX_ATTR_KEY, 'Valid characters: [a-z0-9-_/]{2,32}'),

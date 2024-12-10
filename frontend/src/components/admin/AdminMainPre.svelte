@@ -7,11 +7,17 @@
     import Button from "$lib/Button.svelte";
     import AdminMain from "./AdminMain.svelte";
 
-    export let selected = 'Users';
+    /**
+     * @typedef {Object} Props
+     * @property {string} [selected]
+     */
 
-    let sessionInfo;
-    let isAdmin = false;
-    let mfaReqErr = false;
+    /** @type {Props} */
+    let { selected = $bindable('Users') } = $props();
+
+    let sessionInfo = $state();
+    let isAdmin = $state(false);
+    let mfaReqErr = $state(false);
 
     onMount(async () => {
         let res = await getSessionInfo();

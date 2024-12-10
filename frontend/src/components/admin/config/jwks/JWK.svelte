@@ -1,9 +1,9 @@
 <script>
     import {fade} from 'svelte/transition';
 
-    export let jwk;
+    let { jwk } = $props();
 
-    let isHover = false;
+    let isHover = $state(false);
 
     function renderType() {
         if (jwk.kty === 'OKP') {
@@ -32,8 +32,8 @@
 <div
         role="none"
         class="cert"
-        on:mouseenter={() => isHover = true}
-        on:mouseleave={() => isHover = false}
+        onmouseenter={() => isHover = true}
+        onmouseleave={() => isHover = false}
 >
     <div class="data font-mono">
         {jwk.kid}

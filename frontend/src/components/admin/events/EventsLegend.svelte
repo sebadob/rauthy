@@ -1,7 +1,7 @@
 <script>
     import {eventColor} from "../../../utils/helpers.js";
 
-    export let wide;
+    let { wide } = $props();
 </script>
 
 <div>
