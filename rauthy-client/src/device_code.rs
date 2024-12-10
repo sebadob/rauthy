@@ -314,7 +314,7 @@ struct TokenRequest<'a> {
 }
 
 impl OidcTokenSet {
-    pub async fn access_token<'a>() -> Result<String, RauthyError> {
+    pub async fn access_token() -> Result<String, RauthyError> {
         if let Some(rx) = RX_ACCESS_TOKEN.get() {
             Ok(rx.borrow().to_string())
         } else {
@@ -322,7 +322,7 @@ impl OidcTokenSet {
         }
     }
 
-    pub async fn id_token<'a>() -> Result<Option<String>, RauthyError> {
+    pub async fn id_token() -> Result<Option<String>, RauthyError> {
         if let Some(rx) = RX_ID_TOKEN.get() {
             Ok(rx.borrow().clone())
         } else {
