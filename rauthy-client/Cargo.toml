@@ -66,4 +66,4 @@ url = "2.5.4"
 
 [dev-dependencies]
 pretty_assertions = "1"
-rstest = "*"
+rstest = "0.23"
