@@ -24,6 +24,7 @@ use rauthy_common::constants::{
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use time::OffsetDateTime;
 use tracing::{debug, error};
+use utoipa::{PartialSchema, ToSchema};
 
 use crate::{
     AuthStep, AuthStepLoggedIn,
@@ -60,6 +61,16 @@ impl Default for DnsTxtResolver {
             )
             .build(),
         }
+    }
+}
+
+impl ToSchema for DnsTxtResolver {}
+
+impl PartialSchema for DnsTxtResolver {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        utoipa::openapi::RefOr::T(utoipa::openapi::Schema::Object(
+            utoipa::openapi::ObjectBuilder::new().build(),
+        ))
     }
 }
 
