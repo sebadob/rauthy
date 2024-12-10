@@ -1,3 +1,5 @@
+use std::future::Future;
+
 use actix_web::{
     cookie::Cookie,
     http::header::{self, HeaderValue},
@@ -65,17 +67,17 @@ impl DnsTxtResolverTrait for DnsTxtResolver {
 }
 
 pub trait AtprotoCallback {
-    async fn login_start<'a>(
+    fn login_start<'a>(
         data: &'a web::Data<AppState>,
         payload: atproto::LoginRequest,
-    ) -> Result<(Cookie<'a>, String, HeaderValue), ErrorResponse>;
+    ) -> impl Future<Output = Result<(Cookie<'a>, String, HeaderValue), ErrorResponse>>;
 
-    async fn login_finish<'a>(
+    fn login_finish<'a>(
         data: &'a web::Data<AppState>,
         req: &'a HttpRequest,
         payload: &'a atproto::CallbackRequest,
         session: Session,
-    ) -> Result<(AuthStep, Cookie<'a>), ErrorResponse>;
+    ) -> impl Future<Output = Result<(AuthStep, Cookie<'a>), ErrorResponse>>;
 }
 
 impl AtprotoCallback for AuthProviderCallback {
