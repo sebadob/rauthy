@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.0
+
+This version bumps internal dependencies and
+remediates [CVE-2024-12224](https://rustsec.org/advisories/RUSTSEC-2024-0421). The way the vulnerable `idna` crate has
+been used can not lead to any security issues though.
+
+The MSRV is also bumped to `1.71.1`.
+
 ## v0.4.0
 
 ### BREAKING
