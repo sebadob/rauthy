@@ -7,7 +7,6 @@ version:
     #!/usr/bin/env bash
     echo "v$TAG"
 
-
 # makes sure clippy is fine for each example
 clippy-examples:
     #!/usr/bin/env bash
@@ -21,7 +20,6 @@ clippy-examples:
 
     cd ../generic
     cargo +nightly clippy -- -D warnings
-
 
 # clippy lint + check with minimal versions from nightly
 check: clippy-examples
@@ -42,15 +40,13 @@ check: clippy-examples
     cargo minimal-versions check --features device-code
     cargo minimal-versions check --features userinfo
 
-
 # runs the full set of tests
 test test="":
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    cargo test {{test}}
+    cargo test {{ test }}
     echo All tests successful
-
 
 # builds the code
 build:
@@ -59,16 +55,13 @@ build:
     # build as musl to make sure this works
     cross build --target x86_64-unknown-linux-musl
 
-
 # verifies the MSRV - Note: Currently, you cannot specify features for this -> add features to default beforehand
 msrv-verify:
     cargo msrv verify
 
-
 # find's the new MSRV, if it needs a bump
 msrv-find:
-    cargo msrv --min 1.70.0
-
+    cargo msrv find --min 1.70.0
 
 # makes sure everything is fine
 verify: check test build msrv-verify
@@ -79,7 +72,6 @@ verify: check test build msrv-verify
     git diff --exit-code
 
     echo all good
-
 
 # publishes the current version to cargo.io
 publish: verify
