@@ -161,7 +161,7 @@ impl PasswordPolicy {
             DB::client()
                 .execute(
                     "UPDATE config SET data = $1 WHERE id = 'password_policy'",
-                    params!(),
+                    params!(slf),
                 )
                 .await?;
         } else {
