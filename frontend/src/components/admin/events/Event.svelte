@@ -10,7 +10,7 @@
      */
 
     /** @type {Props} */
-    let { event, collapsed = true, wide } = $props();
+    let {event = $bindable(), collapsed = true, wide = $bindable()} = $props();
 
     let cls = $state('event');
     let isHover = $state(false);
@@ -83,9 +83,9 @@
                 <div class="col-ip">{event.ip || ''}</div>
 
             {:else if event.typ === 'NewRauthyAdmin'
-                    || event.typ === 'NewUserRegistered'
-                    || event.typ === 'UserPasswordReset'
-                    || event.typ === 'UserEmailChange'}
+            || event.typ === 'NewUserRegistered'
+            || event.typ === 'UserPasswordReset'
+            || event.typ === 'UserEmailChange'}
                 <div class="col-typ">{event.typ}</div>
                 <div class="col-ip">{event.ip || ''}</div>
                 <div class="col-text">{@html event.text.replace('@', '<wbr/>@')}</div>
@@ -96,8 +96,8 @@
                 <div class="col-text">{`Expires: ${formatDateFromTs(event.data)}`}</div>
 
             {:else if event.typ === 'RauthyStarted'
-                    || event.typ === 'RauthyHealthy'
-                    || event.typ === 'RauthyUnhealthy'}
+            || event.typ === 'RauthyHealthy'
+            || event.typ === 'RauthyUnhealthy'}
                 <div class="col-typ">{event.typ}</div>
                 <div class="col-ip"></div>
                 <div class="col-text">{event.text}</div>
@@ -128,9 +128,9 @@
             {event.ip}
 
         {:else if event.typ === 'NewRauthyAdmin'
-                || event.typ === 'NewUserRegistered'
-                || event.typ === 'UserPasswordReset'
-                || event.typ === 'UserEmailChange'}
+        || event.typ === 'NewUserRegistered'
+        || event.typ === 'UserPasswordReset'
+        || event.typ === 'UserEmailChange'}
             <br/>
             {event.ip || ''}
             <br/>
@@ -143,8 +143,8 @@
             {formatDateFromTs(event.data)}
 
         {:else if event.typ === 'RauthyStarted'
-                || event.typ === 'RauthyHealthy'
-                || event.typ === 'RauthyUnhealthy'}
+        || event.typ === 'RauthyHealthy'
+        || event.typ === 'RauthyUnhealthy'}
             <br/>
             {event.text}
 

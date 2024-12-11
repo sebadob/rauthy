@@ -4,7 +4,7 @@
     import Button from "$lib/Button.svelte";
     import {formatDateFromTs} from "../../../utils/helpers.js";
 
-    let { user = {}, onSave } = $props();
+    let {user = $bindable({}), onSave = $bindable()} = $props();
 
     let err = $state('');
     let passkeys = $state([]);

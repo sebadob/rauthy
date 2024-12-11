@@ -62,7 +62,7 @@
     </div>
     {#if showAddNew}
         <div transition:slide>
-            <ApiKeyAddNew onSave={fetchApiKeys} apiKeys={keys} />
+            <ApiKeyAddNew onSave={fetchApiKeys} apiKeys={keys}/>
         </div>
     {/if}
 
@@ -72,8 +72,8 @@
                 No Api Keys
             </div>
         {:else}
-            {#each resKeysPaginated as apiKey (apiKey.name)}
-                <ApiKeyTile bind:apiKey onSave={fetchApiKeys} />
+            {#each resKeysPaginated as apiKey, i (apiKey.name)}
+                <ApiKeyTile bind:apiKey={resKeysPaginated[i]} onSave={fetchApiKeys}/>
             {/each}
         {/if}
     </div>

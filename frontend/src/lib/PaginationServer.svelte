@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import OptionSelect from "./OptionSelect.svelte";
     import IconChevronRight from "./icons/IconChevronRight.svelte";
@@ -17,13 +17,13 @@
     /** @type {Props} */
     let {
         itemsTotal = 0,
-        sspPage = 1,
-        sspPageSize = 15,
-        sspContinuationToken = '',
+        sspPage = $bindable(1),
+        sspPageSize = $bindable(15),
+        sspContinuationToken = $bindable(''),
         fetchPageCallback = (offset, backwards) => {
-    },
+        },
         sspPageSizeChange = (pageSize) => {
-    }
+        }
     } = $props();
 
     const options = [2, 3, 5, 7, 10, 15, 20, 30, 50, 100];

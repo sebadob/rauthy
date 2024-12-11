@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     /**
      * @typedef {Object} Props
@@ -12,19 +12,19 @@
     /** @type {Props} */
     let {
         t = {
-        passwordPolicy: {
-            passwordPolicy: "Password Policy",
-            lengthMin: "Length min",
-            lengthMax: "Length max",
-            lowercaseMin: "Lowercase letters min",
-            uppercaseMin: "Uppercase letters min",
-            digitsMin: "Digits min",
-            specialMin: "Special characters min",
-            notRecent: "Not one of last recent passwords",
-        }
-    },
+            passwordPolicy: {
+                passwordPolicy: "Password Policy",
+                lengthMin: "Length min",
+                lengthMax: "Length max",
+                lowercaseMin: "Lowercase letters min",
+                uppercaseMin: "Uppercase letters min",
+                digitsMin: "Digits min",
+                specialMin: "Special characters min",
+                notRecent: "Not one of last recent passwords",
+            }
+        },
         policy = {},
-        password = '',
+        password = $bindable(''),
         accepted = $bindable(false)
     } = $props();
 

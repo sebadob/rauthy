@@ -18,8 +18,8 @@
     let {
         items = $bindable([]),
         resItems = $bindable(),
-        searchOptions = [],
-        orderOptions = [],
+        searchOptions = $bindable([]),
+        orderOptions = $bindable([]),
         firstDirReverse = false,
         useServerSideIdx = $bindable(''),
         isSearchFiltered = $bindable(false),

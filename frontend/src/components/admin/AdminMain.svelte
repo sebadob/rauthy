@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import {redirectToLogout} from "../../utils/helpers.js";
     import Nav from "$lib/nav/Nav.svelte";
@@ -41,12 +41,12 @@
      */
 
     /** @type {Props} */
-    let { selected = $bindable('Users') } = $props();
+    let {selected = $bindable('Users')} = $props();
 
     let title = $state('Rauthy Admin');
-    let isExpanded = $state();
-    let eventsCollapsed = $state();
-    let eventsWide = $state();
+    let isExpanded = $state(true);
+    let eventsCollapsed = $state(true);
+    let eventsWide = $state(false);
     let innerWidth = $state();
 
     run(() => {
@@ -160,7 +160,7 @@
 <main>
     <Nav bind:selected bind:isExpanded widthExpanded={140} widthCollapsed={60}>
         {#snippet logo()}
-                <div >
+            <div>
                 <div
                         style:width={isExpanded ? '120px' : '55px'}
                         style:margin-top={isExpanded ? '32px' : '40px'}
@@ -169,10 +169,10 @@
                     <RauthyLogo/>
                 </div>
             </div>
-            {/snippet}
+        {/snippet}
 
         {#snippet entries()}
-                <div >
+            <div>
                 <NavEntry label="Users">
                     <IconUser/>
                 </NavEntry>
@@ -229,7 +229,7 @@
                     <IconLogout/>
                 </NavEntry>
             </div>
-            {/snippet}
+        {/snippet}
     </Nav>
 
     <div class="inner">

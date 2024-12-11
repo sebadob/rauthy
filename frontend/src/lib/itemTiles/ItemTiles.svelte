@@ -11,7 +11,7 @@
      */
 
     /** @type {Props} */
-    let { items = $bindable([]), options = [], searchThreshold = $bindable(4) } = $props();
+    let {items = $bindable([]), options = [], searchThreshold = $bindable(4)} = $props();
 
     let missing = $state([]);
 
@@ -39,8 +39,8 @@
 
 <div class="container">
     {#if items?.length > 0}
-        {#each items as item}
-            <DeleteItemTile bind:label={item} onDelete={deleteItem}/>
+        {#each items as item, i}
+            <DeleteItemTile bind:label={items[i]} onDelete={deleteItem}/>
         {/each}
     {/if}
 

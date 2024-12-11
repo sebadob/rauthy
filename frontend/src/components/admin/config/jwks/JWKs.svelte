@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import {onMount} from "svelte";
     import Button from "$lib/Button.svelte";
@@ -71,12 +71,12 @@
         </p>
     </div>
 
-    {#each certs as jwk (jwk.kid)}
-        <JWK bind:jwk/>
+    {#each certs as jwk, i (jwk.kid)}
+        <JWK bind:jwk={certs[i]}/>
     {/each}
 
     <!-- Save Button -->
-    <Button on:click={onSubmit} bind:isLoading level={1} width={120}>ROTATE KEYS</Button>
+    <Button on:click={onSubmit} bind:isLoading level={1}>ROTATE KEYS</Button>
 
     {#if success}
         <div class="success">

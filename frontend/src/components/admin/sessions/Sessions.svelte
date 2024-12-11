@@ -147,15 +147,15 @@
 
     <div id="sessions">
         {#if useServerSideIdx && !isSearchFiltered}
-            {#each sessions as session (session.id)}
+            {#each sessions as session, i (session.id)}
                 <div>
-                    <SessionRow bind:session bind:now/>
+                    <SessionRow bind:session={sessions[i]} bind:now/>
                 </div>
             {/each}
         {:else}
-            {#each resSessionsPaginated as session (session.id)}
+            {#each resSessionsPaginated as session, i (session.id)}
                 <div>
-                    <SessionRow bind:session bind:now/>
+                    <SessionRow bind:session={resSessionsPaginated[i]} bind:now/>
                 </div>
             {/each}
         {/if}

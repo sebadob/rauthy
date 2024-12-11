@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import {onMount} from "svelte";
     import {postEvents} from "../../../utils/dataFetchingAdmin.js";
@@ -45,8 +45,8 @@
 
     async function fetchData() {
         let data = {
-          from: formatUtcTsFromDateInput(from),
-          level: level.toLowerCase(),
+            from: formatUtcTsFromDateInput(from),
+            level: level.toLowerCase(),
         };
         if (until) {
             data.until = formatUtcTsFromDateInput(until);
@@ -67,6 +67,7 @@
     function onSave() {
         fetchData();
     }
+
     run(() => {
         if (from || until || level || filter || typ) {
             fetchData();
@@ -111,14 +112,14 @@
                     options={EVENT_LEVELS}
             />
         </div>
-            Filter
-            <Switch bind:selected={filter} />
-            {#if filter}
-                <OptionSelect
-                        bind:value={typ}
-                        options={EVENT_TYPES}
-                />
-            {/if}
+        Filter
+        <Switch bind:selected={filter}/>
+        {#if filter}
+            <OptionSelect
+                    bind:value={typ}
+                    options={EVENT_TYPES}
+            />
+        {/if}
     </div>
 
     {#if resEvents.length === 0}
@@ -126,8 +127,8 @@
             No events found
         </div>
     {:else}
-        {#each resEvents as event (event.id)}
-            <Event bind:event collapsed={false} wide />
+        {#each resEvents as event, i (event.id)}
+            <Event bind:event={resEvents[i]} collapsed={false} wide/>
         {/each}
     {/if}
 </div>

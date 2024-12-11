@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import IconMagnify from "$lib/icons/IconMagnify.svelte";
     import {onMount} from "svelte";
@@ -22,10 +22,10 @@
 
     /** @type {Props} */
     let {
-        items = [],
+        items = $bindable([]),
         resItems = $bindable(),
         options = [],
-        useServerSideIdx = '',
+        useServerSideIdx = $bindable(''),
         isSearchFiltered = $bindable(false),
         search = $bindable('')
     } = $props();
@@ -38,7 +38,6 @@
             extractCallback();
         }
     });
-
 
 
     function extractCallback() {

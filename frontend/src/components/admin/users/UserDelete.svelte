@@ -2,7 +2,7 @@
     import Button from "$lib/Button.svelte";
     import {deleteUser} from "../../../utils/dataFetchingAdmin";
 
-    let { user = {}, onSave } = $props();
+    let {user = $bindable({}), onSave = $bindable()} = $props();
 
     let isLoading = $state(false);
     let err = $state('');

@@ -1,8 +1,11 @@
 <script>
     import IconStop from "$lib/icons/IconStop.svelte";
 
-    let { label, onDelete = () => {
-    } } = $props();
+    let {
+        label = $bindable(),
+        onDelete = () => {
+        },
+    } = $props();
 </script>
 
 <div class="label font-label">

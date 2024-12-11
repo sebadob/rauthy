@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import PasswordPolicy from "../../passwordReset/PasswordPolicy.svelte";
@@ -9,7 +9,7 @@
     import {postPasswordResetRequest, putUser} from "../../../utils/dataFetchingAdmin.js";
     import {generatePassword} from "../../../utils/helpers.js";
 
-    let { user = {}, onSave } = $props();
+    let {user = $bindable({}), onSave = $bindable()} = $props();
 
     const btnWidth = "inherit";
 
@@ -175,14 +175,14 @@
         </div>
     {:else}
         {#if policy}
-            <PasswordPolicy bind:password={formValues.new} bind:accepted bind:policy/>
+            <PasswordPolicy bind:password={formValues.new} bind:accepted {policy}/>
         {/if}
 
         <PasswordInput
                 type="password"
                 bind:value={formValues.new}
                 on:blur={isFormValid}
-                bind:width={pwdWith}
+                width={pwdWith}
                 autocomplete="off"
                 showCopy={formValues.new.length > 0 && formValues.new === formValues.verify}
         >
@@ -192,7 +192,7 @@
                 type="password"
                 bind:value={formValues.verify}
                 on:blur={isFormValid}
-                bind:width={pwdWith}
+                width={pwdWith}
                 autocomplete="off"
         >
             New Password

@@ -2,7 +2,7 @@
     import Button from "$lib/Button.svelte";
     import {deleteSessionsForUser} from "../../../utils/dataFetchingAdmin.js";
 
-    let { user = {} } = $props();
+    let {user = $bindable({})} = $props();
 
     let isLoading = $state(false);
     let err = $state('');

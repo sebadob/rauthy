@@ -20,10 +20,11 @@
     let {
         items = $bindable([]),
         onSelect = (item) => {
+
     },
         mindWidth = 130,
         maxHeight = items.length > 4 ? 175 : 120,
-        searchThreshold = 5
+        searchThreshold = $bindable(5)
     } = $props();
 
     let resItems = $state([]);

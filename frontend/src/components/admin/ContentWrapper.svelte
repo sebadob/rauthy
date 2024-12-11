@@ -7,7 +7,7 @@
      */
 
     /** @type {Props} */
-    let { eventsCollapsed = true, eventsWide = false, children } = $props();
+    let {eventsCollapsed = $bindable(true), eventsWide = $bindable(false), children} = $props();
 </script>
 
 <div

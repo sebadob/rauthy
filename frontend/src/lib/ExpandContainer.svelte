@@ -16,8 +16,8 @@
 
     /** @type {Props} */
     let {
-        idx = 0,
-        show = $bindable(false),
+        idx = $bindable(0),
+        show = $bindable(),
         expandedCallback = () => {
     },
         header,

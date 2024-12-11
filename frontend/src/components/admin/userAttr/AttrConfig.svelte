@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import * as yup from "yup";
     import {extractFormErrors} from "../../../utils/helpers.js";
@@ -9,7 +9,7 @@
     import {putAttr} from "../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";
 
-    let { attr = {}, onSave } = $props();
+    let {attr = {}, onSave = $bindable()} = $props();
 
     let isLoading = false;
     let err = $state('');

@@ -11,13 +11,13 @@
      */
 
     /** @type {Props} */
-    let { session = {}, now = 0 } = $props();
+    let {session = $bindable({}), now = $bindable(0)} = $props();
 </script>
 
 <div class="container" class:expired={session.exp < now}>
     <ExpandContainer>
         {#snippet header()}
-                <div class="header" >
+            <div class="header">
                 <Tooltip text="User ID">
                     <div class="uid">
                         {session.user_id}
@@ -38,10 +38,10 @@
                     </Tooltip>
                 </div>
             </div>
-            {/snippet}
+        {/snippet}
 
         {#snippet body()}
-                <div class="details" >
+            <div class="details">
                 <div class="flex">
                     <div class="label">Session ID:</div>
                     {session.id}
@@ -77,7 +77,7 @@
                     <CheckIcon check={session.is_mfa}/>
                 </div>
             </div>
-            {/snippet}
+        {/snippet}
     </ExpandContainer>
 </div>
 

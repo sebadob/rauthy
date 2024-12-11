@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import {onMount} from "svelte";
     import Event from "./Event.svelte";
@@ -16,7 +16,7 @@
      */
 
     /** @type {Props} */
-    let { collapsed = true, wide = $bindable() } = $props();
+    let {collapsed = true, wide = $bindable()} = $props();
 
     let latest = 50;
     let es = $state();
@@ -24,8 +24,6 @@
     let eventsFiltered = $state([]);
     let eventLevel = $state();
     let isHover = $state(false);
-
-
 
 
     onMount(async () => {
@@ -149,8 +147,8 @@
         {/if}
 
         <div class={widthWide ? 'dataWide' : widthCollapsed ? 'dataCollapsed' : 'data'}>
-            {#each eventsFiltered as event (event.id)}
-                <Event bind:event collapsed={collapsed && !isHover} bind:wide/>
+            {#each eventsFiltered as event, i (event.id)}
+                <Event bind:event={eventsFiltered[i]} collapsed={collapsed && !isHover} bind:wide/>
             {/each}
         </div>
     </div>

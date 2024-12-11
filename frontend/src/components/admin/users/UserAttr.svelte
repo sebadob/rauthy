@@ -4,7 +4,7 @@
     import Button from "$lib/Button.svelte";
     import Input from "$lib/inputs/Input.svelte";
 
-    let { onSave, user } = $props();
+    let {onSave = $bindable(), user = $bindable()} = $props();
 
     let err = $state('');
     let attr = $state([]);

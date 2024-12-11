@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import * as yup from "yup";
     import {extractFormErrors, isDefaultScope} from "../../../utils/helpers.js";
@@ -10,7 +10,7 @@
     import ItemTiles from "$lib/itemTiles/ItemTiles.svelte";
     import Input from "$lib/inputs/Input.svelte";
 
-    let { attrs, scope = $bindable({}), onSave } = $props();
+    let {attrs, scope = $bindable({}), onSave = $bindable()} = $props();
 
     let isLoading = false;
     let err = $state('');

@@ -2,7 +2,7 @@
 
     import Devices from "../../common/Devices.svelte";
 
-    let { user } = $props();
+    let {user = $bindable()} = $props();
 
 </script>
 

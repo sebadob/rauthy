@@ -1,10 +1,10 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import OptionSelect from "./OptionSelect.svelte";
     import IconChevronRight from "./icons/IconChevronRight.svelte";
 
-    let { items = [], resItems = $bindable([]) } = $props();
+    let {items = $bindable([]), resItems = $bindable([])} = $props();
 
     const options = [5, 7, 10, 15, 20, 30, 50, 100];
     const iconSize = 16;

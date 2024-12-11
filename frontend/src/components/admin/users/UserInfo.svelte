@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import * as yup from "yup";
     import {
@@ -26,7 +26,14 @@
     import ItemTiles from "$lib/itemTiles/ItemTiles.svelte";
     import OptionSelect from "$lib/OptionSelect.svelte";
 
-    let { user = $bindable({}), onSave } = $props();
+    let {user = $bindable({}), onSave = $bindable()} = $props();
+
+    if (user.roles === undefined) {
+        user.roles = [];
+    }
+    if (user.groups === undefined) {
+        user.groups = [];
+    }
 
     let err = $state('');
     let success = $state(false);

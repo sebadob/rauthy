@@ -1,7 +1,7 @@
 <script>
     import {fade} from 'svelte/transition';
 
-    let { jwk } = $props();
+    let {jwk = $bindable()} = $props();
 
     let isHover = $state(false);
 

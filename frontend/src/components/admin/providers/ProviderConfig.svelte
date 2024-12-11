@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import * as yup from "yup";
     import {extractFormErrors} from "../../../utils/helpers.js";
@@ -20,7 +20,7 @@
     import ImageUploadRaw from "../../ImageUploadRaw.svelte";
     import ProviderLogo from "../../ProviderLogo.svelte";
 
-    let { provider = $bindable({}), onSave } = $props();
+    let {provider = $bindable({}), onSave = $bindable()} = $props();
 
     const inputWidth = '25rem';
 
@@ -31,8 +31,6 @@
     let isDefault = false;
     let showRootPem = $state(provider.root_pem);
     let logo = $state();
-
-
 
 
     onMount(() => {

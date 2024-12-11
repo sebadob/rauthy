@@ -68,9 +68,9 @@
     <RoleTileAddNew onSave={onSave}/>
 
     <div id="roles">
-        {#each resRolesPaginated as role (role.id)}
+        {#each resRolesPaginated as role, i (role.id)}
             <div>
-                <RoleTile bind:role onSave={onSave}/>
+                <RoleTile bind:role={roles[i]} onSave={onSave}/>
             </div>
         {/each}
     </div>

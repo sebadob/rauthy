@@ -19,7 +19,7 @@
     let {
         name = getKey(),
         disabled = false,
-        error = '',
+        error = $bindable(),
         value = $bindable(),
         width = '250px',
         autocomplete = 'on',

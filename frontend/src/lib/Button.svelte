@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import {createEventDispatcher} from "svelte";
     import Loading from "./Loading.svelte";
@@ -21,7 +21,7 @@
         width = 'inherit',
         selected = $bindable(undefined),
         isDisabled = false,
-        isLoading = false,
+        isLoading = $bindable(false),
         children
     } = $props();
 

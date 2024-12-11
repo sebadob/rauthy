@@ -24,7 +24,7 @@
     import ExpandableInput from "$lib/expandableInputs/ExpandableInputs.svelte";
     import {slide} from "svelte/transition";
 
-    let { client = $bindable({}), onSave } = $props();
+    let { client = $bindable({}), onSave = $bindable() } = $props();
 
     const urlInputWidth = '350px';
 

@@ -4,7 +4,7 @@
     import {onMount} from "svelte";
     import Switch from "$lib/Switch.svelte";
 
-    let { provider = {}, onSave } = $props();
+    let {provider = {}, onSave = $bindable()} = $props();
 
     let isLoading = $state(true);
     let err = $state('');
