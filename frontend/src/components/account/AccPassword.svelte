@@ -12,27 +12,38 @@
     import {onMount} from "svelte";
     import CheckIcon from "$lib/CheckIcon.svelte";
 
-    export let t;
-    export let user = {};
-    export let authProvider;
-    export let viewModePhone = false;
-    $: inputWidth = viewModePhone ? 'calc(100vw - 1.5rem)' : '300px';
+    /**
+     * @typedef {Object} Props
+     * @property {any} t
+     * @property {any} [user]
+     * @property {any} authProvider
+     * @property {boolean} [viewModePhone]
+     */
+
+    /** @type {Props} */
+    let {
+        t = $bindable(),
+        user = {},
+        authProvider,
+        viewModePhone = false
+    } = $props();
+    let inputWidth = $derived(viewModePhone ? 'calc(100vw - 1.5rem)' : '300px');
 
     const btnWidth = "12rem";
 
     let accType = user.account_type;
-    let passkeys = [];
-    let isPwdValid;
-    let convertAccount = false;
-    let isLoading = false;
-    let err = '';
-    let success = false;
-    let webauthnData;
+    let passkeys = $state([]);
+    let isPwdValid = $state();
+    let convertAccount = $state(false);
+    let isLoading = $state(false);
+    let err = $state('');
+    let success = $state(false);
+    let webauthnData = $state();
 
-    let formValues = {};
+    let formValues = $state({});
     let formErrors = {};
 
-    $: canConvertToPasskey = passkeys.filter(pk => pk.user_verified).length > 0;
+    let canConvertToPasskey = $derived(passkeys.filter(pk => pk.user_verified).length > 0);
 
     onMount(() => {
         fetchPasskeys();

@@ -8,12 +8,12 @@
     import ApiKeyAddNew from "./ApiKeyAddNew.svelte";
     import ApiKeyTile from "./ApiKeyTile.svelte";
 
-    let err = '';
-    let keys = [];
-    let resKeys = [];
-    let resKeysPaginated = [];
+    let err = $state('');
+    let keys = $state([]);
+    let resKeys = $state([]);
+    let resKeysPaginated = $state([]);
     let refresh;
-    let showAddNew = false;
+    let showAddNew = $state(false);
 
     const searchOptions = [
         {
@@ -62,7 +62,7 @@
     </div>
     {#if showAddNew}
         <div transition:slide>
-            <ApiKeyAddNew onSave={fetchApiKeys} apiKeys={keys} />
+            <ApiKeyAddNew onSave={fetchApiKeys} apiKeys={keys}/>
         </div>
     {/if}
 
@@ -72,8 +72,8 @@
                 No Api Keys
             </div>
         {:else}
-            {#each resKeysPaginated as apiKey (apiKey.name)}
-                <ApiKeyTile bind:apiKey onSave={fetchApiKeys} />
+            {#each resKeysPaginated as apiKey, i (apiKey.name)}
+                <ApiKeyTile bind:apiKey={resKeysPaginated[i]} onSave={fetchApiKeys}/>
             {/each}
         {/if}
     </div>

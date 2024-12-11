@@ -3,13 +3,19 @@
     import {getQueryParams} from "../../utils/helpers";
     import TabBar from "$lib/TabBar.svelte";
 
-    export let t;
-    export let selected = t.navInfo;
-    export let showWebId = false;
+    /**
+     * @typedef {Object} Props
+     * @property {any} t
+     * @property {any} [selected]
+     * @property {boolean} [showWebId]
+     */
 
-    let labels = showWebId ?
+    /** @type {Props} */
+    let { t, selected = $bindable(t.navInfo), showWebId = false } = $props();
+
+    let labels = $state(showWebId ?
         [t.navInfo, t.navEdit, t.navPassword, t.navMfa, 'WebID', t.devices, t.navLogout]
-        : [t.navInfo, t.navEdit, t.navPassword, t.navMfa, t.devices, t.navLogout];
+        : [t.navInfo, t.navEdit, t.navPassword, t.navMfa, t.devices, t.navLogout]);
 
     onMount(() => {
         let params = getQueryParams();

@@ -2,11 +2,10 @@
     import Button from "$lib/Button.svelte";
     import {deleteGroup} from "../../../utils/dataFetchingAdmin";
 
-    export let group = {};
-    export let onSave;
+    let { group = {}, onSave } = $props();
 
-    let isLoading = false;
-    let err = '';
+    let isLoading = $state(false);
+    let err = $state('');
     let success = false;
 
     async function onSubmit() {

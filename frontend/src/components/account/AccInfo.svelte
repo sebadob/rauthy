@@ -8,22 +8,34 @@
     import getPkce from "oauth-pkce";
     import {PKCE_VERIFIER_UPSTREAM} from "../../utils/constants.js";
 
-    export let t;
-    export let user = {};
-    // webIdData will stay undefined if it is not enabled in the backend
-    export let authProvider;
-    export let webIdData;
-    export let viewModePhone = false;
+    
+    /**
+     * @typedef {Object} Props
+     * @property {any} t
+     * @property {any} [user]
+     * @property {any} authProvider - webIdData will stay undefined if it is not enabled in the backend
+     * @property {any} webIdData
+     * @property {boolean} [viewModePhone]
+     */
 
-    let unlinkErr = false;
-    let showModal = false;
-    let providersAvailable = [];
+    /** @type {Props} */
+    let {
+        t,
+        user = $bindable({}),
+        authProvider,
+        webIdData,
+        viewModePhone = false
+    } = $props();
 
-    $: isFederated = user.account_type?.startsWith('federated');
-    $: accType = isFederated ? `${user.account_type}: ${authProvider?.name || ''}` : user.account_type;
+    let unlinkErr = $state(false);
+    let showModal = $state(false);
+    let providersAvailable = $state([]);
 
-    $: classRow = viewModePhone ? 'rowPhone' : 'row';
-    $: classLabel = viewModePhone ? 'labelPhone' : 'label';
+    let isFederated = $derived(user.account_type?.startsWith('federated'));
+    let accType = $derived(isFederated ? `${user.account_type}: ${authProvider?.name || ''}` : user.account_type);
+
+    let classRow = $derived(viewModePhone ? 'rowPhone' : 'row');
+    let classLabel = $derived(viewModePhone ? 'labelPhone' : 'label');
 
     onMount(() => {
         // value for dev testing only
@@ -123,8 +135,8 @@
                         role="button"
                         tabindex="0"
                         class="provider-link"
-                        on:click={() => showModal = !showModal}
-                        on:keypress={() => showModal = !showModal}
+                        onclick={() => showModal = !showModal}
+                        onkeypress={() => showModal = !showModal}
                 >
                     {t.providerLink}
                 </div>

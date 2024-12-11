@@ -1,7 +1,13 @@
 <script>
-  export let color = 'var(--col-text)';
-  export let opacity = 0.9;
-  export let width = 20;
+  /**
+   * @typedef {Object} Props
+   * @property {string} [color]
+   * @property {number} [opacity]
+   * @property {number} [width]
+   */
+
+  /** @type {Props} */
+  let { color = 'var(--col-text)', opacity = 0.9, width = 20 } = $props();
 </script>
 
 <svg

@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import {onMount} from "svelte";
     import {postDeviceVerify, getPow, getSessionInfo} from "../../utils/dataFetching.js";
     import Loading from "../../components/Loading.svelte";
@@ -15,33 +17,35 @@
     const btnWidthInline = '8rem';
 
     /** @type {any} */
-    let t;
+    let t = $state();
     /** @type {any} */
-    let sessionInfo;
+    let sessionInfo = $state();
 
-    let err = '';
-    let userCodeLength = 8;
-    let isLoading = false;
+    let err = $state('');
+    let userCodeLength = $state(8);
+    let isLoading = $state(false);
     let onInputValidate = false;
 
     /** @type {string | undefined} */
-    let scopes = undefined;
-    let isAccepted = false;
-    let isDeclined = false;
+    let scopes = $state(undefined);
+    let isAccepted = $state(false);
+    let isDeclined = $state(false);
 
-    let formValues = {userCode: ''};
-    let formErrors = {userCode: ''};
-    let schema = {};
-    $: if (t && userCodeLength) {
-        schema = yup.object().shape({
-            // REGEX_URI is not really correct, but it's not too important either.
-            // The backend will validate immediately by cache key, which can be any String.
-            userCode: yup.string().trim()
-                .min(userCodeLength, t.errTooShort)
-                .max(userCodeLength, t.errTooLong)
-                .matches(REGEX_URI, t.invalidInput)
-        });
-    }
+    let formValues = $state({userCode: ''});
+    let formErrors = $state({userCode: ''});
+    let schema = $state({});
+    run(() => {
+        if (t && userCodeLength) {
+            schema = yup.object().shape({
+                // REGEX_URI is not really correct, but it's not too important either.
+                // The backend will validate immediately by cache key, which can be any String.
+                userCode: yup.string().trim()
+                    .min(userCodeLength, t.errTooShort)
+                    .max(userCodeLength, t.errTooLong)
+                    .matches(REGEX_URI, t.invalidInput)
+            });
+        }
+    });
 
     onMount(() => {
         userCodeLength = Number.parseInt(window.document.getElementsByName('rauthy-data')[0].id);

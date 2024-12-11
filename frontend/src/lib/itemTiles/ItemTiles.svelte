@@ -3,11 +3,17 @@
     import DeleteItemTile from "./DeleteItemTile.svelte";
     import {onMount, tick} from "svelte";
 
-    export let items = [];
-    export let options = [];
-    export let searchThreshold = 4;
+    /**
+     * @typedef {Object} Props
+     * @property {any} [items]
+     * @property {any} [options]
+     * @property {number} [searchThreshold]
+     */
 
-    let missing = [];
+    /** @type {Props} */
+    let {items = $bindable([]), options = [], searchThreshold = $bindable(4)} = $props();
+
+    let missing = $state([]);
 
     onMount(() => {
         computeMissing();
@@ -33,8 +39,8 @@
 
 <div class="container">
     {#if items?.length > 0}
-        {#each items as item}
-            <DeleteItemTile bind:label={item} onDelete={deleteItem}/>
+        {#each items as item, i}
+            <DeleteItemTile bind:label={items[i]} onDelete={deleteItem}/>
         {/each}
     {/if}
 

@@ -11,7 +11,7 @@
         'Argon2 Parameter',
         'Encryption Keys',
     ];
-    let selected = tabBarItems[0];
+    let selected = $state(tabBarItems[0]);
 </script>
 
 <div class="content">

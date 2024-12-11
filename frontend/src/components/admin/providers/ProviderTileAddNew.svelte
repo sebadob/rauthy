@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import ExpandContainer from "$lib/ExpandContainer.svelte";
     import * as yup from "yup";
     import {extractFormErrors} from "../../../utils/helpers.js";
@@ -18,27 +20,26 @@
     import JsonPathDesc from "./JsonPathDesc.svelte";
     import Textarea from "$lib/inputs/Textarea.svelte";
 
-    export let idx = -1;
-    export let onSave;
+    let { idx = $bindable(-1), onSave } = $props();
 
     const inputWidth = '25rem';
 
-    let expandContainer = false;
-    let isLoading = false;
-    let err = '';
-    let lookupSuccess = false;
-    let success = false;
-    let timer;
+    let expandContainer = $state(false);
+    let isLoading = $state(false);
+    let err = $state('');
+    let lookupSuccess = $state(false);
+    let success = $state(false);
+    let timer = $state();
 
-    let showRootPem = false;
+    let showRootPem = $state(false);
 
-    let configLookup = {
+    let configLookup = $state({
         issuer: null,
         metadata_url: null,
         danger_allow_insecure: false,
         root_pem: null,
-    };
-    let config = {
+    });
+    let config = $state({
         enabled: true,
         typ: 'oidc',
 
@@ -63,16 +64,12 @@
         mfa_claim_path: null,
         mfa_claim_value: null,
         // maybe additional ones in the future like client_logo
-    }
+    })
     // TODO add "the big ones" as templates in the future
     let modes = ['OIDC', 'Auto', 'Custom', 'Github', 'Google'];
-    let mode = modes[0];
-    $: isAuto = mode === modes[1];
-    $: isCustom = mode === modes[2];
-    $: isOidc = mode === modes[0];
-    $: isSpecial = !isAuto && !isCustom && !isOidc;
+    let mode = $state(modes[0]);
 
-    let formErrors = {};
+    let formErrors = $state({});
     const schemaConfig = yup.object().shape({
         issuer: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128").required('Required'),
         authorization_endpoint: yup.string().url().required('Required'),
@@ -96,95 +93,7 @@
         root_pem: yup.string().trim().nullable().matches(REGEX_PEM, "Valid PEM certificate"),
     });
 
-    // hook for templated values
-    $: if (mode) {
-        // reset values
-        lookupSuccess = false;
-        formErrors = {};
-        configLookup = {
-            issuer: null,
-            metadata_url: null,
-            danger_allow_insecure: false,
-            root_pem: null,
-        };
 
-        switch (mode) {
-            case 'Github':
-                // Github does not implement metadata lookup -> configure manually
-                config = {
-                    enabled: true,
-
-                    // fixed values after lookup
-                    issuer: 'github.com',
-                    danger_allow_insecure: false,
-                    authorization_endpoint: 'https://github.com/login/oauth/authorize',
-                    token_endpoint: 'https://github.com/login/oauth/access_token',
-                    token_auth_method_basic: false,
-                    userinfo_endpoint: 'https://api.github.com/user',
-                    use_pkce: false,
-
-                    // user defined values
-                    name: 'Github',
-                    client_id: '',
-                    client_secret: '',
-                    scope: 'read:user',
-                    root_pem: null,
-
-                    admin_claim_path: null,
-                    admin_claim_value: null,
-                    mfa_claim_path: '$.two_factor_authentication',
-                    mfa_claim_value: 'true',
-                    // maybe additional ones in the future like client_logo
-                };
-                break;
-            case 'Google':
-                // Google supports oidc metadata lookup
-                configLookup = {
-                    issuer: 'accounts.google.com',
-                    metadata_url: null,
-                    danger_allow_insecure: false,
-                    root_pem: null,
-                }
-                onSubmitLookup();
-                break;
-            default:
-                config = {
-                    enabled: true,
-                    typ: 'oidc',
-
-                    // fixed values after lookup
-                    issuer: '',
-                    danger_allow_insecure: false,
-                    authorization_endpoint: '',
-                    token_endpoint: '',
-                    token_auth_method_basic: false,
-                    userinfo_endpoint: '',
-                    use_pkce: true,
-
-                    // user defined values
-                    name: '',
-                    client_id: '',
-                    client_secret: '',
-                    scope: '',
-                    root_pem: null,
-
-                    admin_claim_path: null,
-                    admin_claim_value: null,
-                    mfa_claim_path: null,
-                    mfa_claim_value: null,
-                    // maybe additional ones in the future like client_logo
-                };
-        }
-    }
-
-    $: if (success) {
-        timer = setTimeout(() => {
-            onSave();
-            success = false;
-            expandContainer = false;
-            resetValues();
-        }, 1500);
-    }
 
     onMount(() => {
         return () => {
@@ -326,308 +235,408 @@
         }
     }
 
+    let isAuto = $derived(mode === modes[1]);
+    let isCustom = $derived(mode === modes[2]);
+    let isOidc = $derived(mode === modes[0]);
+    let isSpecial = $derived(!isAuto && !isCustom && !isOidc);
+    // hook for templated values
+    run(() => {
+        if (mode) {
+            // reset values
+            lookupSuccess = false;
+            formErrors = {};
+            configLookup = {
+                issuer: null,
+                metadata_url: null,
+                danger_allow_insecure: false,
+                root_pem: null,
+            };
+
+            switch (mode) {
+                case 'Github':
+                    // Github does not implement metadata lookup -> configure manually
+                    config = {
+                        enabled: true,
+
+                        // fixed values after lookup
+                        issuer: 'github.com',
+                        danger_allow_insecure: false,
+                        authorization_endpoint: 'https://github.com/login/oauth/authorize',
+                        token_endpoint: 'https://github.com/login/oauth/access_token',
+                        token_auth_method_basic: false,
+                        userinfo_endpoint: 'https://api.github.com/user',
+                        use_pkce: false,
+
+                        // user defined values
+                        name: 'Github',
+                        client_id: '',
+                        client_secret: '',
+                        scope: 'read:user',
+                        root_pem: null,
+
+                        admin_claim_path: null,
+                        admin_claim_value: null,
+                        mfa_claim_path: '$.two_factor_authentication',
+                        mfa_claim_value: 'true',
+                        // maybe additional ones in the future like client_logo
+                    };
+                    break;
+                case 'Google':
+                    // Google supports oidc metadata lookup
+                    configLookup = {
+                        issuer: 'accounts.google.com',
+                        metadata_url: null,
+                        danger_allow_insecure: false,
+                        root_pem: null,
+                    }
+                    onSubmitLookup();
+                    break;
+                default:
+                    config = {
+                        enabled: true,
+                        typ: 'oidc',
+
+                        // fixed values after lookup
+                        issuer: '',
+                        danger_allow_insecure: false,
+                        authorization_endpoint: '',
+                        token_endpoint: '',
+                        token_auth_method_basic: false,
+                        userinfo_endpoint: '',
+                        use_pkce: true,
+
+                        // user defined values
+                        name: '',
+                        client_id: '',
+                        client_secret: '',
+                        scope: '',
+                        root_pem: null,
+
+                        admin_claim_path: null,
+                        admin_claim_value: null,
+                        mfa_claim_path: null,
+                        mfa_claim_value: null,
+                        // maybe additional ones in the future like client_logo
+                    };
+            }
+        }
+    });
+    run(() => {
+        if (success) {
+            timer = setTimeout(() => {
+                onSave();
+                success = false;
+                expandContainer = false;
+                resetValues();
+            }, 1500);
+        }
+    });
 </script>
 
 <ExpandContainer bind:idx bind:show={expandContainer}>
-    <div class="header font-label" slot="header">
-        ADD NEW AUTHENTICATION PROVIDER
-    </div>
-
-    <div class="container" slot="body">
-        <div class="header">
-            Type
+    {#snippet header()}
+        <div class="header font-label" >
+            ADD NEW AUTHENTICATION PROVIDER
         </div>
-        <div class="ml mb">
-            <OptionSelect bind:value={mode} options={modes}/>
-        </div>
+    {/snippet}
 
-        {#if !lookupSuccess}
+    {#snippet body()}
+        <div class="container" >
             <div class="header">
-                Custom Root CA PEM
+                Type
             </div>
             <div class="ml mb">
-                <Switch bind:selected={showRootPem}/>
+                <OptionSelect bind:value={mode} options={modes}/>
             </div>
 
-            {#if showRootPem}
-                <Textarea
-                        rows={17}
-                        name="rootPem"
-                        placeholder="-----BEGIN CERTIFICATE-----
------END CERTIFICATE-----"
-                        bind:value={configLookup.root_pem}
-                        bind:error={formErrors.root_pem}
-                >
-                    Root Certificate in PEM format
-                </Textarea>
-            {:else}
+            {#if !lookupSuccess}
                 <div class="header">
-                    Allow insecure TLS certificates
+                    Custom Root CA PEM
                 </div>
                 <div class="ml mb">
-                    <Switch bind:selected={configLookup.danger_allow_insecure}/>
+                    <Switch bind:selected={showRootPem}/>
                 </div>
+
+                {#if showRootPem}
+                    <Textarea
+                            rows={17}
+                            name="rootPem"
+                            placeholder="-----BEGIN CERTIFICATE-----
+    -----END CERTIFICATE-----"
+                            bind:value={configLookup.root_pem}
+                            bind:error={formErrors.root_pem}
+                    >
+                        Root Certificate in PEM format
+                    </Textarea>
+                {:else}
+                    <div class="header">
+                        Allow insecure TLS certificates
+                    </div>
+                    <div class="ml mb">
+                        <Switch bind:selected={configLookup.danger_allow_insecure}/>
+                    </div>
+                {/if}
             {/if}
-        {/if}
 
-        {#if isOidc && !lookupSuccess}
-            <Input
-                    type="url"
-                    name="issuer"
-                    bind:value={configLookup.issuer}
-                    bind:error={formErrors.issuer}
-                    placeholder="Issuer URL"
-                    on:input={validateFormLookup}
-                    width={inputWidth}
-                    on:enter={onSubmitLookup}
-            >
-                ISSUER URL
-            </Input>
+            {#if isOidc && !lookupSuccess}
+                <Input
+                        type="url"
+                        name="issuer"
+                        bind:value={configLookup.issuer}
+                        bind:error={formErrors.issuer}
+                        placeholder="Issuer URL"
+                        on:input={validateFormLookup}
+                        width={inputWidth}
+                        on:enter={onSubmitLookup}
+                >
+                    ISSUER URL
+                </Input>
 
-            <Button on:click={onSubmitLookup} bind:isLoading level={1} width="6rem">
-                LOOKUP
-            </Button>
-        {:else if isAuto && !lookupSuccess}
-            <Input
-                    type="url"
-                    name="metadata"
-                    bind:value={configLookup.metadata_url}
-                    bind:error={formErrors.metadata_url}
-                    placeholder=".../.well-known/openid-configuration"
-                    on:input={validateFormLookup}
-                    width={inputWidth}
-                    on:enter={onSubmitLookup}
-            >
-                METADATA URL
-            </Input>
+                <Button on:click={onSubmitLookup} bind:isLoading level={1} width="6rem">
+                    LOOKUP
+                </Button>
+            {:else if isAuto && !lookupSuccess}
+                <Input
+                        type="url"
+                        name="metadata"
+                        bind:value={configLookup.metadata_url}
+                        bind:error={formErrors.metadata_url}
+                        placeholder=".../.well-known/openid-configuration"
+                        on:input={validateFormLookup}
+                        width={inputWidth}
+                        on:enter={onSubmitLookup}
+                >
+                    METADATA URL
+                </Input>
 
-            <Button on:click={onSubmitLookup} bind:isLoading level={1} width="6rem">
-                LOOKUP
-            </Button>
-        {:else if isSpecial || isCustom || lookupSuccess}
-            {#if showRootPem}
-                <Textarea
-                        rows={17}
-                        name="rootPem"
-                        placeholder="-----BEGIN CERTIFICATE-----
------END CERTIFICATE-----"
-                        bind:value={config.root_pem}
-                        bind:error={formErrors.root_pem}
+                <Button on:click={onSubmitLookup} bind:isLoading level={1} width="6rem">
+                    LOOKUP
+                </Button>
+            {:else if isSpecial || isCustom || lookupSuccess}
+                {#if showRootPem}
+                    <Textarea
+                            rows={17}
+                            name="rootPem"
+                            placeholder="-----BEGIN CERTIFICATE-----
+    -----END CERTIFICATE-----"
+                            bind:value={config.root_pem}
+                            bind:error={formErrors.root_pem}
+                            disabled={lookupSuccess}
+                    >
+                        Root Certificate in PEM format
+                    </Textarea>
+                {:else}
+                    <div class="header">
+                        Allow insecure TLS certificates
+                    </div>
+                    <div class="ml mb">
+                        {#if lookupSuccess}
+                            <CheckIcon bind:check={config.danger_allow_insecure}/>
+                        {:else}
+                            <Switch bind:selected={config.danger_allow_insecure}/>
+                        {/if}
+                    </div>
+                {/if}
+
+                <Input
+                        type="url"
+                        name="issuer"
+                        bind:value={config.issuer}
+                        bind:error={formErrors.issuer}
+                        placeholder="Issuer URL"
+                        on:input={validateFormLookup}
+                        width={inputWidth}
                         disabled={lookupSuccess}
                 >
-                    Root Certificate in PEM format
-                </Textarea>
-            {:else}
+                    ISSUER URL
+                </Input>
+
+                <Input
+                        type="url"
+                        name="auth_endpoint"
+                        bind:value={config.authorization_endpoint}
+                        bind:error={formErrors.authorization_endpoint}
+                        placeholder="Authorization Endpoint"
+                        on:input={validateFormLookup}
+                        width={inputWidth}
+                        disabled={lookupSuccess}
+                >
+                    AUTHORIZATION ENDPOINT
+                </Input>
+
+                <Input
+                        type="url"
+                        name="token_endpoint"
+                        bind:value={config.token_endpoint}
+                        bind:error={formErrors.token_endpoint}
+                        placeholder="Token Endpoint"
+                        on:input={validateFormLookup}
+                        width={inputWidth}
+                        disabled={lookupSuccess}
+                >
+                    TOKEN ENDPOINT
+                </Input>
+
+                <Input
+                        type="url"
+                        name="userinfo_endpoint"
+                        bind:value={config.userinfo_endpoint}
+                        bind:error={formErrors.userinfo_endpoint}
+                        placeholder="Userinfo Endpoint"
+                        on:input={validateFormLookup}
+                        width={inputWidth}
+                        disabled={lookupSuccess}
+                >
+                    USERINFO ENDPOINT
+                </Input>
+
                 <div class="header">
-                    Allow insecure TLS certificates
+                    Use PKCE
                 </div>
-                <div class="ml mb">
+                <div class="ml">
                     {#if lookupSuccess}
-                        <CheckIcon bind:check={config.danger_allow_insecure}/>
+                        <CheckIcon bind:check={config.use_pkce}/>
                     {:else}
-                        <Switch bind:selected={config.danger_allow_insecure}/>
+                        <Switch bind:selected={config.use_pkce}/>
                     {/if}
+                </div>
+
+                <div class="desc">
+                    The scope the client should use when redirecting to the login.<br>
+                    Provide the values separated by space.
+                </div>
+                <Input
+                        name="scope"
+                        bind:value={config.scope}
+                        bind:error={formErrors.scope}
+                        placeholder="openid profile email"
+                        on:input={validateFormConfig}
+                        width={inputWidth}
+                >
+                    SCOPE
+                </Input>
+
+                <div class="desc">
+                    Client name for the Rauthy login form
+                </div>
+                <Input
+                        name="client_name"
+                        bind:value={config.name}
+                        bind:error={formErrors.name}
+                        placeholder="Client Name"
+                        on:input={validateFormConfig}
+                        width={inputWidth}
+                >
+                    CLIENT NAME
+                </Input>
+
+                <div class="desc">
+                    Client ID given by the auth provider
+                </div>
+                <Input
+                        name="client_id"
+                        bind:value={config.client_id}
+                        bind:error={formErrors.client_id}
+                        autocomplete="off"
+                        placeholder="Client ID"
+                        on:input={validateFormConfig}
+                        width={inputWidth}
+                >
+                    CLIENT ID
+                </Input>
+
+                <div class="desc">
+                    Client Secret given by the auth provider.<br>
+                    At least a client secret or PKCE is required.
+                </div>
+                <PasswordInput
+                        name="client_secret"
+                        bind:value={config.client_secret}
+                        bind:error={formErrors.client_secret}
+                        autocomplete="off"
+                        placeholder="Client Secret"
+                        on:input={validateFormConfig}
+                        width={inputWidth}
+                >
+                    CLIENT SECRET
+                </PasswordInput>
+
+                <JsonPathDesc/>
+                <div class="desc">
+                    <p>
+                        You can map a user to be a rauthy admin depending on an upstream ID claim.
+                    </p>
+                </div>
+                <Input
+                        name="admin_claim_path"
+                        bind:value={config.admin_claim_path}
+                        bind:error={formErrors.admin_claim_path}
+                        placeholder="$.roles.*"
+                        on:input={validateFormConfig}
+                        width={inputWidth}
+                >
+                    ADMIN CLAIM PATH
+                </Input>
+                <Input
+                        name="admin_claim_value"
+                        bind:value={config.admin_claim_value}
+                        bind:error={formErrors.admin_claim_value}
+                        placeholder="rauthy_admin"
+                        on:input={validateFormConfig}
+                        width={inputWidth}
+                >
+                    ADMIN CLAIM VALUE
+                </Input>
+
+                <div class="desc">
+                    <p>
+                        If your provider issues a claim indicating that the user has used at least 2FA during
+                        login, you can specify the mfa claim path.
+                    </p>
+                </div>
+                <Input
+                        name="mfa_claim_path"
+                        bind:value={config.mfa_claim_path}
+                        bind:error={formErrors.mfa_claim_path}
+                        placeholder="$.amr.*"
+                        on:input={validateFormConfig}
+                        width={inputWidth}
+                >
+                    MFA CLAIM PATH
+                </Input>
+                <Input
+                        name="mfa_claim_value"
+                        bind:value={config.mfa_claim_value}
+                        bind:error={formErrors.mfa_claim_value}
+                        placeholder="mfa"
+                        on:input={validateFormConfig}
+                        width={inputWidth}
+                >
+                    MFA CLAIM VALUE
+                </Input>
+
+                <Button on:click={onSubmitConfig} bind:isLoading level={1} width="6rem">
+                    SAVE
+                </Button>
+
+                <Button on:click={resetValues} bind:isLoading level={4} width="6rem">
+                    RESET
+                </Button>
+            {/if}
+
+            {#if success}
+                <div class="success">
+                    Success
                 </div>
             {/if}
 
-            <Input
-                    type="url"
-                    name="issuer"
-                    bind:value={config.issuer}
-                    bind:error={formErrors.issuer}
-                    placeholder="Issuer URL"
-                    on:input={validateFormLookup}
-                    width={inputWidth}
-                    disabled={lookupSuccess}
-            >
-                ISSUER URL
-            </Input>
-
-            <Input
-                    type="url"
-                    name="auth_endpoint"
-                    bind:value={config.authorization_endpoint}
-                    bind:error={formErrors.authorization_endpoint}
-                    placeholder="Authorization Endpoint"
-                    on:input={validateFormLookup}
-                    width={inputWidth}
-                    disabled={lookupSuccess}
-            >
-                AUTHORIZATION ENDPOINT
-            </Input>
-
-            <Input
-                    type="url"
-                    name="token_endpoint"
-                    bind:value={config.token_endpoint}
-                    bind:error={formErrors.token_endpoint}
-                    placeholder="Token Endpoint"
-                    on:input={validateFormLookup}
-                    width={inputWidth}
-                    disabled={lookupSuccess}
-            >
-                TOKEN ENDPOINT
-            </Input>
-
-            <Input
-                    type="url"
-                    name="userinfo_endpoint"
-                    bind:value={config.userinfo_endpoint}
-                    bind:error={formErrors.userinfo_endpoint}
-                    placeholder="Userinfo Endpoint"
-                    on:input={validateFormLookup}
-                    width={inputWidth}
-                    disabled={lookupSuccess}
-            >
-                USERINFO ENDPOINT
-            </Input>
-
-            <div class="header">
-                Use PKCE
-            </div>
-            <div class="ml">
-                {#if lookupSuccess}
-                    <CheckIcon bind:check={config.use_pkce}/>
-                {:else}
-                    <Switch bind:selected={config.use_pkce}/>
-                {/if}
-            </div>
-
-            <div class="desc">
-                The scope the client should use when redirecting to the login.<br>
-                Provide the values separated by space.
-            </div>
-            <Input
-                    name="scope"
-                    bind:value={config.scope}
-                    bind:error={formErrors.scope}
-                    placeholder="openid profile email"
-                    on:input={validateFormConfig}
-                    width={inputWidth}
-            >
-                SCOPE
-            </Input>
-
-            <div class="desc">
-                Client name for the Rauthy login form
-            </div>
-            <Input
-                    name="client_name"
-                    bind:value={config.name}
-                    bind:error={formErrors.name}
-                    placeholder="Client Name"
-                    on:input={validateFormConfig}
-                    width={inputWidth}
-            >
-                CLIENT NAME
-            </Input>
-
-            <div class="desc">
-                Client ID given by the auth provider
-            </div>
-            <Input
-                    name="client_id"
-                    bind:value={config.client_id}
-                    bind:error={formErrors.client_id}
-                    autocomplete="off"
-                    placeholder="Client ID"
-                    on:input={validateFormConfig}
-                    width={inputWidth}
-            >
-                CLIENT ID
-            </Input>
-
-            <div class="desc">
-                Client Secret given by the auth provider.<br>
-                At least a client secret or PKCE is required.
-            </div>
-            <PasswordInput
-                    name="client_secret"
-                    bind:value={config.client_secret}
-                    bind:error={formErrors.client_secret}
-                    autocomplete="off"
-                    placeholder="Client Secret"
-                    on:input={validateFormConfig}
-                    width={inputWidth}
-            >
-                CLIENT SECRET
-            </PasswordInput>
-
-            <JsonPathDesc/>
-            <div class="desc">
-                <p>
-                    You can map a user to be a rauthy admin depending on an upstream ID claim.
-                </p>
-            </div>
-            <Input
-                    name="admin_claim_path"
-                    bind:value={config.admin_claim_path}
-                    bind:error={formErrors.admin_claim_path}
-                    placeholder="$.roles.*"
-                    on:input={validateFormConfig}
-                    width={inputWidth}
-            >
-                ADMIN CLAIM PATH
-            </Input>
-            <Input
-                    name="admin_claim_value"
-                    bind:value={config.admin_claim_value}
-                    bind:error={formErrors.admin_claim_value}
-                    placeholder="rauthy_admin"
-                    on:input={validateFormConfig}
-                    width={inputWidth}
-            >
-                ADMIN CLAIM VALUE
-            </Input>
-
-            <div class="desc">
-                <p>
-                    If your provider issues a claim indicating that the user has used at least 2FA during
-                    login, you can specify the mfa claim path.
-                </p>
-            </div>
-            <Input
-                    name="mfa_claim_path"
-                    bind:value={config.mfa_claim_path}
-                    bind:error={formErrors.mfa_claim_path}
-                    placeholder="$.amr.*"
-                    on:input={validateFormConfig}
-                    width={inputWidth}
-            >
-                MFA CLAIM PATH
-            </Input>
-            <Input
-                    name="mfa_claim_value"
-                    bind:value={config.mfa_claim_value}
-                    bind:error={formErrors.mfa_claim_value}
-                    placeholder="mfa"
-                    on:input={validateFormConfig}
-                    width={inputWidth}
-            >
-                MFA CLAIM VALUE
-            </Input>
-
-            <Button on:click={onSubmitConfig} bind:isLoading level={1} width="6rem">
-                SAVE
-            </Button>
-
-            <Button on:click={resetValues} bind:isLoading level={4} width="6rem">
-                RESET
-            </Button>
-        {/if}
-
-        {#if success}
-            <div class="success">
-                Success
-            </div>
-        {/if}
-
-        {#if err}
-            <div class="err">
-                {err}
-            </div>
-        {/if}
-    </div>
+            {#if err}
+                <div class="err">
+                    {err}
+                </div>
+            {/if}
+        </div>
+    {/snippet}
 </ExpandContainer>
 
 <style>

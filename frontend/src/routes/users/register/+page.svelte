@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import * as yup from "yup";
     import {extractFormErrors, getQueryParams} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
@@ -11,28 +13,30 @@
     import LangSelector from "$lib/LangSelector.svelte";
     import {pow_work_wasm} from "../../../spow/spow-wasm";
 
-    let t;
-    let restrictedDomain;
+    let t = $state();
+    let restrictedDomain = $state();
     let redirectUri;
-    let isLoading = false;
-    let err = '';
-    let success = false;
+    let isLoading = $state(false);
+    let err = $state('');
+    let success = $state(false);
 
-    let formValues = {email: '', givenName: '', familyName: ''};
-    let formErrors = {};
+    let formValues = $state({email: '', givenName: '', familyName: ''});
+    let formErrors = $state({});
 
-    let schema = {};
-    $: if (t) {
-        schema = yup.object().shape({
-            email: yup.string().required(t.required).email(t.emailBadFormat),
-            givenName: yup.string()
-                .required(t.required)
-                .matches(REGEX_NAME, t.regexName),
-            familyName: yup.string()
-                .required(t.required)
-                .matches(REGEX_NAME, t.regexName),
-        });
-    }
+    let schema = $state({});
+    run(() => {
+        if (t) {
+            schema = yup.object().shape({
+                email: yup.string().required(t.required).email(t.emailBadFormat),
+                givenName: yup.string()
+                    .required(t.required)
+                    .matches(REGEX_NAME, t.regexName),
+                familyName: yup.string()
+                    .required(t.required)
+                    .matches(REGEX_NAME, t.regexName),
+            });
+        }
+    });
 
     onMount(() => {
         restrictedDomain = window.document.getElementsByName('rauthy-data')[0].id;

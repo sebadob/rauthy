@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import {getAuthProvidersTemplate, redirectToLogout} from "../../utils/helpers.js";
     import AccInfo from "./AccInfo.svelte";
     import AccNav from "./AccNav.svelte";
@@ -11,39 +13,38 @@
     import {onMount} from "svelte";
     import AccDevices from "./AccDevices.svelte";
 
-    export let t;
 
-    export let sessionInfo = {};
-    export let user = {};
-    // webIdData will stay undefined if it is not enabled in the backend
-    export let webIdData;
+    
+    /**
+     * @typedef {Object} Props
+     * @property {any} t
+     * @property {any} [sessionInfo]
+     * @property {any} [user]
+     * @property {any} webIdData - webIdData will stay undefined if it is not enabled in the backend
+     */
 
-    let innerWidth;
-    let providers;
-    let authProvider;
+    /** @type {Props} */
+    let {
+        t = $bindable(),
+        sessionInfo = $bindable({}),
+        user = $bindable({}),
+        webIdData = $bindable()
+    } = $props();
 
-    $: viewModePhone = innerWidth < 500;
+    let innerWidth = $state();
+    let providers = $state();
+    let authProvider = $state();
+
 
     let op = tweened(1.0, {
         duration: 100,
     })
 
-    let content = t.info;
-    let selected = t.info;
+    let content = $state(t.info);
+    let selected = $state(t.info);
 
-    $: if (selected) {
-        animate();
-    }
 
-    $: if (selected === t.navLogout) {
-        redirectToLogout();
-    }
 
-    $: if (providers) {
-        if (user.account_type?.startsWith('federated')) {
-            authProvider = providers.filter(p => p.id === user.auth_provider_id)[0];
-        }
-    }
 
     onMount(async () => {
         providers = await getAuthProvidersTemplate();
@@ -54,6 +55,24 @@
             .then(() => content = selected)
             .then(() => op.set(1.0));
     }
+    let viewModePhone = $derived(innerWidth < 500);
+    run(() => {
+        if (selected) {
+            animate();
+        }
+    });
+    run(() => {
+        if (selected === t.navLogout) {
+            redirectToLogout();
+        }
+    });
+    run(() => {
+        if (providers) {
+            if (user.account_type?.startsWith('federated')) {
+                authProvider = providers.filter(p => p.id === user.auth_provider_id)[0];
+            }
+        }
+    });
 </script>
 
 <svelte:window bind:innerWidth/>

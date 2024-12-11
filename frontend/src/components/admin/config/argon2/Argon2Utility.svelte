@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import * as yup from "yup";
     import Button from "$lib/Button.svelte";
     import {extractFormErrors} from "../../../../utils/helpers.js";
@@ -8,18 +10,18 @@
 
     const inputWidth = '170px';
 
-    let isLoading = false;
+    let isLoading = $state(false);
     let err = '';
-    let success = false;
-    let hashTimes;
-    let scrollY;
+    let success = $state(false);
+    let hashTimes = $state();
+    let scrollY = $state();
 
-    let formValues = {
+    let formValues = $state({
         targetTime: 1000,
         mCost: 32768,
         pCost: 2,
-    };
-    let formErrors = {};
+    });
+    let formErrors = $state({});
 
     const schema = yup.object().shape({
         targetTime: yup.number()
@@ -34,9 +36,11 @@
             .max(1024, 'Cannot be higher than 1024'),
     });
 
-    $: if (success && hashTimes) {
-        scrollY = window.innerHeight;
-    }
+    run(() => {
+        if (success && hashTimes) {
+            scrollY = window.innerHeight;
+        }
+    });
 
     function handleKeyPress(event) {
         if (event.code === 'Enter') {

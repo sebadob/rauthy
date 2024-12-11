@@ -1,6 +1,5 @@
 <script>
-    export let labels = [];
-    export let selected;
+    let { labels = [], selected = $bindable() } = $props();
 </script>
 
 <div class="bar noselect">
@@ -8,8 +7,8 @@
         <button
                 class="btn font-label"
                 data-selected={selected === label}
-                on:click={() => selected = label}
-                on:keypress={() => selected = label}
+                onclick={() => selected = label}
+                onkeypress={() => selected = label}
         >
             {label}
         </button>

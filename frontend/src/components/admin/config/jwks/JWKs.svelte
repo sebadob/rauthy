@@ -1,20 +1,24 @@
 <script>
+    import {run} from 'svelte/legacy';
+
     import {onMount} from "svelte";
     import Button from "$lib/Button.svelte";
     import {getCerts, postRotateJwk} from "../../../../utils/dataFetchingAdmin.js";
     import JWK from "./JWK.svelte";
 
-    let certs = [];
-    let isLoading = false;
-    let err = '';
-    let success = false;
-    let timer;
+    let certs = $state([]);
+    let isLoading = $state(false);
+    let err = $state('');
+    let success = $state(false);
+    let timer = $state();
 
-    $: if (success) {
-        timer = setTimeout(() => {
-            success = false;
-        }, 3000);
-    }
+    run(() => {
+        if (success) {
+            timer = setTimeout(() => {
+                success = false;
+            }, 3000);
+        }
+    });
 
     onMount(async () => {
         if (certs.length === 0) {
@@ -67,12 +71,12 @@
         </p>
     </div>
 
-    {#each certs as jwk (jwk.kid)}
-        <JWK bind:jwk/>
+    {#each certs as jwk, i (jwk.kid)}
+        <JWK bind:jwk={certs[i]}/>
     {/each}
 
     <!-- Save Button -->
-    <Button on:click={onSubmit} bind:isLoading level={1} width={120}>ROTATE KEYS</Button>
+    <Button on:click={onSubmit} bind:isLoading level={1}>ROTATE KEYS</Button>
 
     {#if success}
         <div class="success">

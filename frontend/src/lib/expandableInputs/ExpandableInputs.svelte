@@ -3,18 +3,33 @@
     import {createEventDispatcher, onMount, tick} from "svelte";
     import {getKey} from "../utils/helpers.js";
 
-    export let validation = {
+    /**
+     * @typedef {Object} Props
+     * @property {any} [validation]
+     * @property {any} [values]
+     * @property {string} [width]
+     * @property {boolean} [optional]
+     * @property {string} [autocomplete]
+     * @property {import('svelte').Snippet} [children]
+     */
+
+    /** @type {Props & { [key: string]: any }} */
+    let {
+        validation = $bindable({
         required: false,
         regex: undefined,
         errMsg: '',
-    };
-    export let values = [];
-    export let width = '260px';
-    export let optional = false;
-    export let autocomplete = 'on';
+    }),
+        values = $bindable([]),
+        width = '260px',
+        optional = false,
+        autocomplete = $bindable('on'),
+        children,
+        ...rest
+    } = $props();
 
-    let err = '';
-    let inputs = [];
+    let err = $state('');
+    let inputs = $state([]);
 
     const dispatch = createEventDispatcher();
 
@@ -92,9 +107,9 @@
                 bind:autocomplete
                 on:input={handleInput}
                 on:blur={handleInput}
-                {...$$restProps}
+                {...rest}
         >
-            <slot></slot>
+            {@render children?.()}
         </DynamicInputRow>
     {/each}
 

@@ -1,7 +1,15 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import {spring} from "svelte/motion";
 
-    export let selected = false;
+    /**
+     * @typedef {Object} Props
+     * @property {boolean} [selected]
+     */
+
+    /** @type {Props} */
+    let { selected = $bindable(false) } = $props();
     const selMargin = 11;
 
     let margin = spring(0, {
@@ -9,7 +17,9 @@
         damping: 0.5
     });
 
-    $: margin.set(selected ? selMargin : 0);
+    run(() => {
+        margin.set(selected ? selMargin : 0);
+    });
 
     function handleClick() {
         selected = !selected;
@@ -22,8 +32,8 @@
         tabindex="0"
         class="outer"
         class:selectedOuter={selected}
-        on:click={handleClick}
-        on:keypress={handleClick}
+        onclick={handleClick}
+        onkeypress={handleClick}
 >
     <div class="inner" class:selected style="margin-left: {`${$margin}px`}">
     </div>
