@@ -132,12 +132,11 @@ impl PasswordPolicy {
 
         let bytes: Vec<u8> = if is_hiqlite() {
             DB::client()
-                .query_raw(
+                .query_raw_one(
                     "SELECT data FROM config WHERE id = 'password_policy'",
                     params!(),
                 )
                 .await?
-                .remove(0)
                 .get("data")
         } else {
             sqlx::query("SELECT data FROM config WHERE id = 'password_policy'")
