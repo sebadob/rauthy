@@ -2465,8 +2465,7 @@ dependencies = [
 [[package]]
 name = "hiqlite"
 version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f19fc568aa390a14921be3b9c208000b91b47777f078035d1a52dcc7a8ec0035"
+source = "git+https://github.com/sebadob/hiqlite.git#05a89f8d1f2f88a056d5b055f3471140cbfca260"
 dependencies = [
  "argon2",
  "axum",
@@ -2492,7 +2491,6 @@ dependencies = [
  "hyper 1.5.1",
  "hyper-util",
  "lazy_static",
- "log",
  "lz4-sys",
  "mime_guess",
  "num-derive",
@@ -4273,7 +4271,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.27.1"
+version = "0.27.2-20241211"
 dependencies = [
  "actix-service",
  "actix-web",
@@ -4314,7 +4312,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.27.1"
+version = "0.27.2-20241211"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4335,7 +4333,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.27.1"
+version = "0.27.2-20241211"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4361,7 +4359,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.27.1"
+version = "0.27.2-20241211"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4397,7 +4395,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.27.1"
+version = "0.27.2-20241211"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4427,7 +4425,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.27.1"
+version = "0.27.2-20241211"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4446,7 +4444,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.27.1"
+version = "0.27.2-20241211"
 dependencies = [
  "accept-language",
  "actix",
@@ -4522,7 +4520,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.27.1"
+version = "0.27.2-20241211"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4542,7 +4540,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.27.1"
+version = "0.27.2-20241211"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4560,7 +4558,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.27.1"
+version = "0.27.2-20241211"
 dependencies = [
  "actix-web",
  "argon2",
