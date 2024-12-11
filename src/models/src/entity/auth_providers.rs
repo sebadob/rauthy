@@ -729,7 +729,7 @@ impl AuthProviderCallback {
         Ok(())
     }
 
-    async fn find(callback_id: String) -> Result<Self, ErrorResponse> {
+    pub async fn find(callback_id: String) -> Result<Self, ErrorResponse> {
         let opt: Option<Self> = DB::client()
             .get(Cache::AuthProviderCallback, callback_id)
             .await?;
@@ -743,7 +743,7 @@ impl AuthProviderCallback {
         }
     }
 
-    async fn save(&self) -> Result<(), ErrorResponse> {
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
         DB::client()
             .put(
                 Cache::AuthProviderCallback,
