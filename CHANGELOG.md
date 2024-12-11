@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.27.1
+
+### Bugfix
+
+With the big migration to [Hiqlite](https://github.com/sebadob/hiqlite) under the hood, a bug has been introduced with
+`v0.27.0` that made it possible to end up with a `NULL` value for the password policy after an update. Which would
+result in errors further down the road after a restart, because the policy could not be read again.
+
+This version fixes the issue itself and checks at startup if the database needs a fix for this issue because of an
+already existing `NULL` value. In this case, the default password policy will be inserted correctly at startup.
+
+[#646](https://github.com/sebadob/rauthy/pull/646)
+
 ## v0.27.0
 
 ### Breaking
