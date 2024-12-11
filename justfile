@@ -341,6 +341,7 @@ build-docs:
     set -euxo pipefail
     cd book
     mdbook build -d ../docs
+    git add ../docs/*
 
 # Build the final container image.
 build image="ghcr.io/sebadob/rauthy": build-ui
