@@ -476,17 +476,6 @@ spec:
               subPath: rauthy.cfg
               name: rauthy-config
               readOnly: true
-          readinessProbe:
-            httpGet:
-              # You may need to adjust this, if you decide to start in https only
-              # mode or use another port
-              scheme: HTTP
-              port: 8080
-              #scheme: HTTPS
-              #port: 8443
-              path: /auth/v1/ping
-            initialDelaySeconds: 1
-            periodSeconds: 10
           livenessProbe:
             httpGet:
               # You may need to adjust this, if you decide to start in https only

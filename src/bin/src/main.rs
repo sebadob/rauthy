@@ -13,7 +13,7 @@ use rauthy_common::constants::{
     APP_START, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
 };
 use rauthy_common::utils::UseDummyAddress;
-use rauthy_common::{is_sqlite, password_hasher};
+use rauthy_common::{is_hiqlite, is_sqlite, password_hasher};
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
     api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
@@ -202,7 +202,7 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
 
     // TODO remove this block check with the next minor version.
     // 0.27.0 had a bug that could have inserted NULL for password policy on update.
-    {
+    if is_hiqlite() {
         let mut row = DB::client()
             .query_raw_one(
                 "SELECT data FROM config WHERE id = 'password_policy'",

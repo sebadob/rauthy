@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.27.1"
+version = "0.27.2-20241211"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -19,7 +19,7 @@ strip = true
 panic = "abort"
 
 [patch.crates-io]
-#hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
+hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
 #hiqlite = { path = "../../hiqlite/hiqlite", package = "hiqlite" }
 
 [workspace.dependencies]
