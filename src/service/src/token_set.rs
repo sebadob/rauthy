@@ -5,7 +5,8 @@ use jwt_simple::claims::Claims;
 use jwt_simple::prelude::{coarsetime, UnixTimeStamp};
 use rauthy_api_types::oidc::JktClaim;
 use rauthy_common::constants::{
-    DEVICE_GRANT_REFRESH_TOKEN_LIFETIME, ENABLE_SOLID_AUD, ENABLE_WEB_ID, REFRESH_TOKEN_LIFETIME,
+    DEVICE_GRANT_REFRESH_TOKEN_LIFETIME, DISABLE_REFRESH_TOKEN_NBF, ENABLE_SOLID_AUD,
+    ENABLE_WEB_ID, REFRESH_TOKEN_LIFETIME,
 };
 use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -382,7 +383,11 @@ impl TokenSet {
             did: did.clone(),
         };
 
-        let nbf = Utc::now().add(chrono::Duration::seconds(access_token_lifetime - 60));
+        let nbf = if *DISABLE_REFRESH_TOKEN_NBF {
+            Utc::now()
+        } else {
+            Utc::now().add(chrono::Duration::seconds(access_token_lifetime - 60))
+        };
         let nbf_unix = UnixTimeStamp::from_secs(nbf.timestamp() as u64);
 
         let claims =

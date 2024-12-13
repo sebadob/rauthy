@@ -1,5 +1,35 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+Even though not recommended at all, it is not possible to opt-out of the `refresh_token` nbf claim, and disable it.
+
+By default, A `refresh_token` will not valid before `access_token_lifetime - 60 seconds`, but some (bad) client
+implementations try to refresh `access_tokens` while they are still valid for a long time. To opt-out, you get a new
+config variable:
+
+```
+# By default, `refresh_token`s will have an `nbf` claim, making them valid
+# at `access_token_lifetime - 60 seconds`. Any usage before this time will
+# result in invalidation of not only the token itself, but also all other
+# linked sessions and tokens for this user to prevent damage in case a client
+# leaked the token by accident.
+# However, there are bad / lazy client implementations that do not respect
+# either `nbf` in the `refresh_token`, or the `exp` claim in `access_token`
+# and will refresh early while the current access_token is still valid.
+# This does not only waste resources and time, but also makes it possible
+# to have multiple valid `access_token`s at the same time for the same
+# session. You should only disable the `nbf` claim if you have a good
+# reasons to do so.
+# If disabled, the `nbf` claim will still exist, but always set to *now*.
+# default: false
+DISABLE_REFRESH_TOKEN_NBF=false
+```
+
+[]()
+
 ## v0.27.1
 
 ### Bugfix
