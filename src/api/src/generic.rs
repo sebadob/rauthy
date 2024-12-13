@@ -50,6 +50,7 @@ use std::borrow::Cow;
 use std::ops::{Add, Sub};
 use std::str::FromStr;
 use tracing::{error, info, warn};
+use utoipa::openapi::Response;
 
 #[get("/")]
 pub async fn get_index(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
@@ -601,6 +602,9 @@ pub async fn get_health() -> impl Responder {
 }
 
 /// Ready endpoint for kubernetes / docker ready checks.
+///
+/// Will always return 503 during the first 5 seconds after startup to give this node a chance to
+/// join an existing Raft cluster.
 #[utoipa::path(
     get,
     path = "/ready",
@@ -612,9 +616,16 @@ pub async fn get_health() -> impl Responder {
 )]
 #[get("/ready")]
 pub async fn get_ready() -> impl Responder {
-    // TODO we probably only want to return OK, because with Hiqlite, we would not even get here
-    // if it would not be ready.
-    HttpResponse::Ok().finish()
+    // Make sure to not return ready during the first 5 seconds to give the node the chance to join
+    // an existing Raft cluster and to not shut down the next one too early during K8s rolling
+    // releases.
+    // 5 seconds is plenty of time, as it should have joined in less than 1 second.
+    // -> 4900ms to avoid issues like "check for ready 5 seconds after startup"
+    if Utc::now().sub(*APP_START).num_milliseconds() < 4900 {
+        HttpResponse::ServiceUnavailable().finish()
+    } else {
+        HttpResponse::Ok().finish()
+    }
 }
 
 /// Catch all - redirects from root to the "real root" /auth/v1/

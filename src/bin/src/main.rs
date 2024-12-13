@@ -213,7 +213,7 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
             warn!(
                 r#"
 
-Error looking up PasswordPolicy - this is most probably a know 0.27.0 bug.
+Error looking up PasswordPolicy - this is most probably a known 0.27.0 bug.
 Inserting default Policy to fix it.
 You should visit the Admin UI -> Config -> Password Policy and adjust it to your needs.
 
