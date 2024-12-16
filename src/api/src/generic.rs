@@ -607,7 +607,6 @@ pub async fn get_health() -> impl Responder {
     tag = "health",
     responses(
         (status = 200, description = "Ok"),
-        (status = 503, description = "ServiceUnavailable"),
     ),
 )]
 #[get("/ready")]
