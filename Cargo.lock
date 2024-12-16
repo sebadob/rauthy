@@ -852,9 +852,9 @@ dependencies = [
  "serde_json",
  "serde_path_to_error",
  "serde_urlencoded",
- "sync_wrapper 1.0.2",
+ "sync_wrapper",
  "tokio",
- "tower 0.5.1",
+ "tower 0.5.2",
  "tower-layer",
  "tower-service",
  "tracing",
@@ -875,7 +875,7 @@ dependencies = [
  "mime",
  "pin-project-lite",
  "rustversion",
- "sync_wrapper 1.0.2",
+ "sync_wrapper",
  "tower-layer",
  "tower-service",
  "tracing",
@@ -900,7 +900,7 @@ dependencies = [
  "multer",
  "pin-project-lite",
  "serde",
- "tower 0.5.1",
+ "tower 0.5.2",
  "tower-layer",
  "tower-service",
 ]
@@ -920,7 +920,7 @@ dependencies = [
  "hyper 1.5.1",
  "hyper-util",
  "pin-project-lite",
- "rustls 0.23.19",
+ "rustls 0.23.20",
  "rustls-pemfile 2.2.0",
  "rustls-pki-types",
  "tokio",
@@ -1284,9 +1284,9 @@ checksum = "ade8366b8bd5ba243f0a58f036cc0ca8a2f069cff1a2351ef1cac6b083e16fc0"
 
 [[package]]
 name = "cc"
-version = "1.2.3"
+version = "1.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27f657647bcff5394bf56c7317665bbf790a137a50eaaa5c6bfbb9e27a518f2d"
+checksum = "9157bbaa6b165880c27a4293a474c91cdcf265cc68cc829bf10be0964a391caf"
 dependencies = [
  "jobserver",
  "libc",
@@ -2502,7 +2502,7 @@ dependencies = [
  "rusqlite",
  "rust-embed",
  "rust_decimal",
- "rustls 0.23.19",
+ "rustls 0.23.20",
  "serde",
  "serde_json",
  "serde_rusqlite",
@@ -2512,7 +2512,7 @@ dependencies = [
  "thiserror 2.0.6",
  "tokio",
  "tokio-rustls 0.26.1",
- "tower 0.5.1",
+ "tower 0.5.2",
  "tower-http",
  "tower-layer",
  "tower-service",
@@ -2731,7 +2731,7 @@ dependencies = [
  "http 1.2.0",
  "hyper 1.5.1",
  "hyper-util",
- "rustls 0.23.19",
+ "rustls 0.23.20",
  "rustls-pki-types",
  "tokio",
  "tokio-rustls 0.26.1",
@@ -3234,7 +3234,7 @@ dependencies = [
  "nom",
  "percent-encoding",
  "quoted_printable",
- "rustls 0.23.19",
+ "rustls 0.23.20",
  "rustls-pemfile 2.2.0",
  "rustls-pki-types",
  "socket2",
@@ -4178,7 +4178,7 @@ dependencies = [
  "quinn-proto",
  "quinn-udp",
  "rustc-hash 2.1.0",
- "rustls 0.23.19",
+ "rustls 0.23.20",
  "socket2",
  "thiserror 2.0.6",
  "tokio",
@@ -4196,7 +4196,7 @@ dependencies = [
  "rand",
  "ring",
  "rustc-hash 2.1.0",
- "rustls 0.23.19",
+ "rustls 0.23.20",
  "rustls-pki-types",
  "slab",
  "thiserror 2.0.6",
@@ -4272,7 +4272,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.27.2-20241211"
+version = "0.27.2"
 dependencies = [
  "actix-service",
  "actix-web",
@@ -4297,7 +4297,7 @@ dependencies = [
  "rauthy-service",
  "reqwest",
  "ring",
- "rustls 0.23.19",
+ "rustls 0.23.20",
  "rustls-pemfile 2.2.0",
  "rustls-pki-types",
  "serde",
@@ -4313,7 +4313,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.27.2-20241211"
+version = "0.27.2"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4334,7 +4334,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.27.2-20241211"
+version = "0.27.2"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4360,7 +4360,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.27.2-20241211"
+version = "0.27.2"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4396,7 +4396,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.27.2-20241211"
+version = "0.27.2"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4426,7 +4426,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.27.2-20241211"
+version = "0.27.2"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4445,7 +4445,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.27.2-20241211"
+version = "0.27.2"
 dependencies = [
  "accept-language",
  "actix",
@@ -4521,7 +4521,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.27.2-20241211"
+version = "0.27.2"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4541,7 +4541,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.27.2-20241211"
+version = "0.27.2"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4559,7 +4559,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.27.2-20241211"
+version = "0.27.2"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4663,9 +4663,9 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
-version = "0.5.7"
+version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b6dfecf2c74bce2466cabf93f6664d6998a69eb21e39f4207930065b27b771f"
+checksum = "03a862b389f93e68874fbf580b9de08dd02facb9a788ebadaf4a3fd33cf58834"
 dependencies = [
  "bitflags 2.6.0",
 ]
@@ -4761,13 +4761,13 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "quinn",
- "rustls 0.23.19",
+ "rustls 0.23.20",
  "rustls-pemfile 2.2.0",
  "rustls-pki-types",
  "serde",
  "serde_json",
  "serde_urlencoded",
- "sync_wrapper 1.0.2",
+ "sync_wrapper",
  "tokio",
  "tokio-rustls 0.26.1",
  "tokio-util",
@@ -5192,9 +5192,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.19"
+version = "0.23.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "934b404430bb06b3fae2cba809eb45a1ab1aecd64491213d7c3301b88393f8d1"
+checksum = "5065c3f250cbd332cd894be57c40fa52387247659b14a2d6041d121547903b1b"
 dependencies = [
  "aws-lc-rs",
  "log",
@@ -5386,9 +5386,9 @@ dependencies = [
 
 [[package]]
 name = "semver"
-version = "1.0.23"
+version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61697e0a1c7e512e84a621326239844a24d8207b4669b41bc18b32ea5cbf988b"
+checksum = "3cb6eb87a131f756572d7fb904f6e7b68633f09cca868c5df1c4b8d1a694bbba"
 dependencies = [
  "serde",
 ]
@@ -5791,7 +5791,7 @@ dependencies = [
  "once_cell",
  "paste",
  "percent-encoding",
- "rustls 0.23.19",
+ "rustls 0.23.20",
  "rustls-pemfile 2.2.0",
  "serde",
  "serde_json",
@@ -6073,12 +6073,6 @@ dependencies = [
 
 [[package]]
 name = "sync_wrapper"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2047c6ded9c721764247e62cd3b03c09ffc529b2ba5b10ec482ae507a4a70160"
-
-[[package]]
-name = "sync_wrapper"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0bf256ce5efdfa370213c1dabab5935a12e49f2c58d15e9eac2870d3b4f27263"
@@ -6321,7 +6315,7 @@ version = "0.26.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f6d0975eaace0cf0fcadee4e4aaa5da15b5c079146f2cffb67c113be122bf37"
 dependencies = [
- "rustls 0.23.19",
+ "rustls 0.23.20",
  "tokio",
 ]
 
@@ -6413,14 +6407,14 @@ dependencies = [
 
 [[package]]
 name = "tower"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2873938d487c3cfb9aed7546dc9f2711d867c9f90c46b889989a2cb84eba6b4f"
+checksum = "d039ad9159c98b70ecfd540b2573b97f7f52c3e8d9f8ad57a24b916a536975f9"
 dependencies = [
  "futures-core",
  "futures-util",
  "pin-project-lite",
- "sync_wrapper 0.1.2",
+ "sync_wrapper",
  "tokio",
  "tower-layer",
  "tower-service",
@@ -6437,7 +6431,7 @@ dependencies = [
  "bytes",
  "http 1.2.0",
  "pin-project-lite",
- "tower 0.5.1",
+ "tower 0.5.2",
  "tower-layer",
  "tower-service",
 ]
@@ -7493,9 +7487,9 @@ checksum = "3f423a2c17029964870cfaabb1f13dfab7d092a62a29a89264f4d36990ca414a"
 
 [[package]]
 name = "zune-jpeg"
-version = "0.4.13"
+version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16099418600b4d8f028622f73ff6e3deaabdff330fb9a2a131dea781ee8b0768"
+checksum = "99a5bab8d7dedf81405c4bb1f2b83ea057643d9cb28778cea9eecddeedd2e028"
 dependencies = [
  "zune-core",
 ]

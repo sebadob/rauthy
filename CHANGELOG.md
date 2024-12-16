@@ -4,9 +4,9 @@
 
 ### Changes
 
-Even though not recommended at all, it is not possible to opt-out of the `refresh_token` nbf claim, and disable it.
+Even though not recommended at all, it is now possible to opt-out of the `refresh_token` nbf claim, and disable it.
 
-By default, A `refresh_token` will not valid before `access_token_lifetime - 60 seconds`, but some (bad) client
+By default, A `refresh_token` will not be valid before `access_token_lifetime - 60 seconds`, but some (bad) client
 implementations try to refresh `access_tokens` while they are still valid for a long time. To opt-out, you get a new
 config variable:
 
@@ -28,7 +28,7 @@ config variable:
 DISABLE_REFRESH_TOKEN_NBF=false
 ```
 
-[]()
+[#651](https://github.com/sebadob/rauthy/pull/653)
 
 ## v0.27.1
 

@@ -256,6 +256,10 @@ Error: {}
     }
 
     actix.join().unwrap().unwrap();
+
+    // sleep 1 sec before shutting down the raft -> makes k8s rolling releases a bit smoother
+    // as we can't utilize readiness probes because of a chicken-and-egg problem
+    time::sleep(Duration::from_secs(2)).await;
     DB::client().shutdown().await.unwrap();
 
     Ok(())
