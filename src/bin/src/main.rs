@@ -213,7 +213,7 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
             warn!(
                 r#"
 
-Error looking up PasswordPolicy - this is most probably a know 0.27.0 bug.
+Error looking up PasswordPolicy - this is most probably a known 0.27.0 bug.
 Inserting default Policy to fix it.
 You should visit the Admin UI -> Config -> Password Policy and adjust it to your needs.
 
@@ -256,6 +256,10 @@ Error: {}
     }
 
     actix.join().unwrap().unwrap();
+
+    // sleep 1 sec before shutting down the raft -> makes k8s rolling releases a bit smoother
+    // as we can't utilize readiness probes because of a chicken-and-egg problem
+    time::sleep(Duration::from_secs(2)).await;
     DB::client().shutdown().await.unwrap();
 
     Ok(())

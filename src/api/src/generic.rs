@@ -612,8 +612,6 @@ pub async fn get_health() -> impl Responder {
 )]
 #[get("/ready")]
 pub async fn get_ready() -> impl Responder {
-    // TODO we probably only want to return OK, because with Hiqlite, we would not even get here
-    // if it would not be ready.
     HttpResponse::Ok().finish()
 }
 
