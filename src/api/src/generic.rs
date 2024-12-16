@@ -601,9 +601,6 @@ pub async fn get_health() -> impl Responder {
 }
 
 /// Ready endpoint for kubernetes / docker ready checks.
-///
-/// Will always return 503 during the first 5 seconds after startup to give this node a chance to
-/// join an existing Raft cluster.
 #[utoipa::path(
     get,
     path = "/ready",
