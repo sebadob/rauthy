@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.27.2
 
 ### Changes
 
@@ -29,6 +29,13 @@ DISABLE_REFRESH_TOKEN_NBF=false
 ```
 
 [#651](https://github.com/sebadob/rauthy/pull/653)
+
+### Bugfix
+
+The Rauthy deployment could get stuck in Kubernetes when you were running a HA-Cluster with Postgres as your database
+of choice. The cache raft re-join had an issue sometimes because of a race condition, which needed a full restart of the
+cluster. This has been fixed in [hiqlite-0.3.2](https://github.com/sebadob/hiqlite/releases/tag/v0.3.2) and the
+dependency has been bumped.
 
 ## v0.27.1
 
