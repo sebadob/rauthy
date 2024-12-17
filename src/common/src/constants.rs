@@ -224,7 +224,124 @@ pub static DEVICE_GRANT_RATE_LIMIT: LazyLock<Option<u32>> = LazyLock::new(|| {
         .map(|rl| {
             rl.parse::<u32>()
                 .expect("DEVICE_GRANT_RATE_LIMIT cannot be parsed as u32")
-        })
+        }).ok();
+    pub static ref DEVICE_GRANT_RATE_LIMIT: Option<u32> = env::var("DEVICE_GRANT_RATE_LIMIT")
+        .map(|rl| rl.parse::<u32>()
+        .expect("DEVICE_GRANT_RATE_LIMIT cannot be parsed to u32 - bad format"))
+        .ok();
+    pub static ref DEVICE_GRANT_POLL_INTERVAL: u8 = env::var("DEVICE_GRANT_POLL_INTERVAL")
+        .unwrap_or_else(|_| String::from("5"))
+        .parse::<u8>()
+        .expect("DEVICE_GRANT_POLL_INTERVAL cannot be parsed to u8 - bad format");
+    pub static ref DEVICE_GRANT_REFRESH_TOKEN_LIFETIME: u16 = env::var("DEVICE_GRANT_REFRESH_TOKEN_LIFETIME")
+       .unwrap_or_else(|_| String::from("72"))
+       .parse::<u16>()
+       .expect("DEVICE_GRANT_REFRESH_TOKEN_LIFETIME cannot be parsed to u16 - bad format");
+
+    pub static ref DPOP_TOKEN_ENDPOINT: Uri = {
+        let scheme = if *DEV_MODE && *DEV_DPOP_HTTP { "http" } else { "https" };
+        let uri = format!("{}://{}/auth/v1/oidc/token", scheme, *PUB_URL);
+        Uri::from_str(&uri).unwrap()
+    };
+    pub static ref DPOP_FORCE_NONCE: bool = env::var("DPOP_NONCE_FORCE")
+        .unwrap_or_else(|_| String::from("true"))
+        .parse::<bool>()
+        .expect("Cannot parse DPOP_FORCE_NONCE to bool");
+
+    pub static ref ENABLE_DYN_CLIENT_REG: bool = env::var("ENABLE_DYN_CLIENT_REG")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("ENABLE_DYN_CLIENT_REG cannot be parsed to bool - bad format");
+    pub static ref DYN_CLIENT_REG_TOKEN: Option<String> = env::var("DYN_CLIENT_REG_TOKEN").ok();
+    pub static ref DYN_CLIENT_DEFAULT_TOKEN_LIFETIME: i32 = env::var("DYN_CLIENT_DEFAULT_TOKEN_LIFETIME")
+        .unwrap_or_else(|_| String::from("1800"))
+        .parse::<i32>()
+        .expect("DYN_CLIENT_DEFAULT_TOKEN_LIFETIME cannot be parsed to i32 - bad format");
+    pub static ref DYN_CLIENT_SECRET_AUTO_ROTATE: bool = env::var("DYN_CLIENT_SECRET_AUTO_ROTATE")
+        .unwrap_or_else(|_| String::from("true"))
+        .parse::<bool>()
+        .expect("DYN_CLIENT_SECRET_AUTO_ROTATE cannot be parsed to bool - bad format");
+    pub static ref DYN_CLIENT_CLEANUP_INTERVAL: u64 = env::var("DYN_CLIENT_CLEANUP_INTERVAL")
+        .unwrap_or_else(|_| String::from("60"))
+        .parse::<u64>()
+        .expect("DYN_CLIENT_CLEANUP_INTERVAL cannot be parsed to u64 - bad format");
+    pub static ref DYN_CLIENT_CLEANUP_MINUTES: i64 = env::var("DYN_CLIENT_CLEANUP_MINUTES")
+        .unwrap_or_else(|_| String::from("60"))
+        .parse::<i64>()
+        .expect("DYN_CLIENT_CLEANUP_MINUTES cannot be parsed to i64 - bad format");
+    pub static ref DYN_CLIENT_RATE_LIMIT_SEC: u64 = env::var("DYN_CLIENT_RATE_LIMIT_SEC")
+        .unwrap_or_else(|_| String::from("60"))
+        .parse::<u64>()
+        .expect("DYN_CLIENT_RATE_LIMIT_SEC cannot be parsed to u64 - bad format");
+
+    pub static ref ENABLE_EPHEMERAL_CLIENTS: bool = env::var("ENABLE_EPHEMERAL_CLIENTS")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("ENABLE_EPHEMERAL_CLIENTS cannot be parsed to bool - bad format");
+    pub static ref ENABLE_WEB_ID: bool = env::var("ENABLE_WEB_ID")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("ENABLE_WEB_ID cannot be parsed to bool - bad format");
+    pub static ref ENABLE_SOLID_AUD: bool = env::var("ENABLE_SOLID_AUD")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("ENABLE_SOLID_AUD cannot be parsed to bool - bad format");
+    pub static ref EPHEMERAL_CLIENTS_FORCE_MFA: bool = env::var("EPHEMERAL_CLIENTS_FORCE_MFA")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("EPHEMERAL_CLIENTS_FORCE_MFA cannot be parsed to bool - bad format");
+    pub static ref EPHEMERAL_CLIENTS_ALLOWED_FLOWS: String = env::var("EPHEMERAL_CLIENTS_ALLOWED_FLOWS")
+            .unwrap_or_else(|_| String::from("authorization_code"))
+            .split(' ')
+            .map(|flow| {
+                let flow = flow.trim();
+                if !RE_GRANT_TYPES_EPHEMERAL.is_match(flow) {
+                    panic!("unknown EPHEMERAL_CLIENTS_ALLOWED_FLOWS: {}", flow)
+                }
+                flow.to_string()
+            })
+            .collect::<Vec<String>>()
+            .join(",");
+    pub static ref EPHEMERAL_CLIENTS_ALLOWED_SCOPES: String = env::var("EPHEMERAL_CLIENTS_ALLOWED_SCOPES")
+            .unwrap_or_else(|_| String::from("openid profile email webid"))
+            .split(' ')
+            .filter(|scope| !scope.is_empty())
+            .map(|scope| scope.to_string())
+            .collect::<Vec<String>>()
+            .join(",");
+
+    pub static ref EXPERIMENTAL_FED_CM_ENABLE: bool = env::var("EXPERIMENTAL_FED_CM_ENABLE")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("EXPERIMENTAL_FED_CM_ENABLE cannot be parsed to bool - bad format");
+
+    pub static ref ATPROTO_ENABLE: bool = env::var("ATPROTO_ENABLE")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("ATPROTO_ENABLE cannot be parsed to bool - bad format");
+
+    pub static ref REFRESH_TOKEN_LIFETIME: u16 = env::var("REFRESH_TOKEN_LIFETIME")
+       .unwrap_or_else(|_| String::from("48"))
+       .parse::<u16>()
+       .expect("REFRESH_TOKEN_LIFETIME cannot be parsed to u16 - bad format");
+
+    pub static ref PROXY_MODE: bool = env::var("PROXY_MODE")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .unwrap_or(true);
+    pub static ref TRUSTED_PROXIES: Vec<cidr::IpCidr> = build_trusted_proxies();
+
+    pub static ref OPEN_USER_REG: bool = env::var("OPEN_USER_REG")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("OPEN_USER_REG cannot be parsed to bool - bad format");
+    pub static ref USER_REG_DOMAIN_RESTRICTION: Option<String> = {
+        match env::var("USER_REG_DOMAIN_RESTRICTION") {
+            Err(_) => None,
+            Ok(domain) => Some(domain)
+        }
+    };
+    pub static ref USER_REG_DOMAIN_BLACKLIST: Option<Vec<String>> = env::var("USER_REG_DOMAIN_BLACKLIST")
         .ok()
 });
 pub static DEVICE_GRANT_POLL_INTERVAL: LazyLock<u8> = LazyLock::new(|| {

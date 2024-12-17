@@ -6,6 +6,7 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use rauthy_api_types::{atproto, auth_providers::ProviderLookupResponse};
+use rauthy_common::constants::ATPROTO_ENABLE;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::{
     app_state::AppState,
@@ -24,6 +25,8 @@ use crate::{map_auth_step, ReqPrincipal};
 )]
 #[get("/atproto/client_metadata")]
 pub async fn get_client_metadata(data: web::Data<AppState>) -> Result<HttpResponse, ErrorResponse> {
+    is_atproto_enabled()?;
+
     Ok(HttpResponse::Ok()
         .insert_header((
             header::ACCESS_CONTROL_ALLOW_ORIGIN,
@@ -48,6 +51,7 @@ pub async fn post_login(
     payload: Json<atproto::LoginRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
+    is_atproto_enabled()?;
     principal.validate_session_auth_or_init()?;
 
     let payload = payload.into_inner();
@@ -81,6 +85,7 @@ pub async fn post_callback(
     payload: Query<atproto::CallbackRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
+    is_atproto_enabled()?;
     principal.validate_session_auth_or_init()?;
 
     let payload = payload.into_inner();
@@ -102,4 +107,16 @@ pub async fn post_callback(
     })?;
 
     Ok(resp)
+}
+
+#[inline(always)]
+fn is_atproto_enabled() -> Result<(), ErrorResponse> {
+    if *ATPROTO_ENABLE {
+        Ok(())
+    } else {
+        Err(ErrorResponse::new(
+            ErrorResponseType::Internal,
+            "The atproto client is disabled on this instance",
+        ))
+    }
 }
