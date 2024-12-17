@@ -7,12 +7,13 @@ use actix_web::rt::System;
 use actix_web::{middleware, web, App, HttpServer};
 use actix_web_prom::PrometheusMetricsBuilder;
 use cryptr::EncKeys;
+use hiqlite::params;
 use prometheus::Registry;
 use rauthy_common::constants::{
     APP_START, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
 };
 use rauthy_common::utils::UseDummyAddress;
-use rauthy_common::{is_sqlite, password_hasher};
+use rauthy_common::{is_hiqlite, is_sqlite, password_hasher};
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
     api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
@@ -25,6 +26,7 @@ use rauthy_middlewares::principal::RauthyPrincipalMiddleware;
 use rauthy_models::app_state::AppState;
 use rauthy_models::database::DB;
 use rauthy_models::email::EMail;
+use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::events::event::Event;
 use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::listener::EventListener;
@@ -39,7 +41,7 @@ use std::time::Duration;
 use std::{env, thread};
 use tokio::sync::mpsc;
 use tokio::time;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 use utoipa_swagger_ui::SwaggerUi;
 
 mod dummy_data;
@@ -102,9 +104,8 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
     }
 
     debug!("Starting the persistence layer");
-    // Keep this check in place until v1.0.0 as info for migrations from older versions.
+    // TODO Keep this check in place until v0.28.0 as info for migrations from older versions.
     if is_sqlite() {
-        // TODO add link to release notes / migration instruction link after
         // Hiqlite migration has been finished.
         panic!(
             r#"
@@ -128,8 +129,8 @@ to set
 
         HIQLITE=true
 
-Take a look at the changelog for more detailed information:
-https://github.com/sebadob/rauthy/blob/main/CHANGELOG.md#dropped-sqlx-sqlite-in-favor-of-hiqlite
+Take a look at the release notes for more detailed information:
+https://github.com/sebadob/rauthy/releases/tag/v0.27.0
 "#
         );
     }
@@ -199,6 +200,43 @@ https://github.com/sebadob/rauthy/blob/main/CHANGELOG.md#dropped-sqlx-sqlite-in-
         }
     };
 
+    // TODO remove this block check with the next minor version.
+    // 0.27.0 had a bug that could have inserted NULL for password policy on update.
+    if is_hiqlite() {
+        let mut row = DB::client()
+            .query_raw_one(
+                "SELECT data FROM config WHERE id = 'password_policy'",
+                params!(),
+            )
+            .await?;
+        if let Err(err) = row.try_get::<Vec<u8>>("data") {
+            warn!(
+                r#"
+
+Error looking up PasswordPolicy - this is most probably a known 0.27.0 bug.
+Inserting default Policy to fix it.
+You should visit the Admin UI -> Config -> Password Policy and adjust it to your needs.
+
+Error: {}
+"#,
+                err
+            );
+            PasswordPolicy {
+                length_min: 14,
+                length_max: 128,
+                include_lower_case: Some(1),
+                include_upper_case: Some(1),
+                include_digits: Some(1),
+                include_special: Some(1),
+                valid_days: Some(180),
+                not_recently_used: Some(3),
+            }
+            .save()
+            .await
+            .expect("Cannot fix default PasswordPolicy issue");
+        }
+    }
+
     // actix web
     let state = app_state.clone();
     let actix = thread::spawn(move || {
@@ -218,6 +256,10 @@ https://github.com/sebadob/rauthy/blob/main/CHANGELOG.md#dropped-sqlx-sqlite-in-
     }
 
     actix.join().unwrap().unwrap();
+
+    // sleep 1 sec before shutting down the raft -> makes k8s rolling releases a bit smoother
+    // as we can't utilize readiness probes because of a chicken-and-egg problem
+    time::sleep(Duration::from_secs(2)).await;
     DB::client().shutdown().await.unwrap();
 
     Ok(())

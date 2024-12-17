@@ -170,6 +170,10 @@ lazy_static! {
         .unwrap_or_else(|_| String::from("false"))
         .parse::<bool>()
         .expect("DANGER_DISABLE_INTROSPECT_AUTH cannot be parsed to bool - bad format");
+    pub static ref DISABLE_REFRESH_TOKEN_NBF: bool = env::var("DISABLE_REFRESH_TOKEN_NBF")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("DISABLE_REFRESH_TOKEN_NBF cannot be parsed to bool - bad format");
 
     pub static ref SEC_HEADER_BLOCK: bool = env::var("SEC_HEADER_BLOCK")
         .unwrap_or_else(|_| String::from("true"))

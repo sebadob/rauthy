@@ -251,7 +251,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.27.0
+          image: ghcr.io/sebadob/rauthy:0.27.1
           imagePullPolicy: IfNotPresent
           securityContext:
             # User ID 10001 is actually built into the container at the creation for
@@ -351,17 +351,6 @@ spec:
               subPath: rauthy.cfg
               name: rauthy-config
               readOnly: true
-          readinessProbe:
-            httpGet:
-              # You may need to adjust this, if you decide to start in https only
-              # mode or use another port
-              scheme: HTTP
-              port: 8080
-              #scheme: HTTPS
-              #port: 8443
-              path: /auth/v1/ping
-            initialDelaySeconds: 1
-            periodSeconds: 10
           livenessProbe:
             httpGet:
               # You may need to adjust this, if you decide to start in https only

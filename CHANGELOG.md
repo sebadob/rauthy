@@ -1,5 +1,55 @@
 # Changelog
 
+## v0.27.2
+
+### Changes
+
+Even though not recommended at all, it is now possible to opt-out of the `refresh_token` nbf claim, and disable it.
+
+By default, A `refresh_token` will not be valid before `access_token_lifetime - 60 seconds`, but some (bad) client
+implementations try to refresh `access_tokens` while they are still valid for a long time. To opt-out, you get a new
+config variable:
+
+```
+# By default, `refresh_token`s will have an `nbf` claim, making them valid
+# at `access_token_lifetime - 60 seconds`. Any usage before this time will
+# result in invalidation of not only the token itself, but also all other
+# linked sessions and tokens for this user to prevent damage in case a client
+# leaked the token by accident.
+# However, there are bad / lazy client implementations that do not respect
+# either `nbf` in the `refresh_token`, or the `exp` claim in `access_token`
+# and will refresh early while the current access_token is still valid.
+# This does not only waste resources and time, but also makes it possible
+# to have multiple valid `access_token`s at the same time for the same
+# session. You should only disable the `nbf` claim if you have a good
+# reasons to do so.
+# If disabled, the `nbf` claim will still exist, but always set to *now*.
+# default: false
+DISABLE_REFRESH_TOKEN_NBF=false
+```
+
+[#651](https://github.com/sebadob/rauthy/pull/653)
+
+### Bugfix
+
+The Rauthy deployment could get stuck in Kubernetes when you were running a HA-Cluster with Postgres as your database
+of choice. The cache raft re-join had an issue sometimes because of a race condition, which needed a full restart of the
+cluster. This has been fixed in [hiqlite-0.3.2](https://github.com/sebadob/hiqlite/releases/tag/v0.3.2) and the
+dependency has been bumped.
+
+## v0.27.1
+
+### Bugfix
+
+With the big migration to [Hiqlite](https://github.com/sebadob/hiqlite) under the hood, a bug has been introduced with
+`v0.27.0` that made it possible to end up with a `NULL` value for the password policy after an update. Which would
+result in errors further down the road after a restart, because the policy could not be read again.
+
+This version fixes the issue itself and checks at startup if the database needs a fix for this issue because of an
+already existing `NULL` value. In this case, the default password policy will be inserted correctly at startup.
+
+[#646](https://github.com/sebadob/rauthy/pull/646)
+
 ## v0.27.0
 
 ### Breaking

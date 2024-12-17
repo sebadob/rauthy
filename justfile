@@ -229,6 +229,9 @@ test-backend-stop:
       rm {{ file_test_pid }}
     fi
 
+    # we need to sleep 5 seconds because the lockfiles will take 4.5 seconds to be deleted
+    sleep 5
+
 # runs a single test with hiqlite - needs the backend being started manually
 test *test:
     #!/usr/bin/env bash
@@ -341,11 +344,15 @@ build-docs:
     set -euxo pipefail
     cd book
     mdbook build -d ../docs
+    git add ../docs/*
 
 # Build the final container image.
 build image="ghcr.io/sebadob/rauthy": build-ui
     #!/usr/bin/env bash
     set -euxo pipefail
+
+    # make sure base image is up to date
+    docker pull gcr.io/distroless/cc-debian12:nonroot
 
     mkdir -p out/empty
 

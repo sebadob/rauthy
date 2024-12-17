@@ -907,6 +907,7 @@ pub async fn post_token(
             Ok(resp)
         }
         Err(err) => {
+            error!("{}", err.message);
             if !has_password_been_hashed {
                 return Err(err);
             }
