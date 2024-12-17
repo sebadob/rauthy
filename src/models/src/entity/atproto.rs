@@ -1,4 +1,4 @@
-use std::future::Future;
+use std::{future::Future, ops::Deref, sync::Arc};
 
 use actix_web::{
     cookie::Cookie,
@@ -7,10 +7,15 @@ use actix_web::{
 };
 use atrium_api::{agent::Agent, com::atproto::server::get_session, types::Object};
 use atrium_identity::{
-    did::CommonDidResolver,
-    handle::{AtprotoHandleResolver, DnsTxtResolver as DnsTxtResolverTrait},
+    did::{CommonDidResolver, CommonDidResolverConfig, DEFAULT_PLC_DIRECTORY_URL},
+    handle::{
+        AtprotoHandleResolver, AtprotoHandleResolverConfig, DnsTxtResolver as DnsTxtResolverTrait,
+    },
 };
-use atrium_oauth_client::{AuthorizeOptions, CallbackParams, DefaultHttpClient, OAuthClient};
+use atrium_oauth_client::{
+    AtprotoClientMetadata, AuthMethod, AuthorizeOptions, CallbackParams, DefaultHttpClient,
+    GrantType, KnownScope, OAuthClient, OAuthClientConfig, OAuthResolverConfig, Scope,
+};
 use cryptr::utils::secure_random_alnum;
 use hickory_resolver::{proto::rr::rdata::TXT, TokioAsyncResolver};
 use rauthy_api_types::atproto;
@@ -29,7 +34,7 @@ use crate::{
     entity::{
         auth_codes::AuthCode, auth_providers::AuthProviderLinkCookie, clients::Client, users::User,
     },
-    AuthStep, AuthStepLoggedIn,
+    AuthStep, AuthStepLoggedIn, ListenScheme,
 };
 
 use super::{
@@ -37,12 +42,84 @@ use super::{
     sessions::Session,
 };
 
-pub type AtprotoClient = OAuthClient<
-    DB,
-    DB,
-    CommonDidResolver<DefaultHttpClient>,
-    AtprotoHandleResolver<DnsTxtResolver, DefaultHttpClient>,
->;
+#[derive(Clone)]
+pub struct AtprotoClient(
+    Arc<
+        OAuthClient<
+            DB,
+            DB,
+            CommonDidResolver<DefaultHttpClient>,
+            AtprotoHandleResolver<DnsTxtResolver, DefaultHttpClient>,
+        >,
+    >,
+);
+
+impl std::fmt::Debug for AtprotoClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("AtprotoClient").finish()
+    }
+}
+
+impl AtprotoClient {
+    pub fn new(
+        listen_scheme: &ListenScheme,
+        public_url: &str,
+    ) -> Result<Self, atrium_oauth_client::Error> {
+        let http_client = Arc::new(DefaultHttpClient::default());
+
+        let listen_scheme = match listen_scheme {
+            ListenScheme::Http | ListenScheme::UnixHttp => "http",
+            ListenScheme::Https | ListenScheme::HttpHttps | ListenScheme::UnixHttps => "https",
+        };
+
+        let client_metadata = AtprotoClientMetadata {
+            client_id: format!("{listen_scheme}://{public_url}/auth/v1/atproto/client_metadata"),
+            client_uri: String::new(),
+            redirect_uris: vec![format!(
+                "{listen_scheme}://{public_url}/auth/v1/atproto/callback"
+            )],
+            token_endpoint_auth_method: AuthMethod::None,
+            grant_types: vec![GrantType::AuthorizationCode],
+            scopes: vec![Scope::Known(KnownScope::Atproto)],
+            jwks_uri: None,
+            token_endpoint_auth_signing_alg: None,
+        };
+
+        let config = OAuthClientConfig {
+            client_metadata: client_metadata.clone(),
+            keys: None,
+            resolver: OAuthResolverConfig {
+                did_resolver: CommonDidResolver::new(CommonDidResolverConfig {
+                    plc_directory_url: DEFAULT_PLC_DIRECTORY_URL.to_string(),
+                    http_client: http_client.clone(),
+                }),
+                handle_resolver: AtprotoHandleResolver::new(AtprotoHandleResolverConfig {
+                    dns_txt_resolver: DnsTxtResolver::default(),
+                    http_client: http_client.clone(),
+                }),
+                authorization_server_metadata: Default::default(),
+                protected_resource_metadata: Default::default(),
+            },
+            state_store: DB,
+            session_store: DB,
+        };
+
+        OAuthClient::new(config).map(Arc::new).map(AtprotoClient)
+    }
+}
+
+impl Deref for AtprotoClient {
+    type Target = OAuthClient<
+        DB,
+        DB,
+        CommonDidResolver<DefaultHttpClient>,
+        AtprotoHandleResolver<DnsTxtResolver, DefaultHttpClient>,
+    >;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 pub struct DnsTxtResolver {
     resolver: TokioAsyncResolver,
