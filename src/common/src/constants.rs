@@ -363,6 +363,11 @@ lazy_static! {
         .parse::<bool>()
         .expect("EXPERIMENTAL_FED_CM_ENABLE cannot be parsed to bool - bad format");
 
+    pub static ref ATPROTO_ENABLE: bool = env::var("ATPROTO_ENABLE")
+        .unwrap_or_else(|_| String::from("false"))
+        .parse::<bool>()
+        .expect("ATPROTO_ENABLE cannot be parsed to bool - bad format");
+
     pub static ref REFRESH_TOKEN_LIFETIME: u16 = env::var("REFRESH_TOKEN_LIFETIME")
        .unwrap_or_else(|_| String::from("48"))
        .parse::<u16>()

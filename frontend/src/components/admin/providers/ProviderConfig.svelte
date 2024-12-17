@@ -58,7 +58,7 @@
         token_endpoint: yup.string().url(),
         userinfo_endpoint: yup.string().url(),
 
-        name: yup.string().trim().matches(REGEX_CLIENT_NAME, "Can only contain: 'a-zA-Z0-9À-ÿ- ', length max: 128"),
+        name: yup.string().trim().matches(REGEX_CLIENT_NAME, "Can only contain: 'a-zA-Z0-9À-ÿ- ', length max: 128").not(["atproto"], "Cannot be reserved"),
         client_id: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         client_secret: yup.string().trim().max(256, "Max 256 characters"),
         scope: yup.string().trim().matches(REGEX_PROVIDER_SCOPE, "Can only contain: 'a-zA-Z0-9-_/ ', length max: 128"),

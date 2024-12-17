@@ -68,6 +68,13 @@ pub async fn post_provider(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
 
+    if payload.name == "atproto" {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Must not contain a reserved name".to_string(),
+        ));
+    }
+
     if !payload.use_pkce && payload.client_secret.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -260,6 +267,13 @@ pub async fn put_provider(
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
+
+    if payload.name == "atproto" {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Must not contain a reserved name".to_string(),
+        ));
+    }
 
     if !payload.use_pkce && payload.client_secret.is_none() {
         return Err(ErrorResponse::new(
