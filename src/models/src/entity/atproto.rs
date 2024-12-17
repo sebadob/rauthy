@@ -325,21 +325,21 @@ impl AtprotoCallback for AuthProviderCallback {
                         if link.provider_id != "atproto" {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "bad provider_id in link cookie".to_string(),
+                                "bad provider_id in link cookie",
                             ));
                         }
 
                         if link.user_id != user.id {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "bad user_id in link cookie".to_string(),
+                                "bad user_id in link cookie",
                             ));
                         }
 
                         if link.user_email != user.email {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "Invalid E-Mail".to_string(),
+                                "Invalid E-Mail",
                             ));
                         }
 
@@ -381,10 +381,7 @@ impl AtprotoCallback for AuthProviderCallback {
                     Some(user.failed_login_attempts.unwrap_or_default() + 1);
                 user.save(old_email).await?;
 
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Forbidden,
-                    err.to_string(),
-                ));
+                return Err(ErrorResponse::new(ErrorResponseType::Forbidden, err));
             }
 
             if Some(user.email.as_str()) != email.as_deref() {
