@@ -343,7 +343,7 @@
 
             {#if webauthnData}
                 <WebauthnRequest
-                        bind:t
+                        {t}
                         bind:data={webauthnData}
                         onSuccess={onWebauthnSuccess}
                         onError={onWebauthnError}
@@ -370,7 +370,7 @@
                             bind:bindThis={passwordInput}
                             name="rauthyPassword"
                             bind:value={formValues.password}
-                            bind:error={formErrors.password}
+                            error={formErrors.password}
                             autocomplete="current-password"
                             placeholder={t.password}
                             disabled={tooManyRequests || clientMfaForce}
