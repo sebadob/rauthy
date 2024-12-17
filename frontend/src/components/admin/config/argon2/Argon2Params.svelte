@@ -9,7 +9,7 @@
     let numCpus = $state();
     let isLoading = true;
 
-    onMount(async () => {
+    onMount(() => {
         fetchData();
     });
 

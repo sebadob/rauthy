@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import Button from "$lib/Button.svelte";
     import {
@@ -18,7 +18,7 @@
     import ImageUploadRaw from "../../ImageUploadRaw.svelte";
     import ClientLogo from "../../ClientLogo.svelte";
 
-    let { client = {} } = $props();
+    let {client = {}} = $props();
     let colors = $state();
     let clientLogo = $state();
 
@@ -44,7 +44,6 @@
         text: yup.string().trim().matches(REGEX_CSS_COLOR, "only valid CSS color"),
         bg: yup.string().trim().matches(REGEX_CSS_COLOR, "only valid CSS color"),
     });
-
 
 
     onMount(async () => {
@@ -384,7 +383,7 @@
 
         {#if colors}
             <div class="preview">
-                <ClientBrandingPreview bind:colors clientId={client.id} bind:isLoading/>
+                <ClientBrandingPreview bind:colors clientId={client.id} {isLoading}/>
             </div>
         {/if}
     </div>

@@ -21,8 +21,11 @@
         width = $bindable(),
         autocomplete = $bindable('on'),
         children,
+        validate = $bindable(),
         ...rest
     } = $props();
+    
+    validate = validateValue;
 
     let error = $state('');
 
@@ -31,15 +34,15 @@
     async function handleInput() {
         await tick();
         dispatch('input', true);
-        validate();
+        validateValue();
     }
 
     async function handleBlur() {
         dispatch('blur', true);
-        validate();
+        validateValue();
     }
 
-    export function validate() {
+    export function validateValue() {
         error = '';
         if (!value) {
             // 'required' will be validated in the wrapping component, since a single instance has not idea
@@ -57,11 +60,11 @@
 
 <div transition:fade|global="{{ duration: 200 }}">
     <Input
-            bind:width
+            {width}
             {name}
             bind:value
             bind:error
-            bind:autocomplete
+            {autocomplete}
             on:input={handleInput}
             on:blur={handleBlur}
             {...rest}

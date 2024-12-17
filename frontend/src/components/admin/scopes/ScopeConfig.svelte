@@ -10,7 +10,7 @@
     import ItemTiles from "$lib/itemTiles/ItemTiles.svelte";
     import Input from "$lib/inputs/Input.svelte";
 
-    let {attrs, scope = $bindable({}), onSave = $bindable()} = $props();
+    let {attrs = $bindable([]), scope = $bindable({}), onSave = $bindable()} = $props();
 
     let isLoading = false;
     let err = $state('');

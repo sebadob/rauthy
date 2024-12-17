@@ -23,7 +23,7 @@
         name = getKey(),
         disabled = false,
         error = '',
-        value = $bindable('' || null),
+        value = $bindable(),
         width = '32rem',
         fixed = true,
         children,
@@ -72,7 +72,7 @@
             oninput={onInput}
             onfocus={handleOnFocus}
             onblur={onBlur}
-></textarea>
+    ></textarea>
 
     {#if error}
         <div

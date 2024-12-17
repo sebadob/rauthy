@@ -86,22 +86,22 @@
         </div>
 
         <div class="container">
-            <AccNav bind:t bind:selected showWide/>
+            <AccNav {t} bind:selected />
 
             <div class="innerPhone">
                 <div style="opacity: {$op}">
                     {#if content === t.navInfo}
-                        <AccInfo bind:t bind:user bind:webIdData viewModePhone bind:authProvider/>
+                        <AccInfo {t} bind:user {webIdData} viewModePhone {authProvider}/>
                     {:else if content === t.navEdit}
-                        <AccEdit bind:t bind:user viewModePhone/>
+                        <AccEdit {t} bind:user viewModePhone/>
                     {:else if content === t.navPassword}
-                        <AccPassword bind:t bind:user bind:authProvider viewModePhone/>
+                        <AccPassword {t} {user} {authProvider} viewModePhone/>
                     {:else if content === t.navMfa}
-                        <AccMFA bind:t bind:sessionInfo bind:user/>
+                        <AccMFA {t} {sessionInfo} {user}/>
                     {:else if content === 'WebID'}
-                        <AccWebId bind:t bind:webIdData viewModePhone/>
+                        <AccWebId {t} bind:webIdData />
                     {:else if content === t.devices}
-                        <AccDevices bind:t bind:sessionInfo/>
+                        <AccDevices {t} bind:sessionInfo/>
                     {/if}
                 </div>
             </div>
@@ -116,22 +116,22 @@
         </div>
 
         <div class="container">
-            <AccNav bind:t bind:selected showWebId={!!webIdData} showWide/>
+            <AccNav {t} bind:selected showWebId={!!webIdData} />
 
             <div class="inner">
                 <div style="opacity: {$op}">
                     {#if content === t.navInfo}
-                        <AccInfo bind:t bind:user bind:webIdData bind:authProvider/>
+                        <AccInfo {t} bind:user {webIdData} {authProvider}/>
                     {:else if content === t.navEdit}
-                        <AccEdit bind:t bind:user/>
+                        <AccEdit {t} bind:user/>
                     {:else if content === t.navPassword}
-                        <AccPassword bind:t bind:user bind:authProvider/>
+                        <AccPassword {t} {user} {authProvider}/>
                     {:else if content === t.navMfa}
-                        <AccMFA bind:t bind:sessionInfo bind:user/>
+                        <AccMFA {t} {sessionInfo} {user}/>
                     {:else if content === 'WebID'}
-                        <AccWebId bind:t bind:webIdData/>
+                        <AccWebId {t} bind:webIdData/>
                     {:else if content === t.devices}
-                        <AccDevices bind:t bind:sessionInfo/>
+                        <AccDevices {t} bind:sessionInfo/>
                     {/if}
                 </div>
             </div>

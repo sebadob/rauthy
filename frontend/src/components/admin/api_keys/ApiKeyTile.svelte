@@ -8,8 +8,10 @@
     import {formatDateFromTs} from "../../../utils/helpers.js";
     import ApiKeySecret from "./ApiKeySecret.svelte";
 
-    let { apiKey = $bindable({}), onSave = $bindable(() => {
-    }) } = $props();
+    let {
+        apiKey = $bindable({}), onSave = $bindable(() => {
+        })
+    } = $props();
 
     let expandContainer = $state();
 
@@ -31,7 +33,7 @@
 
 <ExpandContainer bind:show={expandContainer}>
     {#snippet header()}
-        <div class="header" >
+        <div class="header">
             <div class="data">
                 {apiKey.name}
             </div>
@@ -47,22 +49,22 @@
     {/snippet}
 
     {#snippet body()}
-        <div >
+        <div>
             <TabBar labels={tabBarItems} bind:selected/>
 
             {#if selected === 'Config'}
                 <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
-                    <ApiKeyConfig bind:apiKey bind:onSave/>
+                    <ApiKeyConfig bind:apiKey {onSave}/>
                 </div>
 
             {:else if selected === 'Secret'}
                 <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
-                    <ApiKeySecret bind:apiKey/>
+                    <ApiKeySecret {apiKey}/>
                 </div>
 
             {:else if selected === 'Delete'}
                 <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
-                    <ApiKeyDelete bind:apiKey onSave={onDelete}/>
+                    <ApiKeyDelete {apiKey} onSave={onDelete}/>
                 </div>
             {/if}
         </div>

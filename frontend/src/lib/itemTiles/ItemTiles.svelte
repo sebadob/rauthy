@@ -11,7 +11,7 @@
      */
 
     /** @type {Props} */
-    let {items = $bindable([]), options = [], searchThreshold = $bindable(4)} = $props();
+    let {items = $bindable(), options = [], searchThreshold = $bindable(4)} = $props();
 
     let missing = $state([]);
 
@@ -20,6 +20,9 @@
     });
 
     async function addItem(item) {
+        if (!items) {
+            items = [];
+        }
         items.push(item);
         items = [...items];
         await computeMissing();

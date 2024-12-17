@@ -11,7 +11,7 @@
      */
 
     /** @type {Props} */
-    let { webIdData, viewModePhone = $bindable(false) } = $props();
+    let {webIdData, viewModePhone = $bindable(false)} = $props();
 
     let entries = $state();
 
@@ -79,12 +79,12 @@
 
 {#if entries}
     {#each entries as entry, c (c)}
-<!--                isKeyUnique={isKeyUnique}-->
-<!--                removeKey={remove}-->
+        <!--                isKeyUnique={isKeyUnique}-->
+        <!--                removeKey={remove}-->
         <AccWebIdEntry
                 removeEntry={remove}
-                bind:viewModePhone
-                bind:entry
+                {viewModePhone}
+                bind:entry={entries[c]}
         />
     {/each}
 {/if}

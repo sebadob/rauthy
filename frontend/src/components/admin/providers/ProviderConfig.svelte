@@ -176,7 +176,7 @@
                  placeholder="-----BEGIN CERTIFICATE-----
 -----END CERTIFICATE-----"
                  bind:value={provider.root_pem}
-                 bind:error={formErrors.root_pem}
+                 error={formErrors.root_pem}
          >
             Root Certificate in PEM format
         </Textarea>
@@ -289,7 +289,7 @@
     </div>
     <PasswordInput
             bind:value={provider.client_secret}
-            bind:error={formErrors.client_secret}
+            error={formErrors.client_secret}
             autocomplete="off"
             placeholder="Client Secret"
             on:input={validateForm}

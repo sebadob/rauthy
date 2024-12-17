@@ -20,7 +20,7 @@
         REGEX_STREET
     } from "../../../utils/constants.js";
     import {putUser} from "../../../utils/dataFetchingAdmin.js";
-    import {onMount} from "svelte";
+    import {onMount, untrack} from "svelte";
     import CheckIcon from "$lib/CheckIcon.svelte";
     import Input from "$lib/inputs/Input.svelte";
     import ItemTiles from "$lib/itemTiles/ItemTiles.svelte";
@@ -40,7 +40,7 @@
     let timer = $state();
     let language = $state(user.language.toUpperCase());
     let limitLifetime = $state(!!user.user_expires);
-    let userExpires = $state(limitLifetime ? formatDateFromTs(user.user_expires, true) : undefined);
+    let userExpires = $state(untrack(() => limitLifetime) ? formatDateFromTs(user.user_expires, true) : undefined);
 
     let allRoles = $state([]);
     globalRolesNames.subscribe(rls => {

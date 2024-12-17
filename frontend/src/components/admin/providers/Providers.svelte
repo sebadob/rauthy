@@ -7,7 +7,7 @@
     let err = $state('');
     let providers = $state([]);
 
-    onMount(async () => {
+    onMount(() => {
         fetchData();
     });
 

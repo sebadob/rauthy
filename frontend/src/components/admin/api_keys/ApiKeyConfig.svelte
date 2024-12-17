@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import * as yup from "yup";
     import {extractFormErrors, formatUtcTsFromDateInput} from "../../../utils/helpers.js";
@@ -14,7 +14,7 @@
 
     const minDate = new Date().toISOString().split('.')[0];
 
-    let { apiKey = $bindable({}), onSave } = $props();
+    let {apiKey = $bindable({}), onSave} = $props();
 
     let err = $state('');
     let success = $state(false);
@@ -110,7 +110,7 @@
         </div>
     {/if}
 
-    <ApiKeyAccessMatrix bind:apiKey bind:accessMatrix bind:finalize={finalizeMatrix} />
+    <ApiKeyAccessMatrix {apiKey} bind:accessMatrix bind:finalize={finalizeMatrix}/>
 
     <Button on:click={onSubmit} level={1} width="4rem">SAVE</Button>
 

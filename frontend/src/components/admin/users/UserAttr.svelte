@@ -11,7 +11,7 @@
     let success = $state(false);
     let isLoading = $state(false);
 
-    onMount(async () => {
+    onMount(() => {
         fetchBuildAttr();
     })
 

@@ -6,7 +6,7 @@
     import RoleConfig from "./RoleConfig.svelte";
     import RoleDelete from "./RoleDelete.svelte";
 
-    let { role = $bindable({}), onSave = $bindable() } = $props();
+    let {role = $bindable({}), onSave = $bindable()} = $props();
 
     let isLoading = false;
     let expandContainer = $state();
@@ -28,7 +28,7 @@
 
 <ExpandContainer bind:show={expandContainer}>
     {#snippet header()}
-        <div class="header" >
+        <div class="header">
             <Tooltip text="Role ID">
                 <div class="data font-mono">
                     {role.id}
@@ -44,17 +44,19 @@
     {/snippet}
 
     {#snippet body()}
-        <div >
+        <div>
             <TabBar labels={tabBarItems} bind:selected/>
 
             {#if selected === 'Config'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
                     <RoleConfig bind:role bind:onSave/>
                 </div>
 
             {:else if selected === 'Delete'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
-                    <RoleDelete bind:role onSave={onDelete}/>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
+                    <RoleDelete {role} onSave={onDelete}/>
                 </div>
             {/if}
         </div>

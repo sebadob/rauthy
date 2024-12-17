@@ -16,11 +16,12 @@
     /** @type {Props & { [key: string]: any }} */
     let {
         validation = $bindable({
-        required: false,
-        regex: undefined,
-        errMsg: '',
-    }),
-        values = $bindable([]),
+            required: false,
+            regex: undefined,
+            errMsg: '',
+        }),
+        values = $bindable(),
+        validate = $bindable(),
         width = '260px',
         optional = false,
         autocomplete = $bindable('on'),
@@ -28,12 +29,17 @@
         ...rest
     } = $props();
 
+    validate = validateValues;
+
     let err = $state('');
     let inputs = $state([]);
 
     const dispatch = createEventDispatcher();
 
     onMount(() => {
+        if (!values) {
+            values = [];
+        }
         for (let value of values) {
             inputs.push({
                 name: getKey(),
@@ -59,13 +65,13 @@
         }
 
         dispatch('input', true);
-        validate();
+        validateValues();
         values = getValues();
     }
 
     // can be called from the outside to get the values as an array
     export function getValues() {
-        validate();
+        validateValues();
         let res = [];
         for (let i = 0; i < inputs.length - 1; i++) {
             res.push(inputs[i].value);
@@ -74,7 +80,7 @@
     }
 
     // can be called from the outside to validate every input and returns true, if everything is ok
-    export function validate() {
+    export function validateValues() {
         if (validation.required && inputs.length === 1 && !inputs[0].value) {
             if (optional) {
                 return true;
@@ -100,8 +106,8 @@
     {#each inputs as input}
         <DynamicInputRow
                 width={"calc({width} - 20px)"}
-                bind:validation
-                bind:name={input.name}
+                {validation}
+                name={input.name}
                 bind:value={input.value}
                 bind:validate={input.validate}
                 bind:autocomplete

@@ -1,10 +1,10 @@
 <script>
-    import { run, self, createBubbler, stopPropagation } from 'svelte/legacy';
+    import {run, self, createBubbler, stopPropagation} from 'svelte/legacy';
 
     const bubble = createBubbler();
     import IconStop from "$lib/icons/IconStop.svelte";
 
-    
+
     /**
      * @typedef {Object} Props
      * @property {boolean} showModal
@@ -12,7 +12,7 @@
      */
 
     /** @type {Props} */
-    let { showModal = $bindable(), children } = $props();
+    let {showModal = $bindable(), children} = $props();
 
     /** @type {HTMLDialogElement} */
     let dialog = $state();
@@ -23,19 +23,20 @@
 </script>
 
 <!-- According to MDN docs, a dialog element must not have a tabindex -->
-<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 <dialog
+        role="none"
         bind:this={dialog}
         onclose={() => (showModal = false)}
         onclick={self(() => dialog.close())}
 >
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div onclick={stopPropagation(bubble('click'))}>
+    <div role="none" onclick={ev => ev.stopPropagation()}>
+        <!--    <div onclick={stopPropagation(bubble('click'))}>-->
         <div
                 role="button"
                 tabindex="0"
                 class="close"
                 onclick={() => dialog.close()}
+                onkeydown={() => dialog.close()}
         >
             <IconStop color="var(--col-err)" width={24}/>
         </div>

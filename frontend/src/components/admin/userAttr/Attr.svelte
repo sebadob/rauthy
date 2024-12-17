@@ -25,7 +25,7 @@
         },
     ];
 
-    onMount(async () => {
+    onMount(() => {
         fetchAttr();
     })
 

@@ -1,7 +1,9 @@
 <script>
     import {onMount} from "svelte";
 
-    let { apiKey, accessMatrix = $bindable() } = $props();
+    let {apiKey, accessMatrix = $bindable(), finalize = $bindable()} = $props();
+
+    finalize = finalizeMatrix;
 
     const GROUPS = [
         'Blacklist',
@@ -57,7 +59,7 @@
         }
     }
 
-    export function finalize() {
+    export function finalizeMatrix() {
         let access = [];
         for (let i = 0; i < GROUPS.length; i++) {
             let accessRights = [];

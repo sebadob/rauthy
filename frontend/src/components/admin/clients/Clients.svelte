@@ -27,7 +27,7 @@
         },
     ];
 
-    onMount(async () => {
+    onMount(() => {
         fetchClients();
         fetchScopes();
     })

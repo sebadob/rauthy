@@ -6,7 +6,7 @@
     import GroupConfig from "./GroupConfig.svelte";
     import GroupDelete from "./GroupDelete.svelte";
 
-    let { group = $bindable({}), onSave = $bindable() } = $props();
+    let {group = $bindable({}), onSave = $bindable()} = $props();
 
     let isLoading = false;
     let expandContainer = $state();
@@ -28,7 +28,7 @@
 
 <ExpandContainer bind:show={expandContainer}>
     {#snippet header()}
-        <div class="header" >
+        <div class="header">
             <Tooltip text="Group ID">
                 <div class="data font-mono">
                     {group.id}
@@ -44,17 +44,19 @@
     {/snippet}
 
     {#snippet body()}
-        <div >
+        <div>
             <TabBar labels={tabBarItems} bind:selected/>
 
             {#if selected === 'Config'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
-                    <GroupConfig bind:group bind:onSave/>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
+                    <GroupConfig bind:group {onSave}/>
                 </div>
 
             {:else if selected === 'Delete'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
-                    <GroupDelete bind:group onSave={onDelete}/>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
+                    <GroupDelete {group} onSave={onDelete}/>
                 </div>
             {/if}
         </div>

@@ -6,7 +6,7 @@
     import UserAttrConfig from "./AttrConfig.svelte";
     import UserAttrDelete from "./AttrDelete.svelte";
 
-    let { attr = $bindable({}), onSave = $bindable() } = $props();
+    let {attr = $bindable({}), onSave = $bindable()} = $props();
 
     let isLoading = false;
     let expandContainer = $state();
@@ -28,7 +28,7 @@
 
 <ExpandContainer bind:show={expandContainer}>
     {#snippet header()}
-        <div class="header" >
+        <div class="header">
             <Tooltip text="Custom Attribute Name">
                 <div class="data">
                     {attr.name}
@@ -38,17 +38,19 @@
     {/snippet}
 
     {#snippet body()}
-        <div >
+        <div>
             <TabBar labels={tabBarItems} bind:selected/>
 
             {#if selected === 'Config'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
-                    <UserAttrConfig bind:attr bind:onSave/>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
+                    <UserAttrConfig {attr} bind:onSave/>
                 </div>
 
             {:else if selected === 'Delete'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
-                    <UserAttrDelete bind:attr onSave={onDelete}/>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
+                    <UserAttrDelete {attr} onSave={onDelete}/>
                 </div>
             {/if}
         </div>

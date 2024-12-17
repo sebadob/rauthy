@@ -5,7 +5,7 @@
     import {slide} from "svelte/transition";
     import HiddenValueArea from "$lib/inputs/HiddenValueArea.svelte";
 
-    let { apiKey } = $props();
+    let {apiKey} = $props();
 
     let err = $state('');
     let secret = $state('');
@@ -37,7 +37,7 @@
     <Button
             on:click={generateSecret}
             level={!secret ? 1 : 3}
-            width={130}
+            width="130px"
     >
         GENERATE NEW
     </Button>

@@ -61,8 +61,8 @@
                 transition:slide|global={{ duration: 200 }}
         >
             {#if items.length > searchThreshold}
-                <div class="search">
-                    <SearchBar bind:items bind:resItems maxBarWidth={`${mindWidth}px`}/>
+                <div class="search" style:max-width={`${mindWidth}px`}>
+                    <SearchBar bind:items bind:resItems />
                 </div>
             {/if}
 

@@ -20,7 +20,7 @@
         }
     });
 
-    onMount(async () => {
+    onMount(() => {
         if (certs.length === 0) {
             fetchCerts();
         }

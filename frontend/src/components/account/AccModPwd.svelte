@@ -14,6 +14,7 @@
      * @property {string} [btnWidth]
      * @property {boolean} [hideCurrentPassword]
      * @property {any} inputWidth
+     * @property {() => Promise<boolean>} isValid
      */
 
     /** @type {Props} */
@@ -22,8 +23,11 @@
         formValues = $bindable({}),
         btnWidth = "4rem",
         hideCurrentPassword = false,
-        inputWidth
+        inputWidth,
+        isValid = $bindable(),
     } = $props();
+
+    isValid = isPwdValid;
 
     let accepted = $state(false);
     let err = $state('');
@@ -45,7 +49,6 @@
             .required(t.passwordNoMatch),
     });
 
-    
 
     onMount(async () => {
         let res = await getPasswordPolicy();
@@ -57,7 +60,7 @@
         }
     });
 
-    export async function isValid() {
+    export async function isPwdValid() {
         err = '';
 
         if (hideCurrentPassword) {
@@ -109,15 +112,15 @@
 
 {#if policy}
     <div class="container">
-        <PasswordPolicy bind:t bind:accepted bind:policy bind:password={formValues.new}/>
+        <PasswordPolicy {t} bind:accepted {policy} bind:password={formValues.new}/>
 
         {#if !hideCurrentPassword}
             <PasswordInput
                     bind:value={formValues.current}
-                    bind:error={formErrors.current}
+                    error={formErrors.current}
                     autocomplete="current-password"
                     placeholder={t.passwordCurr}
-                    on:input={isValid}
+                    on:input={isPwdValid}
                     width={inputWidth}
             >
                 {t.passwordCurr.toUpperCase()}
@@ -125,22 +128,22 @@
         {/if}
         <PasswordInput
                 bind:value={formValues.new}
-                bind:error={formErrors.new}
+                error={formErrors.new}
                 autocomplete="new-password"
                 placeholder={t.passwordNew}
-                on:input={isValid}
-                bind:showCopy
+                on:input={isPwdValid}
+                {showCopy}
                 width={inputWidth}
         >
             {t.passwordNew.toUpperCase()}
         </PasswordInput>
         <PasswordInput
                 bind:value={formValues.verify}
-                bind:error={formErrors.verify}
+                error={formErrors.verify}
                 autocomplete="new-password"
                 placeholder={t.passwordConfirm}
-                on:input={isValid}
-                bind:showCopy
+                on:input={isPwdValid}
+                {showCopy}
                 width={inputWidth}
         >
             {t.passwordConfirm.toUpperCase()}

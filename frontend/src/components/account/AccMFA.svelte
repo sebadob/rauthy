@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import {
         arrBufToBase64UrlSafe,
@@ -23,7 +23,7 @@
     import IconFingerprint from "$lib/icons/IconFingerprint.svelte";
     import Tooltip from "$lib/Tooltip.svelte";
 
-    let { t, sessionInfo, user = {} } = $props();
+    let {t, sessionInfo, user = {}} = $props();
 
     let isLoading = false;
     let err = $state(false);
@@ -249,7 +249,7 @@
                         {#if passkey.user_verified}
                             <Tooltip text={t.userVerifiedTooltip}>
                                 <div style:margin-bottom="-.25rem">
-                                    <IconFingerprint width=18 color="var(--col-acnt)" />
+                                    <IconFingerprint width={18} color="var(--col-acnt)"/>
                                 </div>
                             </Tooltip>
                         {/if}
@@ -271,7 +271,7 @@
                             <Button
                                     on:click={() => handleDelete(passkey.name)}
                                     level={4}
-                                    disabled={showDelete}
+                                    isDisabled={showDelete}
                             >
                                 {t.mfa.delete.toUpperCase()}
                             </Button>

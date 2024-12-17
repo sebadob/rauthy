@@ -82,7 +82,7 @@
     <WithI18n bind:t content="authorize">
         {#if webauthnData}
             <WebauthnRequest
-                    bind:t
+                    {t}
                     bind:data={webauthnData}
                     onSuccess={onWebauthnSuccess}
                     onError={onWebauthnError}

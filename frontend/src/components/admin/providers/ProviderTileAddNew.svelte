@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import ExpandContainer from "$lib/ExpandContainer.svelte";
     import * as yup from "yup";
@@ -20,7 +20,7 @@
     import JsonPathDesc from "./JsonPathDesc.svelte";
     import Textarea from "$lib/inputs/Textarea.svelte";
 
-    let { idx = $bindable(-1), onSave } = $props();
+    let {idx = $bindable(-1), onSave} = $props();
 
     const inputWidth = '25rem';
 
@@ -92,7 +92,6 @@
         metadata_url: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         root_pem: yup.string().trim().nullable().matches(REGEX_PEM, "Valid PEM certificate"),
     });
-
 
 
     onMount(() => {
@@ -335,13 +334,13 @@
 
 <ExpandContainer bind:idx bind:show={expandContainer}>
     {#snippet header()}
-        <div class="header font-label" >
+        <div class="header font-label">
             ADD NEW AUTHENTICATION PROVIDER
         </div>
     {/snippet}
 
     {#snippet body()}
-        <div class="container" >
+        <div class="container">
             <div class="header">
                 Type
             </div>
@@ -364,7 +363,7 @@
                             placeholder="-----BEGIN CERTIFICATE-----
     -----END CERTIFICATE-----"
                             bind:value={configLookup.root_pem}
-                            bind:error={formErrors.root_pem}
+                            error={formErrors.root_pem}
                     >
                         Root Certificate in PEM format
                     </Textarea>
@@ -420,7 +419,7 @@
                             placeholder="-----BEGIN CERTIFICATE-----
     -----END CERTIFICATE-----"
                             bind:value={config.root_pem}
-                            bind:error={formErrors.root_pem}
+                            error={formErrors.root_pem}
                             disabled={lookupSuccess}
                     >
                         Root Certificate in PEM format
@@ -431,7 +430,7 @@
                     </div>
                     <div class="ml mb">
                         {#if lookupSuccess}
-                            <CheckIcon bind:check={config.danger_allow_insecure}/>
+                            <CheckIcon check={config.danger_allow_insecure}/>
                         {:else}
                             <Switch bind:selected={config.danger_allow_insecure}/>
                         {/if}
@@ -495,7 +494,7 @@
                 </div>
                 <div class="ml">
                     {#if lookupSuccess}
-                        <CheckIcon bind:check={config.use_pkce}/>
+                        <CheckIcon check={config.use_pkce}/>
                     {:else}
                         <Switch bind:selected={config.use_pkce}/>
                     {/if}
@@ -552,7 +551,7 @@
                 <PasswordInput
                         name="client_secret"
                         bind:value={config.client_secret}
-                        bind:error={formErrors.client_secret}
+                        error={formErrors.client_secret}
                         autocomplete="off"
                         placeholder="Client Secret"
                         on:input={validateFormConfig}

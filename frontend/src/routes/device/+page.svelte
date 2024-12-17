@@ -1,6 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
-
+    import {run} from 'svelte/legacy';
     import {onMount} from "svelte";
     import {postDeviceVerify, getPow, getSessionInfo} from "../../utils/dataFetching.js";
     import Loading from "../../components/Loading.svelte";
@@ -12,7 +11,7 @@
     import Button from "$lib/Button.svelte";
     import * as yup from "yup";
     import {REGEX_URI} from "../../utils/constants.js";
-    import {pow_work_wasm} from "../../spow/spow-wasm.js";
+    import {fetchSolvePow} from "../../utils/pow.ts";
 
     const btnWidthInline = '8rem';
 
@@ -83,19 +82,7 @@
         }
         isLoading = true;
 
-        // compute PoW
-        const powRes = await getPow();
-        let body = await powRes.text();
-        if (!powRes.ok) {
-            err = body;
-            return;
-        }
-        let start = new Date().getUTCMilliseconds();
-        // Ryzen 5600G - difficulty 20 -> ~925 ms median
-        let pow = await pow_work_wasm(body);
-        let diff = new Date().getUTCMilliseconds() - start;
-        console.log('pow computation took ' + diff + ' ms');
-
+        let pow = await fetchSolvePow();
         let data = {
             user_code: formValues.userCode,
             pow,

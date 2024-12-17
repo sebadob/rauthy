@@ -8,7 +8,7 @@
     import ClientDelete from "./ClientDelete.svelte";
     import ClientBranding from "./ClientBranding.svelte";
 
-    let { client = $bindable({}), onSave = $bindable() } = $props();
+    let {client = $bindable({}), onSave = $bindable()} = $props();
 
     let isLoading = false;
     let expandContainer = $state();
@@ -32,7 +32,7 @@
 
 <ExpandContainer bind:show={expandContainer}>
     {#snippet header()}
-        <div class="header" >
+        <div class="header">
             <Tooltip text="Client ID">
                 <div class="data font-mono">
                     {client.id}
@@ -50,27 +50,31 @@
     {/snippet}
 
     {#snippet body()}
-        <div >
+        <div>
             <TabBar labels={tabBarItems} bind:selected/>
 
             {#if selected === 'Config'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
                     <ClientConfig bind:client bind:onSave/>
                 </div>
 
             {:else if selected === 'Secret'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
-                    <ClientSecret bind:client/>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
+                    <ClientSecret {client}/>
                 </div>
 
             {:else if selected === 'Branding'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
-                    <ClientBranding bind:client/>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
+                    <ClientBranding {client}/>
                 </div>
 
             {:else if selected === 'Delete'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
-                    <ClientDelete bind:client onSave={onDelete}/>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
+                    <ClientDelete {client} onSave={onDelete}/>
                 </div>
 
             {/if}

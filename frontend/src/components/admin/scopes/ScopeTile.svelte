@@ -6,7 +6,7 @@
     import ScopeConfig from "./ScopeConfig.svelte";
     import ScopeDelete from "./ScopeDelete.svelte";
 
-    let { attrs = $bindable(), scope = $bindable({}), onSave = $bindable() } = $props();
+    let {attrs = $bindable(), scope = $bindable({}), onSave = $bindable()} = $props();
 
     let isLoading = false;
     let expandContainer = $state();
@@ -28,7 +28,7 @@
 
 <ExpandContainer bind:show={expandContainer}>
     {#snippet header()}
-        <div class="header" >
+        <div class="header">
             <Tooltip text="Scope ID">
                 <div class="data font-mono">
                     {scope.id}
@@ -44,17 +44,19 @@
     {/snippet}
 
     {#snippet body()}
-        <div >
+        <div>
             <TabBar labels={tabBarItems} bind:selected/>
 
             {#if selected === 'Config'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
                     <ScopeConfig bind:attrs bind:scope bind:onSave/>
                 </div>
 
             {:else if selected === 'Delete'}
-                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
-                    <ScopeDelete bind:scope onSave={onDelete}/>
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
+                    <ScopeDelete {scope} onSave={onDelete}/>
                 </div>
             {/if}
         </div>

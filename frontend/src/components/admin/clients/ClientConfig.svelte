@@ -296,7 +296,7 @@
             FLOWS ENABLED
         </div>
         <div class="flows">
-            <SwitchList bind:options={clientFlows}/>
+            <SwitchList options={clientFlows}/>
         </div>
     </div>
 
@@ -500,7 +500,7 @@
             PKCE CHALLENGES
         </div>
         <div class="challenges">
-            <SwitchList bind:options={pkceChallenges}/>
+            <SwitchList options={pkceChallenges}/>
         </div>
     </div>
 

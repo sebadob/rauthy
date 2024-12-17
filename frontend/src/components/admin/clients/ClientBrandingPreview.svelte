@@ -3,7 +3,7 @@
     import ClientBrandingPreviewInput from "./ClientBrandingPreviewInput.svelte";
     import ClientLogo from "../../ClientLogo.svelte";
 
-    let { clientId = $bindable(), colors = $bindable(), isLoading } = $props();
+    let {clientId = $bindable(), colors = $bindable(), isLoading} = $props();
 
     let errEmail = $state('This is an E-Mail error');
     let errPwd = $state('This is a password error');
@@ -22,7 +22,7 @@
     <div class="head">
         <div class="logo">
             {#if !isLoading}
-                <ClientLogo bind:clientId/>
+                <ClientLogo {clientId}/>
             {/if}
         </div>
     </div>
@@ -35,8 +35,8 @@
             type="email"
             name="rauthyEmail"
             placeholder="E-Mail"
-            bind:error={errEmail}
-            bind:colors
+            error={errEmail}
+            {colors}
     >
         E-MAIL
     </ClientBrandingPreviewInput>
@@ -45,16 +45,16 @@
             password
             name="rauthyPassword"
             placeholder="Password"
-            bind:error={errPwd}
-            bind:colors
+            error={errPwd}
+            {colors}
     >
         E-MAIL
     </ClientBrandingPreviewInput>
 
     <div class="btn">
-        <ClientBrandingPreviewBtn bind:colors level={1}/>
-        <ClientBrandingPreviewBtn bind:colors level={2}/>
-        <ClientBrandingPreviewBtn bind:colors level={3}/>
+        <ClientBrandingPreviewBtn {colors} level={1}/>
+        <ClientBrandingPreviewBtn {colors} level={2}/>
+        <ClientBrandingPreviewBtn {colors} level={3}/>
     </div>
 
 </div>

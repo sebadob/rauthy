@@ -1,17 +1,16 @@
 <script>
-    import { run } from 'svelte/legacy';
-
+    import {run} from 'svelte/legacy';
     import * as yup from "yup";
     import {extractFormErrors, getQueryParams} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
     import {REGEX_NAME} from "../../../utils/constants.js";
-    import {getPow, registerUser} from "../../../utils/dataFetching.js";
+    import {registerUser} from "../../../utils/dataFetching.js";
     import {onMount, tick} from "svelte";
     import Input from "$lib/inputs/Input.svelte";
     import BrowserCheck from "../../../components/BrowserCheck.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
     import LangSelector from "$lib/LangSelector.svelte";
-    import {pow_work_wasm} from "../../../spow/spow-wasm";
+    import {fetchSolvePow} from "../../../utils/pow.ts";
 
     let t = $state();
     let restrictedDomain = $state();
@@ -72,16 +71,7 @@
         isLoading = true;
         await tick();
 
-        // compute PoW
-        const powRes = await getPow();
-        let powChallenge = await powRes.text();
-        let start = new Date().getUTCMilliseconds();
-        // Ryzen 5600G - difficulty 20 -> ~925 ms median
-        let pow = await pow_work_wasm(powChallenge);
-        let diff = new Date().getUTCMilliseconds() - start;
-        console.log('pow computation took ' + diff + ' ms');
-
-        // build payload
+        let pow = await fetchSolvePow();
         const data = {
             email: formValues.email,
             given_name: formValues.givenName,

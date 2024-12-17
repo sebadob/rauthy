@@ -22,7 +22,7 @@
     let pwdWith = $state('330px');
 
     let policy = $state();
-    let accepted = $state();
+    let accepted = $state(false);
 
     let formValues = $state({new: '', verify: ''});
     let formErrors = {};

@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import * as yup from "yup";
     import {onMount} from "svelte";
@@ -28,7 +28,7 @@
     import LangSelector from "$lib/LangSelector.svelte";
     import {REGEX_NAME} from "../../../../../utils/constants.js";
 
-    const btnWidth = 150;
+    const btnWidth = '150px';
     const inputWidth = '320px';
 
     let t = $state();
@@ -60,8 +60,6 @@
 
     let schemaPasskey = $state();
     let schemaPassword = $state();
-
-
 
 
     onMount(async () => {
@@ -373,26 +371,26 @@
 
                 {#if accountTypeNew === "password"}
                     <div transition:slide>
-                        <PasswordPolicy bind:t bind:accepted bind:policy bind:password={formValues.password}/>
+                        <PasswordPolicy {t} bind:accepted {policy} bind:password={formValues.password}/>
 
                         <PasswordInput
                                 bind:value={formValues.password}
-                                bind:error={formErrors.password}
+                                error={formErrors.password}
                                 autocomplete="new-password"
                                 placeholder={t.password}
                                 width={inputWidth}
-                                bind:showCopy
+                                {showCopy}
                                 disabled={success}
                         >
                             {t.password.toUpperCase()}
                         </PasswordInput>
                         <PasswordInput
                                 bind:value={formValues.passwordConfirm}
-                                bind:error={formErrors.passwordConfirm}
+                                error={formErrors.passwordConfirm}
                                 autocomplete="new-password"
                                 placeholder={t.passwordConfirm}
                                 width={inputWidth}
-                                bind:showCopy
+                                {showCopy}
                                 disabled={success}
                         >
                             {t.passwordConfirm.toUpperCase()}
@@ -467,25 +465,25 @@
 
                 <h1>Password Reset</h1>
 
-                <PasswordPolicy bind:t bind:accepted bind:policy bind:password={formValues.password}/>
+                <PasswordPolicy {t} bind:accepted {policy} bind:password={formValues.password}/>
 
                 <PasswordInput
                         bind:value={formValues.password}
-                        bind:error={formErrors.password}
+                        error={formErrors.password}
                         autocomplete="new-password"
                         placeholder={t.password}
                         width={inputWidth}
-                        bind:showCopy
+                        {showCopy}
                 >
                     {t.password.toUpperCase()}
                 </PasswordInput>
                 <PasswordInput
                         bind:value={formValues.passwordConfirm}
-                        bind:error={formErrors.passwordConfirm}
+                        error={formErrors.passwordConfirm}
                         autocomplete="new-password"
                         placeholder={t.passwordConfirm}
                         width={inputWidth}
-                        bind:showCopy
+                        {showCopy}
                 >
                     {t.passwordConfirm.toUpperCase()}
                 </PasswordInput>
