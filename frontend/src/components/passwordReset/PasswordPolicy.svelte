@@ -24,7 +24,7 @@
             }
         },
         policy = {},
-        password = $bindable(''),
+        password,
         accepted = $bindable(false)
     } = $props();
 

@@ -11,7 +11,7 @@
      */
 
     /** @type {Props} */
-    let {t, selected = $bindable(t.navInfo), showWebId = false} = $props();
+    let {t, selected = $bindable(), showWebId = false} = $props();
 
     let labels = $state(showWebId ?
         [t.navInfo, t.navEdit, t.navPassword, t.navMfa, 'WebID', t.devices, t.navLogout]

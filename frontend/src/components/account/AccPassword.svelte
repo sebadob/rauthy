@@ -40,7 +40,11 @@
     let success = $state(false);
     let webauthnData = $state();
 
-    let formValues = $state({});
+    let formValues = $state({
+        current: '',
+        new: '',
+        verify: '',
+    });
     let formErrors = {};
 
     let canConvertToPasskey = $derived(passkeys.filter(pk => pk.user_verified).length > 0);
@@ -192,7 +196,7 @@
         {#if accType === "password" || accType === "federated_password" || convertAccount}
             <div in:blur={{ duration: 350 }}>
                 <AccModPwd
-                        bind:t
+                        {t}
                         bind:formValues
                         bind:isValid={isPwdValid}
                         btnWidth={btnWidth}

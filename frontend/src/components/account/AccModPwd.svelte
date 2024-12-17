@@ -19,7 +19,7 @@
 
     /** @type {Props} */
     let {
-        t = $bindable(),
+        t,
         formValues = $bindable({}),
         btnWidth = "4rem",
         hideCurrentPassword = false,
@@ -112,7 +112,7 @@
 
 {#if policy}
     <div class="container">
-        <PasswordPolicy {t} bind:accepted {policy} bind:password={formValues.new}/>
+        <PasswordPolicy {t} bind:accepted {policy} password={formValues.new}/>
 
         {#if !hideCurrentPassword}
             <PasswordInput

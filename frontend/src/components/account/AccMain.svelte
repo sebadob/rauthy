@@ -25,8 +25,8 @@
 
     /** @type {Props} */
     let {
-        t = $bindable(),
-        sessionInfo = $bindable({}),
+        t,
+        sessionInfo,
         user = $bindable({}),
         webIdData = $bindable()
     } = $props();
@@ -40,11 +40,8 @@
         duration: 100,
     })
 
-    let content = $state(t.info);
-    let selected = $state(t.info);
-
-
-
+    let content = $state(t.navInfo);
+    let selected = $state(t.navInfo);
 
     onMount(async () => {
         providers = await getAuthProvidersTemplate();

@@ -53,7 +53,7 @@
         {#if !isReady}
             <Loading/>
         {:else}
-            <AccMain bind:t bind:sessionInfo bind:user bind:webIdData />
+            <AccMain {t} {sessionInfo} bind:user bind:webIdData/>
         {/if}
     </WithI18n>
 </BrowserCheck>
