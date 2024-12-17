@@ -397,7 +397,7 @@ impl AtprotoCallback for AuthProviderCallback {
         } else {
             let new_user = User {
                 email: email.as_ref().unwrap().to_string(),
-                given_name: "N/A".to_string(),
+                given_name: "Unknown".to_string(),
                 family_name: None,
                 roles: Default::default(),
                 enabled: true,
