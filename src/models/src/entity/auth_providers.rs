@@ -48,7 +48,6 @@ use std::borrow::Cow;
 use std::fmt::Write;
 use std::str::FromStr;
 use std::time::Duration;
-use time::OffsetDateTime;
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
@@ -1388,7 +1387,7 @@ impl AuthProviderIdClaims<'_> {
             }
         }
 
-        let now = OffsetDateTime::now_utc().unix_timestamp();
+        let now = chrono::Utc::now().timestamp();
         let user = if let Some(mut user) = user_opt {
             let mut old_email = None;
             let mut forbidden_error = None;

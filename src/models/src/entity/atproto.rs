@@ -23,7 +23,6 @@ use rauthy_common::constants::{
     COOKIE_UPSTREAM_CALLBACK, PROVIDER_LINK_COOKIE, UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use time::OffsetDateTime;
 use tracing::{debug, error};
 use utoipa::{PartialSchema, ToSchema};
 
@@ -360,7 +359,7 @@ impl AtprotoCallback for AuthProviderCallback {
         };
         debug!("user_opt:\n{:?}", user_opt);
 
-        let now = OffsetDateTime::now_utc().unix_timestamp();
+        let now = chrono::Utc::now().timestamp();
         let user = if let Some(mut user) = user_opt {
             let mut old_email = None;
             let mut forbidden_error = None;
