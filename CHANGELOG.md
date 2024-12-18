@@ -1,5 +1,35 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### Upstream Identity Providers
+
+To provide additional compatibility for some upstream providers like Active Directory Federation Severices,
+some changes have been applied to Rauthy's behavior.
+
+The first thing is that the HTTP client used for upstream Logins does not force TLS v1.3 anymore, but also allows
+TLS v1.2. Both v1.2 and v1.3 are considered being secure by current standards. This is necessary, because some OS'es
+like Windows Server 2019 do not support TLS 1.3.
+
+The second change is for the way upstream providers are configured. The behavior until now was, that Rauthy added the
+client credentials as both Basic Authentication in headers, and in the body for maximum compatibility. However, some
+IdP'S (like ADFS for instance) complain about this and only expect it in one place.
+To make this happen, there are 2 new fields for the upstream IdP configuration:
+
+- `client_secret_basic: bool`
+- `client_secret_post: bool`
+
+These are available as switches in the Admin UI for each upstream provider. To not introduce breaking changes, all
+possibly existing configurations will have both options enabled like it has been up until now.
+
+#### Note
+
+Even though this changes the request and response objects on the API, this change is **NOT** being handled as
+a breaking change. API clients are forbidden to modify upstream IdPs for security reasons, which means this change
+should only affect the Rauthy Admin UI.
+
 ## v0.27.2
 
 ### Changes
