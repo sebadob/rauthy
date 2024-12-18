@@ -1,7 +1,7 @@
 <script></script>
 
 <div class="desc">
-    <p>ID token claim mappings</p>
+    <h4>ID token claim mappings</h4>
     <p>
         Values from the ID token after a successful upstream login can be mapped automatically.
     </p>
@@ -25,6 +25,10 @@
 </div>
 
 <style>
+    h4 {
+        margin-bottom: .5rem;
+    }
+
     .desc {
         display: flex;
         flex-direction: column;

@@ -79,7 +79,6 @@
     async function onSubmit() {
         const valid = await validateForm();
         if (!valid) {
-            err = 'Invalid input';
             return;
         }
 
@@ -125,9 +124,17 @@
     }
 
     async function validateForm() {
+        formErrors = {};
         try {
             await schema.validate(provider, {abortEarly: false});
-            formErrors = {};
+
+            if (provider.client_secret && !(provider.client_secret_basic || provider.client_secret_post)) {
+                err = 'You have given a client secret, but no client auth method is active';
+                return false;
+            } else {
+                err = 'Invalid input';
+            }
+
             return true;
         } catch (err) {
             formErrors = extractFormErrors(err);
@@ -293,6 +300,30 @@
         CLIENT SECRET
     </PasswordInput>
 
+    <div class="desc">
+        <p>
+            The authentication method to use on the <code>/token</code> endpoint.<br>
+            Most providers should work with <code>basic</code>, some only with <code>post</code>.
+            In rare situations, you need both, while it can lead to errors with others.
+        </p>
+    </div>
+    <div class="switchRow">
+        <div>
+            client_secret_basic
+        </div>
+        <Switch
+                bind:selected={provider.client_secret_basic}
+        />
+    </div>
+    <div class="switchRow">
+        <div>
+            client_secret_post
+        </div>
+        <Switch
+                bind:selected={provider.client_secret_post}
+        />
+    </div>
+
     <JsonPathDesc/>
     <div class="desc">
         <p>
@@ -418,6 +449,13 @@
 
     .success {
         color: var(--col-ok);
+    }
+
+    .switchRow {
+        margin-bottom: .25rem;
+        padding-left: .5rem;
+        display: grid;
+        grid-template-columns: 9rem 1fr;
     }
 
     .unit {
