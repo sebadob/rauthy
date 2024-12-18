@@ -651,13 +651,11 @@ impl AuthProvider {
         let client_secret_basic = well_known
             .token_endpoint_auth_methods_supported
             .iter()
-            .find(|m| m.as_str() == "client_secret_basic")
-            .is_some();
+            .any(|m| m.as_str() == "client_secret_basic");
         let client_secret_post = well_known
             .token_endpoint_auth_methods_supported
             .iter()
-            .find(|m| m.as_str() == "client_secret_post")
-            .is_some();
+            .any(|m| m.as_str() == "client_secret_post");
 
         Ok(ProviderLookupResponse {
             issuer: well_known.issuer,
@@ -915,7 +913,8 @@ impl AuthProviderCallback {
             provider.root_pem.as_deref(),
         )?;
         let mut payload = OidcCodeRequestParams {
-            client_id: None,
+            // a client MAY add the `client_id`, but it MUST add it when it's public
+            client_id: &provider.client_id,
             client_secret: None,
             code: &payload.code,
             code_verifier: provider.use_pkce.then_some(&payload.pkce_verifier),
@@ -923,7 +922,6 @@ impl AuthProviderCallback {
             redirect_uri: &PROVIDER_CALLBACK_URI,
         };
         if provider.client_secret_post {
-            payload.client_id = Some(&provider.client_id);
             payload.client_secret = AuthProvider::get_secret_cleartext(&provider.secret)?;
         }
 
@@ -1609,7 +1607,7 @@ struct AuthProviderTokenSet {
 
 #[derive(Debug, Serialize)]
 struct OidcCodeRequestParams<'a> {
-    client_id: Option<&'a str>,
+    client_id: &'a str,
     client_secret: Option<String>,
     code: &'a str,
     code_verifier: Option<&'a str>,
