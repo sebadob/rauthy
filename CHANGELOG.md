@@ -24,6 +24,8 @@ To make this happen, there are 2 new fields for the upstream IdP configuration:
 These are available as switches in the Admin UI for each upstream provider. To not introduce breaking changes, all
 possibly existing configurations will have both options enabled like it has been up until now.
 
+[#659](https://github.com/sebadob/rauthy/pull/659)
+
 #### Note
 
 Even though this changes the request and response objects on the API, this change is **NOT** being handled as
