@@ -133,6 +133,7 @@ pub struct WellKnownLookup {
     pub userinfo_endpoint: String,
     pub jwks_uri: String,
     pub scopes_supported: Vec<String>,
+    pub token_endpoint_auth_methods_supported: Vec<String>,
     #[serde(default)]
     pub code_challenge_methods_supported: Vec<String>,
 }
@@ -190,8 +191,9 @@ pub struct AuthProvider {
 
     pub allow_insecure_requests: bool,
     pub use_pkce: bool,
-
     pub root_pem: Option<String>,
+    pub client_secret_basic: bool,
+    pub client_secret_post: bool,
 }
 
 impl<'r> From<hiqlite::Row<'r>> for AuthProvider {
@@ -218,6 +220,8 @@ impl<'r> From<hiqlite::Row<'r>> for AuthProvider {
             allow_insecure_requests: row.get("allow_insecure_requests"),
             use_pkce: row.get("use_pkce"),
             root_pem: row.get("root_pem"),
+            client_secret_basic: row.get("client_secret_basic"),
+            client_secret_post: row.get("client_secret_post"),
         }
     }
 }
@@ -234,9 +238,10 @@ impl AuthProvider {
 INSERT INTO
 auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
 userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
-mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem)
+mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem, client_secret_basic,
+client_secret_post)
 VALUES
-($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 RETURNING *"#,
                     params!(
                         slf.id,
@@ -256,7 +261,9 @@ RETURNING *"#,
                         slf.mfa_claim_value,
                         slf.allow_insecure_requests,
                         slf.use_pkce,
-                        slf.root_pem
+                        slf.root_pem,
+                        slf.client_secret_basic,
+                        slf.client_secret_post
                     ),
                 )
                 .await?
@@ -266,9 +273,10 @@ RETURNING *"#,
 INSERT INTO
 auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
 userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
-mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem)
+mfa_claim_path, mfa_claim_value, allow_insecure_requests, use_pkce, root_pem, client_secret_basic,
+client_secret_post)
 VALUES
-($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"#,
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#,
                 slf.id,
                 slf.name,
                 slf.enabled,
@@ -287,6 +295,8 @@ VALUES
                 slf.allow_insecure_requests,
                 slf.use_pkce,
                 slf.root_pem,
+                slf.client_secret_basic,
+                slf.client_secret_post
             )
             .execute(DB::conn())
             .await?;
@@ -405,8 +415,9 @@ UPDATE auth_providers
 SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
 token_endpoint = $6, userinfo_endpoint = $7, client_id = $8, secret = $9, scope = $10,
 admin_claim_path = $11, admin_claim_value = $12, mfa_claim_path = $13, mfa_claim_value = $14,
-allow_insecure_requests = $15, use_pkce = $16, root_pem = $17
-WHERE id = $18"#,
+allow_insecure_requests = $15, use_pkce = $16, root_pem = $17, client_secret_basic = $18,
+client_secret_post = $19
+WHERE id = $20"#,
                     params!(
                         self.name.clone(),
                         self.enabled,
@@ -425,6 +436,8 @@ WHERE id = $18"#,
                         self.allow_insecure_requests,
                         self.use_pkce,
                         self.root_pem.clone(),
+                        self.client_secret_basic,
+                        self.client_secret_post,
                         self.id.clone()
                     ),
                 )
@@ -436,8 +449,9 @@ UPDATE auth_providers
 SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
 token_endpoint = $6, userinfo_endpoint = $7, client_id = $8, secret = $9, scope = $10,
 admin_claim_path = $11, admin_claim_value = $12, mfa_claim_path = $13, mfa_claim_value = $14,
-allow_insecure_requests = $15, use_pkce = $16, root_pem = $17
-WHERE id = $18"#,
+allow_insecure_requests = $15, use_pkce = $16, root_pem = $17, client_secret_basic = $18,
+client_secret_post = $19
+WHERE id = $20"#,
                 self.name,
                 self.enabled,
                 self.issuer,
@@ -455,6 +469,8 @@ WHERE id = $18"#,
                 self.allow_insecure_requests,
                 self.use_pkce,
                 self.root_pem,
+                self.client_secret_basic,
+                self.client_secret_post,
                 self.id,
             )
             .execute(DB::conn())
@@ -503,7 +519,7 @@ impl AuthProvider {
                 .timeout(Duration::from_secs(10))
                 .connect_timeout(Duration::from_secs(10))
                 .tcp_keepalive(Duration::from_secs(30))
-                .min_tls_version(tls::Version::TLS_1_3)
+                .min_tls_version(tls::Version::TLS_1_2)
                 .tls_built_in_root_certs(true)
                 .user_agent(format!("Rauthy Auth Provider Client v{}", RAUTHY_VERSION))
                 .https_only(true);
@@ -543,6 +559,8 @@ impl AuthProvider {
             allow_insecure_requests: req.danger_allow_insecure.unwrap_or(false),
             use_pkce: req.use_pkce,
             root_pem: req.root_pem,
+            client_secret_basic: req.client_secret_basic,
+            client_secret_post: req.client_secret_post,
         })
     }
 
@@ -630,6 +648,15 @@ impl AuthProvider {
             scope.push_str("email ");
         }
 
+        let client_secret_basic = well_known
+            .token_endpoint_auth_methods_supported
+            .iter()
+            .any(|m| m.as_str() == "client_secret_basic");
+        let client_secret_post = well_known
+            .token_endpoint_auth_methods_supported
+            .iter()
+            .any(|m| m.as_str() == "client_secret_post");
+
         Ok(ProviderLookupResponse {
             issuer: well_known.issuer,
             // TODO optimization (and possibly security enhancement): strip issuer url from all of these?
@@ -642,6 +669,8 @@ impl AuthProvider {
                 .code_challenge_methods_supported
                 .iter()
                 .any(|c| c == "S256"),
+            client_secret_basic,
+            client_secret_post,
             danger_allow_insecure: payload.danger_allow_insecure.unwrap_or(false),
             scope,
             // TODO add `scopes_supported` Vec and make them selectable with checkboxes in the UI
@@ -693,6 +722,8 @@ impl TryFrom<AuthProvider> for ProviderResponse {
             mfa_claim_value: value.mfa_claim_value,
             danger_allow_insecure: value.allow_insecure_requests,
             use_pkce: value.use_pkce,
+            client_secret_basic: value.client_secret_basic,
+            client_secret_post: value.client_secret_post,
             root_pem: value.root_pem,
         })
     }
@@ -881,24 +912,36 @@ impl AuthProviderCallback {
             provider.allow_insecure_requests,
             provider.root_pem.as_deref(),
         )?;
-        let payload = OidcCodeRequestParams {
+        let mut payload = OidcCodeRequestParams {
+            // a client MAY add the `client_id`, but it MUST add it when it's public
             client_id: &provider.client_id,
-            client_secret: AuthProvider::get_secret_cleartext(&provider.secret)?,
+            client_secret: None,
             code: &payload.code,
             code_verifier: provider.use_pkce.then_some(&payload.pkce_verifier),
             grant_type: "authorization_code",
             redirect_uri: &PROVIDER_CALLBACK_URI,
         };
-        let res = client
-            .post(&provider.token_endpoint)
-            .header(ACCEPT, APPLICATION_JSON)
-            .basic_auth(
-                &provider.client_id,
-                AuthProvider::get_secret_cleartext(&provider.secret)?,
-            )
-            .form(&payload)
-            .send()
-            .await?;
+        if provider.client_secret_post {
+            payload.client_secret = AuthProvider::get_secret_cleartext(&provider.secret)?;
+        }
+
+        let res = {
+            let mut builder = client
+                .post(&provider.token_endpoint)
+                .header(ACCEPT, APPLICATION_JSON);
+
+            if provider.client_secret_basic {
+                builder = builder.basic_auth(
+                    &provider.client_id,
+                    AuthProvider::get_secret_cleartext(&provider.secret)?,
+                )
+            }
+
+            builder
+        }
+        .form(&payload)
+        .send()
+        .await?;
 
         let status = res.status().as_u16();
         debug!("POST /token auth provider status: {}", status);

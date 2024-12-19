@@ -51,6 +51,8 @@
         token_auth_method_basic: false,
         userinfo_endpoint: '',
         use_pkce: true,
+        client_secret_basic: true,
+        client_secret_post: false,
 
         // user defined values
         name: '',
@@ -104,7 +106,6 @@
     async function onSubmitConfig() {
         const valid = await validateFormConfig();
         if (!valid) {
-            err = 'Invalid input';
             return;
         }
 
@@ -164,6 +165,9 @@
             config.userinfo_endpoint = body.userinfo_endpoint;
             config.token_auth_method_basic = body.token_auth_method_basic;
             config.use_pkce = body.use_pkce;
+            config.client_secret_basic = body.client_secret_basic;
+            // we want to enable basic only if it is supported for better compatibility out of the box
+            config.client_secret_post = !body.client_secret_basic && body.client_secret_post;
             config.scope = body.scope;
             config.root_pem = body.root_pem;
 
@@ -195,6 +199,8 @@
             token_endpoint: '',
             userinfo_endpoint: '',
             use_pkce: true,
+            client_secret_basic: true,
+            client_secret_post: false,
             scope: '',
             root_pem: null,
             admin_claim_path: null,
@@ -207,12 +213,21 @@
     }
 
     async function validateFormConfig() {
+        formErrors = {};
         try {
             await schemaConfig.validate(config, {abortEarly: false});
-            formErrors = {};
+
+            if (config.client_secret && !(config.client_secret_basic || config.client_secret_post)) {
+                err = 'You have given a client secret, but no client auth method is active';
+                return false;
+            } else {
+                err = 'Invalid input';
+            }
+
             return true;
         } catch (err) {
             formErrors = extractFormErrors(err);
+            err = 'Invalid input';
             return false;
         }
     }
@@ -560,32 +575,56 @@
                     CLIENT SECRET
                 </PasswordInput>
 
-                <JsonPathDesc/>
-                <div class="desc">
-                    <p>
-                        You can map a user to be a rauthy admin depending on an upstream ID claim.
-                    </p>
+            <div class="desc">
+                <p>
+                    The authentication method to use on the <code>/token</code> endpoint.<br>
+                    Most providers should work with <code>basic</code>, some only with <code>post</code>.
+                    In rare situations, you need both, while it can lead to errors with others.
+                </p>
+            </div>
+            <div class="switchRow">
+                <div>
+                    client_secret_basic
                 </div>
-                <Input
-                        name="admin_claim_path"
-                        bind:value={config.admin_claim_path}
-                        bind:error={formErrors.admin_claim_path}
-                        placeholder="$.roles.*"
-                        on:input={validateFormConfig}
-                        width={inputWidth}
-                >
-                    ADMIN CLAIM PATH
-                </Input>
-                <Input
-                        name="admin_claim_value"
-                        bind:value={config.admin_claim_value}
-                        bind:error={formErrors.admin_claim_value}
-                        placeholder="rauthy_admin"
-                        on:input={validateFormConfig}
-                        width={inputWidth}
-                >
-                    ADMIN CLAIM VALUE
-                </Input>
+                <Switch
+                        bind:selected={config.client_secret_basic}
+                />
+            </div>
+            <div class="switchRow">
+                <div>
+                    client_secret_post
+                </div>
+                <Switch
+                        bind:selected={config.client_secret_post}
+                />
+            </div>
+
+            <JsonPathDesc/>
+            <div class="desc">
+                <p>
+                    You can map a user to be a rauthy admin depending on an upstream ID claim.
+                </p>
+            </div>
+            <Input
+                    name="admin_claim_path"
+                    bind:value={config.admin_claim_path}
+                    bind:error={formErrors.admin_claim_path}
+                    placeholder="$.roles.*"
+                    on:input={validateFormConfig}
+                    width={inputWidth}
+            >
+                ADMIN CLAIM PATH
+            </Input>
+            <Input
+                    name="admin_claim_value"
+                    bind:value={config.admin_claim_value}
+                    bind:error={formErrors.admin_claim_value}
+                    placeholder="rauthy_admin"
+                    on:input={validateFormConfig}
+                    width={inputWidth}
+            >
+                ADMIN CLAIM VALUE
+            </Input>
 
                 <div class="desc">
                     <p>
@@ -677,5 +716,12 @@
 
     .success {
         color: var(--col-ok);
+    }
+
+    .switchRow {
+        margin-bottom: .25rem;
+        padding-left: .5rem;
+        display: grid;
+        grid-template-columns: 9rem 1fr;
     }
 </style>

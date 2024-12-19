@@ -39,6 +39,8 @@ pub struct ProviderRequest {
 
     pub danger_allow_insecure: Option<bool>,
     pub use_pkce: bool,
+    pub client_secret_basic: bool,
+    pub client_secret_post: bool,
 
     // This validation is pretty loose, but if we make it too strict,
     // we will most probably get into compatibility issues.
@@ -164,6 +166,8 @@ pub struct ProviderResponse {
 
     pub danger_allow_insecure: bool,
     pub use_pkce: bool,
+    pub client_secret_basic: bool,
+    pub client_secret_post: bool,
 
     pub root_pem: Option<String>,
 }
@@ -183,5 +187,7 @@ pub struct ProviderLookupResponse<'a> {
     pub scope: String,
     pub root_pem: &'a Option<String>,
     pub use_pkce: bool,
+    pub client_secret_basic: bool,
+    pub client_secret_post: bool,
     pub danger_allow_insecure: bool,
 }
