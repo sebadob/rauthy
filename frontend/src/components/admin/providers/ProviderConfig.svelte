@@ -62,7 +62,6 @@
         client_id: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         client_secret: yup.string().trim().max(256, "Max 256 characters"),
         scope: yup.string().trim().matches(REGEX_PROVIDER_SCOPE, "Can only contain: 'a-zA-Z0-9-_/ ', length max: 128"),
-        root_pem: yup.string().trim().nullable().matches(REGEX_PEM, "Invalid PEM certificate"),
 
         admin_claim_path: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
         admin_claim_value: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
@@ -77,9 +76,12 @@
     }
 
     async function onSubmit() {
+        if (!showRootPem) {
+            provider.root_pem = undefined;
+        }
+
         const valid = await validateForm();
         if (!valid) {
-            err = 'Invalid input';
             return;
         }
 
@@ -95,6 +97,9 @@
             // make sure we reset to false, which is what a user would expect
             provider.danger_allow_insecure = false;
             provider.root_pem = provider.root_pem.trim();
+        } else {
+            // make sure to not submit am empty string
+            provider.root_pem = undefined;
         }
 
         let res = await putProvider(provider.id, provider);
@@ -125,9 +130,21 @@
     }
 
     async function validateForm() {
+        formErrors = {};
         try {
             await schema.validate(provider, {abortEarly: false});
-            formErrors = {};
+
+            if (provider.client_secret && !(provider.client_secret_basic || provider.client_secret_post)) {
+                err = 'You have given a client secret, but no client auth method is active';
+                return false;
+            } else if (provider.root_pem && provider.root_pem.length > 0) {
+                if (!REGEX_PEM.test(provider.root_pem.trim())) {
+                    formErrors.root_pem = 'Invalid PEM certificate';
+                }
+            } else {
+                err = 'Invalid input';
+            }
+
             return true;
         } catch (err) {
             formErrors = extractFormErrors(err);
@@ -293,6 +310,30 @@
         CLIENT SECRET
     </PasswordInput>
 
+    <div class="desc">
+        <p>
+            The authentication method to use on the <code>/token</code> endpoint.<br>
+            Most providers should work with <code>basic</code>, some only with <code>post</code>.
+            In rare situations, you need both, while it can lead to errors with others.
+        </p>
+    </div>
+    <div class="switchRow">
+        <div>
+            client_secret_basic
+        </div>
+        <Switch
+                bind:selected={provider.client_secret_basic}
+        />
+    </div>
+    <div class="switchRow">
+        <div>
+            client_secret_post
+        </div>
+        <Switch
+                bind:selected={provider.client_secret_post}
+        />
+    </div>
+
     <JsonPathDesc/>
     <div class="desc">
         <p>
@@ -418,6 +459,13 @@
 
     .success {
         color: var(--col-ok);
+    }
+
+    .switchRow {
+        margin-bottom: .25rem;
+        padding-left: .5rem;
+        display: grid;
+        grid-template-columns: 9rem 1fr;
     }
 
     .unit {
