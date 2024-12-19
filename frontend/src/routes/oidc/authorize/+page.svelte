@@ -3,6 +3,7 @@
     import {
         authorize,
         authorizeRefresh,
+        postAtprotoLogin,
         postPasswordResetRequest,
         postProviderLogin
     } from "../../../utils/dataFetching.js";
@@ -23,7 +24,7 @@
     import WithI18n from "$lib/WithI18n.svelte";
     import LangSelector from "$lib/LangSelector.svelte";
     import getPkce from "oauth-pkce";
-    import {PKCE_VERIFIER_UPSTREAM} from "../../../utils/constants.js";
+    import {PKCE_VERIFIER_UPSTREAM, REGEX_AT_ID} from "../../../utils/constants.js";
     import IconHome from "$lib/icons/IconHome.svelte";
 
     let t = {};
@@ -64,14 +65,26 @@
     let emailAfterSubmit = '';
     let isRegOpen = false;
 
-    let formValues = {email: '', password: ''};
+    let atproto = true;
+    let atprotoForm = false;
+
+    let formValues = atprotoForm ? { at_id: '' } : { email: '', password: '' };
     let formErrors = {};
 
     let schema = {};
     $: if (t) {
+      if (atprotoForm) {
+        let atIdRequired = 'AT Identifier is required';
+        let atIdBadFormat = 'AT Identifier must be valid';
+
+        schema = yup.object().shape({
+            at_id: yup.string().required(atIdRequired).matches(REGEX_AT_ID, atIdBadFormat),
+        });
+      } else {
         schema = yup.object().shape({
             email: yup.string().required(t.emailRequired).email(t.emailBadFormat),
         });
+      }
     }
 
     $: if (refresh && clientId?.length > 0 && redirectUri?.length > 0) {
@@ -160,7 +173,12 @@
             return;
         }
 
-        const req = {
+        const req = atprotoForm ? {
+            at_id: formValues.at_id,
+            redirect_uri: redirectUri,
+            state: state,
+            pkce_challenge
+        } : {
             email: formValues.email,
             client_id: clientId,
             redirect_uri: redirectUri,
@@ -171,7 +189,7 @@
             scopes,
         };
 
-        if (needsPassword && formValues.email !== existingMfaUser) {
+        if (needsPassword && formValues.email !== existingMfaUser && !atprotoForm) {
             if (!formValues.password) {
                 formErrors.password = t.passwordRequired;
                 return;
@@ -184,7 +202,7 @@
         }
 
         isLoading = true;
-        let res = await authorize(req, csrf);
+        let res = await (atprotoForm ? postAtprotoLogin(req) : authorize(req, csrf));
         await handleAuthRes(res);
     }
 
@@ -313,6 +331,9 @@
         isLoading = false;
     }
 
+    async function toggleAtproto() {
+      atprotoForm = !atprotoForm;
+    }
 </script>
 
 <svelte:head>
@@ -349,21 +370,36 @@
             {/if}
 
             {#if !clientMfaForce}
-                <Input
-                        type="email"
-                        name="rauthyEmail"
-                        bind:value={formValues.email}
-                        bind:error={formErrors.email}
-                        autocomplete="email"
-                        placeholder={t.email}
-                        disabled={tooManyRequests || clientMfaForce}
-                        on:enter={onSubmit}
-                        on:input={onEmailInput}
-                >
-                    {t.email?.toUpperCase()}
-                </Input>
+                {#if atprotoForm}
+                    <Input
+                      type="text"
+                      name="rauthyAtId"
+                      bind:value={formValues.at_id}
+                      bind:error={formErrors.at_id}
+                      autocomplete="off"
+                      placeholder="AT IDENTIFIER"
+                      disabled={tooManyRequests}
+                      on:enter={onSubmit}
+                    >
+                      {'AT Identifier'.toUpperCase()}
+                    </Input>
+                {:else}
+                    <Input
+                            type="email"
+                            name="rauthyEmail"
+                            bind:value={formValues.email}
+                            bind:error={formErrors.email}
+                            autocomplete="email"
+                            placeholder={t.email}
+                            disabled={tooManyRequests || clientMfaForce}
+                            on:enter={onSubmit}
+                            on:input={onEmailInput}
+                    >
+                        {t.email?.toUpperCase()}
+                    </Input>
+              {/if}
 
-                {#if needsPassword && existingMfaUser !== formValues.email && !showReset}
+                {#if needsPassword && existingMfaUser !== formValues.email && !showReset && !atprotoForm}
                     <PasswordInput
                             bind:bindThis={passwordInput}
                             name="rauthyPassword"
@@ -377,7 +413,7 @@
                         {t.password?.toUpperCase()}
                     </PasswordInput>
 
-                    {#if showResetRequest && !tooManyRequests}
+                    {#if showResetRequest && !tooManyRequests && !atprotoForm}
                         <div
                                 role="button"
                                 tabindex="0"
@@ -404,6 +440,13 @@
                                 {t.login?.toUpperCase()}
                             </Button>
                         </div>
+                        {#if atproto}
+                            <div class="btn flex-col">
+                                <Button on:click={toggleAtproto} bind:isLoading>
+                                    {atprotoForm ? "BACK" : "ATPROTO"}
+                                </Button>
+                            </div>
+                        {/if}
                     {/if}
                 {/if}
             {/if}

@@ -1,4 +1,5 @@
 use crate::email::EMail;
+use crate::entity::atproto::AtprotoClient;
 use crate::events::event::Event;
 use crate::events::ip_blacklist_handler::IpBlacklistReq;
 use crate::events::listener::EventRouterMsg;
@@ -31,6 +32,7 @@ pub struct AppState {
     pub tx_events_router: flume::Sender<EventRouterMsg>,
     pub tx_ip_blacklist: flume::Sender<IpBlacklistReq>,
     pub webauthn: Arc<Webauthn>,
+    pub atproto: AtprotoClient,
 }
 
 impl AppState {
@@ -154,6 +156,9 @@ impl AppState {
             .rp_name(&rp_name);
         let webauthn = Arc::new(builder.build().expect("Invalid configuration"));
 
+        let atproto = AtprotoClient::new(&listen_scheme, &public_url)
+            .expect("failed to initialize atproto client");
+
         Ok(Self {
             public_url,
             argon2_params,
@@ -170,6 +175,7 @@ impl AppState {
             tx_events_router,
             tx_ip_blacklist,
             webauthn,
+            atproto,
         })
     }
 

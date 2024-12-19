@@ -336,3 +336,11 @@ export async function webauthnDelete(id, name) {
         headers: getCsrfHeaders(),
     });
 }
+
+export async function postAtprotoLogin(data) {
+    return await fetch('/auth/v1/atproto/login', {
+        method: 'POST',
+        headers: getCsrfHeaders(),
+        body: JSON.stringify(data),
+    });
+}
