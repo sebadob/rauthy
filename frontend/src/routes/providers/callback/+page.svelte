@@ -14,10 +14,10 @@
     import {sleepAwait} from "$lib/utils/helpers.js";
 
     // will contain the same translations as /oidc/authorize
-    let t = {};
-    let clientMfaForce = false;
-    let error = '';
-    let webauthnData;
+    let t = $state({});
+    let clientMfaForce = $state(false);
+    let error = $state('');
+    let webauthnData = $state();
 
     onMount(async () => {
         const query = getQueryParams();
@@ -82,7 +82,7 @@
     <WithI18n bind:t content="authorize">
         {#if webauthnData}
             <WebauthnRequest
-                    bind:t
+                    {t}
                     bind:data={webauthnData}
                     onSuccess={onWebauthnSuccess}
                     onError={onWebauthnError}

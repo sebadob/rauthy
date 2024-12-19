@@ -1,9 +1,11 @@
 <script>
     import IconStop from "$lib/icons/IconStop.svelte";
 
-    export let label;
-    export let onDelete = () => {
-    };
+    let {
+        label = $bindable(),
+        onDelete = () => {
+        },
+    } = $props();
 </script>
 
 <div class="label font-label">
@@ -12,8 +14,8 @@
             role="button"
             tabindex="0"
             class="icon"
-            on:click={() => onDelete(label)}
-            on:keypress={() => onDelete(label)}
+            onclick={() => onDelete(label)}
+            onkeypress={() => onDelete(label)}
     >
         <IconStop color="--var(--col-bg)" width={14}/>
     </div>

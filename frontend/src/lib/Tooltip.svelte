@@ -3,14 +3,27 @@
     import {spring} from 'svelte/motion';
     import {fade} from 'svelte/transition';
 
-    export let xOffset = 10;
-    export let yOffset = 10;
-    export let text = '';
-    export let html = '';
+    /**
+     * @typedef {Object} Props
+     * @property {number} [xOffset]
+     * @property {number} [yOffset]
+     * @property {string} [text]
+     * @property {string} [html]
+     * @property {import('svelte').Snippet} [children]
+     */
 
-    let show = false;
+    /** @type {Props} */
+    let {
+        xOffset = 10,
+        yOffset = 10,
+        text = '',
+        html = '',
+        children
+    } = $props();
 
-    let coords;
+    let show = $state(false);
+
+    let coords = $state();
     let timer;
 
     onMount(() => {
@@ -43,13 +56,13 @@
 
 <div
         role="none"
-        on:mouseover={handleHover}
-        on:focus={handleHover}
-        on:mouseout={handleHide}
-        on:blur={handleHide}
-        on:mousemove={handleMove}
+        onmouseover={handleHover}
+        onfocus={handleHover}
+        onmouseout={handleHide}
+        onblur={handleHide}
+        onmousemove={handleMove}
 >
-    <slot></slot>
+    {@render children?.()}
     {#if show}
         <div
                 class="tooltip"

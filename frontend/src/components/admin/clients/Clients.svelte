@@ -7,12 +7,12 @@
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
     import Pagination from "$lib/Pagination.svelte";
 
-    let msg = '';
+    let msg = $state('');
 
-    let clients = [];
-    let resClients = [];
-    let resClientsPaginated = [];
-    let search = '';
+    let clients = $state([]);
+    let resClients = $state([]);
+    let resClientsPaginated = $state([]);
+    let search = $state('');
 
     let searchOptions = [
         {
@@ -27,7 +27,7 @@
         },
     ];
 
-    onMount(async () => {
+    onMount(() => {
         fetchClients();
         fetchScopes();
     })
@@ -74,9 +74,9 @@
     <ClientTileAddNew onSave={onSave}/>
 
     <div id="clients">
-        {#each resClientsPaginated as client (client.id)}
+        {#each resClientsPaginated as client, i (client.id)}
             <div>
-                <ClientTile bind:client onSave={onSave}/>
+                <ClientTile bind:client={resClientsPaginated[i]} onSave={onSave}/>
             </div>
         {/each}
     </div>

@@ -3,16 +3,32 @@
 	import IconEye from "$lib/icons/IconEye.svelte";
 	import IconEyeSlash from "$lib/icons/IconEyeSlash.svelte";
 
-	export let colors = {};
-	export let error = '';
-	export let name = '';
-	export let password = false;
-	export let value = '';
-	export let width = '250px';
+  /**
+   * @typedef {Object} Props
+   * @property {any} [colors]
+   * @property {string} [error]
+   * @property {string} [name]
+   * @property {boolean} [password]
+   * @property {string} [value]
+   * @property {string} [width]
+   * @property {import('svelte').Snippet} [children]
+   */
 
-	let type = password ? 'new-password' : 'text';
-	let isHover = false;
-	let isFocus = false;
+  /** @type {Props & { [key: string]: any }} */
+  let {
+    colors = {},
+    error = '',
+    name = '',
+    password = false,
+    value = '',
+    width = '250px',
+    children,
+    ...rest
+  } = $props();
+
+	let type = $state(password ? 'new-password' : 'text');
+	let isHover = $state(false);
+	let isFocus = $state(false);
 
 	function toggle() {
 		if (type === 'password') {
@@ -34,17 +50,17 @@
         style:background={colors.bg}
     >
       <label for={name}>
-        <slot></slot>
+        {@render children?.()}
       </label>
     </div>
   </div>
 
   <input
       {type}
-      on:mouseenter={() => isHover = true}
-      on:mouseleave={() => isHover = false}
-      on:focus={() => isFocus = true}
-      on:blur={() => isFocus = false}
+      onmouseenter={() => isHover = true}
+      onmouseleave={() => isHover = false}
+      onfocus={() => isFocus = true}
+      onblur={() => isFocus = false}
       autocomplete="off"
       style:width={width}
       style:background={isHover || isFocus ? colors.bg : colors.bg}
@@ -53,7 +69,7 @@
       style:box-shadow="1px 1px 2px {colors.gmid}"
       {name}
       {value}
-      {...$$restProps}
+      {...rest}
   />
 
   {#if password}
@@ -61,8 +77,8 @@
       <div
               role="none"
               class="btn show"
-              on:click={toggle}
-              on:keypress={toggle}
+              onclick={toggle}
+              onkeypress={toggle}
       >
         {#if type === 'password'}
           <IconEyeSlash width={22} color={colors.err} />

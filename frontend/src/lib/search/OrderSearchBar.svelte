@@ -2,16 +2,31 @@
     import OrderBy from "./OrderBy.svelte";
     import SearchBar from "./SearchBar.svelte";
 
-    export let items = [];
-    export let resItems;
-    export let searchOptions = [];
-    export let orderOptions = [];
-    export let firstDirReverse = false;
-    export let useServerSideIdx = '';
-    export let isSearchFiltered = false;
-    export let search = '';
+    /**
+     * @typedef {Object} Props
+     * @property {any} [items]
+     * @property {any} resItems
+     * @property {any} [searchOptions]
+     * @property {any} [orderOptions]
+     * @property {boolean} [firstDirReverse]
+     * @property {string} [useServerSideIdx]
+     * @property {boolean} [isSearchFiltered]
+     * @property {string} [search]
+     */
 
-    let searchItems = [];
+    /** @type {Props} */
+    let {
+        items = $bindable([]),
+        resItems = $bindable(),
+        searchOptions = $bindable([]),
+        orderOptions = $bindable([]),
+        firstDirReverse = false,
+        useServerSideIdx = $bindable(''),
+        isSearchFiltered = $bindable(false),
+        search = $bindable('')
+    } = $props();
+
+    let searchItems = $state([]);
 </script>
 
 <div class="container">

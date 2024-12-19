@@ -1,4 +1,6 @@
 <script>
+    import {run} from 'svelte/legacy';
+
     import * as yup from "yup";
     import {extractFormErrors, formatUtcTsFromDateInput} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
@@ -12,36 +14,39 @@
 
     const minDate = new Date().toISOString().split('.')[0];
 
-    export let apiKey = {};
-    export let onSave;
+    let {apiKey = $bindable({}), onSave} = $props();
 
-    let err = '';
-    let success = false;
-    let timer;
-    let doesExpire = !!apiKey.expires;
-    let accessMatrix;
+    let err = $state('');
+    let success = $state(false);
+    let timer = $state();
+    let doesExpire = $state(!!apiKey.expires);
+    let accessMatrix = $state();
     // IMPORTANT: do NOT give a default here -> will be initialized inside ApiKeyAccessMatrix!
-    let finalizeMatrix;
+    let finalizeMatrix = $state();
 
-    $: if (success) {
-        timer = setTimeout(() => {
-            success = false;
-            onSave();
-        }, 2000);
-    }
+    run(() => {
+        if (success) {
+            timer = setTimeout(() => {
+                success = false;
+                onSave();
+            }, 2000);
+        }
+    });
 
     onMount(() => {
         return () => clearTimeout(timer);
     });
 
     let formErrors = {};
-    let formValues = {
+    let formValues = $state({
         exp: '',
-    }
+    })
 
-    $: if (doesExpire) {
-        formValues.exp = new Date().toISOString().split('.')[0];
-    }
+    run(() => {
+        if (doesExpire) {
+            formValues.exp = new Date().toISOString().split('.')[0];
+        }
+    });
 
     async function onSubmit() {
         err = '';
@@ -105,7 +110,7 @@
         </div>
     {/if}
 
-    <ApiKeyAccessMatrix bind:apiKey bind:accessMatrix bind:finalize={finalizeMatrix} />
+    <ApiKeyAccessMatrix {apiKey} bind:accessMatrix bind:finalize={finalizeMatrix}/>
 
     <Button on:click={onSubmit} level={1} width="4rem">SAVE</Button>
 

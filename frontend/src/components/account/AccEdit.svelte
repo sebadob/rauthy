@@ -14,24 +14,30 @@
     import {putUserSelf} from "../../utils/dataFetching.js";
     import Input from "$lib/inputs/Input.svelte";
 
-    export let t;
-    export let user = {};
-    export let viewModePhone = false;
-    $: inputWidth = viewModePhone ? 'calc(100vw - 1.5rem)' : '300px';
+    /**
+     * @typedef {Object} Props
+     * @property {any} t
+     * @property {any} [user]
+     * @property {boolean} [viewModePhone]
+     */
+
+    /** @type {Props} */
+    let { t, user = $bindable({}), viewModePhone = false } = $props();
+    let inputWidth = $derived(viewModePhone ? 'calc(100vw - 1.5rem)' : '300px');
 
     const btnWidth = "8rem";
 
-    let isLoading = false;
-    let err = '';
-    let success = false;
-    let successEmailConfirm = false;
+    let isLoading = $state(false);
+    let err = $state('');
+    let success = $state(false);
+    let successEmailConfirm = $state(false);
 
-    let formValues = {
+    let formValues = $state({
         email: user.email,
         givenName: user.given_name,
         familyName: user.family_name,
-    };
-    let formErrors = {};
+    });
+    let formErrors = $state({});
 
     const schema = yup.object().shape({
         email: yup.string().required(t.validEmail).email(t.validEmail),
@@ -39,7 +45,7 @@
         familyName: yup.string().matches(REGEX_NAME_NULLABLE, t.validFamilyName),
     });
 
-    let formErrorsValues = {};
+    let formErrorsValues = $state({});
     const schemaValues = yup.object().shape({
         // TODO translations
         birthdate: yup.string().nullable().trim().matches(REGEX_BIRTHDATE, t.invalidInput),

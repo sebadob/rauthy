@@ -7,19 +7,18 @@
     import {postAttr} from "../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";
 
-    export let idx = -1;
-    export let onSave;
+    let { idx = $bindable(-1), onSave } = $props();
 
-    let err = '';
+    let err = $state('');
     let isLoading = false;
     let success = false;
-    let expandContainer;
+    let expandContainer = $state();
 
-    let formValues = {
+    let formValues = $state({
         name: '',
         desc: '',
-    };
-    let formErrors = {};
+    });
+    let formErrors = $state({});
 
     const schema = yup.object().shape({
         name: yup.string().trim().required('Name is required').matches(REGEX_ATTR_KEY, 'Invalid characters: [a-z0-9-_/]{2,32}'),
@@ -63,51 +62,55 @@
 </script>
 
 <ExpandContainer bind:idx bind:show={expandContainer}>
-    <div class="header font-label" slot="header">
-        ADD NEW USER ATTRIBUTE
-    </div>
-
-    <div class="container" slot="body">
-        <div class="desc">
-            You can add a new custom user attribute.<br>
-            These attributes can be set for every user and mapped to an existing scope.<br>
-            They are simple Key / JsonValue pairs.
+    {#snippet header()}
+        <div class="header font-label" >
+            ADD NEW USER ATTRIBUTE
         </div>
+    {/snippet}
 
-        <!-- Name-->
-        <Input
-                bind:value={formValues.name}
-                bind:error={formErrors.name}
-                autocomplete="off"
-                placeholder="Name"
-                on:input={validateForm}
-        >
-            NAME
-        </Input>
-        <Input
-                bind:value={formValues.desc}
-                bind:error={formErrors.desc}
-                autocomplete="off"
-                placeholder="Description"
-                on:input={validateForm}
-        >
-            DESCRIPTION
-        </Input>
-
-        <Button on:click={onSubmit} level={1}>SAVE</Button>
-
-        {#if success}
-            <div class="success">
-                Success
+    {#snippet body()}
+        <div class="container" >
+            <div class="desc">
+                You can add a new custom user attribute.<br>
+                These attributes can be set for every user and mapped to an existing scope.<br>
+                They are simple Key / JsonValue pairs.
             </div>
-        {/if}
 
-        {#if err}
-            <div class="mainErr err">
-                {err}
-            </div>
-        {/if}
-    </div>
+            <!-- Name-->
+            <Input
+                    bind:value={formValues.name}
+                    bind:error={formErrors.name}
+                    autocomplete="off"
+                    placeholder="Name"
+                    on:input={validateForm}
+            >
+                NAME
+            </Input>
+            <Input
+                    bind:value={formValues.desc}
+                    bind:error={formErrors.desc}
+                    autocomplete="off"
+                    placeholder="Description"
+                    on:input={validateForm}
+            >
+                DESCRIPTION
+            </Input>
+
+            <Button on:click={onSubmit} level={1}>SAVE</Button>
+
+            {#if success}
+                <div class="success">
+                    Success
+                </div>
+            {/if}
+
+            {#if err}
+                <div class="mainErr err">
+                    {err}
+                </div>
+            {/if}
+        </div>
+    {/snippet}
 </ExpandContainer>
 
 <style>

@@ -1,7 +1,7 @@
 <script>
     import Switch from "./Switch.svelte";
 
-    export let options = [
+    let { options = [
         {
             label: 'password',
             value: false,
@@ -10,7 +10,7 @@
             label: 'refresh_token',
             value: false,
         },
-    ];
+    ] } = $props();
 
 </script>
 

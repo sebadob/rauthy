@@ -5,12 +5,12 @@
     import {slide} from "svelte/transition";
     import HiddenValueArea from "$lib/inputs/HiddenValueArea.svelte";
 
-    export let apiKey;
+    let {apiKey} = $props();
 
-    let err = '';
-    let secret = '';
-    let curl = '';
-    let curlPretty = '';
+    let err = $state('');
+    let secret = $state('');
+    let curl = $state('');
+    let curlPretty = $state('');
 
     async function generateSecret() {
         let res = await putApiKeySecret(apiKey.name);
@@ -37,7 +37,7 @@
     <Button
             on:click={generateSecret}
             level={!secret ? 1 : 3}
-            width={130}
+            width="130px"
     >
         GENERATE NEW
     </Button>

@@ -1,10 +1,21 @@
 <script>
     import {fade} from 'svelte/transition';
 
-    export let offset = 0;
-    export let background = false;
-    export let global = false;
-    export let color = 'var(--col-acnt)';
+    /**
+     * @typedef {Object} Props
+     * @property {number} [offset]
+     * @property {boolean} [background]
+     * @property {boolean} [global]
+     * @property {string} [color]
+     */
+
+    /** @type {Props} */
+    let {
+        offset = 0,
+        background = false,
+        global = false,
+        color = 'var(--col-acnt)'
+    } = $props();
 
 </script>
 
