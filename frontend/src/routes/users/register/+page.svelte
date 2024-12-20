@@ -31,7 +31,6 @@
                     .required(t.required)
                     .matches(REGEX_NAME, t.regexName),
                 familyName: yup.string()
-                    .required(t.required)
                     .matches(REGEX_NAME_NULLABLE, t.regexName),
             });
         }
