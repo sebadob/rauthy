@@ -4,7 +4,7 @@
     import {extractFormErrors, getQueryParams} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
     import {REGEX_NAME, REGEX_NAME_NULLABLE} from "../../../utils/constants.js";
-    import {getPow, registerUser} from "../../../utils/dataFetching.js";
+    import {registerUser} from "../../../utils/dataFetching.js";
     import {onMount, tick} from "svelte";
     import Input from "$lib/inputs/Input.svelte";
     import BrowserCheck from "../../../components/BrowserCheck.svelte";
@@ -74,7 +74,7 @@
         const data = {
             email: formValues.email,
             given_name: formValues.givenName,
-            family_name: formValues.familyName,
+            family_name: formValues.familyName.length > 0 ? formValues.familyName : undefined,
             pow,
         };
 

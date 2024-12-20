@@ -271,7 +271,6 @@
                             <Button
                                     on:click={() => handleDelete(passkey.name)}
                                     level={4}
-                                    isDisabled={showDelete}
                             >
                                 {t.mfa.delete.toUpperCase()}
                             </Button>

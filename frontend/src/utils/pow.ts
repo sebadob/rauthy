@@ -1,5 +1,7 @@
+import {getPow} from "./dataFetching";
+
 export async function fetchSolvePow() {
-    let res = await fetch('/api/pow');
+    let res = await getPow();
 
     if (res.ok) {
         let challenge = await res.text();
