@@ -175,7 +175,7 @@
         </div>
     {:else}
         {#if policy}
-            <PasswordPolicy bind:password={formValues.new} bind:accepted {policy}/>
+            <PasswordPolicy password={formValues.new} bind:accepted {policy}/>
         {/if}
 
         <PasswordInput

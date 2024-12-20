@@ -22,7 +22,7 @@
      */
 
     /** @type {Props} */
-    let { t, user = $bindable({}), viewModePhone = false } = $props();
+    let {t, user = $bindable({}), viewModePhone = false} = $props();
     let inputWidth = $derived(viewModePhone ? 'calc(100vw - 1.5rem)' : '300px');
 
     const btnWidth = "8rem";
@@ -42,7 +42,7 @@
     const schema = yup.object().shape({
         email: yup.string().required(t.validEmail).email(t.validEmail),
         givenName: yup.string().required(t.validGivenName).matches(REGEX_NAME, t.validGivenName),
-        familyName: yup.string().matches(REGEX_NAME_NULLABLE, t.validFamilyName),
+        familyName: yup.string().nullable().matches(REGEX_NAME_NULLABLE, t.validFamilyName),
     });
 
     let formErrorsValues = $state({});
