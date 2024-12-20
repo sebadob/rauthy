@@ -1,6 +1,13 @@
 <script>
-    export let eventsCollapsed = true;
-    export let eventsWide = false;
+    /**
+     * @typedef {Object} Props
+     * @property {boolean} [eventsCollapsed]
+     * @property {boolean} [eventsWide]
+     * @property {import('svelte').Snippet} [children]
+     */
+
+    /** @type {Props} */
+    let {eventsCollapsed = $bindable(true), eventsWide = $bindable(false), children} = $props();
 </script>
 
 <div
@@ -9,7 +16,7 @@
         class:mrCollapsed={eventsCollapsed && !eventsWide}
         class:mrWide={!eventsCollapsed && eventsWide}
 >
-    <slot></slot>
+    {@render children?.()}
 </div>
 
 <style>

@@ -1,4 +1,6 @@
 <script>
+    import {run} from 'svelte/legacy';
+
     import {
         arrBufToBase64UrlSafe,
         base64UrlSafeToArrBuf,
@@ -21,23 +23,23 @@
     import IconFingerprint from "$lib/icons/IconFingerprint.svelte";
     import Tooltip from "$lib/Tooltip.svelte";
 
-    export let t;
-    export let sessionInfo;
-    export let user = {};
+    let {t, sessionInfo, user = {}} = $props();
 
     let isLoading = false;
-    let err = false;
-    let msg = '';
-    let showRegInput = false;
-    let showDelete = user.account_type === "password";
+    let err = $state(false);
+    let msg = $state('');
+    let showRegInput = $state(false);
+    let showDelete = $state(user.account_type === "password");
 
-    let passkeys = [];
-    $: if (passkeys.length > 0 && user.account_type === "passkey") {
-        showDelete = passkeys.length > 1;
-    }
+    let passkeys = $state([]);
+    run(() => {
+        if (passkeys.length > 0 && user.account_type === "passkey") {
+            showDelete = passkeys.length > 1;
+        }
+    });
 
-    let formValues = {passkeyName: ''};
-    let formErrors = {};
+    let formValues = $state({passkeyName: ''});
+    let formErrors = $state({});
     const schema = yup.object().shape({
         passkeyName: yup.string()
             .required(t.invalidInput)
@@ -247,7 +249,7 @@
                         {#if passkey.user_verified}
                             <Tooltip text={t.userVerifiedTooltip}>
                                 <div style:margin-bottom="-.25rem">
-                                    <IconFingerprint width=18 color="var(--col-acnt)" />
+                                    <IconFingerprint width={18} color="var(--col-acnt)"/>
                                 </div>
                             </Tooltip>
                         {/if}
@@ -269,7 +271,6 @@
                             <Button
                                     on:click={() => handleDelete(passkey.name)}
                                     level={4}
-                                    disabled={showDelete}
                             >
                                 {t.mfa.delete.toUpperCase()}
                             </Button>

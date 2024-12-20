@@ -1,30 +1,29 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import {navIsExpanded, navSelected} from "./navStore.js";
     import {fade} from "svelte/transition";
 
-    export let label = '';
-    export let slotCollapsed = true;
+    /**
+     * @typedef {Object} Props
+     * @property {string} [label]
+     * @property {boolean} [slotCollapsed]
+     * @property {import('svelte').Snippet} [children]
+     */
 
-    let isExpanded = true;
-    let color = 'var(--col-text)';
+    /** @type {Props} */
+    let { label = '', slotCollapsed = true, children } = $props();
 
-    let selected = '';
+    let isExpanded = $state(true);
+    let color = $state('var(--col-text)');
+
+    let selected = $state('');
     navSelected.subscribe(s => selected = s);
     navIsExpanded.subscribe(v => isExpanded = v);
 
-    let hover = false;
+    let hover = $state(false);
 
-    $: if (selected) {
-        checkSelected();
-    }
 
-    $: {
-        if (hover) {
-            color = 'var(--col-err)';
-        } else {
-            checkSelected();
-        }
-    }
 
     function checkSelected() {
         if (hover) {
@@ -40,6 +39,18 @@
         navSelected.set(label);
     }
 
+    run(() => {
+        if (selected) {
+            checkSelected();
+        }
+    });
+    run(() => {
+        if (hover) {
+            color = 'var(--col-err)';
+        } else {
+            checkSelected();
+        }
+    });
 </script>
 
 {#if isExpanded}
@@ -48,13 +59,13 @@
             tabindex="0"
             class="entry noselect font-label"
             class:selected={selected === label}
-            on:click={select}
-            on:keypress={select}
-            on:mouseenter={() => hover = true}
-            on:mouseleave={() => hover = false}
+            onclick={select}
+            onkeypress={select}
+            onmouseenter={() => hover = true}
+            onmouseleave={() => hover = false}
             transition:fade|global={{ duration: 100 }}
     >
-        <slot></slot>
+        {@render children?.()}
         <span class="label">
       {label}
     </span>
@@ -65,14 +76,14 @@
             tabindex="0"
             class="entryCollapsed noselect font-label"
             class:selectedCollapsed={selected === label}
-            on:click={select}
-            on:keypress={select}
-            on:mouseenter={() => hover = true}
-            on:mouseleave={() => hover = false}
+            onclick={select}
+            onkeypress={select}
+            onmouseenter={() => hover = true}
+            onmouseleave={() => hover = false}
             in:fade|global={{ delay: 200, duration: 100 }}
     >
         {#if slotCollapsed}
-            <slot></slot>
+            {@render children?.()}
         {/if}
         <span class="labelCollapsed">
       {label}

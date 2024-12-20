@@ -1,4 +1,6 @@
 <script>
+    import {run} from 'svelte/legacy';
+
     import * as yup from "yup";
     import {onMount} from "svelte";
     import {
@@ -26,72 +28,39 @@
     import LangSelector from "$lib/LangSelector.svelte";
     import {REGEX_NAME} from "../../../../../utils/constants.js";
 
-    const btnWidth = 150;
+    const btnWidth = '150px';
     const inputWidth = '320px';
 
-    let t;
+    let t = $state();
     let csrf = '';
-    let policy;
-    let isReady = true;
+    let policy = $state();
+    let isReady = $state(true);
     // let isReady = false;
     let isMfa = false;
 
-    let isLoading = false;
-    let err = '';
+    let isLoading = $state(false);
+    let err = $state('');
     let userId = '';
     // let requestType = '';
-    let requestType = "password_reset"
-    let accountTypeNew = '';
+    let requestType = $state("password_reset")
+    let accountTypeNew = $state('');
     let magicLinkId = '';
-    let redirectUri;
-    let success = false;
-    let accepted = false;
-    let showCopy = false;
-    let webauthnData;
+    let redirectUri = $state();
+    let success = $state(false);
+    let accepted = $state(false);
+    let showCopy = $state(false);
+    let webauthnData = $state();
 
-    let formValues = {
+    let formValues = $state({
         passkeyName: '',
         password: '',
         passwordConfirm: '',
-    };
-    let formErrors = {};
+    });
+    let formErrors = $state({});
 
-    let schemaPasskey;
-    let schemaPassword;
-    $: if (t) {
-        schemaPasskey = yup.object().shape({
-            passkeyName: yup.string()
-                .required(t.required)
-                .matches(REGEX_NAME, t.mfa.passkeyNameErr),
-        });
-        schemaPassword = yup.object().shape({
-            password: yup.string().required(t.required),
-            passwordConfirm: yup.string().required(t.required)
-        });
-    }
+    let schemaPasskey = $state();
+    let schemaPassword = $state();
 
-    $: if (formValues.password?.length > 0 && formValues.password === formValues.passwordConfirm) {
-        showCopy = true;
-    }
-
-    $: if (success) {
-        setTimeout(() => {
-            if (redirectUri) {
-                window.location.replace(redirectUri);
-            } else {
-                navigateToAccount();
-            }
-        }, 5000);
-    }
-
-    $: if (accountTypeNew) {
-        // reset all possibly filled in form values from before
-        formValues = {
-            passkeyName: '',
-            password: '',
-            passwordConfirm: '',
-        };
-    }
 
     onMount(async () => {
         // const policy_vals = '10, 128, 1, 1, 1, 1, 3';
@@ -304,6 +273,45 @@
         }
     }
 
+    run(() => {
+        if (t) {
+            schemaPasskey = yup.object().shape({
+                passkeyName: yup.string()
+                    .required(t.required)
+                    .matches(REGEX_NAME, t.mfa.passkeyNameErr),
+            });
+            schemaPassword = yup.object().shape({
+                password: yup.string().required(t.required),
+                passwordConfirm: yup.string().required(t.required)
+            });
+        }
+    });
+    run(() => {
+        if (accountTypeNew) {
+            // reset all possibly filled in form values from before
+            formValues = {
+                passkeyName: '',
+                password: '',
+                passwordConfirm: '',
+            };
+        }
+    });
+    run(() => {
+        if (formValues.password?.length > 0 && formValues.password === formValues.passwordConfirm) {
+            showCopy = true;
+        }
+    });
+    run(() => {
+        if (success) {
+            setTimeout(() => {
+                if (redirectUri) {
+                    window.location.replace(redirectUri);
+                } else {
+                    navigateToAccount();
+                }
+            }, 5000);
+        }
+    });
 </script>
 
 <svelte:head>
@@ -363,26 +371,26 @@
 
                 {#if accountTypeNew === "password"}
                     <div transition:slide>
-                        <PasswordPolicy bind:t bind:accepted bind:policy bind:password={formValues.password}/>
+                        <PasswordPolicy {t} bind:accepted {policy} bind:password={formValues.password}/>
 
                         <PasswordInput
                                 bind:value={formValues.password}
-                                bind:error={formErrors.password}
+                                error={formErrors.password}
                                 autocomplete="new-password"
                                 placeholder={t.password}
                                 width={inputWidth}
-                                bind:showCopy
+                                {showCopy}
                                 disabled={success}
                         >
                             {t.password.toUpperCase()}
                         </PasswordInput>
                         <PasswordInput
                                 bind:value={formValues.passwordConfirm}
-                                bind:error={formErrors.passwordConfirm}
+                                error={formErrors.passwordConfirm}
                                 autocomplete="new-password"
                                 placeholder={t.passwordConfirm}
                                 width={inputWidth}
-                                bind:showCopy
+                                {showCopy}
                                 disabled={success}
                         >
                             {t.passwordConfirm.toUpperCase()}
@@ -457,25 +465,25 @@
 
                 <h1>Password Reset</h1>
 
-                <PasswordPolicy bind:t bind:accepted bind:policy bind:password={formValues.password}/>
+                <PasswordPolicy {t} bind:accepted {policy} bind:password={formValues.password}/>
 
                 <PasswordInput
                         bind:value={formValues.password}
-                        bind:error={formErrors.password}
+                        error={formErrors.password}
                         autocomplete="new-password"
                         placeholder={t.password}
                         width={inputWidth}
-                        bind:showCopy
+                        {showCopy}
                 >
                     {t.password.toUpperCase()}
                 </PasswordInput>
                 <PasswordInput
                         bind:value={formValues.passwordConfirm}
-                        bind:error={formErrors.passwordConfirm}
+                        error={formErrors.passwordConfirm}
                         autocomplete="new-password"
                         placeholder={t.passwordConfirm}
                         width={inputWidth}
-                        bind:showCopy
+                        {showCopy}
                 >
                     {t.passwordConfirm.toUpperCase()}
                 </PasswordInput>

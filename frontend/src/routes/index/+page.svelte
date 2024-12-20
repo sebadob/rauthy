@@ -8,8 +8,8 @@
 
     const btnWidth = "9rem";
 
-    let t;
-    let renderReg = false;
+    let t = $state();
+    let renderReg = $state(false);
 
     onMount(() => {
         const data = window.document.getElementsByName('rauthy-data')[0].id

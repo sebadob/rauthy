@@ -1,16 +1,29 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import {onMount} from "svelte";
     import IconBarsArrowDown from "$lib/icons/IconBarsArrowDown.svelte";
     import IconBarsArrowUp from "$lib/icons/IconBarsArrowUp.svelte";
     import Tooltip from "../Tooltip.svelte";
 
-    export let items = [];
-    export let resItems;
-    export let options = [];
-    export let firstDirReverse = false;
+    /**
+     * @typedef {Object} Props
+     * @property {any} [items]
+     * @property {any} resItems
+     * @property {any} [options]
+     * @property {boolean} [firstDirReverse]
+     */
 
-    let selected = '';
-    let direction = 1;
+    /** @type {Props} */
+    let {
+        items = [],
+        resItems = $bindable(),
+        options = [],
+        firstDirReverse = false
+    } = $props();
+
+    let selected = $state('');
+    let direction = $state(1);
     let callback;
 
     onMount(() => {
@@ -24,14 +37,7 @@
         orderItems();
     });
 
-    $: if (items) {
-        orderItems();
-    }
 
-    $: if (selected) {
-        extractCallback();
-        orderItems();
-    }
 
     function extractCallback() {
         for (let opt of options) {
@@ -60,6 +66,17 @@
         direction *= -1;
         orderItems();
     }
+    run(() => {
+        if (items) {
+            orderItems();
+        }
+    });
+    run(() => {
+        if (selected) {
+            extractCallback();
+            orderItems();
+        }
+    });
 </script>
 
 <div class="container">
@@ -80,8 +97,8 @@
                 role="button"
                 tabindex="0"
                 class="icon"
-                on:click={switchDirection}
-                on:keypress={switchDirection}
+                onclick={switchDirection}
+                onkeypress={switchDirection}
         >
             {#if direction === 1}
                 <IconBarsArrowUp/>

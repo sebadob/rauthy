@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import {onMount} from "svelte";
     import {getPasswordPolicy} from "../../../../utils/dataFetching.js";
     import Button from "$lib/Button.svelte";
@@ -9,13 +11,13 @@
 
     const inputWidth = '160px';
 
-    let isLoading = false;
-    let err = '';
-    let success = false;
-    let timer;
-    let policy;
+    let isLoading = $state(false);
+    let err = $state('');
+    let success = $state(false);
+    let timer = $state();
+    let policy = $state();
 
-    let formErrors = {};
+    let formErrors = $state({});
     const schema = yup.object().shape({
         length_min: yup.number()
             .required('Min Length is required')
@@ -45,11 +47,13 @@
             .max(32, 'Cannot be higher than 32'),
     });
 
-    $: if (success) {
-        timer = setTimeout(() => {
-            success = false;
-        }, 3000);
-    }
+    run(() => {
+        if (success) {
+            timer = setTimeout(() => {
+                success = false;
+            }, 3000);
+        }
+    });
 
     onMount(async () => {
         if (!policy) {

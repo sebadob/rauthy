@@ -1,7 +1,13 @@
 <script>
-    export let value;
-    export let options = [];
-    export let width = 'inherit';
+    /**
+     * @typedef {Object} Props
+     * @property {any} value
+     * @property {any} [options]
+     * @property {string} [width]
+     */
+
+    /** @type {Props} */
+    let { value = $bindable(), options = [], width = 'inherit' } = $props();
 </script>
 
 <select bind:value style:width>

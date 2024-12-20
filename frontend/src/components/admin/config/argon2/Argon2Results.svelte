@@ -1,5 +1,5 @@
 <script>
-    export let res = [];
+    let { res = [] } = $props();
 </script>
 
 <div class="container">

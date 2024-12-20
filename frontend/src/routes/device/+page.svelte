@@ -1,4 +1,5 @@
 <script>
+    import {run} from 'svelte/legacy';
     import {onMount} from "svelte";
     import {postDeviceVerify, getPow, getSessionInfo} from "../../utils/dataFetching.js";
     import Loading from "../../components/Loading.svelte";
@@ -10,38 +11,40 @@
     import Button from "$lib/Button.svelte";
     import * as yup from "yup";
     import {REGEX_URI} from "../../utils/constants.js";
-    import {pow_work_wasm} from "../../spow/spow-wasm.js";
+    import {fetchSolvePow} from "../../utils/pow.ts";
 
     const btnWidthInline = '8rem';
 
     /** @type {any} */
-    let t;
+    let t = $state();
     /** @type {any} */
-    let sessionInfo;
+    let sessionInfo = $state();
 
-    let err = '';
-    let userCodeLength = 8;
-    let isLoading = false;
+    let err = $state('');
+    let userCodeLength = $state(8);
+    let isLoading = $state(false);
     let onInputValidate = false;
 
     /** @type {string | undefined} */
-    let scopes = undefined;
-    let isAccepted = false;
-    let isDeclined = false;
+    let scopes = $state(undefined);
+    let isAccepted = $state(false);
+    let isDeclined = $state(false);
 
-    let formValues = {userCode: ''};
-    let formErrors = {userCode: ''};
-    let schema = {};
-    $: if (t && userCodeLength) {
-        schema = yup.object().shape({
-            // REGEX_URI is not really correct, but it's not too important either.
-            // The backend will validate immediately by cache key, which can be any String.
-            userCode: yup.string().trim()
-                .min(userCodeLength, t.errTooShort)
-                .max(userCodeLength, t.errTooLong)
-                .matches(REGEX_URI, t.invalidInput)
-        });
-    }
+    let formValues = $state({userCode: ''});
+    let formErrors = $state({userCode: ''});
+    let schema = $state({});
+    run(() => {
+        if (t && userCodeLength) {
+            schema = yup.object().shape({
+                // REGEX_URI is not really correct, but it's not too important either.
+                // The backend will validate immediately by cache key, which can be any String.
+                userCode: yup.string().trim()
+                    .min(userCodeLength, t.errTooShort)
+                    .max(userCodeLength, t.errTooLong)
+                    .matches(REGEX_URI, t.invalidInput)
+            });
+        }
+    });
 
     onMount(() => {
         userCodeLength = Number.parseInt(window.document.getElementsByName('rauthy-data')[0].id);
@@ -79,19 +82,7 @@
         }
         isLoading = true;
 
-        // compute PoW
-        const powRes = await getPow();
-        let body = await powRes.text();
-        if (!powRes.ok) {
-            err = body;
-            return;
-        }
-        let start = new Date().getUTCMilliseconds();
-        // Ryzen 5600G - difficulty 20 -> ~925 ms median
-        let pow = await pow_work_wasm(body);
-        let diff = new Date().getUTCMilliseconds() - start;
-        console.log('pow computation took ' + diff + ' ms');
-
+        let pow = await fetchSolvePow();
         let data = {
             user_code: formValues.userCode,
             pow,

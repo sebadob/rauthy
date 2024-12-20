@@ -2,10 +2,9 @@
     import Button from "$lib/Button.svelte";
     import {deleteApiKey} from "../../../utils/dataFetchingAdmin.js";
 
-    export let apiKey = {};
-    export let onSave;
+    let { apiKey = {}, onSave } = $props();
 
-    let err = '';
+    let err = $state('');
     let success = false;
 
     async function onSubmit() {

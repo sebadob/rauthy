@@ -5,9 +5,9 @@
     import LangSelector from "$lib/LangSelector.svelte";
     import Button from "$lib/Button.svelte";
 
-    let t;
-    let emailOld = 'old@mail.org';
-    let emailNew = 'new@mail.org';
+    let t = $state();
+    let emailOld = $state('old@mail.org');
+    let emailNew = $state('new@mail.org');
 
     onMount(async () => {
         const data = document.getElementsByName('rauthy-data')[0].id;

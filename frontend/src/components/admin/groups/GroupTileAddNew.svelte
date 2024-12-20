@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import ExpandContainer from "$lib/ExpandContainer.svelte";
     import * as yup from "yup";
     import {REGEX_ROLES} from "../../../utils/constants.js";
@@ -8,30 +10,31 @@
     import {postGroup} from "../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";
 
-    export let idx = -1;
-    export let onSave;
-    let expandContainer;
+    let { idx = $bindable(-1), onSave } = $props();
+    let expandContainer = $state();
 
-    let group = {group: ''};
+    let group = $state({group: ''});
 
-    let err = '';
+    let err = $state('');
     let isLoading = false;
-    let success = false;
-    let timer;
-    let formErrors = {};
+    let success = $state(false);
+    let timer = $state();
+    let formErrors = $state({});
 
     const schema = yup.object().shape({
         group: yup.string().trim().matches(REGEX_ROLES, "Can only contain: 'a-z0-9-_/:*', length: 2-64"),
     });
 
-    $: if (success) {
-        timer = setTimeout(() => {
-            onSave();
-            success = false;
-            group = {group: ''};
-            expandContainer = false;
-        }, 1500);
-    }
+    run(() => {
+        if (success) {
+            timer = setTimeout(() => {
+                onSave();
+                success = false;
+                group = {group: ''};
+                expandContainer = false;
+            }, 1500);
+        }
+    });
 
     onMount(() => {
         return () => clearTimeout(timer);
@@ -73,35 +76,39 @@
 </script>
 
 <ExpandContainer bind:idx bind:show={expandContainer}>
-    <div class="header font-label" slot="header">
-        ADD NEW GROUP
-    </div>
+    {#snippet header()}
+        <div class="header font-label" >
+            ADD NEW GROUP
+        </div>
+    {/snippet}
 
-    <div class="container" slot="body">
-        <Input
-                bind:value={group.group}
-                bind:error={formErrors.group}
-                autocomplete="off"
-                placeholder="Group Name"
-                on:input={validateForm}
-        >
-            GROUP NAME
-        </Input>
+    {#snippet body()}
+        <div class="container" >
+            <Input
+                    bind:value={group.group}
+                    bind:error={formErrors.group}
+                    autocomplete="off"
+                    placeholder="Group Name"
+                    on:input={validateForm}
+            >
+                GROUP NAME
+            </Input>
 
-        <Button on:click={onSubmit} level={1} width="4rem">SAVE</Button>
+            <Button on:click={onSubmit} level={1} width="4rem">SAVE</Button>
 
-        {#if success}
-            <div class="success">
-                Success
-            </div>
-        {/if}
+            {#if success}
+                <div class="success">
+                    Success
+                </div>
+            {/if}
 
-        {#if err}
-            <div class="err">
-                {err}
-            </div>
-        {/if}
-    </div>
+            {#if err}
+                <div class="err">
+                    {err}
+                </div>
+            {/if}
+        </div>
+    {/snippet}
 </ExpandContainer>
 
 <style>

@@ -1,25 +1,30 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import {onMount} from "svelte";
     import OptionSelect from "$lib/OptionSelect.svelte";
     import {LANGUAGES} from "../utils/constants.js";
     import {postUpdateUserLanguage} from "../utils/dataFetching.js";
 
-    export let absolute = false;
-    export let absoluteRight = false;
-    // if set to true, a request to the backend will be done for the currently logged in user
-    export let updateBackend = false;
+    
+    /**
+     * @typedef {Object} Props
+     * @property {boolean} [absolute]
+     * @property {boolean} [absoluteRight]
+     * @property {boolean} [updateBackend] - if set to true, a request to the backend will be done for the currently logged in user
+     */
+
+    /** @type {Props} */
+    let { absolute = false, absoluteRight = false, updateBackend = false } = $props();
 
     const attrs = ';Path=/;SameSite=Lax;Max-Age=157680000';
-    let lang;
-    let langSelected;
+    let lang = $state();
+    let langSelected = $state();
 
     onMount(async () => {
         readLang();
     });
 
-    $: if (langSelected && langSelected !== lang) {
-        switchLang(langSelected);
-    }
 
     function readLang() {
         let l = document.documentElement.lang.toUpperCase();
@@ -42,6 +47,11 @@
 
         window.location.reload();
     }
+    run(() => {
+        if (langSelected && langSelected !== lang) {
+            switchLang(langSelected);
+        }
+    });
 </script>
 
 <div class:absolute class:absoluteLeft={!absoluteRight} class:absoluteRight>

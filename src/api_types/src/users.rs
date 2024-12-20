@@ -149,7 +149,7 @@ pub struct UpdateUserSelfRequest {
     pub email: Option<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{1,32}"))]
-    pub given_name: String,
+    pub given_name: Option<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
     #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{1,32}"))]
     pub family_name: Option<String>,

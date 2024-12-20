@@ -4,10 +4,10 @@
     import Button from "$lib/Button.svelte";
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
 
-    export let client;
+    let {client} = $props();
 
-    let err = '';
-    let secret = '';
+    let err = $state('');
+    let secret = $state('');
 
     onMount(() => {
         fetchSecret();
@@ -59,7 +59,7 @@
     <Button
             on:click={generateSecret}
             level={1}
-            width={130}
+            width="130px"
     >
         GENERATE NEW
     </Button>

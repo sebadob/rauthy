@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import {onMount} from "svelte";
     import {getKey} from "$lib/utils/helpers.js";
     import Button from "$lib/Button.svelte";
@@ -9,19 +11,21 @@
     import CheckIcon from "$lib/CheckIcon.svelte";
     import {getFedCMStatus} from "../../utils/dataFetching.js";
 
-    let configUrl = '';
-    let isSupported = false;
-    let isLoggedIn = false;
-    let credentials = '';
-    let credentialType = '';
+    let configUrl = $state('');
+    let isSupported = $state(false);
+    let isLoggedIn = $state(false);
+    let credentials = $state('');
+    let credentialType = $state('');
 
-    $: console.log('built config url: ' + configUrl);
+    run(() => {
+        console.log('built config url: ' + configUrl);
+    });
 
-    let formValues = {
+    let formValues = $state({
         clientId: 'fedcm',
         configUrl: 'any',
-    }
-    let formErrors = {};
+    })
+    let formErrors = $state({});
     const schema = yup.object().shape({
         clientId: yup.string().required('Client ID is required').trim().matches(REGEX_URI, "Must be URL safe"),
         configUrl: yup.string().nullable().trim().matches(REGEX_URI, "Must be URL safe"),

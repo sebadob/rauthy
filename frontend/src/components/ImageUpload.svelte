@@ -1,10 +1,16 @@
 <script>
     import IconUpload from "$lib/icons/IconUpload.svelte";
 
-    export let text = 'UPLOAD LOGO';
-    export let image;
+    /**
+     * @typedef {Object} Props
+     * @property {string} [text]
+     * @property {any} image
+     */
 
-    let inputRef;
+    /** @type {Props} */
+    let { text = 'UPLOAD LOGO', image = $bindable() } = $props();
+
+    let inputRef = $state();
 
     function onFileSelected(e) {
         let img = e.target.files[0];
@@ -24,8 +30,8 @@
             role="button"
             tabindex="0"
             class="btn"
-            on:click={() => inputRef.click()}
-            on:keypress={() => inputRef.click()}
+            onclick={() => inputRef.click()}
+            onkeypress={() => inputRef.click()}
     >
         <IconUpload width={22}/>
     </div>
@@ -33,8 +39,8 @@
             role="button"
             tabindex="0"
             class="text noselect font-label"
-            on:click={() => inputRef.click()}
-            on:keypress={() => inputRef.click()}
+            onclick={() => inputRef.click()}
+            onkeypress={() => inputRef.click()}
     >
         {text}
     </div>
@@ -44,7 +50,7 @@
             class="imageInput"
             type="file"
             accept=".jpg, .jpeg, .png, .svg"
-            on:change={(e)=>onFileSelected(e)}
+            onchange={(e)=>onFileSelected(e)}
     >
 </div>
 

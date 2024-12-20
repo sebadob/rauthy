@@ -4,12 +4,12 @@
     import Argon2Utility from "./Argon2Utility.svelte";
 
     let err = '';
-    let currParams;
-    let loginTime;
-    let numCpus;
+    let currParams = $state();
+    let loginTime = $state();
+    let numCpus = $state();
     let isLoading = true;
 
-    onMount(async () => {
+    onMount(() => {
         fetchData();
     });
 

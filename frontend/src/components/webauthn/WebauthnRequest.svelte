@@ -5,21 +5,33 @@
     import {webauthnAuth} from "../../utils/webauthn.js";
     import {promiseTimeout} from "../../utils/helpers.js";
 
-    export let t = {
+    /**
+     * @typedef {Object} Props
+     * @property {any} [t]
+     * @property {any} data
+     * @property {string} [purpose]
+     * @property {any} [onError]
+     * @property {any} [onSuccess]
+     */
+
+    /** @type {Props} */
+    let {
+        t = {
         invalidKeyUsed: 'Invalid Key',
         mfaAck: 'Acknowledged',
         provideMfa: 'Please login with your MFA device',
         requestExpires: 'Request expires',
-    };
-    export let data;
-    export let purpose = 'Login';
-    export let onError = (error) => {
-    };
-    export let onSuccess = (resBody) => {
-    };
-    let err = false;
-    let msg = '';
-    let success = false;
+    },
+        data = $bindable(),
+        purpose = 'Login',
+        onError = (error) => {
+    },
+        onSuccess = (resBody) => {
+    }
+    } = $props();
+    let err = $state(false);
+    let msg = $state('');
+    let success = $state(false);
 
     let progress = tweened(data.exp, {
         duration: data.exp * 1000,
