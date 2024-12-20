@@ -1797,5 +1797,13 @@ mod tests {
         client.delete_scope("cust_scope");
         assert_eq!(&client.scopes, "email,openid,groups");
         assert_eq!(&client.default_scopes, "email,openid");
+
+        client.delete_scope("email");
+        assert_eq!(&client.scopes, "openid,groups");
+        assert_eq!(&client.default_scopes, "openid");
+
+        client.delete_scope("groups");
+        assert_eq!(&client.scopes, "openid");
+        assert_eq!(&client.default_scopes, "openid");
     }
 }
