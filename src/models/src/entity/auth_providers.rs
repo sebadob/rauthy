@@ -48,7 +48,6 @@ use std::borrow::Cow;
 use std::fmt::Write;
 use std::str::FromStr;
 use std::time::Duration;
-use time::OffsetDateTime;
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
@@ -760,7 +759,7 @@ impl AuthProviderCallback {
         Ok(())
     }
 
-    async fn find(callback_id: String) -> Result<Self, ErrorResponse> {
+    pub async fn find(callback_id: String) -> Result<Self, ErrorResponse> {
         let opt: Option<Self> = DB::client()
             .get(Cache::AuthProviderCallback, callback_id)
             .await?;
@@ -774,7 +773,7 @@ impl AuthProviderCallback {
         }
     }
 
-    async fn save(&self) -> Result<(), ErrorResponse> {
+    pub async fn save(&self) -> Result<(), ErrorResponse> {
         DB::client()
             .put(
                 Cache::AuthProviderCallback,
@@ -1248,14 +1247,11 @@ impl AuthProviderIdClaims<'_> {
         let _header = parts.next().ok_or_else(|| {
             ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "incorrect ID did not contain claims".to_string(),
+                "incorrect ID did not contain claims",
             )
         })?;
         let claims = parts.next().ok_or_else(|| {
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "ID token was unsigned".to_string(),
-            )
+            ErrorResponse::new(ErrorResponseType::BadRequest, "ID token was unsigned")
         })?;
         debug!("upstream ID token claims:\n{}", claims);
         let json_bytes = base64_url_no_pad_decode(claims)?;
@@ -1270,10 +1266,7 @@ impl AuthProviderIdClaims<'_> {
         if self.email.is_none() {
             let err = "No `email` in ID token claims. This is a mandatory claim";
             error!("{}", err);
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                err.to_string(),
-            ));
+            return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
         }
 
         let claims_user_id = if let Some(sub) = &self.sub {
@@ -1285,10 +1278,7 @@ impl AuthProviderIdClaims<'_> {
         } else {
             let err = "Cannot find any user id in the response";
             error!("{}", err);
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                err.to_string(),
-            ));
+            return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
         }
         // We need to create a real string here, since we don't know what json type we get.
         // Any json number would become a String too, which is what we need for compatibility.
@@ -1317,7 +1307,7 @@ impl AuthProviderIdClaims<'_> {
                         if link.provider_id != provider.id {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "bad provider_id in link cookie".to_string(),
+                                "bad provider_id in link cookie",
                             ));
                         }
 
@@ -1327,7 +1317,7 @@ impl AuthProviderIdClaims<'_> {
                             // multiple accounts.
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "bad user_id in link cookie".to_string(),
+                                "bad user_id in link cookie",
                             ));
                         }
 
@@ -1335,7 +1325,7 @@ impl AuthProviderIdClaims<'_> {
                         if link.user_email != user.email {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
-                                "Invalid E-Mail".to_string(),
+                                "Invalid E-Mail",
                             ));
                         }
 
@@ -1364,7 +1354,7 @@ impl AuthProviderIdClaims<'_> {
             if provider.admin_claim_value.is_none() {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Internal,
-                    "Misconfigured Auth Provider - admin claim path without value".to_string(),
+                    "Misconfigured Auth Provider - admin claim path without value",
                 ));
             }
 
@@ -1405,7 +1395,7 @@ impl AuthProviderIdClaims<'_> {
             if provider.mfa_claim_value.is_none() {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Internal,
-                    "Misconfigured Auth Provider - mfa claim path without value".to_string(),
+                    "Misconfigured Auth Provider - mfa claim path without value",
                 ));
             }
 
@@ -1440,7 +1430,7 @@ impl AuthProviderIdClaims<'_> {
             }
         }
 
-        let now = OffsetDateTime::now_utc().unix_timestamp();
+        let now = chrono::Utc::now().timestamp();
         let user = if let Some(mut user) = user_opt {
             let mut old_email = None;
             let mut forbidden_error = None;
@@ -1465,10 +1455,7 @@ impl AuthProviderIdClaims<'_> {
                     Some(user.failed_login_attempts.unwrap_or_default() + 1);
                 user.save(old_email).await?;
 
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Forbidden,
-                    err.to_string(),
-                ));
+                return Err(ErrorResponse::new(ErrorResponseType::Forbidden, err));
             }
 
             // check / update email
