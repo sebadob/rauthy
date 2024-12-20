@@ -35,6 +35,9 @@
 
     async function computeMissing() {
         await tick();
+        if (!items) {
+            items = [];
+        }
         missing = [...options.filter(i => !items.includes(i))];
     }
 
