@@ -4,7 +4,7 @@
     import {extractFormErrors, getQueryParams} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
     import {REGEX_NAME} from "../../../utils/constants.js";
-    import {registerUser} from "../../../utils/dataFetching.js";
+    import {getPow, registerUser} from "../../../utils/dataFetching.js";
     import {onMount, tick} from "svelte";
     import Input from "$lib/inputs/Input.svelte";
     import BrowserCheck from "../../../components/BrowserCheck.svelte";
