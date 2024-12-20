@@ -2,7 +2,7 @@
     import * as yup from "yup";
     import {extractFormErrors, getQueryParams} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
-    import {REGEX_NAME} from "../../../utils/constants.js";
+    import {REGEX_NAME, REGEX_NAME_NULLABLE} from "../../../utils/constants.js";
     import {getPow, registerUser} from "../../../utils/dataFetching.js";
     import {onMount, tick} from "svelte";
     import Input from "$lib/inputs/Input.svelte";
@@ -30,7 +30,7 @@
                 .matches(REGEX_NAME, t.regexName),
             familyName: yup.string()
                 .required(t.required)
-                .matches(REGEX_NAME, t.regexName),
+                .matches(REGEX_NAME_NULLABLE, t.regexName),
         });
     }
 
