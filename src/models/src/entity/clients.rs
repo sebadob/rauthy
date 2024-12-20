@@ -669,51 +669,44 @@ impl Client {
 
     // TODO make a generic 'delete_from_csv' function out of this and re-use it in some other places
     pub fn delete_scope(&mut self, scope: &str) {
+        let len = scope.bytes().len();
+
         // find the scope via index in the string
         // first entry: delete scope + ',' if it exists
         // last entry: delete scope + ',' in front if it exists
         // middle: delete scope + ',' in front if it exists
         // --> 2 cases: first entry or else
-        let i_opt = self.scopes.find(scope);
-        if i_opt.is_none() {
-            return;
-        }
-
-        let i = i_opt.unwrap();
-        let len = scope.bytes().len();
-        if i == 0 {
-            // the scope is the first entry
-            if self.scopes.len() > len {
-                let s = format!("{},", scope);
-                self.scopes = self.scopes.replace(&s, "");
+        if let Some(i) = self.scopes.find(scope) {
+            if i == 0 {
+                // the scope is the first entry
+                if self.scopes.len() > len {
+                    let s = format!("{},", scope);
+                    self.scopes = self.scopes.replace(&s, "");
+                } else {
+                    self.scopes = String::default();
+                }
             } else {
-                self.scopes = String::default();
+                // the scope is at the end or in the middle
+                let s = format!(",{}", scope);
+                self.scopes = self.scopes.replace(&s, "");
             }
-        } else {
-            // the scope is at the end or in the middle
-            let s = format!(",{}", scope);
-            self.scopes = self.scopes.replace(&s, "");
         }
 
         // check if the to-be-deleted scope is in the default scopes
-        let i_opt = self.default_scopes.find(scope);
-        if i_opt.is_none() {
-            return;
-        }
-
-        let i = i_opt.unwrap();
-        if i == 0 {
-            // the scope is the first entry
-            if self.default_scopes.len() > len {
-                let s = format!("{},", scope);
-                self.default_scopes = self.default_scopes.replace(&s, "");
+        if let Some(i) = self.default_scopes.find(scope) {
+            if i == 0 {
+                // the scope is the first entry
+                if self.default_scopes.len() > len {
+                    let s = format!("{},", scope);
+                    self.default_scopes = self.default_scopes.replace(&s, "");
+                } else {
+                    self.default_scopes = String::default();
+                }
             } else {
-                self.default_scopes = String::default();
+                // the scope is at the end or in the middle
+                let s = format!(",{}", scope);
+                self.default_scopes = self.default_scopes.replace(&s, "");
             }
-        } else {
-            // the scope is at the end or in the middle
-            let s = format!(",{}", scope);
-            self.default_scopes = self.default_scopes.replace(&s, "");
         }
     }
 
@@ -1789,5 +1782,28 @@ mod tests {
                 .await
                 .expect("ephemeral client test http server to start") })
         })
+    }
+
+    #[test]
+    fn test_delete_client_custom_scope() {
+        let mut client = Client::default();
+        client.scopes = "email,openid,profile,groups".to_string();
+        client.default_scopes = "email,openid,cust_scope".to_string();
+
+        client.delete_scope("profile");
+        assert_eq!(&client.scopes, "email,openid,groups");
+        assert_eq!(&client.default_scopes, "email,openid,cust_scope");
+
+        client.delete_scope("cust_scope");
+        assert_eq!(&client.scopes, "email,openid,groups");
+        assert_eq!(&client.default_scopes, "email,openid");
+
+        client.delete_scope("email");
+        assert_eq!(&client.scopes, "openid,groups");
+        assert_eq!(&client.default_scopes, "openid");
+
+        client.delete_scope("groups");
+        assert_eq!(&client.scopes, "openid");
+        assert_eq!(&client.default_scopes, "openid");
     }
 }
