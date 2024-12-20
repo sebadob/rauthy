@@ -65,7 +65,7 @@
     const schema = yup.object().shape({
         email: yup.string().required('E-Mail is required').email("Bad E-Mail format"),
         given_name: yup.string().trim().required('Given Name is required').matches(REGEX_NAME, 'Invalid characters'),
-        family_name: yup.string().trim().matches(REGEX_NAME_NULLABLE, 'Invalid characters'),
+        family_name: yup.string().nullable().trim().matches(REGEX_NAME_NULLABLE, 'Invalid characters'),
     });
 
     let formErrorsValues = $state({});
