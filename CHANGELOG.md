@@ -32,6 +32,13 @@ Even though this changes the request and response objects on the API, this chang
 a breaking change. API clients are forbidden to modify upstream IdPs for security reasons, which means this change
 should only affect the Rauthy Admin UI.
 
+### Bugfix
+
+- During the deletion of a custom scope, that has been mapped to only a clients default scopes, but not the
+  free ones, the mapping would be skipped during the whole client cleanup and end up being left-over after the
+  deletion, which needed a manual cleanup afterward.
+  [#663](https://github.com/sebadob/rauthy/pull/663)
+
 ## v0.27.2
 
 ### Changes
