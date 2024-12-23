@@ -12,7 +12,7 @@ docker run --rm \
     -e COOKIE_MODE=danger-insecure \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.27.2
+    ghcr.io/sebadob/rauthy:0.27.3
 ```
 
 This will start the container in interactive mode with the [Hiqlite](https://github.com/sebadob/hiqlite) database. Just
@@ -25,7 +25,7 @@ docker run -d \
     -e COOKIE_MODE=danger-insecure \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.27.2
+    ghcr.io/sebadob/rauthy:0.27.3
 ```
 
 ```admonish note
@@ -132,7 +132,7 @@ docker run -d \
     -v $(pwd)/rauthy/data:/app/data \
     -p 8080:8080 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.27.2
+    ghcr.io/sebadob/rauthy:0.27.3
 ```
 
 - `-v $(pwd)/rauthy/rauthy.cfg:/app/rauthy.cfg` makes sure to overwrite the testing config inside the container
