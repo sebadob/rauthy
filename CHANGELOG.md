@@ -10,7 +10,7 @@ To provide additional compatibility for some upstream providers like Active Dire
 some changes have been applied to Rauthy's behavior.
 
 The first thing is that the HTTP client used for upstream Logins does not force TLS v1.3 anymore, but also allows
-TLS v1.2. Both v1.2 and v1.3 are considered being secure by current standards. This is necessary, because some OS'es
+TLS v1.2. Both v1.2 and v1.3 are considered being secure by current standards. This is necessary, because some OSes
 like Windows Server 2019 do not support TLS 1.3.
 
 The second change is for the way upstream providers are configured. The behavior until now was, that Rauthy added the
