@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.27.3-20241218-1"
+version = "0.27.3"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -20,7 +20,6 @@ panic = "abort"
 
 [patch.crates-io]
 #hiqlite = { git = "https://github.com/sebadob/hiqlite.git", branch = "prepare-v0.3.3", package = "hiqlite" }
-#hiqlite = { path = "../../hiqlite/hiqlite", package = "hiqlite" }
 
 [workspace.dependencies]
 accept-language = "3"
@@ -83,7 +82,7 @@ ring = "0.17"
 rio_api = "0.8.4"
 rio_turtle = "0.8.4"
 rsa = { version = "0.9.3", features = ["serde", "sha2"] }
-ruma = { version = "0.11.0", features = ["client-api-c", "client-ext-client-api", "client-reqwest", "markdown", "rand"] }
+ruma = { version = "0.12.0", features = ["client-api-c", "client-ext-client-api", "client-reqwest", "markdown", "rand"] }
 rust-embed = "8.5.0"
 rustls = { version = "0.23", default-features = false, features = ["logging", "std", "tls12", "ring"] }
 rustls-pki-types = "1.4.1"

@@ -4272,7 +4272,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.27.3-20241218-1"
+version = "0.27.3"
 dependencies = [
  "actix-service",
  "actix-web",
@@ -4313,7 +4313,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.27.3-20241218-1"
+version = "0.27.3"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4334,7 +4334,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.27.3-20241218-1"
+version = "0.27.3"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4360,7 +4360,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.27.3-20241218-1"
+version = "0.27.3"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4396,7 +4396,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.27.3-20241218-1"
+version = "0.27.3"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -4426,7 +4426,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.27.3-20241218-1"
+version = "0.27.3"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4445,7 +4445,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-models"
-version = "0.27.3-20241218-1"
+version = "0.27.3"
 dependencies = [
  "accept-language",
  "actix",
@@ -4521,7 +4521,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.27.3-20241218-1"
+version = "0.27.3"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4541,7 +4541,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.27.3-20241218-1"
+version = "0.27.3"
 dependencies = [
  "actix-web",
  "chrono",
@@ -4559,7 +4559,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.27.3-20241218-1"
+version = "0.27.3"
 dependencies = [
  "actix-web",
  "argon2",
@@ -4921,9 +4921,9 @@ dependencies = [
 
 [[package]]
 name = "ruma"
-version = "0.11.1"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e94984418ae8a5e1160e6c87608141330e9ae26330abf22e3d15416efa96d48a"
+checksum = "f5100fcaf13d18b9c5c2dfdee5632c428e3201b04ddefd82c930953b461d000a"
 dependencies = [
  "assign",
  "js_int",
@@ -4937,9 +4937,9 @@ dependencies = [
 
 [[package]]
 name = "ruma-client"
-version = "0.14.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98b28c843d376e011b98e66c91a3921c174d987440792cdd3ea61cf59e29bfe0"
+checksum = "7df765f1917f28ef0bf307b19c2c845be4fc2bb77f76e00b1eafbfa8921f7952"
 dependencies = [
  "as_variant",
  "assign",
@@ -4956,9 +4956,9 @@ dependencies = [
 
 [[package]]
 name = "ruma-client-api"
-version = "0.19.0"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "325e054db8d5545c00767d9868356d61e63f2c6cb8b54768346d66696ea4ad48"
+checksum = "25f5929f675a96adb22dcfbab1c527862d7f92a6346a280f2ddcfc6380b19391"
 dependencies = [
  "as_variant",
  "assign",
@@ -4973,16 +4973,16 @@ dependencies = [
  "serde",
  "serde_html_form",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.7",
  "url",
  "web-time",
 ]
 
 [[package]]
 name = "ruma-common"
-version = "0.14.1"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad71c7f49abaa047ba228339d34f9aaefa4d8b50ebeb8e859d0340cc2138bda8"
+checksum = "6c537899b20312655aa9bf4cd825aaf00dd13203f215df2007bc4fbbeac8d8ba"
 dependencies = [
  "as_variant",
  "base64 0.22.1",
@@ -5000,7 +5000,7 @@ dependencies = [
  "serde",
  "serde_html_form",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.7",
  "time",
  "tracing",
  "url",
@@ -5011,9 +5011,9 @@ dependencies = [
 
 [[package]]
 name = "ruma-events"
-version = "0.29.1"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be86dccf3504588c1f4dc1bda4ce1f8bbd646fc6dda40c77cc7de6e203e62dad"
+checksum = "34e4f72eb598c62f51a199bd9218f3fc36a5d50361ecc7a30d864df7bfcef220"
 dependencies = [
  "as_variant",
  "indexmap 2.7.0",
@@ -5027,7 +5027,7 @@ dependencies = [
  "ruma-macros",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.7",
  "tracing",
  "url",
  "web-time",
@@ -5046,12 +5046,11 @@ dependencies = [
 
 [[package]]
 name = "ruma-macros"
-version = "0.14.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8d57d3cb20e8e758e8f7c5e408ce831d46758003b615100099852e468631934"
+checksum = "ff7bc55ea278668253c9898dd905325bf1f72df4bf2abddd04ff1c99b7b3c4fb"
 dependencies = [
  "cfg-if",
- "once_cell",
  "proc-macro-crate",
  "proc-macro2",
  "quote",
