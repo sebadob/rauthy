@@ -131,7 +131,7 @@
                     name: 'Github',
                     client_id: '',
                     client_secret: '',
-                    scope: 'read:user',
+                    scope: 'user:email',
                     root_pem: null,
 
                     admin_claim_path: null,

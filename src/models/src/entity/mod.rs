@@ -6,6 +6,7 @@ use sqlx::query;
 pub mod api_keys;
 pub mod app_version;
 pub mod auth_codes;
+mod auth_provider_cust_impl;
 pub mod auth_providers;
 pub mod clients;
 pub mod clients_dyn;
