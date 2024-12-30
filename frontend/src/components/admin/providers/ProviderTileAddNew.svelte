@@ -285,7 +285,7 @@
                         name: 'Github',
                         client_id: '',
                         client_secret: '',
-                        scope: 'read:user',
+                        scope: 'user:email',
                         root_pem: null,
 
                         admin_claim_path: null,
@@ -575,56 +575,56 @@
                     CLIENT SECRET
                 </PasswordInput>
 
-            <div class="desc">
-                <p>
-                    The authentication method to use on the <code>/token</code> endpoint.<br>
-                    Most providers should work with <code>basic</code>, some only with <code>post</code>.
-                    In rare situations, you need both, while it can lead to errors with others.
-                </p>
-            </div>
-            <div class="switchRow">
-                <div>
-                    client_secret_basic
+                <div class="desc">
+                    <p>
+                        The authentication method to use on the <code>/token</code> endpoint.<br>
+                        Most providers should work with <code>basic</code>, some only with <code>post</code>.
+                        In rare situations, you need both, while it can lead to errors with others.
+                    </p>
                 </div>
-                <Switch
-                        bind:selected={config.client_secret_basic}
-                />
-            </div>
-            <div class="switchRow">
-                <div>
-                    client_secret_post
+                <div class="switchRow">
+                    <div>
+                        client_secret_basic
+                    </div>
+                    <Switch
+                            bind:selected={config.client_secret_basic}
+                    />
                 </div>
-                <Switch
-                        bind:selected={config.client_secret_post}
-                />
-            </div>
+                <div class="switchRow">
+                    <div>
+                        client_secret_post
+                    </div>
+                    <Switch
+                            bind:selected={config.client_secret_post}
+                    />
+                </div>
 
-            <JsonPathDesc/>
-            <div class="desc">
-                <p>
-                    You can map a user to be a rauthy admin depending on an upstream ID claim.
-                </p>
-            </div>
-            <Input
-                    name="admin_claim_path"
-                    bind:value={config.admin_claim_path}
-                    bind:error={formErrors.admin_claim_path}
-                    placeholder="$.roles.*"
-                    on:input={validateFormConfig}
-                    width={inputWidth}
-            >
-                ADMIN CLAIM PATH
-            </Input>
-            <Input
-                    name="admin_claim_value"
-                    bind:value={config.admin_claim_value}
-                    bind:error={formErrors.admin_claim_value}
-                    placeholder="rauthy_admin"
-                    on:input={validateFormConfig}
-                    width={inputWidth}
-            >
-                ADMIN CLAIM VALUE
-            </Input>
+                <JsonPathDesc/>
+                <div class="desc">
+                    <p>
+                        You can map a user to be a rauthy admin depending on an upstream ID claim.
+                    </p>
+                </div>
+                <Input
+                        name="admin_claim_path"
+                        bind:value={config.admin_claim_path}
+                        bind:error={formErrors.admin_claim_path}
+                        placeholder="$.roles.*"
+                        on:input={validateFormConfig}
+                        width={inputWidth}
+                >
+                    ADMIN CLAIM PATH
+                </Input>
+                <Input
+                        name="admin_claim_value"
+                        bind:value={config.admin_claim_value}
+                        bind:error={formErrors.admin_claim_value}
+                        placeholder="rauthy_admin"
+                        on:input={validateFormConfig}
+                        width={inputWidth}
+                >
+                    ADMIN CLAIM VALUE
+                </Input>
 
                 <div class="desc">
                     <p>
