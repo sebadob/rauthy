@@ -32,6 +32,17 @@ Even though this changes the request and response objects on the API, this chang
 a breaking change. API clients are forbidden to modify upstream IdPs for security reasons, which means this change
 should only affect the Rauthy Admin UI.
 
+#### Gitlab as Upstream IdP
+
+Gitlab is special and does its own, annoying thing to make it usable as an upstream IdP. An issue has been found
+when someone tries to log in with no publicly shown email address. In this worst case scenario, a successful
+login to Github while retrieving all necessary information (email is mandatory for Rauthy), you need to do 3
+different API requests.
+
+This version also makes it possible to log in via Github IdP with an account with only private email addresses.
+
+[#665](https://github.com/sebadob/rauthy/pull/665)
+
 ### Bugfix
 
 - During the deletion of a custom scope, that has been mapped to only a clients default scopes, but not the
