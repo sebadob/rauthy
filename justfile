@@ -155,13 +155,14 @@ mailcrab-stop:
 # Starts mailcrab
 postgres-start:
     {{ docker }} run -d \
-      -v {{ invocation_directory() }}/postgres/sql-scripts:/docker-entrypoint-initdb.d \
+      -e POSTGRES_USER=rauthy \
       -e POSTGRES_PASSWORD=123SuperSafe \
+      -e POSTGRES_DB=rauthy \
       --net {{ container_network }} \
       -p 5432:5432 \
       --name {{ container_postgres }} \
       --restart unless-stopped \
-      docker.io/library/postgres:16.2-alpine
+      docker.io/library/postgres:17.2-alpine
 
     sleep 3
     just migrate-postgres

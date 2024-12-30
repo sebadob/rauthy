@@ -1004,7 +1004,7 @@ impl AuthProviderCallback {
                     let mut claims = AuthProviderIdClaims::try_from(res_bytes.as_bytes())?;
 
                     if claims.email.is_none() && provider.typ == AuthProviderType::Github {
-                        auth_provider_cust_impl::get_update_github_private_email(
+                        auth_provider_cust_impl::get_github_private_email(
                             &client,
                             &access_token,
                             &mut claims,
@@ -1236,9 +1236,10 @@ impl AuthProviderIdClaims<'_> {
         if let Some(given_name) = &self.given_name {
             given_name
         } else if let Some(name) = &self.name {
-            let (given_name, _) = name.split_once(' ').unwrap_or(("N/A", "N/A"));
+            let (given_name, _) = name.split_once(' ').unwrap_or((name, ""));
             given_name
         } else {
+            // This should never happen at all
             "N/A"
         }
     }
@@ -1247,8 +1248,11 @@ impl AuthProviderIdClaims<'_> {
         if let Some(family_name) = &self.family_name {
             Some(family_name)
         } else if let Some(name) = &self.name {
-            let (_, family_name) = name.split_once(' ').unwrap_or(("N/A", "N/A"));
-            Some(family_name)
+            if let Some((_, family_name)) = name.split_once(' ') {
+                Some(family_name)
+            } else {
+                None
+            }
         } else {
             None
         }

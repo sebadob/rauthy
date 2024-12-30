@@ -22,10 +22,10 @@ struct GithubEmailPrivateResponse {
 /// This means we need a 3rd request to Github.
 ///
 /// Note: The user endpoint is hardcoded because it is very unlikely to ever
-/// change in the future. If we would allow this to be customizable, everything
+/// change in the future. If we allowed this to be customizable, everything
 /// would get super messy. If the Github API ever updates, we just need to update
 /// the URL here as well.
-pub async fn get_update_github_private_email(
+pub async fn get_github_private_email(
     client: &reqwest::Client,
     access_token: &str,
     claims: &mut AuthProviderIdClaims<'_>,
@@ -35,7 +35,6 @@ pub async fn get_update_github_private_email(
     let res = client
         .get("https://api.github.com/user/emails")
         .header(AUTHORIZATION, format!("Bearer {}", access_token))
-        // .header(ACCEPT, "application/vnd.github+json")
         .header(ACCEPT, APPLICATION_JSON)
         .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
