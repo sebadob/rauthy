@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.27.3
 
 ### Changes
 
@@ -10,7 +10,7 @@ To provide additional compatibility for some upstream providers like Active Dire
 some changes have been applied to Rauthy's behavior.
 
 The first thing is that the HTTP client used for upstream Logins does not force TLS v1.3 anymore, but also allows
-TLS v1.2. Both v1.2 and v1.3 are considered being secure by current standards. This is necessary, because some OS'es
+TLS v1.2. Both v1.2 and v1.3 are considered being secure by current standards. This is necessary, because some OSes
 like Windows Server 2019 do not support TLS 1.3.
 
 The second change is for the way upstream providers are configured. The behavior until now was, that Rauthy added the
@@ -31,6 +31,20 @@ possibly existing configurations will have both options enabled like it has been
 Even though this changes the request and response objects on the API, this change is **NOT** being handled as
 a breaking change. API clients are forbidden to modify upstream IdPs for security reasons, which means this change
 should only affect the Rauthy Admin UI.
+
+#### Gitlab as Upstream IdP
+
+Gitlab is special and does its own, annoying thing to make it usable as an upstream IdP. An issue has been found
+when someone tries to log in with no publicly shown email address. In this worst case scenario, a successful
+login to Github while retrieving all necessary information (email is mandatory for Rauthy), you need to do 3
+different API requests.
+
+This version also makes it possible to log in via Github IdP with an account with only private email addresses.
+A different `scope` for the login is necessary to make this possible. The template in the UI has been updated,
+but this will not affect existing Github IdP Providers. If you are currently using Github as upstream IdP, please
+change the `scope` manually from `read:user` to `user:email`.
+
+[#665](https://github.com/sebadob/rauthy/pull/665)
 
 ### Bugfix
 

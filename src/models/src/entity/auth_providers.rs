@@ -2,6 +2,7 @@ use crate::api_cookie::ApiCookie;
 use crate::app_state::AppState;
 use crate::database::{Cache, DB};
 use crate::entity::auth_codes::AuthCode;
+use crate::entity::auth_provider_cust_impl;
 use crate::entity::clients::Client;
 use crate::entity::sessions::Session;
 use crate::entity::users::User;
@@ -52,7 +53,7 @@ use time::OffsetDateTime;
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "varchar")]
 #[sqlx(rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
@@ -1000,7 +1001,17 @@ impl AuthProviderCallback {
                     debug!("GET /userinfo auth provider status: {}", status);
 
                     let res_bytes = res.bytes().await?;
-                    let claims = AuthProviderIdClaims::try_from(res_bytes.as_bytes())?;
+                    let mut claims = AuthProviderIdClaims::try_from(res_bytes.as_bytes())?;
+
+                    if claims.email.is_none() && provider.typ == AuthProviderType::Github {
+                        auth_provider_cust_impl::get_github_private_email(
+                            &client,
+                            &access_token,
+                            &mut claims,
+                        )
+                        .await?;
+                    }
+
                     claims.validate_update_user(&provider, &link_cookie).await?
                 } else {
                     let err = "Neither `access_token` nor `id_token` existed";
@@ -1183,31 +1194,31 @@ enum ProviderMfaLogin {
 }
 
 #[derive(Debug, Deserialize)]
-struct AuthProviderIdClaims<'a> {
+pub struct AuthProviderIdClaims<'a> {
     // pub iss: &'a str,
     // json values because some providers provide String, some int
-    sub: Option<serde_json::Value>,
-    id: Option<serde_json::Value>,
-    uid: Option<serde_json::Value>,
+    pub sub: Option<serde_json::Value>,
+    pub id: Option<serde_json::Value>,
+    pub uid: Option<serde_json::Value>,
 
     // aud / azp is not being validated, because it works with OIDC only anyway
     // aud: Option<&'a str>,
     // azp: Option<&'a str>,
     // even though `email` is mandatory for Rauthy, we set it to optional for
     // the deserialization to have more control over the error message being returned
-    email: Option<Cow<'a, str>>,
-    email_verified: Option<bool>,
+    pub email: Option<Cow<'a, str>>,
+    pub email_verified: Option<bool>,
 
-    name: Option<Cow<'a, str>>,
-    given_name: Option<Cow<'a, str>>,
-    family_name: Option<Cow<'a, str>>,
+    pub name: Option<Cow<'a, str>>,
+    pub given_name: Option<Cow<'a, str>>,
+    pub family_name: Option<Cow<'a, str>>,
 
-    address: Option<AuthProviderAddressClaims<'a>>,
-    birthdate: Option<Cow<'a, str>>,
-    locale: Option<Cow<'a, str>>,
-    phone: Option<Cow<'a, str>>,
+    pub address: Option<AuthProviderAddressClaims<'a>>,
+    pub birthdate: Option<Cow<'a, str>>,
+    pub locale: Option<Cow<'a, str>>,
+    pub phone: Option<Cow<'a, str>>,
 
-    json_bytes: Option<&'a [u8]>,
+    pub json_bytes: Option<&'a [u8]>,
 }
 
 impl<'a> TryFrom<&'a [u8]> for AuthProviderIdClaims<'a> {
@@ -1225,9 +1236,10 @@ impl AuthProviderIdClaims<'_> {
         if let Some(given_name) = &self.given_name {
             given_name
         } else if let Some(name) = &self.name {
-            let (given_name, _) = name.split_once(' ').unwrap_or(("N/A", "N/A"));
+            let (given_name, _) = name.split_once(' ').unwrap_or((name, ""));
             given_name
         } else {
+            // This should never happen at all
             "N/A"
         }
     }
@@ -1236,8 +1248,11 @@ impl AuthProviderIdClaims<'_> {
         if let Some(family_name) = &self.family_name {
             Some(family_name)
         } else if let Some(name) = &self.name {
-            let (_, family_name) = name.split_once(' ').unwrap_or(("N/A", "N/A"));
-            Some(family_name)
+            if let Some((_, family_name)) = name.split_once(' ') {
+                Some(family_name)
+            } else {
+                None
+            }
         } else {
             None
         }
