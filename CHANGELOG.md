@@ -40,6 +40,9 @@ login to Github while retrieving all necessary information (email is mandatory f
 different API requests.
 
 This version also makes it possible to log in via Github IdP with an account with only private email addresses.
+A different `scope` for the login is necessary to make this possible. The template in the UI has been updated,
+but this will not affect existing Github IdP Providers. If you are currently using Github as upstream IdP, please
+change the `scope` manually from `read:user` to `user:email`.
 
 [#665](https://github.com/sebadob/rauthy/pull/665)
 
