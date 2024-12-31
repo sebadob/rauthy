@@ -6,17 +6,16 @@
     import RoleConfig from "./RoleConfig.svelte";
     import RoleDelete from "./RoleDelete.svelte";
 
-    export let role = {};
-    export let onSave;
+    let {role = $bindable({}), onSave = $bindable()} = $props();
 
     let isLoading = false;
-    let expandContainer;
+    let expandContainer = $state();
 
     const tabBarItems = [
         'Config',
         'Delete',
     ];
-    let selected = tabBarItems[0];
+    let selected = $state(tabBarItems[0]);
     const tabBarDur = 200;
     const tabBarDly = tabBarDur / 2;
 
@@ -28,34 +27,40 @@
 </script>
 
 <ExpandContainer bind:show={expandContainer}>
-    <div class="header" slot="header">
-        <Tooltip text="Role ID">
-            <div class="data font-mono">
-                {role.id}
-            </div>
-        </Tooltip>
+    {#snippet header()}
+        <div class="header">
+            <Tooltip text="Role ID">
+                <div class="data font-mono">
+                    {role.id}
+                </div>
+            </Tooltip>
 
-        <Tooltip text="Role Name">
-            <div class="data">
-                {role.name}
-            </div>
-        </Tooltip>
-    </div>
+            <Tooltip text="Role Name">
+                <div class="data">
+                    {role.name}
+                </div>
+            </Tooltip>
+        </div>
+    {/snippet}
 
-    <div slot="body">
-        <TabBar labels={tabBarItems} bind:selected/>
+    {#snippet body()}
+        <div>
+            <TabBar labels={tabBarItems} bind:selected/>
 
-        {#if selected === 'Config'}
-            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
-                <RoleConfig bind:role bind:onSave/>
-            </div>
+            {#if selected === 'Config'}
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
+                    <RoleConfig bind:role bind:onSave/>
+                </div>
 
-        {:else if selected === 'Delete'}
-            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
-                <RoleDelete bind:role onSave={onDelete}/>
-            </div>
-        {/if}
-    </div>
+            {:else if selected === 'Delete'}
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
+                    <RoleDelete {role} onSave={onDelete}/>
+                </div>
+            {/if}
+        </div>
+    {/snippet}
 </ExpandContainer>
 
 <style>

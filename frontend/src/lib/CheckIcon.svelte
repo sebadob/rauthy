@@ -2,7 +2,13 @@
     import IconCheck from "./icons/IconCheck.svelte";
     import IconStop from "./icons/IconStop.svelte";
 
-    export let check = false;
+    /**
+     * @typedef {Object} Props
+     * @property {boolean} [check]
+     */
+
+    /** @type {Props} */
+    let { check = false } = $props();
 </script>
 
 {#if check}

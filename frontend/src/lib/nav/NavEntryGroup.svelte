@@ -1,32 +1,53 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import {fade, scale, slide} from "svelte/transition";
     import {navContainerExpanded, navIsExpanded, navWidthCollapsed} from "./navStore.js";
     import IconChevronRight from "$lib/icons/IconChevronRight.svelte";
     import {spring} from "svelte/motion";
     import {sleepAwait} from "../utils/helpers.js";
 
-    export let label = '';
-    export let slotCollapsed = true;
+    /**
+     * @typedef {Object} Props
+     * @property {string} [label]
+     * @property {boolean} [slotCollapsed]
+     * @property {import('svelte').Snippet} [icon]
+     * @property {import('svelte').Snippet} [body]
+     */
 
-    let expandedContainer;
-    let isExpanded;
-    let isNavExpanded = true;
-    let color = 'var(--col-text)';
-    let outerWidthCollapsed;
+    /** @type {Props} */
+    let {
+        label = '',
+        slotCollapsed = true,
+        icon,
+        body
+    } = $props();
 
-    let hover = false;
+    let expandedContainer = $state();
+    let isExpanded = $state();
+    let isNavExpanded = $state(true);
+    let color = $state('var(--col-text)');
+    let outerWidthCollapsed = $state();
 
-    $: if (hover) {
-        color = 'var(--col-err)';
-    }
+    let hover = $state(false);
 
-    $: isExpanded = expandedContainer === label;
+    run(() => {
+        if (hover) {
+            color = 'var(--col-err)';
+        }
+    });
+
+    run(() => {
+        isExpanded = expandedContainer === label;
+    });
 
     const rotation = spring(isExpanded ? 90 : 180, {
         stiffness: 0.1,
         damping: 0.3
     });
-    $: rotation.set(isExpanded ? 90 : 180);
+    run(() => {
+        rotation.set(isExpanded ? 90 : 180);
+    });
 
     navWidthCollapsed.subscribe(w => outerWidthCollapsed = w);
     navIsExpanded.subscribe(v => isNavExpanded = v);
@@ -58,13 +79,13 @@
     >
         <div
                 class="labelContainer"
-                on:click={toggle}
-                on:keypress={toggle}
-                on:mouseenter={toggleHover}
-                on:mouseleave={toggleHover}
+                onclick={toggle}
+                onkeypress={toggle}
+                onmouseenter={toggleHover}
+                onmouseleave={toggleHover}
         >
             {#if isNavExpanded}
-                <slot name="icon"></slot>
+                {@render icon?.()}
                 <span class="label">
           {label}
         </span>
@@ -79,17 +100,17 @@
                     class="entries"
                     transition:slide|global={{ duration: 150 }}
             >
-                <slot name="body"></slot>
+                {@render body?.()}
             </div>
         {/if}
     </div>
 {:else}
     <div
             class="collapsed noselect font-label"
-            on:click={toggle}
-            on:keypress={toggle}
-            on:mouseenter={toggleHover}
-            on:mouseleave={toggleHover}
+            onclick={toggle}
+            onkeypress={toggle}
+            onmouseenter={toggleHover}
+            onmouseleave={toggleHover}
             in:fade|global={{ delay: 200, duration: 100 }}
     >
         {#if hover}
@@ -102,7 +123,7 @@
                         style:width="{outerWidthCollapsed}px"
                         style:left="calc({outerWidthCollapsed}px / 2 - 8px)"
                 >
-                    <slot name="body"></slot>
+                    {@render body?.()}
                 </div>
             </div>
         {/if}
@@ -117,7 +138,7 @@
         </div>
 
         {#if slotCollapsed}
-            <slot name="icon"></slot>
+            {@render icon?.()}
         {/if}
         <span class="labelCollapsed">
       {label}

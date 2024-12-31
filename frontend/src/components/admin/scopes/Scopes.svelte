@@ -6,13 +6,13 @@
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
     import Pagination from "$lib/Pagination.svelte";
 
-    let attrs = [];
-    let err = '';
-    let scopes = [];
-    let resScopes = [];
-    let resScopesPaginated = [];
+    let attrs = $state([]);
+    let err = $state('');
+    let scopes = $state([]);
+    let resScopes = $state([]);
+    let resScopesPaginated = $state([]);
     let refresh;
-    let search = '';
+    let search = $state('');
 
     let searchOptions = [
         {
@@ -81,9 +81,9 @@
     <ScopeTileAddNew onSave={onSave}/>
 
     <div id="scopes">
-        {#each resScopesPaginated as scope (scope.id)}
+        {#each resScopesPaginated as scope, i (scope.id)}
             <div>
-                <ScopeTile bind:attrs bind:scope onSave={onSave}/>
+                <ScopeTile bind:attrs bind:scope={resScopesPaginated[i]} onSave={onSave}/>
             </div>
         {/each}
     </div>

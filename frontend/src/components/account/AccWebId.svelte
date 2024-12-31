@@ -1,29 +1,32 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import Button from "$lib/Button.svelte";
     import {fade, slide} from 'svelte/transition';
     import {putUserWebIdData} from "../../utils/dataFetching.js";
     import Switch from "$lib/Switch.svelte";
     import {buildWebIdUri} from "../../utils/helpers.js";
 
-    export let t;
-    export let webIdData;
+    let { t, webIdData = $bindable() } = $props();
 
     const btnWidth = "12rem";
 
-    let err = '';
-    let success = false;
-    let expertMode = !!webIdData.custom_triples;
+    let err = $state('');
+    let success = $state(false);
+    let expertMode = $state(!!webIdData.custom_triples);
     let webIdLink = buildWebIdUri(webIdData.user_id);
 
     // do not set any value here - will be bound to validate function in <AccWebIdEntries/>
     let getData;
     let validateData;
 
-    $: if (success) {
-        setTimeout(() => {
-            success = false;
-        }, 3000);
-    }
+    run(() => {
+        if (success) {
+            setTimeout(() => {
+                success = false;
+            }, 3000);
+        }
+    });
 
     async function onSubmit() {
         err = '';

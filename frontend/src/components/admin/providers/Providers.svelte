@@ -4,10 +4,10 @@
     import ProviderTile from "./ProviderTile.svelte";
     import {postProviders} from "../../../utils/dataFetchingAdmin.js";
 
-    let err = '';
-    let providers = [];
+    let err = $state('');
+    let providers = $state([]);
 
-    onMount(async () => {
+    onMount(() => {
         fetchData();
     });
 
@@ -33,9 +33,9 @@
     <FederationTileAddNew onSave={onSave}/>
 
     <div id="federation">
-        {#each providers as provider (provider.id)}
+        {#each providers as provider, i (provider.id)}
             <div>
-                <ProviderTile bind:provider onSave={onSave}/>
+                <ProviderTile bind:provider={providers[i]} onSave={onSave}/>
             </div>
         {/each}
     </div>

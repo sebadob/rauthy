@@ -1,8 +1,15 @@
 <script>
     import {onMount} from "svelte";
+    /**
+     * @typedef {Object} Props
+     * @property {import('svelte').Snippet} [children]
+     */
 
-    let isChecked = false;
-    let isOk = false;
+    /** @type {Props} */
+    let { children } = $props();
+
+    let isChecked = $state(false);
+    let isOk = $state(false);
 
     onMount(() => {
         isOk = navigator.cookieEnabled;
@@ -17,7 +24,7 @@
 
 {#if isChecked}
     {#if isOk}
-        <slot></slot>
+        {@render children?.()}
     {:else}
         <div>
             <h2>Cookies disabled</h2>

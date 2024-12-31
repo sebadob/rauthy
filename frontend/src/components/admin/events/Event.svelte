@@ -2,17 +2,23 @@
     import {eventColor, formatDateFromTs} from "../../../utils/helpers.js";
     import {onMount} from "svelte";
 
-    export let event;
-    export let collapsed = true;
-    export let wide;
+    /**
+     * @typedef {Object} Props
+     * @property {any} event
+     * @property {boolean} [collapsed]
+     * @property {any} wide
+     */
 
-    let cls = 'event';
-    let isHover = false;
+    /** @type {Props} */
+    let {event = $bindable(), collapsed = true, wide = $bindable()} = $props();
 
-    $: showDefault = !collapsed && !wide;
-    $: showCollapsed = collapsed && !wide && !isHover;
-    $: showWide = !collapsed && wide;
-    $: borderWidth = showCollapsed ? '.5rem' : '.33rem';
+    let cls = $state('event');
+    let isHover = $state(false);
+
+    let showDefault = $derived(!collapsed && !wide);
+    let showCollapsed = $derived(collapsed && !wide && !isHover);
+    let showWide = $derived(!collapsed && wide);
+    let borderWidth = $derived(showCollapsed ? '.5rem' : '.33rem');
 
     onMount(() => {
         let now = new Date().getTime();
@@ -56,8 +62,8 @@
         class={cls}
         class:showCollapsed
         style:border-left={`${borderWidth} solid ${eventColor(event.level)}`}
-        on:mouseenter={() => isHover = true}
-        on:mouseleave={() => isHover = false}
+        onmouseenter={() => isHover = true}
+        onmouseleave={() => isHover = false}
 >
     {#if showWide}
         <div class="row">
@@ -77,10 +83,9 @@
                 <div class="col-ip">{event.ip || ''}</div>
 
             {:else if event.typ === 'NewRauthyAdmin'
-                    || event.typ === 'NewUserRegistered'
-                    || event.typ === 'UserPasswordReset'
-                    || event.typ === 'UserEmailChange'
-            }
+            || event.typ === 'NewUserRegistered'
+            || event.typ === 'UserPasswordReset'
+            || event.typ === 'UserEmailChange'}
                 <div class="col-typ">{event.typ}</div>
                 <div class="col-ip">{event.ip || ''}</div>
                 <div class="col-text">{@html event.text.replace('@', '<wbr/>@')}</div>
@@ -91,9 +96,8 @@
                 <div class="col-text">{`Expires: ${formatDateFromTs(event.data)}`}</div>
 
             {:else if event.typ === 'RauthyStarted'
-                    || event.typ === 'RauthyHealthy'
-                    || event.typ === 'RauthyUnhealthy'
-            }
+            || event.typ === 'RauthyHealthy'
+            || event.typ === 'RauthyUnhealthy'}
                 <div class="col-typ">{event.typ}</div>
                 <div class="col-ip"></div>
                 <div class="col-text">{event.text}</div>
@@ -124,10 +128,9 @@
             {event.ip}
 
         {:else if event.typ === 'NewRauthyAdmin'
-                || event.typ === 'NewUserRegistered'
-                || event.typ === 'UserPasswordReset'
-                || event.typ === 'UserEmailChange'
-        }
+        || event.typ === 'NewUserRegistered'
+        || event.typ === 'UserPasswordReset'
+        || event.typ === 'UserEmailChange'}
             <br/>
             {event.ip || ''}
             <br/>
@@ -140,9 +143,8 @@
             {formatDateFromTs(event.data)}
 
         {:else if event.typ === 'RauthyStarted'
-                || event.typ === 'RauthyHealthy'
-                || event.typ === 'RauthyUnhealthy'
-        }
+        || event.typ === 'RauthyHealthy'
+        || event.typ === 'RauthyUnhealthy'}
             <br/>
             {event.text}
 

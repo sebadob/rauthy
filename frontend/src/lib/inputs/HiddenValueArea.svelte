@@ -1,25 +1,43 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import IconClipboard from "$lib/icons/IconClipboard.svelte";
     import IconEye from "$lib/icons/IconEye.svelte";
     import IconEyeSlash from "$lib/icons/IconEyeSlash.svelte";
     import {onMount} from "svelte";
 
-    export let value = '';
-    export let rows = 10;
-    export let cols = 60;
-    export let name = 'default';
 
-    export let show = false;
-    export let width = '40rem';
+    /**
+     * @typedef {Object} Props
+     * @property {string} [value]
+     * @property {number} [rows]
+     * @property {number} [cols]
+     * @property {string} [name]
+     * @property {boolean} [show]
+     * @property {string} [width]
+     */
 
-    let hidden = '';
-    let text = '';
+    /** @type {Props & { [key: string]: any }} */
+    let {
+        value = '',
+        rows = 10,
+        cols = 60,
+        name = 'default',
+        show = $bindable(false),
+        width = '40rem',
+        ...rest
+    } = $props();
 
-    $: if (show) {
-        text = value;
-    } else {
-        text = hidden;
-    }
+    let hidden = $state('');
+    let text = $state('');
+
+    run(() => {
+        if (show) {
+            text = value;
+        } else {
+            text = hidden;
+        }
+    });
 
     onMount(() => {
         for (let i = 0; i < value.length; i++) {
@@ -41,7 +59,7 @@
 <div style:width={`${width}`}>
     <div class="iconsOuter">
         <div class="iconsInner">
-            <div role="button" tabindex="0" class="show" on:click={toggle} on:keypress={toggle}>
+            <div role="button" tabindex="0" class="show" onclick={toggle} onkeypress={toggle}>
                 {#if show}
                     <IconEye width={22}/>
                 {:else}
@@ -49,7 +67,7 @@
                 {/if}
             </div>
 
-            <div role="button" tabindex="0" on:click={copyToClip} on:keypress={copyToClip}>
+            <div role="button" tabindex="0" onclick={copyToClip} onkeypress={copyToClip}>
                 <IconClipboard/>
             </div>
         </div>
@@ -63,7 +81,7 @@
             {name}
             {rows}
             {cols}
-            {...$$restProps}
+            {...rest}
     ></textarea>
 </div>
 

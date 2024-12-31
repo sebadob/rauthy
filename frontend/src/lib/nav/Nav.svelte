@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import {navIsExpanded, navSelected, navWidthCollapsed, navWidthExpanded} from "./navStore.js";
     import IconBurger from "$lib/icons/IconBurger.svelte";
     import IconClose from "$lib/icons/IconStop.svelte";
@@ -8,11 +10,26 @@
     import {onMount} from "svelte";
     import AppVersion from "../../components/AppVersion.svelte";
 
-    export let selected = '';
-    export let widthExpanded = 180;
-    export let widthCollapsed = 60;
 
-    export let isExpanded = true;
+    /**
+     * @typedef {Object} Props
+     * @property {string} [selected]
+     * @property {number} [widthExpanded]
+     * @property {number} [widthCollapsed]
+     * @property {boolean} [isExpanded]
+     * @property {import('svelte').Snippet} [logo]
+     * @property {import('svelte').Snippet} [entries]
+     */
+
+    /** @type {Props} */
+    let {
+        selected = $bindable(''),
+        widthExpanded = 180,
+        widthCollapsed = 60,
+        isExpanded = $bindable(true),
+        logo,
+        entries
+    } = $props();
 
     const width = tweened(isExpanded ? widthExpanded : widthCollapsed, {
         duration: 200,
@@ -26,19 +43,23 @@
         }
     });
 
-    $: if (isExpanded) {
-        navIsExpanded.set(true);
-        width.set(widthExpanded);
-    } else {
-        navIsExpanded.set(false);
-        setTimeout(() => {
-            width.set(widthCollapsed);
-        }, 200);
-    }
+    run(() => {
+        if (isExpanded) {
+            navIsExpanded.set(true);
+            width.set(widthExpanded);
+        } else {
+            navIsExpanded.set(false);
+            setTimeout(() => {
+                width.set(widthCollapsed);
+            }, 200);
+        }
+    });
 
-    $: if (selected) {
-        navSelected.set(selected);
-    }
+    run(() => {
+        if (selected) {
+            navSelected.set(selected);
+        }
+    });
 
     onMount(() => {
         navWidthExpanded.set(widthExpanded);
@@ -66,14 +87,14 @@
                     style:left="calc({$width}px - 22px)"
                     in:fade={{ delay: 500, duration: 200 }}
                     out:fade={{ duration: 100 }}
-                    on:click={toggle}
-                    on:keypress={toggle}
+                    onclick={toggle}
+                    onkeypress={toggle}
             >
                 <IconClose/>
             </div>
 
             <div class="logo" in:fade={{ delay: 250, duration: 100 }} out:fade={{ duration: 20 }}>
-                <slot name="logo"></slot>
+                {@render logo?.()}
             </div>
         {:else}
             <div
@@ -83,20 +104,20 @@
                     style:left="3px"
                     in:fade={{ delay: 500, duration: 200 }}
                     out:fade={{ duration: 100 }}
-                    on:click={toggle}
-                    on:keypress={toggle}
+                    onclick={toggle}
+                    onkeypress={toggle}
             >
                 <IconBurger width={24}/>
             </div>
             <div style:height="10px"></div>
             <div class="logo" in:fade={{ delay: 250, duration: 100 }} out:fade={{ duration: 20 }}>
-                <slot name="logo"></slot>
+                {@render logo?.()}
             </div>
         {/if}
 
         <div class="menu">
             <div class="links">
-                <slot name="entries"></slot>
+                {@render entries?.()}
             </div>
         </div>
     </div>

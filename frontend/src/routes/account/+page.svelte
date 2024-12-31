@@ -7,11 +7,11 @@
     import BrowserCheck from "../../components/BrowserCheck.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
 
-    let t;
-    let sessionInfo;
-    let user;
-    let webIdData;
-    let isReady = false;
+    let t = $state();
+    let sessionInfo = $state();
+    let user = $state();
+    let webIdData = $state();
+    let isReady = $state(false);
 
     onMount(async () => {
         let res = await getSessionInfo();
@@ -53,7 +53,7 @@
         {#if !isReady}
             <Loading/>
         {:else}
-            <AccMain bind:t bind:sessionInfo bind:user bind:webIdData />
+            <AccMain {t} {sessionInfo} bind:user bind:webIdData/>
         {/if}
     </WithI18n>
 </BrowserCheck>

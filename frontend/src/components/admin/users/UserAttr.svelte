@@ -4,15 +4,14 @@
     import Button from "$lib/Button.svelte";
     import Input from "$lib/inputs/Input.svelte";
 
-    export let onSave;
-    export let user;
+    let {onSave = $bindable(), user = $bindable()} = $props();
 
-    let err = '';
-    let attr = [];
-    let success = false;
-    let isLoading = false;
+    let err = $state('');
+    let attr = $state([]);
+    let success = $state(false);
+    let isLoading = $state(false);
 
-    onMount(async () => {
+    onMount(() => {
         fetchBuildAttr();
     })
 

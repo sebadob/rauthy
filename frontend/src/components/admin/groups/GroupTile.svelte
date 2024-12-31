@@ -6,17 +6,16 @@
     import GroupConfig from "./GroupConfig.svelte";
     import GroupDelete from "./GroupDelete.svelte";
 
-    export let group = {};
-    export let onSave;
+    let {group = $bindable({}), onSave = $bindable()} = $props();
 
     let isLoading = false;
-    let expandContainer;
+    let expandContainer = $state();
 
     const tabBarItems = [
         'Config',
         'Delete',
     ];
-    let selected = tabBarItems[0];
+    let selected = $state(tabBarItems[0]);
     const tabBarDur = 200;
     const tabBarDly = tabBarDur / 2;
 
@@ -28,34 +27,40 @@
 </script>
 
 <ExpandContainer bind:show={expandContainer}>
-    <div class="header" slot="header">
-        <Tooltip text="Group ID">
-            <div class="data font-mono">
-                {group.id}
-            </div>
-        </Tooltip>
+    {#snippet header()}
+        <div class="header">
+            <Tooltip text="Group ID">
+                <div class="data font-mono">
+                    {group.id}
+                </div>
+            </Tooltip>
 
-        <Tooltip text="Group Name">
-            <div class="data">
-                {group.name}
-            </div>
-        </Tooltip>
-    </div>
+            <Tooltip text="Group Name">
+                <div class="data">
+                    {group.name}
+                </div>
+            </Tooltip>
+        </div>
+    {/snippet}
 
-    <div slot="body">
-        <TabBar labels={tabBarItems} bind:selected/>
+    {#snippet body()}
+        <div>
+            <TabBar labels={tabBarItems} bind:selected/>
 
-        {#if selected === 'Config'}
-            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
-                <GroupConfig bind:group bind:onSave/>
-            </div>
+            {#if selected === 'Config'}
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
+                    <GroupConfig bind:group {onSave}/>
+                </div>
 
-        {:else if selected === 'Delete'}
-            <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }} out:slide|global={{ duration: tabBarDur }}>
-                <GroupDelete bind:group onSave={onDelete}/>
-            </div>
-        {/if}
-    </div>
+            {:else if selected === 'Delete'}
+                <div in:slide|global={{ delay: tabBarDly, duration: tabBarDur }}
+                     out:slide|global={{ duration: tabBarDur }}>
+                    <GroupDelete {group} onSave={onDelete}/>
+                </div>
+            {/if}
+        </div>
+    {/snippet}
 </ExpandContainer>
 
 <style>

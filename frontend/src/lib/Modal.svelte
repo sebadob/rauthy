@@ -1,29 +1,42 @@
 <script>
+    import {run, self, createBubbler, stopPropagation} from 'svelte/legacy';
+
+    const bubble = createBubbler();
     import IconStop from "$lib/icons/IconStop.svelte";
 
-    /** @type {boolean} */
-    export let showModal;
+
+    /**
+     * @typedef {Object} Props
+     * @property {boolean} showModal
+     * @property {import('svelte').Snippet} [children]
+     */
+
+    /** @type {Props} */
+    let {showModal = $bindable(), children} = $props();
 
     /** @type {HTMLDialogElement} */
-    let dialog;
+    let dialog = $state();
 
-    $: if (dialog && showModal) dialog.showModal();
+    run(() => {
+        if (dialog && showModal) dialog.showModal();
+    });
 </script>
 
 <!-- According to MDN docs, a dialog element must not have a tabindex -->
-<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
 <dialog
+        role="none"
         bind:this={dialog}
-        on:close={() => (showModal = false)}
-        on:click|self={() => dialog.close()}
+        onclose={() => (showModal = false)}
+        onclick={self(() => dialog.close())}
 >
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div on:click|stopPropagation>
+    <div role="none" onclick={ev => ev.stopPropagation()}>
+        <!--    <div onclick={stopPropagation(bubble('click'))}>-->
         <div
                 role="button"
                 tabindex="0"
                 class="close"
-                on:click={() => dialog.close()}
+                onclick={() => dialog.close()}
+                onkeydown={() => dialog.close()}
         >
             <IconStop color="var(--col-err)" width={24}/>
         </div>
@@ -33,7 +46,7 @@
             There is no need to load resources like images if the dialog is closed anyway.
             -->
             {#if showModal}
-                <slot></slot>
+                {@render children?.()}
             {/if}
         </div>
     </div>

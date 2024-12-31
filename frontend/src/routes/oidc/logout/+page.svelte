@@ -6,10 +6,10 @@
     import Loading from "$lib/Loading.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
 
-    let t;
+    let t = $state();
     let err = '';
     let postLogoutUri = '';
-    let isLoading = false;
+    let isLoading = $state(false);
 
     onMount(async () => {
         const params = getQueryParams();

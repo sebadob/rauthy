@@ -3,28 +3,46 @@
     import {fade} from "svelte/transition";
     import Input from "../inputs/Input.svelte";
 
-    export let validation = {};
-    export let name;
-    export let value;
-    export let width;
-    export let autocomplete = 'on';
+    /**
+     * @typedef {Object} Props
+     * @property {any} [validation]
+     * @property {any} name
+     * @property {any} value
+     * @property {any} width
+     * @property {string} [autocomplete]
+     * @property {import('svelte').Snippet} [children]
+     */
 
-    let error = '';
+    /** @type {Props & { [key: string]: any }} */
+    let {
+        validation = {},
+        name,
+        value = $bindable(),
+        width = $bindable(),
+        autocomplete = $bindable('on'),
+        children,
+        validate = $bindable(),
+        ...rest
+    } = $props();
+    
+    validate = validateValue;
+
+    let error = $state('');
 
     const dispatch = createEventDispatcher();
 
     async function handleInput() {
         await tick();
         dispatch('input', true);
-        validate();
+        validateValue();
     }
 
     async function handleBlur() {
         dispatch('blur', true);
-        validate();
+        validateValue();
     }
 
-    export function validate() {
+    export function validateValue() {
         error = '';
         if (!value) {
             // 'required' will be validated in the wrapping component, since a single instance has not idea
@@ -42,15 +60,15 @@
 
 <div transition:fade|global="{{ duration: 200 }}">
     <Input
-            bind:width
+            {width}
             {name}
             bind:value
             bind:error
-            bind:autocomplete
+            {autocomplete}
             on:input={handleInput}
             on:blur={handleBlur}
-            {...$$restProps}
+            {...rest}
     >
-        <slot></slot>
+        {@render children?.()}
     </Input>
 </div>

@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import * as yup from "yup";
     import {extractFormErrors} from "../../../utils/helpers.js";
     import Switch from "$lib/Switch.svelte";
@@ -22,58 +24,46 @@
     import ExpandableInput from "$lib/expandableInputs/ExpandableInputs.svelte";
     import {slide} from "svelte/transition";
 
-    export let client = {};
-    export let onSave;
+    let { client = $bindable({}), onSave = $bindable() } = $props();
 
     const urlInputWidth = '350px';
 
     let isLoading = false;
-    let err = '';
-    let success = false;
-    let timer;
+    let err = $state('');
+    let success = $state(false);
+    let timer = $state();
 
-    let clientFlows = FLOWS.map(f => {
+    let clientFlows = $state(FLOWS.map(f => {
         if (f.label === 'device_code') {
             f.value = client.flows_enabled?.includes('urn:ietf:params:oauth:grant-type:device_code');
         } else {
             f.value = client.flows_enabled?.includes(f.label);
         }
         return f;
-    });
+    }));
 
-    let allScopes;
+    let allScopes = $state();
     globalScopesNames.subscribe(scps => {
         allScopes = scps;
     })
 
-    let pkceChallenges = PKCE_CHALLENGES.map(c => {
+    let pkceChallenges = $state(PKCE_CHALLENGES.map(c => {
         c.value = client.challenges?.includes(c.label);
         return c;
-    });
+    }));
 
-    let validateContacts;
-    let validateAllowedOrigins;
-    let validateRedirectUris;
-    let validatePostLogoutUris;
+    let validateContacts = $state();
+    let validateAllowedOrigins = $state();
+    let validateRedirectUris = $state();
+    let validatePostLogoutUris = $state();
 
-    // This hook is needed to not show `undefined` in inputs after some
-    // values have been emptied manually
-    $: if (client.id) {
-        checkUndefinedValues();
-    }
 
-    $: if (success) {
-        timer = setTimeout(() => {
-            success = false;
-            onSave();
-        }, 3000);
-    }
 
     onMount(() => {
         return () => clearTimeout(timer);
     });
 
-    let formErrors = {};
+    let formErrors = $state({});
     const schema = yup.object().shape({
         name: yup.string().trim().matches(REGEX_CLIENT_NAME, "Can only contain characters, numbers and '-'"),
         client_uri: yup.string().trim().nullable().matches(REGEX_URI, "Invalid URI"),
@@ -190,6 +180,21 @@
             return false;
         }
     }
+    // This hook is needed to not show `undefined` in inputs after some
+    // values have been emptied manually
+    run(() => {
+        if (client.id) {
+            checkUndefinedValues();
+        }
+    });
+    run(() => {
+        if (success) {
+            timer = setTimeout(() => {
+                success = false;
+                onSave();
+            }, 3000);
+        }
+    });
 </script>
 
 <div class="container">
@@ -291,7 +296,7 @@
             FLOWS ENABLED
         </div>
         <div class="flows">
-            <SwitchList bind:options={clientFlows}/>
+            <SwitchList options={clientFlows}/>
         </div>
     </div>
 
@@ -495,7 +500,7 @@
             PKCE CHALLENGES
         </div>
         <div class="challenges">
-            <SwitchList bind:options={pkceChallenges}/>
+            <SwitchList options={pkceChallenges}/>
         </div>
     </div>
 

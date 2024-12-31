@@ -6,11 +6,11 @@
     import UserAttrTile from "./AttrTile.svelte";
     import Pagination from "$lib/Pagination.svelte";
 
-    let msg = '';
-    let attr = [];
-    let resAttr = [];
-    let resAttrPaginated = [];
-    let search = '';
+    let msg = $state('');
+    let attr = $state([]);
+    let resAttr = $state([]);
+    let resAttrPaginated = $state([]);
+    let search = $state('');
 
     let searchOptions = [
         {
@@ -25,7 +25,7 @@
         },
     ];
 
-    onMount(async () => {
+    onMount(() => {
         fetchAttr();
     })
 
@@ -60,9 +60,9 @@
     <UserAttrTileAddNew onSave={onSave}/>
 
     <div id="attrs">
-        {#each resAttrPaginated as attr (attr.name)}
+        {#each resAttrPaginated as attr, i (attr.name)}
             <div>
-                <UserAttrTile bind:attr onSave={onSave}/>
+                <UserAttrTile bind:attr={resAttrPaginated[i]} onSave={onSave}/>
             </div>
         {/each}
     </div>

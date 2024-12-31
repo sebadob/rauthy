@@ -1,10 +1,16 @@
 <script>
-    export let selected = '';
-    export let label = '';
-    $: active = selected === label;
+  /**
+   * @typedef {Object} Props
+   * @property {string} [selected]
+   * @property {string} [label]
+   */
+
+  /** @type {Props} */
+  let { selected = $bindable(''), label = '' } = $props();
+    let active = $derived(selected === label);
 </script>
 
-<div class="link noselect" on:click={() => selected = label} on:keypress={() => selected = label}>
+<div class="link noselect" onclick={() => selected = label} onkeypress={() => selected = label}>
   <span class:active>
     {label}
   </span>

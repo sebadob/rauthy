@@ -1,38 +1,40 @@
 <script>
+    import {run} from 'svelte/legacy';
     import * as yup from "yup";
     import {extractFormErrors, getQueryParams} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
     import {REGEX_NAME, REGEX_NAME_NULLABLE} from "../../../utils/constants.js";
-    import {getPow, registerUser} from "../../../utils/dataFetching.js";
+    import {registerUser} from "../../../utils/dataFetching.js";
     import {onMount, tick} from "svelte";
     import Input from "$lib/inputs/Input.svelte";
     import BrowserCheck from "../../../components/BrowserCheck.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
     import LangSelector from "$lib/LangSelector.svelte";
-    import {pow_work_wasm} from "../../../spow/spow-wasm";
+    import {fetchSolvePow} from "../../../utils/pow.ts";
 
-    let t;
-    let restrictedDomain;
+    let t = $state();
+    let restrictedDomain = $state();
     let redirectUri;
-    let isLoading = false;
-    let err = '';
-    let success = false;
+    let isLoading = $state(false);
+    let err = $state('');
+    let success = $state(false);
 
-    let formValues = {email: '', givenName: '', familyName: ''};
-    let formErrors = {};
+    let formValues = $state({email: '', givenName: '', familyName: ''});
+    let formErrors = $state({});
 
-    let schema = {};
-    $: if (t) {
-        schema = yup.object().shape({
-            email: yup.string().required(t.required).email(t.emailBadFormat),
-            givenName: yup.string()
-                .required(t.required)
-                .matches(REGEX_NAME, t.regexName),
-            familyName: yup.string()
-                .required(t.required)
-                .matches(REGEX_NAME_NULLABLE, t.regexName),
-        });
-    }
+    let schema = $state({});
+    run(() => {
+        if (t) {
+            schema = yup.object().shape({
+                email: yup.string().required(t.required).email(t.emailBadFormat),
+                givenName: yup.string()
+                    .required(t.required)
+                    .matches(REGEX_NAME, t.regexName),
+                familyName: yup.string()
+                    .matches(REGEX_NAME_NULLABLE, t.regexName),
+            });
+        }
+    });
 
     onMount(() => {
         restrictedDomain = window.document.getElementsByName('rauthy-data')[0].id;
@@ -68,20 +70,11 @@
         isLoading = true;
         await tick();
 
-        // compute PoW
-        const powRes = await getPow();
-        let powChallenge = await powRes.text();
-        let start = new Date().getUTCMilliseconds();
-        // Ryzen 5600G - difficulty 20 -> ~925 ms median
-        let pow = await pow_work_wasm(powChallenge);
-        let diff = new Date().getUTCMilliseconds() - start;
-        console.log('pow computation took ' + diff + ' ms');
-
-        // build payload
+        let pow = await fetchSolvePow();
         const data = {
             email: formValues.email,
             given_name: formValues.givenName,
-            family_name: formValues.familyName,
+            family_name: formValues.familyName.length > 0 ? formValues.familyName : undefined,
             pow,
         };
 

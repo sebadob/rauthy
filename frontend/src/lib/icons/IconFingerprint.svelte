@@ -1,7 +1,13 @@
 <script>
-    export let opacity = 0.9;
-    export let width = 24;
-    export let color = 'currentColor';
+    /**
+     * @typedef {Object} Props
+     * @property {number} [opacity]
+     * @property {number} [width]
+     * @property {string} [color]
+     */
+
+    /** @type {Props} */
+    let { opacity = 0.9, width = 24, color = 'currentColor' } = $props();
 </script>
 
 <svg

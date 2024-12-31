@@ -1,4 +1,6 @@
 <script>
+    import {run} from 'svelte/legacy';
+
     import IconMagnify from "$lib/icons/IconMagnify.svelte";
     import {onMount} from "svelte";
     import Tooltip from "../Tooltip.svelte";
@@ -7,14 +9,27 @@
     import {getSearch} from "../../utils/dataFetchingAdmin.js";
     import {SERVER_SIDE_SEARCH_THRES} from "../../utils/constants.js";
 
-    export let items = [];
-    export let resItems;
-    export let options = [];
-    export let useServerSideIdx = '';
-    export let isSearchFiltered = false;
 
-    export let search = '';
-    let selected = '';
+    /**
+     * @typedef {Object} Props
+     * @property {any} [items]
+     * @property {any} resItems
+     * @property {any} [options]
+     * @property {string} [useServerSideIdx]
+     * @property {boolean} [isSearchFiltered]
+     * @property {string} [search]
+     */
+
+    /** @type {Props} */
+    let {
+        items = $bindable([]),
+        resItems = $bindable(),
+        options = [],
+        useServerSideIdx = $bindable(''),
+        isSearchFiltered = $bindable(false),
+        search = $bindable('')
+    } = $props();
+    let selected = $state('');
     let callback;
 
     onMount(() => {
@@ -24,20 +39,6 @@
         }
     });
 
-    $: if (selected) {
-        extractCallback();
-    }
-
-    $: {
-        if (!search) {
-            resItems = items;
-            isSearchFiltered = false;
-        } else if (useServerSideIdx) {
-            filerItemsServerSide();
-        } else {
-            filerItems();
-        }
-    }
 
     function extractCallback() {
         for (let opt of options) {
@@ -93,6 +94,21 @@
         }
     }
 
+    run(() => {
+        if (selected) {
+            extractCallback();
+        }
+    });
+    run(() => {
+        if (!search) {
+            resItems = items;
+            isSearchFiltered = false;
+        } else if (useServerSideIdx) {
+            filerItemsServerSide();
+        } else {
+            filerItems();
+        }
+    });
 </script>
 
 <div class="container">
@@ -125,8 +141,8 @@
                 role="button"
                 tabindex="0"
                 class="back"
-                on:click={del}
-                on:keypress={del}
+                onclick={del}
+                onkeypress={del}
         >
             <IconBackspace/>
         </div>

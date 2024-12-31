@@ -3,14 +3,20 @@
     import Input from "$lib/inputs/Input.svelte";
     import IconStop from "$lib/icons/IconStop.svelte";
 
-    export let entry = { no: 0, value: '' };
     // export let entry = { key: '', value: '', keyErr: '', valueErr: '' };
 
-    // export let isKeyUnique;
-    export let removeEntry;
-    export let viewModePhone = false;
+    
+    /**
+     * @typedef {Object} Props
+     * @property {any} [entry]
+     * @property {any} removeEntry - export let isKeyUnique;
+     * @property {boolean} [viewModePhone]
+     */
 
-    $: inputWidth = viewModePhone ? 'calc(100vw - 3.5rem)' : '360px';
+    /** @type {Props} */
+    let { entry = $bindable({ no: 0, value: '' }), removeEntry, viewModePhone = false } = $props();
+
+    let inputWidth = $derived(viewModePhone ? 'calc(100vw - 3.5rem)' : '360px');
     // $: inputWidthValue = viewModePhone ? 'calc(100vw - 1.5rem)' : 'calc(380px + 3rem)';
 
     // function validateKey() {
@@ -45,8 +51,8 @@
                 role="button"
                 tabindex="0"
                 class="delete"
-                on:click={() => removeEntry(entry.no)}
-                on:keypress={() => removeEntry(entry.no)}
+                onclick={() => removeEntry(entry.no)}
+                onkeypress={() => removeEntry(entry.no)}
         >
             <IconStop color="var(--col-err)" width="1.5rem" />
         </div>

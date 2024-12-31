@@ -1,4 +1,6 @@
 <script>
+    import { run } from 'svelte/legacy';
+
     import * as yup from "yup";
     import {extractFormErrors} from "../../../utils/helpers.js";
     import Button from "$lib/Button.svelte";
@@ -7,26 +9,27 @@
     import {putGroup} from "../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";
 
-    export let group = {};
-    export let onSave;
+    let { group = $bindable({}), onSave } = $props();
 
     let isLoading = false;
-    let err = '';
-    let success = false;
-    let timer;
+    let err = $state('');
+    let success = $state(false);
+    let timer = $state();
 
-    $: if (success) {
-        timer = setTimeout(() => {
-            success = false;
-            onSave();
-        }, 2000);
-    }
+    run(() => {
+        if (success) {
+            timer = setTimeout(() => {
+                success = false;
+                onSave();
+            }, 2000);
+        }
+    });
 
     onMount(() => {
         return () => clearTimeout(timer);
     });
 
-    let formErrors = {};
+    let formErrors = $state({});
     const schema = yup.object().shape({
         name: yup.string().trim().matches(REGEX_ROLES, "Can only contain: 'a-z0-9-_/:*', length: 2-64"),
     });

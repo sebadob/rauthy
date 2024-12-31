@@ -1095,7 +1095,9 @@ LIMIT $2"#,
         let req = UpdateUserRequest {
             // never update the email directly here, only via email confirmation action from the user
             email: user.email.clone(),
-            given_name: upd_user.given_name,
+            given_name: upd_user
+                .given_name
+                .unwrap_or_else(|| user.given_name.clone()),
             family_name: upd_user.family_name,
             language: upd_user.language,
             password,

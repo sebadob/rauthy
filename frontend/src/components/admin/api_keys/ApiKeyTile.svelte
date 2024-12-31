@@ -8,18 +8,19 @@
     import {formatDateFromTs} from "../../../utils/helpers.js";
     import ApiKeySecret from "./ApiKeySecret.svelte";
 
-    export let apiKey = {};
-    export let onSave = () => {
-    };
+    let {
+        apiKey = $bindable({}), onSave = $bindable(() => {
+        })
+    } = $props();
 
-    let expandContainer;
+    let expandContainer = $state();
 
     const tabBarItems = [
         'Config',
         'Secret',
         'Delete',
     ];
-    let selected = tabBarItems[0];
+    let selected = $state(tabBarItems[0]);
     const tabBarDur = 200;
     const tabBarDly = tabBarDur / 2;
 
@@ -31,39 +32,43 @@
 </script>
 
 <ExpandContainer bind:show={expandContainer}>
-    <div class="header" slot="header">
-        <div class="data">
-            {apiKey.name}
+    {#snippet header()}
+        <div class="header">
+            <div class="data">
+                {apiKey.name}
+            </div>
+
+            {#if apiKey.expires}
+                <Tooltip text="Expiry">
+                    <div class="data">
+                        {formatDateFromTs(apiKey.expires)}
+                    </div>
+                </Tooltip>
+            {/if}
         </div>
+    {/snippet}
 
-        {#if apiKey.expires}
-            <Tooltip text="Expiry">
-                <div class="data">
-                    {formatDateFromTs(apiKey.expires)}
+    {#snippet body()}
+        <div>
+            <TabBar labels={tabBarItems} bind:selected/>
+
+            {#if selected === 'Config'}
+                <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+                    <ApiKeyConfig bind:apiKey {onSave}/>
                 </div>
-            </Tooltip>
-        {/if}
-    </div>
 
-    <div slot="body">
-        <TabBar labels={tabBarItems} bind:selected/>
+            {:else if selected === 'Secret'}
+                <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+                    <ApiKeySecret {apiKey}/>
+                </div>
 
-        {#if selected === 'Config'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
-                <ApiKeyConfig bind:apiKey bind:onSave/>
-            </div>
-
-        {:else if selected === 'Secret'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
-                <ApiKeySecret bind:apiKey/>
-            </div>
-
-        {:else if selected === 'Delete'}
-            <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
-                <ApiKeyDelete bind:apiKey onSave={onDelete}/>
-            </div>
-        {/if}
-    </div>
+            {:else if selected === 'Delete'}
+                <div in:slide={{ delay: tabBarDly, duration: tabBarDur }} out:slide={{ duration: tabBarDur }}>
+                    <ApiKeyDelete {apiKey} onSave={onDelete}/>
+                </div>
+            {/if}
+        </div>
+    {/snippet}
 </ExpandContainer>
 
 <style>

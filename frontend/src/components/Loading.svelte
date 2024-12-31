@@ -1,13 +1,19 @@
 <script>
     import {fade, scale} from 'svelte/transition';
 
-    export let offset = 0;
-    export let background = true;
-    export let local = false;
+    /**
+     * @typedef {Object} Props
+     * @property {number} [offset]
+     * @property {boolean} [background]
+     * @property {boolean} [local]
+     */
 
-    let show1 = true;
-    let show2 = false;
-    let show3 = false;
+    /** @type {Props} */
+    let { offset = 0, background = true, local = false } = $props();
+
+    let show1 = $state(true);
+    let show2 = $state(false);
+    let show3 = $state(false);
 
     setTimeout(() => {
         show2 = true;
@@ -34,8 +40,8 @@
             <div
                     class="circle"
                     transition:scale|global="{{ delay: 600, duration: 1000 }}"
-                    on:introend="{() => show1 = false}"
-                    on:outroend="{() => show1 = true}"
+                    onintroend={() => show1 = false}
+                    onoutroend={() => show1 = true}
             ></div>
         {/if}
 
@@ -43,8 +49,8 @@
             <div
                     class="circle"
                     transition:scale|global="{{ delay: 600, duration: 1000 }}"
-                    on:introend="{() => show2 = false}"
-                    on:outroend="{() => show2 = true}"
+                    onintroend={() => show2 = false}
+                    onoutroend={() => show2 = true}
             ></div>
         {/if}
 
@@ -52,8 +58,8 @@
             <div
                     class="circle"
                     transition:scale|global="{{ delay: 600, duration: 1000 }}"
-                    on:introend="{() => show3 = false}"
-                    on:outroend="{() => show3 = true}"
+                    onintroend={() => show3 = false}
+                    onoutroend={() => show3 = true}
             ></div>
         {/if}
     </div>

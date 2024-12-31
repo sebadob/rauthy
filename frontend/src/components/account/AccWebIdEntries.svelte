@@ -4,12 +4,18 @@
     import {onMount} from "svelte";
     import {REGEX_URI_SPACE} from "../../utils/constants.js";
 
-    export let webIdData;
-    export let viewModePhone = false;
+    /**
+     * @typedef {Object} Props
+     * @property {any} webIdData
+     * @property {boolean} [viewModePhone]
+     */
 
-    let entries;
+    /** @type {Props} */
+    let {webIdData, viewModePhone = $bindable(false)} = $props();
 
-    $: containsEmptyKey = entries?.length > 0 && entries.filter(e => e.key === '').length > 0;
+    let entries = $state();
+
+    let containsEmptyKey = $derived(entries?.length > 0 && entries.filter(e => e.key === '').length > 0);
 
     onMount(() => {
         let arr = [];
@@ -73,12 +79,12 @@
 
 {#if entries}
     {#each entries as entry, c (c)}
-<!--                isKeyUnique={isKeyUnique}-->
-<!--                removeKey={remove}-->
+        <!--                isKeyUnique={isKeyUnique}-->
+        <!--                removeKey={remove}-->
         <AccWebIdEntry
                 removeEntry={remove}
-                bind:viewModePhone
-                bind:entry
+                {viewModePhone}
+                bind:entry={entries[c]}
         />
     {/each}
 {/if}
@@ -88,8 +94,8 @@
             role="button"
             tabindex="0"
             class="btnNew"
-            on:click={add}
-            on:keypress={add}
+            onclick={add}
+            onkeypress={add}
     >
         <IconPlus/>
     </div>

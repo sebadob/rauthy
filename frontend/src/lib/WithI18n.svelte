@@ -3,9 +3,23 @@
     import {base} from "$app/paths";
 
 
-    export let content;
-    export let t;
-    export let isReady = false;
+    /**
+     * @typedef {Object} Props
+     * @property {any} content
+     * @property {any} t
+     * @property {boolean} [isReady]
+     * @property {import('svelte').Snippet} [loading]
+     * @property {import('svelte').Snippet} [children]
+     */
+
+    /** @type {Props} */
+    let {
+        content,
+        t = $bindable(),
+        isReady = $bindable(false),
+        loading,
+        children
+    } = $props();
 
     // static translation
     onMount(async () => {
@@ -34,7 +48,7 @@
 </script>
 
 {#if !isReady}
-    <slot name="loading"></slot>
+    {@render loading?.()}
 {:else}
-    <slot></slot>
+    {@render children?.()}
 {/if}

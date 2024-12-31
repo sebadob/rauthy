@@ -9,13 +9,19 @@
     import IconStop from "$lib/icons/IconStop.svelte";
     import {REGEX_CLIENT_NAME} from "../../utils/constants.js";
 
-    export let t;
-    export let userId = '';
+    /**
+     * @typedef {Object} Props
+     * @property {any} t
+     * @property {string} [userId]
+     */
 
-    let devices = [];
+    /** @type {Props} */
+    let { t, userId = '' } = $props();
 
-    let formErrors = {};
-    let formValues = {};
+    let devices = $state([]);
+
+    let formErrors = $state({});
+    let formValues = $state({});
 
     onMount(() => {
         fetchDevices();
@@ -96,98 +102,102 @@
 <div class="devices">
     {#each devices as device (device.id)}
         <ExpandContainer>
-            <div class="device-header" slot="header">
-                <div class="device-head font-mono">
-                    {device.name}
-                </div>
-            </div>
-
-            <div class="device" slot="body">
-                <div class="unit">
-                    <div class="label font-label">
-                        {t?.deviceId.toUpperCase() || 'ID'}
-                    </div>
-                    <div class="value font-mono">
-                        {device.id}
+            {#snippet header()}
+                        <div class="device-header" >
+                    <div class="device-head font-mono">
+                        {device.name}
                     </div>
                 </div>
+                    {/snippet}
 
-                <div class="row">
-                    <Input
-                            bind:value={formValues[device.id]}
-                            bind:error={formErrors[device.id]}
-                            autocomplete="off"
-                            placeholder={t?.deviceName.toUpperCase() || 'Name'}
-                            on:enter={() => onSaveName(device.id)}
-                    >
-                        {t?.deviceName.toUpperCase() || 'NAME'}
-                    </Input>
-                    {#if formValues[device.id] != device.name}
-                        <Tooltip text={t?.save || 'Save'}>
-                            <div
-                                    role="button"
-                                    tabindex="0"
-                                    class="icon-btn-input"
-                                    on:click={() => onSaveName(device.id)}
-                                    on:keypress={() => onSaveName(device.id)}
-                            >
-                                <IconCheck color="var(--col-ok)" width={24}/>
-                            </div>
-                        </Tooltip>
-                    {/if}
-                </div>
-
-                <div class="unit">
-                    <div class="label font-label">
-                        {t?.regDate.toUpperCase() || 'REGISTRATION DATE'}
-                    </div>
-                    <div class="value">
-                        {device.created}
-                    </div>
-                </div>
-
-                <div class="unit">
-                    <div class="label font-label">
-                        {t?.accessExp.toUpperCase() || 'ACCESS EXPIRES'}
-                    </div>
-                    <div class="value">
-                        {formatDateFromTs(device.access_exp)}
-                    </div>
-                </div>
-
-                {#if device.refresh_exp}
+            {#snippet body()}
+                        <div class="device" >
                     <div class="unit">
                         <div class="label font-label">
-                            {t?.accessRenew.toUpperCase() || 'ACCESS RENEW UNTIL'}
+                            {t?.deviceId.toUpperCase() || 'ID'}
                         </div>
-                        <div class="row">
-                            <div class="value">
-                                {formatDateFromTs(device.refresh_exp)}
-                            </div>
-                            <Tooltip text={t?.accessRenewDelete || 'Delete the possibility to renew'}>
+                        <div class="value font-mono">
+                            {device.id}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <Input
+                                bind:value={formValues[device.id]}
+                                bind:error={formErrors[device.id]}
+                                autocomplete="off"
+                                placeholder={t?.deviceName.toUpperCase() || 'Name'}
+                                on:enter={() => onSaveName(device.id)}
+                        >
+                            {t?.deviceName.toUpperCase() || 'NAME'}
+                        </Input>
+                        {#if formValues[device.id] != device.name}
+                            <Tooltip text={t?.save || 'Save'}>
                                 <div
                                         role="button"
                                         tabindex="0"
-                                        class="icon-btn-value"
-                                        on:click={() => onRevokeRefresh(device.id)}
-                                        on:keypress={() => onRevokeRefresh(device.id)}
+                                        class="icon-btn-input"
+                                        onclick={() => onSaveName(device.id)}
+                                        onkeypress={() => onSaveName(device.id)}
                                 >
-                                    <IconStop color='var(--col-err)' width={24}/>
+                                    <IconCheck color="var(--col-ok)" width={24}/>
                                 </div>
                             </Tooltip>
+                        {/if}
+                    </div>
+
+                    <div class="unit">
+                        <div class="label font-label">
+                            {t?.regDate.toUpperCase() || 'REGISTRATION DATE'}
+                        </div>
+                        <div class="value">
+                            {device.created}
                         </div>
                     </div>
-                {/if}
 
-                <div class="unit">
-                    <div class="label font-label">
-                        {t?.regIp.toUpperCase() || 'REGISTRATION FROM IP'}
+                    <div class="unit">
+                        <div class="label font-label">
+                            {t?.accessExp.toUpperCase() || 'ACCESS EXPIRES'}
+                        </div>
+                        <div class="value">
+                            {formatDateFromTs(device.access_exp)}
+                        </div>
                     </div>
-                    <div class="value">
-                        {device.peer_ip}
+
+                    {#if device.refresh_exp}
+                        <div class="unit">
+                            <div class="label font-label">
+                                {t?.accessRenew.toUpperCase() || 'ACCESS RENEW UNTIL'}
+                            </div>
+                            <div class="row">
+                                <div class="value">
+                                    {formatDateFromTs(device.refresh_exp)}
+                                </div>
+                                <Tooltip text={t?.accessRenewDelete || 'Delete the possibility to renew'}>
+                                    <div
+                                            role="button"
+                                            tabindex="0"
+                                            class="icon-btn-value"
+                                            onclick={() => onRevokeRefresh(device.id)}
+                                            onkeypress={() => onRevokeRefresh(device.id)}
+                                    >
+                                        <IconStop color='var(--col-err)' width={24}/>
+                                    </div>
+                                </Tooltip>
+                            </div>
+                        </div>
+                    {/if}
+
+                    <div class="unit">
+                        <div class="label font-label">
+                            {t?.regIp.toUpperCase() || 'REGISTRATION FROM IP'}
+                        </div>
+                        <div class="value">
+                            {device.peer_ip}
+                        </div>
                     </div>
                 </div>
-            </div>
+                    {/snippet}
         </ExpandContainer>
     {/each}
 </div>

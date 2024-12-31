@@ -1,4 +1,6 @@
 <script>
+    import {run} from 'svelte/legacy';
+
     import {redirectToLogout} from "../../utils/helpers.js";
     import Nav from "$lib/nav/Nav.svelte";
     import NavEntry from "$lib/nav/NavEntry.svelte";
@@ -33,92 +35,102 @@
     import IconCloud from "$lib/icons/IconCloud.svelte";
     import Providers from "./providers/Providers.svelte";
 
-    export let selected = 'Users';
+    /**
+     * @typedef {Object} Props
+     * @property {string} [selected]
+     */
 
-    let title = 'Rauthy Admin';
-    let isExpanded;
-    let eventsCollapsed;
-    let eventsWide;
-    let innerWidth;
+    /** @type {Props} */
+    let {selected = $bindable('Users')} = $props();
 
-    $: if (innerWidth) {
-        isExpanded = innerWidth > 1050;
-        eventsCollapsed = innerWidth < 1050;
-        eventsWide = innerWidth > 1450;
-    }
+    let title = $state('Rauthy Admin');
+    let isExpanded = $state(true);
+    let eventsCollapsed = $state(true);
+    let eventsWide = $state(false);
+    let innerWidth = $state();
 
-    $: if (selected) {
-        switch (selected) {
-            case 'Users': {
-                window.history.pushState('Users', '', '/auth/v1/admin/users');
-                title = 'Users';
-                break;
-            }
-            case 'Attributes': {
-                window.history.pushState('Attributes', '', '/auth/v1/admin/attributes');
-                title = 'Attributes';
-                break;
-            }
-            case 'Clients': {
-                window.history.pushState('Clients', '', '/auth/v1/admin/clients');
-                title = 'Clients';
-                break;
-            }
-            case 'Roles': {
-                window.history.pushState('Roles', '', '/auth/v1/admin/roles');
-                title = 'Roles';
-                break;
-            }
-            case 'Groups': {
-                window.history.pushState('Groups', '', '/auth/v1/admin/groups');
-                title = 'Groups';
-                break;
-            }
-            case 'Scopes': {
-                window.history.pushState('Scopes', '', '/auth/v1/admin/scopes');
-                title = 'Scopes';
-                break;
-            }
-            case 'Sessions': {
-                window.history.pushState('Sessions', '', '/auth/v1/admin/sessions');
-                title = 'Sessions';
-                break;
-            }
-            case 'Events': {
-                window.history.pushState('Sessions', '', '/auth/v1/admin/events');
-                title = 'Events';
-                break;
-            }
-            case 'Blacklist': {
-                window.history.pushState('Blacklist', '', '/auth/v1/admin/blacklist');
-                title = 'Blacklist';
-                break;
-            }
-            case 'ApiKeys': {
-                window.history.pushState('ApiKeys', '', '/auth/v1/admin/api_keys');
-                title = 'ApiKeys';
-                break;
-            }
-            case 'Providers': {
-                window.history.pushState('Providers', '', '/auth/v1/admin/providers');
-                title = 'Providers';
-                break;
-            }
-            case 'Config': {
-                window.history.pushState('Config', '', '/auth/v1/admin/config');
-                title = 'Config';
-                break;
-            }
-            case 'Docs': {
-                window.history.pushState('Docs', '', '/auth/v1/admin/docs');
-                title = 'Docs';
-                break;
-            }
-            case 'Logout':
-                redirectToLogout();
-                break;
+    run(() => {
+        if (innerWidth) {
+            isExpanded = innerWidth > 1050;
+            eventsCollapsed = innerWidth < 1050;
+            eventsWide = innerWidth > 1450;
         }
-    }
+    });
+
+    run(() => {
+        if (selected) {
+            switch (selected) {
+                case 'Users': {
+                    window.history.pushState('Users', '', '/auth/v1/admin/users');
+                    title = 'Users';
+                    break;
+                }
+                case 'Attributes': {
+                    window.history.pushState('Attributes', '', '/auth/v1/admin/attributes');
+                    title = 'Attributes';
+                    break;
+                }
+                case 'Clients': {
+                    window.history.pushState('Clients', '', '/auth/v1/admin/clients');
+                    title = 'Clients';
+                    break;
+                }
+                case 'Roles': {
+                    window.history.pushState('Roles', '', '/auth/v1/admin/roles');
+                    title = 'Roles';
+                    break;
+                }
+                case 'Groups': {
+                    window.history.pushState('Groups', '', '/auth/v1/admin/groups');
+                    title = 'Groups';
+                    break;
+                }
+                case 'Scopes': {
+                    window.history.pushState('Scopes', '', '/auth/v1/admin/scopes');
+                    title = 'Scopes';
+                    break;
+                }
+                case 'Sessions': {
+                    window.history.pushState('Sessions', '', '/auth/v1/admin/sessions');
+                    title = 'Sessions';
+                    break;
+                }
+                case 'Events': {
+                    window.history.pushState('Sessions', '', '/auth/v1/admin/events');
+                    title = 'Events';
+                    break;
+                }
+                case 'Blacklist': {
+                    window.history.pushState('Blacklist', '', '/auth/v1/admin/blacklist');
+                    title = 'Blacklist';
+                    break;
+                }
+                case 'ApiKeys': {
+                    window.history.pushState('ApiKeys', '', '/auth/v1/admin/api_keys');
+                    title = 'ApiKeys';
+                    break;
+                }
+                case 'Providers': {
+                    window.history.pushState('Providers', '', '/auth/v1/admin/providers');
+                    title = 'Providers';
+                    break;
+                }
+                case 'Config': {
+                    window.history.pushState('Config', '', '/auth/v1/admin/config');
+                    title = 'Config';
+                    break;
+                }
+                case 'Docs': {
+                    window.history.pushState('Docs', '', '/auth/v1/admin/docs');
+                    title = 'Docs';
+                    break;
+                }
+                case 'Logout':
+                    redirectToLogout();
+                    break;
+            }
+        }
+    });
 
     onMount(() => {
         window.addEventListener('popstate', setSelected);
@@ -147,73 +159,77 @@
 
 <main>
     <Nav bind:selected bind:isExpanded widthExpanded={140} widthCollapsed={60}>
-        <div slot="logo">
-            <div
-                    style:width={isExpanded ? '120px' : '55px'}
-                    style:margin-top={isExpanded ? '32px' : '40px'}
-                    style:margin-bottom={isExpanded ? '13px' : '22px'}
-            >
-                <RauthyLogo/>
+        {#snippet logo()}
+            <div>
+                <div
+                        style:width={isExpanded ? '120px' : '55px'}
+                        style:margin-top={isExpanded ? '32px' : '40px'}
+                        style:margin-bottom={isExpanded ? '13px' : '22px'}
+                >
+                    <RauthyLogo/>
+                </div>
             </div>
-        </div>
+        {/snippet}
 
-        <div slot="entries">
-            <NavEntry label="Users">
-                <IconUser/>
-            </NavEntry>
+        {#snippet entries()}
+            <div>
+                <NavEntry label="Users">
+                    <IconUser/>
+                </NavEntry>
 
-            <NavEntry label="Attributes">
-                <IconDocText/>
-            </NavEntry>
+                <NavEntry label="Attributes">
+                    <IconDocText/>
+                </NavEntry>
 
-            <NavEntry label="Clients">
-                <IconOffice/>
-            </NavEntry>
+                <NavEntry label="Clients">
+                    <IconOffice/>
+                </NavEntry>
 
-            <NavEntry label="Roles">
-                <IconShieldCheck/>
-            </NavEntry>
+                <NavEntry label="Roles">
+                    <IconShieldCheck/>
+                </NavEntry>
 
-            <NavEntry label="Groups">
-                <IconUsers/>
-            </NavEntry>
+                <NavEntry label="Groups">
+                    <IconUsers/>
+                </NavEntry>
 
-            <NavEntry label="Scopes">
-                <IconId/>
-            </NavEntry>
+                <NavEntry label="Scopes">
+                    <IconId/>
+                </NavEntry>
 
-            <NavEntry label="Sessions">
-                <IconShieldCheck/>
-            </NavEntry>
+                <NavEntry label="Sessions">
+                    <IconShieldCheck/>
+                </NavEntry>
 
-            <NavEntry label="Events">
-                <IconBellAlert/>
-            </NavEntry>
+                <NavEntry label="Events">
+                    <IconBellAlert/>
+                </NavEntry>
 
-            <NavEntry label="Blacklist">
-                <IconStop width={24}/>
-            </NavEntry>
+                <NavEntry label="Blacklist">
+                    <IconStop width={24}/>
+                </NavEntry>
 
-            <NavEntry label="ApiKeys">
-                <IconKey/>
-            </NavEntry>
+                <NavEntry label="ApiKeys">
+                    <IconKey/>
+                </NavEntry>
 
-            <NavEntry label="Providers">
-                <IconCloud/>
-            </NavEntry>
+                <NavEntry label="Providers">
+                    <IconCloud/>
+                </NavEntry>
 
-            <NavEntry label="Config">
-                <IconWrenchScrew/>
-            </NavEntry>
+                <NavEntry label="Config">
+                    <IconWrenchScrew/>
+                </NavEntry>
 
-            <NavEntry label="Docs">
-                <IconBookOpen/>
-            </NavEntry>
+                <NavEntry label="Docs">
+                    <IconBookOpen/>
+                </NavEntry>
 
-            <NavEntry label="Logout">
-                <IconLogout/>
-            </NavEntry>
-        </div>
+                <NavEntry label="Logout">
+                    <IconLogout/>
+                </NavEntry>
+            </div>
+        {/snippet}
     </Nav>
 
     <div class="inner">
@@ -271,7 +287,7 @@
             </ContentWrapper>
         {/if}
 
-        {#if innerWidth !== undefined }
+        {#if innerWidth !== undefined}
             <Events collapsed={eventsCollapsed} wide={eventsWide}/>
         {/if}
     </div>
