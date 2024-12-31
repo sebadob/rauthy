@@ -63,7 +63,6 @@ setup:
 
     echo "Starting Postgres and Mailcrab containers"
     just backend-start
-    just migrate
 
     cargo build
 
