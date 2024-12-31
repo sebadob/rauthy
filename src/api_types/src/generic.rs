@@ -34,6 +34,7 @@ pub enum Language {
     En,
     De,
     ZhHans,
+    Ko,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]

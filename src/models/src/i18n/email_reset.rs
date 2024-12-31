@@ -53,6 +53,22 @@ static TPL_ZH_HANS_RESET_BUTTON: Lazy<Option<String>> =
 static TPL_ZH_HANS_RESET_FOOTER: Lazy<Option<String>> =
     Lazy::new(|| env::var("TPL_ZH_HANS_RESET_FOOTER").ok());
 
+static TPL_KO_RESET_SUBJECT: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_KO_RESET_SUBJECT").ok());
+static TPL_KO_RESET_HEADER: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_KO_RESET_HEADER").ok());
+static TPL_KO_RESET_TEXT: Lazy<Option<String>> = Lazy::new(|| env::var("TPL_KO_RESET_TEXT").ok());
+static TPL_KO_RESET_CLICK_LINK: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_KO_RESET_CLICK_LINK").ok());
+static TPL_KO_RESET_VALIDITY: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_KO_RESET_VALIDITY").ok());
+static TPL_KO_RESET_EXPIRES: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_KO_RESET_EXPIRES").ok());
+static TPL_KO_RESET_BUTTON: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_KO_RESET_BUTTON").ok());
+static TPL_KO_RESET_FOOTER: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_KO_RESET_FOOTER").ok());
+
 #[derive(Debug, Serialize)]
 pub struct I18nEmailReset<'a> {
     pub subject: &'a str,
@@ -71,6 +87,7 @@ impl SsrJson for I18nEmailReset<'_> {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
             Language::ZhHans => Self::build_zh_hans(),
+            Language::Ko => Self::build_ko(),
         }
     }
 
@@ -146,6 +163,27 @@ impl I18nEmailReset<'_> {
                 .unwrap_or("链接过期时间"),
             button_text: TPL_ZH_HANS_RESET_BUTTON.as_deref().unwrap_or("重置密码"),
             footer: TPL_ZH_HANS_RESET_FOOTER.as_deref(),
+        }
+    }
+
+    fn build_ko() -> Self {
+        Self {
+            subject: TPL_KO_RESET_SUBJECT
+                .as_deref()
+                .unwrap_or("비밀번호 초기화 요청"),
+            header: TPL_KO_RESET_HEADER
+                .as_deref()
+                .unwrap_or("비밀번호 초기화 요청:"),
+            text: TPL_KO_RESET_TEXT.as_deref(),
+            click_link: TPL_KO_RESET_CLICK_LINK
+                .as_deref()
+                .unwrap_or("비밀번호 초기화 요청 창으로 이동하려면, 아래의 링크를 클릭해 주세요."),
+            validity: TPL_KO_RESET_VALIDITY
+                .as_deref()
+                .unwrap_or("이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다."),
+            expires: TPL_KO_RESET_EXPIRES.as_deref().unwrap_or("링크 만료일:"),
+            button_text: TPL_KO_RESET_BUTTON.as_deref().unwrap_or("비밀번호 초기화"),
+            footer: TPL_KO_RESET_FOOTER.as_deref(),
         }
     }
 }

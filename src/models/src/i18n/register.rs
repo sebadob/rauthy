@@ -26,6 +26,7 @@ impl SsrJson for I18nRegister<'_> {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
             Language::ZhHans => Self::build_zh_hans(),
+            Language::Ko => Self::build_ko(),
         }
     }
 
@@ -86,6 +87,24 @@ impl I18nRegister<'_> {
             required: "必填",
             success: "注册成功",
             user_reg: "用户注册",
+        }
+    }
+
+    fn build_ko() -> Self {
+        Self {
+            domain_allowed: "허용된 도메인:",
+            domain_err: "허용되지 않은 이메일의 도메인입니다.",
+            domain_restricted: "이메일의 도메인이 제한되어 있습니다.",
+            email: "이메일",
+            email_bad_format: "잘못된 이메일 형식입니다.",
+            email_check: "이메일 보관함을 확인해 주세요.",
+            family_name: "성",
+            given_name: "이름",
+            regex_name: "이름은 특수문자를 제외한 2자에서 32자이어야 합니다.",
+            register: "가입",
+            required: "필수 항목입니다.",
+            success: "성공적으로 가입되었습니다.",
+            user_reg: "사용자 가입",
         }
     }
 }

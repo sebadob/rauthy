@@ -28,6 +28,7 @@ impl SsrJson for I18nDevice<'_> {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
             Language::ZhHans => Self::build_zh_hans(),
+            Language::Ko => Self::build_ko(),
         }
     }
 
@@ -94,6 +95,26 @@ impl I18nDevice<'_> {
             title: "设备授权",
             user_code: "用户代码",
             wrong_or_expired: "代码错误或已过期",
+        }
+    }
+
+    fn build_ko() -> Self {
+        Self {
+            accept: "수락",
+            auto_redirect_account: "지금 계정으로 리다이렉트될 예정입니다.",
+            close_window: "이제 창을 닫아도 됩니다.",
+            decline: "거절",
+            desc: "기기에서 {{count}}자의 사용자 코드를 입력해 주세요.",
+            desc_scopes: "다음 기기가 접근을 요청합니다:",
+            err_too_short: "입력이 너무 짧습니다.",
+            err_too_long: "입력이 너무 깁니다.",
+            invalid_input: "유효하지 않은 입력입니다.",
+            is_accepted: "요청이 수락되었습니다.",
+            is_declined: "요청이 거절되었습니다.",
+            submit: "제출",
+            title: "기기 인증",
+            user_code: "사용자 코드",
+            wrong_or_expired: "잘못되거나 만료된 코드입니다.",
         }
     }
 }

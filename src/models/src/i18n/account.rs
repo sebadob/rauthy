@@ -87,6 +87,7 @@ impl SsrJson for I18nAccount<'_> {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
             Language::ZhHans => Self::build_zh_hans(),
+            Language::Ko => Self::build_ko(),
         }
     }
 
@@ -378,6 +379,96 @@ WebID被一些网络用于去中心化登陆。如果您不知道这是什么，
             zip: "邮政编码",
         }
     }
+
+    fn build_ko() -> Self {
+        Self {
+            account: "사용자 계정",
+            acc_type: "계정 종류",
+            acc_type_passkey_text_1: r#"이 계정은 현재 패스키 전용 계정입니다.
+즉, 비밀번호가 필요하지 않으므로, 비밀번호가 전혀 없다는 뜻입니다."#,
+            acc_type_passkey_text_2: r#"계정을 전환하고 비밀번호를 추가할 수 있습니다.
+다만, 이렇게 하면 새 기기를 인증할 때마다 추가적으로 비밀번호 인증을 해야 한다는 것을 명심해 주세요.
+한 번도 비밀번호를 입력한 적이 없는 기기에서는 바로 로그인할 수 없습니다."#,
+            acc_type_passkey_text_3: "계정을 전환하고 비밀번호를 추가하겠습니까?",
+            access_exp: "접근 만료",
+            access_renew: "접근 갱신 기한",
+            access_renew_delete: "갱신할 가능성을 제거",
+            birthdate: "생년월일",
+            cancel: "취소",
+            city: "도시",
+            change_password: "비밀번호 변경",
+            convert_account: "계정 전환",
+            convert_account_p_1: r#"계정을 패스키 전용 계정으로 전환할 수 있습니다.
+이 전환은 비밀번호를 삭제하며, 등록된 패스키를 사용해서만 로그인할 수 있습니다.
+추가적인 사용자 인증이 가능한 패스키만 허용된다는 점을 명심해 주세요.
+패스키가 지원한다면, 'MFA' 페이지에서 키 이름 뒤에 작은 표시가 있는 것을 찾을 수 있을 겁니다."#,
+            country: "국가",
+            device_id: "아이디",
+            device_name: "이름",
+            devices: "기기",
+            devices_desc: "이 계정에 연결된 기기",
+            email: "이메일",
+            email_update_confirm: r#"아직 이메일 주소가 변경되지 않았습니다. 새 주소로 메시지가 전송되었습니다.
+내부에 있는 승인 링크를 클릭해야 합니다. 승인되면 이메일 주소가 새 주소로 변경될 겁니다."#,
+            email_verified: "이메일 인증 여부",
+            family_name: "성",
+            federated_convert_password_1: r#"페더레이션 계정을 가지고 있습니다. 즉, 외부 인증 제공자를 사용하여
+로그인한다는 것을 의미합니다. 현재 제공자는 다음과 같습니다:"#,
+            federated_convert_password_2: r#"이메일을 통해 비밀번호 초기화를 요청할 수 있습니다. 완료하면 내부적인
+비밀번호가 계정에 추가될 겁니다. 그러면 외부 제공자 또는 내부적인 비밀번호를 통하여 로그인할 수 있습니다. 초기화를 요청하겠습니까?"#,
+            generate_random: "무작위로 생성",
+            given_name: "이름",
+            groups: "그룹",
+            invalid_input: "유효하지 않은 입력입니다.",
+            key: "키",
+            key_unique: "키는 고유해야 합니다.",
+            last_login: "마지막 로그인 일",
+            mfa: I18nAccountMfa::build_ko(),
+            mfa_activated: "MFA 활성화 여부",
+            nav_info: "정보",
+            nav_edit: "수정",
+            nav_mfa: "MFA",
+            nav_password: "비밀번호",
+            nav_logout: "로그아웃",
+            never: "무기한",
+            optional_values: "선택 항목",
+            password_confirm: "비밀번호 확인",
+            password_curr: "현재 비밀번호",
+            password_curr_req: "현재 비밀번호가 필요합니다.",
+            password_new: "새 비밀번호",
+            password_new_req: "새 비밀번호가 필요합니다.",
+            password_no_match: "비밀번호 확인이 필요합니다.",
+            password_expiry: "비밀번호 만료일",
+            password_policy: I18nPasswordPolicy::build_ko(),
+            password_policy_follow: "비밀번호 정책을 준수해야 합니다.",
+            password_reset: "비밀번호 초기화",
+            phone: "전화번호",
+            provider_link: "페더레이션 계정",
+            provider_link_desc: r#"이 계정은 다음 중 하나의 로그인 제공자에 연결할 수 있습니다.
+이 기능을 활성화하면, 선택한 것의 로그인 페이지로 리다이렉트될 겁니다. 성공적으로 로그인하고 이메일이 일치하면, 계정이 연결될 겁니다."#,
+            provider_unlink: "페더레이션 해제",
+            provider_unlink_desc: r#"이 계정에 최소 하나의 비밀번호 또는 패스키를 설정하면, 상위 제공자로부터 연결을 해제할 수 있습니다."#,
+            reg_date: "가입일",
+            reg_ip: "IP에서 가입",
+            roles: "역할",
+            save: "저장",
+            street: "주소",
+            user: "사용자",
+            user_created: "사용자 생성일",
+            user_enabled: "사용자 활성화 여부",
+            user_expiry: "사용자 만료",
+            user_verified_tooltip: "지문 또는 PIN을 통해 보호",
+            valid_email: "유효하지 않은 이메일 형식입니다.",
+            valid_given_name: "이름은 특수문자를 제외한 1자에서 32자이어야 합니다.",
+            valid_family_name: "성은 특수문자를 제외한 1자에서 32자이어야 합니다.",
+            web_id_desc: r#"WebID와 함께 노출할 항목을 설정할 수 있습니다.
+이 기능은 몇몇 탈중앙화된 로그인 네트워크에서 사용됩니다. 이것이 무엇인지 모르면, 대체로 필요하지 않을 것입니다."#,
+            web_id_desc_data:
+                "WebID에서 유효한 FOAF 어휘를 사용자 지정 데이터 항목에 추가할 수 있습니다",
+            web_id_expert_mode: "전문가 모드 활성화",
+            zip: "우편번호",
+        }
+    }
 }
 
 #[derive(Debug, Default, Serialize)]
@@ -408,6 +499,7 @@ impl SsrJson for I18nAccountMfa<'_> {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
             Language::ZhHans => Self::build_zh_hans(),
+            Language::Ko => Self::build_ko(),
         }
     }
 
@@ -486,6 +578,29 @@ impl I18nAccountMfa<'_> {
             test: "测试",
             test_error: "开始测试时出现错误",
             test_success: "测试成功！",
+        }
+    }
+
+    pub(crate) fn build_ko() -> Self {
+        Self {
+            p_1: "윈도우와 안드로이드와 같은 여러 시스템에서 MFA 키를 사용하려면, 안드로이드에서 등록해야 합니다.",
+            p_2: "안드로이드는 비밀번호 없이 인증하는 기술을 가장 적게 지원하는 플랫폼 중 하나입니다. \
+            안드로이드에서 등록한 키는 다른 곳에서도 작동합니다. 그러나, 그 반대로는 적용되지 않습니다.",
+
+            delete: "삭제",
+            error_reg: "가입 절차 시작 중 오류가 발생했습니다.",
+            invalid_key_used: "유효하지 않은 키가 사용되었습니다.",
+            last_used: "마지막 사용",
+            no_key: "이 슬롯에 등록된 보안 키가 없습니다.",
+            register: "등록",
+            register_new: "새 키 등록",
+            registerd: "등록되었습니다.",
+            registerd_keys: "등록된 키",
+            passkey_name: "패스키 이름",
+            passkey_name_err: "특수문자를 제외한 2자에서 32자이어야 합니다.",
+            test: "테스트",
+            test_error: "테스트 시작 중에 오류가 발생했습니다.",
+            test_success: "테스트 성공",
         }
     }
 }

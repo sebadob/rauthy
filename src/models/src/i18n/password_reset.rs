@@ -37,6 +37,7 @@ impl SsrJson for I18nPasswordReset<'_> {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
             Language::ZhHans => Self::build_zh_hans(),
+            Language::Ko => Self::build_ko(),
         }
     }
 
@@ -143,6 +144,36 @@ Reset via E-Mail nutzen für den Fall, dass der derzeitige Passkey abhanden komm
             success_passkey_1: "您的通行密钥已成功注册。",
             success_passkey_2: r#"请登入您的账户并尽快注册一个备份密钥。
 对于仅密钥登陆的账户，在丢失您当前的密钥时，您无法通过电子邮件进行密码重置。"#,
+        }
+    }
+
+    pub fn build_ko() -> Self {
+        Self {
+            password_policy: I18nPasswordPolicy::build_ko(),
+
+            account_login: "계정 로그인",
+            bad_format: "잘못된 형식",
+            fido_link: "https://fidoalliance.org/fido2/?lang=ko",
+            generate: "생성",
+            mfa: I18nAccountMfa::build_ko(),
+            new_acc_desc_1: "계정 종류는 비밀번호가 없는 계정 또는 기존의 비밀번호가 있는 계정 중 하나를 선택할 수 있습니다.",
+            new_acc_desc_2: r#"비밀번호가 없는 계정은 더 강력한 보안 방법을 제공하기 때문에 항상 선호됩니다.
+이러한 계정을 생성하려면 최소 하나의 패스키(Yubikey, Apple Touch ID, Windows Hello, ...)가 필요합니다. 기기가 FIDO2 표준을 지원해야 합니다.
+더 자세한 사항은 다음 링크를 참고해 주세요: "#,
+            new_account: "새 계정",
+            password_reset: "비밀번호 초기화",
+            password: "비밀번호",
+            passwordless: "FIDO 패스키",
+            password_confirm: "비밀번호 확인",
+            password_no_match: "비밀번호가 일치하지 않습니다.",
+            required: "필수",
+            save: "저장",
+            success_1: "비밀번호가 성공적으로 변경되었습니다.",
+            success_2: "곧 리다이렉트됩니다.",
+            success_3: "만약 리다이렉트가 되지 않으면, 여기를 클릭해 주세요:",
+            success_passkey_1: "새로운 패스키가 성공적으로 등록되었습니다.",
+            success_passkey_2: r#"계정에 로그인하여 가능한 한 빨리 두 번째 백업 키를 등록해 주세요.
+패스키 전용 계정은 현재 패스키를 잃어버리면, 이메일을 통하여 비밀번호 초기화할 수 없습니다."#,
         }
     }
 }

@@ -18,6 +18,7 @@ impl SsrJson for I18nEmailChangeInfoNew<'_> {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
             Language::ZhHans => Self::build_zh_hans(),
+            Language::Ko => Self::build_ko(),
         }
     }
 
@@ -58,6 +59,17 @@ impl I18nEmailChangeInfoNew<'_> {
             validity: "出于安全考虑，此链接仅在短时间内有效。",
             expires: "链接过期时间：",
             button_text: "确认电子邮件地址",
+        }
+    }
+
+    fn build_ko() -> Self {
+        Self {
+            subject: "이메일 변경 요청",
+            header: "이메일 변경 요청:",
+            click_link: "이메일 주소를 승인하려면 아래에 있는 링크를 클릭해 주세요.",
+            validity: "이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다.",
+            expires: "링크 만료일:",
+            button_text: "이메일 승인",
         }
     }
 }

@@ -17,6 +17,7 @@ impl SsrJson for I18nEmailResetInfo<'_> {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
             Language::ZhHans => Self::build_zh_hans(),
+            Language::Ko => Self::build_ko(),
         }
     }
 
@@ -53,6 +54,16 @@ impl I18nEmailResetInfo<'_> {
             expires_2: "的密码即将过期：",
             update: "您可以在此处更新密码：",
             button_text: "更新密码",
+        }
+    }
+
+    fn build_ko() -> Self {
+        Self {
+            subject: "비밀번호가 곧 만료됩니다.",
+            expires_1: "",
+            expires_2: "의 비밀번호가 곧 만료됩니다:",
+            update: "다음에서 변경할 수 있습니다:",
+            button_text: "비밀번호 변경",
         }
     }
 }
