@@ -35,6 +35,8 @@ pub enum Cache {
     ClientDynamic,
     ClientEphemeral,
     DPoPNonce,
+    Etag,
+    Html,
     IPRateLimit,
     Session,
     PoW,

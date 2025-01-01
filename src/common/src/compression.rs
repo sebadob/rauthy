@@ -1,6 +1,5 @@
 use brotli::enc::BrotliEncoderParams;
 use libflate::gzip::Encoder;
-use rand::Rng;
 use rauthy_error::ErrorResponse;
 use std::io::{Cursor, Write};
 use std::sync::LazyLock;
@@ -13,16 +12,12 @@ static BROTLI_PARAMS_9: LazyLock<BrotliEncoderParams> = LazyLock::new(|| {
 });
 // Params for dynamic compression which happens often like with every new request.
 // We don't want to compress too high in that case because of diminishing returns.
+// TODO test compression times for dyn compression and find best compromise
 static BROTLI_PARAMS_DYN: LazyLock<BrotliEncoderParams> = LazyLock::new(|| {
     let mut p = BrotliEncoderParams::default();
     p.quality = 5;
     p
 });
-
-#[inline]
-pub fn rand_between(start: u64, end: u64) -> u64 {
-    rand::thread_rng().gen_range(start..end)
-}
 
 /// Brotli compression with max quality
 #[inline]
