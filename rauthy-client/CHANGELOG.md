@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.6.1
+
+Fixes the `OptionalFromRequestParts` trait impl for `axum-0.8` in a way that it makes the example work
+again as expected.
+
 ## v0.6.0
 
 Brings compatibility for `axum-0.8` by bumping `axum` and `axum_extra` dependencies.
