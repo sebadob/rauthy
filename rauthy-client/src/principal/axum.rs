@@ -94,19 +94,19 @@ where
         state: &S,
     ) -> Result<Option<Self>, Self::Rejection> {
         // Extract the token from the authorization header
-        let TypedHeader(Authorization(bearer)) =
+        if let Ok(TypedHeader(Authorization(bearer))) =
             <TypedHeader<Authorization<Bearer>> as FromRequestParts<S>>::from_request_parts(
                 parts, state,
             )
             .await
-            .map_err(|_| Response::builder().status(401).body(Body::empty()).unwrap())?;
-
-        match PrincipalOidc::from_token_validated(bearer.token()).await {
-            Ok(p) => {
-                p.is_user()?;
-                Ok(Some(p))
+        {
+            if let Ok(p) = PrincipalOidc::from_token_validated(bearer.token()).await {
+                if p.is_user().is_ok() {
+                    return Ok(Some(p));
+                }
             }
-            Err(_err) => Err(Response::builder().status(401).body(Body::empty()).unwrap()),
         }
+
+        Ok(None)
     }
 }
