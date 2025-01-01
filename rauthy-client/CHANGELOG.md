@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.6.0
+
+Brings compatibility for `axum-0.8` by bumping `axum` and `axum_extra` dependencies.
+
 ## v0.5.0
 
 This version bumps internal dependencies and
