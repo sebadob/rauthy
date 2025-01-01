@@ -38,6 +38,7 @@ askama_actix = "0.14"
 async-trait = "0.1.74"
 base64 = "0.22.0"
 bincode = "1"
+brotli = "7.0.0"
 cached = "0.54"
 chacha20poly1305 = { version = "0.10", features = ["std"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
@@ -65,6 +66,7 @@ lazy_static = "1"
 lettre = { version = "0.11", default-features = false, features = [
     "builder", "smtp-transport", "tokio1-rustls-tls", "tracing"
 ] }
+libflate = "2.1.0"
 mime = "0.3.17"
 mime_guess = "2"
 num_cpus = "1"
