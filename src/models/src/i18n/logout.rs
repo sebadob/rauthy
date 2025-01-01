@@ -16,6 +16,7 @@ impl SsrJson for I18nLogout<'_> {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
             Language::ZhHans => Self::build_zh_hans(),
+            Language::Ko => Self::build_ko(),
         }
     }
 
@@ -47,6 +48,14 @@ impl I18nLogout<'_> {
             logout: "退出登录",
             confirm_msg: "您确定要退出登录并结束会话吗？",
             cancel: "取消",
+        }
+    }
+
+    fn build_ko() -> Self {
+        Self {
+            logout: "로그아웃",
+            confirm_msg: "정말로 로그아웃하고 세션을 종료하겠습니까?",
+            cancel: "취소",
         }
     }
 }

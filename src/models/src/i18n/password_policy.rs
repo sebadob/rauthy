@@ -52,4 +52,17 @@ impl I18nPasswordPolicy<'_> {
             not_recent: "不是最近使用过的密码之一",
         }
     }
+
+    pub fn build_ko() -> Self {
+        Self {
+            password_policy: "비밀번호 정책",
+            length_min: "최소 자수",
+            length_max: "최대 자수",
+            lowercase_min: "최소 소문자 자수",
+            uppercase_min: "최소 대문자 자수",
+            digits_min: "최소 숫자 자수",
+            special_min: "최소 특수문자 자수",
+            not_recent: "최근 사용한 비밀번호 중 하나가 아닌 것",
+        }
+    }
 }

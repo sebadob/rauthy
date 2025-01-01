@@ -22,6 +22,7 @@ impl I18nError<'_> {
             Language::En => Self::build_en(status_code, details_text.map(|t| t.into())),
             Language::De => Self::build_de(status_code, details_text.map(|t| t.into())),
             Language::ZhHans => Self::build_zh_hans(status_code, details_text.map(|t| t.into())),
+            Language::Ko => Self::build_ko(status_code, details_text.map(|t| t.into())),
         }
     }
 }
@@ -32,6 +33,7 @@ impl SsrJson for I18nError<'_> {
             Language::En => Self::build_en(StatusCode::NOT_FOUND, None),
             Language::De => Self::build_de(StatusCode::NOT_FOUND, None),
             Language::ZhHans => Self::build_zh_hans(StatusCode::NOT_FOUND, None),
+            Language::Ko => Self::build_ko(StatusCode::NOT_FOUND, None),
         }
     }
 
@@ -89,6 +91,26 @@ impl I18nError<'_> {
             error: status_code.to_string(),
             error_text,
             details: "显示详情",
+            details_text,
+        }
+    }
+
+    fn build_ko(status_code: StatusCode, details_text: Option<Cow<'static, str>>) -> Self {
+        let error_text = match status_code {
+            StatusCode::BAD_REQUEST => {
+                "요청이 손상되었거나 잘못되었습니다. 자세한 정보를 참고해 주세요."
+            }
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
+                "접근 거부 - 이 리소스를 사용하거나 접근할 수 없습니다."
+            }
+            StatusCode::INTERNAL_SERVER_ERROR => "내부적인 서버 오류",
+            _ => "요청 정보를 찾을 수 없습니다.",
+        };
+
+        Self {
+            error: status_code.to_string(),
+            error_text,
+            details: "자세한 정보 표시",
             details_text,
         }
     }

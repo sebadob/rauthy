@@ -30,6 +30,7 @@ impl SsrJson for I18nAuthorize<'_> {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
             Language::ZhHans => Self::build_zh_hans(),
+            Language::Ko => Self::build_ko(),
         }
     }
 
@@ -106,6 +107,29 @@ hinzufügen."#,
             provide_mfa: "请使用MFA设备登陆",
             request_expires: "请求过期",
             sign_up: "用户注册",
+        }
+    }
+
+    fn build_ko() -> Self {
+        Self {
+            client_force_mfa: r#"이 로그인은 더 높은 수준의 보안을 위해서 MFA를 강제합니다.
+접근하려면, 계정에 로그인하고 최소 하나 이상의 패스키를 추가해야 합니다."#,
+            email: "이메일",
+            email_bad_format: "잘못된 이메일 형식입니다.",
+            email_required: "이메일이 필요합니다.",
+            email_sent_msg: "이메일이 존재하면, 요청이 전송되었을 것입니다.",
+            http_429: "유효하지 않은 입력이 너무 많습니다. 다음 시간 전까지 비활성화합니다:",
+            invalid_credentials: "유효하지 않은 인증 정보입니다.",
+            invalid_key_used: "유효하지 않은 키입니다.",
+            login: "로그인",
+            mfa_ack: "확인되었습니다.",
+            password: "비밀번호",
+            password_forgotten: "비밀번호를 잊으셨나요?",
+            password_request: "요청",
+            password_required: "비밀번호는 필요합니다.",
+            provide_mfa: "MFA 기기를 통해 로그인해 주세요.",
+            request_expires: "요청 만료일",
+            sign_up: "사용자 가입",
         }
     }
 }

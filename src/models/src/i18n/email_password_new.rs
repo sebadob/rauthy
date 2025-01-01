@@ -55,6 +55,23 @@ static TPL_ZH_HANS_PASSWORD_NEW_BUTTON: Lazy<Option<String>> =
 static TPL_ZH_HANS_PASSWORD_NEW_FOOTER: Lazy<Option<String>> =
     Lazy::new(|| env::var("TPL_ZH_HANS_PASSWORD_NEW_FOOTER").ok());
 
+static TPL_KO_PASSWORD_NEW_SUBJECT: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_KO_PASSWORD_NEW_SUBJECT").ok());
+static TPL_KO_PASSWORD_NEW_HEADER: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_KO_PASSWORD_NEW_HEADER").ok());
+static TPL_KO_PASSWORD_NEW_TEXT: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_KO_PASSWORD_NEW_TEXT").ok());
+static TPL_KO_PASSWORD_NEW_CLICK_LINK: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_KO_PASSWORD_NEW_CLICK_LINK").ok());
+static TPL_KO_PASSWORD_NEW_VALIDITY: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_KO_PASSWORD_NEW_VALIDITY").ok());
+static TPL_KO_PASSWORD_NEW_EXPIRES: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_KO_PASSWORD_NEW_EXPIRES").ok());
+static TPL_KO_PASSWORD_NEW_BUTTON: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_KO_PASSWORD_NEW_BUTTON").ok());
+static TPL_KO_PASSWORD_NEW_FOOTER: Lazy<Option<String>> =
+    Lazy::new(|| env::var("TPL_KO_PASSWORD_NEW_FOOTER").ok());
+
 #[derive(Debug, Serialize)]
 pub struct I18nEmailPasswordNew<'a> {
     pub subject: &'a str,
@@ -73,6 +90,7 @@ impl SsrJson for I18nEmailPasswordNew<'_> {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
             Language::ZhHans => Self::build_zh_hans(),
+            Language::Ko => Self::build_ko(),
         }
     }
 
@@ -154,6 +172,31 @@ impl I18nEmailPasswordNew<'_> {
                 .as_deref()
                 .unwrap_or("设置密码"),
             footer: TPL_ZH_HANS_PASSWORD_NEW_FOOTER.as_deref(),
+        }
+    }
+
+    fn build_ko() -> Self {
+        Self {
+            subject: TPL_KO_PASSWORD_NEW_SUBJECT
+                .as_deref()
+                .unwrap_or("새 비밀번호"),
+            header: TPL_KO_PASSWORD_NEW_HEADER
+                .as_deref()
+                .unwrap_or("새 비밀번호를 설정해 주세요:"),
+            text: TPL_KO_PASSWORD_NEW_TEXT.as_deref(),
+            click_link: TPL_KO_PASSWORD_NEW_CLICK_LINK
+                .as_deref()
+                .unwrap_or("비밀번호 입력창으로 이동하려면, 아래의 링크를 클릭해 주세요."),
+            validity: TPL_KO_PASSWORD_NEW_VALIDITY
+                .as_deref()
+                .unwrap_or("이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다."),
+            expires: TPL_KO_PASSWORD_NEW_EXPIRES
+                .as_deref()
+                .unwrap_or("링크 만료일:"),
+            button_text: TPL_KO_PASSWORD_NEW_BUTTON
+                .as_deref()
+                .unwrap_or("비밀번호 설정"),
+            footer: TPL_KO_PASSWORD_NEW_FOOTER.as_deref(),
         }
     }
 }

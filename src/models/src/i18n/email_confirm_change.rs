@@ -15,6 +15,7 @@ impl SsrJson for I18nEmailConfirmChange<'_> {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
             Language::ZhHans => Self::build_zh_hans(),
+            Language::Ko => Self::build_ko(),
         }
     }
 
@@ -45,6 +46,14 @@ impl I18nEmailConfirmChange<'_> {
             subject: "电子邮件地址已更新：",
             msg: "您的电子邮件地址已成功更新为：",
             msg_from_admin: "此操作由管理员完成。",
+        }
+    }
+
+    fn build_ko() -> Self {
+        Self {
+            subject: "이메일 변경이 승인되었습니다:",
+            msg: "이메일 주소가 다음 주소로 성공적으로 변경되었습니다:",
+            msg_from_admin: "이 작업은 관리자가 수행했습니다.",
         }
     }
 }

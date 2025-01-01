@@ -16,6 +16,7 @@ impl SsrJson for I18nIndex<'_> {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
             Language::ZhHans => Self::build_zh_hans(),
+            Language::Ko => Self::build_ko(),
         }
     }
 
@@ -46,6 +47,14 @@ impl I18nIndex<'_> {
             register: "注册",
             account_login: "登陆",
             admin_login: "管理",
+        }
+    }
+
+    fn build_ko() -> Self {
+        Self {
+            register: "가입",
+            account_login: "계정",
+            admin_login: "관리",
         }
     }
 }
