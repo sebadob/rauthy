@@ -5,18 +5,16 @@ use std::io::{Cursor, Write};
 use std::sync::LazyLock;
 
 static BROTLI_PARAMS: LazyLock<BrotliEncoderParams> = LazyLock::new(BrotliEncoderParams::default);
-static BROTLI_PARAMS_9: LazyLock<BrotliEncoderParams> = LazyLock::new(|| {
-    let mut p = BrotliEncoderParams::default();
-    p.quality = 9;
-    p
+static BROTLI_PARAMS_9: LazyLock<BrotliEncoderParams> = LazyLock::new(|| BrotliEncoderParams {
+    quality: 9,
+    ..Default::default()
 });
 // Params for dynamic compression which happens often like with every new request.
 // We don't want to compress too high in that case because of diminishing returns.
 // TODO test compression times for dyn compression and find best compromise
-static BROTLI_PARAMS_DYN: LazyLock<BrotliEncoderParams> = LazyLock::new(|| {
-    let mut p = BrotliEncoderParams::default();
-    p.quality = 5;
-    p
+static BROTLI_PARAMS_DYN: LazyLock<BrotliEncoderParams> = LazyLock::new(|| BrotliEncoderParams {
+    quality: 5,
+    ..Default::default()
 });
 
 /// Brotli compression with max quality

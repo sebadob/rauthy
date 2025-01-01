@@ -61,22 +61,22 @@ impl ThemeCssFull {
 
     #[inline]
     fn cache_key_etag(client_id: &str) -> String {
-        format!("{}_theme_css", client_id)
+        format!("{}_theme_etag", client_id)
     }
 
     #[inline]
     fn cache_key_plain(client_id: &str) -> String {
-        format!("{}_theme_css_plain", client_id)
+        format!("{}_theme_plain", client_id)
     }
 
     #[inline]
     fn cache_key_br(client_id: &str) -> String {
-        format!("{}_theme_css_br", client_id)
+        format!("{}_theme_br", client_id)
     }
 
     #[inline]
     fn cache_key_gzip(client_id: &str) -> String {
-        format!("{}_theme_css_gzip", client_id)
+        format!("{}_theme_gzip", client_id)
     }
 
     pub async fn etag_update(client_id: &str) -> Result<String, ErrorResponse> {
