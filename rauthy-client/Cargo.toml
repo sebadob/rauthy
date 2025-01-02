@@ -1,6 +1,6 @@
 [package]
 name = "rauthy-client"
-version = "0.5.0"
+version = "0.6.1"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -16,12 +16,12 @@ default = []
 actix-web = [
     "dep:actix-web",
     "dep:http",
+    # minimal versions
+    "dep:actix-macros",
 ]
 axum = [
     "dep:axum",
     "dep:axum-extra",
-    # minimal versions
-    "dep:elliptic-curve",
 ]
 device-code = []
 qrcode = ["device-code", "dep:qrcode"]
@@ -36,7 +36,7 @@ chacha20poly1305 = { version = "0.10.1", features = ["std"] }
 chrono = { version = "0.4.31", default-features = false, features = ["clock", "serde", "std"] }
 jwt-simple = { version = "0.12.6", default-features = false, features = ["pure-rust"] }
 rand = "0.8.5"
-reqwest = { version = "0.12.9", default-features = false, features = [
+reqwest = { version = "0.12.12", default-features = false, features = [
     "brotli", "json", "rustls-tls", "rustls-tls-webpki-roots"
 ] }
 ring = "0.17.5"
@@ -51,18 +51,14 @@ actix-web = { version = "4.4", optional = true, features = [] }
 http = { version = "1.0.0", optional = true }
 
 # axum
-axum = { version = "0.7", optional = true, features = [] }
-axum-extra = { version = "0.9", optional = true, features = ["cookie", "typed-header"] }
+axum = { version = "0.8", optional = true, features = [] }
+axum-extra = { version = "0.10", optional = true, features = ["cookie", "typed-header"] }
 
 # device-code
 qrcode = { version = "0.14.0", optional = true }
 
 # make minimal versions happy
-elliptic-curve = { version = "0.13.8", optional = true }
-
-# remediate idna cve https://rustsec.org/advisories/RUSTSEC-2024-0421
-# this is an indirect fix, as reqwest 0.12.9 uses url 2.5.0 as minimum which is vulnerable
-url = "2.5.4"
+actix-macros = { version = "0.2.4", optional = true }
 
 [dev-dependencies]
 pretty_assertions = "1"

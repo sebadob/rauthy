@@ -1,4 +1,5 @@
 use crate::principal::PrincipalOidc;
+use axum::extract::OptionalFromRequestParts;
 use axum::response::IntoResponse;
 use axum::{body::Body, extract::FromRequestParts, http::request::Parts, response::Response};
 use axum_extra::{
@@ -58,8 +59,6 @@ impl PrincipalOidc {
     }
 }
 
-/// Axum trait implementation to extract the Principal from the request
-#[axum::async_trait]
 impl<S> FromRequestParts<S> for PrincipalOidc
 where
     S: Send + Sync,
@@ -67,11 +66,12 @@ where
     type Rejection = Response<Body>;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        // Extract the token from the authorization header
         let TypedHeader(Authorization(bearer)) =
-            TypedHeader::<Authorization<Bearer>>::from_request_parts(parts, state)
-                .await
-                .map_err(|_| Response::builder().status(401).body(Body::empty()).unwrap())?;
+            <TypedHeader<Authorization<Bearer>> as FromRequestParts<S>>::from_request_parts(
+                parts, state,
+            )
+            .await
+            .map_err(|_| Response::builder().status(401).body(Body::empty()).unwrap())?;
 
         match PrincipalOidc::from_token_validated(bearer.token()).await {
             Ok(p) => {
@@ -80,5 +80,33 @@ where
             }
             Err(_err) => Err(Response::builder().status(401).body(Body::empty()).unwrap()),
         }
+    }
+}
+
+impl<S> OptionalFromRequestParts<S> for PrincipalOidc
+where
+    S: Send + Sync,
+{
+    type Rejection = Response<Body>;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S,
+    ) -> Result<Option<Self>, Self::Rejection> {
+        // Extract the token from the authorization header
+        if let Ok(TypedHeader(Authorization(bearer))) =
+            <TypedHeader<Authorization<Bearer>> as FromRequestParts<S>>::from_request_parts(
+                parts, state,
+            )
+            .await
+        {
+            if let Ok(p) = PrincipalOidc::from_token_validated(bearer.token()).await {
+                if p.is_user().is_ok() {
+                    return Ok(Some(p));
+                }
+            }
+        }
+
+        Ok(None)
     }
 }

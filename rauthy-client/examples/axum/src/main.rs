@@ -47,7 +47,7 @@ async fn main() -> anyhow::Result<()> {
         // If set to 'false', tokens with a non-verified email address will be rejected.
         email_verified: true,
         // The issuer URL from your Rauthy deployment
-        iss: "https://rauthy.local/auth/v1".to_string(),
+        iss: "https://iam.sebadob.dev/auth/v1".to_string(),
         // The scopes you want to request. The only mandatory which always needs to exist is
         // `openid`, the rest is optional and depending on your needs.
         scope: vec![
