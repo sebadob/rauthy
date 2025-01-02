@@ -8,6 +8,7 @@ use std::env;
 use std::ops::Not;
 use std::str::FromStr;
 use std::string::ToString;
+use std::sync::LazyLock;
 
 #[derive(Debug, PartialEq)]
 pub enum CookieMode {
@@ -15,6 +16,10 @@ pub enum CookieMode {
     Secure,
     DangerInsecure,
 }
+
+pub static BUILD_TIME: LazyLock<DateTime<Utc>> = LazyLock::new(|| {
+    DateTime::from_timestamp(env!("BUILD_TIME").parse::<i64>().unwrap(), 0).unwrap()
+});
 
 pub const RAUTHY_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const CONTENT_TYPE_WEBP: &str = "image/webp";

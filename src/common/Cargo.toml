@@ -28,6 +28,9 @@ serde_json = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 
+[build-dependencies]
+chrono = { version = "0.4", default-features = false, features = ["now"] }
+
 [dev-dependencies]
 pretty_assertions = "1"
 tokio-test = "*"

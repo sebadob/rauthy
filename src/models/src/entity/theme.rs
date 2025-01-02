@@ -2,6 +2,7 @@ use crate::database::{Cache, DB};
 use chrono::Utc;
 use hiqlite::{params, Param};
 use rauthy_common::compression::{compress_br, compress_gzip};
+use rauthy_common::constants::BUILD_TIME;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
@@ -83,7 +84,7 @@ impl Default for ThemeCssFull {
     fn default() -> Self {
         Self {
             client_id: "rauthy".to_string(),
-            last_update: Utc::now().timestamp(), // TODO change to proper TS when using DB
+            last_update: BUILD_TIME.timestamp(),
             version: 1,
             light: ThemeCss::default_light(),
             dark: ThemeCss::default_dark(),

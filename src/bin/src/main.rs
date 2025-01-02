@@ -10,7 +10,7 @@ use cryptr::EncKeys;
 use hiqlite::params;
 use prometheus::Registry;
 use rauthy_common::constants::{
-    APP_START, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
+    BUILD_TIME, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
 };
 use rauthy_common::utils::UseDummyAddress;
 use rauthy_common::{is_hiqlite, is_sqlite, password_hasher};
@@ -81,7 +81,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let log_level = setup_logging();
-    info!("{} - Starting Rauthy v{}", *APP_START, RAUTHY_VERSION);
+    info!("Starting Rauthy v{} ({})", RAUTHY_VERSION, *BUILD_TIME);
     info!("Log Level set to '{}'", log_level);
     if test_mode {
         info!("Application started in Integration Test Mode");
