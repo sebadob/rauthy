@@ -25,7 +25,7 @@ pub async fn get_theme(
     let body = match enc {
         AcceptEncoding::Br => BoxBody::new(ThemeCssFull::br(&client_id).await?),
         AcceptEncoding::Gzip => BoxBody::new(ThemeCssFull::gzip(&client_id).await?),
-        AcceptEncoding::None => BoxBody::new(ThemeCssFull::plain(&client_id).await?),
+        AcceptEncoding::None => BoxBody::new(ThemeCssFull::plain(client_id).await?),
     };
 
     Ok(HttpResponse::build(StatusCode::OK)

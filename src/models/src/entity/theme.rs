@@ -1,47 +1,182 @@
 use crate::database::{Cache, DB};
 use chrono::Utc;
+use hiqlite::{params, Param};
 use rauthy_common::compression::{compress_br, compress_gzip};
+use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
+use serde::{Deserialize, Serialize};
+use sqlx::{Error, FromRow, Row};
 use std::fmt::Write;
+use tracing::error;
+
+static LATEST_CSS_VERSION: i32 = 1;
 
 #[derive(Debug)]
 pub struct ThemeCssFull {
-    pub ts: i64,
+    pub client_id: String,
+    // used for the etag
+    pub last_update: i64,
+    // Should always be 1 for now, but makes it possible to have different structs
+    // in the future for proper deserialization.
+    pub version: i64,
     pub light: ThemeCss,
     pub dark: ThemeCss,
     pub border_radius: String,
 }
 
+impl From<hiqlite::Row<'_>> for ThemeCssFull {
+    fn from(mut row: hiqlite::Row<'_>) -> Self {
+        let version: i64 = row.get("version");
+        let (light, dark) = if version == 1 {
+            let light = ThemeCss::from(row.get::<Vec<u8>>("light").as_slice());
+            let dark = ThemeCss::from(row.get::<Vec<u8>>("dark").as_slice());
+            (light, dark)
+        } else {
+            error!(
+                "Invalid CSS version {} returned from database, using defaults",
+                version
+            );
+            (ThemeCss::default_light(), ThemeCss::default_dark())
+        };
+
+        Self {
+            client_id: row.get("client_id"),
+            last_update: row.get("last_update"),
+            version,
+            light,
+            dark,
+            border_radius: row.get("border_radius"),
+        }
+    }
+}
+
+impl FromRow<'_, sqlx::postgres::PgRow> for ThemeCssFull {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, Error> {
+        let version: i64 = row.get("version");
+        let (light, dark) = if version == 1 {
+            let bytes: Vec<u8> = row.get("light");
+            let light = ThemeCss::from(bytes.as_slice());
+            let bytes: Vec<u8> = row.get("dark");
+            let dark = ThemeCss::from(bytes.as_slice());
+
+            (light, dark)
+        } else {
+            error!(
+                "Invalid CSS version {} returned from database, using defaults",
+                version
+            );
+            (ThemeCss::default_light(), ThemeCss::default_dark())
+        };
+
+        Ok(Self {
+            client_id: row.get("client_id"),
+            last_update: row.get("last_update"),
+            version,
+            light,
+            dark,
+            border_radius: row.get("border_radius"),
+        })
+    }
+}
+
 impl Default for ThemeCssFull {
     fn default() -> Self {
         Self {
-            ts: Utc::now().timestamp(), // TODO change to proper TS when using DB
-            light: ThemeCss {
-                text: vec![208, 10, 40],
-                text_high: vec![208, 20, 20],
-                bg: vec![228, 2, 98],
-                bg_high: vec![228, 8, 84],
-                action: vec![34, 100, 59],
-                accent: vec![246, 60, 53],
-                error: vec![15, 100, 37],
-                btn_text: "white".to_string(),
-                theme_sun: "hsla(var(--action), .7)".to_string(),
-                theme_moon: "hsla(var(--accent), .85)".to_string(),
-            },
-            dark: ThemeCss {
-                text: vec![228, 2, 70],
-                text_high: vec![228, 8, 90],
-                bg: vec![208, 90, 4],
-                bg_high: vec![208, 30, 19],
-                action: vec![34, 100, 59],
-                accent: vec![246, 60, 53],
-                error: vec![15, 100, 37],
-                btn_text: "hsl(var(--bg))".to_string(),
-                theme_sun: "hsla(var(--action), .7)".to_string(),
-                theme_moon: "hsla(var(--accent), .85)".to_string(),
-            },
+            client_id: "rauthy".to_string(),
+            last_update: Utc::now().timestamp(), // TODO change to proper TS when using DB
+            version: 1,
+            light: ThemeCss::default_light(),
+            dark: ThemeCss::default_dark(),
             border_radius: "5px".to_string(),
         }
+    }
+}
+
+// CRUD
+impl ThemeCssFull {
+    pub async fn find(client_id: String) -> Result<Self, ErrorResponse> {
+        let opt: Option<Self> = if is_hiqlite() {
+            DB::client()
+                .query_map_optional(
+                    "SELECT * FROM themes WHERE client_id = $1",
+                    params!(client_id),
+                )
+                .await?
+        } else {
+            sqlx::query("SELECT * FROM themes WHERE client_id = $1")
+                .bind(client_id)
+                .fetch_optional(DB::conn())
+                .await?
+                .map(|row| Self::from_row(&row).unwrap())
+        };
+
+        Ok(opt.unwrap_or_default())
+    }
+
+    pub async fn delete(client_id: String) -> Result<(), ErrorResponse> {
+        let id = client_id.clone();
+
+        if is_hiqlite() {
+            DB::client()
+                .execute("DELETE FROM themes WHERE client_id = $1", params!(id))
+                .await?;
+        } else {
+            sqlx::query!("DELETE FROM themes WHERE client_id = $1", id)
+                .execute(DB::conn())
+                .await?;
+        }
+
+        Self::invalidate_caches(&client_id).await?;
+
+        Ok(())
+    }
+
+    pub async fn upsert(
+        client_id: String,
+        light: ThemeCss,
+        dark: ThemeCss,
+        border_radius: String,
+    ) -> Result<(), ErrorResponse> {
+        let id = client_id.clone();
+        let now = Utc::now().timestamp();
+        let light = light.as_bytes();
+        let dark = dark.as_bytes();
+
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    r#"
+INSERT INTO themes (client_id, last_update, version, light, dark, border_radius)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (client_id) DO UPDATE
+SET last_update = $2, version = $3, light = $4, dark = $5, border_radius = $6
+"#,
+                    params!(id, now, LATEST_CSS_VERSION, light, dark, border_radius),
+                )
+                .await?;
+        } else {
+            sqlx::query!(
+                r#"
+INSERT INTO themes (client_id, last_update, version, light, dark, border_radius)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (client_id) DO UPDATE
+SET last_update = $2, version = $3, light = $4, dark = $5, border_radius = $6
+"#,
+                id,
+                now,
+                LATEST_CSS_VERSION,
+                light,
+                dark,
+                border_radius
+            )
+            .execute(DB::conn())
+            .await?;
+        }
+
+        // TODO if we have the prebuild fn at some point, favor this instead of invalidation
+        Self::invalidate_caches(&client_id).await?;
+
+        Ok(())
     }
 }
 
@@ -113,7 +248,7 @@ impl ThemeCssFull {
         Ok(())
     }
 
-    pub async fn plain(client_id: &str) -> Result<String, ErrorResponse> {
+    pub async fn plain(client_id: String) -> Result<String, ErrorResponse> {
         // TODO do we even want to cache the plain version?
         // It is probably only used once each time to build the compressed versions anyway.
 
@@ -127,8 +262,8 @@ impl ThemeCssFull {
         //     return Ok(css);
         // }
 
-        // TODO update to proper DB query once the theme is dynamic
-        let res = Self::default().as_css()?;
+        let slf = Self::find(client_id).await?;
+        let res = slf.as_css()?;
 
         // DB::client()
         //     .put_bytes(
@@ -150,7 +285,7 @@ impl ThemeCssFull {
             return Ok(bytes);
         }
 
-        let plain = Self::plain(client_id).await?;
+        let plain = Self::plain(client_id.to_string()).await?;
         let compressed = compress_br(plain.as_bytes())?;
         DB::client()
             .put_bytes(
@@ -172,7 +307,7 @@ impl ThemeCssFull {
             return Ok(bytes);
         }
 
-        let plain = Self::plain(client_id).await?;
+        let plain = Self::plain(client_id.to_string()).await?;
         let compressed = compress_gzip(plain.as_bytes())?;
         DB::client()
             .put_bytes(
@@ -224,7 +359,7 @@ impl ThemeCssFull {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ThemeCss {
     // HSL values without prefix
     pub text: Vec<u16>,
@@ -239,6 +374,12 @@ pub struct ThemeCss {
     pub btn_text: String,
     pub theme_sun: String,
     pub theme_moon: String,
+}
+
+impl From<&[u8]> for ThemeCss {
+    fn from(value: &[u8]) -> Self {
+        bincode::deserialize(value).unwrap()
+    }
 }
 
 impl ThemeCss {
@@ -280,6 +421,40 @@ impl ThemeCss {
         write!(s, "--theme-moon:{};", self.theme_moon)?;
 
         Ok(())
+    }
+
+    fn as_bytes(&self) -> Vec<u8> {
+        bincode::serialize(self).unwrap()
+    }
+
+    fn default_dark() -> Self {
+        Self {
+            text: vec![228, 2, 70],
+            text_high: vec![228, 8, 90],
+            bg: vec![208, 90, 4],
+            bg_high: vec![208, 30, 19],
+            action: vec![34, 100, 59],
+            accent: vec![246, 60, 53],
+            error: vec![15, 100, 37],
+            btn_text: "hsl(var(--bg))".to_string(),
+            theme_sun: "hsla(var(--action), .7)".to_string(),
+            theme_moon: "hsla(var(--accent), .85)".to_string(),
+        }
+    }
+
+    fn default_light() -> Self {
+        Self {
+            text: vec![208, 10, 40],
+            text_high: vec![208, 20, 20],
+            bg: vec![228, 2, 98],
+            bg_high: vec![228, 8, 84],
+            action: vec![34, 100, 59],
+            accent: vec![246, 60, 53],
+            error: vec![15, 100, 37],
+            btn_text: "white".to_string(),
+            theme_sun: "hsla(var(--action), .7)".to_string(),
+            theme_moon: "hsla(var(--accent), .85)".to_string(),
+        }
     }
 }
 
