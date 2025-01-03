@@ -9,13 +9,19 @@ const config = {
         paths: {
             base: '/auth/v1',
         },
-        adapter: adapter({
-            fallback: null,
-            pages: '../templates/html',
-            assets: '../static/v1',
-            precompress: true,
-            strict: true,
-        }),
+        alias: {
+            // Contains all the API request and response types
+            // (as soon as Svelte 5 + TS migration is done)
+            $api: 'src/api',
+            // The `lib5` is a temp lib which will exist until all core components
+            // have been migrated to Svelte5 + TS. Migration all dependencies will
+            // be a lot safer when changing each component to `lib5` first.
+            // Later on, the old component can be removed from `lib` and via compiler
+            // warnings, we can be 100% sure, that we have not forgotten any migration.
+            // After this is done and no errors are thrown, we can do a very easy
+            // switch to the original `lib` via global search and replace.
+            $lib5: 'src/lib_svelte5',
+        },
         csp: isDev ? {} : {
             directives: {
                 'default-src': ['none'],
@@ -25,6 +31,13 @@ const config = {
                 'img-src': ['self'],
             },
         },
+        adapter: adapter({
+            fallback: null,
+            pages: '../templates/html',
+            assets: '../static/v1',
+            precompress: true,
+            strict: true,
+        }),
     },
 };
 

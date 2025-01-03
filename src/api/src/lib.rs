@@ -2,6 +2,7 @@
 
 #![forbid(unsafe_code)]
 
+use actix_web::http::header::{HeaderMap, HeaderValue};
 use actix_web::{web, HttpRequest, HttpResponse};
 use rauthy_api_types::users::WebauthnLoginResponse;
 use rauthy_common::constants::COOKIE_MFA;
@@ -29,11 +30,50 @@ pub mod openapi;
 pub mod roles;
 pub mod scopes;
 pub mod sessions;
+pub mod themes;
 pub mod users;
 
 pub type ReqApiKey = web::ReqData<Option<ApiKey>>;
 pub type ReqPrincipal = web::ReqData<Principal>;
 pub type ReqSession = web::ReqData<Option<Session>>;
+
+#[derive(Debug, PartialEq)]
+enum AcceptEncoding {
+    Br,
+    Gzip,
+    None,
+}
+
+impl From<&HeaderMap> for AcceptEncoding {
+    #[inline]
+    fn from(headers: &HeaderMap) -> Self {
+        if let Some(accept) = headers
+            .get("accept-encoding")
+            .map(|v| v.to_str().unwrap_or_default())
+        {
+            if accept.contains("br") {
+                Self::Br
+            } else if accept.contains("gzip") {
+                Self::Gzip
+            } else {
+                Self::None
+            }
+        } else {
+            Self::None
+        }
+    }
+}
+
+impl AcceptEncoding {
+    #[inline]
+    pub fn value(&self) -> HeaderValue {
+        match self {
+            AcceptEncoding::Br => HeaderValue::from_static("br"),
+            AcceptEncoding::Gzip => HeaderValue::from_static("gzip"),
+            AcceptEncoding::None => HeaderValue::from_static("none"),
+        }
+    }
+}
 
 #[derive(RustEmbed)]
 #[folder = "../../static/v1/"]

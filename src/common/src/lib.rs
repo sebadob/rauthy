@@ -6,6 +6,7 @@
 use crate::constants::DB_TYPE;
 use std::env;
 
+pub mod compression;
 pub mod constants;
 pub mod password_hasher;
 pub mod utils;

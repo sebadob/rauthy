@@ -1,11 +1,11 @@
 use crate::{
     api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
-    scopes, sessions, users,
+    scopes, sessions, themes, users,
 };
 use actix_web::web;
 use rauthy_api_types::{
     api_keys::*, auth_providers::*, blacklist::*, clients::*, events::*, fed_cm::*, generic::*,
-    groups::*, oidc::*, roles::*, scopes::*, sessions::*, users::*,
+    groups::*, oidc::*, roles::*, scopes::*, sessions::*, themes::*, users::*,
 };
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -121,6 +121,10 @@ use utoipa::{openapi, OpenApi};
         sessions::get_sessions,
         sessions::delete_sessions,
         sessions::delete_sessions_for_user,
+
+        themes::get_theme,
+        themes::put_theme,
+        themes::delete_theme,
 
         users::get_users,
         users::post_users,
@@ -259,6 +263,8 @@ use utoipa::{openapi, OpenApi};
             ScopeResponse,
             SessionResponse,
             SessionInfoResponse,
+            ThemeCss,
+            ThemeRequestResponse,
             TokenInfo,
             UserAttrConfigResponse,
             UserAttrConfigValueResponse,

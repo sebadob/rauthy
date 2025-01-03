@@ -10,14 +10,14 @@ use cryptr::EncKeys;
 use hiqlite::params;
 use prometheus::Registry;
 use rauthy_common::constants::{
-    APP_START, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
+    BUILD_TIME, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
 };
 use rauthy_common::utils::UseDummyAddress;
 use rauthy_common::{is_hiqlite, is_sqlite, password_hasher};
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
     api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
-    scopes, sessions, users,
+    scopes, sessions, themes, users,
 };
 use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -81,7 +81,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let log_level = setup_logging();
-    info!("{} - Starting Rauthy v{}", *APP_START, RAUTHY_VERSION);
+    info!("Starting Rauthy v{} ({})", RAUTHY_VERSION, *BUILD_TIME);
     info!("Log Level set to '{}'", log_level);
     if test_mode {
         info!("Application started in Integration Test Mode");
@@ -552,6 +552,9 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(generic::get_enc_keys)
                             .service(generic::post_migrate_enc_key)
                             .service(generic::ping)
+                            .service(themes::get_theme)
+                            .service(themes::put_theme)
+                            .service(themes::delete_theme)
                             .service(oidc::post_validate_token)
                             .service(oidc::get_well_known)
                             .service(generic::get_health)

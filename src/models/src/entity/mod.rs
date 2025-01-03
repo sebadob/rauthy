@@ -31,6 +31,7 @@ pub mod refresh_tokens_devices;
 pub mod roles;
 pub mod scopes;
 pub mod sessions;
+pub mod theme;
 pub mod user_attr;
 pub mod users;
 pub mod users_values;

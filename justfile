@@ -320,7 +320,7 @@ build-ui:
     for folder in "${PAGES[@]}"; do
         for html in $folder; do
           # set correct document language
-          sd 'lang="en"' 'lang="{{{{ lang }}"' $html
+          #sd 'lang="en"' 'lang="{{{{ lang }}"' $html
           # for pre-rendering colors
           sd '#6b3d99;' '{{{{ col_act1 }};' $html
           sd '#714d99;' '{{{{ col_act1a }};' "$html"

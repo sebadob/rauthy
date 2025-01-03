@@ -8,6 +8,7 @@ use std::env;
 use std::ops::Not;
 use std::str::FromStr;
 use std::string::ToString;
+use std::sync::LazyLock;
 
 #[derive(Debug, PartialEq)]
 pub enum CookieMode {
@@ -15,6 +16,10 @@ pub enum CookieMode {
     Secure,
     DangerInsecure,
 }
+
+pub static BUILD_TIME: LazyLock<DateTime<Utc>> = LazyLock::new(|| {
+    DateTime::from_timestamp(env!("BUILD_TIME").parse::<i64>().unwrap(), 0).unwrap()
+});
 
 pub const RAUTHY_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const CONTENT_TYPE_WEBP: &str = "image/webp";
@@ -132,6 +137,7 @@ lazy_static! {
     pub static ref RE_CLIENT_NAME: Regex = Regex::new(r"^[a-zA-Z0-9À-ſ-\s\x{3041}-\x{3096}\x{30A0}-\x{30FF}\x{3400}-\x{4DB5}\x{4E00}-\x{9FCB}\x{F900}-\x{FA6A}\x{2E80}-\x{2FD5}\x{FF66}-\x{FF9F}\x{FFA1}-\x{FFDC}\x{31F0}-\x{31FF}]{2,128}$").unwrap();
     pub static ref RE_CODE_CHALLENGE: Regex = Regex::new(r"^[a-zA-Z0-9-\._~]{43,128}$").unwrap();
     pub static ref RE_CODE_VERIFIER: Regex = Regex::new(r"^[a-zA-Z0-9-\._~+/=]+$").unwrap();
+    pub static ref RE_CSS_VALUE_LOOSE: Regex = Regex::new(r"^[a-z0-9-,.()%]+$").unwrap();
     pub static ref RE_CONTACT: Regex = Regex::new(r"^[a-zA-Z0-9\+.@/:]{0,48}$").unwrap();
     pub static ref RE_DATE_STR: Regex = Regex::new(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$").unwrap();
     pub static ref RE_GRANT_TYPES: Regex = Regex::new(r"^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$").unwrap();
