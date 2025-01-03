@@ -11,4 +11,5 @@ pub mod oidc;
 pub mod roles;
 pub mod scopes;
 pub mod sessions;
+pub mod themes;
 pub mod users;

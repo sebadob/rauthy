@@ -363,18 +363,35 @@ impl ThemeCssFull {
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ThemeCss {
     // HSL values without prefix
-    pub text: Vec<u16>,
-    pub text_high: Vec<u16>,
-    pub bg: Vec<u16>,
-    pub bg_high: Vec<u16>,
-    pub action: Vec<u16>,
-    pub accent: Vec<u16>,
-    pub error: Vec<u16>,
+    pub text: [u16; 3],
+    pub text_high: [u16; 3],
+    pub bg: [u16; 3],
+    pub bg_high: [u16; 3],
+    pub action: [u16; 3],
+    pub accent: [u16; 3],
+    pub error: [u16; 3],
 
     // fully valid values
     pub btn_text: String,
     pub theme_sun: String,
     pub theme_moon: String,
+}
+
+impl From<rauthy_api_types::themes::ThemeCss> for ThemeCss {
+    fn from(value: rauthy_api_types::themes::ThemeCss) -> Self {
+        Self {
+            text: value.text,
+            text_high: value.text_high,
+            bg: value.bg,
+            bg_high: value.bg_high,
+            action: value.action,
+            accent: value.accent,
+            error: value.error,
+            btn_text: value.btn_text,
+            theme_sun: value.theme_sun,
+            theme_moon: value.theme_moon,
+        }
+    }
 }
 
 impl From<&[u8]> for ThemeCss {
@@ -387,33 +404,33 @@ impl ThemeCss {
     pub fn append_css(&self, s: &mut String) -> Result<(), ErrorResponse> {
         write!(
             s,
-            "--text:{},{}%,{}%;",
+            "--text:{} {} {};",
             self.text[0], self.text[1], self.text[2]
         )?;
         write!(
             s,
-            "--text-high:{},{}%,{}%;",
+            "--text-high:{} {} {};",
             self.text_high[0], self.text_high[1], self.text_high[2]
         )?;
-        write!(s, "--bg:{},{}%,{}%;", self.bg[0], self.bg[1], self.bg[2])?;
+        write!(s, "--bg:{} {} {};", self.bg[0], self.bg[1], self.bg[2])?;
         write!(
             s,
-            "--bg-high:{},{}%,{}%;",
+            "--bg-high:{} {} {};",
             self.bg_high[0], self.bg_high[1], self.bg_high[2]
         )?;
         write!(
             s,
-            "--action:{},{}%,{}%;",
+            "--action:{} {} {};",
             self.action[0], self.action[1], self.action[2]
         )?;
         write!(
             s,
-            "--accent:{},{}%,{}%;",
+            "--accent:{} {} {};",
             self.accent[0], self.accent[1], self.accent[2]
         )?;
         write!(
             s,
-            "--error:{},{}%,{}%;",
+            "--error:{} {} {};",
             self.error[0], self.error[1], self.error[2]
         )?;
 
@@ -430,13 +447,13 @@ impl ThemeCss {
 
     fn default_dark() -> Self {
         Self {
-            text: vec![228, 2, 70],
-            text_high: vec![228, 8, 90],
-            bg: vec![208, 90, 4],
-            bg_high: vec![208, 30, 19],
-            action: vec![34, 100, 59],
-            accent: vec![246, 60, 53],
-            error: vec![15, 100, 37],
+            text: [228, 2, 70],
+            text_high: [228, 8, 90],
+            bg: [208, 90, 4],
+            bg_high: [208, 30, 19],
+            action: [34, 100, 59],
+            accent: [246, 60, 53],
+            error: [15, 100, 37],
             btn_text: "hsl(var(--bg))".to_string(),
             theme_sun: "hsla(var(--action), .7)".to_string(),
             theme_moon: "hsla(var(--accent), .85)".to_string(),
@@ -445,13 +462,13 @@ impl ThemeCss {
 
     fn default_light() -> Self {
         Self {
-            text: vec![208, 10, 40],
-            text_high: vec![208, 20, 20],
-            bg: vec![228, 2, 98],
-            bg_high: vec![228, 8, 84],
-            action: vec![34, 100, 59],
-            accent: vec![246, 60, 53],
-            error: vec![15, 100, 37],
+            text: [208, 10, 40],
+            text_high: [208, 20, 20],
+            bg: [228, 2, 98],
+            bg_high: [228, 8, 84],
+            action: [34, 100, 59],
+            accent: [246, 60, 53],
+            error: [15, 100, 37],
             btn_text: "white".to_string(),
             theme_sun: "hsla(var(--action), .7)".to_string(),
             theme_moon: "hsla(var(--accent), .85)".to_string(),

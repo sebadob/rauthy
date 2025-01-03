@@ -17,7 +17,7 @@ use rauthy_common::{is_hiqlite, is_sqlite, password_hasher};
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
     api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
-    scopes, sessions, theme, users,
+    scopes, sessions, themes, users,
 };
 use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -552,7 +552,9 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(generic::get_enc_keys)
                             .service(generic::post_migrate_enc_key)
                             .service(generic::ping)
-                            .service(theme::get_theme)
+                            .service(themes::get_theme)
+                            .service(themes::put_theme)
+                            .service(themes::delete_theme)
                             .service(oidc::post_validate_token)
                             .service(oidc::get_well_known)
                             .service(generic::get_health)

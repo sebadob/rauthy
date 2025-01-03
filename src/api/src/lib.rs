@@ -30,7 +30,7 @@ pub mod openapi;
 pub mod roles;
 pub mod scopes;
 pub mod sessions;
-pub mod theme;
+pub mod themes;
 pub mod users;
 
 pub type ReqApiKey = web::ReqData<Option<ApiKey>>;
