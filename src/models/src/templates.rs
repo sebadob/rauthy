@@ -41,6 +41,7 @@ impl Display for FrontendAction {
 #[template(path = "html/index.html")]
 pub struct IndexHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: bool,
@@ -65,6 +66,7 @@ impl IndexHtml<'_> {
     pub fn build(colors: &Colors, lang: &Language) -> String {
         let res = IndexHtml {
             lang: lang.as_str(),
+            client_id: "rauthy",
             csrf_token: "",
             data: &OPEN_USER_REG.to_string(),
             col_act1: &colors.act1,
@@ -92,6 +94,7 @@ impl IndexHtml<'_> {
 #[template(path = "html/account.html")]
 pub struct AccountHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -116,6 +119,7 @@ impl AccountHtml<'_> {
     pub fn build(colors: &Colors, lang: &Language, auth_providers_json: Option<String>) -> String {
         let res = AccountHtml {
             lang: lang.as_str(),
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -141,6 +145,7 @@ impl AccountHtml<'_> {
 #[template(path = "html/admin.html")]
 pub struct AdminHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -165,6 +170,7 @@ impl AdminHtml<'_> {
     pub fn build(colors: &Colors) -> String {
         let res = AdminHtml {
             lang: "en",
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -189,6 +195,7 @@ impl AdminHtml<'_> {
 #[template(path = "html/device.html")]
 pub struct DeviceHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: bool,
@@ -213,6 +220,7 @@ impl DeviceHtml<'_> {
     pub fn build(colors: &Colors, lang: &Language) -> String {
         let res = DeviceHtml {
             lang: lang.as_str(),
+            client_id: "rauthy",
             csrf_token: "",
             data: &DEVICE_GRANT_USER_CODE_LENGTH.to_string(),
             col_act1: &colors.act1,
@@ -240,6 +248,7 @@ impl DeviceHtml<'_> {
 #[template(path = "html/fedcm.html")]
 pub struct FedCMHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: bool,
@@ -264,6 +273,7 @@ impl FedCMHtml<'_> {
     pub fn build(colors: &Colors) -> String {
         let res = FedCMHtml {
             lang: "en",
+            client_id: "rauthy",
             csrf_token: "",
             data: &DEVICE_GRANT_USER_CODE_LENGTH.to_string(),
             col_act1: &colors.act1,
@@ -290,6 +300,7 @@ impl FedCMHtml<'_> {
 #[template(path = "html/error.html")]
 pub struct ErrorHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: bool,
@@ -319,6 +330,7 @@ impl ErrorHtml<'_> {
     ) -> String {
         let res = ErrorHtml {
             lang: lang.as_str(),
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -356,6 +368,7 @@ impl ErrorHtml<'_> {
 #[template(path = "html/error/error.html")]
 pub struct Error1Html<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: bool,
@@ -388,6 +401,7 @@ impl Error1Html<'_> {
     {
         let res = Error1Html {
             lang: lang.as_str(),
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -413,6 +427,7 @@ impl Error1Html<'_> {
 #[template(path = "html/error/error/error.html")]
 pub struct Error2Html<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: bool,
@@ -445,6 +460,7 @@ impl Error2Html<'_> {
     {
         let res = Error2Html {
             lang: lang.as_str(),
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -470,6 +486,7 @@ impl Error2Html<'_> {
 #[template(path = "html/error/error/error/error.html")]
 pub struct Error3Html<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: bool,
@@ -502,6 +519,7 @@ impl Error3Html<'_> {
     {
         let res = Error3Html {
             lang: lang.as_str(),
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -527,6 +545,7 @@ impl Error3Html<'_> {
 #[template(path = "html/admin/api_keys.html")]
 pub struct AdminApiKeysHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -551,6 +570,7 @@ impl AdminApiKeysHtml<'_> {
     pub fn build(colors: &Colors) -> String {
         let res = AdminApiKeysHtml {
             lang: "en",
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -575,6 +595,7 @@ impl AdminApiKeysHtml<'_> {
 #[template(path = "html/admin/attributes.html")]
 pub struct AdminAttributesHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -599,6 +620,7 @@ impl AdminAttributesHtml<'_> {
     pub fn build(colors: &Colors) -> String {
         let res = AdminAttributesHtml {
             lang: "en",
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -623,6 +645,7 @@ impl AdminAttributesHtml<'_> {
 #[template(path = "html/admin/blacklist.html")]
 pub struct AdminBlacklistHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -647,6 +670,7 @@ impl AdminBlacklistHtml<'_> {
     pub fn build(colors: &Colors) -> String {
         let res = AdminBlacklistHtml {
             lang: "en",
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -671,6 +695,7 @@ impl AdminBlacklistHtml<'_> {
 #[template(path = "html/admin/clients.html")]
 pub struct AdminClientsHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -695,6 +720,7 @@ impl AdminClientsHtml<'_> {
     pub fn build(colors: &Colors) -> String {
         let res = AdminClientsHtml {
             lang: "en",
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -719,6 +745,7 @@ impl AdminClientsHtml<'_> {
 #[template(path = "html/admin/config.html")]
 pub struct AdminConfigHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -743,6 +770,7 @@ impl AdminConfigHtml<'_> {
     pub fn build(colors: &Colors) -> String {
         let res = AdminConfigHtml {
             lang: "en",
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -767,6 +795,7 @@ impl AdminConfigHtml<'_> {
 #[template(path = "html/admin/docs.html")]
 pub struct AdminDocsHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -791,6 +820,7 @@ impl AdminDocsHtml<'_> {
     pub fn build(colors: &Colors) -> String {
         let res = AdminDocsHtml {
             lang: "en",
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -815,6 +845,7 @@ impl AdminDocsHtml<'_> {
 #[template(path = "html/admin/events.html")]
 pub struct AdminEventsHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -839,6 +870,7 @@ impl AdminEventsHtml<'_> {
     pub fn build(colors: &Colors) -> String {
         let res = AdminEventsHtml {
             lang: "en",
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -863,6 +895,7 @@ impl AdminEventsHtml<'_> {
 #[template(path = "html/admin/groups.html")]
 pub struct AdminGroupsHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -887,6 +920,7 @@ impl AdminGroupsHtml<'_> {
     pub fn build(colors: &Colors) -> String {
         let res = AdminGroupsHtml {
             lang: "en",
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -911,6 +945,7 @@ impl AdminGroupsHtml<'_> {
 #[template(path = "html/admin/roles.html")]
 pub struct AdminRolesHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -935,6 +970,7 @@ impl AdminRolesHtml<'_> {
     pub fn build(colors: &Colors) -> String {
         let res = AdminRolesHtml {
             lang: "en",
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -959,6 +995,7 @@ impl AdminRolesHtml<'_> {
 #[template(path = "html/admin/scopes.html")]
 pub struct AdminScopesHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -983,6 +1020,7 @@ impl AdminScopesHtml<'_> {
     pub fn build(colors: &Colors) -> String {
         let res = AdminScopesHtml {
             lang: "en",
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1007,6 +1045,7 @@ impl AdminScopesHtml<'_> {
 #[template(path = "html/admin/sessions.html")]
 pub struct AdminSessionsHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -1031,6 +1070,7 @@ impl AdminSessionsHtml<'_> {
     pub fn build(colors: &Colors) -> String {
         let res = AdminSessionsHtml {
             lang: "en",
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1055,6 +1095,7 @@ impl AdminSessionsHtml<'_> {
 #[template(path = "html/admin/users.html")]
 pub struct AdminUsersHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -1079,6 +1120,7 @@ impl AdminUsersHtml<'_> {
     pub fn build(colors: &Colors) -> String {
         let res = AdminUsersHtml {
             lang: "en",
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1103,6 +1145,7 @@ impl AdminUsersHtml<'_> {
 #[template(path = "html/oidc/authorize.html")]
 pub struct AuthorizeHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -1134,6 +1177,7 @@ impl AuthorizeHtml<'_> {
     ) -> String {
         let mut res = AuthorizeHtml {
             lang: lang.as_str(),
+            client_id: "rauthy",
             csrf_token,
             action: &action.to_string(),
             col_act1: &colors.act1,
@@ -1166,6 +1210,7 @@ impl AuthorizeHtml<'_> {
 #[template(path = "html/oidc/callback.html")]
 pub struct CallbackHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -1190,6 +1235,7 @@ impl CallbackHtml<'_> {
     pub fn build(colors: &Colors) -> String {
         let res = CallbackHtml {
             lang: "en",
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1214,6 +1260,7 @@ impl CallbackHtml<'_> {
 #[template(path = "html/admin/providers.html")]
 pub struct ProvidersHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -1238,6 +1285,7 @@ impl crate::templates::ProvidersHtml<'_> {
     pub fn build(colors: &Colors) -> String {
         let res = crate::templates::ProvidersHtml {
             lang: "en",
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1262,6 +1310,7 @@ impl crate::templates::ProvidersHtml<'_> {
 #[template(path = "html/providers/callback.html")]
 pub struct ProviderCallbackHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: &'a str,
@@ -1286,6 +1335,7 @@ impl ProviderCallbackHtml<'_> {
     pub fn build(colors: &Colors, lang: &Language) -> String {
         let res = ProviderCallbackHtml {
             lang: lang.as_str(),
+            client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1311,6 +1361,7 @@ impl ProviderCallbackHtml<'_> {
 #[template(path = "html/oidc/logout.html")]
 pub struct LogoutHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: bool,
@@ -1335,6 +1386,7 @@ impl LogoutHtml<'_> {
     pub fn build(csrf_token: &str, set_logout: bool, colors: &Colors, lang: &Language) -> String {
         let res = LogoutHtml {
             lang: lang.as_str(),
+            client_id: "rauthy",
             csrf_token,
             action: set_logout,
             col_act1: &colors.act1,
@@ -1362,6 +1414,7 @@ impl LogoutHtml<'_> {
 #[template(path = "html/users/{id}/reset/reset.html")]
 pub struct PwdResetHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: bool,
@@ -1406,6 +1459,7 @@ impl PwdResetHtml<'_> {
 
         let res = PwdResetHtml {
             lang: lang.as_str(),
+            client_id: "rauthy",
             csrf_token,
             data: &data,
             col_act1: &colors.act1,
@@ -1446,6 +1500,7 @@ impl TooManyRequestsHtml {
 #[template(path = "html/users/{id}/email_confirm/email_confirm.html")]
 pub struct UserEmailChangeConfirmHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: bool,
@@ -1472,6 +1527,7 @@ impl UserEmailChangeConfirmHtml<'_> {
 
         UserEmailChangeConfirmHtml {
             lang: lang.as_str(),
+            client_id: "rauthy",
             data: &data,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
@@ -1498,6 +1554,7 @@ impl UserEmailChangeConfirmHtml<'_> {
 #[template(path = "html/users/register.html")]
 pub struct UserRegisterHtml<'a> {
     pub lang: &'a str,
+    pub client_id: &'a str,
     pub csrf_token: &'a str,
     pub data: &'a str,
     pub action: bool,
@@ -1522,6 +1579,7 @@ impl UserRegisterHtml<'_> {
     pub fn build(colors: &Colors, lang: &Language) -> String {
         UserRegisterHtml {
             lang: lang.as_str(),
+            client_id: "rauthy",
             data: USER_REG_DOMAIN_RESTRICTION
                 .as_ref()
                 .map(|s| s.as_str())
