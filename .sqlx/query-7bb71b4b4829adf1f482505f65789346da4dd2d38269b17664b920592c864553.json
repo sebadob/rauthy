@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n    INSERT INTO user_attr_values (user_id, key, value)\n    VALUES ($1, $2, $3)\n    ON CONFLICT(user_id, key) DO UPDATE SET value = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7bb71b4b4829adf1f482505f65789346da4dd2d38269b17664b920592c864553"
+}

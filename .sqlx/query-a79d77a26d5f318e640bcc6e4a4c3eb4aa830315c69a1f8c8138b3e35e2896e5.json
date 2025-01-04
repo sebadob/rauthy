@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO refresh_tokens (id, user_id, nbf, exp, scope)\nVALUES ($1, $2, $3, $4, $5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Int8",
+        "Int8",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a79d77a26d5f318e640bcc6e4a4c3eb4aa830315c69a1f8c8138b3e35e2896e5"
+}

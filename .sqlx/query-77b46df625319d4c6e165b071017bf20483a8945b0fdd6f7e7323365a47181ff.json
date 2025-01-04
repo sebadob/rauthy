@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM clients_dyn WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "created",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "last_used",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "registration_token",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 4,
+        "name": "token_endpoint_auth_method",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "77b46df625319d4c6e165b071017bf20483a8945b0fdd6f7e7323365a47181ff"
+}

@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO refresh_tokens_devices\n(id, device_id, user_id, nbf, exp, scope)\nVALUES ($1, $2, $3, $4, $5, $6)\nON CONFLICT(id) DO UPDATE\nSET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Int8",
+        "Int8",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cfe603c8063b41e88e380d244b2df7545ce3c2af2fa0a761bb533b0e4ca8728e"
+}

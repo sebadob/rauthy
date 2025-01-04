@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM devices WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "client_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "created",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "access_exp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "refresh_exp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "peer_ip",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "name",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "a8f2397d8d6b2c2ad756f0c5bafafed29ff3239bdb607fe9ce0f2bc78b9821d7"
+}

@@ -1,0 +1,134 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM auth_providers",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "enabled",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "typ",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "issuer",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "authorization_endpoint",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "token_endpoint",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "userinfo_endpoint",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "client_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "secret",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 10,
+        "name": "scope",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 11,
+        "name": "admin_claim_path",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 12,
+        "name": "admin_claim_value",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 13,
+        "name": "mfa_claim_path",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 14,
+        "name": "mfa_claim_value",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 15,
+        "name": "allow_insecure_requests",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 16,
+        "name": "use_pkce",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 17,
+        "name": "root_pem",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 18,
+        "name": "client_secret_basic",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 19,
+        "name": "client_secret_post",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "3ad7e466ae4956859619fed127a6143f2d34fd5c97d5020e6dae7453e5cbc39a"
+}

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO config (id, data)\n                    VALUES ('db_version', $1)\n                    ON CONFLICT(id) DO UPDATE SET data = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "71aa1997e2abc557307483f8ce79dc0c2f2e2765e2fd58167b9a948fdc598a19"
+}
