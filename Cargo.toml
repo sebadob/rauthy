@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.27.3"
+version = "0.28.0-20250104"
 edition = "2021"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
@@ -104,8 +104,7 @@ tokio = { version = "1", features = ["full"] }
 utoipa = { version = "5", features = ["actix_extras", "chrono", "openapi_extensions"] }
 utoipa-swagger-ui = { version = "8.0.3", features = ["actix-web"] }
 uuid = { version = "1", features = ["serde", "v4"] }
-# update to 0.19 blocked by `actix-web-validator`
-validator = { version = "0.18", features = ["derive"] }
+validator = { version = "0.19.0", features = ["derive"] }
 webauthn-rs = { version = "0.5", features = [
     "danger-allow-state-serialisation", "danger-credential-internals"
 ] }
