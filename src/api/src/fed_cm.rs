@@ -85,6 +85,7 @@ pub async fn get_fed_cm_client_meta(
 ) -> Result<HttpResponse, ErrorResponse> {
     is_fed_cm_enabled()?;
     is_web_identity_fetch(&req)?;
+    params.validate()?;
 
     if &params.client_id == "rauthy" {
         return Err(ErrorResponse::new(
