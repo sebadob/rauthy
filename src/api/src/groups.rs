@@ -1,9 +1,11 @@
 use crate::ReqPrincipal;
+use actix_web::web::Json;
 use actix_web::{delete, get, post, put, web, HttpResponse};
 use rauthy_api_types::groups::NewGroupRequest;
 use rauthy_error::ErrorResponse;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::groups::Group;
+use validator::Validate;
 
 /// Returns all existing *groups*
 ///
@@ -45,12 +47,13 @@ pub async fn get_groups(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRe
 )]
 #[post("/groups")]
 pub async fn post_group(
-    group_req: actix_web_validator::Json<NewGroupRequest>,
+    Json(payload): Json<NewGroupRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Create)?;
+    payload.validate()?;
 
-    Group::create(group_req.into_inner())
+    Group::create(payload)
         .await
         .map(|r| HttpResponse::Ok().json(r))
 }
@@ -73,12 +76,13 @@ pub async fn post_group(
 #[put("/groups/{id}")]
 pub async fn put_group(
     id: web::Path<String>,
-    group_req: actix_web_validator::Json<NewGroupRequest>,
+    Json(payload): Json<NewGroupRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Update)?;
+    payload.validate()?;
 
-    Group::update(id.into_inner(), group_req.group.to_owned())
+    Group::update(id.into_inner(), payload.group)
         .await
         .map(|g| HttpResponse::Ok().json(g))
 }

@@ -1,9 +1,11 @@
 use crate::ReqPrincipal;
+use actix_web::web::Json;
 use actix_web::{delete, get, post, put, web, HttpResponse};
 use rauthy_api_types::roles::NewRoleRequest;
 use rauthy_error::ErrorResponse;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::roles::Role;
+use validator::Validate;
 
 /// Returns all existing roles
 ///
@@ -45,12 +47,13 @@ pub async fn get_roles(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRes
 )]
 #[post("/roles")]
 pub async fn post_role(
-    role_req: actix_web_validator::Json<NewRoleRequest>,
+    Json(payload): Json<NewRoleRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Roles, AccessRights::Create)?;
+    payload.validate()?;
 
-    Role::create(role_req.into_inner())
+    Role::create(payload)
         .await
         .map(|r| HttpResponse::Ok().json(r))
 }
@@ -73,12 +76,13 @@ pub async fn post_role(
 #[put("/roles/{id}")]
 pub async fn put_role(
     id: web::Path<String>,
-    role_req: actix_web_validator::Json<NewRoleRequest>,
+    Json(payload): Json<NewRoleRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Roles, AccessRights::Update)?;
+    payload.validate()?;
 
-    Role::update(id.into_inner(), role_req.role.to_owned())
+    Role::update(id.into_inner(), payload.role)
         .await
         .map(|r| HttpResponse::Ok().json(r))
 }

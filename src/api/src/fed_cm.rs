@@ -1,5 +1,6 @@
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
+use actix_web::web::{Form, Query};
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use chrono::Utc;
 use rauthy_api_types::clients::EphemeralClientRequest;
@@ -22,6 +23,7 @@ use rauthy_models::entity::users::User;
 use rauthy_models::ListenScheme;
 use rauthy_service::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenNonce, TokenSet};
 use tracing::{debug, error, warn};
+use validator::Validate;
 
 const HEADER_ALLOW_CREDENTIALS: (&str, &str) = ("access-control-allow-credentials", "true");
 
@@ -79,12 +81,11 @@ pub async fn get_fed_cm_accounts(req: HttpRequest) -> Result<HttpResponse, Error
 pub async fn get_fed_cm_client_meta(
     data: web::Data<AppState>,
     req: HttpRequest,
-    params: actix_web_validator::Query<FedCMClientMetadataRequest>,
+    Query(params): Query<FedCMClientMetadataRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     is_fed_cm_enabled()?;
     is_web_identity_fetch(&req)?;
-
-    let params = params.into_inner();
+    params.validate()?;
 
     if &params.client_id == "rauthy" {
         return Err(ErrorResponse::new(
@@ -238,10 +239,11 @@ pub async fn get_fed_cm_status(req: HttpRequest) -> HttpResponse {
 pub async fn post_fed_cm_token(
     req: HttpRequest,
     data: web::Data<AppState>,
-    payload: actix_web_validator::Form<FedCMAssertionRequest>,
+    Form(payload): Form<FedCMAssertionRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     is_fed_cm_enabled()?;
     is_web_identity_fetch(&req)?;
+    payload.validate()?;
 
     let (login_status, user_id) = login_status_from_req(&req).await;
     if login_status == FedCMLoginStatus::LoggedOut {
@@ -249,8 +251,6 @@ pub async fn post_fed_cm_token(
             .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
             .finish());
     }
-
-    let payload = payload.into_inner();
 
     // find and check the client
     let client = match Client::find_maybe_ephemeral(payload.client_id).await {

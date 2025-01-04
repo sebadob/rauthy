@@ -1,6 +1,7 @@
 use crate::{Assets, ReqPrincipal};
 use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::{header, StatusCode};
+use actix_web::web::{Json, Query};
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
 use chrono::Utc;
 use cryptr::EncKeys;
@@ -50,6 +51,7 @@ use std::borrow::Cow;
 use std::ops::{Add, Sub};
 use std::str::FromStr;
 use tracing::{error, info, warn};
+use validator::Validate;
 
 #[get("/")]
 pub async fn get_index(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
@@ -95,10 +97,10 @@ pub async fn get_static_assets(
 pub async fn post_i18n(
     req: HttpRequest,
     // no validation needed for I18nRequest
-    req_data: web::Json<I18nRequest>,
+    Json(payload): Json<I18nRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let lang = Language::try_from(&req).unwrap_or_default();
-    let body = match req_data.content {
+    let body = match payload.content {
         I18nContent::Authorize => I18nAuthorize::build(&lang).as_json(),
         I18nContent::Account => I18nAccount::build(&lang).as_json(),
         I18nContent::Device => I18nDevice::build(&lang).as_json(),
@@ -341,12 +343,13 @@ pub async fn post_migrate_enc_key(
     data: web::Data<AppState>,
     req: HttpRequest,
     principal: ReqPrincipal,
-    req_data: actix_web_validator::Json<EncKeyMigrateRequest>,
+    Json(payload): Json<EncKeyMigrateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
-    let ip = real_ip_from_req(&req)?;
+    payload.validate()?;
 
-    encryption::migrate_encryption_alg(&data, &req_data.key_id).await?;
+    let ip = real_ip_from_req(&req)?;
+    encryption::migrate_encryption_alg(&data, &payload.key_id).await?;
 
     data.tx_events
         .send_async(Event::secrets_migrated(ip))
@@ -418,11 +421,12 @@ pub async fn get_login_time(
 #[post("/password_hash_times")]
 pub async fn post_password_hash_times(
     principal: ReqPrincipal,
-    req_data: actix_web_validator::Json<PasswordHashTimesRequest>,
+    Json(payload): Json<PasswordHashTimesRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Generic, AccessRights::Create)?;
+    payload.validate()?;
 
-    PasswordHashTimes::compute(req_data.into_inner())
+    PasswordHashTimes::compute(payload)
         .await
         .map(|r| HttpResponse::Ok().json(r))
 }
@@ -466,12 +470,13 @@ pub async fn get_password_policy(principal: ReqPrincipal) -> Result<HttpResponse
 #[put("/password_policy")]
 pub async fn put_password_policy(
     principal: ReqPrincipal,
-    req_data: actix_web_validator::Json<PasswordPolicyRequest>,
+    Json(payload): Json<PasswordPolicyRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
+    payload.validate()?;
 
     let mut rules = PasswordPolicy::find().await?;
-    rules.apply_req(req_data.into_inner());
+    rules.apply_req(payload);
     rules.save().await?;
     Ok(HttpResponse::Ok().json(PasswordPolicyResponse::from(rules)))
 }
@@ -520,10 +525,11 @@ pub async fn post_pow() -> Result<HttpResponse, ErrorResponse> {
 )]
 #[get("/search")]
 pub async fn get_search(
-    params: actix_web_validator::Query<SearchParams>,
+    Query(params): Query<SearchParams>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
+    params.validate()?;
 
     let limit = params.limit.unwrap_or(100) as i64;
     match params.ty {

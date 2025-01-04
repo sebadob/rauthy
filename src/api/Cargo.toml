@@ -15,7 +15,6 @@ rauthy-service = { path = "../service" }
 actix-multipart = { workspace = true }
 actix-web = { workspace = true }
 actix-web-lab = { workspace = true }
-actix-web-validator = { workspace = true }
 chrono = { workspace = true }
 cryptr = { workspace = true }
 mime_guess = { workspace = true }

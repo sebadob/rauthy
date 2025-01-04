@@ -1,7 +1,7 @@
 use crate::ReqPrincipal;
+use actix_web::web::{Json, Query};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use actix_web_lab::sse;
-use actix_web_validator::Json;
 use chrono::Utc;
 use rauthy_api_types::events::{EventsListenParams, EventsRequest};
 use rauthy_common::constants::SSE_KEEP_ALIVE;
@@ -30,12 +30,10 @@ use validator::Validate;
 #[post("/events")]
 pub async fn post_events(
     principal: ReqPrincipal,
-    payload: Json<EventsRequest>,
+    Json(payload): Json<EventsRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Events, AccessRights::Read)?;
-
     payload.validate()?;
-    let payload = payload.into_inner();
 
     let events = Event::find_all(
         payload.from,
@@ -66,11 +64,10 @@ pub async fn post_events(
 pub async fn sse_events(
     data: web::Data<AppState>,
     principal: ReqPrincipal,
-    params: web::Query<EventsListenParams>,
+    params: Query<EventsListenParams>,
     req: HttpRequest,
 ) -> Result<impl Responder, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Events, AccessRights::Read)?;
-
     params.validate()?;
 
     let ip = real_ip_from_req(&req)?.to_string();
