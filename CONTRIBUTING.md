@@ -72,6 +72,9 @@ Afterward, it will create a docker network named `rauthy-dev` and start `mailcra
 
 As the last step, it will do a `cargo build` to make sure there are not compile errors.
 
+> If you want to use a Postgres other than the one created by `just setup`, you most probably need to provide a
+> different `DATABASE_URL` than the default in `rauthy.cfg`.
+
 ### Config
 
 The default config file is the `rauthy.cfg`. This has reasonable defaults for local dev.
