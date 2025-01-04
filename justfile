@@ -40,7 +40,7 @@ setup:
             cargo install "$pkg"
         fi
     done
-    if command -v sqlx &>/dev/null; then
+    if command -v cargo sqlx &>/dev/null; then
         if printf '%s\0' "${cargopkgs[@]}" | grep -qw sqlx-cli; then
             cargo install sqlx-cli --no-default-features --features rustls,sqlite,postgres
         fi
@@ -153,6 +153,8 @@ mailcrab-stop:
 
 # Starts mailcrab
 postgres-start:
+    #!/usr/bin/env bash
+
     {{ docker }} run -d \
       -e POSTGRES_USER=rauthy \
       -e POSTGRES_PASSWORD=123SuperSafe \
@@ -163,8 +165,10 @@ postgres-start:
       --restart unless-stopped \
       docker.io/library/postgres:17.2-alpine
 
-    sleep 3
-    just migrate-postgres
+    while ! just migrate-postgres; do
+        echo "Database migrations failed - Postgres is probably still starting up"
+        sleep 3
+    done
 
 # Stops mailcrab
 postgres-stop:
@@ -192,7 +196,8 @@ delete-hiqlite:
 
 # migrate the postgres database with sqlx
 migrate-postgres:
-    sqlx migrate run --source migrations/postgres
+    cargo sqlx migrate run --source migrations/postgres
+    cargo sqlx prepare --workspace
 
 # runs any of: none (hiqlite), postgres, ui
 run ty="hiqlite":
