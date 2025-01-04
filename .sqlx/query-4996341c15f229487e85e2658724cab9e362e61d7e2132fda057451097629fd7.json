@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM jwks WHERE kid = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "kid",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "signature",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "enc_key_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "jwk",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4996341c15f229487e85e2658724cab9e362e61d7e2132fda057451097629fd7"
+}

@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\nclients_dyn (id, created, registration_token, token_endpoint_auth_method)\nVALUES ($1, $2, $3, $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Int8",
+        "Bytea",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "90e84e1e4c45ef1fbabe1c387f887372f45d99ac2e9d9ca467adef3e72cd8a04"
+}

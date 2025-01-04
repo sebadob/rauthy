@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data)\nVALUES ($1, $2, $3, $4)\nON CONFLICT(auth_provider_id, res) DO UPDATE\nSET content_type = $3, data = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7db996183478edcef00f6f399f97097cf4b3592c694423cc4fdb270f844ed555"
+}

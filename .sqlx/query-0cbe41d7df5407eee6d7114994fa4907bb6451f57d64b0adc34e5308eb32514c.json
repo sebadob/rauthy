@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1 AND user_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0cbe41d7df5407eee6d7114994fa4907bb6451f57d64b0adc34e5308eb32514c"
+}

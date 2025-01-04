@@ -1,0 +1,77 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM sessions WHERE id LIKE $1 ORDER BY exp DESC LIMIT $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "csrf_token",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "roles",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "groups",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "is_mfa",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "state",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "exp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 8,
+        "name": "last_seen",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
+        "name": "remote_ip",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "9efef3632d1d26f851dbcf3a686d0506d2ff1d62718072747f48eed6280fed74"
+}

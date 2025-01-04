@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT auth_provider_id AS id, res, content_type, data\nFROM auth_provider_logos\nWHERE auth_provider_id = $1 AND (res = $2 OR res = $3)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "res",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "content_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "data",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "037a3eb8f28070ca848446024b04e30f4bd150bbe92e85a9cb1cdc482aad4d30"
+}

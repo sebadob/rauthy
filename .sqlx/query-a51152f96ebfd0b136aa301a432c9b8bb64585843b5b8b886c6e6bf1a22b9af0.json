@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM devices\nWHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a51152f96ebfd0b136aa301a432c9b8bb64585843b5b8b886c6e6bf1a22b9af0"
+}
