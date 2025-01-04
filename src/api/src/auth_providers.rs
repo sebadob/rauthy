@@ -1,8 +1,8 @@
 use crate::{map_auth_step, ReqPrincipal};
 use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE, LOCATION};
+use actix_web::web::Json;
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_lab::__reexports::futures_util::StreamExt;
-use actix_web_validator::Json;
 use rauthy_api_types::auth_providers::{
     ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
 };
@@ -19,6 +19,7 @@ use rauthy_models::entity::users::User;
 use rauthy_models::language::Language;
 use rauthy_models::templates::ProviderCallbackHtml;
 use tracing::debug;
+use validator::Validate;
 
 /// GET all upstream auth providers
 ///
@@ -63,10 +64,11 @@ pub async fn post_providers(principal: ReqPrincipal) -> Result<HttpResponse, Err
 )]
 #[post("/providers/create")]
 pub async fn post_provider(
-    payload: Json<ProviderRequest>,
+    Json(payload): Json<ProviderRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
+    payload.validate()?;
 
     if !payload.use_pkce && payload.client_secret.is_none() {
         return Err(ErrorResponse::new(
@@ -75,7 +77,7 @@ pub async fn post_provider(
         ));
     }
 
-    let provider = AuthProvider::create(payload.into_inner()).await?;
+    let provider = AuthProvider::create(payload).await?;
     Ok(HttpResponse::Ok().json(ProviderResponse::try_from(provider)?))
 }
 
@@ -101,12 +103,12 @@ pub async fn post_provider(
     skip_all, fields(issuer = payload.issuer)
 )]
 pub async fn post_provider_lookup(
-    payload: Json<ProviderLookupRequest>,
+    Json(payload): Json<ProviderLookupRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
+    payload.validate()?;
 
-    let payload = payload.into_inner();
     let resp = AuthProvider::lookup_config(&payload).await?;
 
     Ok(HttpResponse::Ok().json(resp))
@@ -129,12 +131,12 @@ pub async fn post_provider_lookup(
 )]
 #[post("/providers/login")]
 pub async fn post_provider_login(
-    payload: Json<ProviderLoginRequest>,
+    Json(payload): Json<ProviderLoginRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
+    payload.validate()?;
 
-    let payload = payload.into_inner();
     let (cookie, xsrf_token, location) = AuthProviderCallback::login_start(payload).await?;
 
     Ok(HttpResponse::Accepted()
@@ -175,12 +177,12 @@ pub async fn get_provider_callback_html(req: HttpRequest) -> Result<HttpResponse
 pub async fn post_provider_callback(
     data: web::Data<AppState>,
     req: HttpRequest,
-    payload: Json<ProviderCallbackRequest>,
+    Json(payload): Json<ProviderCallbackRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
+    payload.validate()?;
 
-    let payload = payload.into_inner();
     let session = principal.get_session()?;
     let (auth_step, cookie) =
         AuthProviderCallback::login_finish(&data, &req, &payload, session.clone()).await?;
@@ -256,10 +258,11 @@ pub async fn get_providers_minimal() -> Result<HttpResponse, ErrorResponse> {
 #[put("/providers/{id}")]
 pub async fn put_provider(
     id: web::Path<String>,
-    payload: Json<ProviderRequest>,
+    Json(payload): Json<ProviderRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
+    payload.validate()?;
 
     if !payload.use_pkce && payload.client_secret.is_none() {
         return Err(ErrorResponse::new(
@@ -276,7 +279,7 @@ pub async fn put_provider(
         ));
     }
 
-    AuthProvider::update(id.into_inner(), payload.into_inner()).await?;
+    AuthProvider::update(id.into_inner(), payload).await?;
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -434,9 +437,10 @@ pub async fn put_provider_img(
 pub async fn post_provider_link(
     provider_id: web::Path<String>,
     principal: ReqPrincipal,
-    payload: Json<ProviderLoginRequest>,
+    Json(payload): Json<ProviderLoginRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth()?;
+    payload.validate()?;
 
     let user_id = principal.user_id()?.to_string();
     let user = User::find(user_id).await?;
@@ -457,8 +461,7 @@ pub async fn post_provider_link(
     };
 
     // directly redirect to the provider login page
-    let (login_cookie, xsrf_token, location) =
-        AuthProviderCallback::login_start(payload.into_inner()).await?;
+    let (login_cookie, xsrf_token, location) = AuthProviderCallback::login_start(payload).await?;
 
     Ok(HttpResponse::Accepted()
         .insert_header((LOCATION, location))

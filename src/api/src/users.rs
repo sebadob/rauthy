@@ -1,8 +1,8 @@
 use crate::ReqPrincipal;
 use actix_web::http::header::{ACCEPT, LOCATION};
 use actix_web::http::StatusCode;
+use actix_web::web::{Json, Query};
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
-use actix_web_validator::{Json, Query};
 use rauthy_api_types::generic::{PaginationParams, PasswordPolicyResponse};
 use rauthy_api_types::oidc::PasswordResetResponse;
 use rauthy_api_types::users::{
@@ -41,6 +41,7 @@ use rauthy_models::templates::{Error1Html, Error3Html, ErrorHtml, UserRegisterHt
 use rauthy_service::password_reset;
 use spow::pow::Pow;
 use tracing::{error, warn};
+use validator::Validate;
 
 /// Returns all existing users
 ///
@@ -66,9 +67,10 @@ use tracing::{error, warn};
 #[get("/users")]
 pub async fn get_users(
     principal: ReqPrincipal,
-    params: Query<PaginationParams>,
+    Query(params): Query<PaginationParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
+    params.validate()?;
 
     let user_count = User::count().await?;
 
@@ -128,11 +130,12 @@ pub async fn post_users(
     data: web::Data<AppState>,
     req: HttpRequest,
     principal: ReqPrincipal,
-    user: Json<NewUserRequest>,
+    Json(payload): Json<NewUserRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Create)?;
+    payload.validate()?;
 
-    let user = User::create_from_new(&data, user.into_inner()).await?;
+    let user = User::create_from_new(&data, payload).await?;
 
     data.tx_events
         .send_async(Event::new_user(
@@ -189,12 +192,13 @@ pub async fn get_cust_attr(principal: ReqPrincipal) -> Result<HttpResponse, Erro
 #[post("/users/attr")]
 pub async fn post_cust_attr(
     principal: ReqPrincipal,
-    req_data: Json<UserAttrConfigRequest>,
+    Json(payload): Json<UserAttrConfigRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal
         .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Create)?;
+    payload.validate()?;
 
-    UserAttrConfigEntity::create(req_data.into_inner())
+    UserAttrConfigEntity::create(payload)
         .await
         .map(|attr| HttpResponse::Ok().json(attr))
 }
@@ -216,12 +220,13 @@ pub async fn post_cust_attr(
 pub async fn put_cust_attr(
     path: web::Path<String>,
     principal: ReqPrincipal,
-    req_data: Json<UserAttrConfigRequest>,
+    Json(payload): Json<UserAttrConfigRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal
         .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Update)?;
+    payload.validate()?;
 
-    UserAttrConfigEntity::update(path.into_inner(), req_data.into_inner())
+    UserAttrConfigEntity::update(path.into_inner(), payload)
         .await
         .map(|a| HttpResponse::Ok().json(a))
 }
@@ -299,7 +304,7 @@ pub async fn get_users_register(req: HttpRequest) -> Result<HttpResponse, ErrorR
 pub async fn post_users_register(
     data: web::Data<AppState>,
     req: HttpRequest,
-    req_data: Json<NewUserRegistrationRequest>,
+    Json(payload): Json<NewUserRegistrationRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     if !*OPEN_USER_REG {
         return Err(ErrorResponse::new(
@@ -307,8 +312,10 @@ pub async fn post_users_register(
             "Open User Registration is not allowed".to_string(),
         ));
     }
+    payload.validate()?;
+
     if let Some(restriction) = &*USER_REG_DOMAIN_RESTRICTION {
-        if !req_data.email.ends_with(restriction) {
+        if !payload.email.ends_with(restriction) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!(
@@ -319,7 +326,7 @@ pub async fn post_users_register(
         }
     } else if let Some(blacklist) = &*USER_REG_DOMAIN_BLACKLIST {
         for blacklisted in blacklist {
-            if req_data.email.ends_with(blacklisted) {
+            if payload.email.ends_with(blacklisted) {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "Domain is blacklisted",
@@ -327,7 +334,7 @@ pub async fn post_users_register(
             }
         }
     }
-    if let Some(redirect_uri) = &req_data.redirect_uri {
+    if let Some(redirect_uri) = &payload.redirect_uri {
         if !*USER_REG_OPEN_REDIRECT {
             let mut allow = false;
             for uri in Client::find_all_client_uris().await? {
@@ -346,11 +353,11 @@ pub async fn post_users_register(
     }
 
     // validate the PoW
-    let challenge = Pow::validate(&req_data.pow)?;
+    let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
     let lang = Language::try_from(&req).unwrap_or_default();
-    let user = User::create_from_reg(&data, req_data.into_inner(), lang).await?;
+    let user = User::create_from_reg(&data, payload, lang).await?;
 
     data.tx_events
         .send_async(Event::new_user(
@@ -438,12 +445,13 @@ pub async fn get_user_attr(
 pub async fn put_user_attr(
     path: web::Path<String>,
     principal: ReqPrincipal,
-    req_data: Json<UserAttrValuesUpdateRequest>,
+    Json(payload): Json<UserAttrValuesUpdateRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal
         .validate_api_key_or_admin_session(AccessGroup::UserAttributes, AccessRights::Update)?;
+    payload.validate()?;
 
-    let values = UserAttrValueEntity::update_for_user(&path.into_inner(), req_data.into_inner())
+    let values = UserAttrValueEntity::update_for_user(&path.into_inner(), payload)
         .await?
         .drain(..)
         .map(UserAttrValueResponse::from)
@@ -494,12 +502,12 @@ pub async fn get_user_devices(
 pub async fn put_user_device_name(
     path: web::Path<String>,
     principal: ReqPrincipal,
-    payload: actix_web_validator::Json<DeviceRequest>,
+    Json(payload): Json<DeviceRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let user_id = path.into_inner();
     principal.validate_user_or_admin(&user_id)?;
+    payload.validate()?;
 
-    let payload = payload.into_inner();
     if let Some(name) = &payload.name {
         DeviceEntity::update_name(&payload.device_id, &user_id, name).await?;
     }
@@ -524,12 +532,12 @@ pub async fn put_user_device_name(
 pub async fn delete_user_device(
     path: web::Path<String>,
     principal: ReqPrincipal,
-    payload: actix_web_validator::Json<DeviceRequest>,
+    Json(payload): Json<DeviceRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let user_id = path.into_inner();
     principal.validate_user_or_admin(&user_id)?;
+    payload.validate()?;
 
-    let payload = payload.into_inner();
     let device = DeviceEntity::find(&payload.device_id).await?;
     if device.user_id.as_deref() != Some(&user_id) {
         return Err(ErrorResponse::new(
@@ -664,29 +672,26 @@ pub async fn put_user_password_reset(
     data: web::Data<AppState>,
     path: web::Path<String>,
     req: HttpRequest,
-    req_data: Json<PasswordResetRequest>,
+    Json(payload): Json<PasswordResetRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    password_reset::handle_put_user_password_reset(
-        &data,
-        req,
-        path.into_inner(),
-        req_data.into_inner(),
-    )
-    .await
-    .map(|(cookie, location)| {
-        if let Some(loc) = location {
-            HttpResponse::Ok()
-                .insert_header((LOCATION, loc))
-                .cookie(cookie)
-                .status(StatusCode::ACCEPTED)
-                .finish()
-        } else {
-            HttpResponse::Ok()
-                .cookie(cookie)
-                .status(StatusCode::ACCEPTED)
-                .finish()
-        }
-    })
+    payload.validate()?;
+
+    password_reset::handle_put_user_password_reset(&data, req, path.into_inner(), payload)
+        .await
+        .map(|(cookie, location)| {
+            if let Some(loc) = location {
+                HttpResponse::Ok()
+                    .insert_header((LOCATION, loc))
+                    .cookie(cookie)
+                    .status(StatusCode::ACCEPTED)
+                    .finish()
+            } else {
+                HttpResponse::Ok()
+                    .cookie(cookie)
+                    .status(StatusCode::ACCEPTED)
+                    .finish()
+            }
+        })
 }
 
 /// Get all registered Webauthn Passkeys for a user
@@ -752,10 +757,11 @@ pub async fn post_webauthn_auth_start(
     // fully new / different browser which does not have any lefter data or cookies
     principal: ReqPrincipal,
     req: HttpRequest,
-    req_data: Json<WebauthnAuthStartRequest>,
+    Json(payload): Json<WebauthnAuthStartRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let purpose = req_data.into_inner().purpose;
-    let id = match purpose {
+    payload.validate()?;
+
+    let id = match payload.purpose {
         // only for a Login purpose, this can be accessed without authentication (yet)
         MfaPurpose::Login(_) => {
             // During Login, the session is allowed to be in init only state
@@ -799,7 +805,7 @@ pub async fn post_webauthn_auth_start(
         }
     };
 
-    webauthn::auth_start(&data, id, purpose)
+    webauthn::auth_start(&data, id, payload.purpose)
         .await
         .map(|res| HttpResponse::Ok().json(res))
 }
@@ -823,15 +829,17 @@ pub async fn post_webauthn_auth_start(
 pub async fn post_webauthn_auth_finish(
     data: web::Data<AppState>,
     id: web::Path<String>,
-    req_data: Json<WebauthnAuthFinishRequest>,
+    Json(payload): Json<WebauthnAuthFinishRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
     let id = id.into_inner();
 
     // We do not need to further validate the principal here.
     // All of this is done at the /start endpoint.
     // This here will simply fail, if the secret code from the /start does not exist.
 
-    let res = webauthn::auth_finish(&data, id, req_data.into_inner()).await?;
+    let res = webauthn::auth_finish(&data, id, payload).await?;
     Ok(res.into_response())
 }
 
@@ -937,18 +945,14 @@ pub async fn post_webauthn_reg_start(
     id: web::Path<String>,
     principal: ReqPrincipal,
     req: HttpRequest,
-    req_data: Json<WebauthnRegStartRequest>,
+    Json(payload): Json<WebauthnRegStartRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
     // If we have a magic link ID in the payload, we do not validate the active session / principal.
     // This is mandatory to make registering a passkey for a completely new account work.
-    if req_data.magic_link_id.is_some() && req.headers().get(PWD_CSRF_HEADER).is_some() {
-        password_reset::handle_put_user_passkey_start(
-            &data,
-            req,
-            id.into_inner(),
-            req_data.into_inner(),
-        )
-        .await
+    if payload.magic_link_id.is_some() && req.headers().get(PWD_CSRF_HEADER).is_some() {
+        password_reset::handle_put_user_passkey_start(&data, req, id.into_inner(), payload).await
     } else {
         principal.validate_session_auth()?;
         // this endpoint is a CSRF check exception inside the Principal Middleware -> check here!
@@ -958,7 +962,7 @@ pub async fn post_webauthn_reg_start(
         let id = id.into_inner();
         principal.is_user(&id)?;
 
-        webauthn::reg_start(&data, id, req_data.into_inner())
+        webauthn::reg_start(&data, id, payload)
             .await
             .map(|ccr| HttpResponse::Ok().json(ccr))
     }
@@ -986,18 +990,14 @@ pub async fn post_webauthn_reg_finish(
     id: web::Path<String>,
     principal: ReqPrincipal,
     req: HttpRequest,
-    req_data: Json<WebauthnRegFinishRequest>,
+    Json(payload): Json<WebauthnRegFinishRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
     // If we have a magic link ID in the payload, we do not validate the active session / principal.
     // This is mandatory to make registering a passkey for a completely new account work.
-    if req_data.magic_link_id.is_some() {
-        password_reset::handle_put_user_passkey_finish(
-            &data,
-            req,
-            id.into_inner(),
-            req_data.into_inner(),
-        )
-        .await
+    if payload.magic_link_id.is_some() {
+        password_reset::handle_put_user_passkey_finish(&data, req, id.into_inner(), payload).await
     } else {
         principal.validate_session_auth()?;
         // this endpoint is a CSRF check exception inside the Principal Middleware -> check here!
@@ -1007,7 +1007,7 @@ pub async fn post_webauthn_reg_finish(
         let id = id.into_inner();
         principal.is_user(&id)?;
 
-        webauthn::reg_finish(&data, id, req_data.into_inner()).await?;
+        webauthn::reg_finish(&data, id, payload).await?;
         Ok(HttpResponse::Created().finish())
     }
 }
@@ -1107,19 +1107,18 @@ pub async fn get_user_webid_data(
 pub async fn put_user_webid_data(
     id: web::Path<String>,
     principal: ReqPrincipal,
-    payload: Json<WebIdRequest>,
+    Json(payload): Json<WebIdRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    // check if webid's are enabled globally
     if !*ENABLE_WEB_ID {
         return Ok(HttpResponse::MethodNotAllowed().finish());
     }
+    payload.validate()?;
 
     // check auth
     principal.validate_session_auth()?;
     let id = id.into_inner();
     principal.is_user(&id)?;
 
-    let payload = payload.into_inner();
     let web_id = WebId::try_new(id, payload.custom_triples.as_deref(), payload.expose_email)
         .map_err(|e| {
             ErrorResponse::new(
@@ -1158,12 +1157,12 @@ pub async fn put_user_webid_data(
 pub async fn post_user_password_request_reset(
     data: web::Data<AppState>,
     req: HttpRequest,
-    payload: Json<RequestResetRequest>,
+    Json(payload): Json<RequestResetRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
+    payload.validate()?;
 
-    let payload = payload.into_inner();
     match User::find_by_email(payload.email).await {
         Ok(user) => user
             .request_password_reset(&data, req, payload.redirect_uri)
@@ -1224,12 +1223,13 @@ pub async fn put_user_by_id(
     id: web::Path<String>,
     req: HttpRequest,
     principal: ReqPrincipal,
-    user: Json<UpdateUserRequest>,
+    Json(payload): Json<UpdateUserRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
+    payload.validate()?;
 
     let (user, user_values, is_new_admin) =
-        User::update(&data, id.into_inner(), user.into_inner(), None).await?;
+        User::update(&data, id.into_inner(), payload, None).await?;
 
     if is_new_admin {
         data.tx_events
@@ -1264,16 +1264,16 @@ pub async fn put_user_self(
     data: web::Data<AppState>,
     id: web::Path<String>,
     principal: ReqPrincipal,
-    user: Json<UpdateUserSelfRequest>,
+    Json(payload): Json<UpdateUserSelfRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth()?;
+    payload.validate()?;
 
     // make sure the logged in user can only update itself
     let id = id.into_inner();
     principal.is_user(&id)?;
 
-    let (user, user_values, email_updated) =
-        User::update_self_req(&data, id, user.into_inner()).await?;
+    let (user, user_values, email_updated) = User::update_self_req(&data, id, payload).await?;
     if email_updated {
         Ok(HttpResponse::Accepted().json(user.into_response(user_values)))
     } else {

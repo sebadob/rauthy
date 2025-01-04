@@ -1,10 +1,12 @@
 use crate::ReqPrincipal;
+use actix_web::web::Json;
 use actix_web::{delete, get, post, put, web, HttpResponse};
 use rauthy_api_types::scopes::{ScopeRequest, ScopeResponse};
 use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::scopes::Scope;
+use validator::Validate;
 
 /// Returns all existing scopes
 ///
@@ -52,11 +54,12 @@ pub async fn get_scopes(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRe
 pub async fn post_scope(
     data: web::Data<AppState>,
     principal: ReqPrincipal,
-    scope_req: actix_web_validator::Json<ScopeRequest>,
+    Json(payload): Json<ScopeRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Scopes, AccessRights::Create)?;
+    payload.validate()?;
 
-    Scope::create(&data, scope_req.into_inner())
+    Scope::create(&data, payload)
         .await
         .map(|s| HttpResponse::Ok().json(s))
 }
@@ -81,11 +84,12 @@ pub async fn put_scope(
     data: web::Data<AppState>,
     path: web::Path<String>,
     principal: ReqPrincipal,
-    scope_req: actix_web_validator::Json<ScopeRequest>,
+    Json(payload): Json<ScopeRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Scopes, AccessRights::Update)?;
+    payload.validate()?;
 
-    Scope::update(&data, path.as_str(), scope_req.into_inner())
+    Scope::update(&data, path.as_str(), payload)
         .await
         .map(|s| HttpResponse::Ok().json(ScopeResponse::from(s)))
 }

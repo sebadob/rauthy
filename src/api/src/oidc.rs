@@ -3,6 +3,7 @@ use actix_web::cookie::time::OffsetDateTime;
 use actix_web::cookie::SameSite;
 use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::{header, StatusCode};
+use actix_web::web::{Form, Json, Query};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError};
 use chrono::Utc;
 use rauthy_api_types::oidc::{
@@ -51,6 +52,7 @@ use std::borrow::Cow;
 use std::ops::Add;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, error};
+use validator::Validate;
 
 /// OIDC Authorization HTML
 ///
@@ -70,10 +72,12 @@ use tracing::{debug, error};
 pub async fn get_authorize(
     data: web::Data<AppState>,
     req: HttpRequest,
-    req_data: actix_web_validator::Query<AuthRequest>,
+    Query(params): Query<AuthRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let colors = ColorEntity::find(&req_data.client_id)
+    params.validate()?;
+
+    let colors = ColorEntity::find(&params.client_id)
         .await
         .unwrap_or_default();
     let lang = Language::try_from(&req).unwrap_or_default();
@@ -81,10 +85,10 @@ pub async fn get_authorize(
     let (client, origin_header) = match validation::validate_auth_req_param(
         &data,
         &req,
-        &req_data.client_id,
-        &req_data.redirect_uri,
-        &req_data.code_challenge,
-        &req_data.code_challenge_method,
+        &params.client_id,
+        &params.redirect_uri,
+        &params.code_challenge,
+        &params.code_challenge_method,
     )
     .await
     {
@@ -97,14 +101,14 @@ pub async fn get_authorize(
     };
 
     // check prompt and max_age to possibly force a new session
-    let mut force_new_session = if req_data
+    let mut force_new_session = if params
         .prompt
         .as_ref()
         .map(|p| p.as_str() == "login")
         .unwrap_or(false)
     {
         true
-    } else if let Some(max_age) = req_data.max_age {
+    } else if let Some(max_age) = params.max_age {
         if let Some(session) = &principal.session {
             let session_created = session.exp - *SESSION_LIFETIME as i64;
             Utc::now().timestamp() > session_created + max_age
@@ -133,7 +137,7 @@ pub async fn get_authorize(
 
     // check for `prompt=no-prompt`
     if !force_new_session
-        && req_data
+        && params
             .prompt
             .as_ref()
             .map(|p| p.as_str() == "none")
@@ -249,12 +253,11 @@ pub async fn get_authorize(
 pub async fn post_authorize(
     data: web::Data<AppState>,
     req: HttpRequest,
-    payload: actix_web_validator::Json<LoginRequest>,
+    Json(payload): Json<LoginRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    debug!("Validating session in auth or init state");
     principal.validate_session_auth_or_init()?;
-    debug!("session is in auth or init state");
+    payload.validate()?;
 
     // TODO refactor login delay to use Instant, which is a bit cleaner
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
@@ -268,7 +271,7 @@ pub async fn post_authorize(
     let res = match authorize::post_authorize(
         &data,
         &req,
-        payload.into_inner(),
+        payload,
         session.clone(),
         &mut has_password_been_hashed,
         &mut add_login_delay,
@@ -323,24 +326,24 @@ pub async fn post_authorize(
 pub async fn post_authorize_refresh(
     data: web::Data<AppState>,
     req: HttpRequest,
-    req_data: actix_web_validator::Json<LoginRefreshRequest>,
+    Json(payload): Json<LoginRefreshRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     let session = principal.validate_session_auth()?;
+    payload.validate()?;
 
     let (client, header_origin) = validation::validate_auth_req_param(
         &data,
         &req,
-        &req_data.client_id,
-        &req_data.redirect_uri,
-        &req_data.code_challenge,
-        &req_data.code_challenge_method,
+        &payload.client_id,
+        &payload.redirect_uri,
+        &payload.code_challenge,
+        &payload.code_challenge_method,
     )
     .await?;
 
     let auth_step =
-        authorize::post_authorize_refresh(session, client, header_origin, req_data.into_inner())
-            .await?;
+        authorize::post_authorize_refresh(session, client, header_origin, payload).await?;
     map_auth_step(auth_step, &req).await
 }
 
@@ -404,8 +407,12 @@ pub async fn get_cert_by_kid(kid: web::Path<String>) -> Result<HttpResponse, Err
 #[post("/oidc/device")]
 pub async fn post_device_auth(
     req: HttpRequest,
-    payload: actix_web_validator::Form<DeviceGrantRequest>,
+    Form(payload): Form<DeviceGrantRequest>,
 ) -> HttpResponse {
+    if let Err(err) = payload.validate() {
+        return ErrorResponse::from(err).error_response();
+    }
+
     // handle ip rate-limiting
     if DEVICE_GRANT_RATE_LIMIT.is_some() {
         match real_ip_from_req(&req) {
@@ -454,7 +461,6 @@ pub async fn post_device_auth(
     }
 
     // find and validate the client
-    let payload = payload.into_inner();
     let client = match Client::find(payload.client_id).await {
         Ok(client) => client,
         Err(_) => {
@@ -546,12 +552,12 @@ pub async fn post_device_auth(
 #[post("/oidc/device/verify")]
 #[tracing::instrument(level = "debug", skip_all, fields(user_code = payload.user_code))]
 pub async fn post_device_verify(
-    payload: actix_web_validator::Json<DeviceVerifyRequest>,
+    Json(payload): Json<DeviceVerifyRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth()?;
+    payload.validate()?;
 
-    let payload = payload.into_inner();
     debug!("{:?}", payload);
 
     let challenge = Pow::validate(&payload.pow)?;
@@ -601,9 +607,13 @@ pub async fn post_device_verify(
 pub async fn get_logout(
     data: web::Data<AppState>,
     req: HttpRequest,
-    req_data: actix_web_validator::Query<LogoutRequest>,
+    Query(params): Query<LogoutRequest>,
     principal: ReqPrincipal,
 ) -> HttpResponse {
+    if let Err(err) = params.validate() {
+        return ErrorResponse::from(err).error_response();
+    }
+
     // If we get any logout errors, maybe because there is no session anymore or whatever happens,
     // just redirect to rauthy's root page, since the user is not logged in anyway anymore.
     let session = match principal.get_session() {
@@ -616,7 +626,7 @@ pub async fn get_logout(
     };
 
     let lang = Language::try_from(&req).unwrap_or_default();
-    let body = match logout::get_logout_html(req_data.into_inner(), session, &data, &lang).await {
+    let body = match logout::get_logout_html(params, session, &data, &lang).await {
         Ok(t) => t,
         Err(_) => {
             return HttpResponse::build(StatusCode::from_u16(302).unwrap())
@@ -646,10 +656,12 @@ pub async fn get_logout(
 )]
 #[post("/oidc/logout")]
 pub async fn post_logout(
-    req_data: actix_web_validator::Query<LogoutRequest>,
+    Query(params): Query<LogoutRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     let session = principal.get_session()?.clone();
+    params.validate()?;
+
     let cookie_fed_cm = ApiCookie::build_with_same_site(
         COOKIE_SESSION_FED_CM,
         Cow::from(&session.id),
@@ -660,15 +672,15 @@ pub async fn post_logout(
     let cookie = ApiCookie::build(COOKIE_SESSION, &sid, 0);
     session.invalidate().await?;
 
-    if req_data.post_logout_redirect_uri.is_some() {
-        let state = if req_data.state.is_some() {
-            req_data.state.as_ref().unwrap().as_str()
+    if params.post_logout_redirect_uri.is_some() {
+        let state = if params.state.is_some() {
+            params.state.as_ref().unwrap().as_str()
         } else {
             ""
         };
         let loc = format!(
             "{}?state={}",
-            req_data.post_logout_redirect_uri.as_ref().unwrap(),
+            params.post_logout_redirect_uri.as_ref().unwrap(),
             state
         );
         return Ok(HttpResponse::build(StatusCode::MOVED_PERMANENTLY)
@@ -883,21 +895,23 @@ pub async fn get_session_xsrf(
 pub async fn post_token(
     req: HttpRequest,
     data: web::Data<AppState>,
-    payload: actix_web_validator::Form<TokenRequest>,
+    Form(payload): Form<TokenRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
     let ip = real_ip_from_req(&req)?;
 
     if payload.grant_type == GRANT_TYPE_DEVICE_CODE {
         // the `urn:ietf:params:oauth:grant-type:device_code` needs
         // a fully customized handling here with customized error response
         // to meet the oauth rfc
-        return Ok(oidc::grant_type_device_code(&data, ip, payload.into_inner()).await);
+        return Ok(oidc::grant_type_device_code(&data, ip, payload).await);
     }
 
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let has_password_been_hashed = payload.grant_type == "password";
 
-    let res = match oidc::get_token_set(payload.into_inner(), &data, req).await {
+    let res = match oidc::get_token_set(payload, &data, req).await {
         Ok((token_set, headers)) => {
             let mut builder = HttpResponseBuilder::new(StatusCode::OK);
             for h in headers {
@@ -945,9 +959,11 @@ pub async fn post_token(
 pub async fn post_token_introspect(
     data: web::Data<AppState>,
     req: HttpRequest,
-    req_data: actix_web_validator::Form<TokenValidationRequest>,
+    Form(payload): Form<TokenValidationRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    match token_info::get_token_info(&data, &req, &req_data.token).await {
+    payload.validate()?;
+
+    match token_info::get_token_info(&data, &req, &payload.token).await {
         Ok(info) => Ok(HttpResponse::Ok().json(info)),
         Err(err) => {
             error!("{:?}", err);
@@ -974,9 +990,11 @@ pub async fn post_token_introspect(
 #[post("/oidc/token/validate")]
 pub async fn post_validate_token(
     data: web::Data<AppState>,
-    req_data: actix_web_validator::Json<TokenValidationRequest>,
+    Json(payload): Json<TokenValidationRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    validation::validate_token::<JwtCommonClaims>(&data, &req_data.token)
+    payload.validate()?;
+
+    validation::validate_token::<JwtCommonClaims>(&data, &payload.token)
         .await
         .map(|_| HttpResponse::Accepted().finish())
 }

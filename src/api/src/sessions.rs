@@ -1,6 +1,6 @@
 use crate::ReqPrincipal;
+use actix_web::web::Query;
 use actix_web::{delete, get, web, HttpResponse};
-use actix_web_validator::Query;
 use rauthy_api_types::generic::PaginationParams;
 use rauthy_api_types::sessions::{SessionResponse, SessionState};
 use rauthy_common::constants::SSP_THRESHOLD;
@@ -10,6 +10,7 @@ use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::refresh_tokens::RefreshToken;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
+use validator::Validate;
 
 /// Returns all existing sessions
 ///
@@ -31,9 +32,10 @@ use rauthy_models::entity::users::User;
 #[get("/sessions")]
 pub async fn get_sessions(
     principal: ReqPrincipal,
-    params: Query<PaginationParams>,
+    Query(params): Query<PaginationParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Read)?;
+    params.validate()?;
 
     // sessions will be dynamically paginated based on the same setting as users
     let user_count = User::count().await?;

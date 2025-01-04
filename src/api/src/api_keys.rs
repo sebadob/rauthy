@@ -1,10 +1,11 @@
 use crate::ReqPrincipal;
+use actix_web::web::Json;
 use actix_web::{delete, get, post, put, web, HttpResponse};
-use actix_web_validator::Json;
 use mime_guess::mime::TEXT_PLAIN_UTF_8;
 use rauthy_api_types::api_keys::{ApiKeyRequest, ApiKeyResponse, ApiKeysResponse};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::api_keys::ApiKeyEntity;
+use validator::Validate;
 
 /// Returns all API Keys
 ///
@@ -52,13 +53,13 @@ pub async fn get_api_keys(principal: ReqPrincipal) -> Result<HttpResponse, Error
 #[post("/api_keys")]
 pub async fn post_api_key(
     principal: ReqPrincipal,
-    payload: Json<ApiKeyRequest>,
+    Json(payload): Json<ApiKeyRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
+    payload.validate()?;
 
-    let req = payload.into_inner();
-    let access = req.access.into_iter().map(|a| a.into()).collect();
-    let secret = ApiKeyEntity::create(req.name, req.exp, access).await?;
+    let access = payload.access.into_iter().map(|a| a.into()).collect();
+    let secret = ApiKeyEntity::create(payload.name, payload.exp, access).await?;
 
     Ok(HttpResponse::Ok()
         .content_type(TEXT_PLAIN_UTF_8)
@@ -84,21 +85,21 @@ pub async fn post_api_key(
 pub async fn put_api_key(
     principal: ReqPrincipal,
     name: web::Path<String>,
-    payload: Json<ApiKeyRequest>,
+    Json(payload): Json<ApiKeyRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
+    payload.validate()?;
 
     let name = name.into_inner();
-    let req = payload.into_inner();
-    if req.name != name {
+    if payload.name != name {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "JSON payload does not match the Name from the path".to_string(),
         ));
     }
 
-    let access = req.access.into_iter().map(|a| a.into()).collect();
-    ApiKeyEntity::update(&name, req.exp, access).await?;
+    let access = payload.access.into_iter().map(|a| a.into()).collect();
+    ApiKeyEntity::update(&name, payload.exp, access).await?;
 
     Ok(HttpResponse::Ok().finish())
 }

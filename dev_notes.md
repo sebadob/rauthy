@@ -13,7 +13,6 @@
 - "known host cookie" with connection between accounts and IPs to send out warnings in case
   of a login on a new device
 - credential stuffing detection
-- on the long term, get rid of `actix-web-validator` as it often blocked `validator` updates already
 - find a nice way to always expose the swagger UI for rauthy admins only without config
   current issue: when the session cookie is a non-host cookie with path restriction -> not working
   probably move from `/docs/v1` to `/auth/v1/docs`

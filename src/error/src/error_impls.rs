@@ -19,6 +19,7 @@ use std::string::FromUtf8Error;
 use svg_hush::FError;
 use time::OffsetDateTime;
 use tracing::{debug, error, trace};
+use validator::ValidationError;
 
 const APPLICATION_JSON: &str = "application/json";
 const HEADER_DPOP_NONCE: &str = "DPoP-Nonce";
@@ -338,6 +339,16 @@ impl From<FromUtf8Error> for ErrorResponse {
 
 impl From<validator::ValidationErrors> for ErrorResponse {
     fn from(value: validator::ValidationErrors) -> Self {
+        trace!("{:?}", value);
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("Payload validation error: {:?}", value),
+        )
+    }
+}
+
+impl From<validator::ValidationError> for ErrorResponse {
+    fn from(value: ValidationError) -> Self {
         trace!("{:?}", value);
         ErrorResponse::new(
             ErrorResponseType::BadRequest,

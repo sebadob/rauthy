@@ -1,6 +1,6 @@
 use crate::ReqPrincipal;
+use actix_web::web::Json;
 use actix_web::{delete, get, post, web, HttpResponse};
-use actix_web_validator::Json;
 use chrono::DateTime;
 use rauthy_api_types::blacklist::{BlacklistResponse, BlacklistedIp, IpBlacklistRequest};
 use rauthy_error::ErrorResponse;
@@ -9,6 +9,7 @@ use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::events::event::Event;
 use rauthy_models::events::ip_blacklist_handler::IpBlacklistReq;
 use tokio::sync::oneshot;
+use validator::Validate;
 
 /// Returns all blacklisted IP's
 ///
@@ -69,9 +70,10 @@ pub async fn get_blacklist(
 pub async fn post_blacklist(
     data: web::Data<AppState>,
     principal: ReqPrincipal,
-    payload: Json<IpBlacklistRequest>,
+    Json(payload): Json<IpBlacklistRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Blacklist, AccessRights::Create)?;
+    payload.validate()?;
 
     data.tx_events
         .send_async(Event::ip_blacklisted(

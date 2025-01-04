@@ -30,7 +30,6 @@ actix-web = { version = "4", features = ["rustls-0_23"] }
 actix-web-actors = "4"
 actix-web-lab = "0.23"
 actix-web-prom = "0.9.0"
-actix-web-validator = "6"
 anyhow = "1"
 argon2 = { version = "0.5", features = ["std", "zeroize"] }
 askama = { version = "0.12", features = ["with-actix-web"] }

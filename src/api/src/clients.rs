@@ -2,6 +2,7 @@ use crate::ReqPrincipal;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE, WWW_AUTHENTICATE,
 };
+use actix_web::web::Json;
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use rauthy_api_types::clients::{
@@ -20,6 +21,7 @@ use rauthy_models::entity::logos::{Logo, LogoType};
 use rauthy_service::client;
 use rauthy_service::oidc::helpers;
 use tracing::debug;
+use validator::Validate;
 
 /// Returns all existing OIDC clients with all their information, except for the client secrets.
 ///
@@ -130,12 +132,13 @@ pub async fn get_client_secret(
 )]
 #[post("/clients")]
 pub async fn post_clients(
-    client: actix_web_validator::Json<NewClientRequest>,
+    Json(payload): Json<NewClientRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Create)?;
+    payload.validate()?;
 
-    let client = Client::create(client.into_inner()).await?;
+    let client = Client::create(payload).await?;
     Ok(HttpResponse::Ok().json(ClientResponse::from(client)))
 }
 
@@ -155,12 +158,13 @@ pub async fn post_clients(
 #[post("/clients_dyn")]
 pub async fn post_clients_dyn(
     data: web::Data<AppState>,
-    payload: actix_web_validator::Json<DynamicClientRequest>,
+    Json(payload): Json<DynamicClientRequest>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     if !*ENABLE_DYN_CLIENT_REG {
         return Ok(HttpResponse::NotFound().finish());
     }
+    payload.validate()?;
 
     if let Some(token) = &*DYN_CLIENT_REG_TOKEN {
         let bearer = helpers::get_bearer_token_from_header(req.headers())?;
@@ -178,14 +182,12 @@ pub async fn post_clients_dyn(
         ClientDyn::rate_limit_ip(ip).await?;
     }
 
-    Client::create_dynamic(&data, payload.into_inner())
-        .await
-        .map(|resp| {
-            HttpResponse::Created()
-                // The registration should be possible from another Web UI by RFC
-                .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
-                .json(resp)
-        })
+    Client::create_dynamic(&data, payload).await.map(|resp| {
+        HttpResponse::Created()
+            // The registration should be possible from another Web UI by RFC
+            .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
+            .json(resp)
+    })
 }
 
 /// GET a dynamic OIDC client
@@ -236,20 +238,21 @@ pub async fn get_clients_dyn(
 #[put("/clients_dyn/{id}")]
 pub async fn put_clients_dyn(
     data: web::Data<AppState>,
-    payload: actix_web_validator::Json<DynamicClientRequest>,
+    Json(payload): Json<DynamicClientRequest>,
     id: web::Path<String>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     if !*ENABLE_DYN_CLIENT_REG {
         return Ok(HttpResponse::NotFound().finish());
     }
+    payload.validate()?;
 
     let bearer = helpers::get_bearer_token_from_header(req.headers())?;
     let id = id.into_inner();
     let client_dyn = ClientDyn::find(id.clone()).await?;
     client_dyn.validate_token(&bearer)?;
 
-    let resp = Client::update_dynamic(&data, payload.into_inner(), client_dyn).await?;
+    let resp = Client::update_dynamic(&data, payload, client_dyn).await?;
     Ok(HttpResponse::Ok().json(resp))
 }
 
@@ -272,13 +275,14 @@ pub async fn put_clients_dyn(
 )]
 #[put("/clients/{id}")]
 pub async fn put_clients(
-    client: actix_web_validator::Json<UpdateClientRequest>,
+    Json(payload): Json<UpdateClientRequest>,
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Update)?;
+    payload.validate()?;
 
-    client::update_client(path.into_inner(), client.into_inner())
+    client::update_client(path.into_inner(), payload)
         .await
         .map(|r| HttpResponse::Ok().json(ClientResponse::from(r)))
 }
@@ -329,13 +333,13 @@ pub async fn get_client_colors(
 pub async fn put_client_colors(
     id: web::Path<String>,
     principal: ReqPrincipal,
-    req_data: actix_web_validator::Json<ColorsRequest>,
+    Json(payload): Json<ColorsRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Update)?;
+    payload.validate()?;
 
-    let colors = req_data.into_inner();
-    colors.validate_css()?;
-    ColorEntity::update(id.as_str(), colors).await?;
+    payload.validate_css()?;
+    ColorEntity::update(id.as_str(), payload).await?;
 
     Ok(HttpResponse::Ok().finish())
 }
