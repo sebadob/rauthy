@@ -200,7 +200,7 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
         }
     };
 
-    // TODO remove this block check with the next minor version.
+    // TODO remove this block check after `0.28`.
     // 0.27.0 had a bug that could have inserted NULL for password policy on update.
     if is_hiqlite() {
         let mut row = DB::client()
