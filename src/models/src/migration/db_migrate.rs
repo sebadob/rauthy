@@ -32,9 +32,10 @@ pub async fn migrate_from_sqlite(db_from: sqlx::SqlitePool) -> Result<(), ErrorR
 
     // CONFIG
     debug!("Migrating table: config");
-    let before = sqlx::query_as::<_, ConfigEntity>("SELECT * FROM config")
-        .fetch_all(&db_from)
-        .await?;
+    let before =
+        sqlx::query_as::<_, ConfigEntity>("SELECT * FROM config WHERE id = 'password_policy'")
+            .fetch_all(&db_from)
+            .await?;
     inserts::config(before).await?;
 
     // API KEYS
@@ -227,9 +228,10 @@ pub async fn migrate_from_postgres(db_from: sqlx::PgPool) -> Result<(), ErrorRes
 
     // CONFIG
     debug!("Migrating table: config");
-    let before = sqlx::query_as::<_, ConfigEntity>("SELECT * FROM config")
-        .fetch_all(&db_from)
-        .await?;
+    let before =
+        sqlx::query_as::<_, ConfigEntity>("SELECT * FROM config WHERE id = 'password_policy'")
+            .fetch_all(&db_from)
+            .await?;
     inserts::config(before).await?;
 
     // API KEYS
