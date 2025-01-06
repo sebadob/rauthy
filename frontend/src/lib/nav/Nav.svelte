@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import {navIsExpanded, navSelected, navWidthCollapsed, navWidthExpanded} from "./navStore.js";
     import IconBurger from "$lib/icons/IconBurger.svelte";
@@ -24,7 +24,7 @@
     /** @type {Props} */
     let {
         selected = $bindable(''),
-        widthExpanded = 180,
+        widthExpanded = 185,
         widthCollapsed = 60,
         isExpanded = $bindable(true),
         logo,

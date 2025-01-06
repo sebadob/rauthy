@@ -1,0 +1,85 @@
+/*
+This theme is not really used, but served from the backend instead.
+It just exists for easy testing stuff and making the IDE happy because
+of the CSS variables.
+*/
+
+body {
+    /*
+    Default colors
+    https://coolors.co/e8ebf7-010b14-ffa630-5448c8-bf3100
+    HSL values without hsl() wrapper
+    */
+    --text: 208, 10%, 40%;
+    --text-high: 208, 20%, 20%;
+    --bg: 228, 2%, 98%;
+    --bg-high: 228, 8%, 84%;
+    --action: 34, 100%, 59%;
+    --accent: 246, 60%, 53%;
+    --error: 15, 100%, 37%;
+
+    /*
+    Specific colors must work on their own
+    */
+    --btn-text: white;
+    --theme-sun: hsla(var(--action), .7);
+    --theme-moon: hsla(var(--accent), .85);
+
+    /*
+    Other variables that only need to be declared once
+    */
+    --border-radius: 5px;
+}
+
+/*
+Dark theme colors
+Wrapped inside media query to not overwrite when dark mode is default anyway.
+Must be the same as in @media (prefers-color-scheme: dark) -> body
+*/
+@media (prefers-color-scheme: light) {
+    .theme-dark {
+        --text: 228, 2%, 70%;
+        --text-high: 228, 8%, 90%;
+        --bg: 208, 90%, 4%;
+        --bg-high: 208, 30%, 19%;
+        --btn-text: hsl(var(--bg));
+    }
+}
+
+/* Styles for users who prefer dark mode at the OS level */
+@media (prefers-color-scheme: dark) {
+    /* defaults to dark theme */
+    body {
+        /*
+        Default colors
+        HSL values without hsl() wrapper
+        */
+        --text: 228, 2%, 70%;
+        --text-high: 228, 8%, 90%;
+        --bg: 208, 90%, 4%;
+        --bg-high: 208, 30%, 19%;
+        --action: 34, 100%, 59%;
+        --accent: 246, 60%, 53%;
+        --error: 15, 100%, 37%;
+
+        /*
+        Specific colors must work on their own
+        */
+        --btn-text: hsl(var(--bg));
+        --theme-sun: hsla(var(--action), .7);
+        --theme-moon: hsla(var(--accent), .85);
+
+    }
+
+    /*
+    Override dark mode with light mode styles if the user decides to swap
+    Must be the same as in body (non prefers-color-scheme: dark)
+    */
+    .theme-light {
+        --text: 208, 10%, 40%;
+        --text-high: 208, 20%, 20%;
+        --bg: 228, 2%, 98%;
+        --bg-high: 228, 8%, 84%;
+        --btn-text: white;
+    }
+}

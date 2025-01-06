@@ -158,7 +158,7 @@
 </svelte:head>
 
 <main>
-    <Nav bind:selected bind:isExpanded widthExpanded={140} widthCollapsed={60}>
+    <Nav bind:selected bind:isExpanded widthExpanded={150} widthCollapsed={70}>
         {#snippet logo()}
             <div>
                 <div
