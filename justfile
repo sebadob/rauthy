@@ -29,11 +29,11 @@ setup:
     set -euxo pipefail
     clear
 
-    echo "Installing necessary tools: just, sd, mdbook, mdbook-admonish, sqlx-cli"
+    echo "Installing necessary tools: sd, mdbook, mdbook-admonish, sqlx-cli"
     readarray -t cargopkgs < <(cargo install --list | cut -d' ' -f1 | sort | uniq)
-    for pkg in just sd mdbook mdbook-admonish; do
+    for pkg in sd mdbook mdbook-admonish; do
         if command -v "$pkg" &>/dev/null; then
-            if printf '%s\0' "${cargopkgs[@]}" | grep -qw "$pkg"; then
+            if ! printf '%s\0' "${cargopkgs[@]}" | grep -qw "$pkg"; then
                 cargo install "$pkg"
             fi
         else
@@ -41,7 +41,7 @@ setup:
         fi
     done
     if command -v sqlx &>/dev/null; then
-        if printf '%s\0' "${cargopkgs[@]}" | grep -qw sqlx-cli; then
+        if ! printf '%s\0' "${cargopkgs[@]}" | grep -qw sqlx-cli; then
             cargo install sqlx-cli --no-default-features --features rustls,sqlite,postgres
         fi
     else
