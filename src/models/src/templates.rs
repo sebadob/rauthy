@@ -40,6 +40,7 @@ impl Display for FrontendAction {
 #[derive(Default, Template)]
 #[template(path = "html/index.html")]
 pub struct IndexHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -93,6 +94,7 @@ impl IndexHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/account.html")]
 pub struct AccountHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -144,6 +146,7 @@ impl AccountHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin.html")]
 pub struct AdminHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -194,6 +197,7 @@ impl AdminHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/device.html")]
 pub struct DeviceHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -247,6 +251,7 @@ impl DeviceHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/fedcm.html")]
 pub struct FedCMHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -299,6 +304,7 @@ impl FedCMHtml<'_> {
 #[derive(Debug, Default, Template)]
 #[template(path = "html/error.html")]
 pub struct ErrorHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -367,6 +373,7 @@ impl ErrorHtml<'_> {
 #[derive(Debug, Default, Template)]
 #[template(path = "html/error/error.html")]
 pub struct Error1Html<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -426,6 +433,7 @@ impl Error1Html<'_> {
 #[derive(Debug, Default, Template)]
 #[template(path = "html/error/error/error.html")]
 pub struct Error2Html<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -485,6 +493,7 @@ impl Error2Html<'_> {
 #[derive(Debug, Default, Template)]
 #[template(path = "html/error/error/error/error.html")]
 pub struct Error3Html<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -544,6 +553,7 @@ impl Error3Html<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/api_keys.html")]
 pub struct AdminApiKeysHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -594,6 +604,7 @@ impl AdminApiKeysHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/attributes.html")]
 pub struct AdminAttributesHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -644,6 +655,7 @@ impl AdminAttributesHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/blacklist.html")]
 pub struct AdminBlacklistHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -694,6 +706,7 @@ impl AdminBlacklistHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/clients.html")]
 pub struct AdminClientsHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -744,6 +757,7 @@ impl AdminClientsHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/config.html")]
 pub struct AdminConfigHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -794,6 +808,7 @@ impl AdminConfigHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/docs.html")]
 pub struct AdminDocsHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -844,6 +859,7 @@ impl AdminDocsHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/events.html")]
 pub struct AdminEventsHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -894,6 +910,7 @@ impl AdminEventsHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/groups.html")]
 pub struct AdminGroupsHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -944,6 +961,7 @@ impl AdminGroupsHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/roles.html")]
 pub struct AdminRolesHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -994,6 +1012,7 @@ impl AdminRolesHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/scopes.html")]
 pub struct AdminScopesHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -1044,6 +1063,7 @@ impl AdminScopesHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/sessions.html")]
 pub struct AdminSessionsHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -1094,6 +1114,7 @@ impl AdminSessionsHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/users.html")]
 pub struct AdminUsersHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -1144,6 +1165,7 @@ impl AdminUsersHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/oidc/authorize.html")]
 pub struct AuthorizeHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -1209,6 +1231,7 @@ impl AuthorizeHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/oidc/callback.html")]
 pub struct CallbackHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -1259,6 +1282,7 @@ impl CallbackHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/providers.html")]
 pub struct ProvidersHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -1309,6 +1333,7 @@ impl crate::templates::ProvidersHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/providers/callback.html")]
 pub struct ProviderCallbackHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -1360,6 +1385,7 @@ impl ProviderCallbackHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/oidc/logout.html")]
 pub struct LogoutHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -1383,8 +1409,9 @@ pub struct LogoutHtml<'a> {
 }
 
 impl LogoutHtml<'_> {
-    pub fn build(csrf_token: &str, set_logout: bool, colors: &Colors, lang: &Language) -> String {
+    pub fn build(csrf_token: &str, set_logout: bool, colors: &Colors, lang: &Language, state: &str) -> String {
         let res = LogoutHtml {
+            state: state,
             lang: lang.as_str(),
             client_id: "rauthy",
             csrf_token,
@@ -1413,6 +1440,7 @@ impl LogoutHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/users/{id}/reset/reset.html")]
 pub struct PwdResetHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -1499,6 +1527,7 @@ impl TooManyRequestsHtml {
 #[derive(Default, Template)]
 #[template(path = "html/users/{id}/email_confirm/email_confirm.html")]
 pub struct UserEmailChangeConfirmHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
@@ -1553,6 +1582,7 @@ impl UserEmailChangeConfirmHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/users/register.html")]
 pub struct UserRegisterHtml<'a> {
+    pub state: &'a str,
     pub lang: &'a str,
     pub client_id: &'a str,
     pub csrf_token: &'a str,
