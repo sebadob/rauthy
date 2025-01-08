@@ -13,7 +13,7 @@
      */
 
     /** @type {Props} */
-    let { selected = $bindable('Users') } = $props();
+    let {selected = $bindable('Users')} = $props();
 
     let sessionInfo = $state();
     let isAdmin = $state(false);
@@ -45,30 +45,28 @@
     <title>Admin</title>
 </svelte:head>
 
-<BrowserCheck>
-    {#if !sessionInfo && !mfaReqErr}
-        <Loading/>
-    {:else if mfaReqErr}
-        <div class="noAdmin">
-            <div class="text">
-                A rauthy admin account must have <b>MFA enabled.</b><br>
-                Please navigate to your <b>account</b> and activate MFA.<br>
-                Afterwards, you need to do a logout and log back in.
-            </div>
-            <Button on:click={() => window.location.href = '/auth/v1/account'}>ACCOUNT</Button>
+{#if !sessionInfo && !mfaReqErr}
+    <Loading/>
+{:else if mfaReqErr}
+    <div class="noAdmin">
+        <div class="text">
+            A rauthy admin account must have <b>MFA enabled.</b><br>
+            Please navigate to your <b>account</b> and activate MFA.<br>
+            Afterwards, you need to do a logout and log back in.
         </div>
-    {:else if !isAdmin}
-        <div class="noAdmin">
-            <div class="text">
-                You are not assigned to the <b>rauthy_admin</b> role.<br/>
-                You do not have access to the admin panel.
-            </div>
-            <Button on:click={() => window.location.href = '/auth/v1/'}>GO BACK</Button>
+        <Button on:click={() => window.location.href = '/auth/v1/account'}>ACCOUNT</Button>
+    </div>
+{:else if !isAdmin}
+    <div class="noAdmin">
+        <div class="text">
+            You are not assigned to the <b>rauthy_admin</b> role.<br/>
+            You do not have access to the admin panel.
         </div>
-    {:else}
-        <AdminMain bind:selected/>
-    {/if}
-</BrowserCheck>
+        <Button on:click={() => window.location.href = '/auth/v1/'}>GO BACK</Button>
+    </div>
+{:else}
+    <AdminMain bind:selected/>
+{/if}
 
 <style>
     .noAdmin {

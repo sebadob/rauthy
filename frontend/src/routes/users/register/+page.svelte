@@ -7,10 +7,12 @@
     import {registerUser} from "../../../utils/dataFetching.js";
     import {onMount, tick} from "svelte";
     import Input from "$lib/inputs/Input.svelte";
-    import BrowserCheck from "../../../components/BrowserCheck.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
     import LangSelector from "$lib/LangSelector.svelte";
     import {fetchSolvePow} from "../../../utils/pow.ts";
+    import Main from "$lib5/Main.svelte";
+    import ContentCenter from "$lib5/ContentCenter.svelte";
+    import {useIsDev} from "$state/is_dev.svelte";
 
     let t = $state();
     let restrictedDomain = $state();
@@ -37,7 +39,10 @@
     });
 
     onMount(() => {
-        restrictedDomain = window.document.getElementsByName('rauthy-data')[0].id;
+        const data = window.document.getElementsByName('rauthy-data')[0].id;
+        if (useIsDev() && data !== '{{ data }}') {
+            restrictedDomain = data;
+        }
 
         const params = getQueryParams();
         redirectUri = params.redirect_uri;
@@ -109,64 +114,66 @@
     <title>{t?.register || 'Register'}</title>
 </svelte:head>
 
-<BrowserCheck>
-    <WithI18n bind:t content="register">
-        <div class="container">
+<Main>
+    <ContentCenter>
+        <WithI18n bind:t content="register">
+            <div class="container">
 
-            <div class="domainTxt">
-                <h1>{t.userReg}</h1>
-                {#if restrictedDomain}
-                    {t.domainRestricted}<br>
-                    {t.domainAllowed} <code>@{restrictedDomain}</code>
+                <div class="domainTxt">
+                    <h1>{t.userReg}</h1>
+                    {#if restrictedDomain}
+                        {t.domainRestricted}<br>
+                        {t.domainAllowed} <code>@{restrictedDomain}</code>
+                    {/if}
+                </div>
+
+                <Input
+                        type="email"
+                        bind:value={formValues.email}
+                        bind:error={formErrors.email}
+                        autocomplete="email"
+                        placeholder={t.email}
+                        on:keypress={handleKeyPress}
+                >
+                    {t.email.toUpperCase()}
+                </Input>
+                <Input
+                        bind:value={formValues.givenName}
+                        bind:error={formErrors.givenName}
+                        autocomplete="given-name"
+                        placeholder={t.givenName}
+                        on:keypress={handleKeyPress}
+                >
+                    {t.givenName.toUpperCase()}
+                </Input>
+                <Input
+                        bind:value={formValues.familyName}
+                        bind:error={formErrors.familyName}
+                        autocomplete="family-name"
+                        placeholder={t.familyName}
+                        on:keypress={handleKeyPress}
+                >
+                    {t.familyName.toUpperCase()}
+                </Input>
+
+                <Button on:click={onSubmit} bind:isLoading>{t.register.toUpperCase()}</Button>
+
+                {#if success}
+                    <div class="success">
+                        {t.success}<br/>
+                        {t.emailCheck}
+                    </div>
+                {:else if err}
+                    <div class="err">
+                        {err}
+                    </div>
                 {/if}
             </div>
 
-            <Input
-                    type="email"
-                    bind:value={formValues.email}
-                    bind:error={formErrors.email}
-                    autocomplete="email"
-                    placeholder={t.email}
-                    on:keypress={handleKeyPress}
-            >
-                {t.email.toUpperCase()}
-            </Input>
-            <Input
-                    bind:value={formValues.givenName}
-                    bind:error={formErrors.givenName}
-                    autocomplete="given-name"
-                    placeholder={t.givenName}
-                    on:keypress={handleKeyPress}
-            >
-                {t.givenName.toUpperCase()}
-            </Input>
-            <Input
-                    bind:value={formValues.familyName}
-                    bind:error={formErrors.familyName}
-                    autocomplete="family-name"
-                    placeholder={t.familyName}
-                    on:keypress={handleKeyPress}
-            >
-                {t.familyName.toUpperCase()}
-            </Input>
-
-            <Button on:click={onSubmit} bind:isLoading>{t.register.toUpperCase()}</Button>
-
-            {#if success}
-                <div class="success">
-                    {t.success}<br/>
-                    {t.emailCheck}
-                </div>
-            {:else if err}
-                <div class="err">
-                    {err}
-                </div>
-            {/if}
-        </div>
-
-        <LangSelector absolute/>
-    </WithI18n>
-</BrowserCheck>
+            <LangSelector absolute/>
+        </WithI18n>
+    </ContentCenter>
+</Main>
 
 <style>
     .container {

@@ -1,3 +1,13 @@
+/*
+Some lines are out-commented until all components have been updated properly.
+These need to be taken into account again after the migration to the new theme
+has been finished:
+
+- body line height and colors
+- h1, h2, h3, h4, h5, h6 color
+- global input settings
+ */
+
 /* CSS Reset */
 *, *::before, *::after {
     box-sizing: border-box;
@@ -68,7 +78,7 @@ blockquote {
 }
 
 h1, h2, h3, h4, h5, h6 {
-    color: hsl(var(--text-high));
+    /*color: hsl(var(--text-high));*/
     overflow-wrap: break-word;
 }
 
