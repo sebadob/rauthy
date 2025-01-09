@@ -27,6 +27,8 @@
     import getPkce from "oauth-pkce";
     import {PKCE_VERIFIER_UPSTREAM} from "../../../utils/constants.js";
     import IconHome from "$lib/icons/IconHome.svelte";
+    import Main from "$lib5/Main.svelte";
+    import ContentCenter from "$lib5/ContentCenter.svelte";
 
     let t = {};
 
@@ -321,144 +323,146 @@
     <title>Login {clientName || clientId}</title>
 </svelte:head>
 
-<BrowserCheck>
-    <WithI18n bind:t content="authorize">
-        <div class="container">
-            <div class="head">
-                <div class="logo">
-                    {#if clientId}
-                        <img src="{`/auth/v1/clients/${clientId}/logo`}" alt="No Logo Available"/>
+<Main>
+    <ContentCenter>
+        <WithI18n bind:t content="authorize">
+            <div class="container">
+                <div class="head">
+                    <div class="logo">
+                        {#if clientId}
+                            <img src="{`/auth/v1/clients/${clientId}/logo`}" alt="No Logo Available"/>
+                        {/if}
+                    </div>
+                    {#if clientUri}
+                        <a class="home" href={clientUri}>
+                            <IconHome opacity={0.5}/>
+                        </a>
                     {/if}
                 </div>
-                {#if clientUri}
-                    <a class="home" href={clientUri}>
-                        <IconHome opacity={0.5}/>
-                    </a>
+
+                <div class="name">
+                    <h2>{clientName || clientId}</h2>
+                </div>
+
+                {#if webauthnData}
+                    <WebauthnRequest
+                            {t}
+                            bind:data={webauthnData}
+                            onSuccess={onWebauthnSuccess}
+                            onError={onWebauthnError}
+                    />
                 {/if}
-            </div>
 
-            <div class="name">
-                <h2>{clientName || clientId}</h2>
-            </div>
-
-            {#if webauthnData}
-                <WebauthnRequest
-                        {t}
-                        bind:data={webauthnData}
-                        onSuccess={onWebauthnSuccess}
-                        onError={onWebauthnError}
-                />
-            {/if}
-
-            {#if !clientMfaForce}
-                <Input
-                        type="email"
-                        name="rauthyEmail"
-                        bind:value={formValues.email}
-                        bind:error={formErrors.email}
-                        autocomplete="email"
-                        placeholder={t.email}
-                        disabled={tooManyRequests || clientMfaForce}
-                        on:enter={onSubmit}
-                        on:input={onEmailInput}
-                >
-                    {t.email?.toUpperCase()}
-                </Input>
-
-                {#if needsPassword && existingMfaUser !== formValues.email && !showReset}
-                    <PasswordInput
-                            bind:bindThis={passwordInput}
-                            name="rauthyPassword"
-                            bind:value={formValues.password}
-                            error={formErrors.password}
-                            autocomplete="current-password"
-                            placeholder={t.password}
+                {#if !clientMfaForce}
+                    <Input
+                            type="email"
+                            name="rauthyEmail"
+                            bind:value={formValues.email}
+                            bind:error={formErrors.email}
+                            autocomplete="email"
+                            placeholder={t.email}
                             disabled={tooManyRequests || clientMfaForce}
                             on:enter={onSubmit}
+                            on:input={onEmailInput}
                     >
-                        {t.password?.toUpperCase()}
-                    </PasswordInput>
+                        {t.email?.toUpperCase()}
+                    </Input>
 
-                    {#if showResetRequest && !tooManyRequests}
-                        <div
-                                role="button"
-                                tabindex="0"
-                                class="forgotten"
-                                transition:scale|global
-                                on:click={handleShowReset}
-                                on:keypress={handleShowReset}
+                    {#if needsPassword && existingMfaUser !== formValues.email && !showReset}
+                        <PasswordInput
+                                bind:bindThis={passwordInput}
+                                name="rauthyPassword"
+                                bind:value={formValues.password}
+                                error={formErrors.password}
+                                autocomplete="current-password"
+                                placeholder={t.password}
+                                disabled={tooManyRequests || clientMfaForce}
+                                on:enter={onSubmit}
                         >
-                            {t.passwordForgotten}
-                        </div>
-                    {/if}
-                {/if}
+                            {t.password?.toUpperCase()}
+                        </PasswordInput>
 
-                {#if !tooManyRequests && !clientMfaForce}
-                    {#if showReset}
-                        <div class="btn flex-col">
-                            <Button on:click={requestReset}>
-                                {t.passwordRequest?.toUpperCase()}
-                            </Button>
-                        </div>
-                    {:else}
-                        <div class="btn flex-col">
-                            <Button on:click={onSubmit} bind:isLoading>
-                                {t.login?.toUpperCase()}
-                            </Button>
-                        </div>
-                    {/if}
-                {/if}
-            {/if}
-
-            {#if providers}
-                <div class="providers flex-col">
-                    {#each providers as provider (provider.id)}
-                        <Button on:click={() => providerLogin(provider.id)} level={3}>
-                            <div class="flex-inline">
-                                <img src="{`/auth/v1/providers/${provider.id}/img`}" alt="" width="20" height="20"/>
-                                <span class="providerName">{provider.name}</span>
+                        {#if showResetRequest && !tooManyRequests}
+                            <div
+                                    role="button"
+                                    tabindex="0"
+                                    class="forgotten"
+                                    transition:scale|global
+                                    on:click={handleShowReset}
+                                    on:keypress={handleShowReset}
+                            >
+                                {t.passwordForgotten}
                             </div>
-                        </Button>
-                    {/each}
-                </div>
-            {/if}
+                        {/if}
+                    {/if}
 
-            {#if err}
-                <div class="errMsg errMsgApi">
-                    {err}
-                </div>
-            {/if}
-
-            {#if emailSuccess}
-                <div class="success">
-                    {t.emailSentMsg}
-                </div>
-            {/if}
-
-            {#if isRegOpen && !clientMfaForce && !showResetRequest && !tooManyRequests}
-                {#if clientUri}
-                    <a class="reg" href="/auth/v1/users/register?redirect_uri={clientUri}" target="_blank">
-                        {t.signUp}
-                    </a>
-                {:else}
-                    <a class="reg" href="/auth/v1/users/register" target="_blank">
-                        {t.signUp}
-                    </a>
+                    {#if !tooManyRequests && !clientMfaForce}
+                        {#if showReset}
+                            <div class="btn flex-col">
+                                <Button on:click={requestReset}>
+                                    {t.passwordRequest?.toUpperCase()}
+                                </Button>
+                            </div>
+                        {:else}
+                            <div class="btn flex-col">
+                                <Button on:click={onSubmit} bind:isLoading>
+                                    {t.login?.toUpperCase()}
+                                </Button>
+                            </div>
+                        {/if}
+                    {/if}
                 {/if}
-            {/if}
 
-            {#if clientMfaForce}
-                <div class="btn flex-col">
-                    <Button on:click={() => window.location.href = '/auth/v1/account'}>
-                        ACCOUNT
-                    </Button>
-                </div>
-            {/if}
-        </div>
+                {#if providers}
+                    <div class="providers flex-col">
+                        {#each providers as provider (provider.id)}
+                            <Button on:click={() => providerLogin(provider.id)} level={3}>
+                                <div class="flex-inline">
+                                    <img src="{`/auth/v1/providers/${provider.id}/img`}" alt="" width="20" height="20"/>
+                                    <span class="providerName">{provider.name}</span>
+                                </div>
+                            </Button>
+                        {/each}
+                    </div>
+                {/if}
 
-        <LangSelector absolute/>
-    </WithI18n>
-</BrowserCheck>
+                {#if err}
+                    <div class="errMsg errMsgApi">
+                        {err}
+                    </div>
+                {/if}
+
+                {#if emailSuccess}
+                    <div class="success">
+                        {t.emailSentMsg}
+                    </div>
+                {/if}
+
+                {#if isRegOpen && !clientMfaForce && !showResetRequest && !tooManyRequests}
+                    {#if clientUri}
+                        <a class="reg" href="/auth/v1/users/register?redirect_uri={clientUri}" target="_blank">
+                            {t.signUp}
+                        </a>
+                    {:else}
+                        <a class="reg" href="/auth/v1/users/register" target="_blank">
+                            {t.signUp}
+                        </a>
+                    {/if}
+                {/if}
+
+                {#if clientMfaForce}
+                    <div class="btn flex-col">
+                        <Button on:click={() => window.location.href = '/auth/v1/account'}>
+                            ACCOUNT
+                        </Button>
+                    </div>
+                {/if}
+            </div>
+
+            <LangSelector absolute/>
+        </WithI18n>
+    </ContentCenter>
+</Main>
 
 <style>
     .btn {

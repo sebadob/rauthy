@@ -21,10 +21,12 @@
 
 <style>
     .content {
+        padding-left: 1rem;
+        padding-top: 2.5rem;
         display: flex;
         flex-direction: column;
-        justify-content: center;
-        align-items: center;
+        /*justify-content: center;*/
+        /*align-items: center;*/
         height: 100vh;
         flex: 1;
         overflow-y: auto;

@@ -3,7 +3,6 @@
     import {getQueryParams, purgeStorage, saveCsrfToken} from "../../../utils/helpers.js";
     import {logout} from "../../../utils/dataFetching.js";
     import Button from "$lib/Button.svelte";
-    import Loading from "$lib/Loading.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
 
     let t = $state();
@@ -48,7 +47,7 @@
     async function handleRes(res) {
         purgeStorage();
         if (res.ok) {
-            window.location.href = postLogoutUri;
+            window.location.href = res.headers.get('location');
         } else {
             await handleCancel();
         }

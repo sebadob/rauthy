@@ -59,7 +59,6 @@
     <Button
             on:click={generateSecret}
             level={1}
-            width="130px"
     >
         GENERATE NEW
     </Button>

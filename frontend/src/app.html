@@ -15,10 +15,6 @@
     <link rel="preload" href="/auth/v1/theme/{{client_id}}" as="style"/>
     <link rel="stylesheet" href="/auth/v1/theme/{{client_id}}"/>
     <style>
-        * {
-            box-sizing: border-box;
-        }
-
         :root {
             --col-act1: #6b3d99;
             --col-act1a: #714d99;
@@ -51,12 +47,6 @@
         a:hover {
             color: var(--col-act2a)
         }
-
-        .content {
-            width: 100%;
-            height: 100vh;
-            padding: 20px 10px;
-        }
     </style>
     %sveltekit.head%
 </head>
@@ -66,6 +56,6 @@
 <input name="rauthy-csrf-token" id="{{ csrf_token }}" type="hidden"/>
 <input name="rauthy-data" id="{{ data }}" type="hidden"/>
 <input name="rauthy-action" id="{{ action }}" type="hidden"/>
-<div>%sveltekit.body%</div>
+<div style="display: contents">%sveltekit.body%</div>
 </body>
 </html>
