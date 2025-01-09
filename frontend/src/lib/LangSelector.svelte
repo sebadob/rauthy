@@ -1,12 +1,12 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import {onMount} from "svelte";
     import OptionSelect from "$lib/OptionSelect.svelte";
     import {LANGUAGES} from "../utils/constants.js";
     import {postUpdateUserLanguage} from "../utils/dataFetching.js";
 
-    
+
     /**
      * @typedef {Object} Props
      * @property {boolean} [absolute]
@@ -15,7 +15,7 @@
      */
 
     /** @type {Props} */
-    let { absolute = false, absoluteRight = false, updateBackend = false } = $props();
+    let {absolute = false, absoluteRight = false, updateBackend = false} = $props();
 
     const attrs = ';Path=/;SameSite=Lax;Max-Age=157680000';
     let lang = $state();
@@ -25,9 +25,8 @@
         readLang();
     });
 
-
     function readLang() {
-        let l = document.documentElement.lang.toUpperCase();
+        let l = document.documentElement.lang.toUpperCase().slice(0, 2);
         lang = l;
         langSelected = l;
     }
@@ -47,6 +46,7 @@
 
         window.location.reload();
     }
+
     run(() => {
         if (langSelected && langSelected !== lang) {
             switchLang(langSelected);

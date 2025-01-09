@@ -25,10 +25,11 @@ impl Language {
     }
 
     pub fn as_str(&self) -> &str {
+        // must return results that work with serde::Deserialize from lowercase
         match self {
             Language::En => "en",
             Language::De => "de",
-            Language::ZhHans => "zh-Hans",
+            Language::ZhHans => "zhhans",
             Language::Ko => "ko",
         }
     }
@@ -63,7 +64,7 @@ impl From<&str> for Language {
         match value {
             "de" | "de-DE" => Self::De,
             "en" | "en-US" => Self::En,
-            "zh" | "zh-hans" | "zh-Hans" => Self::ZhHans,
+            "zh" | "zhhans" | "zh-hans" | "zh-Hans" => Self::ZhHans,
             "ko" | "ko-KR" => Self::Ko,
             _ => Self::default(),
         }
