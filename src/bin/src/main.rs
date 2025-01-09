@@ -7,13 +7,12 @@ use actix_web::rt::System;
 use actix_web::{middleware, web, App, HttpServer};
 use actix_web_prom::PrometheusMetricsBuilder;
 use cryptr::EncKeys;
-use hiqlite::params;
 use prometheus::Registry;
 use rauthy_common::constants::{
     BUILD_TIME, RAUTHY_VERSION, SWAGGER_UI_EXTERNAL, SWAGGER_UI_INTERNAL,
 };
 use rauthy_common::utils::UseDummyAddress;
-use rauthy_common::{is_hiqlite, is_sqlite, password_hasher};
+use rauthy_common::{is_sqlite, password_hasher};
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
     api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
@@ -26,7 +25,6 @@ use rauthy_middlewares::principal::RauthyPrincipalMiddleware;
 use rauthy_models::app_state::AppState;
 use rauthy_models::database::DB;
 use rauthy_models::email::EMail;
-use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::events::event::Event;
 use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::listener::EventListener;
@@ -41,12 +39,13 @@ use std::time::Duration;
 use std::{env, thread};
 use tokio::sync::mpsc;
 use tokio::time;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 use utoipa_swagger_ui::SwaggerUi;
 
 mod dummy_data;
 mod logging;
 mod tls;
+mod version_migration;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -103,8 +102,8 @@ https://sebadob.github.io/rauthy/getting_started/main.html"#
         }
     }
 
-    debug!("Starting the persistence layer");
     // TODO Keep this check in place until v0.28.0 as info for migrations from older versions.
+    debug!("Starting the persistence layer");
     if is_sqlite() {
         // Hiqlite migration has been finished.
         panic!(
@@ -200,42 +199,7 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
         }
     };
 
-    // TODO remove this block check after `0.28`.
-    // 0.27.0 had a bug that could have inserted NULL for password policy on update.
-    if is_hiqlite() {
-        let mut row = DB::client()
-            .query_raw_one(
-                "SELECT data FROM config WHERE id = 'password_policy'",
-                params!(),
-            )
-            .await?;
-        if let Err(err) = row.try_get::<Vec<u8>>("data") {
-            warn!(
-                r#"
-
-Error looking up PasswordPolicy - this is most probably a known 0.27.0 bug.
-Inserting default Policy to fix it.
-You should visit the Admin UI -> Config -> Password Policy and adjust it to your needs.
-
-Error: {}
-"#,
-                err
-            );
-            PasswordPolicy {
-                length_min: 14,
-                length_max: 128,
-                include_lower_case: Some(1),
-                include_upper_case: Some(1),
-                include_digits: Some(1),
-                include_special: Some(1),
-                valid_days: Some(180),
-                not_recently_used: Some(3),
-            }
-            .save()
-            .await
-            .expect("Cannot fix default PasswordPolicy issue");
-        }
-    }
+    version_migration::manual_version_migrations().await?;
 
     // actix web
     let state = app_state.clone();
