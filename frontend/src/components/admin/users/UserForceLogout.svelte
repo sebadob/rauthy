@@ -29,7 +29,7 @@
         Invalidate all existing sessions and refresh tokens for this user?
     </div>
 
-    <Button on:click={onSubmit} bind:isLoading level={1} width="5rem">
+    <Button on:click={onSubmit} bind:isLoading level={1}>
         LOGOUT
     </Button>
 
