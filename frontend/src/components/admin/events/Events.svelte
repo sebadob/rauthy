@@ -30,8 +30,6 @@
         eventLevel = await readSavedEventLevel();
     });
 
-    //
-
     async function readSavedEventLevel() {
         return localStorage.getItem('eventLevel') || 'Info';
     }
