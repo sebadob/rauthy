@@ -67,7 +67,7 @@
             return;
         }
 
-        if (!formValues.email.endsWith(restrictedDomain)) {
+        if (restrictedDomain && !formValues.email.endsWith(restrictedDomain)) {
             err = t.domainErr;
             return;
         }

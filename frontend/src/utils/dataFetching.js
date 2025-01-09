@@ -87,10 +87,15 @@ export async function getSessionInfoXsrf(accessToken) {
 }
 
 export async function logout(data) {
+    let body = new FormData();
+    for (let key in data) {
+        body.append(key, data[key]);
+    }
+
     return await fetch('/auth/v1/oidc/logout', {
         method: 'POST',
         headers: getCsrfHeaders(),
-        body: data,
+        body,
     });
 }
 

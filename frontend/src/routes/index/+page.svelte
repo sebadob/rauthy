@@ -6,7 +6,7 @@
     import AppVersion from "../../components/AppVersion.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
-    import {IS_DEV_ENV} from "../../utils/constants.js";
+    import {useIsDev} from "$state/is_dev.svelte";
 
     const btnWidth = "9rem";
 
@@ -14,8 +14,9 @@
     let renderReg = $state(false);
 
     onMount(() => {
+        let isDev = useIsDev();
         const data = window.document.getElementsByName('rauthy-data')[0].id
-        if ('true' === data || IS_DEV_ENV) {
+        if ('true' === data || isDev) {
             renderReg = true;
         }
     });
