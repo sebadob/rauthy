@@ -656,7 +656,7 @@ pub async fn get_logout(
 )]
 #[post("/oidc/logout")]
 pub async fn post_logout(
-    Query(params): Query<LogoutRequest>,
+    Form(params): Form<LogoutRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     let session = principal.get_session()?.clone();
