@@ -19,14 +19,8 @@ pub async fn get_logout_html(
 ) -> Result<String, ErrorResponse> {
     let colors = ColorEntity::find_rauthy().await?;
 
-    let state = if logout_request.state.is_some() {
-    logout_request.state.as_ref().unwrap().as_str()
-            } else {
-            ""
-        };
-
     if logout_request.id_token_hint.is_none() {
-        return Ok(LogoutHtml::build(&session.csrf_token, false, &colors, lang, state));
+        return Ok(LogoutHtml::build(&session.csrf_token, false, &colors, lang));
     }
 
     // check if the provided token hint is a valid
@@ -73,5 +67,5 @@ pub async fn get_logout_html(
         // redirect uri is valid at this point
     }
 
-    Ok(LogoutHtml::build(&session.csrf_token, true, &colors, lang, state))
+    Ok(LogoutHtml::build(&session.csrf_token, true, &colors, lang))
 }
