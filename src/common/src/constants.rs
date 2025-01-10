@@ -93,7 +93,6 @@ pub const IDX_WEBAUTHN: &str = "webauthn_";
 // TODO drop `lazy_static` and use rust 1.80 built-in features
 lazy_static! {
     pub static ref APP_START: DateTime<Utc> = Utc::now();
-    pub static ref APP_START_TS_STR: String = APP_START.timestamp().to_string();
 
     pub static ref CACHE_TTL_AUTH_CODE: Option<i64> = Some(300 + *WEBAUTHN_REQ_EXP as i64);
     pub static ref CACHE_TTL_DEVICE_CODE: Option<i64> = Some(*DEVICE_GRANT_CODE_LIFETIME as i64);

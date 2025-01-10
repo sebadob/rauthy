@@ -2,7 +2,7 @@ use crate::database::{Cache, DB};
 use chrono::Utc;
 use hiqlite::{params, Param};
 use rauthy_common::compression::{compress_br, compress_gzip};
-use rauthy_common::constants::{APP_START, BUILD_TIME};
+use rauthy_common::constants::BUILD_TIME;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
@@ -218,7 +218,7 @@ impl ThemeCssFull {
     pub async fn etag_update(client_id: &str) -> Result<String, ErrorResponse> {
         // TODO get "real" etag from DB in that case to avoid re-fetches between restarts.
         // timestamp is just a placeholder for now
-        let etag = APP_START.timestamp().to_string();
+        let etag = BUILD_TIME.timestamp().to_string();
         DB::client()
             .put_bytes(
                 Cache::Etag,

@@ -5,7 +5,7 @@ use actix_web::http::StatusCode;
 use actix_web::web::{Json, Path};
 use actix_web::{get, post, HttpRequest, HttpResponse};
 use rauthy_api_types::generic::{I18nContent, I18nRequest};
-use rauthy_common::constants::{APPLICATION_JSON, APP_START_TS_STR};
+use rauthy_common::constants::{APPLICATION_JSON, BUILD_TIME};
 use rauthy_error::ErrorResponse;
 use rauthy_models::i18n::email::confirm_change_html::I18nEmailConfirmChangeHtml;
 use rauthy_models::i18n::ui::account::I18nAccount;
@@ -21,7 +21,7 @@ use rauthy_models::language::Language;
 
 #[get("/i18n/{lang}")]
 pub async fn get_i18n(lang: Path<String>, req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
-    let etag = APP_START_TS_STR.as_str();
+    let etag = BUILD_TIME.timestamp().to_string();
 
     if let Some(etag_remote) = req.headers().get("if-none-match") {
         let etag_remote = etag_remote.to_str().unwrap_or_default();
