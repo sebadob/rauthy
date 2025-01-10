@@ -25,6 +25,7 @@ pub mod events;
 pub mod fed_cm;
 pub mod generic;
 pub mod groups;
+pub mod i18n;
 pub mod oidc;
 pub mod openapi;
 pub mod roles;

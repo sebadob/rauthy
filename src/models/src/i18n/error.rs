@@ -6,14 +6,14 @@ use std::borrow::Cow;
 
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct I18nError<'a> {
+pub struct I18nError {
     error: String,
     error_text: &'static str,
-    details: &'a str,
+    details: &'static str,
     details_text: Option<Cow<'static, str>>,
 }
 
-impl I18nError<'_> {
+impl I18nError {
     pub fn build_with<C>(lang: &Language, status_code: StatusCode, details_text: Option<C>) -> Self
     where
         C: Into<Cow<'static, str>>,
@@ -27,7 +27,7 @@ impl I18nError<'_> {
     }
 }
 
-impl SsrJson for I18nError<'_> {
+impl SsrJson for I18nError {
     fn build(lang: &Language) -> Self {
         match lang {
             Language::En => Self::build_en(StatusCode::NOT_FOUND, None),
@@ -42,7 +42,7 @@ impl SsrJson for I18nError<'_> {
     }
 }
 
-impl I18nError<'_> {
+impl I18nError {
     fn build_en(status_code: StatusCode, details_text: Option<Cow<'static, str>>) -> Self {
         let error_text = match status_code {
             StatusCode::BAD_REQUEST => {

@@ -4,27 +4,27 @@ use serde::Serialize;
 
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct I18nAuthorize<'a> {
-    client_force_mfa: &'a str,
-    email: &'a str,
-    email_bad_format: &'a str,
-    email_required: &'a str,
-    email_sent_msg: &'a str,
-    http_429: &'a str,
-    invalid_credentials: &'a str,
-    invalid_key_used: &'a str,
-    login: &'a str,
-    mfa_ack: &'a str,
-    password: &'a str,
-    password_forgotten: &'a str,
-    password_request: &'a str,
-    password_required: &'a str,
-    provide_mfa: &'a str,
-    request_expires: &'a str,
-    sign_up: &'a str,
+pub struct I18nAuthorize {
+    client_force_mfa: &'static str,
+    email: &'static str,
+    email_bad_format: &'static str,
+    email_required: &'static str,
+    email_sent_msg: &'static str,
+    http_429: &'static str,
+    invalid_credentials: &'static str,
+    invalid_key_used: &'static str,
+    login: &'static str,
+    mfa_ack: &'static str,
+    password: &'static str,
+    password_forgotten: &'static str,
+    password_request: &'static str,
+    password_required: &'static str,
+    provide_mfa: &'static str,
+    request_expires: &'static str,
+    sign_up: &'static str,
 }
 
-impl SsrJson for I18nAuthorize<'_> {
+impl SsrJson for I18nAuthorize {
     fn build(lang: &Language) -> Self {
         match lang {
             Language::En => Self::build_en(),
@@ -39,7 +39,7 @@ impl SsrJson for I18nAuthorize<'_> {
     }
 }
 
-impl I18nAuthorize<'_> {
+impl I18nAuthorize {
     fn build_en() -> Self {
         Self {
             client_force_mfa: r#"This login forces MFA to achieve higher security.

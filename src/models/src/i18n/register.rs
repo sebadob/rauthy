@@ -4,23 +4,23 @@ use serde::Serialize;
 
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct I18nRegister<'a> {
-    domain_allowed: &'a str,
-    domain_err: &'a str,
-    domain_restricted: &'a str,
-    email: &'a str,
-    email_bad_format: &'a str,
-    email_check: &'a str,
-    family_name: &'a str,
-    given_name: &'a str,
-    regex_name: &'a str,
-    register: &'a str,
-    required: &'a str,
-    success: &'a str,
-    user_reg: &'a str,
+pub struct I18nRegister {
+    domain_allowed: &'static str,
+    domain_err: &'static str,
+    domain_restricted: &'static str,
+    email: &'static str,
+    email_bad_format: &'static str,
+    email_check: &'static str,
+    family_name: &'static str,
+    given_name: &'static str,
+    regex_name: &'static str,
+    register: &'static str,
+    required: &'static str,
+    success: &'static str,
+    user_reg: &'static str,
 }
 
-impl SsrJson for I18nRegister<'_> {
+impl SsrJson for I18nRegister {
     fn build(lang: &Language) -> Self {
         match lang {
             Language::En => Self::build_en(),
@@ -35,7 +35,7 @@ impl SsrJson for I18nRegister<'_> {
     }
 }
 
-impl I18nRegister<'_> {
+impl I18nRegister {
     fn build_en() -> Self {
         Self {
             domain_allowed: "Allowed domain:",

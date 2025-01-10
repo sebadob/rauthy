@@ -4,25 +4,25 @@ use serde::Serialize;
 
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct I18nDevice<'a> {
-    accept: &'a str,
-    auto_redirect_account: &'a str,
-    close_window: &'a str,
-    decline: &'a str,
-    desc: &'a str,
-    desc_scopes: &'a str,
-    err_too_short: &'a str,
-    err_too_long: &'a str,
-    invalid_input: &'a str,
-    is_accepted: &'a str,
-    is_declined: &'a str,
-    submit: &'a str,
-    title: &'a str,
-    user_code: &'a str,
-    wrong_or_expired: &'a str,
+pub struct I18nDevice {
+    accept: &'static str,
+    auto_redirect_account: &'static str,
+    close_window: &'static str,
+    decline: &'static str,
+    desc: &'static str,
+    desc_scopes: &'static str,
+    err_too_short: &'static str,
+    err_too_long: &'static str,
+    invalid_input: &'static str,
+    is_accepted: &'static str,
+    is_declined: &'static str,
+    submit: &'static str,
+    title: &'static str,
+    user_code: &'static str,
+    wrong_or_expired: &'static str,
 }
 
-impl SsrJson for I18nDevice<'_> {
+impl SsrJson for I18nDevice {
     fn build(lang: &Language) -> Self {
         match lang {
             Language::En => Self::build_en(),
@@ -37,7 +37,7 @@ impl SsrJson for I18nDevice<'_> {
     }
 }
 
-impl I18nDevice<'_> {
+impl I18nDevice {
     fn build_en() -> Self {
         Self {
             accept: "Accept",

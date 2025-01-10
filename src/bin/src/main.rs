@@ -15,8 +15,8 @@ use rauthy_common::utils::UseDummyAddress;
 use rauthy_common::{is_sqlite, password_hasher};
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
-    api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
-    scopes, sessions, themes, users,
+    api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, i18n, oidc,
+    roles, scopes, sessions, themes, users,
 };
 use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -415,10 +415,11 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(generic::get_fed_cm_html)
                             .service(generic::get_auth_check)
                             .service(generic::get_auth_check_admin)
-                            .service(generic::post_i18n)
                             .service(generic::post_update_language)
                             .service(generic::get_version)
                             .service(generic::get_whoami)
+                            .service(i18n::get_i18n)
+                            .service(i18n::post_i18n)
                             .service(oidc::get_authorize)
                             .service(oidc::post_authorize)
                             .service(oidc::post_authorize_refresh)

@@ -1,18 +1,18 @@
 use crate::{Assets, ReqPrincipal};
-use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
-use actix_web::http::{header, StatusCode};
+use actix_web::http::header;
+use actix_web::http::header::HeaderValue;
 use actix_web::web::{Json, Query};
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
 use chrono::Utc;
 use cryptr::EncKeys;
 use rauthy_api_types::generic::{
     AppVersionResponse, Argon2ParamsResponse, EncKeyMigrateRequest, EncKeysResponse,
-    HealthResponse, I18nContent, I18nRequest, LoginTimeResponse, PasswordHashTimesRequest,
-    PasswordPolicyRequest, PasswordPolicyResponse, SearchParams, SearchParamsType,
+    HealthResponse, LoginTimeResponse, PasswordHashTimesRequest, PasswordPolicyRequest,
+    PasswordPolicyResponse, SearchParams, SearchParamsType,
 };
 use rauthy_common::constants::{
-    APPLICATION_JSON, APP_START, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEALTH_CHECK_DELAY_SECS,
-    IDX_LOGIN_TIME, RAUTHY_VERSION, SUSPICIOUS_REQUESTS_BLACKLIST, SUSPICIOUS_REQUESTS_LOG,
+    APP_START, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEALTH_CHECK_DELAY_SECS, IDX_LOGIN_TIME,
+    RAUTHY_VERSION, SUSPICIOUS_REQUESTS_BLACKLIST, SUSPICIOUS_REQUESTS_LOG,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::ErrorResponse;
@@ -29,16 +29,6 @@ use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::events::event::Event;
 use rauthy_models::events::ip_blacklist_handler::{IpBlacklist, IpBlacklistReq};
-use rauthy_models::i18n::account::I18nAccount;
-use rauthy_models::i18n::authorize::I18nAuthorize;
-use rauthy_models::i18n::device::I18nDevice;
-use rauthy_models::i18n::email_confirm_change_html::I18nEmailConfirmChangeHtml;
-use rauthy_models::i18n::error::I18nError;
-use rauthy_models::i18n::index::I18nIndex;
-use rauthy_models::i18n::logout::I18nLogout;
-use rauthy_models::i18n::password_reset::I18nPasswordReset;
-use rauthy_models::i18n::register::I18nRegister;
-use rauthy_models::i18n::SsrJson;
 use rauthy_models::language::Language;
 use rauthy_models::templates::{
     AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
@@ -91,33 +81,6 @@ pub async fn get_static_assets(
             HttpResponse::NotFound().finish()
         }
     }
-}
-
-#[post("/i18n")]
-pub async fn post_i18n(
-    req: HttpRequest,
-    // no validation needed for I18nRequest
-    Json(payload): Json<I18nRequest>,
-) -> Result<HttpResponse, ErrorResponse> {
-    let lang = Language::try_from(&req).unwrap_or_default();
-    let body = match payload.content {
-        I18nContent::Authorize => I18nAuthorize::build(&lang).as_json(),
-        I18nContent::Account => I18nAccount::build(&lang).as_json(),
-        I18nContent::Device => I18nDevice::build(&lang).as_json(),
-        I18nContent::EmailChangeConfirm => I18nEmailConfirmChangeHtml::build(&lang).as_json(),
-        // Just return some default values for local dev -> dynamically built during prod
-        I18nContent::Error => {
-            I18nError::build_with(&lang, StatusCode::NOT_FOUND, Some("<empty>")).as_json()
-        }
-        I18nContent::Index => I18nIndex::build(&lang).as_json(),
-        I18nContent::Logout => I18nLogout::build(&lang).as_json(),
-        I18nContent::PasswordReset => I18nPasswordReset::build(&lang).as_json(),
-        I18nContent::Register => I18nRegister::build(&lang).as_json(),
-    };
-
-    Ok(HttpResponse::Ok()
-        .insert_header((CONTENT_TYPE, APPLICATION_JSON))
-        .body(body))
 }
 
 #[get("/account")]

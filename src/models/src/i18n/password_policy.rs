@@ -1,19 +1,29 @@
+use crate::language::Language;
 use serde::Serialize;
 
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct I18nPasswordPolicy<'a> {
-    password_policy: &'a str,
-    length_min: &'a str,
-    length_max: &'a str,
-    lowercase_min: &'a str,
-    uppercase_min: &'a str,
-    digits_min: &'a str,
-    special_min: &'a str,
-    not_recent: &'a str,
+pub struct I18nPasswordPolicy {
+    password_policy: &'static str,
+    length_min: &'static str,
+    length_max: &'static str,
+    lowercase_min: &'static str,
+    uppercase_min: &'static str,
+    digits_min: &'static str,
+    special_min: &'static str,
+    not_recent: &'static str,
 }
 
-impl I18nPasswordPolicy<'_> {
+impl I18nPasswordPolicy {
+    pub fn build(lang: &Language) -> Self {
+        match lang {
+            Language::En => Self::build_en(),
+            Language::De => Self::build_de(),
+            Language::ZhHans => Self::build_zh_hans(),
+            Language::Ko => Self::build_ko(),
+        }
+    }
+
     pub fn build_en() -> Self {
         Self {
             password_policy: "Password Policy",

@@ -6,32 +6,32 @@ use serde::Serialize;
 
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct I18nPasswordReset<'a> {
-    password_policy: I18nPasswordPolicy<'a>,
+pub struct I18nPasswordReset {
+    password_policy: I18nPasswordPolicy,
 
-    account_login: &'a str,
-    bad_format: &'a str,
-    fido_link: &'a str,
-    generate: &'a str,
-    mfa: I18nAccountMfa<'a>,
-    new_acc_desc_1: &'a str,
-    new_acc_desc_2: &'a str,
-    new_account: &'a str,
-    password_reset: &'a str,
-    password: &'a str,
-    passwordless: &'a str,
-    password_confirm: &'a str,
-    password_no_match: &'a str,
-    required: &'a str,
-    save: &'a str,
-    success_1: &'a str,
-    success_2: &'a str,
-    success_3: &'a str,
-    success_passkey_1: &'a str,
-    success_passkey_2: &'a str,
+    account_login: &'static str,
+    bad_format: &'static str,
+    fido_link: &'static str,
+    generate: &'static str,
+    mfa: I18nAccountMfa,
+    new_acc_desc_1: &'static str,
+    new_acc_desc_2: &'static str,
+    new_account: &'static str,
+    password_reset: &'static str,
+    password: &'static str,
+    passwordless: &'static str,
+    password_confirm: &'static str,
+    password_no_match: &'static str,
+    required: &'static str,
+    save: &'static str,
+    success_1: &'static str,
+    success_2: &'static str,
+    success_3: &'static str,
+    success_passkey_1: &'static str,
+    success_passkey_2: &'static str,
 }
 
-impl SsrJson for I18nPasswordReset<'_> {
+impl SsrJson for I18nPasswordReset {
     fn build(lang: &Language) -> Self {
         match lang {
             Language::En => Self::build_en(),
@@ -49,7 +49,7 @@ impl SsrJson for I18nPasswordReset<'_> {
 // batman@batcave.io
 // 6f#h5b+eLZ9$9h5%hBQH,RH+
 
-impl I18nPasswordReset<'_> {
+impl I18nPasswordReset {
     pub fn build_en() -> Self {
         Self {
             password_policy: I18nPasswordPolicy::build_en(),

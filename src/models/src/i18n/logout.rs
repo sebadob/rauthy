@@ -4,13 +4,13 @@ use serde::Serialize;
 
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct I18nLogout<'a> {
-    logout: &'a str,
-    confirm_msg: &'a str,
-    cancel: &'a str,
+pub struct I18nLogout {
+    logout: &'static str,
+    confirm_msg: &'static str,
+    cancel: &'static str,
 }
 
-impl SsrJson for I18nLogout<'_> {
+impl SsrJson for I18nLogout {
     fn build(lang: &Language) -> Self {
         match lang {
             Language::En => Self::build_en(),
@@ -25,7 +25,7 @@ impl SsrJson for I18nLogout<'_> {
     }
 }
 
-impl I18nLogout<'_> {
+impl I18nLogout {
     fn build_en() -> Self {
         Self {
             logout: "Logout",

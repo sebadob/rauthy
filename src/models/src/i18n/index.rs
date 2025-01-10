@@ -4,13 +4,13 @@ use serde::Serialize;
 
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct I18nIndex<'a> {
-    register: &'a str,
-    account_login: &'a str,
-    admin_login: &'a str,
+pub struct I18nIndex {
+    register: &'static str,
+    account_login: &'static str,
+    admin_login: &'static str,
 }
 
-impl SsrJson for I18nIndex<'_> {
+impl SsrJson for I18nIndex {
     fn build(lang: &Language) -> Self {
         match lang {
             Language::En => Self::build_en(),
@@ -25,7 +25,7 @@ impl SsrJson for I18nIndex<'_> {
     }
 }
 
-impl I18nIndex<'_> {
+impl I18nIndex {
     fn build_en() -> Self {
         Self {
             register: "Register",
