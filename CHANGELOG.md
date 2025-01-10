@@ -18,6 +18,9 @@ Korean has been added to the translations for all user-facing UI parts.
 - Fixed a regression from v0.27.0 which made it impossible to use `zh-Hans` as a users language. The deserialization
   of the database value would fail when using Hiqlite.
   [#693](https://github.com/sebadob/rauthy/pull/693)
+- Fixed a bug in the UI - Custom User Attributed: When only a single existing attributed has been deleted, the
+  list would not properly update and remove it.
+  [#695](https://github.com/sebadob/rauthy/pull/695)
 
 ## v0.27.3
 
