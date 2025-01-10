@@ -40,6 +40,14 @@
     }
 
     function onSave() {
+        // Just a workaround for now until the order and search components have been migrated to svelte5.
+        // If the last existing `attr` has been deleted, the list would not update.
+        if (attr.length < 2) {
+            attr = [];
+            resAttr = [];
+            resAttrPaginated = [];
+        }
+
         fetchAttr();
         search = '';
     }
