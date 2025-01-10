@@ -48,7 +48,7 @@
     async function handleRes(res) {
         purgeStorage();
         if (res.ok && res.headers.get('location')) {
-            window.location.href = res.headers.get('location');
+            window.location.replace(res.headers.get('location'));
         }else {
             await handleCancel();
         }
