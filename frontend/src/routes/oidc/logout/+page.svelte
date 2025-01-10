@@ -48,18 +48,9 @@
     async function handleRes(res) {
         purgeStorage();
         if (res.ok) {
-            if (!res.headers) { 
-               // no header present
-               window.location.href = postLogoutUri;
-            }
-            else {
-                if (!res.headers.get('location')) {
-                    window.location.href = postLogoutUri;
-                }
-                else {
-                    window.location.href = res.headers.get('location');
-                }
-            }
+            window.location.href = postLogoutUri;
+        } else if (res.status === 301 && res.headers.get('loc')) {
+            window.location.href = res.headers.get('loc');
         } else {
             await handleCancel();
         }
