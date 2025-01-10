@@ -1,4 +1,4 @@
-use crate::i18n::SsrJson;
+use crate::i18n::ui::SsrJson;
 use crate::language::Language;
 use actix_web::http::StatusCode;
 use serde::Serialize;

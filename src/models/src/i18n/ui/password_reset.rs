@@ -1,6 +1,6 @@
-use crate::i18n::account::I18nAccountMfa;
-use crate::i18n::password_policy::I18nPasswordPolicy;
-use crate::i18n::SsrJson;
+use crate::i18n::ui::account::I18nAccountMfa;
+use crate::i18n::ui::password_policy::I18nPasswordPolicy;
+use crate::i18n::ui::SsrJson;
 use crate::language::Language;
 use serde::Serialize;
 

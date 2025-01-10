@@ -7,16 +7,16 @@ use actix_web::{get, post, HttpRequest, HttpResponse};
 use rauthy_api_types::generic::{I18nContent, I18nRequest};
 use rauthy_common::constants::{APPLICATION_JSON, APP_START_TS_STR};
 use rauthy_error::ErrorResponse;
-use rauthy_models::i18n::account::I18nAccount;
-use rauthy_models::i18n::authorize::I18nAuthorize;
-use rauthy_models::i18n::device::I18nDevice;
-use rauthy_models::i18n::email_confirm_change_html::I18nEmailConfirmChangeHtml;
-use rauthy_models::i18n::error::I18nError;
-use rauthy_models::i18n::index::I18nIndex;
-use rauthy_models::i18n::logout::I18nLogout;
-use rauthy_models::i18n::password_reset::I18nPasswordReset;
-use rauthy_models::i18n::register::I18nRegister;
-use rauthy_models::i18n::{I18n, SsrJson};
+use rauthy_models::i18n::email::confirm_change_html::I18nEmailConfirmChangeHtml;
+use rauthy_models::i18n::ui::account::I18nAccount;
+use rauthy_models::i18n::ui::authorize::I18nAuthorize;
+use rauthy_models::i18n::ui::device::I18nDevice;
+use rauthy_models::i18n::ui::error::I18nError;
+use rauthy_models::i18n::ui::index::I18nIndex;
+use rauthy_models::i18n::ui::logout::I18nLogout;
+use rauthy_models::i18n::ui::password_reset::I18nPasswordReset;
+use rauthy_models::i18n::ui::register::I18nRegister;
+use rauthy_models::i18n::ui::{I18n, SsrJson};
 use rauthy_models::language::Language;
 
 #[get("/i18n/{lang}")]
