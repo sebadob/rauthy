@@ -683,9 +683,8 @@ pub async fn post_logout(
             params.post_logout_redirect_uri.as_ref().unwrap(),
             state
         );
-        return Ok(HttpResponse::build(StatusCode::MOVED_PERMANENTLY)
-            //.append_header((header::LOCATION, loc))
-            .append_header(("loc", loc))
+        return Ok(HttpResponse::build(StatusCode::OK)
+            .append_header((header::LOCATION, loc))
             .cookie(cookie)
             .cookie(cookie_fed_cm)
             .finish());
