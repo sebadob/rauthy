@@ -6,8 +6,15 @@
     import {useLang} from "$state/language.svelte.js";
     import {getCookie} from "$lib/utils/helpers";
 
-
-    let {absolute = false, absoluteRight = false, updateBackend = false} = $props();
+    let {
+        absolute = false,
+        absoluteRight = false,
+        updateBackend = false,
+    }: {
+        absolute: string,
+        absoluteRight: string,
+        updateBackend: string,
+    } = $props();
 
     const attrs = ';Path=/;SameSite=Lax;Max-Age=315360000';
     let lang = useLang();
