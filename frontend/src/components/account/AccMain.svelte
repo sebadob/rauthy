@@ -7,7 +7,7 @@
     import AccEdit from "./AccEdit.svelte";
     import {tweened} from "svelte/motion";
     import AccMFA from "./AccMFA.svelte";
-    import LangSelector from "$lib/LangSelector.svelte";
+    import LangSelector from "$lib5/LangSelector.svelte";
     import AccPassword from "./AccPassword.svelte";
     import AccWebId from "./AccWebId.svelte";
     import {onMount} from "svelte";

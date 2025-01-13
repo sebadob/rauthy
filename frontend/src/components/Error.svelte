@@ -3,7 +3,7 @@
     import IconChevronRight from "$lib/icons/IconChevronRight.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
     import BrowserCheck from "./BrowserCheck.svelte";
-    import LangSelector from "$lib/LangSelector.svelte";
+    import LangSelector from "$lib5/LangSelector.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
 

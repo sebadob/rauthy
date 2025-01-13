@@ -8,7 +8,7 @@
     import {onMount, tick} from "svelte";
     import Input from "$lib/inputs/Input.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
-    import LangSelector from "$lib/LangSelector.svelte";
+    import LangSelector from "$lib5/LangSelector.svelte";
     import {fetchSolvePow} from "../../../utils/pow.ts";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";

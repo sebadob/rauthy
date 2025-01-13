@@ -2,7 +2,7 @@
     import {onMount} from "svelte";
     import Button from "$lib/Button.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
-    import LangSelector from "$lib/LangSelector.svelte";
+    import LangSelector from "$lib5/LangSelector.svelte";
     import AppVersion from "../../components/AppVersion.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";

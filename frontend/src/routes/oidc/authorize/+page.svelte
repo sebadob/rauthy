@@ -23,7 +23,7 @@
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import BrowserCheck from "../../../components/BrowserCheck.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
-    import LangSelector from "$lib/LangSelector.svelte";
+    import LangSelector from "$lib5/LangSelector.svelte";
     import getPkce from "oauth-pkce";
     import {PKCE_VERIFIER_UPSTREAM} from "../../../utils/constants.js";
     import IconHome from "$lib/icons/IconHome.svelte";

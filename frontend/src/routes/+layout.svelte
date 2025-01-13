@@ -1,14 +1,17 @@
 <script lang="ts">
     import {onMount, type Snippet} from 'svelte'
-
-    import "../css/global.css";
     import {useIsDev} from "../global_state/is_dev.svelte.ts";
+    import {initLang} from "$state/language.svelte.ts";
+    
+    import "../css/global.css";
 
     let {
         children,
     }: {
         children: Snippet,
     } = $props();
+
+    initLang();
 
     let isDev = useIsDev();
     let cookiesEnabled = $state(true);

@@ -1,37 +1,36 @@
-<script>
-    import {run} from 'svelte/legacy';
-
-    import {onMount} from "svelte";
+<script lang="ts">
+    import {untrack} from "svelte";
     import OptionSelect from "$lib/OptionSelect.svelte";
     import {LANGUAGES} from "../utils/constants.js";
     import {postUpdateUserLanguage} from "../utils/dataFetching.js";
+    import {useLang} from "$state/language.svelte.js";
+    import {getCookie} from "$lib/utils/helpers";
 
 
-    /**
-     * @typedef {Object} Props
-     * @property {boolean} [absolute]
-     * @property {boolean} [absoluteRight]
-     * @property {boolean} [updateBackend] - if set to true, a request to the backend will be done for the currently logged in user
-     */
-
-    /** @type {Props} */
     let {absolute = false, absoluteRight = false, updateBackend = false} = $props();
 
-    const attrs = ';Path=/;SameSite=Lax;Max-Age=157680000';
-    let lang = $state();
-    let langSelected = $state();
+    const attrs = ';Path=/;SameSite=Lax;Max-Age=315360000';
+    let lang = useLang();
+    let langSelected = $state(untrack(() => lang));
 
-    onMount(async () => {
-        readLang();
+    // Makes lang overrides work during local dev
+    // Will do nothing in prod because of proper SSR.
+    $effect(() => {
+        let cookie = getCookie('locale');
+        let l = untrack(() => lang);
+        if (cookie !== l && LANGUAGES.includes(cookie)) {
+            lang = cookie;
+            langSelected = cookie;
+        }
     });
 
-    function readLang() {
-        let l = document.documentElement.lang.toUpperCase().slice(0, 2);
-        lang = l;
-        langSelected = l;
-    }
+    $effect(() => {
+        if (langSelected && langSelected !== lang) {
+            switchLang(langSelected);
+        }
+    });
 
-    async function switchLang(l) {
+    async function switchLang(l: string) {
         document.cookie = 'locale=' + l.toLowerCase() + attrs;
 
         if (updateBackend) {
@@ -41,17 +40,10 @@
                 console.error(body);
                 return;
             }
-
         }
 
         window.location.reload();
     }
-
-    run(() => {
-        if (langSelected && langSelected !== lang) {
-            switchLang(langSelected);
-        }
-    });
 </script>
 
 <div class:absolute class:absoluteLeft={!absoluteRight} class:absoluteRight>

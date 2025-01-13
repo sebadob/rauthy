@@ -5,7 +5,7 @@
     import Loading from "../../components/Loading.svelte";
     import {extractFormErrors, getQueryParams, redirectToLogin} from "../../utils/helpers.js";
     import WithI18n from "$lib/WithI18n.svelte";
-    import LangSelector from "$lib/LangSelector.svelte";
+    import LangSelector from "$lib5/LangSelector.svelte";
     import Input from "$lib/inputs/Input.svelte";
     import Button from "$lib/Button.svelte";
     import * as yup from "yup";

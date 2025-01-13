@@ -24,7 +24,7 @@
     import BrowserCheck from "../../../../../components/BrowserCheck.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
     import {slide} from "svelte/transition";
-    import LangSelector from "$lib/LangSelector.svelte";
+    import LangSelector from "$lib5/LangSelector.svelte";
     import {REGEX_NAME} from "../../../../../utils/constants.js";
     import {useIsDev} from "$state/is_dev.svelte";
 
