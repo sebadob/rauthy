@@ -18,6 +18,13 @@ function getCsrfHeaders() {
     }
 }
 
+function getCsrfHeadersForm() {
+    return {
+        ...HEADERS.form,
+        'csrf-token': getCsrfToken(),
+    }
+}
+
 export async function authorize(data) {
     const res = await fetch('/auth/v1/oidc/authorize', {
         method: 'POST',
@@ -87,14 +94,14 @@ export async function getSessionInfoXsrf(accessToken) {
 }
 
 export async function logout(data) {
-    let body = new FormData();
+    let body = new URLSearchParams();
     for (let key in data) {
         body.append(key, data[key]);
     }
 
     return await fetch('/auth/v1/oidc/logout', {
         method: 'POST',
-        headers: getCsrfHeaders(),
+        headers: getCsrfHeadersForm(),
         body,
     });
 }
