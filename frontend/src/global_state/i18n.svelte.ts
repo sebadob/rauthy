@@ -8,7 +8,7 @@ import {isBrowser} from "../utils/helpers.ts";
 // This will never be undefined, because we have a `preload` in each HTML
 // `head` and we set the i18n immediately as the very first thing in the
 // base layout.
-let _i18n: I18n = $state(undefined as any as I18n);
+let _i18n: I18n = undefined as any as I18n;
 
 // IMPORTANT:
 //
@@ -46,9 +46,9 @@ export async function initI18n() {
 // build step in any case. So after the failed build command for the
 // backend, you should have these files back.
 //
-// The dynamic import makes it possible to not need to fetch the json in the UI
-// later on in production, but will insert the correct values during local dev
-// and at compilation.
+// The dynamic import makes it possible to not need to fetch the json
+// in the UI later on in production, but will insert the correct values
+// during local dev and at compilation.
 async function initI18nSsr() {
     let lang = useLang();
     // TODO make sure the incompatibility warning is gone after the i18n
@@ -72,7 +72,9 @@ async function initI18nSsr() {
 }
 
 async function initI18nBrowser() {
-    let lang = useI18n();
+    let lang = useLang();
+
+    // This will resolve immediately because of a `preload` link inside the html head.
     let res = await fetchGet<I18n>(`${window.origin}/auth/v1/i18n/${lang}`);
     if (res.body) {
         _i18n = res.body;
