@@ -8,7 +8,7 @@ use std::fmt::{Display, Formatter};
 use tracing::debug;
 
 // Note: Updating this enum will require an update on the LANGUAGES constant for the frontend too
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Type, strum::EnumIter)]
 #[sqlx(type_name = "varchar")]
 #[sqlx(rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]

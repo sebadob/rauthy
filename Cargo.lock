@@ -4325,6 +4325,7 @@ dependencies = [
  "serde",
  "serde_json",
  "spow",
+ "strum",
  "tokio",
  "tokio-test",
  "tracing",
