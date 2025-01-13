@@ -4,6 +4,8 @@
     import WithI18n from "$lib/WithI18n.svelte";
     import LangSelector from "$lib/LangSelector.svelte";
     import Button from "$lib/Button.svelte";
+    import Main from "$lib5/Main.svelte";
+    import ContentCenter from "$lib5/ContentCenter.svelte";
 
     let t = $state();
     let emailOld = $state('old@mail.org');
@@ -23,26 +25,28 @@
     <title>{t?.title || 'E-Mail Change Confirm'}</title>
 </svelte:head>
 
-<BrowserCheck>
-    <WithI18n bind:t content="emailChangeConfirm">
-        <div class="container">
-            <h1>{t.title}</h1>
-            <p>
-                {t.text_changed}:<br/>
-                <b>{emailOld}</b>
-                {t.to}
-                <b>{emailNew}</b>
-            </p>
-            <p>{t.text_login}</p>
-            <div class="btn">
-                <Button on:click={() => window.location.replace('/auth/v1/account')}>
-                    Account Login
-                </Button>
+<Main>
+    <ContentCenter>
+        <WithI18n bind:t content="emailChangeConfirm">
+            <div class="container">
+                <h1>{t.title}</h1>
+                <p>
+                    {t.text_changed}:<br/>
+                    <b>{emailOld}</b>
+                    {t.to}
+                    <b>{emailNew}</b>
+                </p>
+                <p>{t.text_login}</p>
+                <div class="btn">
+                    <Button on:click={() => window.location.replace('/auth/v1/account')}>
+                        Account Login
+                    </Button>
+                </div>
             </div>
-        </div>
-        <LangSelector absolute/>
-    </WithI18n>
-</BrowserCheck>
+            <LangSelector absolute/>
+        </WithI18n>
+    </ContentCenter>
+</Main>
 
 <style>
     p {

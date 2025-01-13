@@ -29,6 +29,7 @@ const config = {
             // After this is done and no errors are thrown, we can do a very easy
             // switch to the original `lib` via global search and replace.
             $lib5: 'src/lib_svelte5',
+            $state: 'src/global_state',
         },
         csp: isDev ? {} : {
             directives: {

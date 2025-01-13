@@ -1,10 +1,9 @@
 <script>
     import {run} from 'svelte/legacy';
     import {onMount} from "svelte";
-    import {postDeviceVerify, getPow, getSessionInfo} from "../../utils/dataFetching.js";
+    import {postDeviceVerify, getSessionInfo} from "../../utils/dataFetching.js";
     import Loading from "../../components/Loading.svelte";
     import {extractFormErrors, getQueryParams, redirectToLogin} from "../../utils/helpers.js";
-    import BrowserCheck from "../../components/BrowserCheck.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
     import LangSelector from "$lib/LangSelector.svelte";
     import Input from "$lib/inputs/Input.svelte";
@@ -12,6 +11,8 @@
     import * as yup from "yup";
     import {REGEX_URI} from "../../utils/constants.js";
     import {fetchSolvePow} from "../../utils/pow.ts";
+    import Main from "$lib5/Main.svelte";
+    import ContentCenter from "$lib5/ContentCenter.svelte";
 
     const btnWidthInline = '8rem';
 
@@ -126,83 +127,85 @@
     <title>{t?.title || 'Device Authorization'}</title>
 </svelte:head>
 
-<BrowserCheck>
-    <WithI18n bind:t content="device">
-        {#if !sessionInfo}
-            <Loading/>
-        {:else}
-            <div class="container">
-                <div class="name">
-                    <h2>{t.title}</h2>
+<Main>
+    <ContentCenter>
+        <WithI18n bind:t content="device">
+            {#if !sessionInfo}
+                <Loading/>
+            {:else}
+                <div class="container">
+                    <div class="name">
+                        <h2>{t.title}</h2>
+                    </div>
+
+                    {#if scopes === undefined}
+                        <div class="desc">
+                            {t.desc.replaceAll('{{count}}', userCodeLength)}
+                        </div>
+
+                        <Input
+                                name="userCode"
+                                bind:value={formValues.userCode}
+                                bind:error={formErrors.userCode}
+                                autocomplete="off"
+                                placeholder={t.userCode}
+                                on:enter={onSubmit}
+                                on:input={onInput}
+                        >
+                            {t.userCode.toUpperCase()}
+                        </Input>
+
+                        <Button on:click={() => onSubmit('pending')} bind:isLoading>
+                            {t.submit.toUpperCase()}
+                        </Button>
+                    {:else if isAccepted}
+                        <div class="desc">
+                            <p>{t.isAccepted}</p>
+                            <p>{t.autoRedirectAccount}</p>
+                        </div>
+                    {:else if isDeclined}
+                        <div class="desc">
+                            <p class="declined">{t.isDeclined}</p>
+                            <p>{t.closeWindow}</p>
+                        </div>
+                    {:else}
+                        <div class="desc">
+                            {t.descScopes}
+                            <ul>
+                                {#each scopes as scope}
+                                    <li>{scope}</li>
+                                {/each}
+                            </ul>
+                        </div>
+
+                        <div class="inline">
+                            <Button
+                                    on:click={() => onSubmit('accept')}
+                                    bind:isLoading
+                                    level={1}
+                                    width={btnWidthInline}
+                            >
+                                {t.accept}
+                            </Button>
+                            <Button
+                                    on:click={() => onSubmit('decline')}
+                                    bind:isLoading
+                                    level={3}
+                                    width={btnWidthInline}
+                            >
+                                {t.decline}
+                            </Button>
+                        </div>
+                    {/if}
+
+                    <div class="err">{err}</div>
                 </div>
+            {/if}
 
-                {#if scopes === undefined}
-                    <div class="desc">
-                        {t.desc.replaceAll('{{count}}', userCodeLength)}
-                    </div>
-
-                    <Input
-                            name="userCode"
-                            bind:value={formValues.userCode}
-                            bind:error={formErrors.userCode}
-                            autocomplete="off"
-                            placeholder={t.userCode}
-                            on:enter={onSubmit}
-                            on:input={onInput}
-                    >
-                        {t.userCode.toUpperCase()}
-                    </Input>
-
-                    <Button on:click={() => onSubmit('pending')} bind:isLoading>
-                        {t.submit.toUpperCase()}
-                    </Button>
-                {:else if isAccepted}
-                    <div class="desc">
-                        <p>{t.isAccepted}</p>
-                        <p>{t.autoRedirectAccount}</p>
-                    </div>
-                {:else if isDeclined}
-                    <div class="desc">
-                        <p class="declined">{t.isDeclined}</p>
-                        <p>{t.closeWindow}</p>
-                    </div>
-                {:else}
-                    <div class="desc">
-                        {t.descScopes}
-                        <ul>
-                            {#each scopes as scope}
-                                <li>{scope}</li>
-                            {/each}
-                        </ul>
-                    </div>
-
-                    <div class="inline">
-                        <Button
-                                on:click={() => onSubmit('accept')}
-                                bind:isLoading
-                                level={1}
-                                width={btnWidthInline}
-                        >
-                            {t.accept}
-                        </Button>
-                        <Button
-                                on:click={() => onSubmit('decline')}
-                                bind:isLoading
-                                level={3}
-                                width={btnWidthInline}
-                        >
-                            {t.decline}
-                        </Button>
-                    </div>
-                {/if}
-
-                <div class="err">{err}</div>
-            </div>
-        {/if}
-
-        <LangSelector absolute/>
-    </WithI18n>
-</BrowserCheck>
+            <LangSelector absolute/>
+        </WithI18n>
+    </ContentCenter>
+</Main>
 
 <style>
     .container {

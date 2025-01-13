@@ -389,10 +389,10 @@
     </div>
 
     <div class="btns">
-        <Button on:click={onSubmit} bind:isLoading level={1} width="4rem">
+        <Button on:click={onSubmit} bind:isLoading level={1}>
             SAVE
         </Button>
-        <Button on:click={onReset} bind:isLoading level={3} width="4rem">
+        <Button on:click={onReset} bind:isLoading level={3}>
             RESET
         </Button>
 

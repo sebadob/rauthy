@@ -159,12 +159,18 @@
 {/if}
 
 <style>
+    ul {
+        margin-left: 1rem;
+    }
+
     .li {
+        margin-left: 1.5rem;
         width: 100%;
     }
 
     .policyContainer {
-        margin-left: -10px;
+        margin-left: -.5rem;
+        margin-bottom: 1rem;
     }
 
     .policyErr {

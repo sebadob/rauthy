@@ -1,7 +1,7 @@
 <script>
     import {run} from 'svelte/legacy';
 
-    import {onMount} from "svelte";
+    import {onMount, untrack} from "svelte";
     import {postEvents} from "../../../utils/dataFetchingAdmin.js";
     import {formatDateToDateInput, formatUtcTsFromDateInput} from "../../../utils/helpers.js";
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
@@ -10,6 +10,7 @@
     import OptionSelect from "$lib/OptionSelect.svelte";
     import Event from "./Event.svelte";
     import Switch from "$lib/Switch.svelte";
+    import {sleepAwait} from "$lib/utils/helpers.js";
 
     let err = '';
     let events = $state([]);
@@ -21,7 +22,6 @@
     let level = $state('Info');
     let filter = $state(false);
     let typ = $state(EVENT_TYPES[0]);
-
 
     let searchOptions = [
         {
@@ -39,7 +39,7 @@
         {label: 'Type', callback: (a, b) => a.typ.localeCompare(b.typ)},
     ];
 
-    onMount(() => {
+    $effect(() => {
         fetchData();
     });
 
@@ -67,12 +67,6 @@
     function onSave() {
         fetchData();
     }
-
-    run(() => {
-        if (from || until || level || filter || typ) {
-            fetchData();
-        }
-    });
 </script>
 
 <div class="content">

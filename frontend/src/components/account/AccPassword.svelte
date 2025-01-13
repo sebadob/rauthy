@@ -29,7 +29,7 @@
     } = $props();
     let inputWidth = $derived(viewModePhone ? 'calc(100vw - 1.5rem)' : '300px');
 
-    const btnWidth = "12rem";
+    const btnWidth = "13rem";
 
     let accType = user.account_type;
     let passkeys = $state([]);

@@ -1,5 +1,24 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### I18n - Korean
+
+Korean has been added to the translations for all user-facing UI parts.
+[#670](https://github.com/sebadob/rauthy/pull/670)
+
+### Bugfix
+
+- When using the `MIGRATE_DB_FROM` in combination with a Sqlite DB as base that has been created with
+  Rauthy < v.0.20.0, the migration might fail for you in v0.27.0 because of an old value in the `config`
+  table that might not have been cleaned up properly in some cases.
+  [#669](https://github.com/sebadob/rauthy/pull/685)
+- Fixed a regression from v0.27.0 which made it impossible to use `zh-Hans` as a users language. The deserialization
+  of the database value would fail when using Hiqlite.
+  [#693](https://github.com/sebadob/rauthy/pull/693)
+
 ## v0.27.3
 
 ### Changes

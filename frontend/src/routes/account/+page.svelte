@@ -6,6 +6,8 @@
     import {redirectToLogin} from "../../utils/helpers.js";
     import BrowserCheck from "../../components/BrowserCheck.svelte";
     import WithI18n from "$lib/WithI18n.svelte";
+    import Main from "$lib5/Main.svelte";
+    import ContentCenter from "$lib5/ContentCenter.svelte";
 
     let t = $state();
     let sessionInfo = $state();
@@ -48,12 +50,14 @@
     <title>{t?.account || 'Account'} {user?.email}</title>
 </svelte:head>
 
-<BrowserCheck>
-    <WithI18n bind:t content="account">
-        {#if !isReady}
-            <Loading/>
-        {:else}
-            <AccMain {t} {sessionInfo} bind:user bind:webIdData/>
-        {/if}
-    </WithI18n>
-</BrowserCheck>
+<Main>
+    <ContentCenter>
+        <WithI18n bind:t content="account">
+            {#if !isReady}
+                <Loading/>
+            {:else}
+                <AccMain {t} {sessionInfo} bind:user bind:webIdData/>
+            {/if}
+        </WithI18n>
+    </ContentCenter>
+</Main>

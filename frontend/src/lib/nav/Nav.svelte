@@ -75,6 +75,7 @@
 
 <nav
         class="nav"
+        style:min-width="{$width}px"
         style:width="{$width}px"
         style:padding={isExpanded ? '20px 10px' : '10px 3px'}
 >

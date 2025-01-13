@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import {onMount} from "svelte";
     import {getKey} from "$lib/utils/helpers.js";
@@ -10,6 +10,8 @@
     import {extractFormErrors} from "../../utils/helpers.js";
     import CheckIcon from "$lib/CheckIcon.svelte";
     import {getFedCMStatus} from "../../utils/dataFetching.js";
+    import Main from "$lib5/Main.svelte";
+    import ContentCenter from "$lib5/ContentCenter.svelte";
 
     let configUrl = $state('');
     let isSupported = $state(false);
@@ -102,51 +104,57 @@
     }
 </script>
 
-<h1>FedCM Testing</h1>
-<div class="row">
-    <div><b>FedCM supported:</b></div>
-    <div class="check">
-        <CheckIcon check={isSupported}/>
-    </div>
-</div>
-{#if !isSupported}
-    <br>-> enable idp registration:<br>
-    <code>chrome://flags/#fedcm-idp-registration</code>
-{/if}
+<Main>
+    <ContentCenter>
+        <div class="flex-col">
+            <h1>FedCM Testing</h1>
+            <div class="row">
+                <div><b>FedCM supported:</b></div>
+                <div class="check">
+                    <CheckIcon check={isSupported}/>
+                </div>
+            </div>
+            {#if !isSupported}
+                <br>-> enable idp registration:<br>
+                <code>chrome://flags/#fedcm-idp-registration</code>
+            {/if}
 
-{#if isSupported}
-    <p>
-        <Button on:click={register} level={3}>Register IdP</Button>
-    </p>
+            {#if isSupported}
+                <p>
+                    <Button on:click={register} level={3}>Register IdP</Button>
+                </p>
 
-    <p>
-        <Input
-                bind:value={formValues.clientId}
-                bind:error={formErrors.clientId}
-                autocomplete="off"
-                placeholder="Client Id"
-                on:input={validateForm}
-        >
-            CLIENT ID
-        </Input>
-        <Input
-                bind:value={formValues.configUrl}
-                bind:error={formErrors.configUrl}
-                autocomplete="off"
-                placeholder="Config URL"
-                on:input={validateForm}
-        >
-            CONFIG URL
-        </Input>
-        <Button on:click={login}>Login</Button>
-    </p>
-    <div class="row">
-        <b>Logged In:</b>
-        <div class="check">
-            <CheckIcon check={isLoggedIn}/>
+                <p>
+                    <Input
+                            bind:value={formValues.clientId}
+                            bind:error={formErrors.clientId}
+                            autocomplete="off"
+                            placeholder="Client Id"
+                            on:input={validateForm}
+                    >
+                        CLIENT ID
+                    </Input>
+                    <Input
+                            bind:value={formValues.configUrl}
+                            bind:error={formErrors.configUrl}
+                            autocomplete="off"
+                            placeholder="Config URL"
+                            on:input={validateForm}
+                    >
+                        CONFIG URL
+                    </Input>
+                    <Button on:click={login}>Login</Button>
+                </p>
+                <div class="row">
+                    <b>Logged In:</b>
+                    <div class="check">
+                        <CheckIcon check={isLoggedIn}/>
+                    </div>
+                </div>
+            {/if}
         </div>
-    </div>
-{/if}
+    </ContentCenter>
+</Main>
 
 {#if credentials}
     <div class="row">
