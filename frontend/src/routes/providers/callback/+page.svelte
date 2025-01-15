@@ -8,7 +8,6 @@
     import {onMount} from "svelte";
     import WebauthnRequest from "../../../components/webauthn/WebauthnRequest.svelte";
     import BrowserCheck from "../../../components/BrowserCheck.svelte";
-    import WithI18n from "$lib/WithI18n.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import Button from "$lib/Button.svelte";
     import {useI18n} from "$state/i18n.svelte";

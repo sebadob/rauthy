@@ -323,7 +323,6 @@
 </script>
 
 <svelte:head>
-    <!-- the :head component cannot be wrapped inside the <WithI18n> unfortunately -->
     {#if t}
         {#if requestType.startsWith('new_user')}
             <title>{t.passwordReset.newAccount}</title>

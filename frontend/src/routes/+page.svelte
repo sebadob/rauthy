@@ -38,7 +38,6 @@
     <title>Rauthy</title>
 </svelte:head>
 
-<!--<WithI18n bind:t content="index">-->
 <Main>
     <ContentCenter>
         <div class="btn">
@@ -55,7 +54,6 @@
         <AppVersion/>
     </div>
 </Main>
-<!--</WithI18n>-->
 
 <style>
     .btn {
