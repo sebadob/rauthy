@@ -2,7 +2,7 @@
     import {onMount, type Snippet} from 'svelte'
     import {initIsDev} from "$state/is_dev.svelte.ts";
     import {initLang} from "$state/language.svelte.ts";
-    import {initI18n} from "$state/i18n.svelte.ts";
+    import {initI18n, useI18n} from "$state/i18n.svelte.ts";
 
     import "../css/global.css";
 
@@ -16,6 +16,8 @@
     initLang();
     initI18n();
 
+    // We expect true to not break SSR.
+    // If cookies should be disabled, the warning will show up fast enough.
     let cookiesEnabled = $state(true);
 
     onMount(() => {

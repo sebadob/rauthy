@@ -1,4 +1,4 @@
-import {getCsrfToken} from "./helpers.js";
+import {getCsrfToken} from "./helpers";
 
 const HEADERS = {
     json: {

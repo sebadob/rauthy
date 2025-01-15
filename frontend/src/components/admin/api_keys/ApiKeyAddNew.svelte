@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import Button from "$lib/Button.svelte";
     import Input from "$lib/inputs/Input.svelte";
@@ -8,12 +8,15 @@
     import {postApiKey} from "../../../utils/dataFetchingAdmin.js";
     import Switch from "$lib/Switch.svelte";
     import {slide} from "svelte/transition";
-    import {extractFormErrors, formatUtcTsFromDateInput} from "../../../utils/helpers.js";
+    import {extractFormErrors, formatUtcTsFromDateInput} from "../../../utils/helpers";
     import ApiKeyAccessMatrix from "./ApiKeyAccessMatrix.svelte";
 
     const minDate = new Date().toISOString().split('.')[0];
 
-    let { apiKeys = [], onSave = () => {} } = $props();
+    let {
+        apiKeys = [], onSave = () => {
+        }
+    } = $props();
 
     let err = $state('');
     let doesExpire = $state(false);
@@ -127,7 +130,7 @@
         </div>
     {/if}
 
-    <ApiKeyAccessMatrix bind:accessMatrix bind:finalize={finalizeMatrix} />
+    <ApiKeyAccessMatrix bind:accessMatrix bind:finalize={finalizeMatrix}/>
 
     <div class="saveBtn">
         <Button on:click={onSubmit} level={1}>SAVE</Button>

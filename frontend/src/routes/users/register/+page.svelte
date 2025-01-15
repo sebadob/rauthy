@@ -1,7 +1,7 @@
 <script>
     import {run} from 'svelte/legacy';
     import * as yup from "yup";
-    import {extractFormErrors, getQueryParams} from "../../../utils/helpers.js";
+    import {extractFormErrors, getQueryParams} from "../../../utils/helpers";
     import Button from "$lib/Button.svelte";
     import {REGEX_NAME, REGEX_NAME_NULLABLE} from "../../../utils/constants.js";
     import {registerUser} from "../../../utils/dataFetching.js";

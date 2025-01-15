@@ -1,6 +1,6 @@
 <script>
     import {onMount} from "svelte";
-    import {getQueryParams, purgeStorage, saveCsrfToken} from "../../../utils/helpers.js";
+    import {getQueryParams, purgeStorage, saveCsrfToken} from "../../../utils/helpers";
     import {logout} from "../../../utils/dataFetching.js";
     import Button from "$lib/Button.svelte";
     import WithI18n from "$lib/WithI18n.svelte";

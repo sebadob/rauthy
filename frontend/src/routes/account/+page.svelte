@@ -3,8 +3,7 @@
     import {getSessionInfo, getUser, getUserWebIdData} from "../../utils/dataFetching.js";
     import Loading from "../../components/Loading.svelte";
     import AccMain from "../../components/account/AccMain.svelte";
-    import {redirectToLogin} from "../../utils/helpers.js";
-    import BrowserCheck from "../../components/BrowserCheck.svelte";
+    import {redirectToLogin} from "../../utils/helpers";
     import WithI18n from "$lib/WithI18n.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";

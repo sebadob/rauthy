@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import {onMount} from "svelte";
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
@@ -10,7 +10,7 @@
     import Input from "$lib/inputs/Input.svelte";
     import {REGEX_IP_V4} from "../../../utils/constants.js";
     import * as yup from "yup";
-    import {extractFormErrors, formatDateFromTs, formatUtcTsFromDateInput} from "../../../utils/helpers.js";
+    import {extractFormErrors, formatDateFromTs, formatUtcTsFromDateInput} from "../../../utils/helpers";
     import IconStop from "$lib/icons/IconStop.svelte";
     import Tooltip from "$lib/Tooltip.svelte";
 

@@ -8,7 +8,7 @@
         extractFormErrors,
         generatePassword,
         getQueryParams
-    } from "../../../../../utils/helpers.js";
+    } from "../../../../../utils/helpers";
     import {
         resetPassword,
         webauthnAuthStart,

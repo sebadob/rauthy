@@ -8,7 +8,7 @@
         getUsersSsp
     } from "../../../utils/dataFetchingAdmin.js";
     import CheckIcon from "$lib/CheckIcon.svelte";
-    import {formatDateFromTs, redirectToLogin} from "../../../utils/helpers.js";
+    import {formatDateFromTs, redirectToLogin} from "../../../utils/helpers";
     import Loading from "$lib/Loading.svelte";
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
     import Button from "$lib/Button.svelte";

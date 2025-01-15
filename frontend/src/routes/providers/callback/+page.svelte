@@ -3,7 +3,7 @@
         getQueryParams,
         getProviderToken,
         getVerifierUpstreamFromStorage,
-    } from "../../../utils/helpers.js";
+    } from "../../../utils/helpers";
     import {postProviderCallback} from "../../../utils/dataFetching.js";
     import {onMount} from "svelte";
     import WebauthnRequest from "../../../components/webauthn/WebauthnRequest.svelte";
@@ -11,7 +11,7 @@
     import WithI18n from "$lib/WithI18n.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import Button from "$lib/Button.svelte";
-    import {sleepAwait} from "$lib/utils/helpers.js";
+    import {sleepAwait} from "$lib/utils/helpers";
 
     // will contain the same translations as /oidc/authorize
     let t = $state({});

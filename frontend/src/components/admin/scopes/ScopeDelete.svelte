@@ -1,9 +1,9 @@
 <script>
     import Button from "$lib/Button.svelte";
     import {deleteScope} from "../../../utils/dataFetchingAdmin";
-    import {isDefaultScope} from "../../../utils/helpers.js";
+    import {isDefaultScope} from "../../../utils/helpers";
 
-    let { scope = {}, onSave } = $props();
+    let {scope = {}, onSave} = $props();
 
     let isLoading = $state(false);
     let err = $state('');

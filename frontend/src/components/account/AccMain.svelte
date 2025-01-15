@@ -1,7 +1,7 @@
 <script>
     import { run } from 'svelte/legacy';
 
-    import {getAuthProvidersTemplate, redirectToLogout} from "../../utils/helpers.js";
+    import {getAuthProvidersTemplate, redirectToLogout} from "../../utils/helpers";
     import AccInfo from "./AccInfo.svelte";
     import AccNav from "./AccNav.svelte";
     import AccEdit from "./AccEdit.svelte";

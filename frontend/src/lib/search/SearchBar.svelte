@@ -4,7 +4,7 @@
     import IconMagnify from "$lib/icons/IconMagnify.svelte";
     import {onMount} from "svelte";
     import Tooltip from "../Tooltip.svelte";
-    import {getKey} from "../utils/helpers.js";
+    import {getKey} from "../utils/helpers";
     import IconBackspace from "$lib/icons/IconBackspace.svelte";
     import {getSearch} from "../../utils/dataFetchingAdmin.js";
     import {SERVER_SIDE_SEARCH_THRES} from "../../utils/constants.js";

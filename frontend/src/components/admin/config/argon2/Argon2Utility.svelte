@@ -1,9 +1,9 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import * as yup from "yup";
     import Button from "$lib/Button.svelte";
-    import {extractFormErrors} from "../../../../utils/helpers.js";
+    import {extractFormErrors} from "../../../../utils/helpers";
     import {postPasswordHashTimes} from "../../../../utils/dataFetchingAdmin.js";
     import Argon2Results from "./Argon2Results.svelte";
     import Input from "$lib/inputs/Input.svelte";

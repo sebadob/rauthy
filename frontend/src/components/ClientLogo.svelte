@@ -1,7 +1,7 @@
 <script>
-    import {getKey} from "$lib/utils/helpers.js";
+    import {getKey} from "$lib/utils/helpers";
 
-    let { clientId } = $props();
+    let {clientId} = $props();
 </script>
 
 <!--

@@ -1,5 +1,5 @@
 <script>
-    import {eventColor} from "../../../utils/helpers.js";
+    import {eventColor} from "../../../utils/helpers";
 
     let {wide = $bindable()} = $props();
 </script>

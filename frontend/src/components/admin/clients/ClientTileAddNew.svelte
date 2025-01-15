@@ -4,7 +4,7 @@
     import ExpandContainer from "$lib/ExpandContainer.svelte";
     import * as yup from "yup";
     import {REGEX_CLIENT_ID, REGEX_CLIENT_NAME, REGEX_URI} from "../../../utils/constants.js";
-    import {extractFormErrors} from "../../../utils/helpers.js";
+    import {extractFormErrors} from "../../../utils/helpers";
     import ExpandableInput from "$lib/expandableInputs/ExpandableInputs.svelte";
     import Switch from "$lib/Switch.svelte";
     import {onMount} from "svelte";

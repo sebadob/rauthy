@@ -3,7 +3,7 @@
     import * as yup from "yup";
     import {LANGUAGES, REGEX_NAME} from "../../../utils/constants.js";
     import {globalGroupsNames, globalRolesNames} from "../../../stores/admin.js";
-    import {extractFormErrors, formatUtcTsFromDateInput} from "../../../utils/helpers.js";
+    import {extractFormErrors, formatUtcTsFromDateInput} from "../../../utils/helpers";
     import Button from "$lib/Button.svelte";
     import {postUser} from "../../../utils/dataFetchingAdmin.js";
     import ItemTiles from "$lib/itemTiles/ItemTiles.svelte";
@@ -11,7 +11,7 @@
     import OptionSelect from "$lib/OptionSelect.svelte";
     import Switch from "$lib/Switch.svelte";
 
-    let { idx = $bindable(-1), onSave } = $props();
+    let {idx = $bindable(-1), onSave} = $props();
 
     let err = $state('');
     let isLoading = false;
@@ -100,13 +100,13 @@
 
 <ExpandContainer bind:idx bind:show={expandContainer}>
     {#snippet header()}
-        <div class="header font-label" >
+        <div class="header font-label">
             ADD NEW USER
         </div>
     {/snippet}
 
     {#snippet body()}
-        <div class="container" >
+        <div class="container">
             <Input
                     type="email"
                     bind:value={formValues.email}
@@ -141,7 +141,7 @@
                     LANGUAGE
                 </div>
                 <div style="margin-top: .4rem">
-                    <OptionSelect bind:value={language} options={LANGUAGES} />
+                    <OptionSelect bind:value={language} options={LANGUAGES}/>
                 </div>
             </div>
 

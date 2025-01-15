@@ -3,7 +3,7 @@
 
     import ExpandContainer from "$lib/ExpandContainer.svelte";
     import * as yup from "yup";
-    import {extractFormErrors} from "../../../utils/helpers.js";
+    import {extractFormErrors} from "../../../utils/helpers";
     import {onMount} from "svelte";
     import Button from "$lib/Button.svelte";
     import {postProviderLookup, postProvider} from "../../../utils/dataFetchingAdmin.js";

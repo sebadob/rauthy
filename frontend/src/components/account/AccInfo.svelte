@@ -1,6 +1,6 @@
 <script>
     import CheckIcon from "$lib/CheckIcon.svelte";
-    import {buildWebIdUri, formatDateFromTs, saveProviderToken} from "../../utils/helpers.js";
+    import {buildWebIdUri, formatDateFromTs, saveProviderToken} from "../../utils/helpers";
     import {onMount} from "svelte";
     import Button from "$lib/Button.svelte";
     import {deleteUserProviderLink, postUserProviderLink} from "../../utils/dataFetching.js";
@@ -8,7 +8,7 @@
     import getPkce from "oauth-pkce";
     import {PKCE_VERIFIER_UPSTREAM} from "../../utils/constants.js";
 
-    
+
     /**
      * @typedef {Object} Props
      * @property {any} t

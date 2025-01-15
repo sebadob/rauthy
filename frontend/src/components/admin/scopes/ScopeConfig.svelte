@@ -2,7 +2,7 @@
     import {run} from 'svelte/legacy';
 
     import * as yup from "yup";
-    import {extractFormErrors, isDefaultScope} from "../../../utils/helpers.js";
+    import {extractFormErrors, isDefaultScope} from "../../../utils/helpers";
     import Button from "$lib/Button.svelte";
     import {REGEX_ROLES} from "../../../utils/constants.js";
     import {onMount} from "svelte";

@@ -2,12 +2,12 @@
     import ExpandContainer from "$lib/ExpandContainer.svelte";
     import * as yup from "yup";
     import {REGEX_ATTR_DESC, REGEX_ATTR_KEY} from "../../../utils/constants.js";
-    import {extractFormErrors} from "../../../utils/helpers.js";
+    import {extractFormErrors} from "../../../utils/helpers";
     import Button from "$lib/Button.svelte";
     import {postAttr} from "../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";
 
-    let { idx = $bindable(-1), onSave } = $props();
+    let {idx = $bindable(-1), onSave} = $props();
 
     let err = $state('');
     let isLoading = false;
@@ -63,13 +63,13 @@
 
 <ExpandContainer bind:idx bind:show={expandContainer}>
     {#snippet header()}
-        <div class="header font-label" >
+        <div class="header font-label">
             ADD NEW USER ATTRIBUTE
         </div>
     {/snippet}
 
     {#snippet body()}
-        <div class="container" >
+        <div class="container">
             <div class="desc">
                 You can add a new custom user attribute.<br>
                 These attributes can be set for every user and mapped to an existing scope.<br>

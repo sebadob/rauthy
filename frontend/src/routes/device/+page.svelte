@@ -3,7 +3,7 @@
     import {onMount} from "svelte";
     import {postDeviceVerify, getSessionInfo} from "../../utils/dataFetching.js";
     import Loading from "../../components/Loading.svelte";
-    import {extractFormErrors, getQueryParams, redirectToLogin} from "../../utils/helpers.js";
+    import {extractFormErrors, getQueryParams, redirectToLogin} from "../../utils/helpers";
     import WithI18n from "$lib/WithI18n.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import Input from "$lib/inputs/Input.svelte";

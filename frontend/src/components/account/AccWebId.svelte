@@ -1,13 +1,13 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import Button from "$lib/Button.svelte";
     import {fade, slide} from 'svelte/transition';
     import {putUserWebIdData} from "../../utils/dataFetching.js";
     import Switch from "$lib/Switch.svelte";
-    import {buildWebIdUri} from "../../utils/helpers.js";
+    import {buildWebIdUri} from "../../utils/helpers";
 
-    let { t, webIdData = $bindable() } = $props();
+    let {t, webIdData = $bindable()} = $props();
 
     const btnWidth = "12rem";
 
@@ -69,13 +69,13 @@
         {#if expertMode}
             <div transition:slide>
                 <p>{t.webIdDescData}</p>
-<!--                <AccWebIdEntries-->
-<!--                        bind:t-->
-<!--                        bind:webIdData-->
-<!--                        bind:viewModePhone-->
-<!--                        bind:getData-->
-<!--                        bind:validateData-->
-<!--                />-->
+                <!--                <AccWebIdEntries-->
+                <!--                        bind:t-->
+                <!--                        bind:webIdData-->
+                <!--                        bind:viewModePhone-->
+                <!--                        bind:getData-->
+                <!--                        bind:validateData-->
+                <!--                />-->
                 <textarea
                         class="font-mono text"
                         rows={15}

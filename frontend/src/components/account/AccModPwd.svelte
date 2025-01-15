@@ -3,7 +3,7 @@
     import * as yup from "yup";
     import {onMount} from "svelte";
     import {getPasswordPolicy} from "../../utils/dataFetching.js";
-    import {extractFormErrors, generatePassword} from "../../utils/helpers.js";
+    import {extractFormErrors, generatePassword} from "../../utils/helpers";
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import Button from "$lib/Button.svelte";
 

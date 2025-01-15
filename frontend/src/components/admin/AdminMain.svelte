@@ -1,7 +1,7 @@
 <script>
     import {run} from 'svelte/legacy';
 
-    import {redirectToLogout} from "../../utils/helpers.js";
+    import {redirectToLogout} from "../../utils/helpers";
     import Nav from "$lib/nav/Nav.svelte";
     import NavEntry from "$lib/nav/NavEntry.svelte";
     import Users from "./users/Users.svelte";

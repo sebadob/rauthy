@@ -5,7 +5,7 @@
     import {slide} from 'svelte/transition';
     import ApiKeyConfig from "./ApiKeyConfig.svelte";
     import ApiKeyDelete from "./ApiKeyDelete.svelte";
-    import {formatDateFromTs} from "../../../utils/helpers.js";
+    import {formatDateFromTs} from "../../../utils/helpers";
     import ApiKeySecret from "./ApiKeySecret.svelte";
 
     let {

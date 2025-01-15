@@ -15,7 +15,7 @@
         getQueryParams,
         saveCsrfToken,
         saveProviderToken,
-    } from "../../../utils/helpers.js";
+    } from "../../../utils/helpers";
     import Button from "$lib/Button.svelte";
     import WebauthnRequest from "../../../components/webauthn/WebauthnRequest.svelte";
     import {scale} from 'svelte/transition';

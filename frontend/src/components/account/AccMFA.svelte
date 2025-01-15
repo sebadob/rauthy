@@ -6,7 +6,7 @@
         base64UrlSafeToArrBuf,
         extractFormErrors,
         formatDateFromTs
-    } from "../../utils/helpers.js";
+    } from "../../utils/helpers";
     import Button from "$lib/Button.svelte";
     import {
         getUserPasskeys,

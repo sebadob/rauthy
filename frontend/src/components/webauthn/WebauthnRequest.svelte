@@ -3,7 +3,7 @@
     import {tweened} from "svelte/motion";
     import Loading from "$lib/Loading.svelte";
     import {webauthnAuth} from "../../utils/webauthn.js";
-    import {promiseTimeout} from "../../utils/helpers.js";
+    import {promiseTimeout} from "../../utils/helpers";
 
     /**
      * @typedef {Object} Props
@@ -17,17 +17,17 @@
     /** @type {Props} */
     let {
         t = {
-        invalidKeyUsed: 'Invalid Key',
-        mfaAck: 'Acknowledged',
-        provideMfa: 'Please login with your MFA device',
-        requestExpires: 'Request expires',
-    },
+            invalidKeyUsed: 'Invalid Key',
+            mfaAck: 'Acknowledged',
+            provideMfa: 'Please login with your MFA device',
+            requestExpires: 'Request expires',
+        },
         data = $bindable(),
         purpose = 'Login',
         onError = (error) => {
-    },
+        },
         onSuccess = (resBody) => {
-    }
+        }
     } = $props();
     let err = $state(false);
     let msg = $state('');
@@ -36,7 +36,7 @@
     let progress = tweened(data.exp, {
         duration: data.exp * 1000,
     })
-    
+
     // close this component automatically, when the request has expired
     onMount(() => {
         let timer = setTimeout(() => {

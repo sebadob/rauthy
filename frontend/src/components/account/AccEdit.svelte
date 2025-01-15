@@ -1,6 +1,6 @@
 <script>
     import * as yup from "yup";
-    import {extractFormErrors} from "../../utils/helpers.js";
+    import {extractFormErrors} from "../../utils/helpers";
     import {
         REGEX_BIRTHDATE,
         REGEX_CITY,

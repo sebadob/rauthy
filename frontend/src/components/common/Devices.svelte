@@ -4,7 +4,7 @@
     import ExpandContainer from "$lib/ExpandContainer.svelte";
     import Input from "$lib/inputs/Input.svelte";
     import IconCheck from "$lib/icons/IconCheck.svelte";
-    import {formatDateFromTs} from "../../utils/helpers.js";
+    import {formatDateFromTs} from "../../utils/helpers";
     import Tooltip from "$lib/Tooltip.svelte";
     import IconStop from "$lib/icons/IconStop.svelte";
     import {REGEX_CLIENT_NAME} from "../../utils/constants.js";
@@ -16,7 +16,7 @@
      */
 
     /** @type {Props} */
-    let { t, userId = '' } = $props();
+    let {t, userId = ''} = $props();
 
     let devices = $state([]);
 
@@ -103,15 +103,15 @@
     {#each devices as device (device.id)}
         <ExpandContainer>
             {#snippet header()}
-                        <div class="device-header" >
+                <div class="device-header">
                     <div class="device-head font-mono">
                         {device.name}
                     </div>
                 </div>
-                    {/snippet}
+            {/snippet}
 
             {#snippet body()}
-                        <div class="device" >
+                <div class="device">
                     <div class="unit">
                         <div class="label font-label">
                             {t?.deviceId.toUpperCase() || 'ID'}
@@ -197,7 +197,7 @@
                         </div>
                     </div>
                 </div>
-                    {/snippet}
+            {/snippet}
         </ExpandContainer>
     {/each}
 </div>

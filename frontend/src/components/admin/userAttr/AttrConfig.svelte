@@ -2,7 +2,7 @@
     import {run} from 'svelte/legacy';
 
     import * as yup from "yup";
-    import {extractFormErrors} from "../../../utils/helpers.js";
+    import {extractFormErrors} from "../../../utils/helpers";
     import Button from "$lib/Button.svelte";
     import {REGEX_ATTR_DESC, REGEX_ATTR_KEY} from "../../../utils/constants.js";
     import {onMount} from "svelte";

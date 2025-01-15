@@ -2,7 +2,7 @@
     import {onMount} from "svelte";
     import {getUserPasskeys, webauthnDelete} from "../../../utils/dataFetching.js";
     import Button from "$lib/Button.svelte";
-    import {formatDateFromTs} from "../../../utils/helpers.js";
+    import {formatDateFromTs} from "../../../utils/helpers";
 
     let {user = $bindable({}), onSave = $bindable()} = $props();
 

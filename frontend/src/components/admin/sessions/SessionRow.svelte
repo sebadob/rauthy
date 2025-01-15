@@ -1,5 +1,5 @@
 <script>
-    import {formatDateFromTs} from "../../../utils/helpers.js";
+    import {formatDateFromTs} from "../../../utils/helpers";
     import CheckIcon from "$lib/CheckIcon.svelte";
     import ExpandContainer from "$lib/ExpandContainer.svelte";
     import Tooltip from "$lib/Tooltip.svelte";
