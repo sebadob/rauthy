@@ -1,4 +1,3 @@
-use crate::i18n::ui::SsrJson;
 use crate::language::Language;
 use serde::Serialize;
 
@@ -11,18 +10,14 @@ pub struct I18nEmailResetInfo<'a> {
     pub button_text: &'a str,
 }
 
-impl SsrJson for I18nEmailResetInfo<'_> {
-    fn build(lang: &Language) -> Self {
+impl I18nEmailResetInfo<'_> {
+    pub fn build(lang: &Language) -> Self {
         match lang {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
             Language::ZhHans => Self::build_zh_hans(),
             Language::Ko => Self::build_ko(),
         }
-    }
-
-    fn as_json(&self) -> String {
-        serde_json::to_string(self).unwrap()
     }
 }
 

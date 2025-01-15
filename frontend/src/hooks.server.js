@@ -17,7 +17,7 @@ export async function handle({event, resolve}) {
 
     if (path === '/auth/v1/theme/%7B%7Bclient_id%7D%7D') {
         return new Response(themeDefault);
-    } else if (path === '/auth/v1/i18n/%7B%7Blang%7D%7D') {
+    } else if (path === '/auth/v1/i18n_email/%7B%7Blang%7D%7D') {
         // TODO insert EN template here if the whole setup works
         // This, for now, only fixes UI compilation.
         return new Response('{}');

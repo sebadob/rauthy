@@ -1,20 +1,18 @@
-use crate::i18n::ui::SsrJson;
 use crate::language::Language;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
-pub struct I18nEmailChangeInfoOld<'a> {
+pub struct I18nEmailChangeInfoNew<'a> {
     pub subject: &'a str,
     pub header: &'a str,
-    pub change_info: &'a str,
     pub click_link: &'a str,
     pub validity: &'a str,
     pub expires: &'a str,
     pub button_text: &'a str,
 }
 
-impl SsrJson for I18nEmailChangeInfoOld<'_> {
-    fn build(lang: &Language) -> Self {
+impl I18nEmailChangeInfoNew<'_> {
+    pub fn build(lang: &Language) -> Self {
         match lang {
             Language::En => Self::build_en(),
             Language::De => Self::build_de(),
@@ -22,34 +20,29 @@ impl SsrJson for I18nEmailChangeInfoOld<'_> {
             Language::Ko => Self::build_ko(),
         }
     }
-
-    fn as_json(&self) -> String {
-        serde_json::to_string(self).unwrap()
-    }
 }
 
-impl I18nEmailChangeInfoOld<'_> {
+impl I18nEmailChangeInfoNew<'_> {
     fn build_en() -> Self {
         Self {
             subject: "E-Mail Change Request",
             header: "E-Mail change request for",
-            change_info: "A change of your E-Mail address has been requested. New address:",
-            click_link: "If you did not request this change, please click the Link below",
+            click_link: "Click the link below to confirm your E-Mail address.",
             validity: "This link is only valid for a short period of time for security reasons.",
             expires: "Link expires:",
-            button_text: "Block Address Change",
+            button_text: "Confirm E-Mail",
         }
     }
 
     fn build_de() -> Self {
         Self {
-            subject: "E-Mail Wechsel Bestätigung",
+            subject: "E-Mail Wechsel Anfrage",
             header: "E-Mail Wechsel angefordert für",
-            change_info: "Der Wechsel Ihrer E-Mail Adresse wurde angefordert. Neue Adresse:",
-            click_link: "Sollten Sie diesen Wechsel nicht angefordert haben, klicken Sie bitte unten stehenden Link",
+            click_link:
+                "Klicken Sie auf den unten stehenden Link die E-Mail Adresse zu bestätigen.",
             validity: "Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig.",
             expires: "Link gültig bis:",
-            button_text: "Adresswechsel Blockieren",
+            button_text: "E-Mail Bestätigen",
         }
     }
 
@@ -57,11 +50,10 @@ impl I18nEmailChangeInfoOld<'_> {
         Self {
             subject: "电子邮件更改请求",
             header: "电子邮件更改请求：",
-            change_info: "有人请求更改您的账户的电子邮件地址。新邮箱为：",
-            click_link: "如果您没有请求此更改，请点击下方的链接阻止此更改。",
+            click_link: "点击下方链接以确认您的电子邮件地址。",
             validity: "出于安全考虑，此链接仅在短时间内有效。",
             expires: "链接过期时间：",
-            button_text: "阻止地址更改",
+            button_text: "确认电子邮件地址",
         }
     }
 
@@ -69,11 +61,10 @@ impl I18nEmailChangeInfoOld<'_> {
         Self {
             subject: "이메일 변경 요청",
             header: "이메일 변경 요청:",
-            change_info: "이메일 주소 변경 요청이 있습니다. 새로운 주소:",
-            click_link: "만약 이 변경을 요청한 적 없으면, 아래의 링크를 클릭해 주세요.",
+            click_link: "이메일 주소를 승인하려면 아래에 있는 링크를 클릭해 주세요.",
             validity: "이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다.",
             expires: "링크 만료일:",
-            button_text: "주소 변경 차단",
+            button_text: "이메일 승인",
         }
     }
 }

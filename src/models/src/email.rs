@@ -1,12 +1,11 @@
 use crate::app_state::AppState;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::users::User;
-use crate::i18n::email::change_info_new::I18nEmailChangeInfoNew;
-use crate::i18n::email::confirm_change::I18nEmailConfirmChange;
-use crate::i18n::email::password_new::I18nEmailPasswordNew;
-use crate::i18n::email::reset::I18nEmailReset;
-use crate::i18n::email::reset_info::I18nEmailResetInfo;
-use crate::i18n::ui::SsrJson;
+use crate::i18n_email::change_info_new::I18nEmailChangeInfoNew;
+use crate::i18n_email::confirm_change::I18nEmailConfirmChange;
+use crate::i18n_email::password_new::I18nEmailPasswordNew;
+use crate::i18n_email::reset::I18nEmailReset;
+use crate::i18n_email::reset_info::I18nEmailResetInfo;
 use actix_web::web;
 use askama_actix::Template;
 use chrono::DateTime;
@@ -55,7 +54,7 @@ pub struct EMailChangeInfoNewHtml<'a> {
     pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
-    // i18n
+    // i18n_email
     pub header: &'a str,
     pub click_link: &'a str,
     pub validity: &'a str,
@@ -69,7 +68,7 @@ pub struct EMailChangeInfoNewTxt<'a> {
     pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
-    // i18n
+    // i18n_email
     pub header: &'a str,
     pub click_link: &'a str,
     pub validity: &'a str,
@@ -102,7 +101,7 @@ pub struct EMailResetHtml<'a> {
     pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
-    // i18n
+    // i18n_email
     pub header: &'a str,
     pub click_link: &'a str,
     pub text: &'a str,
@@ -118,7 +117,7 @@ pub struct EmailResetTxt<'a> {
     pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
-    // i18n
+    // i18n_email
     pub header: &'a str,
     pub click_link: &'a str,
     pub text: &'a str,
@@ -133,7 +132,7 @@ pub struct EMailResetInfoHtml<'a> {
     pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
-    // i18n
+    // i18n_email
     pub expires_1: &'a str,
     pub expires_2: &'a str,
     pub update: &'a str,
@@ -146,7 +145,7 @@ pub struct EmailResetInfoTxt<'a> {
     pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
-    // i18n
+    // i18n_email
     pub expires_1: &'a str,
     pub expires_2: &'a str,
     pub update: &'a str,

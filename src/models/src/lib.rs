@@ -21,7 +21,7 @@ pub mod database;
 pub mod email;
 pub mod entity;
 pub mod events;
-pub mod i18n;
+pub mod i18n_email;
 pub mod language;
 pub mod migration;
 pub mod templates;
