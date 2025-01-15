@@ -4,7 +4,7 @@
     import Loading from "$lib/Loading.svelte";
     import {webauthnAuth} from "../../utils/webauthn.js";
     import {promiseTimeout} from "../../utils/helpers";
-    import {useI18n} from "$state/i18n.svelte.js";
+    import {useI18n} from "$state/i18n.svelte";
 
     /**
      * @typedef {Object} Props
