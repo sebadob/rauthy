@@ -27,7 +27,6 @@ export function useI18n(): I18n {
 
 export function initI18n() {
     let lang = useLang();
-    console.log(lang);
     switch (lang) {
         case 'de':
             _i18n = I18nDe;

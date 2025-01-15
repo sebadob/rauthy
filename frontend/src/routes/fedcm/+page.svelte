@@ -19,10 +19,6 @@
     let credentials = $state('');
     let credentialType = $state('');
 
-    run(() => {
-        console.log('built config url: ' + configUrl);
-    });
-
     let formValues = $state({
         clientId: 'fedcm',
         configUrl: 'any',
