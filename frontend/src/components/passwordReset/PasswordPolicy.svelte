@@ -1,9 +1,9 @@
 <script>
     import {run} from 'svelte/legacy';
+    import {useI18n} from "$state/i18n.svelte";
 
     /**
      * @typedef {Object} Props
-     * @property {any} [t]
      * @property {any} [policy]
      * @property {string} [password]
      * @property {boolean} [accepted]
@@ -11,22 +11,12 @@
 
     /** @type {Props} */
     let {
-        t = {
-            passwordPolicy: {
-                passwordPolicy: "Password Policy",
-                lengthMin: "Length min",
-                lengthMax: "Length max",
-                lowercaseMin: "Lowercase letters min",
-                uppercaseMin: "Uppercase letters min",
-                digitsMin: "Digits min",
-                specialMin: "Special characters min",
-                notRecent: "Not one of last recent passwords",
-            }
-        },
         policy = {},
         password,
         accepted = $bindable(false)
     } = $props();
+
+    let t = useI18n();
 
     let errPolicy = $state([false, false, false, false, false, false]);
 
