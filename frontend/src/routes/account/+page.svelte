@@ -9,7 +9,7 @@
     import {useI18n} from "$state/i18n.svelte";
 
     let t = useI18n();
-    $inspect('t in account', t);
+
     let sessionInfo = $state();
     let user = $state();
     let webIdData = $state();

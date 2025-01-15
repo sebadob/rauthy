@@ -3,9 +3,12 @@
     import {getQueryParams, purgeStorage, saveCsrfToken} from "../../../utils/helpers";
     import {logout} from "../../../utils/dataFetching.js";
     import Button from "$lib/Button.svelte";
-    import WithI18n from "$lib/WithI18n.svelte";
+    import {useI18n} from "$state/i18n.svelte";
+    import Main from "$lib5/Main.svelte";
+    import ContentCenter from "$lib5/ContentCenter.svelte";
+    import LangSelector from "$lib5/LangSelector.svelte";
 
-    let t = $state();
+    let t = useI18n();
     let err = '';
     let postLogoutUri = '';
     let isLoading = $state(false);
@@ -48,7 +51,7 @@
         purgeStorage();
         if (res.ok && res.headers.get('location')) {
             window.location.replace(res.headers.get('location'));
-        }else {
+        } else {
             await handleCancel();
         }
     }
@@ -56,29 +59,32 @@
 </script>
 
 <svelte:head>
-    <title>{t?.logout || 'Logout'}</title>
+    <title>{t?.logout.logout || 'Logout'}</title>
 </svelte:head>
 
-<WithI18n bind:t content="logout">
-    <div class="container">
-        <h1>{t.logout}</h1>
+<Main>
+    <ContentCenter>
+        <div class="container">
+            <h1>{t.logout.logout}</h1>
+            <p>
+                {t.logout.confirmMsg}
+            </p>
 
-        <p>
-            {t.confirmMsg}
-        </p>
+            <div class="btn">
+                <Button on:click={handleLogout} level={2} bind:isLoading>{t.logout.logout}</Button>
+                <Button on:click={handleCancel} level={4}>{t.common.cancel}</Button>
+            </div>
 
-        <div class="btn">
-            <Button on:click={handleLogout} level={2} bind:isLoading>{t.logout.toUpperCase()}</Button>
-            <Button on:click={handleCancel} level={4}>{t.cancel.toUpperCase()}</Button>
+            {#if err}
+                <div class:err>
+                    {err}
+                </div>
+            {/if}
         </div>
 
-        {#if err}
-            <div class:err>
-                {err}
-            </div>
-        {/if}
-    </div>
-</WithI18n>
+        <LangSelector absolute/>
+    </ContentCenter>
+</Main>
 
 <style>
     .btn {
