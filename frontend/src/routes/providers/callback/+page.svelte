@@ -11,10 +11,10 @@
     import WithI18n from "$lib/WithI18n.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import Button from "$lib/Button.svelte";
-    import {sleepAwait} from "$lib/utils/helpers";
+    import {useI18n} from "$state/i18n.svelte";
 
     // will contain the same translations as /oidc/authorize
-    let t = $state({});
+    let t = useI18n();
     let clientMfaForce = $state(false);
     let error = $state('');
     let webauthnData = $state();
@@ -53,7 +53,7 @@
             error = body.message;
         } else if (res.status === 406) {
             // 406 -> client forces MFA while the user has none
-            error = t.clientForceMfa;
+            error = t.authorize.clientForceMfa;
             clientMfaForce = true;
         } else {
             let body = await res.text();
@@ -79,28 +79,25 @@
 </svelte:head>
 
 <BrowserCheck>
-    <WithI18n bind:t content="authorize">
-        {#if webauthnData}
-            <WebauthnRequest
-                    {t}
-                    bind:data={webauthnData}
-                    onSuccess={onWebauthnSuccess}
-                    onError={onWebauthnError}
-            />
-        {:else if clientMfaForce}
-            <div class="btn flex-col">
-                <Button on:click={() => window.location.href = '/auth/v1/account'}>
-                    ACCOUNT LOGIN
-                </Button>
-            </div>
-        {:else if error}
-            <div class="error">
-                {error}
-            </div>
-        {/if}
+    {#if webauthnData}
+        <WebauthnRequest
+                bind:data={webauthnData}
+                onSuccess={onWebauthnSuccess}
+                onError={onWebauthnError}
+        />
+    {:else if clientMfaForce}
+        <div class="btn flex-col">
+            <Button on:click={() => window.location.href = '/auth/v1/account'}>
+                ACCOUNT LOGIN
+            </Button>
+        </div>
+    {:else if error}
+        <div class="error">
+            {error}
+        </div>
+    {/if}
 
-        <LangSelector absolute/>
-    </WithI18n>
+    <LangSelector absolute/>
 </BrowserCheck>
 
 <style>

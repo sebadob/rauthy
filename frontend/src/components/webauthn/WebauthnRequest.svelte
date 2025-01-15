@@ -4,10 +4,10 @@
     import Loading from "$lib/Loading.svelte";
     import {webauthnAuth} from "../../utils/webauthn.js";
     import {promiseTimeout} from "../../utils/helpers";
+    import {useI18n} from "$state/i18n.svelte.js";
 
     /**
      * @typedef {Object} Props
-     * @property {any} [t]
      * @property {any} data
      * @property {string} [purpose]
      * @property {any} [onError]
@@ -16,12 +16,6 @@
 
     /** @type {Props} */
     let {
-        t = {
-            invalidKeyUsed: 'Invalid Key',
-            mfaAck: 'Acknowledged',
-            provideMfa: 'Please login with your MFA device',
-            requestExpires: 'Request expires',
-        },
         data = $bindable(),
         purpose = 'Login',
         onError = (error) => {
@@ -32,6 +26,8 @@
     let err = $state(false);
     let msg = $state('');
     let success = $state(false);
+
+    let t = useI18n();
 
     let progress = tweened(data.exp, {
         duration: data.exp * 1000,
@@ -58,7 +54,7 @@
         let res = {};
         try {
             res = await promiseTimeout(
-                webauthnAuth(data.user_id, p, t.invalidKeyUsed),
+                webauthnAuth(data.user_id, p, t?.authorize.invalidKeyUsed || 'Invalid Key'),
                 // we need to cancel 1 sec before the expiry to not get into a browser exception,
                 // because we would not be able to "go back" again
                 data.exp * 1000 - 1000
@@ -92,13 +88,13 @@
 
             <div class="contentRow">
                 <div class="contentHeader">
-                    {t.provideMfa}
+                    {t.authorize.provideMfa || 'Please login with your MFA device'}
                 </div>
             </div>
 
             <div class="contentRow">
                 <div class="contentHeader">
-                    {t.requestExpires}
+                    {t.authorize.requestExpires || 'Request expires'}
                     :
                 </div>
                 <div>
@@ -109,7 +105,7 @@
             <div class="contentRow">
                 {#if success}
                     <div class="good">
-                        {t.mfaAck}
+                        {t.authorize.mfaAck || 'Acknowledged'}
                     </div>
                 {:else if err}
                     <div class="err">
