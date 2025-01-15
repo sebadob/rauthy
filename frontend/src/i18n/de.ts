@@ -112,6 +112,12 @@ export const I18nDe: I18n = {
         userCode: "Benutzer Code",
         wrongOrExpired: "Ungültiger oder abgelaufener Code"
     },
+    emailChange: {
+        title: "E-Mail Wechsel bestätigt",
+        textChanged: "Ihre E-Mail Adresse wurde erfolgreich geändert von",
+        textLogin: "Sie können sich jetzt mit der neuen Adresse einloggen.",
+        to: "zu",
+    },
     error: {
         error: "404 Not Found",
         errorText: "Die angeforderte Seite konnte nicht gefunden werden.",

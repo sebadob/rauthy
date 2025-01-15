@@ -112,6 +112,12 @@ export const I18nZh: I18n = {
         userCode: "用户代码",
         wrongOrExpired: "代码错误或已过期"
     },
+    emailChange: {
+        title: "电子邮件地址已更新",
+        textChanged: "您的电子邮件地址已从",
+        textLogin: "您现在可以使用您的新地址进行登陆。",
+        to: "更新为",
+    },
     error: {
         error: "404 Not Found",
         errorText: "找不到请求的资源",

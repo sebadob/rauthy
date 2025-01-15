@@ -112,6 +112,12 @@ export const I18nEn: I18n = {
         userCode: "User Code",
         wrongOrExpired: "Wrong or expired code"
     },
+    emailChange: {
+        title: "E-Mail Change confirmed",
+        textChanged: "Your E-Mail address has been changed from",
+        textLogin: "You can now log in using your new address.",
+        to: "to",
+    },
     error: {
         error: "404 Not Found",
         errorText: "The requested data could not be found",

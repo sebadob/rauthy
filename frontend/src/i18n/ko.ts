@@ -112,6 +112,12 @@ export const I18nKo: I18n = {
         userCode: "사용자 코드",
         wrongOrExpired: "잘못되거나 만료된 코드입니다."
     },
+    emailChange: {
+        title: "이메일 변경이 승인되었습니다.",
+        textChanged: "이메일 주소가 다음으로부터 변경되었습니다",
+        textLogin: "이제 새로운 주소로 로그인할 수 있습니다.",
+        to: "에서",
+    },
     error: {
         error: "404 Not Found",
         errorText: "요청 정보를 찾을 수 없습니다.",

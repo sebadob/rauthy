@@ -110,6 +110,12 @@ export interface I18n {
         userCode: string,
         wrongOrExpired: string,
     },
+    emailChange: {
+        title: string,
+        textChanged: string,
+        textLogin: string,
+        to: string,
+    },
     error: {
         error: string,
         details: string,
