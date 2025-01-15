@@ -4,6 +4,8 @@ export const I18nDe: I18n = {
     common: {
         cancel: "Abbrechen",
         email: "E-Mail",
+        errTooShort: "Eingabe zu kurz",
+        errTooLong: "Eingabe zu lang",
         invalidInput: "Ungültige Eingaben",
         never: "Niemals",
         password: "Passwort",
@@ -102,9 +104,6 @@ export const I18nDe: I18n = {
         decline: "Ablehnen",
         desc: "Bitte den {{count}}-stelligen vom Geräte angezeigten Benutzer Code eingeben.",
         descScopes: "Das Gerät fragt Zugang an zu:",
-        errTooShort: "Eingabe zu kurz",
-        errTooLong: "Eingabe zu lang",
-        invalidInput: "Ungültige Eingabe",
         isAccepted: "Die Anfrage wurde akzeptiert",
         isDeclined: "Die Anfrage wurde abgewiesen",
         submit: "Absenden",

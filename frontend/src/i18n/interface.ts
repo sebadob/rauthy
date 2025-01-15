@@ -2,6 +2,8 @@ export interface I18n {
     common: {
         cancel: string,
         email: string,
+        errTooShort: string,
+        errTooLong: string,
         invalidInput: string,
         never: string,
         password: string,
@@ -100,9 +102,6 @@ export interface I18n {
         decline: string,
         desc: string,
         descScopes: string,
-        errTooShort: string,
-        errTooLong: string,
-        invalidInput: string,
         isAccepted: string,
         isDeclined: string,
         submit: string,

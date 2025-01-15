@@ -4,6 +4,8 @@ export const I18nKo: I18n = {
     common: {
         cancel: "취소",
         email: "이메일",
+        errTooShort: "입력이 너무 짧습니다.",
+        errTooLong: "입력이 너무 깁니다.",
         invalidInput: "유효하지 않은 입력입니다.",
         password: "비밀번호",
         never: "무기한",
@@ -102,9 +104,6 @@ export const I18nKo: I18n = {
         decline: "거절",
         desc: "기기에서 {{count}}자의 사용자 코드를 입력해 주세요.",
         descScopes: "다음 기기가 접근을 요청합니다:",
-        errTooShort: "입력이 너무 짧습니다.",
-        errTooLong: "입력이 너무 깁니다.",
-        invalidInput: "유효하지 않은 입력입니다.",
         isAccepted: "요청이 수락되었습니다.",
         isDeclined: "요청이 거절되었습니다.",
         submit: "제출",

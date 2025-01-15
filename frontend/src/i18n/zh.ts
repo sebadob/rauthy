@@ -4,6 +4,8 @@ export const I18nZh: I18n = {
     common: {
         cancel: "取消",
         email: "电子邮箱",
+        errTooShort: "输入过短",
+        errTooLong: "输入过长",
         invalidInput: "无效输入",
         password: "密码",
         never: "从不",
@@ -102,9 +104,6 @@ export const I18nZh: I18n = {
         decline: "拒绝",
         desc: "请输入来自您的设备的{{count}}位用户代码。",
         descScopes: "此设备请求访问：",
-        errTooShort: "输入过短",
-        errTooLong: "输入过长",
-        invalidInput: "无效输入",
         isAccepted: "请求已被接受。",
         isDeclined: "请求已被拒绝。",
         submit: "提交",

@@ -4,6 +4,8 @@ export const I18nEn: I18n = {
     common: {
         cancel: "Cancel",
         email: "E-Mail",
+        errTooShort: "Input too short",
+        errTooLong: "Input too long",
         invalidInput: "Invalid Input",
         never: "Never",
         password: "Password",
@@ -102,9 +104,6 @@ export const I18nEn: I18n = {
         decline: "Decline",
         desc: "Please enter the {{count}} characters user code from your device.",
         descScopes: "The device requests access to:",
-        errTooShort: "Input too short",
-        errTooLong: "Input too long",
-        invalidInput: "Invalid Input",
         isAccepted: "The request has been accepted.",
         isDeclined: "The request has been declined.",
         submit: "Submit",
