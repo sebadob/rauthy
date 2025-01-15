@@ -6,10 +6,10 @@
     import {extractFormErrors, generatePassword} from "../../utils/helpers";
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import Button from "$lib/Button.svelte";
+    import {useI18n} from "$state/i18n.svelte";
 
     /**
      * @typedef {Object} Props
-     * @property {any} t
      * @property {any} [formValues]
      * @property {string} [btnWidth]
      * @property {boolean} [hideCurrentPassword]
@@ -19,13 +19,14 @@
 
     /** @type {Props} */
     let {
-        t,
         formValues = $bindable({}),
         btnWidth = "4rem",
         hideCurrentPassword = false,
         inputWidth,
         isValid = $bindable(),
     } = $props();
+
+    let t = useI18n();
 
     isValid = isPwdValid;
 
@@ -36,17 +37,17 @@
     let showCopy = $derived(formValues.new?.length > 6 && formValues.new === formValues.verify);
 
     const schema = yup.object().shape({
-        current: yup.string().required(t.passwordCurrReq),
+        current: yup.string().required(t.account.passwordCurrReq),
         new: yup.string()
-            .required(t.passwordNewReq),
+            .required(t.account.passwordNewReq),
         verify: yup.string()
-            .required(t.passwordNoMatch),
+            .required(t.account.passwordNoMatch),
     });
     const schemaWithoutCurrent = yup.object().shape({
         new: yup.string()
-            .required(t.passwordNewReq),
+            .required(t.account.passwordNewReq),
         verify: yup.string()
-            .required(t.passwordNoMatch),
+            .required(t.account.passwordNoMatch),
     });
 
 
@@ -82,7 +83,7 @@
         }
 
         if (!accepted) {
-            err = t.passwordPolicyFollow;
+            err = t.account.passwordPolicyFollow;
             return false;
         }
 
@@ -92,7 +93,7 @@
         }
 
         if (formValues.new !== formValues.verify) {
-            err = t.passwordNoMatch;
+            err = t.account.passwordNoMatch;
             return false;
         }
 
@@ -119,38 +120,38 @@
                     bind:value={formValues.current}
                     error={formErrors.current}
                     autocomplete="current-password"
-                    placeholder={t.passwordCurr}
+                    placeholder={t.account.passwordCurr}
                     on:input={isPwdValid}
                     width={inputWidth}
             >
-                {t.passwordCurr.toUpperCase()}
+                {t.account.passwordCurr.toUpperCase()}
             </PasswordInput>
         {/if}
         <PasswordInput
                 bind:value={formValues.new}
                 error={formErrors.new}
                 autocomplete="new-password"
-                placeholder={t.passwordNew}
+                placeholder={t.account.passwordNew}
                 on:input={isPwdValid}
                 {showCopy}
                 width={inputWidth}
         >
-            {t.passwordNew.toUpperCase()}
+            {t.account.passwordNew.toUpperCase()}
         </PasswordInput>
         <PasswordInput
                 bind:value={formValues.verify}
                 error={formErrors.verify}
                 autocomplete="new-password"
-                placeholder={t.passwordConfirm}
+                placeholder={t.account.passwordConfirm}
                 on:input={isPwdValid}
                 {showCopy}
                 width={inputWidth}
         >
-            {t.passwordConfirm.toUpperCase()}
+            {t.account.passwordConfirm.toUpperCase()}
         </PasswordInput>
 
         <Button on:click={generate} level={2} width={btnWidth}>
-            {t.generateRandom.toUpperCase()}
+            {t.account.generateRandom}
         </Button>
 
         <div class="err">

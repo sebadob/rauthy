@@ -26,7 +26,8 @@ export async function handle({event, resolve}) {
     return resolve(event, {
         transformPageChunk: ({html}) => {
             if (isDev) {
-                return html.replace('%lang%', langDefault);
+                let locale = event.cookies.get('locale');
+                return html.replace('%lang%', locale || langDefault);
             } else {
                 return html.replace('%lang%', '{{lang}}');
             }

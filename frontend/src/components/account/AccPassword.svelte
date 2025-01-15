@@ -3,7 +3,8 @@
     import {blur, fade} from 'svelte/transition';
     import AccModPwd from "./AccModPwd.svelte";
     import {
-        getUserPasskeys, postPasswordResetRequest,
+        getUserPasskeys,
+        postPasswordResetRequest,
         postUserSelfConvertPasskey,
         putUserSelf,
         webauthnAuthStart
@@ -11,10 +12,10 @@
     import WebauthnRequest from "../webauthn/WebauthnRequest.svelte";
     import {onMount} from "svelte";
     import CheckIcon from "$lib/CheckIcon.svelte";
+    import {useI18n} from "$state/i18n.svelte";
 
     /**
      * @typedef {Object} Props
-     * @property {any} t
      * @property {any} [user]
      * @property {any} authProvider
      * @property {boolean} [viewModePhone]
@@ -22,11 +23,13 @@
 
     /** @type {Props} */
     let {
-        t = $bindable(),
         user = {},
         authProvider,
         viewModePhone = false
     } = $props();
+
+    let t = useI18n();
+
     let inputWidth = $derived(viewModePhone ? 'calc(100vw - 1.5rem)' : '300px');
 
     const btnWidth = "13rem";
@@ -84,7 +87,7 @@
     async function onSubmitMfa() {
         const validPwd = await isPwdValid();
         if (!validPwd) {
-            err = t.invalidInput;
+            err = t.common.invalidInput;
             return;
         }
 
@@ -95,7 +98,7 @@
     async function onSubmitFinish(mfaCode) {
         const validPwd = await isPwdValid();
         if (!validPwd) {
-            err = t.invalidInput;
+            err = t.common.invalidInput;
             return;
         }
 
@@ -163,9 +166,9 @@
 
         {#if accType === 'federated'}
             <div class="m-05">
-                <p>{t.federatedConvertPassword1}</p>
+                <p>{t.account.federatedConvertPassword1}</p>
                 <p><b>{authProvider.name || 'UNKNOWN'}</b></p>
-                <p>{t.federatedConvertPassword2}</p>
+                <p>{t.account.federatedConvertPassword2}</p>
                 {#if success}
                     <CheckIcon check/>
                 {:else}
@@ -174,29 +177,28 @@
                             on:click={requestPasswordReset}
                             level={3}
                     >
-                        {t.passwordReset.toUpperCase()}
+                        {t.account.passwordReset}
                     </Button>
                 {/if}
             </div>
         {/if}
 
         {#if (accType === "passkey" || accType === "federated_passkey") && !convertAccount}
-            <p>{t.accTypePasskeyText1}</p>
-            <p>{t.accTypePasskeyText2}</p>
-            <p>{t.accTypePasskeyText3}</p>
+            <p>{t.account.accTypePasskeyText1}</p>
+            <p>{t.account.accTypePasskeyText2}</p>
+            <p>{t.account.accTypePasskeyText3}</p>
             <Button
                     width={btnWidth}
                     on:click={() => convertAccount = true}
                     level={3}
             >
-                {t.convertAccount.toUpperCase()}
+                {t.account.convertAccount}
             </Button>
         {/if}
 
         {#if accType === "password" || accType === "federated_password" || convertAccount}
             <div in:blur={{ duration: 350 }}>
                 <AccModPwd
-                        {t}
                         bind:formValues
                         bind:isValid={isPwdValid}
                         btnWidth={btnWidth}
@@ -206,7 +208,7 @@
 
                 <div>
                     <Button width={btnWidth} on:click={onSubmit} level={1} bind:isLoading>
-                        {t.save.toUpperCase()}
+                        {t.common.save}
                     </Button>
                 </div>
                 {#if convertAccount && !isLoading}
@@ -216,7 +218,7 @@
                                 on:click={() => convertAccount = false}
                                 level={4}
                         >
-                            {t.cancel.toUpperCase()}
+                            {t.common.cancel}
                         </Button>
                     </div>
                 {/if}
@@ -224,14 +226,14 @@
 
             {#if !convertAccount && canConvertToPasskey}
                 <div class="convertPasskey">
-                    <h3>{t.convertAccount}</h3>
-                    <p>{t.convertAccountP1}</p>
+                    <h3>{t.account.convertAccount}</h3>
+                    <p>{t.account.convertAccountP1}</p>
                     <Button
                             width={btnWidth}
                             on:click={convertToPasskeyOnly}
                             level={3}
                     >
-                        {t.convertAccount.toUpperCase()}
+                        {t.account.convertAccount}
                     </Button>
                 </div>
             {/if}

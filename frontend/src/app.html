@@ -6,13 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link rel="icon" href="%sveltekit.assets%/assets/favicon.svg"/>
 
-    <!-- <link rel="preload" href="/auth/v1/theme/rauthy" as="style"/>-->
-    <!-- <link rel="stylesheet" href="/auth/v1/theme/rauthy"/>-->
     <!--
     We can keep the {{client_id}} during local dev -> backend will always return the default.
     In production, the value will be replaced with the proper id to load custom client branding.
     -->
-    <link rel="preload" href="/auth/v1/theme/{{client_id}}" as="style"/>
     <link rel="stylesheet" href="/auth/v1/theme/{{client_id}}"/>
     <style>
         :root {
@@ -48,7 +45,6 @@
             color: var(--col-act2a)
         }
     </style>
-    <link rel="preload" href="/auth/v1/i18n/{{lang}}" as="fetch"/>
     %sveltekit.head%
 </head>
 <body>

@@ -1,3 +1,0 @@
-Do NOT edit the files in this directory.
-These are automatically managed by the build script in 'src/bin/build.rs' and will be overwritten.
-        

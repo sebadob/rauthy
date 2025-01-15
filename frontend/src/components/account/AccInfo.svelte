@@ -7,11 +7,10 @@
     import Modal from "$lib/Modal.svelte";
     import getPkce from "oauth-pkce";
     import {PKCE_VERIFIER_UPSTREAM} from "../../utils/constants.js";
-
+    import {useI18n} from "$state/i18n.svelte";
 
     /**
      * @typedef {Object} Props
-     * @property {any} t
      * @property {any} [user]
      * @property {any} authProvider - webIdData will stay undefined if it is not enabled in the backend
      * @property {any} webIdData
@@ -20,12 +19,13 @@
 
     /** @type {Props} */
     let {
-        t,
         user = $bindable({}),
         authProvider,
         webIdData,
         viewModePhone = false
     } = $props();
+
+    let t = useI18n();
 
     let unlinkErr = $state(false);
     let showModal = $state(false);
@@ -96,37 +96,37 @@
 
 <div class="container">
     <div class={classRow}>
-        <div class={classLabel}><b>{t.email}:</b></div>
+        <div class={classLabel}><b>{t.common.email}:</b></div>
         <span class="value">{user.email}</span>
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.givenName}:</b></div>
+        <div class={classLabel}><b>{t.account.givenName}:</b></div>
         <span class="value">{user.given_name}</span>
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.familyName}:</b></div>
+        <div class={classLabel}><b>{t.account.familyName}:</b></div>
         <span class="value">{user.family_name}</span>
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.user} ID:</b></div>
+        <div class={classLabel}><b>{t.account.user} ID:</b></div>
         <span class="value">{user.id}</span>
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.accType}:</b></div>
+        <div class={classLabel}><b>{t.account.accType}:</b></div>
         <div>
             <div class="value">{accType || ''}</div>
             {#if isFederated}
                 <div class="fed-btn">
                     <Button level={3} on:click={unlinkProvider}>
-                        {t.providerUnlink}
+                        {t.account.providerUnlink}
                     </Button>
                     {#if unlinkErr}
                         <div class="link-err value">
-                            {t.providerUnlinkDesc}
+                            {t.account.providerUnlinkDesc}
                         </div>
                     {/if}
                 </div>
@@ -138,10 +138,10 @@
                         onclick={() => showModal = !showModal}
                         onkeypress={() => showModal = !showModal}
                 >
-                    {t.providerLink}
+                    {t.account.providerLink}
                 </div>
                 <Modal bind:showModal>
-                    <p>{t.providerLinkDesc}</p>
+                    <p>{t.account.providerLinkDesc}</p>
 
                     <div class="providers">
                         {#each providersAvailable as provider (provider.id)}
@@ -166,48 +166,50 @@
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.roles}:</b></div>
+        <div class={classLabel}><b>{t.account.roles}:</b></div>
         <span class="value">{user.roles || 'None'}</span>
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.groups}:</b></div>
+        <div class={classLabel}><b>{t.account.groups}:</b></div>
         <span class="value">{user.groups || 'None'}</span>
     </div>
 
     <div class="row">
-        <div class={classLabel}><b>{t.mfaActivated}:</b></div>
+        <div class={classLabel}><b>{t.account.mfaActivated}:</b></div>
         <CheckIcon check={!!user.webauthn_user_id}/>
     </div>
 
     <div class="row">
-        <div class={classLabel}><b>{t.userEnabled}:</b></div>
+        <div class={classLabel}><b>{t.account.userEnabled}:</b></div>
         <CheckIcon check={user.enabled}/>
     </div>
 
     <div class="row">
-        <div class={classLabel}><b>{t.emailVerified}:</b></div>
+        <div class={classLabel}><b>{t.account.emailVerified}:</b></div>
         <CheckIcon check={user.email_verified}/>
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.lastLogin}:</b></div>
+        <div class={classLabel}><b>{t.account.lastLogin}:</b></div>
         <span class="value">{formatDateFromTs(user.last_login)}</span>
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.passwordExpiry}:</b></div>
-        <span class="value">{user.password_expires && formatDateFromTs(user.password_expires) || t.never}</span>
+        <div class={classLabel}><b>{t.account.passwordExpiry}:</b></div>
+        <span class="value">
+            {user.password_expires && formatDateFromTs(user.password_expires) || t.common.never}
+        </span>
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.userCreated}:</b></div>
+        <div class={classLabel}><b>{t.account.userCreated}:</b></div>
         <span class="value">{formatDateFromTs(user.created_at)}</span>
     </div>
 
     {#if user.user_expires}
         <div class={classRow}>
-            <div class={classLabel}><b>{t.userExpiry}:</b></div>
+            <div class={classLabel}><b>{t.account.userExpiry}:</b></div>
             <span class="value">{formatDateFromTs(user.user_expires)}</span>
         </div>
     {/if}
