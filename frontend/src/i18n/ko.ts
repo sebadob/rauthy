@@ -7,8 +7,9 @@ export const I18nKo: I18n = {
         errTooShort: "입력이 너무 짧습니다.",
         errTooLong: "입력이 너무 깁니다.",
         invalidInput: "유효하지 않은 입력입니다.",
-        password: "비밀번호",
         never: "무기한",
+        password: "비밀번호",
+        required: "필수 항목입니다.",
         save: "저장",
     },
     account: {
@@ -183,11 +184,8 @@ export const I18nKo: I18n = {
         email: "이메일",
         emailBadFormat: "잘못된 이메일 형식입니다.",
         emailCheck: "이메일 보관함을 확인해 주세요.",
-        familyName: "성",
-        givenName: "이름",
         regexName: "이름은 특수문자를 제외한 2자에서 32자이어야 합니다.",
         register: "가입",
-        required: "필수 항목입니다.",
         success: "성공적으로 가입되었습니다.",
         userReg: "사용자 가입"
     }

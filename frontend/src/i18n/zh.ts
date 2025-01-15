@@ -7,8 +7,9 @@ export const I18nZh: I18n = {
         errTooShort: "输入过短",
         errTooLong: "输入过长",
         invalidInput: "无效输入",
-        password: "密码",
         never: "从不",
+        password: "密码",
+        required: "必填",
         save: "保存",
     },
     account: {
@@ -183,11 +184,8 @@ export const I18nZh: I18n = {
         email: "电子邮件",
         emailBadFormat: "错误的电子邮件地址格式",
         emailCheck: "请检查您的电子邮件收件箱",
-        familyName: "姓氏",
-        givenName: "名字",
         regexName: "名字应有2-32个非特殊字符。",
         register: "注册",
-        required: "必填",
         success: "注册成功",
         userReg: "用户注册"
     }

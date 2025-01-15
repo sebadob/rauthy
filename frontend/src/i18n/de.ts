@@ -9,6 +9,7 @@ export const I18nDe: I18n = {
         invalidInput: "Ungültige Eingaben",
         never: "Niemals",
         password: "Passwort",
+        required: "Notwendig",
         save: "Speichern",
     },
     account: {
@@ -183,11 +184,8 @@ export const I18nDe: I18n = {
         email: "E-Mail",
         emailBadFormat: "Ungültiges E-Mail Format",
         emailCheck: "Bitte prüfen Sie Ihren E-Mail Posteingang",
-        familyName: "Nachname",
-        givenName: "Vorname",
         regexName: "Name mit 2 - 32 Buchstaben ohne Sonderzeichen",
         register: "Registrieren",
-        required: "Notwendig",
         success: "Registrierung erfolgreich",
         userReg: "Benutzer Registrierung"
     }
