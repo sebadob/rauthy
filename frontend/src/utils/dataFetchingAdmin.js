@@ -1,5 +1,5 @@
-import {getCsrfToken} from "./helpers.js";
-import {sleepAwait} from "$lib/utils/helpers.js";
+import {getCsrfToken} from "./helpers";
+import {sleepAwait} from "$lib/utils/helpers";
 
 const HEADERS = {
     'Content-Type': 'application/json',

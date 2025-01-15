@@ -1,10 +1,10 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import {onMount} from "svelte";
     import {getPasswordPolicy} from "../../../../utils/dataFetching.js";
     import Button from "$lib/Button.svelte";
-    import {extractFormErrors} from "../../../../utils/helpers.js";
+    import {extractFormErrors} from "../../../../utils/helpers";
     import * as yup from "yup";
     import {putPasswordPolicy} from "../../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";

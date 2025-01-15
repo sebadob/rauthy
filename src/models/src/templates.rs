@@ -1,15 +1,5 @@
 use crate::entity::colors::Colors;
 use crate::entity::password::PasswordPolicy;
-use crate::i18n::account::I18nAccount;
-use crate::i18n::authorize::I18nAuthorize;
-use crate::i18n::device::I18nDevice;
-use crate::i18n::email_confirm_change_html::I18nEmailConfirmChangeHtml;
-use crate::i18n::error::I18nError;
-use crate::i18n::index::I18nIndex;
-use crate::i18n::logout::I18nLogout;
-use crate::i18n::password_reset::I18nPasswordReset;
-use crate::i18n::register::I18nRegister;
-use crate::i18n::SsrJson;
 use crate::language::Language;
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, HttpResponseBuilder};
@@ -58,7 +48,6 @@ pub struct IndexHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -82,7 +71,6 @@ impl IndexHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            i18n: I18nIndex::build(lang).as_json(),
             ..Default::default()
         };
 
@@ -111,7 +99,6 @@ pub struct AccountHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: String,
 }
 
@@ -133,7 +120,6 @@ impl AccountHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            i18n: I18nAccount::build(lang).as_json(),
             auth_providers: auth_providers_json.unwrap_or_default(),
             ..Default::default()
         };
@@ -162,7 +148,6 @@ pub struct AdminHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -212,7 +197,6 @@ pub struct DeviceHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -236,7 +220,6 @@ impl DeviceHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            i18n: I18nDevice::build(lang).as_json(),
             ..Default::default()
         };
 
@@ -265,7 +248,6 @@ pub struct FedCMHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -317,7 +299,6 @@ pub struct ErrorHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -344,7 +325,6 @@ impl ErrorHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            i18n: I18nError::build_with(lang, status_code, details_text).as_json(),
             ..Default::default()
         };
 
@@ -385,7 +365,6 @@ pub struct Error1Html<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -415,7 +394,6 @@ impl Error1Html<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            i18n: I18nError::build_with(lang, status_code, details_text).as_json(),
             ..Default::default()
         };
 
@@ -444,7 +422,6 @@ pub struct Error2Html<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -474,7 +451,6 @@ impl Error2Html<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            i18n: I18nError::build_with(lang, status_code, details_text).as_json(),
             ..Default::default()
         };
 
@@ -503,7 +479,6 @@ pub struct Error3Html<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -533,7 +508,6 @@ impl Error3Html<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            i18n: I18nError::build_with(lang, status_code, details_text).as_json(),
             ..Default::default()
         };
 
@@ -562,7 +536,6 @@ pub struct AdminApiKeysHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -612,7 +585,6 @@ pub struct AdminAttributesHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -662,7 +634,6 @@ pub struct AdminBlacklistHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -712,7 +683,6 @@ pub struct AdminClientsHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -762,7 +732,6 @@ pub struct AdminConfigHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -812,7 +781,6 @@ pub struct AdminDocsHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -862,7 +830,6 @@ pub struct AdminEventsHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -912,7 +879,6 @@ pub struct AdminGroupsHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -962,7 +928,6 @@ pub struct AdminRolesHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -1012,7 +977,6 @@ pub struct AdminScopesHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -1062,7 +1026,6 @@ pub struct AdminSessionsHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -1112,7 +1075,6 @@ pub struct AdminUsersHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -1162,7 +1124,6 @@ pub struct AuthorizeHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: String,
 }
 
@@ -1193,7 +1154,6 @@ impl AuthorizeHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            i18n: I18nAuthorize::build(lang).as_json(),
             auth_providers: auth_providers_json.unwrap_or_default(),
             ..Default::default()
         };
@@ -1227,7 +1187,6 @@ pub struct CallbackHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -1277,7 +1236,6 @@ pub struct ProvidersHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -1327,7 +1285,6 @@ pub struct ProviderCallbackHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -1349,7 +1306,6 @@ impl ProviderCallbackHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            i18n: I18nAuthorize::build(lang).as_json(),
             ..Default::default()
         };
 
@@ -1378,7 +1334,6 @@ pub struct LogoutHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -1402,7 +1357,6 @@ impl LogoutHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            i18n: I18nLogout::build(lang).as_json(),
             ..Default::default()
         };
 
@@ -1431,7 +1385,6 @@ pub struct PwdResetHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -1475,7 +1428,6 @@ impl PwdResetHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            i18n: I18nPasswordReset::build(lang).as_json(),
             ..Default::default()
         };
 
@@ -1517,7 +1469,6 @@ pub struct UserEmailChangeConfirmHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -1542,7 +1493,6 @@ impl UserEmailChangeConfirmHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            i18n: I18nEmailConfirmChangeHtml::build(lang).as_json(),
             ..Default::default()
         }
         .render()
@@ -1571,7 +1521,6 @@ pub struct UserRegisterHtml<'a> {
     pub col_ghigh: &'a str,
     pub col_text: &'a str,
     pub col_bg: &'a str,
-    pub i18n: String,
     pub auth_providers: &'a str,
 }
 
@@ -1597,7 +1546,6 @@ impl UserRegisterHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            i18n: I18nRegister::build(lang).as_json(),
             ..Default::default()
         }
         .render()

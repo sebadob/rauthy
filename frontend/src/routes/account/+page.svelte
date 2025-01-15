@@ -3,13 +3,13 @@
     import {getSessionInfo, getUser, getUserWebIdData} from "../../utils/dataFetching.js";
     import Loading from "../../components/Loading.svelte";
     import AccMain from "../../components/account/AccMain.svelte";
-    import {redirectToLogin} from "../../utils/helpers.js";
-    import BrowserCheck from "../../components/BrowserCheck.svelte";
-    import WithI18n from "$lib/WithI18n.svelte";
+    import {redirectToLogin} from "../../utils/helpers";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
+    import {useI18n} from "$state/i18n.svelte";
 
-    let t = $state();
+    let t = useI18n();
+
     let sessionInfo = $state();
     let user = $state();
     let webIdData = $state();
@@ -47,17 +47,20 @@
 </script>
 
 <svelte:head>
-    <title>{t?.account || 'Account'} {user?.email}</title>
+    <!--
+    for some reason, t can be undefined in the svelte:head section even though it never is
+    inside the component, even during init and before the very first render
+    -->
+    <title>{t?.account.account || 'Account'} {user?.email}</title>
+    <!--    <title>{t.account.account} {user.account.email}</title>-->
 </svelte:head>
 
 <Main>
     <ContentCenter>
-        <WithI18n bind:t content="account">
-            {#if !isReady}
-                <Loading/>
-            {:else}
-                <AccMain {t} {sessionInfo} bind:user bind:webIdData/>
-            {/if}
-        </WithI18n>
+        {#if !isReady}
+            <Loading/>
+        {:else}
+            <AccMain {sessionInfo} bind:user bind:webIdData/>
+        {/if}
     </ContentCenter>
 </Main>

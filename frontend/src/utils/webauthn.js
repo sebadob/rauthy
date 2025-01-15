@@ -1,5 +1,5 @@
 import {webauthnAuthFinish, webauthnAuthStart} from "./dataFetching.js";
-import {arrBufToBase64UrlSafe, base64UrlSafeToArrBuf} from "./helpers.js";
+import {arrBufToBase64UrlSafe, base64UrlSafeToArrBuf} from "./helpers";
 
 export async function webauthnAuth(uid, data, errorMsg) {
     let res = await webauthnAuthStart(uid, data);

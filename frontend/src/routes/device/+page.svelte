@@ -3,9 +3,8 @@
     import {onMount} from "svelte";
     import {postDeviceVerify, getSessionInfo} from "../../utils/dataFetching.js";
     import Loading from "../../components/Loading.svelte";
-    import {extractFormErrors, getQueryParams, redirectToLogin} from "../../utils/helpers.js";
-    import WithI18n from "$lib/WithI18n.svelte";
-    import LangSelector from "$lib/LangSelector.svelte";
+    import {extractFormErrors, getQueryParams, redirectToLogin} from "../../utils/helpers";
+    import LangSelector from "$lib5/LangSelector.svelte";
     import Input from "$lib/inputs/Input.svelte";
     import Button from "$lib/Button.svelte";
     import * as yup from "yup";
@@ -13,11 +12,11 @@
     import {fetchSolvePow} from "../../utils/pow.ts";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
+    import {useI18n} from "$state/i18n.svelte";
 
     const btnWidthInline = '8rem';
 
-    /** @type {any} */
-    let t = $state();
+    let t = useI18n();
     /** @type {any} */
     let sessionInfo = $state();
 
@@ -40,9 +39,9 @@
                 // REGEX_URI is not really correct, but it's not too important either.
                 // The backend will validate immediately by cache key, which can be any String.
                 userCode: yup.string().trim()
-                    .min(userCodeLength, t.errTooShort)
-                    .max(userCodeLength, t.errTooLong)
-                    .matches(REGEX_URI, t.invalidInput)
+                    .min(userCodeLength, t.common.errTooShort)
+                    .max(userCodeLength, t.common.errTooLong)
+                    .matches(REGEX_URI, t.common.invalidInput)
             });
         }
     });
@@ -102,7 +101,7 @@
         } else if (res.status === 204) {
             isDeclined = true;
         } else if (res.status === 404) {
-            err = t.wrongOrExpired;
+            err = t.device.wrongOrExpired;
         } else {
             const body = await res.json();
             err = body.message;
@@ -124,86 +123,84 @@
 </script>
 
 <svelte:head>
-    <title>{t?.title || 'Device Authorization'}</title>
+    <title>{t?.device.title || 'Device Authorization'}</title>
 </svelte:head>
 
 <Main>
     <ContentCenter>
-        <WithI18n bind:t content="device">
-            {#if !sessionInfo}
-                <Loading/>
-            {:else}
-                <div class="container">
-                    <div class="name">
-                        <h2>{t.title}</h2>
+        {#if !sessionInfo}
+            <Loading/>
+        {:else}
+            <div class="container">
+                <div class="name">
+                    <h2>{t.device.title}</h2>
+                </div>
+
+                {#if scopes === undefined}
+                    <div class="desc">
+                        {t.device.desc.replaceAll('{{count}}', userCodeLength)}
                     </div>
 
-                    {#if scopes === undefined}
-                        <div class="desc">
-                            {t.desc.replaceAll('{{count}}', userCodeLength)}
-                        </div>
+                    <Input
+                            name="userCode"
+                            bind:value={formValues.userCode}
+                            bind:error={formErrors.userCode}
+                            autocomplete="off"
+                            placeholder={t.device.userCode}
+                            on:enter={onSubmit}
+                            on:input={onInput}
+                    >
+                        {t.device.userCode.toUpperCase()}
+                    </Input>
 
-                        <Input
-                                name="userCode"
-                                bind:value={formValues.userCode}
-                                bind:error={formErrors.userCode}
-                                autocomplete="off"
-                                placeholder={t.userCode}
-                                on:enter={onSubmit}
-                                on:input={onInput}
+                    <Button on:click={() => onSubmit('pending')} bind:isLoading>
+                        {t.device.submit}
+                    </Button>
+                {:else if isAccepted}
+                    <div class="desc">
+                        <p>{t.device.isAccepted}</p>
+                        <p>{t.device.autoRedirectAccount}</p>
+                    </div>
+                {:else if isDeclined}
+                    <div class="desc">
+                        <p class="declined">{t.device.isDeclined}</p>
+                        <p>{t.device.closeWindow}</p>
+                    </div>
+                {:else}
+                    <div class="desc">
+                        {t.device.descScopes}
+                        <ul>
+                            {#each scopes as scope}
+                                <li>{scope}</li>
+                            {/each}
+                        </ul>
+                    </div>
+
+                    <div class="inline">
+                        <Button
+                                on:click={() => onSubmit('accept')}
+                                bind:isLoading
+                                level={1}
+                                width={btnWidthInline}
                         >
-                            {t.userCode.toUpperCase()}
-                        </Input>
-
-                        <Button on:click={() => onSubmit('pending')} bind:isLoading>
-                            {t.submit.toUpperCase()}
+                            {t.device.accept}
                         </Button>
-                    {:else if isAccepted}
-                        <div class="desc">
-                            <p>{t.isAccepted}</p>
-                            <p>{t.autoRedirectAccount}</p>
-                        </div>
-                    {:else if isDeclined}
-                        <div class="desc">
-                            <p class="declined">{t.isDeclined}</p>
-                            <p>{t.closeWindow}</p>
-                        </div>
-                    {:else}
-                        <div class="desc">
-                            {t.descScopes}
-                            <ul>
-                                {#each scopes as scope}
-                                    <li>{scope}</li>
-                                {/each}
-                            </ul>
-                        </div>
+                        <Button
+                                on:click={() => onSubmit('decline')}
+                                bind:isLoading
+                                level={3}
+                                width={btnWidthInline}
+                        >
+                            {t.device.decline}
+                        </Button>
+                    </div>
+                {/if}
 
-                        <div class="inline">
-                            <Button
-                                    on:click={() => onSubmit('accept')}
-                                    bind:isLoading
-                                    level={1}
-                                    width={btnWidthInline}
-                            >
-                                {t.accept}
-                            </Button>
-                            <Button
-                                    on:click={() => onSubmit('decline')}
-                                    bind:isLoading
-                                    level={3}
-                                    width={btnWidthInline}
-                            >
-                                {t.decline}
-                            </Button>
-                        </div>
-                    {/if}
+                <div class="err">{err}</div>
+            </div>
+        {/if}
 
-                    <div class="err">{err}</div>
-                </div>
-            {/if}
-
-            <LangSelector absolute/>
-        </WithI18n>
+        <LangSelector absolute/>
     </ContentCenter>
 </Main>
 

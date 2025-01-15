@@ -35,6 +35,11 @@ tokio = { workspace = true }
 utoipa = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
 
+[build-dependencies]
+rauthy-models = { path = "../models" }
+serde_json = { workspace = true }
+strum = { workspace = true }
+
 [dev-dependencies]
 rauthy-api-types = { path = "../api_types" }
 

@@ -218,7 +218,7 @@ impl ThemeCssFull {
     pub async fn etag_update(client_id: &str) -> Result<String, ErrorResponse> {
         // TODO get "real" etag from DB in that case to avoid re-fetches between restarts.
         // timestamp is just a placeholder for now
-        let etag = Utc::now().timestamp().to_string();
+        let etag = BUILD_TIME.timestamp().to_string();
         DB::client()
             .put_bytes(
                 Cache::Etag,

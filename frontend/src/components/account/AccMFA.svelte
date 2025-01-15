@@ -6,7 +6,7 @@
         base64UrlSafeToArrBuf,
         extractFormErrors,
         formatDateFromTs
-    } from "../../utils/helpers.js";
+    } from "../../utils/helpers";
     import Button from "$lib/Button.svelte";
     import {
         getUserPasskeys,
@@ -22,8 +22,11 @@
     import {REGEX_NAME} from "../../utils/constants.js";
     import IconFingerprint from "$lib/icons/IconFingerprint.svelte";
     import Tooltip from "$lib/Tooltip.svelte";
+    import {useI18n} from "$state/i18n.svelte";
 
-    let {t, sessionInfo, user = {}} = $props();
+    let {sessionInfo, user = {}} = $props();
+
+    let t = useI18n();
 
     let isLoading = false;
     let err = $state(false);
@@ -42,7 +45,7 @@
     let formErrors = $state({});
     const schema = yup.object().shape({
         passkeyName: yup.string()
-            .required(t.invalidInput)
+            .required(t.common.invalidInput)
             .matches(REGEX_NAME, t.mfa.passkeyNameErr),
     });
 
@@ -225,12 +228,12 @@
             {t.mfa.passkeyName}
         </Input>
         <div class="regBtns">
-            <Button on:click={handleRegStart} level={1}>{t.mfa.register.toUpperCase()}</Button>
-            <Button on:click={() => showRegInput = false} level={4}>{t.cancel.toUpperCase()}</Button>
+            <Button on:click={handleRegStart} level={1}>{t.mfa.register}</Button>
+            <Button on:click={() => showRegInput = false} level={4}>{t.common.cancel}</Button>
         </div>
     {:else}
         <div class="regNewBtn">
-            <Button on:click={() => showRegInput = true} level={3}>{t.mfa.registerNew.toUpperCase()}</Button>
+            <Button on:click={() => showRegInput = true} level={3}>{t.mfa.registerNew}</Button>
         </div>
     {/if}
 
@@ -247,7 +250,7 @@
                     <div class="nameUv">
                         <b>{passkey.name}</b>
                         {#if passkey.user_verified}
-                            <Tooltip text={t.userVerifiedTooltip}>
+                            <Tooltip text={t.account.userVerifiedTooltip}>
                                 <div style:margin-bottom="-.25rem">
                                     <IconFingerprint width={18} color="var(--col-acnt)"/>
                                 </div>
@@ -283,7 +286,7 @@
 
     {#if passkeys.length > 0}
         <div class="button">
-            <Button on:click={handleTestStart} level={1}>{t.mfa.test.toUpperCase()}</Button>
+            <Button on:click={handleTestStart} level={1}>{t.mfa.test}</Button>
         </div>
     {/if}
 

@@ -13,17 +13,21 @@ import {
 import {decode, encode} from "base64-arraybuffer";
 import {getProvidersTemplate} from "./dataFetching.js";
 
-export function buildWebIdUri(userId) {
+export function buildWebIdUri(userId: string) {
     return `${window.location.origin}/auth/${userId}/profile#me`
 }
 
-export function extractFormErrors(err) {
-    return err.inner.reduce((acc, err) => {
+export function extractFormErrors(err: any): any {
+    return err.inner.reduce((acc: any, err: any) => {
         return {...acc, [err.path]: err.message};
     }, {});
 }
 
-export function isDefaultScope(name) {
+export function isBrowser() {
+    return typeof window !== 'undefined';
+}
+
+export function isDefaultScope(name: string) {
     return name === 'openid' || name === 'profile' || name === 'email' || name === 'groups'
         || name === 'address' || name === 'phone';
 }
@@ -35,7 +39,7 @@ export function isDefaultScope(name) {
  */
 export async function getAuthProvidersTemplate() {
     if ('production' === import.meta.env.MODE) {
-        const providerTpl = document.getElementsByTagName('template').namedItem('auth_providers').innerHTML;
+        const providerTpl = document?.getElementsByTagName('template')?.namedItem('auth_providers')?.innerHTML;
         if (providerTpl) {
             return JSON.parse(providerTpl);
         }
@@ -49,7 +53,7 @@ export async function getAuthProvidersTemplate() {
     }
 }
 
-export const redirectToLogin = (state) => {
+export const redirectToLogin = (state: string) => {
     getPkce(64, (error, {challenge, verifier}) => {
         if (!error) {
             localStorage.setItem(PKCE_VERIFIER, verifier);
@@ -67,7 +71,7 @@ export const redirectToLogout = () => {
     window.location.href = url;
 };
 
-export const saveCsrfToken = (csrf) => {
+export const saveCsrfToken = (csrf: string) => {
     localStorage.setItem(CSRF_TOKEN, csrf);
 }
 
@@ -75,15 +79,15 @@ export const getCsrfToken = () => {
     return localStorage.getItem(CSRF_TOKEN) || '';
 }
 
-export const saveIdToken = (token) => {
+export const saveIdToken = (token: string) => {
     localStorage.setItem(ID_TOKEN, token);
 }
 
-export const saveAccessToken = (token) => {
+export const saveAccessToken = (token: string) => {
     localStorage.setItem(ACCESS_TOKEN, token);
 }
 
-export const saveProviderToken = (token) => {
+export const saveProviderToken = (token: string) => {
     localStorage.setItem(PROVIDER_TOKEN, token);
 }
 export const getProviderToken = () => {
@@ -114,27 +118,27 @@ export const purgeStorage = () => {
     localStorage.removeItem(PROVIDER_TOKEN);
 }
 
-export function arrBufToBase64UrlSafe(buffer) {
+export function arrBufToBase64UrlSafe(buffer: ArrayBuffer) {
     let base64 = encode(buffer);
     const enc = {
         '+': '-',
         '/': '_',
         '=': ''
     }
-    return base64.replace(/[+/=]/g, (m) => enc[m])
+    return base64.replace(/[+/=]/g, m => enc[m as '+' | '/' | '='])
 }
 
-export function base64UrlSafeToArrBuf(base64url) {
+export function base64UrlSafeToArrBuf(base64url: string) {
     const dec = {
         '-': '+',
         '_': '/',
         '.': '='
     }
-    const base64 = base64url.replace(/[-_.]/g, (m) => dec[m])
+    const base64 = base64url.replace(/[-_.]/g, (m) => dec[m as '-' | '_' | '.'])
     return decode(base64);
 }
 
-export function eventColor(level) {
+export function eventColor(level: string) {
     switch (level) {
         case 'test':
             return '#b2b2b2';
@@ -150,12 +154,12 @@ export function eventColor(level) {
 }
 
 
-export const formatDateToDateInput = date => {
+export const formatDateToDateInput = (date: Date) => {
     return date.toISOString().slice(0, 16);
     // return date.toISOString().split('.')[0];
 }
 
-export const formatUtcTsFromDateInput = inputDate => {
+export const formatUtcTsFromDateInput = (inputDate: string) => {
     let d = Date.parse(inputDate);
     if (isNaN(d)) {
         return;
@@ -163,29 +167,29 @@ export const formatUtcTsFromDateInput = inputDate => {
     return d / 1000;
 }
 
-export const formatDateFromTs = (ts, fmtIso) => {
+export const formatDateFromTs = (ts: number, fmtIso: boolean) => {
     const utcOffsetMinutes = -new Date().getTimezoneOffset();
     const d = new Date((ts + utcOffsetMinutes * 60) * 1000);
 
-    let dd = d.getUTCDate();
+    let dd: number | string = d.getUTCDate();
     if (dd < 10) {
         dd = '0' + dd;
     }
-    let mm = d.getUTCMonth() + 1;
+    let mm: number | string = d.getUTCMonth() + 1;
     if (mm < 10) {
         mm = '0' + mm;
     }
     const yyyy = d.getUTCFullYear();
 
-    let hr = d.getUTCHours();
+    let hr: number | string = d.getUTCHours();
     if (hr < 10) {
         hr = '0' + hr;
     }
-    let mn = d.getUTCMinutes();
+    let mn: number | string = d.getUTCMinutes();
     if (mn < 10) {
         mn = '0' + mn;
     }
-    let sc = d.getUTCSeconds();
+    let sc: number | string = d.getUTCSeconds();
     if (sc < 10) {
         sc = '0' + sc;
     }
@@ -196,7 +200,13 @@ export const formatDateFromTs = (ts, fmtIso) => {
     return `${yyyy}/${mm}/${dd} ${hr}:${mn}:${sc}`;
 }
 
-export const generatePassword = (length, minLowerCase, minUpperCase, minDigit, minSpecial) => {
+export const generatePassword = (
+    length: number,
+    minLowerCase: number,
+    minUpperCase: number,
+    minDigit: number,
+    minSpecial: number,
+) => {
     const lowerCaseNeeded = minLowerCase || 1;
     const upperCaseNeeded = minUpperCase || 1;
     const digitNeeded = minDigit || 1;
@@ -252,7 +262,7 @@ export const generatePassword = (length, minLowerCase, minUpperCase, minDigit, m
 };
 
 // Returns a short random key, which can be used in components to identify them uniquely.
-export const getKey = (i) => {
+export const getKey = (i: number) => {
     let res = '';
 
     const target = i || 8;
@@ -269,13 +279,13 @@ export const getKey = (i) => {
 
 export const getQueryParams = () => {
     return new Proxy(new URLSearchParams(window.location.search), {
-        get: (searchParams, prop) => searchParams.get(prop),
+        get: (searchParams, prop) => searchParams.get(prop.toString()),
     });
 }
 
 // races a promise against a given timeout and throws an exception if exceeded
-export const promiseTimeout = (prom, time) => {
-    let timer;
+export const promiseTimeout = (prom: Promise<any>, time: number) => {
+    let timer: any;
     return Promise.race([
         prom,
         new Promise(
@@ -285,4 +295,4 @@ export const promiseTimeout = (prom, time) => {
 }
 
 // async sleep in ms
-export const sleepAwait = async (ms) => await new Promise(x => setTimeout(x, ms));
+export const sleepAwait = async (ms: number) => await new Promise(x => setTimeout(x, ms));

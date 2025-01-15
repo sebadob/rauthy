@@ -5,7 +5,7 @@
     import {navContainerExpanded, navIsExpanded, navWidthCollapsed} from "./navStore.js";
     import IconChevronRight from "$lib/icons/IconChevronRight.svelte";
     import {spring} from "svelte/motion";
-    import {sleepAwait} from "../utils/helpers.js";
+    import {sleepAwait} from "../utils/helpers";
 
     /**
      * @typedef {Object} Props

@@ -1,7 +1,7 @@
 <script>
     import {onMount} from "svelte";
     import {checkAdminAccess, getSessionInfo} from "../../utils/dataFetching.js";
-    import {redirectToLogin} from "../../utils/helpers.js";
+    import {redirectToLogin} from "../../utils/helpers";
     import BrowserCheck from "../BrowserCheck.svelte";
     import Loading from "$lib/Loading.svelte";
     import Button from "$lib/Button.svelte";

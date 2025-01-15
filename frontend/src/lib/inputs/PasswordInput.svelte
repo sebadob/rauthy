@@ -3,7 +3,7 @@
     import IconClipboard from "$lib/icons/IconClipboard.svelte";
     import IconEyeSlash from "$lib/icons/IconEyeSlash.svelte";
     import IconEye from "$lib/icons/IconEye.svelte";
-    import {getKey} from "../utils/helpers.js";
+    import {getKey} from "../utils/helpers";
     import {slide} from "svelte/transition";
 
 

@@ -1,6 +1,6 @@
 let _isDev = $state(typeof (process) !== 'undefined' && process.env.DEV_MODE === 'true');
 
-export function useIsDev() {
+export function initIsDev() {
     if (typeof (process) !== 'undefined') {
         _isDev = process.env.DEV_MODE === 'true';
     } else if (typeof (window) !== 'undefined') {
@@ -9,8 +9,9 @@ export function useIsDev() {
         let elem = window.document.getElementsByName('rauthy-csrf-token')[0];
         _isDev = elem.id === '{{ csrf_token }}';
     }
-    console.log('isDev: ', _isDev);
+}
 
+export function useIsDev() {
     return {
         get(): boolean {
             return _isDev;

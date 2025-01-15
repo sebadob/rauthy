@@ -7,7 +7,7 @@
         saveAccessToken,
         saveCsrfToken,
         saveIdToken
-    } from "../../../utils/helpers.js";
+    } from "../../../utils/helpers";
     import {onMount} from "svelte";
     import {
         CLIENT_ID,

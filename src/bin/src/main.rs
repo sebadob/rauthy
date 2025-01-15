@@ -15,8 +15,8 @@ use rauthy_common::utils::UseDummyAddress;
 use rauthy_common::{is_sqlite, password_hasher};
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::{
-    api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, oidc, roles,
-    scopes, sessions, themes, users,
+    api_keys, auth_providers, blacklist, clients, events, fed_cm, generic, groups, html, oidc,
+    roles, scopes, sessions, themes, users,
 };
 use rauthy_middlewares::csrf_protection::CsrfProtectionMiddleware;
 use rauthy_middlewares::ip_blacklist::RauthyIpBlacklistMiddleware;
@@ -395,27 +395,26 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(events::post_events)
                             .service(events::sse_events)
                             .service(events::post_event_test)
-                            .service(generic::get_index)
-                            .service(generic::get_account_html)
-                            .service(generic::get_admin_html)
-                            .service(generic::get_admin_api_keys_html)
-                            .service(generic::get_admin_attr_html)
-                            .service(generic::get_admin_blacklist_html)
-                            .service(generic::get_admin_clients_html)
-                            .service(generic::get_admin_config_html)
-                            .service(generic::get_admin_docs_html)
-                            .service(generic::get_admin_events_html)
-                            .service(generic::get_admin_groups_html)
-                            .service(generic::get_admin_roles_html)
-                            .service(generic::get_admin_scopes_html)
-                            .service(generic::get_admin_providers_html)
-                            .service(generic::get_admin_sessions_html)
-                            .service(generic::get_admin_users_html)
-                            .service(generic::get_device_html)
-                            .service(generic::get_fed_cm_html)
+                            .service(html::get_index)
+                            .service(html::get_account_html)
+                            .service(html::get_admin_html)
+                            .service(html::get_admin_api_keys_html)
+                            .service(html::get_admin_attr_html)
+                            .service(html::get_admin_blacklist_html)
+                            .service(html::get_admin_clients_html)
+                            .service(html::get_admin_config_html)
+                            .service(html::get_admin_docs_html)
+                            .service(html::get_admin_events_html)
+                            .service(html::get_admin_groups_html)
+                            .service(html::get_admin_roles_html)
+                            .service(html::get_admin_scopes_html)
+                            .service(html::get_admin_providers_html)
+                            .service(html::get_admin_sessions_html)
+                            .service(html::get_admin_users_html)
+                            .service(html::get_device_html)
+                            .service(html::get_fed_cm_html)
                             .service(generic::get_auth_check)
                             .service(generic::get_auth_check_admin)
-                            .service(generic::post_i18n)
                             .service(generic::post_update_language)
                             .service(generic::get_version)
                             .service(generic::get_whoami)
@@ -523,7 +522,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(oidc::get_well_known)
                             .service(generic::get_health)
                             .service(generic::get_ready)
-                            .service(generic::get_static_assets),
+                            .service(html::get_static_assets),
                     ),
             );
 

@@ -7,7 +7,7 @@
         formatDateFromTs,
         formatDateToDateInput,
         formatUtcTsFromDateInput, redirectToLogin
-    } from "../../../utils/helpers.js";
+    } from "../../../utils/helpers";
     import Switch from "$lib/Switch.svelte";
     import {globalGroupsNames, globalRolesNames} from "../../../stores/admin.js";
     import Button from "$lib/Button.svelte";

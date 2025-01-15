@@ -1,23 +1,20 @@
 <script>
     import { run } from 'svelte/legacy';
-
-    import {getAuthProvidersTemplate, redirectToLogout} from "../../utils/helpers.js";
+    import {getAuthProvidersTemplate, redirectToLogout} from "../../utils/helpers";
     import AccInfo from "./AccInfo.svelte";
     import AccNav from "./AccNav.svelte";
     import AccEdit from "./AccEdit.svelte";
     import {tweened} from "svelte/motion";
     import AccMFA from "./AccMFA.svelte";
-    import LangSelector from "$lib/LangSelector.svelte";
+    import LangSelector from "$lib5/LangSelector.svelte";
     import AccPassword from "./AccPassword.svelte";
     import AccWebId from "./AccWebId.svelte";
     import {onMount} from "svelte";
     import AccDevices from "./AccDevices.svelte";
+    import {useI18n} from "$state/i18n.svelte";
 
-
-    
     /**
      * @typedef {Object} Props
-     * @property {any} t
      * @property {any} [sessionInfo]
      * @property {any} [user]
      * @property {any} webIdData - webIdData will stay undefined if it is not enabled in the backend
@@ -25,11 +22,12 @@
 
     /** @type {Props} */
     let {
-        t,
         sessionInfo,
         user = $bindable({}),
         webIdData = $bindable()
     } = $props();
+
+    let t = useI18n();
 
     let innerWidth = $state();
     let providers = $state();
@@ -40,8 +38,8 @@
         duration: 100,
     })
 
-    let content = $state(t.navInfo);
-    let selected = $state(t.navInfo);
+    let content = $state(t.account.navInfo);
+    let selected = $state(t.account.navInfo);
 
     onMount(async () => {
         providers = await getAuthProvidersTemplate();
@@ -59,7 +57,7 @@
         }
     });
     run(() => {
-        if (selected === t.navLogout) {
+        if (selected === t.account.navLogout) {
             redirectToLogout();
         }
     });
@@ -79,26 +77,26 @@
         <LangSelector absolute absoluteRight updateBackend/>
 
         <div class="headerPhone">
-            <h3>{t.account}</h3>
+            <h3>{t.account.account}</h3>
         </div>
 
         <div class="container">
-            <AccNav {t} bind:selected />
+            <AccNav bind:selected />
 
             <div class="innerPhone">
                 <div style="opacity: {$op}">
-                    {#if content === t.navInfo}
-                        <AccInfo {t} bind:user {webIdData} viewModePhone {authProvider}/>
-                    {:else if content === t.navEdit}
-                        <AccEdit {t} bind:user viewModePhone/>
-                    {:else if content === t.navPassword}
-                        <AccPassword {t} {user} {authProvider} viewModePhone/>
-                    {:else if content === t.navMfa}
-                        <AccMFA {t} {sessionInfo} {user}/>
+                    {#if content === t.account.navInfo}
+                        <AccInfo bind:user {webIdData} viewModePhone {authProvider}/>
+                    {:else if content === t.account.navEdit}
+                        <AccEdit bind:user viewModePhone/>
+                    {:else if content === t.common.password}
+                        <AccPassword {user} {authProvider} viewModePhone/>
+                    {:else if content === t.account.navMfa}
+                        <AccMFA {sessionInfo} {user}/>
                     {:else if content === 'WebID'}
-                        <AccWebId {t} bind:webIdData />
-                    {:else if content === t.devices}
-                        <AccDevices {t} bind:sessionInfo/>
+                        <AccWebId bind:webIdData />
+                    {:else if content === t.account.devices}
+                        <AccDevices bind:sessionInfo/>
                     {/if}
                 </div>
             </div>
@@ -109,26 +107,26 @@
         <LangSelector absolute updateBackend/>
 
         <div class="header">
-            <h3>{t.account}</h3>
+            <h3>{t.account.account}</h3>
         </div>
 
         <div class="container">
-            <AccNav {t} bind:selected showWebId={!!webIdData} />
+            <AccNav bind:selected showWebId={!!webIdData} />
 
             <div class="inner">
                 <div style="opacity: {$op}">
-                    {#if content === t.navInfo}
-                        <AccInfo {t} bind:user {webIdData} {authProvider}/>
-                    {:else if content === t.navEdit}
-                        <AccEdit {t} bind:user/>
-                    {:else if content === t.navPassword}
-                        <AccPassword {t} {user} {authProvider}/>
-                    {:else if content === t.navMfa}
-                        <AccMFA {t} {sessionInfo} {user}/>
+                    {#if content === t.account.navInfo}
+                        <AccInfo bind:user {webIdData} {authProvider}/>
+                    {:else if content === t.account.navEdit}
+                        <AccEdit bind:user/>
+                    {:else if content === t.common.password}
+                        <AccPassword {user} {authProvider}/>
+                    {:else if content === t.account.navMfa}
+                        <AccMFA {sessionInfo} {user}/>
                     {:else if content === 'WebID'}
-                        <AccWebId {t} bind:webIdData/>
-                    {:else if content === t.devices}
-                        <AccDevices {t} bind:sessionInfo/>
+                        <AccWebId bind:webIdData/>
+                    {:else if content === t.account.devices}
+                        <AccDevices bind:sessionInfo/>
                     {/if}
                 </div>
             </div>

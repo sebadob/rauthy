@@ -7,7 +7,7 @@
     import {getPasswordPolicy} from "../../../utils/dataFetching.js";
     import Button from "$lib/Button.svelte";
     import {postPasswordResetRequest, putUser} from "../../../utils/dataFetchingAdmin.js";
-    import {generatePassword} from "../../../utils/helpers.js";
+    import {generatePassword} from "../../../utils/helpers";
 
     let {user = $bindable({}), onSave = $bindable()} = $props();
 

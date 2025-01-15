@@ -6,13 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link rel="icon" href="%sveltekit.assets%/assets/favicon.svg"/>
 
-    <!-- <link rel="preload" href="/auth/v1/theme/rauthy" as="style"/>-->
-    <!-- <link rel="stylesheet" href="/auth/v1/theme/rauthy"/>-->
     <!--
     We can keep the {{client_id}} during local dev -> backend will always return the default.
     In production, the value will be replaced with the proper id to load custom client branding.
     -->
-    <link rel="preload" href="/auth/v1/theme/{{client_id}}" as="style"/>
     <link rel="stylesheet" href="/auth/v1/theme/{{client_id}}"/>
     <style>
         :root {
@@ -51,7 +48,6 @@
     %sveltekit.head%
 </head>
 <body>
-<template id="i18n">{{ i18n|safe }}</template>
 <template id="auth_providers">{{ auth_providers|safe }}</template>
 <input name="rauthy-csrf-token" id="{{ csrf_token }}" type="hidden"/>
 <input name="rauthy-data" id="{{ data }}" type="hidden"/>

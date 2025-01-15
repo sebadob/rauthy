@@ -12,7 +12,7 @@
     import {onDestroy, onMount, tick} from "svelte";
     import ClientBrandingPreview from "./ClientBrandingPreview.svelte";
     import Input from "$lib/inputs/Input.svelte";
-    import {extractFormErrors} from "../../../utils/helpers.js";
+    import {extractFormErrors} from "../../../utils/helpers";
     import * as yup from "yup";
     import {REGEX_CSS_COLOR} from "../../../utils/constants.js";
     import ImageUploadRaw from "../../ImageUploadRaw.svelte";

@@ -1,5 +1,5 @@
 <script>
-    import {eventColor, formatDateFromTs} from "../../../utils/helpers.js";
+    import {eventColor, formatDateFromTs} from "../../../utils/helpers";
     import {onMount} from "svelte";
 
     /**

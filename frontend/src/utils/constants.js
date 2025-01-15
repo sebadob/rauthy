@@ -76,7 +76,7 @@ export const EVENT_TYPES = [
     'UserPasswordReset',
     'Test',
 ]
-export const LANGUAGES = ['DE', 'EN', 'ZH', 'KO'];
+export const LANGUAGES = ['de', 'en', 'zh', 'ko'];
 export const TOKEN_ALGS = [
     'RS256',
     'RS384',

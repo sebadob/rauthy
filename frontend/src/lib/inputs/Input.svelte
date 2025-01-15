@@ -1,6 +1,6 @@
 <script>
     import {createEventDispatcher, tick} from "svelte";
-    import {getKey} from "../utils/helpers.js";
+    import {getKey} from "../utils/helpers";
     import {slide} from "svelte/transition";
 
 

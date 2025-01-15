@@ -2,25 +2,41 @@
     import {onMount} from "svelte";
     import {getQueryParams} from "../../utils/helpers";
     import TabBar from "$lib/TabBar.svelte";
+    import {useI18n} from "$state/i18n.svelte";
 
     /**
      * @typedef {Object} Props
-     * @property {any} t
      * @property {any} [selected]
      * @property {boolean} [showWebId]
      */
 
     /** @type {Props} */
-    let {t, selected = $bindable(), showWebId = false} = $props();
+    let {selected = $bindable(), showWebId = false} = $props();
+
+    let t = useI18n();
 
     let labels = $state(showWebId ?
-        [t.navInfo, t.navEdit, t.navPassword, t.navMfa, 'WebID', t.devices, t.navLogout]
-        : [t.navInfo, t.navEdit, t.navPassword, t.navMfa, t.devices, t.navLogout]);
+        [
+            t.account.navInfo,
+            t.account.navEdit,
+            t.common.password,
+            t.account.navMfa, 'WebID',
+            t.account.devices,
+            t.account.navLogout,
+        ]
+        : [
+            t.account.navInfo,
+            t.account.navEdit,
+            t.common.password,
+            t.account.navMfa,
+            t.account.devices,
+            t.account.navLogout,
+        ]);
 
     onMount(() => {
         let params = getQueryParams();
         if (params.v === 'devices') {
-            selected = t.devices;
+            selected = t.account.devices;
         }
     });
 

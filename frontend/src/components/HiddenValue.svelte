@@ -1,10 +1,10 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import {onMount} from "svelte";
     import IconEyeSlash from "$lib/icons/IconEyeSlash.svelte";
     import IconEye from "$lib/icons/IconEye.svelte";
-    import {sleepAwait} from "../utils/helpers.js";
+    import {sleepAwait} from "../utils/helpers";
     import IconClipboard from "$lib/icons/IconClipboard.svelte";
 
     /**
@@ -13,7 +13,7 @@
      */
 
     /** @type {Props} */
-    let { value = '' } = $props();
+    let {value = ''} = $props();
 
     let hidden = '';
     let text = $state('');
@@ -51,6 +51,7 @@
     function toggle() {
         showValue = !showValue;
     }
+
     run(() => {
         if (showValue) {
             show();

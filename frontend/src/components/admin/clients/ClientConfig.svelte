@@ -2,7 +2,7 @@
     import { run } from 'svelte/legacy';
 
     import * as yup from "yup";
-    import {extractFormErrors} from "../../../utils/helpers.js";
+    import {extractFormErrors} from "../../../utils/helpers";
     import Switch from "$lib/Switch.svelte";
     import ItemTiles from "$lib/itemTiles/ItemTiles.svelte";
     import Button from "$lib/Button.svelte";

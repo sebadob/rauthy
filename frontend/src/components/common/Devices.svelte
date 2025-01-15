@@ -4,19 +4,21 @@
     import ExpandContainer from "$lib/ExpandContainer.svelte";
     import Input from "$lib/inputs/Input.svelte";
     import IconCheck from "$lib/icons/IconCheck.svelte";
-    import {formatDateFromTs} from "../../utils/helpers.js";
+    import {formatDateFromTs} from "../../utils/helpers";
     import Tooltip from "$lib/Tooltip.svelte";
     import IconStop from "$lib/icons/IconStop.svelte";
     import {REGEX_CLIENT_NAME} from "../../utils/constants.js";
+    import {useI18n} from "$state/i18n.svelte";
 
     /**
      * @typedef {Object} Props
-     * @property {any} t
      * @property {string} [userId]
      */
 
     /** @type {Props} */
-    let { t, userId = '' } = $props();
+    let {userId = ''} = $props();
+
+    let t = useI18n();
 
     let devices = $state([]);
 
@@ -47,7 +49,7 @@
         if (isValid) {
             formErrors[id] = '';
         } else {
-            formErrors[id] = t?.invalidInput || 'Invalid Input';
+            formErrors[id] = t?.common.invalidInput || 'Invalid Input';
             return;
         }
 
@@ -96,25 +98,25 @@
 </script>
 
 <div class="head">
-    {t?.devicesDesc || 'Devices linked to this account'}
+    {t?.account.devicesDesc || 'Devices linked to this account'}
 </div>
 
 <div class="devices">
     {#each devices as device (device.id)}
         <ExpandContainer>
             {#snippet header()}
-                        <div class="device-header" >
+                <div class="device-header">
                     <div class="device-head font-mono">
                         {device.name}
                     </div>
                 </div>
-                    {/snippet}
+            {/snippet}
 
             {#snippet body()}
-                        <div class="device" >
+                <div class="device">
                     <div class="unit">
                         <div class="label font-label">
-                            {t?.deviceId.toUpperCase() || 'ID'}
+                            {t?.account.deviceId.toUpperCase() || 'ID'}
                         </div>
                         <div class="value font-mono">
                             {device.id}
@@ -126,13 +128,13 @@
                                 bind:value={formValues[device.id]}
                                 bind:error={formErrors[device.id]}
                                 autocomplete="off"
-                                placeholder={t?.deviceName.toUpperCase() || 'Name'}
+                                placeholder={t?.account.deviceName.toUpperCase() || 'Name'}
                                 on:enter={() => onSaveName(device.id)}
                         >
-                            {t?.deviceName.toUpperCase() || 'NAME'}
+                            {t?.account.deviceName.toUpperCase() || 'NAME'}
                         </Input>
                         {#if formValues[device.id] != device.name}
-                            <Tooltip text={t?.save || 'Save'}>
+                            <Tooltip text={t?.common.save || 'Save'}>
                                 <div
                                         role="button"
                                         tabindex="0"
@@ -148,7 +150,7 @@
 
                     <div class="unit">
                         <div class="label font-label">
-                            {t?.regDate.toUpperCase() || 'REGISTRATION DATE'}
+                            {t?.account.regDate.toUpperCase() || 'REGISTRATION DATE'}
                         </div>
                         <div class="value">
                             {device.created}
@@ -157,7 +159,7 @@
 
                     <div class="unit">
                         <div class="label font-label">
-                            {t?.accessExp.toUpperCase() || 'ACCESS EXPIRES'}
+                            {t?.account.accessExp.toUpperCase() || 'ACCESS EXPIRES'}
                         </div>
                         <div class="value">
                             {formatDateFromTs(device.access_exp)}
@@ -167,13 +169,13 @@
                     {#if device.refresh_exp}
                         <div class="unit">
                             <div class="label font-label">
-                                {t?.accessRenew.toUpperCase() || 'ACCESS RENEW UNTIL'}
+                                {t?.account.accessRenew.toUpperCase() || 'ACCESS RENEW UNTIL'}
                             </div>
                             <div class="row">
                                 <div class="value">
                                     {formatDateFromTs(device.refresh_exp)}
                                 </div>
-                                <Tooltip text={t?.accessRenewDelete || 'Delete the possibility to renew'}>
+                                <Tooltip text={t?.account.accessRenewDelete || 'Delete the possibility to renew'}>
                                     <div
                                             role="button"
                                             tabindex="0"
@@ -190,14 +192,14 @@
 
                     <div class="unit">
                         <div class="label font-label">
-                            {t?.regIp.toUpperCase() || 'REGISTRATION FROM IP'}
+                            {t?.account.regIp.toUpperCase() || 'REGISTRATION FROM IP'}
                         </div>
                         <div class="value">
                             {device.peer_ip}
                         </div>
                     </div>
                 </div>
-                    {/snippet}
+            {/snippet}
         </ExpandContainer>
     {/each}
 </div>

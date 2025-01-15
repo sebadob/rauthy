@@ -1,7 +1,7 @@
 <script>
     import Devices from "../common/Devices.svelte";
 
-    let {t, sessionInfo = $bindable()} = $props();
+    let {sessionInfo = $bindable()} = $props();
 
 </script>
 
@@ -10,7 +10,7 @@
     This is component is only a wrapper because the same Devices
     is reused in the admin ui
     -->
-    <Devices {t} userId={sessionInfo.user_id}/>
+    <Devices userId={sessionInfo.user_id}/>
 </div>
 
 <style>

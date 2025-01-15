@@ -30,7 +30,7 @@ const config = {
             '/auth/v1/oidc/callback': backend,
             '/auth/v1/oidc/certs': backend,
             '/auth/v1/oidc/device': backend,
-            '/auth/v1/oidc/logout': backend,
+            // '/auth/v1/oidc/logout': backend,
             '/auth/v1/oidc/rotate_jwk': backend,
             '/auth/v1/oidc/sessioninfo': backend,
             '/auth/v1/oidc/token': backend,

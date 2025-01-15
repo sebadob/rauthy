@@ -8,7 +8,7 @@
         extractFormErrors,
         generatePassword,
         getQueryParams
-    } from "../../../../../utils/helpers.js";
+    } from "../../../../../utils/helpers";
     import {
         resetPassword,
         webauthnAuthStart,
@@ -21,17 +21,16 @@
     import Input from "$lib/inputs/Input.svelte";
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import WebauthnRequest from "../../../../../components/webauthn/WebauthnRequest.svelte";
-    import BrowserCheck from "../../../../../components/BrowserCheck.svelte";
-    import WithI18n from "$lib/WithI18n.svelte";
     import {slide} from "svelte/transition";
-    import LangSelector from "$lib/LangSelector.svelte";
+    import LangSelector from "$lib5/LangSelector.svelte";
     import {REGEX_NAME} from "../../../../../utils/constants.js";
     import {useIsDev} from "$state/is_dev.svelte";
+    import {useI18n} from "$state/i18n.svelte";
 
     const btnWidth = '150px';
     const inputWidth = '320px';
 
-    let t = $state();
+    let t = useI18n();
     let csrf = '';
     let policy = $state();
     let isReady = $state(true);
@@ -214,7 +213,7 @@
 
         // do passwords match?
         if (formValues.password !== formValues.passwordConfirm) {
-            err = t.passwordNoMatch;
+            err = t.passwordReset.passwordNoMatch;
             return;
         } else {
             err = '';
@@ -286,12 +285,12 @@
         if (t) {
             schemaPasskey = yup.object().shape({
                 passkeyName: yup.string()
-                    .required(t.required)
+                    .required(t.common.required)
                     .matches(REGEX_NAME, t.mfa.passkeyNameErr),
             });
             schemaPassword = yup.object().shape({
-                password: yup.string().required(t.required),
-                passwordConfirm: yup.string().required(t.required)
+                password: yup.string().required(t.common.required),
+                passwordConfirm: yup.string().required(t.common.required)
             });
         }
     });
@@ -324,12 +323,11 @@
 </script>
 
 <svelte:head>
-    <!-- the :head component cannot be wrapped inside the <WithI18n> unfortunately -->
     {#if t}
         {#if requestType.startsWith('new_user')}
-            <title>{t.newAccount}</title>
+            <title>{t.passwordReset.newAccount}</title>
         {:else if requestType === "password_reset"}
-            <title>{t.passwordReset}</title>
+            <title>{t.passwordReset.passwordReset}</title>
         {/if}
     {:else}
         <title>Password</title>
@@ -341,189 +339,187 @@
     <Loading/>
 {/if}
 
-<WithI18n bind:t content="passwordReset">
-    <!--    <div class="container">-->
-    <!--        {#if requestType.startsWith('new_user')}-->
-    <!--            {#if webauthnData}-->
-    <!--                <WebauthnRequest-->
-    <!--                        bind:data={webauthnData}-->
-    <!--                        onSuccess={onWebauthnSuccess}-->
-    <!--                        onError={onWebauthnError}-->
-    <!--                />-->
-    <!--            {/if}-->
+<div class="container">
+    {#if requestType.startsWith('new_user')}
+        {#if webauthnData}
+            <WebauthnRequest
+                    bind:data={webauthnData}
+                    onSuccess={onWebauthnSuccess}
+                    onError={onWebauthnError}
+            />
+        {/if}
 
-    <!--            <h1>{t.newAccount}</h1>-->
-    <!--            <p>{t.newAccDesc1}</p>-->
-    <!--            <p>{t.newAccDesc2}<a href={t.fidoLink} target="_blank">FIDO Alliance</a></p>-->
+        <h1>{t.passwordReset.newAccount}</h1>
+        <p>{t.passwordReset.newAccDesc1}</p>
+        <p>{t.passwordReset.newAccDesc2}<a href={t.passwordReset.fidoLink} target="_blank">FIDO Alliance</a></p>
 
-    <!--            <div style:margin-bottom="1rem">-->
-    <!--                <Button-->
-    <!--                        on:click={() => accountTypeNew = "passkey"}-->
-    <!--                        width={btnWidth}-->
-    <!--                        bind:isLoading-->
-    <!--                        level={2}-->
-    <!--                        isDisabled={success}-->
-    <!--                >-->
-    <!--                    {t.passwordless.toUpperCase()}-->
-    <!--                </Button>-->
-    <!--                <Button-->
-    <!--                        on:click={() => accountTypeNew = "password"}-->
-    <!--                        width={btnWidth}-->
-    <!--                        bind:isLoading-->
-    <!--                        level={3}-->
-    <!--                        isDisabled={success}-->
-    <!--                >-->
-    <!--                    {t.password.toUpperCase()}-->
-    <!--                </Button>-->
-    <!--            </div>-->
+        <div style:margin-bottom="1rem">
+            <Button
+                    on:click={() => accountTypeNew = "passkey"}
+                    width={btnWidth}
+                    bind:isLoading
+                    level={2}
+                    isDisabled={success}
+            >
+                {t.passwordReset.passwordless}
+            </Button>
+            <Button
+                    on:click={() => accountTypeNew = "password"}
+                    width={btnWidth}
+                    bind:isLoading
+                    level={3}
+                    isDisabled={success}
+            >
+                {t.passwordReset.password}
+            </Button>
+        </div>
 
-    <!--            {#if accountTypeNew === "password"}-->
-    <!--                <div transition:slide>-->
-    <!--                    <PasswordPolicy {t} bind:accepted {policy} password={formValues.password}/>-->
+        {#if accountTypeNew === "password"}
+            <div transition:slide>
+                <PasswordPolicy bind:accepted {policy} password={formValues.password}/>
 
-    <!--                    <PasswordInput-->
-    <!--                            bind:value={formValues.password}-->
-    <!--                            error={formErrors.password}-->
-    <!--                            autocomplete="new-password"-->
-    <!--                            placeholder={t.password}-->
-    <!--                            width={inputWidth}-->
-    <!--                            {showCopy}-->
-    <!--                            disabled={success}-->
-    <!--                    >-->
-    <!--                        {t.password.toUpperCase()}-->
-    <!--                    </PasswordInput>-->
-    <!--                    <PasswordInput-->
-    <!--                            bind:value={formValues.passwordConfirm}-->
-    <!--                            error={formErrors.passwordConfirm}-->
-    <!--                            autocomplete="new-password"-->
-    <!--                            placeholder={t.passwordConfirm}-->
-    <!--                            width={inputWidth}-->
-    <!--                            {showCopy}-->
-    <!--                            disabled={success}-->
-    <!--                    >-->
-    <!--                        {t.passwordConfirm.toUpperCase()}-->
-    <!--                    </PasswordInput>-->
+                <PasswordInput
+                        bind:value={formValues.password}
+                        error={formErrors.password}
+                        autocomplete="new-password"
+                        placeholder={t.passwordReset.password}
+                        width={inputWidth}
+                        {showCopy}
+                        disabled={success}
+                >
+                    {t.passwordReset.password.toUpperCase()}
+                </PasswordInput>
+                <PasswordInput
+                        bind:value={formValues.passwordConfirm}
+                        error={formErrors.passwordConfirm}
+                        autocomplete="new-password"
+                        placeholder={t.passwordReset.passwordConfirm}
+                        width={inputWidth}
+                        {showCopy}
+                        disabled={success}
+                >
+                    {t.passwordReset.passwordConfirm.toUpperCase()}
+                </PasswordInput>
 
-    <!--                    <Button-->
-    <!--                            on:click={generate}-->
-    <!--                            width={btnWidth}-->
-    <!--                            level={3}-->
-    <!--                            isDisabled={success}-->
-    <!--                    >-->
-    <!--                        {t.generate.toUpperCase()}-->
-    <!--                    </Button>-->
-    <!--                    <Button-->
-    <!--                            on:click={passwordReset}-->
-    <!--                            width={btnWidth}-->
-    <!--                            bind:isLoading level={2}-->
-    <!--                            isDisabled={success}-->
-    <!--                    >-->
-    <!--                        {t.save.toUpperCase()}-->
-    <!--                    </Button>-->
+                <Button
+                        on:click={generate}
+                        width={btnWidth}
+                        level={3}
+                        isDisabled={success}
+                >
+                    {t.passwordReset.generate}
+                </Button>
+                <Button
+                        on:click={passwordReset}
+                        width={btnWidth}
+                        bind:isLoading level={2}
+                        isDisabled={success}
+                >
+                    {t.common.save}
+                </Button>
 
-    <!--                    {#if success}-->
-    <!--                        <div class="success">-->
-    <!--                            {t.success1}-->
-    <!--                            <br>-->
-    <!--                            {t.success2}-->
-    <!--                        </div>-->
-    <!--                    {/if}-->
-    <!--                </div>-->
-    <!--            {:else if accountTypeNew === "passkey"}-->
-    <!--                <div transition:slide>-->
-    <!--                    <Input-->
-    <!--                            bind:value={formValues.passkeyName}-->
-    <!--                            bind:error={formErrors.passkeyName}-->
-    <!--                            autocomplete="off"-->
-    <!--                            placeholder={t.mfa.passkeyName}-->
-    <!--                            on:enter={handleRegisterPasskey}-->
-    <!--                            width={inputWidth}-->
-    <!--                            disabled={success}-->
-    <!--                    >-->
-    <!--                        {t.mfa.passkeyName}-->
-    <!--                    </Input>-->
-    <!--                    <Button-->
-    <!--                            on:click={handleRegisterPasskey} width={btnWidth}-->
-    <!--                            level={success ? 2 : 1}-->
-    <!--                            isDisabled={success}-->
-    <!--                    >-->
-    <!--                        {t.mfa.register.toUpperCase()}-->
-    <!--                    </Button>-->
+                {#if success}
+                    <div class="success">
+                        {t.passwordReset.success1}
+                        <br>
+                        {t.passwordReset.success2}
+                    </div>
+                {/if}
+            </div>
+        {:else if accountTypeNew === "passkey"}
+            <div transition:slide>
+                <Input
+                        bind:value={formValues.passkeyName}
+                        bind:error={formErrors.passkeyName}
+                        autocomplete="off"
+                        placeholder={t.mfa.passkeyName}
+                        on:enter={handleRegisterPasskey}
+                        width={inputWidth}
+                        disabled={success}
+                >
+                    {t.mfa.passkeyName}
+                </Input>
+                <Button
+                        on:click={handleRegisterPasskey} width={btnWidth}
+                        level={success ? 2 : 1}
+                        isDisabled={success}
+                >
+                    {t.mfa.register}
+                </Button>
 
-    <!--                    {#if success}-->
-    <!--                        <div class="success">-->
-    <!--                            <p>{t.successPasskey1}</p>-->
-    <!--                            <p>{t.successPasskey2}</p>-->
-    <!--                            <Button on:click={navigateToAccount} width={btnWidth} level={1}>-->
-    <!--                                {t.accountLogin.toUpperCase()}-->
-    <!--                            </Button>-->
-    <!--                        </div>-->
-    <!--                    {/if}-->
-    <!--                </div>-->
-    <!--            {/if}-->
-    <!--        {:else if requestType.startsWith('password_reset')}-->
-    <!--            {#if webauthnData}-->
-    <!--                <WebauthnRequest-->
-    <!--                        bind:data={webauthnData}-->
-    <!--                        purpose="PasswordReset"-->
-    <!--                        onSuccess={onWebauthnSuccess}-->
-    <!--                        onError={onWebauthnError}-->
-    <!--                />-->
-    <!--            {/if}-->
+                {#if success}
+                    <div class="success">
+                        <p>{t.passwordReset.successPasskey1}</p>
+                        <p>{t.passwordReset.successPasskey2}</p>
+                        <Button on:click={navigateToAccount} width={btnWidth} level={1}>
+                            {t.passwordReset.accountLogin}
+                        </Button>
+                    </div>
+                {/if}
+            </div>
+        {/if}
+    {:else if requestType.startsWith('password_reset')}
+        {#if webauthnData}
+            <WebauthnRequest
+                    bind:data={webauthnData}
+                    purpose="PasswordReset"
+                    onSuccess={onWebauthnSuccess}
+                    onError={onWebauthnError}
+            />
+        {/if}
 
-    <!--            <h1>Password Reset</h1>-->
+        <h1>Password Reset</h1>
 
-    <!--            <PasswordPolicy {t} bind:accepted {policy} password={formValues.password}/>-->
+        <PasswordPolicy bind:accepted {policy} password={formValues.password}/>
 
-    <!--            <PasswordInput-->
-    <!--                    bind:value={formValues.password}-->
-    <!--                    error={formErrors.password}-->
-    <!--                    autocomplete="new-password"-->
-    <!--                    placeholder={t.password}-->
-    <!--                    width={inputWidth}-->
-    <!--                    {showCopy}-->
-    <!--            >-->
-    <!--                {t.password.toUpperCase()}-->
-    <!--            </PasswordInput>-->
-    <!--            <PasswordInput-->
-    <!--                    bind:value={formValues.passwordConfirm}-->
-    <!--                    error={formErrors.passwordConfirm}-->
-    <!--                    autocomplete="new-password"-->
-    <!--                    placeholder={t.passwordConfirm}-->
-    <!--                    width={inputWidth}-->
-    <!--                    {showCopy}-->
-    <!--            >-->
-    <!--                {t.passwordConfirm.toUpperCase()}-->
-    <!--            </PasswordInput>-->
+        <PasswordInput
+                bind:value={formValues.password}
+                error={formErrors.password}
+                autocomplete="new-password"
+                placeholder={t.passwordReset.password}
+                width={inputWidth}
+                {showCopy}
+        >
+            {t.passwordReset.password.toUpperCase()}
+        </PasswordInput>
+        <PasswordInput
+                bind:value={formValues.passwordConfirm}
+                error={formErrors.passwordConfirm}
+                autocomplete="new-password"
+                placeholder={t.passwordReset.passwordConfirm}
+                width={inputWidth}
+                {showCopy}
+        >
+            {t.passwordReset.passwordConfirm.toUpperCase()}
+        </PasswordInput>
 
-    <!--            <Button on:click={generate} width={btnWidth} level={3}>-->
-    <!--                {t.generate.toUpperCase()}-->
-    <!--            </Button>-->
-    <!--            <Button on:click={passwordReset} width={btnWidth} bind:isLoading level={2}>-->
-    <!--                {t.save.toUpperCase()}-->
-    <!--            </Button>-->
+        <Button on:click={generate} width={btnWidth} level={3}>
+            {t.passwordReset.generate}
+        </Button>
+        <Button on:click={passwordReset} width={btnWidth} bind:isLoading level={2}>
+            {t.common.save}
+        </Button>
 
-    <!--            {#if success}-->
-    <!--                <div class="success">-->
-    <!--                    {t.success1}-->
-    <!--                    {t.success2}-->
-    <!--                    <br>-->
-    <!--                    {t.success3}-->
-    <!--                    <br>-->
-    <!--                    <a href={redirectUri || '/auth/v1/account'}>Link</a>-->
-    <!--                </div>-->
-    <!--            {/if}-->
-    <!--        {/if}-->
+        {#if success}
+            <div class="success">
+                {t.passwordReset.success1}
+                {t.passwordReset.success2}
+                <br>
+                {t.passwordReset.success3}
+                <br>
+                <a href={redirectUri || '/auth/v1/account'}>Link</a>
+            </div>
+        {/if}
+    {/if}
 
-    <!--        {#if err}-->
-    <!--            <div class="err">-->
-    <!--                {err}-->
-    <!--            </div>-->
-    <!--        {/if}-->
-    <!--    </div>-->
+    {#if err}
+        <div class="err">
+            {err}
+        </div>
+    {/if}
+</div>
 
-    <LangSelector absolute/>
-</WithI18n>
+<LangSelector absolute/>
 
 <style>
     a {

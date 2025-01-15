@@ -1,8 +1,14 @@
 <script lang="ts">
     import {onMount, type Snippet} from 'svelte'
+    import {initIsDev} from "$state/is_dev.svelte.ts";
+    import {initLang} from "$state/language.svelte.ts";
+    import {initI18n} from "$state/i18n.svelte.ts";
 
     import "../css/global.css";
-    import {useIsDev} from "../global_state/is_dev.svelte.ts";
+
+    initIsDev();
+    initLang();
+    initI18n();
 
     let {
         children,
@@ -10,7 +16,8 @@
         children: Snippet,
     } = $props();
 
-    let isDev = useIsDev();
+    // We expect true to not break SSR.
+    // If cookies should be disabled, the warning will show up fast enough.
     let cookiesEnabled = $state(true);
 
     onMount(() => {

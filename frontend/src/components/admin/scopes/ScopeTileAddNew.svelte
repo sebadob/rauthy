@@ -1,16 +1,16 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import ExpandContainer from "$lib/ExpandContainer.svelte";
     import * as yup from "yup";
     import {REGEX_ROLES} from "../../../utils/constants.js";
-    import {extractFormErrors} from "../../../utils/helpers.js";
+    import {extractFormErrors} from "../../../utils/helpers";
     import {onMount} from "svelte";
     import Button from "$lib/Button.svelte";
     import {postScope} from "../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";
 
-    let { idx = $bindable(-1), onSave } = $props();
+    let {idx = $bindable(-1), onSave} = $props();
     let expandContainer = $state();
 
     let scope = $state({scope: ''});
@@ -77,13 +77,13 @@
 
 <ExpandContainer bind:idx bind:show={expandContainer}>
     {#snippet header()}
-        <div class="header font-label" >
+        <div class="header font-label">
             ADD NEW SCOPE
         </div>
     {/snippet}
 
     {#snippet body()}
-        <div class="container" >
+        <div class="container">
             <Input
                     bind:value={scope.scope}
                     bind:error={formErrors.scope}

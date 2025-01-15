@@ -1,15 +1,15 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import * as yup from "yup";
-    import {extractFormErrors} from "../../../utils/helpers.js";
+    import {extractFormErrors} from "../../../utils/helpers";
     import Button from "$lib/Button.svelte";
     import {REGEX_ROLES} from "../../../utils/constants.js";
     import {onMount} from "svelte";
     import {putGroup} from "../../../utils/dataFetchingAdmin.js";
     import Input from "$lib/inputs/Input.svelte";
 
-    let { group = $bindable({}), onSave } = $props();
+    let {group = $bindable({}), onSave} = $props();
 
     let isLoading = false;
     let err = $state('');

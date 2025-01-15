@@ -1,13 +1,15 @@
 <script>
-    import { run } from 'svelte/legacy';
-
+    import {run} from 'svelte/legacy';
     import Button from "$lib/Button.svelte";
     import {fade, slide} from 'svelte/transition';
     import {putUserWebIdData} from "../../utils/dataFetching.js";
     import Switch from "$lib/Switch.svelte";
-    import {buildWebIdUri} from "../../utils/helpers.js";
+    import {buildWebIdUri} from "../../utils/helpers";
+    import {useI18n} from "$state/i18n.svelte";
 
-    let { t, webIdData = $bindable() } = $props();
+    let {webIdData = $bindable()} = $props();
+
+    let t = useI18n();
 
     const btnWidth = "12rem";
 
@@ -44,7 +46,7 @@
 
 <div class="wrapper">
     <div class="container">
-        <p>{t.webIdDesc}</p>
+        <p>{t.account.webIdDesc}</p>
 
         <p>
             <a href={webIdLink} target="_blank">
@@ -61,21 +63,21 @@
 
         <div class="row">
             <div class="label">
-                {t.webIdExpertMode}
+                {t.account.webIdExpertMode}
             </div>
             <Switch bind:selected={expertMode}/>
         </div>
 
         {#if expertMode}
             <div transition:slide>
-                <p>{t.webIdDescData}</p>
-<!--                <AccWebIdEntries-->
-<!--                        bind:t-->
-<!--                        bind:webIdData-->
-<!--                        bind:viewModePhone-->
-<!--                        bind:getData-->
-<!--                        bind:validateData-->
-<!--                />-->
+                <p>{t.account.webIdDescData}</p>
+                <!--                <AccWebIdEntries-->
+                <!--                        bind:t-->
+                <!--                        bind:webIdData-->
+                <!--                        bind:viewModePhone-->
+                <!--                        bind:getData-->
+                <!--                        bind:validateData-->
+                <!--                />-->
                 <textarea
                         class="font-mono text"
                         rows={15}
@@ -86,7 +88,7 @@
         {/if}
 
         <Button width={btnWidth} on:click={onSubmit} level={1}>
-            {t.save.toUpperCase()}
+            {t.common.save}
         </Button>
 
         <div class="bottom">

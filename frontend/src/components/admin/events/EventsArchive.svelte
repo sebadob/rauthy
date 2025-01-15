@@ -3,14 +3,14 @@
 
     import {onMount, untrack} from "svelte";
     import {postEvents} from "../../../utils/dataFetchingAdmin.js";
-    import {formatDateToDateInput, formatUtcTsFromDateInput} from "../../../utils/helpers.js";
+    import {formatDateToDateInput, formatUtcTsFromDateInput} from "../../../utils/helpers";
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
     import Input from "$lib/inputs/Input.svelte";
     import {EVENT_LEVELS, EVENT_TYPES} from "../../../utils/constants.js";
     import OptionSelect from "$lib/OptionSelect.svelte";
     import Event from "./Event.svelte";
     import Switch from "$lib/Switch.svelte";
-    import {sleepAwait} from "$lib/utils/helpers.js";
+    import {sleepAwait} from "$lib/utils/helpers";
 
     let err = '';
     let events = $state([]);

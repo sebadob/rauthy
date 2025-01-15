@@ -2,12 +2,12 @@
     import {run} from 'svelte/legacy';
 
     import {onMount} from "svelte";
-    import {getKey} from "$lib/utils/helpers.js";
+    import {getKey} from "$lib/utils/helpers";
     import Button from "$lib/Button.svelte";
     import Input from "$lib/inputs/Input.svelte";
     import * as yup from "yup";
     import {REGEX_URI} from "../../utils/constants.js";
-    import {extractFormErrors} from "../../utils/helpers.js";
+    import {extractFormErrors} from "../../utils/helpers";
     import CheckIcon from "$lib/CheckIcon.svelte";
     import {getFedCMStatus} from "../../utils/dataFetching.js";
     import Main from "$lib5/Main.svelte";
@@ -18,10 +18,6 @@
     let isLoggedIn = $state(false);
     let credentials = $state('');
     let credentialType = $state('');
-
-    run(() => {
-        console.log('built config url: ' + configUrl);
-    });
 
     let formValues = $state({
         clientId: 'fedcm',
