@@ -3,10 +3,10 @@ use crate::entity::password::PasswordPolicy;
 use crate::language::Language;
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, HttpResponseBuilder};
-use askama_actix::Template;
 use rauthy_common::constants::{
     DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION,
 };
+use rinja_actix::Template;
 use std::borrow::Cow;
 use std::fmt::{Debug, Display, Formatter};
 
