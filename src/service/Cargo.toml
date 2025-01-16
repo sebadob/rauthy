@@ -13,8 +13,6 @@ rauthy-models = { path = "../models" }
 
 actix-web = { workspace = true }
 argon2 = { workspace = true }
-askama = { workspace = true }
-askama_actix = { workspace = true }
 chacha20poly1305 = { workspace = true }
 chrono = { workspace = true }
 cryptr = { workspace = true }

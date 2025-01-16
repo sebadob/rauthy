@@ -24,8 +24,6 @@ actix-web-lab = { workspace = true }
 actix-service = { workspace = true }
 anyhow = { workspace = true }
 argon2 = { workspace = true }
-askama = { workspace = true }
-askama_actix = { workspace = true }
 async-trait = { workspace = true }
 bincode = { workspace = true }
 cached = { workspace = true }
@@ -58,6 +56,8 @@ rand_core = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }
 ring = { workspace = true }
+rinja = { workspace = true }
+rinja_actix = { workspace = true }
 rio_api = { workspace = true }
 rio_turtle = { workspace = true }
 rust-embed = { workspace = true }

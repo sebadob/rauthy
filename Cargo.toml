@@ -32,8 +32,6 @@ actix-web-lab = "0.23"
 actix-web-prom = "0.9.0"
 anyhow = "1"
 argon2 = { version = "0.5", features = ["std", "zeroize"] }
-askama = { version = "0.12", features = ["with-actix-web"] }
-askama_actix = "0.14"
 async-trait = "0.1.74"
 base64 = "0.22.0"
 bincode = "1"
@@ -80,6 +78,8 @@ rand_core = { version = "0.6", features = ["std"] }
 regex = "1"
 reqwest = { version = "0.12.3", default-features = false, features = ["json", "rustls-tls"] }
 ring = "0.17"
+rinja = { version = "0.3.5", features = ["with-actix-web"] }
+rinja_actix = "0.3.5"
 rio_api = "0.8.4"
 rio_turtle = "0.8.4"
 rsa = { version = "0.9.3", features = ["serde", "sha2"] }
