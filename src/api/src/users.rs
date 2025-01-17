@@ -272,12 +272,7 @@ pub async fn get_users_register(req: HttpRequest) -> Result<HttpResponse, ErrorR
 
     if !*OPEN_USER_REG {
         let status = StatusCode::NOT_FOUND;
-        let body = Error1Html::build(
-            &colors,
-            &lang,
-            status,
-            Some("Open User Registration is disabled".to_string()),
-        );
+        let body = Error1Html::build(&colors, &lang, status, "Open User Registration is disabled");
         return Ok(ErrorHtml::response(body, status));
     }
 
@@ -577,7 +572,7 @@ pub async fn get_user_email_confirm(
         Err(err) => {
             let colors = ColorEntity::find_rauthy().await.unwrap_or_default();
             let status = err.status_code();
-            let body = Error3Html::build(&colors, &lang, status, Some(err.message));
+            let body = Error3Html::build(&colors, &lang, status, err.message);
             ErrorHtml::response(body, status)
         }
     }
@@ -619,7 +614,7 @@ pub async fn get_user_password_reset(
                     Err(err) => {
                         let colors = ColorEntity::find_rauthy().await.unwrap_or_default();
                         let status = err.status_code();
-                        let body = Error3Html::build(&colors, &lang, status, Some(err.message));
+                        let body = Error3Html::build(&colors, &lang, status, err.message);
                         return ErrorHtml::response(body, status);
                     }
                 };
@@ -641,7 +636,7 @@ pub async fn get_user_password_reset(
         Err(err) => {
             let colors = ColorEntity::find_rauthy().await.unwrap_or_default();
             let status = err.status_code();
-            let body = Error3Html::build(&colors, &lang, status, Some(err.message));
+            let body = Error3Html::build(&colors, &lang, status, err.message);
             ErrorHtml::response(body, status)
         }
     }

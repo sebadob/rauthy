@@ -95,7 +95,7 @@ pub async fn get_authorize(
         Ok(res) => res,
         Err(err) => {
             let status = err.status_code();
-            let body = Error1Html::build(&colors, &lang, status, Some(err.message));
+            let body = Error1Html::build(&colors, &lang, status, err.message);
             return Ok(ErrorHtml::response(body, status));
         }
     };
@@ -144,7 +144,7 @@ pub async fn get_authorize(
             .unwrap_or(false)
     {
         let status = StatusCode::UNAUTHORIZED;
-        let body = Error1Html::build(&colors, &lang, status, Some("login_required"));
+        let body = Error1Html::build(&colors, &lang, status, "login_required");
         return Ok(ErrorHtml::response(body, status));
     }
 
@@ -188,7 +188,7 @@ pub async fn get_authorize(
 
     if let Err(err) = session.save().await {
         let status = err.status_code();
-        let body = Error1Html::build(&colors, &lang, status, Some(err.message));
+        let body = Error1Html::build(&colors, &lang, status, err.message);
         return Ok(ErrorHtml::response(body, status));
     }
 

@@ -5,10 +5,10 @@
 
     let {
         id,
-        data = $bindable(),
+        value = $bindable(),
     }: {
         id: string,
-        data: boolean | string | object,
+        value: boolean | string | object,
     } = $props();
 
     onMount(async () => {
@@ -18,7 +18,7 @@
                 assign(tpl.innerHTML);
             }
         } else {
-            let res = await fetchGet<typeof data>(`/auth/v1/template/${id}`);
+            let res = await fetchGet<typeof value>(`/auth/v1/template/${id}`);
             if (res.error) {
                 console.error(res.error);
             } else if (res.text) {
@@ -28,12 +28,12 @@
     });
 
     function assign(s: string) {
-        if (typeof data === 'boolean') {
-            data = s === 'true';
-        } else if (typeof data === 'string') {
-            data = s;
+        if (typeof value === 'boolean') {
+            value = s === 'true';
+        } else if (typeof value === 'string') {
+            value = s;
         } else {
-            data = JSON.parse(s);
+            value = JSON.parse(s);
         }
     }
 </script>

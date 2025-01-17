@@ -5,11 +5,14 @@
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
+    import Template from "$lib5/Template.svelte";
+    import {TPL_ERROR_TEXT, TPL_STATUS_CODE} from "../utils/constants.js";
 
     let t = useI18n();
 
     let showDetails = $state(false);
-    let errorTyp = $state('');
+    let statusCode = $state('');
+    let errorText = $state('');
     let errorDetails = $state('');
 
     // TODO:
@@ -18,14 +21,17 @@
 
 </script>
 
+<Template id={TPL_STATUS_CODE} bind:value={statusCode}/>
+<Template id={TPL_ERROR_TEXT} bind:value={errorText}/>
+
 <Main>
     <ContentCenter>
         <div class="flex-col">
-            <h1>{t.error.error}</h1>
+            <h1>{statusCode}</h1>
             <br>
-            <p>{t.error.errorText}</p>
+            <p>{errorText}</p>
 
-            {#if t.error.detailsText}
+            {#if errorDetails}
                 <div
                         role="button"
                         tabindex="0"
@@ -48,7 +54,7 @@
 
                 {#if showDetails}
                     <div transition:slide class="details">
-                        {t.error.detailsText}
+                        {errorDetails}
                     </div>
                 {/if}
             {/if}

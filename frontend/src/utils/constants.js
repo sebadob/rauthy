@@ -116,3 +116,10 @@ export const PKCE_CHALLENGES = [{
         value: false,
     },
 ];
+
+// All TPL_* values match a possibly existing `<template>` id
+// -> src/models/src/html_templates.rs -> HtmlTemplate
+export const TPL_AUTH_PROVIDERS = 'auth_providers';
+export const TPL_ERROR_DETAILS = 'error_details';
+export const TPL_ERROR_TEXT = 'error_text';
+export const TPL_STATUS_CODE = 'status_code';

@@ -120,9 +120,9 @@ export const I18nEn: I18n = {
     },
     error: {
         error: "404 Not Found",
-        errorText: "The requested data could not be found",
+        // errorText: "The requested data could not be found",
         details: "Show Details",
-        detailsText: undefined,
+        // detailsText: undefined,
     },
     index: {
         register: "Register",

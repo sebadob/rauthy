@@ -2,13 +2,10 @@ use crate::entity::auth_providers::AuthProviderTemplate;
 use crate::entity::colors::Colors;
 use crate::entity::password::PasswordPolicy;
 use crate::language::Language;
-use actix_web::http::header::CONTENT_TYPE;
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, HttpResponseBuilder};
-use jwt_simple::reexports::thiserror::__private::AsDisplay;
 use rauthy_common::constants::{
-    APPLICATION_JSON, DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG,
-    USER_REG_DOMAIN_RESTRICTION,
+    DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rinja_actix::Template;
@@ -32,10 +29,14 @@ impl Display for FrontendAction {
     }
 }
 
+// If you add new values to this template, make sure to also create a
+// matching constant in the UI and make proper use of it:
+// -> frontend/src/utils/constants.js -> TPL_* values
 #[derive(Debug)]
 pub enum HtmlTemplate {
     /// Auth providers as JSON value
     AuthProviders(String),
+    ErrorDetails(Cow<'static, str>),
     ErrorText(Cow<'static, str>),
     StatusCode(StatusCode),
 }
@@ -59,6 +60,7 @@ impl HtmlTemplate {
     pub fn id(&self) -> &'static str {
         match self {
             Self::AuthProviders(_) => "auth_providers",
+            Self::ErrorDetails(_) => "error_details",
             Self::ErrorText(_) => "error_text",
             Self::StatusCode(_) => "status_code",
         }
@@ -67,8 +69,9 @@ impl HtmlTemplate {
     pub fn inner(&self) -> &str {
         match self {
             Self::AuthProviders(s) => s,
-            Self::StatusCode(s) => s.as_str(),
+            Self::ErrorDetails(s) => s.as_ref(),
             Self::ErrorText(s) => s.as_ref(),
+            Self::StatusCode(s) => s.as_str(),
         }
     }
 }
@@ -349,12 +352,15 @@ pub struct ErrorHtml<'a> {
 }
 
 impl ErrorHtml<'_> {
-    pub fn build(
+    pub fn build<C>(
         colors: &Colors,
         lang: &Language,
         status_code: StatusCode,
-        details_text: Option<Cow<'static, str>>,
-    ) -> String {
+        details_text: C,
+    ) -> String
+    where
+        C: Into<Cow<'static, str>>,
+    {
         let res = ErrorHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
@@ -371,6 +377,10 @@ impl ErrorHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            templates: &[
+                HtmlTemplate::StatusCode(status_code),
+                HtmlTemplate::ErrorText(details_text.into()),
+            ],
             ..Default::default()
         };
 
@@ -419,7 +429,7 @@ impl Error1Html<'_> {
         colors: &Colors,
         lang: &Language,
         status_code: StatusCode,
-        details_text: Option<C>,
+        details_text: C,
     ) -> String
     where
         C: Into<Cow<'static, str>>,
@@ -440,6 +450,10 @@ impl Error1Html<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            templates: &[
+                HtmlTemplate::StatusCode(status_code),
+                HtmlTemplate::ErrorText(details_text.into()),
+            ],
             ..Default::default()
         };
 
@@ -476,7 +490,7 @@ impl Error2Html<'_> {
         colors: &Colors,
         lang: &Language,
         status_code: StatusCode,
-        details_text: Option<C>,
+        details_text: C,
     ) -> String
     where
         C: Into<Cow<'static, str>>,
@@ -497,6 +511,10 @@ impl Error2Html<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            templates: &[
+                HtmlTemplate::StatusCode(status_code),
+                HtmlTemplate::ErrorText(details_text.into()),
+            ],
             ..Default::default()
         };
 
@@ -533,7 +551,7 @@ impl Error3Html<'_> {
         colors: &Colors,
         lang: &Language,
         status_code: StatusCode,
-        details_text: Option<C>,
+        details_text: C,
     ) -> String
     where
         C: Into<Cow<'static, str>>,
@@ -554,6 +572,10 @@ impl Error3Html<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            templates: &[
+                HtmlTemplate::StatusCode(status_code),
+                HtmlTemplate::ErrorText(details_text.into()),
+            ],
             ..Default::default()
         };
 
