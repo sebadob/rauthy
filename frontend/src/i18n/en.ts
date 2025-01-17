@@ -119,7 +119,6 @@ export const I18nEn: I18n = {
         to: "to",
     },
     error: {
-        error: "404 Not Found",
         // errorText: "The requested data could not be found",
         details: "Show Details",
         // detailsText: undefined,

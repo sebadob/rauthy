@@ -119,7 +119,6 @@ export const I18nZh: I18n = {
         to: "更新为",
     },
     error: {
-        error: "404 Not Found",
         // errorText: "找不到请求的资源",
         details: "显示详情",
         // detailsText: undefined,

@@ -117,7 +117,6 @@ export interface I18n {
         to: string,
     },
     error: {
-        error: string,
         details: string,
     },
     index: {
