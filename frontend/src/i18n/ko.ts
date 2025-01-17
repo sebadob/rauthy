@@ -119,10 +119,9 @@ export const I18nKo: I18n = {
         to: "에서",
     },
     error: {
-        error: "404 Not Found",
-        errorText: "요청 정보를 찾을 수 없습니다.",
+        // errorText: "요청 정보를 찾을 수 없습니다.",
         details: "자세한 정보 표시",
-        detailsText: undefined,
+        // detailsText: undefined,
     },
     index: {
         register: "가입",

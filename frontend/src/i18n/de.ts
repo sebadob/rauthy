@@ -119,10 +119,9 @@ export const I18nDe: I18n = {
         to: "zu",
     },
     error: {
-        error: "404 Not Found",
-        errorText: "Die angeforderte Seite konnte nicht gefunden werden.",
+        // errorText: "Die angeforderte Seite konnte nicht gefunden werden.",
         details: "Details Anzeigen",
-        detailsText: undefined,
+        // detailsText: undefined,
     },
     index: {
         register: "Registrieren",

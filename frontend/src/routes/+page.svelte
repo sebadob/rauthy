@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import {onMount} from "svelte";
     import Button from "$lib/Button.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
@@ -7,6 +7,7 @@
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useIsDev} from "$state/is_dev.svelte";
     import {useI18n} from "$state/i18n.svelte";
+    import Template from "$lib5/Template.svelte";
 
     const btnWidth = "9rem";
 

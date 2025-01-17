@@ -1,5 +1,5 @@
 import {CSRF_TOKEN} from "../utils/constants";
-import type {ErrorResponse} from "$api/response/common/errorResponse.ts";
+import {type ErrorResponse} from "$api/response/errorResponse.ts";
 
 export interface IResponse<T> {
     body: undefined | T,

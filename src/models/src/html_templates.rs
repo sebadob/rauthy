@@ -1,3 +1,4 @@
+use crate::entity::auth_providers::AuthProviderTemplate;
 use crate::entity::colors::Colors;
 use crate::entity::password::PasswordPolicy;
 use crate::language::Language;
@@ -6,6 +7,7 @@ use actix_web::{HttpResponse, HttpResponseBuilder};
 use rauthy_common::constants::{
     DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION,
 };
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rinja_actix::Template;
 use std::borrow::Cow;
 use std::fmt::{Debug, Display, Formatter};
@@ -27,28 +29,75 @@ impl Display for FrontendAction {
     }
 }
 
+// If you add new values to this template, make sure to also create a
+// matching constant in the UI and make proper use of it:
+// -> frontend/src/utils/constants.js -> TPL_* values
+#[derive(Debug)]
+pub enum HtmlTemplate {
+    /// Auth providers as JSON value
+    AuthProviders(String),
+    ErrorDetails(Cow<'static, str>),
+    ErrorText(Cow<'static, str>),
+    StatusCode(StatusCode),
+}
+
+impl HtmlTemplate {
+    pub async fn build_from_str(s: &str) -> Result<Self, ErrorResponse> {
+        // TODO make sure to check the session in case of sensitive id's like csrf token
+
+        match s {
+            "auth_providers" => {
+                let json = AuthProviderTemplate::get_all_json_template().await?;
+                Ok(Self::AuthProviders(json))
+            }
+            _ => Err(ErrorResponse::new(
+                ErrorResponseType::NotFound,
+                "invalid template id",
+            )),
+        }
+    }
+
+    pub fn id(&self) -> &'static str {
+        match self {
+            Self::AuthProviders(_) => "auth_providers",
+            Self::ErrorDetails(_) => "error_details",
+            Self::ErrorText(_) => "error_text",
+            Self::StatusCode(_) => "status_code",
+        }
+    }
+
+    pub fn inner(&self) -> &str {
+        match self {
+            Self::AuthProviders(s) => s,
+            Self::ErrorDetails(s) => s.as_ref(),
+            Self::ErrorText(s) => s.as_ref(),
+            Self::StatusCode(s) => s.as_str(),
+        }
+    }
+}
+
 #[derive(Default, Template)]
 #[template(path = "html/index.html")]
 pub struct IndexHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: bool,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: bool,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl IndexHtml<'_> {
@@ -81,29 +130,29 @@ impl IndexHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/account.html")]
 pub struct AccountHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: String,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl AccountHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, auth_providers_json: Option<String>) -> String {
+    pub fn build(colors: &Colors, lang: &Language, templates: &[HtmlTemplate]) -> String {
         let res = AccountHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
@@ -120,7 +169,7 @@ impl AccountHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            auth_providers: auth_providers_json.unwrap_or_default(),
+            templates,
             ..Default::default()
         };
         res.render().unwrap()
@@ -130,25 +179,25 @@ impl AccountHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin.html")]
 pub struct AdminHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl AdminHtml<'_> {
@@ -179,25 +228,25 @@ impl AdminHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/device.html")]
 pub struct DeviceHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: bool,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: bool,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl DeviceHtml<'_> {
@@ -230,25 +279,25 @@ impl DeviceHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/fedcm.html")]
 pub struct FedCMHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: bool,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: bool,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl FedCMHtml<'_> {
@@ -281,34 +330,37 @@ impl FedCMHtml<'_> {
 #[derive(Debug, Default, Template)]
 #[template(path = "html/error.html")]
 pub struct ErrorHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: bool,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: bool,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl ErrorHtml<'_> {
-    pub fn build(
+    pub fn build<C>(
         colors: &Colors,
         lang: &Language,
         status_code: StatusCode,
-        details_text: Option<Cow<'static, str>>,
-    ) -> String {
+        details_text: C,
+    ) -> String
+    where
+        C: Into<Cow<'static, str>>,
+    {
         let res = ErrorHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
@@ -325,6 +377,10 @@ impl ErrorHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            templates: &[
+                HtmlTemplate::StatusCode(status_code),
+                HtmlTemplate::ErrorText(details_text.into()),
+            ],
             ..Default::default()
         };
 
@@ -347,25 +403,25 @@ impl ErrorHtml<'_> {
 #[derive(Debug, Default, Template)]
 #[template(path = "html/error/error.html")]
 pub struct Error1Html<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: bool,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: bool,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl Error1Html<'_> {
@@ -373,7 +429,7 @@ impl Error1Html<'_> {
         colors: &Colors,
         lang: &Language,
         status_code: StatusCode,
-        details_text: Option<C>,
+        details_text: C,
     ) -> String
     where
         C: Into<Cow<'static, str>>,
@@ -394,6 +450,10 @@ impl Error1Html<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            templates: &[
+                HtmlTemplate::StatusCode(status_code),
+                HtmlTemplate::ErrorText(details_text.into()),
+            ],
             ..Default::default()
         };
 
@@ -404,25 +464,25 @@ impl Error1Html<'_> {
 #[derive(Debug, Default, Template)]
 #[template(path = "html/error/error/error.html")]
 pub struct Error2Html<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: bool,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: bool,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl Error2Html<'_> {
@@ -430,7 +490,7 @@ impl Error2Html<'_> {
         colors: &Colors,
         lang: &Language,
         status_code: StatusCode,
-        details_text: Option<C>,
+        details_text: C,
     ) -> String
     where
         C: Into<Cow<'static, str>>,
@@ -451,6 +511,10 @@ impl Error2Html<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            templates: &[
+                HtmlTemplate::StatusCode(status_code),
+                HtmlTemplate::ErrorText(details_text.into()),
+            ],
             ..Default::default()
         };
 
@@ -461,25 +525,25 @@ impl Error2Html<'_> {
 #[derive(Debug, Default, Template)]
 #[template(path = "html/error/error/error/error.html")]
 pub struct Error3Html<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: bool,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: bool,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl Error3Html<'_> {
@@ -487,7 +551,7 @@ impl Error3Html<'_> {
         colors: &Colors,
         lang: &Language,
         status_code: StatusCode,
-        details_text: Option<C>,
+        details_text: C,
     ) -> String
     where
         C: Into<Cow<'static, str>>,
@@ -508,6 +572,10 @@ impl Error3Html<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            templates: &[
+                HtmlTemplate::StatusCode(status_code),
+                HtmlTemplate::ErrorText(details_text.into()),
+            ],
             ..Default::default()
         };
 
@@ -518,25 +586,25 @@ impl Error3Html<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/api_keys.html")]
 pub struct AdminApiKeysHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl AdminApiKeysHtml<'_> {
@@ -567,25 +635,25 @@ impl AdminApiKeysHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/attributes.html")]
 pub struct AdminAttributesHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl AdminAttributesHtml<'_> {
@@ -616,25 +684,25 @@ impl AdminAttributesHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/blacklist.html")]
 pub struct AdminBlacklistHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl AdminBlacklistHtml<'_> {
@@ -665,25 +733,25 @@ impl AdminBlacklistHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/clients.html")]
 pub struct AdminClientsHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl AdminClientsHtml<'_> {
@@ -714,25 +782,25 @@ impl AdminClientsHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/config.html")]
 pub struct AdminConfigHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl AdminConfigHtml<'_> {
@@ -763,25 +831,25 @@ impl AdminConfigHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/docs.html")]
 pub struct AdminDocsHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl AdminDocsHtml<'_> {
@@ -812,25 +880,25 @@ impl AdminDocsHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/events.html")]
 pub struct AdminEventsHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl AdminEventsHtml<'_> {
@@ -861,25 +929,25 @@ impl AdminEventsHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/groups.html")]
 pub struct AdminGroupsHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl AdminGroupsHtml<'_> {
@@ -910,25 +978,25 @@ impl AdminGroupsHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/roles.html")]
 pub struct AdminRolesHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl AdminRolesHtml<'_> {
@@ -959,25 +1027,25 @@ impl AdminRolesHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/scopes.html")]
 pub struct AdminScopesHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl AdminScopesHtml<'_> {
@@ -1008,25 +1076,25 @@ impl AdminScopesHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/sessions.html")]
 pub struct AdminSessionsHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl AdminSessionsHtml<'_> {
@@ -1057,25 +1125,25 @@ impl AdminSessionsHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/users.html")]
 pub struct AdminUsersHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl AdminUsersHtml<'_> {
@@ -1106,25 +1174,25 @@ impl AdminUsersHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/oidc/authorize.html")]
 pub struct AuthorizeHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: String,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl AuthorizeHtml<'_> {
@@ -1134,7 +1202,7 @@ impl AuthorizeHtml<'_> {
         action: FrontendAction,
         colors: &Colors,
         lang: &Language,
-        auth_providers_json: Option<String>,
+        templates: &[HtmlTemplate],
     ) -> String {
         let mut res = AuthorizeHtml {
             lang: lang.as_str(),
@@ -1154,7 +1222,7 @@ impl AuthorizeHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            auth_providers: auth_providers_json.unwrap_or_default(),
+            templates,
             ..Default::default()
         };
 
@@ -1169,25 +1237,25 @@ impl AuthorizeHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/oidc/callback.html")]
 pub struct CallbackHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl CallbackHtml<'_> {
@@ -1218,30 +1286,30 @@ impl CallbackHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/admin/providers.html")]
 pub struct ProvidersHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
-impl crate::templates::ProvidersHtml<'_> {
+impl crate::html_templates::ProvidersHtml<'_> {
     pub fn build(colors: &Colors) -> String {
-        let res = crate::templates::ProvidersHtml {
+        let res = crate::html_templates::ProvidersHtml {
             lang: "en",
             client_id: "rauthy",
             col_act1: &colors.act1,
@@ -1267,25 +1335,25 @@ impl crate::templates::ProvidersHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/providers/callback.html")]
 pub struct ProviderCallbackHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: &'a str,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: &'a str,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl ProviderCallbackHtml<'_> {
@@ -1316,25 +1384,25 @@ impl ProviderCallbackHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/oidc/logout.html")]
 pub struct LogoutHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: bool,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: bool,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl LogoutHtml<'_> {
@@ -1367,25 +1435,25 @@ impl LogoutHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/users/{id}/reset/reset.html")]
 pub struct PwdResetHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: bool,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: bool,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl PwdResetHtml<'_> {
@@ -1451,25 +1519,25 @@ impl TooManyRequestsHtml {
 #[derive(Default, Template)]
 #[template(path = "html/users/{id}/email_confirm/email_confirm.html")]
 pub struct UserEmailChangeConfirmHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: bool,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: bool,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl UserEmailChangeConfirmHtml<'_> {
@@ -1503,25 +1571,25 @@ impl UserEmailChangeConfirmHtml<'_> {
 #[derive(Default, Template)]
 #[template(path = "html/users/register.html")]
 pub struct UserRegisterHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: bool,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: bool,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    templates: &'a [HtmlTemplate],
 }
 
 impl UserRegisterHtml<'_> {

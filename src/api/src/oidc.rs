@@ -39,10 +39,10 @@ use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::WebauthnCookie;
 use rauthy_models::entity::well_known::WellKnown;
-use rauthy_models::language::Language;
-use rauthy_models::templates::{
-    AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction,
+use rauthy_models::html_templates::{
+    AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction, HtmlTemplate,
 };
+use rauthy_models::language::Language;
 use rauthy_models::JwtCommonClaims;
 use rauthy_service::oidc::{authorize, logout, token_info, userinfo, validation};
 use rauthy_service::token_set::TokenSet;
@@ -95,7 +95,7 @@ pub async fn get_authorize(
         Ok(res) => res,
         Err(err) => {
             let status = err.status_code();
-            let body = Error1Html::build(&colors, &lang, status, Some(err.message));
+            let body = Error1Html::build(&colors, &lang, status, err.message);
             return Ok(ErrorHtml::response(body, status));
         }
     };
@@ -144,7 +144,7 @@ pub async fn get_authorize(
             .unwrap_or(false)
     {
         let status = StatusCode::UNAUTHORIZED;
-        let body = Error1Html::build(&colors, &lang, status, Some("login_required"));
+        let body = Error1Html::build(&colors, &lang, status, "login_required");
         return Ok(ErrorHtml::response(body, status));
     }
 
@@ -165,7 +165,7 @@ pub async fn get_authorize(
             FrontendAction::Refresh,
             &colors,
             &lang,
-            auth_providers_json,
+            &[HtmlTemplate::AuthProviders(auth_providers_json)],
         );
 
         if let Some(o) = origin_header {
@@ -188,7 +188,7 @@ pub async fn get_authorize(
 
     if let Err(err) = session.save().await {
         let status = err.status_code();
-        let body = Error1Html::build(&colors, &lang, status, Some(err.message));
+        let body = Error1Html::build(&colors, &lang, status, err.message);
         return Ok(ErrorHtml::response(body, status));
     }
 
@@ -198,7 +198,7 @@ pub async fn get_authorize(
         action,
         &colors,
         &lang,
-        auth_providers_json,
+        &[HtmlTemplate::AuthProviders(auth_providers_json)],
     );
 
     let cookie = session.client_cookie();

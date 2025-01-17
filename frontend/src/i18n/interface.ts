@@ -117,12 +117,7 @@ export interface I18n {
         to: string,
     },
     error: {
-        error: string,
         details: string,
-        // these 2 will probably need a rework and should be appended dynamically via query params
-        // or inserted into the body directly, as they change with each error
-        errorText: string,
-        detailsText?: string,
     },
     index: {
         register: string,

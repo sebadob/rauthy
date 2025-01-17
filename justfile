@@ -318,6 +318,7 @@ build-ui:
     "templates/html/error/error/*.html"
     "templates/html/error/error/error/*.html"
     "templates/html/oidc/*.html"
+    "templates/html/providers/*.html"
     "templates/html/users/*.html"
     "templates/html/users/{id}/reset/*.html"
     "templates/html/users/{id}/email_confirm/*.html"

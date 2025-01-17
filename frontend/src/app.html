@@ -4,12 +4,8 @@
     <meta charset="utf-8"/>
     <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Rauthy</title>
     <link rel="icon" href="%sveltekit.assets%/assets/favicon.svg"/>
-
-    <!--
-    We can keep the {{client_id}} during local dev -> backend will always return the default.
-    In production, the value will be replaced with the proper id to load custom client branding.
-    -->
     <link rel="stylesheet" href="/auth/v1/theme/{{client_id}}"/>
     <style>
         :root {
@@ -48,10 +44,14 @@
     %sveltekit.head%
 </head>
 <body>
-<template id="auth_providers">{{ auth_providers|safe }}</template>
-<input name="rauthy-csrf-token" id="{{ csrf_token }}" type="hidden"/>
-<input name="rauthy-data" id="{{ data }}" type="hidden"/>
-<input name="rauthy-action" id="{{ action }}" type="hidden"/>
+<div class="hidden" aria-hidden="true">
+    <input name="rauthy-csrf-token" id="{{ csrf_token }}" type="hidden"/>
+    <input name="rauthy-data" id="{{ data }}" type="hidden"/>
+    <input name="rauthy-action" id="{{ action }}" type="hidden"/>
+    {%- for tpl in templates -%}
+    <template id="{{ tpl.id() }}">{{ tpl.inner()|safe }}</template>
+    {%- endfor %}
+</div>
 <div style="display: contents">%sveltekit.body%</div>
 </body>
 </html>

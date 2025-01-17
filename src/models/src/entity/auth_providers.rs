@@ -1134,7 +1134,7 @@ pub struct AuthProviderTemplate {
 }
 
 impl AuthProviderTemplate {
-    pub async fn get_all_json_template() -> Result<Option<String>, ErrorResponse> {
+    pub async fn get_all_json_template() -> Result<String, ErrorResponse> {
         let client = DB::client();
         if let Some(slf) = client.get(Cache::App, IDX_AUTH_PROVIDER_TEMPLATE).await? {
             return Ok(slf);
@@ -1150,12 +1150,8 @@ impl AuthProviderTemplate {
                 name: p.name,
             })
             .collect::<Vec<Self>>();
+        let json = serde_json::to_string(&providers)?;
 
-        let json = if providers.is_empty() {
-            None
-        } else {
-            Some(serde_json::to_string(&providers)?)
-        };
         client
             .put(Cache::App, IDX_AUTH_PROVIDER_TEMPLATE, &json, CACHE_TTL_APP)
             .await?;

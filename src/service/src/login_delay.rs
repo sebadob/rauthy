@@ -6,7 +6,7 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::database::{Cache, DB};
 use rauthy_models::events::event::Event;
 use rauthy_models::events::ip_blacklist_handler::{IpBlacklistReq, IpFailedLoginCheck};
-use rauthy_models::templates::TooManyRequestsHtml;
+use rauthy_models::html_templates::TooManyRequestsHtml;
 use std::net::IpAddr;
 use std::ops::{Add, Sub};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};

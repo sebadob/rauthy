@@ -395,6 +395,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(events::post_events)
                             .service(events::sse_events)
                             .service(events::post_event_test)
+                            .service(html::get_template)
                             .service(html::get_index)
                             .service(html::get_account_html)
                             .service(html::get_admin_html)
