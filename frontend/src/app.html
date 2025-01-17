@@ -48,15 +48,14 @@
     %sveltekit.head%
 </head>
 <body>
-<div class="hidden">
-    <template id="auth_providers">{{ auth_providers|safe }}</template>
+<div class="hidden" aria-hidden="true">
     <input name="rauthy-csrf-token" id="{{ csrf_token }}" type="hidden"/>
     <input name="rauthy-data" id="{{ data }}" type="hidden"/>
-    {% for tpl in templates -%}
+    <input name="rauthy-action" id="{{ action }}" type="hidden"/>
+    {%- for tpl in templates -%}
     <template id="{{ tpl.id() }}">{{ tpl.inner()|safe }}</template>
     {%- endfor %}
 </div>
-<input name="rauthy-action" id="{{ action }}" type="hidden"/>
 <div style="display: contents">%sveltekit.body%</div>
 </body>
 </html>

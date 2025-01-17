@@ -4384,6 +4384,7 @@ dependencies = [
  "rauthy-service",
  "rust-embed",
  "semver",
+ "serde",
  "spow",
  "time",
  "tokio",

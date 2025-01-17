@@ -1,17 +1,32 @@
 use crate::Assets;
 use actix_web::http::header;
 use actix_web::{get, web, HttpRequest, HttpResponse};
-use rauthy_common::constants::HEADER_HTML;
+use rauthy_common::constants::{DEV_MODE, HEADER_HTML};
 use rauthy_error::ErrorResponse;
 use rauthy_models::entity::auth_providers::AuthProviderTemplate;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::html_templates::{
     AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
     AdminConfigHtml, AdminDocsHtml, AdminGroupsHtml, AdminHtml, AdminRolesHtml, AdminScopesHtml,
-    AdminSessionsHtml, AdminUsersHtml, DeviceHtml, FedCMHtml, IndexHtml, ProvidersHtml,
+    AdminSessionsHtml, AdminUsersHtml, DeviceHtml, FedCMHtml, HtmlTemplate, IndexHtml,
+    ProvidersHtml,
 };
 use rauthy_models::language::Language;
 use std::borrow::Cow;
+
+// dev-only endpoint - in prod, values will be inserted into the HTML directly.
+// Returns the inner template value, as it would be rendered during prod, inside the body,
+// which is different depending on the id.
+#[get("/template/{id}")]
+pub async fn get_template(id: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
+    if !*DEV_MODE {
+        return Ok(HttpResponse::NotFound().finish());
+    }
+
+    // TODO make sure to check the session in case of sensitive id's like csrf token
+    let tpl = HtmlTemplate::build_from_str(id.as_str()).await?;
+    Ok(HttpResponse::Ok().body(tpl.inner().to_string()))
+}
 
 #[get("/{_:.*}")]
 pub async fn get_static_assets(
@@ -58,7 +73,8 @@ pub async fn get_account_html(req: HttpRequest) -> Result<HttpResponse, ErrorRes
     let colors = ColorEntity::find_rauthy().await?;
     let lang = Language::try_from(&req).unwrap_or_default();
     let providers = AuthProviderTemplate::get_all_json_template().await?;
-    let body = AccountHtml::build(&colors, &lang, providers);
+    // let body = AccountHtml::build(&colors, &lang, Some(providers));
+    let body = AccountHtml::build(&colors, &lang, &[HtmlTemplate::AuthProviders(providers)]);
 
     Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }

@@ -236,10 +236,8 @@ pub async fn delete_provider_link(principal: ReqPrincipal) -> Result<HttpRespons
 pub async fn get_providers_minimal() -> Result<HttpResponse, ErrorResponse> {
     // unauthorized - does not leak any sensitive information other than shown in the
     // default login page anyway
-    match AuthProviderTemplate::get_all_json_template().await? {
-        None => Ok(HttpResponse::Ok().insert_header(HEADER_JSON).body("[]")),
-        Some(tpl) => Ok(HttpResponse::Ok().insert_header(HEADER_JSON).body(tpl)),
-    }
+    let tpl = AuthProviderTemplate::get_all_json_template().await?;
+    Ok(HttpResponse::Ok().insert_header(HEADER_JSON).body(tpl))
 }
 
 /// PUT update an upstream auth provider

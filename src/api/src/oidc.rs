@@ -40,7 +40,7 @@ use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::WebauthnCookie;
 use rauthy_models::entity::well_known::WellKnown;
 use rauthy_models::html_templates::{
-    AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction,
+    AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction, HtmlTemplate,
 };
 use rauthy_models::language::Language;
 use rauthy_models::JwtCommonClaims;
@@ -165,7 +165,7 @@ pub async fn get_authorize(
             FrontendAction::Refresh,
             &colors,
             &lang,
-            auth_providers_json,
+            &[HtmlTemplate::AuthProviders(auth_providers_json)],
         );
 
         if let Some(o) = origin_header {
@@ -198,7 +198,7 @@ pub async fn get_authorize(
         action,
         &colors,
         &lang,
-        auth_providers_json,
+        &[HtmlTemplate::AuthProviders(auth_providers_json)],
     );
 
     let cookie = session.client_cookie();

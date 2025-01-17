@@ -7,7 +7,10 @@
     import {useI18n} from "$state/i18n.svelte";
 
     let t = useI18n();
+
     let showDetails = $state(false);
+    let errorTyp = $state('');
+    let errorDetails = $state('');
 
     // TODO:
     // The `details` and `detailsText` cannot be translated statically.
