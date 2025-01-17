@@ -5,12 +5,12 @@ use rauthy_common::constants::HEADER_HTML;
 use rauthy_error::ErrorResponse;
 use rauthy_models::entity::auth_providers::AuthProviderTemplate;
 use rauthy_models::entity::colors::ColorEntity;
-use rauthy_models::language::Language;
-use rauthy_models::templates::{
+use rauthy_models::html_templates::{
     AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
     AdminConfigHtml, AdminDocsHtml, AdminGroupsHtml, AdminHtml, AdminRolesHtml, AdminScopesHtml,
     AdminSessionsHtml, AdminUsersHtml, DeviceHtml, FedCMHtml, IndexHtml, ProvidersHtml,
 };
+use rauthy_models::language::Language;
 use std::borrow::Cow;
 
 #[get("/{_:.*}")]

@@ -16,8 +16,8 @@ use rauthy_models::entity::auth_providers::{
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::logos::{Logo, LogoType};
 use rauthy_models::entity::users::User;
+use rauthy_models::html_templates::ProviderCallbackHtml;
 use rauthy_models::language::Language;
-use rauthy_models::templates::ProviderCallbackHtml;
 use tracing::debug;
 use validator::Validate;
 

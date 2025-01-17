@@ -39,10 +39,10 @@ use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::WebauthnCookie;
 use rauthy_models::entity::well_known::WellKnown;
-use rauthy_models::language::Language;
-use rauthy_models::templates::{
+use rauthy_models::html_templates::{
     AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction,
 };
+use rauthy_models::language::Language;
 use rauthy_models::JwtCommonClaims;
 use rauthy_service::oidc::{authorize, logout, token_info, userinfo, validation};
 use rauthy_service::token_set::TokenSet;

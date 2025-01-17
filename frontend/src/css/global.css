@@ -19,6 +19,11 @@ has been finished:
     /*box-sizing: border-box;*/
 }
 
+::selection {
+    color: hsl(var(--bg));
+    background: hsl(var(--action));
+}
+
 input, button, textarea, select {
     font: inherit;
 }
@@ -149,6 +154,22 @@ hr {
     position: absolute
 }
 
+.accent {
+    color: hsl(var(--accent));
+}
+
+.action {
+    color: hsl(var(--action));
+}
+
+.clip {
+    overflow: clip;
+}
+
+.err {
+    color: hsl(var(--error));
+}
+
 .relative {
     position: relative
 }
@@ -156,6 +177,14 @@ hr {
 .flex {
     display: flex;
     align-items: center;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.flex-2 {
+    flex: 2;
 }
 
 .flex-col {
@@ -167,8 +196,30 @@ hr {
     flex-wrap: wrap;
 }
 
-.space-between {
-    justify-content: space-between;
+.flex-3 {
+    flex: 3;
+}
+
+.gap-05 {
+    gap: .5rem
+}
+
+.gap-10 {
+    gap: 1rem
+}
+
+.gap-15 {
+    gap: 1.5rem
+}
+
+.gap-20 {
+    gap: 2rem
+}
+
+.hidden {
+    height: 0;
+    width: 0;
+    display: none;
 }
 
 .m-05 {
@@ -195,60 +246,20 @@ hr {
     margin: 1rem 0;
 }
 
-.gap-05 {
-    gap: .5rem
-}
-
-.gap-10 {
-    gap: 1rem
-}
-
-.gap-15 {
-    gap: 1.5rem
-}
-
-.gap-20 {
-    gap: 2rem
-}
-
-.flex-1 {
-    flex: 1;
-}
-
-.flex-2 {
-    flex: 2;
-}
-
-.flex-3 {
-    flex: 3;
-}
-
-.clip {
-    overflow: clip;
-}
-
-.action {
-    color: hsl(var(--action));
-}
-
-.accent {
-    color: hsl(var(--accent));
-}
-
-.err {
-    color: hsl(var(--error));
-}
-
-.text {
-    color: hsl(var(--text));
+.noselect {
+    user-select: none;
 }
 
 .pointer {
     cursor: pointer;
 }
 
-.noselect {
-    user-select: none;
+.space-between {
+    justify-content: space-between;
+}
+
+.text {
+    color: hsl(var(--text));
 }
 
 .zoom {
@@ -292,11 +303,6 @@ label[data-required="true"]:after {
 
 .fade-in {
     animation: fadeIn 200ms;
-}
-
-::selection {
-    color: hsl(var(--bg));
-    background: hsl(var(--action));
 }
 
 @keyframes fadeIn {

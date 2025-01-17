@@ -27,28 +27,49 @@ impl Display for FrontendAction {
     }
 }
 
+#[derive(Debug)]
+pub enum HtmlTemplate<'a> {
+    /// Auth providers as JSON value
+    AuthProviders(&'a str),
+}
+
+impl HtmlTemplate<'_> {
+    fn id(&self) -> &'static str {
+        match self {
+            HtmlTemplate::AuthProviders(_) => "AuthProviders",
+        }
+    }
+
+    fn inner(&self) -> &str {
+        match self {
+            HtmlTemplate::AuthProviders(s) => s,
+        }
+    }
+}
+
 #[derive(Default, Template)]
 #[template(path = "html/index.html")]
 pub struct IndexHtml<'a> {
-    pub lang: &'a str,
-    pub client_id: &'a str,
-    pub csrf_token: &'a str,
-    pub data: &'a str,
-    pub action: bool,
-    pub col_act1: &'a str,
-    pub col_act1a: &'a str,
-    pub col_act2: &'a str,
-    pub col_act2a: &'a str,
-    pub col_acnt: &'a str,
-    pub col_acnta: &'a str,
-    pub col_ok: &'a str,
-    pub col_err: &'a str,
-    pub col_glow: &'a str,
-    pub col_gmid: &'a str,
-    pub col_ghigh: &'a str,
-    pub col_text: &'a str,
-    pub col_bg: &'a str,
-    pub auth_providers: &'a str,
+    lang: &'a str,
+    client_id: &'a str,
+    csrf_token: &'a str,
+    data: &'a str,
+    action: bool,
+    col_act1: &'a str,
+    col_act1a: &'a str,
+    col_act2: &'a str,
+    col_act2a: &'a str,
+    col_acnt: &'a str,
+    col_acnta: &'a str,
+    col_ok: &'a str,
+    col_err: &'a str,
+    col_glow: &'a str,
+    col_gmid: &'a str,
+    col_ghigh: &'a str,
+    col_text: &'a str,
+    col_bg: &'a str,
+    auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl IndexHtml<'_> {
@@ -71,6 +92,7 @@ impl IndexHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            templates: &[HtmlTemplate::AuthProviders("test 1337")],
             ..Default::default()
         };
 
@@ -100,6 +122,7 @@ pub struct AccountHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: String,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl AccountHtml<'_> {
@@ -149,6 +172,7 @@ pub struct AdminHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl AdminHtml<'_> {
@@ -198,6 +222,7 @@ pub struct DeviceHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl DeviceHtml<'_> {
@@ -249,6 +274,7 @@ pub struct FedCMHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl FedCMHtml<'_> {
@@ -300,6 +326,7 @@ pub struct ErrorHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl ErrorHtml<'_> {
@@ -366,6 +393,7 @@ pub struct Error1Html<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl Error1Html<'_> {
@@ -423,6 +451,7 @@ pub struct Error2Html<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl Error2Html<'_> {
@@ -480,6 +509,7 @@ pub struct Error3Html<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl Error3Html<'_> {
@@ -537,6 +567,7 @@ pub struct AdminApiKeysHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl AdminApiKeysHtml<'_> {
@@ -586,6 +617,7 @@ pub struct AdminAttributesHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl AdminAttributesHtml<'_> {
@@ -635,6 +667,7 @@ pub struct AdminBlacklistHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl AdminBlacklistHtml<'_> {
@@ -684,6 +717,7 @@ pub struct AdminClientsHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl AdminClientsHtml<'_> {
@@ -733,6 +767,7 @@ pub struct AdminConfigHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl AdminConfigHtml<'_> {
@@ -782,6 +817,7 @@ pub struct AdminDocsHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl AdminDocsHtml<'_> {
@@ -831,6 +867,7 @@ pub struct AdminEventsHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl AdminEventsHtml<'_> {
@@ -880,6 +917,7 @@ pub struct AdminGroupsHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl AdminGroupsHtml<'_> {
@@ -929,6 +967,7 @@ pub struct AdminRolesHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl AdminRolesHtml<'_> {
@@ -978,6 +1017,7 @@ pub struct AdminScopesHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl AdminScopesHtml<'_> {
@@ -1027,6 +1067,7 @@ pub struct AdminSessionsHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl AdminSessionsHtml<'_> {
@@ -1076,6 +1117,7 @@ pub struct AdminUsersHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl AdminUsersHtml<'_> {
@@ -1125,6 +1167,7 @@ pub struct AuthorizeHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: String,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl AuthorizeHtml<'_> {
@@ -1188,6 +1231,7 @@ pub struct CallbackHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl CallbackHtml<'_> {
@@ -1237,11 +1281,12 @@ pub struct ProvidersHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
-impl crate::templates::ProvidersHtml<'_> {
+impl crate::html_templates::ProvidersHtml<'_> {
     pub fn build(colors: &Colors) -> String {
-        let res = crate::templates::ProvidersHtml {
+        let res = crate::html_templates::ProvidersHtml {
             lang: "en",
             client_id: "rauthy",
             col_act1: &colors.act1,
@@ -1286,6 +1331,7 @@ pub struct ProviderCallbackHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl ProviderCallbackHtml<'_> {
@@ -1335,6 +1381,7 @@ pub struct LogoutHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl LogoutHtml<'_> {
@@ -1386,6 +1433,7 @@ pub struct PwdResetHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl PwdResetHtml<'_> {
@@ -1470,6 +1518,7 @@ pub struct UserEmailChangeConfirmHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl UserEmailChangeConfirmHtml<'_> {
@@ -1522,6 +1571,7 @@ pub struct UserRegisterHtml<'a> {
     pub col_text: &'a str,
     pub col_bg: &'a str,
     pub auth_providers: &'a str,
+    templates: &'a [HtmlTemplate<'a>],
 }
 
 impl UserRegisterHtml<'_> {

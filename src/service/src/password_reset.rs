@@ -16,8 +16,8 @@ use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::WebauthnServiceReq;
 use rauthy_models::events::event::Event;
+use rauthy_models::html_templates::PwdResetHtml;
 use rauthy_models::language::Language;
-use rauthy_models::templates::PwdResetHtml;
 use tracing::{debug, error};
 
 pub async fn handle_get_pwd_reset<'a>(
