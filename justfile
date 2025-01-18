@@ -290,6 +290,8 @@ build-ui:
     #!/usr/bin/env bash
     set -euxo pipefail
 
+    cd frontend
+
     # cleanup old files
     rm -rf static/v1/*
     rm -rf templates/html/*
@@ -306,7 +308,6 @@ build-ui:
     done
 
     # build the frontend
-    cd frontend
     {{ npm }} run build
     cd ..
 
