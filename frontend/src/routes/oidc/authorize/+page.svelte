@@ -21,7 +21,12 @@
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import getPkce from "oauth-pkce";
-    import {PKCE_VERIFIER_UPSTREAM, TPL_AUTH_PROVIDERS} from "../../../utils/constants.js";
+    import {
+        PKCE_VERIFIER_UPSTREAM,
+        TPL_AUTH_PROVIDERS, TPL_CLIENT_DATA, TPL_CLIENT_NAME, TPL_CLIENT_URL, TPL_CSRF_TOKEN,
+        TPL_IS_REG_OPEN,
+        TPL_LOGIN_ACTION
+    } from "../../../utils/constants.js";
     import IconHome from "$lib/icons/IconHome.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
@@ -57,6 +62,8 @@
 
     let isLoading = false;
     let err = '';
+    let loginAction = '';
+    let csrfToken = '';
     let needsPassword = false;
     let clientMfaForce = false;
     let showReset = false;
@@ -108,21 +115,32 @@
         passwordInput.focus();
     }
 
-    onMount(async () => {
-        const data = window.document.getElementsByName('rauthy-data')[0].id.split('\n');
-        clientName = data[0];
-        clientUri = data[1];
-        isRegOpen = data[2] === "true";
-
-        const action = window.document.getElementsByName('rauthy-action')[0].id;
-        if ('Refresh' === action) {
+    $: if (loginAction) {
+        if ('Refresh' === loginAction) {
             refresh = true;
-        } else if (action?.startsWith('MfaLogin ')) {
-            existingMfaUser = action.replace('MfaLogin ', '');
+        } else if (loginAction?.startsWith('MfaLogin ')) {
+            existingMfaUser = loginAction.replace('MfaLogin ', '');
         }
+    }
 
-        csrf = window.document.getElementsByName('rauthy-csrf-token')[0].id;
-        saveCsrfToken(csrf);
+    $: if (csrfToken) {
+        saveCsrfToken(csrfToken);
+    }
+
+    onMount(async () => {
+        // const data = window.document.getElementsByName('rauthy-data')[0].id.split('\n');
+        // clientName = data[0];
+        // clientUri = data[1];
+
+        // const action = window.document.getElementsByName('rauthy-action')[0].id;
+        // if ('Refresh' === action) {
+        //     refresh = true;
+        // } else if (action?.startsWith('MfaLogin ')) {
+        //     existingMfaUser = action.replace('MfaLogin ', '');
+        // }
+
+        // csrf = window.document.getElementsByName('rauthy-csrf-token')[0].id;
+        // saveCsrfToken(csrf);
 
         const params = getQueryParams();
         clientId = params.client_id;
@@ -315,6 +333,11 @@
 </svelte:head>
 
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers}/>
+<Template id={TPL_CLIENT_NAME} bind:value={clientName}/>
+<Template id={TPL_CLIENT_URL} bind:value={clientUri}/>
+<Template id={TPL_CSRF_TOKEN} bind:value={csrfToken}/>
+<Template id={TPL_LOGIN_ACTION} bind:value={loginAction}/>
+<Template id={TPL_IS_REG_OPEN} bind:value={isRegOpen}/>
 
 <Main>
     <ContentCenter>

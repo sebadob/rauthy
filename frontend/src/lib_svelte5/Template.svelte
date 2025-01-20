@@ -10,7 +10,7 @@
         value = $bindable(),
     }: {
         id: string,
-        value: boolean | string | T,
+        value: boolean | string | number | T,
     } = $props();
 
     onMount(async () => {

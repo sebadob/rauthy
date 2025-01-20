@@ -1,4 +1,4 @@
-use crate::Assets;
+use crate::{Assets, ReqPrincipal};
 use actix_web::http::header;
 use actix_web::{get, web, HttpRequest, HttpResponse};
 use rauthy_common::constants::{DEV_MODE, HEADER_HTML};
@@ -18,13 +18,15 @@ use std::borrow::Cow;
 // Returns the inner template value, as it would be rendered during prod, inside the body,
 // which is different depending on the id.
 #[get("/template/{id}")]
-pub async fn get_template(id: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_template(
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
     if !*DEV_MODE {
         return Ok(HttpResponse::NotFound().finish());
     }
 
-    // TODO make sure to check the session in case of sensitive id's like csrf token
-    let tpl = HtmlTemplate::build_from_str(id.as_str()).await?;
+    let tpl = HtmlTemplate::build_from_str(id.as_str(), principal.into_inner().session).await?;
     Ok(HttpResponse::Ok().body(tpl.inner().to_string()))
 }
 

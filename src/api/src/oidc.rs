@@ -149,23 +149,21 @@ pub async fn get_authorize(
     }
 
     let auth_providers_json = AuthProviderTemplate::get_all_json_template().await?;
-    let tpl_data = Some(format!(
-        "{}\n{}\n{}",
-        client.name.unwrap_or_default(),
-        client.client_uri.unwrap_or_default(),
-        *OPEN_USER_REG,
-    ));
 
     // if the user is still authenticated and everything is valid -> immediate refresh
     if !force_new_session && principal.validate_session_auth().is_ok() {
         let csrf = principal.get_session_csrf_token()?;
         let body = AuthorizeHtml::build(
-            &tpl_data,
             csrf,
-            FrontendAction::Refresh,
             &colors,
             &lang,
-            &[HtmlTemplate::AuthProviders(auth_providers_json)],
+            &[
+                HtmlTemplate::AuthProviders(auth_providers_json),
+                HtmlTemplate::ClientName(client.name.unwrap_or_default()),
+                HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
+                HtmlTemplate::IsRegOpen(*OPEN_USER_REG),
+                HtmlTemplate::LoginAction(FrontendAction::Refresh),
+            ],
         );
 
         if let Some(o) = origin_header {
@@ -193,12 +191,16 @@ pub async fn get_authorize(
     }
 
     let body = AuthorizeHtml::build(
-        &tpl_data,
         &session.csrf_token,
-        action,
         &colors,
         &lang,
-        &[HtmlTemplate::AuthProviders(auth_providers_json)],
+        &[
+            HtmlTemplate::AuthProviders(auth_providers_json),
+            HtmlTemplate::ClientName(client.name.unwrap_or_default()),
+            HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
+            HtmlTemplate::IsRegOpen(*OPEN_USER_REG),
+            HtmlTemplate::LoginAction(action),
+        ],
     );
 
     let cookie = session.client_cookie();

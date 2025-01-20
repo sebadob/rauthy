@@ -15,7 +15,7 @@
     import type {UserResponse} from "$api/response/common/user.ts";
     import {TPL_AUTH_PROVIDERS} from "../../utils/constants";
     import Template from "$lib5/Template.svelte";
-    import type {AuthProvidersTemplate} from "$api/templates/authProvider.ts";
+    import type {AuthProvidersTemplate} from "$api/templates/AuthProvider.ts";
 
     let {
         session: session,

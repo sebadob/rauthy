@@ -1,6 +1,7 @@
 use crate::entity::auth_providers::AuthProviderTemplate;
 use crate::entity::colors::Colors;
 use crate::entity::password::PasswordPolicy;
+use crate::entity::sessions::Session;
 use crate::language::Language;
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, HttpResponseBuilder};
@@ -9,6 +10,7 @@ use rauthy_common::constants::{
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rinja_actix::Template;
+use serde::Serialize;
 use std::borrow::Cow;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -29,6 +31,12 @@ impl Display for FrontendAction {
     }
 }
 
+#[derive(Debug, Serialize)]
+pub struct TplClientData {
+    pub name: String,
+    pub url: String,
+}
+
 // If you add new values to this template, make sure to also create a
 // matching constant in the UI and make proper use of it:
 // -> frontend/src/utils/constants.js -> TPL_* values
@@ -36,20 +44,47 @@ impl Display for FrontendAction {
 pub enum HtmlTemplate {
     /// Auth providers as JSON value
     AuthProviders(String),
+    ClientName(String),
+    ClientUrl(String),
+    CsrfToken(String),
     ErrorDetails(Cow<'static, str>),
     ErrorText(Cow<'static, str>),
+    DeviceUserCodeLength(u8),
+    IsRegOpen(bool),
+    LoginAction(FrontendAction),
     StatusCode(StatusCode),
 }
 
 impl HtmlTemplate {
-    pub async fn build_from_str(s: &str) -> Result<Self, ErrorResponse> {
-        // TODO make sure to check the session in case of sensitive id's like csrf token
-
+    /// This function is only used during local dev to async resolve template values that are
+    /// rendered into the HTML directly in prod.
+    ///
+    /// TODO maybe deactivate completely without debug_assertions?
+    pub async fn build_from_str(s: &str, session: Option<Session>) -> Result<Self, ErrorResponse> {
         match s {
-            "auth_providers" => {
+            "tpl_auth_providers" => {
                 let json = AuthProviderTemplate::get_all_json_template().await?;
                 Ok(Self::AuthProviders(json))
             }
+            "tpl_csrf_token" => {
+                if let Some(s) = session {
+                    Ok(Self::CsrfToken(s.csrf_token))
+                } else {
+                    Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        "no session",
+                    ))
+                }
+            }
+            "tpl_device_user_code_length" => {
+                Ok(Self::DeviceUserCodeLength(*DEVICE_GRANT_USER_CODE_LENGTH))
+            }
+            "tpl_is_reg_open" => Ok(Self::IsRegOpen(*OPEN_USER_REG)),
+            // the LoginAction requires a complex logic + validation.
+            // Simply always return None during local dev.
+            "tpl_login_action" => Ok(Self::LoginAction(FrontendAction::None)),
+            // "tpl_client_name" => todo!("extract info from referrer?"),
+            // "tpl_client_url" => todo!("extract info from referrer?"),
             _ => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
                 "invalid template id",
@@ -57,21 +92,46 @@ impl HtmlTemplate {
         }
     }
 
+    /// Returns the `id` that will be used for the HTML `<template>` element.
     pub fn id(&self) -> &'static str {
         match self {
-            Self::AuthProviders(_) => "auth_providers",
-            Self::ErrorDetails(_) => "error_details",
-            Self::ErrorText(_) => "error_text",
-            Self::StatusCode(_) => "status_code",
+            Self::AuthProviders(_) => "tpl_auth_providers",
+            Self::ClientName(_) => "tpl_client_name",
+            Self::ClientUrl(_) => "tpl_client_url",
+            Self::CsrfToken(_) => "tpl_csrf_token",
+            Self::ErrorDetails(_) => "tpl_error_details",
+            Self::ErrorText(_) => "tpl_error_text",
+            Self::DeviceUserCodeLength(_) => "tpl_device_user_code_length",
+            Self::IsRegOpen(_) => "tpl_is_reg_open",
+            Self::LoginAction(_) => "tpl_login_action",
+            Self::StatusCode(_) => "tpl_status_code",
         }
     }
 
-    pub fn inner(&self) -> &str {
+    // pub fn inner(&self) -> &str {
+    //     match self {
+    //         Self::AuthProviders(i) => i,
+    //         Self::ErrorDetails(i) => i.as_ref(),
+    //         Self::ErrorText(i) => i.as_ref(),
+    //         Self::DeviceUserCodeLength(i) => i,
+    //         Self::StatusCode(i) => i.as_str(),
+    //     }
+    // }
+
+    // TODO find a way to borrow the value dynamically, no matter the type
+    // -> does rinja work with generic traits like `Display`?
+    pub fn inner(&self) -> String {
         match self {
-            Self::AuthProviders(s) => s,
-            Self::ErrorDetails(s) => s.as_ref(),
-            Self::ErrorText(s) => s.as_ref(),
-            Self::StatusCode(s) => s.as_str(),
+            Self::AuthProviders(i) => i.to_string(),
+            Self::ClientName(i) => i.to_string(),
+            Self::ClientUrl(i) => i.to_string(),
+            Self::CsrfToken(i) => i.to_string(),
+            Self::ErrorDetails(i) => i.to_string(),
+            Self::ErrorText(i) => i.to_string(),
+            Self::DeviceUserCodeLength(i) => i.to_string(),
+            Self::IsRegOpen(i) => i.to_string(),
+            Self::LoginAction(i) => i.to_string(),
+            Self::StatusCode(i) => i.to_string(),
         }
     }
 }
@@ -255,7 +315,6 @@ impl DeviceHtml<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             csrf_token: "",
-            data: &DEVICE_GRANT_USER_CODE_LENGTH.to_string(),
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -269,6 +328,9 @@ impl DeviceHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            templates: &[HtmlTemplate::DeviceUserCodeLength(
+                *DEVICE_GRANT_USER_CODE_LENGTH,
+            )],
             ..Default::default()
         };
 
@@ -1197,18 +1259,15 @@ pub struct AuthorizeHtml<'a> {
 
 impl AuthorizeHtml<'_> {
     pub fn build(
-        client_name: &Option<String>,
         csrf_token: &str,
-        action: FrontendAction,
         colors: &Colors,
         lang: &Language,
         templates: &[HtmlTemplate],
     ) -> String {
-        let mut res = AuthorizeHtml {
+        let res = AuthorizeHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             csrf_token,
-            action: &action.to_string(),
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1225,10 +1284,6 @@ impl AuthorizeHtml<'_> {
             templates,
             ..Default::default()
         };
-
-        if client_name.is_some() {
-            res.data = client_name.as_ref().unwrap();
-        }
 
         res.render().unwrap()
     }

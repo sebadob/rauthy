@@ -8,11 +8,12 @@
     import Input from "$lib/inputs/Input.svelte";
     import Button from "$lib/Button.svelte";
     import * as yup from "yup";
-    import {REGEX_URI} from "../../utils/constants.js";
+    import {REGEX_URI, TPL_DEVICE_USER_CODE_LENGTH} from "../../utils/constants.js";
     import {fetchSolvePow} from "../../utils/pow.ts";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
+    import Template from "$lib5/Template.svelte";
 
     const btnWidthInline = '8rem';
 
@@ -45,10 +46,6 @@
             });
         }
     });
-
-    onMount(() => {
-        userCodeLength = Number.parseInt(window.document.getElementsByName('rauthy-data')[0].id);
-    })
 
     onMount(async () => {
         const params = getQueryParams();
@@ -125,6 +122,8 @@
 <svelte:head>
     <title>{t?.device.title || 'Device Authorization'}</title>
 </svelte:head>
+
+<Template id={TPL_DEVICE_USER_CODE_LENGTH} bind:value={userCodeLength}/>
 
 <Main>
     <ContentCenter>
