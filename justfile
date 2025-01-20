@@ -344,6 +344,9 @@ build-ui:
         done;
     done
 
+    git add static/v1/*
+    git add templates/html/*
+
 # builds the rauthy book
 build-docs:
     #!/usr/bin/env bash

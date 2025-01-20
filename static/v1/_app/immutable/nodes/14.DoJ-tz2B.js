@@ -1,0 +1,1 @@
+import"../chunks/disclose-version.DZhRUPAc.js";import"../chunks/legacy.BuHyzquP.js";import{A as e}from"../chunks/AdminMainPre.BC7y4hZJ.js";function t(o){e(o,{selected:"Roles"})}export{t as component};

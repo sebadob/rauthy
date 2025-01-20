@@ -1,0 +1,1 @@
+import{y as i,E as p,I as t,n as c,Z as l,z as m,K as u}from"./index-client.CGppiJvc.js";function E(o,r,...f){var n=o,s=c,a;i(()=>{s!==(s=r())&&(a&&(l(a),a=null),a=t(()=>s(n,...f)))},p),m&&(n=u)}export{E as s};
