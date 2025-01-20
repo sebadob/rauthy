@@ -1,6 +1,6 @@
-<script>
+<script lang="ts">
     import { run } from 'svelte/legacy';
-    import {getAuthProvidersTemplate, redirectToLogout} from "../../utils/helpers";
+    import {redirectToLogout} from "../../utils/helpers";
     import AccInfo from "./AccInfo.svelte";
     import AccNav from "./AccNav.svelte";
     import AccEdit from "./AccEdit.svelte";
@@ -9,30 +9,33 @@
     import LangSelector from "$lib5/LangSelector.svelte";
     import AccPassword from "./AccPassword.svelte";
     import AccWebId from "./AccWebId.svelte";
-    import {onMount} from "svelte";
     import AccDevices from "./AccDevices.svelte";
     import {useI18n} from "$state/i18n.svelte";
+    import type {SessionResponse} from "$api/response/common/session.js";
+    import type {UserResponse} from "$api/response/common/user.ts";
+    import {TPL_AUTH_PROVIDERS} from "../../utils/constants";
+    import Template from "$lib5/Template.svelte";
+    import type {AuthProvidersTemplate} from "$api/templates/AuthProvider.ts";
 
-    /**
-     * @typedef {Object} Props
-     * @property {any} [sessionInfo]
-     * @property {any} [user]
-     * @property {any} webIdData - webIdData will stay undefined if it is not enabled in the backend
-     */
-
-    /** @type {Props} */
     let {
-        sessionInfo,
-        user = $bindable({}),
+        session: session,
+        user = $bindable(),
         webIdData = $bindable()
+    }: {
+        session: SessionResponse,
+        user: UserResponse,
+        webIdData: any,
     } = $props();
 
     let t = useI18n();
 
-    let innerWidth = $state();
-    let providers = $state();
-    let authProvider = $state();
-
+    let innerWidth: undefined | number = $state();
+    let providers: AuthProvidersTemplate = $state([]);
+    let authProvider = $derived.by(() => {
+        if (user.account_type?.startsWith('federated')) {
+            return providers.filter(p => p.id === user.auth_provider_id)[0];
+        }
+    });
 
     let op = tweened(1.0, {
         duration: 100,
@@ -41,36 +44,28 @@
     let content = $state(t.account.navInfo);
     let selected = $state(t.account.navInfo);
 
-    onMount(async () => {
-        providers = await getAuthProvidersTemplate();
-    });
-
     function animate() {
         op.set(0)
             .then(() => content = selected)
             .then(() => op.set(1.0));
     }
-    let viewModePhone = $derived(innerWidth < 500);
+    let viewModePhone = $derived(innerWidth && innerWidth < 500);
     run(() => {
         if (selected) {
             animate();
         }
     });
-    run(() => {
+
+    $effect(() => {
         if (selected === t.account.navLogout) {
             redirectToLogout();
-        }
-    });
-    run(() => {
-        if (providers) {
-            if (user.account_type?.startsWith('federated')) {
-                authProvider = providers.filter(p => p.id === user.auth_provider_id)[0];
-            }
         }
     });
 </script>
 
 <svelte:window bind:innerWidth/>
+
+<Template id={TPL_AUTH_PROVIDERS} bind:value={providers}/>
 
 {#if viewModePhone}
     <div class="wrapper">
@@ -86,17 +81,17 @@
             <div class="innerPhone">
                 <div style="opacity: {$op}">
                     {#if content === t.account.navInfo}
-                        <AccInfo bind:user {webIdData} viewModePhone {authProvider}/>
+                        <AccInfo bind:user {webIdData} viewModePhone {providers} {authProvider}/>
                     {:else if content === t.account.navEdit}
                         <AccEdit bind:user viewModePhone/>
                     {:else if content === t.common.password}
                         <AccPassword {user} {authProvider} viewModePhone/>
                     {:else if content === t.account.navMfa}
-                        <AccMFA {sessionInfo} {user}/>
+                        <AccMFA {session} {user}/>
                     {:else if content === 'WebID'}
                         <AccWebId bind:webIdData />
                     {:else if content === t.account.devices}
-                        <AccDevices bind:sessionInfo/>
+                        <AccDevices bind:session/>
                     {/if}
                 </div>
             </div>
@@ -116,17 +111,17 @@
             <div class="inner">
                 <div style="opacity: {$op}">
                     {#if content === t.account.navInfo}
-                        <AccInfo bind:user {webIdData} {authProvider}/>
+                        <AccInfo bind:user {webIdData} {providers} {authProvider}/>
                     {:else if content === t.account.navEdit}
                         <AccEdit bind:user/>
                     {:else if content === t.common.password}
                         <AccPassword {user} {authProvider}/>
                     {:else if content === t.account.navMfa}
-                        <AccMFA {sessionInfo} {user}/>
+                        <AccMFA {session} {user}/>
                     {:else if content === 'WebID'}
                         <AccWebId bind:webIdData/>
                     {:else if content === t.account.devices}
-                        <AccDevices bind:sessionInfo/>
+                        <AccDevices bind:session/>
                     {/if}
                 </div>
             </div>

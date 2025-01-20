@@ -1,25 +1,16 @@
 <script>
     import CheckIcon from "$lib/CheckIcon.svelte";
     import {buildWebIdUri, formatDateFromTs, saveProviderToken} from "../../utils/helpers";
-    import {onMount} from "svelte";
     import Button from "$lib/Button.svelte";
     import {deleteUserProviderLink, postUserProviderLink} from "../../utils/dataFetching.js";
-    import Modal from "$lib/Modal.svelte";
+    import Modal from "$lib5/Modal.svelte";
     import getPkce from "oauth-pkce";
     import {PKCE_VERIFIER_UPSTREAM} from "../../utils/constants.js";
     import {useI18n} from "$state/i18n.svelte";
 
-    /**
-     * @typedef {Object} Props
-     * @property {any} [user]
-     * @property {any} authProvider - webIdData will stay undefined if it is not enabled in the backend
-     * @property {any} webIdData
-     * @property {boolean} [viewModePhone]
-     */
-
-    /** @type {Props} */
     let {
-        user = $bindable({}),
+        user = $bindable(),
+        providers,
         authProvider,
         webIdData,
         viewModePhone = false
@@ -29,23 +20,12 @@
 
     let unlinkErr = $state(false);
     let showModal = $state(false);
-    let providersAvailable = $state([]);
 
     let isFederated = $derived(user.account_type?.startsWith('federated'));
     let accType = $derived(isFederated ? `${user.account_type}: ${authProvider?.name || ''}` : user.account_type);
 
     let classRow = $derived(viewModePhone ? 'rowPhone' : 'row');
     let classLabel = $derived(viewModePhone ? 'labelPhone' : 'label');
-
-    onMount(() => {
-        // value for dev testing only
-        // let tpl = '[{"id": "7F6N7fb3el3P5XimjJSaeD2o", "name": "Rauthy IAM"}]';
-        let tpl = document?.getElementsByTagName("template").namedItem("auth_providers")?.innerHTML;
-        // the additional comparison is just for local dev and no big deal in prod
-        if (tpl && tpl !== '{{ auth_providers|safe }}') {
-            providersAvailable = JSON.parse(tpl);
-        }
-    })
 
     function linkProvider(id) {
         getPkce(64, (error, {challenge, verifier}) => {
@@ -130,7 +110,7 @@
                         </div>
                     {/if}
                 </div>
-            {:else if providersAvailable.length > 0}
+            {:else if providers.length > 0}
                 <div
                         role="button"
                         tabindex="0"
@@ -144,7 +124,7 @@
                     <p>{t.account.providerLinkDesc}</p>
 
                     <div class="providers">
-                        {#each providersAvailable as provider (provider.id)}
+                        {#each providers as provider (provider.id)}
                             <Button on:click={() => linkProvider(provider.id)} level={3}>
                                 <div class="flex-inline">
                                     <img

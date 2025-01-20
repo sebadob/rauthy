@@ -2,6 +2,10 @@
 
 ## CURRENT WORK
 
+### Missing i18n (zh/ko) for Svelte 5 Migration:
+
+- `t.common.close`
+
 ## Stage 1 - essentials
 
 [x] finished

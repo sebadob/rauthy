@@ -57,6 +57,7 @@
         border-radius: 3px;
         border: none;
         padding: 0;
+        /*background: transparent;*/
     }
 
     dialog::backdrop {
@@ -64,6 +65,7 @@
     }
 
     dialog > div {
+        margin: auto;
         padding: 1rem;
     }
 

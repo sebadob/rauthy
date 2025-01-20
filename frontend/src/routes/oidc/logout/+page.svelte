@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import {onMount} from "svelte";
     import {getQueryParams, purgeStorage, saveCsrfToken} from "../../../utils/helpers";
     import {logout} from "../../../utils/dataFetching.js";
@@ -7,17 +7,20 @@
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
+    import type {LogoutData} from "$api/templates/LogoutData.js";
 
     let t = useI18n();
     let err = '';
-    let postLogoutUri = '';
     let isLoading = $state(false);
+    let logoutData: LogoutData = $state({});
 
     onMount(async () => {
         const params = getQueryParams();
-        postLogoutUri = params.post_logout_redirect_uri;
-        const token = params.id_token_hint;
-        const state = params.state;
+        logoutData = {
+            post_logout_uri: params.post_logout_redirect_uri,
+            id_token_hint: params.id_token_hint,
+            state: params.state,
+        };
 
         const csrf = window.document.getElementsByName('rauthy-csrf-token')[0].id
         saveCsrfToken(csrf);
@@ -26,13 +29,7 @@
         if ('true' === immediateLogout) {
             isLoading = true;
 
-            const req = {
-                id_token_hint: token,
-                post_logout_redirect_uri: postLogoutUri,
-                state: state,
-            };
-
-            let res = await logout(req);
+            let res = await logout(logoutData);
             await handleRes(res);
         }
     });
@@ -43,7 +40,7 @@
 
     async function handleLogout() {
         isLoading = true;
-        let res = await logout({});
+        let res = await logout(logoutData);
         await handleRes(res);
     }
 

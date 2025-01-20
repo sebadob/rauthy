@@ -1,1 +1,0 @@
-import"../chunks/disclose-version.DZhRUPAc.js";import"../chunks/legacy.BuHyzquP.js";import{A as e}from"../chunks/AdminMainPre.BC7y4hZJ.js";function r(o){e(o,{selected:"Providers"})}export{r as component};

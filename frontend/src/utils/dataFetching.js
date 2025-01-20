@@ -94,7 +94,7 @@ export async function getSessionInfoXsrf(accessToken) {
 }
 
 export async function logout(data) {
-    let body = new URLSearchParams();
+    let body = new FormData();
     for (let key in data) {
         body.append(key, data[key]);
     }

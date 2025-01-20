@@ -1,38 +1,44 @@
-<script>
+<script lang="ts">
     import {onMount} from "svelte";
     import {getSessionInfo, getUser, getUserWebIdData} from "../../utils/dataFetching.js";
-    import Loading from "../../components/Loading.svelte";
     import AccMain from "../../components/account/AccMain.svelte";
     import {redirectToLogin} from "../../utils/helpers";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
+    import {type SessionResponse} from "$api/response/common/session.ts";
+    import {type UserResponse} from "$api/response/common/user.ts";
+    import Loading from "$lib5/Loading.svelte";
 
     let t = useI18n();
 
-    let sessionInfo = $state();
-    let user = $state();
+    let session: undefined | SessionResponse = $state();
+    let user: undefined | UserResponse = $state();
     let webIdData = $state();
     let isReady = $state(false);
 
     onMount(async () => {
         let res = await getSessionInfo();
         if (res.ok) {
-            sessionInfo = await res.json();
+            session = await res.json();
+            if (!session) {
+                console.error('did not receive valid session response');
+                return;
+            }
 
-            res = await getUser(sessionInfo.user_id);
+            res = await getUser(session.user_id);
             if (res.ok) {
                 user = await res.json();
             } else {
                 redirectToLogin('account');
             }
 
-            res = await getUserWebIdData(sessionInfo.user_id);
+            res = await getUserWebIdData(session.user_id);
             if (res.ok) {
                 webIdData = await res.json();
             } else if (res.status === 404) {
                 webIdData = {
-                    user_id: sessionInfo.user_id,
+                    user_id: session.user_id,
                     is_open: false,
                 };
             } else {
@@ -59,8 +65,8 @@
     <ContentCenter>
         {#if !isReady}
             <Loading/>
-        {:else}
-            <AccMain {sessionInfo} bind:user bind:webIdData/>
+        {:else if session && user}
+            <AccMain {session} bind:user bind:webIdData/>
         {/if}
     </ContentCenter>
 </Main>

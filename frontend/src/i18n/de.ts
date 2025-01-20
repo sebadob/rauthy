@@ -3,6 +3,7 @@ import {type I18n} from "./interface.ts";
 export const I18nDe: I18n = {
     common: {
         cancel: "Abbrechen",
+        close: "Schließen",
         email: "E-Mail",
         errTooShort: "Eingabe zu kurz",
         errTooLong: "Eingabe zu lang",

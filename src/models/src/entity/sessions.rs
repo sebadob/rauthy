@@ -23,6 +23,7 @@ use std::str::FromStr;
 use time::OffsetDateTime;
 use tracing::{error, warn};
 
+// TODO impl `Debug` manually to never possibly leak the full id / csrf_token
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct Session {
     pub id: String,
