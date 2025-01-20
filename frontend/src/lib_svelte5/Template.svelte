@@ -3,12 +3,14 @@
     import {useIsDev} from "$state/is_dev.svelte.ts";
     import {fetchGet} from "$api/fetch.ts";
 
+    type T = $$Generic;
+
     let {
         id,
         value = $bindable(),
     }: {
         id: string,
-        value: boolean | string | object,
+        value: boolean | string | T,
     } = $props();
 
     onMount(async () => {

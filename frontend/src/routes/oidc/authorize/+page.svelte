@@ -21,11 +21,12 @@
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import getPkce from "oauth-pkce";
-    import {PKCE_VERIFIER_UPSTREAM} from "../../../utils/constants.js";
+    import {PKCE_VERIFIER_UPSTREAM, TPL_AUTH_PROVIDERS} from "../../../utils/constants.js";
     import IconHome from "$lib/icons/IconHome.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
+    import Template from "$lib5/Template.svelte";
 
     let t = useI18n();
 
@@ -122,13 +123,6 @@
 
         csrf = window.document.getElementsByName('rauthy-csrf-token')[0].id;
         saveCsrfToken(csrf);
-
-        // demo value for testing - only un-comment in local dev, not for production build
-        // const provider_tpl = document.getElementsByTagName('template').namedItem('auth_providers').innerHTML || '[{"id": "z6rC5VvymQOev50Pwq0oL0KD", "name": "dev-test", "use_pkce": true}]';
-        const providerTpl = document.getElementsByTagName('template').namedItem('auth_providers').innerHTML;
-        if (providerTpl) {
-            providers = JSON.parse(providerTpl);
-        }
 
         const params = getQueryParams();
         clientId = params.client_id;
@@ -319,6 +313,8 @@
 <svelte:head>
     <title>Login {clientName || clientId}</title>
 </svelte:head>
+
+<Template id={TPL_AUTH_PROVIDERS} bind:value={providers}/>
 
 <Main>
     <ContentCenter>

@@ -3,6 +3,7 @@ import {type I18n} from "./interface.ts";
 export const I18nKo: I18n = {
     common: {
         cancel: "취소",
+        close: "Close",
         email: "이메일",
         errTooShort: "입력이 너무 짧습니다.",
         errTooLong: "입력이 너무 깁니다.",

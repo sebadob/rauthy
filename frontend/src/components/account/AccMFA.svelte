@@ -24,7 +24,7 @@
     import Tooltip from "$lib/Tooltip.svelte";
     import {useI18n} from "$state/i18n.svelte";
 
-    let {sessionInfo, user = {}} = $props();
+    let {session, user = {}} = $props();
 
     let t = useI18n();
 
@@ -59,7 +59,7 @@
     }
 
     async function fetchPasskeys() {
-        let res = await getUserPasskeys(sessionInfo.user_id);
+        let res = await getUserPasskeys(session.user_id);
         let body = await res.json();
         if (res.ok) {
             passkeys = body;
