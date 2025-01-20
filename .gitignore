@@ -13,8 +13,6 @@ data
 frontend/.next
 frontend/node_modules
 frontend/out
-static/v1
-templates/html/
 book/book
 out/
 .npm_cache

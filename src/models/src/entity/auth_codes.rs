@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use std::ops::Add;
 use time::OffsetDateTime;
 
-// Struct for the codes from the 'authorization_code' flow
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AuthCode {
     pub id: String,

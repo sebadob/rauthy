@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="{{lang}}">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Rauthy</title>
+    <link rel="icon" href="./assets/favicon.svg"/>
+    <link rel="stylesheet" href="/auth/v1/theme/{{client_id}}"/>
+    <style>
+        :root {
+            --col-act1: {{ col_act1 }};
+            --col-act1a: {{ col_act1a }};
+            --col-act2: {{ col_act2 }};
+            --col-act2a: {{ col_act2a }};
+            --col-acnt: {{ col_acnt }};
+            --col-acnta: {{ col_acnta }};
+            --col-ok: {{ col_ok }};
+            --col-err: {{ col_err }};
+            --col-glow: {{ col_glow }};
+            --col-gmid: {{ col_gmid }};
+            --col-ghigh: {{ col_ghigh }};
+            --col-text: {{ col_text }};
+            --col-bg: {{ col_bg }};
+
+            --width-events: 12.5rem;
+            --width-events-collapsed: 2.5rem;
+            --width-events-wide: 30rem;
+        }
+
+        body {
+            color: var(--col-text);
+            background: var(--col-bg);
+        }
+
+        a, a:visited {
+            color: var(--col-act2)
+        }
+
+        a:hover {
+            color: var(--col-act2a)
+        }
+    </style>
+    <meta http-equiv="content-security-policy" content="default-src 'none'; connect-src 'self'; img-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-CliHpAG9EzCVn08T6UiTT8M7TTBzrRfs4d0nuiw/jgw='; style-src 'self' 'unsafe-inline'">
+		<link href="./_app/immutable/assets/0.BjC-dB5x.css" rel="stylesheet">
+		<link href="./_app/immutable/assets/Error.BHaKgkRX.css" rel="stylesheet">
+		<link href="./_app/immutable/assets/LangSelector.O5X7vySz.css" rel="stylesheet">
+		<link href="./_app/immutable/assets/OptionSelect.v1wsJTwS.css" rel="stylesheet">
+		<link href="./_app/immutable/assets/ContentCenter.BpmtvV5f.css" rel="stylesheet">
+		<link rel="modulepreload" href="./_app/immutable/entry/start.Bj78bRRv.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/entry.Ddy6icaf.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/index-client.CGppiJvc.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/index.BU3V9-NS.js">
+		<link rel="modulepreload" href="./_app/immutable/entry/app.Dj8nXbmK.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/preload-helper.CmsKOCeN.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/legacy-client.CgqodnwN.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/render.D4MwAWTL.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/disclose-version.DZhRUPAc.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/if.DUA6Hpfn.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/proxy.DB4Km9hY.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/this.B23tdsYu.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/props.Df_pGDSd.js">
+		<link rel="modulepreload" href="./_app/immutable/nodes/0.Cb38Tfsl.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/snippet.xhmr1ywJ.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/is_dev.svelte.sP_MjoCE.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/language.svelte.n4n5oz7-.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/i18n.svelte.BTGsPiz_.js">
+		<link rel="modulepreload" href="./_app/immutable/nodes/19.0qOBqwlU.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/legacy.BuHyzquP.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/Error.CsY9Wg-p.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/LangSelector.mSh8cV6Q.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/dataFetching.Dto1xJW6.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/OptionSelect.BCgZksOM.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/helpers.DVmWh-6p.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/ContentCenter.CsjyBf2d.js">
+</head>
+<body>
+<div class="hidden" aria-hidden="true">
+    <input name="rauthy-csrf-token" id="{{ csrf_token }}" type="hidden"/>
+    <input name="rauthy-data" id="{{ data }}" type="hidden"/>
+    <input name="rauthy-action" id="{{ action }}" type="hidden"/>
+    {%- for tpl in templates -%}
+    <template id="{{ tpl.id() }}">{{ tpl.inner()|safe }}</template>
+    {%- endfor %}
+</div>
+<div style="display: contents"><!--[--><!--[--><!----><noscript><h2>You need to enable JavaScript</h2></noscript> <!--[--><!----><!----> <!----> <main class="svelte-1w3gfbz"><div class="svelte-vtwvgl"><div class="flex-col"><h1></h1> <br> <p></p> <!--[!--><!--]--> <div class="svelte-s2vujs absolute absoluteLeft"><select style="width: inherit;" class="svelte-ysgm66"><!--[--><option class="opt svelte-ysgm66" value="de">de</option><option class="opt svelte-ysgm66" value="en">en</option><option class="opt svelte-ysgm66" value="zh">zh</option><option class="opt svelte-ysgm66" value="ko">ko</option><!--]--></select><!----></div><!----></div><!----></div><!----></main><!----><!----><!----><!--]--><!----><!--]--> <!--[!--><!--]--><!--]-->
+			
+			<script>
+				{
+					__sveltekit_zeckhh = {
+						base: new URL(".", location).pathname.slice(0, -1),
+						assets: "/auth/v1"
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("./_app/immutable/entry/start.Bj78bRRv.js"),
+						import("./_app/immutable/entry/app.Dj8nXbmK.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 19],
+							data: [null,null],
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
+</body>
+</html>
