@@ -618,17 +618,21 @@ pub async fn get_logout(
 
     // If we get any logout errors, maybe because there is no session anymore or whatever happens,
     // just redirect to rauthy's root page, since the user is not logged in anyway anymore.
-    let session = match principal.get_session() {
-        Ok(s) => s,
-        Err(_) => {
-            return HttpResponse::build(StatusCode::from_u16(302).unwrap())
-                .insert_header(("location", "/auth/v1/"))
-                .finish()
-        }
-    };
+    if principal.validate_session_auth().is_err() {
+        return HttpResponse::build(StatusCode::from_u16(302).unwrap())
+            .insert_header(("location", "/auth/v1/"))
+            .finish();
+    }
 
     let lang = Language::try_from(&req).unwrap_or_default();
-    let body = match logout::get_logout_html(params, session, &data, &lang).await {
+    let body = match logout::get_logout_html(
+        params,
+        principal.into_inner().session.unwrap(),
+        &data,
+        &lang,
+    )
+    .await
+    {
         Ok(t) => t,
         Err(_) => {
             return HttpResponse::build(StatusCode::from_u16(302).unwrap())

@@ -42,7 +42,7 @@ pub struct TplClientData {
 // -> frontend/src/utils/constants.js -> TPL_* values
 #[derive(Debug)]
 pub enum HtmlTemplate {
-    /// Auth providers as JSON value
+    /// Auth providers as pre-built, cached JSON value
     AuthProviders(String),
     ClientName(String),
     ClientUrl(String),
@@ -108,18 +108,8 @@ impl HtmlTemplate {
         }
     }
 
-    // pub fn inner(&self) -> &str {
-    //     match self {
-    //         Self::AuthProviders(i) => i,
-    //         Self::ErrorDetails(i) => i.as_ref(),
-    //         Self::ErrorText(i) => i.as_ref(),
-    //         Self::DeviceUserCodeLength(i) => i,
-    //         Self::StatusCode(i) => i.as_str(),
-    //     }
-    // }
-
     // TODO find a way to borrow the value dynamically, no matter the type
-    // -> does rinja work with generic traits like `Display`?
+    // -> does rinja accept generic traits like `Display`?
     pub fn inner(&self) -> String {
         match self {
             Self::AuthProviders(i) => i.to_string(),
@@ -1461,12 +1451,10 @@ pub struct LogoutHtml<'a> {
 }
 
 impl LogoutHtml<'_> {
-    pub fn build(csrf_token: &str, set_logout: bool, colors: &Colors, lang: &Language) -> String {
+    pub fn build(csrf_token: String, colors: &Colors, lang: &Language) -> String {
         let res = LogoutHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
-            csrf_token,
-            action: set_logout,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1480,6 +1468,7 @@ impl LogoutHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            templates: &[HtmlTemplate::CsrfToken(csrf_token)],
             ..Default::default()
         };
 

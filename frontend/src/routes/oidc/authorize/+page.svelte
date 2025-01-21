@@ -23,7 +23,10 @@
     import getPkce from "oauth-pkce";
     import {
         PKCE_VERIFIER_UPSTREAM,
-        TPL_AUTH_PROVIDERS, TPL_CLIENT_DATA, TPL_CLIENT_NAME, TPL_CLIENT_URL, TPL_CSRF_TOKEN,
+        TPL_AUTH_PROVIDERS,
+        TPL_CLIENT_NAME,
+        TPL_CLIENT_URL,
+        TPL_CSRF_TOKEN,
         TPL_IS_REG_OPEN,
         TPL_LOGIN_ACTION
     } from "../../../utils/constants.js";
