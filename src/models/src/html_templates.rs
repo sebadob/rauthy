@@ -213,7 +213,6 @@ impl IndexHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             templates: &[HtmlTemplate::IsRegOpen(*OPEN_USER_REG)],
-            ..Default::default()
         };
 
         res.render().unwrap()
@@ -260,7 +259,6 @@ impl AccountHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             templates,
-            ..Default::default()
         };
         res.render().unwrap()
     }
@@ -354,7 +352,6 @@ impl DeviceHtml<'_> {
             templates: &[HtmlTemplate::DeviceUserCodeLength(
                 *DEVICE_GRANT_USER_CODE_LENGTH,
             )],
-            ..Default::default()
         };
 
         res.render().unwrap()
@@ -458,7 +455,6 @@ impl ErrorHtml<'_> {
                 HtmlTemplate::StatusCode(status_code),
                 HtmlTemplate::ErrorText(details_text.into()),
             ],
-            ..Default::default()
         };
 
         res.render().unwrap()
@@ -528,7 +524,6 @@ impl Error1Html<'_> {
                 HtmlTemplate::StatusCode(status_code),
                 HtmlTemplate::ErrorText(details_text.into()),
             ],
-            ..Default::default()
         };
 
         res.render().unwrap()
@@ -586,7 +581,6 @@ impl Error2Html<'_> {
                 HtmlTemplate::StatusCode(status_code),
                 HtmlTemplate::ErrorText(details_text.into()),
             ],
-            ..Default::default()
         };
 
         res.render().unwrap()
@@ -644,7 +638,6 @@ impl Error3Html<'_> {
                 HtmlTemplate::StatusCode(status_code),
                 HtmlTemplate::ErrorText(details_text.into()),
             ],
-            ..Default::default()
         };
 
         res.render().unwrap()
@@ -1243,7 +1236,6 @@ impl AuthorizeHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             templates,
-            ..Default::default()
         };
 
         res.render().unwrap()
@@ -1428,7 +1420,6 @@ impl LogoutHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             templates: &[HtmlTemplate::CsrfToken(csrf_token)],
-            ..Default::default()
         };
 
         res.render().unwrap()
@@ -1477,7 +1468,6 @@ impl PwdResetHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             templates: &[HtmlTemplate::PasswordReset(template)],
-            ..Default::default()
         };
 
         res.render().unwrap()
@@ -1537,7 +1527,6 @@ impl UserEmailChangeConfirmHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             templates,
-            ..Default::default()
         }
         .render()
         .expect("rendering email_confirm.html")
@@ -1586,7 +1575,6 @@ impl UserRegisterHtml<'_> {
             templates: &[HtmlTemplate::RestrictedEmailDomain(
                 USER_REG_DOMAIN_RESTRICTION.clone().unwrap_or_default(),
             )],
-            ..Default::default()
         }
         .render()
         .expect("rendering register.html")
