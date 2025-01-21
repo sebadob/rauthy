@@ -3,7 +3,7 @@
     import * as yup from "yup";
     import {extractFormErrors, getQueryParams} from "../../../utils/helpers";
     import Button from "$lib/Button.svelte";
-    import {REGEX_NAME, REGEX_NAME_NULLABLE} from "../../../utils/constants.js";
+    import {REGEX_NAME, REGEX_NAME_NULLABLE, TPL_RESTRICTED_EMAIL_DOMAIN} from "../../../utils/constants.js";
     import {registerUser} from "../../../utils/dataFetching.js";
     import {onMount, tick} from "svelte";
     import Input from "$lib/inputs/Input.svelte";
@@ -11,11 +11,11 @@
     import {fetchSolvePow} from "../../../utils/pow.ts";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
-    import {useIsDev} from "$state/is_dev.svelte";
     import {useI18n} from "$state/i18n.svelte";
+    import Template from "$lib5/Template.svelte";
 
     let t = useI18n();
-    let restrictedDomain = $state();
+    let restrictedDomain = $state('');
     let redirectUri;
     let isLoading = $state(false);
     let err = $state('');
@@ -39,11 +39,6 @@
     });
 
     onMount(() => {
-        const data = window.document.getElementsByName('rauthy-data')[0].id;
-        if (useIsDev() && data !== '{{ data }}') {
-            restrictedDomain = data;
-        }
-
         const params = getQueryParams();
         redirectUri = params.redirect_uri;
     });
@@ -113,6 +108,8 @@
 <svelte:head>
     <title>{t?.register || 'Register'}</title>
 </svelte:head>
+
+<Template id={TPL_RESTRICTED_EMAIL_DOMAIN} bind:value={restrictedDomain}/>
 
 <Main>
     <ContentCenter>

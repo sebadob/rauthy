@@ -52,6 +52,7 @@ pub enum HtmlTemplate {
     DeviceUserCodeLength(u8),
     IsRegOpen(bool),
     LoginAction(FrontendAction),
+    RestrictedEmailDomain(String),
     StatusCode(StatusCode),
 }
 
@@ -85,6 +86,9 @@ impl HtmlTemplate {
             "tpl_login_action" => Ok(Self::LoginAction(FrontendAction::None)),
             // "tpl_client_name" => todo!("extract info from referrer?"),
             // "tpl_client_url" => todo!("extract info from referrer?"),
+            "tpl_restricted_email_domain" => Ok(Self::RestrictedEmailDomain(
+                USER_REG_DOMAIN_RESTRICTION.clone().unwrap_or_default(),
+            )),
             _ => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
                 "invalid template id",
@@ -104,6 +108,7 @@ impl HtmlTemplate {
             Self::DeviceUserCodeLength(_) => "tpl_device_user_code_length",
             Self::IsRegOpen(_) => "tpl_is_reg_open",
             Self::LoginAction(_) => "tpl_login_action",
+            Self::RestrictedEmailDomain(_) => "tpl_restricted_email_domain",
             Self::StatusCode(_) => "tpl_status_code",
         }
     }
@@ -122,6 +127,7 @@ impl HtmlTemplate {
             Self::IsRegOpen(i) => i.to_string(),
             Self::LoginAction(i) => i.to_string(),
             Self::StatusCode(i) => i.to_string(),
+            Self::RestrictedEmailDomain(i) => i.to_string(),
         }
     }
 }
@@ -1641,10 +1647,6 @@ impl UserRegisterHtml<'_> {
         UserRegisterHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
-            data: USER_REG_DOMAIN_RESTRICTION
-                .as_ref()
-                .map(|s| s.as_str())
-                .unwrap_or(""),
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1658,6 +1660,9 @@ impl UserRegisterHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            templates: &[HtmlTemplate::RestrictedEmailDomain(
+                USER_REG_DOMAIN_RESTRICTION.clone().unwrap_or_default(),
+            )],
             ..Default::default()
         }
         .render()

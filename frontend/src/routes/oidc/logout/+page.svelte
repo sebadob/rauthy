@@ -35,9 +35,9 @@
     onMount(async () => {
         const params = getQueryParams();
         logoutData = {
-            post_logout_redirect_uri: params.get('post_logout_redirect_uri'),
-            id_token_hint: params.get('id_token_hint'),
-            state: params.get('state'),
+            post_logout_redirect_uri: params.post_logout_redirect_uri,
+            id_token_hint: params.id_token_hint,
+            state: params.state,
         };
     });
 
