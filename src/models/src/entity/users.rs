@@ -13,7 +13,7 @@ use crate::entity::sessions::Session;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
 use crate::events::event::Event;
-use crate::html_templates::UserEmailChangeConfirmHtml;
+use crate::html_templates::{HtmlTemplate, UserEmailChangeConfirmHtml};
 use crate::language::Language;
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;
@@ -1350,11 +1350,6 @@ impl User {
 
         let mut user = Self::find(user_id).await?;
 
-        // build response HTML
-        let colors = ColorEntity::find_rauthy().await?;
-        let lang = Language::try_from(&req).unwrap_or_default();
-        let html = UserEmailChangeConfirmHtml::build(&colors, &lang, &user.email, &new_email);
-
         // save data
         let old_email = user.email;
         user.email = new_email;
@@ -1375,6 +1370,18 @@ impl User {
             .send_async(Event::user_email_change(event_text, ip))
             .await
             .unwrap();
+
+        // build response HTML
+        let colors = ColorEntity::find_rauthy().await?;
+        let lang = Language::try_from(&req).unwrap_or_default();
+        let html = UserEmailChangeConfirmHtml::build(
+            &colors,
+            &lang,
+            &[
+                HtmlTemplate::EmailOld(old_email),
+                HtmlTemplate::EmailNew(user.email),
+            ],
+        );
 
         Ok(html)
     }

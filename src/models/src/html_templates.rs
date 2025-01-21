@@ -47,6 +47,8 @@ pub enum HtmlTemplate {
     ClientName(String),
     ClientUrl(String),
     CsrfToken(String),
+    EmailOld(String),
+    EmailNew(String),
     ErrorDetails(Cow<'static, str>),
     ErrorText(Cow<'static, str>),
     DeviceUserCodeLength(u8),
@@ -80,6 +82,8 @@ impl HtmlTemplate {
             "tpl_device_user_code_length" => {
                 Ok(Self::DeviceUserCodeLength(*DEVICE_GRANT_USER_CODE_LENGTH))
             }
+            "tpl_email_old" => Ok(Self::EmailOld("OLD@EMAIL.LOCAL".to_string())),
+            "tpl_email_new" => Ok(Self::EmailOld("NEW@EMAIL.LOCAL".to_string())),
             "tpl_is_reg_open" => Ok(Self::IsRegOpen(*OPEN_USER_REG)),
             // the LoginAction requires a complex logic + validation.
             // Simply always return None during local dev.
@@ -103,6 +107,8 @@ impl HtmlTemplate {
             Self::ClientName(_) => "tpl_client_name",
             Self::ClientUrl(_) => "tpl_client_url",
             Self::CsrfToken(_) => "tpl_csrf_token",
+            Self::EmailOld(_) => "tpl_email_old",
+            Self::EmailNew(_) => "tpl_email_new",
             Self::ErrorDetails(_) => "tpl_error_details",
             Self::ErrorText(_) => "tpl_error_text",
             Self::DeviceUserCodeLength(_) => "tpl_device_user_code_length",
@@ -113,7 +119,7 @@ impl HtmlTemplate {
         }
     }
 
-    // TODO find a way to borrow the value dynamically, no matter the type
+    // TODO find a way to borrow values dynamically, no matter the type
     // -> does rinja accept generic traits like `Display`?
     pub fn inner(&self) -> String {
         match self {
@@ -121,6 +127,8 @@ impl HtmlTemplate {
             Self::ClientName(i) => i.to_string(),
             Self::ClientUrl(i) => i.to_string(),
             Self::CsrfToken(i) => i.to_string(),
+            Self::EmailOld(i) => i.to_string(),
+            Self::EmailNew(i) => i.to_string(),
             Self::ErrorDetails(i) => i.to_string(),
             Self::ErrorText(i) => i.to_string(),
             Self::DeviceUserCodeLength(i) => i.to_string(),
@@ -1591,13 +1599,10 @@ pub struct UserEmailChangeConfirmHtml<'a> {
 }
 
 impl UserEmailChangeConfirmHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, email_old: &str, email_new: &str) -> String {
-        let data = format!("{},{}", email_old, email_new,);
-
+    pub fn build(colors: &Colors, lang: &Language, templates: &[HtmlTemplate]) -> String {
         UserEmailChangeConfirmHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
-            data: &data,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1611,6 +1616,7 @@ impl UserEmailChangeConfirmHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            templates,
             ..Default::default()
         }
         .render()
