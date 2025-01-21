@@ -149,23 +149,21 @@ pub async fn get_authorize(
     }
 
     let auth_providers_json = AuthProviderTemplate::get_all_json_template().await?;
-    let tpl_data = Some(format!(
-        "{}\n{}\n{}",
-        client.name.unwrap_or_default(),
-        client.client_uri.unwrap_or_default(),
-        *OPEN_USER_REG,
-    ));
 
     // if the user is still authenticated and everything is valid -> immediate refresh
     if !force_new_session && principal.validate_session_auth().is_ok() {
         let csrf = principal.get_session_csrf_token()?;
         let body = AuthorizeHtml::build(
-            &tpl_data,
-            csrf,
-            FrontendAction::Refresh,
             &colors,
             &lang,
-            &[HtmlTemplate::AuthProviders(auth_providers_json)],
+            &[
+                HtmlTemplate::AuthProviders(auth_providers_json),
+                HtmlTemplate::ClientName(client.name.unwrap_or_default()),
+                HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
+                HtmlTemplate::CsrfToken(csrf.to_string()),
+                HtmlTemplate::IsRegOpen(*OPEN_USER_REG),
+                HtmlTemplate::LoginAction(FrontendAction::Refresh),
+            ],
         );
 
         if let Some(o) = origin_header {
@@ -193,12 +191,16 @@ pub async fn get_authorize(
     }
 
     let body = AuthorizeHtml::build(
-        &tpl_data,
-        &session.csrf_token,
-        action,
         &colors,
         &lang,
-        &[HtmlTemplate::AuthProviders(auth_providers_json)],
+        &[
+            HtmlTemplate::AuthProviders(auth_providers_json),
+            HtmlTemplate::ClientName(client.name.unwrap_or_default()),
+            HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
+            HtmlTemplate::CsrfToken(session.csrf_token.clone()),
+            HtmlTemplate::IsRegOpen(*OPEN_USER_REG),
+            HtmlTemplate::LoginAction(action),
+        ],
     );
 
     let cookie = session.client_cookie();
@@ -616,17 +618,21 @@ pub async fn get_logout(
 
     // If we get any logout errors, maybe because there is no session anymore or whatever happens,
     // just redirect to rauthy's root page, since the user is not logged in anyway anymore.
-    let session = match principal.get_session() {
-        Ok(s) => s,
-        Err(_) => {
-            return HttpResponse::build(StatusCode::from_u16(302).unwrap())
-                .insert_header(("location", "/auth/v1/"))
-                .finish()
-        }
-    };
+    if principal.validate_session_auth().is_err() {
+        return HttpResponse::build(StatusCode::from_u16(302).unwrap())
+            .insert_header(("location", "/auth/v1/"))
+            .finish();
+    }
 
     let lang = Language::try_from(&req).unwrap_or_default();
-    let body = match logout::get_logout_html(params, session, &data, &lang).await {
+    let body = match logout::get_logout_html(
+        params,
+        principal.into_inner().session.unwrap(),
+        &data,
+        &lang,
+    )
+    .await
+    {
         Ok(t) => t,
         Err(_) => {
             return HttpResponse::build(StatusCode::from_u16(302).unwrap())

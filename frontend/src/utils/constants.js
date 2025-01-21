@@ -119,7 +119,17 @@ export const PKCE_CHALLENGES = [{
 
 // All TPL_* values match a possibly existing `<template>` id
 // -> src/models/src/html_templates.rs -> HtmlTemplate
-export const TPL_AUTH_PROVIDERS = 'auth_providers';
-export const TPL_ERROR_DETAILS = 'error_details';
-export const TPL_ERROR_TEXT = 'error_text';
-export const TPL_STATUS_CODE = 'status_code';
+export const TPL_AUTH_PROVIDERS = 'tpl_auth_providers';
+export const TPL_CLIENT_NAME = 'tpl_client_name';
+export const TPL_CLIENT_URL = 'tpl_client_url';
+export const TPL_CSRF_TOKEN = 'tpl_csrf_token';
+export const TPL_EMAIL_OLD = 'tpl_email_old';
+export const TPL_EMAIL_NEW = 'tpl_email_new';
+export const TPL_ERROR_DETAILS = 'tpl_error_details';
+export const TPL_ERROR_TEXT = 'tpl_error_text';
+export const TPL_DEVICE_USER_CODE_LENGTH = 'tpl_device_user_code_length';
+export const TPL_IS_REG_OPEN = 'tpl_is_reg_open';
+export const TPL_LOGIN_ACTION = 'tpl_login_action';
+export const TPL_PASSWORD_RESET = 'tpl_password_reset';
+export const TPL_STATUS_CODE = 'tpl_status_code';
+export const TPL_RESTRICTED_EMAIL_DOMAIN = 'tpl_restricted_email_domain';

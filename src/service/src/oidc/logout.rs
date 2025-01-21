@@ -13,17 +13,17 @@ use rauthy_models::{JwtIdClaims, JwtTokenType};
 /// Returns the Logout HTML Page for [GET /oidc/logout](crate::handlers::get_logout)
 pub async fn get_logout_html(
     logout_request: LogoutRequest,
-    session: &Session,
+    session: Session,
     data: &web::Data<AppState>,
     lang: &Language,
 ) -> Result<String, ErrorResponse> {
     let colors = ColorEntity::find_rauthy().await?;
 
     if logout_request.id_token_hint.is_none() {
-        return Ok(LogoutHtml::build(&session.csrf_token, false, &colors, lang));
+        return Ok(LogoutHtml::build(session.csrf_token, &colors, lang));
     }
 
-    // check if the provided token hint is a valid
+    // check if the provided token hint is valid
     let token_raw = logout_request.id_token_hint.unwrap();
     let claims = validation::validate_token::<JwtIdClaims>(data, &token_raw).await?;
 
@@ -67,5 +67,5 @@ pub async fn get_logout_html(
         // redirect uri is valid at this point
     }
 
-    Ok(LogoutHtml::build(&session.csrf_token, true, &colors, lang))
+    Ok(LogoutHtml::build(session.csrf_token, &colors, lang))
 }

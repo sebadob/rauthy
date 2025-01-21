@@ -1,14 +1,17 @@
 use crate::entity::auth_providers::AuthProviderTemplate;
 use crate::entity::colors::Colors;
 use crate::entity::password::PasswordPolicy;
+use crate::entity::sessions::Session;
 use crate::language::Language;
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, HttpResponseBuilder};
+use rauthy_api_types::generic::PasswordPolicyResponse;
 use rauthy_common::constants::{
     DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rinja_actix::Template;
+use serde::Serialize;
 use std::borrow::Cow;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -29,26 +32,97 @@ impl Display for FrontendAction {
     }
 }
 
+#[derive(Debug, Serialize)]
+pub struct TplClientData {
+    pub name: String,
+    pub url: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TplPasswordReset {
+    pub csrf_token: String,
+    pub magic_link_id: String,
+    pub needs_mfa: bool,
+    pub password_policy: PasswordPolicyResponse,
+    pub user_id: String,
+}
+
 // If you add new values to this template, make sure to also create a
 // matching constant in the UI and make proper use of it:
 // -> frontend/src/utils/constants.js -> TPL_* values
 #[derive(Debug)]
 pub enum HtmlTemplate {
-    /// Auth providers as JSON value
+    /// Auth providers as pre-built, cached JSON value
     AuthProviders(String),
+    ClientName(String),
+    ClientUrl(String),
+    CsrfToken(String),
+    EmailOld(String),
+    EmailNew(String),
     ErrorDetails(Cow<'static, str>),
     ErrorText(Cow<'static, str>),
+    DeviceUserCodeLength(u8),
+    IsRegOpen(bool),
+    LoginAction(FrontendAction),
+    PasswordReset(TplPasswordReset),
+    RestrictedEmailDomain(String),
     StatusCode(StatusCode),
 }
 
 impl HtmlTemplate {
-    pub async fn build_from_str(s: &str) -> Result<Self, ErrorResponse> {
-        // TODO make sure to check the session in case of sensitive id's like csrf token
-
+    /// This function is only used during local dev to async resolve template values that are
+    /// rendered into the HTML directly in prod.
+    ///
+    /// TODO maybe deactivate completely without debug_assertions?
+    pub async fn build_from_str(s: &str, session: Option<Session>) -> Result<Self, ErrorResponse> {
         match s {
-            "auth_providers" => {
+            "tpl_auth_providers" => {
                 let json = AuthProviderTemplate::get_all_json_template().await?;
                 Ok(Self::AuthProviders(json))
+            }
+            "tpl_csrf_token" => {
+                if let Some(s) = session {
+                    Ok(Self::CsrfToken(s.csrf_token))
+                } else {
+                    Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        "no session",
+                    ))
+                }
+            }
+            "tpl_device_user_code_length" => {
+                Ok(Self::DeviceUserCodeLength(*DEVICE_GRANT_USER_CODE_LENGTH))
+            }
+            "tpl_email_old" => Ok(Self::EmailOld("OLD@EMAIL.LOCAL".to_string())),
+            "tpl_email_new" => Ok(Self::EmailOld("NEW@EMAIL.LOCAL".to_string())),
+            "tpl_is_reg_open" => Ok(Self::IsRegOpen(*OPEN_USER_REG)),
+            // the LoginAction requires a complex logic + validation.
+            // Simply always return None during local dev.
+            "tpl_login_action" => Ok(Self::LoginAction(FrontendAction::None)),
+            // "tpl_client_name" => todo!("extract info from referrer?"),
+            // "tpl_client_url" => todo!("extract info from referrer?"),
+            "tpl_restricted_email_domain" => Ok(Self::RestrictedEmailDomain(
+                USER_REG_DOMAIN_RESTRICTION.clone().unwrap_or_default(),
+            )),
+            "tpl_password_reset" => {
+                if let Some(s) = session {
+                    let password_policy = PasswordPolicy::find().await?;
+
+                    // we can't easily return the complete and correct templates, but it should
+                    // be good enough to be able to work with it
+                    Ok(Self::PasswordReset(TplPasswordReset {
+                        csrf_token: "CSRF_TOKEN_TEMPLATE".to_string(),
+                        magic_link_id: "MAGIC_LINK:ID".to_string(),
+                        needs_mfa: false,
+                        password_policy: PasswordPolicyResponse::from(password_policy),
+                        user_id: s.user_id.unwrap_or_default(),
+                    }))
+                } else {
+                    Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        "no session",
+                    ))
+                }
             }
             _ => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
@@ -57,21 +131,44 @@ impl HtmlTemplate {
         }
     }
 
+    /// Returns the `id` that will be used for the HTML `<template>` element.
     pub fn id(&self) -> &'static str {
         match self {
-            Self::AuthProviders(_) => "auth_providers",
-            Self::ErrorDetails(_) => "error_details",
-            Self::ErrorText(_) => "error_text",
-            Self::StatusCode(_) => "status_code",
+            Self::AuthProviders(_) => "tpl_auth_providers",
+            Self::ClientName(_) => "tpl_client_name",
+            Self::ClientUrl(_) => "tpl_client_url",
+            Self::CsrfToken(_) => "tpl_csrf_token",
+            Self::EmailOld(_) => "tpl_email_old",
+            Self::EmailNew(_) => "tpl_email_new",
+            Self::ErrorDetails(_) => "tpl_error_details",
+            Self::ErrorText(_) => "tpl_error_text",
+            Self::DeviceUserCodeLength(_) => "tpl_device_user_code_length",
+            Self::IsRegOpen(_) => "tpl_is_reg_open",
+            Self::LoginAction(_) => "tpl_login_action",
+            Self::PasswordReset(_) => "tpl_password_reset",
+            Self::RestrictedEmailDomain(_) => "tpl_restricted_email_domain",
+            Self::StatusCode(_) => "tpl_status_code",
         }
     }
 
-    pub fn inner(&self) -> &str {
+    // TODO find a way to borrow values dynamically, no matter the type
+    // -> does rinja accept generic traits like `Display`?
+    pub fn inner(&self) -> String {
         match self {
-            Self::AuthProviders(s) => s,
-            Self::ErrorDetails(s) => s.as_ref(),
-            Self::ErrorText(s) => s.as_ref(),
-            Self::StatusCode(s) => s.as_str(),
+            Self::AuthProviders(i) => i.to_string(),
+            Self::ClientName(i) => i.to_string(),
+            Self::ClientUrl(i) => i.to_string(),
+            Self::CsrfToken(i) => i.to_string(),
+            Self::EmailOld(i) => i.to_string(),
+            Self::EmailNew(i) => i.to_string(),
+            Self::ErrorDetails(i) => i.to_string(),
+            Self::ErrorText(i) => i.to_string(),
+            Self::DeviceUserCodeLength(i) => i.to_string(),
+            Self::IsRegOpen(i) => i.to_string(),
+            Self::LoginAction(i) => i.to_string(),
+            Self::PasswordReset(i) => serde_json::to_string(i).unwrap(),
+            Self::StatusCode(i) => i.to_string(),
+            Self::RestrictedEmailDomain(i) => i.to_string(),
         }
     }
 }
@@ -81,9 +178,6 @@ impl HtmlTemplate {
 pub struct IndexHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -105,8 +199,6 @@ impl IndexHtml<'_> {
         let res = IndexHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
-            csrf_token: "",
-            data: &OPEN_USER_REG.to_string(),
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -120,7 +212,7 @@ impl IndexHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            ..Default::default()
+            templates: &[HtmlTemplate::IsRegOpen(*OPEN_USER_REG)],
         };
 
         res.render().unwrap()
@@ -132,9 +224,6 @@ impl IndexHtml<'_> {
 pub struct AccountHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -170,7 +259,6 @@ impl AccountHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             templates,
-            ..Default::default()
         };
         res.render().unwrap()
     }
@@ -181,9 +269,6 @@ impl AccountHtml<'_> {
 pub struct AdminHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -230,9 +315,6 @@ impl AdminHtml<'_> {
 pub struct DeviceHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -254,8 +336,6 @@ impl DeviceHtml<'_> {
         let res = DeviceHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
-            csrf_token: "",
-            data: &DEVICE_GRANT_USER_CODE_LENGTH.to_string(),
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -269,7 +349,9 @@ impl DeviceHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            ..Default::default()
+            templates: &[HtmlTemplate::DeviceUserCodeLength(
+                *DEVICE_GRANT_USER_CODE_LENGTH,
+            )],
         };
 
         res.render().unwrap()
@@ -281,9 +363,6 @@ impl DeviceHtml<'_> {
 pub struct FedCMHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -305,8 +384,6 @@ impl FedCMHtml<'_> {
         let res = FedCMHtml {
             lang: "en",
             client_id: "rauthy",
-            csrf_token: "",
-            data: &DEVICE_GRANT_USER_CODE_LENGTH.to_string(),
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -332,9 +409,6 @@ impl FedCMHtml<'_> {
 pub struct ErrorHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -381,7 +455,6 @@ impl ErrorHtml<'_> {
                 HtmlTemplate::StatusCode(status_code),
                 HtmlTemplate::ErrorText(details_text.into()),
             ],
-            ..Default::default()
         };
 
         res.render().unwrap()
@@ -405,9 +478,6 @@ impl ErrorHtml<'_> {
 pub struct Error1Html<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -454,7 +524,6 @@ impl Error1Html<'_> {
                 HtmlTemplate::StatusCode(status_code),
                 HtmlTemplate::ErrorText(details_text.into()),
             ],
-            ..Default::default()
         };
 
         res.render().unwrap()
@@ -466,9 +535,6 @@ impl Error1Html<'_> {
 pub struct Error2Html<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -515,7 +581,6 @@ impl Error2Html<'_> {
                 HtmlTemplate::StatusCode(status_code),
                 HtmlTemplate::ErrorText(details_text.into()),
             ],
-            ..Default::default()
         };
 
         res.render().unwrap()
@@ -527,9 +592,6 @@ impl Error2Html<'_> {
 pub struct Error3Html<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -576,7 +638,6 @@ impl Error3Html<'_> {
                 HtmlTemplate::StatusCode(status_code),
                 HtmlTemplate::ErrorText(details_text.into()),
             ],
-            ..Default::default()
         };
 
         res.render().unwrap()
@@ -588,9 +649,6 @@ impl Error3Html<'_> {
 pub struct AdminApiKeysHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -637,9 +695,6 @@ impl AdminApiKeysHtml<'_> {
 pub struct AdminAttributesHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -686,9 +741,6 @@ impl AdminAttributesHtml<'_> {
 pub struct AdminBlacklistHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -735,9 +787,6 @@ impl AdminBlacklistHtml<'_> {
 pub struct AdminClientsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -784,9 +833,6 @@ impl AdminClientsHtml<'_> {
 pub struct AdminConfigHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -833,9 +879,6 @@ impl AdminConfigHtml<'_> {
 pub struct AdminDocsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -882,9 +925,6 @@ impl AdminDocsHtml<'_> {
 pub struct AdminEventsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -931,9 +971,6 @@ impl AdminEventsHtml<'_> {
 pub struct AdminGroupsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -980,9 +1017,6 @@ impl AdminGroupsHtml<'_> {
 pub struct AdminRolesHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1029,9 +1063,6 @@ impl AdminRolesHtml<'_> {
 pub struct AdminScopesHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1078,9 +1109,6 @@ impl AdminScopesHtml<'_> {
 pub struct AdminSessionsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1127,9 +1155,6 @@ impl AdminSessionsHtml<'_> {
 pub struct AdminUsersHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1176,9 +1201,6 @@ impl AdminUsersHtml<'_> {
 pub struct AuthorizeHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1196,19 +1218,10 @@ pub struct AuthorizeHtml<'a> {
 }
 
 impl AuthorizeHtml<'_> {
-    pub fn build(
-        client_name: &Option<String>,
-        csrf_token: &str,
-        action: FrontendAction,
-        colors: &Colors,
-        lang: &Language,
-        templates: &[HtmlTemplate],
-    ) -> String {
-        let mut res = AuthorizeHtml {
+    pub fn build(colors: &Colors, lang: &Language, templates: &[HtmlTemplate]) -> String {
+        let res = AuthorizeHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
-            csrf_token,
-            action: &action.to_string(),
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1223,12 +1236,7 @@ impl AuthorizeHtml<'_> {
             col_text: &colors.text,
             col_bg: &colors.bg,
             templates,
-            ..Default::default()
         };
-
-        if client_name.is_some() {
-            res.data = client_name.as_ref().unwrap();
-        }
 
         res.render().unwrap()
     }
@@ -1239,9 +1247,6 @@ impl AuthorizeHtml<'_> {
 pub struct CallbackHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1288,9 +1293,6 @@ impl CallbackHtml<'_> {
 pub struct ProvidersHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1337,9 +1339,6 @@ impl crate::html_templates::ProvidersHtml<'_> {
 pub struct ProviderCallbackHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1386,9 +1385,6 @@ impl ProviderCallbackHtml<'_> {
 pub struct LogoutHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1406,12 +1402,10 @@ pub struct LogoutHtml<'a> {
 }
 
 impl LogoutHtml<'_> {
-    pub fn build(csrf_token: &str, set_logout: bool, colors: &Colors, lang: &Language) -> String {
+    pub fn build(csrf_token: String, colors: &Colors, lang: &Language) -> String {
         let res = LogoutHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
-            csrf_token,
-            action: set_logout,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1425,7 +1419,7 @@ impl LogoutHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            ..Default::default()
+            templates: &[HtmlTemplate::CsrfToken(csrf_token)],
         };
 
         res.render().unwrap()
@@ -1437,9 +1431,6 @@ impl LogoutHtml<'_> {
 pub struct PwdResetHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1459,30 +1450,10 @@ pub struct PwdResetHtml<'a> {
 impl PwdResetHtml<'_> {
     // If the email is Some(_), this means that the user has webauthn enabled and does not need
     // to provide the email manually
-    pub fn build(
-        csrf_token: &str,
-        password_rules: &PasswordPolicy,
-        colors: &Colors,
-        lang: &Language,
-        needs_mfa: bool,
-    ) -> String {
-        let data = format!(
-            "{},{},{},{},{},{},{},{}",
-            password_rules.length_min,
-            password_rules.length_max,
-            password_rules.include_lower_case.unwrap_or(-1),
-            password_rules.include_upper_case.unwrap_or(-1),
-            password_rules.include_digits.unwrap_or(-1),
-            password_rules.include_special.unwrap_or(-1),
-            password_rules.not_recently_used.unwrap_or(-1),
-            needs_mfa,
-        );
-
+    pub fn build(colors: &Colors, lang: &Language, template: TplPasswordReset) -> String {
         let res = PwdResetHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
-            csrf_token,
-            data: &data,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1496,7 +1467,7 @@ impl PwdResetHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            ..Default::default()
+            templates: &[HtmlTemplate::PasswordReset(template)],
         };
 
         res.render().unwrap()
@@ -1521,9 +1492,6 @@ impl TooManyRequestsHtml {
 pub struct UserEmailChangeConfirmHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1541,13 +1509,10 @@ pub struct UserEmailChangeConfirmHtml<'a> {
 }
 
 impl UserEmailChangeConfirmHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, email_old: &str, email_new: &str) -> String {
-        let data = format!("{},{}", email_old, email_new,);
-
+    pub fn build(colors: &Colors, lang: &Language, templates: &[HtmlTemplate]) -> String {
         UserEmailChangeConfirmHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
-            data: &data,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1561,7 +1526,7 @@ impl UserEmailChangeConfirmHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            ..Default::default()
+            templates,
         }
         .render()
         .expect("rendering email_confirm.html")
@@ -1573,9 +1538,6 @@ impl UserEmailChangeConfirmHtml<'_> {
 pub struct UserRegisterHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1597,10 +1559,6 @@ impl UserRegisterHtml<'_> {
         UserRegisterHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
-            data: USER_REG_DOMAIN_RESTRICTION
-                .as_ref()
-                .map(|s| s.as_str())
-                .unwrap_or(""),
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1614,7 +1572,9 @@ impl UserRegisterHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
-            ..Default::default()
+            templates: &[HtmlTemplate::RestrictedEmailDomain(
+                USER_REG_DOMAIN_RESTRICTION.clone().unwrap_or_default(),
+            )],
         }
         .render()
         .expect("rendering register.html")

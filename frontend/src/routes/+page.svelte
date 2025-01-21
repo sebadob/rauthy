@@ -1,26 +1,17 @@
 <script lang="ts">
-    import {onMount} from "svelte";
     import Button from "$lib/Button.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import AppVersion from "../components/AppVersion.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
-    import {useIsDev} from "$state/is_dev.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import Template from "$lib5/Template.svelte";
+    import {TPL_IS_REG_OPEN} from "../utils/constants";
 
     const btnWidth = "9rem";
 
     let t = useI18n();
-    let renderReg = $state(false);
-
-    onMount(() => {
-        let isDev = useIsDev();
-        const data = window.document.getElementsByName('rauthy-data')[0].id
-        if ('true' === data || isDev) {
-            renderReg = true;
-        }
-    });
+    let isRegOpen = $state(false);
 
     function redirectToAdmin() {
         window.location.href = '/auth/v1/admin';
@@ -39,10 +30,12 @@
     <title>Rauthy</title>
 </svelte:head>
 
+<Template id={TPL_IS_REG_OPEN} bind:value={isRegOpen}/>
+
 <Main>
     <ContentCenter>
         <div class="btn">
-            {#if renderReg}
+            {#if isRegOpen}
                 <Button on:click={redirectToReg} width={btnWidth}>{t.index.register}</Button>
             {/if}
             <Button on:click={redirectToAccount} width={btnWidth}>{t.index.accountLogin}</Button>

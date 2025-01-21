@@ -1,28 +1,24 @@
 <script>
-    import {onMount} from "svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import Button from "$lib/Button.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
+    import Template from "$lib5/Template.svelte";
+    import {TPL_EMAIL_NEW, TPL_EMAIL_OLD} from "../../../../../utils/constants.js";
 
     let t = useI18n();
     let emailOld = $state('old@mail.org');
     let emailNew = $state('new@mail.org');
-
-    onMount(async () => {
-        const data = document.getElementsByName('rauthy-data')[0].id;
-        const arr = [];
-        data.split(',').forEach(i => arr.push(i));
-        emailOld = arr[0];
-        emailNew = arr[1];
-    })
 
 </script>
 
 <svelte:head>
     <title>{t.emailChange.title || 'E-Mail Change Confirm'}</title>
 </svelte:head>
+
+<Template id={TPL_EMAIL_OLD} bind:value={emailOld}/>
+<Template id={TPL_EMAIL_NEW} bind:value={emailNew}/>
 
 <Main>
     <ContentCenter>

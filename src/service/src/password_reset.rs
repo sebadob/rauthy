@@ -1,5 +1,6 @@
 use actix_web::{cookie, web, HttpRequest, HttpResponse};
 use chrono::Utc;
+use rauthy_api_types::generic::PasswordPolicyResponse;
 use rauthy_api_types::users::{
     PasswordResetRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
@@ -16,7 +17,7 @@ use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::WebauthnServiceReq;
 use rauthy_models::events::event::Event;
-use rauthy_models::html_templates::PwdResetHtml;
+use rauthy_models::html_templates::{PwdResetHtml, TplPasswordReset};
 use rauthy_models::language::Language;
 use tracing::{debug, error};
 
@@ -31,21 +32,21 @@ pub async fn handle_get_pwd_reset<'a>(
 
     let user = User::find(ml.user_id.clone()).await?;
 
-    // get the html and insert values
-    let rules = PasswordPolicy::find().await?;
     let colors = ColorEntity::find_rauthy().await?;
     let lang = Language::try_from(&req).unwrap_or_default();
 
     let content = if no_html {
         ml.csrf_token.clone()
     } else {
-        PwdResetHtml::build(
-            &ml.csrf_token,
-            &rules,
-            &colors,
-            &lang,
-            user.has_webauthn_enabled(),
-        )
+        let password_policy = PasswordPolicy::find().await?;
+        let tpl = TplPasswordReset {
+            csrf_token: ml.csrf_token.clone(),
+            magic_link_id: ml.id.clone(),
+            needs_mfa: user.has_webauthn_enabled(),
+            password_policy: PasswordPolicyResponse::from(password_policy),
+            user_id,
+        };
+        PwdResetHtml::build(&colors, &lang, tpl)
     };
 
     // generate a cookie value and save it to the magic link

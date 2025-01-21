@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import {onMount} from "svelte";
     import {getQueryParams, purgeStorage, saveCsrfToken} from "../../../utils/helpers";
     import {logout} from "../../../utils/dataFetching.js";
@@ -7,60 +7,63 @@
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
+    import type {LogoutParams} from "$api/query_params/logout.ts";
+    import Template from "$lib5/Template.svelte";
+    import {TPL_CSRF_TOKEN} from "../../../utils/constants";
 
     let t = useI18n();
     let err = '';
-    let postLogoutUri = '';
     let isLoading = $state(false);
 
-    onMount(async () => {
-        const params = getQueryParams();
-        postLogoutUri = params.post_logout_redirect_uri;
-        const token = params.id_token_hint;
-        const state = params.state;
+    let csrfToken = $state('');
+    let logoutData: LogoutParams = $state({});
 
-        const csrf = window.document.getElementsByName('rauthy-csrf-token')[0].id
-        saveCsrfToken(csrf);
-
-        const immediateLogout = window.document.getElementsByName('rauthy-action')[0].id
-        if ('true' === immediateLogout) {
-            isLoading = true;
-
-            const req = {
-                id_token_hint: token,
-                post_logout_redirect_uri: postLogoutUri,
-                state: state,
-            };
-
-            let res = await logout(req);
-            await handleRes(res);
+    // TODO remove the csrfToken from this component completely after finishing
+    // [#692](https://github.com/sebadob/rauthy/issues/692)
+    $effect(() => {
+        if (csrfToken) {
+            saveCsrfToken(csrfToken);
         }
     });
 
+    $effect(() => {
+        if (logoutData.id_token_hint) {
+            handleLogout();
+        }
+    });
+
+    onMount(async () => {
+        const params = getQueryParams();
+        logoutData = {
+            post_logout_redirect_uri: params.post_logout_redirect_uri,
+            id_token_hint: params.id_token_hint,
+            state: params.state,
+        };
+    });
+
     async function handleCancel() {
-        window.location.href = '/auth/v1';
+        window.location.replace('/auth/v1');
     }
 
     async function handleLogout() {
         isLoading = true;
-        let res = await logout({});
-        await handleRes(res);
-    }
 
-    async function handleRes(res) {
+        let res = await logout(logoutData);
         purgeStorage();
-        if (res.ok && res.headers.get('location')) {
-            window.location.replace(res.headers.get('location'));
+        let loc = res.headers.get('location');
+        if (loc) {
+            window.location.replace(loc);
         } else {
             await handleCancel();
         }
     }
-
 </script>
 
 <svelte:head>
     <title>{t?.logout.logout || 'Logout'}</title>
 </svelte:head>
+
+<Template id={TPL_CSRF_TOKEN} bind:value={csrfToken}/>
 
 <Main>
     <ContentCenter>

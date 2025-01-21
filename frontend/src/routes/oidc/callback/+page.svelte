@@ -1,5 +1,4 @@
 <script>
-    import Loading from "$lib/Loading.svelte";
     import {
         deleteVerifierFromStorage,
         getQueryParams,
@@ -61,5 +60,3 @@
 <svelte:head>
     <title>Login</title>
 </svelte:head>
-
-<Loading/>

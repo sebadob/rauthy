@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import {run} from 'svelte/legacy';
     import * as yup from "yup";
     import {onMount} from "svelte";
@@ -15,7 +15,6 @@
         webauthnRegStartAccReset,
         webauthnRegFinishAccReset,
     } from "../../../../../utils/dataFetching.js";
-    import Loading from "$lib/Loading.svelte";
     import Button from "$lib/Button.svelte";
     import PasswordPolicy from "../../../../../components/passwordReset/PasswordPolicy.svelte";
     import Input from "$lib/inputs/Input.svelte";
@@ -23,28 +22,26 @@
     import WebauthnRequest from "../../../../../components/webauthn/WebauthnRequest.svelte";
     import {slide} from "svelte/transition";
     import LangSelector from "$lib5/LangSelector.svelte";
-    import {REGEX_NAME} from "../../../../../utils/constants.js";
+    import {REGEX_NAME, TPL_PASSWORD_RESET} from "../../../../../utils/constants.js";
     import {useIsDev} from "$state/is_dev.svelte";
     import {useI18n} from "$state/i18n.svelte";
+    import Main from "$lib5/Main.svelte";
+    import ContentCenter from "$lib5/ContentCenter.svelte";
+    import type {PasswordResetTemplate} from "$api/templates/PasswordReset";
+    import Template from "$lib5/Template.svelte";
 
     const btnWidth = '150px';
     const inputWidth = '320px';
 
     let t = useI18n();
-    let csrf = '';
-    let policy = $state();
-    let isReady = $state(true);
-    // let isReady = false;
-    let isMfa = false;
+
+    let data: undefined | PasswordResetTemplate = $state();
 
     let isLoading = $state(false);
     let err = $state('');
-    let userId = '';
     let requestType = $state('');
-    // let requestType = $state("password_reset")
     let accountTypeNew = $state('');
-    let magicLinkId = '';
-    let redirectUri = $state();
+    let redirectUri = $state('');
     let success = $state(false);
     let accepted = $state(false);
     let showCopy = $state(false);
@@ -63,39 +60,12 @@
     onMount(async () => {
         let isDev = useIsDev();
 
-        let policy_vals;
-        if (isDev) {
-            policy_vals = '10, 128, 1, 1, 1, 1, 3';
-        } else {
-            policy_vals = document.getElementsByName('rauthy-data')[0].id;
-        }
-        const arr = [];
-        policy_vals
-            .split(',')
-            .forEach(v => arr.push(v));
-        policy = {
-            length_min: Number.parseInt(arr[0]),
-            length_max: Number.parseInt(arr[1]),
-            include_lower_case: Number.parseInt(arr[2]),
-            include_upper_case: Number.parseInt(arr[3]),
-            include_digits: Number.parseInt(arr[4]),
-            include_special: Number.parseInt(arr[5]),
-            not_recently_used: Number.parseInt(arr[6]),
-        };
-        isMfa = arr[7] == "true";
-
-        csrf = window.document.getElementsByName('rauthy-csrf-token')[0].id
-        userId = window.location.href.split("/users/")[1].split("/")[0];
-        magicLinkId = window.location.href.split("/reset/")[1].split("?")[0];
-
         if (isDev) {
             requestType = 'password_reset';
         } else {
             const params = getQueryParams();
             requestType = params['type'];
         }
-
-        isReady = true;
     })
 
     function navigateToAccount() {
@@ -103,18 +73,26 @@
     }
 
     function generate() {
-        const len = policy.length_min > 24 ? policy.length_min : 24;
-        let pwd = generatePassword(
-            len, policy.include_lower_case,
-            policy.include_upper_case,
-            policy.include_digits,
-            policy.include_special,
-        );
-        formValues.password = pwd;
-        formValues.passwordConfirm = pwd;
+        if (data) {
+            const len = data.password_policy.length_min > 24 ? data.password_policy.length_min : 24;
+            let pwd = generatePassword(
+                len,
+                data.password_policy.include_lower_case,
+                data.password_policy.include_upper_case,
+                data.password_policy.include_digits,
+                data.password_policy.include_special,
+            );
+            formValues.password = pwd;
+            formValues.passwordConfirm = pwd;
+        }
     }
 
     async function handleRegisterPasskey() {
+        if (!data) {
+            console.error('template data is undefined');
+            return;
+        }
+
         err = '';
 
         try {
@@ -131,11 +109,11 @@
             return;
         }
 
-        let data = {
+        let payload = {
             passkey_name: passkeyName,
-            magic_link_id: magicLinkId,
+            magic_link_id: data.magic_link_id,
         };
-        let res = await webauthnRegStartAccReset(userId, data, csrf);
+        let res = await webauthnRegStartAccReset(data.user_id, payload, data.csrf_token);
         if (res.status === 200) {
             let challenge = await res.json();
 
@@ -158,7 +136,7 @@
             let challengePk = await navigator.credentials.create(challenge);
 
             // the backend expects base64 url safe string instead of array buffers
-            let data = {
+            let payload = {
                 passkey_name: passkeyName,
                 data: {
                     id: challengePk.id,
@@ -169,11 +147,11 @@
                     },
                     type: challengePk.type,
                 },
-                magic_link_id: magicLinkId,
+                magic_link_id: data.magic_link_id,
             }
 
             // send the keys' pk to the backend and finish the registration
-            res = await webauthnRegFinishAccReset(userId, data, csrf);
+            res = await webauthnRegFinishAccReset(userId, payload, data.csrf_token);
             if (res.status === 201) {
                 formValues = {
                     passkeyName: '',
@@ -219,8 +197,8 @@
             err = '';
         }
 
-        if (isMfa) {
-            let res = await webauthnAuthStart(userId, {purpose: 'PasswordReset'});
+        if (data?.needs_mfa) {
+            let res = await webauthnAuthStart(data?.user_id, {purpose: 'PasswordReset'});
             let body = await res.json();
             if (!res.ok) {
                 err = body.message;
@@ -228,7 +206,7 @@
                 return;
             }
 
-            if (body.user_id !== userId) {
+            if (body.user_id !== data.user_id) {
                 err = 'MFA user ID does not match - this should never happen';
                 isLoading = false;
                 return;
@@ -240,16 +218,19 @@
         }
     }
 
-    async function onSubmitFinish(mfaCode) {
+    async function onSubmitFinish(mfaCode?: string) {
+        if (!data) {
+            return;
+        }
+
         isLoading = true;
 
-        const data = {
+        const payload = {
             password: formValues.password,
-            magic_link_id: magicLinkId,
+            magic_link_id: data.magic_link_id,
             mfa_code: mfaCode,
         };
-
-        const res = await resetPassword(userId, data, csrf);
+        const res = await resetPassword(data.user_id, payload, data?.csrf_token);
         if (res.ok) {
             err = '';
             formValues = {
@@ -332,192 +313,196 @@
     {:else}
         <title>Password</title>
     {/if}
-
 </svelte:head>
 
-{#if !isReady}
-    <Loading/>
-{/if}
+<Template id={TPL_PASSWORD_RESET} bind:value={data}/>
 
-<div class="container">
-    {#if requestType.startsWith('new_user')}
-        {#if webauthnData}
-            <WebauthnRequest
-                    bind:data={webauthnData}
-                    onSuccess={onWebauthnSuccess}
-                    onError={onWebauthnError}
-            />
-        {/if}
+<Main>
+    <ContentCenter>
+        {#if data}
+            <div class="container">
+                {#if requestType.startsWith('new_user')}
+                    {#if webauthnData}
+                        <WebauthnRequest
+                                bind:data={webauthnData}
+                                onSuccess={onWebauthnSuccess}
+                                onError={onWebauthnError}
+                        />
+                    {/if}
 
-        <h1>{t.passwordReset.newAccount}</h1>
-        <p>{t.passwordReset.newAccDesc1}</p>
-        <p>{t.passwordReset.newAccDesc2}<a href={t.passwordReset.fidoLink} target="_blank">FIDO Alliance</a></p>
+                    <h1>{t.passwordReset.newAccount}</h1>
+                    <p>{t.passwordReset.newAccDesc1}</p>
+                    <p>{t.passwordReset.newAccDesc2}<a href={t.passwordReset.fidoLink} target="_blank">FIDO Alliance</a>
+                    </p>
 
-        <div style:margin-bottom="1rem">
-            <Button
-                    on:click={() => accountTypeNew = "passkey"}
-                    width={btnWidth}
-                    bind:isLoading
-                    level={2}
-                    isDisabled={success}
-            >
-                {t.passwordReset.passwordless}
-            </Button>
-            <Button
-                    on:click={() => accountTypeNew = "password"}
-                    width={btnWidth}
-                    bind:isLoading
-                    level={3}
-                    isDisabled={success}
-            >
-                {t.passwordReset.password}
-            </Button>
-        </div>
-
-        {#if accountTypeNew === "password"}
-            <div transition:slide>
-                <PasswordPolicy bind:accepted {policy} password={formValues.password}/>
-
-                <PasswordInput
-                        bind:value={formValues.password}
-                        error={formErrors.password}
-                        autocomplete="new-password"
-                        placeholder={t.passwordReset.password}
-                        width={inputWidth}
-                        {showCopy}
-                        disabled={success}
-                >
-                    {t.passwordReset.password.toUpperCase()}
-                </PasswordInput>
-                <PasswordInput
-                        bind:value={formValues.passwordConfirm}
-                        error={formErrors.passwordConfirm}
-                        autocomplete="new-password"
-                        placeholder={t.passwordReset.passwordConfirm}
-                        width={inputWidth}
-                        {showCopy}
-                        disabled={success}
-                >
-                    {t.passwordReset.passwordConfirm.toUpperCase()}
-                </PasswordInput>
-
-                <Button
-                        on:click={generate}
-                        width={btnWidth}
-                        level={3}
-                        isDisabled={success}
-                >
-                    {t.passwordReset.generate}
-                </Button>
-                <Button
-                        on:click={passwordReset}
-                        width={btnWidth}
-                        bind:isLoading level={2}
-                        isDisabled={success}
-                >
-                    {t.common.save}
-                </Button>
-
-                {#if success}
-                    <div class="success">
-                        {t.passwordReset.success1}
-                        <br>
-                        {t.passwordReset.success2}
-                    </div>
-                {/if}
-            </div>
-        {:else if accountTypeNew === "passkey"}
-            <div transition:slide>
-                <Input
-                        bind:value={formValues.passkeyName}
-                        bind:error={formErrors.passkeyName}
-                        autocomplete="off"
-                        placeholder={t.mfa.passkeyName}
-                        on:enter={handleRegisterPasskey}
-                        width={inputWidth}
-                        disabled={success}
-                >
-                    {t.mfa.passkeyName}
-                </Input>
-                <Button
-                        on:click={handleRegisterPasskey} width={btnWidth}
-                        level={success ? 2 : 1}
-                        isDisabled={success}
-                >
-                    {t.mfa.register}
-                </Button>
-
-                {#if success}
-                    <div class="success">
-                        <p>{t.passwordReset.successPasskey1}</p>
-                        <p>{t.passwordReset.successPasskey2}</p>
-                        <Button on:click={navigateToAccount} width={btnWidth} level={1}>
-                            {t.passwordReset.accountLogin}
+                    <div style:margin-bottom="1rem">
+                        <Button
+                                on:click={() => accountTypeNew = "passkey"}
+                                width={btnWidth}
+                                bind:isLoading
+                                level={2}
+                                isDisabled={success}
+                        >
+                            {t.passwordReset.passwordless}
+                        </Button>
+                        <Button
+                                on:click={() => accountTypeNew = "password"}
+                                width={btnWidth}
+                                bind:isLoading
+                                level={3}
+                                isDisabled={success}
+                        >
+                            {t.passwordReset.password}
                         </Button>
                     </div>
+
+                    {#if accountTypeNew === "password"}
+                        <div transition:slide>
+                            <PasswordPolicy bind:accepted policy={data.password_policy} password={formValues.password}/>
+
+                            <PasswordInput
+                                    bind:value={formValues.password}
+                                    error={formErrors.password}
+                                    autocomplete="new-password"
+                                    placeholder={t.passwordReset.password}
+                                    width={inputWidth}
+                                    {showCopy}
+                                    disabled={success}
+                            >
+                                {t.passwordReset.password.toUpperCase()}
+                            </PasswordInput>
+                            <PasswordInput
+                                    bind:value={formValues.passwordConfirm}
+                                    error={formErrors.passwordConfirm}
+                                    autocomplete="new-password"
+                                    placeholder={t.passwordReset.passwordConfirm}
+                                    width={inputWidth}
+                                    {showCopy}
+                                    disabled={success}
+                            >
+                                {t.passwordReset.passwordConfirm.toUpperCase()}
+                            </PasswordInput>
+
+                            <Button
+                                    on:click={generate}
+                                    width={btnWidth}
+                                    level={3}
+                                    isDisabled={success}
+                            >
+                                {t.passwordReset.generate}
+                            </Button>
+                            <Button
+                                    on:click={passwordReset}
+                                    width={btnWidth}
+                                    bind:isLoading level={2}
+                                    isDisabled={success}
+                            >
+                                {t.common.save}
+                            </Button>
+
+                            {#if success}
+                                <div class="success">
+                                    {t.passwordReset.success1}
+                                    <br>
+                                    {t.passwordReset.success2}
+                                </div>
+                            {/if}
+                        </div>
+                    {:else if accountTypeNew === "passkey"}
+                        <div transition:slide>
+                            <Input
+                                    bind:value={formValues.passkeyName}
+                                    bind:error={formErrors.passkeyName}
+                                    autocomplete="off"
+                                    placeholder={t.mfa.passkeyName}
+                                    on:enter={handleRegisterPasskey}
+                                    width={inputWidth}
+                                    disabled={success}
+                            >
+                                {t.mfa.passkeyName}
+                            </Input>
+                            <Button
+                                    on:click={handleRegisterPasskey} width={btnWidth}
+                                    level={success ? 2 : 1}
+                                    isDisabled={success}
+                            >
+                                {t.mfa.register}
+                            </Button>
+
+                            {#if success}
+                                <div class="success">
+                                    <p>{t.passwordReset.successPasskey1}</p>
+                                    <p>{t.passwordReset.successPasskey2}</p>
+                                    <Button on:click={navigateToAccount} width={btnWidth} level={1}>
+                                        {t.passwordReset.accountLogin}
+                                    </Button>
+                                </div>
+                            {/if}
+                        </div>
+                    {/if}
+                {:else if requestType.startsWith('password_reset')}
+                    {#if webauthnData}
+                        <WebauthnRequest
+                                bind:data={webauthnData}
+                                purpose="PasswordReset"
+                                onSuccess={onWebauthnSuccess}
+                                onError={onWebauthnError}
+                        />
+                    {/if}
+
+                    <h1>Password Reset</h1>
+
+                    <PasswordPolicy bind:accepted policy={data.password_policy} password={formValues.password}/>
+
+                    <PasswordInput
+                            bind:value={formValues.password}
+                            error={formErrors.password}
+                            autocomplete="new-password"
+                            placeholder={t.passwordReset.password}
+                            width={inputWidth}
+                            {showCopy}
+                    >
+                        {t.passwordReset.password.toUpperCase()}
+                    </PasswordInput>
+                    <PasswordInput
+                            bind:value={formValues.passwordConfirm}
+                            error={formErrors.passwordConfirm}
+                            autocomplete="new-password"
+                            placeholder={t.passwordReset.passwordConfirm}
+                            width={inputWidth}
+                            {showCopy}
+                    >
+                        {t.passwordReset.passwordConfirm.toUpperCase()}
+                    </PasswordInput>
+
+                    <Button on:click={generate} width={btnWidth} level={3}>
+                        {t.passwordReset.generate}
+                    </Button>
+                    <Button on:click={passwordReset} width={btnWidth} bind:isLoading level={2}>
+                        {t.common.save}
+                    </Button>
+
+                    {#if success}
+                        <div class="success">
+                            {t.passwordReset.success1}
+                            {t.passwordReset.success2}
+                            <br>
+                            {t.passwordReset.success3}
+                            <br>
+                            <a href={redirectUri || '/auth/v1/account'}>Link</a>
+                        </div>
+                    {/if}
+                {/if}
+
+                {#if err}
+                    <div class="err">
+                        {err}
+                    </div>
                 {/if}
             </div>
         {/if}
-    {:else if requestType.startsWith('password_reset')}
-        {#if webauthnData}
-            <WebauthnRequest
-                    bind:data={webauthnData}
-                    purpose="PasswordReset"
-                    onSuccess={onWebauthnSuccess}
-                    onError={onWebauthnError}
-            />
-        {/if}
-
-        <h1>Password Reset</h1>
-
-        <PasswordPolicy bind:accepted {policy} password={formValues.password}/>
-
-        <PasswordInput
-                bind:value={formValues.password}
-                error={formErrors.password}
-                autocomplete="new-password"
-                placeholder={t.passwordReset.password}
-                width={inputWidth}
-                {showCopy}
-        >
-            {t.passwordReset.password.toUpperCase()}
-        </PasswordInput>
-        <PasswordInput
-                bind:value={formValues.passwordConfirm}
-                error={formErrors.passwordConfirm}
-                autocomplete="new-password"
-                placeholder={t.passwordReset.passwordConfirm}
-                width={inputWidth}
-                {showCopy}
-        >
-            {t.passwordReset.passwordConfirm.toUpperCase()}
-        </PasswordInput>
-
-        <Button on:click={generate} width={btnWidth} level={3}>
-            {t.passwordReset.generate}
-        </Button>
-        <Button on:click={passwordReset} width={btnWidth} bind:isLoading level={2}>
-            {t.common.save}
-        </Button>
-
-        {#if success}
-            <div class="success">
-                {t.passwordReset.success1}
-                {t.passwordReset.success2}
-                <br>
-                {t.passwordReset.success3}
-                <br>
-                <a href={redirectUri || '/auth/v1/account'}>Link</a>
-            </div>
-        {/if}
-    {/if}
-
-    {#if err}
-        <div class="err">
-            {err}
-        </div>
-    {/if}
-</div>
+    </ContentCenter>
+</Main>
 
 <LangSelector absolute/>
 
@@ -528,13 +513,6 @@
 
     a:visited {
         color: var(--col-act2);
-    }
-
-    .container {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        max-width: 20.5rem;
     }
 
     .err {
