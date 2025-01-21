@@ -5,6 +5,7 @@ use crate::entity::sessions::Session;
 use crate::language::Language;
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, HttpResponseBuilder};
+use rauthy_api_types::generic::PasswordPolicyResponse;
 use rauthy_common::constants::{
     DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION,
 };
@@ -37,6 +38,15 @@ pub struct TplClientData {
     pub url: String,
 }
 
+#[derive(Debug, Serialize)]
+pub struct TplPasswordReset {
+    pub csrf_token: String,
+    pub magic_link_id: String,
+    pub needs_mfa: bool,
+    pub password_policy: PasswordPolicyResponse,
+    pub user_id: String,
+}
+
 // If you add new values to this template, make sure to also create a
 // matching constant in the UI and make proper use of it:
 // -> frontend/src/utils/constants.js -> TPL_* values
@@ -54,6 +64,7 @@ pub enum HtmlTemplate {
     DeviceUserCodeLength(u8),
     IsRegOpen(bool),
     LoginAction(FrontendAction),
+    PasswordReset(TplPasswordReset),
     RestrictedEmailDomain(String),
     StatusCode(StatusCode),
 }
@@ -93,6 +104,26 @@ impl HtmlTemplate {
             "tpl_restricted_email_domain" => Ok(Self::RestrictedEmailDomain(
                 USER_REG_DOMAIN_RESTRICTION.clone().unwrap_or_default(),
             )),
+            "tpl_password_reset" => {
+                if let Some(s) = session {
+                    let password_policy = PasswordPolicy::find().await?;
+
+                    // we can't easily return the complete and correct templates, but it should
+                    // be good enough to be able to work with it
+                    Ok(Self::PasswordReset(TplPasswordReset {
+                        csrf_token: "CSRF_TOKEN_TEMPLATE".to_string(),
+                        magic_link_id: "MAGIC_LINK:ID".to_string(),
+                        needs_mfa: false,
+                        password_policy: PasswordPolicyResponse::from(password_policy),
+                        user_id: s.user_id.unwrap_or_default(),
+                    }))
+                } else {
+                    Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        "no session",
+                    ))
+                }
+            }
             _ => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
                 "invalid template id",
@@ -114,6 +145,7 @@ impl HtmlTemplate {
             Self::DeviceUserCodeLength(_) => "tpl_device_user_code_length",
             Self::IsRegOpen(_) => "tpl_is_reg_open",
             Self::LoginAction(_) => "tpl_login_action",
+            Self::PasswordReset(_) => "tpl_password_reset",
             Self::RestrictedEmailDomain(_) => "tpl_restricted_email_domain",
             Self::StatusCode(_) => "tpl_status_code",
         }
@@ -134,6 +166,7 @@ impl HtmlTemplate {
             Self::DeviceUserCodeLength(i) => i.to_string(),
             Self::IsRegOpen(i) => i.to_string(),
             Self::LoginAction(i) => i.to_string(),
+            Self::PasswordReset(i) => serde_json::to_string(i).unwrap(),
             Self::StatusCode(i) => i.to_string(),
             Self::RestrictedEmailDomain(i) => i.to_string(),
         }
@@ -1517,30 +1550,10 @@ pub struct PwdResetHtml<'a> {
 impl PwdResetHtml<'_> {
     // If the email is Some(_), this means that the user has webauthn enabled and does not need
     // to provide the email manually
-    pub fn build(
-        csrf_token: &str,
-        password_rules: &PasswordPolicy,
-        colors: &Colors,
-        lang: &Language,
-        needs_mfa: bool,
-    ) -> String {
-        let data = format!(
-            "{},{},{},{},{},{},{},{}",
-            password_rules.length_min,
-            password_rules.length_max,
-            password_rules.include_lower_case.unwrap_or(-1),
-            password_rules.include_upper_case.unwrap_or(-1),
-            password_rules.include_digits.unwrap_or(-1),
-            password_rules.include_special.unwrap_or(-1),
-            password_rules.not_recently_used.unwrap_or(-1),
-            needs_mfa,
-        );
-
+    pub fn build(colors: &Colors, lang: &Language, template: TplPasswordReset) -> String {
         let res = PwdResetHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
-            csrf_token,
-            data: &data,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1554,6 +1567,7 @@ impl PwdResetHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            templates: &[HtmlTemplate::PasswordReset(template)],
             ..Default::default()
         };
 

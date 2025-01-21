@@ -202,10 +202,10 @@ export const formatDateFromTs = (ts: number, fmtIso: boolean) => {
 
 export const generatePassword = (
     length: number,
-    minLowerCase: number,
-    minUpperCase: number,
-    minDigit: number,
-    minSpecial: number,
+    minLowerCase?: number,
+    minUpperCase?: number,
+    minDigit?: number,
+    minSpecial?: number,
 ) => {
     const lowerCaseNeeded = minLowerCase || 1;
     const upperCaseNeeded = minUpperCase || 1;
