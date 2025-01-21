@@ -154,13 +154,13 @@ pub async fn get_authorize(
     if !force_new_session && principal.validate_session_auth().is_ok() {
         let csrf = principal.get_session_csrf_token()?;
         let body = AuthorizeHtml::build(
-            csrf,
             &colors,
             &lang,
             &[
                 HtmlTemplate::AuthProviders(auth_providers_json),
                 HtmlTemplate::ClientName(client.name.unwrap_or_default()),
                 HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
+                HtmlTemplate::CsrfToken(csrf.to_string()),
                 HtmlTemplate::IsRegOpen(*OPEN_USER_REG),
                 HtmlTemplate::LoginAction(FrontendAction::Refresh),
             ],
@@ -191,13 +191,13 @@ pub async fn get_authorize(
     }
 
     let body = AuthorizeHtml::build(
-        &session.csrf_token,
         &colors,
         &lang,
         &[
             HtmlTemplate::AuthProviders(auth_providers_json),
             HtmlTemplate::ClientName(client.name.unwrap_or_default()),
             HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
+            HtmlTemplate::CsrfToken(session.csrf_token.clone()),
             HtmlTemplate::IsRegOpen(*OPEN_USER_REG),
             HtmlTemplate::LoginAction(action),
         ],

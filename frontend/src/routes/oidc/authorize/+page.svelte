@@ -131,20 +131,6 @@
     }
 
     onMount(async () => {
-        // const data = window.document.getElementsByName('rauthy-data')[0].id.split('\n');
-        // clientName = data[0];
-        // clientUri = data[1];
-
-        // const action = window.document.getElementsByName('rauthy-action')[0].id;
-        // if ('Refresh' === action) {
-        //     refresh = true;
-        // } else if (action?.startsWith('MfaLogin ')) {
-        //     existingMfaUser = action.replace('MfaLogin ', '');
-        // }
-
-        // csrf = window.document.getElementsByName('rauthy-csrf-token')[0].id;
-        // saveCsrfToken(csrf);
-
         const params = getQueryParams();
         clientId = params.client_id;
         redirectUri = params.redirect_uri;

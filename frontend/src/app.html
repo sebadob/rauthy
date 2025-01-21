@@ -45,9 +45,6 @@
 </head>
 <body>
 <div class="hidden" aria-hidden="true">
-    <input name="rauthy-csrf-token" id="{{ csrf_token }}" type="hidden"/>
-    <input name="rauthy-data" id="{{ data }}" type="hidden"/>
-    <input name="rauthy-action" id="{{ action }}" type="hidden"/>
     {%- for tpl in templates -%}
     <template id="{{ tpl.id() }}">{{ tpl.inner()|safe }}</template>
     {%- endfor %}

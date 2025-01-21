@@ -178,9 +178,6 @@ impl HtmlTemplate {
 pub struct IndexHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -202,8 +199,6 @@ impl IndexHtml<'_> {
         let res = IndexHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
-            csrf_token: "",
-            data: &OPEN_USER_REG.to_string(),
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -217,6 +212,7 @@ impl IndexHtml<'_> {
             col_ghigh: &colors.ghigh,
             col_text: &colors.text,
             col_bg: &colors.bg,
+            templates: &[HtmlTemplate::IsRegOpen(*OPEN_USER_REG)],
             ..Default::default()
         };
 
@@ -229,9 +225,6 @@ impl IndexHtml<'_> {
 pub struct AccountHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -278,9 +271,6 @@ impl AccountHtml<'_> {
 pub struct AdminHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -327,9 +317,6 @@ impl AdminHtml<'_> {
 pub struct DeviceHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -351,7 +338,6 @@ impl DeviceHtml<'_> {
         let res = DeviceHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
-            csrf_token: "",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -380,9 +366,6 @@ impl DeviceHtml<'_> {
 pub struct FedCMHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -404,8 +387,6 @@ impl FedCMHtml<'_> {
         let res = FedCMHtml {
             lang: "en",
             client_id: "rauthy",
-            csrf_token: "",
-            data: &DEVICE_GRANT_USER_CODE_LENGTH.to_string(),
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -431,9 +412,6 @@ impl FedCMHtml<'_> {
 pub struct ErrorHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -504,9 +482,6 @@ impl ErrorHtml<'_> {
 pub struct Error1Html<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -565,9 +540,6 @@ impl Error1Html<'_> {
 pub struct Error2Html<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -626,9 +598,6 @@ impl Error2Html<'_> {
 pub struct Error3Html<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -687,9 +656,6 @@ impl Error3Html<'_> {
 pub struct AdminApiKeysHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -736,9 +702,6 @@ impl AdminApiKeysHtml<'_> {
 pub struct AdminAttributesHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -785,9 +748,6 @@ impl AdminAttributesHtml<'_> {
 pub struct AdminBlacklistHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -834,9 +794,6 @@ impl AdminBlacklistHtml<'_> {
 pub struct AdminClientsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -883,9 +840,6 @@ impl AdminClientsHtml<'_> {
 pub struct AdminConfigHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -932,9 +886,6 @@ impl AdminConfigHtml<'_> {
 pub struct AdminDocsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -981,9 +932,6 @@ impl AdminDocsHtml<'_> {
 pub struct AdminEventsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1030,9 +978,6 @@ impl AdminEventsHtml<'_> {
 pub struct AdminGroupsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1079,9 +1024,6 @@ impl AdminGroupsHtml<'_> {
 pub struct AdminRolesHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1128,9 +1070,6 @@ impl AdminRolesHtml<'_> {
 pub struct AdminScopesHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1177,9 +1116,6 @@ impl AdminScopesHtml<'_> {
 pub struct AdminSessionsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1226,9 +1162,6 @@ impl AdminSessionsHtml<'_> {
 pub struct AdminUsersHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1275,9 +1208,6 @@ impl AdminUsersHtml<'_> {
 pub struct AuthorizeHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1295,16 +1225,10 @@ pub struct AuthorizeHtml<'a> {
 }
 
 impl AuthorizeHtml<'_> {
-    pub fn build(
-        csrf_token: &str,
-        colors: &Colors,
-        lang: &Language,
-        templates: &[HtmlTemplate],
-    ) -> String {
+    pub fn build(colors: &Colors, lang: &Language, templates: &[HtmlTemplate]) -> String {
         let res = AuthorizeHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
-            csrf_token,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1331,9 +1255,6 @@ impl AuthorizeHtml<'_> {
 pub struct CallbackHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1380,9 +1301,6 @@ impl CallbackHtml<'_> {
 pub struct ProvidersHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1429,9 +1347,6 @@ impl crate::html_templates::ProvidersHtml<'_> {
 pub struct ProviderCallbackHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: &'a str,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1478,9 +1393,6 @@ impl ProviderCallbackHtml<'_> {
 pub struct LogoutHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1528,9 +1440,6 @@ impl LogoutHtml<'_> {
 pub struct PwdResetHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1593,9 +1502,6 @@ impl TooManyRequestsHtml {
 pub struct UserEmailChangeConfirmHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1643,9 +1549,6 @@ impl UserEmailChangeConfirmHtml<'_> {
 pub struct UserRegisterHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
-    csrf_token: &'a str,
-    data: &'a str,
-    action: bool,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
