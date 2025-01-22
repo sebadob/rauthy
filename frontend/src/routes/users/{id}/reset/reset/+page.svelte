@@ -7,7 +7,6 @@
         base64UrlSafeToArrBuf,
         extractFormErrors,
         generatePassword,
-        getQueryParams
     } from "../../../../../utils/helpers";
     import {
         resetPassword,
