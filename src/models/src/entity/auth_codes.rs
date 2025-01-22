@@ -3,10 +3,11 @@ use rauthy_common::constants::CACHE_TTL_AUTH_CODE;
 use rauthy_common::utils::get_rand;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use time::OffsetDateTime;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct AuthCode {
     pub id: String,
     pub exp: i64,
@@ -17,6 +18,20 @@ pub struct AuthCode {
     pub challenge_method: Option<String>,
     pub nonce: Option<String>,
     pub scopes: Vec<String>,
+}
+
+impl Debug for AuthCode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "id: {}(...), exp: {}, client_id: {}, user_id: {}, scopes: {:?}",
+            self.id[..5],
+            self.exp,
+            self.client_id,
+            self.user_id,
+            self.scopes
+        )
+    }
 }
 
 // CRUD
