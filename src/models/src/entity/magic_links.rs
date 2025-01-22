@@ -8,7 +8,7 @@ use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use time::OffsetDateTime;
 use tracing::warn;
 
@@ -85,7 +85,7 @@ impl Display for MagicLinkUsage {
     }
 }
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+#[derive(Clone, FromRow, Serialize, Deserialize)]
 pub struct MagicLink {
     pub id: String,
     pub user_id: String,
@@ -94,6 +94,20 @@ pub struct MagicLink {
     pub exp: i64,
     pub used: bool,
     pub usage: String,
+}
+
+impl Debug for MagicLink {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "id: {}(...), user_id: {}, csrf_token: {}(...), cookie: {:?}, exp: {}, used: {}, usage: {}",
+               &self.id[..5],
+               self.user_id,
+               &self.csrf_token[..5],
+               self.cookie,
+               self.exp,
+               self.used,
+               self.usage
+        )
+    }
 }
 
 // CRUD

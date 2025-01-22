@@ -25,7 +25,7 @@ impl Debug for AuthCode {
         write!(
             f,
             "id: {}(...), exp: {}, client_id: {}, user_id: {}, scopes: {:?}",
-            self.id.as_str()[..5],
+            &self.id[..5],
             self.exp,
             self.client_id,
             self.user_id,
