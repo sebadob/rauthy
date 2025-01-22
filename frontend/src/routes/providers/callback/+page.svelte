@@ -10,7 +10,7 @@
     import LangSelector from "$lib5/LangSelector.svelte";
     import Button from "$lib/Button.svelte";
     import {useI18n} from "$state/i18n.svelte";
-    import {useParam} from "$state/param.svelte.js";
+    import {useParam} from "$state/param.svelte";
 
     // will contain the same translations as /oidc/authorize
     let t = useI18n();

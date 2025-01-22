@@ -2,7 +2,7 @@
     import {onMount} from "svelte";
     import TabBar from "$lib/TabBar.svelte";
     import {useI18n} from "$state/i18n.svelte";
-    import {useParam} from "$state/param.svelte.js";
+    import {useParam} from "$state/param.svelte";
 
     /**
      * @typedef {Object} Props

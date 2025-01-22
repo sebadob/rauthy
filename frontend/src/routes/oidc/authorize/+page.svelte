@@ -34,7 +34,7 @@
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import Template from "$lib5/Template.svelte";
-    import {useParam} from "$state/param.svelte.js";
+    import {useParam} from "$state/param.svelte";
 
     let t = useI18n();
 

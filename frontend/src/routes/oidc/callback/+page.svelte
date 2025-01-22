@@ -13,7 +13,7 @@
         REDIRECT_URI_SUCCESS_ACC,
     } from "../../../utils/constants.js";
     import {getSessionInfoXsrf, getToken} from "../../../utils/dataFetching.js";
-    import {useParam} from "$state/param.svelte.js";
+    import {useParam} from "$state/param.svelte";
 
     let pCode = useParam('code');
     let pState = useParam('state');
