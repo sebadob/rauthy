@@ -1,5 +1,5 @@
 <script>
-    import {onMount, tick} from "svelte";
+    import {tick} from "svelte";
     import {
         authorize,
         authorizeRefresh,
@@ -10,7 +10,6 @@
     import {
         extractFormErrors,
         formatDateFromTs,
-        getQueryParams,
         saveCsrfToken,
         saveProviderToken,
     } from "../../../utils/helpers";

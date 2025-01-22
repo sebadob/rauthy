@@ -1,8 +1,8 @@
 <script>
     import {onMount} from "svelte";
-    import {getQueryParams} from "../../utils/helpers";
     import TabBar from "$lib/TabBar.svelte";
     import {useI18n} from "$state/i18n.svelte";
+    import {useParam} from "$state/param.svelte.js";
 
     /**
      * @typedef {Object} Props
@@ -34,8 +34,7 @@
         ]);
 
     onMount(() => {
-        let params = getQueryParams();
-        if (params.v === 'devices') {
+        if (useParam('v').get() === 'devices') {
             selected = t.account.devices;
         }
     });
