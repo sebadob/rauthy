@@ -5,8 +5,9 @@ use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use std::fmt::{Debug, Formatter};
 
-#[derive(Debug, FromRow, Serialize, Deserialize)]
+#[derive(FromRow, Serialize, Deserialize)]
 pub struct RefreshToken {
     pub id: String,
     pub user_id: String,
@@ -14,6 +15,21 @@ pub struct RefreshToken {
     pub exp: i64,
     pub scope: Option<String>,
     pub is_mfa: bool,
+}
+
+impl Debug for RefreshToken {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "id: {}(...), user_id: {}, nbf: {}, exp: {}, scope: {:?}, is_mfa: {}",
+            &self.id[..5],
+            self.user_id,
+            self.nbf,
+            self.exp,
+            self.scope,
+            self.is_mfa
+        )
+    }
 }
 
 // CRUD
