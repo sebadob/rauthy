@@ -20,6 +20,7 @@ panic = "abort"
 
 [patch.crates-io]
 #hiqlite = { git = "https://github.com/sebadob/hiqlite.git", branch = "optimized-migration-checks-in-writer", package = "hiqlite" }
+#hiqlite = { path = "../hiqlite/hiqlite", package = "hiqlite" }
 
 [workspace.dependencies]
 accept-language = "3"
@@ -40,7 +41,7 @@ cached = "0.54"
 chacha20poly1305 = { version = "0.10", features = ["std"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 cidr = "0.3.0"
-cron = "0.13"
+cron = "0.15"
 cryptr = { version = "0.5.1", features = ["s3", "streaming"] }
 css-color = "0.2"
 derive_more = "1"
@@ -51,7 +52,8 @@ futures = "0.3"
 futures-util = "0.3"
 gethostname = "0.5.0"
 hex = { version = "0.4", features = ["serde"] }
-hiqlite = { version = "0.3.3", features = ["full"] }
+# sqlx blocks bumping hiqlite to 0.5 because of old lib-sqlite dep
+hiqlite = { version = "0.4", features = ["full"] }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
 image = { version = "0.25.1", default-features = false, features = [
