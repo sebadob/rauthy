@@ -13,10 +13,11 @@
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import Template from "$lib5/Template.svelte";
+    import {useParam} from "$state/param.svelte.js";
 
     let t = useI18n();
     let restrictedDomain = $state('');
-    let redirectUri;
+    let redirectUri = useParam('redirect_uri');
     let isLoading = $state(false);
     let err = $state('');
     let success = $state(false);
@@ -36,11 +37,6 @@
                     .matches(REGEX_NAME_NULLABLE, t.register.regexName),
             });
         }
-    });
-
-    onMount(() => {
-        const params = getQueryParams();
-        redirectUri = params.redirect_uri;
     });
 
     function handleKeyPress(event) {
@@ -79,8 +75,9 @@
         };
 
         // this allows to redirect the client to a custom URI after a successful password set
-        if (redirectUri) {
-            data.redirect_uri = redirectUri;
+        let uri = redirectUri.get();
+        if (uri) {
+            data.redirect_uri = uri;
         }
 
         const res = await registerUser(data);
@@ -89,7 +86,7 @@
             success = true;
             if (redirectUri) {
                 setTimeout(() => {
-                    window.location.replace(redirectUri);
+                    window.location.replace(redirectUri.get() || '/auth/v1/account');
                 }, 3000);
             }
         } else {
