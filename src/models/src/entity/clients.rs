@@ -28,6 +28,7 @@ use reqwest::header::CONTENT_TYPE;
 use reqwest::{tls, Url};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
+use std::fmt::{Debug, Formatter};
 use std::str::FromStr;
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -46,7 +47,7 @@ performance, when we do reads on clients, which we do most of the time.
 
 `*_lifetime` values are meant to be in seconds.
  */
-#[derive(Debug, Clone, PartialEq, Eq, FromRow, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Eq, FromRow, Deserialize, Serialize)]
 pub struct Client {
     pub id: String,
     pub name: Option<String>,
@@ -70,6 +71,37 @@ pub struct Client {
     pub force_mfa: bool,
     pub client_uri: Option<String>,
     pub contacts: Option<String>,
+}
+
+impl Debug for Client {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "id: {}, name: {:?}, endabled: {}, confidential: {}, secret: <hidden>, \
+        redirect_uris: {}, post_logout_redirect_uris: {:?}, allowed_origins: {:?}, \
+        flows_enabled: {}, access_token_alg: {}, id_token_alg: {}, auth_code_lifetime: {}, \
+        access_token_lifetime: {}, scopes: {}, default_scopes: {}, challenge: {:?}, force_mfa: {}, \
+        client_uri: {:?}, contacts: {:?}",
+            self.id,
+            self.name,
+            self.enabled,
+            self.confidential,
+            self.redirect_uris,
+            self.post_logout_redirect_uris,
+            self.allowed_origins,
+            self.flows_enabled,
+            self.access_token_alg,
+            self.id_token_alg,
+            self.auth_code_lifetime,
+            self.access_token_lifetime,
+            self.scopes,
+            self.default_scopes,
+            self.challenge,
+            self.force_mfa,
+            self.client_uri,
+            self.contacts
+        )
+    }
 }
 
 // CRUD
@@ -184,7 +216,7 @@ post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
 client_uri, contacts)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#,
-                params!(
+                 params!(
                     &client.id,
                     &client.name,
                     client.enabled,
@@ -210,7 +242,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
 INSERT INTO
 clients_dyn (id, created, registration_token, token_endpoint_auth_method)
 VALUES ($1, $2, $3, $4)"#,
-                params!(
+                 params!(
                     client.id.clone(),
                     created,
                     registration_token.clone(),
@@ -248,8 +280,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
                 client.client_uri,
                 client.contacts,
             )
-            .execute(&mut *txn)
-            .await?;
+                .execute(&mut *txn)
+                .await?;
 
             sqlx::query!(
                 r#"
@@ -1776,11 +1808,12 @@ mod tests {
                         }),
                     )
                 })
-                .bind(("127.0.0.1", 10080))
-                .expect("port 10080 to be free for testing")
-                .run()
-                .await
-                .expect("ephemeral client test http server to start") })
+                    .bind(("127.0.0.1", 10080))
+                    .expect("port 10080 to be free for testing")
+                    .run()
+                    .await
+                    .expect("ephemeral client test http server to start")
+            })
         })
     }
 
