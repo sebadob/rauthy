@@ -15,10 +15,6 @@
     let errorText = $state('');
     let errorDetails = $state('');
 
-    // TODO:
-    // The `details` and `detailsText` cannot be translated statically.
-    // -> implement a mechanism to fetch them either from the body or query params
-
 </script>
 
 <Template id={TPL_STATUS_CODE} bind:value={statusCode}/>

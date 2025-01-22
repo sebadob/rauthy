@@ -1,6 +1,4 @@
 <script>
-    import {run} from 'svelte/legacy';
-
     import {onMount} from "svelte";
     import {getKey} from "$lib/utils/helpers";
     import Button from "$lib/Button.svelte";

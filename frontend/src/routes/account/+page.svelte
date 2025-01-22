@@ -8,14 +8,12 @@
     import {useI18n} from "$state/i18n.svelte";
     import {type SessionResponse} from "$api/response/common/session.ts";
     import {type UserResponse} from "$api/response/common/user.ts";
-    import Loading from "$lib5/Loading.svelte";
 
     let t = useI18n();
 
     let session: undefined | SessionResponse = $state();
     let user: undefined | UserResponse = $state();
     let webIdData = $state();
-    let isReady = $state(false);
 
     onMount(async () => {
         let res = await getSessionInfo();
@@ -44,8 +42,6 @@
             } else {
                 // now it can only be a 405 -> webid is not enabled -> do nothing
             }
-
-            isReady = true;
         } else {
             redirectToLogin('account');
         }
@@ -63,9 +59,7 @@
 
 <Main>
     <ContentCenter>
-        {#if !isReady}
-            <Loading/>
-        {:else if session && user}
+        {#if session && user && webIdData}
             <AccMain {session} bind:user bind:webIdData/>
         {/if}
     </ContentCenter>
