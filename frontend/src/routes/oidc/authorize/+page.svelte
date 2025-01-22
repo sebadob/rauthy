@@ -76,7 +76,7 @@
     let emailAfterSubmit = '';
     let isRegOpen = false;
 
-    let formValues = {email: useParam('login_hint') || '', password: ''};
+    let formValues = {email: useParam('login_hint').get() || '', password: ''};
     let formErrors = {};
 
     let schema = {};
