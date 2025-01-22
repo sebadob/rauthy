@@ -5,9 +5,10 @@ use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use std::fmt::{Debug, Formatter};
 use time::OffsetDateTime;
 
-#[derive(Debug, FromRow, Serialize, Deserialize)]
+#[derive(FromRow, Serialize, Deserialize)]
 pub struct RefreshTokenDevice {
     pub id: String,
     pub device_id: String,
@@ -15,6 +16,20 @@ pub struct RefreshTokenDevice {
     pub nbf: i64,
     pub exp: i64,
     pub scope: Option<String>,
+}
+
+impl Debug for RefreshTokenDevice {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "id: {}(...), device_id: {}, nbf: {}, exp: {}, scope: {:?}",
+            &self.id[..5],
+            self.device_id,
+            self.nbf,
+            self.exp,
+            self.scope,
+        )
+    }
 }
 
 // CRUD
