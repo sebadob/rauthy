@@ -10,8 +10,9 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use ring::digest;
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, FromRow};
+use std::fmt::{Debug, Formatter};
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Clone, Serialize, Deserialize, FromRow)]
 pub struct ApiKeyEntity {
     pub name: String,
     pub secret: Vec<u8>,
@@ -19,6 +20,16 @@ pub struct ApiKeyEntity {
     pub expires: Option<i64>,
     pub enc_key_id: String,
     pub access: Vec<u8>,
+}
+
+impl Debug for ApiKeyEntity {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "name: {}, secret: <hidden>, created: {}, expires: {:?}, enc_key_id: {}, access: {:?}",
+            self.name, self.created, self.expires, self.enc_key_id, self.access
+        )
+    }
 }
 
 impl ApiKeyEntity {
