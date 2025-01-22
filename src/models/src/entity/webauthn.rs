@@ -24,6 +24,7 @@ use rauthy_common::utils::{base64_encode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use std::str::FromStr;
 use time::OffsetDateTime;
@@ -34,7 +35,7 @@ use webauthn_rs_proto::{
     AuthenticatorSelectionCriteria, ResidentKeyRequirement, UserVerificationPolicy,
 };
 
-#[derive(Debug, Clone, FromRow, Deserialize, Serialize)]
+#[derive(Clone, FromRow, Deserialize, Serialize)]
 pub struct PasskeyEntity {
     pub user_id: String,
     pub name: String,
@@ -44,6 +45,22 @@ pub struct PasskeyEntity {
     pub registered: i64,
     pub last_used: i64,
     pub user_verified: Option<bool>,
+}
+
+impl Debug for PasskeyEntity {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "user_id: {}, name: {}, passkey_user_id: {}, passkey: <hidden>, \
+        credential_id: <hidden>, registered: {}, last_used: {}, user_verified: {:?}",
+            self.user_id,
+            self.name,
+            self.passkey_user_id,
+            self.registered,
+            self.last_used,
+            self.user_verified
+        )
+    }
 }
 
 // CRUD
