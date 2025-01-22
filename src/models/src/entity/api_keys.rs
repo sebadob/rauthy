@@ -349,7 +349,7 @@ pub struct ApiKeyAccess {
     pub access_rights: Vec<AccessRights>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ApiKey {
     pub name: String,
     /// SHA256 hashed secret key
@@ -357,6 +357,16 @@ pub struct ApiKey {
     pub created: i64,
     pub expires: Option<i64>,
     pub access: Vec<ApiKeyAccess>,
+}
+
+impl Debug for ApiKey {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "name: {}, secret: <hidden>, created: {}, expires: {:?}, access: {:?}",
+            self.name, self.created, self.expires, self.access
+        )
+    }
 }
 
 impl ApiKey {
