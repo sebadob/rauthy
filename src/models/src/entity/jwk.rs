@@ -98,7 +98,7 @@ macro_rules! validate_jwt {
 The Json Web Keys are saved encrypted inside the database. The encryption is the same as for a
 Client secret -> *ChaCha20Poly1305*
  */
-#[derive(Debug, FromRow, Serialize, Deserialize)]
+#[derive(FromRow, Serialize, Deserialize)]
 pub struct Jwk {
     pub kid: String,
     pub created_at: i64,
@@ -106,6 +106,16 @@ pub struct Jwk {
     pub signature: JwkKeyPairAlg,
     pub enc_key_id: String,
     pub jwk: Vec<u8>,
+}
+
+impl Debug for Jwk {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "kid: {}, created_at: {}, signature: {:?}, enc_key_id: {}, jwk: <hidden>",
+            self.kid, self.created_at, self.signature, self.enc_key_id,
+        )
+    }
 }
 
 // CRUD
@@ -599,11 +609,17 @@ impl From<JWKSPublicKey> for JWKSPublicKeyCerts {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct JwkKeyPair {
     pub kid: String,
     pub typ: JwkKeyPairAlg,
     pub bytes: Vec<u8>,
+}
+
+impl Debug for JwkKeyPair {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "kid: {}, typ: {}, bytes: <hidden>", self.kid, self.typ)
+    }
 }
 
 impl JwkKeyPair {

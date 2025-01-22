@@ -10,14 +10,21 @@ use rauthy_common::constants::{
 use rauthy_common::utils::{base64_url_no_pad_decode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
+use std::fmt::{Debug, Formatter};
 use std::ops::{Add, Sub};
 use tracing::error;
 
 /// A DPoP nonce that only live inside the cache to limit client's DPoP lifetimes
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct DPoPNonce {
     pub exp: DateTime<Utc>,
     pub value: String,
+}
+
+impl Debug for DPoPNonce {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "exp: {}, value: <hidden>", self.exp)
+    }
 }
 
 impl DPoPNonce {

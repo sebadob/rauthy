@@ -17,14 +17,14 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::{query_as, FromRow, Row};
 use std::borrow::Cow;
+use std::fmt::{Debug, Formatter};
 use std::net::IpAddr;
 use std::ops::Add;
 use std::str::FromStr;
 use time::OffsetDateTime;
 use tracing::{error, warn};
 
-// TODO impl `Debug` manually to never possibly leak the full id / csrf_token
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+#[derive(Clone, FromRow, Serialize, Deserialize)]
 pub struct Session {
     pub id: String,
     pub csrf_token: String,
@@ -36,6 +36,26 @@ pub struct Session {
     pub exp: i64,
     pub last_seen: i64,
     pub remote_ip: Option<String>,
+}
+
+impl Debug for Session {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "id: {}(...), csrf_token: {}(...), user_id: {:?}, roles: {:?}, groups: {:?}, \
+        is_mfa: {}, state: {}, exp: {}, last_seen: {}, remote_ip: {:?}",
+            &self.id[..5],
+            &self.csrf_token[..5],
+            self.user_id,
+            self.roles,
+            self.groups,
+            self.is_mfa,
+            self.state,
+            self.exp,
+            self.last_seen,
+            self.remote_ip
+        )
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

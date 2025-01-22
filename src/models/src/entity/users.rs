@@ -34,6 +34,7 @@ use rauthy_common::utils::{new_store_id, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::{query_as, FromRow};
+use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use time::OffsetDateTime;
 use tracing::{debug, error, trace, warn};
@@ -64,7 +65,7 @@ impl From<AccountType> for UserAccountTypeResponse {
     }
 }
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+#[derive(Clone, FromRow, Serialize, Deserialize)]
 pub struct User {
     pub id: String,
     pub email: String,
@@ -85,6 +86,37 @@ pub struct User {
     pub user_expires: Option<i64>,
     pub auth_provider_id: Option<String>,
     pub federation_uid: Option<String>,
+}
+
+impl Debug for User {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "id: {}, email: {}, given_name: {}, family_name: {:?}, password: <hidden>, \
+        roles: {}, groups: {:?}, enabled: {}, email_verified: {}, password_expires: {:?}, \
+        created_at: {}, last_login: {:?}, last_failed_login: {:?}, failed_login_attempts: {:?}, \
+        language: {}, webauthn_user_id: {:?}, user_expires: {:?}, auth_provider_id: {:?}, \
+        federation_uid: {:?}",
+            self.id,
+            self.email,
+            self.given_name,
+            self.family_name,
+            self.roles,
+            self.groups,
+            self.enabled,
+            self.email_verified,
+            self.password_expires,
+            self.created_at,
+            self.last_login,
+            self.last_failed_login,
+            self.failed_login_attempts,
+            self.language,
+            self.webauthn_user_id,
+            self.user_expires,
+            self.auth_provider_id,
+            self.federation_uid
+        )
+    }
 }
 
 // CRUD
