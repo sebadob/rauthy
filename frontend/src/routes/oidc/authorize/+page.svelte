@@ -35,20 +35,21 @@
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import Template from "$lib5/Template.svelte";
+    import {useParam} from "$state/param.svelte.js";
 
     let t = useI18n();
 
-    let clientId;
+    let clientId = useParam('client_id').get();
     let clientName = '';
     let clientUri = '';
-    let redirectUri = '';
-    let nonce = '';
-    let scopes = [];
+    let redirectUri = useParam('redirect_uri').get();
+    let nonce = useParam('nonce').get();
+    let scopes = useParam('scopes').get()?.split(' ') || [];
     let passwordInput;
 
-    let state;
-    let challenge;
-    let challengeMethod;
+    let state = useParam('state').get();
+    let challenge = useParam('code_challenge').get();
+    let challengeMethod = useParam('code_challenge_method').get();
     let csrf = '';
     let refresh = false;
     let existingMfaUser;
@@ -76,7 +77,7 @@
     let emailAfterSubmit = '';
     let isRegOpen = false;
 
-    let formValues = {email: '', password: ''};
+    let formValues = {email: useParam('login_hint') || '', password: ''};
     let formErrors = {};
 
     let schema = {};
@@ -129,21 +130,6 @@
     $: if (csrfToken) {
         saveCsrfToken(csrfToken);
     }
-
-    onMount(async () => {
-        const params = getQueryParams();
-        clientId = params.client_id;
-        redirectUri = params.redirect_uri;
-        nonce = params.nonce;
-        scopes = params.scope.split(' ');
-        state = params.state;
-        challenge = params.code_challenge;
-        challengeMethod = params.code_challenge_method;
-
-        if (params.login_hint) {
-            formValues.email = params.login_hint;
-        }
-    })
 
     function handleShowReset() {
         err = '';
