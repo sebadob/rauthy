@@ -164,14 +164,14 @@
     }
 
     .event {
-        background: var(--col-bg);
-        color: var(--col-text);
+        background: hsl(var(--bg));
+        color: hsl(var(--text));
         transition: all 1s ease-in-out;
     }
 
     .eventNew {
-        background: var(--col-text);
-        color: var(--col-bg);
+        background: hsl(var(--text));
+        color: hsl(var(--bg));
         transition: all 250ms ease-in-out;
     }
 
@@ -185,9 +185,6 @@
 
     .col-ip {
         width: 7.5rem;
-    }
-
-    .col-text {
     }
 
     .row {

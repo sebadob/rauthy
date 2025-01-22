@@ -15,6 +15,7 @@
     import {useI18n} from "$state/i18n.svelte";
     import Template from "$lib5/Template.svelte";
     import {useParam} from "$state/param.svelte";
+    import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
 
     const btnWidthInline = '8rem';
 
@@ -201,6 +202,7 @@
             </div>
         {/if}
 
+        <ThemeSwitch absolute/>
         <LangSelector absolute/>
     </ContentCenter>
 </Main>

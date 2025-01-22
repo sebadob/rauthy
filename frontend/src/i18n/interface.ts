@@ -1,6 +1,7 @@
 export interface I18n {
     common: {
         cancel: string,
+        changeTheme: string,
         close: string,
         email: string,
         errTooShort: string,

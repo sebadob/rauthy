@@ -22,8 +22,8 @@ body {
     Specific colors must work on their own
     */
     --btn-text: white;
-    --theme-sun: hsla(var(--action), .7);
-    --theme-moon: hsla(var(--accent), .85);
+    --theme-sun: hsla(var(--action) / .7);
+    --theme-moon: hsla(var(--accent) / .85);
 
     /*
     Other variables that only need to be declared once
@@ -66,8 +66,8 @@ Must be the same as in @media (prefers-color-scheme: dark) -> body
         Specific colors must work on their own
         */
         --btn-text: hsl(var(--bg));
-        --theme-sun: hsla(var(--action), .7);
-        --theme-moon: hsla(var(--accent), .85);
+        --theme-sun: hsla(var(--action) / .7);
+        --theme-moon: hsla(var(--accent) / .85);
 
     }
 

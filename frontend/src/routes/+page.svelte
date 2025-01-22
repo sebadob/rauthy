@@ -7,6 +7,7 @@
     import {useI18n} from "$state/i18n.svelte";
     import Template from "$lib5/Template.svelte";
     import {TPL_IS_REG_OPEN} from "../utils/constants";
+    import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
 
     const btnWidth = "9rem";
 
@@ -44,6 +45,7 @@
     </ContentCenter>
 
     <LangSelector absolute/>
+    <ThemeSwitch absolute/>
     <div class="version">
         <AppVersion/>
     </div>

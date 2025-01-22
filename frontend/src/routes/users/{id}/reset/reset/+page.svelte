@@ -29,6 +29,7 @@
     import type {PasswordResetTemplate} from "$api/templates/PasswordReset";
     import Template from "$lib5/Template.svelte";
     import {useParam} from "$state/param.svelte.ts";
+    import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
 
     const btnWidth = '150px';
     const inputWidth = '320px';
@@ -499,6 +500,8 @@
                 {/if}
             </div>
         {/if}
+
+        <ThemeSwitch absolute/>
     </ContentCenter>
 </Main>
 

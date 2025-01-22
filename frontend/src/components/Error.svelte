@@ -7,6 +7,7 @@
     import {useI18n} from "$state/i18n.svelte";
     import Template from "$lib5/Template.svelte";
     import {TPL_ERROR_TEXT, TPL_STATUS_CODE} from "../utils/constants.js";
+    import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
 
     let t = useI18n();
 
@@ -55,6 +56,7 @@
                 {/if}
             {/if}
 
+            <ThemeSwitch absolute/>
             <LangSelector absolute/>
         </div>
     </ContentCenter>

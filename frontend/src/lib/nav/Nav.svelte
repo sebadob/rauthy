@@ -138,7 +138,7 @@
 <style>
     .burger:hover, .close:hover {
         cursor: pointer;
-        color: var(--col-act2);
+        color: hsl(var(--action));
     }
 
     .burger {
@@ -158,17 +158,14 @@
         justify-content: space-between;
     }
 
-    .logo {
-    }
-
     .links {
         flex: 1;
     }
 
     .nav {
         height: 100vh;
-        border-right: 1px solid var(--col-gmid);
-        box-shadow: 1px 0 5px var(--col-gmid);
+        border-right: 1px solid hsl(var(--bg-high));
+        box-shadow: 1px 0 5px hsl(var(--bg-high));
         display: flex;
         flex-direction: column;
         justify-content: space-between;

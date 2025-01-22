@@ -73,7 +73,7 @@
     <div class="label">
         <div
                 class="labelInner font-label noselect"
-                style:background={disabled ? 'var(--col-gmid)' : 'var(--col-bg)'}
+                style:background={disabled ? 'hsla(var(--bg-high) / .25)' : 'hsl(var(--bg))'}
         >
             <label for={name}>
                 {@render children?.()}
@@ -141,30 +141,19 @@
     input {
         margin: 12px 5px 5px 5px;
         padding: 5px 10px;
-        background: var(--col-bg);
-        border: 1px solid var(--col-glow);
+        border: 1px solid hsl(var(--bg-high));
         border-radius: 3px;
-        color: var(--col-text);
         font-size: 1.05rem;
         outline: none;
-        box-shadow: 1px 1px 2px var(--col-gmid);
+        box-shadow: 1px 1px 2px hsl(var(--bg-high));
     }
 
     input:disabled {
-        background: var(--col-gmid);
-    }
-
-    input:disabled:hover {
-        background: var(--col-gmid);
-    }
-
-    input:hover {
-        background: white;
+        background: hsla(var(--bg-high) / .25);
     }
 
     input:focus {
-        background: white;
-        border: 1px solid var(--col-acnt);
+        border: 1px solid hsl(var(--accent));
     }
 
     .label {
@@ -176,7 +165,7 @@
         margin-left: 5px;
         padding: 0 10px;
         font-size: .85rem;
-        color: var(--col-err);
+        color: hsl(var(--error));
     }
 
     .labelInner {

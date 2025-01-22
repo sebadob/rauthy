@@ -4,6 +4,7 @@ export const I18nDe: I18n = {
     common: {
         cancel: "Abbrechen",
         close: "Schließen",
+        changeTheme: "Farbschema wechseln",
         email: "E-Mail",
         errTooShort: "Eingabe zu kurz",
         errTooLong: "Eingabe zu lang",
