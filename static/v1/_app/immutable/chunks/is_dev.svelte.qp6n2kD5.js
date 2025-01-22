@@ -1,1 +1,0 @@
-import{P as u,j as t,g as a}from"./index-client.CzqVbBUo.js";import{p as e}from"./if.BnegfJmL.js";var o={};let r=u(e(typeof process<"u"&&o.DEV_MODE==="true"));function p(){t(r,o.DEV_MODE==="true")}function f(){return{get(){return a(r)},set(s){t(r,e(s))}}}export{p as i,f as u};

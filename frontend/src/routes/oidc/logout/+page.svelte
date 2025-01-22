@@ -1,6 +1,5 @@
 <script lang="ts">
-    import {onMount} from "svelte";
-    import {getQueryParams, purgeStorage, saveCsrfToken} from "../../../utils/helpers";
+    import {purgeStorage, saveCsrfToken} from "../../../utils/helpers";
     import {logout} from "../../../utils/dataFetching.js";
     import Button from "$lib/Button.svelte";
     import {useI18n} from "$state/i18n.svelte";
@@ -10,13 +9,19 @@
     import type {LogoutParams} from "$api/query_params/logout.ts";
     import Template from "$lib5/Template.svelte";
     import {TPL_CSRF_TOKEN} from "../../../utils/constants";
+    import {useParam} from "$state/param.svelte.ts";
 
     let t = useI18n();
     let err = '';
     let isLoading = $state(false);
 
     let csrfToken = $state('');
-    let logoutData: LogoutParams = $state({});
+    let logoutData: LogoutParams = $state({
+        post_logout_redirect_uri: useParam('post_logout_redirect_uri').get(),
+        id_token_hint: useParam('id_token_hint').get(),
+        state: useParam('state').get(),
+    });
+    $inspect('logoutData', logoutData);
 
     // TODO remove the csrfToken from this component completely after finishing
     // [#692](https://github.com/sebadob/rauthy/issues/692)
@@ -30,15 +35,6 @@
         if (logoutData.id_token_hint) {
             handleLogout();
         }
-    });
-
-    onMount(async () => {
-        const params = getQueryParams();
-        logoutData = {
-            post_logout_redirect_uri: params.post_logout_redirect_uri,
-            id_token_hint: params.id_token_hint,
-            state: params.state,
-        };
     });
 
     async function handleCancel() {

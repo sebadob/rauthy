@@ -63,9 +63,7 @@
 
 <Main>
     <ContentCenter>
-        {#if !isReady}
-            <Loading/>
-        {:else if session && user}
+        {#if isReady && session && user}
             <AccMain {session} bind:user bind:webIdData/>
         {/if}
     </ContentCenter>

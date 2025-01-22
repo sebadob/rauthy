@@ -1,7 +1,7 @@
 let _isDev = $state(typeof (process) !== 'undefined' && process.env.DEV_MODE === 'true');
 
 export function initIsDev() {
-    _isDev = process.env.DEV_MODE === 'true'
+    _isDev = typeof (process) !== 'undefined' && process.env.DEV_MODE === 'true';
     // if (typeof (process) !== 'undefined') {
     //     _isDev = process.env.DEV_MODE === 'true';
     // } else if (typeof (window) !== 'undefined') {

@@ -277,11 +277,11 @@ export const getKey = (i: number) => {
     return res;
 }
 
-export const getQueryParams = () => {
-    return new Proxy(new URLSearchParams(window.location.search), {
-        get: (searchParams, prop) => searchParams.get(prop.toString()),
-    });
-}
+// export const getQueryParams = () => {
+//     return new Proxy(new URLSearchParams(window.location.search), {
+//         get: (searchParams, prop) => searchParams.get(prop.toString()),
+//     });
+// }
 
 // races a promise against a given timeout and throws an exception if exceeded
 export const promiseTimeout = (prom: Promise<any>, time: number) => {

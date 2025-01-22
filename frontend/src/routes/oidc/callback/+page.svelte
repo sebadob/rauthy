@@ -1,7 +1,6 @@
 <script>
     import {
         deleteVerifierFromStorage,
-        getQueryParams,
         getVerifierFromStorage,
         saveAccessToken,
         saveCsrfToken,
@@ -14,23 +13,32 @@
         REDIRECT_URI_SUCCESS_ACC,
     } from "../../../utils/constants.js";
     import {getSessionInfoXsrf, getToken} from "../../../utils/dataFetching.js";
+    import {useParam} from "$state/param.svelte";
+
+    let pCode = useParam('code');
+    let pState = useParam('state');
 
     onMount(async () => {
-        const query = getQueryParams();
-
         const data = new URLSearchParams();
         let redirectUri = REDIRECT_URI_SUCCESS;
 
-        if (query.state) {
-            if (query.state === 'account') {
+        let state = pState.get();
+        if (state) {
+            if (state === 'account') {
                 redirectUri = REDIRECT_URI_SUCCESS_ACC;
-            } else if (query.state.startsWith('device')) {
-                redirectUri = `/auth/v1/${query.state}`;
+            } else if (state.startsWith('device')) {
+                redirectUri = `/auth/v1/${state}`;
             }
         }
 
+        let code = pCode.get();
+        if (!code) {
+            console.error('no `code` given');
+            return;
+        }
+
         data.append('grant_type', 'authorization_code');
-        data.append('code', query.code);
+        data.append('code', code);
         data.append('redirect_uri', redirectUri);
         data.append('client_id', CLIENT_ID);
         data.append('code_verifier', getVerifierFromStorage());
@@ -50,11 +58,8 @@
         // clean up
         deleteVerifierFromStorage();
 
-        // all good -> redirect now
-        window.location.href = redirectUri;
+        window.location.replace(redirectUri);
     });
-
-    //
 </script>
 
 <svelte:head>

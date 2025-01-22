@@ -1,6 +1,5 @@
 <script>
     import {
-        getQueryParams,
         getProviderToken,
         getVerifierUpstreamFromStorage,
     } from "../../../utils/helpers";
@@ -11,6 +10,7 @@
     import LangSelector from "$lib5/LangSelector.svelte";
     import Button from "$lib/Button.svelte";
     import {useI18n} from "$state/i18n.svelte";
+    import {useParam} from "$state/param.svelte";
 
     // will contain the same translations as /oidc/authorize
     let t = useI18n();
@@ -19,16 +19,17 @@
     let webauthnData = $state();
 
     onMount(async () => {
-        const query = getQueryParams();
-        if (query.error) {
+        let pErr = useParam('error').get();
+        if (pErr) {
             // if we have any error, do not proceed like normal and only show the error
-            error = `${query.error}: ${query.error_description}`;
+            let desc = useParam('error_description').get();
+            error = `${pErr}: ${desc}`;
             return;
         }
 
         let data = {
-            state: query.state,
-            code: query.code,
+            state: useParam('state').get(),
+            code: useParam('code').get(),
             pkce_verifier: getVerifierUpstreamFromStorage(),
             xsrf_token: getProviderToken(),
         };
@@ -36,7 +37,7 @@
 
         if (res.status === 202) {
             // -> all good
-            window.location.replace(res.headers.get('location'));
+            window.location.replace(res.headers.get('location') || '/auth/v1/account');
         } else if (res.status === 200) {
             // -> all good, but needs additional passkey validation
             error = '';

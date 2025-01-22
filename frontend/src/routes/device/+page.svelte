@@ -3,7 +3,7 @@
     import {onMount} from "svelte";
     import {postDeviceVerify, getSessionInfo} from "../../utils/dataFetching.js";
     import Loading from "../../components/Loading.svelte";
-    import {extractFormErrors, getQueryParams, redirectToLogin} from "../../utils/helpers";
+    import {extractFormErrors, redirectToLogin} from "../../utils/helpers";
     import LangSelector from "$lib5/LangSelector.svelte";
     import Input from "$lib/inputs/Input.svelte";
     import Button from "$lib/Button.svelte";
@@ -14,6 +14,7 @@
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import Template from "$lib5/Template.svelte";
+    import {useParam} from "$state/param.svelte";
 
     const btnWidthInline = '8rem';
 
@@ -48,16 +49,17 @@
     });
 
     onMount(async () => {
-        const params = getQueryParams();
-        if (params.code) {
-            formValues.userCode = params.code;
+        let param = useParam('code');
+        let code = param.get();
+        if (code) {
+            formValues.userCode = code;
         }
 
         let res = await getSessionInfo();
         if (res.ok) {
             sessionInfo = await res.json();
-        } else if (params.code) {
-            redirectToLogin(`device?code=${params.code}`);
+        } else if (code) {
+            redirectToLogin(`device?code=${code}`);
         } else {
             redirectToLogin('device');
         }
@@ -137,7 +139,7 @@
 
                 {#if scopes === undefined}
                     <div class="desc">
-                        {t.device.desc.replaceAll('{{count}}', userCodeLength)}
+                        {t.device.desc.replace('{{count}}', userCodeLength)}
                     </div>
 
                     <Input

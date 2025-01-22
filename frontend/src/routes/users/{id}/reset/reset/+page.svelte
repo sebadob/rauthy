@@ -7,7 +7,6 @@
         base64UrlSafeToArrBuf,
         extractFormErrors,
         generatePassword,
-        getQueryParams
     } from "../../../../../utils/helpers";
     import {
         resetPassword,
@@ -29,6 +28,7 @@
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import type {PasswordResetTemplate} from "$api/templates/PasswordReset";
     import Template from "$lib5/Template.svelte";
+    import {useParam} from "$state/param.svelte.ts";
 
     const btnWidth = '150px';
     const inputWidth = '320px';
@@ -59,12 +59,10 @@
 
     onMount(async () => {
         let isDev = useIsDev();
-
         if (isDev) {
             requestType = 'password_reset';
         } else {
-            const params = getQueryParams();
-            requestType = params['type'];
+            requestType = useParam('type').get() || 'password_reset';
         }
     })
 
