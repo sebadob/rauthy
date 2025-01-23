@@ -1,7 +1,7 @@
 <script lang="ts">
     import type {Snippet} from "svelte";
     import {fetchSolvePow} from "$utils/pow.ts";
-    import {unixTsFromDateInput} from "$utils/helpers.ts";
+    import {unixTsFromDateInput} from "$utils/form.ts";
     import {errorFromResponse, fetchForm} from "$api/fetch.ts";
 
     type T = $$Generic;
