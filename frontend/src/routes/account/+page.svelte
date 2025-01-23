@@ -1,51 +1,61 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import {getSessionInfo, getUser, getUserWebIdData} from "../../utils/dataFetching.js";
     import AccMain from "../../components/account/AccMain.svelte";
-    import {redirectToLogin} from "../../utils/helpers";
+    import {redirectToLogin} from "$utils/helpers.ts";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import {type SessionResponse} from "$api/response/common/session.ts";
     import {type UserResponse} from "$api/response/common/user.ts";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
+    import {fetchGet} from "$api/fetch.ts";
+    import type {WebIdResponse} from "$api/response/common/web_id.ts";
+    import LangSelector from "$lib5/LangSelector.svelte";
 
     let t = useI18n();
 
     let session: undefined | SessionResponse = $state();
     let user: undefined | UserResponse = $state();
-    let webIdData = $state();
+    let webIdData: undefined | WebIdResponse = $state();
     let isReady = $state(false);
 
     onMount(async () => {
-        let res = await getSessionInfo();
-        if (res.ok) {
-            session = await res.json();
+        let res = await fetchGet<SessionResponse>('/auth/v1/oidc/sessioninfo');
+        if (res.body) {
+            session = res.body
             if (!session) {
                 console.error('did not receive valid session response');
                 return;
             }
 
-            res = await getUser(session.user_id);
-            if (res.ok) {
-                user = await res.json();
-            } else {
-                redirectToLogin('account');
-            }
+            const userId = session.user_id;
+            if (userId) {
+                let res = await Promise.all([
+                    fetchGet<UserResponse>(`/auth/v1/users/${userId}`),
+                    fetchGet<WebIdResponse>(`/auth/v1/users/${userId}/webid/data`),
+                ]);
 
-            res = await getUserWebIdData(session.user_id);
-            if (res.ok) {
-                webIdData = await res.json();
-            } else if (res.status === 404) {
-                webIdData = {
-                    user_id: session.user_id,
-                    is_open: false,
-                };
-            } else {
-                // now it can only be a 405 -> webid is not enabled -> do nothing
-            }
+                if (res[0].body) {
+                    user = res[0].body;
+                } else {
+                    redirectToLogin('account');
+                }
 
-            isReady = true;
+                if (res[1].body) {
+                    webIdData = res[1].body
+                } else if (res[1].status === 404) {
+                    webIdData = {
+                        user_id: userId,
+                        expose_email: false,
+                    };
+                } else {
+                    // now it can only be a 405 -> webid is not enabled -> do nothing
+                }
+
+                isReady = true;
+            } else {
+                console.error('no user_id in session');
+            }
         } else {
             redirectToLogin('account');
         }
@@ -67,5 +77,6 @@
             <AccMain {session} bind:user bind:webIdData/>
         {/if}
         <ThemeSwitch absolute/>
+        <LangSelector absolute/>
     </ContentCenter>
 </Main>

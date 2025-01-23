@@ -1,21 +1,20 @@
 <script lang="ts">
-    import { run } from 'svelte/legacy';
-    import {redirectToLogout} from "../../utils/helpers";
+    import {redirectToLogout} from "$utils/helpers.ts";
     import AccInfo from "./AccInfo.svelte";
-    import AccNav from "./AccNav.svelte";
     import AccEdit from "./AccEdit.svelte";
-    import {tweened} from "svelte/motion";
     import AccMFA from "./AccMFA.svelte";
-    import LangSelector from "$lib5/LangSelector.svelte";
     import AccPassword from "./AccPassword.svelte";
     import AccWebId from "./AccWebId.svelte";
     import AccDevices from "./AccDevices.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import type {SessionResponse} from "$api/response/common/session.js";
     import type {UserResponse} from "$api/response/common/user.ts";
-    import {TPL_AUTH_PROVIDERS} from "../../utils/constants";
+    import {TPL_AUTH_PROVIDERS} from "$utils/constants";
     import Template from "$lib5/Template.svelte";
     import type {AuthProvidersTemplate} from "$api/templates/AuthProvider.ts";
+    import {onMount} from "svelte";
+    import {useParam} from "$state/param.svelte.ts";
+    import Tabs from "$lib5/tabs/Tabs.svelte";
 
     let {
         session: session,
@@ -37,22 +36,30 @@
         }
     });
 
-    let op = tweened(1.0, {
-        duration: 100,
-    })
-
-    let content = $state(t.account.navInfo);
-    let selected = $state(t.account.navInfo);
-
-    function animate() {
-        op.set(0)
-            .then(() => content = selected)
-            .then(() => op.set(1.0));
-    }
     let viewModePhone = $derived(innerWidth && innerWidth < 500);
-    run(() => {
-        if (selected) {
-            animate();
+
+    let selected = $state(t.account.navInfo);
+    let tabs = $state(!!webIdData ?
+        [
+            t.account.navInfo,
+            t.account.navEdit,
+            t.common.password,
+            t.account.navMfa, 'WebID',
+            t.account.devices,
+            t.account.navLogout,
+        ]
+        : [
+            t.account.navInfo,
+            t.account.navEdit,
+            t.common.password,
+            t.account.navMfa,
+            t.account.devices,
+            t.account.navLogout,
+        ]);
+
+    onMount(() => {
+        if (useParam('v').get() === 'devices') {
+            selected = t.account.devices;
         }
     });
 
@@ -67,87 +74,83 @@
 
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers}/>
 
-{#if viewModePhone}
-    <div class="wrapper">
-        <LangSelector absolute absoluteRight updateBackend/>
+{#snippet header()}
+    <h3>{`${user.given_name} ${user.family_name || ''}`}</h3>
+{/snippet}
 
+<div class="wrapper">
+    <!--    <div class="wrapperInner">-->
+    {#if viewModePhone}
         <div class="headerPhone">
-            <h3>{t.account.account}</h3>
+            {@render header()}
         </div>
 
         <div class="container">
-            <AccNav bind:selected />
+            <Tabs {tabs} bind:selected/>
 
             <div class="innerPhone">
-                <div style="opacity: {$op}">
-                    {#if content === t.account.navInfo}
-                        <AccInfo bind:user {webIdData} viewModePhone {providers} {authProvider}/>
-                    {:else if content === t.account.navEdit}
-                        <AccEdit bind:user viewModePhone/>
-                    {:else if content === t.common.password}
-                        <AccPassword {user} {authProvider} viewModePhone/>
-                    {:else if content === t.account.navMfa}
-                        <AccMFA {session} {user}/>
-                    {:else if content === 'WebID'}
-                        <AccWebId bind:webIdData />
-                    {:else if content === t.account.devices}
-                        <AccDevices bind:session/>
-                    {/if}
-                </div>
+                {#if selected === t.account.navInfo}
+                    <AccInfo bind:user {providers} {authProvider} viewModePhone {webIdData}/>
+                {:else if selected === t.account.navEdit}
+                    <AccEdit bind:user viewModePhone/>
+                {:else if selected === t.common.password}
+                    <AccPassword {user} {authProvider} viewModePhone/>
+                {:else if selected === t.account.navMfa}
+                    <AccMFA {session} {user}/>
+                {:else if selected === 'WebID'}
+                    <AccWebId bind:webIdData/>
+                {:else if selected === t.account.devices}
+                    <AccDevices bind:session/>
+                {/if}
             </div>
         </div>
-    </div>
-{:else}
-    <div class="wrapper">
-        <LangSelector absolute updateBackend/>
-
+    {:else}
         <div class="header">
-            <h3>{t.account.account}</h3>
+            {@render header()}
         </div>
 
         <div class="container">
-            <AccNav bind:selected showWebId={!!webIdData} />
+            <Tabs {tabs} bind:selected center/>
 
             <div class="inner">
-                <div style="opacity: {$op}">
-                    {#if content === t.account.navInfo}
-                        <AccInfo bind:user {webIdData} {providers} {authProvider}/>
-                    {:else if content === t.account.navEdit}
-                        <AccEdit bind:user/>
-                    {:else if content === t.common.password}
-                        <AccPassword {user} {authProvider}/>
-                    {:else if content === t.account.navMfa}
-                        <AccMFA {session} {user}/>
-                    {:else if content === 'WebID'}
-                        <AccWebId bind:webIdData/>
-                    {:else if content === t.account.devices}
-                        <AccDevices bind:session/>
-                    {/if}
-                </div>
+                {#if selected === t.account.navInfo}
+                    <AccInfo bind:user {webIdData} {providers} {authProvider}/>
+                {:else if selected === t.account.navEdit}
+                    <AccEdit bind:user/>
+                {:else if selected === t.common.password}
+                    <AccPassword {user} {authProvider}/>
+                {:else if selected === t.account.navMfa}
+                    <AccMFA {session} {user}/>
+                {:else if selected === 'WebID'}
+                    <AccWebId bind:webIdData/>
+                {:else if selected === t.account.devices}
+                    <AccDevices bind:session/>
+                {/if}
             </div>
         </div>
-    </div>
-{/if}
+    {/if}
+    <!--    </div>-->
+</div>
 
 <style>
     .container {
+        margin-top: .5rem;
         display: flex;
         flex-direction: column;
     }
 
     .header {
-        width: 100%;
-        margin-left: 10px;
-        margin-bottom: -10px;
+        /*width: 100%;*/
+        margin-left: .25rem;
     }
 
     .headerPhone {
-        margin-left: 10px;
-        margin-bottom: -10px;
+        margin-left: .5rem;
     }
 
     .inner {
-        width: 30rem;
+        width: min(30rem, 100dvw);
+        padding: .5rem;
     }
 
     .innerPhone {
@@ -155,6 +158,14 @@
     }
 
     .wrapper {
-        height: calc(100dvh - 20px);
+        height: 100dvh;
+        max-width: 100dvw;
     }
+
+    /*.wrapperInner {*/
+    /*    margin-top: 1rem;*/
+    /*    padding: .5rem;*/
+    /*    border: 1px solid hsl(var(--bg-high));*/
+    /*    border-radius: var(--border-radius);*/
+    /*}*/
 </style>

@@ -1,19 +1,29 @@
-<script>
-    import CheckIcon from "$lib/CheckIcon.svelte";
-    import {buildWebIdUri, formatDateFromTs, saveProviderToken} from "../../utils/helpers";
-    import Button from "$lib/Button.svelte";
-    import {deleteUserProviderLink, postUserProviderLink} from "../../utils/dataFetching.js";
+<script lang="ts">
+    import CheckIcon from "$lib5/CheckIcon.svelte";
+    import {buildWebIdUri, formatDateFromTs, saveProviderToken} from "$utils/helpers.ts";
+    import Button from "$lib5/Button.svelte";
     import Modal from "$lib5/Modal.svelte";
     import getPkce from "oauth-pkce";
-    import {PKCE_VERIFIER_UPSTREAM} from "../../utils/constants.js";
+    import {PKCE_VERIFIER_UPSTREAM} from "$utils/constants";
     import {useI18n} from "$state/i18n.svelte";
+    import type {UserResponse} from "$api/response/common/user.ts";
+    import type {AuthProvidersTemplate, AuthProviderTemplate} from "$api/templates/AuthProvider.ts";
+    import type {WebIdResponse} from "$api/response/common/web_id.ts";
+    import type {ProviderLoginRequest} from "$api/response/common/auth_provider.ts";
+    import {fetchDelete, fetchPost} from "$api/fetch.ts";
 
     let {
         user = $bindable(),
         providers,
         authProvider,
         webIdData,
-        viewModePhone = false
+        viewModePhone,
+    }: {
+        user: UserResponse,
+        providers: AuthProvidersTemplate,
+        authProvider: undefined | AuthProviderTemplate,
+        viewModePhone?: boolean,
+        webIdData: WebIdResponse,
     } = $props();
 
     let t = useI18n();
@@ -24,10 +34,12 @@
     let isFederated = $derived(user.account_type?.startsWith('federated'));
     let accType = $derived(isFederated ? `${user.account_type}: ${authProvider?.name || ''}` : user.account_type);
 
-    let classRow = $derived(viewModePhone ? 'rowPhone' : 'row');
-    let classLabel = $derived(viewModePhone ? 'labelPhone' : 'label');
+    let classRow: 'rowPhone' | 'row' = $derived(viewModePhone ? 'rowPhone' : 'row');
+    let classLabel: 'labelPhone' | 'label' = $derived(viewModePhone ? 'labelPhone' : 'label');
 
-    function linkProvider(id) {
+    let showProviderButtons: any = {};
+
+    function linkProvider(id: string) {
         getPkce(64, (error, {challenge, verifier}) => {
             if (!error) {
                 localStorage.setItem(PKCE_VERIFIER_UPSTREAM, verifier);
@@ -36,72 +48,68 @@
         });
     }
 
-    async function providerLoginPkce(id, pkce_challenge) {
-        let data = {
+    async function providerLoginPkce(id: string, pkce_challenge: string) {
+        let payload: ProviderLoginRequest = {
             email: user.email,
             client_id: 'rauthy',
             redirect_uri: window.location.href,
-            // scopes: '',
-            // state: state,
-            // nonce: nonce,
-            // code_challenge: challenge,
-            // code_challenge_method: challengeMethod,
             provider_id: id,
             pkce_challenge,
         };
-        let res = await postUserProviderLink(id, data);
-        if (res.ok) {
-            const xsrfToken = await res.text();
-            saveProviderToken(xsrfToken);
 
-            window.location.href = res.headers.get('location');
+        let res = await fetchPost<string>(`/auth/v1/providers/${id}/link`, payload);
+        if (res.text) {
+            saveProviderToken(res.text);
+            let loc = res.headers.get('location');
+            if (loc) {
+                window.location.href = loc;
+            }
         } else {
-            let body = await res.json();
             // TODO catch error even necessary? should be handled in `/callback` already...
-            console.error(body);
+            console.error(res.error);
         }
     }
 
     async function unlinkProvider() {
-        let res = await deleteUserProviderLink();
-        let body = await res.json();
-        if (res.ok) {
-            user = body;
+        let res = await fetchDelete<UserResponse>('/auth/v1/providers/link');
+        if (res.body) {
+            user = res.body;
         } else {
+            console.error(res.error);
             unlinkErr = true;
         }
     }
 
 </script>
 
-<div class="container">
+<div>
     <div class={classRow}>
-        <div class={classLabel}><b>{t.common.email}:</b></div>
+        <div class={classLabel}>{t.common.email}</div>
         <span class="value">{user.email}</span>
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.account.givenName}:</b></div>
+        <div class={classLabel}>{t.account.givenName}</div>
         <span class="value">{user.given_name}</span>
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.account.familyName}:</b></div>
+        <div class={classLabel}>{t.account.familyName}</div>
         <span class="value">{user.family_name}</span>
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.account.user} ID:</b></div>
+        <div class={classLabel}>{t.account.user} ID</div>
         <span class="value">{user.id}</span>
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.account.accType}:</b></div>
+        <div class={classLabel}>{t.account.accType}</div>
         <div>
             <div class="value">{accType || ''}</div>
             {#if isFederated}
                 <div class="fed-btn">
-                    <Button level={3} on:click={unlinkProvider}>
+                    <Button ariaLabel={t.account.providerUnlink} level={3} onclick={unlinkProvider}>
                         {t.account.providerUnlink}
                     </Button>
                     {#if unlinkErr}
@@ -111,28 +119,30 @@
                     {/if}
                 </div>
             {:else if providers.length > 0}
-                <div
-                        role="button"
-                        tabindex="0"
-                        class="provider-link"
-                        onclick={() => showModal = !showModal}
-                        onkeypress={() => showModal = !showModal}
-                >
+                <Button level={2} onclick={() => showModal = true}>
                     {t.account.providerLink}
-                </div>
+                </Button>
                 <Modal bind:showModal>
+                    <h3>{t.account.providerLink}</h3>
                     <p>{t.account.providerLinkDesc}</p>
 
                     <div class="providers">
                         {#each providers as provider (provider.id)}
-                            <Button on:click={() => linkProvider(provider.id)} level={3}>
+                            <Button
+                                    ariaLabel={`${t.account.providerLink}: ${provider.name}`}
+                                    onclick={() => linkProvider(provider.id)}
+                                    level={2}
+                            >
                                 <div class="flex-inline">
-                                    <img
-                                            src="{`/auth/v1/providers/${provider.id}/img`}"
-                                            alt=""
-                                            width="20"
-                                            height="20"
-                                    />
+                                    {#if showProviderButtons[provider.id]}
+                                        <img
+                                                src="{`/auth/v1/providers/${provider.id}/img`}"
+                                                alt=""
+                                                width="20"
+                                                height="20"
+                                                onload={() => showProviderButtons[provider.id] = true}
+                                        />
+                                    {/if}
                                     <span class="provider-name">
                                         {provider.name}
                                     </span>
@@ -146,50 +156,52 @@
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.account.roles}:</b></div>
+        <div class={classLabel}>{t.account.roles}</div>
         <span class="value">{user.roles || 'None'}</span>
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.account.groups}:</b></div>
+        <div class={classLabel}>{t.account.groups}</div>
         <span class="value">{user.groups || 'None'}</span>
     </div>
 
     <div class="row">
-        <div class={classLabel}><b>{t.account.mfaActivated}:</b></div>
-        <CheckIcon check={!!user.webauthn_user_id}/>
+        <div class={classLabel}>{t.account.mfaActivated}</div>
+        <CheckIcon checked={!!user.webauthn_user_id}/>
     </div>
 
     <div class="row">
-        <div class={classLabel}><b>{t.account.userEnabled}:</b></div>
-        <CheckIcon check={user.enabled}/>
+        <div class={classLabel}>{t.account.userEnabled}</div>
+        <CheckIcon checked={user.enabled}/>
     </div>
 
     <div class="row">
-        <div class={classLabel}><b>{t.account.emailVerified}:</b></div>
-        <CheckIcon check={user.email_verified}/>
+        <div class={classLabel}>{t.account.emailVerified}</div>
+        <CheckIcon checked={user.email_verified}/>
     </div>
 
-    <div class={classRow}>
-        <div class={classLabel}><b>{t.account.lastLogin}:</b></div>
-        <span class="value">{formatDateFromTs(user.last_login)}</span>
-    </div>
+    {#if user.last_login}
+        <div class={classRow}>
+            <div class={classLabel}>{t.account.lastLogin}</div>
+            <span class="value">{formatDateFromTs(user.last_login)}</span>
+        </div>
+    {/if}
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.account.passwordExpiry}:</b></div>
+        <div class={classLabel}>{t.account.passwordExpiry}</div>
         <span class="value">
             {user.password_expires && formatDateFromTs(user.password_expires) || t.common.never}
         </span>
     </div>
 
     <div class={classRow}>
-        <div class={classLabel}><b>{t.account.userCreated}:</b></div>
+        <div class={classLabel}>{t.account.userCreated}</div>
         <span class="value">{formatDateFromTs(user.created_at)}</span>
     </div>
 
     {#if user.user_expires}
         <div class={classRow}>
-            <div class={classLabel}><b>{t.account.userExpiry}:</b></div>
+            <div class={classLabel}>{t.account.userExpiry}</div>
             <span class="value">{formatDateFromTs(user.user_expires)}</span>
         </div>
     {/if}
@@ -207,9 +219,9 @@
 </div>
 
 <style>
-    .container {
-        margin: 0 .25rem;
-        padding: 10px;
+    .label, .labelPhone {
+        color: hsla(var(--text) / .66);
+        font-size: .9rem;
     }
 
     .label {
@@ -232,25 +244,34 @@
 
     .link-err {
         margin-left: 5px;
-        color: var(--col-err);
+        color: hsl(var(--error));
     }
 
-    .provider-link {
-        color: var(--col-act2);
-        cursor: pointer;
-    }
+    /*.provider-link {*/
+    /*    color: */
+    /*    cursor: pointer;*/
+    /*}*/
 
     .provider-name {
         margin-bottom: -4px;
     }
 
     .providers {
-        margin-top: .66rem;
+        margin-top: 1rem;
         display: flex;
     }
 
     .row {
         display: flex;
+        margin-bottom: .25rem;
+    }
+
+    .rowPhone {
+        margin-bottom: .25rem;
+    }
+
+    .rowPhone > .labelPhone {
+        margin-bottom: -.25rem;
     }
 
     .value {

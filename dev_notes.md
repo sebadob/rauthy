@@ -6,6 +6,7 @@
 
 - `t.common.close`
 - `t.common.changeTheme`
+- `t.common.selectI18n`
 
 ## Stage 1 - essentials
 
