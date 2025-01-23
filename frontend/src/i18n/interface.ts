@@ -1,4 +1,5 @@
 export interface I18n {
+    lang: string,
     common: {
         cancel: string,
         changeTheme: string,
@@ -11,6 +12,7 @@ export interface I18n {
         password: string,
         required: string,
         save: string,
+        selectI18n: string,
     },
     account: {
         account: string,

@@ -1,6 +1,7 @@
 import {type I18n} from "./interface.ts";
 
 export const I18nEn: I18n = {
+    lang: "en",
     common: {
         cancel: "Cancel",
         changeTheme: "Change Theme",
@@ -13,6 +14,7 @@ export const I18nEn: I18n = {
         password: "Password",
         required: "Required",
         save: "Save",
+        selectI18n: "Select Language",
     },
     account: {
         account: "User Account",

@@ -1,6 +1,7 @@
 import {type I18n} from "./interface.ts";
 
 export const I18nKo: I18n = {
+    lang: "ko",
     common: {
         cancel: "취소",
         changeTheme: "Change Theme",
@@ -13,6 +14,7 @@ export const I18nKo: I18n = {
         password: "비밀번호",
         required: "필수 항목입니다.",
         save: "저장",
+        selectI18n: "Select Language",
     },
     account: {
         account: "사용자 계정",

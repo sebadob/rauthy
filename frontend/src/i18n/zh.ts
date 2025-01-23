@@ -1,6 +1,7 @@
 import {type I18n} from "./interface.ts";
 
 export const I18nZh: I18n = {
+    lang: "zh",
     common: {
         cancel: "取消",
         changeTheme: "Change Theme",
@@ -13,6 +14,7 @@ export const I18nZh: I18n = {
         password: "密码",
         required: "必填",
         save: "保存",
+        selectI18n: "Select Language",
     },
     account: {
         account: "用户账户",
