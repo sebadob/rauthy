@@ -165,8 +165,7 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        background: var(--col-bg);
-        box-shadow: -2px 0 5px var(--col-gmid);
+        box-shadow: -2px 0 5px hsl(var(--bg-high));
         transition: all 250ms ease-in-out;
     }
 

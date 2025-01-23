@@ -5,6 +5,7 @@
 ### Missing i18n (zh/ko) for Svelte 5 Migration:
 
 - `t.common.close`
+- `t.common.changeTheme`
 
 ## Stage 1 - essentials
 

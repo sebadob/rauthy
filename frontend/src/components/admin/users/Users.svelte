@@ -205,6 +205,7 @@
 
 <style>
     #users div:nth-of-type(2n + 1) {
-        background: linear-gradient(90deg, var(--col-ghigh) 35rem, var(--col-bg) 50rem);
+        /*background: linear-gradient(90deg, hsla(var(--bg-high) / .25) 10rem, hsl(var(--bg)) 50rem);*/
+        background: linear-gradient(90deg, hsla(var(--bg-high) / .25) 10rem, hsl(var(--bg)) 50rem);
     }
 </style>

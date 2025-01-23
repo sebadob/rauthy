@@ -110,7 +110,7 @@
     }
 
     .expired {
-        background: var(--col-gmid);
+        background: hsl(var(--bg-high));
     }
 
     .flex {

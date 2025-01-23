@@ -149,7 +149,7 @@
 <style>
     .container, .collapsed {
         display: flex;
-        color: var(--col-text);
+        color: hsl(var(--text));
         cursor: pointer;
     }
 
@@ -169,9 +169,8 @@
     .collapsedInner {
         position: absolute;
         top: 0;
-        border: 1px solid var(--col-gmid);
-        background: var(--col-bg);
-        box-shadow: 5px 5px 5px var(--col-gmid);
+        border: 1px solid hsl(var(--bg-high));
+        box-shadow: 5px 5px 5px hsl(var(--bg-high));
         z-index: 10;
     }
 
@@ -180,7 +179,7 @@
     }
 
     .labelContainer:hover, .collapsed:hover {
-        color: var(--col-act2);
+        color: hsl(var(--action));
     }
 
     .entries {

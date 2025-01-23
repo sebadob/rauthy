@@ -206,7 +206,7 @@
                 </NavEntry>
 
                 <NavEntry label="Blacklist">
-                    <IconStop width={24}/>
+                    <IconStop width={24} color="currentColor"/>
                 </NavEntry>
 
                 <NavEntry label="ApiKeys">

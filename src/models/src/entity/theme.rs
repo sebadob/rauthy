@@ -10,6 +10,7 @@ use sqlx::{Error, FromRow, Row};
 use std::fmt::Write;
 use tracing::error;
 
+// used for possible future struct updates to be able to deserialize old themes properly
 static LATEST_CSS_VERSION: i32 = 1;
 
 #[derive(Debug)]
@@ -455,8 +456,8 @@ impl ThemeCss {
             accent: [246, 60, 53],
             error: [15, 100, 37],
             btn_text: "hsl(var(--bg))".to_string(),
-            theme_sun: "hsla(var(--action), .7)".to_string(),
-            theme_moon: "hsla(var(--accent), .85)".to_string(),
+            theme_sun: "hsla(var(--action) / .7)".to_string(),
+            theme_moon: "hsla(var(--accent) / .85)".to_string(),
         }
     }
 
@@ -470,8 +471,8 @@ impl ThemeCss {
             accent: [246, 60, 53],
             error: [15, 100, 37],
             btn_text: "white".to_string(),
-            theme_sun: "hsla(var(--action), .7)".to_string(),
-            theme_moon: "hsla(var(--accent), .85)".to_string(),
+            theme_sun: "hsla(var(--action) / .7)".to_string(),
+            theme_moon: "hsla(var(--accent) / .85)".to_string(),
         }
     }
 }

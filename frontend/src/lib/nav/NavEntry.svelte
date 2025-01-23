@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import {navIsExpanded, navSelected} from "./navStore.js";
     import {fade} from "svelte/transition";
@@ -12,10 +12,10 @@
      */
 
     /** @type {Props} */
-    let { label = '', slotCollapsed = true, children } = $props();
+    let {label = '', slotCollapsed = true, children} = $props();
 
     let isExpanded = $state(true);
-    let color = $state('var(--col-text)');
+    let color = $state('hsl(var(--text))');
 
     let selected = $state('');
     navSelected.subscribe(s => selected = s);
@@ -24,14 +24,13 @@
     let hover = $state(false);
 
 
-
     function checkSelected() {
         if (hover) {
-            color = 'var(--col-err)';
+            color = 'hsl(var(--error))';
         } else if (selected === label) {
-            color = 'var(--col-ok)';
+            color = 'hsl(var(--action))';
         } else {
-            color = 'var(--col-text)';
+            color = 'hsl(var(--text))';
         }
     }
 
@@ -46,7 +45,7 @@
     });
     run(() => {
         if (hover) {
-            color = 'var(--col-err)';
+            color = 'hsl(var(--error))';
         } else {
             checkSelected();
         }
@@ -95,7 +94,7 @@
     .entry, .entryCollapsed {
         display: flex;
         align-items: center;
-        color: var(--col-text);
+        color: hsl(var(--text));
         cursor: pointer;
     }
 
@@ -110,7 +109,7 @@
     }
 
     .entry:hover, .entryCollapsed:hover {
-        color: var(--col-act2);
+        color: hsl(var(--action));
     }
 
     .label {
@@ -123,7 +122,7 @@
     }
 
     .selected, .selectedCollapsed {
-        color: var(--col-act2a);
+        color: hsl(var(--action));
     }
 
     .selected:after {
@@ -134,6 +133,6 @@
 
     .selectedCollapsed {
         text-decoration: underline;
-        text-underline: var(--col-act2);
+        text-underline: hsl(var(--action));
     }
 </style>

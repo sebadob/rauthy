@@ -9,6 +9,7 @@
     import {cubicOut} from "svelte/easing";
     import {onMount} from "svelte";
     import AppVersion from "../../components/AppVersion.svelte";
+    import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
 
 
     /**
@@ -123,22 +124,27 @@
         </div>
     </div>
 
-    {#if isExpanded}
-        <div
-                class="version"
-                in:fade={{ delay: 500, duration: 200 }}
-                out:fade={{ duration: 100 }}
-        >
+    <div
+            class="version"
+            in:fade={{ delay: 500, duration: 200 }}
+            out:fade={{ duration: 100 }}
+    >
+        {#if isExpanded}
+            <ThemeSwitch/>
             <AppVersion/>
-        </div>
-    {/if}
+        {:else}
+            <div class="theme-collapsed">
+                <ThemeSwitch/>
+            </div>
+        {/if}
+    </div>
 
 </nav>
 
 <style>
     .burger:hover, .close:hover {
         cursor: pointer;
-        color: var(--col-act2);
+        color: hsl(var(--action));
     }
 
     .burger {
@@ -158,20 +164,23 @@
         justify-content: space-between;
     }
 
-    .logo {
-    }
-
     .links {
         flex: 1;
     }
 
     .nav {
         height: 100vh;
-        border-right: 1px solid var(--col-gmid);
-        box-shadow: 1px 0 5px var(--col-gmid);
+        border-right: 1px solid hsl(var(--bg-high));
+        box-shadow: 1px 0 5px hsl(var(--bg-high));
         display: flex;
         flex-direction: column;
         justify-content: space-between;
+    }
+
+    .theme-collapsed {
+        margin-bottom: .5rem;
+        width: 100%;
+        text-align: center;
     }
 
     .version {

@@ -101,11 +101,11 @@ We need the onclick listener here to make easy click-outside work.
     }
 
     dialog[data-strict="true"]::backdrop {
-        background: hsla(var(--bg), 0.8);
+        background: hsla(var(--bg) / 0.8);
     }
 
     dialog[data-strict="false"]::backdrop {
-        background: hsla(var(--bg), 0.2);
+        background: hsla(var(--bg) / 0.2);
     }
 
     dialog > div {
@@ -127,7 +127,7 @@ We need the onclick listener here to make easy click-outside work.
     }
 
     .closeIcon {
-        color: hsla(var(--text), .5);
+        color: hsla(var(--text) / .5);
         transition: color 150ms;
     }
 

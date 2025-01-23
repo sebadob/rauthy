@@ -10,6 +10,7 @@
     import Template from "$lib5/Template.svelte";
     import {TPL_CSRF_TOKEN} from "../../../utils/constants";
     import {useParam} from "$state/param.svelte.ts";
+    import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
 
     let t = useI18n();
     let err = '';
@@ -81,6 +82,7 @@
             {/if}
         </div>
 
+        <ThemeSwitch absolute/>
         <LangSelector absolute/>
     </ContentCenter>
 </Main>

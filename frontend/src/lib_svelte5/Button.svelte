@@ -182,7 +182,7 @@
         outline: none;
         background: none;
         box-shadow: none;
-        color: hsla(var(--action), .93);
+        color: hsla(var(--action) / .93);
     }
 
     .invisible:hover {
@@ -218,12 +218,12 @@
     }
 
     .l1, .l2, .l3 {
-        border: 1px solid hsla(var(--action), .5);
+        border: 1px solid hsla(var(--action) / .5);
     }
 
     .l1 {
         color: var(--btn-text);
-        background: hsla(var(--action), .93);
+        background: hsla(var(--action) / .93);
     }
 
     .l1:hover {
@@ -231,7 +231,7 @@
     }
 
     .l1[aria-disabled="true"] {
-        background: hsla(var(--text), .5);
+        background: hsla(var(--text) / .5);
     }
 
     .l2 {
@@ -241,7 +241,7 @@
     }
 
     .l3 {
-        color: hsla(var(--action), .9);
+        color: hsla(var(--action) / .9);
         border: none;
         background: transparent;
     }
@@ -251,12 +251,12 @@
     }
 
     .l1d, .l2d, .l3d {
-        border: 1px solid hsla(var(--error), .5);
+        border: 1px solid hsla(var(--error) / .5);
     }
 
     .l1d {
         color: var(--btn-text);
-        background: hsla(var(--error), .93);
+        background: hsla(var(--error) / .93);
     }
 
     .l1d:hover {

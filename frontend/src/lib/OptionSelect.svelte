@@ -7,7 +7,7 @@
      */
 
     /** @type {Props} */
-    let { value = $bindable(), options = [], width = 'inherit' } = $props();
+    let {value = $bindable(), options = [], width = 'inherit'} = $props();
 </script>
 
 <select bind:value style:width>
@@ -21,7 +21,7 @@
 <style>
     select {
         padding: 3px;
-        color: var(--col-text);
+        color: hsl(var(--text));
         font-size: 1rem;
         cursor: pointer;
         border-radius: 3px;
@@ -31,11 +31,11 @@
     }
 
     select:hover {
-        color: var(--col-acnta);
+        color: hsl(var(--action));
     }
 
     .opt {
-        color: var(--col-text);
+        color: hsl(var(--text));
         cursor: pointer;
     }
 </style>

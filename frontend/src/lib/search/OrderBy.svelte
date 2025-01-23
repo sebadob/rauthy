@@ -1,5 +1,5 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import {onMount} from "svelte";
     import IconBarsArrowDown from "$lib/icons/IconBarsArrowDown.svelte";
@@ -38,7 +38,6 @@
     });
 
 
-
     function extractCallback() {
         for (let opt of options) {
             if (opt.label === selected) {
@@ -66,6 +65,7 @@
         direction *= -1;
         orderItems();
     }
+
     run(() => {
         if (items) {
             orderItems();
@@ -123,19 +123,19 @@
     .icon {
         margin-top: 5px;
         cursor: pointer;
-        color: var(--col-act2a)
+        color: hsl(var(--action));
     }
 
     select {
         height: 2.13rem;
         padding-top: .2rem;
         padding-left: .5rem;
-        color: var(--col-text);
-        background: var(--col-bg);
+        color: hsl(var(--text));
+        background: transparent;
         font-size: 1.05rem;
         border-radius: 3px;
         cursor: pointer;
-        border: 1px solid var(--col-glow);
-        box-shadow: 1px 1px 2px var(--col-gmid);
+        border: 1px solid hsl(var(--bg-high));
+        box-shadow: 1px 1px 2px hsl(var(--bg-high));
     }
 </style>

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type {IconProps} from "$types/icon.ts";
+    import type {IconProps} from "./props.ts";
 
     let {
         opacity = 0.9,

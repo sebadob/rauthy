@@ -8,7 +8,7 @@
     import {useI18n} from "$state/i18n.svelte";
     import {type SessionResponse} from "$api/response/common/session.ts";
     import {type UserResponse} from "$api/response/common/user.ts";
-    import Loading from "$lib5/Loading.svelte";
+    import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
 
     let t = useI18n();
 
@@ -66,5 +66,6 @@
         {#if isReady && session && user}
             <AccMain {session} bind:user bind:webIdData/>
         {/if}
+        <ThemeSwitch absolute/>
     </ContentCenter>
 </Main>

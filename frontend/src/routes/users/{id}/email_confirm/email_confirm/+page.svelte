@@ -6,6 +6,7 @@
     import {useI18n} from "$state/i18n.svelte";
     import Template from "$lib5/Template.svelte";
     import {TPL_EMAIL_NEW, TPL_EMAIL_OLD} from "../../../../../utils/constants.js";
+    import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
 
     let t = useI18n();
     let emailOld = $state('old@mail.org');
@@ -37,6 +38,8 @@
                 </Button>
             </div>
         </div>
+
+        <ThemeSwitch absolute/>
         <LangSelector absolute/>
     </ContentCenter>
 </Main>

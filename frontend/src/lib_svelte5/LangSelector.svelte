@@ -67,7 +67,7 @@
     }
 
     .absoluteLeft {
-        left: .25rem;
+        left: 2rem;
     }
 
     .absoluteRight {
