@@ -91,7 +91,7 @@
 <style>
     .absolute {
         position: absolute;
-        bottom: -.25rem;
+        bottom: 0;
         left: .25rem;
     }
 
