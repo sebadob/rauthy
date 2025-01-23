@@ -5,6 +5,8 @@ export interface IResponse<T> {
     body: undefined | T,
     text: undefined | string,
     error: undefined | ErrorResponse,
+    status: number,
+    headers: Headers,
 }
 
 function buildHeaders(
@@ -125,6 +127,8 @@ export async function handleResponse<T>(res: Response, redirect401: boolean): Pr
         body: undefined,
         text: undefined,
         error: undefined,
+        status: res.status,
+        headers: res.headers,
     };
 
     if (res.ok) {
@@ -136,7 +140,7 @@ export async function handleResponse<T>(res: Response, redirect401: boolean): Pr
         } else {
             resp.text = await res.text();
         }
-    } else {
+    } else if (res.status !== 405) {
         resp.error = await res.json();
     }
 
