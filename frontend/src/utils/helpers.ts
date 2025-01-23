@@ -57,7 +57,7 @@ export const redirectToLogin = (state: string) => {
     getPkce(64, (error, {challenge, verifier}) => {
         if (!error) {
             localStorage.setItem(PKCE_VERIFIER, verifier);
-            const nonce = getKey(24);
+            const nonce = genKey(24);
             const s = state || 'admin';
             const redirect_uri = `${window.location.origin}${REDIRECT_URI}`.replaceAll(':', '%3A').replaceAll('/', '%2F');
             window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${redirect_uri}&response_type=code&code_challenge=${challenge}&code_challenge_method=S256&scope=openid+profile+email&nonce=${nonce}&state=${s}`;
@@ -167,7 +167,7 @@ export const formatUtcTsFromDateInput = (inputDate: string) => {
     return d / 1000;
 }
 
-export const formatDateFromTs = (ts: number, fmtIso: boolean) => {
+export const formatDateFromTs = (ts: number, fmtIso?: boolean) => {
     const utcOffsetMinutes = -new Date().getTimezoneOffset();
     const d = new Date((ts + utcOffsetMinutes * 60) * 1000);
 
@@ -262,26 +262,41 @@ export const generatePassword = (
 };
 
 // Returns a short random key, which can be used in components to identify them uniquely.
-export const getKey = (i: number) => {
-    let res = '';
+export const genKey = (length?: number) => {
+    let key = [];
+    length = length || 8;
 
-    const target = i || 8;
-    for (let i = 0; i < target; i += 1) {
-        let nextNumber = 60;
-        while ((nextNumber > 57 && nextNumber < 65) || (nextNumber > 90 && nextNumber < 97)) {
-            nextNumber = Math.floor(Math.random() * 74) + 48;
+    for (let i = 0; i < length; i += 1) {
+        let nextNumber = 95;
+        while (nextNumber > 90 && nextNumber < 97) {
+            nextNumber = Math.floor(Math.random() * 57) + 65;
         }
-        res = res.concat(String.fromCharCode(nextNumber));
+        key.push(String.fromCharCode(nextNumber));
     }
 
-    return res;
+    return key.join('');
 }
 
-// export const getQueryParams = () => {
-//     return new Proxy(new URLSearchParams(window.location.search), {
-//         get: (searchParams, prop) => searchParams.get(prop.toString()),
-//     });
-// }
+/**
+ * Tries to get the cookie with the given name, if it is accessible
+ * @param cname {string} The cookie name to get
+ * @returns {string} The cookie value, if it exists
+ */
+export function getCookie(cname: string): string {
+    let name = cname + "=";
+    let decodedCookie = decodeURIComponent(document.cookie);
+    let ca = decodedCookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') {
+            c = c.substring(1);
+        }
+        if (c.indexOf(name) === 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return "";
+}
 
 // races a promise against a given timeout and throws an exception if exceeded
 export const promiseTimeout = (prom: Promise<any>, time: number) => {
