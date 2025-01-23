@@ -7,6 +7,7 @@ use rauthy_api_types::auth_providers::{
     ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
 };
 use rauthy_api_types::auth_providers::{ProviderLookupResponse, ProviderResponse};
+use rauthy_api_types::users::UserResponse;
 use rauthy_common::constants::{HEADER_HTML, HEADER_JSON};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
@@ -207,7 +208,7 @@ pub async fn post_provider_callback(
     path = "/providers/link",
     tag = "providers",
     responses(
-        (status = 200, description = "OK"),
+        (status = 200, description = "OK", body = UserResponse),
         (status = 400, description = "BadRequest", body = ErrorResponse),
     ),
 )]
@@ -217,7 +218,7 @@ pub async fn delete_provider_link(principal: ReqPrincipal) -> Result<HttpRespons
 
     let user_id = principal.user_id()?.to_string();
     let user = User::provider_unlink(user_id).await?;
-    Ok(HttpResponse::Ok().json(user))
+    Ok(HttpResponse::Ok().json(user.into_response(None)))
 }
 
 /// GET all upstream auth providers as templated minimal JSON
@@ -424,6 +425,7 @@ pub async fn put_provider_img(
     post,
     path = "/providers/{id}/link",
     tag = "providers",
+    request_body = ProviderLoginRequest,
     responses(
         (status = 200, description = "OK"),
         (status = 400, description = "BadRequest", body = ErrorResponse),
