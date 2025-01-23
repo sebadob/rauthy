@@ -2,6 +2,7 @@
     import {slide} from "svelte/transition";
     import {genKey} from "$utils/helpers.ts";
     import {useI18n} from "$state/i18n.svelte.ts";
+    import type {FullAutoFill} from "svelte/elements";
 
     let {
         ref = $bindable(),
@@ -34,14 +35,14 @@
         onUp,
         onDown,
         onSubmit,
-    } = $props<{
+    }: {
         ref?: undefined | HTMLInputElement,
         typ?: string,
         id?: string,
         name?: string,
         value?: string | number,
         label?: string,
-        autocomplete?: string,
+        autocomplete?: FullAutoFill | null | undefined,
         placeholder?: string,
         disabled?: boolean | null | undefined,
         maxLength?: number | null | undefined,
@@ -61,7 +62,7 @@
         onUp?: () => void,
         onDown?: () => void,
         onSubmit?: (event: Event & { currentTarget: EventTarget & HTMLInputElement }) => void,
-    }>();
+    } = $props();
 
     let t = useI18n();
 
