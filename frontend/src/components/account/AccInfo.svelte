@@ -79,7 +79,6 @@
             unlinkErr = true;
         }
     }
-
 </script>
 
 <div>
@@ -165,17 +164,17 @@
         <span class="value">{user.groups || 'None'}</span>
     </div>
 
-    <div class="row">
+    <div class={classRow}>
         <div class={classLabel}>{t.account.mfaActivated}</div>
         <CheckIcon checked={!!user.webauthn_user_id}/>
     </div>
 
-    <div class="row">
+    <div class={classRow}>
         <div class={classLabel}>{t.account.userEnabled}</div>
         <CheckIcon checked={user.enabled}/>
     </div>
 
-    <div class="row">
+    <div class={classRow}>
         <div class={classLabel}>{t.account.emailVerified}</div>
         <CheckIcon checked={user.email_verified}/>
     </div>
@@ -225,7 +224,7 @@
     }
 
     .label {
-        width: 10rem;
+        width: 8.5rem;
     }
 
     .labelPhone {
@@ -247,11 +246,6 @@
         color: hsl(var(--error));
     }
 
-    /*.provider-link {*/
-    /*    color: */
-    /*    cursor: pointer;*/
-    /*}*/
-
     .provider-name {
         margin-bottom: -4px;
     }
@@ -263,6 +257,7 @@
 
     .row {
         display: flex;
+        align-items: center;
         margin-bottom: .25rem;
     }
 

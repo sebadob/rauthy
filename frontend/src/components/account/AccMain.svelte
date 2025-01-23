@@ -79,7 +79,6 @@
 {/snippet}
 
 <div class="wrapper">
-    <!--    <div class="wrapperInner">-->
     {#if viewModePhone}
         <div class="headerPhone">
             {@render header()}
@@ -129,7 +128,6 @@
             </div>
         </div>
     {/if}
-    <!--    </div>-->
 </div>
 
 <style>
@@ -148,24 +146,24 @@
         margin-left: .5rem;
     }
 
-    .inner {
-        width: min(30rem, 100dvw);
+    .inner, .innerPhone {
         padding: .5rem;
+    }
+
+    .inner {
+        width: min(32rem, 100dvw);
+        max-height: calc(100dvh - 7rem);
+        overflow-y: auto;
     }
 
     .innerPhone {
         width: 100vw;
+        max-height: calc(100dvh - 8.8rem);
+        overflow-y: auto;
     }
 
     .wrapper {
         height: 100dvh;
         max-width: 100dvw;
     }
-
-    /*.wrapperInner {*/
-    /*    margin-top: 1rem;*/
-    /*    padding: .5rem;*/
-    /*    border: 1px solid hsl(var(--bg-high));*/
-    /*    border-radius: var(--border-radius);*/
-    /*}*/
 </style>

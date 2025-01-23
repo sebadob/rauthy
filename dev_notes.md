@@ -7,6 +7,10 @@
 - `t.common.close`
 - `t.common.changeTheme`
 - `t.common.selectI18n`
+- `t.common.month`
+- `t.common.months`
+- `t.common.weekDaysShort`
+- `t.common.year`
 
 ## Stage 1 - essentials
 

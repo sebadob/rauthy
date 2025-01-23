@@ -39,7 +39,7 @@ body {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', 'Segoe UI', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     -webkit-font-smoothing: antialiased;
-    /*line-height: 1.5rem;*/
+    line-height: 1.5rem;
     color: hsl(var(--text));
     background-color: hsl(var(--bg));
     scroll-behavior: smooth;

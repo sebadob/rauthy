@@ -11,21 +11,7 @@ export function unixTsFromDateInput(inputDate: string) {
     return d / 1000;
 }
 
-
 export const DAY_MILLIS = 1000 * 60 * 60 * 24;
-
-/**
- * Submits a form
- */
-export async function fetchForm(form: HTMLFormElement, body: URLSearchParams) {
-    return await fetch(form.action, {
-        method: form.method,
-        headers: {
-            'content-type': 'application/x-www-form-urlencoded',
-        },
-        body,
-    })
-}
 
 export interface Day {
     day: number,
@@ -146,3 +132,14 @@ export function fmtTimeInput(date?: Date) {
     return `${hr}:${mn}`;
 }
 
+/**
+ * Converts the given `params` into an object that makes the TS compiler happy.
+ * CAUTION: It does NOT check the integrity! Uses unchecked typecasting!
+ */
+export function paramsInto<T>(params: URLSearchParams): T {
+    let res: any = {};
+    for (let p of params) {
+        res[p[0]] = p[1] || undefined;
+    }
+    return res as T;
+}
