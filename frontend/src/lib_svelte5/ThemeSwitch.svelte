@@ -1,12 +1,10 @@
 <script lang="ts">
-    import {crossfade} from "svelte/transition";
     import {useI18n} from "$state/i18n.svelte.ts";
     import Button from "$lib5/Button.svelte";
 
     let {absolute}: { absolute?: boolean } = $props();
 
     const storageIdx = 'darkMode';
-    const [send, receive] = crossfade({});
 
     let t = useI18n();
 
@@ -49,7 +47,7 @@
 <div class:absolute>
     <Button ariaLabel={t.common.changeTheme} invisible onclick={toggle}>
         {#if darkMode === true}
-            <div class="icon moon" in:receive={{key: "dark"}} out:send={{key: "light"}}>
+            <div class="icon moon">
                 <svg
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
@@ -67,10 +65,8 @@
                     />
                 </svg>
             </div>
-        {/if}
-
-        {#if darkMode === false}
-            <div class="icon sun" in:receive={{key: "light"}} out:send={{key: "dark"}}>
+        {:else}
+            <div class="icon sun">
                 <svg
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
@@ -95,8 +91,8 @@
 <style>
     .absolute {
         position: absolute;
-        top: -.25rem;
-        right: .25rem;
+        bottom: -.25rem;
+        left: .25rem;
     }
 
     .icon {

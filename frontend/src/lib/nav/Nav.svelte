@@ -9,6 +9,7 @@
     import {cubicOut} from "svelte/easing";
     import {onMount} from "svelte";
     import AppVersion from "../../components/AppVersion.svelte";
+    import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
 
 
     /**
@@ -123,15 +124,20 @@
         </div>
     </div>
 
-    {#if isExpanded}
-        <div
-                class="version"
-                in:fade={{ delay: 500, duration: 200 }}
-                out:fade={{ duration: 100 }}
-        >
+    <div
+            class="version"
+            in:fade={{ delay: 500, duration: 200 }}
+            out:fade={{ duration: 100 }}
+    >
+        {#if isExpanded}
+            <ThemeSwitch/>
             <AppVersion/>
-        </div>
-    {/if}
+        {:else}
+            <div class="theme-collapsed">
+                <ThemeSwitch/>
+            </div>
+        {/if}
+    </div>
 
 </nav>
 
@@ -169,6 +175,12 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
+    }
+
+    .theme-collapsed {
+        margin-bottom: .5rem;
+        width: 100%;
+        text-align: center;
     }
 
     .version {
