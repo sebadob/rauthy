@@ -1,26 +1,31 @@
-<script>
-    import {run} from 'svelte/legacy';
+<script lang="ts">
     import {useI18n} from "$state/i18n.svelte";
+    import type {PasswordPolicyResponse} from "$api/response/common/password_policy.ts";
 
-    /**
-     * @typedef {Object} Props
-     * @property {any} [policy]
-     * @property {string} [password]
-     * @property {boolean} [accepted]
-     */
-
-    /** @type {Props} */
     let {
-        policy = {},
+        policy,
         password,
         accepted = $bindable(false)
+    }: {
+        policy: PasswordPolicyResponse,
+        password: string,
+        accepted: boolean,
     } = $props();
 
     let t = useI18n();
 
     let errPolicy = $state([false, false, false, false, false, false]);
+    let isFirstRender = true;
 
-    const checkPolicy = (pwd) => {
+    $effect(() => {
+        if (isFirstRender) {
+            isFirstRender = false;
+        } else {
+            checkPolicy();
+        }
+    });
+
+    function checkPolicy() {
         if (!policy) {
             return false;
         }
@@ -28,20 +33,19 @@
         let pErr = [false, false, false, false, false, false];
         let err = false;
 
-        // check min and max length
-        if (pwd.length < policy.length_min) {
+        if (password.length < policy.length_min) {
             pErr[0] = true;
             err = true;
         }
-        if (pwd.length > policy.length_max) {
+        if (password.length > policy.length_max) {
             pErr[1] = true;
             err = true;
         }
 
         // get character counts
         let counts = [0, 0, 0, 0];
-        for (let i = 0; i < pwd.length; i++) {
-            let code = pwd.charCodeAt(i);
+        for (let i = 0; i < password.length; i++) {
+            let code = password.charCodeAt(i);
 
             // is lowercase?
             if (code >= 97 && code <= 122) {
@@ -65,19 +69,31 @@
             counts[3] = counts[3] + 1;
         }
 
-        if (policy.include_lower_case !== -1 && policy.include_lower_case > counts[0]) {
+        if (policy.include_lower_case
+            && policy.include_lower_case !== -1
+            && policy.include_lower_case > counts[0]
+        ) {
             pErr[2] = true;
             err = true;
         }
-        if (policy.include_upper_case !== -1 && policy.include_upper_case > counts[1]) {
+        if (policy.include_upper_case
+            && policy.include_upper_case !== -1
+            && policy.include_upper_case > counts[1]
+        ) {
             pErr[3] = true;
             err = true;
         }
-        if (policy.include_digits !== -1 && policy.include_digits > counts[2]) {
+        if (policy.include_digits
+            && policy.include_digits !== -1
+            && policy.include_digits > counts[2]
+        ) {
             pErr[4] = true;
             err = true;
         }
-        if (policy.include_special !== -1 && policy.include_special > counts[3]) {
+        if (policy.include_special
+            && policy.include_special !== -1
+            && policy.include_special > counts[3]
+        ) {
             pErr[5] = true;
             err = true;
         }
@@ -85,19 +101,11 @@
         errPolicy = pErr;
         accepted = !err;
     }
-
-    run(() => {
-        if (password) {
-            checkPolicy(password);
-        }
-    });
 </script>
 
 {#if policy}
     <div class="policyContainer">
-      <span style="margin-left: 20px">
         <b>{t.passwordPolicy.passwordPolicy}</b>
-      </span>
 
         <ul>
             <li class="li" class:policyErr={!!errPolicy[0]}>
@@ -149,6 +157,10 @@
 {/if}
 
 <style>
+    b {
+        margin-left: 1rem;
+    }
+
     ul {
         margin-left: 1rem;
     }
@@ -164,6 +176,6 @@
     }
 
     .policyErr {
-        color: var(--col-err);
+        color: hsl(var(--error));
     }
 </style>

@@ -4,6 +4,7 @@ export interface I18n {
         cancel: string,
         changeTheme: string,
         close: string,
+        delete: string,
         email: string,
         errTooShort: string,
         errTooLong: string,
@@ -137,7 +138,6 @@ export interface I18n {
         p1: string,
         p2: string,
 
-        delete: string,
         errorReg: string,
         invalidKeyUsed: string,
         lastUsed: string,

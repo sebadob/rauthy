@@ -4,8 +4,9 @@ export const I18nDe: I18n = {
     lang: "de",
     common: {
         cancel: "Abbrechen",
-        close: "Schließen",
         changeTheme: "Farbschema wechseln",
+        close: "Schließen",
+        delete: "Löschen",
         email: "E-Mail",
         errTooShort: "Eingabe zu kurz",
         errTooLong: "Eingabe zu lang",
@@ -161,7 +162,6 @@ export const I18nDe: I18n = {
     mfa: {
         p1: "Wenn Sie mehrere Systeme parallel nutzen möchten, wie z.B. Windows und Android, sollten Sie die Registrierung mit Android durchführen.",
         p2: "Android ist diejenige Plattform, die derzeit die wenigsten Features der passwortlosen Technologie unterstützt. Schlüssel, die dort registriert werden, funktionieren auf anderen Geräten gleichermaßen. Dies gilt jedoch nicht andersherum.",
-        delete: "Löschen",
         errorReg: "Fehler beim Starten der Registrierung",
         invalidKeyUsed: "Ungültiger Sicherheitsschlüssel benutzt",
         lastUsed: "Zuletzt genutzt",

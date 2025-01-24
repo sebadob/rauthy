@@ -6,6 +6,7 @@ export const I18nZh: I18n = {
         cancel: "取消",
         changeTheme: "Change Theme",
         close: "Close",
+        delete: "删除",
         email: "电子邮箱",
         errTooShort: "输入过短",
         errTooLong: "输入过长",
@@ -161,7 +162,6 @@ export const I18nZh: I18n = {
     mfa: {
         p1: "如果您计划在多个系统上使用您的MFA密钥，例如Windows和Android，您应该在Android上进行注册。",
         p2: "Android是支持无密码登陆特性最少的平台。能够在Android上进行注册的密钥也应能在其他平台上使用。",
-        delete: "删除",
         errorReg: "开始注册过程时出现错误。",
         invalidKeyUsed: "使用的密钥无效",
         lastUsed: "最后使用",

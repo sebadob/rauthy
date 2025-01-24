@@ -6,6 +6,7 @@ export const I18nEn: I18n = {
         cancel: "Cancel",
         changeTheme: "Change Theme",
         close: "Close",
+        delete: "Delete",
         email: "E-Mail",
         errTooShort: "Input too short",
         errTooLong: "Input too long",
@@ -161,7 +162,6 @@ export const I18nEn: I18n = {
     mfa: {
         p1: "If you plan on using your MFA key with multiple systems like Windows and Android, you should do the registration with Android.",
         p2: "Android is the platform with the least supported features for the passwordless technology. Keys you register with Android work elsewhere too. However, this does not apply the other way around.",
-        delete: "Delete",
         errorReg: "Error starting the Registration process",
         invalidKeyUsed: "Invalid Key used",
         lastUsed: "Last used",

@@ -6,6 +6,7 @@ export const I18nKo: I18n = {
         cancel: "취소",
         changeTheme: "Change Theme",
         close: "Close",
+        delete: "삭제",
         email: "이메일",
         errTooShort: "입력이 너무 짧습니다.",
         errTooLong: "입력이 너무 깁니다.",
@@ -161,7 +162,6 @@ export const I18nKo: I18n = {
     mfa: {
         p1: "윈도우와 안드로이드와 같은 여러 시스템에서 MFA 키를 사용하려면, 안드로이드에서 등록해야 합니다.",
         p2: "안드로이드는 비밀번호 없이 인증하는 기술을 가장 적게 지원하는 플랫폼 중 하나입니다. 안드로이드에서 등록한 키는 다른 곳에서도 작동합니다. 그러나, 그 반대로는 적용되지 않습니다.",
-        delete: "삭제",
         errorReg: "가입 절차 시작 중 오류가 발생했습니다.",
         invalidKeyUsed: "유효하지 않은 키가 사용되었습니다.",
         lastUsed: "마지막 사용",
