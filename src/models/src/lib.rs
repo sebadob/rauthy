@@ -60,7 +60,9 @@ pub enum ListenScheme {
     Http,
     Https,
     HttpHttps,
+    #[cfg(not(target_os = "windows"))]
     UnixHttp,
+    #[cfg(not(target_os = "windows"))]
     UnixHttps,
 }
 
@@ -70,7 +72,9 @@ impl Display for ListenScheme {
             ListenScheme::Http => write!(f, "http"),
             ListenScheme::Https => write!(f, "https"),
             ListenScheme::HttpHttps => write!(f, "{{http|https}}"),
+            #[cfg(not(target_os = "windows"))]
             ListenScheme::UnixHttp => write!(f, "unix+http"),
+            #[cfg(not(target_os = "windows"))]
             ListenScheme::UnixHttps => write!(f, "unix+https"),
         }
     }
