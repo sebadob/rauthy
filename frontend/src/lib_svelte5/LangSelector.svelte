@@ -22,8 +22,8 @@
     let initial = untrack(() => t.lang);
     let selected = $state(initial);
 
-    let offsetTop = $derived(openTop ? `-${LANGUAGES.length * 2.1 + 1.2}rem` : undefined);
-    let offsetLeft = $derived(openTop ? '-.2rem' : undefined);
+    let offsetTop = $derived(openTop ? `-${LANGUAGES.length * 2 + 2}rem` : undefined);
+    let offsetLeft = $derived(openTop ? '.2rem' : undefined);
 
     $effect(() => {
         let cookie = getCookie('locale');

@@ -41,7 +41,7 @@
 
 <style>
     .tabs {
-        padding: .5rem;
+        padding: .5rem .25rem;
         display: flex;
         column-gap: .25rem;
         row-gap: .75rem;

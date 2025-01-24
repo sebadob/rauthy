@@ -211,6 +211,7 @@
 
 <style>
     .btn {
+        padding: .15rem;
         display: inline-flex;
         color: hsl(var(--text));
         border-radius: var(--border-radius);
@@ -237,7 +238,6 @@
         text-align: left;
         padding: .25rem .5rem;
         color: hsl(var(--text));
-        /*font-size: .95rem;*/
         font-weight: normal;
         border-radius: var(--border-radius);
         cursor: pointer;
@@ -268,6 +268,5 @@
         display: flex;
         flex-direction: column;
         overflow-y: auto;
-        gap: .5rem;
     }
 </style>
