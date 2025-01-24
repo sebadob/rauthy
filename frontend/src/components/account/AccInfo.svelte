@@ -6,10 +6,10 @@
     import getPkce from "oauth-pkce";
     import {PKCE_VERIFIER_UPSTREAM} from "$utils/constants";
     import {useI18n} from "$state/i18n.svelte";
-    import type {UserResponse} from "$api/response/common/user.ts";
+    import type {UserResponse} from "$api/types/user.ts";
     import type {AuthProvidersTemplate, AuthProviderTemplate} from "$api/templates/AuthProvider.ts";
-    import type {WebIdResponse} from "$api/response/common/web_id.ts";
-    import type {ProviderLoginRequest} from "$api/response/common/auth_provider.ts";
+    import type {WebIdResponse} from "$api/types/web_id.ts";
+    import type {ProviderLoginRequest} from "$api/types/auth_provider.ts";
     import {fetchDelete, fetchPost} from "$api/fetch.ts";
 
     let {

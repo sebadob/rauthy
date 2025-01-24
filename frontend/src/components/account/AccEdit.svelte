@@ -3,12 +3,14 @@
     import {fade} from 'svelte/transition';
     import Input from "$lib5/form/Input.svelte";
     import {useI18n} from "$state/i18n.svelte";
-    import type {UpdateUserSelfRequest, UserResponse} from "$api/response/common/user.ts";
+    import type {UpdateUserSelfRequest, UserResponse} from "$api/types/user.ts";
     import Form from "$lib5/form/Form.svelte";
     import {PATTERN_CITY, PATTERN_PHONE, PATTERN_STREET, PATTERN_USER_NAME} from "$utils/patterns.ts";
     import InputDate from "$lib5/form/InputDate.svelte";
     import IconCheck from "$icons/IconCheck.svelte";
     import {fetchPut} from "$api/fetch.ts";
+    import IconStop from "$icons/IconStop.svelte";
+    import InputDateCombo from "$lib5/form/InputDateCombo.svelte";
 
     let {
         user = $bindable(),
@@ -17,6 +19,10 @@
         user: UserResponse,
         viewModePhone?: boolean,
     } = $props();
+
+    if (!user.user_values?.birthdate) {
+        user.user_values.birthdate = '';
+    }
 
     let t = useI18n();
 
@@ -101,10 +107,11 @@
                             maxLength={32}
                             pattern={PATTERN_USER_NAME}
                     />
-                    <InputDate
+                    <InputDateCombo
                             name="birthdate"
                             label={t.account.birthdate}
-                            value={user.user_values.birthdate}
+                            bind:value={user.user_values.birthdate}
+                            withDelete
                     />
                 </div>
                 <div>

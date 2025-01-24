@@ -5,16 +5,17 @@
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
-    import {type SessionResponse} from "$api/response/common/session.ts";
-    import {type UserResponse} from "$api/response/common/user.ts";
+    import {type SessionResponse} from "$api/types/session.ts";
+    import {type UserResponse} from "$api/types/user.ts";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
     import {fetchGet} from "$api/fetch.ts";
-    import type {WebIdResponse} from "$api/response/common/web_id.ts";
+    import type {WebIdResponse} from "$api/types/web_id.ts";
     import LangSelector from "$lib5/LangSelector.svelte";
+    import {useSession} from "$state/session.svelte.ts";
 
     let t = useI18n();
+    let session = useSession();
 
-    let session: undefined | SessionResponse = $state();
     let user: undefined | UserResponse = $state();
     let webIdData: undefined | WebIdResponse = $state();
     let isReady = $state(false);
@@ -22,13 +23,13 @@
     onMount(async () => {
         let res = await fetchGet<SessionResponse>('/auth/v1/oidc/sessioninfo');
         if (res.body) {
-            session = res.body
+            session.set(res.body);
             if (!session) {
                 console.error('did not receive valid session response');
                 return;
             }
 
-            const userId = session.user_id;
+            const userId = res.body.user_id;
             if (userId) {
                 let res = await Promise.all([
                     fetchGet<UserResponse>(`/auth/v1/users/${userId}`),
@@ -74,7 +75,7 @@
 <Main>
     <ContentCenter>
         {#if isReady && session && user}
-            <AccMain {session} bind:user bind:webIdData/>
+            <AccMain bind:user bind:webIdData/>
         {/if}
         <ThemeSwitch absolute/>
         <LangSelector absolute/>

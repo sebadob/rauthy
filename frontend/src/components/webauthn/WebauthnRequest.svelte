@@ -1,63 +1,51 @@
-<script>
+<script lang="ts">
     import {onMount} from "svelte";
-    import {tweened} from "svelte/motion";
     import Loading from "$lib/Loading.svelte";
-    import {webauthnAuth} from "../../utils/webauthn.js";
-    import {promiseTimeout} from "../../utils/helpers";
+    import {webauthnAuth, type WebauthnAuthResult} from "$webauthn/ceremony_auth.ts";
+    import {promiseTimeout} from "$utils/helpers";
     import {useI18n} from "$state/i18n.svelte";
+    import type {MfaPurpose} from "$webauthn/types.ts";
 
-    /**
-     * @typedef {Object} Props
-     * @property {any} data
-     * @property {string} [purpose]
-     * @property {any} [onError]
-     * @property {any} [onSuccess]
-     */
-
-    /** @type {Props} */
     let {
-        data = $bindable(),
-        purpose = 'Login',
-        onError = (error) => {
-        },
-        onSuccess = (resBody) => {
-        }
+        userId,
+        purpose,
+        onError,
+        onSuccess,
+    }: {
+        userId: string,
+        purpose: MfaPurpose,
+        onError: (error: string) => void,
+        onSuccess: (res: WebauthnAuthResult) => void,
     } = $props();
+
+    let t = useI18n();
+
     let err = $state(false);
     let msg = $state('');
     let success = $state(false);
 
-    let t = useI18n();
+    let exp: undefined | number = $state();
+    let progress = $state(100);
 
-    let progress = tweened(data.exp, {
-        duration: data.exp * 1000,
-    })
-
-    // close this component automatically, when the request has expired
-    onMount(() => {
-        let timer = setTimeout(() => {
-            data = undefined;
-        }, data.exp * 1000);
-        progress.set(0);
+    $effect(() => {
+        let timer: number;
+        if (exp) {
+            timer = setTimeout(() => {
+                onError('Timeout');
+            }, exp * 1000);
+        }
 
         return () => clearTimeout(timer);
     });
 
     onMount(async () => {
-        let p;
-        if (purpose === 'Login') {
-            p = {purpose: {Login: data.code}};
-        } else {
-            p = {purpose};
-        }
-
         let res = {};
         try {
             res = await promiseTimeout(
-                webauthnAuth(data.user_id, p, t?.authorize.invalidKeyUsed || 'Invalid Key'),
+                webauthnAuth(userId, purpose, t.authorize.invalidKeyUsed),
                 // we need to cancel 1 sec before the expiry to not get into a browser exception,
                 // because we would not be able to "go back" again
-                data.exp * 1000 - 1000
+                exp * 1000 - 1000
             );
         } catch (err) {
             console.error(err);
@@ -82,43 +70,43 @@
     //
 </script>
 
-<div class="wrapperOuter">
-    <div class="wrapperInner">
-        <div class="content">
-
-            <div class="contentRow">
-                <div class="contentHeader">
-                    {t.authorize.provideMfa || 'Please login with your MFA device'}
-                </div>
-            </div>
-
-            <div class="contentRow">
-                <div class="contentHeader">
-                    {t.authorize.requestExpires || 'Request expires'}
-                    :
-                </div>
-                <div>
-                    <progress value={$progress} max={data.exp}></progress>
-                </div>
-            </div>
-
-            <div class="contentRow">
-                {#if success}
-                    <div class="good">
-                        {t.authorize.mfaAck || 'Acknowledged'}
+{#if purpose}
+    <div class="wrapperOuter">
+        <div class="wrapperInner">
+            <div class="content">
+                <div class="contentRow">
+                    <div class="contentHeader">
+                        {t.authorize.provideMfa}
                     </div>
-                {:else if err}
-                    <div class="err">
-                        {msg}
+                </div>
+
+                <div class="contentRow">
+                    <div class="contentHeader">
+                        {t.authorize.requestExpires}
+                        :
                     </div>
-                {:else}
-                    <Loading background={false}/>
-                {/if}
+                    <div>
+                        <progress value={progress} max={exp}></progress>
+                    </div>
+                </div>
+
+                <div class="contentRow">
+                    {#if success}
+                        <div class="good">
+                            {t.authorize.mfaAck}
+                        </div>
+                    {:else if err}
+                        <div class="err">
+                            {msg}
+                        </div>
+                    {:else}
+                        <Loading background={false}/>
+                    {/if}
+                </div>
             </div>
         </div>
-
     </div>
-</div>
+{/if}
 
 <style>
     .content {

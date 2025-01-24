@@ -9,17 +9,13 @@
     import IconStop from "$lib/icons/IconStop.svelte";
     import {REGEX_CLIENT_NAME} from "../../utils/constants.js";
     import {useI18n} from "$state/i18n.svelte";
+    import {useSession} from "$state/session.svelte";
 
-    /**
-     * @typedef {Object} Props
-     * @property {string} [userId]
-     */
-
-    /** @type {Props} */
-    let {userId = ''} = $props();
 
     let t = useI18n();
+    let session = useSession();
 
+    let userId = $derived(session.get()?.user_id);
     let devices = $state([]);
 
     let formErrors = $state({});

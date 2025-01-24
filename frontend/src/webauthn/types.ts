@@ -1,0 +1,195 @@
+import {PATTERN_ALNUM_64, PATTERN_USER_NAME} from "$utils/patterns.ts";
+
+export type MfaPurpose = { Login: string } | 'PasswordNew' | 'PasswordReset' | 'Test';
+export type WebauthnAdditionalData = { Login: WebauthnLoginReq } | { Service: WebauthnServiceReq } | 'Test';
+
+export interface WebauthnAuthStartRequest {
+    purpose: MfaPurpose,
+}
+
+export interface WebauthnAuthFinishRequest {
+    code: string,
+    data: PublicKeyCredential,
+}
+
+export interface WebauthnAuthStartResponse {
+    code: string,
+    rcr: WebauthnRequestChallengeResponse,
+    user_id: string,
+    exp: number,
+}
+
+export interface WebauthnLoginReq {
+    code: string,
+    user_id: string,
+    header_loc: string,
+    header_origin?: string,
+}
+
+export interface WebauthnServiceReq {
+    code: string,
+    user_id: string,
+}
+
+export interface WebauthnRegStartRequest {
+    /// Validation: PATTERN_USER_NAME / 32
+    passkey_name: string,
+    /// Validation: PATTERN_ALNUM_64
+    magic_link_id?: string,
+}
+
+export interface WebauthnRegFinishRequest {
+    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{1,32}"))]
+    pub passkey_name: String,
+    /// Note: `ToSchema` does currently not exist for `webauthn_rs::prelude::PublicKeyCredential`
+    #[schema(value_type = str)]
+    pub data: webauthn_rs::prelude::RegisterPublicKeyCredential,
+    /// Validation: `[a-zA-Z0-9]{64}`
+    #[validate(regex(path = "*RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
+    pub magic_link_id: Option<String>,
+}
+
+// ######################################################################
+// The following types all match the `webauthn-rs` types from the backend.
+// Most of them exist in the Browser context already, but with ArrayBuffer
+// types instead of Base64UrlSafeData for backend communication.
+
+type AuthenticatorTransport = 'Usb' | 'Nfc' | 'Ble' | 'Internal' | 'Hybrid' | 'Test' | 'Unknown';
+type AttestationFormat = 'packed' | 'Packed'
+    | 'tpm' | 'Tpm' | 'TPM'
+    | 'android-key' | 'AndroidKey'
+    | 'android-safetynet' | 'AndroidSafetyNet' | 'AndroidSafetynet'
+    | 'fido-u2f' | 'FIDOU2F'
+    | 'apple' | 'AppleAnonymous'
+    | 'none' | 'None';
+type Base64UrlSafeData = string;
+// TODO it could be the case that serde serialized as bytes -> double check
+type CredentialProtectionPolicy = 'UserVerificationOptional'
+    | 'UserVerificationOptionalWithCredentialIDList'
+    | 'UserVerificationRequired';
+type Mediation = 'Conditional';
+type UserVerificationPolicy = 'required' | 'preferred' | 'discouraged';
+type PublicKeyCredentialHints = 'securitykey' | 'clientdevice' | 'hybrid';
+
+export interface WebauthnRequestChallengeResponse {
+    publicKey: PublicKeyCredentialRequestOptions,
+    mediation?: Mediation,
+}
+
+export interface PublicKeyCredentialRequestOptions {
+    challenge: Base64UrlSafeData,
+    timeout?: number,
+    rp_id: string,
+    allow_credentials: AllowCredentials[],
+    user_verification: UserVerificationPolicy,
+    hints?: PublicKeyCredentialHints[],
+    extensions?: RequestAuthenticationExtensions,
+}
+
+export interface AllowCredentials {
+    type: string,
+    id: Base64UrlSafeData,
+    transports?: AuthenticatorTransport[],
+}
+
+export interface RequestAuthenticationExtensions {
+    appid?: string,
+    /// ⚠️  - Browsers do not support this!
+    uvm?: boolean,
+    /// ⚠️  - Browsers do not support this!
+    /// <https://bugs.chromium.org/p/chromium/issues/detail?id=1023225>
+    hmac_get_secret?: HmacGetSecretInput,
+}
+
+export interface HmacGetSecretInput {
+    /// Retrieve a symmetric secrets from the authenticator with this input.
+    output1: Base64UrlSafeData,
+    /// Rotate the secret in the same operation.
+    output2?: Base64UrlSafeData,
+}
+
+export interface PublicKeyCredential {
+    id: string,
+    rawId: Base64UrlSafeData,
+    response: AuthenticatorAssertionResponseRaw,
+    extensions: AuthenticationExtensionsClientOutputs,
+    type: string,
+}
+
+export interface AuthenticatorAssertionResponseRaw {
+    authenticatorData: Base64UrlSafeData,
+    clientDataJSON: Base64UrlSafeData,
+    signature: Base64UrlSafeData,
+    userHandle?: Base64UrlSafeData,
+}
+
+export interface CreationChallengeResponse {
+    publicKey: PublicKeyCredentialCreationOptions,
+}
+
+export interface PublicKeyCredentialCreationOptions {
+    rp: RelyingParty,
+    user: User,
+    challenge: Base64UrlSafeData,
+    pubKeyCredParams: PubKeyCredParams[],
+    timeout?: number,
+    excludeCredentials?: PublicKeyCredentialDescriptor[],
+    authenticatorSelection?: AuthenticatorSelectionCriteria,
+    hints?: PublicKeyCredentialHints[],
+    attestation?: AttestationConveyancePreference,
+    attestationFormats?: AttestationFormat[],
+    extensions?: RequestRegistrationExtensions,
+}
+
+export interface RelyingParty {
+    name: string,
+    id: string,
+}
+
+export interface User {
+    /// The user's id in base64 form. This MUST be a unique id, and
+    /// must NOT contain personally identifying information, as this value can NEVER
+    /// be changed.
+    id: Base64UrlSafeData,
+    /// A detailed name for the account, such as an email address. This value
+    /// **can** change, so **must not** be used as a primary key.
+    name: string,
+    /// The user's preferred name for display. This value **can** change, so
+    /// **must not** be used as a primary key.
+    display_name: string,
+}
+
+export interface PubKeyCredParams {
+    type: string,
+    alg: number,
+}
+
+export interface PublicKeyCredentialDescriptor {
+    type: string,
+    id: Base64UrlSafeData,
+    transports?: AuthenticatorTransport[],
+}
+
+export interface RequestRegistrationExtensions {
+    credProtect?: CredProtect,
+    /// ⚠️  - Browsers do not support this!
+    uvm?: boolean,
+    /// ⚠️  - This extension result is always unsigned, and only indicates if the
+    /// browser *requests* a residentKey to be created. It has no bearing on the
+    /// true rk state of the credential.
+    credProps?: boolean,
+    /// CTAP2.1 Minumum pin length
+    minPinLength?: boolean,
+    /// ⚠️  - Browsers support the *creation* of the secret, but not the retrieval of it.
+    /// CTAP2.1 create hmac secret
+    hmacCreateSecret?: boolean,
+}
+
+export interface CredProtect {
+    credentialProtectionPolicy: CredentialProtectionPolicy,
+    /// Whether it is better for the authenticator to fail to create a
+    /// credential rather than ignore the protection policy
+    /// If no value is provided, the client treats it as `false`.
+    enforceCredentialProtectionPolicy?: boolean,
+}

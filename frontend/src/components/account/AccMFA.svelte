@@ -1,56 +1,57 @@
-<script>
-    import {run} from 'svelte/legacy';
-
+<script lang="ts">
     import {
         arrBufToBase64UrlSafe,
         base64UrlSafeToArrBuf,
-        extractFormErrors,
         formatDateFromTs
-    } from "../../utils/helpers";
-    import Button from "$lib/Button.svelte";
+    } from "$utils/helpers";
+    import Button from "$lib5/Button.svelte";
     import {
-        getUserPasskeys,
         webauthnAuthFinish,
         webauthnAuthStart,
         webauthnDelete,
-        webauthnRegFinish,
-        webauthnRegStart
-    } from "../../utils/dataFetching.js";
+    } from "$utils/dataFetching.js";
     import {onMount} from "svelte";
-    import Input from "$lib/inputs/Input.svelte";
-    import * as yup from "yup";
-    import {REGEX_NAME} from "../../utils/constants.js";
+    import Input from "$lib5/form/Input.svelte";
     import IconFingerprint from "$lib/icons/IconFingerprint.svelte";
     import Tooltip from "$lib/Tooltip.svelte";
     import {useI18n} from "$state/i18n.svelte";
+    import {useSession} from "$state/session.svelte";
+    import {fetchGet} from "$api/fetch.ts";
+    import type {PasskeyResponse} from "$api/types/webauthn.ts";
+    import type {UserResponse} from "$api/types/user.ts";
+    import {PATTERN_USER_NAME} from "$utils/patterns.ts";
+    import {webauthnReg} from "$webauthn/ceremony_reg.ts";
 
-    let {session, user = {}} = $props();
+    let {user}: { user: UserResponse } = $props();
 
     let t = useI18n();
+    let session = useSession();
+    let userId = $derived(session.get()?.user_id);
 
-    let isLoading = false;
+    let refInput: undefined | HTMLInputElement = $state();
+
     let err = $state(false);
     let msg = $state('');
     let showRegInput = $state(false);
     let showDelete = $state(user.account_type === "password");
 
-    let passkeys = $state([]);
-    run(() => {
+    let passkeyName = $state('');
+    let isInputError = $state(false);
+
+    let passkeys: PasskeyResponse[] = $state([]);
+
+    onMount(() => {
+        fetchPasskeys();
+    });
+
+    $effect(() => {
         if (passkeys.length > 0 && user.account_type === "passkey") {
             showDelete = passkeys.length > 1;
         }
     });
 
-    let formValues = $state({passkeyName: ''});
-    let formErrors = $state({});
-    const schema = yup.object().shape({
-        passkeyName: yup.string()
-            .required(t.common.invalidInput)
-            .matches(REGEX_NAME, t.mfa.passkeyNameErr),
-    });
-
-    onMount(() => {
-        fetchPasskeys();
+    $effect(() => {
+        refInput?.focus();
     });
 
     function resetMsgErr() {
@@ -59,75 +60,35 @@
     }
 
     async function fetchPasskeys() {
-        let res = await getUserPasskeys(session.user_id);
-        let body = await res.json();
-        if (res.ok) {
-            passkeys = body;
+        let res = await fetchGet<PasskeyResponse[]>(`/auth/v1/users/${session.get()?.user_id}/webauthn`);
+        if (res.body) {
+            passkeys = res.body;
         } else {
-            console.error('error fetching passkeys: ' + body.message);
+            console.error(res.error);
         }
     }
 
     async function handleRegStart() {
         resetMsgErr();
 
-        const valid = await validateForm();
-        if (!valid) {
+        if (isInputError || !userId) {
             return;
         }
-
-        const passkeyName = formValues.passkeyName;
-        if (passkeyName.length < 2) {
+        if (passkeyName.length < 1) {
             err = true;
             msg = t.mfa.passkeyNameErr;
             return;
         }
 
-        let res = await webauthnRegStart(user.id, {passkey_name: passkeyName});
-        if (res.status === 200) {
-            let challenge = await res.json();
-
-            // the navigator credentials engine needs some values as array buffers
-            challenge.publicKey.challenge = base64UrlSafeToArrBuf(challenge.publicKey.challenge);
-            challenge.publicKey.user.id = base64UrlSafeToArrBuf(challenge.publicKey.user.id);
-            challenge.publicKey.excludeCredentials = challenge.publicKey.excludeCredentials
-
-            if (challenge.publicKey.excludeCredentials) {
-                challenge.publicKey.excludeCredentials = challenge.publicKey.excludeCredentials.map(cred => {
-                    cred.id = base64UrlSafeToArrBuf(cred.id);
-                    return cred;
-                });
-            }
-
-            // prompt for the user security key and get its public key
-            let challengePk = await navigator.credentials.create(challenge);
-
-            // the backend expects base64 url safe string instead of array buffers
-            let data = {
-                passkey_name: passkeyName,
-                data: {
-                    id: challengePk.id,
-                    rawId: arrBufToBase64UrlSafe(challengePk.rawId),
-                    response: {
-                        attestationObject: arrBufToBase64UrlSafe(challengePk.response.attestationObject),
-                        clientDataJSON: arrBufToBase64UrlSafe(challengePk.response.clientDataJSON),
-                    },
-                    type: challengePk.type,
-                },
-            }
-
-            // send the keys' pk to the backend and finish the registration
-            res = await webauthnRegFinish(user.id, data);
-            if (res.status === 201) {
-                showRegInput = false;
-                formValues.passkeyName = '';
-                await fetchPasskeys();
-            } else {
-                console.error(res);
-            }
+        let res = await webauthnReg(userId, passkeyName);
+        console.log(res);
+        if (res.success) {
+            showRegInput = false;
+            passkeyName = '';
+            await fetchPasskeys();
         } else {
             err = true;
-            msg = t.mfa.errorReg;
+            msg = `${t.mfa.errorReg} - ${res.msg}`;
         }
     }
 
@@ -184,7 +145,7 @@
         }
     }
 
-    async function handleDelete(name) {
+    async function handleDelete(name: string) {
         let res = await webauthnDelete(user.id, name);
         if (res.status === 200) {
             await fetchPasskeys();
@@ -192,17 +153,6 @@
             let body = await res.json();
             err = true;
             msg = body.message;
-        }
-    }
-
-    async function validateForm() {
-        try {
-            await schema.validate(formValues, {abortEarly: false});
-            formErrors = {};
-            return true;
-        } catch (err) {
-            formErrors = extractFormErrors(err);
-            return false;
         }
     }
 
@@ -217,23 +167,28 @@
 
     {#if showRegInput}
         <Input
-                bind:value={formValues.passkeyName}
-                bind:error={formErrors.passkeyName}
+                bind:ref={refInput}
+                bind:value={passkeyName}
                 autocomplete="off"
+                label={t.mfa.passkeyName}
                 placeholder={t.mfa.passkeyName}
-                on:input={validateForm}
-                autofocus
-                on:enter={handleRegStart}
-        >
-            {t.mfa.passkeyName}
-        </Input>
+                maxLength={32}
+                pattern={PATTERN_USER_NAME}
+                bind:isError={isInputError}
+                onEnter={handleRegStart}
+        />
         <div class="regBtns">
-            <Button on:click={handleRegStart} level={1}>{t.mfa.register}</Button>
-            <Button on:click={() => showRegInput = false} level={4}>{t.common.cancel}</Button>
+            <Button onclick={handleRegStart}>{t.mfa.register}</Button>
+            <Button level={3} onclick={() => showRegInput = false}>{t.common.cancel}</Button>
         </div>
     {:else}
         <div class="regNewBtn">
-            <Button on:click={() => showRegInput = true} level={3}>{t.mfa.registerNew}</Button>
+            <Button
+                    level={passkeys.length === 0 ? 1 : 2}
+                    onclick={() => showRegInput = true}
+            >
+                {t.mfa.registerNew}
+            </Button>
         </div>
     {/if}
 
@@ -272,10 +227,10 @@
                         <div></div>
                         <div class="deleteBtn">
                             <Button
-                                    on:click={() => handleDelete(passkey.name)}
-                                    level={4}
+                                    level={-3}
+                                    onclick={() => handleDelete(passkey.name)}
                             >
-                                {t.mfa.delete.toUpperCase()}
+                                {t.common.delete.toUpperCase()}
                             </Button>
                         </div>
                     </div>
@@ -286,11 +241,11 @@
 
     {#if passkeys.length > 0}
         <div class="button">
-            <Button on:click={handleTestStart} level={1}>{t.mfa.test}</Button>
+            <Button onclick={handleTestStart}>{t.mfa.test}</Button>
         </div>
     {/if}
 
-    <div class:msg={!err} class:err>
+    <div class:success={!err} class:err>
         {msg}
     </div>
 </div>
@@ -301,7 +256,6 @@
     }
 
     .container {
-        padding-left: 10px;
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
@@ -313,7 +267,7 @@
     }
 
     .deleteBtn {
-        margin-right: -.8rem;
+        margin-right: -.35rem;
     }
 
     .keysContainer {
@@ -331,17 +285,13 @@
         font-weight: bold;
     }
 
-    .msg, .err {
-        margin: 5px;
-        text-align: center;
+    .success, .err {
+        margin-top: .5rem;
+        text-align: left;
     }
 
-    .err {
-        color: var(--col-err);
-    }
-
-    .msg {
-        color: var(--col-ok);
+    .success {
+        color: hsl(var(--accent));
     }
 
     .nameUv {
@@ -351,12 +301,14 @@
     }
 
     .regBtns {
+        margin: .25rem 0;
         display: flex;
         align-items: center;
+        gap: .5rem;
     }
 
     .regNewBtn {
-        margin: 0 0 .5rem -.33rem;
+        margin: .5rem 0;
     }
 
     .row {

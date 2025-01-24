@@ -1,29 +1,24 @@
-<script>
+<script lang="ts">
     import PasswordPolicy from "../passwordReset/PasswordPolicy.svelte";
-    import * as yup from "yup";
     import {onMount} from "svelte";
-    import {getPasswordPolicy} from "../../utils/dataFetching.js";
-    import {extractFormErrors, generatePassword} from "../../utils/helpers";
-    import PasswordInput from "$lib/inputs/PasswordInput.svelte";
-    import Button from "$lib/Button.svelte";
+    import {generatePassword} from "$utils/helpers";
+    import InputPassword from "$lib5/form/InputPassword.svelte";
+    import Button from "$lib5/Button.svelte";
     import {useI18n} from "$state/i18n.svelte";
+    import type {PasswordPolicyResponse} from "$api/types/password_policy.ts";
+    import {fetchGet} from "$api/fetch.ts";
+    import type {PropsPassword} from "./props.ts";
 
-    /**
-     * @typedef {Object} Props
-     * @property {any} [formValues]
-     * @property {string} [btnWidth]
-     * @property {boolean} [hideCurrentPassword]
-     * @property {any} inputWidth
-     * @property {() => Promise<boolean>} isValid
-     */
-
-    /** @type {Props} */
     let {
-        formValues = $bindable({}),
-        btnWidth = "4rem",
+        passwords = $bindable(),
         hideCurrentPassword = false,
         inputWidth,
         isValid = $bindable(),
+    }: {
+        passwords: PropsPassword
+        hideCurrentPassword?: boolean,
+        inputWidth: string,
+        isValid: undefined | (() => boolean),
     } = $props();
 
     let t = useI18n();
@@ -32,67 +27,44 @@
 
     let accepted = $state(false);
     let err = $state('');
-    let policy = $state();
-    let formErrors = $state({});
-    let showCopy = $derived(formValues.new?.length > 6 && formValues.new === formValues.verify);
-
-    const schema = yup.object().shape({
-        current: yup.string().required(t.account.passwordCurrReq),
-        new: yup.string()
-            .required(t.account.passwordNewReq),
-        verify: yup.string()
-            .required(t.account.passwordNoMatch),
-    });
-    const schemaWithoutCurrent = yup.object().shape({
-        new: yup.string()
-            .required(t.account.passwordNewReq),
-        verify: yup.string()
-            .required(t.account.passwordNoMatch),
-    });
-
+    let policy: undefined | PasswordPolicyResponse = $state();
+    let showCopy = $derived(passwords.new?.length > 6 && passwords.new === passwords.newConfirm);
 
     onMount(async () => {
-        let res = await getPasswordPolicy();
-        let body = await res.json();
-        if (!res.ok) {
-            err = body.message;
+        let res = await fetchGet<PasswordPolicyResponse>('/auth/v1/password_policy');
+        if (res.body) {
+            policy = res.body;
         } else {
-            policy = body;
+            console.error(res.error);
         }
     });
 
-    export async function isPwdValid() {
+    export function isPwdValid(): boolean {
         err = '';
 
-        if (hideCurrentPassword) {
-            try {
-                await schemaWithoutCurrent.validate(formValues, {abortEarly: false});
-                formErrors = {};
-            } catch (err) {
-                formErrors = extractFormErrors(err);
-                return false;
-            }
-        } else {
-            try {
-                await schema.validate(formValues, {abortEarly: false});
-                formErrors = {};
-            } catch (err) {
-                formErrors = extractFormErrors(err);
-                return false;
-            }
+        if (!hideCurrentPassword && !passwords.current) {
+            err = t.account.passwordCurrReq;
+            return false;
+        }
+        if (!passwords.new) {
+            err = t.account.passwordNewReq;
+            return false;
+        }
+        if (!passwords.newConfirm) {
+            err = t.account.passwordNewReq;
+            return false;
         }
 
         if (!accepted) {
             err = t.account.passwordPolicyFollow;
             return false;
         }
-
-        if (formValues.new.length > 256) {
+        if (passwords.new.length > 256) {
             err = 'max 256';
             return false;
         }
 
-        if (formValues.new !== formValues.verify) {
+        if (passwords.new !== passwords.newConfirm) {
             err = t.account.passwordNoMatch;
             return false;
         }
@@ -101,56 +73,49 @@
     }
 
     function generate() {
-        const len = policy.length_min > 20 ? policy.length_min : 20;
-        let pwd = generatePassword(
-            len, policy.include_lower_case, policy.include_upper_case, policy.include_digits, policy.include_special
-        );
-        formValues.new = pwd;
-        formValues.verify = pwd;
+        if (policy) {
+            let pwd = generatePassword(policy);
+            passwords.new = pwd;
+            passwords.newConfirm = pwd;
+        }
     }
 
 </script>
 
 {#if policy}
     <div class="container">
-        <PasswordPolicy {t} bind:accepted {policy} password={formValues.new}/>
+        <PasswordPolicy bind:accepted {policy} password={passwords.new}/>
 
         {#if !hideCurrentPassword}
-            <PasswordInput
-                    bind:value={formValues.current}
-                    error={formErrors.current}
+            <InputPassword
+                    bind:value={passwords.current}
                     autocomplete="current-password"
+                    label={t.account.passwordCurr}
                     placeholder={t.account.passwordCurr}
-                    on:input={isPwdValid}
+                    onInput={isPwdValid}
                     width={inputWidth}
-            >
-                {t.account.passwordCurr.toUpperCase()}
-            </PasswordInput>
+            />
         {/if}
-        <PasswordInput
-                bind:value={formValues.new}
-                error={formErrors.new}
+        <InputPassword
+                bind:value={passwords.new}
                 autocomplete="new-password"
+                label={t.account.passwordNew}
                 placeholder={t.account.passwordNew}
-                on:input={isPwdValid}
+                onInput={isPwdValid}
                 {showCopy}
                 width={inputWidth}
-        >
-            {t.account.passwordNew.toUpperCase()}
-        </PasswordInput>
-        <PasswordInput
-                bind:value={formValues.verify}
-                error={formErrors.verify}
+        />
+        <InputPassword
+                bind:value={passwords.newConfirm}
                 autocomplete="new-password"
+                label={t.account.passwordConfirm}
                 placeholder={t.account.passwordConfirm}
-                on:input={isPwdValid}
+                onInput={isPwdValid}
                 {showCopy}
                 width={inputWidth}
-        >
-            {t.account.passwordConfirm.toUpperCase()}
-        </PasswordInput>
+        />
 
-        <Button on:click={generate} level={2} width={btnWidth}>
+        <Button onclick={generate} level={2}>
             {t.account.generateRandom}
         </Button>
 

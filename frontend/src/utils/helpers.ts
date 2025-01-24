@@ -6,12 +6,15 @@ import {
     CSRF_TOKEN,
     ID_TOKEN,
     LOGOUT_URL,
-    PKCE_VERIFIER, PKCE_VERIFIER_UPSTREAM,
-    POST_LOGOUT_REDIRECT_URI, PROVIDER_TOKEN,
+    PKCE_VERIFIER,
+    PKCE_VERIFIER_UPSTREAM,
+    POST_LOGOUT_REDIRECT_URI,
+    PROVIDER_TOKEN,
     REDIRECT_URI
 } from "./constants.js";
 import {decode, encode} from "base64-arraybuffer";
 import {getProvidersTemplate} from "./dataFetching.js";
+import type {PasswordPolicyResponse} from "$api/types/password_policy.ts";
 
 export function buildWebIdUri(userId: string) {
     return `${window.location.origin}/auth/${userId}/profile#me`
@@ -201,26 +204,22 @@ export const formatDateFromTs = (ts: number, fmtIso?: boolean) => {
 }
 
 export const generatePassword = (
-    length: number,
-    minLowerCase?: number,
-    minUpperCase?: number,
-    minDigit?: number,
-    minSpecial?: number,
+    policy: PasswordPolicyResponse
 ) => {
-    const lowerCaseNeeded = minLowerCase || 1;
-    const upperCaseNeeded = minUpperCase || 1;
-    const digitNeeded = minDigit || 1;
-    const specialNeeded = minSpecial || 1;
+    const length = policy.length_min > 20 ? policy.length_min : 20;
+    const lowerCaseNeeded = policy.include_lower_case || 1;
+    const upperCaseNeeded = policy.include_upper_case || 1;
+    const digitNeeded = policy.include_digits || 1;
+    const specialNeeded = policy.include_digits || 1;
 
     while (true) {
-        let pwdLength = length || 16;
         let lowerCaseIncluded = 0;
         let upperCaseIncluded = 0;
         let digitIncluded = 0;
         let specialIncluded = 0;
         let pwdArr = [];
 
-        for (let i = 0; i < pwdLength; i += 1) {
+        for (let i = 0; i < length; i += 1) {
             let nextNumber = 60;
             while ((nextNumber > 57 && nextNumber < 65) || (nextNumber > 90 && nextNumber < 97)) {
                 nextNumber = Math.floor(Math.random() * 74) + 33;

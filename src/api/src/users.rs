@@ -929,7 +929,7 @@ pub async fn delete_webauthn(
     tag = "mfa",
     request_body = WebauthnRegStartRequest,
     responses(
-        (status = 200, description = "Ok - Returns a default Webauthn CreationChallengeResponse, which cannot be serialized into OpenAPI schema currently"),
+        (status = 200, description = "Ok"),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
@@ -1264,7 +1264,7 @@ pub async fn put_user_self(
     principal.validate_session_auth()?;
     payload.validate()?;
 
-    // make sure the logged in user can only update itself
+    // make sure the logged-in user can only update itself
     let id = id.into_inner();
     principal.is_user(&id)?;
 

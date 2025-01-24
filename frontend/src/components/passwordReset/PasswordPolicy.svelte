@@ -1,6 +1,6 @@
 <script lang="ts">
     import {useI18n} from "$state/i18n.svelte";
-    import type {PasswordPolicyResponse} from "$api/response/common/password_policy.ts";
+    import type {PasswordPolicyResponse} from "$api/types/password_policy.ts";
 
     let {
         policy,

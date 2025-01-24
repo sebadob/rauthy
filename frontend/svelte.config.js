@@ -33,6 +33,7 @@ const config = {
             $state: 'src/global_state',
             $types: 'src/types',
             $utils: 'src/utils',
+            $webauthn: 'src/webauthn',
         },
         csp: isDev ? {} : {
             directives: {

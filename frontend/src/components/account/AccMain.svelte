@@ -7,8 +7,7 @@
     import AccWebId from "./AccWebId.svelte";
     import AccDevices from "./AccDevices.svelte";
     import {useI18n} from "$state/i18n.svelte";
-    import type {SessionResponse} from "$api/response/common/session.js";
-    import type {UserResponse} from "$api/response/common/user.ts";
+    import type {UserResponse} from "$api/types/user.ts";
     import {TPL_AUTH_PROVIDERS} from "$utils/constants";
     import Template from "$lib5/Template.svelte";
     import type {AuthProvidersTemplate} from "$api/templates/AuthProvider.ts";
@@ -17,11 +16,9 @@
     import Tabs from "$lib5/tabs/Tabs.svelte";
 
     let {
-        session: session,
         user = $bindable(),
         webIdData = $bindable()
     }: {
-        session: SessionResponse,
         user: UserResponse,
         webIdData: any,
     } = $props();
@@ -95,11 +92,11 @@
                 {:else if selected === t.common.password}
                     <AccPassword {user} {authProvider} viewModePhone/>
                 {:else if selected === t.account.navMfa}
-                    <AccMFA {session} {user}/>
+                    <AccMFA {user}/>
                 {:else if selected === 'WebID'}
                     <AccWebId bind:webIdData/>
                 {:else if selected === t.account.devices}
-                    <AccDevices bind:session/>
+                    <AccDevices/>
                 {/if}
             </div>
         </div>
@@ -119,11 +116,11 @@
                 {:else if selected === t.common.password}
                     <AccPassword {user} {authProvider}/>
                 {:else if selected === t.account.navMfa}
-                    <AccMFA {session} {user}/>
+                    <AccMFA {user}/>
                 {:else if selected === 'WebID'}
                     <AccWebId bind:webIdData/>
                 {:else if selected === t.account.devices}
-                    <AccDevices bind:session/>
+                    <AccDevices/>
                 {/if}
             </div>
         </div>
