@@ -67,10 +67,12 @@ impl AppState {
                 info!("Listen URL: {{http|https}}://{}:{}", listen_addr, port);
                 ListenScheme::HttpHttps
             }
+            #[cfg(not(target_os = "windows"))]
             "unix_http" => {
                 info!("Listen URL: unix+http:{}", listen_addr);
                 ListenScheme::UnixHttp
             }
+            #[cfg(not(target_os = "windows"))]
             "unix_https" => {
                 info!("Listen URL: unix+https:{}", listen_addr);
                 ListenScheme::UnixHttps
@@ -109,6 +111,18 @@ impl AppState {
             .parse::<u32>()
             .expect("Could not parse REFRESH_TOKEN_GRACE_TIME");
 
+        #[cfg(target_os = "windows")]
+        let issuer_scheme = if matches!(
+            listen_scheme,
+            ListenScheme::HttpHttps | ListenScheme::Https
+        ) || *PROXY_MODE
+        {
+            "https"
+        } else {
+            "http"
+        };
+
+        #[cfg(not(target_os = "windows"))]
         let issuer_scheme = if matches!(
             listen_scheme,
             ListenScheme::HttpHttps | ListenScheme::Https | ListenScheme::UnixHttps
@@ -118,6 +132,7 @@ impl AppState {
         } else {
             "http"
         };
+        
         let issuer = format!("{}://{}/auth/v1", issuer_scheme, public_url);
         debug!("Issuer: {}", issuer);
 

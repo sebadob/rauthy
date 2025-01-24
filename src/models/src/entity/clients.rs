@@ -1452,7 +1452,9 @@ pub fn is_origin_external<'a>(
             ListenScheme::Http => scheme == "http",
             ListenScheme::Https => scheme == "https",
             ListenScheme::HttpHttps => scheme == "http" || scheme == "https",
+            #[cfg(not(target_os = "windows"))]
             ListenScheme::UnixHttp => scheme == "http",
+            #[cfg(not(target_os = "windows"))]
             ListenScheme::UnixHttps => scheme == "https",
         } || ADDITIONAL_ALLOWED_ORIGIN_SCHEMES
             .iter()
