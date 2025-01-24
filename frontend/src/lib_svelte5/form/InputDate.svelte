@@ -9,6 +9,7 @@
     import Options from "$lib5/Options.svelte";
     import Button from "$lib5/Button.svelte";
     import IconCalendar from "$icons/IconCalendar.svelte";
+    import type {PropsInputDate} from "$lib5/form/props.ts";
 
     let {
         id = genKey(),
@@ -26,23 +27,7 @@
         onRight,
         onUp,
         onDown,
-    }: {
-        id?: string,
-        name?: string,
-        value?: string,
-        label?: string,
-        title?: string,
-        disabled?: boolean,
-        min?: string,
-        max?: string,
-        required?: boolean,
-
-        onEnter?: () => void,
-        onLeft?: () => void,
-        onRight?: () => void,
-        onUp?: () => void,
-        onDown?: () => void,
-    } = $props();
+    }: PropsInputDate = $props();
 
     const today = parseDate(fmtDateInput(new Date()));
     const todayStr = today.toString();
