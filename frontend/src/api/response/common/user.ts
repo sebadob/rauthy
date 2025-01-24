@@ -1,12 +1,12 @@
 import type {Language} from "$api/response/common/language.ts";
 
 export type UserAccountTypeResponse =
-    'New'
-    | 'Password'
-    | 'Passkey'
-    | 'Federated'
-    | 'FederatedPasskey'
-    | 'FederatedPassword';
+    'new'
+    | 'password'
+    | 'passkey'
+    | 'federated'
+    | 'federated_passkey'
+    | 'federated_password';
 
 export interface UserResponse {
     id: string,
