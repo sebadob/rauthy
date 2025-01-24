@@ -65,8 +65,6 @@ export async function webauthnReg(userId: string, passkeyName: string): Promise<
             msg: 'Credential Creation Error',
         };
     }
-    // TODO remove after proper type has been created
-    console.log('challengePk', challengePk);
 
     // the backend expects base64 url safe string instead of array buffers
     let payloadFinish: WebauthnRegFinishRequest = {
@@ -81,6 +79,8 @@ export async function webauthnReg(userId: string, passkeyName: string): Promise<
                 // @ts-ignore the `response.clientDataJSON` actually exists
                 clientDataJSON: arrBufToBase64UrlSafe(challengePk.response.clientDataJSON),
             },
+            // @ts-ignore the `response.getClientExtensionResults()` actually exists
+            extensions: challengePk.getClientExtensionResults(),
             type: challengePk.type,
         },
     }

@@ -39,15 +39,11 @@ export interface WebauthnRegStartRequest {
 }
 
 export interface WebauthnRegFinishRequest {
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ſ-\\s]{1,32}"))]
-    pub passkey_name: String,
-    /// Note: `ToSchema` does currently not exist for `webauthn_rs::prelude::PublicKeyCredential`
-    #[schema(value_type = str)]
-    pub data: webauthn_rs::prelude::RegisterPublicKeyCredential,
-    /// Validation: `[a-zA-Z0-9]{64}`
-    #[validate(regex(path = "*RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
-    pub magic_link_id: Option<String>,
+    /// Validation: RE_USER_NAME / 32
+    passkey_name: string,
+    data: RegisterPublicKeyCredential,
+    /// Validation: RE_ALNUM_64
+    magic_link_id?: string,
 }
 
 // ######################################################################
@@ -192,4 +188,52 @@ export interface CredProtect {
     /// credential rather than ignore the protection policy
     /// If no value is provided, the client treats it as `false`.
     enforceCredentialProtectionPolicy?: boolean,
+}
+
+export interface RegisterPublicKeyCredential {
+    /// The id of the PublicKey credential, likely in base64.
+    /// This is NEVER actually used in a real registration, because the true
+    /// credential ID is taken from the attestation data.
+    id: string,
+    /// The id of the credential, as binary.
+    ///
+    /// This is NEVER actually used in a real registration, because the true
+    // credential ID is taken from the attestation data.
+    rawId: Base64UrlSafeData,
+    /// <https://w3c.github.io/webauthn/#dom-publickeycredential-response>
+    response: AuthenticatorAttestationResponseRaw,
+    type: string,
+    extensions: RegistrationExtensionsClientOutputs,
+}
+
+export interface AuthenticatorAttestationResponseRaw {
+    /// <https://w3c.github.io/webauthn/#dom-authenticatorattestationresponse-attestationobject>
+    attestationObject: Base64UrlSafeData,
+    /// <https://w3c.github.io/webauthn/#dom-authenticatorresponse-clientdatajson>
+    clientDataJSON: Base64UrlSafeData,
+    /// <https://w3c.github.io/webauthn/#dom-authenticatorattestationresponse-gettransports>
+    transports?: AuthenticatorTransport[],
+}
+
+export interface RegistrationExtensionsClientOutputs {
+    /// Indicates whether the client used the provided appid extension
+    appid?: boolean,
+    /// Indicates if the client believes it created a resident key. This
+    /// property is managed by the webbrowser, and is NOT SIGNED and CAN NOT be trusted!
+    cred_props?: CredProps,
+    /// Indicates if the client successfully applied a HMAC Secret
+    hmac_secret?: boolean,
+    /// Indicates if the client successfully applied a credential protection policy.
+    cred_protect?: CredentialProtectionPolicy,
+    /// Indicates the current minimum PIN length
+    min_pin_length?: number,
+}
+
+export interface CredProps {
+    /// A user agent supplied hint that this credential *may* have created a resident key. It is
+    /// retured from the user agent, not the authenticator meaning that this is an unreliable
+    /// signal.
+    ///
+    /// Note that this extension is UNSIGNED and may have been altered by page javascript.
+    rk: boolean,
 }

@@ -3,7 +3,7 @@ import {fetchPost} from "$api/fetch.ts";
 import type {
     MfaPurpose,
     WebauthnAdditionalData,
-    WebauthnAuthFinishRequest,
+    WebauthnAuthFinishRequest, WebauthnAuthStartRequest,
     WebauthnAuthStartResponse
 } from "./types.ts";
 import {base64UrlSafeToArrBuf} from "./utils.ts";
@@ -15,7 +15,10 @@ export interface WebauthnAuthResult {
 }
 
 export async function webauthnAuth(userId: string, purpose: MfaPurpose, errorI18nInvalidKey: string): Promise<WebauthnAuthResult> {
-    let res = await fetchPost<WebauthnAuthStartResponse>(`/auth/v1/users/${userId}/webauthn/auth/start`, purpose);
+    let payloadStart: WebauthnAuthStartRequest = {
+        purpose,
+    };
+    let res = await fetchPost<WebauthnAuthStartResponse>(`/auth/v1/users/${userId}/webauthn/auth/start`, payloadStart);
     if (res.error) {
         console.error(res.error);
         return {
@@ -73,23 +76,25 @@ export async function webauthnAuth(userId: string, purpose: MfaPurpose, errorI18
             msg: errorI18nInvalidKey || 'Invalid Key',
         };
     }
-    // TODO remove after proper type has been created
-    console.log('challengePk', challengePk);
 
     // The backend expects base64 url safe strings instead of array buffers.
     // The values we need to modify are not publicly exported in the TS type though, but they exist.
-    let payload: WebauthnAuthFinishRequest = {
+    let payloadFinish: WebauthnAuthFinishRequest = {
         code: resp.code,
         data: {
             id: challengePk.id,
+            // @ts-ignore the `response.rawId` actually exists
             rawId: arrBufToBase64UrlSafe(challengePk.rawId),
             response: {
+                // @ts-ignore the `response.authenticatorData` actually exists
                 authenticatorData: arrBufToBase64UrlSafe(challengePk.response.authenticatorData),
+                // @ts-ignore the `response.clientDataJSON` actually exists
                 clientDataJSON: arrBufToBase64UrlSafe(challengePk.response.clientDataJSON),
+                // @ts-ignore the `response.signature` actually exists
                 signature: arrBufToBase64UrlSafe(challengePk.response.signature),
             },
-            // TODO check if this exists, we can probably get rid of it in the browser
-            extensions: challengePk.extensions,
+            // @ts-ignore the `response.getClientExtensionResults()` actually exists
+            extensions: challengePk.getClientExtensionResults(),
             type: challengePk.type,
         }
     }
@@ -97,7 +102,7 @@ export async function webauthnAuth(userId: string, purpose: MfaPurpose, errorI18
     // finish the ceremony
     let resFinish = await fetchPost<WebauthnAdditionalData>(
         `/auth/v1/users/${userId}/webauthn/auth/finish`,
-        payload,
+        payloadFinish,
     );
     if (resFinish.status === 202) {
         return {

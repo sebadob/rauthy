@@ -1,15 +1,7 @@
 <script lang="ts">
-    import {
-        arrBufToBase64UrlSafe,
-        base64UrlSafeToArrBuf,
-        formatDateFromTs
-    } from "$utils/helpers";
+    import {formatDateFromTs} from "$utils/helpers";
     import Button from "$lib5/Button.svelte";
-    import {
-        webauthnAuthFinish,
-        webauthnAuthStart,
-        webauthnDelete,
-    } from "$utils/dataFetching.js";
+    import {webauthnDelete} from "$utils/dataFetching.js";
     import {onMount} from "svelte";
     import Input from "$lib5/form/Input.svelte";
     import IconFingerprint from "$lib/icons/IconFingerprint.svelte";
@@ -21,6 +13,7 @@
     import type {UserResponse} from "$api/types/user.ts";
     import {PATTERN_USER_NAME} from "$utils/patterns.ts";
     import {webauthnReg} from "$webauthn/ceremony_reg.ts";
+    import {webauthnAuth} from "$webauthn/ceremony_auth.ts";
 
     let {user}: { user: UserResponse } = $props();
 
@@ -81,7 +74,6 @@
         }
 
         let res = await webauthnReg(userId, passkeyName);
-        console.log(res);
         if (res.success) {
             showRegInput = false;
             passkeyName = '';
@@ -95,53 +87,14 @@
     async function handleTestStart() {
         resetMsgErr();
 
-        let res = await webauthnAuthStart(user.id, {purpose: 'Test'});
-        if (res.status === 200) {
-            let resp = await res.json();
-            let challenge = resp.rcr;
-
-            // the navigator credentials engine needs some values as array buffers
-            challenge.publicKey.challenge = base64UrlSafeToArrBuf(challenge.publicKey.challenge);
-            for (let cred of challenge.publicKey.allowCredentials) {
-                cred.id = base64UrlSafeToArrBuf(cred.id);
-            }
-
-            // prompt for the user security key and get its public key
-            let challengePk
-            try {
-                challengePk = await navigator.credentials.get(challenge);
-            } catch (e) {
-                err = true;
-                msg = t.mfa.invalidKeyUsed;
-                return;
-            }
-
-            // the backend expects base64 url safe string instead of array buffers
-            let data = {
-                code: resp.code,
-                data: {
-                    id: challengePk.id,
-                    rawId: arrBufToBase64UrlSafe(challengePk.rawId),
-                    response: {
-                        authenticatorData: arrBufToBase64UrlSafe(challengePk.response.authenticatorData),
-                        clientDataJSON: arrBufToBase64UrlSafe(challengePk.response.clientDataJSON),
-                        signature: arrBufToBase64UrlSafe(challengePk.response.signature),
-                    },
-                    type: challengePk.type,
-                }
-            }
-
-            // send the data to the backend
-            res = await webauthnAuthFinish(user.id, data);
-            if (res.status === 202) {
-                msg = t.mfa.testSuccess;
-                await fetchPasskeys();
-            } else {
-                console.error(res);
-            }
+        let res = await webauthnAuth(user.id, 'Test', t.mfa.testError);
+        if (res.success) {
+            msg = t.mfa.testSuccess;
+            // re-fetching keys to update timestamps for expected outcome
+            await fetchPasskeys();
         } else {
             err = true;
-            msg = t.mfa.testError;
+            msg = `${t.mfa.testError} - ${res.msg}`;
         }
     }
 
@@ -286,12 +239,12 @@
     }
 
     .success, .err {
-        margin-top: .5rem;
+        margin: .5rem -.3rem;
         text-align: left;
     }
 
     .success {
-        color: hsl(var(--accent));
+        color: hsl(var(--action));
     }
 
     .nameUv {
