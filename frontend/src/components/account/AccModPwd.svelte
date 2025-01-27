@@ -42,6 +42,7 @@
     export function isPwdValid(): boolean {
         err = '';
 
+
         if (!hideCurrentPassword && !passwords.current) {
             err = t.account.passwordCurrReq;
             return false;
@@ -115,9 +116,11 @@
                 width={inputWidth}
         />
 
-        <Button onclick={generate} level={2}>
-            {t.account.generateRandom}
-        </Button>
+        <div class="btn">
+            <Button onclick={generate} level={2}>
+                {t.account.generateRandom}
+            </Button>
+        </div>
 
         <div class="err">
             {err}
@@ -126,9 +129,12 @@
 {/if}
 
 <style>
+    .btn {
+        margin: .5rem 0;
+    }
+
     .container {
-        margin-top: 5px;
-        margin-bottom: 10px;
+        margin: .5rem 0;
     }
 
     .err {

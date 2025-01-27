@@ -498,10 +498,10 @@ lazy_static! {
         .parse::<bool>()
         .expect("PASSWORD_RESET_COOKIE_BINDING cannot be parsed to bool - bad format");
 
-    pub static ref WEBAUTHN_REQ_EXP: u64 = env::var("WEBAUTHN_REQ_EXP")
+    pub static ref WEBAUTHN_REQ_EXP: u32 = env::var("WEBAUTHN_REQ_EXP")
         .unwrap_or_else(|_| String::from("60"))
-        .parse::<u64>()
-        .expect("WEBAUTHN_REQ_EXP cannot be parsed to u64 - bad format");
+        .parse::<u32>()
+        .expect("WEBAUTHN_REQ_EXP cannot be parsed to u32 - bad format");
     pub static ref WEBAUTHN_DATA_EXP: u64 = env::var("WEBAUTHN_DATA_EXP")
         .unwrap_or_else(|_| String::from("90"))
         .parse::<u64>()

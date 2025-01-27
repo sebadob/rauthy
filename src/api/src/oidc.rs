@@ -809,6 +809,12 @@ pub async fn get_session_info(data: web::Data<AppState>, principal: ReqPrincipal
                 .json(err);
         }
     };
+    if session.user_id.is_none() {
+        return HttpResponse::InternalServerError().json(ErrorResponse::new(
+            ErrorResponseType::Internal,
+            "no user_id for authenticated session",
+        ));
+    }
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()

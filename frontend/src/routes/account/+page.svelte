@@ -1,5 +1,4 @@
 <script lang="ts">
-    import {onMount} from "svelte";
     import AccMain from "../../components/account/AccMain.svelte";
     import {redirectToLogin} from "$utils/helpers.ts";
     import Main from "$lib5/Main.svelte";
@@ -14,53 +13,49 @@
     import {useSession} from "$state/session.svelte.ts";
 
     let t = useI18n();
-    let session = useSession();
+    let session = useSession('account');
 
     let user: undefined | UserResponse = $state();
     let webIdData: undefined | WebIdResponse = $state();
     let isReady = $state(false);
 
-    onMount(async () => {
-        let res = await fetchGet<SessionResponse>('/auth/v1/oidc/sessioninfo');
-        if (res.body) {
-            session.set(res.body);
-            if (!session) {
-                console.error('did not receive valid session response');
-                return;
-            }
-
-            const userId = res.body.user_id;
-            if (userId) {
-                let res = await Promise.all([
-                    fetchGet<UserResponse>(`/auth/v1/users/${userId}`),
-                    fetchGet<WebIdResponse>(`/auth/v1/users/${userId}/webid/data`),
-                ]);
-
-                if (res[0].body) {
-                    user = res[0].body;
-                } else {
-                    redirectToLogin('account');
-                }
-
-                if (res[1].body) {
-                    webIdData = res[1].body
-                } else if (res[1].status === 404) {
-                    webIdData = {
-                        user_id: userId,
-                        expose_email: false,
-                    };
-                } else {
-                    // now it can only be a 405 -> webid is not enabled -> do nothing
-                }
-
-                isReady = true;
-            } else {
-                console.error('no user_id in session');
-            }
-        } else {
-            redirectToLogin('account');
+    $effect(() => {
+        let s = session.get();
+        if (s) {
+            fetchInfo(s);
         }
     });
+
+    async function fetchInfo(s: SessionResponse) {
+        const userId = s.user_id;
+        if (userId) {
+            let res = await Promise.all([
+                fetchGet<UserResponse>(`/auth/v1/users/${userId}`),
+                fetchGet<WebIdResponse>(`/auth/v1/users/${userId}/webid/data`),
+            ]);
+
+            if (res[0].body) {
+                user = res[0].body;
+            } else {
+                redirectToLogin('account');
+            }
+
+            if (res[1].body) {
+                webIdData = res[1].body
+            } else if (res[1].status === 404) {
+                webIdData = {
+                    user_id: userId,
+                    expose_email: false,
+                };
+            } else {
+                // now it can only be a 405 -> webid is not enabled -> do nothing
+            }
+
+            isReady = true;
+        } else {
+            console.error('no user_id in session');
+        }
+    }
 </script>
 
 <svelte:head>
@@ -69,7 +64,6 @@
     inside the component, even during init and before the very first render
     -->
     <title>{t?.account.account || 'Account'} {user?.email}</title>
-    <!--    <title>{t.account.account} {user.account.email}</title>-->
 </svelte:head>
 
 <Main>

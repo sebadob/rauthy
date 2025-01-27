@@ -56,7 +56,7 @@ export async function getAuthProvidersTemplate() {
     }
 }
 
-export const redirectToLogin = (state: string) => {
+export const redirectToLogin = (state?: string) => {
     getPkce(64, (error, {challenge, verifier}) => {
         if (!error) {
             localStorage.setItem(PKCE_VERIFIER, verifier);
@@ -297,13 +297,15 @@ export function getCookie(cname: string): string {
     return "";
 }
 
-// races a promise against a given timeout and throws an exception if exceeded
-export const promiseTimeout = (prom: Promise<any>, time: number) => {
+/** races a promise against a given timeout and throws an exception if exceeded */
+export function promiseTimeout<T>(prom: Promise<T>, time: number): Promise<T | undefined> {
     let timer: any;
-    return Promise.race([
+    return Promise.race<T | undefined>([
         prom,
         new Promise(
-            (_r, rej) => timer = setTimeout(rej, time, 'timeout')
+            (_r, rej) => {
+                timer = setTimeout(rej, time, 'timeout');
+            }
         )
     ]).finally(() => clearTimeout(timer));
 }

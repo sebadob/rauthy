@@ -13,14 +13,15 @@
     import type {UserResponse} from "$api/types/user.ts";
     import {PATTERN_USER_NAME} from "$utils/patterns.ts";
     import {webauthnReg} from "$webauthn/registration.ts";
-    import {webauthnAuth} from "$webauthn/authentication.ts";
+    import WebauthnRequest from "../webauthn/WebauthnRequest.svelte";
+    import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
 
     let {user}: { user: UserResponse } = $props();
 
     const isSupported = 'credentials' in navigator;
 
     let t = useI18n();
-    let session = useSession();
+    let session = useSession('account');
     let userId = $derived(session.get()?.user_id);
 
     let refInput: undefined | HTMLInputElement = $state();
@@ -30,6 +31,7 @@
     let showRegInput = $state(false);
     let showDelete = $state(user.account_type === "password");
 
+    let mfaPurpose: undefined | MfaPurpose = $state();
     let passkeyName = $state('');
     let isInputError = $state(false);
 
@@ -86,19 +88,19 @@
         }
     }
 
-    async function handleTestStart() {
-        resetMsgErr();
-
-        let res = await webauthnAuth(user.id, 'Test', t.mfa.testError);
-        if (res.success) {
-            msg = t.mfa.testSuccess;
-            // re-fetching keys to update timestamps for expected outcome
-            await fetchPasskeys();
-        } else {
-            err = true;
-            msg = `${t.mfa.testError} - ${res.msg}`;
-        }
-    }
+    // async function handleTestStart() {
+    //     resetMsgErr();
+    //
+    //     let res = await webauthnAuth(user.id, 'Test', t.mfa.testError, t.authorize.requestExpired);
+    //     if (res.error) {
+    //         err = true;
+    //         msg = `${t.mfa.testError} - ${res.error}`;
+    //     } else {
+    //         msg = t.mfa.testSuccess;
+    //         // re-fetching keys to update timestamps for expected outcome
+    //         await fetchPasskeys();
+    //     }
+    // }
 
     async function handleDelete(name: string) {
         let res = await webauthnDelete(user.id, name);
@@ -110,6 +112,21 @@
             msg = body.message;
         }
     }
+
+    function onWebauthnError(error: string) {
+        mfaPurpose = undefined;
+        err = true;
+        msg = error;
+        setTimeout(() => {
+            err = false;
+            msg = '';
+        }, 5000);
+    }
+
+    function onWebauthnSuccess(data: WebauthnAdditionalData) {
+        mfaPurpose = undefined;
+        msg = t.mfa.testSuccess;
+    }
 </script>
 
 <div class="container">
@@ -120,6 +137,15 @@
             </b>
         </div>
     {:else}
+        {#if mfaPurpose}
+            <WebauthnRequest
+                    userId={user.id}
+                    purpose={mfaPurpose}
+                    onSuccess={onWebauthnSuccess}
+                    onError={onWebauthnError}
+            />
+        {/if}
+
         <p>
             {t.mfa.p1}
             <br><br>
@@ -211,7 +237,7 @@
 
         {#if passkeys.length > 0}
             <div class="button">
-                <Button onclick={handleTestStart}>{t.mfa.test}</Button>
+                <Button onclick={() => mfaPurpose = 'Test' }>{t.mfa.test}</Button>
             </div>
         {/if}
 

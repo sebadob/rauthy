@@ -15,14 +15,9 @@
     let t = useI18n();
 
     let errPolicy = $state([false, false, false, false, false, false]);
-    let isFirstRender = true;
 
     $effect(() => {
-        if (isFirstRender) {
-            isFirstRender = false;
-        } else {
-            checkPolicy();
-        }
+        checkPolicy();
     });
 
     function checkPolicy() {

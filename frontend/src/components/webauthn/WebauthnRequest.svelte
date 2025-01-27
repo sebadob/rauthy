@@ -1,10 +1,9 @@
 <script lang="ts">
-    import {onMount} from "svelte";
-    import Loading from "$lib/Loading.svelte";
+    import Loading from "$lib5/Loading.svelte";
     import {webauthnAuth, type WebauthnAuthResult} from "$webauthn/authentication.ts";
-    import {promiseTimeout} from "$utils/helpers";
     import {useI18n} from "$state/i18n.svelte";
-    import type {MfaPurpose} from "$webauthn/types.ts";
+    import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
+    import {onMount} from "svelte";
 
     let {
         userId,
@@ -15,59 +14,29 @@
         userId: string,
         purpose: MfaPurpose,
         onError: (error: string) => void,
-        onSuccess: (res: WebauthnAuthResult) => void,
+        onSuccess: (res?: WebauthnAdditionalData) => void,
     } = $props();
 
     let t = useI18n();
 
-    let err = $state(false);
-    let msg = $state('');
-    let success = $state(false);
-
-    let exp: undefined | number = $state();
-    let progress = $state(100);
-
-    $effect(() => {
-        let timer: number;
-        if (exp) {
-            timer = setTimeout(() => {
-                onError('Timeout');
-            }, exp * 1000);
-        }
-
-        return () => clearTimeout(timer);
-    });
+    let webauthnRes: undefined | WebauthnAuthResult = $state();
 
     onMount(async () => {
-        let res = {};
-        try {
-            res = await promiseTimeout(
-                webauthnAuth(userId, purpose, t.authorize.invalidKeyUsed),
-                // we need to cancel 1 sec before the expiry to not get into a browser exception,
-                // because we would not be able to "go back" again
-                exp * 1000 - 1000
-            );
-        } catch (err) {
-            console.error(err);
-            res.err = true;
-            res.msg = 'Timeout';
-            onError('Passkey Error');
-        }
+        webauthnRes = await webauthnAuth(userId, purpose, t.authorize.invalidKeyUsed, t.authorize.requestExpired);
+    });
 
-        err = res.err;
-        success = !res.err;
-        msg = res.msg;
-
-        if (success) {
-            onSuccess(res.body);
-        } else {
-            setTimeout(() => {
-                onError();
-            }, 3000);
+    $effect(() => {
+        if (webauthnRes) {
+            if (webauthnRes.error) {
+                setTimeout(() => {
+                    onError(webauthnRes?.error || 'Webauthn Error');
+                }, 3000);
+            } else {
+                onSuccess(webauthnRes.data);
+            }
         }
     });
 
-    //
 </script>
 
 {#if purpose}
@@ -76,31 +45,40 @@
             <div class="content">
                 <div class="contentRow">
                     <div class="contentHeader">
-                        {t.authorize.provideMfa}
+                        {t.authorize.expectingPasskey}
                     </div>
                 </div>
 
                 <div class="contentRow">
-                    <div class="contentHeader">
-                        {t.authorize.requestExpires}
-                        :
-                    </div>
+                    <!-- <div class="contentHeader muted">-->
+                    <!--     {t.authorize.requestExpires}-->
+                    <!--     :-->
+                    <!-- </div>-->
                     <div>
-                        <progress value={progress} max={exp}></progress>
+                        <!-- TODO
+                        We can't show an expiry visualization based on JS because an open PIN / key
+                        request window will block the JS event loop -> Find a way to show the timeout
+                        with CSS only before it gets blocked.
+                        Stick with just loading until then.
+                        -->
+                        {#if !webauthnRes}
+                            <Loading/>
+                        {/if}
+                        <!-- <progress value={progress} max={exp}></progress>-->
                     </div>
                 </div>
 
                 <div class="contentRow">
-                    {#if success}
-                        <div class="good">
-                            {t.authorize.mfaAck}
-                        </div>
-                    {:else if err}
-                        <div class="err">
-                            {msg}
-                        </div>
-                    {:else}
-                        <Loading background={false}/>
+                    {#if webauthnRes}
+                        {#if webauthnRes.error}
+                            <div class="err">
+                                {webauthnRes.error}
+                            </div>
+                        {:else}
+                            <div class="good">
+                                {t.authorize.mfaAck}
+                            </div>
+                        {/if}
                     {/if}
                 </div>
             </div>
@@ -110,18 +88,17 @@
 
 <style>
     .content {
-        width: 350px;
-        height: 220px;
-        border: 1px solid var(--col-ghigh);
-        border-radius: 5px;
+        padding: 1rem;
+        border: 1px solid hsl(var(--bg-high));
+        border-radius: var(--border-radius);
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        color: white;
+        color: hsl(var(--text-high));
         text-align: center;
-        z-index: 20;
-        background: rgba(24, 24, 24, .95);
+        z-index: 99;
+        background: hsla(var(--bg) / .9);
     }
 
     .contentRow {
@@ -141,17 +118,17 @@
         font-weight: bold;
     }
 
-    .err {
-        color: var(--col-err);
-    }
-
     .good {
-        color: var(--col-ok);
+        color: hsl(var(--action));
     }
 
-    progress {
-        accent-color: var(--col-acnt);
-    }
+    /*.muted {*/
+    /*    color: hsla(var(--text) / .8)*/
+    /*}*/
+
+    /*progress {*/
+    /*    accent-color: hsl(var(--accent));*/
+    /*}*/
 
     .wrapperOuter {
         position: absolute;

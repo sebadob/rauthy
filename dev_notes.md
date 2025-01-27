@@ -4,6 +4,8 @@
 
 ### Missing i18n (zh/ko) for Svelte 5 Migration:
 
+- `t.authorize.expectingPasskey`
+- `t.authorize.requestExpired`
 - `t.common.close`
 - `t.common.changeTheme`
 - `t.common.selectI18n`

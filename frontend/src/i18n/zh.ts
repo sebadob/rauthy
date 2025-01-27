@@ -111,6 +111,7 @@ export const I18nZh: I18n = {
         emailBadFormat: "错误的电子邮件地址格式",
         emailRequired: "电子邮件地址必填。",
         emailSentMsg: "如果您的电子邮件存在，我们已发送请求邮件。",
+        expectingPasskey: "请使用MFA设备登陆",
         http429: "过多无效输入，已锁定至：",
         invalidCredentials: "无效证明",
         invalidKeyUsed: "无效密钥",
@@ -120,8 +121,8 @@ export const I18nZh: I18n = {
         passwordForgotten: "忘记密码",
         passwordRequest: "请求",
         passwordRequired: "密码必填。",
-        provideMfa: "请使用MFA设备登陆",
         requestExpires: "请求过期",
+        requestExpired: "Request has expired",
         signUp: "用户注册"
     },
     device: {

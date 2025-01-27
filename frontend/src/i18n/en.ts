@@ -111,6 +111,7 @@ export const I18nEn: I18n = {
         emailBadFormat: "Bad E-Mail format",
         emailRequired: "E-Mail is required",
         emailSentMsg: "If your E-Mail exists, a request has been sent",
+        expectingPasskey: "Expecting Passkey Authentication",
         http429: "Too many invalid inputs. Locked until:",
         invalidCredentials: "Invalid credentials",
         invalidKeyUsed: "Invalid Key",
@@ -120,8 +121,8 @@ export const I18nEn: I18n = {
         passwordForgotten: "Password forgotten?",
         passwordRequest: "Request",
         passwordRequired: "Password is required",
-        provideMfa: "Please login with your MFA device",
         requestExpires: "Request expires",
+        requestExpired: "Request has expired",
         signUp: "User Registration"
     },
     device: {

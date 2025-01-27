@@ -111,6 +111,7 @@ export const I18nKo: I18n = {
         emailBadFormat: "잘못된 이메일 형식입니다.",
         emailRequired: "이메일이 필요합니다.",
         emailSentMsg: "이메일이 존재하면, 요청이 전송되었을 것입니다.",
+        expectingPasskey: "MFA 기기를 통해 로그인해 주세요.",
         http429: "유효하지 않은 입력이 너무 많습니다. 다음 시간 전까지 비활성화합니다:",
         invalidCredentials: "유효하지 않은 인증 정보입니다.",
         invalidKeyUsed: "유효하지 않은 키입니다.",
@@ -120,8 +121,8 @@ export const I18nKo: I18n = {
         passwordForgotten: "비밀번호를 잊으셨나요?",
         passwordRequest: "요청",
         passwordRequired: "비밀번호는 필요합니다.",
-        provideMfa: "MFA 기기를 통해 로그인해 주세요.",
         requestExpires: "요청 만료일",
+        requestExpired: "Request has expired",
         signUp: "사용자 가입"
     },
     device: {

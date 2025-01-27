@@ -97,8 +97,9 @@ export interface I18n {
         passwordForgotten: string,
         passwordRequest: string,
         passwordRequired: string,
-        provideMfa: string,
+        expectingPasskey: string,
         requestExpires: string,
+        requestExpired: string,
         signUp: string,
     },
     device: {

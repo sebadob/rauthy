@@ -1,23 +1,19 @@
 <script lang="ts">
     import Button from "$lib5/Button.svelte";
-    import {blur, fade} from 'svelte/transition';
+    import {fade} from 'svelte/transition';
     import AccModPwd from "./AccModPwd.svelte";
-    import {
-        getUserPasskeys,
-        postPasswordResetRequest,
-        postUserSelfConvertPasskey,
-    } from "$utils/dataFetching.js";
+    import {postPasswordResetRequest} from "$utils/dataFetching.js";
     import WebauthnRequest from "../webauthn/WebauthnRequest.svelte";
-    import {onMount} from "svelte";
     import CheckIcon from "$lib/CheckIcon.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import type {UpdateUserSelfRequest, UserResponse} from "$api/types/user.ts";
     import type {AuthProviderTemplate} from "$api/templates/AuthProvider.ts";
     import IconCheck from "$icons/IconCheck.svelte";
     import type {PropsPassword} from "./props.ts";
-    import {fetchPut} from "$api/fetch.ts";
-    import type {WebauthnAuthResult} from "$webauthn/authentication.ts";
-    import type {MfaPurpose} from "../../webauthn/types.ts";
+    import {fetchGet, fetchPost, fetchPut} from "$api/fetch.ts";
+    import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
+    import type {PasskeyResponse} from "$api/types/webauthn.ts";
+    import {onMount} from "svelte";
 
     let {
         user = $bindable(),
@@ -34,7 +30,7 @@
     let inputWidth = $derived(viewModePhone ? 'calc(100vw - 1.5rem)' : '300px');
 
     let accType = user.account_type;
-    let passkeys = $state([]);
+    let passkeys: PasskeyResponse[] = $state([]);
     let isPwdValid: undefined | (() => boolean) = $state();
     let convertAccount = $state(false);
     let isLoading = $state(false);
@@ -55,26 +51,25 @@
     });
 
     async function fetchPasskeys() {
-        let res = await getUserPasskeys(user.id);
-        let body = await res.json();
-        if (res.ok) {
-            passkeys = body;
+        let res = await fetchGet<PasskeyResponse[]>(`/auth/v1/users/${user.id}/webauthn`);
+        if (res.body) {
+            passkeys = res.body;
         } else {
-            console.error('error fetching passkeys: ' + body.message);
+            console.error('error fetching passkeys: ' + res.error);
         }
     }
 
     async function convertToPasskeyOnly() {
-        let res = await postUserSelfConvertPasskey(user.id);
-        if (res.ok) {
+        let res = await fetchPost<UserResponse>(`/auth/v1/users/${user.id}/self/convert_passkey`);
+        if (!res.error) {
             window.location.reload();
         } else {
-            let body = await res.json();
-            console.error('error fetching passkeys: ' + body.message);
+            console.error('error fetching passkeys: ' + res.error);
         }
     }
 
     async function onSubmit() {
+        err = '';
         if (passkeys.length > 0) {
             await onSubmitMfa();
         } else {
@@ -87,10 +82,6 @@
             err = t.common.invalidInput;
             return;
         }
-
-        // TODO
-        // const res = await webauthnAuthStart(user.id, {purpose: 'PasswordNew'});
-
         mfaPurpose = 'PasswordNew';
     }
 
@@ -131,18 +122,17 @@
         isLoading = false;
     }
 
-    function onWebauthnError() {
-        // If there is any error with the key, the user should start a new login process
+    function onWebauthnError(error: string) {
         mfaPurpose = undefined;
-        err = t.mfa.errorReg;
+        err = error;
+        setTimeout(() => {
+            err = '';
+        }, 5000);
     }
 
-    function onWebauthnSuccess(res: WebauthnAuthResult) {
-        if (res) {
-            mfaPurpose = undefined;
-            console.warn('TODO onWebauthnSuccess()');
-            // onSubmitFinish(res.data.code)
-        }
+    function onWebauthnSuccess(data: WebauthnAdditionalData) {
+        mfaPurpose = undefined;
+        onSubmitFinish(data.code)
     }
 
     async function requestPasswordReset() {
@@ -162,6 +152,7 @@
     <div class="container">
         {#if mfaPurpose}
             <WebauthnRequest
+                    userId={user.id}
                     purpose={mfaPurpose}
                     onSuccess={onWebauthnSuccess}
                     onError={onWebauthnError}
@@ -176,10 +167,7 @@
                 {#if success}
                     <CheckIcon check/>
                 {:else}
-                    <Button
-                            onclick={requestPasswordReset}
-                            level={3}
-                    >
+                    <Button level={3} onclick={requestPasswordReset}>
                         {t.account.passwordReset}
                     </Button>
                 {/if}
@@ -196,7 +184,7 @@
         {/if}
 
         {#if accType === "password" || accType === "federated_password" || convertAccount}
-            <div in:blur={{ duration: 350 }}>
+            <div>
                 <AccModPwd
                         bind:passwords
                         bind:isValid={isPwdValid}
@@ -204,7 +192,7 @@
                         hideCurrentPassword={!(accType === "password" && passkeys.length < 1)}
                 />
 
-                <div>
+                <div class="save">
                     <Button onclick={onSubmit} level={1} {isLoading}>
                         {t.common.save}
                     </Button>
@@ -218,16 +206,6 @@
                 {/if}
             </div>
 
-            {#if !convertAccount && canConvertToPasskey}
-                <div class="convertPasskey">
-                    <h3>{t.account.convertAccount}</h3>
-                    <p>{t.account.convertAccountP1}</p>
-                    <Button level={3} onclick={convertToPasskeyOnly}>
-                        {t.account.convertAccount}
-                    </Button>
-                </div>
-            {/if}
-
             <div class="bottom">
                 {#if success}
                     <div class="success" transition:fade>
@@ -239,6 +217,16 @@
                     </div>
                 {/if}
             </div>
+
+            {#if !convertAccount && canConvertToPasskey}
+                <div class="convertPasskey">
+                    <h3>{t.account.convertAccount}</h3>
+                    <p>{t.account.convertAccountP1}</p>
+                    <Button level={2} onclick={convertToPasskeyOnly}>
+                        {t.account.convertAccount}
+                    </Button>
+                </div>
+            {/if}
         {/if}
     </div>
 </div>
@@ -255,6 +243,7 @@
     .wrapper {
         display: flex;
         flex-direction: row;
+        overflow-x: clip;
     }
 
     .container {
@@ -269,6 +258,10 @@
 
     .bottom {
         height: 1em;
+    }
+
+    .save {
+        margin-top: 1rem;
     }
 
     .success {

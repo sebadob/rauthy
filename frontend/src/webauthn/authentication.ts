@@ -1,20 +1,25 @@
-import {arrBufToBase64UrlSafe} from "$utils/helpers.ts";
+import {arrBufToBase64UrlSafe, promiseTimeout} from "$utils/helpers.ts";
 import {fetchPost} from "$api/fetch.ts";
 import type {
     MfaPurpose,
     WebauthnAdditionalData,
-    WebauthnAuthFinishRequest, WebauthnAuthStartRequest,
+    WebauthnAuthFinishRequest,
+    WebauthnAuthStartRequest,
     WebauthnAuthStartResponse
 } from "./types.ts";
 import {base64UrlSafeToArrBuf} from "./utils.ts";
 
 export interface WebauthnAuthResult {
-    success: boolean,
-    msg: string,
+    error?: string,
     data?: WebauthnAdditionalData,
 }
 
-export async function webauthnAuth(userId: string, purpose: MfaPurpose, errorI18nInvalidKey: string): Promise<WebauthnAuthResult> {
+export async function webauthnAuth(
+    userId: string,
+    purpose: MfaPurpose,
+    errorI18nInvalidKey: string,
+    errorI18nTimeout: string,
+): Promise<WebauthnAuthResult> {
     let payloadStart: WebauthnAuthStartRequest = {
         purpose,
     };
@@ -22,17 +27,13 @@ export async function webauthnAuth(userId: string, purpose: MfaPurpose, errorI18
     if (res.error) {
         console.error(res.error);
         return {
-            success: false,
-            msg: res.error.message || 'Error starting the Authentication'
+            error: res.error.message || 'Error starting the Authentication'
         };
     }
     if (!res.body) {
-        let msg = 'Did not receive a valid webauthn body';
-        console.error(msg);
-        return {
-            success: false,
-            msg,
-        };
+        let error = 'Did not receive a valid webauthn body';
+        console.error(error);
+        return {error};
     }
 
     let resp = res.body;
@@ -41,13 +42,14 @@ export async function webauthnAuth(userId: string, purpose: MfaPurpose, errorI18
     // which we will decode properly in the following lines.
     let challenge = resp.rcr as unknown as CredentialRequestOptions;
     if (!challenge.publicKey) {
-        let msg = 'no publicKey in challenge from the backend';
-        console.error(msg);
+        let error = 'no publicKey in challenge from the backend';
+        console.error(error);
         return {
-            success: false,
-            msg,
+            error,
         };
     }
+    challenge.publicKey.timeout = resp.exp * 1000;
+    // console.log('challenge', challenge);
 
     // convert base64 into ArrayBuffers
     challenge.publicKey.challenge = base64UrlSafeToArrBuf(challenge.publicKey.challenge);
@@ -60,23 +62,24 @@ export async function webauthnAuth(userId: string, purpose: MfaPurpose, errorI18
     // prompt for the passkey and get its public key
     let credential: Credential;
     try {
-        const cred = await navigator.credentials.get(challenge);
+        // TODO currently, we don't have a way to remote-close / cancel the browser popup for PIN input,
+        // if the request expires. Tests done in Firefox so far.
+        const cred = await promiseTimeout(navigator.credentials.get(challenge), 5 * 1000 - 1);
+        // const cred = await promiseTimeout(navigator.credentials.get(challenge), resp.exp * 1000 - 1);
         if (cred) {
             credential = cred;
         } else {
             return {
-                success: false,
-                msg: errorI18nInvalidKey || 'Invalid Key',
+                error: errorI18nInvalidKey || 'Invalid Key',
             };
         }
     } catch (e) {
-        console.error(e);
         return {
-            success: false,
-            msg: errorI18nInvalidKey || 'Invalid Key',
+            error: errorI18nTimeout || 'Timeout',
         };
     }
-    
+    // console.log('credential', credential);
+
     // The backend expects base64 url safe strings instead of array buffers.
     // The values we need to modify are not publicly exported in the TS type though, but they exist.
     let payloadFinish: WebauthnAuthFinishRequest = {
@@ -106,15 +109,12 @@ export async function webauthnAuth(userId: string, purpose: MfaPurpose, errorI18
     );
     if (resFinish.status === 202) {
         return {
-            success: true,
-            msg: 'Authentication successful',
             data: resFinish.body,
         };
     } else {
-        console.error(res);
+        console.error(resFinish);
         return {
-            success: false,
-            msg: res.error || 'Authentication Error',
+            error: resFinish.error || 'Authentication Error',
         };
     }
 }
