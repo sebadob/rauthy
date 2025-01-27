@@ -58,11 +58,11 @@ export async function webauthnAuth(userId: string, purpose: MfaPurpose, errorI18
     }
 
     // prompt for the passkey and get its public key
-    let challengePk: Credential;
+    let credential: Credential;
     try {
         const cred = await navigator.credentials.get(challenge);
         if (cred) {
-            challengePk = cred;
+            credential = cred;
         } else {
             return {
                 success: false,
@@ -76,26 +76,26 @@ export async function webauthnAuth(userId: string, purpose: MfaPurpose, errorI18
             msg: errorI18nInvalidKey || 'Invalid Key',
         };
     }
-
+    
     // The backend expects base64 url safe strings instead of array buffers.
     // The values we need to modify are not publicly exported in the TS type though, but they exist.
     let payloadFinish: WebauthnAuthFinishRequest = {
         code: resp.code,
         data: {
-            id: challengePk.id,
+            id: credential.id,
             // @ts-ignore the `response.rawId` actually exists
-            rawId: arrBufToBase64UrlSafe(challengePk.rawId),
+            rawId: arrBufToBase64UrlSafe(credential.rawId),
             response: {
                 // @ts-ignore the `response.authenticatorData` actually exists
-                authenticatorData: arrBufToBase64UrlSafe(challengePk.response.authenticatorData),
+                authenticatorData: arrBufToBase64UrlSafe(credential.response.authenticatorData),
                 // @ts-ignore the `response.clientDataJSON` actually exists
-                clientDataJSON: arrBufToBase64UrlSafe(challengePk.response.clientDataJSON),
+                clientDataJSON: arrBufToBase64UrlSafe(credential.response.clientDataJSON),
                 // @ts-ignore the `response.signature` actually exists
-                signature: arrBufToBase64UrlSafe(challengePk.response.signature),
+                signature: arrBufToBase64UrlSafe(credential.response.signature),
             },
             // @ts-ignore the `response.getClientExtensionResults()` actually exists
-            extensions: challengePk.getClientExtensionResults(),
-            type: challengePk.type,
+            extensions: credential.getClientExtensionResults(),
+            type: credential.type,
         }
     }
 

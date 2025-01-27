@@ -47,11 +47,11 @@ export async function webauthnReg(userId: string, passkeyName: string): Promise<
     }
 
     // prompt for the passkey and get its public key
-    let challengePk: Credential;
+    let credential: Credential;
     try {
         const cred = await navigator.credentials.create(options);
         if (cred) {
-            challengePk = cred;
+            credential = cred;
         } else {
             return {
                 success: false,
@@ -70,18 +70,18 @@ export async function webauthnReg(userId: string, passkeyName: string): Promise<
     let payloadFinish: WebauthnRegFinishRequest = {
         passkey_name: passkeyName,
         data: {
-            id: challengePk.id,
+            id: credential.id,
             // @ts-ignore the `rawId` actually exists
-            rawId: arrBufToBase64UrlSafe(challengePk.rawId),
+            rawId: arrBufToBase64UrlSafe(credential.rawId),
             response: {
                 // @ts-ignore the `response.attestationObject` actually exists
-                attestationObject: arrBufToBase64UrlSafe(challengePk.response.attestationObject),
+                attestationObject: arrBufToBase64UrlSafe(credential.response.attestationObject),
                 // @ts-ignore the `response.clientDataJSON` actually exists
-                clientDataJSON: arrBufToBase64UrlSafe(challengePk.response.clientDataJSON),
+                clientDataJSON: arrBufToBase64UrlSafe(credential.response.clientDataJSON),
             },
             // @ts-ignore the `response.getClientExtensionResults()` actually exists
-            extensions: challengePk.getClientExtensionResults(),
-            type: challengePk.type,
+            extensions: credential.getClientExtensionResults(),
+            type: credential.type,
         },
     }
 

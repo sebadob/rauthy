@@ -1,64 +1,43 @@
-<script>
-    import {run} from 'svelte/legacy';
+<script lang="ts">
     import {onMount} from "svelte";
-    import {postDeviceVerify, getSessionInfo} from "../../utils/dataFetching.js";
-    import Loading from "../../components/Loading.svelte";
-    import {extractFormErrors, redirectToLogin} from "../../utils/helpers";
+    import {redirectToLogin} from "$utils/helpers";
     import LangSelector from "$lib5/LangSelector.svelte";
-    import Input from "$lib/inputs/Input.svelte";
-    import Button from "$lib/Button.svelte";
-    import * as yup from "yup";
-    import {REGEX_URI, TPL_DEVICE_USER_CODE_LENGTH} from "../../utils/constants.js";
-    import {fetchSolvePow} from "../../utils/pow.ts";
+    import Input from "$lib5/form/Input.svelte";
+    import Button from "$lib5/Button.svelte";
+    import {TPL_DEVICE_USER_CODE_LENGTH} from "$utils/constants";
+    import {fetchSolvePow} from "$utils/pow";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import Template from "$lib5/Template.svelte";
     import {useParam} from "$state/param.svelte";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
-
-    const btnWidthInline = '8rem';
+    import type {SessionResponse} from "$api/types/session.ts";
+    import {fetchGet, fetchPost} from "$api/fetch.ts";
+    import {PATTERN_URI} from "$utils/patterns.ts";
+    import type {DeviceAcceptedRequest, DeviceVerifyResponse} from "$api/types/device.ts";
 
     let t = useI18n();
-    /** @type {any} */
-    let sessionInfo = $state();
+    let session: undefined | SessionResponse = $state();
 
     let err = $state('');
+    let isError = $state(false);
     let userCodeLength = $state(8);
-    let isLoading = $state(false);
-    let onInputValidate = false;
 
-    /** @type {string | undefined} */
-    let scopes = $state(undefined);
+    let scopes: undefined | string[] = $state();
     let isAccepted = $state(false);
     let isDeclined = $state(false);
 
-    let formValues = $state({userCode: ''});
-    let formErrors = $state({userCode: ''});
-    let schema = $state({});
-    run(() => {
-        if (t && userCodeLength) {
-            schema = yup.object().shape({
-                // REGEX_URI is not really correct, but it's not too important either.
-                // The backend will validate immediately by cache key, which can be any String.
-                userCode: yup.string().trim()
-                    .min(userCodeLength, t.common.errTooShort)
-                    .max(userCodeLength, t.common.errTooLong)
-                    .matches(REGEX_URI, t.common.invalidInput)
-            });
-        }
-    });
+    let userCode = $state('');
 
     onMount(async () => {
         let param = useParam('code');
-        let code = param.get();
-        if (code) {
-            formValues.userCode = code;
-        }
+        let code = param.get() || '';
+        userCode = code;
 
-        let res = await getSessionInfo();
-        if (res.ok) {
-            sessionInfo = await res.json();
+        let res = await fetchGet<SessionResponse>('/auth/v1/oidc/sessioninfo');
+        if (res.body) {
+            session = res.body;
         } else if (code) {
             redirectToLogin(`device?code=${code}`);
         } else {
@@ -66,33 +45,34 @@
         }
     });
 
-    function onInput() {
-        if (onInputValidate) {
-            validateForm();
-        }
-    }
-
-    async function onSubmit(deviceAccepted) {
+    async function onSubmit(deviceAccepted: 'accept' | 'decline' | 'pending') {
         err = '';
-        onInputValidate = true;
 
-        const valid = await validateForm();
-        if (!valid) {
+        if (isError) {
             return;
         }
-        isLoading = true;
+        if (userCode.length < userCodeLength) {
+            err = t.common.errTooShort;
+            return;
+        }
+        if (userCode.length > userCodeLength) {
+            err = t.common.errTooLong;
+            return;
+        }
 
         let pow = await fetchSolvePow();
-        let data = {
-            user_code: formValues.userCode,
+        if (!pow) {
+            err = 'PoW error - please contact your administrator';
+            return;
+        }
+        let payload: DeviceAcceptedRequest = {
+            user_code: userCode,
             pow,
             device_accepted: deviceAccepted,
         };
-        const res = await postDeviceVerify(data);
+        let res = await fetchPost<DeviceVerifyResponse>('/auth/v1/oidc/device/verify', payload);
         if (res.status === 200) {
-            const body = await res.json();
-            console.log(body);
-            scopes = body.scopes?.split(' ') || ['openid'];
+            scopes = res.body?.scopes?.split(' ') || ['openid'];
         } else if (res.status === 202) {
             isAccepted = true;
             setTimeout(() => {
@@ -103,21 +83,8 @@
         } else if (res.status === 404) {
             err = t.device.wrongOrExpired;
         } else {
-            const body = await res.json();
-            err = body.message;
-        }
-
-        isLoading = false;
-    }
-
-    async function validateForm() {
-        try {
-            await schema.validate(formValues, {abortEarly: false});
-            formErrors = {userCode: ''};
-            return true;
-        } catch (err) {
-            formErrors = extractFormErrors(err);
-            return false;
+            console.error(res);
+            err = res.error?.message;
         }
     }
 </script>
@@ -130,9 +97,7 @@
 
 <Main>
     <ContentCenter>
-        {#if !sessionInfo}
-            <Loading/>
-        {:else}
+        {#if session}
             <div class="container">
                 <div class="name">
                     <h2>{t.device.title}</h2>
@@ -140,24 +105,27 @@
 
                 {#if scopes === undefined}
                     <div class="desc">
-                        {t.device.desc.replace('{{count}}', userCodeLength)}
+                        {t.device.desc.replace('{{count}}', userCodeLength.toString())}
                     </div>
 
                     <Input
                             name="userCode"
-                            bind:value={formValues.userCode}
-                            bind:error={formErrors.userCode}
                             autocomplete="off"
+                            label={t.device.userCode}
                             placeholder={t.device.userCode}
-                            on:enter={onSubmit}
-                            on:input={onInput}
-                    >
-                        {t.device.userCode.toUpperCase()}
-                    </Input>
+                            bind:value={userCode}
+                            bind:isError={isError}
+                            required
+                            min={userCodeLength.toString()}
+                            max={userCodeLength.toString()}
+                            pattern={PATTERN_URI}
+                    />
 
-                    <Button on:click={() => onSubmit('pending')} bind:isLoading>
-                        {t.device.submit}
-                    </Button>
+                    <div>
+                        <Button onclick={() => onSubmit('pending')}>
+                            {t.device.submit}
+                        </Button>
+                    </div>
                 {:else if isAccepted}
                     <div class="desc">
                         <p>{t.device.isAccepted}</p>
@@ -179,20 +147,10 @@
                     </div>
 
                     <div class="inline">
-                        <Button
-                                on:click={() => onSubmit('accept')}
-                                bind:isLoading
-                                level={1}
-                                width={btnWidthInline}
-                        >
+                        <Button onclick={() => onSubmit('accept')}>
                             {t.device.accept}
                         </Button>
-                        <Button
-                                on:click={() => onSubmit('decline')}
-                                bind:isLoading
-                                level={3}
-                                width={btnWidthInline}
-                        >
+                        <Button level={-1} onclick={() => onSubmit('decline')}>
                             {t.device.decline}
                         </Button>
                     </div>
@@ -212,15 +170,15 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
-        max-width: 19rem;
-        padding: 20px;
-        border: 1px solid var(--col-gmid);
-        border-radius: 5px;
-        box-shadow: 5px 5px 5px rgba(128, 128, 128, .1);
+        max-width: 18rem;
+        padding: 1rem;
+        border: 1px solid hsl(var(--bg-high));
+        border-radius: var(--border-radius);
+        box-shadow: .2rem .2rem .2rem rgba(128, 128, 128, .1);
     }
 
     .declined {
-        color: var(--col-err);
+        color: hsl(var(--error));
     }
 
     .err, .desc {
@@ -228,12 +186,13 @@
     }
 
     .err {
-        color: var(--col-err);
+        color: hsl(var(--error));
     }
 
     .inline {
+        padding: .5rem;
         display: flex;
-        justify-content: space-between;
+        gap: .5rem;
     }
 
     .name {

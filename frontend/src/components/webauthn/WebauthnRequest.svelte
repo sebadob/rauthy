@@ -1,7 +1,7 @@
 <script lang="ts">
     import {onMount} from "svelte";
     import Loading from "$lib/Loading.svelte";
-    import {webauthnAuth, type WebauthnAuthResult} from "$webauthn/ceremony_auth.ts";
+    import {webauthnAuth, type WebauthnAuthResult} from "$webauthn/authentication.ts";
     import {promiseTimeout} from "$utils/helpers";
     import {useI18n} from "$state/i18n.svelte";
     import type {MfaPurpose} from "$webauthn/types.ts";

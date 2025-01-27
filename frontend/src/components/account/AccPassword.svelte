@@ -16,7 +16,7 @@
     import IconCheck from "$icons/IconCheck.svelte";
     import type {PropsPassword} from "./props.ts";
     import {fetchPut} from "$api/fetch.ts";
-    import type {WebauthnAuthResult} from "../../webauthn/ceremony_auth.ts";
+    import type {WebauthnAuthResult} from "$webauthn/authentication.ts";
     import type {MfaPurpose} from "../../webauthn/types.ts";
 
     let {

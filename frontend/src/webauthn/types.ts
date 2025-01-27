@@ -1,5 +1,3 @@
-import {PATTERN_ALNUM_64, PATTERN_USER_NAME} from "$utils/patterns.ts";
-
 export type MfaPurpose = { Login: string } | 'PasswordNew' | 'PasswordReset' | 'Test';
 export type WebauthnAdditionalData = { Login: WebauthnLoginReq } | { Service: WebauthnServiceReq } | 'Test';
 
@@ -50,6 +48,9 @@ export interface WebauthnRegFinishRequest {
 // The following types all match the `webauthn-rs` types from the backend.
 // Most of them exist in the Browser context already, but with ArrayBuffer
 // types instead of Base64UrlSafeData for backend communication.
+// We need to convert and translate them between backend and browser,
+// because all data will be sent as JSON which does not support bytes.
+// ######################################################################
 
 type AuthenticatorTransport = 'Usb' | 'Nfc' | 'Ble' | 'Internal' | 'Hybrid' | 'Test' | 'Unknown';
 type AttestationFormat = 'packed' | 'Packed'

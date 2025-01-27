@@ -1,14 +1,14 @@
 <script lang="ts">
-    import {purgeStorage, saveCsrfToken} from "../../../utils/helpers";
-    import {logout} from "../../../utils/dataFetching.js";
+    import {purgeStorage, saveCsrfToken} from "$utils/helpers.ts";
+    import {logout} from "$utils/dataFetching";
     import Button from "$lib/Button.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
-    import type {LogoutParams} from "$api/query_params/logout.ts";
+    import type {LogoutParams} from "$api/types/logout.ts";
     import Template from "$lib5/Template.svelte";
-    import {TPL_CSRF_TOKEN} from "../../../utils/constants";
+    import {TPL_CSRF_TOKEN} from "$utils/constants";
     import {useParam} from "$state/param.svelte.ts";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
 

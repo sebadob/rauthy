@@ -12,10 +12,12 @@
     import type {PasskeyResponse} from "$api/types/webauthn.ts";
     import type {UserResponse} from "$api/types/user.ts";
     import {PATTERN_USER_NAME} from "$utils/patterns.ts";
-    import {webauthnReg} from "$webauthn/ceremony_reg.ts";
-    import {webauthnAuth} from "$webauthn/ceremony_auth.ts";
+    import {webauthnReg} from "$webauthn/registration.ts";
+    import {webauthnAuth} from "$webauthn/authentication.ts";
 
     let {user}: { user: UserResponse } = $props();
+
+    const isSupported = 'credentials' in navigator;
 
     let t = useI18n();
     let session = useSession();
@@ -108,99 +110,115 @@
             msg = body.message;
         }
     }
-
 </script>
 
 <div class="container">
-    <p>
-        {t.mfa.p1}
-        <br><br>
-        {t.mfa.p2}
-    </p>
-
-    {#if showRegInput}
-        <Input
-                bind:ref={refInput}
-                bind:value={passkeyName}
-                autocomplete="off"
-                label={t.mfa.passkeyName}
-                placeholder={t.mfa.passkeyName}
-                maxLength={32}
-                pattern={PATTERN_USER_NAME}
-                bind:isError={isInputError}
-                onEnter={handleRegStart}
-        />
-        <div class="regBtns">
-            <Button onclick={handleRegStart}>{t.mfa.register}</Button>
-            <Button level={3} onclick={() => showRegInput = false}>{t.common.cancel}</Button>
+    {#if !isSupported}
+        <div class="err">
+            <b>
+                Your browser does not support Webauthn credentials and must be updated.
+            </b>
         </div>
     {:else}
-        <div class="regNewBtn">
-            <Button
-                    level={passkeys.length === 0 ? 1 : 2}
-                    onclick={() => showRegInput = true}
-            >
-                {t.mfa.registerNew}
-            </Button>
-        </div>
-    {/if}
+        <p>
+            {t.mfa.p1}
+            <br><br>
+            {t.mfa.p2}
+        </p>
 
-    {#if passkeys.length > 0}
-        <div class="keysHeader">
-            {t.mfa.registerdKeys}
-        </div>
-    {/if}
-    <div class="keysContainer">
-        {#each passkeys as passkey (passkey.name)}
-            <div class="keyContainer">
-                <div class="row">
-                    {`${t.mfa.passkeyName}: `}
-                    <div class="nameUv">
-                        <b>{passkey.name}</b>
-                        {#if passkey.user_verified}
-                            <Tooltip text={t.account.userVerifiedTooltip}>
-                                <div style:margin-bottom="-.25rem">
-                                    <IconFingerprint width={18} color="var(--col-acnt)"/>
-                                </div>
-                            </Tooltip>
-                        {/if}
-                    </div>
-                </div>
-                <div class="row">
-                    {`${t.mfa.registerd}: `}
-                    <span class="font-mono">{formatDateFromTs(passkey.registered)}</span>
-                </div>
-                <div class="row">
-                    {`${t.mfa.lastUsed}: `}
-                    <span class="font-mono">{formatDateFromTs(passkey.last_used)}</span>
-                </div>
+        {#if showRegInput}
+            <Input
+                    bind:ref={refInput}
+                    bind:value={passkeyName}
+                    autocomplete="off"
+                    label={t.mfa.passkeyName}
+                    placeholder={t.mfa.passkeyName}
+                    maxLength={32}
+                    pattern={PATTERN_USER_NAME}
+                    bind:isError={isInputError}
+                    onEnter={handleRegStart}
+            />
+            <div class="regBtns">
+                <Button onclick={handleRegStart}>{t.mfa.register}</Button>
+                <Button level={3} onclick={() => showRegInput = false}>{t.common.cancel}</Button>
+            </div>
+        {:else}
+            <div class="regNewBtn">
+                <Button
+                        level={passkeys.length === 0 ? 1 : 2}
+                        onclick={() => showRegInput = true}
+                >
+                    {t.mfa.registerNew}
+                </Button>
+            </div>
+        {/if}
 
-                {#if showDelete}
+        {#if passkeys.length > 0}
+            <div class="keysHeader">
+                {t.mfa.registerdKeys}
+            </div>
+        {/if}
+        <div class="keysContainer">
+            {#each passkeys as passkey (passkey.name)}
+                <div class="keyContainer">
                     <div class="row">
-                        <div></div>
-                        <div class="deleteBtn">
-                            <Button
-                                    level={-3}
-                                    onclick={() => handleDelete(passkey.name)}
-                            >
-                                {t.common.delete.toUpperCase()}
-                            </Button>
+                    <span class="label">
+                        {t.mfa.passkeyName}
+                    </span>
+
+                        <div class="nameUv">
+                            <b>{passkey.name}</b>
+                            {#if passkey.user_verified}
+                                <Tooltip text={t.account.userVerifiedTooltip}>
+                                    <div style:margin-bottom="-.25rem">
+                                        <IconFingerprint width={18} color="var(--col-acnt)"/>
+                                    </div>
+                                </Tooltip>
+                            {/if}
                         </div>
                     </div>
-                {/if}
-            </div>
-        {/each}
-    </div>
+                    <div class="row">
+                    <span class="label">
+                        {t.mfa.registerd}
+                    </span>
 
-    {#if passkeys.length > 0}
-        <div class="button">
-            <Button onclick={handleTestStart}>{t.mfa.test}</Button>
+                        <span class="font-mono">{formatDateFromTs(passkey.registered)}</span>
+                    </div>
+                    <div class="row">
+                    <span class="label">
+                        {t.mfa.lastUsed}
+                    </span>
+
+                        <span class="font-mono">{formatDateFromTs(passkey.last_used)}</span>
+                    </div>
+
+                    {#if showDelete}
+                        <div class="row">
+                            <div></div>
+                            <div class="deleteBtn">
+                                <Button
+                                        level={-3}
+                                        onclick={() => handleDelete(passkey.name)}
+                                >
+                                    {t.common.delete}
+                                </Button>
+                            </div>
+                        </div>
+                    {/if}
+                </div>
+            {/each}
+        </div>
+
+        {#if passkeys.length > 0}
+            <div class="button">
+                <Button onclick={handleTestStart}>{t.mfa.test}</Button>
+            </div>
+        {/if}
+
+        <div class:success={!err} class:err>
+            {msg}
         </div>
     {/if}
-
-    <div class:success={!err} class:err>
-        {msg}
-    </div>
 </div>
 
 <style>
@@ -238,6 +256,10 @@
         font-weight: bold;
     }
 
+    .label {
+        color: hsla(var(--text) / .7);
+    }
+
     .success, .err {
         margin: .5rem -.3rem;
         text-align: left;
@@ -265,6 +287,7 @@
     }
 
     .row {
+        width: min(95dvw, 21rem);
         display: flex;
         gap: .5rem;
         justify-content: space-between;

@@ -129,7 +129,7 @@ export const I18nDe: I18n = {
         autoRedirectAccount: "Automatische Weiterleitung zum Account folgt",
         closeWindow: "Dieses Fenster kann nun geschlossen werden.",
         decline: "Ablehnen",
-        desc: "Bitte den {{count}}-stelligen vom Geräte angezeigten Benutzer Code eingeben.",
+        desc: "Bitte den {{count}}-stelligen vom Gerät angezeigten Benutzer Code eingeben.",
         descScopes: "Das Gerät fragt Zugang an zu:",
         isAccepted: "Die Anfrage wurde akzeptiert",
         isDeclined: "Die Anfrage wurde abgewiesen",
