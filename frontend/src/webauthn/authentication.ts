@@ -48,8 +48,6 @@ export async function webauthnAuth(
             error,
         };
     }
-    challenge.publicKey.timeout = resp.exp * 1000;
-    // console.log('challenge', challenge);
 
     // convert base64 into ArrayBuffers
     challenge.publicKey.challenge = base64UrlSafeToArrBuf(challenge.publicKey.challenge);
@@ -60,25 +58,26 @@ export async function webauthnAuth(
     }
 
     // prompt for the passkey and get its public key
+    const exp = (resp.exp - 1) * 1000;
+    const expTime = new Date().getTime() + exp;
     let credential: Credential;
     try {
         // TODO currently, we don't have a way to remote-close / cancel the browser popup for PIN input,
         // if the request expires. Tests done in Firefox so far.
-        const cred = await promiseTimeout(navigator.credentials.get(challenge), 5 * 1000 - 1);
-        // const cred = await promiseTimeout(navigator.credentials.get(challenge), resp.exp * 1000 - 1);
+        const cred = await promiseTimeout(navigator.credentials.get(challenge), exp);
         if (cred) {
             credential = cred;
         } else {
             return {
-                error: errorI18nInvalidKey || 'Invalid Key',
+                error: errorI18nInvalidKey,
             };
         }
     } catch (e) {
+        const timeout = new Date().getTime() >= expTime;
         return {
-            error: errorI18nTimeout || 'Timeout',
+            error: timeout ? errorI18nTimeout : errorI18nInvalidKey,
         };
     }
-    // console.log('credential', credential);
 
     // The backend expects base64 url safe strings instead of array buffers.
     // The values we need to modify are not publicly exported in the TS type though, but they exist.

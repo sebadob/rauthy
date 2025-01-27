@@ -74,6 +74,7 @@
     }
 
     function generate() {
+        err = '';
         if (policy) {
             let pwd = generatePassword(policy);
             passwords.new = pwd;
@@ -138,8 +139,8 @@
     }
 
     .err {
-        margin: -5px 10px 5px 10px;
+        margin: .5rem 0;
         text-align: left;
-        color: var(--col-err)
+        color: hsl(var(--error));
     }
 </style>

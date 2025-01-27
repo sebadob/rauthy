@@ -1,13 +1,18 @@
 import {fetchPost} from "$api/fetch.ts";
 import {arrBufToBase64UrlSafe, base64UrlSafeToArrBuf} from "./utils";
 import type {CreationChallengeResponse, WebauthnRegFinishRequest, WebauthnRegStartRequest} from "$webauthn/types.ts";
+import {promiseTimeout} from "$utils/helpers.ts";
 
 export interface WebauthnRegResult {
-    success: boolean,
-    msg: string,
+    error?: string,
 }
 
-export async function webauthnReg(userId: string, passkeyName: string): Promise<WebauthnRegResult> {
+export async function webauthnReg(
+    userId: string,
+    passkeyName: string,
+    errorI18nInvalidKey: string,
+    errorI18nTimeout: string,
+): Promise<WebauthnRegResult> {
     let payloadStart: WebauthnRegStartRequest = {
         passkey_name: passkeyName,
     };
@@ -17,8 +22,7 @@ export async function webauthnReg(userId: string, passkeyName: string): Promise<
     );
     if (!resStart.body) {
         return {
-            success: false,
-            msg: resStart.error.message || 'did not receive any registration data',
+            error: resStart.error.message || 'did not receive any registration data',
         };
     }
 
@@ -27,18 +31,14 @@ export async function webauthnReg(userId: string, passkeyName: string): Promise<
     // which we will decode properly in the following lines.
     let options = resStart.body as unknown as CredentialCreationOptions;
     if (!options.publicKey) {
-        let msg = 'no publicKey in options from the backend';
-        console.error(msg);
-        return {
-            success: false,
-            msg,
-        };
+        let error = 'no publicKey in options from the backend';
+        console.error(error);
+        return {error};
     }
 
     // the navigator credentials engine needs some values as array buffers
     options.publicKey.challenge = base64UrlSafeToArrBuf(options.publicKey.challenge);
     options.publicKey.user.id = base64UrlSafeToArrBuf(options.publicKey.user.id);
-    // options.publicKey.excludeCredentials = options.publicKey.excludeCredentials
 
     if (options.publicKey.excludeCredentials) {
         for (let cred of options.publicKey.excludeCredentials) {
@@ -47,22 +47,22 @@ export async function webauthnReg(userId: string, passkeyName: string): Promise<
     }
 
     // prompt for the passkey and get its public key
+    let exp = (options.publicKey.timeout || 60000) - 1000;
+    const expTime = new Date().getTime() + exp;
     let credential: Credential;
     try {
-        const cred = await navigator.credentials.create(options);
+        const cred = await promiseTimeout(navigator.credentials.create(options), exp);
         if (cred) {
             credential = cred;
         } else {
             return {
-                success: false,
-                msg: 'Credential Creation Error',
+                error: errorI18nInvalidKey,
             };
         }
     } catch (e) {
-        console.error(e);
+        const timeout = new Date().getTime() >= expTime;
         return {
-            success: false,
-            msg: 'Credential Creation Error',
+            error: timeout ? errorI18nTimeout : errorI18nInvalidKey,
         };
     }
 
@@ -90,14 +90,10 @@ export async function webauthnReg(userId: string, passkeyName: string): Promise<
         payloadFinish,
     );
     if (resFinish.status === 201) {
-        return {
-            success: true,
-            msg: 'Registration successful',
-        };
+        return {};
     } else {
         return {
-            success: false,
-            msg: resFinish.error.message || 'Registration failed',
+            error: resFinish.error.message || 'Registration failed',
         };
     }
 }

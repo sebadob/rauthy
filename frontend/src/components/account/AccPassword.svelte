@@ -29,7 +29,7 @@
 
     let inputWidth = $derived(viewModePhone ? 'calc(100vw - 1.5rem)' : '300px');
 
-    let accType = user.account_type;
+    let accType = $state(user.account_type);
     let passkeys: PasskeyResponse[] = $state([]);
     let isPwdValid: undefined | (() => boolean) = $state();
     let convertAccount = $state(false);
@@ -111,9 +111,11 @@
                 newConfirm: '',
             };
             user = res.body;
+            accType = res.body.account_type;
 
             setTimeout(() => {
                 success = false;
+                convertAccount = false;
             }, 3000);
         } else {
             err = res.error?.message || 'Error';
@@ -130,9 +132,11 @@
         }, 5000);
     }
 
-    function onWebauthnSuccess(data: WebauthnAdditionalData) {
+    function onWebauthnSuccess(data?: WebauthnAdditionalData) {
         mfaPurpose = undefined;
-        onSubmitFinish(data.code)
+        if (data) {
+            onSubmitFinish(data.code)
+        }
     }
 
     async function requestPasswordReset() {
@@ -178,9 +182,11 @@
             <p>{t.account.accTypePasskeyText1}</p>
             <p>{t.account.accTypePasskeyText2}</p>
             <p>{t.account.accTypePasskeyText3}</p>
-            <Button level={3} onclick={() => convertAccount = true}>
-                {t.account.convertAccount}
-            </Button>
+            <div>
+                <Button level={2} onclick={() => convertAccount = true}>
+                    {t.account.convertAccount}
+                </Button>
+            </div>
         {/if}
 
         {#if accType === "password" || accType === "federated_password" || convertAccount}
@@ -196,26 +202,23 @@
                     <Button onclick={onSubmit} level={1} {isLoading}>
                         {t.common.save}
                     </Button>
+                    {#if success}
+                        <div class="success" transition:fade>
+                            <IconCheck/>
+                        </div>
+                    {:else if err}
+                        <div class="err" transition:fade>
+                            {err}
+                        </div>
+                    {:else if convertAccount && !isLoading}
+                        <div class="cancel">
+                            <Button level={3} onclick={() => convertAccount = false}>
+                                {t.common.cancel}
+                            </Button>
+                        </div>
+                    {/if}
                 </div>
-                {#if convertAccount && !isLoading}
-                    <div>
-                        <Button level={3} onclick={() => convertAccount = false}>
-                            {t.common.cancel}
-                        </Button>
-                    </div>
-                {/if}
-            </div>
 
-            <div class="bottom">
-                {#if success}
-                    <div class="success" transition:fade>
-                        <IconCheck/>
-                    </div>
-                {:else if err}
-                    <div class="err" transition:fade>
-                        {err}
-                    </div>
-                {/if}
             </div>
 
             {#if !convertAccount && canConvertToPasskey}
@@ -256,16 +259,15 @@
         margin: 1rem 0;
     }
 
-    .bottom {
-        height: 1em;
-    }
-
     .save {
         margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        gap: .66rem;
     }
 
     .success {
-        margin: 5px;
+        margin-bottom: -.25rem;
         color: var(--col-ok);
     }
 </style>

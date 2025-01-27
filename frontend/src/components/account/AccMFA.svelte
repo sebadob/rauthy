@@ -78,13 +78,13 @@
         }
 
         let res = await webauthnReg(userId, passkeyName);
-        if (res.success) {
+        if (res.error) {
+            err = true;
+            msg = `${t.mfa.errorReg} - ${res.error}`;
+        } else {
             showRegInput = false;
             passkeyName = '';
             await fetchPasskeys();
-        } else {
-            err = true;
-            msg = `${t.mfa.errorReg} - ${res.msg}`;
         }
     }
 
