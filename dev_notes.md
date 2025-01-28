@@ -4,15 +4,19 @@
 
 - `amr` is not correctly set to `mfa` using the `device_code` flow, even when the user has used a passkey
 
-### Missing i18n (zh/ko) for Svelte 5 Migration:
+### Missing / Updated i18n (zh/ko) for Svelte 5 Migration:
 
+- `t.account.accessRenew`
 - `t.authorize.expectingPasskey`
 - `t.authorize.requestExpired`
 - `t.common.close`
 - `t.common.changeTheme`
+- `t.common.details`
+- `t.common.expandContent`
 - `t.common.selectI18n`
 - `t.common.month`
 - `t.common.months`
+- `t.common.summary`
 - `t.common.weekDaysShort`
 - `t.common.year`
 

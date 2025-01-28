@@ -14,6 +14,7 @@
     import {onMount} from "svelte";
     import {useParam} from "$state/param.svelte.ts";
     import Tabs from "$lib5/tabs/Tabs.svelte";
+    import Devices from "../common/Devices.svelte";
 
     let {
         user = $bindable(),
@@ -96,7 +97,8 @@
                 {:else if selected === 'WebID'}
                     <AccWebId bind:webIdData/>
                 {:else if selected === t.account.devices}
-                    <AccDevices/>
+                    <!--                    <AccDevices/>-->
+                    <Devices/>
                 {/if}
             </div>
         </div>

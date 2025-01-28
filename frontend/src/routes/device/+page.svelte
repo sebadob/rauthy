@@ -14,8 +14,8 @@
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
     import type {SessionResponse} from "$api/types/session.ts";
     import {fetchGet, fetchPost} from "$api/fetch.ts";
-    import {PATTERN_URI} from "$utils/patterns.ts";
-    import type {DeviceAcceptedRequest, DeviceVerifyResponse} from "$api/types/device.ts";
+    import {PATTERN_ALNUM, PATTERN_URI} from "$utils/patterns.ts";
+    import type {DeviceVerifyRequest, DeviceVerifyResponse} from "$api/types/device.ts";
 
     let t = useI18n();
     let session: undefined | SessionResponse = $state();
@@ -67,7 +67,7 @@
             err = 'PoW error - please contact your administrator';
             return;
         }
-        let payload: DeviceAcceptedRequest = {
+        let payload: DeviceVerifyRequest = {
             user_code: userCode,
             pow,
             device_accepted: deviceAccepted,
@@ -122,7 +122,7 @@
                             required
                             min={userCodeLength.toString()}
                             max={userCodeLength.toString()}
-                            pattern={PATTERN_URI}
+                            pattern={PATTERN_ALNUM}
                     />
 
                     <div>

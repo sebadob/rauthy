@@ -1,1 +1,0 @@
-import"../chunks/disclose-version.BDr9Qe-U.js";import"../chunks/legacy.CWXZuyhS.js";import{A as e}from"../chunks/AdminMainPre.DrF7230u.js";function t(o){e(o,{selected:"Sessions"})}export{t as component};
