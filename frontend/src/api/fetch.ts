@@ -1,5 +1,5 @@
 import {CSRF_TOKEN} from "../utils/constants";
-import {type ErrorResponse} from "$api/response/common/error.ts";
+import {type ErrorResponse} from "$api/types/error.ts";
 
 export interface IResponse<T> {
     body: undefined | T,
@@ -114,18 +114,7 @@ async function fetchWithBody<T>(
     if (typ === 'json') {
         body = JSON.stringify(payload);
     } else if (typ === 'form') {
-        let fd = new FormData();
-        for (let key of Object.keys(payload)) {
-            // @ts-ignore
-            let v = payload[key];
-            if (typeof v === 'object') {
-                fd.append(key, JSON.stringify(v));
-            } else {
-                // @ts-ignore
-                fd.append(key, payload[key]);
-            }
-        }
-        body = fd;
+        body = formDataFromObj(payload);
     }
 
     let res = await fetch(uri, {
@@ -135,6 +124,21 @@ async function fetchWithBody<T>(
         body,
     });
     return handleResponse(res, true);
+}
+
+export function formDataFromObj(obj: Object) {
+    let fd = new FormData();
+    for (let key of Object.keys(obj)) {
+        // @ts-ignore
+        let v = obj[key];
+        if (typeof v === 'object') {
+            fd.append(key, JSON.stringify(v));
+        } else {
+            // @ts-ignore
+            fd.append(key, obj[key]);
+        }
+    }
+    return fd;
 }
 
 export async function handleResponse<T>(res: Response, redirect401: boolean): Promise<IResponse<T>> {

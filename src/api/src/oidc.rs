@@ -663,6 +663,16 @@ pub async fn post_logout(
     Form(params): Form<LogoutRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
+    post_logout_handle(params, principal).await
+}
+
+// Extracted only to make it accessible via DEV handler `post_dev_only_endpoints()`.
+// The actix_web macro convert it into a `struct` which is not easily callable.
+#[inline]
+pub async fn post_logout_handle(
+    params: LogoutRequest,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
     let session = principal.get_session()?.clone();
     params.validate()?;
 

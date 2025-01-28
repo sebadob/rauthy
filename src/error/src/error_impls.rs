@@ -146,6 +146,16 @@ impl From<std::io::Error> for ErrorResponse {
     }
 }
 
+impl From<actix_web::Error> for ErrorResponse {
+    fn from(err: actix_web::Error) -> Self {
+        trace!("{:?}", err);
+        ErrorResponse::new(
+            ErrorResponseType::Internal,
+            format!("actix_web::Error Error: {}", err),
+        )
+    }
+}
+
 impl From<argon2::Error> for ErrorResponse {
     fn from(err: argon2::Error) -> Self {
         trace!("{:?}", err);

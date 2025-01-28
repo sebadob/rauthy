@@ -1,10 +1,12 @@
-use crate::{Assets, ReqPrincipal};
+use crate::{oidc, Assets, ReqPrincipal};
 use actix_web::http::header;
-use actix_web::{get, web, HttpRequest, HttpResponse};
+use actix_web::{get, post, web, FromRequest, HttpRequest, HttpResponse};
+use rauthy_api_types::oidc::LogoutRequest;
 use rauthy_common::constants::{DEV_MODE, HEADER_HTML};
 use rauthy_error::ErrorResponse;
 use rauthy_models::entity::auth_providers::AuthProviderTemplate;
 use rauthy_models::entity::colors::ColorEntity;
+use rauthy_models::entity::principal::Principal;
 use rauthy_models::html_templates::{
     AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
     AdminConfigHtml, AdminDocsHtml, AdminGroupsHtml, AdminHtml, AdminRolesHtml, AdminScopesHtml,
@@ -22,12 +24,54 @@ pub async fn get_template(
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    if !*DEV_MODE {
-        return Ok(HttpResponse::NotFound().finish());
-    }
+    // TODO maybe auto-block IP as suspicious if used in prod?
+    #[cfg(not(debug_assertions))]
+    return Ok(HttpResponse::NotFound().finish());
 
-    let tpl = HtmlTemplate::build_from_str(id.as_str(), principal.into_inner().session).await?;
-    Ok(HttpResponse::Ok().body(tpl.inner().to_string()))
+    #[cfg(debug_assertions)]
+    {
+        if !*DEV_MODE {
+            return Ok(HttpResponse::NotFound().finish());
+        }
+
+        let tpl = HtmlTemplate::build_from_str(id.as_str(), principal.into_inner().session).await?;
+        Ok(HttpResponse::Ok().body(tpl.inner().to_string()))
+    }
+}
+
+// This is a dev only endpoint. It is used in very specific scenarios only to work around a
+// limitation of the vite proxy. E.h. the `/oidc/logout` endpoint is used with `GET` to return
+// HTML, and with POST to actually do the logout. However, the vite proxy (at the time of writing)
+// cannot be configured in a fine-grained way to only proxy POST request to the backend and handle
+// GET via the dev UI. This endpoint solves this issue to provide a better DX and make everything
+// usable during local dev.
+//
+// DEV_MODE MUST be `true` and the code be compiled with `debug_assertions` to make it work.
+#[post("/dev/{typ}")]
+pub async fn post_dev_only_endpoints(
+    typ: web::Path<String>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    // TODO maybe auto-block IP as suspicious if used in prod?
+    #[cfg(not(debug_assertions))]
+    return Ok(HttpResponse::NotFound().finish());
+
+    #[cfg(debug_assertions)]
+    {
+        if !*DEV_MODE {
+            return Ok(HttpResponse::NotFound().finish());
+        }
+
+        match typ.as_str() {
+            "logout" => {
+                let params = web::Form::<LogoutRequest>::extract(&req).await?;
+                let principal = web::ReqData::<Principal>::extract(&req).await?;
+                oidc::post_logout_handle(params.into_inner(), principal).await
+            }
+            // "register" => todo!(),
+            _ => Ok(HttpResponse::NotFound().finish()),
+        }
+    }
 }
 
 #[get("/{_:.*}")]

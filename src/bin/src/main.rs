@@ -396,6 +396,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(events::sse_events)
                             .service(events::post_event_test)
                             .service(html::get_template)
+                            .service(html::post_dev_only_endpoints)
                             .service(html::get_index)
                             .service(html::get_account_html)
                             .service(html::get_admin_html)
@@ -573,7 +574,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                 .run()
                 .await
         }
-        
+
         #[cfg(not(target_os = "windows"))]
         ListenScheme::UnixHttp | ListenScheme::UnixHttps => {
             server.bind_uds(listen_addr)?.run().await
