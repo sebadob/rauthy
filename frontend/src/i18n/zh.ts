@@ -7,9 +7,11 @@ export const I18nZh: I18n = {
         changeTheme: "Change Theme",
         close: "Close",
         delete: "删除",
+        details: "Details",
         email: "电子邮箱",
         errTooShort: "输入过短",
         errTooLong: "输入过长",
+        expandContent: "Expand content",
         invalidInput: "无效输入",
         month: "Month",
         months: [
@@ -31,6 +33,7 @@ export const I18nZh: I18n = {
         required: "必填",
         save: "保存",
         selectI18n: "Select Language",
+        summary: "Summary",
         weekDaysShort: [
             "Sun",
             "Mon",

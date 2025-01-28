@@ -7,9 +7,11 @@ export const I18nKo: I18n = {
         changeTheme: "Change Theme",
         close: "Close",
         delete: "삭제",
+        details: "Details",
         email: "이메일",
         errTooShort: "입력이 너무 짧습니다.",
         errTooLong: "입력이 너무 깁니다.",
+        expandContent: "Expand content",
         invalidInput: "유효하지 않은 입력입니다.",
         month: "Month",
         months: [
@@ -31,6 +33,7 @@ export const I18nKo: I18n = {
         required: "필수 항목입니다.",
         save: "저장",
         selectI18n: "Select Language",
+        summary: "Summary",
         weekDaysShort: [
             "Sun",
             "Mon",

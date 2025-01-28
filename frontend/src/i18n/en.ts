@@ -7,9 +7,11 @@ export const I18nEn: I18n = {
         changeTheme: "Change Theme",
         close: "Close",
         delete: "Delete",
+        details: "Details",
         email: "E-Mail",
         errTooShort: "Input too short",
         errTooLong: "Input too long",
+        expandContent: "Expand content",
         invalidInput: "Invalid Input",
         month: "Month",
         months: [
@@ -31,6 +33,7 @@ export const I18nEn: I18n = {
         required: "Required",
         save: "Save",
         selectI18n: "Select Language",
+        summary: "Summary",
         weekDaysShort: [
             "Sun",
             "Mon",
@@ -49,7 +52,7 @@ export const I18nEn: I18n = {
         accTypePasskeyText2: "You can convert your account and add a password. But keep\nin mind, that this implies, that you need to verify each new device with the password additionally.\nYou then cannot just log in on any device, where you have not entered the password beforehand at\nleast once.",
         accTypePasskeyText3: "Do you want to convert your account and add a password?",
         accessExp: "Access Expires",
-        accessRenew: "Access Renew Until",
+        accessRenew: "Access renewable until",
         accessRenewDelete: "Delete the possibility to renew",
         birthdate: "Birthdate",
         city: "City",
