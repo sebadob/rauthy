@@ -22,6 +22,7 @@
 
     let err = $state('');
     let isError = $state(false);
+    let isLoading = $state(false);
     let userCodeLength = $state(8);
 
     let scopes: undefined | string[] = $state();
@@ -59,6 +60,7 @@
             err = t.common.errTooLong;
             return;
         }
+        isLoading = true;
 
         let pow = await fetchSolvePow();
         if (!pow) {
@@ -86,6 +88,8 @@
             console.error(res);
             err = res.error?.message;
         }
+
+        isLoading = false;
     }
 </script>
 
@@ -122,7 +126,7 @@
                     />
 
                     <div>
-                        <Button onclick={() => onSubmit('pending')}>
+                        <Button onclick={() => onSubmit('pending')} {isLoading}>
                             {t.device.submit}
                         </Button>
                     </div>
@@ -147,10 +151,10 @@
                     </div>
 
                     <div class="inline">
-                        <Button onclick={() => onSubmit('accept')}>
+                        <Button onclick={() => onSubmit('accept')} {isLoading}>
                             {t.device.accept}
                         </Button>
-                        <Button level={-1} onclick={() => onSubmit('decline')}>
+                        <Button level={-1} onclick={() => onSubmit('decline')} {isLoading}>
                             {t.device.decline}
                         </Button>
                     </div>
@@ -166,6 +170,14 @@
 </Main>
 
 <style>
+    ul {
+        margin-top: .5rem;
+    }
+
+    li {
+        margin-left: 1rem;
+    }
+
     .container {
         display: flex;
         flex-direction: column;
