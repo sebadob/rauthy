@@ -560,8 +560,6 @@ pub async fn post_device_verify(
     principal.validate_session_auth()?;
     payload.validate()?;
 
-    debug!("{:?}", payload);
-
     let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 

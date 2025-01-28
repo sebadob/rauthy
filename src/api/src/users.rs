@@ -487,6 +487,7 @@ pub async fn get_user_devices(
     put,
     path = "/users/{id}/devices",
     tag = "users",
+    request_body = DeviceRequest,
     responses(
         (status = 200, description = "Ok"),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
@@ -517,6 +518,7 @@ pub async fn put_user_device_name(
     delete,
     path = "/users/{id}/devices",
     tag = "users",
+    request_body = DeviceRequest,
     responses(
         (status = 200, description = "Ok"),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
