@@ -1,9 +1,11 @@
 use actix_web::web::Json;
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
+use rauthy_api_types::auth_providers::ProviderCallbackRequest;
 use rauthy_api_types::oidc::LoginRequest;
 use rauthy_common::constants::DEV_MODE;
 use rauthy_error::ErrorResponse;
 
+use crate::auth_providers;
 #[cfg(debug_assertions)]
 use rauthy_models::entity::principal::Principal;
 
@@ -65,15 +67,11 @@ pub async fn post_dev_only_endpoints(
             return Ok(HttpResponse::NotFound().finish());
         }
 
+        let data = web::Data::<AppState>::extract(&req).await?;
+
         match typ.as_str() {
-            "logout" => {
-                let params = web::Form::<LogoutRequest>::extract(&req).await?;
-                let principal = web::ReqData::<Principal>::extract(&req).await?;
-                oidc::post_logout_handle(params.into_inner(), principal).await
-            }
             "authorize" => {
                 if let Some(payload) = login_req {
-                    let data = web::Data::<AppState>::extract(&req).await?;
                     // TODO for some reason, this does not work...
                     // let payload = web::Json::<LoginRequest>::extract(&req).await?;
                     let principal = web::ReqData::<Principal>::extract(&req).await?;
@@ -81,6 +79,22 @@ pub async fn post_dev_only_endpoints(
                 } else {
                     Ok(HttpResponse::InternalServerError().finish())
                 }
+            }
+            "logout" => {
+                let params = web::Form::<LogoutRequest>::extract(&req).await?;
+                let principal = web::ReqData::<Principal>::extract(&req).await?;
+                oidc::post_logout_handle(params.into_inner(), principal).await
+            }
+            "providers_callback" => {
+                let payload = web::Json::<ProviderCallbackRequest>::extract(&req).await?;
+                let principal = web::ReqData::<Principal>::extract(&req).await?;
+                auth_providers::post_provider_callback_handle(
+                    data,
+                    req,
+                    payload.into_inner(),
+                    principal,
+                )
+                .await
             }
             // "register" => todo!(),
             _ => Ok(HttpResponse::NotFound().finish()),
