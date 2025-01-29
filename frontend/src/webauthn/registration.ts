@@ -22,7 +22,7 @@ export async function webauthnReg(
     );
     if (!resStart.body) {
         return {
-            error: resStart.error.message || 'did not receive any registration data',
+            error: resStart.error?.message || 'did not receive any registration data',
         };
     }
 
@@ -93,7 +93,7 @@ export async function webauthnReg(
         return {};
     } else {
         return {
-            error: resFinish.error.message || 'Registration failed',
+            error: resFinish.error?.message || 'Registration failed',
         };
     }
 }

@@ -258,6 +258,17 @@ pub async fn post_authorize(
     Json(payload): Json<LoginRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
+    post_authorize_handle(data, req, payload, principal).await
+}
+
+// extracted to be easily usable by post_dev_only_endpoints()
+#[inline(always)]
+pub async fn post_authorize_handle(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+    payload: LoginRequest,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
     payload.validate()?;
 

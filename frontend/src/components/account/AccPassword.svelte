@@ -134,7 +134,7 @@
 
     function onWebauthnSuccess(data?: WebauthnAdditionalData) {
         mfaPurpose = undefined;
-        if (data) {
+        if (data && 'code' in data) {
             onSubmitFinish(data.code)
         }
     }

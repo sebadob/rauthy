@@ -1,1 +1,0 @@
-import{a3 as p,j as e,g as u}from"./index-client.Bsb9hq-M.js";import{p as r}from"./proxy.DclUEOHG.js";var o={};let t=p(r(typeof process<"u"&&o.DEV_MODE==="true"));function a(){e(t,r(typeof process<"u"&&o.DEV_MODE==="true"))}function f(){return{get(){return u(t)},set(s){e(t,r(s))}}}export{a as i,f as u};

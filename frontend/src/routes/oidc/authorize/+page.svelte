@@ -1,23 +1,13 @@
-<script>
-    import {tick} from "svelte";
+<script lang="ts">
+    import {postProviderLogin} from "$utils/dataFetching.js";
     import {
-        authorize,
-        authorizeRefresh,
-        postPasswordResetRequest,
-        postProviderLogin
-    } from "../../../utils/dataFetching.js";
-    import * as yup from 'yup';
-    import {
-        extractFormErrors,
         formatDateFromTs,
         saveCsrfToken,
         saveProviderToken,
-    } from "../../../utils/helpers";
-    import Button from "$lib/Button.svelte";
+    } from "$utils/helpers";
+    import Button from "$lib5/Button.svelte";
     import WebauthnRequest from "../../../components/webauthn/WebauthnRequest.svelte";
-    import {scale} from 'svelte/transition';
-    import Input from "$lib/inputs/Input.svelte";
-    import PasswordInput from "$lib/inputs/PasswordInput.svelte";
+    import Input from "$lib5/form/Input.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import getPkce from "oauth-pkce";
     import {
@@ -28,7 +18,7 @@
         TPL_CSRF_TOKEN,
         TPL_IS_REG_OPEN,
         TPL_LOGIN_ACTION
-    } from "../../../utils/constants.js";
+    } from "$utils/constants.js";
     import IconHome from "$lib/icons/IconHome.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
@@ -36,169 +26,239 @@
     import Template from "$lib5/Template.svelte";
     import {useParam} from "$state/param.svelte";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
+    import type {AuthProviderTemplate} from "$api/templates/AuthProvider.ts";
+    import InputPassword from "$lib5/form/InputPassword.svelte";
+    import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
+    import {fetchGet, fetchPost, type IResponse} from "$api/fetch.ts";
+    import {useIsDev} from "$state/is_dev.svelte.ts";
+    import type {
+        LoginRefreshRequest, LoginRequest,
+        RequestResetRequest,
+        WebauthnLoginResponse
+    } from "$api/types/authorize.ts";
+    import Form from "$lib5/form/Form.svelte";
+    import ButtonAuthProvider from "../../../components/ButtonAuthProvider.svelte";
+    import {onMount} from "svelte";
+    import type {SessionInfoResponse} from "$api/types/session.ts";
+
+    const inputWidth = "18rem";
 
     let t = useI18n();
+    let isDev = useIsDev();
+
+    let authorizeUrl = $derived(useIsDev().get() ? '/auth/v1/dev/authorize' : '/auth/v1/oidc/authorize');
 
     let clientId = useParam('client_id').get();
-    let clientName = '';
-    let clientUri = '';
+    let clientName = $state('');
+    let clientUri = $state('');
     let redirectUri = useParam('redirect_uri').get();
     let nonce = useParam('nonce').get();
-    let scopes = useParam('scopes').get()?.split(' ') || [];
-    let passwordInput;
+    let scopes = useParam('scope').get()?.split(' ') || [];
 
-    let state = useParam('state').get();
+    let refEmail: undefined | HTMLInputElement = $state();
+    let refPassword: undefined | HTMLInputElement = $state();
+
+    let stateParam = useParam('state').get();
     let challenge = useParam('code_challenge').get();
     let challengeMethod = useParam('code_challenge_method').get();
-    let csrf = '';
     let refresh = false;
-    let existingMfaUser;
-    let providers = [];
-    // dummy data for testing
-    // let webauthnData = {
-    // 	code: "asdjknfasdjklfnasdlkjf",
-    //   header_csrf: "askjdfgnsdfjklgn",
-    //   user_id: "asdkfjnasdjkn",
-    //   email: "admin@localhost.de",
-    //   exp: 60,
-    // };
-    let webauthnData;
+    let existingMfaUser: undefined | string = $state();
+    let providers: AuthProviderTemplate[] = $state([]);
+    let mfaPurpose: undefined | MfaPurpose = $state();
 
-    let isLoading = false;
-    let err = '';
-    let loginAction = '';
-    let csrfToken = '';
-    let needsPassword = false;
-    let clientMfaForce = false;
-    let showReset = false;
-    let showResetRequest = false;
-    let emailSuccess = false;
-    let tooManyRequests = false;
-    let emailAfterSubmit = '';
-    let isRegOpen = false;
+    let isLoading = $state(false);
+    // let err = $state('some error message that it longer over multiple lines');
+    let err = $state('');
+    let loginAction = $state('');
+    let csrfToken = $state('');
+    let needsPassword = $state(false);
+    let clientMfaForce = $state(false);
+    let showReset = $state(false);
+    let showResetRequest = $state(false);
+    let emailSuccess = $state(false);
+    let tooManyRequests = $state(false);
+    let emailAfterSubmit = $state('');
+    let isRegOpen = $state(false);
 
-    let formValues = {email: useParam('login_hint').get() || '', password: ''};
-    let formErrors = {};
+    let email = $state(useParam('login_hint').get() || '');
+    let password = $state('');
+    let userId = $state('');
 
-    let schema = {};
-    $: if (t) {
-        schema = yup.object().shape({
-            email: yup.string().required(t.authorize.emailRequired).email(t.authorize.emailBadFormat),
-        });
-    }
+    onMount(async () => {
+        if (isDev.get()) {
+            // we want to fetch the original HTML in dev mode to get the proper session cookie
+            // that would otherwise be handled automatically in prod
+            let res = await fetchGet('/auth/v1/oidc/authorize');
+            if (res.error) {
+                console.error(res.error);
+            }
+        }
+    });
 
-    $: if (refresh && clientId?.length > 0 && redirectUri?.length > 0) {
-        isLoading = true
-        const req = {
-            client_id: clientId,
-            redirect_uri: redirectUri,
-            state: state,
-            code_challenge: challenge,
-            code_challenge_method: challengeMethod,
-            nonce: nonce,
-            scopes
-        };
+    onMount(() => {
+        if (!needsPassword) {
+            refEmail?.focus();
+        }
+    });
 
-        // make sure loading has been set to prevent a chrome bug with too fast redirect inside authorizeRefresh
-        tick().then(() => authorizeRefresh(req, csrf).then(res => handleAuthRes(res)));
-    }
+    $effect(() => {
+        if (refresh && clientId?.length || 0 > 0 && redirectUri?.length || 0 > 0) {
+            onRefresh();
+        }
+    })
 
-    $: if (existingMfaUser) {
-        formValues.email = existingMfaUser;
-    }
+    $effect(() => {
+        if (emailSuccess) {
+            setTimeout(() => {
+                emailSuccess = false;
+                showReset = false;
+                showResetRequest = false;
+            }, 3000);
+        }
+    });
 
-    $: if (emailSuccess) {
-        setTimeout(() => {
-            emailSuccess = false;
-            showReset = false;
-            showResetRequest = false;
-        }, 3000);
-    }
+    $effect(() => {
+        refPassword?.focus();
+    });
 
-    $: if (passwordInput) {
-        passwordInput.focus();
-    }
-
-    $: if (loginAction) {
+    $effect(() => {
         if ('Refresh' === loginAction) {
             refresh = true;
         } else if (loginAction?.startsWith('MfaLogin ')) {
-            existingMfaUser = loginAction.replace('MfaLogin ', '');
+            let mfaUser = loginAction.replace('MfaLogin ', '');
+            email = mfaUser;
+            existingMfaUser = mfaUser;
         }
-    }
+    });
 
-    $: if (csrfToken) {
-        saveCsrfToken(csrfToken);
-    }
+    $effect(() => {
+        if (csrfToken) {
+            saveCsrfToken(csrfToken);
+        }
+    });
 
     function handleShowReset() {
         err = '';
         showReset = true;
-        formValues.password = '';
+        password = '';
     }
 
-    async function onSubmit() {
-        err = '';
-
-        try {
-            await schema.validate(formValues, {abortEarly: false});
-            formErrors = {};
-        } catch (err) {
-            formErrors = extractFormErrors(err);
+    async function onRefresh() {
+        if (!clientId) {
+            console.error('clientId is undefined');
+            return;
+        }
+        if (!redirectUri) {
+            console.error('redirectUri is undefined');
             return;
         }
 
-        const req = {
-            email: formValues.email,
+        isLoading = true
+
+        const payload: LoginRefreshRequest = {
             client_id: clientId,
             redirect_uri: redirectUri,
-            state: state,
-            code_challenge: challenge,
-            code_challenge_method: challengeMethod,
+            state: stateParam,
             nonce: nonce,
-            scopes,
+            scopes
         };
-
-        if (needsPassword && formValues.email !== existingMfaUser) {
-            if (!formValues.password) {
-                formErrors.password = t.passwordRequired;
-                return;
-            }
-            if (formValues.password.length > 256) {
-                formErrors.password = 'max 256';
-                return;
-            }
-            req.password = formValues.password;
+        if (challenge && challengeMethod && (challengeMethod === 'plain' || challengeMethod === 'S256')) {
+            payload.code_challenge = challenge;
+            payload.code_challenge_method = challengeMethod;
         }
 
-        isLoading = true;
-        let res = await authorize(req, csrf);
+        let res = await fetchPost<undefined | WebauthnLoginResponse>('/auth/v1/oidc/authorize/refresh', payload);
         await handleAuthRes(res);
     }
 
-    async function handleAuthRes(res) {
+    async function onSubmit(form?: HTMLFormElement, params?: URLSearchParams) {
+        err = '';
+
+        if (!clientId) {
+            console.error('clientId is undefined');
+            return;
+        }
+        if (!redirectUri) {
+            console.error('redirectUri is undefined');
+            return;
+        }
+
+        const payload: LoginRequest = {
+            email,
+            client_id: clientId,
+            redirect_uri: redirectUri,
+            state: stateParam,
+            nonce: nonce,
+            scopes,
+        };
+        if (challenge && challengeMethod && (challengeMethod === 'plain' || challengeMethod === 'S256')) {
+            payload.code_challenge = challenge;
+            payload.code_challenge_method = challengeMethod;
+        }
+
+        if (needsPassword && email !== existingMfaUser) {
+            if (!password) {
+                err = t.authorize.passwordRequired;
+                return;
+            }
+            if (password.length > 256) {
+                err = 'max 256';
+                return;
+            }
+            payload.password = password;
+        }
+
+        isLoading = true;
+
+        let url = '/auth/v1/oidc/authorize';
+        if (useIsDev().get()) {
+            url = '/auth/v1/dev/authorize';
+        }
+
+        let res = await fetchPost<undefined | WebauthnLoginResponse>(url, payload);
+        await handleAuthRes(res);
+    }
+
+    async function handleAuthRes(res: IResponse<undefined | WebauthnLoginResponse>) {
         if (res.status === 202) {
             // -> all good
-            window.location.replace(res.headers.get('location'));
+            let loc = res.headers.get('location');
+            if (!loc) {
+                console.error('location header missing');
+                return;
+            }
+            window.location.replace(loc);
         } else if (res.status === 200) {
             // -> all good, but needs additional passkey validation
             err = '';
-            webauthnData = await res.json();
+            let body = res.body;
+            if (body && 'user_id' in body && 'code' in body) {
+                // TODO is there a nicer way of making TS happy with type checking?
+                userId = body.user_id as string;
+                mfaPurpose = {Login: body.code as string};
+            } else {
+                console.error('did not receive a proper WebauthnLoginResponse after HTTP200');
+            }
         } else if (res.status === 406) {
             // 406 -> client forces MFA while the user has none
             err = t.authorize.clientForceMfa;
             clientMfaForce = true;
         } else if (res.status === 429) {
             // 429 -> too many failed logins
-            let notBefore = Number.parseInt(res.headers.get('x-retry-not-before'));
+            let nbf = res.headers.get('x-retry-not-before');
+            if (!nbf) {
+                console.error('x-retry-not-before header missing');
+                return;
+            }
+            let notBefore = Number.parseInt(nbf);
             let nbfDate = formatDateFromTs(notBefore);
             let diff = notBefore * 1000 - new Date().getTime();
 
             tooManyRequests = true;
             err = `${t.authorize.http429} ${nbfDate}`;
 
-            formValues.email = '';
-            formValues.password = '';
+            email = '';
+            password = '';
             needsPassword = false;
 
             setTimeout(() => {
@@ -209,7 +269,7 @@
             // this will happen always if the user does the first try with a password-only account
             // the good thing about this is, that it is a prevention against autofill passwords from the browser
             needsPassword = true;
-            emailAfterSubmit = formValues.email;
+            emailAfterSubmit = email;
         } else {
             err = t.authorize.invalidCredentials;
             showResetRequest = true;
@@ -220,14 +280,14 @@
     function onEmailInput() {
         // this will basically remove the password input again if the user was asked to provide
         // a password and afterward changes his email again
-        if (needsPassword && emailAfterSubmit !== formValues.email) {
+        if (needsPassword && emailAfterSubmit !== email) {
             needsPassword = false;
-            formValues.password = '';
+            password = '';
             err = '';
         }
     }
 
-    function providerLogin(id) {
+    function providerLogin(id: string) {
         getPkce(64, (error, {challenge, verifier}) => {
             if (!error) {
                 localStorage.setItem(PKCE_VERIFIER_UPSTREAM, verifier);
@@ -236,13 +296,13 @@
         });
     }
 
-    async function providerLoginPkce(id, pkce_challenge) {
+    async function providerLoginPkce(id: string, pkce_challenge: string) {
         let data = {
-            email: formValues.email || null,
+            email: email || null,
             client_id: clientId,
             redirect_uri: redirectUri,
             scopes: scopes,
-            state: state,
+            state: stateParam,
             nonce: nonce,
             code_challenge: challenge,
             code_challenge_method: challengeMethod,
@@ -254,48 +314,44 @@
             const xsrfToken = await res.text();
             saveProviderToken(xsrfToken);
 
-            window.location.href = res.headers.get('location');
+            let loc = res.headers.get('location');
+            if (!loc) {
+                console.error('no location header set for provider login');
+                return;
+            }
+            window.location.href = loc;
         } else {
             let body = await res.json();
             err = body.message;
         }
     }
 
-    function onWebauthnError() {
+    function onWebauthnError(error: string) {
         // If there is any error with the key, the user should start a new login process
-        webauthnData = undefined;
+        mfaPurpose = undefined;
+        err = error;
     }
 
-    function onWebauthnSuccess(res) {
-        if (res) {
-            window.location.replace(res.loc);
+    function onWebauthnSuccess(data?: WebauthnAdditionalData) {
+        console.log('onWebauthnSuccess', data);
+        if (data && 'loc' in data) {
+            window.location.replace(data.loc as string);
         }
     }
 
     async function requestReset() {
-        try {
-            await schema.validate(formValues, {abortEarly: false});
-            formErrors = {};
-        } catch (err) {
-            formErrors = extractFormErrors(err);
-            return;
-        }
-
-        let req = {
-            email: formValues.email,
-        };
+        let payload: RequestResetRequest = {email};
         if (clientUri) {
-            req.redirect_uri = encodeURI(clientUri);
+            payload.redirect_uri = encodeURI(clientUri);
         }
 
         isLoading = true;
 
-        let res = await postPasswordResetRequest(req);
-        if (res.ok) {
-            emailSuccess = true;
+        let res = await fetchPost('/auth/v1/users/request_reset', payload);
+        if (res.error) {
+            err = res.error.message;
         } else {
-            let body = await res.json();
-            err = body.message;
+            emailSuccess = true;
         }
 
         isLoading = false;
@@ -334,90 +390,92 @@
                 <h2>{clientName || clientId}</h2>
             </div>
 
-            {#if webauthnData}
+            {#if mfaPurpose && userId}
+                <!--
+                TODO we could pass in an optional loginCodeExp and make sure
+                it fits inside the exp returned inside the WebauthnRequest later on
+                to output proper logs in case of misconfiguration.
+                Another approach would be to check this in the backend and emit warning logs.
+                -->
                 <WebauthnRequest
-                        {t}
-                        bind:data={webauthnData}
+                        {userId}
+                        purpose={mfaPurpose}
                         onSuccess={onWebauthnSuccess}
                         onError={onWebauthnError}
                 />
             {/if}
 
             {#if !clientMfaForce}
-                <Input
-                        type="email"
-                        name="rauthyEmail"
-                        bind:value={formValues.email}
-                        bind:error={formErrors.email}
-                        autocomplete="email"
-                        placeholder={t.common.email}
-                        disabled={tooManyRequests || clientMfaForce}
-                        on:enter={onSubmit}
-                        on:input={onEmailInput}
-                >
-                    {t.common.email.toUpperCase()}
-                </Input>
-
-                {#if needsPassword && existingMfaUser !== formValues.email && !showReset}
-                    <PasswordInput
-                            bind:bindThis={passwordInput}
-                            name="rauthyPassword"
-                            bind:value={formValues.password}
-                            error={formErrors.password}
-                            autocomplete="current-password"
-                            placeholder={t.common.password}
+                <Form action={authorizeUrl} {onSubmit}>
+                    <Input
+                            bind:ref={refEmail}
+                            typ="email"
+                            name="email"
+                            bind:value={email}
+                            autocomplete="email"
+                            label={t.common.email}
+                            placeholder={t.common.email}
                             disabled={tooManyRequests || clientMfaForce}
-                            on:enter={onSubmit}
-                    >
-                        {t.common.password.toUpperCase()}
-                    </PasswordInput>
+                            onInput={onEmailInput}
+                            width={inputWidth}
+                            required
+                    />
 
-                    {#if showResetRequest && !tooManyRequests}
-                        <div
-                                role="button"
-                                tabindex="0"
-                                class="forgotten"
-                                transition:scale|global
-                                on:click={handleShowReset}
-                                on:keypress={handleShowReset}
-                        >
-                            {t.authorize.passwordForgotten}
-                        </div>
-                    {/if}
-                {/if}
+                    {#if needsPassword && existingMfaUser !== email && !showReset}
+                        <InputPassword
+                                bind:ref={refPassword}
+                                name="password"
+                                bind:value={password}
+                                autocomplete="current-password"
+                                label={t.common.password}
+                                placeholder={t.common.password}
+                                maxLength={256}
+                                disabled={tooManyRequests || clientMfaForce}
+                                width={inputWidth}
+                                required
+                        />
 
-                {#if !tooManyRequests && !clientMfaForce}
-                    {#if showReset}
-                        <div class="btn flex-col">
-                            <Button on:click={requestReset}>
-                                {t.authorize.passwordRequest}
-                            </Button>
-                        </div>
-                    {:else}
-                        <div class="btn flex-col">
-                            <Button on:click={onSubmit} bind:isLoading>
-                                {t.authorize.login}
-                            </Button>
-                        </div>
-                    {/if}
-                {/if}
-            {/if}
-
-            {#if providers}
-                <div class="providers flex-col">
-                    {#each providers as provider (provider.id)}
-                        <Button on:click={() => providerLogin(provider.id)} level={3}>
-                            <div class="flex-inline">
-                                <img src="{`/auth/v1/providers/${provider.id}/img`}" alt="" width="20" height="20"/>
-                                <span class="providerName">{provider.name}</span>
+                        {#if showResetRequest && !tooManyRequests}
+                            <div class="forgotten">
+                                <Button invisible onclick={handleShowReset}>
+                                    {t.authorize.passwordForgotten}
+                                </Button>
                             </div>
-                        </Button>
-                    {/each}
-                </div>
+                        {/if}
+                    {/if}
+
+                    {#if !tooManyRequests && !clientMfaForce}
+                        {#if showReset}
+                            <div class="btn flex-col">
+                                <Button onclick={requestReset}>
+                                    {t.authorize.passwordRequest}
+                                </Button>
+                            </div>
+                        {:else}
+                            <div class="btn flex-col">
+                                <Button type="submit" {isLoading}>
+                                    {t.authorize.login}
+                                </Button>
+                            </div>
+                        {/if}
+                    {/if}
+                </Form>
+
+                {#if isRegOpen && !showResetRequest && !tooManyRequests}
+                    {#if clientUri}
+                        <a class="reg" href="/auth/v1/users/register?redirect_uri={clientUri}" target="_blank">
+                            {t.authorize.signUp}
+                        </a>
+                    {:else}
+                        <a class="reg" href="/auth/v1/users/register" target="_blank">
+                            {t.authorize.signUp}
+                        </a>
+                    {/if}
+                {/if}
             {/if}
 
             {#if err}
-                <div class="errMsg errMsgApi">
+                <div class="errMsg">
                     {err}
                 </div>
             {/if}
@@ -428,23 +486,31 @@
                 </div>
             {/if}
 
-            {#if isRegOpen && !clientMfaForce && !showResetRequest && !tooManyRequests}
-                {#if clientUri}
-                    <a class="reg" href="/auth/v1/users/register?redirect_uri={clientUri}" target="_blank">
-                        {t.authorize.signUp}
-                    </a>
-                {:else}
-                    <a class="reg" href="/auth/v1/users/register" target="_blank">
-                        {t.authorize.signUp}
-                    </a>
-                {/if}
-            {/if}
-
             {#if clientMfaForce}
                 <div class="btn flex-col">
-                    <Button on:click={() => window.location.href = '/auth/v1/account'}>
-                        ACCOUNT
+                    <Button onclick={() => window.location.href = '/auth/v1/account'}>
+                        Account
                     </Button>
+                </div>
+            {/if}
+
+            {#if !clientMfaForce && providers}
+                <div class="providers flex-col">
+                    <div class="providersSeparator">
+                        <div class="separator"></div>
+                        <div class="loginWith">
+                            <div>
+                                {t.authorize.orLoginWith}
+                            </div>
+                        </div>
+                    </div>
+                    {#each providers as provider (provider.id)}
+                        <ButtonAuthProvider
+                                ariaLabel={`Login: ${provider.name}`}
+                                {provider}
+                                onclick={providerLogin}
+                        />
+                    {/each}
                 </div>
             {/if}
         </div>
@@ -464,17 +530,18 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
-        max-width: 19rem;
+        max-width: 21rem;
         padding: 20px;
-        border: 1px solid var(--col-gmid);
+        border: 1px solid hsl(var(--bg-high));
         border-radius: 5px;
-        box-shadow: 5px 5px 5px rgba(128, 128, 128, .1);
+        box-shadow: .1rem .1rem .1rem rgba(128, 128, 128, .1);
     }
 
     .errMsg {
-        max-width: 15rem;
-        margin: -10px 10px 5px 5px;
-        color: var(--col-err)
+        margin: .5rem 0;
+        max-width: 18rem;
+        text-wrap: wrap;
+        color: hsl(var(--error));
     }
 
     .flex-col {
@@ -482,19 +549,8 @@
         flex-direction: column;
     }
 
-    .flex-inline {
-        display: inline-flex;
-        align-items: center;
-        gap: .5rem;
-    }
-
     .forgotten {
-        margin: 0 5px;
-        cursor: pointer;
-    }
-
-    .forgotten:hover {
-        color: var(--col-ok);
+        margin: 0 0 .5rem .5rem;
     }
 
     .head {
@@ -511,6 +567,29 @@
         margin: -10px 5px 0 5px;
     }
 
+    .loginWith {
+        display: flex;
+        justify-content: center;
+        margin-top: -.8rem;
+    }
+
+    .loginWith > div {
+        padding: 0 .5rem;
+        font-size: .8rem;
+        color: hsla(var(--text) / .6);
+        background: hsl(var(--bg));
+    }
+
+    .providersSeparator {
+        margin-top: 1rem;
+        margin-bottom: .5rem;
+    }
+
+    .separator {
+        height: 1px;
+        background: hsla(var(--bg-high) / .8);
+    }
+
     .logo {
         margin: 0 .25rem;
         width: 84px;
@@ -524,17 +603,13 @@
         margin-top: .66rem;
     }
 
-    .providerName {
-        /*margin-bottom: -14px;*/
-        margin-top: 4px;
-    }
-
     .reg {
-        margin-left: 5px;
+        margin-top: .5rem;
+        color: hsla(var(--text) / .75);
     }
 
     .success {
         margin: 0 5px;
-        color: var(--col-ok);
+        color: hsl(var(--action));
     }
 </style>

@@ -112,12 +112,15 @@
     .summary {
         margin-right: .5rem;
         padding-top: .25rem;
-        /*margin: .2rem .5rem 0 0;*/
         display: inline-flex;
         align-items: center;
     }
 
     .details {
+        transition: padding 150ms ease-in-out;
+    }
+
+    .container[aria-expanded="true"] .details {
         padding: .5rem;
     }
 </style>

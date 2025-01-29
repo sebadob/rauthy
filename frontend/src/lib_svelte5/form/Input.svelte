@@ -30,6 +30,7 @@
 
         onBlur,
         onEnter,
+        onInput,
         onLeft,
         onRight,
         onUp,
@@ -57,6 +58,7 @@
 
         onBlur?: () => void,
         onEnter?: () => void,
+        onInput?: () => void,
         onLeft?: () => void,
         onRight?: () => void,
         onUp?: () => void,
@@ -75,6 +77,7 @@
 
     function oninput(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
         isValid();
+        onInput?.();
         // console.log('in onInput');
         // console.log(event);
     }

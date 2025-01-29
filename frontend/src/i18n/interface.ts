@@ -96,6 +96,7 @@ export interface I18n {
         invalidKeyUsed: string,
         login: string,
         mfaAck: string,
+        orLoginWith: string,
         password: string,
         passwordForgotten: string,
         passwordRequest: string,
@@ -143,7 +144,6 @@ export interface I18n {
         p2: string,
 
         errorReg: string,
-        invalidKeyUsed: string,
         lastUsed: string,
         noKey: string,
         register: string,

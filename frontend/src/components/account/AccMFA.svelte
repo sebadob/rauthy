@@ -14,7 +14,7 @@
     import {PATTERN_USER_NAME} from "$utils/patterns.ts";
     import {webauthnReg} from "$webauthn/registration.ts";
     import WebauthnRequest from "../webauthn/WebauthnRequest.svelte";
-    import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
+    import type {MfaPurpose, WebauthnAuthResponse} from "$webauthn/types.ts";
 
     let {user}: { user: UserResponse } = $props();
 
@@ -77,7 +77,7 @@
             return;
         }
 
-        let res = await webauthnReg(userId, passkeyName);
+        let res = await webauthnReg(userId, passkeyName, t.authorize.invalidKeyUsed, t.authorize.requestExpired);
         if (res.error) {
             err = true;
             msg = `${t.mfa.errorReg} - ${res.error}`;
@@ -123,7 +123,7 @@
         }, 5000);
     }
 
-    function onWebauthnSuccess(data: WebauthnAdditionalData) {
+    function onWebauthnSuccess(data?: WebauthnAuthResponse) {
         mfaPurpose = undefined;
         msg = t.mfa.testSuccess;
     }

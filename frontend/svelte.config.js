@@ -44,6 +44,9 @@ const config = {
                 'img-src': ['self'],
             },
         },
+        env: {
+            publicPrefix: 'DEV_',
+        }
     },
 };
 

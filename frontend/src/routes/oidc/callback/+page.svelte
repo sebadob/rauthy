@@ -1,18 +1,18 @@
-<script>
+<script lang="ts">
     import {
         deleteVerifierFromStorage,
         getVerifierFromStorage,
         saveAccessToken,
         saveCsrfToken,
         saveIdToken
-    } from "../../../utils/helpers";
+    } from "$utils/helpers.js";
     import {onMount} from "svelte";
     import {
         CLIENT_ID,
         REDIRECT_URI_SUCCESS,
         REDIRECT_URI_SUCCESS_ACC,
-    } from "../../../utils/constants.js";
-    import {getSessionInfoXsrf, getToken} from "../../../utils/dataFetching.js";
+    } from "$utils/constants.js";
+    import {getSessionInfoXsrf, getToken} from "$utils/dataFetching.js";
     import {useParam} from "$state/param.svelte";
 
     let pCode = useParam('code');
@@ -63,5 +63,5 @@
 </script>
 
 <svelte:head>
-    <title>Login</title>
+    <title>Callback</title>
 </svelte:head>

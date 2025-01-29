@@ -7,6 +7,7 @@
     import {useI18n} from "$state/i18n.svelte.ts";
 
     let {
+        ref = $bindable(),
         type = 'password',
         id,
         name = 'password',
@@ -24,8 +25,10 @@
         showCopy = false,
 
         onBlur,
+        onEnter,
         onInput,
     }: {
+        ref?: undefined | HTMLInputElement,
         type?: string,
         id?: undefined | string,
         name?: string,
@@ -45,6 +48,7 @@
         showCopy?: boolean,
 
         onBlur?: () => void,
+        onEnter?: () => void,
         onInput?: () => void,
     } = $props();
 
@@ -85,8 +89,7 @@
 
     function onkeydown(ev: KeyboardEvent) {
         if (ev.code === 'Enter') {
-            // TODO try to find out if we are in a form and submit it
-            // dispatch('enter', true);
+            onEnter?.();
         }
     }
 
@@ -95,6 +98,7 @@
 <div style:width={width}>
     <div class="input-row">
         <input
+                bind:this={ref}
                 {type}
                 {id}
                 {name}

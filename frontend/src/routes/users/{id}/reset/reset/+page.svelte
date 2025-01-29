@@ -59,7 +59,7 @@
     let schemaPassword = $state();
 
     onMount(async () => {
-        let isDev = useIsDev();
+        let isDev = useIsDev().get();
         if (isDev) {
             requestType = 'password_reset';
         } else {

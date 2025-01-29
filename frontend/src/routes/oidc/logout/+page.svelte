@@ -47,7 +47,7 @@
         isLoading = true;
 
         let url = '/auth/v1/oidc/logout';
-        if (useIsDev()) {
+        if (useIsDev().get()) {
             url = '/auth/v1/dev/logout';
         }
         let res = await fetchPost(url, logoutData, 'form');

@@ -8,6 +8,7 @@
 
 - `t.account.accessRenew`
 - `t.authorize.expectingPasskey`
+- `t.authorize.orLoginWith`
 - `t.authorize.requestExpired`
 - `t.common.close`
 - `t.common.changeTheme`

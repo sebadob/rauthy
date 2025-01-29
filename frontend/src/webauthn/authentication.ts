@@ -1,8 +1,7 @@
 import {arrBufToBase64UrlSafe, promiseTimeout} from "$utils/helpers.ts";
 import {fetchPost} from "$api/fetch.ts";
 import type {
-    MfaPurpose,
-    WebauthnAdditionalData,
+    MfaPurpose, WebauthnAdditionalData,
     WebauthnAuthFinishRequest,
     WebauthnAuthStartRequest,
     WebauthnAuthStartResponse
@@ -113,7 +112,7 @@ export async function webauthnAuth(
     } else {
         console.error(resFinish);
         return {
-            error: resFinish.error || 'Authentication Error',
+            error: resFinish.error?.message || 'Authentication Error',
         };
     }
 }

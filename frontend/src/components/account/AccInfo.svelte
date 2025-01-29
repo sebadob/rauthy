@@ -11,6 +11,7 @@
     import type {WebIdResponse} from "$api/types/web_id.ts";
     import type {ProviderLoginRequest} from "$api/types/auth_provider.ts";
     import {fetchDelete, fetchPost} from "$api/fetch.ts";
+    import ButtonAuthProvider from "../ButtonAuthProvider.svelte";
 
     let {
         user = $bindable(),
@@ -127,26 +128,11 @@
 
                     <div class="providers">
                         {#each providers as provider (provider.id)}
-                            <Button
+                            <ButtonAuthProvider
                                     ariaLabel={`${t.account.providerLink}: ${provider.name}`}
-                                    onclick={() => linkProvider(provider.id)}
-                                    level={2}
-                            >
-                                <div class="flex-inline">
-                                    {#if showProviderButtons[provider.id]}
-                                        <img
-                                                src="{`/auth/v1/providers/${provider.id}/img`}"
-                                                alt=""
-                                                width="20"
-                                                height="20"
-                                                onload={() => showProviderButtons[provider.id] = true}
-                                        />
-                                    {/if}
-                                    <span class="provider-name">
-                                        {provider.name}
-                                    </span>
-                                </div>
-                            </Button>
+                                    {provider}
+                                    onclick={linkProvider}
+                            />
                         {/each}
                     </div>
                 </Modal>
@@ -235,19 +221,9 @@
         margin-left: -5px;
     }
 
-    .flex-inline {
-        display: inline-flex;
-        align-items: center;
-        gap: .5rem;
-    }
-
     .link-err {
         margin-left: 5px;
         color: hsl(var(--error));
-    }
-
-    .provider-name {
-        margin-bottom: -4px;
     }
 
     .providers {

@@ -1,4 +1,5 @@
 export type MfaPurpose = { Login: string } | 'PasswordNew' | 'PasswordReset' | 'Test';
+export type WebauthnAdditionalData = undefined | WebauthnLoginFinishResponse | WebauthnServiceReq;
 
 export interface WebauthnAuthStartRequest {
     purpose: MfaPurpose,
@@ -16,11 +17,13 @@ export interface WebauthnAuthStartResponse {
     exp: number,
 }
 
-export interface WebauthnAdditionalData {
+export interface WebauthnLoginFinishResponse {
+    loc: String,
+}
+
+export interface WebauthnServiceReq {
     code: string,
     user_id: string,
-    header_loc?: string,
-    header_origin?: string,
 }
 
 export interface WebauthnRegStartRequest {

@@ -1,6 +1,5 @@
 <script lang="ts">
     import Button from "$lib5/Button.svelte";
-    import AppVersion from "../components/AppVersion.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";

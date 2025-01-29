@@ -97,8 +97,7 @@
                 {:else if selected === 'WebID'}
                     <AccWebId bind:webIdData/>
                 {:else if selected === t.account.devices}
-                    <!--                    <AccDevices/>-->
-                    <Devices/>
+                    <Devices viewMode="account"/>
                 {/if}
             </div>
         </div>
