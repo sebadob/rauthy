@@ -1,101 +1,75 @@
-<script>
-    import {run} from 'svelte/legacy';
-    import * as yup from "yup";
-    import {extractFormErrors} from "../../../utils/helpers";
-    import Button from "$lib/Button.svelte";
-    import {REGEX_NAME, REGEX_NAME_NULLABLE, TPL_RESTRICTED_EMAIL_DOMAIN} from "../../../utils/constants.js";
-    import {registerUser} from "../../../utils/dataFetching.js";
-    import {tick} from "svelte";
-    import Input from "$lib/inputs/Input.svelte";
+<script lang="ts">
+    import Button from "$lib5/Button.svelte";
+    import {TPL_RESTRICTED_EMAIL_DOMAIN} from "$utils/constants";
+    import Input from "$lib5/form/Input.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
-    import {fetchSolvePow} from "../../../utils/pow.ts";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import Template from "$lib5/Template.svelte";
     import {useParam} from "$state/param.svelte";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
+    import Form from "$lib5/form/Form.svelte";
+    import {useIsDev} from "$state/is_dev.svelte.ts";
+    import {PATTERN_USER_NAME} from "$utils/patterns.ts";
+    import type {NewUserRegistrationRequest} from "$api/types/register.ts";
+    import {fetchPost} from "$api/fetch.ts";
 
     let t = useI18n();
+    let isDev = useIsDev();
+
     let restrictedDomain = $state('');
     let redirectUri = useParam('redirect_uri');
     let isLoading = $state(false);
     let err = $state('');
     let success = $state(false);
 
-    let formValues = $state({email: '', givenName: '', familyName: ''});
-    let formErrors = $state({});
+    let action = $derived(isDev.get() ? '/auth/v1/dev/register' : '/auth/v1/users/register');
 
-    let schema = $state({});
-    run(() => {
-        if (t) {
-            schema = yup.object().shape({
-                email: yup.string().required(t.common.required).email(t.register.emailBadFormat),
-                givenName: yup.string()
-                    .required(t.common.required)
-                    .matches(REGEX_NAME, t.register.regexName),
-                familyName: yup.string()
-                    .matches(REGEX_NAME_NULLABLE, t.register.regexName),
-            });
-        }
-    });
-
-    function handleKeyPress(event) {
-        if (event.detail.code === 'Enter') {
-            onSubmit();
-        }
-    }
-
-    async function onSubmit() {
+    async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         success = false;
         err = '';
 
-        // validate form
-        try {
-            await schema.validate(formValues, {abortEarly: false});
-            formErrors = {};
-        } catch (err) {
-            formErrors = extractFormErrors(err);
+        let email = params.get('email');
+        let given_name = params.get('given_name');
+        let pow = params.get('pow');
+
+        if (!email || !given_name || !pow) {
+            console.error('email, given_name, pow missing');
             return;
         }
 
-        if (restrictedDomain && !formValues.email.endsWith(restrictedDomain)) {
+        if (restrictedDomain && !email.endsWith(restrictedDomain)) {
             err = t.register.domainErr;
             return;
         }
 
-        isLoading = true;
-        await tick();
-
-        let pow = await fetchSolvePow();
-        const data = {
-            email: formValues.email,
-            given_name: formValues.givenName,
-            family_name: formValues.familyName.length > 0 ? formValues.familyName : undefined,
+        let payload: NewUserRegistrationRequest = {
+            email,
+            given_name,
+            family_name: params.get('family_name') || undefined,
             pow,
+            redirect_uri: params.get('redirect_uri') || undefined,
         };
 
-        // this allows to redirect the client to a custom URI after a successful password set
-        let uri = redirectUri.get();
-        if (uri) {
-            data.redirect_uri = uri;
-        }
+        isLoading = true;
+        // await tick();
 
-        const res = await registerUser(data);
-        if (res.ok) {
+        const res = await fetchPost(form.action, payload);
+        if (res.error) {
+            let error = res.error.message || 'Error';
+            if (error.includes("UNIQUE constraint")) {
+                err = 'E-Mail is already registered';
+            } else {
+                err = error;
+            }
+        } else {
             err = '';
             success = true;
             if (redirectUri) {
                 setTimeout(() => {
-                    window.location.replace(redirectUri.get() || '/auth/v1/account');
+                    window.location.replace(payload.redirect_uri || '/auth/v1/account');
                 }, 3000);
-            }
-        } else {
-            const body = await res.json();
-            if (body.message.includes("UNIQUE constraint")) {
-                err = 'E-Mail is already registered';
-            } else {
-                err = body.message;
             }
         }
 
@@ -112,7 +86,6 @@
 <Main>
     <ContentCenter>
         <div class="container">
-
             <div class="domainTxt">
                 <h1>{t.register.userReg}</h1>
                 {#if restrictedDomain}
@@ -121,47 +94,49 @@
                 {/if}
             </div>
 
-            <Input
-                    type="email"
-                    bind:value={formValues.email}
-                    bind:error={formErrors.email}
-                    autocomplete="email"
-                    placeholder={t.common.email}
-                    on:keypress={handleKeyPress}
-            >
-                {t.common.email.toUpperCase()}
-            </Input>
-            <Input
-                    bind:value={formValues.givenName}
-                    bind:error={formErrors.givenName}
-                    autocomplete="given-name"
-                    placeholder={t.account.givenName}
-                    on:keypress={handleKeyPress}
-            >
-                {t.account.givenName.toUpperCase()}
-            </Input>
-            <Input
-                    bind:value={formValues.familyName}
-                    bind:error={formErrors.familyName}
-                    autocomplete="family-name"
-                    placeholder={t.account.familyName}
-                    on:keypress={handleKeyPress}
-            >
-                {t.account.familyName.toUpperCase()}
-            </Input>
+            <Form {action} {onSubmit} withPowAs="pow">
+                {#if redirectUri.get()}
+                    <input type="hidden" name="redirect_uri" value={redirectUri.get()}/>
+                {/if}
+                <Input
+                        typ="email"
+                        name="email"
+                        autocomplete="email"
+                        label={t.common.email}
+                        placeholder={t.common.email}
+                        required
+                />
+                <Input
+                        name="given_name"
+                        autocomplete="given-name"
+                        label={t.account.givenName}
+                        placeholder={t.account.givenName}
+                        pattern={PATTERN_USER_NAME}
+                        required
+                />
+                <Input
+                        name="family_name"
+                        autocomplete="family-name"
+                        label={t.account.familyName}
+                        placeholder={t.account.familyName}
+                        pattern={PATTERN_USER_NAME}
+                />
 
-            <Button on:click={onSubmit} bind:isLoading>{t.register.register}</Button>
+                <div class="submit">
+                    <Button type="submit" {isLoading}>{t.register.register}</Button>
+                </div>
+                {#if success}
+                    <div class="success">
+                        {t.register.success}<br/>
+                        {t.register.emailCheck}
+                    </div>
+                {:else if err}
+                    <div class="err">
+                        {err}
+                    </div>
+                {/if}
 
-            {#if success}
-                <div class="success">
-                    {t.register.success}<br/>
-                    {t.register.emailCheck}
-                </div>
-            {:else if err}
-                <div class="err">
-                    {err}
-                </div>
-            {/if}
+            </Form>
         </div>
 
         <ThemeSwitch absolute/>
@@ -170,22 +145,25 @@
 </Main>
 
 <style>
+    .submit {
+        margin-top: .66rem;
+    }
+
     .container {
         display: flex;
         flex-direction: column;
         justify-content: center;
     }
 
-    .domainTxt {
-        margin: 0 5px 15px 5px;
-    }
-
     .err {
-        margin: 0 5px;
-        color: var(--col-err);
+        max-width: 16rem;
     }
 
-    .success {
-        margin: 0 5px;
+    .err, .success {
+        margin-top: .5rem;
+    }
+
+    .domainTxt {
+        margin: .5rem 0;
     }
 </style>
