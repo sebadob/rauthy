@@ -1,11 +1,11 @@
 <script lang="ts">
     import Button from "$lib5/Button.svelte";
     import {fade} from 'svelte/transition';
-    import AccModPwd from "./AccModPwd.svelte";
+    import AccModPwd from "$lib5/account/AccModPwd.svelte";
     import {postPasswordResetRequest} from "$utils/dataFetching.js";
-    import WebauthnRequest from "../webauthn/WebauthnRequest.svelte";
+    import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
     import CheckIcon from "$lib/CheckIcon.svelte";
-    import {useI18n} from "$state/i18n.svelte";
+    import {useI18n} from "$state/i18n.svelte.js";
     import type {UpdateUserSelfRequest, UserResponse} from "$api/types/user.ts";
     import type {AuthProviderTemplate} from "$api/templates/AuthProvider.ts";
     import IconCheck from "$icons/IconCheck.svelte";

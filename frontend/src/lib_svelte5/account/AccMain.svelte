@@ -1,12 +1,12 @@
 <script lang="ts">
     import {redirectToLogout} from "$utils/helpers.ts";
-    import AccInfo from "./AccInfo.svelte";
-    import AccEdit from "./AccEdit.svelte";
+    import AccInfo from "$lib5/account/AccInfo.svelte";
+    import AccEdit from "$lib5/account/AccEdit.svelte";
     import AccMFA from "./AccMFA.svelte";
     import AccPassword from "./AccPassword.svelte";
-    import AccWebId from "./AccWebId.svelte";
-    import AccDevices from "./AccDevices.svelte";
-    import {useI18n} from "$state/i18n.svelte";
+    import AccWebId from "../../components/account/AccWebId.svelte";
+    import AccDevices from "$lib5/account/AccDevices.svelte";
+    import {useI18n} from "$state/i18n.svelte.js";
     import type {UserResponse} from "$api/types/user.ts";
     import {TPL_AUTH_PROVIDERS} from "$utils/constants";
     import Template from "$lib5/Template.svelte";
@@ -14,7 +14,7 @@
     import {onMount} from "svelte";
     import {useParam} from "$state/param.svelte.ts";
     import Tabs from "$lib5/tabs/Tabs.svelte";
-    import Devices from "../common/Devices.svelte";
+    import Devices from "$lib5/devices/Devices.svelte";
 
     let {
         user = $bindable(),

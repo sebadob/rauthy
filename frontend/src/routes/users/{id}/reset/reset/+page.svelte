@@ -15,10 +15,10 @@
         webauthnRegFinishAccReset,
     } from "../../../../../utils/dataFetching.js";
     import Button from "$lib/Button.svelte";
-    import PasswordPolicy from "../../../../../components/passwordReset/PasswordPolicy.svelte";
+    import PasswordPolicy from "$lib5/PasswordPolicy.svelte";
     import Input from "$lib/inputs/Input.svelte";
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
-    import WebauthnRequest from "../../../../../components/webauthn/WebauthnRequest.svelte";
+    import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
     import {slide} from "svelte/transition";
     import LangSelector from "$lib5/LangSelector.svelte";
     import {REGEX_NAME, TPL_PASSWORD_RESET} from "../../../../../utils/constants.js";

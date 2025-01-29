@@ -6,7 +6,7 @@
         saveProviderToken,
     } from "$utils/helpers";
     import Button from "$lib5/Button.svelte";
-    import WebauthnRequest from "../../../components/webauthn/WebauthnRequest.svelte";
+    import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
     import Input from "$lib5/form/Input.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import getPkce from "oauth-pkce";

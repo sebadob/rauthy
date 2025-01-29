@@ -2,7 +2,7 @@
     import {run} from 'svelte/legacy';
 
     import PasswordInput from "$lib/inputs/PasswordInput.svelte";
-    import PasswordPolicy from "../../passwordReset/PasswordPolicy.svelte";
+    import PasswordPolicy from "$lib5/PasswordPolicy.svelte";
     import {onMount} from "svelte";
     import {getPasswordPolicy} from "../../../utils/dataFetching.js";
     import Button from "$lib/Button.svelte";

@@ -1,20 +1,20 @@
 <script lang="ts">
-    import {formatDateFromTs} from "$utils/helpers";
+    import {formatDateFromTs} from "$utils/helpers.ts";
     import Button from "$lib5/Button.svelte";
     import {webauthnDelete} from "$utils/dataFetching.js";
     import {onMount} from "svelte";
     import Input from "$lib5/form/Input.svelte";
     import IconFingerprint from "$lib/icons/IconFingerprint.svelte";
     import Tooltip from "$lib/Tooltip.svelte";
-    import {useI18n} from "$state/i18n.svelte";
-    import {useSession} from "$state/session.svelte";
+    import {useI18n} from "$state/i18n.svelte.js";
+    import {useSession} from "$state/session.svelte.js";
     import {fetchGet} from "$api/fetch.ts";
     import type {PasskeyResponse} from "$api/types/webauthn.ts";
     import type {UserResponse} from "$api/types/user.ts";
     import {PATTERN_USER_NAME} from "$utils/patterns.ts";
     import {webauthnReg} from "$webauthn/registration.ts";
-    import WebauthnRequest from "../webauthn/WebauthnRequest.svelte";
-    import type {MfaPurpose, WebauthnAuthResponse} from "$webauthn/types.ts";
+    import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
+    import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
 
     let {user}: { user: UserResponse } = $props();
 
@@ -88,20 +88,6 @@
         }
     }
 
-    // async function handleTestStart() {
-    //     resetMsgErr();
-    //
-    //     let res = await webauthnAuth(user.id, 'Test', t.mfa.testError, t.authorize.requestExpired);
-    //     if (res.error) {
-    //         err = true;
-    //         msg = `${t.mfa.testError} - ${res.error}`;
-    //     } else {
-    //         msg = t.mfa.testSuccess;
-    //         // re-fetching keys to update timestamps for expected outcome
-    //         await fetchPasskeys();
-    //     }
-    // }
-
     async function handleDelete(name: string) {
         let res = await webauthnDelete(user.id, name);
         if (res.status === 200) {
@@ -123,7 +109,7 @@
         }, 5000);
     }
 
-    function onWebauthnSuccess(data?: WebauthnAuthResponse) {
+    function onWebauthnSuccess(data?: WebauthnAdditionalData) {
         mfaPurpose = undefined;
         msg = t.mfa.testSuccess;
     }

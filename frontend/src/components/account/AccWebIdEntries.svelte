@@ -2,7 +2,7 @@
     import AccWebIdEntry from "./AccWebIdEntry.svelte";
     import IconPlus from "$lib/icons/IconPlus.svelte";
     import {onMount} from "svelte";
-    import {REGEX_URI_SPACE} from "../../utils/constants.js";
+    import {REGEX_URI_SPACE} from "$utils/constants.js";
 
     /**
      * @typedef {Object} Props

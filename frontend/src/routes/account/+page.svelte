@@ -1,5 +1,5 @@
 <script lang="ts">
-    import AccMain from "../../components/account/AccMain.svelte";
+    import AccMain from "$lib5/account/AccMain.svelte";
     import {redirectToLogin} from "$utils/helpers.ts";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";

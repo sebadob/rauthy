@@ -1,25 +1,37 @@
+import type {CodeChallengeMethod} from "$api/types/authorize.ts";
+
+export interface ProviderCallbackRequest {
+    /// Validation: PATTERN_ALNUM
+    state: string,
+    /// Validation: PATTERN_URI
+    code: string,
+    /// Validation: PATTERN_ALNUM
+    xsrf_token: string,
+    /// Validation: PATTERN_URI
+    pkce_verifier: string,
+}
+
 export interface ProviderLoginRequest {
     // values for the downstream client
     /// Validation: `email`
     email?: string,
-    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
+    /// Validation: PATTERN_CLIENT_ID_EPHEMERAL
     client_id: string,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    /// Validation: PATTERN_URI
     redirect_uri: string,
-    /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
+    /// Validation: PATTERN_GROUP
     scopes?: string[],
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    /// Validation: PATTERN_URI
     state?: string,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    /// Validation: PATTERN_URI
     nonce?: string,
-    /// Validation: `[a-zA-Z0-9-._~]{43,128}`
+    /// Validation: PATTERN_CODE_CHALLENGE
     code_challenge?: string,
-    /// Validation: `[a-zA-Z0-9]`
-    code_challenge_method?: string,
+    code_challenge_method?: CodeChallengeMethod,
 
     // values for the callback from upstream
-    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
+    /// Validation: PATTERN_URI
     provider_id: string,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
+    /// Validation: PATTERN_URI
     pkce_challenge: string,
 }

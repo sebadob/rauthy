@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {useI18n} from "$state/i18n.svelte";
+    import {useI18n} from "$state/i18n.svelte.js";
     import type {PasswordPolicyResponse} from "$api/types/password_policy.ts";
 
     let {

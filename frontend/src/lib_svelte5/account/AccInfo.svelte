@@ -5,13 +5,13 @@
     import Modal from "$lib5/Modal.svelte";
     import getPkce from "oauth-pkce";
     import {PKCE_VERIFIER_UPSTREAM} from "$utils/constants";
-    import {useI18n} from "$state/i18n.svelte";
+    import {useI18n} from "$state/i18n.svelte.js";
     import type {UserResponse} from "$api/types/user.ts";
     import type {AuthProvidersTemplate, AuthProviderTemplate} from "$api/templates/AuthProvider.ts";
     import type {WebIdResponse} from "$api/types/web_id.ts";
     import type {ProviderLoginRequest} from "$api/types/auth_provider.ts";
     import {fetchDelete, fetchPost} from "$api/fetch.ts";
-    import ButtonAuthProvider from "../ButtonAuthProvider.svelte";
+    import ButtonAuthProvider from "../../components/ButtonAuthProvider.svelte";
 
     let {
         user = $bindable(),

@@ -2,9 +2,9 @@
     import {run} from 'svelte/legacy';
     import Button from "$lib/Button.svelte";
     import {fade, slide} from 'svelte/transition';
-    import {putUserWebIdData} from "../../utils/dataFetching.js";
+    import {putUserWebIdData} from "$utils/dataFetching.js";
     import Switch from "$lib/Switch.svelte";
-    import {buildWebIdUri} from "../../utils/helpers";
+    import {buildWebIdUri} from "$utils/helpers";
     import {useI18n} from "$state/i18n.svelte";
 
     let {webIdData = $bindable()} = $props();

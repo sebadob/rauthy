@@ -15,7 +15,7 @@ export interface LoginRequest {
     state?: string,
     /// Validation: PATTERN_URI
     nonce?: string,
-    /// Validation: PATTERN_URI
+    /// Validation: PATTERN_CODE_CHALLENGE
     code_challenge?: string,
     /// Validation: `plain|S256`
     code_challenge_method?: CodeChallengeMethod,
@@ -32,7 +32,7 @@ export interface LoginRefreshRequest {
     state?: string,
     /// Validation: PATTERN_URI
     nonce?: string,
-    /// Validation: PATTERN_URI
+    /// Validation: PATTERN_CODE_CHALLENGE
     code_challenge?: string,
     code_challenge_method?: CodeChallengeMethod,
 }
