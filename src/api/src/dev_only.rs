@@ -1,11 +1,6 @@
-use actix_web::web::Json;
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
-use rauthy_api_types::auth_providers::ProviderCallbackRequest;
-use rauthy_api_types::oidc::LoginRequest;
-use rauthy_common::constants::DEV_MODE;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 
-use crate::auth_providers;
 #[cfg(debug_assertions)]
 use rauthy_models::entity::principal::Principal;
 
@@ -24,6 +19,7 @@ pub async fn get_template(
     #[cfg(debug_assertions)]
     {
         use actix_web::FromRequest;
+        use rauthy_common::constants::DEV_MODE;
         use rauthy_models::html_templates::HtmlTemplate;
 
         if !*DEV_MODE {
@@ -48,9 +44,7 @@ pub async fn get_template(
 pub async fn post_dev_only_endpoints(
     typ: web::Path<String>,
     req: HttpRequest,
-    // TODO for some weird reason, the extraction for LoginRequest works here but not when done
-    // manually below -> figure out why
-    login_req: Option<Json<LoginRequest>>,
+    mut payload: web::Payload,
 ) -> Result<HttpResponse, ErrorResponse> {
     // TODO maybe auto-block IP as suspicious if used in prod?
     #[cfg(not(debug_assertions))]
@@ -59,44 +53,55 @@ pub async fn post_dev_only_endpoints(
     #[cfg(debug_assertions)]
     {
         use crate::oidc;
+        use crate::{auth_providers, users};
         use actix_web::FromRequest;
+        use futures::StreamExt;
+        use rauthy_api_types::auth_providers::ProviderCallbackRequest;
         use rauthy_api_types::oidc::{LoginRequest, LogoutRequest};
+        use rauthy_api_types::users::NewUserRegistrationRequest;
+        use rauthy_common::constants::DEV_MODE;
         use rauthy_models::app_state::AppState;
 
         if !*DEV_MODE {
             return Ok(HttpResponse::NotFound().finish());
         }
 
+        // for some weird reason, the `payload` would be empty, if we extract it here from `req`
+        let mut body = web::BytesMut::new();
+        while let Some(chunk) = payload.next().await {
+            let chunk = chunk?;
+            if (body.len() + chunk.len()) > 262_144 {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "payload too large",
+                ));
+            }
+            body.extend_from_slice(&chunk);
+        }
+        let bytes = body.as_ref();
+
         let data = web::Data::<AppState>::extract(&req).await?;
 
         match typ.as_str() {
             "authorize" => {
-                if let Some(payload) = login_req {
-                    // TODO for some reason, this does not work...
-                    // let payload = web::Json::<LoginRequest>::extract(&req).await?;
-                    let principal = web::ReqData::<Principal>::extract(&req).await?;
-                    oidc::post_authorize_handle(data, req, payload.into_inner(), principal).await
-                } else {
-                    Ok(HttpResponse::InternalServerError().finish())
-                }
+                let payload = serde_json::from_slice::<LoginRequest>(bytes)?;
+                let principal = web::ReqData::<Principal>::extract(&req).await?;
+                oidc::post_authorize_handle(data, req, payload, principal).await
             }
             "logout" => {
-                let params = web::Form::<LogoutRequest>::extract(&req).await?;
+                let params = serde_urlencoded::from_bytes::<LogoutRequest>(bytes)?;
                 let principal = web::ReqData::<Principal>::extract(&req).await?;
-                oidc::post_logout_handle(params.into_inner(), principal).await
+                oidc::post_logout_handle(params, principal).await
             }
             "providers_callback" => {
-                let payload = web::Json::<ProviderCallbackRequest>::extract(&req).await?;
+                let payload = serde_json::from_slice::<ProviderCallbackRequest>(bytes)?;
                 let principal = web::ReqData::<Principal>::extract(&req).await?;
-                auth_providers::post_provider_callback_handle(
-                    data,
-                    req,
-                    payload.into_inner(),
-                    principal,
-                )
-                .await
+                auth_providers::post_provider_callback_handle(data, req, payload, principal).await
             }
-            // "register" => todo!(),
+            "register" => {
+                let payload = serde_json::from_slice::<NewUserRegistrationRequest>(bytes)?;
+                users::post_users_register_handle(data, req, payload).await
+            }
             _ => Ok(HttpResponse::NotFound().finish()),
         }
     }

@@ -301,6 +301,16 @@ pub async fn post_users_register(
     req: HttpRequest,
     Json(payload): Json<NewUserRegistrationRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    post_users_register_handle(data, req, payload).await
+}
+
+// extracted to be usable from `post_dev_only_endpoints()`
+#[inline(always)]
+pub async fn post_users_register_handle(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+    payload: NewUserRegistrationRequest,
+) -> Result<HttpResponse, ErrorResponse> {
     if !*OPEN_USER_REG {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,

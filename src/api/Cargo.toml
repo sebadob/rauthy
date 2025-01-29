@@ -17,18 +17,21 @@ actix-web = { workspace = true }
 actix-web-lab = { workspace = true }
 chrono = { workspace = true }
 cryptr = { workspace = true }
+futures = { workspace = true }
 mime_guess = { workspace = true }
 num_cpus = { workspace = true }
 rust-embed = { version = "8", features = ["actix-web", "tokio"] }
 semver = { workspace = true }
 spow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_urlencoded = { workspace = true }
 time = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 utoipa = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
 validator = { workspace = true }
-serde = { version = "1.0.217", features = ["derive"] }
 
 [dev-dependencies]
 pretty_assertions = "1"

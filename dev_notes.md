@@ -20,6 +20,7 @@
 - `t.common.summary`
 - `t.common.weekDaysShort`
 - `t.common.year`
+- `t.register.alreadyRegistered`
 
 ## Stage 1 - essentials
 

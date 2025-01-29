@@ -25,6 +25,7 @@ ruma = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_json_path = { workspace = true }
+serde_urlencoded = { workspace = true }
 spow = { workspace = true }
 sqlx = { workspace = true }
 svg-hush = { workspace = true }
