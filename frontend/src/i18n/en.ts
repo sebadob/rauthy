@@ -212,6 +212,7 @@ export const I18nEn: I18n = {
         successPasskey2: "Please log into your account and register a second backup key as\nsoon as possible. With a passkey only account, you wil not be able to use a password reset via\nE-Mail in case you lose your current key."
     },
     register: {
+        alreadyRegistered: "E-Mail is already registered",
         domainAllowed: "Allowed domain:",
         domainErr: "E-Mail domain not allowed",
         domainRestricted: "E-Mail domains are restricted",

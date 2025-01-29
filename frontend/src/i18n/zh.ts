@@ -212,6 +212,7 @@ export const I18nZh: I18n = {
         successPasskey2: "请登入您的账户并尽快注册一个备份密钥。\n对于仅密钥登陆的账户，在丢失您当前的密钥时，您无法通过电子邮件进行密码重置。"
     },
     register: {
+        alreadyRegistered: "E-Mail is already registered",
         domainAllowed: "允许的域名：",
         domainErr: "此电子邮件域名不被允许",
         domainRestricted: "电子邮件域名被限制",

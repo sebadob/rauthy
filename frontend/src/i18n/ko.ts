@@ -212,6 +212,7 @@ export const I18nKo: I18n = {
         successPasskey2: "계정에 로그인하여 가능한 한 빨리 두 번째 백업 키를 등록해 주세요.\n패스키 전용 계정은 현재 패스키를 잃어버리면, 이메일을 통하여 비밀번호 초기화할 수 없습니다."
     },
     register: {
+        alreadyRegistered: "E-Mail is already registered",
         domainAllowed: "허용된 도메인:",
         domainErr: "허용되지 않은 이메일의 도메인입니다.",
         domainRestricted: "이메일의 도메인이 제한되어 있습니다.",

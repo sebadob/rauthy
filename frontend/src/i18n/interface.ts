@@ -188,6 +188,7 @@ export interface I18n {
         successPasskey2: string,
     },
     register: {
+        alreadyRegistered: string,
         domainAllowed: string,
         domainErr: string,
         domainRestricted: string,

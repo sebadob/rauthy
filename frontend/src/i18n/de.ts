@@ -212,6 +212,7 @@ export const I18nDe: I18n = {
         successPasskey2: "Bitte loggen Sie sich direkt in Ihren Account ein und registrieren\nSie mindestens einen weiteren Backup Passkey. Ein passwortloser Account kann nicht den Passwort\nReset via E-Mail nutzen für den Fall, dass der derzeitige Passkey abhanden kommt."
     },
     register: {
+        alreadyRegistered: "E-Mail is bereits registriert",
         domainAllowed: "Erlaubte Domain:",
         domainErr: "E-Mail Domain ist nicht erlaubt",
         domainRestricted: "E-Mail Domains sind beschränkt",
