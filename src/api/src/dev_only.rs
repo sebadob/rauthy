@@ -20,14 +20,17 @@ pub async fn get_template(
     {
         use actix_web::FromRequest;
         use rauthy_common::constants::DEV_MODE;
+        use rauthy_models::app_state::AppState;
         use rauthy_models::html_templates::HtmlTemplate;
 
         if !*DEV_MODE {
             return Ok(HttpResponse::NotFound().finish());
         }
 
+        let data = web::Data::<AppState>::extract(&req).await?;
         let principal = web::ReqData::<Principal>::extract(&req).await?;
-        let tpl = HtmlTemplate::build_from_str(id.as_str(), principal.into_inner().session).await?;
+        let tpl =
+            HtmlTemplate::build_from_str(data, id.as_str(), principal.into_inner().session).await?;
         Ok(HttpResponse::Ok().body(tpl.inner().to_string()))
     }
 }
@@ -102,7 +105,10 @@ pub async fn post_dev_only_endpoints(
                 let payload = serde_json::from_slice::<NewUserRegistrationRequest>(bytes)?;
                 users::post_users_register_handle(data, req, payload).await
             }
-            _ => Ok(HttpResponse::NotFound().finish()),
+            _ => {
+                tracing::warn!("unhandled DEV template request: {}", typ);
+                Ok(HttpResponse::NotFound().finish())
+            }
         }
     }
 }

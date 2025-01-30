@@ -86,10 +86,12 @@
 
     onMount(async () => {
         if (isDev.get()) {
-            // we want to fetch the original HTML in dev mode to get the proper session cookie
-            // that would otherwise be handled automatically in prod
-            let res = await fetchGet('/auth/v1/oidc/authorize');
-            if (res.error) {
+            // Make sure to create a session manually during dev.
+            // In prod, it will be handled automatically during the GET already.
+            let res = await fetchPost<SessionInfoResponse>('/auth/v1/oidc/session');
+            if (res.body?.csrf_token) {
+                saveCsrfToken(res.body.csrf_token)
+            } else {
                 console.error(res.error);
             }
         }

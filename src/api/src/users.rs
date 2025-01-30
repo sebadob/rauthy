@@ -40,7 +40,7 @@ use rauthy_models::html_templates::{Error1Html, Error3Html, ErrorHtml, UserRegis
 use rauthy_models::language::Language;
 use rauthy_service::password_reset;
 use spow::pow::Pow;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 use validator::Validate;
 
 /// Returns all existing users
@@ -656,7 +656,7 @@ pub async fn get_user_password_reset(
 
 /// Endpoint for resetting passwords
 ///
-/// On this endpoint, a password reset can be posted. This only works with a valid
+/// On this endpoint, a password reset can be submitted. This only works with a valid
 /// `PWD_RESET_COOKIE` + CSRF token.
 ///
 /// Expects the CSRF token to be provided with an HTTP Header called `PWD_CSRF_HEADER`
@@ -1170,9 +1170,15 @@ pub async fn post_user_password_request_reset(
     principal.validate_session_auth_or_init()?;
     payload.validate()?;
 
+    info!(
+        "Password reset request for '{}' from IP {}",
+        payload.email,
+        real_ip_from_req(&req)?
+    );
+
     match User::find_by_email(payload.email).await {
         Ok(user) => user
-            .request_password_reset(&data, req, payload.redirect_uri)
+            .request_password_reset(&data, payload.redirect_uri)
             .await
             .map(|_| HttpResponse::Ok().status(StatusCode::OK).finish()),
         Err(_) => {

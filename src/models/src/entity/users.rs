@@ -37,7 +37,7 @@ use sqlx::{query_as, FromRow};
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use time::OffsetDateTime;
-use tracing::{debug, error, trace, warn};
+use tracing::{debug, error, trace};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccountType {
@@ -1635,7 +1635,6 @@ impl User {
     pub async fn request_password_reset(
         &self,
         data: &web::Data<AppState>,
-        req: HttpRequest,
         redirect_uri: Option<String>,
     ) -> Result<(), ErrorResponse> {
         // TODO implement something with a Backup Code for passkey only accounts?
@@ -1644,17 +1643,8 @@ impl User {
             return Ok(());
         }
 
-        let ml_res = MagicLink::find_by_user(self.id.clone()).await;
-        // if an active magic link already exists - invalidate it.
-        if let Ok(mut ml) = ml_res {
-            if ml.exp > OffsetDateTime::now_utc().unix_timestamp() {
-                warn!(
-                    "Password reset request with already existing valid magic link from: {}",
-                    real_ip_from_req(&req)?
-                );
-                ml.invalidate().await?;
-            }
-        }
+        // if any active magic links already exist - delete them and only ever have 1 active.
+        MagicLink::delete_all_pwd_reset_for_user(self.id.clone()).await?;
 
         let usage = if self.password.is_none() && !self.has_webauthn_enabled() {
             MagicLinkUsage::NewUser(redirect_uri)

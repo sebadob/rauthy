@@ -1,10 +1,13 @@
+use crate::app_state::AppState;
 use crate::entity::auth_providers::AuthProviderTemplate;
 use crate::entity::colors::Colors;
+use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::sessions::Session;
+use crate::entity::users::User;
 use crate::language::Language;
 use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, HttpResponseBuilder};
+use actix_web::{web, HttpResponse, HttpResponseBuilder};
 use rauthy_api_types::generic::PasswordPolicyResponse;
 use rauthy_common::constants::{
     DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION,
@@ -74,7 +77,11 @@ impl HtmlTemplate {
     /// rendered into the HTML directly in prod.
     ///
     /// TODO maybe deactivate completely without debug_assertions?
-    pub async fn build_from_str(s: &str, session: Option<Session>) -> Result<Self, ErrorResponse> {
+    pub async fn build_from_str(
+        data: web::Data<AppState>,
+        s: &str,
+        session: Option<Session>,
+    ) -> Result<Self, ErrorResponse> {
         match s {
             "tpl_auth_providers" => {
                 let json = AuthProviderTemplate::get_all_json_template().await?;
@@ -104,7 +111,7 @@ impl HtmlTemplate {
             "tpl_restricted_email_domain" => Ok(Self::RestrictedEmailDomain(
                 USER_REG_DOMAIN_RESTRICTION.clone().unwrap_or_default(),
             )),
-            "tpl_password_reset" => {
+            "tpl_password_reset_old" => {
                 if let Some(s) = session {
                     let password_policy = PasswordPolicy::find().await?;
 
@@ -123,6 +130,36 @@ impl HtmlTemplate {
                         "no session",
                     ))
                 }
+            }
+            "tpl_password_reset" => {
+                // To have a good DX when working on the password reset, we want to create a new,
+                // valid magic link automatically in DEV mode and return proper values directly.
+                // At a valid session should have been created before to make this work.
+                let user_id = session
+                    .expect("To make the tpl_password_reset work automatically in local dev, you need to be logged in")
+                    .user_id
+                    .clone()
+                    .expect("To make the tpl_password_reset work automatically in local dev, you need to be logged in");
+                let user = User::find(user_id).await?;
+
+                MagicLink::delete_all_pwd_reset_for_user(user.id.clone()).await?;
+                let usage = if user.password.is_none() && !user.has_webauthn_enabled() {
+                    MagicLinkUsage::NewUser(None)
+                } else {
+                    MagicLinkUsage::PasswordReset(None)
+                };
+                let ml =
+                    MagicLink::create(user.id.clone(), data.ml_lt_pwd_reset as i64, usage).await?;
+                let password_policy = PasswordPolicy::find().await?;
+                let tpl = TplPasswordReset {
+                    csrf_token: ml.csrf_token.clone(),
+                    magic_link_id: ml.id.clone(),
+                    needs_mfa: user.has_webauthn_enabled(),
+                    password_policy: PasswordPolicyResponse::from(password_policy),
+                    user_id: user.id,
+                };
+
+                Ok(Self::PasswordReset(tpl))
             }
             _ => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,

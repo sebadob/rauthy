@@ -164,6 +164,26 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
         Ok(link)
     }
 
+    pub async fn delete_all_pwd_reset_for_user(user_id: String) -> Result<(), ErrorResponse> {
+        if is_hiqlite() {
+            DB::client()
+                .execute(
+                    "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'password_reset%'",
+                    params!(user_id),
+                )
+                .await?;
+        } else {
+            sqlx::query!(
+                "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'password_reset%'",
+                user_id,
+            )
+            .execute(DB::conn())
+            .await?;
+        };
+
+        Ok(())
+    }
+
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let res = if is_hiqlite() {
             DB::client()
@@ -203,13 +223,13 @@ VALUES ($1, $2, $3, $4, $5, $6)"#,
         if is_hiqlite() {
             DB::client()
                 .execute(
-                    "DELETE FROM magic_links WHERE user_id = $1 AND USAGE LIKE 'email_change$%'",
+                    "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'email_change$%'",
                     params!(user_id),
                 )
                 .await?;
         } else {
             sqlx::query!(
-                "DELETE FROM magic_links WHERE user_id = $1 AND USAGE LIKE 'email_change$%'",
+                "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'email_change$%'",
                 user_id,
             )
             .execute(DB::conn())
