@@ -65,7 +65,7 @@
         }
     }
 
-    async function handleRegStart() {
+    async function handleRegister() {
         resetMsgErr();
 
         if (isInputError || !userId) {
@@ -148,10 +148,10 @@
                     maxLength={32}
                     pattern={PATTERN_USER_NAME}
                     bind:isError={isInputError}
-                    onEnter={handleRegStart}
+                    onEnter={handleRegister}
             />
             <div class="regBtns">
-                <Button onclick={handleRegStart}>{t.mfa.register}</Button>
+                <Button onclick={handleRegister}>{t.mfa.register}</Button>
                 <Button level={3} onclick={() => showRegInput = false}>{t.common.cancel}</Button>
             </div>
         {:else}

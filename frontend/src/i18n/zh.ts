@@ -200,7 +200,7 @@ export const I18nZh: I18n = {
         newAccount: "新账户",
         passwordReset: "密码重置",
         password: "密码",
-        passwordless: "FIDO通行密钥",
+        passwordless: "通行密钥",
         passwordConfirm: "密码确认",
         passwordNoMatch: "密码不匹配",
         required: "必填",

@@ -200,7 +200,7 @@ export const I18nKo: I18n = {
         newAccount: "새 계정",
         passwordReset: "비밀번호 초기화",
         password: "비밀번호",
-        passwordless: "FIDO 패스키",
+        passwordless: "패스키",
         passwordConfirm: "비밀번호 확인",
         passwordNoMatch: "비밀번호가 일치하지 않습니다.",
         required: "필수",

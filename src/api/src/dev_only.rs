@@ -1,3 +1,4 @@
+use actix_web::http::header::SET_COOKIE;
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 
@@ -29,9 +30,16 @@ pub async fn get_template(
 
         let data = web::Data::<AppState>::extract(&req).await?;
         let principal = web::ReqData::<Principal>::extract(&req).await?;
-        let tpl =
+        let (tpl, cookie) =
             HtmlTemplate::build_from_str(data, id.as_str(), principal.into_inner().session).await?;
-        Ok(HttpResponse::Ok().body(tpl.inner().to_string()))
+
+        if let Some(cookie) = cookie {
+            Ok(HttpResponse::Ok()
+                .cookie(cookie)
+                .body(tpl.inner().to_string()))
+        } else {
+            Ok(HttpResponse::Ok().body(tpl.inner().to_string()))
+        }
     }
 }
 

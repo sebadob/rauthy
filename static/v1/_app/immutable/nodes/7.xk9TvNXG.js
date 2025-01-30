@@ -1,1 +1,0 @@
-import"../chunks/disclose-version.BDr9Qe-U.js";import"../chunks/legacy.CJVMz36h.js";import{A as o}from"../chunks/AdminMainPre.B6a42Qjw.js";function e(t){o(t,{selected:"Blacklist"})}export{e as component};

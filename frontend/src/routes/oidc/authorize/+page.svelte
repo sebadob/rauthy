@@ -84,19 +84,6 @@
     let password = $state('');
     let userId = $state('');
 
-    onMount(async () => {
-        if (isDev.get()) {
-            // Make sure to create a session manually during dev.
-            // In prod, it will be handled automatically during the GET already.
-            let res = await fetchPost<SessionInfoResponse>('/auth/v1/oidc/session');
-            if (res.body?.csrf_token) {
-                saveCsrfToken(res.body.csrf_token)
-            } else {
-                console.error(res.error);
-            }
-        }
-    });
-
     onMount(() => {
         if (!needsPassword) {
             refEmail?.focus();
@@ -134,10 +121,24 @@
     });
 
     $effect(() => {
-        if (csrfToken) {
+        if (isDev.get()) {
+            // Make sure to create a session manually during dev.
+            // In prod, it will be handled automatically during the GET already.
+            createSessionDev();
+        } else if (csrfToken) {
             saveCsrfToken(csrfToken);
         }
     });
+
+    async function createSessionDev() {
+        let res = await fetchPost<SessionInfoResponse>('/auth/v1/oidc/session');
+        console.log('manual session', res.body);
+        if (res.body?.csrf_token) {
+            saveCsrfToken(res.body.csrf_token)
+        } else {
+            console.error(res.error);
+        }
+    }
 
     function handleShowReset() {
         err = '';

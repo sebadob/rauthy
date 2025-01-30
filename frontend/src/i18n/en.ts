@@ -200,7 +200,7 @@ export const I18nEn: I18n = {
         newAccount: "New Account",
         passwordReset: "Password Reset",
         password: "Password",
-        passwordless: "FIDO Passkey",
+        passwordless: "Passkey",
         passwordConfirm: "Password Confirm",
         passwordNoMatch: "Passwords do not match",
         required: "Required",

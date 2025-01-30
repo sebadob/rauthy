@@ -75,6 +75,7 @@ export const redirectToLogout = () => {
 };
 
 export const saveCsrfToken = (csrf: string) => {
+    console.log('saving csrf token in local storage', CSRF_TOKEN, csrf);
     localStorage.setItem(CSRF_TOKEN, csrf);
 }
 

@@ -54,7 +54,7 @@
 
     let t = useI18n();
 
-    let isErr = $state(false);
+    let isError = $state(false);
 
     function copy() {
         if (navigator.clipboard) {
@@ -73,24 +73,39 @@
     }
 
     function onblur(event: FocusEvent & { currentTarget: EventTarget & HTMLInputElement }) {
-        const isValid = event?.currentTarget?.reportValidity();
-        isErr = !isValid;
+        console.log('on blur', label);
+        isValid();
         onBlur?.()
     }
 
     function oninput(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
+        console.log('on input', label);
+        isValid();
         onInput?.();
     }
 
     function oninvalid(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
+        console.log('on invalid', label);
         event.preventDefault();
-        isErr = true;
+        isError = true;
     }
 
     function onkeydown(ev: KeyboardEvent) {
         if (ev.code === 'Enter') {
-            onEnter?.();
+            if (isValid()) {
+                onEnter?.();
+            }
         }
+    }
+
+    function isValid() {
+        let validity = ref?.validity;
+        if (validity) {
+            isError = !validity.valid;
+            return validity.valid;
+        }
+        isError = false;
+        return true;
     }
 
 </script>
@@ -154,7 +169,7 @@
     <label for={id} class="font-label noselect" data-required={required}>
         {label}
     </label>
-    {#if isErr}
+    {#if isError}
         <div class="error" transition:slide>
             {#if !label}
                 <div class="nolabel"></div>
