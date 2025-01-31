@@ -2,8 +2,6 @@
 
 ## CURRENT WORK
 
-- `amr` is not correctly set to `mfa` using the `device_code` flow, even when the user has used a passkey
-
 ### Missing / Updated i18n (zh/ko) for Svelte 5 Migration:
 
 - `t.account.accessRenew`
@@ -28,6 +26,7 @@
 
 ## Stage 2 - features - do before v1.0.0
 
+- `amr` is not correctly set to `mfa` using the `device_code` flow, even when the user has used a passkey
 - check if `REFRESH_TOKEN_GRACE_TIME` can be dropped with Hiqlite
 - randomize default admin user id on prod init + set email to `BOOTSTRAP_ADMIN_EMAIL` before password info logging
 - "known host cookie" with connection between accounts and IPs to send out warnings in case

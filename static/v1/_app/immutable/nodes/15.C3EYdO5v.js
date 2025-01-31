@@ -1,1 +1,0 @@
-import"../chunks/disclose-version.BDr9Qe-U.js";import"../chunks/legacy.BDl8PDwo.js";import{A as e}from"../chunks/AdminMainPre.SqsOoaYB.js";function t(o){e(o,{selected:"Scopes"})}export{t as component};
