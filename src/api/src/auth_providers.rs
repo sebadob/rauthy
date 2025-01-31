@@ -7,6 +7,7 @@ use rauthy_api_types::auth_providers::{
     ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
 };
 use rauthy_api_types::auth_providers::{ProviderLookupResponse, ProviderResponse};
+use rauthy_api_types::users::{UserResponse, WebauthnLoginResponse};
 use rauthy_common::constants::{HEADER_HTML, HEADER_JSON};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
@@ -163,8 +164,10 @@ pub async fn get_provider_callback_html(req: HttpRequest) -> Result<HttpResponse
     post,
     path = "/providers/callback",
     tag = "providers",
+    request_body = ProviderCallbackRequest,
     responses(
-        (status = 200, description = "OK", body = ProviderLookupResponse),
+        (status = 200, description = "Correct credentials, but needs to continue with Webauthn MFA Login", body = WebauthnLoginResponse),
+        (status = 202, description = "Correct credentials and no MFA Login required, adds Location header"),
         (status = 400, description = "BadRequest", body = ErrorResponse),
         (status = 404, description = "NotFound", body = ErrorResponse),
     ),
@@ -178,6 +181,17 @@ pub async fn post_provider_callback(
     data: web::Data<AppState>,
     req: HttpRequest,
     Json(payload): Json<ProviderCallbackRequest>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    post_provider_callback_handle(data, req, payload, principal).await
+}
+
+// extracted to make it usable in `post_dev_only_endpoints()`
+#[inline(always)]
+pub async fn post_provider_callback_handle(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+    payload: ProviderCallbackRequest,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
@@ -207,7 +221,7 @@ pub async fn post_provider_callback(
     path = "/providers/link",
     tag = "providers",
     responses(
-        (status = 200, description = "OK"),
+        (status = 200, description = "OK", body = UserResponse),
         (status = 400, description = "BadRequest", body = ErrorResponse),
     ),
 )]
@@ -217,7 +231,7 @@ pub async fn delete_provider_link(principal: ReqPrincipal) -> Result<HttpRespons
 
     let user_id = principal.user_id()?.to_string();
     let user = User::provider_unlink(user_id).await?;
-    Ok(HttpResponse::Ok().json(user))
+    Ok(HttpResponse::Ok().json(user.into_response(None)))
 }
 
 /// GET all upstream auth providers as templated minimal JSON
@@ -424,6 +438,7 @@ pub async fn put_provider_img(
     post,
     path = "/providers/{id}/link",
     tag = "providers",
+    request_body = ProviderLoginRequest,
     responses(
         (status = 200, description = "OK"),
         (status = 400, description = "BadRequest", body = ErrorResponse),

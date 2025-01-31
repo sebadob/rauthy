@@ -1,13 +1,12 @@
 <script lang="ts">
-    import Button from "$lib/Button.svelte";
-    import LangSelector from "$lib5/LangSelector.svelte";
-    import AppVersion from "../components/AppVersion.svelte";
+    import Button from "$lib5/Button.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import Template from "$lib5/Template.svelte";
-    import {TPL_IS_REG_OPEN} from "../utils/constants";
+    import {TPL_IS_REG_OPEN} from "$utils/constants";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
+    import LangSelector from "$lib5/LangSelector.svelte";
 
     const btnWidth = "9rem";
 
@@ -36,30 +35,28 @@
 <Main>
     <ContentCenter>
         <div class="btn">
+            <Button onclick={redirectToAccount} width={btnWidth}>
+                {t.index.accountLogin}
+            </Button>
             {#if isRegOpen}
-                <Button on:click={redirectToReg} width={btnWidth}>{t.index.register}</Button>
+                <Button level={2} onclick={redirectToReg} width={btnWidth}>
+                    {t.index.register}
+                </Button>
             {/if}
-            <Button on:click={redirectToAccount} width={btnWidth}>{t.index.accountLogin}</Button>
-            <Button on:click={redirectToAdmin} width={btnWidth}>{t.index.adminLogin}</Button>
+            <Button level={3} onclick={redirectToAdmin} width={btnWidth}>
+                {t.index.adminLogin}
+            </Button>
         </div>
     </ContentCenter>
 
-    <LangSelector absolute/>
     <ThemeSwitch absolute/>
-    <div class="version">
-        <AppVersion/>
-    </div>
+    <LangSelector absolute/>
 </Main>
 
 <style>
     .btn {
         display: flex;
         flex-direction: column;
-    }
-
-    .version {
-        position: absolute;
-        right: 0;
-        top: calc(100dvh - 1.2rem);
+        gap: .5rem;
     }
 </style>

@@ -40,7 +40,7 @@ use rauthy_models::html_templates::{Error1Html, Error3Html, ErrorHtml, UserRegis
 use rauthy_models::language::Language;
 use rauthy_service::password_reset;
 use spow::pow::Pow;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 use validator::Validate;
 
 /// Returns all existing users
@@ -301,6 +301,16 @@ pub async fn post_users_register(
     req: HttpRequest,
     Json(payload): Json<NewUserRegistrationRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    post_users_register_handle(data, req, payload).await
+}
+
+// extracted to be usable from `post_dev_only_endpoints()`
+#[inline(always)]
+pub async fn post_users_register_handle(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+    payload: NewUserRegistrationRequest,
+) -> Result<HttpResponse, ErrorResponse> {
     if !*OPEN_USER_REG {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
@@ -487,6 +497,7 @@ pub async fn get_user_devices(
     put,
     path = "/users/{id}/devices",
     tag = "users",
+    request_body = DeviceRequest,
     responses(
         (status = 200, description = "Ok"),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
@@ -517,6 +528,7 @@ pub async fn put_user_device_name(
     delete,
     path = "/users/{id}/devices",
     tag = "users",
+    request_body = DeviceRequest,
     responses(
         (status = 200, description = "Ok"),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
@@ -644,7 +656,7 @@ pub async fn get_user_password_reset(
 
 /// Endpoint for resetting passwords
 ///
-/// On this endpoint, a password reset can be posted. This only works with a valid
+/// On this endpoint, a password reset can be submitted. This only works with a valid
 /// `PWD_RESET_COOKIE` + CSRF token.
 ///
 /// Expects the CSRF token to be provided with an HTTP Header called `PWD_CSRF_HEADER`
@@ -929,7 +941,7 @@ pub async fn delete_webauthn(
     tag = "mfa",
     request_body = WebauthnRegStartRequest,
     responses(
-        (status = 200, description = "Ok - Returns a default Webauthn CreationChallengeResponse, which cannot be serialized into OpenAPI schema currently"),
+        (status = 200, description = "Ok"),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
@@ -1158,9 +1170,15 @@ pub async fn post_user_password_request_reset(
     principal.validate_session_auth_or_init()?;
     payload.validate()?;
 
+    info!(
+        "Password reset request for '{}' from IP {}",
+        payload.email,
+        real_ip_from_req(&req)?
+    );
+
     match User::find_by_email(payload.email).await {
         Ok(user) => user
-            .request_password_reset(&data, req, payload.redirect_uri)
+            .request_password_reset(&data, payload.redirect_uri)
             .await
             .map(|_| HttpResponse::Ok().status(StatusCode::OK).finish()),
         Err(_) => {
@@ -1264,7 +1282,7 @@ pub async fn put_user_self(
     principal.validate_session_auth()?;
     payload.validate()?;
 
-    // make sure the logged in user can only update itself
+    // make sure the logged-in user can only update itself
     let id = id.into_inner();
     principal.is_user(&id)?;
 

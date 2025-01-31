@@ -1,10 +1,12 @@
 import {CSRF_TOKEN} from "../utils/constants";
-import {type ErrorResponse} from "$api/response/common/error.ts";
+import {type ErrorResponse} from "$api/types/error.ts";
 
 export interface IResponse<T> {
     body: undefined | T,
     text: undefined | string,
     error: undefined | ErrorResponse,
+    status: number,
+    headers: Headers,
 }
 
 function buildHeaders(
@@ -37,11 +39,11 @@ export async function fetchGet<T>(uri: string, typ: 'json' | 'form' = 'json'): P
 
 export async function fetchPost<T>(
     uri: string,
-    body?: Object,
+    payload?: Object,
     typ: 'json' | 'form' = 'json',
 ): Promise<IResponse<T>> {
-    if (body) {
-        return fetchWithBody('POST', uri, typ, body);
+    if (payload) {
+        return fetchWithBody('POST', uri, typ, payload);
     } else {
         return fetchWithoutBody('POST', uri, typ);
     }
@@ -55,13 +57,23 @@ export async function fetchPost<T>(
 //     console.warn('TODO fetchPostMultipart');
 // }
 
+export async function fetchForm(form: HTMLFormElement, body: URLSearchParams) {
+    return await fetch(form.action, {
+        method: form.method,
+        headers: {
+            'content-type': 'application/x-www-form-urlencoded',
+        },
+        body,
+    })
+}
+
 export async function fetchPut<T>(
     uri: string,
-    body?: Object,
+    payload?: Object,
     typ: 'json' | 'form' = 'json',
 ): Promise<IResponse<T>> {
-    if (body) {
-        return fetchWithBody('PUT', uri, typ, body);
+    if (payload) {
+        return fetchWithBody('PUT', uri, typ, payload);
     } else {
         return fetchWithoutBody('PUT', uri, typ);
     }
@@ -96,8 +108,15 @@ async function fetchWithBody<T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     uri: string,
     typ: 'json' | 'form',
-    body: any,
+    payload: Object,
 ): Promise<IResponse<T>> {
+    let body;
+    if (typ === 'json') {
+        body = JSON.stringify(payload);
+    } else if (typ === 'form') {
+        body = formDataFromObj(payload);
+    }
+
     let res = await fetch(uri, {
         method,
         headers: buildHeaders(method, typ),
@@ -105,6 +124,21 @@ async function fetchWithBody<T>(
         body,
     });
     return handleResponse(res, true);
+}
+
+export function formDataFromObj(obj: Object) {
+    let fd = new FormData();
+    for (let key of Object.keys(obj)) {
+        // @ts-ignore
+        let v = obj[key];
+        if (typeof v === 'object') {
+            fd.append(key, JSON.stringify(v));
+        } else {
+            // @ts-ignore
+            fd.append(key, obj[key]);
+        }
+    }
+    return fd;
 }
 
 export async function handleResponse<T>(res: Response, redirect401: boolean): Promise<IResponse<T>> {
@@ -125,6 +159,8 @@ export async function handleResponse<T>(res: Response, redirect401: boolean): Pr
         body: undefined,
         text: undefined,
         error: undefined,
+        status: res.status,
+        headers: res.headers,
     };
 
     if (res.ok) {
@@ -136,9 +172,17 @@ export async function handleResponse<T>(res: Response, redirect401: boolean): Pr
         } else {
             resp.text = await res.text();
         }
-    } else {
+    } else if (res.status !== 405) {
         resp.error = await res.json();
     }
 
     return resp;
+}
+
+export async function errorFromResponse(res: Response, eventOnError?: boolean): Promise<ErrorResponse> {
+    let err = await res.json();
+    // if (eventOnError) {
+    //     useEvents().push('error', ErrorType[err.error], err.message, 5);
+    // }
+    return err;
 }

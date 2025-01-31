@@ -144,7 +144,7 @@ pub async fn post_authorize(
             header_origin,
             user_id: user.id.clone(),
             email: user.email,
-            exp: *WEBAUTHN_REQ_EXP,
+            exp: *WEBAUTHN_REQ_EXP as u64,
             session,
         };
 
@@ -165,7 +165,7 @@ pub async fn post_authorize(
         Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
             user_id: user.id,
             email: user.email,
-            header_loc: (header::LOCATION, HeaderValue::from_str(&loc).unwrap()),
+            header_loc: (header::LOCATION, HeaderValue::from_str(&loc)?),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
             header_origin,
         }))
@@ -224,7 +224,7 @@ pub async fn post_authorize_refresh(
             header_origin,
             user_id: user.id.clone(),
             email: user.email,
-            exp: *WEBAUTHN_REQ_EXP,
+            exp: *WEBAUTHN_REQ_EXP as u64,
             session: session.clone(),
         };
 
@@ -244,10 +244,7 @@ pub async fn post_authorize_refresh(
         Ok(AuthStep::LoggedIn(AuthStepLoggedIn {
             user_id: user.id,
             email: user.email,
-            header_loc: (
-                header::LOCATION,
-                HeaderValue::from_str(&header_loc).unwrap(),
-            ),
+            header_loc: (header::LOCATION, HeaderValue::from_str(&header_loc)?),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
             header_origin,
         }))

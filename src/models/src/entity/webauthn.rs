@@ -831,6 +831,9 @@ pub async fn auth_start(
 
     match data.webauthn.start_passkey_authentication(pks.as_slice()) {
         Ok((mut rcr, auth_state)) => {
+            // timeout expected in ms
+            rcr.public_key.timeout = Some(*WEBAUTHN_REQ_EXP * 1000);
+
             if force_uv {
                 rcr.public_key.user_verification = UserVerificationPolicy::Required;
             }
@@ -849,7 +852,7 @@ pub async fn auth_start(
                 code: auth_data.code,
                 rcr,
                 user_id: user.id,
-                exp: *WEBAUTHN_REQ_EXP,
+                exp: *WEBAUTHN_REQ_EXP as u64,
             })
         }
 
@@ -968,6 +971,9 @@ pub async fn reg_start(
         Some(cred_ids),
     ) {
         Ok((mut ccr, reg_state)) => {
+            // timeout expected in ms
+            ccr.public_key.timeout = Some(*WEBAUTHN_REQ_EXP * 1000);
+
             if *WEBAUTHN_FORCE_UV || user.account_type() == AccountType::Passkey {
                 // in this case we need to force UV no matter what is set in the config
                 ccr.public_key.authenticator_selection =

@@ -1,16 +1,18 @@
 <script lang="ts">
-    import {purgeStorage, saveCsrfToken} from "../../../utils/helpers";
-    import {logout} from "../../../utils/dataFetching.js";
-    import Button from "$lib/Button.svelte";
+    import {purgeStorage, saveCsrfToken} from "$utils/helpers.ts";
+    import {logout} from "$utils/dataFetching";
+    import Button from "$lib5/Button.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
-    import type {LogoutParams} from "$api/query_params/logout.ts";
+    import type {LogoutParams} from "$api/types/logout.ts";
     import Template from "$lib5/Template.svelte";
-    import {TPL_CSRF_TOKEN} from "../../../utils/constants";
+    import {TPL_CSRF_TOKEN} from "$utils/constants";
     import {useParam} from "$state/param.svelte.ts";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
+    import {fetchPost} from "$api/fetch.ts";
+    import {useIsDev} from "$state/is_dev.svelte.ts";
 
     let t = useI18n();
     let err = '';
@@ -22,7 +24,6 @@
         id_token_hint: useParam('id_token_hint').get(),
         state: useParam('state').get(),
     });
-    $inspect('logoutData', logoutData);
 
     // TODO remove the csrfToken from this component completely after finishing
     // [#692](https://github.com/sebadob/rauthy/issues/692)
@@ -45,9 +46,14 @@
     async function handleLogout() {
         isLoading = true;
 
-        let res = await logout(logoutData);
+        let url = '/auth/v1/oidc/logout';
+        if (useIsDev().get()) {
+            url = '/auth/v1/dev/logout';
+        }
+        let res = await fetchPost(url, logoutData, 'form');
         purgeStorage();
         let loc = res.headers.get('location');
+        console.log('loc', loc);
         if (loc) {
             window.location.replace(loc);
         } else {
@@ -66,13 +72,15 @@
     <ContentCenter>
         <div class="container">
             <h1>{t.logout.logout}</h1>
-            <p>
-                {t.logout.confirmMsg}
-            </p>
+            <p>{t.logout.confirmMsg}</p>
 
             <div class="btn">
-                <Button on:click={handleLogout} level={2} bind:isLoading>{t.logout.logout}</Button>
-                <Button on:click={handleCancel} level={4}>{t.common.cancel}</Button>
+                <Button onclick={handleLogout} {isLoading}>
+                    {t.logout.logout}
+                </Button>
+                <Button level={3} onclick={handleCancel}>
+                    {t.common.cancel}
+                </Button>
             </div>
 
             {#if err}
@@ -89,7 +97,10 @@
 
 <style>
     .btn {
-        margin: 10px;
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
     }
 
     .container {
@@ -101,7 +112,7 @@
     }
 
     .err {
-        margin: 10px;
-        color: var(--col-err)
+        margin-top: .66rem;
+        color: hsl(var(--error));
     }
 </style>

@@ -21,6 +21,7 @@ use rauthy_models::html_templates::{PwdResetHtml, TplPasswordReset};
 use rauthy_models::language::Language;
 use tracing::{debug, error};
 
+/// Returns `(response body, set-cookie)`
 pub async fn handle_get_pwd_reset<'a>(
     req: HttpRequest,
     user_id: String,
@@ -54,8 +55,8 @@ pub async fn handle_get_pwd_reset<'a>(
     ml.cookie = Some(cookie_val);
     ml.save().await?;
 
-    let age_secs = ml.exp - Utc::now().timestamp();
-    let cookie = ApiCookie::build(PWD_RESET_COOKIE, ml.cookie.unwrap(), age_secs);
+    let max_age_secs = ml.exp - Utc::now().timestamp();
+    let cookie = ApiCookie::build(PWD_RESET_COOKIE, ml.cookie.unwrap(), max_age_secs);
 
     Ok((content, cookie))
 }

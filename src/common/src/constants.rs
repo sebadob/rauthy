@@ -131,7 +131,7 @@ lazy_static! {
     pub static ref RE_API_KEY: Regex = Regex::new(r"^[a-zA-Z0-9_/-]{2,24}$").unwrap();
     pub static ref RE_APP_ID: Regex = Regex::new(r"^[a-zA-Z0-9]{12}$").unwrap();
     pub static ref RE_BASE64: Regex = Regex::new(r"^[a-zA-Z0-9+/=]{4}$").unwrap();
-    pub static ref RE_CHALLENGE: Regex = Regex::new(r"^(plain|S256)$").unwrap();
+    pub static ref RE_CODE_CHALLENGE_METHOD: Regex = Regex::new(r"^(plain|S256)$").unwrap();
     pub static ref RE_CITY: Regex = Regex::new(r"^[a-zA-Z0-9À-ÿ-]{0,48}$").unwrap();
     pub static ref RE_CLIENT_ID_EPHEMERAL: Regex = Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,256}$").unwrap();
     pub static ref RE_CLIENT_NAME: Regex = Regex::new(r"^[a-zA-Z0-9À-ſ-\s\x{3041}-\x{3096}\x{30A0}-\x{30FF}\x{3400}-\x{4DB5}\x{4E00}-\x{9FCB}\x{F900}-\x{FA6A}\x{2E80}-\x{2FD5}\x{FF66}-\x{FF9F}\x{FFA1}-\x{FFDC}\x{31F0}-\x{31FF}]{2,128}$").unwrap();
@@ -498,10 +498,10 @@ lazy_static! {
         .parse::<bool>()
         .expect("PASSWORD_RESET_COOKIE_BINDING cannot be parsed to bool - bad format");
 
-    pub static ref WEBAUTHN_REQ_EXP: u64 = env::var("WEBAUTHN_REQ_EXP")
+    pub static ref WEBAUTHN_REQ_EXP: u32 = env::var("WEBAUTHN_REQ_EXP")
         .unwrap_or_else(|_| String::from("60"))
-        .parse::<u64>()
-        .expect("WEBAUTHN_REQ_EXP cannot be parsed to u64 - bad format");
+        .parse::<u32>()
+        .expect("WEBAUTHN_REQ_EXP cannot be parsed to u32 - bad format");
     pub static ref WEBAUTHN_DATA_EXP: u64 = env::var("WEBAUTHN_DATA_EXP")
         .unwrap_or_else(|_| String::from("90"))
         .parse::<u64>()

@@ -6,7 +6,7 @@ use actix_web::http::header::{
     WWW_AUTHENTICATE,
 };
 use actix_web::http::{header, StatusCode};
-use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
+use actix_web::{error, HttpResponse, HttpResponseBuilder, ResponseError};
 use cryptr::CryptrError;
 use css_color::ParseColorError;
 use image::ImageError;
@@ -142,6 +142,16 @@ impl From<std::io::Error> for ErrorResponse {
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("IO Error: {}", value),
+        )
+    }
+}
+
+impl From<actix_web::Error> for ErrorResponse {
+    fn from(err: actix_web::Error) -> Self {
+        trace!("{:?}", err);
+        ErrorResponse::new(
+            ErrorResponseType::Internal,
+            format!("actix_web::Error Error: {}", err),
         )
     }
 }
@@ -330,6 +340,13 @@ impl From<actix_multipart::MultipartError> for ErrorResponse {
     }
 }
 
+impl From<error::PayloadError> for ErrorResponse {
+    fn from(value: error::PayloadError) -> Self {
+        trace!("{:?}", value);
+        ErrorResponse::new(ErrorResponseType::BadRequest, value.to_string())
+    }
+}
+
 impl From<FromUtf8Error> for ErrorResponse {
     fn from(value: FromUtf8Error) -> Self {
         trace!("{:?}", value);
@@ -429,6 +446,16 @@ impl From<serde_json_path::ParseError> for ErrorResponse {
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("JsonPath error: {}", value),
+        )
+    }
+}
+
+impl From<serde_urlencoded::de::Error> for ErrorResponse {
+    fn from(value: serde_urlencoded::de::Error) -> Self {
+        trace!("{:?}", value);
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("URL encoded error: {}", value),
         )
     }
 }

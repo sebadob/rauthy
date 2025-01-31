@@ -258,6 +258,17 @@ pub async fn post_authorize(
     Json(payload): Json<LoginRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
+    post_authorize_handle(data, req, payload, principal).await
+}
+
+// extracted to be easily usable by post_dev_only_endpoints()
+#[inline(always)]
+pub async fn post_authorize_handle(
+    data: web::Data<AppState>,
+    req: HttpRequest,
+    payload: LoginRequest,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
     payload.validate()?;
 
@@ -560,8 +571,6 @@ pub async fn post_device_verify(
     principal.validate_session_auth()?;
     payload.validate()?;
 
-    debug!("{:?}", payload);
-
     let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
@@ -663,6 +672,16 @@ pub async fn get_logout(
 #[post("/oidc/logout")]
 pub async fn post_logout(
     Form(params): Form<LogoutRequest>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    post_logout_handle(params, principal).await
+}
+
+// Extracted only to make it accessible via DEV handler `post_dev_only_endpoints()`.
+// The actix_web macro convert it into a `struct` which is not easily callable.
+#[inline]
+pub async fn post_logout_handle(
+    params: LogoutRequest,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     let session = principal.get_session()?.clone();
@@ -809,6 +828,12 @@ pub async fn get_session_info(data: web::Data<AppState>, principal: ReqPrincipal
                 .json(err);
         }
     };
+    if session.user_id.is_none() {
+        return HttpResponse::InternalServerError().json(ErrorResponse::new(
+            ErrorResponseType::Internal,
+            "no user_id for authenticated session",
+        ));
+    }
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()

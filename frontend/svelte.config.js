@@ -21,6 +21,7 @@ const config = {
             // (as soon as Svelte 5 + TS migration is done)
             $api: 'src/api',
             $css: 'src/css',
+            $icons: 'src/icons5',
             // The `lib5` is a temp lib which will exist until all core components
             // have been migrated to Svelte5 + TS. Migration all dependencies will
             // be a lot safer when changing each component to `lib5` first.
@@ -31,6 +32,8 @@ const config = {
             $lib5: 'src/lib_svelte5',
             $state: 'src/global_state',
             $types: 'src/types',
+            $utils: 'src/utils',
+            $webauthn: 'src/webauthn',
         },
         csp: isDev ? {} : {
             directives: {
@@ -41,6 +44,9 @@ const config = {
                 'img-src': ['self'],
             },
         },
+        env: {
+            publicPrefix: 'DEV_',
+        }
     },
 };
 

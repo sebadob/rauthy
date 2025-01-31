@@ -1,5 +1,5 @@
 use rauthy_common::constants::{
-    RE_ATTR, RE_CHALLENGE, RE_CONTACT, RE_GRANT_TYPES, RE_GROUPS, RE_ORIGIN, RE_URI,
+    RE_ATTR, RE_CODE_CHALLENGE_METHOD, RE_CONTACT, RE_GRANT_TYPES, RE_GROUPS, RE_ORIGIN, RE_URI,
 };
 use validator::ValidationError;
 
@@ -29,7 +29,7 @@ pub fn validate_vec_challenge(value: &[String]) -> Result<(), ValidationError> {
         err = Some("'challenges' cannot be empty when provided");
     } else {
         value.iter().for_each(|v| {
-            if !RE_CHALLENGE.is_match(v) {
+            if !RE_CODE_CHALLENGE_METHOD.is_match(v) {
                 err = Some("^(plain|S256)$");
             }
         });

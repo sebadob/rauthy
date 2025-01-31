@@ -1,50 +1,53 @@
 <script lang="ts">
+    import {useI18n} from "$state/i18n.svelte.ts";
     import {untrack} from "svelte";
-    import OptionSelect from "$lib/OptionSelect.svelte";
-    import {LANGUAGES} from "../utils/constants.js";
-    import {postUpdateUserLanguage} from "../utils/dataFetching.js";
-    import {useLang} from "$state/language.svelte.js";
-    import {getCookie} from "$lib/utils/helpers";
+    import {getCookie} from "$utils/helpers.ts";
+    import {LANGUAGES} from "$utils/constants";
+    import Options from "$lib5/Options.svelte";
+    import {fetchPost} from "$api/fetch.ts";
 
     let {
-        absolute = false,
-        absoluteRight = false,
-        updateBackend = false,
+        absolute,
+        openTop = true,
+        updateBackend,
     }: {
-        absolute: string,
-        absoluteRight: string,
-        updateBackend: string,
+        absolute?: boolean,
+        openTop?: boolean,
+        updateBackend?: boolean,
     } = $props();
 
-    const attrs = ';Path=/;SameSite=Lax;Max-Age=315360000';
-    let lang = useLang();
-    let langSelected = $state(untrack(() => lang));
+    const cookieAttrs = ';Path=/;SameSite=Lax;Max-Age=157680000';
 
-    // Makes lang overrides work during local dev
-    // Will do nothing in prod because of proper SSR.
+    let t = useI18n();
+    let initial = untrack(() => t.lang);
+    let selected = $state(initial);
+
+    let offsetTop = $derived(openTop ? `-${LANGUAGES.length * 2 + 2}rem` : undefined);
+    let offsetLeft = $derived(openTop ? '.2rem' : undefined);
+
     $effect(() => {
         let cookie = getCookie('locale');
-        let l = untrack(() => lang);
-        if (cookie !== l && LANGUAGES.includes(cookie)) {
-            lang = cookie;
-            langSelected = cookie;
+        let current = untrack(() => selected);
+        if (cookie && cookie !== current) {
+            document.cookie = 'locale=' + current + cookieAttrs;
         }
     });
 
     $effect(() => {
-        if (langSelected && langSelected !== lang) {
-            switchLang(langSelected);
+        if (selected !== initial) {
+            switchLang();
         }
     });
 
-    async function switchLang(l: string) {
-        document.cookie = 'locale=' + l.toLowerCase() + attrs;
+    async function switchLang() {
+        // locale is technically mandatory by EU cookie laws
+        // -> we can just save without cookie consent
+        document.cookie = 'locale=' + selected.toLowerCase() + cookieAttrs;
 
         if (updateBackend) {
-            let res = await postUpdateUserLanguage();
-            if (!res.ok) {
-                let body = await res.json();
-                console.error(body);
+            let res = await fetchPost('/auth/v1/update_language');
+            if (res.error) {
+                console.error(res.error);
                 return;
             }
         }
@@ -53,24 +56,23 @@
     }
 </script>
 
-<div class:absolute class:absoluteLeft={!absoluteRight} class:absoluteRight>
-    <OptionSelect
-            bind:value={langSelected}
+<div class:absolute>
+    <Options
+            ariaLabel={t.common.selectI18n}
             options={LANGUAGES}
+            borderless
+            bind:value={selected}
+            {offsetTop}
+            {offsetLeft}
     />
 </div>
 
 <style>
     .absolute {
+        height: 1.5rem;
         position: absolute;
-        top: calc(100dvh - 1.75rem);
-    }
-
-    .absoluteLeft {
+        bottom: .35rem;
         left: 2rem;
-    }
-
-    .absoluteRight {
-        right: .25rem;
+        overflow: clip;
     }
 </style>

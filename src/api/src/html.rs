@@ -1,7 +1,7 @@
-use crate::{Assets, ReqPrincipal};
+use crate::Assets;
 use actix_web::http::header;
 use actix_web::{get, web, HttpRequest, HttpResponse};
-use rauthy_common::constants::{DEV_MODE, HEADER_HTML};
+use rauthy_common::constants::HEADER_HTML;
 use rauthy_error::ErrorResponse;
 use rauthy_models::entity::auth_providers::AuthProviderTemplate;
 use rauthy_models::entity::colors::ColorEntity;
@@ -13,22 +13,6 @@ use rauthy_models::html_templates::{
 };
 use rauthy_models::language::Language;
 use std::borrow::Cow;
-
-// dev-only endpoint - in prod, values will be inserted into the HTML directly.
-// Returns the inner template value, as it would be rendered during prod, inside the body,
-// which is different depending on the id.
-#[get("/template/{id}")]
-pub async fn get_template(
-    id: web::Path<String>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
-    if !*DEV_MODE {
-        return Ok(HttpResponse::NotFound().finish());
-    }
-
-    let tpl = HtmlTemplate::build_from_str(id.as_str(), principal.into_inner().session).await?;
-    Ok(HttpResponse::Ok().body(tpl.inner().to_string()))
-}
 
 #[get("/{_:.*}")]
 pub async fn get_static_assets(

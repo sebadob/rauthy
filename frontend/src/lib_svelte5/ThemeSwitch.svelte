@@ -44,7 +44,7 @@
     }
 </script>
 
-<div class:absolute>
+<div class="container" class:absolute>
     <Button ariaLabel={t.common.changeTheme} invisible onclick={toggle}>
         {#if darkMode === true}
             <div class="icon moon">
@@ -91,8 +91,12 @@
 <style>
     .absolute {
         position: absolute;
-        bottom: -.25rem;
+        bottom: 0;
         left: .25rem;
+    }
+
+    .container {
+        overflow: clip;
     }
 
     .icon {

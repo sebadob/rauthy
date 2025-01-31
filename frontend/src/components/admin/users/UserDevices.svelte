@@ -1,6 +1,6 @@
 <script>
 
-    import Devices from "../../common/Devices.svelte";
+    import Devices from "$lib5/devices/Devices.svelte";
 
     let {user = $bindable()} = $props();
 

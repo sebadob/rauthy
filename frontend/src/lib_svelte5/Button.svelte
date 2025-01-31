@@ -177,11 +177,13 @@
     }
 
     .invisible, .invisible:hover {
+        height: inherit;
         margin: 0;
         padding: 0;
         outline: none;
         background: none;
         box-shadow: none;
+        font-size: 1rem;
         color: hsla(var(--action) / .93);
     }
 
@@ -196,10 +198,6 @@
 
     .invisible:hover > div {
         color: hsl(var(--action));
-    }
-
-    .invisible .font-label {
-        margin-bottom: -.5rem;
     }
 
     .invisibleOutline:focus {

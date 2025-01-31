@@ -1,14 +1,22 @@
+use crate::api_cookie::ApiCookie;
+use crate::app_state::AppState;
 use crate::entity::auth_providers::AuthProviderTemplate;
 use crate::entity::colors::Colors;
+use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::sessions::Session;
+use crate::entity::users::User;
 use crate::language::Language;
+use actix_web::cookie::Cookie;
 use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, HttpResponseBuilder};
+use actix_web::{web, HttpResponse, HttpResponseBuilder};
+use chrono::Utc;
 use rauthy_api_types::generic::PasswordPolicyResponse;
 use rauthy_common::constants::{
-    DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG, USER_REG_DOMAIN_RESTRICTION,
+    DEVICE_GRANT_USER_CODE_LENGTH, HEADER_HTML, OPEN_USER_REG, PWD_RESET_COOKIE,
+    USER_REG_DOMAIN_RESTRICTION,
 };
+use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rinja_actix::Template;
 use serde::Serialize;
@@ -74,15 +82,19 @@ impl HtmlTemplate {
     /// rendered into the HTML directly in prod.
     ///
     /// TODO maybe deactivate completely without debug_assertions?
-    pub async fn build_from_str(s: &str, session: Option<Session>) -> Result<Self, ErrorResponse> {
+    pub async fn build_from_str(
+        data: web::Data<AppState>,
+        s: &str,
+        session: Option<Session>,
+    ) -> Result<(Self, Option<Cookie<'_>>), ErrorResponse> {
         match s {
             "tpl_auth_providers" => {
                 let json = AuthProviderTemplate::get_all_json_template().await?;
-                Ok(Self::AuthProviders(json))
+                Ok((Self::AuthProviders(json), None))
             }
             "tpl_csrf_token" => {
                 if let Some(s) = session {
-                    Ok(Self::CsrfToken(s.csrf_token))
+                    Ok((Self::CsrfToken(s.csrf_token), None))
                 } else {
                     Err(ErrorResponse::new(
                         ErrorResponseType::BadRequest,
@@ -90,39 +102,60 @@ impl HtmlTemplate {
                     ))
                 }
             }
-            "tpl_device_user_code_length" => {
-                Ok(Self::DeviceUserCodeLength(*DEVICE_GRANT_USER_CODE_LENGTH))
-            }
-            "tpl_email_old" => Ok(Self::EmailOld("OLD@EMAIL.LOCAL".to_string())),
-            "tpl_email_new" => Ok(Self::EmailOld("NEW@EMAIL.LOCAL".to_string())),
-            "tpl_is_reg_open" => Ok(Self::IsRegOpen(*OPEN_USER_REG)),
+            "tpl_device_user_code_length" => Ok((
+                Self::DeviceUserCodeLength(*DEVICE_GRANT_USER_CODE_LENGTH),
+                None,
+            )),
+            "tpl_email_old" => Ok((Self::EmailOld("OLD@EMAIL.LOCAL".to_string()), None)),
+            "tpl_email_new" => Ok((Self::EmailOld("NEW@EMAIL.LOCAL".to_string()), None)),
+            "tpl_is_reg_open" => Ok((Self::IsRegOpen(*OPEN_USER_REG), None)),
             // the LoginAction requires a complex logic + validation.
             // Simply always return None during local dev.
-            "tpl_login_action" => Ok(Self::LoginAction(FrontendAction::None)),
+            "tpl_login_action" => Ok((Self::LoginAction(FrontendAction::None), None)),
             // "tpl_client_name" => todo!("extract info from referrer?"),
             // "tpl_client_url" => todo!("extract info from referrer?"),
-            "tpl_restricted_email_domain" => Ok(Self::RestrictedEmailDomain(
-                USER_REG_DOMAIN_RESTRICTION.clone().unwrap_or_default(),
+            "tpl_restricted_email_domain" => Ok((
+                Self::RestrictedEmailDomain(
+                    USER_REG_DOMAIN_RESTRICTION.clone().unwrap_or_default(),
+                ),
+                None,
             )),
             "tpl_password_reset" => {
-                if let Some(s) = session {
-                    let password_policy = PasswordPolicy::find().await?;
+                // To have a good DX when working on the password reset, we want to create a new,
+                // valid magic link automatically in DEV mode and return proper values directly.
+                // At a valid session should have been created before to make this work.
+                let user_id = session
+                    .expect("To make the tpl_password_reset work automatically in local dev, you need to be logged in")
+                    .user_id
+                    .clone()
+                    .expect("To make the tpl_password_reset work automatically in local dev, you need to be logged in");
+                let user = User::find(user_id).await?;
 
-                    // we can't easily return the complete and correct templates, but it should
-                    // be good enough to be able to work with it
-                    Ok(Self::PasswordReset(TplPasswordReset {
-                        csrf_token: "CSRF_TOKEN_TEMPLATE".to_string(),
-                        magic_link_id: "MAGIC_LINK:ID".to_string(),
-                        needs_mfa: false,
-                        password_policy: PasswordPolicyResponse::from(password_policy),
-                        user_id: s.user_id.unwrap_or_default(),
-                    }))
+                MagicLink::delete_all_pwd_reset_for_user(user.id.clone()).await?;
+                let usage = if user.password.is_none() && !user.has_webauthn_enabled() {
+                    MagicLinkUsage::NewUser(None)
                 } else {
-                    Err(ErrorResponse::new(
-                        ErrorResponseType::BadRequest,
-                        "no session",
-                    ))
-                }
+                    MagicLinkUsage::PasswordReset(None)
+                };
+                let mut ml =
+                    MagicLink::create(user.id.clone(), data.ml_lt_pwd_reset as i64, usage).await?;
+                let cookie_val = get_rand(48);
+                ml.cookie = Some(cookie_val);
+                ml.save().await?;
+
+                let password_policy = PasswordPolicy::find().await?;
+                let tpl = TplPasswordReset {
+                    csrf_token: ml.csrf_token.clone(),
+                    magic_link_id: ml.id.clone(),
+                    needs_mfa: user.has_webauthn_enabled(),
+                    password_policy: PasswordPolicyResponse::from(password_policy),
+                    user_id: user.id,
+                };
+
+                let max_age_secs = ml.exp - Utc::now().timestamp();
+                let cookie = ApiCookie::build(PWD_RESET_COOKIE, ml.cookie.unwrap(), max_age_secs);
+
+                Ok((Self::PasswordReset(tpl), Some(cookie)))
             }
             _ => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,

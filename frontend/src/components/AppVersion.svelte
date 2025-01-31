@@ -23,13 +23,12 @@
             newVersionAvailable = body.update_available;
         }
     }
-
 </script>
 
 {#if newVersionAvailable}
     <div class="ver upd">
         <a href={updateUrl} target="_blank">
-            v{version}⚠️
+            v{version} ⚠️
         </a>
     </div>
 {:else}
@@ -44,14 +43,15 @@
     }
 
     .ver {
-        margin: 0 .25rem;
+        margin: .1rem .5rem;
         display: flex;
         align-items: center;
         font-size: .85rem;
+        color: hsla(var(--text) / .5);
     }
 
     .ver > a {
         text-decoration: none;
-        color: var(--col-text);
+        color: hsla(var(--text) / .65);
     }
 </style>

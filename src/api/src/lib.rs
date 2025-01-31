@@ -21,6 +21,7 @@ pub mod api_keys;
 pub mod auth_providers;
 pub mod blacklist;
 pub mod clients;
+pub mod dev_only;
 pub mod events;
 pub mod fed_cm;
 pub mod generic;

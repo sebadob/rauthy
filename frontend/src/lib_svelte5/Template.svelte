@@ -14,7 +14,7 @@
     } = $props();
 
     onMount(async () => {
-        if (!useIsDev()) {
+        if (!useIsDev().get()) {
             let tpl = document.getElementById(id);
             if (tpl) {
                 assign(tpl.innerHTML);

@@ -6,12 +6,15 @@ import {
     CSRF_TOKEN,
     ID_TOKEN,
     LOGOUT_URL,
-    PKCE_VERIFIER, PKCE_VERIFIER_UPSTREAM,
-    POST_LOGOUT_REDIRECT_URI, PROVIDER_TOKEN,
+    PKCE_VERIFIER,
+    PKCE_VERIFIER_UPSTREAM,
+    POST_LOGOUT_REDIRECT_URI,
+    PROVIDER_TOKEN,
     REDIRECT_URI
 } from "./constants.js";
 import {decode, encode} from "base64-arraybuffer";
 import {getProvidersTemplate} from "./dataFetching.js";
+import type {PasswordPolicyResponse} from "$api/types/password_policy.ts";
 
 export function buildWebIdUri(userId: string) {
     return `${window.location.origin}/auth/${userId}/profile#me`
@@ -53,11 +56,11 @@ export async function getAuthProvidersTemplate() {
     }
 }
 
-export const redirectToLogin = (state: string) => {
+export const redirectToLogin = (state?: string) => {
     getPkce(64, (error, {challenge, verifier}) => {
         if (!error) {
             localStorage.setItem(PKCE_VERIFIER, verifier);
-            const nonce = getKey(24);
+            const nonce = genKey(24);
             const s = state || 'admin';
             const redirect_uri = `${window.location.origin}${REDIRECT_URI}`.replaceAll(':', '%3A').replaceAll('/', '%2F');
             window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${redirect_uri}&response_type=code&code_challenge=${challenge}&code_challenge_method=S256&scope=openid+profile+email&nonce=${nonce}&state=${s}`;
@@ -72,6 +75,7 @@ export const redirectToLogout = () => {
 };
 
 export const saveCsrfToken = (csrf: string) => {
+    console.log('saving csrf token in local storage', CSRF_TOKEN, csrf);
     localStorage.setItem(CSRF_TOKEN, csrf);
 }
 
@@ -167,7 +171,7 @@ export const formatUtcTsFromDateInput = (inputDate: string) => {
     return d / 1000;
 }
 
-export const formatDateFromTs = (ts: number, fmtIso: boolean) => {
+export const formatDateFromTs = (ts: number, fmtIso?: boolean) => {
     const utcOffsetMinutes = -new Date().getTimezoneOffset();
     const d = new Date((ts + utcOffsetMinutes * 60) * 1000);
 
@@ -201,26 +205,22 @@ export const formatDateFromTs = (ts: number, fmtIso: boolean) => {
 }
 
 export const generatePassword = (
-    length: number,
-    minLowerCase?: number,
-    minUpperCase?: number,
-    minDigit?: number,
-    minSpecial?: number,
+    policy: PasswordPolicyResponse
 ) => {
-    const lowerCaseNeeded = minLowerCase || 1;
-    const upperCaseNeeded = minUpperCase || 1;
-    const digitNeeded = minDigit || 1;
-    const specialNeeded = minSpecial || 1;
+    const length = policy.length_min > 20 ? policy.length_min : 20;
+    const lowerCaseNeeded = policy.include_lower_case || 1;
+    const upperCaseNeeded = policy.include_upper_case || 1;
+    const digitNeeded = policy.include_digits || 1;
+    const specialNeeded = policy.include_digits || 1;
 
     while (true) {
-        let pwdLength = length || 16;
         let lowerCaseIncluded = 0;
         let upperCaseIncluded = 0;
         let digitIncluded = 0;
         let specialIncluded = 0;
         let pwdArr = [];
 
-        for (let i = 0; i < pwdLength; i += 1) {
+        for (let i = 0; i < length; i += 1) {
             let nextNumber = 60;
             while ((nextNumber > 57 && nextNumber < 65) || (nextNumber > 90 && nextNumber < 97)) {
                 nextNumber = Math.floor(Math.random() * 74) + 33;
@@ -262,34 +262,51 @@ export const generatePassword = (
 };
 
 // Returns a short random key, which can be used in components to identify them uniquely.
-export const getKey = (i: number) => {
-    let res = '';
+export const genKey = (length?: number) => {
+    let key = [];
+    length = length || 8;
 
-    const target = i || 8;
-    for (let i = 0; i < target; i += 1) {
-        let nextNumber = 60;
-        while ((nextNumber > 57 && nextNumber < 65) || (nextNumber > 90 && nextNumber < 97)) {
-            nextNumber = Math.floor(Math.random() * 74) + 48;
+    for (let i = 0; i < length; i += 1) {
+        let nextNumber = 95;
+        while (nextNumber > 90 && nextNumber < 97) {
+            nextNumber = Math.floor(Math.random() * 57) + 65;
         }
-        res = res.concat(String.fromCharCode(nextNumber));
+        key.push(String.fromCharCode(nextNumber));
     }
 
-    return res;
+    return key.join('');
 }
 
-// export const getQueryParams = () => {
-//     return new Proxy(new URLSearchParams(window.location.search), {
-//         get: (searchParams, prop) => searchParams.get(prop.toString()),
-//     });
-// }
+/**
+ * Tries to get the cookie with the given name, if it is accessible
+ * @param cname {string} The cookie name to get
+ * @returns {string} The cookie value, if it exists
+ */
+export function getCookie(cname: string): string {
+    let name = cname + "=";
+    let decodedCookie = decodeURIComponent(document.cookie);
+    let ca = decodedCookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') {
+            c = c.substring(1);
+        }
+        if (c.indexOf(name) === 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return "";
+}
 
-// races a promise against a given timeout and throws an exception if exceeded
-export const promiseTimeout = (prom: Promise<any>, time: number) => {
+/** races a promise against a given timeout and throws an exception if exceeded */
+export function promiseTimeout<T>(prom: Promise<T>, time: number): Promise<T | undefined> {
     let timer: any;
-    return Promise.race([
+    return Promise.race<T | undefined>([
         prom,
         new Promise(
-            (_r, rej) => timer = setTimeout(rej, time, 'timeout')
+            (_r, rej) => {
+                timer = setTimeout(rej, time, 'timeout');
+            }
         )
     ]).finally(() => clearTimeout(timer));
 }

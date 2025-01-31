@@ -1,14 +1,15 @@
-<script>
+<script lang="ts">
     import LangSelector from "$lib5/LangSelector.svelte";
-    import Button from "$lib/Button.svelte";
+    import Button from "$lib5/Button.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import Template from "$lib5/Template.svelte";
-    import {TPL_EMAIL_NEW, TPL_EMAIL_OLD} from "../../../../../utils/constants.js";
+    import {TPL_EMAIL_NEW, TPL_EMAIL_OLD} from "$utils/constants.js";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
 
     let t = useI18n();
+
     let emailOld = $state('old@mail.org');
     let emailNew = $state('new@mail.org');
 
@@ -33,7 +34,7 @@
             </p>
             <p>{t.emailChange.textLogin}</p>
             <div class="btn">
-                <Button on:click={() => window.location.replace('/auth/v1/account')}>
+                <Button onclick={() => window.location.replace('/auth/v1/account')}>
                     {t.authorize.login}
                 </Button>
             </div>

@@ -1093,7 +1093,7 @@ impl AuthProviderCallback {
                 header_origin,
                 user_id: user.id.clone(),
                 email: user.email,
-                exp: *WEBAUTHN_REQ_EXP,
+                exp: *WEBAUTHN_REQ_EXP as u64,
                 session,
             };
 

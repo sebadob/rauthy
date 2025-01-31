@@ -2,7 +2,7 @@
     import type {Snippet} from "svelte";
     import {useI18n} from "$state/i18n.svelte.ts";
     import Button from "$lib5/Button.svelte";
-    import IconStop from "$lib5/icons/IconStop.svelte";
+    import IconStop from "../icons5/IconStop.svelte";
 
     let {
         showModal = $bindable(),
@@ -121,7 +121,7 @@ We need the onclick listener here to make easy click-outside work.
     }
 
     .close {
-        top: -1.4rem;
+        top: -1.1rem;
         right: -1rem;
         cursor: pointer;
     }
@@ -146,7 +146,7 @@ We need the onclick listener here to make easy click-outside work.
         }
 
         .close {
-            top: -.8rem;
+            top: -.5rem;
             right: -.4rem;
             cursor: pointer;
         }

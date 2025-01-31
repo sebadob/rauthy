@@ -4,8 +4,8 @@ use crate::sessions::SessionState;
 use actix_web::http::header;
 use actix_web::HttpRequest;
 use rauthy_common::constants::{
-    RE_ALNUM, RE_CLIENT_ID_EPHEMERAL, RE_CODE_VERIFIER, RE_GRANT_TYPES, RE_LOWERCASE,
-    RE_SCOPE_SPACE, RE_URI,
+    RE_ALNUM, RE_CLIENT_ID_EPHEMERAL, RE_CODE_CHALLENGE_METHOD, RE_CODE_VERIFIER, RE_GRANT_TYPES,
+    RE_LOWERCASE, RE_SCOPE_SPACE, RE_URI,
 };
 use rauthy_common::utils::base64_decode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -54,8 +54,8 @@ pub struct AuthRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub code_challenge: Option<String>,
-    /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    /// Validation: `plain|S256`
+    #[validate(regex(path = "*RE_CODE_CHALLENGE_METHOD", code = "plain|S256"))]
     pub code_challenge_method: Option<String>,
     #[validate(range(min = 0))]
     pub max_age: Option<i64>,
@@ -131,8 +131,8 @@ pub struct LoginRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%]+$"))]
     pub code_challenge: Option<String>,
-    /// Validation: `[a-zA-Z0-9]`
-    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    /// Validation: `plain|S256`
+    #[validate(regex(path = "*RE_CODE_CHALLENGE_METHOD", code = "plain|S256"))]
     pub code_challenge_method: Option<String>,
 }
 
