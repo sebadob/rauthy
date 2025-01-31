@@ -4,7 +4,7 @@
     import AccEdit from "$lib5/account/AccEdit.svelte";
     import AccMFA from "./AccMFA.svelte";
     import AccPassword from "./AccPassword.svelte";
-    import AccWebId from "../../components/account/AccWebId.svelte";
+    import AccWebId from "./AccWebId.svelte";
     import AccDevices from "$lib5/account/AccDevices.svelte";
     import {useI18n} from "$state/i18n.svelte.js";
     import type {UserResponse} from "$api/types/user.ts";
@@ -15,13 +15,14 @@
     import {useParam} from "$state/param.svelte.ts";
     import Tabs from "$lib5/tabs/Tabs.svelte";
     import Devices from "$lib5/devices/Devices.svelte";
+    import type {WebIdResponse} from "$api/types/web_id.ts";
 
     let {
         user = $bindable(),
         webIdData = $bindable()
     }: {
         user: UserResponse,
-        webIdData: any,
+        webIdData: WebIdResponse,
     } = $props();
 
     let t = useI18n();

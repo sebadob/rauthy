@@ -11,7 +11,7 @@
 
         rows = 3,
         placeholder = '',
-        title = '',
+        errMsg = '',
         disabled = false,
 
         maxLength,
@@ -34,7 +34,7 @@
         label?: string,
         rows?: number,
         placeholder?: string,
-        title: string,
+        errMsg?: string,
         disabled?: boolean | null | undefined,
         maxLength?: number | null | undefined,
         step?: number,
@@ -51,6 +51,8 @@
     }>();
 
     const re = pattern ? new RegExp(pattern, 'gm') : undefined;
+
+    let title = $derived(label || placeholder);
 
     function onblur(event: FocusEvent & { currentTarget: EventTarget & HTMLTextAreaElement }) {
         isValid();
@@ -93,7 +95,7 @@
     function isValid() {
         if (re) {
             if (value.match(re).length > 2) {
-                ref?.setCustomValidity(title);
+                ref?.setCustomValidity(errMsg);
                 isError = true;
             } else {
                 ref?.setCustomValidity('');
@@ -139,7 +141,7 @@
         </label>
         {#if isError}
             <div class="error" transition:slide>
-                {title}
+                {errMsg}
             </div>
         {/if}
     </div>

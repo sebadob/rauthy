@@ -56,7 +56,6 @@ const config = {
             '/auth/v1/theme': backend,
             '/auth/v1/update_language': backend,
             '/auth/v1/version': backend,
-            '/auth/webid/': backend,
             '/docs/v1/': backend,
         }
     }
