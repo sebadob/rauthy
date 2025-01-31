@@ -19,7 +19,7 @@
         TPL_IS_REG_OPEN,
         TPL_LOGIN_ACTION
     } from "$utils/constants.js";
-    import IconHome from "$lib/icons/IconHome.svelte";
+    import IconHome from "$icons/IconHome.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
@@ -29,10 +29,11 @@
     import type {AuthProviderTemplate} from "$api/templates/AuthProvider.ts";
     import InputPassword from "$lib5/form/InputPassword.svelte";
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
-    import {fetchGet, fetchPost, type IResponse} from "$api/fetch.ts";
+    import {fetchPost, type IResponse} from "$api/fetch.ts";
     import {useIsDev} from "$state/is_dev.svelte.ts";
     import type {
-        LoginRefreshRequest, LoginRequest,
+        LoginRefreshRequest,
+        LoginRequest,
         RequestResetRequest,
         WebauthnLoginResponse
     } from "$api/types/authorize.ts";
@@ -44,13 +45,13 @@
     const inputWidth = "18rem";
 
     let t = useI18n();
-    let isDev = useIsDev();
+    let isDev = useIsDev().get();
 
-    let authorizeUrl = $derived(useIsDev().get() ? '/auth/v1/dev/authorize' : '/auth/v1/oidc/authorize');
+    let authorizeUrl = $derived(isDev ? '/auth/v1/dev/authorize' : '/auth/v1/oidc/authorize');
 
     let clientId = useParam('client_id').get();
     let clientName = $state('');
-    let clientUri = $state('');
+    let clientUri = $state(isDev ? '/auth/v1' : '');
     let redirectUri = useParam('redirect_uri').get();
     let nonce = useParam('nonce').get();
     let scopes = useParam('scope').get()?.split(' ') || [];
@@ -121,7 +122,7 @@
     });
 
     $effect(() => {
-        if (isDev.get()) {
+        if (isDev) {
             // Make sure to create a session manually during dev.
             // In prod, it will be handled automatically during the GET already.
             createSessionDev();
@@ -384,7 +385,7 @@
                 </div>
                 {#if clientUri}
                     <a class="home" href={clientUri}>
-                        <IconHome opacity={0.5}/>
+                        <IconHome color="hsla(var(--text) / .4)"/>
                     </a>
                 {/if}
             </div>

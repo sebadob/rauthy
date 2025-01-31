@@ -47,62 +47,60 @@
 
 </script>
 
-<div class="wrapper">
-    <div class="container">
-        <p>{t.account.webIdDesc}</p>
+<div class="container">
+    <p>{t.account.webIdDesc}</p>
 
-        <p>
-            <A href={webIdLink} target="_blank">
-                {@html webIdLink.replace('/auth/', '/auth/<wbr/>')}
-            </A>
-        </p>
+    <p>
+        <A href={webIdLink} target="_blank">
+            {@html webIdLink.replace('/auth/', '/auth/<wbr/>')}
+        </A>
+    </p>
 
-        <div class="switch">
-            <Switch
-                    ariaLabel="E-Mail"
-                    bind:checked={webIdData.expose_email}
-                    {labelWidth}
-            >
-                E-Mail
-            </Switch>
+    <div class="switch">
+        <Switch
+                ariaLabel="E-Mail"
+                bind:checked={webIdData.expose_email}
+                {labelWidth}
+        >
+            E-Mail
+        </Switch>
+    </div>
+
+    <div class="switch">
+        <Switch
+                ariaLabel={t.account.webIdExpertMode}
+                bind:checked={expertMode}
+                {labelWidth}
+        >
+            {t.account.webIdExpertMode}
+        </Switch>
+    </div>
+
+    {#if expertMode}
+        <div transition:slide>
+            <p>{t.account.webIdDescData}</p>
+            <InputArea
+                    placeholder="FOAF"
+                    rows={15}
+                    bind:value={webIdData.custom_triples}
+            />
         </div>
+    {/if}
 
-        <div class="switch">
-            <Switch
-                    ariaLabel={t.account.webIdExpertMode}
-                    bind:checked={expertMode}
-                    {labelWidth}
-            >
-                {t.account.webIdExpertMode}
-            </Switch>
-        </div>
+    <div class="bottom">
+        <Button onclick={onSubmit}>
+            {t.common.save}
+        </Button>
 
-        {#if expertMode}
-            <div transition:slide>
-                <p>{t.account.webIdDescData}</p>
-                <InputArea
-                        placeholder="FOAF"
-                        rows={15}
-                        bind:value={webIdData.custom_triples}
-                />
+        {#if success}
+            <div class="success" transition:fade>
+                <IconCheck/>
+            </div>
+        {:else if err}
+            <div class="err" transition:fade>
+                {err}
             </div>
         {/if}
-
-        <div class="bottom">
-            <Button onclick={onSubmit}>
-                {t.common.save}
-            </Button>
-
-            {#if success}
-                <div class="success" transition:fade>
-                    <IconCheck/>
-                </div>
-            {:else if err}
-                <div class="err" transition:fade>
-                    {err}
-                </div>
-            {/if}
-        </div>
     </div>
 </div>
 
@@ -131,11 +129,5 @@
 
     .switch {
         margin: .5rem 0;
-    }
-
-    .wrapper {
-        margin-top: 10px;
-        display: flex;
-        flex-direction: row;
     }
 </style>

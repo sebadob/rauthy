@@ -60,7 +60,7 @@
 </script>
 
 <div
-        role="none"
+        role="tooltip"
         onmouseover={handleHover}
         onfocus={handleHover}
         onmouseout={handleHide}

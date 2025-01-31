@@ -47,6 +47,9 @@
     let password = $state('');
     let passwordConfirm = $state('');
 
+    let reportValidityNew: undefined | (() => void);
+    let reportValidityConfirm: undefined | (() => void);
+
     $effect(() => {
         if (accountTypeNew) {
             resetValues();
@@ -77,13 +80,16 @@
         window.location.replace('/auth/v1/account');
     }
 
-    $inspect('password', password);
-
     function generate() {
         if (tplData) {
             let pwd = generatePassword(tplData.password_policy);
             password = pwd;
             passwordConfirm = pwd;
+
+            requestAnimationFrame(() => {
+                reportValidityNew?.();
+                reportValidityConfirm?.();
+            });
         }
     }
 
@@ -224,6 +230,7 @@
                     placeholder={t.account.passwordNew}
                     maxLength={tplData.password_policy.length_max}
                     required
+                    bind:reportValidity={reportValidityNew}
                     showCopy={password.length >= tplData.password_policy.length_min}
                     width={inputWidth}
             />
@@ -233,6 +240,7 @@
                     label={t.account.passwordConfirm}
                     placeholder={t.account.passwordConfirm}
                     maxLength={tplData.password_policy.length_max}
+                    bind:reportValidity={reportValidityConfirm}
                     required
                     width={inputWidth}
             />

@@ -5,7 +5,6 @@
     import {onMount} from "svelte";
     import Input from "$lib5/form/Input.svelte";
     import IconFingerprint from "$lib/icons/IconFingerprint.svelte";
-    import Tooltip from "$lib/Tooltip.svelte";
     import {useI18n} from "$state/i18n.svelte.js";
     import {useSession} from "$state/session.svelte.js";
     import {fetchGet} from "$api/fetch.ts";
@@ -15,6 +14,7 @@
     import {webauthnReg} from "$webauthn/registration.ts";
     import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
+    import Tooltip from "$lib5/Tooltip.svelte";
 
     let {user}: { user: UserResponse } = $props();
 
@@ -112,6 +112,9 @@
     function onWebauthnSuccess(data?: WebauthnAdditionalData) {
         mfaPurpose = undefined;
         msg = t.mfa.testSuccess;
+        setTimeout(() => {
+            msg = '';
+        }, 3000);
     }
 </script>
 
@@ -246,7 +249,7 @@
     }
 
     .button {
-        margin-left: -.33rem;
+        margin-top: .33rem;
     }
 
     .deleteBtn {
@@ -255,12 +258,12 @@
 
     .keysContainer {
         max-height: 20rem;
-        padding-right: 2rem;
         overflow-y: auto;
     }
 
     .keyContainer {
         margin: .33rem 0;
+        overflow: clip;
     }
 
     .keysHeader {
@@ -278,6 +281,7 @@
     }
 
     .success {
+        margin-left: .2rem;
         color: hsl(var(--action));
     }
 

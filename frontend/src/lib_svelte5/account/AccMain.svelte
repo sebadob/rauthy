@@ -150,6 +150,7 @@
     }
 
     .inner {
+        margin-top: .5rem;
         width: min(32rem, 100dvw);
         max-height: calc(100dvh - 7rem);
         overflow-y: auto;
@@ -157,7 +158,7 @@
 
     .innerPhone {
         width: 100vw;
-        max-height: calc(100dvh - 8.8rem);
+        max-height: calc(100dvh - 8.5rem);
         overflow-y: auto;
     }
 

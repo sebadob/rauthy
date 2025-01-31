@@ -152,111 +152,100 @@
     }
 </script>
 
-<div class="wrapper">
-    <div class="container">
-        {#if mfaPurpose}
-            <WebauthnRequest
-                    userId={user.id}
-                    purpose={mfaPurpose}
-                    onSuccess={onWebauthnSuccess}
-                    onError={onWebauthnError}
-            />
-        {/if}
+<div class="container">
+    {#if mfaPurpose}
+        <WebauthnRequest
+                userId={user.id}
+                purpose={mfaPurpose}
+                onSuccess={onWebauthnSuccess}
+                onError={onWebauthnError}
+        />
+    {/if}
 
-        {#if accType === 'federated'}
-            <div class="m-05">
-                <p>{t.account.federatedConvertPassword1}</p>
-                <p><b>{authProvider?.name || 'UNKNOWN'}</b></p>
-                <p>{t.account.federatedConvertPassword2}</p>
+    {#if accType === 'federated'}
+        <div class="m-05">
+            <p>{t.account.federatedConvertPassword1}</p>
+            <p><b>{authProvider?.name || 'UNKNOWN'}</b></p>
+            <div style:height=".3rem"></div>
+            <p>{t.account.federatedConvertPassword2}</p>
+            {#if success}
+                <CheckIcon check/>
+            {:else}
+                <Button level={2} onclick={requestPasswordReset}>
+                    {t.account.passwordReset}
+                </Button>
+            {/if}
+        </div>
+    {/if}
+
+    {#if (accType === "passkey" || accType === "federated_passkey") && !convertAccount}
+        <p>{t.account.accTypePasskeyText1}</p>
+        <p>{t.account.accTypePasskeyText2}</p>
+        <p>{t.account.accTypePasskeyText3}</p>
+        <div>
+            <Button level={2} onclick={() => convertAccount = true}>
+                {t.account.convertAccount}
+            </Button>
+        </div>
+    {/if}
+
+    {#if accType === "password" || accType === "federated_password" || convertAccount}
+        <div>
+            <AccModPwd
+                    bind:passwords
+                    bind:isValid={isPwdValid}
+                    inputWidth={inputWidth}
+                    hideCurrentPassword={!(accType === "password" && passkeys.length < 1)}
+            />
+
+            <div class="save">
+                <Button onclick={onSubmit} level={1} {isLoading}>
+                    {t.common.save}
+                </Button>
                 {#if success}
-                    <CheckIcon check/>
-                {:else}
-                    <Button level={3} onclick={requestPasswordReset}>
-                        {t.account.passwordReset}
-                    </Button>
+                    <div class="success" transition:fade>
+                        <IconCheck/>
+                    </div>
+                {:else if err}
+                    <div class="err" transition:fade>
+                        {err}
+                    </div>
+                {:else if convertAccount && !isLoading}
+                    <div class="cancel">
+                        <Button level={3} onclick={() => convertAccount = false}>
+                            {t.common.cancel}
+                        </Button>
+                    </div>
                 {/if}
             </div>
-        {/if}
+        </div>
 
-        {#if (accType === "passkey" || accType === "federated_passkey") && !convertAccount}
-            <p>{t.account.accTypePasskeyText1}</p>
-            <p>{t.account.accTypePasskeyText2}</p>
-            <p>{t.account.accTypePasskeyText3}</p>
-            <div>
-                <Button level={2} onclick={() => convertAccount = true}>
+        {#if !convertAccount && canConvertToPasskey}
+            <div class="convertPasskey">
+                <h3>{t.account.convertAccount}</h3>
+                <p>{t.account.convertAccountP1}</p>
+                <Button level={2} onclick={convertToPasskeyOnly}>
                     {t.account.convertAccount}
                 </Button>
             </div>
         {/if}
-
-        {#if accType === "password" || accType === "federated_password" || convertAccount}
-            <div>
-                <AccModPwd
-                        bind:passwords
-                        bind:isValid={isPwdValid}
-                        inputWidth={inputWidth}
-                        hideCurrentPassword={!(accType === "password" && passkeys.length < 1)}
-                />
-
-                <div class="save">
-                    <Button onclick={onSubmit} level={1} {isLoading}>
-                        {t.common.save}
-                    </Button>
-                    {#if success}
-                        <div class="success" transition:fade>
-                            <IconCheck/>
-                        </div>
-                    {:else if err}
-                        <div class="err" transition:fade>
-                            {err}
-                        </div>
-                    {:else if convertAccount && !isLoading}
-                        <div class="cancel">
-                            <Button level={3} onclick={() => convertAccount = false}>
-                                {t.common.cancel}
-                            </Button>
-                        </div>
-                    {/if}
-                </div>
-
-            </div>
-
-            {#if !convertAccount && canConvertToPasskey}
-                <div class="convertPasskey">
-                    <h3>{t.account.convertAccount}</h3>
-                    <p>{t.account.convertAccountP1}</p>
-                    <Button level={2} onclick={convertToPasskeyOnly}>
-                        {t.account.convertAccount}
-                    </Button>
-                </div>
-            {/if}
-        {/if}
-    </div>
+    {/if}
 </div>
 
 <style>
-    p {
-        margin: .5rem 0;
-    }
-
-    .m-05 {
-        margin: .5rem;
-    }
-
-    .wrapper {
-        display: flex;
-        flex-direction: row;
-        overflow-x: clip;
-    }
-
     .container {
         padding: 0 5px;
         display: flex;
         flex-direction: column;
+        overflow-x: clip;
     }
 
     .convertPasskey {
         margin: 1rem 0;
+    }
+
+    .m-05 {
+        margin: .5rem;
     }
 
     .save {

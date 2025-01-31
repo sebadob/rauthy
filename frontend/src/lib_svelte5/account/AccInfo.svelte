@@ -193,7 +193,7 @@
 
     {#if webIdData}
         <div class={classRow}>
-            <div class={classLabel}><b>WebID:</b></div>
+            <div class={classLabel}>WebID:</div>
             <span class="value">
                 <a href={buildWebIdUri(user.id)} target="_blank">
                     {@html buildWebIdUri(user.id).replace('/auth/', '/auth/<wbr/>')}
@@ -210,6 +210,7 @@
     }
 
     .label {
+        margin-top: -.05rem;
         width: 8.5rem;
     }
 
@@ -242,7 +243,7 @@
     }
 
     .rowPhone > .labelPhone {
-        margin-bottom: -.25rem;
+        margin-bottom: -.4rem;
     }
 
     .value {

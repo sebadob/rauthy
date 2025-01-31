@@ -30,6 +30,9 @@
     let policy: undefined | PasswordPolicyResponse = $state();
     let showCopy = $derived(passwords.new?.length > 6 && passwords.new === passwords.newConfirm);
 
+    let reportValidityNew: undefined | (() => void);
+    let reportValidityConfirm: undefined | (() => void);
+
     onMount(async () => {
         let res = await fetchGet<PasswordPolicyResponse>('/auth/v1/password_policy');
         if (res.body) {
@@ -80,6 +83,11 @@
             passwords.new = pwd;
             passwords.newConfirm = pwd;
         }
+
+        requestAnimationFrame(() => {
+            reportValidityNew?.();
+            reportValidityConfirm?.();
+        });
     }
 
 </script>
@@ -103,6 +111,7 @@
                 autocomplete="new-password"
                 label={t.account.passwordNew}
                 placeholder={t.account.passwordNew}
+                bind:reportValidity={reportValidityNew}
                 onInput={isPwdValid}
                 {showCopy}
                 width={inputWidth}
@@ -112,6 +121,7 @@
                 autocomplete="new-password"
                 label={t.account.passwordConfirm}
                 placeholder={t.account.passwordConfirm}
+                bind:reportValidity={reportValidityConfirm}
                 onInput={isPwdValid}
                 {showCopy}
                 width={inputWidth}

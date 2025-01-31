@@ -24,6 +24,7 @@
         width = 'inherit',
         showCopy = false,
 
+        reportValidity = $bindable(),
         onBlur,
         onEnter,
         onInput,
@@ -47,6 +48,7 @@
         width?: string,
         showCopy?: boolean,
 
+        reportValidity?: () => void,
         onBlur?: () => void,
         onEnter?: () => void,
         onInput?: () => void,
@@ -55,6 +57,8 @@
     let t = useI18n();
 
     let isError = $state(false);
+    
+    reportValidity = isValid;
 
     function copy() {
         if (navigator.clipboard) {
