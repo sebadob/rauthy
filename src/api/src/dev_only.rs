@@ -1,6 +1,5 @@
-use actix_web::http::header::SET_COOKIE;
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
-use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_error::ErrorResponse;
 
 #[cfg(debug_assertions)]
 use rauthy_models::entity::principal::Principal;
@@ -10,8 +9,8 @@ use rauthy_models::entity::principal::Principal;
 // which is different depending on the id.
 #[get("/template/{id}")]
 pub async fn get_template(
-    id: web::Path<String>,
-    req: HttpRequest,
+    #[allow(unused_variables)] id: web::Path<String>,
+    #[allow(unused_variables)] req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     // TODO maybe auto-block IP as suspicious if used in prod?
     #[cfg(not(debug_assertions))]
@@ -53,8 +52,10 @@ pub async fn get_template(
 // DEV_MODE MUST be `true` and the code be compiled with `debug_assertions` to make it work.
 #[post("/dev/{typ}")]
 pub async fn post_dev_only_endpoints(
-    typ: web::Path<String>,
-    req: HttpRequest,
+    #[allow(unused_variables)] typ: web::Path<String>,
+    #[allow(unused_variables)] req: HttpRequest,
+    #[allow(unused_variables)]
+    #[allow(unused_mut)]
     mut payload: web::Payload,
 ) -> Result<HttpResponse, ErrorResponse> {
     // TODO maybe auto-block IP as suspicious if used in prod?
@@ -71,6 +72,7 @@ pub async fn post_dev_only_endpoints(
         use rauthy_api_types::oidc::{LoginRequest, LogoutRequest};
         use rauthy_api_types::users::NewUserRegistrationRequest;
         use rauthy_common::constants::DEV_MODE;
+        use rauthy_error::ErrorResponseType;
         use rauthy_models::app_state::AppState;
 
         if !*DEV_MODE {
