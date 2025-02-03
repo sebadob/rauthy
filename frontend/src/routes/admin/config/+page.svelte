@@ -1,5 +1,5 @@
 <script>
-    import AdminMainPre from "../../../components/admin/AdminMainPre.svelte";
+    import Config from "../../../components/admin/config/Config.svelte";
 </script>
 
-<AdminMainPre selected="Config"/>
+<Config/>

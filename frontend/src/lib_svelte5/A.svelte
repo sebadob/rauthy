@@ -8,7 +8,7 @@
         selectedStep = false,
         hideUnderline = false,
         highlight = false,
-        highlightExact = true,
+        highlightExact = false,
         highlightWithParams = false,
         children,
     }: {
@@ -27,17 +27,21 @@
             return 'step';
         }
 
+        let route = page.route.id;
         if (highlightWithParams) {
-            let hrefPage = `${page.route.id}${page.url.search}`;
+            let hrefPage = `${route}${page.url.search}`;
             if (hrefPage.startsWith(href)) {
                 return 'page';
             }
         } else if (highlightExact) {
-            if (page.route.id === href.split('?')[0]) {
+            if (route === href.split('?')[0]) {
                 return 'page';
             }
-        } else if (page.route.id) {
-            if (page.route.id.startsWith(href.split('?')[0])) {
+        } else if (route) {
+            let link = href.split('?')[0];
+            console.log('link', link);
+            if (link.endsWith(route)) {
+                // if (route.endsWith(href.split('?')[0])) {
                 return 'page';
             }
         }
@@ -79,6 +83,7 @@
 
     a[aria-current="page"],
     a[aria-current="step"] {
+        color: hsl(var(--text-high));
         text-decoration: underline;
     }
 </style>

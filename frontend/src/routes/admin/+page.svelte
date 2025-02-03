@@ -1,5 +1,6 @@
 <script>
-import AdminMainPre from "../../components/admin/AdminMainPre.svelte";
+    import Users from "../../components/admin/users/Users.svelte";
 </script>
 
-<AdminMainPre selected="Users"/>
+<!-- In the future, we could maybe show an overview dashboard here with latest events and such things -->
+<Users/>

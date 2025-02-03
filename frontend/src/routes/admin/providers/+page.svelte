@@ -1,5 +1,5 @@
 <script>
-    import AdminMainPre from "../../../components/admin/AdminMainPre.svelte";
+    import Providers from "../../../components/admin/providers/Providers.svelte";
 </script>
 
-<AdminMainPre selected="Providers"/>
+<Providers/>

@@ -1,5 +1,5 @@
 <script>
-    import AdminMainPre from "../../../components/admin/AdminMainPre.svelte";
+    import Blacklist from "../../../components/admin/blacklist/Blacklist.svelte";
 </script>
 
-<AdminMainPre selected="Blacklist"/>
+<Blacklist/>
