@@ -1,5 +1,5 @@
 <script>
-    import AdminMainPre from "../../../components/admin/AdminMainPre.svelte";
+    import Documentation from "../../../components/admin/documentation/Documentation.svelte";
 </script>
 
-<AdminMainPre selected="Docs"/>
+<Documentation/>

@@ -1,5 +1,5 @@
 <script>
-    import AdminMainPre from "../../../components/admin/AdminMainPre.svelte";
+    import Scopes from "../../../components/admin/scopes/Scopes.svelte";
 </script>
 
-<AdminMainPre selected="Scopes"/>
+<Scopes/>

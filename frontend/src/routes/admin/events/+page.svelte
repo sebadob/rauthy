@@ -1,5 +1,5 @@
 <script>
-    import AdminMainPre from "../../../components/admin/AdminMainPre.svelte";
+    import EventsArchive from "../../../components/admin/events/EventsArchive.svelte";
 </script>
 
-<AdminMainPre selected="Events"/>
+<EventsArchive/>

@@ -1,5 +1,5 @@
 <script>
-    import AdminMainPre from "../../../components/admin/AdminMainPre.svelte";
+    import ApiKeys from "../../../components/admin/api_keys/ApiKeys.svelte";
 </script>
 
-<AdminMainPre selected="ApiKeys"/>
+<ApiKeys/>
