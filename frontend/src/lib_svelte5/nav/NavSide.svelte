@@ -221,10 +221,7 @@
         {#if !collapsed}
             {#if compact}
                 <div class="bottom">
-                    <AppVersion/>
-                    <span class="themeSwitch">
                     <ThemeSwitch/>
-                </span>
                     <LangSelector openTop/>
                 </div>
             {:else}
@@ -233,7 +230,7 @@
                         <ThemeSwitch/>
                         <LangSelector openTop/>
                     </div>
-                    <div>
+                    <div class="version">
                         <AppVersion/>
                     </div>
                 </div>
@@ -299,9 +296,9 @@
         gap: .2rem;
     }
 
-    nav[data-compact="true"] .themeSwitch {
-        position: relative;
-        margin: .25rem 0 -.2rem 0;
+    .bottom {
+        display: flex;
+        flex-direction: column;
     }
 
     .logo {
@@ -358,5 +355,9 @@
     nav[aria-hidden="true"] .navmod .inner:hover,
     .navmod .inner:hover {
         color: hsl(var(--action));
+    }
+
+    .version {
+        margin: 0 0 -.5rem -.5rem;
     }
 </style>

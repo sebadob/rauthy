@@ -1,5 +1,5 @@
 <script>
-    import {eventColor} from "../../../utils/helpers";
+    import {eventColor} from "$utils/helpers";
 
     let {wide = $bindable()} = $props();
 </script>
@@ -16,31 +16,31 @@
                 class={wide ? ' legendEntryWide' : 'legendEntry'}
                 style:border-left={`.33rem solid ${eventColor('test')}`}
         >
-            TEST
+            Test
         </div>
         <div
                 class={wide ? ' legendEntryWide' : 'legendEntry'}
                 style:border-left={`.33rem solid ${eventColor('info')}`}
         >
-            INFO
+            Info
         </div>
         <div
                 class={wide ? ' legendEntryWide' : 'legendEntry'}
                 style:border-left={`.33rem solid ${eventColor('notice')}`}
         >
-            NOTICE
+            Notice
         </div>
         <div
                 class={wide ? ' legendEntryWide' : 'legendEntry'}
                 style:border-left={`.33rem solid ${eventColor('warning')}`}
         >
-            WARNING
+            Warning
         </div>
         <div
                 class={wide ? ' legendEntryWide' : 'legendEntry'}
                 style:border-left={`.33rem solid ${eventColor('critical')}`}
         >
-            CRITICAL
+            Critical
         </div>
     </div>
 </div>
@@ -48,6 +48,8 @@
 <style>
     .legend, .legendWide {
         width: 100%;
+        line-height: 1rem;
+        overflow: clip;
     }
 
     .legendWide {
