@@ -7,6 +7,8 @@ export interface I18nAdmin {
     common: {
         account: string,
         back: string,
+        search: string,
+        searchOptions: string,
     }
     error: {
         // will be inserted as html

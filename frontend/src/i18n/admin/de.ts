@@ -4,6 +4,8 @@ export let I18nAdminDe: I18nAdmin = {
     common: {
         account: 'Account',
         back: 'Zurück',
+        search: 'Suchen',
+        searchOptions: 'Suchoptionen',
     },
     error: {
         needsAdminRole: 'Um Zugriff zu erhalten ist die Rolle <b>rauthy_admin</b> notwendig.',

@@ -4,6 +4,8 @@ export let I18nAdminEn: I18nAdmin = {
     common: {
         account: 'Account',
         back: 'Back',
+        search: 'Search',
+        searchOptions: 'Search Options',
     },
     error: {
         needsAdminRole: `You are not assigned to the <b>rauthy_admin</b> role.<br/>
