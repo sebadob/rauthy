@@ -1,3 +1,7 @@
+/**
+ * These are common translations needed in (at least) all end user facing pages.
+ * Admin specific translations are separated to reduce the overall payload for end users.
+ */
 export interface I18n {
     lang: string,
     common: {
