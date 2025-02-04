@@ -23,8 +23,11 @@
     import IconWrenchScrew from "$icons/IconWrenchScrew.svelte";
     import IconBookOpen from "$icons/IconBookOpen.svelte";
     import IconCheckBadge from "$icons/IconCheckBadge.svelte";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
 
     let t = useI18n();
+    let ta = useI18nAdmin();
+
     let session = useSession('admin');
     let timeout: undefined | number;
 
@@ -128,91 +131,91 @@
                         {#snippet icon(width: string)}
                             <IconUser {width}/>
                         {/snippet}
-                        Users
+                        {ta.nav.users}
                     </NavLink>
 
                     <NavLink {compact} {params} route="/attributes">
                         {#snippet icon(width: string)}
                             <IconDocText {width}/>
                         {/snippet}
-                        Attributes
+                        {ta.nav.attributes}
                     </NavLink>
 
                     <NavLink {compact} {params} route="/clients">
                         {#snippet icon(width: string)}
                             <IconOffice {width}/>
                         {/snippet}
-                        Clients
+                        {ta.nav.clients}
                     </NavLink>
 
                     <NavLink {compact} {params} route="/roles">
                         {#snippet icon(width: string)}
                             <IconCheckBadge {width}/>
                         {/snippet}
-                        Roles
+                        {ta.nav.roles}
                     </NavLink>
 
                     <NavLink {compact} {params} route="/groups">
                         {#snippet icon(width: string)}
                             <IconUserGroup {width}/>
                         {/snippet}
-                        Groups
+                        {ta.nav.groups}
                     </NavLink>
 
                     <NavLink {compact} {params} route="/scopes">
                         {#snippet icon(width: string)}
                             <IconId {width}/>
                         {/snippet}
-                        Scopes
+                        {ta.nav.scopes}
                     </NavLink>
 
                     <NavLink {compact} {params} route="/sessions">
                         {#snippet icon(width: string)}
                             <IconShieldCheck {width}/>
                         {/snippet}
-                        Sessions
+                        {ta.nav.sessions}
                     </NavLink>
 
                     <NavLink {compact} {params} route="/events">
                         {#snippet icon(width: string)}
                             <IconBell {width}/>
                         {/snippet}
-                        Events
+                        {ta.nav.events}
                     </NavLink>
 
                     <NavLink {compact} {params} route="/blacklist">
                         {#snippet icon(width: string)}
                             <IconStop {width} color="currentColor"/>
                         {/snippet}
-                        Blacklist
+                        {ta.nav.blacklist}
                     </NavLink>
 
                     <NavLink {compact} {params} route="/api_keys">
                         {#snippet icon(width: string)}
                             <IconKey {width}/>
                         {/snippet}
-                        API Keys
+                        {ta.nav.apiKeys}
                     </NavLink>
 
                     <NavLink {compact} {params} route="/providers">
                         {#snippet icon(width: string)}
                             <IconCloud {width}/>
                         {/snippet}
-                        Providers
+                        {ta.nav.providers}
                     </NavLink>
 
                     <NavLink {compact} {params} route="/config">
                         {#snippet icon(width: string)}
                             <IconWrenchScrew {width}/>
                         {/snippet}
-                        Config
+                        {ta.nav.config}
                     </NavLink>
 
                     <NavLink {compact} {params} route="/docs">
                         {#snippet icon(width: string)}
                             <IconBookOpen {width}/>
                         {/snippet}
-                        Docs
+                        {ta.nav.docs}
                     </NavLink>
                 </div>
             {/if}

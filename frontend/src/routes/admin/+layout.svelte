@@ -6,12 +6,16 @@
     import {useSession} from "$state/session.svelte.ts";
     import {fetchGet} from "$api/fetch.ts";
     import Events from "../../components/admin/events/Events.svelte";
+    import {initI18nAdmin, useI18nAdmin} from "$state/i18n_admin.svelte.ts";
 
     let {
         children,
     }: {
         children: Snippet,
     } = $props();
+
+    initI18nAdmin();
+    let ta = useI18nAdmin();
 
     let session = useSession('admin');
 
@@ -47,20 +51,21 @@
 
 {#if mfaReqErr}
     <div class="noAdmin">
-        <div class="text">
-            A Rauthy admin account must have <b>MFA enabled.</b><br>
-            Please navigate to your <b>account</b> and activate MFA.<br>
-            Afterwards, you need to do a logout and log back in.
+        <div>
+            <div class="text">
+                {@html ta.error.noAdmin}
+            </div>
+            <Button onclick={() => window.location.href = '/auth/v1/account'}>{ta.common.account}</Button>
         </div>
-        <Button onclick={() => window.location.href = '/auth/v1/account'}>Account</Button>
     </div>
 {:else if needsAdminRole}
     <div class="noAdmin">
-        <div class="text">
-            You are not assigned to the <b>rauthy_admin</b> role.<br/>
-            You do not have access to the admin panel.
+        <div>
+            <div class="text">
+                {@html ta.error.needsAdminRole}
+            </div>
+            <Button onclick={() => window.location.href = '/auth/v1/'}>{ta.common.back}</Button>
         </div>
-        <Button onclick={() => window.location.href = '/auth/v1/'}>Go Back</Button>
     </div>
 {:else if isAdmin}
     <NavSide/>
@@ -77,6 +82,7 @@
 
 <style>
     .noAdmin {
+        width: 100dvw;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -90,6 +96,6 @@
     }
 
     .text {
-        margin: .8rem;
+        margin-bottom: 1rem;
     }
 </style>
