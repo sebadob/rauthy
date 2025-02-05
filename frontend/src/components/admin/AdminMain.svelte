@@ -24,7 +24,7 @@
     import Documentation from "./documentation/Documentation.svelte";
     import IconBookOpen from "$lib/icons/IconBookOpen.svelte";
     import {onMount} from "svelte";
-    import Events from "./events/Events.svelte";
+    import Events from "$lib5/admin/events/Events.svelte";
     import IconStop from "$lib/icons/IconStop.svelte";
     import Blacklist from "./blacklist/Blacklist.svelte";
     import IconKey from "$lib/icons/IconKey.svelte";

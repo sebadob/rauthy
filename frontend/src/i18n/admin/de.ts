@@ -6,6 +6,7 @@ export let I18nAdminDe: I18nAdmin = {
         back: 'Zurück',
         search: 'Suchen',
         searchOptions: 'Suchoptionen',
+        until: "Bis",
     },
     error: {
         needsAdminRole: 'Um Zugriff zu erhalten ist die Rolle <b>rauthy_admin</b> notwendig.',

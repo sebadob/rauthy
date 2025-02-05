@@ -9,6 +9,7 @@ export interface I18nAdmin {
         back: string,
         search: string,
         searchOptions: string,
+        until: string,
     }
     error: {
         // will be inserted as html

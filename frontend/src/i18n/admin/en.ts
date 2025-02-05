@@ -6,6 +6,7 @@ export let I18nAdminEn: I18nAdmin = {
         back: 'Back',
         search: 'Search',
         searchOptions: 'Search Options',
+        until: "Until",
     },
     error: {
         needsAdminRole: `You are not assigned to the <b>rauthy_admin</b> role.<br/>

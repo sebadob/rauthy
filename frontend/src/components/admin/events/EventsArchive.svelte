@@ -8,7 +8,7 @@
     import Input from "$lib/inputs/Input.svelte";
     import {EVENT_LEVELS, EVENT_TYPES} from "../../../utils/constants.js";
     import OptionSelect from "$lib/OptionSelect.svelte";
-    import Event from "./Event.svelte";
+    import Event from "$lib5/admin/events/Event.svelte";
     import Switch from "$lib/Switch.svelte";
     import {sleepAwait} from "$lib/utils/helpers";
 

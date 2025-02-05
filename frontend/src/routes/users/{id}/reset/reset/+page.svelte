@@ -47,8 +47,8 @@
     let password = $state('');
     let passwordConfirm = $state('');
 
-    let reportValidityNew: undefined | (() => void);
-    let reportValidityConfirm: undefined | (() => void);
+    let reportValidityNew: undefined | (() => void) = $state();
+    let reportValidityConfirm: undefined | (() => void) = $state();
 
     $effect(() => {
         if (accountTypeNew) {

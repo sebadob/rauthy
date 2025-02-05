@@ -13,6 +13,7 @@ export const I18nKo: I18n = {
         errTooLong: "입력이 너무 깁니다.",
         expandContent: "Expand content",
         invalidInput: "유효하지 않은 입력입니다.",
+        legend: "Legend",
         month: "Month",
         months: [
             "January",

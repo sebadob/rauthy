@@ -3,14 +3,15 @@ use actix_web::web::{Json, Query};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use actix_web_lab::sse;
 use chrono::Utc;
-use rauthy_api_types::events::{EventsListenParams, EventsRequest};
-use rauthy_common::constants::SSE_KEEP_ALIVE;
+use rauthy_api_types::events::{EventResponse, EventsListenParams, EventsRequest};
+use rauthy_common::constants::{DEV_MODE, SSE_KEEP_ALIVE};
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::events::event::Event;
 use rauthy_models::events::listener::EventRouterMsg;
+use std::net::IpAddr;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use validator::Validate;
@@ -53,7 +54,7 @@ pub async fn post_events(
     tag = "events",
     params(EventsListenParams),
     responses(
-        (status = 200, description = "Ok"),
+        (status = 200, description = "Ok", body = [EventResponse]),
         (status = 400, description = "BadRequest", body = ErrorResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
@@ -118,6 +119,66 @@ pub async fn post_event_test(
     Event::test(real_ip_from_req(&req)?)
         .send(&data.tx_events)
         .await?;
+
+    #[cfg(debug_assertions)]
+    if *DEV_MODE {
+        // in debug + dev mode, we want to generate one event of each type
+        // as a helper for UI development
+        let ip = "0.0.0.0".parse::<IpAddr>().unwrap();
+
+        Event::invalid_login(1, ip.to_string())
+            .send(&data.tx_events)
+            .await?;
+        Event::brute_force(ip.to_string())
+            .send(&data.tx_events)
+            .await?;
+        Event::ip_blacklisted(Utc::now(), ip.to_string())
+            .send(&data.tx_events)
+            .await?;
+        Event::ip_blacklist_removed(ip.to_string())
+            .send(&data.tx_events)
+            .await?;
+        Event::new_user("test@dummy".to_string(), ip.to_string())
+            .send(&data.tx_events)
+            .await?;
+        Event::new_rauthy_admin("test-admin@dummy".to_string(), ip.to_string())
+            .send(&data.tx_events)
+            .await?;
+        Event::new_rauthy_version("https://github.com/sebadob/rauthy/releases".to_string())
+            .send(&data.tx_events)
+            .await?;
+        Event::jwks_rotated().send(&data.tx_events).await?;
+        Event::rauthy_started().send(&data.tx_events).await?;
+        Event::rauthy_healthy().send(&data.tx_events).await?;
+        Event::rauthy_unhealthy_cache()
+            .send(&data.tx_events)
+            .await?;
+        Event::rauthy_unhealthy_db().send(&data.tx_events).await?;
+        Event::secrets_migrated(ip.clone())
+            .send(&data.tx_events)
+            .await?;
+        Event::test(ip.clone()).send(&data.tx_events).await?;
+
+        let old_email = "old@mail";
+        let new_mail = "new@mail";
+        let text = format!("{} -> {}", old_email, new_mail);
+        let text_admin = format!("Change by admin: {} -> {}", old_email, new_mail);
+        Event::user_email_change(text, Some(ip.clone()))
+            .send(&data.tx_events)
+            .await?;
+        Event::user_email_change(text_admin, Some(ip.clone()))
+            .send(&data.tx_events)
+            .await?;
+
+        let text = format!("Reset via Password Reset Form: {}", "dummy@mail");
+        let text_admin = format!("Reset done by admin for user {}", "dummy@mail");
+        Event::user_password_reset(text, Some(ip.to_string()))
+            .send(&data.tx_events)
+            .await?;
+        Event::user_password_reset(text_admin, Some(ip.to_string()))
+            .send(&data.tx_events)
+            .await?;
+    }
 
     Ok(HttpResponse::Ok().finish())
 }

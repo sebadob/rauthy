@@ -15,6 +15,7 @@ export interface I18n {
         errTooLong: string,
         expandContent: string,
         invalidInput: string,
+        legend: string,
         month: string,
         months: string[],
         never: string,

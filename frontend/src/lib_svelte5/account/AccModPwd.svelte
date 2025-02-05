@@ -30,8 +30,8 @@
     let policy: undefined | PasswordPolicyResponse = $state();
     let showCopy = $derived(passwords.new?.length > 6 && passwords.new === passwords.newConfirm);
 
-    let reportValidityNew: undefined | (() => void);
-    let reportValidityConfirm: undefined | (() => void);
+    let reportValidityNew: undefined | (() => void) = $state();
+    let reportValidityConfirm: undefined | (() => void) = $state();
 
     onMount(async () => {
         let res = await fetchGet<PasswordPolicyResponse>('/auth/v1/password_policy');

@@ -7,7 +7,7 @@
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import type {ADMIN_PAGES} from "$lib5/nav/props.ts";
     import NavSide from "$lib5/nav/NavSide.svelte";
-    import Events from "../../components/admin/events/Events.svelte";
+    import Events from "./events/Events.svelte";
     import ContentWrapper from "../../components/admin/ContentWrapper.svelte";
     import Sessions from "../../components/admin/sessions/Sessions.svelte";
     import Providers from "../../components/admin/providers/Providers.svelte";

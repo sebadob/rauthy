@@ -5,7 +5,7 @@
     import NavSide from "$lib5/nav/NavSide.svelte";
     import {useSession} from "$state/session.svelte.ts";
     import {fetchGet} from "$api/fetch.ts";
-    import Events from "../../components/admin/events/Events.svelte";
+    import Events from "$lib5/admin/events/Events.svelte";
     import {initI18nAdmin, useI18nAdmin} from "$state/i18n_admin.svelte.ts";
 
     let {
@@ -15,9 +15,11 @@
     } = $props();
 
     initI18nAdmin();
-    let ta = useI18nAdmin();
 
+    let ta = useI18nAdmin();
     let session = useSession('admin');
+
+    let innerWidth: undefined | number = $state();
 
     let isAdmin = $state(false);
     let needsAdminRole = $state(false);
@@ -44,6 +46,8 @@
         }
     }
 </script>
+
+<svelte:window bind:innerWidth/>
 
 <svelte:head>
     <title>Rauthy Admin</title>
@@ -73,10 +77,12 @@
         <div class="content">
             {@render children()}
         </div>
-        <div class="events">
-            <!-- TODO make self-contained without state bindings -->
-            <Events collapsed={false}/>
-        </div>
+        {#if innerWidth && innerWidth > 1024}
+            <div class="events">
+                <!-- TODO make self-contained without state bindings -->
+                <Events/>
+            </div>
+        {/if}
     </Main>
 {/if}
 
@@ -94,6 +100,10 @@
         flex: 1;
         overflow-y: auto;
     }
+
+    /*.events {*/
+    /*    border: 1px solid green;*/
+    /*}*/
 
     .text {
         margin-bottom: 1rem;
