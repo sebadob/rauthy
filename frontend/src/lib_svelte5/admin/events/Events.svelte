@@ -5,11 +5,14 @@
     import {postTestEvent} from "$utils/dataFetching.js";
     import {EVENT_LEVELS} from "$utils/constants";
     import {isBrowser} from "$utils/helpers.ts";
-    import type {EventResponse} from "$api/types/events.ts";
+    import type {EventLevel, EventResponse} from "$api/types/events.ts";
     import Options from "$lib5/Options.svelte";
     import {onDestroy} from "svelte";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
 
     const latest = 50;
+
+    let ta = useI18nAdmin();
 
     let innerWidth: undefined | number = $state();
     let wide = $state(false);
@@ -17,7 +20,7 @@
     let es: undefined | EventSource = $state();
     let events: EventResponse[] = $state([]);
     let eventsFiltered: EventResponse[] = $state([]);
-    let level: string = $state(isBrowser() ? localStorage.getItem('eventLevel') || 'Info' : 'Info');
+    let level: EventLevel = $state(isBrowser() ? localStorage.getItem('eventLevel') as EventLevel || 'info' : 'info');
     let levelBefore = '';
 
     onDestroy(() => {
@@ -44,10 +47,10 @@
     $effect(() => {
         if (events) {
             switch (level) {
-                case 'Info':
+                case 'info':
                     eventsFiltered = events;
                     break;
-                case 'Notice':
+                case 'notice':
                     eventsFiltered = events.filter(
                         evt => evt.typ === 'Test'
                             || evt.level === 'notice'
@@ -55,12 +58,12 @@
                             || evt.level === 'critical'
                     );
                     break;
-                case 'Warning':
+                case 'warning':
                     eventsFiltered = events.filter(
                         evt => evt.typ === 'Test' || evt.level === 'warning' || evt.level === 'critical'
                     );
                     break;
-                case 'Critical':
+                case 'critical':
                     eventsFiltered = events.filter(evt => evt.typ === 'Test' || evt.level === 'critical');
                     break;
             }
@@ -113,7 +116,7 @@
             <div class="flex gap-10">
                 <b>Events</b>
                 <Options
-                        ariaLabel="Event Level"
+                        ariaLabel={ta.events.eventLevel}
                         options={EVENT_LEVELS}
                         bind:value={level}
                         borderless
@@ -138,6 +141,7 @@
 <style>
     #events {
         height: 100dvh;
+        margin-left: .5rem;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
@@ -148,6 +152,7 @@
 
     .data {
         max-height: calc(100dvh - 7.5rem);
+        background: hsla(var(--bg-high) / .1);
         overflow-y: auto;
     }
 

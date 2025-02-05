@@ -222,13 +222,13 @@
         </div>
 
         {#if !collapsed}
-            {#if compact}
-                <div class="bottom">
-                    <ThemeSwitch/>
+            <div class="bottom">
+                {#if compact}
+                    <div class="theme">
+                        <ThemeSwitch/>
+                    </div>
                     <LangSelector openTop/>
-                </div>
-            {:else}
-                <div class="bottom">
+                {:else}
                     <div class="flex gap-05">
                         <ThemeSwitch/>
                         <LangSelector openTop/>
@@ -236,8 +236,8 @@
                     <div class="version">
                         <AppVersion/>
                     </div>
-                </div>
-            {/if}
+                {/if}
+            </div>
         {/if}
     </div>
 </nav>
@@ -290,18 +290,13 @@
 
     .bottom {
         display: flex;
+        flex-direction: column;
         justify-content: space-between;
+        line-height: 1.5rem;
     }
 
-    nav[data-compact="true"] .bottom {
-        flex-direction: column;
-        align-items: center;
-        gap: .2rem;
-    }
-
-    .bottom {
-        display: flex;
-        flex-direction: column;
+    nav[data-compact="true"] .theme {
+        margin-bottom: -.5rem;
     }
 
     .logo {

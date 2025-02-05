@@ -86,6 +86,7 @@
         padding: .33rem .5rem;
         background: hsl(var(--bg));
         color: hsl(var(--text));
+        text-align: left;
         z-index: 999;
         border: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius);

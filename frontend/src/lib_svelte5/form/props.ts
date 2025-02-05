@@ -3,7 +3,7 @@ export interface PropsInputDate {
     name?: string,
     value?: string,
     label?: string,
-    title?: string,
+    errMsg?: string,
     disabled?: boolean,
     min?: string,
     max?: string,
@@ -17,5 +17,15 @@ export interface PropsInputDate {
 }
 
 export interface PropsInputDateCombo extends PropsInputDate {
+    timeName?: string,
+    timeValue?: string,
+    timeErrMsg?: string,
+    timeMin?: string,
+    timeMax?: string,
+
+    timeDisabled?: boolean,
+    timeRequired?: boolean,
+
     withDelete?: boolean,
+    withTime?: boolean,
 }

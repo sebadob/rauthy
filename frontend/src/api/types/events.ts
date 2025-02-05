@@ -15,6 +15,15 @@ export type EventType = 'InvalidLogins'
     | 'UserPasswordReset'
     | 'Test';
 
+export interface EventsRequest {
+    /// Unix timestamp in seconds
+    from: number,
+    /// Unix timestamp in seconds
+    until?: number,
+    level: EventLevel,
+    typ?: EventType,
+}
+
 export interface EventResponse {
     id: string,
     timestamp: number,

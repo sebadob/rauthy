@@ -161,8 +161,13 @@ export const formatDateToDateInput = (date: Date) => {
     // return date.toISOString().split('.')[0];
 }
 
-export const formatUtcTsFromDateInput = (inputDate: string) => {
-    let d = Date.parse(inputDate);
+export const formatUtcTsFromDateInput = (date: string, time?: string) => {
+    let d: number;
+    if (time) {
+        d = Date.parse(`${date}T${time}`);
+    } else {
+        d = Date.parse(date)
+    }
     if (isNaN(d)) {
         return;
     }

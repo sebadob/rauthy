@@ -85,8 +85,8 @@
         left: .15rem;
         bottom: .04rem;
         background-color: hsl(var(--bg));
-        -webkit-transition: 333ms;
-        transition: 333ms;
+        -webkit-transition: 150ms;
+        transition: 150ms;
     }
 
     input[type = "checkbox"] {

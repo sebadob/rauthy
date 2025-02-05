@@ -4,6 +4,8 @@
     import type {EventResponse} from "$api/types/events.ts";
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
     import A from "$lib5/A.svelte";
+    import Button from "$lib5/Button.svelte";
+    import Tooltip from "$lib5/Tooltip.svelte";
 
     // populated fields for different events:
     // - invalid_login: failed logins count as data, ip
@@ -24,13 +26,16 @@
 
     let {
         event,
+        inline,
     }: {
         event: EventResponse,
+        inline?: boolean,
     } = $props();
 
     let ta = useI18nAdmin();
 
     let highlight = $state(false);
+    let tooltip = $state(ta.common.copyToClip);
 
     onMount(() => {
         let now = new Date().getTime();
@@ -45,27 +50,26 @@
         }
     });
 
-    function eventIndex() {
-        switch (event.level) {
-            case 'info':
-                return 'I';
-            case 'notice':
-                return 'N';
-            case 'warning':
-                return 'W';
-            case 'critical':
-                return 'C';
-            default:
-                return 'U';
-        }
+    function copyToClip(v: string) {
+        navigator.clipboard.writeText(v);
+        tooltip = ta.common.copiedToClip;
+        setTimeout(() => {
+            tooltip = ta.common.copyToClip;
+        }, 3000);
     }
 
 </script>
 
 {#snippet ip(ip: undefined | string)}
     {#if ip}
-        <div class="ip font-mono">
-            {ip}
+        <div>
+            <Button invisible onclick={() => copyToClip(ip)}>
+                <Tooltip text={tooltip} yOffset={20}>
+                    <div class="ip font-mono">
+                        {ip}
+                    </div>
+                </Tooltip>
+            </Button>
         </div>
     {/if}
 {/snippet}
@@ -74,13 +78,17 @@
         role="contentinfo"
         class="event"
         class:highlight
+        class:inline
         style:border-left={`2px solid ${eventColor(event.level)}`}
 >
     <div class="ts">
         {formatDateFromTs(event.timestamp / 1000)}
     </div>
 
-    {#if event.typ !== 'RauthyHealthy' && event.typ !== 'RauthyUnhealthy' && event.typ !== 'NewRauthyVersion'}
+    {#if event.typ !== 'RauthyHealthy'
+    && event.typ !== 'RauthyUnhealthy'
+    && event.typ !== 'NewRauthyVersion'
+    && event.typ !== 'Test'}
         {event.typ}
     {/if}
 
@@ -107,6 +115,8 @@
         width: 100%;
         min-width: 5px;
         padding: .1rem .5rem .2rem .5rem;
+        display: flex;
+        flex-direction: column;
         line-height: 1rem;
         margin-bottom: .15rem;
         word-break: break-word;
@@ -120,10 +130,18 @@
         color: hsl(var(--bg));
     }
 
+    .inline {
+        flex-direction: row;
+        align-items: center;
+        column-gap: .5rem;
+        flex-wrap: wrap;
+    }
+
     .ip {
         margin-top: -.05rem;
         font-size: .9rem;
         color: hsl(var(--accent));
+        cursor: copy;
     }
 
     .ts {

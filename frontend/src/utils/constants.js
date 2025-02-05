@@ -53,12 +53,13 @@ export const REGEX_CSS_COLOR = /(#(?:[0-9a-f]{2}){2,4}$|(#[0-9a-f]{3}$)|(rgb|hsl
 export const SERVER_SIDE_SEARCH_THRES = 3
 
 export const EVENT_LEVELS = [
-    'Info',
-    'Notice',
-    'Warning',
-    'Critical'
+    'info',
+    'notice',
+    'warning',
+    'critical'
 ]
 export const EVENT_TYPES = [
+    '-',
     'InvalidLogins',
     'IpBlacklisted',
     'IpBlacklistRemoved',

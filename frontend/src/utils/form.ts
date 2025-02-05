@@ -1,15 +1,31 @@
 import {CalendarDate, getDayOfWeek, isWeekend, startOfMonth, startOfWeek} from "@internationalized/date";
 
 /**
- * Returns a Unix timestamp from the given DateTime input
+ * Returns a Unix timestamp from the given date string.
+ * Use for date-only inputs - will split off any time data inside the string.
+ * To include time, use `unixTsFromLocalDateTime()`.
  */
-export function unixTsFromDateInput(inputDate: string) {
-    let d = Date.parse(inputDate);
+export function unixTsFromLocalDate(inputDate: string) {
+    let d = Date.parse(inputDate.split('T')[0]);
     if (isNaN(d)) {
         return;
     }
     return d / 1000;
 }
+
+/**
+ * Returns a Unix timestamp from the given local date and time string.
+ * This function is time-zone-aware. Simple, passed-in strings will be converted to UnixTS
+ * with respect for the local timezone in the users' browser.
+ */
+export function unixTsFromLocalDateTime(date: string, time: string) {
+    let ts = Date.parse(`${date}T${time}`);
+    if (isNaN(ts)) {
+        return;
+    }
+    return ts / 1000 - new Date().getTimezoneOffset();
+}
+
 
 export const DAY_MILLIS = 1000 * 60 * 60 * 24;
 
@@ -28,9 +44,9 @@ export interface Week {
     days: Day[],
 }
 
-/*
-Returns all weeks in the month for the given date.
-Appends days from the month before and the one after if there is an overlap.
+/**
+ Returns all weeks in the month for the given date.
+ Appends days from the month before and the one after if there is an overlap.
  */
 export function getWeeksInMonth(date: CalendarDate, locale: string): Week[] {
     const thisMonth = date.month;
@@ -84,7 +100,7 @@ export function getWeeksInMonth(date: CalendarDate, locale: string): Week[] {
  * Converts the DateTime string inside the given URLSearchParams to a Unix timestamp
  */
 export function formParamsDateToTs(key: string, params: URLSearchParams) {
-    let ts = unixTsFromDateInput(params.get(key) || '');
+    let ts = unixTsFromLocalDate(params.get(key) || '');
     params.set(key, ts?.toString() || '');
     return params;
 }

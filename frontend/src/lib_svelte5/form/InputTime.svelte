@@ -13,7 +13,7 @@
         name = 'time',
         value = $bindable(fmtTimeInput()),
         label = '',
-        title = '',
+        errMsg = '',
         disabled,
         min = '00:00',
         max = '23:59',
@@ -30,7 +30,7 @@
         name?: string,
         value?: string,
         label?: string,
-        title?: string,
+        errMsg?: string,
         disabled?: boolean,
         min?: string,
         max?: string,
@@ -190,7 +190,7 @@
         let intMinute = Number.parseInt(minute);
 
         if (intHour < hourMin || intHour > hourMax || intMinute < minuteMin || intMinute > minuteMax) {
-            refInput?.setCustomValidity(title);
+            refInput?.setCustomValidity(errMsg);
         }
 
         isErr = !refInput?.reportValidity();
@@ -205,8 +205,8 @@
                 type="text"
                 {id}
                 {name}
-                {title}
-                aria-label={title}
+                title={label}
+                aria-label={label}
                 bind:value
 
                 {disabled}
@@ -235,9 +235,9 @@
                         btnInvisible
                 >
                     {#snippet button()}
-                        <span class="pointer">
+                        <div title={label} class="pointer">
                             <IconClock color="hsl(var(--text)" width="1.2rem"/>
-                        </span>
+                        </div>
                     {/snippet}
                     <div class="popup">
                         <div class="flex space-between">
@@ -277,7 +277,7 @@
         </label>
         {#if isErr}
             <div class="error" transition:slide>
-                {title}
+                {errMsg}
             </div>
         {/if}
     </div>
@@ -316,7 +316,7 @@
     }
 
     .indicator {
-        top: -1.1rem;
+        top: -.7rem;
         right: 0;
         padding: 2px 5px 0 5px;
     }

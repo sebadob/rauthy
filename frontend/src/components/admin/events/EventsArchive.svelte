@@ -1,27 +1,29 @@
-<script>
-    import {run} from 'svelte/legacy';
-
-    import {onMount, untrack} from "svelte";
-    import {postEvents} from "../../../utils/dataFetchingAdmin.js";
-    import {formatDateToDateInput, formatUtcTsFromDateInput} from "../../../utils/helpers";
+<script lang="ts">
+    import {formatUtcTsFromDateInput} from "$utils/helpers";
     import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
-    import Input from "$lib/inputs/Input.svelte";
-    import {EVENT_LEVELS, EVENT_TYPES} from "../../../utils/constants.js";
-    import OptionSelect from "$lib/OptionSelect.svelte";
+    import {EVENT_LEVELS, EVENT_TYPES} from "$utils/constants";
     import Event from "$lib5/admin/events/Event.svelte";
-    import Switch from "$lib/Switch.svelte";
-    import {sleepAwait} from "$lib/utils/helpers";
+    import Switch from "$lib5/Switch.svelte";
+    import type {EventLevel, EventResponse, EventsRequest, EventType} from "$api/types/events.ts";
+    import {fetchPost} from "$api/fetch.ts";
+    import Options from "$lib5/Options.svelte";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import InputDateTimeCombo from "$lib5/form/InputDateTimeCombo.svelte";
+    import {fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime} from "$utils/form.ts";
 
-    let err = '';
-    let events = $state([]);
-    let resEvents = $state([]);
+    let ta = useI18nAdmin();
 
-    let from = $state(formatDateToDateInput(new Date(new Date().getTime() - 3600 * 1000)));
-    /** @type {string | undefined} */
-    let until = $state(undefined);
-    let level = $state('Info');
-    let filter = $state(false);
-    let typ = $state(EVENT_TYPES[0]);
+    let events: EventResponse[] = $state([]);
+    let resEvents: EventResponse[] = $state([]);
+
+    let fromDate = $state(fmtDateInput());
+    let fromTime = $state(fmtTimeInput());
+    let untilDate: undefined | string = $state('');
+    let untilTime = $state('--:--');
+    // let untilTime = $state(fmtTimeInput());
+    let level: EventLevel = $state('info');
+    // let filter = $state(false);
+    let typ: EventType = $state(EVENT_TYPES[0] as EventType);
 
     let searchOptions = [
         {
@@ -44,23 +46,31 @@
     });
 
     async function fetchData() {
-        let data = {
-            from: formatUtcTsFromDateInput(from),
-            level: level.toLowerCase(),
-        };
-        if (until) {
-            data.until = formatUtcTsFromDateInput(until);
+        let from = unixTsFromLocalDateTime(fromDate, fromTime);
+        if (!from) {
+            console.error('from ts invalid format', from);
+            return;
         }
-        if (filter) {
-            data.typ = typ;
+        let until: undefined | number;
+        if (untilDate && untilTime) {
+            let u = unixTsFromLocalDateTime(untilDate, untilTime);
+            if (!u) {
+                console.error('until ts invalid format', from);
+                return;
+            }
         }
 
-        let res = await postEvents(data);
-        let body = await res.json();
-        if (res.ok) {
-            events = body;
+        let payload: EventsRequest = {
+            from,
+            until,
+            level,
+            typ: typ !== EVENT_TYPES[0] ? typ : undefined,
+        };
+        let res = await fetchPost<EventResponse[]>('/auth/v1/events', payload);
+        if (res.body) {
+            events = res.body;
         } else {
-            err = body.message;
+            console.error(res.error);
         }
     }
 
@@ -80,40 +90,40 @@
         />
     </div>
     <div class="row filter">
-        <Input
-                type="datetime-local"
-                step="60"
-                width="17.5rem"
-                bind:value={from}
-                max="2099-01-01T00:00"
-        >
-            FROM
-        </Input>
-        <Input
-                type="datetime-local"
-                step="60"
-                width="17rem"
-                bind:value={until}
-                max="2099-01-01T00:00"
-        >
-            UNTIL
-        </Input>
+        <InputDateTimeCombo
+                label={ta.common.from}
+                bind:value={fromDate}
+                bind:timeValue={fromTime}
+                withTime
+        />
+        <InputDateTimeCombo
+                label={ta.common.until}
+                bind:value={untilDate}
+                bind:timeValue={untilTime}
+                withTime
+                withDelete
+        />
     </div>
     <div class="row filterOpts">
-        <div style:margin="0 5.5rem 0 .25rem">
-            <OptionSelect
-                    bind:value={level}
+        <div class="level">
+            <Options
+                    ariaLabel={ta.events.eventLevel}
                     options={EVENT_LEVELS}
+                    bind:value={level}
+                    borderless
             />
         </div>
-        Filter
-        <Switch bind:selected={filter}/>
-        {#if filter}
-            <OptionSelect
-                    bind:value={typ}
-                    options={EVENT_TYPES}
-            />
-        {/if}
+        <!--        <Switch ariaLabel={ta.common.filter} bind:checked={filter}>-->
+        <!--            {ta.common.filter}-->
+        <!--        </Switch>-->
+        <!--{#if filter}-->
+        <Options
+                ariaLabel={ta.events.eventType}
+                options={EVENT_TYPES}
+                bind:value={typ}
+                borderless
+        />
+        <!--{/if}-->
     </div>
 
     {#if resEvents.length === 0}
@@ -121,8 +131,8 @@
             No events found
         </div>
     {:else}
-        {#each resEvents as event, i (event.id)}
-            <Event bind:event={resEvents[i]} collapsed={false} wide/>
+        {#each resEvents as event (event.id)}
+            <Event {event} inline/>
         {/each}
     {/if}
 </div>
@@ -136,9 +146,14 @@
         gap: 1rem;
     }
 
+    .level {
+        width: 8rem;
+    }
+
     .row {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
+        gap: 1rem;
     }
 </style>
