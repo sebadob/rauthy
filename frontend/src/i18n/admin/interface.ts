@@ -7,6 +7,10 @@ export interface I18nAdmin {
     common: {
         account: string,
         back: string,
+        copiedToClip: string,
+        copyToClip: string,
+        filter: string,
+        from: string,
         search: string,
         searchOptions: string,
         until: string,
@@ -17,6 +21,10 @@ export interface I18nAdmin {
         // will be inserted as html
         noAdmin: string,
     },
+    events: {
+        eventLevel: string,
+        eventType: string,
+    }
     nav: {
         apiKeys: string,
         attributes: string,

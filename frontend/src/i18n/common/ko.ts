@@ -12,8 +12,10 @@ export const I18nKo: I18n = {
         errTooShort: "입력이 너무 짧습니다.",
         errTooLong: "입력이 너무 깁니다.",
         expandContent: "Expand content",
+        hours: "Hours",
         invalidInput: "유효하지 않은 입력입니다.",
         legend: "Legend",
+        minutes: "Minutes",
         month: "Month",
         months: [
             "January",

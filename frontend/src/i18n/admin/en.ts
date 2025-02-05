@@ -4,6 +4,10 @@ export let I18nAdminEn: I18nAdmin = {
     common: {
         account: 'Account',
         back: 'Back',
+        copiedToClip: 'Value has been copied to clipboard',
+        copyToClip: 'Copy value to clipboard',
+        filter: "Filter",
+        from: "From",
         search: 'Search',
         searchOptions: 'Search Options',
         until: "Until",
@@ -14,6 +18,10 @@ export let I18nAdminEn: I18nAdmin = {
         noAdmin: `A Rauthy admin account must have <b>MFA enabled.</b><br>
             Please navigate to your <b>account</b> and activate MFA.<br>
             Afterward, you need to do a logout and log back in.`,
+    },
+    events: {
+        eventLevel: "Event Level",
+        eventType: "Event Type",
     },
     nav: {
         apiKeys: 'API Keys',
