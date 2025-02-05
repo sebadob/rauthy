@@ -21,8 +21,9 @@ use validator::Validate;
     post,
     path = "/events",
     tag = "events",
+    request_body = EventsRequest,
     responses(
-        (status = 200, description = "Ok"),
+        (status = 200, description = "Ok", body = [EventResponse]),
         (status = 400, description = "BadRequest", body = ErrorResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
@@ -42,7 +43,10 @@ pub async fn post_events(
         payload.level.into(),
         payload.typ.map(|t| t.into()),
     )
-    .await?;
+    .await?
+    .into_iter()
+    .map(EventResponse::from)
+    .collect::<Vec<_>>();
 
     Ok(HttpResponse::Ok().json(events))
 }

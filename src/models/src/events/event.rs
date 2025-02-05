@@ -9,6 +9,7 @@ use crate::events::{
 };
 use chrono::{DateTime, Timelike, Utc};
 use hiqlite::{params, Param, Row};
+use rauthy_api_types::events::EventResponse;
 use rauthy_common::constants::EMAIL_SUB_PREFIX;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_local_hostname, get_rand};
@@ -50,6 +51,17 @@ impl From<rauthy_api_types::events::EventLevel> for EventLevel {
             rauthy_api_types::events::EventLevel::Notice => Self::Notice,
             rauthy_api_types::events::EventLevel::Warning => Self::Warning,
             rauthy_api_types::events::EventLevel::Critical => Self::Critical,
+        }
+    }
+}
+
+impl From<EventLevel> for rauthy_api_types::events::EventLevel {
+    fn from(value: EventLevel) -> Self {
+        match value {
+            EventLevel::Info => Self::Info,
+            EventLevel::Notice => Self::Notice,
+            EventLevel::Warning => Self::Warning,
+            EventLevel::Critical => Self::Critical,
         }
     }
 }
@@ -202,6 +214,28 @@ impl From<rauthy_api_types::events::EventType> for EventType {
             rauthy_api_types::events::EventType::UserEmailChange => Self::UserEmailChange,
             rauthy_api_types::events::EventType::UserPasswordReset => Self::UserPasswordReset,
             rauthy_api_types::events::EventType::Test => Self::Test,
+        }
+    }
+}
+
+impl From<EventType> for rauthy_api_types::events::EventType {
+    fn from(value: EventType) -> Self {
+        match value {
+            EventType::InvalidLogins => Self::InvalidLogins,
+            EventType::IpBlacklisted => Self::IpBlacklisted,
+            EventType::IpBlacklistRemoved => Self::IpBlacklistRemoved,
+            EventType::JwksRotated => Self::JwksRotated,
+            EventType::NewUserRegistered => Self::NewUserRegistered,
+            EventType::NewRauthyAdmin => Self::NewRauthyAdmin,
+            EventType::NewRauthyVersion => Self::NewRauthyVersion,
+            EventType::PossibleBruteForce => Self::PossibleBruteForce,
+            EventType::RauthyStarted => Self::RauthyStarted,
+            EventType::RauthyHealthy => Self::RauthyHealthy,
+            EventType::RauthyUnhealthy => Self::RauthyUnhealthy,
+            EventType::SecretsMigrated => Self::SecretsMigrated,
+            EventType::UserEmailChange => Self::UserEmailChange,
+            EventType::UserPasswordReset => Self::UserPasswordReset,
+            EventType::Test => Self::Test,
         }
     }
 }
@@ -825,6 +859,20 @@ impl Event {
                     format!("Error sending event internally: {:?}", err),
                 ))
             }
+        }
+    }
+}
+
+impl From<Event> for EventResponse {
+    fn from(e: Event) -> Self {
+        Self {
+            id: e.id,
+            timestamp: e.timestamp,
+            level: e.level.into(),
+            typ: e.typ.into(),
+            ip: e.ip,
+            data: e.data,
+            text: e.text,
         }
     }
 }
