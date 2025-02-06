@@ -178,6 +178,7 @@ use utoipa::{openapi, OpenApi};
             ApiKeyAccess,
             AuthProviderType,
             EventLevel,
+            EventResponse,
             EventType,
             JktClaim,
             JwkKeyPairAlg,
@@ -323,13 +324,12 @@ impl ApiDoc {
         // doc.info.contact = Some(contact);
 
         #[cfg(target_os = "windows")]
-        let scheme = if !*PROXY_MODE && app_state.listen_scheme == ListenScheme::Http
-        {
+        let scheme = if !*PROXY_MODE && app_state.listen_scheme == ListenScheme::Http {
             "http://"
         } else {
             "https://"
         };
-        
+
         #[cfg(not(target_os = "windows"))]
         let scheme = if (!*PROXY_MODE && app_state.listen_scheme == ListenScheme::Http)
             || app_state.listen_scheme == ListenScheme::UnixHttp

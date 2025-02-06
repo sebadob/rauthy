@@ -13,7 +13,7 @@
     } from "$utils/patterns.ts";
     import IconCheck from "$icons/IconCheck.svelte";
     import {fetchPut} from "$api/fetch.ts";
-    import InputDateCombo from "$lib5/form/InputDateCombo.svelte";
+    import InputDateTimeCombo from "$lib5/form/InputDateTimeCombo.svelte";
 
     let {
         user = $bindable(),
@@ -111,7 +111,7 @@
                         maxLength={32}
                         pattern={PATTERN_USER_NAME}
                 />
-                <InputDateCombo
+                <InputDateTimeCombo
                         name="birthdate"
                         label={t.account.birthdate}
                         bind:value={user.user_values.birthdate}

@@ -24,12 +24,12 @@
     import Documentation from "./documentation/Documentation.svelte";
     import IconBookOpen from "$lib/icons/IconBookOpen.svelte";
     import {onMount} from "svelte";
-    import Events from "./events/Events.svelte";
+    import Events from "$lib5/admin/events/Events.svelte";
     import IconStop from "$lib/icons/IconStop.svelte";
     import Blacklist from "./blacklist/Blacklist.svelte";
     import IconKey from "$lib/icons/IconKey.svelte";
     import ApiKeys from "./api_keys/ApiKeys.svelte";
-    import EventsArchive from "./events/EventsArchive.svelte";
+    import EventsArchive from "$lib5/admin/events/EventsArchive.svelte";
     import IconBellAlert from "$lib/icons/IconBellAlert.svelte";
     import IconCloud from "$lib/icons/IconCloud.svelte";
     import Providers from "./providers/Providers.svelte";

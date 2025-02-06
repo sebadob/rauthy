@@ -1,1 +1,0 @@
-import"../chunks/disclose-version.BDr9Qe-U.js";import"../chunks/legacy.CiDis14V.js";import{A as e}from"../chunks/AdminMainPre.DunJUaEo.js";function r(o){e(o,{selected:"Providers"})}export{r as component};

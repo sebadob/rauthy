@@ -49,3 +49,14 @@ pub struct EventsRequest {
     pub level: EventLevel,
     pub typ: Option<EventType>,
 }
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct EventResponse {
+    pub id: String,
+    pub timestamp: i64,
+    pub level: EventLevel,
+    pub typ: EventType,
+    pub ip: Option<String>,
+    pub data: Option<i64>,
+    pub text: Option<String>,
+}

@@ -39,9 +39,7 @@
             }
         } else if (route) {
             let link = href.split('?')[0];
-            console.log('link', link);
             if (link.endsWith(route)) {
-                // if (route.endsWith(href.split('?')[0])) {
                 return 'page';
             }
         }

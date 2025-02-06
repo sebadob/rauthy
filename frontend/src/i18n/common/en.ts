@@ -12,7 +12,10 @@ export const I18nEn: I18n = {
         errTooShort: "Input too short",
         errTooLong: "Input too long",
         expandContent: "Expand content",
+        hours: "Hours",
         invalidInput: "Invalid Input",
+        legend: "Legend",
+        minutes: "Minutes",
         month: "Month",
         months: [
             "January",

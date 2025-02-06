@@ -1,5 +1,5 @@
 <script>
-    import EventsArchive from "../../../components/admin/events/EventsArchive.svelte";
+    import EventsArchive from "$lib5/admin/events/EventsArchive.svelte";
 </script>
 
 <EventsArchive/>

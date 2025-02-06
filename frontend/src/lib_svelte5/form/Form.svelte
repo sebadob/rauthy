@@ -1,7 +1,7 @@
 <script lang="ts">
     import type {Snippet} from "svelte";
     import {fetchSolvePow} from "$utils/pow.ts";
-    import {unixTsFromDateInput} from "$utils/form.ts";
+    import {unixTsFromLocalDate} from "$utils/form.ts";
     import {errorFromResponse, fetchForm} from "$api/fetch.ts";
 
     type T = $$Generic;
@@ -48,7 +48,7 @@
 
         for (let key of convertDateToTs) {
             let data = formData.get(key)?.toString() || '';
-            let ts = unixTsFromDateInput(data) || '';
+            let ts = unixTsFromLocalDate(data) || '';
             formData.set(key, ts?.toString() || '');
         }
 

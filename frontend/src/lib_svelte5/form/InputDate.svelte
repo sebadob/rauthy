@@ -16,7 +16,7 @@
         name,
         value = $bindable(fmtDateInput()),
         label = '',
-        title = '',
+        errMsg = '',
         disabled,
         min = '1900-01-01',
         max = '2100-01-01',
@@ -189,8 +189,8 @@
                 type="date"
                 {id}
                 {name}
-                {title}
-                aria-label={title}
+                title={label}
+                aria-label={label}
                 bind:value
 
                 {disabled}
@@ -220,9 +220,9 @@
                         lazy
                 >
                     {#snippet button()}
-                        <span class="pointer">
+                        <div title={label} class="pointer">
                             <IconCalendar color="hsl(var(--text)" width="1.2rem"/>
-                        </span>
+                        </div>
                     {/snippet}
                     <div class="popup">
                         <div class="flex space-between">
@@ -303,7 +303,7 @@
         </label>
         {#if isErr}
             <div class="error" transition:slide>
-                {title}
+                {errMsg}
             </div>
         {/if}
     </div>

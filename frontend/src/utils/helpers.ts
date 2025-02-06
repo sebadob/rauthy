@@ -15,6 +15,7 @@ import {
 import {decode, encode} from "base64-arraybuffer";
 import {getProvidersTemplate} from "./dataFetching.js";
 import type {PasswordPolicyResponse} from "$api/types/password_policy.ts";
+import type {EventLevel} from "$api/types/events.ts";
 
 export function buildWebIdUri(userId: string) {
     return `${window.location.origin}/auth/${userId}/profile#me`
@@ -142,29 +143,31 @@ export function base64UrlSafeToArrBuf(base64url: string) {
     return decode(base64);
 }
 
-export function eventColor(level: string) {
+export function eventColor(level: EventLevel) {
     switch (level) {
-        case 'test':
-            return '#b2b2b2';
         case 'info':
-            return '#388c51';
+            return 'rgba(52,255,109,0.7)';
         case 'notice':
-            return '#3d5d99';
+            return 'rgba(51,69,255,0.7)';
         case 'warning':
-            return '#c29a4f';
+            return 'rgba(255,211,51,0.7)';
         case 'critical':
-            return '#993d49';
+            return 'rgba(255,46,46,0.7)';
     }
 }
-
 
 export const formatDateToDateInput = (date: Date) => {
     return date.toISOString().slice(0, 16);
     // return date.toISOString().split('.')[0];
 }
 
-export const formatUtcTsFromDateInput = (inputDate: string) => {
-    let d = Date.parse(inputDate);
+export const formatUtcTsFromDateInput = (date: string, time?: string) => {
+    let d: number;
+    if (time) {
+        d = Date.parse(`${date}T${time}`);
+    } else {
+        d = Date.parse(date)
+    }
     if (isNaN(d)) {
         return;
     }

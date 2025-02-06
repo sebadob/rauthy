@@ -7,6 +7,13 @@ export interface I18nAdmin {
     common: {
         account: string,
         back: string,
+        copiedToClip: string,
+        copyToClip: string,
+        filter: string,
+        from: string,
+        search: string,
+        searchOptions: string,
+        until: string,
     }
     error: {
         // will be inserted as html
@@ -14,6 +21,10 @@ export interface I18nAdmin {
         // will be inserted as html
         noAdmin: string,
     },
+    events: {
+        eventLevel: string,
+        eventType: string,
+    }
     nav: {
         apiKeys: string,
         attributes: string,
@@ -28,5 +39,10 @@ export interface I18nAdmin {
         scopes: string,
         sessions: string,
         users: string,
+    }
+    search: {
+        orderBy: string,
+        orderChangeToAsc: string,
+        orderChangeToDesc: string,
     }
 }
