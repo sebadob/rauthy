@@ -1,6 +1,5 @@
 <script>
     import {run} from 'svelte/legacy';
-
     import {onMount} from "svelte";
     import IconBarsArrowDown from "$lib/icons/IconBarsArrowDown.svelte";
     import IconBarsArrowUp from "$lib/icons/IconBarsArrowUp.svelte";

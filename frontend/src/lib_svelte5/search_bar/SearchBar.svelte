@@ -39,7 +39,7 @@
         focus?: () => void,
         width?: string;
         borderless?: boolean;
-        onSearch?: (value: string) => void,
+        onSearch?: (value: string, option?: string) => void,
         onTab?: (value: string) => void,
         onUp?: (value: string) => void,
         onDown?: (value: string) => void,
@@ -73,7 +73,7 @@
     }
 
     function search() {
-        onSearch?.(value);
+        onSearch?.(value, option);
     }
 
     function doFocus() {
