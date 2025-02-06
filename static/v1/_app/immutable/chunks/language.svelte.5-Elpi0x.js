@@ -1,1 +1,0 @@
-import{v as o,w as t,u as n}from"./runtime.BONl2e88.js";import{p as u}from"./proxy.0BECmVET.js";let e=t("");function a(){typeof document<"u"?o(e,u(document.documentElement.lang.slice(0,2).toLowerCase())):o(e,"en")}function r(){return n(e)}export{a as i,r as u};
