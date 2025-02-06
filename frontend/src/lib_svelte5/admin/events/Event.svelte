@@ -60,13 +60,13 @@
 
 </script>
 
-{#snippet ip(ip: undefined | string)}
-    {#if ip}
+{#snippet ip(v: undefined | string)}
+    {#if v}
         <div>
-            <Button invisible onclick={() => copyToClip(ip)}>
+            <Button invisible onclick={() => copyToClip(v)}>
                 <Tooltip text={tooltip} yOffset={20}>
                     <div class="ip font-mono">
-                        {ip}
+                        {v}
                     </div>
                 </Tooltip>
             </Button>

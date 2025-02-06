@@ -83,9 +83,9 @@
                     invisible
                     onclick={reset}
             >
-                <span title={t.common.delete}>
-                    <IconStop color="hsla(var(--error) / .8)" width="1.2rem"/>
-                </span>
+                    <span title={t.common.delete}>
+                        <IconStop color="hsla(var(--error) / .8)" width="1.2rem"/>
+                    </span>
             </Button>
         </div>
     {/if}

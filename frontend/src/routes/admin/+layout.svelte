@@ -101,11 +101,13 @@
         overflow-y: auto;
     }
 
-    /*.events {*/
-    /*    border: 1px solid green;*/
-    /*}*/
-
     .text {
         margin-bottom: 1rem;
+    }
+
+    @media (max-width: 800px) {
+        .content {
+            padding: 1.25rem .5rem 0 .5rem;
+        }
     }
 </style>

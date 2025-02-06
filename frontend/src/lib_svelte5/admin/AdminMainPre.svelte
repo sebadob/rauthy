@@ -20,7 +20,7 @@
     import Attr from "../../components/admin/userAttr/Attr.svelte";
     import Groups from "../../components/admin/groups/Groups.svelte";
     import Clients from "../../components/admin/clients/Clients.svelte";
-    import EventsArchive from "../../components/admin/events/EventsArchive.svelte";
+    import EventsArchive from "./events/EventsArchive.svelte";
     import Blacklist from "../../components/admin/blacklist/Blacklist.svelte";
 
     let {

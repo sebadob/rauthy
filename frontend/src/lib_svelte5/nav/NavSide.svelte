@@ -309,7 +309,7 @@
     }
 
     .menu {
-        max-height: 80dvh;
+        max-height: 85dvh;
         display: flex;
         flex-direction: column;
         gap: .5rem;
@@ -317,7 +317,7 @@
     }
 
     nav[data-compact="true"] .menu {
-        max-height: 73dvh;
+        max-height: 80dvh;
     }
 
     .navmod {
