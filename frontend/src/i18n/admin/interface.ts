@@ -40,4 +40,9 @@ export interface I18nAdmin {
         sessions: string,
         users: string,
     }
+    search: {
+        orderBy: string,
+        orderChangeToAsc: string,
+        orderChangeToDesc: string,
+    }
 }

@@ -36,5 +36,10 @@ export let I18nAdminDe: I18nAdmin = {
         scopes: 'Scopes',
         sessions: 'Sessions',
         users: 'Benutzer',
+    },
+    search: {
+        orderBy: 'Sortieren nach ...',
+        orderChangeToAsc: 'Zu aufsteigender Sortierung wechseln',
+        orderChangeToDesc: 'Zu absteigende Sortierung wechseln',
     }
 };
