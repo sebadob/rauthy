@@ -8,6 +8,7 @@
     import InputDateTimeCombo from "$lib5/form/InputDateTimeCombo.svelte";
     import {fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime} from "$utils/form.ts";
     import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
+    import ContentAdmin from "$lib5/ContentAdmin.svelte";
 
     let ta = useI18nAdmin();
 
@@ -80,7 +81,7 @@
     }
 </script>
 
-<div class="content">
+<ContentAdmin>
     <OrderSearchBar
             {searchOptions}
             bind:searchOption
@@ -133,7 +134,7 @@
             <Event {event} inline/>
         {/each}
     {/if}
-</div>
+</ContentAdmin>
 
 <style>
     .filters {

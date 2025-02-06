@@ -11,14 +11,21 @@ export interface I18nAdmin {
         copyToClip: string,
         filter: string,
         from: string,
+        note: string,
         search: string,
         searchOptions: string,
         until: string,
     }
+    docs: {
+        book: string,
+        openapi: string,
+        openapiNote: string,
+        source: string,
+    }
     error: {
-        // will be inserted as html
+        // inserted as html
         needsAdminRole: string,
-        // will be inserted as html
+        // inserted as html
         noAdmin: string,
     },
     events: {
