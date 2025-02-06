@@ -77,6 +77,7 @@ export const EVENT_TYPES = [
     'Test',
 ]
 export const LANGUAGES = ['de', 'en', 'zh', 'ko'];
+export const LANGUAGES_ADMIN = ['de', 'en'];
 export const TOKEN_ALGS = [
     'RS256',
     'RS384',
