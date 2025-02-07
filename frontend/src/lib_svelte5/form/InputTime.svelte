@@ -205,7 +205,7 @@
                 type="text"
                 {id}
                 {name}
-                title={label}
+                title={errMsg}
                 aria-label={label}
                 bind:value
 

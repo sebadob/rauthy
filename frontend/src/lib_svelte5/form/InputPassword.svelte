@@ -57,7 +57,7 @@
     let t = useI18n();
 
     let isError = $state(false);
-    
+
     reportValidity = isValid;
 
     function copy() {
@@ -121,6 +121,7 @@
                 {type}
                 {id}
                 {name}
+                title={errMsg}
                 aria-label={ariaLabel}
                 style:padding-right={showCopy ? '3.8rem' : '2.2rem'}
                 bind:value

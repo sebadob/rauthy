@@ -1,6 +1,5 @@
 <script lang="ts">
-    import {useI18n} from "$state/i18n.svelte.ts";
-    import {page} from "$app/stores";
+    import {page} from "$app/state";
     import type {Snippet} from "svelte";
     import A from "$lib5/A.svelte";
 
@@ -17,8 +16,8 @@
     } = $props();
 
     let current = $derived(highlightWithParams
-        ? `${$page.route.id}${$page.url.search}`.startsWith(href)
-        : $page.route.id === href.split('?')[0]
+        ? `${page.route.id}${page.url.search}`.startsWith(href)
+        : page.route.id === href.split('?')[0]
     );
 
 </script>

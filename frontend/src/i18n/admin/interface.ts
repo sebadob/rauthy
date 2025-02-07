@@ -47,6 +47,12 @@ export interface I18nAdmin {
         sessions: string,
         users: string,
     }
+    passwordPolicy: {
+        configDesc: string,
+        resetSet0: string,
+        validForDays: string,
+        validityNew: string,
+    },
     search: {
         orderBy: string,
         orderChangeToAsc: string,

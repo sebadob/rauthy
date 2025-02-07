@@ -47,6 +47,12 @@ export let I18nAdminEn: I18nAdmin = {
         sessions: "Sessions",
         users: "Users",
     },
+    passwordPolicy: {
+        configDesc: "Policy for new passwords.",
+        resetSet0: "The value 0 deactivates the requirement.",
+        validForDays: "Valid For Days",
+        validityNew: "Validity for new passwords.",
+    },
     search: {
         orderBy: "Order by ...",
         orderChangeToAsc: "Change sort to ascending",
