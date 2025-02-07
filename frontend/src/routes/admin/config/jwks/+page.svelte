@@ -1,5 +1,5 @@
 <script lang="ts">
-    import JWKs from "../../../../components/admin/config/jwks/JWKs.svelte";
+    import JWKs from "$lib5/admin/config/JWKs.svelte";
 </script>
 
 <JWKs/>

@@ -31,7 +31,12 @@ export interface I18nAdmin {
     events: {
         eventLevel: string,
         eventType: string,
-    }
+    },
+    jwks: {
+        alg: string,
+        type: string,
+        rotateKeys: string,
+    },
     nav: {
         apiKeys: string,
         attributes: string,

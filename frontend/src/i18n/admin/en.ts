@@ -32,6 +32,11 @@ export let I18nAdminEn: I18nAdmin = {
         eventLevel: "Event Level",
         eventType: "Event Type",
     },
+    jwks: {
+        alg: "Algorithm",
+        type: "Type",
+        rotateKeys: "Rotate Keys",
+    },
     nav: {
         apiKeys: "API Keys",
         attributes: "Attributes",
