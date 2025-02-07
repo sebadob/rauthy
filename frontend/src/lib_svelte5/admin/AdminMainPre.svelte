@@ -11,8 +11,8 @@
     import ContentWrapper from "../../components/admin/ContentWrapper.svelte";
     import Sessions from "../../components/admin/sessions/Sessions.svelte";
     import Providers from "../../components/admin/providers/Providers.svelte";
-    import Config from "../../components/admin/config/Config.svelte";
-    import Documentation from "../../components/admin/documentation/Documentation.svelte";
+    import Config from "./config/Config.svelte";
+    import Documentation from "./documentation/Documentation.svelte";
     import Users from "../../components/admin/users/Users.svelte";
     import Scopes from "../../components/admin/scopes/Scopes.svelte";
     import ApiKeys from "../../components/admin/api_keys/ApiKeys.svelte";

@@ -11,7 +11,7 @@
     import Clients from "./clients/Clients.svelte";
     import Sessions from "./sessions/Sessions.svelte";
     import Attr from "./userAttr/Attr.svelte";
-    import Config from "./config/Config.svelte";
+    import Config from "$lib5/admin/config/Config.svelte";
     import IconWrenchScrew from "$lib/icons/IconWrenchScrew.svelte";
     import IconUser from "$lib/icons/IconUser.svelte";
     import IconOffice from "$lib/icons/IconOffice.svelte";
@@ -21,7 +21,7 @@
     import IconLogout from "$lib/icons/IconLogout.svelte";
     import IconId from "$lib/icons/IconId.svelte";
     import RauthyLogo from "$lib/icons/RauthyLogo.svelte";
-    import Documentation from "./documentation/Documentation.svelte";
+    import Documentation from "$lib5/admin/documentation/Documentation.svelte";
     import IconBookOpen from "$lib/icons/IconBookOpen.svelte";
     import {onMount} from "svelte";
     import Events from "$lib5/admin/events/Events.svelte";

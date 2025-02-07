@@ -97,6 +97,7 @@
 
     .content {
         flex: 1;
+        display: flex;
     }
 
     .text {
