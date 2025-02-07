@@ -33,6 +33,12 @@ export let I18nAdminDe: I18nAdmin = {
     },
     jwks: {
         alg: "Algorithmus",
+        p1: "Dies sind die Json Web Keys (JWKs) die für das Signieren der Tokens genutzt werden.",
+        p2: `JWKs werden standardmäßig automatisch an jedem 1. des Monats rotiert. Für alle neuen Tokens wird 
+        immer die aktuellste Version eines Keys für den jeweiligen Algorithmus verwerndet. Alte Keys werden für 
+        eine Weile behalten um bestehende Tokens validieren zu können und nach einer gewissen Zeit automatisch gelöscht.`,
+        p3: `Die Keys können manuell rotiert werden. Abhängig von der Hardware auf der diese Rauthy Instanz läuft,
+        kann dies einige Sekunden in Anspruch nehmen.`,
         type: "Typ",
         rotateKeys: "Keys Rotieren",
     },

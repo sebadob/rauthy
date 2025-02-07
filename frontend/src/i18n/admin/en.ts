@@ -34,6 +34,13 @@ export let I18nAdminEn: I18nAdmin = {
     },
     jwks: {
         alg: "Algorithm",
+        p1: "These are the Json Web Keys (JWKs) used for token singing.",
+        p2: `The JWKs will be rotated by default every 1st of a month. For all newly created tokens, only the latest
+        available key for the given algorithm will be used for signing. Old keys will be kept for a while to make sure
+        that currently valid tokens can still be validated properly. After a while, they will be cleaned up 
+        automatically.`,
+        p3: `Keys can also be rotated manually. Depending on the hardware this Rauthy instance is running on, it might
+        take a few seconds.`,
         type: "Type",
         rotateKeys: "Rotate Keys",
     },

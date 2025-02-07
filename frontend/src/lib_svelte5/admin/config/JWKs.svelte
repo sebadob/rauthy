@@ -53,18 +53,9 @@
 
 <ContentAdmin>
     <h2>Json Web Keys</h2>
-    <p>
-        These are the Json Web Keys (JWKs) used for token singing.
-    </p>
-
-    <p>
-        You can rotate them and generate a full new set. Depending on your deployment, this could take a few
-        seconds.<br>
-        New tokens will always be signed with the new / latest ones. The old keys will be cleaned up automatically,
-        when
-        there cannot be a token anymore that used the old key to not
-        break any current token validation.
-    </p>
+    <p>{ta.jwks.p1}</p>
+    <p>{ta.jwks.p2}</p>
+    <p>{ta.jwks.p3}</p>
 
     {#each certs as jwk (jwk.kid)}
         <Expandable>
