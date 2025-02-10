@@ -5,6 +5,7 @@ use validator::Validate;
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
 pub struct EncKeyMigrateRequest {
+    /// Validation: `[a-zA-Z0-9]`
     #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub key_id: String,
 }

@@ -16,6 +16,19 @@ export let I18nAdminEn: I18nAdmin = {
     docs: {
         book: "For general documentation about Rauthy itself, you should take a look at the",
         encryption: "Encryption",
+        encKeys: {
+            header: "Encryption Keys",
+            keyActive: "Active Key",
+            keysAvailable: "Available Keys",
+            migrate: "Migrate",
+            migrateToKey: 'Migrate all existing encrypted values to the following key',
+            p1: `These Keys are used for an additional encryption at rest, independently from any data store technology 
+            used under the hood. They are configured statically, but can be rotated and migrated on this page manually.`,
+            p2: `The active key is statically set in the Rauthy config file / environment variables. It cannot be changed
+            here dynamically. All new JWK encryption's will always use the currently active key.`,
+            p3: `If you migrate all existing secrets, it might take a few seconds to finish, if you have a big 
+            dataset.`,
+        },
         hashing: {
             calculate: "Calculate",
 

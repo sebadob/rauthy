@@ -16,6 +16,21 @@ export let I18nAdminDe: I18nAdmin = {
     docs: {
         book: "Für generelle Dokumentation für Rauthy existiert das",
         encryption: "Verschlüsselung",
+        encKeys: {
+            header: "Encryption Keys",
+            keyActive: "Aktiver Key",
+            keysAvailable: "Verfügbare Keys",
+            migrate: "Migrieren",
+            migrateToKey: "Migriere alle Werte zu folgendem Encryption Key",
+            p1: `Diese Schlüssel werden für die zusätzliche Verschlüsselung in verschiedenen Situationen genutzt, wie 
+            z.B. gewisse Werte innerhalb der Datenbank oder Session Cookies. Sie sind statisch konfiguriert, aber können
+            als best-practice manuell rotiert werden.`,
+            p2: `Der aktive Schlüssel ist ebenfalls statisch im Rauthy config file gesetzt. Alle neu-verschlüsselten
+            Werte werden mit dem aktiven Schlüssel verschlüsselt, während alte zur Rückwärts-Kompatibilität parallel
+            existieren können.`,
+            p3: `Das Migrieren aller verschlüsselten Werte an dieser Stelle kann, je nach System, einige Zeit in 
+            Anspruch nehmen.`,
+        },
         hashing: {
             calculate: "Berechnen",
 

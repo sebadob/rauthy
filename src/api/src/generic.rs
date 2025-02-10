@@ -80,7 +80,7 @@ pub async fn get_auth_check_admin(principal: ReqPrincipal) -> Result<HttpRespons
     path = "/encryption/keys",
     tag = "generic",
     responses(
-        (status = 200, description = "Ok"),
+        (status = 200, description = "Ok", body = EncKeysResponse),
         (status = 401, description = "Unauthorized"),
         (status = 403, description = "Forbidden"),
     ),
@@ -109,6 +109,7 @@ pub async fn get_enc_keys(principal: ReqPrincipal) -> Result<HttpResponse, Error
     post,
     path = "/encryption/migrate",
     tag = "generic",
+    request_body = EncKeyMigrateRequest,
     responses(
         (status = 200, description = "Ok"),
         (status = 401, description = "Unauthorized"),

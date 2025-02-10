@@ -1,5 +1,5 @@
 <script lang="ts">
-    import EncKeys from "../../../../components/admin/config/encKeys/EncKeys.svelte";
+    import EncKeys from "$lib5/admin/config/EncKeys.svelte";
 </script>
 
 <EncKeys/>

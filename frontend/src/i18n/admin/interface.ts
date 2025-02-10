@@ -19,6 +19,16 @@ export interface I18nAdmin {
     docs: {
         book: string,
         encryption: string,
+        encKeys: {
+            header: string,
+            keyActive: string,
+            keysAvailable: string,
+            migrate: string,
+            migrateToKey: string,
+            p1: string,
+            p2: string,
+            p3: string,
+        },
         hashing: {
             calculate: string,
 
