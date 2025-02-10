@@ -6,7 +6,7 @@
 
     let {
         width = 'min(25rem, 100dvw)',
-        paddingTop = '7.1rem',
+        paddingTop = '4.5rem',
         collapse = $bindable(),
         collapseButtonThreshold = 800,
         thresholdNavSub = 500,
@@ -77,9 +77,9 @@
 <div class="navSub">
     {#snippet btn()}
         <Button ariaControls={id} invisible onclick={toggle}>
-        <span class="btn">
-            <IconArrowRightLeft width="1.4rem"/>
-        </span>
+            <div class="btn">
+                <IconArrowRightLeft width="1.4rem"/>
+            </div>
         </Button>
     {/snippet}
 
@@ -115,7 +115,6 @@
 
 <style>
     nav {
-        margin-left: -.5rem;
         background: hsl(var(--bg));
         border-right: 1px solid hsla(var(--bg-high) / .23);
         overflow: clip;
@@ -143,6 +142,8 @@
     }
 
     .btn {
+        margin-left: -.2rem;
+        margin-top: -.1rem;
         color: hsla(var(--text) / .5);
         transition: color 150ms;
     }
@@ -154,7 +155,7 @@
     .btnCollapsed {
         position: fixed;
         width: 0;
-        transform: translateX(.8rem);
+        margin-left: 1.5rem;
         z-index: 2;
     }
 

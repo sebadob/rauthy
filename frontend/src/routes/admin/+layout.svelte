@@ -96,18 +96,11 @@
     }
 
     .content {
-        padding: 1rem;
         flex: 1;
-        overflow-y: auto;
+        display: flex;
     }
 
     .text {
         margin-bottom: 1rem;
-    }
-
-    @media (max-width: 800px) {
-        .content {
-            padding: 1.25rem .5rem 0 .5rem;
-        }
     }
 </style>

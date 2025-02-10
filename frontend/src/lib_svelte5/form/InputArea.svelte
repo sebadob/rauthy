@@ -52,8 +52,6 @@
 
     const re = pattern ? new RegExp(pattern, 'gm') : undefined;
 
-    let title = $derived(label || placeholder);
-
     function onblur(event: FocusEvent & { currentTarget: EventTarget & HTMLTextAreaElement }) {
         isValid();
         onBlur?.();
@@ -112,8 +110,8 @@
             bind:this={ref}
             {id}
             {name}
-            {title}
-            aria-label={title}
+            title={errMsg}
+            aria-label={label || placeholder}
             bind:value
             {rows}
 

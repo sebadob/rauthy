@@ -8,7 +8,7 @@
         datalist,
         pattern,
         value = $bindable(),
-        searchWidth = 'min(25rem, 95dvw)',
+        searchWidth = 'min(25rem, calc(100dvw - .5rem))',
         onSearch = $bindable(),
 
         orderOptions,

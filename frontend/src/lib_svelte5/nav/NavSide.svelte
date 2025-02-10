@@ -204,7 +204,7 @@
                         {ta.nav.providers}
                     </NavLink>
 
-                    <NavLink {compact} {params} route="/config">
+                    <NavLink {compact} {params} route="/config/policy" highlightIncludes="/config/">
                         {#snippet icon(width: string)}
                             <IconWrenchScrew {width}/>
                         {/snippet}

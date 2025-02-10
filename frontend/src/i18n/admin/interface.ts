@@ -11,20 +11,87 @@ export interface I18nAdmin {
         copyToClip: string,
         filter: string,
         from: string,
+        note: string,
         search: string,
         searchOptions: string,
         until: string,
     }
+    docs: {
+        book: string,
+        encryption: string,
+        encKeys: {
+            header: string,
+            keyActive: string,
+            keysAvailable: string,
+            migrate: string,
+            migrateToKey: string,
+            p1: string,
+            p2: string,
+            p3: string,
+        },
+        hashing: {
+            calculate: string,
+
+            currValuesHead: string,
+            currValues1: string,
+            currValuesNote: string,
+            currValuesThreadsAccess: string,
+
+            loginTimeHead: string,
+            loginTime1: string,
+            loginTime2: string,
+
+            // inserted as html
+            mCost1: string,
+            // inserted as html
+            mCost2: string,
+            // inserted as html
+            mCost3: string,
+
+            // inserted as html
+            pCost1: string,
+            // inserted as html
+            pCost2: string,
+
+            // inserted as html
+            tCost1: string,
+            // inserted as html
+            tCost2: string,
+
+            utilityHead: string,
+            utility1: string,
+            // inserted as html
+            utility2: string,
+
+            time: string,
+            targetTime: string,
+            tune: string,
+            pDetials: string,
+            pTune: string,
+            pUtility: string,
+        },
+        openapi: string,
+        openapiNote: string,
+        source: string,
+    }
     error: {
-        // will be inserted as html
+        // inserted as html
         needsAdminRole: string,
-        // will be inserted as html
+        // inserted as html
         noAdmin: string,
     },
     events: {
         eventLevel: string,
         eventType: string,
-    }
+    },
+    jwks: {
+        alg: string,
+        p1: string,
+        p2: string,
+        p3: string,
+        type: string,
+        rotateKeys: string,
+    },
     nav: {
         apiKeys: string,
         attributes: string,
@@ -40,6 +107,12 @@ export interface I18nAdmin {
         sessions: string,
         users: string,
     }
+    passwordPolicy: {
+        configDesc: string,
+        resetSet0: string,
+        validForDays: string,
+        validityNew: string,
+    },
     search: {
         orderBy: string,
         orderChangeToAsc: string,

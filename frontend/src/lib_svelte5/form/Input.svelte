@@ -68,8 +68,6 @@
 
     let t = useI18n();
 
-    let title = $derived(label || placeholder);
-
     function onblur(event: FocusEvent & { currentTarget: EventTarget & HTMLInputElement }) {
         isValid();
         onBlur?.();
@@ -128,8 +126,8 @@
             type={typ}
             {id}
             {name}
-            {title}
-            aria-label={title}
+            title={errMsg}
+            aria-label={label || placeholder}
             bind:value
 
             {autocomplete}

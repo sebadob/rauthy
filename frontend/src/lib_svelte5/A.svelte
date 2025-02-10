@@ -9,6 +9,7 @@
         hideUnderline = false,
         highlight = false,
         highlightExact = false,
+        highlightIncludes,
         highlightWithParams = false,
         children,
     }: {
@@ -18,6 +19,7 @@
         hideUnderline?: boolean,
         highlight?: boolean,
         highlightExact?: boolean,
+        highlightIncludes?: string,
         highlightWithParams?: boolean,
         children: Snippet,
     } = $props();
@@ -28,6 +30,9 @@
         }
 
         let route = page.route.id;
+        if (!route) {
+            return;
+        }
         if (highlightWithParams) {
             let hrefPage = `${route}${page.url.search}`;
             if (hrefPage.startsWith(href)) {
@@ -37,14 +42,16 @@
             if (route === href.split('?')[0]) {
                 return 'page';
             }
+        } else if (highlightIncludes) {
+            if (route.includes(highlightIncludes)) {
+                return 'page';
+            }
         } else if (route) {
             let link = href.split('?')[0];
             if (link.endsWith(route)) {
                 return 'page';
             }
         }
-
-        return undefined;
     });
 
 </script>

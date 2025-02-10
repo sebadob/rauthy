@@ -1,5 +1,5 @@
 <script>
-    import Documentation from "../../../components/admin/documentation/Documentation.svelte";
+    import Documentation from "$lib5/admin/documentation/Documentation.svelte";
 </script>
 
 <Documentation/>

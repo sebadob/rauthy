@@ -7,12 +7,14 @@
         params,
         route,
         icon,
+        highlightIncludes,
         children,
     }: {
         compact: boolean,
         params: string,
         route: string,
         icon: Snippet<[string]>,
+        highlightIncludes?: string,
         children: Snippet,
     } = $props();
 
@@ -22,7 +24,7 @@
     let href = $derived(`${urlPrefix}${route}${params}`);
 </script>
 
-<A {href} hideUnderline>
+<A {href} hideUnderline {highlightIncludes}>
     {#if compact}
         <div class="compact">
             <div class="iconCompact">

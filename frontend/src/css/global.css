@@ -69,6 +69,12 @@ blockquote {
     background-color: hsl(var(--bg-high));
 }
 
+code {
+    padding: 0 .15rem;
+    font-size: .9rem;
+    background: hsl(var(--bg-high));
+}
+
 h1, h2, h3, h4, h5, h6 {
     color: hsl(var(--text-high));
     overflow-wrap: break-word;
@@ -120,6 +126,10 @@ hr {
     border: none;
     border-top: 1px solid hsla(var(--bg-high), .66);
     margin: .5rem 0;
+}
+
+li {
+    margin-left: 1rem;
 }
 
 .font-default {
