@@ -8,7 +8,7 @@ use rauthy_common::utils::real_ip_from_svc_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::events::ip_blacklist_handler::{IpBlacklistCheck, IpBlacklistReq};
-use rauthy_models::html_templates::TooManyRequestsHtml;
+use rauthy_models::html::templates::TooManyRequestsHtml;
 use std::future::{ready, Ready};
 use std::rc::Rc;
 use tokio::sync::oneshot;

@@ -314,6 +314,7 @@ build-ui:
     PAGES=(
     "templates/html/*.html"
     "templates/html/admin/*.html"
+    "templates/html/admin/config/*.html"
     "templates/html/error/*.html"
     "templates/html/error/error/*.html"
     "templates/html/error/error/error/*.html"

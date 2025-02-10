@@ -36,7 +36,7 @@ use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::{PasskeyEntity, WebauthnAdditionalData};
 use rauthy_models::entity::webids::WebId;
 use rauthy_models::events::event::Event;
-use rauthy_models::html_templates::{Error1Html, Error3Html, ErrorHtml, UserRegisterHtml};
+use rauthy_models::html::templates::{Error1Html, Error3Html, ErrorHtml, UserRegisterHtml};
 use rauthy_models::language::Language;
 use rauthy_service::password_reset;
 use spow::pow::Pow;

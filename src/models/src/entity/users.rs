@@ -13,7 +13,7 @@ use crate::entity::sessions::Session;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
 use crate::events::event::Event;
-use crate::html_templates::{HtmlTemplate, UserEmailChangeConfirmHtml};
+use crate::html::templates::{HtmlTemplate, UserEmailChangeConfirmHtml};
 use crate::language::Language;
 use actix_web::{web, HttpRequest};
 use argon2::PasswordHash;

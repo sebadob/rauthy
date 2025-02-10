@@ -119,7 +119,7 @@ export const PKCE_CHALLENGES = [{
 ];
 
 // All TPL_* values match a possibly existing `<template>` id
-// -> src/models/src/html_templates.rs -> HtmlTemplate
+// -> src/models/src/templates -> HtmlTemplate
 export const TPL_AUTH_PROVIDERS = 'tpl_auth_providers';
 export const TPL_CLIENT_NAME = 'tpl_client_name';
 export const TPL_CLIENT_URL = 'tpl_client_url';

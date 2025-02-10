@@ -6,7 +6,7 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::sessions::Session;
-use rauthy_models::html_templates::LogoutHtml;
+use rauthy_models::html::templates::LogoutHtml;
 use rauthy_models::language::Language;
 use rauthy_models::{JwtIdClaims, JwtTokenType};
 

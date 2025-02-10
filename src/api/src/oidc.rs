@@ -39,7 +39,7 @@ use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::WebauthnCookie;
 use rauthy_models::entity::well_known::WellKnown;
-use rauthy_models::html_templates::{
+use rauthy_models::html::templates::{
     AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction, HtmlTemplate,
 };
 use rauthy_models::language::Language;
