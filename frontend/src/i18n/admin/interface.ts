@@ -18,6 +18,48 @@ export interface I18nAdmin {
     }
     docs: {
         book: string,
+        encryption: string,
+        hashing: {
+            calculate: string,
+
+            currValuesHead: string,
+            currValues1: string,
+            currValuesNote: string,
+            currValuesThreadsAccess: string,
+
+            loginTimeHead: string,
+            loginTime1: string,
+            loginTime2: string,
+
+            // inserted as html
+            mCost1: string,
+            // inserted as html
+            mCost2: string,
+            // inserted as html
+            mCost3: string,
+
+            // inserted as html
+            pCost1: string,
+            // inserted as html
+            pCost2: string,
+
+            // inserted as html
+            tCost1: string,
+            // inserted as html
+            tCost2: string,
+
+            utilityHead: string,
+            utility1: string,
+            // inserted as html
+            utility2: string,
+
+            time: string,
+            targetTime: string,
+            tune: string,
+            pDetials: string,
+            pTune: string,
+            pUtility: string,
+        },
         openapi: string,
         openapiNote: string,
         source: string,

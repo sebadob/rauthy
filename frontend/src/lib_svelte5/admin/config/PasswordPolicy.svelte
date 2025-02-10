@@ -2,7 +2,6 @@
     import {onMount} from "svelte";
     import Button from "$lib5/Button.svelte";
     import Input from "$lib5/form/Input.svelte";
-    import ContentAdmin from "$lib5/ContentAdmin.svelte";
     import {fetchGet, fetchPut} from "$api/fetch.ts";
     import type {PasswordPolicyRequest, PasswordPolicyResponse} from "$api/types/password_policy.ts";
     import Form from "$lib5/form/Form.svelte";
@@ -88,135 +87,133 @@
     }
 </script>
 
-<ContentAdmin>
-    <h2>{t.passwordPolicy.passwordPolicy}</h2>
-    <p>
-        {ta.passwordPolicy.configDesc}
-    </p>
+<h2>{t.passwordPolicy.passwordPolicy}</h2>
+<p>
+    {ta.passwordPolicy.configDesc}
+</p>
 
-    <Form action="/auth/v1/password_policy" {onSubmit}>
-        {#if policy}
-            <div class="row">
-                <Input
-                        typ="number"
-                        bind:value={policy.length_min}
-                        label={t.passwordPolicy.lengthMin}
-                        placeholder={t.passwordPolicy.lengthMin}
-                        autocomplete="off"
-                        min="8"
-                        max="128"
-                        required
-                        width={inputWidth}
-                />
+<Form action="/auth/v1/password_policy" {onSubmit}>
+    {#if policy}
+        <div class="row">
+            <Input
+                    typ="number"
+                    bind:value={policy.length_min}
+                    label={t.passwordPolicy.lengthMin}
+                    placeholder={t.passwordPolicy.lengthMin}
+                    autocomplete="off"
+                    min="8"
+                    max="128"
+                    required
+                    width={inputWidth}
+            />
 
-                <Input
-                        typ="number"
-                        bind:value={policy.length_max}
-                        label={t.passwordPolicy.lengthMax}
-                        placeholder={t.passwordPolicy.lengthMax}
-                        autocomplete="off"
-                        min="8"
-                        max="128"
-                        required
-                        width={inputWidth}
-                />
+            <Input
+                    typ="number"
+                    bind:value={policy.length_max}
+                    label={t.passwordPolicy.lengthMax}
+                    placeholder={t.passwordPolicy.lengthMax}
+                    autocomplete="off"
+                    min="8"
+                    max="128"
+                    required
+                    width={inputWidth}
+            />
+        </div>
+
+        <div class="row">
+            <Input
+                    typ="number"
+                    bind:value={policy.include_lower_case}
+                    label={t.passwordPolicy.lowercaseMin}
+                    placeholder={t.passwordPolicy.lowercaseMin}
+                    autocomplete="off"
+                    min="0"
+                    max="32"
+                    width={inputWidth}
+            />
+
+            <Input
+                    typ="number"
+                    bind:value={policy.include_upper_case}
+                    label={t.passwordPolicy.uppercaseMin}
+                    placeholder={t.passwordPolicy.uppercaseMin}
+                    autocomplete="off"
+                    min="0"
+                    max="32"
+                    width={inputWidth}
+            />
+        </div>
+
+        <div class="row">
+            <Input
+                    typ="number"
+                    bind:value={policy.include_digits}
+                    label={t.passwordPolicy.digitsMin}
+                    placeholder={t.passwordPolicy.digitsMin}
+                    autocomplete="off"
+                    min="0"
+                    max="32"
+                    width={inputWidth}
+            />
+
+            <Input
+                    typ="number"
+                    bind:value={policy.include_special}
+                    label={t.passwordPolicy.specialMin}
+                    placeholder={t.passwordPolicy.specialMin}
+                    autocomplete="off"
+                    min="0"
+                    max="32"
+                    width={inputWidth}
+            />
+        </div>
+
+        <p>
+            {ta.passwordPolicy.validityNew}<br>
+            {ta.passwordPolicy.resetSet0}
+        </p>
+
+        <div class="row">
+            <Input
+                    typ="number"
+                    bind:value={policy.not_recently_used}
+                    label={t.passwordPolicy.notRecent}
+                    placeholder={t.passwordPolicy.notRecent}
+                    autocomplete="off"
+                    min="0"
+                    max="32"
+                    width={inputWidth}
+            />
+
+            <Input
+                    typ="number"
+                    bind:value={policy.valid_days}
+                    label={ta.passwordPolicy.validForDays}
+                    placeholder={ta.passwordPolicy.validForDays}
+                    autocomplete="off"
+                    min="0"
+                    max="3650"
+                    width={inputWidth}
+            />
+        </div>
+
+        <Button type="submit">
+            {t.common.save}
+        </Button>
+
+        {#if success}
+            <div class="success">
+                Success
             </div>
-
-            <div class="row">
-                <Input
-                        typ="number"
-                        bind:value={policy.include_lower_case}
-                        label={t.passwordPolicy.lowercaseMin}
-                        placeholder={t.passwordPolicy.lowercaseMin}
-                        autocomplete="off"
-                        min="0"
-                        max="32"
-                        width={inputWidth}
-                />
-
-                <Input
-                        typ="number"
-                        bind:value={policy.include_upper_case}
-                        label={t.passwordPolicy.uppercaseMin}
-                        placeholder={t.passwordPolicy.uppercaseMin}
-                        autocomplete="off"
-                        min="0"
-                        max="32"
-                        width={inputWidth}
-                />
-            </div>
-
-            <div class="row">
-                <Input
-                        typ="number"
-                        bind:value={policy.include_digits}
-                        label={t.passwordPolicy.digitsMin}
-                        placeholder={t.passwordPolicy.digitsMin}
-                        autocomplete="off"
-                        min="0"
-                        max="32"
-                        width={inputWidth}
-                />
-
-                <Input
-                        typ="number"
-                        bind:value={policy.include_special}
-                        label={t.passwordPolicy.specialMin}
-                        placeholder={t.passwordPolicy.specialMin}
-                        autocomplete="off"
-                        min="0"
-                        max="32"
-                        width={inputWidth}
-                />
-            </div>
-
-            <p>
-                {ta.passwordPolicy.validityNew}<br>
-                {ta.passwordPolicy.resetSet0}
-            </p>
-
-            <div class="row">
-                <Input
-                        typ="number"
-                        bind:value={policy.not_recently_used}
-                        label={t.passwordPolicy.notRecent}
-                        placeholder={t.passwordPolicy.notRecent}
-                        autocomplete="off"
-                        min="0"
-                        max="32"
-                        width={inputWidth}
-                />
-
-                <Input
-                        typ="number"
-                        bind:value={policy.valid_days}
-                        label={ta.passwordPolicy.validForDays}
-                        placeholder={ta.passwordPolicy.validForDays}
-                        autocomplete="off"
-                        min="0"
-                        max="3650"
-                        width={inputWidth}
-                />
-            </div>
-
-            <Button type="submit">
-                {t.common.save}
-            </Button>
-
-            {#if success}
-                <div class="success">
-                    Success
-                </div>
-            {/if}
-
-            {#if err}
-                <div class="err">
-                    {err}
-                </div>
-            {/if}
         {/if}
-    </Form>
-</ContentAdmin>
+
+        {#if err}
+            <div class="err">
+                {err}
+            </div>
+        {/if}
+    {/if}
+</Form>
 
 <style>
     .row {

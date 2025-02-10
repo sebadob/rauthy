@@ -147,6 +147,7 @@
         justify-content: space-between;
         background: hsla(var(--bg-high) / .2);
         box-shadow: -2px 0 5px hsl(var(--bg-high));
+        overflow-y: clip;
         transition: all 150ms ease-in-out;
     }
 

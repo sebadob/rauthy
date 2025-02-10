@@ -4,7 +4,6 @@
     import {postRotateJwk} from "$utils/dataFetchingAdmin.js";
     import {fetchGet} from "$api/fetch.ts";
     import type {JWKSCerts, JWKSPublicKeyCerts} from "$api/types/oidc.ts";
-    import ContentAdmin from "$lib5/ContentAdmin.svelte";
     import Expandable from "$lib5/Expandable.svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
@@ -51,74 +50,72 @@
 
 </script>
 
-<ContentAdmin>
-    <h2>Json Web Keys</h2>
-    <p>{ta.jwks.p1}</p>
-    <p>{ta.jwks.p2}</p>
-    <p>{ta.jwks.p3}</p>
+<h2>Json Web Keys</h2>
+<p>{ta.jwks.p1}</p>
+<p>{ta.jwks.p2}</p>
+<p>{ta.jwks.p3}</p>
 
-    {#each certs as jwk (jwk.kid)}
-        <Expandable>
-            {#snippet summary()}
-                <div class="font-mono">
-                    {jwk.alg}
-                    /
-                    {jwk.kid}
-                </div>
-            {/snippet}
-            {#snippet details()}
-                <LabeledValue label="Key ID" mono>
-                    {jwk.kid}
-                </LabeledValue>
-                <LabeledValue label={ta.jwks.type} mono>
-                    {jwk.kty}
-                </LabeledValue>
-                <LabeledValue label={ta.jwks.alg} mono>
-                    {jwk.alg}
-                </LabeledValue>
+{#each certs as jwk (jwk.kid)}
+    <Expandable>
+        {#snippet summary()}
+            <div class="font-mono">
+                {jwk.alg}
+                /
+                {jwk.kid}
+            </div>
+        {/snippet}
+        {#snippet details()}
+            <LabeledValue label="Key ID" mono>
+                {jwk.kid}
+            </LabeledValue>
+            <LabeledValue label={ta.jwks.type} mono>
+                {jwk.kty}
+            </LabeledValue>
+            <LabeledValue label={ta.jwks.alg} mono>
+                {jwk.alg}
+            </LabeledValue>
 
-                {#if jwk.crv}
-                    <LabeledValue label="Curve" mono>
-                        {jwk.crv}
-                    </LabeledValue>
-                {/if}
-                {#if jwk.n}
-                    <LabeledValue label="n" mono>
-                        <div class="n">
-                            {jwk.n}
-                        </div>
-                    </LabeledValue>
-                {/if}
-                {#if jwk.e}
-                    <LabeledValue label="e" mono>
-                        {jwk.e}
-                    </LabeledValue>
-                {/if}
-                {#if jwk.x}
-                    <LabeledValue label="x" mono>
-                        {jwk.x}
-                    </LabeledValue>
-                {/if}
-            {/snippet}
-        </Expandable>
-    {/each}
+            {#if jwk.crv}
+                <LabeledValue label="Curve" mono>
+                    {jwk.crv}
+                </LabeledValue>
+            {/if}
+            {#if jwk.n}
+                <LabeledValue label="n" mono>
+                    <div class="n">
+                        {jwk.n}
+                    </div>
+                </LabeledValue>
+            {/if}
+            {#if jwk.e}
+                <LabeledValue label="e" mono>
+                    {jwk.e}
+                </LabeledValue>
+            {/if}
+            {#if jwk.x}
+                <LabeledValue label="x" mono>
+                    {jwk.x}
+                </LabeledValue>
+            {/if}
+        {/snippet}
+    </Expandable>
+{/each}
 
-    <div class="btn">
-        <Button onclick={onSubmit} {isLoading}>
-            {ta.jwks.rotateKeys}
-        </Button>
+<div class="btn">
+    <Button onclick={onSubmit} {isLoading}>
+        {ta.jwks.rotateKeys}
+    </Button>
+</div>
+
+{#if success}
+    <IconCheck/>
+{/if}
+
+{#if err}
+    <div class="err">
+        {err}
     </div>
-
-    {#if success}
-        <IconCheck/>
-    {/if}
-
-    {#if err}
-        <div class="err">
-            {err}
-        </div>
-    {/if}
-</ContentAdmin>
+{/if}
 
 <style>
     .btn {
