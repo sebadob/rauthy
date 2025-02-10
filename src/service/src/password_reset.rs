@@ -17,7 +17,7 @@ use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::WebauthnServiceReq;
 use rauthy_models::events::event::Event;
-use rauthy_models::html_templates::{PwdResetHtml, TplPasswordReset};
+use rauthy_models::html::templates::{PwdResetHtml, TplPasswordReset};
 use rauthy_models::language::Language;
 use tracing::{debug, error};
 

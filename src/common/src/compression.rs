@@ -38,6 +38,7 @@ pub fn compress_br_dyn(input: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
 
 #[inline]
 fn compress_br_with(input: &[u8], params: &BrotliEncoderParams) -> Result<Vec<u8>, ErrorResponse> {
+    // TODO test if its worth it to take owned data and outsource into blocking task
     let mut writer = Cursor::new(Vec::with_capacity(input.len()));
     let mut reader = Cursor::new(input);
     brotli::BrotliCompress(&mut reader, &mut writer, params)?;
@@ -46,6 +47,7 @@ fn compress_br_with(input: &[u8], params: &BrotliEncoderParams) -> Result<Vec<u8
 
 #[inline]
 pub fn compress_gzip(input: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
+    // TODO test if its worth it to take owned data and outsource into blocking task
     let mut encoder = Encoder::new(Vec::new())?;
     encoder.write_all(input)?;
     Ok(encoder.finish().into_result()?)

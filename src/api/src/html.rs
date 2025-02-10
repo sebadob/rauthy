@@ -3,15 +3,12 @@ use actix_web::http::header;
 use actix_web::{get, web, HttpRequest, HttpResponse};
 use rauthy_common::constants::HEADER_HTML;
 use rauthy_error::ErrorResponse;
-use rauthy_models::entity::auth_providers::AuthProviderTemplate;
 use rauthy_models::entity::colors::ColorEntity;
-use rauthy_models::html_templates::{
-    AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
-    AdminConfigHtml, AdminDocsHtml, AdminGroupsHtml, AdminHtml, AdminRolesHtml, AdminScopesHtml,
-    AdminSessionsHtml, AdminUsersHtml, DeviceHtml, FedCMHtml, HtmlTemplate, IndexHtml,
-    ProvidersHtml,
+use rauthy_models::html::templates::{
+    AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml, AdminGroupsHtml,
+    AdminHtml, AdminRolesHtml, AdminScopesHtml, AdminSessionsHtml, AdminUsersHtml, ProvidersHtml,
 };
-use rauthy_models::language::Language;
+use rauthy_models::html::HtmlCached;
 use std::borrow::Cow;
 
 #[get("/{_:.*}")]
@@ -47,22 +44,12 @@ pub async fn get_static_assets(
 
 #[get("/")]
 pub async fn get_index(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
-    let colors = ColorEntity::find_rauthy().await?;
-    let lang = Language::try_from(&req).unwrap_or_default();
-    let body = IndexHtml::build(&colors, &lang);
-
-    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
+    HtmlCached::Index.handle(req, true).await
 }
 
 #[get("/account")]
 pub async fn get_account_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
-    let colors = ColorEntity::find_rauthy().await?;
-    let lang = Language::try_from(&req).unwrap_or_default();
-    let providers = AuthProviderTemplate::get_all_json_template().await?;
-    // let body = AccountHtml::build(&colors, &lang, Some(providers));
-    let body = AccountHtml::build(&colors, &lang, &[HtmlTemplate::AuthProviders(providers)]);
-
-    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
+    HtmlCached::Account.handle(req, true).await
 }
 
 #[get("/admin")]
@@ -105,20 +92,31 @@ pub async fn get_admin_clients_html() -> Result<HttpResponse, ErrorResponse> {
     Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
-#[get("/admin/config")]
-pub async fn get_admin_config_html() -> Result<HttpResponse, ErrorResponse> {
-    let colors = ColorEntity::find_rauthy().await?;
-    let body = AdminConfigHtml::build(&colors);
+#[get("/admin/config/argon2")]
+pub async fn get_admin_config_argon2_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    HtmlCached::ConfigArgon2.handle(req, true).await
+}
 
-    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
+#[get("/admin/config/encryption")]
+pub async fn get_admin_config_encryption_html(
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    HtmlCached::ConfigEncryption.handle(req, true).await
+}
+
+#[get("/admin/config/jwks")]
+pub async fn get_admin_config_jwks_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    HtmlCached::ConfigJwks.handle(req, true).await
+}
+
+#[get("/admin/config/policy")]
+pub async fn get_admin_config_policy_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    HtmlCached::ConfigPolicy.handle(req, true).await
 }
 
 #[get("/admin/docs")]
-pub async fn get_admin_docs_html() -> Result<HttpResponse, ErrorResponse> {
-    let colors = ColorEntity::find_rauthy().await?;
-    let body = AdminDocsHtml::build(&colors);
-
-    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
+pub async fn get_admin_docs_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    HtmlCached::Docs.handle(req, true).await
 }
 
 #[get("/admin/events")]
@@ -179,16 +177,10 @@ pub async fn get_admin_users_html() -> Result<HttpResponse, ErrorResponse> {
 
 #[get("/device")]
 pub async fn get_device_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
-    let colors = ColorEntity::find_rauthy().await?;
-    let lang = Language::try_from(&req).unwrap_or_default();
-    let body = DeviceHtml::build(&colors, &lang);
-
-    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
+    HtmlCached::Device.handle(req, true).await
 }
 
 #[get("/fedcm")]
-pub async fn get_fed_cm_html() -> Result<HttpResponse, ErrorResponse> {
-    let colors = ColorEntity::find_rauthy().await?;
-    let body = FedCMHtml::build(&colors);
-    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
+pub async fn get_fed_cm_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    HtmlCached::FedCM.handle(req, true).await
 }

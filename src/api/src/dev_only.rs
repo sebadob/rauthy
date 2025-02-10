@@ -21,7 +21,7 @@ pub async fn get_template(
         use actix_web::FromRequest;
         use rauthy_common::constants::DEV_MODE;
         use rauthy_models::app_state::AppState;
-        use rauthy_models::html_templates::HtmlTemplate;
+        use rauthy_models::html::templates::HtmlTemplate;
 
         if !*DEV_MODE {
             return Ok(HttpResponse::NotFound().finish());

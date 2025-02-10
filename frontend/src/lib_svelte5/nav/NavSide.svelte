@@ -3,8 +3,6 @@
     import Button from "$lib5/Button.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import {page} from "$app/state";
-    import {useI18n} from "$state/i18n.svelte.ts";
-    import {useSession} from "$state/session.svelte.ts";
     import AppVersion from "../../components/AppVersion.svelte";
     import RauthyLogo from "$lib/icons/RauthyLogo.svelte";
     import NavLink from "$lib5/nav/NavLink.svelte";
@@ -25,10 +23,8 @@
     import IconCheckBadge from "$icons/IconCheckBadge.svelte";
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
 
-    let t = useI18n();
     let ta = useI18nAdmin();
 
-    let session = useSession('admin');
     let timeout: undefined | number;
 
     let optsButtons = $state(false);
@@ -37,7 +33,6 @@
     let collapsed = $state(true);
 
     let innerWidth: undefined | number = $state();
-    let widthLogo = $derived(compact ? '2rem' : '5.5rem');
 
     // cannot be derived because of static pre-rendering
     $effect(() => {

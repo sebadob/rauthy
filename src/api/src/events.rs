@@ -158,19 +158,17 @@ pub async fn post_event_test(
             .send(&data.tx_events)
             .await?;
         Event::rauthy_unhealthy_db().send(&data.tx_events).await?;
-        Event::secrets_migrated(ip.clone())
-            .send(&data.tx_events)
-            .await?;
-        Event::test(ip.clone()).send(&data.tx_events).await?;
+        Event::secrets_migrated(ip).send(&data.tx_events).await?;
+        Event::test(ip).send(&data.tx_events).await?;
 
         let old_email = "old@mail";
         let new_mail = "new@mail";
         let text = format!("{} -> {}", old_email, new_mail);
         let text_admin = format!("Change by admin: {} -> {}", old_email, new_mail);
-        Event::user_email_change(text, Some(ip.clone()))
+        Event::user_email_change(text, Some(ip))
             .send(&data.tx_events)
             .await?;
-        Event::user_email_change(text_admin, Some(ip.clone()))
+        Event::user_email_change(text_admin, Some(ip))
             .send(&data.tx_events)
             .await?;
 

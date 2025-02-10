@@ -8,17 +8,15 @@ use rauthy_api_types::auth_providers::{
 };
 use rauthy_api_types::auth_providers::{ProviderLookupResponse, ProviderResponse};
 use rauthy_api_types::users::{UserResponse, WebauthnLoginResponse};
-use rauthy_common::constants::{HEADER_HTML, HEADER_JSON};
+use rauthy_common::constants::HEADER_JSON;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderLinkCookie, AuthProviderTemplate,
 };
-use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::logos::{Logo, LogoType};
 use rauthy_models::entity::users::User;
-use rauthy_models::html_templates::ProviderCallbackHtml;
-use rauthy_models::language::Language;
+use rauthy_models::html::HtmlCached;
 use tracing::debug;
 use validator::Validate;
 
@@ -148,11 +146,7 @@ pub async fn post_provider_login(
 
 #[get("/providers/callback")]
 pub async fn get_provider_callback_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
-    let colors = ColorEntity::find_rauthy().await?;
-    let lang = Language::try_from(&req).unwrap_or_default();
-    let body = ProviderCallbackHtml::build(&colors, &lang);
-
-    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
+    HtmlCached::Device.handle(req, true).await
 }
 
 /// Callback for an upstream auth provider login

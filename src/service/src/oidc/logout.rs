@@ -1,26 +1,24 @@
 use crate::oidc::validation;
-use actix_web::web;
+use actix_web::{web, HttpRequest, HttpResponse};
 use rauthy_api_types::oidc::LogoutRequest;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
-use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::sessions::Session;
-use rauthy_models::html_templates::LogoutHtml;
-use rauthy_models::language::Language;
+use rauthy_models::html::HtmlCached;
 use rauthy_models::{JwtIdClaims, JwtTokenType};
 
 /// Returns the Logout HTML Page for [GET /oidc/logout](crate::handlers::get_logout)
 pub async fn get_logout_html(
+    req: HttpRequest,
     logout_request: LogoutRequest,
     session: Session,
     data: &web::Data<AppState>,
-    lang: &Language,
-) -> Result<String, ErrorResponse> {
-    let colors = ColorEntity::find_rauthy().await?;
-
+) -> Result<HttpResponse, ErrorResponse> {
     if logout_request.id_token_hint.is_none() {
-        return Ok(LogoutHtml::build(session.csrf_token, &colors, lang));
+        return HtmlCached::Logout(session.csrf_token)
+            .handle(req, false)
+            .await;
     }
 
     // check if the provided token hint is valid
@@ -67,5 +65,7 @@ pub async fn get_logout_html(
         // redirect uri is valid at this point
     }
 
-    Ok(LogoutHtml::build(session.csrf_token, &colors, lang))
+    HtmlCached::Logout(session.csrf_token)
+        .handle(req, false)
+        .await
 }
