@@ -36,7 +36,8 @@ use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::{PasskeyEntity, WebauthnAdditionalData};
 use rauthy_models::entity::webids::WebId;
 use rauthy_models::events::event::Event;
-use rauthy_models::html::templates::{Error1Html, Error3Html, ErrorHtml, UserRegisterHtml};
+use rauthy_models::html::templates::{Error3Html, ErrorHtml};
+use rauthy_models::html::HtmlCached;
 use rauthy_models::language::Language;
 use rauthy_service::password_reset;
 use spow::pow::Pow;
@@ -267,17 +268,10 @@ pub async fn delete_cust_attr(
 )]
 #[get("/users/register")]
 pub async fn get_users_register(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
-    let colors = ColorEntity::find_rauthy().await?;
-    let lang = Language::try_from(&req).unwrap_or_default();
-
     if !*OPEN_USER_REG {
-        let status = StatusCode::NOT_FOUND;
-        let body = Error1Html::build(&colors, &lang, status, "Open User Registration is disabled");
-        return Ok(ErrorHtml::response(body, status));
+        return Ok(HttpResponse::NotFound().finish());
     }
-
-    let body = UserRegisterHtml::build(&colors, &lang);
-    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
+    HtmlCached::UserRegistration.handle(req, true).await
 }
 
 /// Creates a new user with almost all values set to default

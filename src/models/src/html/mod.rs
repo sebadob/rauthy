@@ -3,7 +3,8 @@ use crate::entity::auth_providers::AuthProviderTemplate;
 use crate::entity::colors::ColorEntity;
 use crate::html::templates::{
     AccountHtml, AdminConfigArgon2Html, AdminConfigEncryptionHtml, AdminConfigJwksHtml,
-    AdminConfigPolicyHtml, DeviceHtml, FedCMHtml, HtmlTemplate, IndexHtml,
+    AdminConfigPolicyHtml, DeviceHtml, FedCMHtml, HtmlTemplate, IndexHtml, LogoutHtml,
+    ProviderCallbackHtml, UserRegisterHtml,
 };
 use crate::language::Language;
 use actix_web::http::header::ACCEPT_ENCODING;
@@ -19,6 +20,7 @@ pub mod templates;
 #[derive(Debug, Deserialize)]
 pub enum HtmlCached {
     Account,
+    AuthProviderCallback,
     Docs,
     ConfigArgon2,
     ConfigEncryption,
@@ -27,6 +29,8 @@ pub enum HtmlCached {
     Device,
     FedCM,
     Index,
+    Logout(String),
+    UserRegistration,
 }
 
 impl HtmlCached {
@@ -34,6 +38,7 @@ impl HtmlCached {
     fn as_str(&self) -> &'static str {
         match self {
             Self::Account => "account",
+            Self::AuthProviderCallback => "auth_provider_cb",
             Self::Docs => "docs",
             Self::ConfigArgon2 => "cfg_argon2",
             Self::ConfigEncryption => "cfg_encryption",
@@ -42,6 +47,8 @@ impl HtmlCached {
             Self::Device => "device",
             Self::FedCM => "fed_cm",
             Self::Index => "index",
+            Self::Logout(_) => "logout",
+            Self::UserRegistration => "user_reg",
         }
     }
 
@@ -51,7 +58,7 @@ impl HtmlCached {
     }
 
     pub async fn handle(
-        &self,
+        self,
         req: HttpRequest,
         with_cache: bool,
     ) -> Result<HttpResponse, ErrorResponse> {
@@ -69,7 +76,7 @@ impl HtmlCached {
         };
 
         let lang = Language::try_from(&req).unwrap_or_default();
-        if with_cache {
+        let cache_key = if with_cache {
             if let Some(bytes) = DB::client()
                 .get_bytes(Cache::Html, self.cache_key(&lang, encoding))
                 .await?
@@ -79,7 +86,10 @@ impl HtmlCached {
                     .insert_header(HEADER_HTML)
                     .body(bytes));
             }
-        }
+            self.cache_key(&lang, encoding)
+        } else {
+            String::default()
+        };
 
         // TODO remove the colors after svelte 5 migration is finished
         let colors = ColorEntity::find_rauthy().await?;
@@ -89,6 +99,7 @@ impl HtmlCached {
                 let providers = AuthProviderTemplate::get_all_json_template().await?;
                 AccountHtml::build(&colors, &lang, &[HtmlTemplate::AuthProviders(providers)])
             }
+            Self::AuthProviderCallback => ProviderCallbackHtml::build(&colors, &lang),
             Self::Docs => AdminDocsHtml::build(&colors, &lang),
             Self::ConfigArgon2 => AdminConfigArgon2Html::build(&colors, &lang),
             Self::ConfigEncryption => AdminConfigEncryptionHtml::build(&colors, &lang),
@@ -97,6 +108,8 @@ impl HtmlCached {
             Self::Device => DeviceHtml::build(&colors, &lang),
             Self::FedCM => FedCMHtml::build(&colors, &lang),
             Self::Index => IndexHtml::build(&colors, &lang),
+            Self::Logout(csrf_token) => LogoutHtml::build(csrf_token, &colors, &lang),
+            Self::UserRegistration => UserRegisterHtml::build(&colors, &lang),
         };
         let body_bytes = match encoding {
             "br" => {
@@ -114,12 +127,7 @@ impl HtmlCached {
 
         if with_cache {
             DB::client()
-                .put_bytes(
-                    Cache::Html,
-                    self.cache_key(&lang, encoding),
-                    body_bytes.clone(),
-                    None,
-                )
+                .put_bytes(Cache::Html, cache_key, body_bytes.clone(), None)
                 .await?;
         }
 
