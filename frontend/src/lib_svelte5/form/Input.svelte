@@ -1,13 +1,12 @@
 <script lang="ts">
     import {slide} from "svelte/transition";
-    import {genKey} from "$utils/helpers.ts";
     import {useI18n} from "$state/i18n.svelte.ts";
     import type {FullAutoFill} from "svelte/elements";
 
     let {
         ref = $bindable(),
         typ = 'text',
-        id = genKey(),
+        id,
         name,
         value = $bindable(),
         label = '',

@@ -1,10 +1,9 @@
 <script lang="ts">
     import {slide} from "svelte/transition";
-    import {genKey} from "$utils/helpers.ts";
 
     let {
         ref = $bindable(),
-        id = genKey(),
+        id,
         name,
         value = $bindable(''),
         label = '',
