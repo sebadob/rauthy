@@ -1,6 +1,6 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import {postRotateJwk} from "$utils/dataFetchingAdmin.js";
     import {fetchGet} from "$api/fetch.ts";
     import type {JWKSCerts, JWKSPublicKeyCerts} from "$api/types/oidc.ts";

@@ -8,7 +8,7 @@
     import Expandable from "$lib5/Expandable.svelte";
     import {PATTERN_CLIENT_NAME} from "$utils/patterns.ts";
     import LabeledValue from "$lib5/LabeledValue.svelte";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import {fetchDelete, fetchPut} from "$api/fetch.ts";
 
     let {

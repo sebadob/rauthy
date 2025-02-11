@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import {fade} from 'svelte/transition';
     import AccModPwd from "$lib5/account/AccModPwd.svelte";
     import {postPasswordResetRequest} from "$utils/dataFetching.js";

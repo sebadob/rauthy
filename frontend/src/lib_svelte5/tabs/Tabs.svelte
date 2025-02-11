@@ -1,10 +1,10 @@
 <script lang="ts">
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
 
     let {
         tabs,
         selected = $bindable(''),
-        borderRadius = '5px',
+        borderRadius = 'var(--border-radius)',
         center = false,
         width = 'inherit',
     }: {

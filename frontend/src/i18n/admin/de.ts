@@ -3,9 +3,11 @@ import type {I18nAdmin} from "./interface.ts";
 export let I18nAdminDe: I18nAdmin = {
     common: {
         account: "Account",
+        addNew: "Neu Hinzufügen",
         back: "Zurück",
         copiedToClip: "Wert wurde in die Zwischenablage kopiert",
         copyToClip: "Wert in Zwischenablage kopieren",
+        details: "Details",
         filter: "Filter",
         from: "Von",
         note: "Notiz",

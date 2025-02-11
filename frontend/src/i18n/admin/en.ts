@@ -2,10 +2,12 @@ import type {I18nAdmin} from "./interface.ts";
 
 export let I18nAdminEn: I18nAdmin = {
     common: {
-        account: 'Account',
+        account: "Account",
+        addNew: "Add New",
         back: "Back",
         copiedToClip: "Value has been copied to clipboard",
         copyToClip: "Copy value to clipboard",
+        details: "Details",
         filter: "Filter",
         from: "From",
         note: "Note",

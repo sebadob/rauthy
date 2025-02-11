@@ -1,6 +1,6 @@
 <script lang="ts">
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import {page} from "$app/state";
     import AppVersion from "../../components/AppVersion.svelte";

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import Argon2Results from "./Argon2Results.svelte";
     import Input from "$lib5/form/Input.svelte";
     import Form from "$lib5/form/Form.svelte";

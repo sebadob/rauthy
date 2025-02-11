@@ -6,7 +6,7 @@
     import ProviderConfig from "./ProviderConfig.svelte";
     import ProviderDelete from "./ProviderDelete.svelte";
 
-    let { provider = $bindable({}), onSave = $bindable() } = $props();
+    let {provider = $bindable({}), onSave = $bindable()} = $props();
 
     let expandContainer = $state();
 
@@ -27,7 +27,7 @@
 
 <ExpandContainer bind:show={expandContainer}>
     {#snippet header()}
-        <div class="header" >
+        <div class="header">
             <Tooltip text="Provider ID">
                 <div class="data font-mono">
                     {provider.id}
@@ -43,7 +43,7 @@
     {/snippet}
 
     {#snippet body()}
-        <div >
+        <div>
             <TabBar labels={tabBarItems} bind:selected/>
 
             {#if selected === 'Config'}
@@ -64,7 +64,6 @@
     .data {
         display: flex;
         align-items: center;
-        margin: 3px 10px;
     }
 
     .header {

@@ -7,7 +7,7 @@
     import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
     import BrowserCheck from "../../../components/BrowserCheck.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import {useParam} from "$state/param.svelte";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";

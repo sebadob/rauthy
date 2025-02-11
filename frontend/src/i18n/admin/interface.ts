@@ -6,9 +6,11 @@
 export interface I18nAdmin {
     common: {
         account: string,
+        addNew: string,
         back: string,
         copiedToClip: string,
         copyToClip: string,
+        details: string,
         filter: string,
         from: string,
         note: string,

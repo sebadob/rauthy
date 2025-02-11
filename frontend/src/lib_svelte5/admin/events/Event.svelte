@@ -4,7 +4,7 @@
     import type {EventResponse} from "$api/types/events.ts";
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
     import A from "$lib5/A.svelte";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import Tooltip from "$lib5/Tooltip.svelte";
 
     // populated fields for different events:

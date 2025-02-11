@@ -32,7 +32,7 @@
     import EventsArchive from "$lib5/admin/events/EventsArchive.svelte";
     import IconBellAlert from "$lib/icons/IconBellAlert.svelte";
     import IconCloud from "$lib/icons/IconCloud.svelte";
-    import Providers from "./providers/Providers.svelte";
+    import Providers from "$lib5/admin/providers/Providers.svelte";
 
     /**
      * @typedef {Object} Props

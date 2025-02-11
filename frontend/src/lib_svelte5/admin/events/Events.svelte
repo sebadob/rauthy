@@ -1,7 +1,7 @@
 <script lang="ts">
     import Event from "$lib5/admin/events/Event.svelte";
     import EventsLegend from "./EventsLegend.svelte";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import {postTestEvent} from "$utils/dataFetching.js";
     import {EVENT_LEVELS} from "$utils/constants";
     import {isBrowser} from "$utils/helpers.ts";
@@ -146,7 +146,7 @@
         flex-direction: column;
         justify-content: space-between;
         background: hsla(var(--bg-high) / .2);
-        box-shadow: -2px 0 5px hsl(var(--bg-high));
+        border-radius: var(--border-radius) 0 0 var(--border-radius);
         overflow-y: clip;
         transition: all 150ms ease-in-out;
     }

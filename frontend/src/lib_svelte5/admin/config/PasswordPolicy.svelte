@@ -1,6 +1,6 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import Input from "$lib5/form/Input.svelte";
     import {fetchGet, fetchPut} from "$api/fetch.ts";
     import type {PasswordPolicyRequest, PasswordPolicyResponse} from "$api/types/password_policy.ts";
