@@ -47,11 +47,11 @@
         err = '';
 
         if (provider.client_secret && !(provider.client_secret_basic || provider.client_secret_post)) {
-            err = 'You have given a client secret, but no client auth method is active';
+            err = ta.providers.config.errNoAuthMethod;
             return false;
         }
         if (!provider.use_pkce && !provider.client_secret) {
-            err = 'Must at least be a confidential client or use PKCE';
+            err = ta.providers.config.errConfidential;
             return;
         }
 
@@ -102,13 +102,13 @@
         <div style:height=".15rem"></div>
 
         <div class="checkbox">
-            <InputCheckbox ariaLabel="Enabled" bind:checked={provider.enabled}>
-                Enabled
+            <InputCheckbox ariaLabel={ta.common.enabled} bind:checked={provider.enabled}>
+                {ta.common.enabled}
             </InputCheckbox>
         </div>
         <div class="checkbox">
-            <InputCheckbox ariaLabel="Custom Root CA PEM" bind:checked={showRootPem}>
-                Custom Root CA PEM
+            <InputCheckbox ariaLabel={ta.providers.config.custRootCa} bind:checked={showRootPem}>
+                {ta.providers.config.custRootCa}
             </InputCheckbox>
         </div>
 
@@ -117,7 +117,7 @@
                 <InputArea
                         rows={15}
                         name="rootPem"
-                        label="PEM Root Certificate"
+                        label={ta.providers.config.rootPemCert}
                         placeholder="-----BEGIN CERTIFICATE-----
 ...
  -----END CERTIFICATE-----"
@@ -130,8 +130,11 @@
             </div>
         {:else}
             <div class="checkbox">
-                <InputCheckbox ariaLabel="Allow insecure TLS" bind:checked={provider.danger_allow_insecure}>
-                    Allow insecure TLS
+                <InputCheckbox
+                        ariaLabel={ta.providers.config.allowInsecureTls}
+                        bind:checked={provider.danger_allow_insecure}
+                >
+                    {ta.providers.config.allowInsecureTls}
                 </InputCheckbox>
             </div>
         {/if}
@@ -174,15 +177,12 @@
         />
 
         <div class="checkbox">
-            <InputCheckbox ariaLabel="Use PKCE" bind:checked={provider.use_pkce}>
-                Use PKCE
+            <InputCheckbox ariaLabel="PKCE" bind:checked={provider.use_pkce}>
+                PKCE
             </InputCheckbox>
         </div>
 
-        <p class="desc">
-            The scope the client should use when redirecting to the login.<br>
-            Provide the values separated by space.
-        </p>
+        <p class="desc">{ta.providers.config.descScope}</p>
         <Input
                 bind:value={provider.scope}
                 autocomplete="off"
@@ -193,22 +193,18 @@
                 width={inputWidth}
         />
 
-        <p class="desc">
-            Client name for the Rauthy login form
-        </p>
+        <p class="desc">{ta.providers.config.descClientName}</p>
         <Input
                 bind:value={provider.name}
                 autocomplete="off"
-                label="Client Name"
-                placeholder="Client Name"
+                label={ta.providers.config.clientName}
+                placeholder={ta.providers.config.clientName}
                 required
                 pattern={PATTERN_CLIENT_NAME}
                 width={inputWidth}
         />
 
-        <p class="desc">
-            Client ID given by the auth provider
-        </p>
+        <p class="desc">{ta.providers.config.descClientId}</p>
         <Input
                 bind:value={provider.client_id}
                 autocomplete="off"
@@ -219,10 +215,7 @@
                 width={inputWidth}
         />
 
-        <p class="desc">
-            Client Secret given by the auth provider.<br>
-            At least a client secret or PKCE is required.
-        </p>
+        <p class="desc">{ta.providers.config.descClientSecret}</p>
         <InputPassword
                 bind:value={provider.client_secret}
                 autocomplete="off"
@@ -232,11 +225,7 @@
                 width={inputWidth}
         />
 
-        <p>
-            The authentication method to use on the <code>/token</code> endpoint.<br>
-            Most providers should work with <code>basic</code>, some only with <code>post</code>.
-            In rare situations, you need both, while it can lead to errors with others.
-        </p>
+        <p>{@html ta.providers.config.descAuthMethod}</p>
         <div class="checkbox">
             <InputCheckbox ariaLabel="client_secret_basic" bind:checked={provider.client_secret_basic}>
                 client_secret_basic
@@ -249,13 +238,12 @@
         </div>
 
         <JsonPathDesc/>
-        <p class="desc">
-            You can map a user to be a Rauthy admin depending on an upstream ID claim.
-        </p>
+
+        <p class="desc">{ta.providers.config.mapUser}</p>
         <Input
                 bind:value={provider.admin_claim_path}
                 autocomplete="off"
-                label="Admin Claim Path"
+                label={ta.providers.config.pathAdminClaim}
                 placeholder="$.roles.*"
                 pattern={PATTERN_URI}
                 width={inputWidth}
@@ -263,20 +251,17 @@
         <Input
                 bind:value={provider.admin_claim_value}
                 autocomplete="off"
-                label="Admin Claim Value"
+                label={ta.providers.config.valueAdminClaim}
                 placeholder="rauthy_admin"
                 pattern={PATTERN_URI}
                 width={inputWidth}
         />
 
-        <p class="desc">
-            If your provider issues a claim indicating that the user has used at least 2FA during
-            login, you can specify the mfa claim path.
-        </p>
+        <p class="desc">{ta.providers.config.mapMfa}</p>
         <Input
                 bind:value={provider.mfa_claim_path}
                 autocomplete="off"
-                label="MFA Claim Path"
+                label={ta.providers.config.pathMfaClaim}
                 placeholder="$.amr.*"
                 pattern={PATTERN_URI}
                 width={inputWidth}
@@ -284,7 +269,7 @@
         <Input
                 bind:value={provider.mfa_claim_value}
                 autocomplete="off"
-                label="MFA Claim Value"
+                label={ta.providers.config.valueMfaClaim}
                 placeholder="mfa"
                 pattern={PATTERN_URI}
                 width={inputWidth}

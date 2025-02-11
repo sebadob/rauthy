@@ -8,6 +8,7 @@ export let I18nAdminDe: I18nAdmin = {
         copiedToClip: "Wert wurde in die Zwischenablage kopiert",
         copyToClip: "Wert in Zwischenablage kopieren",
         details: "Details",
+        enabled: "Aktiviert",
         filter: "Filter",
         from: "Von",
         loading: "Lade",
@@ -148,6 +149,42 @@ export let I18nAdminDe: I18nAdmin = {
         validityNew: "Gültigkeit für neue Passwörter.",
     },
     providers: {
+        config: {
+            allowInsecureTls: "Erlaube unsicheres TLS",
+            clientName: "Client Name",
+            custRootCa: "Eigenes Root CA PEM",
+            descAuthMethod: `Die Authentication Method, welche für den <code>/token</code> Endpunkt genutzt werden soll.
+                Die meisten Provider sollten mit <code>basic</code> funktionieren, manche jedoch nur mit 
+                <code>post</code>. In seltenen Fällen müssen beide Optionen aktiviert werden, auch wenn es gegen das
+                RFC verstößt.`,
+            descClientId: "Client ID, vom Auth Provider vorgegeben.",
+            descClientName: "Client Name der auf der Rauthy Login Form angezeigt werden soll.",
+            descClientSecret: `Client Secret, vom Auth Provider vorgegeben.
+                Es muss mindestens ein Secret gegeben, oder PKCE aktiviert sein.`,
+            descScope: `Der scope der beim Redirect zum Login genutzt werden soll. Werde müssen durch Leerzeichen
+                getrennt angegeben werden`,
+            errNoAuthMethod: "Ein client secret existiert, jedoch ist keine auth Methode aktiv",
+            errConfidential: "Es muss mindestens entweder ein client secret existieren oder PKCE aktiv sein.",
+            jsonPath: {
+                p1: "Werte aus dem ID Token nach einem erfolgreichen Upstream Login können automatisch gemapped werden.",
+                p2: `Der <code>Pfad</code> muss in korrekter Regex Syntax angegeben werden. Er kann auf einzelne JSON
+                    Werte verweise, oder komplexe Sturkturen wie Arrays oder Objects`,
+                p3: "<code>$.</code> den Beginn eines JSON Objects",
+                p4: "<code>*</code> kann als Wildcard innerhalb des Pfads genutzt werden",
+                p5: "<code>$.roles</code> würde zeigen auf den Wert <code>&#123;\"roles\": \"value\"&#125;</code>",
+                p6: `<code>$.roles.*</code> kann auf einen Wert innerhalb eines Arrays oder Objects wie z.B.<br>
+                    <code>&#123;"roles": ["value", "notMyValue"]&#125;</code> verweisen`,
+            },
+            pathAdminClaim: "Admin Claim Pfad",
+            pathMfaClaim: "MFA Claim Pfad",
+            rootPemCert: "Root PEM Zertifikat",
+            mapMfa: `Sollte der Auth Provider in ID Claim bereit stellen, welches anzeigt, ob eine Art 2FA oder MFA
+                beim Login verwandt wurde, so kann Rauthy diesen Werten extrahieren und entsprechend weitergeben.`,
+            mapUser: `Es kann beim Login automatisch ein Nutzer mit der Rauthy Admin Rolle verlinkt werden, in
+                Abhängigkeit von einem existierenden Upstream ID Claim.`,
+            valueAdminClaim: "Admin Claim Wert",
+            valueMfaClaim: "MFA Claim Wert",
+        },
         delete: {
             areYouSure: "Sicher, dass dieser Provider gelöscht werden soll?",
             forceDelete: "Löschen Erzwingen",

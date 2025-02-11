@@ -11,6 +11,7 @@ export interface I18nAdmin {
         copiedToClip: string,
         copyToClip: string,
         details: string,
+        enabled: string,
         filter: string,
         from: string,
         loading: string,
@@ -117,6 +118,39 @@ export interface I18nAdmin {
         validityNew: string,
     },
     providers: {
+        config: {
+            allowInsecureTls: string,
+            clientName: string,
+            custRootCa: string,
+            // inserted as html
+            descAuthMethod: string,
+            descClientId: string,
+            descClientName: string,
+            descClientSecret: string,
+            descScope: string,
+            errNoAuthMethod: string,
+            errConfidential: string,
+            jsonPath: {
+                p1: string,
+                // inserted as html
+                p2: string,
+                // inserted as html
+                p3: string,
+                // inserted as html
+                p4: string,
+                // inserted as html
+                p5: string,
+                // inserted as html
+                p6: string,
+            },
+            pathAdminClaim: string,
+            pathMfaClaim: string,
+            rootPemCert: string,
+            mapMfa: string,
+            mapUser: string,
+            valueAdminClaim: string,
+            valueMfaClaim: string,
+        },
         delete: {
             areYouSure: string,
             forceDelete: string,

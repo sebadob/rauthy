@@ -1,27 +1,17 @@
-<script lang="ts"></script>
+<script lang="ts">
+    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+
+    let ta = useI18nAdmin();
+</script>
 
 <div class="desc">
     <h4>ID token claim mappings</h4>
-    <p>
-        Values from the ID token after a successful upstream login can be mapped automatically.
-    </p>
-    <p>
-        The <code>path</code> needs to be given in a regex like syntax. It can resolve to
-        single JSON values or resolve to a value in a JSON object or array.
-    </p>
-    <p>
-        <code>$.</code> marks the start of the JSON object
-    </p>
-    <p>
-        <code>*</code> can be used as a wildcard in your path
-    </p>
-    <p>
-        <code>$.roles</code> would target <code>&#123;"roles": "value"&#125;</code>
-    </p>
-    <p>
-        <code>$.roles.*</code> can target a value inside an object or array like<br>
-        <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>
-    </p>
+    <p>{ta.providers.config.jsonPath.p1}</p>
+    <p>{@html ta.providers.config.jsonPath.p2}</p>
+    <p>{@html ta.providers.config.jsonPath.p3}</p>
+    <p>{@html ta.providers.config.jsonPath.p4}</p>
+    <p>{@html ta.providers.config.jsonPath.p5}</p>
+    <p>{@html ta.providers.config.jsonPath.p6}</p>
 </div>
 
 <style>
