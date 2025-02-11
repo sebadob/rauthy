@@ -256,6 +256,7 @@ pub async fn get_providers_minimal() -> Result<HttpResponse, ErrorResponse> {
     put,
     path = "/providers/{id}",
     tag = "providers",
+    request_body = ProviderRequest,
     responses(
         (status = 400, description = "BadRequest", body = ErrorResponse),
         (status = 404, description = "NotFound", body = ErrorResponse),

@@ -57,6 +57,7 @@ impl HtmlCached {
         format!("{}_{}_{}", self.as_str(), lang.as_str(), encoding)
     }
 
+    /// Handles the request and builds a full `HttpResponse` with compression and caching.
     pub async fn handle(
         self,
         req: HttpRequest,
