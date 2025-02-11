@@ -1,26 +1,22 @@
 <script lang="ts">
-    import * as yup from "yup";
     import Button from "$lib5/button/Button.svelte";
-    import {
-        REGEX_CLIENT_NAME,
-        REGEX_URI,
-        REGEX_PROVIDER_SCOPE
-    } from "$utils/constants";
     import Input from "$lib5/form/Input.svelte";
-    import Switch from "$lib5/Switch.svelte";
-    import JsonPathDesc from "./JsonPathDesc.svelte";
-    import ImageUploadRaw from "../../ImageUploadRaw.svelte";
-    import ProviderLogo from "../../ProviderLogo.svelte";
+    import JsonPathDesc from "$lib5/admin/providers/JsonPathDesc.svelte";
+    import ProviderLogo from "../../../components/ProviderLogo.svelte";
     import type {ProviderRequest, ProviderResponse} from "$api/types/auth_provider.ts";
     import IconCheck from "$icons/IconCheck.svelte";
     import InputArea from "$lib5/form/InputArea.svelte";
     import InputPassword from "$lib5/form/InputPassword.svelte";
     import Form from "$lib5/form/Form.svelte";
-    import {fetchPut} from "$api/fetch.ts";
+    import {fetchPut, uploadFile} from "$api/fetch.ts";
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
     import {useI18n} from "$state/i18n.svelte.ts";
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import InputCheckbox from "$lib5/form/InputCheckbox.svelte";
+    import {PATTERN_CLIENT_NAME, PATTERN_PEM, PATTERN_SCOPE_SPACE, PATTERN_URI} from "$utils/patterns.ts";
+    import {slide} from "svelte/transition";
+    import InputFile from "$lib5/form/InputFile.svelte";
+    import {genKey} from "$utils/helpers.ts";
 
     let {
         provider,
@@ -34,41 +30,17 @@
     let ta = useI18nAdmin();
 
     const inputWidth = 'min(calc(100dvw - .5rem), 30rem)';
-    const labelWidth = '12rem';
 
     let isLoading = $state(false);
     let err = $state('');
     let success = $state(false);
-    let isDefault = false;
     let showRootPem = $state(!!provider.root_pem);
-    let logo = $state();
-
-    let formErrors = $state({});
-    const schema = yup.object().shape({
-        issuer: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
-        authorization_endpoint: yup.string().url(),
-        token_endpoint: yup.string().url(),
-        userinfo_endpoint: yup.string().url(),
-
-        name: yup.string().trim().matches(REGEX_CLIENT_NAME, "Can only contain: 'a-zA-Z0-9À-ÿ- ', length max: 128"),
-        client_id: yup.string().trim().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
-        client_secret: yup.string().trim().max(256, "Max 256 characters"),
-        scope: yup.string().trim().matches(REGEX_PROVIDER_SCOPE, "Can only contain: 'a-zA-Z0-9-_/ ', length max: 128"),
-
-        admin_claim_path: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
-        admin_claim_value: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
-        mfa_claim_path: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
-        mfa_claim_value: yup.string().trim().nullable().matches(REGEX_URI, "Can only contain URI safe characters, length max: 128"),
-    });
+    let logoKey = $state(genKey());
 
     $effect(() => {
         if (provider.scope) {
             provider.scope = provider.scope.replaceAll('+', ' ');
         }
-    });
-
-    $effect(() => {
-        uploadLogo();
     });
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
@@ -114,34 +86,11 @@
             err = res.error.message;
         } else {
             success = true;
+            onSave();
             setTimeout(() => {
                 success = false;
-                onSave();
             }, 3000);
         }
-    }
-
-    async function uploadLogo() {
-        if (!logo) {
-            return;
-        }
-
-        isLoading = true;
-
-        console.log('logo upload, typeof', typeof logo, logo);
-        const formData = new FormData();
-        formData.append('logo', logo);
-
-        let res = await fetchPut(`/auth/v1/providers/${provider.id}/img`, formData);
-        if (res.error) {
-            console.error(res.error);
-        } else {
-            // We don't need to do anything in that case.
-            // A reload of the logo in the body below will be done depending
-            // on state changes of `isLoading`.
-        }
-
-        isLoading = false;
     }
 </script>
 
@@ -150,9 +99,7 @@
         <LabeledValue label="ID" mono>
             {provider.id}
         </LabeledValue>
-
-        <!-- Mappings -->
-        <div class="separator"></div>
+        <div style:height=".15rem"></div>
 
         <div class="checkbox">
             <InputCheckbox ariaLabel="Enabled" bind:checked={provider.enabled}>
@@ -166,16 +113,21 @@
         </div>
 
         {#if showRootPem}
-            <InputArea
-                    rows={17}
-                    name="rootPem"
-                    label="PEM Root Certificate"
-                    placeholder="-----BEGIN CERTIFICATE-----
+            <div transition:slide={{duration: 150}}>
+                <InputArea
+                        rows={15}
+                        name="rootPem"
+                        label="PEM Root Certificate"
+                        placeholder="-----BEGIN CERTIFICATE-----
 ...
  -----END CERTIFICATE-----"
-                    bind:value={provider.root_pem}
-                    errMsg="-----BEGIN CERTIFICATE----- ..."
-            />
+                        bind:value={provider.root_pem}
+                        errMsg="-----BEGIN CERTIFICATE----- ..."
+                        width="min(40rem, calc(100dvw - .5rem))"
+                        fontMono
+                        pattern={PATTERN_PEM}
+                />
+            </div>
         {:else}
             <div class="checkbox">
                 <InputCheckbox ariaLabel="Allow insecure TLS" bind:checked={provider.danger_allow_insecure}>
@@ -189,30 +141,35 @@
                 autocomplete="off"
                 label="Issuer URL"
                 placeholder="Issuer URL"
+                required
+                pattern={PATTERN_URI}
                 width={inputWidth}
         />
-
         <Input
                 bind:value={provider.authorization_endpoint}
                 autocomplete="off"
                 label="Authorization Endpoint"
                 placeholder="Authorization Endpoint"
+                required
+                pattern={PATTERN_URI}
                 width={inputWidth}
         />
-
         <Input
                 bind:value={provider.token_endpoint}
                 autocomplete="off"
                 label="Token Endpoint"
                 placeholder="Token Endpoint"
+                required
+                pattern={PATTERN_URI}
                 width={inputWidth}
         />
-
         <Input
                 bind:value={provider.userinfo_endpoint}
                 autocomplete="off"
                 label="Userinfo Endpoint"
                 placeholder="Userinfo Endpoint"
+                required
+                pattern={PATTERN_URI}
                 width={inputWidth}
         />
 
@@ -222,7 +179,7 @@
             </InputCheckbox>
         </div>
 
-        <p>
+        <p class="desc">
             The scope the client should use when redirecting to the login.<br>
             Provide the values separated by space.
         </p>
@@ -231,10 +188,12 @@
                 autocomplete="off"
                 label="Scope"
                 placeholder="openid profile email"
+                required
+                pattern={PATTERN_SCOPE_SPACE}
                 width={inputWidth}
         />
 
-        <p>
+        <p class="desc">
             Client name for the Rauthy login form
         </p>
         <Input
@@ -242,10 +201,12 @@
                 autocomplete="off"
                 label="Client Name"
                 placeholder="Client Name"
+                required
+                pattern={PATTERN_CLIENT_NAME}
                 width={inputWidth}
         />
 
-        <p>
+        <p class="desc">
             Client ID given by the auth provider
         </p>
         <Input
@@ -253,10 +214,12 @@
                 autocomplete="off"
                 label="Client ID"
                 placeholder="Client ID"
+                required
+                pattern={PATTERN_URI}
                 width={inputWidth}
         />
 
-        <p>
+        <p class="desc">
             Client Secret given by the auth provider.<br>
             At least a client secret or PKCE is required.
         </p>
@@ -265,6 +228,7 @@
                 autocomplete="off"
                 label="Client Secret"
                 placeholder="Client Secret"
+                maxLength={256}
                 width={inputWidth}
         />
 
@@ -285,14 +249,15 @@
         </div>
 
         <JsonPathDesc/>
-        <p>
-            You can map a user to be a rauthy admin depending on an upstream ID claim.
+        <p class="desc">
+            You can map a user to be a Rauthy admin depending on an upstream ID claim.
         </p>
         <Input
                 bind:value={provider.admin_claim_path}
                 autocomplete="off"
                 label="Admin Claim Path"
                 placeholder="$.roles.*"
+                pattern={PATTERN_URI}
                 width={inputWidth}
         />
         <Input
@@ -300,10 +265,11 @@
                 autocomplete="off"
                 label="Admin Claim Value"
                 placeholder="rauthy_admin"
+                pattern={PATTERN_URI}
                 width={inputWidth}
         />
 
-        <p>
+        <p class="desc">
             If your provider issues a claim indicating that the user has used at least 2FA during
             login, you can specify the mfa claim path.
         </p>
@@ -312,6 +278,7 @@
                 autocomplete="off"
                 label="MFA Claim Path"
                 placeholder="$.amr.*"
+                pattern={PATTERN_URI}
                 width={inputWidth}
         />
         <Input
@@ -319,18 +286,26 @@
                 autocomplete="off"
                 label="MFA Claim Value"
                 placeholder="mfa"
+                pattern={PATTERN_URI}
                 width={inputWidth}
         />
 
         <div class="logo">
-            <ImageUploadRaw bind:image={logo}/>
-            {#if !isLoading}
-                <ProviderLogo providerId={provider.id}/>
-            {/if}
+            {#key logoKey}
+                <div>
+                    <ProviderLogo providerId={provider.id}/>
+                </div>
+            {/key}
+            <InputFile
+                    method="PUT"
+                    url={`/auth/v1/providers/${provider.id}/img`}
+                    fileName="logo"
+                    onSuccess={() => logoKey = genKey()}
+            />
         </div>
 
-        {#if !isDefault}
-            <Button onclick={onSubmit} {isLoading}>
+        <div class="flex gap-05">
+            <Button type="submit" {isLoading}>
                 {t.common.save}
             </Button>
 
@@ -343,13 +318,28 @@
                 {err}
             </span>
             {/if}
-        {/if}
+        </div>
     </Form>
 </div>
 
 <style>
+    .container {
+        margin-bottom: 1rem;
+    }
+
+    .desc {
+        margin-bottom: -.5rem;
+    }
+
     .logo {
         margin: 1rem .25rem;
+        display: flex;
+        flex-direction: column;
+        gap: .25rem;
+    }
+
+    .logo > div {
+        margin-left: .25rem;
     }
 
     .checkbox {

@@ -1,4 +1,4 @@
-<script></script>
+<script lang="ts"></script>
 
 <div class="desc">
     <h4>ID token claim mappings</h4>
@@ -32,14 +32,10 @@
     .desc {
         display: flex;
         flex-direction: column;
-        margin: .5rem;
+        margin: .5rem 0;
     }
 
     .desc > p {
         margin: .2rem 0;
-    }
-
-    .desc > p > code {
-        background: var(--col-gmid);
     }
 </style>
