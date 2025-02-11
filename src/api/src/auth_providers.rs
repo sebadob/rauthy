@@ -4,7 +4,8 @@ use actix_web::web::Json;
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use rauthy_api_types::auth_providers::{
-    ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
+    ProviderCallbackRequest, ProviderLinkedUserResponse, ProviderLoginRequest,
+    ProviderLookupRequest, ProviderRequest,
 };
 use rauthy_api_types::auth_providers::{ProviderLookupResponse, ProviderResponse};
 use rauthy_api_types::users::{UserResponse, WebauthnLoginResponse};
@@ -325,6 +326,11 @@ pub async fn delete_provider(
     tag = "providers",
     responses(
         (status = 404, description = "NotFound", body = ErrorResponse),
+        (
+            status = 406,
+            description = "NotAcceptable - linked users to this provider",
+            body = ProviderLinkedUserResponse
+        ),
     ),
 )]
 #[get("/providers/{id}/delete_safe")]

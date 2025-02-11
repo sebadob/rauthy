@@ -3,8 +3,8 @@
     import Tooltip from "$lib/Tooltip.svelte";
     import TabBar from "$lib/TabBar.svelte";
     import {slide} from 'svelte/transition';
-    import ProviderConfig from "./ProviderConfig.svelte";
-    import ProviderDelete from "./ProviderDelete.svelte";
+    import ProviderConfig from "$lib5/admin/providers/ProviderConfig.svelte";
+    import ProviderDelete from "$lib5/admin/providers/ProviderDelete.svelte";
 
     let {provider = $bindable({}), onSave = $bindable()} = $props();
 

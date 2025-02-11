@@ -99,3 +99,8 @@ export interface ProviderResponse {
     client_secret_post: boolean,
     root_pem?: string,
 }
+
+export interface ProviderLinkedUserResponse {
+    id: string,
+    email: string,
+}

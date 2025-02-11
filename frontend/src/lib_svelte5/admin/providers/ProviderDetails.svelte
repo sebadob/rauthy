@@ -1,7 +1,7 @@
 <script lang="ts">
     import type {ProviderResponse} from "$api/types/auth_provider.ts";
     import ProviderConfig from "./ProviderConfig.svelte";
-    import ProviderDelete from "../../../components/admin/providers/ProviderDelete.svelte";
+    import ProviderDelete from "./ProviderDelete.svelte";
     import Tabs from "$lib5/tabs/Tabs.svelte";
 
     let {

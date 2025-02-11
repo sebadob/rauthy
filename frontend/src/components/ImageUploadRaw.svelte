@@ -1,19 +1,17 @@
-<script>
+<script lang="ts">
     import IconUpload from "$lib/icons/IconUpload.svelte";
 
-    /**
-     * @typedef {Object} Props
-     * @property {string} [text]
-     * @property {any} image
-     */
+    let {
+        text = 'Upload Logo',
+    }: {
+        text: string,
+    } = $props();
 
-    /** @type {Props} */
-    let { text = 'UPLOAD LOGO', image = $bindable() } = $props();
+    let inputRef: undefined | HTMLInputElement = $state();
+    let file: undefined | File = $state();
 
-    let inputRef = $state();
-
-    async function onFileSelected(e) {
-        image = e.target.files[0];
+    async function onFileSelected(ev: Event) {
+        file = ev.target.files[0];
     }
 
 </script>
@@ -49,7 +47,7 @@
 
 <style>
     .btn, .text {
-        color: var(--col-act2);
+        color: hsl(var(--action));
     }
 
     .btn {

@@ -12,6 +12,7 @@
         placeholder = '',
         errMsg = '',
         disabled = false,
+        fontMono = false,
 
         maxLength,
         required = false,
@@ -35,6 +36,7 @@
         placeholder?: string,
         errMsg?: string,
         disabled?: boolean | null | undefined,
+        fontMono?: boolean | null | undefined,
         maxLength?: number | null | undefined,
         step?: number,
         required?: boolean,
@@ -109,6 +111,7 @@
             bind:this={ref}
             {id}
             {name}
+            class:font-mono={fontMono}
             title={errMsg}
             aria-label={label || placeholder}
             bind:value

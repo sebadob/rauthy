@@ -10,6 +10,7 @@ export let I18nAdminDe: I18nAdmin = {
         details: "Details",
         filter: "Filter",
         from: "Von",
+        loading: "Lade",
         note: "Notiz",
         search: "Suchen",
         searchOptions: "Suchoptionen",
@@ -145,6 +146,16 @@ export let I18nAdminDe: I18nAdmin = {
         resetSet0: "Der Wert 0 deaktiviert die Bedingung.",
         validForDays: "Gültigkeit Tage",
         validityNew: "Gültigkeit für neue Passwörter.",
+    },
+    providers: {
+        delete: {
+            areYouSure: "Sicher, dass dieser Provider gelöscht werden soll?",
+            forceDelete: "Löschen Erzwingen",
+            isInUse1: "Dieser Provider wird von aktiven Nutzern verwendet!",
+            isInUse2: `Das Löschen kann erzwungen werden. Nutzer ohne lokales Passwort oder
+                Passkey werden jedoch nicht mehr in der Lage sein, sich einzuloggen.`,
+            linkedUsers: "Verbundene Nutzer",
+        },
     },
     search: {
         orderBy: "Sortieren nach ...",

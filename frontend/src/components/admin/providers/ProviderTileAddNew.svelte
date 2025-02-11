@@ -17,7 +17,7 @@
         REGEX_PEM, REGEX_PROVIDER_SCOPE,
         REGEX_URI
     } from "../../../utils/constants.js";
-    import JsonPathDesc from "./JsonPathDesc.svelte";
+    import JsonPathDesc from "$lib5/admin/providers/JsonPathDesc.svelte";
     import Textarea from "$lib/inputs/Textarea.svelte";
 
     let {idx = $bindable(-1), onSave} = $props();

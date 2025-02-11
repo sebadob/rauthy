@@ -13,6 +13,7 @@ export interface I18nAdmin {
         details: string,
         filter: string,
         from: string,
+        loading: string,
         note: string,
         search: string,
         searchOptions: string,
@@ -115,6 +116,15 @@ export interface I18nAdmin {
         validForDays: string,
         validityNew: string,
     },
+    providers: {
+        delete: {
+            areYouSure: string,
+            forceDelete: string,
+            isInUse1: string,
+            isInUse2: string,
+            linkedUsers: string,
+        }
+    }
     search: {
         orderBy: string,
         orderChangeToAsc: string,
