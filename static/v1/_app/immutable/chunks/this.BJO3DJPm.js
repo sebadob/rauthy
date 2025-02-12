@@ -1,0 +1,1 @@
+import{e as o,b as f,_ as l,$ as b,S as c}from"./index-client.CzvcfCLI.js";function e(n,u){return n===u||(n==null?void 0:n[c])===u}function m(n={},u,a,p){return o(()=>{var s,t;return f(()=>{s=t,t=[],l(()=>{n!==a(...t)&&(u(n,...t),s&&e(a(...s),n)&&u(null,...s))})}),()=>{b(()=>{t&&e(a(...t),n)&&u(null,...t)})}}),n}export{m as b};

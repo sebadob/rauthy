@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import {fade} from 'svelte/transition';
     import Input from "$lib5/form/Input.svelte";
     import {useI18n} from "$state/i18n.svelte.js";

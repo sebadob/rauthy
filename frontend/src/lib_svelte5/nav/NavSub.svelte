@@ -1,7 +1,7 @@
 <script lang="ts">
     import type {Snippet} from "svelte";
     import {genKey} from "$utils/helpers.ts";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import IconArrowRightLeft from "$icons/IconArrowRightLeft.svelte";
 
     let {
@@ -11,6 +11,8 @@
         collapseButtonThreshold = 800,
         thresholdNavSub = 500,
         children,
+        buttonTiles,
+        buttonTilesAriaControls,
     }: {
         width?: string;
         paddingTop?: string;
@@ -18,6 +20,8 @@
         collapseButtonThreshold?: number;
         thresholdNavSub?: number;
         children: Snippet,
+        buttonTiles?: Snippet,
+        buttonTilesAriaControls?: string,
     } = $props();
 
     const id = genKey();
@@ -109,6 +113,12 @@
 
         <div style:padding-top={paddingTop}>
             {@render children()}
+
+            {#if buttonTiles}
+                <ul aria-controls={buttonTilesAriaControls}>
+                    {@render buttonTiles()}
+                </ul>
+            {/if}
         </div>
     </nav>
 </div>
@@ -117,6 +127,7 @@
     nav {
         background: hsl(var(--bg));
         border-right: 1px solid hsla(var(--bg-high) / .23);
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
         overflow: clip;
         z-index: 1;
         transition: width 150ms;

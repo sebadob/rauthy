@@ -1,6 +1,6 @@
 <script lang="ts">
     import {genKey} from "$utils/helpers.ts";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import IconMagnify from "$icons/IconMagnify.svelte";
     import Options from "$lib5/Options.svelte";
     import IconBackspace from "$icons/IconBackspace.svelte";

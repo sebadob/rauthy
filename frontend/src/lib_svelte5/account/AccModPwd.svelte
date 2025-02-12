@@ -3,7 +3,7 @@
     import {onMount} from "svelte";
     import {generatePassword} from "$utils/helpers.ts";
     import InputPassword from "$lib5/form/InputPassword.svelte";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import {useI18n} from "$state/i18n.svelte.js";
     import type {PasswordPolicyResponse} from "$api/types/password_policy.ts";
     import {fetchGet} from "$api/fetch.ts";

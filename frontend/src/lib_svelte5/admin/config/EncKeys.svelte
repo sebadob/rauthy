@@ -1,6 +1,6 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import IconCheck from "$icons/IconCheck.svelte";
     import {fetchGet, fetchPost} from "$api/fetch.ts";
     import type {EncKeyMigrateRequest, EncKeysResponse} from "$api/types/enc_keys.ts";

@@ -6,6 +6,8 @@ export const PATTERN_CLIENT_NAME = '^[a-zA-Z0-9À-ſ\\-\\s\\u3041-\\u3096\\u30A0
 // export const PATTERN_DATE_STR = '[0-9]{4}\\-[0-9]{2}-[0-9]{2}$';
 export const PATTERN_CODE_CHALLENGE = '^[a-zA-Z0-9\\-._~]{43,128}$';
 export const PATTERN_GROUP = '^[a-z0-9\\-_\\/,:*]{2,64}$';
+export const PATTERN_SCOPE_SPACE = '^[a-z0-9\\-_\\/:\\s*]{0,512}$';
+export const PATTERN_PEM = '^(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+\\/=\\n]+(-----END CERTIFICATE-----)$';
 export const PATTERN_PHONE = '^\\+[0-9]{0,32}$';
 export const PATTERN_STREET = '^[a-zA-Z0-9À-ÿ\\-.\\s]{0,48}$';
 export const PATTERN_URI = '^[a-zA-Z0-9,.:\\/_\\-&?=~#!$\'\\(\\)*+%]*$';

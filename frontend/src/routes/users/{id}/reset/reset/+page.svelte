@@ -1,6 +1,6 @@
 <script lang="ts">
     import {generatePassword} from "$utils/helpers";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import PasswordPolicy from "$lib5/PasswordPolicy.svelte";
     import Input from "$lib5/form/Input.svelte";
     import WebauthnRequest from "$lib5/WebauthnRequest.svelte";

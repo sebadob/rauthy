@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import {fade, slide} from 'svelte/transition';
     import {putUserWebIdData} from "$utils/dataFetching.js";
     import Switch from "$lib5/Switch.svelte";

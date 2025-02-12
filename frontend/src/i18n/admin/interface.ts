@@ -6,12 +6,17 @@
 export interface I18nAdmin {
     common: {
         account: string,
+        addNew: string,
         back: string,
         copiedToClip: string,
         copyToClip: string,
+        details: string,
+        enabled: string,
         filter: string,
         from: string,
+        loading: string,
         note: string,
+        reset: string,
         search: string,
         searchOptions: string,
         until: string,
@@ -113,6 +118,49 @@ export interface I18nAdmin {
         validForDays: string,
         validityNew: string,
     },
+    providers: {
+        config: {
+            allowInsecureTls: string,
+            clientName: string,
+            custRootCa: string,
+            // inserted as html
+            descAuthMethod: string,
+            descClientId: string,
+            descClientName: string,
+            descClientSecret: string,
+            descScope: string,
+            errNoAuthMethod: string,
+            errConfidential: string,
+            jsonPath: {
+                p1: string,
+                // inserted as html
+                p2: string,
+                // inserted as html
+                p3: string,
+                // inserted as html
+                p4: string,
+                // inserted as html
+                p5: string,
+                // inserted as html
+                p6: string,
+            },
+            lookup: string,
+            pathAdminClaim: string,
+            pathMfaClaim: string,
+            rootPemCert: string,
+            mapMfa: string,
+            mapUser: string,
+            valueAdminClaim: string,
+            valueMfaClaim: string,
+        },
+        delete: {
+            areYouSure: string,
+            forceDelete: string,
+            isInUse1: string,
+            isInUse2: string,
+            linkedUsers: string,
+        }
+    }
     search: {
         orderBy: string,
         orderChangeToAsc: string,

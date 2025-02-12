@@ -18,7 +18,7 @@
         placeholder = 'Password',
         disabled = false,
         maxLength = 128,
-        required = true,
+        required,
         pattern,
         errMsg,
         width = 'inherit',
@@ -131,6 +131,7 @@
                 {disabled}
 
                 required={required || undefined}
+                aria-required={required || false}
                 maxlength={maxLength || undefined}
                 pattern={pattern || undefined}
 

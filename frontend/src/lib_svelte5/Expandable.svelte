@@ -2,7 +2,7 @@
     import IconChevronRight from "$icons/IconChevronRight.svelte";
     import {genKey} from "$utils/helpers.ts";
     import {useI18n} from "$state/i18n.svelte.ts";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import {slide} from "svelte/transition";
 
     import type {Snippet} from "svelte";

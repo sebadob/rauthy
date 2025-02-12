@@ -1,6 +1,6 @@
 <script lang="ts">
     import Popover from "$lib5/Popover.svelte";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import SearchBar from "$lib5/search_bar/SearchBar.svelte";
     import IconChevronDown from "$icons/IconChevronDown.svelte";
 

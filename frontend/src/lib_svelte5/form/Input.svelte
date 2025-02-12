@@ -1,8 +1,8 @@
 <script lang="ts">
     import {slide} from "svelte/transition";
-    import {genKey} from "$utils/helpers.ts";
     import {useI18n} from "$state/i18n.svelte.ts";
     import type {FullAutoFill} from "svelte/elements";
+    import {genKey} from "$utils/helpers.ts";
 
     let {
         ref = $bindable(),

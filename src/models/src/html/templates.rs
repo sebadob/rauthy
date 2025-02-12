@@ -1389,10 +1389,15 @@ pub struct AuthorizeHtml<'a> {
 }
 
 impl AuthorizeHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, templates: &[HtmlTemplate]) -> String {
+    pub fn build(
+        colors: &Colors,
+        lang: &Language,
+        client_id: &str,
+        templates: &[HtmlTemplate],
+    ) -> String {
         let res = AuthorizeHtml {
             lang: lang.as_str(),
-            client_id: "rauthy",
+            client_id,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1480,10 +1485,10 @@ pub struct ProvidersHtml<'a> {
     templates: &'a [HtmlTemplate],
 }
 
-impl crate::html::templates::ProvidersHtml<'_> {
-    pub fn build(colors: &Colors) -> String {
-        let res = crate::html::templates::ProvidersHtml {
-            lang: "en",
+impl ProvidersHtml<'_> {
+    pub fn build(colors: &Colors, lang: &Language) -> String {
+        let res = ProvidersHtml {
+            lang: lang.as_str(),
             client_id: "rauthy",
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,

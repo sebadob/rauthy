@@ -14,6 +14,7 @@ use rauthy_api_types::oidc::{
 };
 use rauthy_api_types::sessions::SessionState;
 use rauthy_api_types::users::{Userinfo, WebauthnLoginResponse};
+use rauthy_common::compression::{compress_br_dyn, compress_gzip};
 use rauthy_common::constants::{
     APPLICATION_JSON, AUTH_HEADERS_ENABLE, AUTH_HEADER_EMAIL, AUTH_HEADER_EMAIL_VERIFIED,
     AUTH_HEADER_FAMILY_NAME, AUTH_HEADER_GIVEN_NAME, AUTH_HEADER_GROUPS, AUTH_HEADER_MFA,
@@ -72,6 +73,7 @@ use validator::Validate;
 pub async fn get_authorize(
     data: web::Data<AppState>,
     req: HttpRequest,
+    accept_encoding: web::Header<header::AcceptEncoding>,
     Query(params): Query<AuthRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -156,6 +158,7 @@ pub async fn get_authorize(
         let body = AuthorizeHtml::build(
             &colors,
             &lang,
+            &client.id,
             &[
                 HtmlTemplate::AuthProviders(auth_providers_json),
                 HtmlTemplate::ClientName(client.name.unwrap_or_default()),
@@ -193,6 +196,7 @@ pub async fn get_authorize(
     let body = AuthorizeHtml::build(
         &colors,
         &lang,
+        &client.id,
         &[
             HtmlTemplate::AuthProviders(auth_providers_json),
             HtmlTemplate::ClientName(client.name.unwrap_or_default()),
@@ -202,6 +206,14 @@ pub async fn get_authorize(
             HtmlTemplate::LoginAction(action),
         ],
     );
+    let (body_bytes, encoding) = if accept_encoding.contains(&"br".parse().unwrap()) {
+        (compress_br_dyn(body.as_bytes())?, "br")
+    } else if accept_encoding.contains(&"gzip".parse().unwrap()) {
+        // TODO create a dyn version for gzip with lower strength
+        (compress_gzip(body.as_bytes())?, "gzip")
+    } else {
+        (body.as_bytes().to_vec(), "none")
+    };
 
     let cookie = session.client_cookie();
     if let Some(o) = origin_header {
@@ -210,7 +222,8 @@ pub async fn get_authorize(
             .cookie(cookie)
             .insert_header(o)
             .insert_header(HEADER_HTML)
-            .body(body));
+            .insert_header(("content-encoding", encoding))
+            .body(body_bytes));
     }
 
     if *EXPERIMENTAL_FED_CM_ENABLE {
@@ -218,12 +231,14 @@ pub async fn get_authorize(
             .cookie(session.client_cookie_fed_cm())
             .cookie(cookie)
             .insert_header(HEADER_HTML)
-            .body(body))
+            .insert_header(("content-encoding", encoding))
+            .body(body_bytes))
     } else {
         Ok(HttpResponse::build(StatusCode::OK)
             .cookie(cookie)
             .insert_header(HEADER_HTML)
-            .body(body))
+            .insert_header(("content-encoding", encoding))
+            .body(body_bytes))
     }
 }
 

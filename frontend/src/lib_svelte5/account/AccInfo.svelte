@@ -1,7 +1,7 @@
 <script lang="ts">
     import CheckIcon from "$lib5/CheckIcon.svelte";
     import {buildWebIdUri, formatDateFromTs, saveProviderToken} from "$utils/helpers.ts";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import Modal from "$lib5/Modal.svelte";
     import getPkce from "oauth-pkce";
     import {PKCE_VERIFIER_UPSTREAM} from "$utils/constants";

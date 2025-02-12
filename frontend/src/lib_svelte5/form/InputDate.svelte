@@ -1,18 +1,17 @@
 <script lang="ts">
     import {slide} from "svelte/transition";
-    import {genKey} from "$utils/helpers.ts";
     import {dayToString, fmtDateInput, getWeeksInMonth, type Day} from "$utils/form";
     import {untrack} from "svelte";
     import {useI18n} from "$state/i18n.svelte.ts";
     import {CalendarDate, getDayOfWeek, parseDate} from "@internationalized/date";
     import Popover from "$lib5/Popover.svelte";
     import Options from "$lib5/Options.svelte";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import IconCalendar from "$icons/IconCalendar.svelte";
     import type {PropsInputDate} from "$lib5/form/props.ts";
 
     let {
-        id = genKey(),
+        id,
         name,
         value = $bindable(fmtDateInput()),
         label = '',

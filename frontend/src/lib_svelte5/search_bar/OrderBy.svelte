@@ -1,7 +1,7 @@
 <script lang="ts">
     import IconBarsArrowDown from "$lib/icons/IconBarsArrowDown.svelte";
     import IconBarsArrowUp from "$lib/icons/IconBarsArrowUp.svelte";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import Tooltip from "$lib5/Tooltip.svelte";
     import Options from "$lib5/Options.svelte";
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";

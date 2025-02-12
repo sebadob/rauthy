@@ -1,6 +1,6 @@
 <script lang="ts">
     import {formatDateFromTs} from "$utils/helpers.ts";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import {webauthnDelete} from "$utils/dataFetching.js";
     import {onMount} from "svelte";
     import Input from "$lib5/form/Input.svelte";

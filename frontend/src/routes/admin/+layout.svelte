@@ -1,7 +1,7 @@
 <script lang="ts">
     import type {Snippet} from "svelte";
     import Main from "$lib5/Main.svelte";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import NavSide from "$lib5/nav/NavSide.svelte";
     import {useSession} from "$state/session.svelte.ts";
     import {fetchGet} from "$api/fetch.ts";

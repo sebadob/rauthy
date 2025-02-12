@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import AdminMain from "../../components/admin/AdminMain.svelte";
     import {useSession} from "$state/session.svelte.ts";
     import {fetchGet} from "$api/fetch.ts";
@@ -10,7 +10,7 @@
     import Events from "./events/Events.svelte";
     import ContentWrapper from "../../components/admin/ContentWrapper.svelte";
     import Sessions from "../../components/admin/sessions/Sessions.svelte";
-    import Providers from "../../components/admin/providers/Providers.svelte";
+    import Providers from "./providers/Providers.svelte";
     import Config from "./config/Config.svelte";
     import Documentation from "./documentation/Documentation.svelte";
     import Users from "../../components/admin/users/Users.svelte";

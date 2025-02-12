@@ -1,5 +1,6 @@
 import {CSRF_TOKEN} from "../utils/constants";
 import {type ErrorResponse} from "$api/types/error.ts";
+import {getCsrfToken} from "$utils/helpers.ts";
 
 export interface IResponse<T> {
     body: undefined | T,
@@ -108,7 +109,7 @@ async function fetchWithBody<T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     uri: string,
     typ: 'json' | 'form',
-    payload: Object,
+    payload: Object | FormData,
 ): Promise<IResponse<T>> {
     let body;
     if (typ === 'json') {
@@ -142,18 +143,9 @@ export function formDataFromObj(obj: Object) {
 }
 
 export async function handleResponse<T>(res: Response, redirect401: boolean): Promise<IResponse<T>> {
-    // TODO we could either do a redirect to a given loc header
-    // or post any error to a global events / toast component for better UX in such a case
-    // -> will come in a later PR
-
-    // if (res.status === 401) {
-    //     if (redirect401) {
-    //         let loc = res.headers.get('location');
-    //         if (loc) {
-    //             window.location.href = loc;
-    //         }
-    //     }
-    // }
+    if (redirect401 && res.status === 401) {
+        window.location.reload();
+    }
 
     let resp: IResponse<T> = {
         body: undefined,
@@ -185,4 +177,18 @@ export async function errorFromResponse(res: Response, eventOnError?: boolean): 
     //     useEvents().push('error', ErrorType[err.error], err.message, 5);
     // }
     return err;
+}
+
+export async function uploadFile<T>(method: 'POST' | 'PUT', url: string, file: File, name: string): Promise<IResponse<T>> {
+    const formData = new FormData();
+    formData.append(name, file);
+
+    const res = await fetch(url, {
+        method: method,
+        headers: {
+            'csrf-token': localStorage.getItem(CSRF_TOKEN) || '',
+        },
+        body: formData,
+    });
+    return handleResponse(res, true);
 }

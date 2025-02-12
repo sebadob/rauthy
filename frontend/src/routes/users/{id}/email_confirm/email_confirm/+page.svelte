@@ -1,6 +1,6 @@
 <script lang="ts">
     import LangSelector from "$lib5/LangSelector.svelte";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";

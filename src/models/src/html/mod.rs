@@ -4,7 +4,7 @@ use crate::entity::colors::ColorEntity;
 use crate::html::templates::{
     AccountHtml, AdminConfigArgon2Html, AdminConfigEncryptionHtml, AdminConfigJwksHtml,
     AdminConfigPolicyHtml, DeviceHtml, FedCMHtml, HtmlTemplate, IndexHtml, LogoutHtml,
-    ProviderCallbackHtml, UserRegisterHtml,
+    ProviderCallbackHtml, ProvidersHtml, UserRegisterHtml,
 };
 use crate::language::Language;
 use actix_web::http::header::ACCEPT_ENCODING;
@@ -20,6 +20,7 @@ pub mod templates;
 #[derive(Debug, Deserialize)]
 pub enum HtmlCached {
     Account,
+    AdminProviders,
     AuthProviderCallback,
     Docs,
     ConfigArgon2,
@@ -38,6 +39,7 @@ impl HtmlCached {
     fn as_str(&self) -> &'static str {
         match self {
             Self::Account => "account",
+            Self::AdminProviders => "admin_providers",
             Self::AuthProviderCallback => "auth_provider_cb",
             Self::Docs => "docs",
             Self::ConfigArgon2 => "cfg_argon2",
@@ -57,6 +59,7 @@ impl HtmlCached {
         format!("{}_{}_{}", self.as_str(), lang.as_str(), encoding)
     }
 
+    /// Handles the request and builds a full `HttpResponse` with compression and caching.
     pub async fn handle(
         self,
         req: HttpRequest,
@@ -99,6 +102,7 @@ impl HtmlCached {
                 let providers = AuthProviderTemplate::get_all_json_template().await?;
                 AccountHtml::build(&colors, &lang, &[HtmlTemplate::AuthProviders(providers)])
             }
+            Self::AdminProviders => ProvidersHtml::build(&colors, &lang),
             Self::AuthProviderCallback => ProviderCallbackHtml::build(&colors, &lang),
             Self::Docs => AdminDocsHtml::build(&colors, &lang),
             Self::ConfigArgon2 => AdminConfigArgon2Html::build(&colors, &lang),

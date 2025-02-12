@@ -2,13 +2,18 @@ import type {I18nAdmin} from "./interface.ts";
 
 export let I18nAdminEn: I18nAdmin = {
     common: {
-        account: 'Account',
+        account: "Account",
+        addNew: "Add New",
         back: "Back",
         copiedToClip: "Value has been copied to clipboard",
         copyToClip: "Copy value to clipboard",
+        details: "Details",
+        enabled: "Enabled",
         filter: "Filter",
         from: "From",
+        loading: "Loading",
         note: "Note",
+        reset: "Reset",
         search: "Search",
         searchOptions: "Search Options",
         until: "Until",
@@ -137,6 +142,51 @@ export let I18nAdminEn: I18nAdmin = {
         resetSet0: "The value 0 deactivates the requirement.",
         validForDays: "Valid For Days",
         validityNew: "Validity for new passwords.",
+    },
+    providers: {
+        config: {
+            allowInsecureTls: "Allow insecure TLS",
+            clientName: "Client Name",
+            custRootCa: "Custom Root CA PEM",
+            descAuthMethod: `The authentication method to use on the <code>/token</code> endpoint.<br>
+                Most providers should work with <code>basic</code>, some only with <code>post</code>.
+                In rare situations, you need both, while it can lead to errors with others.`,
+            descClientId: "Client ID given by the auth provider.",
+            descClientName: "Client name that should be shown on the Rauthy login page.",
+            descClientSecret: `Client Secret given by the auth provider.
+                At least a client secret or PKCE is required.`,
+            descScope: `The scope the client should use when redirecting to the login.
+                Provide the values separated by space.`,
+            errNoAuthMethod: "You have given a client secret, but no client auth method is active",
+            errConfidential: "Must at least be a confidential client or use PKCE",
+            jsonPath: {
+                p1: "Values from the ID token after a successful upstream login can be mapped automatically.",
+                p2: `The <code>path</code> needs to be given in a regex like syntax. It can resolve to
+                    single JSON values or resolve to a value in a JSON object or array.`,
+                p3: "<code>$.</code> marks the start of the JSON object",
+                p4: "<code>*</code> can be used as a wildcard in your path",
+                p5: "<code>$.roles</code> would target <code>&#123;\"roles\": \"value\"&#125;</code>",
+                p6: `<code>$.roles.*</code> can target a value inside an object or array like<br>
+                    <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
+            },
+            lookup: "Lookup",
+            pathAdminClaim: "Admin Claim Path",
+            pathMfaClaim: "MFA Claim Path",
+            rootPemCert: "Root PEM Certificate",
+            mapMfa: `If your provider issues a claim indicating that the user has used at least 2FA during
+                login, you can specify the mfa claim path.`,
+            mapUser: `You can map a user to be a Rauthy admin depending on an upstream ID claim.`,
+            valueAdminClaim: "Admin Claim Value",
+            valueMfaClaim: "MFA Claim Value",
+        },
+        delete: {
+            areYouSure: "Are you sure you want to delete this provider?",
+            forceDelete: "Force Delete",
+            isInUse1: "This provider is in use by active users!",
+            isInUse2: `You can force delete it, but users without a local password or passkey
+                will not be able to log in anymore.`,
+            linkedUsers: "Linked Users",
+        },
     },
     search: {
         orderBy: "Order by ...",

@@ -4,7 +4,8 @@ use actix_web::web::Json;
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use rauthy_api_types::auth_providers::{
-    ProviderCallbackRequest, ProviderLoginRequest, ProviderLookupRequest, ProviderRequest,
+    ProviderCallbackRequest, ProviderLinkedUserResponse, ProviderLoginRequest,
+    ProviderLookupRequest, ProviderRequest,
 };
 use rauthy_api_types::auth_providers::{ProviderLookupResponse, ProviderResponse};
 use rauthy_api_types::users::{UserResponse, WebauthnLoginResponse};
@@ -55,6 +56,7 @@ pub async fn post_providers(principal: ReqPrincipal) -> Result<HttpResponse, Err
     post,
     path = "/providers/create",
     tag = "providers",
+    request_body = ProviderRequest,
     responses(
         (status = 200, description = "OK", body = ProviderResponse),
         (status = 400, description = "BadRequest", body = ErrorResponse),
@@ -72,7 +74,7 @@ pub async fn post_provider(
     if !payload.use_pkce && payload.client_secret.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "Must at least be a confidential client or use PKCE".to_string(),
+            "Must at least be a confidential client or use PKCE",
         ));
     }
 
@@ -90,6 +92,7 @@ pub async fn post_provider(
     post,
     path = "/providers/lookup",
     tag = "providers",
+    request_body = ProviderLookupRequest,
     responses(
         (status = 200, description = "OK", body = ProviderLookupResponse),
         (status = 400, description = "BadRequest", body = ErrorResponse),
@@ -256,6 +259,7 @@ pub async fn get_providers_minimal() -> Result<HttpResponse, ErrorResponse> {
     put,
     path = "/providers/{id}",
     tag = "providers",
+    request_body = ProviderRequest,
     responses(
         (status = 400, description = "BadRequest", body = ErrorResponse),
         (status = 404, description = "NotFound", body = ErrorResponse),
@@ -324,6 +328,11 @@ pub async fn delete_provider(
     tag = "providers",
     responses(
         (status = 404, description = "NotFound", body = ErrorResponse),
+        (
+            status = 406,
+            description = "NotAcceptable - linked users to this provider",
+            body = ProviderLinkedUserResponse
+        ),
     ),
 )]
 #[get("/providers/{id}/delete_safe")]

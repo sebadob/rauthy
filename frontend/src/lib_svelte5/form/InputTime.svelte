@@ -1,6 +1,5 @@
 <script lang="ts">
     import {slide} from "svelte/transition";
-    import {genKey} from "$utils/helpers.ts";
     import Options from "$lib5/Options.svelte";
     import Popover from "$lib5/Popover.svelte";
     import {useI18n} from "$state/i18n.svelte.ts";
@@ -9,7 +8,7 @@
     import IconClock from "$icons/IconClock.svelte";
 
     let {
-        id = genKey(),
+        id,
         name = 'time',
         value = $bindable(fmtTimeInput()),
         label = '',

@@ -5,12 +5,10 @@
 
     let {
         href,
-        highlightExact = true,
         highlightWithParams = false,
         children,
     }: {
         href: string,
-        highlightExact?: boolean,
         highlightWithParams?: boolean,
         children: Snippet,
     } = $props();

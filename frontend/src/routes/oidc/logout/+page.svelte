@@ -1,7 +1,7 @@
 <script lang="ts">
     import {purgeStorage, saveCsrfToken} from "$utils/helpers.ts";
     import {logout} from "$utils/dataFetching";
-    import Button from "$lib5/Button.svelte";
+    import Button from "$lib5/button/Button.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
