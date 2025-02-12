@@ -6,7 +6,7 @@ use rauthy_error::ErrorResponse;
 use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::html::templates::{
     AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml, AdminGroupsHtml,
-    AdminHtml, AdminRolesHtml, AdminScopesHtml, AdminSessionsHtml, AdminUsersHtml, ProvidersHtml,
+    AdminHtml, AdminRolesHtml, AdminScopesHtml, AdminSessionsHtml, AdminUsersHtml,
 };
 use rauthy_models::html::HtmlCached;
 use std::borrow::Cow;
@@ -136,11 +136,8 @@ pub async fn get_admin_groups_html() -> Result<HttpResponse, ErrorResponse> {
 }
 
 #[get("/admin/providers")]
-pub async fn get_admin_providers_html() -> Result<HttpResponse, ErrorResponse> {
-    let colors = ColorEntity::find_rauthy().await?;
-    let body = ProvidersHtml::build(&colors);
-
-    Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
+pub async fn get_admin_providers_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    HtmlCached::AdminProviders.handle(req, true).await
 }
 
 #[get("/admin/roles")]
