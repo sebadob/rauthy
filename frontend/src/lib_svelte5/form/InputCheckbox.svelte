@@ -45,7 +45,6 @@
         {@render children?.()}
     </span>
 </label>
-<!--</div>-->
 
 <style>
     label {

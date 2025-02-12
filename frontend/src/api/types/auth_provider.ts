@@ -1,6 +1,6 @@
 import type {CodeChallengeMethod} from "$api/types/authorize.ts";
 
-export type AuthProviderType = 'Custom' | 'Github' | 'Google' | 'OIDC';
+export type AuthProviderType = 'auto' | 'custom' | 'github' | 'google' | 'oidc';
 
 export interface ProviderRequest {
     /// Validation: PATTERN_CLIENT_NAME
@@ -17,7 +17,7 @@ export interface ProviderRequest {
     /// Validation: PATTERN_URI
     userinfo_endpoint: string,
 
-    danger_allow_insecure?: boolean,
+    danger_allow_insecure: boolean,
     use_pkce: boolean,
     client_secret_basic: boolean,
     client_secret_post: boolean,
@@ -77,6 +77,16 @@ export interface ProviderLoginRequest {
     pkce_challenge: string,
 }
 
+export interface ProviderLookupRequest {
+    /// Validation: PATTERN_URI
+    issuer?: string,
+    /// Validation: PATTERN_URI
+    metadata_url?: string,
+    danger_allow_insecure: boolean,
+    // no validation since it will throw an error later if not correctly formed
+    root_pem?: string,
+}
+
 export interface ProviderResponse {
     id: string,
     name: string,
@@ -103,4 +113,17 @@ export interface ProviderResponse {
 export interface ProviderLinkedUserResponse {
     id: string,
     email: string,
+}
+
+export interface ProviderLookupResponse {
+    issuer: string,
+    authorization_endpoint: string,
+    token_endpoint: string,
+    userinfo_endpoint: string,
+    scope: string,
+    root_pem?: string,
+    use_pkce: boolean,
+    client_secret_basic: boolean,
+    client_secret_post: boolean,
+    danger_allow_insecure: boolean,
 }

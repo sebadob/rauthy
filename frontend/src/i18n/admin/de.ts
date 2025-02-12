@@ -13,6 +13,7 @@ export let I18nAdminDe: I18nAdmin = {
         from: "Von",
         loading: "Lade",
         note: "Notiz",
+        reset: "Zurücksetzen",
         search: "Suchen",
         searchOptions: "Suchoptionen",
         until: "Bis",
@@ -161,7 +162,7 @@ export let I18nAdminDe: I18nAdmin = {
             descClientName: "Client Name der auf der Rauthy Login Form angezeigt werden soll.",
             descClientSecret: `Client Secret, vom Auth Provider vorgegeben.
                 Es muss mindestens ein Secret gegeben, oder PKCE aktiviert sein.`,
-            descScope: `Der scope der beim Redirect zum Login genutzt werden soll. Werde müssen durch Leerzeichen
+            descScope: `Der scope der beim Redirect zum Login genutzt werden soll. Werte müssen durch Leerzeichen
                 getrennt angegeben werden`,
             errNoAuthMethod: "Ein client secret existiert, jedoch ist keine auth Methode aktiv",
             errConfidential: "Es muss mindestens entweder ein client secret existieren oder PKCE aktiv sein.",
@@ -169,12 +170,13 @@ export let I18nAdminDe: I18nAdmin = {
                 p1: "Werte aus dem ID Token nach einem erfolgreichen Upstream Login können automatisch gemapped werden.",
                 p2: `Der <code>Pfad</code> muss in korrekter Regex Syntax angegeben werden. Er kann auf einzelne JSON
                     Werte verweise, oder komplexe Sturkturen wie Arrays oder Objects`,
-                p3: "<code>$.</code> den Beginn eines JSON Objects",
+                p3: "<code>$.</code> markiert den Beginn eines JSON Objects",
                 p4: "<code>*</code> kann als Wildcard innerhalb des Pfads genutzt werden",
-                p5: "<code>$.roles</code> würde zeigen auf den Wert <code>&#123;\"roles\": \"value\"&#125;</code>",
+                p5: "<code>$.roles</code> hätte als Ziel den Wert <code>&#123;\"roles\": \"value\"&#125;</code>",
                 p6: `<code>$.roles.*</code> kann auf einen Wert innerhalb eines Arrays oder Objects wie z.B.<br>
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code> verweisen`,
             },
+            lookup: "Prüfen",
             pathAdminClaim: "Admin Claim Pfad",
             pathMfaClaim: "MFA Claim Pfad",
             rootPemCert: "Root PEM Zertifikat",

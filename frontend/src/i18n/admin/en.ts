@@ -13,6 +13,7 @@ export let I18nAdminEn: I18nAdmin = {
         from: "From",
         loading: "Loading",
         note: "Note",
+        reset: "Reset",
         search: "Search",
         searchOptions: "Search Options",
         until: "Until",
@@ -168,6 +169,7 @@ export let I18nAdminEn: I18nAdmin = {
                 p6: `<code>$.roles.*</code> can target a value inside an object or array like<br>
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
             },
+            lookup: "Lookup",
             pathAdminClaim: "Admin Claim Path",
             pathMfaClaim: "MFA Claim Path",
             rootPemCert: "Root PEM Certificate",

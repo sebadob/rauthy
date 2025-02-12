@@ -19,7 +19,7 @@
     import {genKey} from "$utils/helpers.ts";
 
     let {
-        provider,
+        provider = $bindable(),
         onSave = $bindable(),
     }: {
         provider: ProviderResponse,
@@ -38,6 +38,17 @@
     let logoKey = $state(genKey());
 
     $effect(() => {
+        if (provider.id) {
+            provider.client_secret = provider.client_secret || '';
+            provider.admin_claim_path = provider.admin_claim_path || '';
+            provider.admin_claim_value = provider.admin_claim_value || '';
+            provider.mfa_claim_path = provider.mfa_claim_path || '';
+            provider.mfa_claim_value = provider.mfa_claim_value || '';
+            provider.root_pem = provider.root_pem || '';
+        }
+    });
+
+    $effect(() => {
         if (provider.scope) {
             provider.scope = provider.scope.replaceAll('+', ' ');
         }
@@ -48,7 +59,7 @@
 
         if (provider.client_secret && !(provider.client_secret_basic || provider.client_secret_post)) {
             err = ta.providers.config.errNoAuthMethod;
-            return false;
+            return;
         }
         if (!provider.use_pkce && !provider.client_secret) {
             err = ta.providers.config.errConfidential;
@@ -71,14 +82,14 @@
             client_secret_post: provider.client_secret_post,
 
             client_id: provider.client_id,
-            client_secret: provider.client_secret,
-            scope: provider.scope,
+            client_secret: provider.client_secret || undefined,
+            scope: provider.scope.trim(),
             root_pem: showRootPem && provider.root_pem ? provider.root_pem.trim() : undefined,
 
-            admin_claim_path: provider.admin_claim_path,
-            admin_claim_value: provider.admin_claim_value,
-            mfa_claim_path: provider.mfa_claim_path,
-            mfa_claim_value: provider.mfa_claim_value,
+            admin_claim_path: provider.admin_claim_path || undefined,
+            admin_claim_value: provider.admin_claim_value || undefined,
+            mfa_claim_path: provider.mfa_claim_path || undefined,
+            mfa_claim_value: provider.mfa_claim_value || undefined,
         };
 
         let res = await fetchPut(form.action, payload);
@@ -149,6 +160,7 @@
                 width={inputWidth}
         />
         <Input
+                typ="url"
                 bind:value={provider.authorization_endpoint}
                 autocomplete="off"
                 label="Authorization Endpoint"
@@ -158,6 +170,7 @@
                 width={inputWidth}
         />
         <Input
+                typ="url"
                 bind:value={provider.token_endpoint}
                 autocomplete="off"
                 label="Token Endpoint"
@@ -167,6 +180,7 @@
                 width={inputWidth}
         />
         <Input
+                typ="url"
                 bind:value={provider.userinfo_endpoint}
                 autocomplete="off"
                 label="Userinfo Endpoint"
@@ -222,6 +236,8 @@
                 label="Client Secret"
                 placeholder="Client Secret"
                 maxLength={256}
+                errMsg={ta.providers.config.errConfidential}
+                required={!provider.use_pkce}
                 width={inputWidth}
         />
 
@@ -236,6 +252,11 @@
                 client_secret_post
             </InputCheckbox>
         </div>
+        {#if !provider.use_pkce && !provider.client_secret_basic && !provider.client_secret_post}
+            <div class="err" transition:slide={{duration: 150}}>
+                {ta.providers.config.errNoAuthMethod}
+            </div>
+        {/if}
 
         <JsonPathDesc/>
 
@@ -308,6 +329,10 @@
 </div>
 
 <style>
+    .checkbox {
+        margin: .25rem 0;
+    }
+
     .container {
         margin-bottom: 1rem;
     }
@@ -325,9 +350,5 @@
 
     .logo > div {
         margin-left: .25rem;
-    }
-
-    .checkbox {
-        margin: .25rem 0;
     }
 </style>

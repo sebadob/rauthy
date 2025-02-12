@@ -56,6 +56,7 @@ pub async fn post_providers(principal: ReqPrincipal) -> Result<HttpResponse, Err
     post,
     path = "/providers/create",
     tag = "providers",
+    request_body = ProviderRequest,
     responses(
         (status = 200, description = "OK", body = ProviderResponse),
         (status = 400, description = "BadRequest", body = ErrorResponse),
@@ -73,7 +74,7 @@ pub async fn post_provider(
     if !payload.use_pkce && payload.client_secret.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "Must at least be a confidential client or use PKCE".to_string(),
+            "Must at least be a confidential client or use PKCE",
         ));
     }
 
@@ -91,6 +92,7 @@ pub async fn post_provider(
     post,
     path = "/providers/lookup",
     tag = "providers",
+    request_body = ProviderLookupRequest,
     responses(
         (status = 200, description = "OK", body = ProviderLookupResponse),
         (status = 400, description = "BadRequest", body = ErrorResponse),

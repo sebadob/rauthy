@@ -6,7 +6,7 @@
 
     let {
         level = 2,
-        closeModal,
+        closeModal = $bindable(),
         onClose,
         children,
     }: {

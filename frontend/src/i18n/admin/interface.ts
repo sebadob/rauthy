@@ -16,6 +16,7 @@ export interface I18nAdmin {
         from: string,
         loading: string,
         note: string,
+        reset: string,
         search: string,
         searchOptions: string,
         until: string,
@@ -143,6 +144,7 @@ export interface I18nAdmin {
                 // inserted as html
                 p6: string,
             },
+            lookup: string,
             pathAdminClaim: string,
             pathMfaClaim: string,
             rootPemCert: string,

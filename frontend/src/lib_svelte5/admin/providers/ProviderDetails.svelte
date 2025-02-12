@@ -5,7 +5,7 @@
     import Tabs from "$lib5/tabs/Tabs.svelte";
 
     let {
-        provider,
+        provider = $bindable(),
         onSave = $bindable(),
     }: {
         provider: ProviderResponse,
@@ -25,7 +25,7 @@
 </div>
 
 {#if selected === 'Config'}
-    <ProviderConfig {provider} bind:onSave/>
+    <ProviderConfig bind:provider bind:onSave/>
 {:else if selected === 'Delete'}
     <ProviderDelete {provider} bind:onSave/>
 {/if}
