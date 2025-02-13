@@ -29,16 +29,14 @@
 </script>
 
 <div class="container">
-    {#if options.length > 1}
-        <Tooltip text={ta.search.orderBy}>
-            <Options
-                    ariaLabel={ta.search.orderBy}
-                    {options}
-                    bind:value={selected}
-                    {borderless}
-            />
-        </Tooltip>
-    {/if}
+    <Tooltip text={ta.search.orderBy}>
+        <Options
+                ariaLabel={ta.search.orderBy}
+                {options}
+                bind:value={selected}
+                {borderless}
+        />
+    </Tooltip>
 
     <div class="btn">
         {#if direction === 'up'}
