@@ -4,6 +4,11 @@
  * which does exist for the end user facing pages, the admin translation will fall back to EN.
  */
 export interface I18nAdmin {
+    api_key: {
+        expires: string,
+        keyName: string,
+        limitedValidity: string,
+    },
     common: {
         account: string,
         addNew: string,
@@ -165,5 +170,9 @@ export interface I18nAdmin {
         orderBy: string,
         orderChangeToAsc: string,
         orderChangeToDesc: string,
+    }
+    tabs: {
+        config: string,
+        delete: string,
     }
 }

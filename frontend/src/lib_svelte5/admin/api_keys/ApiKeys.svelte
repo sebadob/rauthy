@@ -9,6 +9,7 @@
     import {useParam} from "$state/param.svelte.ts";
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
     import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
+    import ApiKeyDetails from "$lib5/admin/api_keys/ApiKeyDetails.svelte";
 
     let ta = useI18nAdmin();
 
@@ -88,7 +89,7 @@
 <ContentAdmin>
     <div id="keys" aria-label={ta.common.details}>
         {#if key}
-            {key.name}
+            <ApiKeyDetails bind:key onSave={fetchApiKeys}/>
         {/if}
     </div>
 </ContentAdmin>

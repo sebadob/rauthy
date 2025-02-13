@@ -3,6 +3,7 @@
     import ProviderConfig from "./ProviderConfig.svelte";
     import ProviderDelete from "./ProviderDelete.svelte";
     import Tabs from "$lib5/tabs/Tabs.svelte";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
 
     let {
         provider = $bindable(),
@@ -12,9 +13,11 @@
         onSave: () => void,
     } = $props();
 
+    let ta = useI18nAdmin();
+
     const tabs = [
-        'Config',
-        'Delete',
+        ta.tabs.config,
+        ta.tabs.delete,
     ];
     let selected = $state(tabs[0]);
 
@@ -24,8 +27,8 @@
     <Tabs {tabs} bind:selected/>
 </div>
 
-{#if selected === 'Config'}
+{#if selected === ta.tabs.config}
     <ProviderConfig bind:provider bind:onSave/>
-{:else if selected === 'Delete'}
+{:else if selected === ta.tabs.delete}
     <ProviderDelete {provider} bind:onSave/>
 {/if}

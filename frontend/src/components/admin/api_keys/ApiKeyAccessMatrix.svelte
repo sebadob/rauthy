@@ -1,11 +1,20 @@
-<script>
+<script lang="ts">
     import {onMount} from "svelte";
+    import type {AccessGroup, AccessRight, ApiKeyAccess, ApiKeyResponse} from "$api/types/api_keys.ts";
+    import Button from "$lib5/button/Button.svelte";
+    import InputCheckbox from "$lib5/form/InputCheckbox.svelte";
 
-    let {apiKey, accessMatrix = $bindable(), finalize = $bindable()} = $props();
+    let {
+        key,
+        finalize = $bindable(),
+    }: {
+        key: ApiKeyResponse,
+        finalize: undefined | (() => ApiKeyAccess[]),
+    } = $props();
 
     finalize = finalizeMatrix;
 
-    const GROUPS = [
+    const GROUPS: AccessGroup[] = [
         'Blacklist',
         'Clients',
         'Events',
@@ -18,39 +27,62 @@
         'UserAttributes',
         'Users',
     ];
-    const OPS = [
+    const RIGHTS: AccessRight[] = [
         'create',
         'read',
         'update',
-        'delete',
+        'delete'
     ];
 
-    // keep the state for whole row or column toggles
-    let groupsToggle = new Array(GROUPS.length).fill(false);
-    let opsToggle = new Array(OPS.length).fill(false);
+    let accessRights: [string, boolean][] = $state([[]]);
 
-    onMount(() => {
-        buildArray();
-        if (apiKey?.access) {
-            buildFromKey();
+    // interface MatrixRow {
+    //     group: AccessGroup,
+    //     rights: [AccessRight, boolean][],
+    // }
+    //
+    // let accessMatrix: MatrixRow[] = $state([]);
+    // $inspect('accessMatrix', accessMatrix);
+    // keep the state for whole row or column toggles
+    // let groupsToggle = new Array(GROUPS.length).fill(false);
+    // let opsToggle = new Array(4).fill(false);
+
+    // onMount(() => {
+    buildArray();
+    //     if (key?.access) {
+    //         buildFromKey();
+    //     }
+    // });
+
+    $effect(() => {
+        if (key.name) {
+            // TODO
         }
-    });
+    })
 
     function buildArray() {
-        let arr = new Array(GROUPS.length);
-        for (let i = 0; i < GROUPS.length; i++) {
-            arr[i] = {
-                group: GROUPS[i],
-            };
-            for (let op of OPS) {
-                arr[i][op] = false;
+        for (let group of GROUPS) {
+            for (let right of RIGHTS) {
+                let idx = group + '.' + right;
+                accessRights[idx] = false;
             }
         }
-        accessMatrix = arr;
+        //
+        //
+        // let arr = new Array(GROUPS.length);
+        // for (let i = 0; i < GROUPS.length; i++) {
+        //     arr[i] = {
+        //         group: GROUPS[i],
+        //     };
+        //     for (let op of OPS) {
+        //         arr[i][op] = false;
+        //     }
+        // }
+        // accessMatrix = arr;
     }
 
     function buildFromKey() {
-        for (let access of apiKey.access) {
+        for (let access of key.access) {
             let idxGroup = GROUPS.findIndex(name => name === access.group);
             for (let rights of access.access_rights) {
                 let idxRights = OPS.findIndex(name => name === rights);
@@ -59,10 +91,11 @@
         }
     }
 
-    export function finalizeMatrix() {
+    export function finalizeMatrix(): ApiKeyAccess[] {
         let access = [];
         for (let i = 0; i < GROUPS.length; i++) {
-            let accessRights = [];
+            let accessRights: AccessRight[] = [];
+
             for (let op of OPS) {
                 if (accessMatrix[i][op]) {
                     accessRights.push(op);
@@ -78,7 +111,7 @@
         return access;
     }
 
-    function toggleGroup(idx) {
+    function toggleGroup(g: AccessGroup) {
         groupsToggle[idx] = !groupsToggle[idx];
 
         const toggleTo = groupsToggle[idx];
@@ -93,7 +126,7 @@
         accessMatrix[idx] = row;
     }
 
-    function toggleOp(idx) {
+    function toggleOp(idx: AccessRight) {
         opsToggle[idx] = !opsToggle[idx];
 
         const toggleTo = opsToggle[idx];
@@ -107,42 +140,35 @@
 <div class="matrix">
     <b>Access Rights</b>
 
+    {#snippet accessRight(s: AccessRight)}
+        <Button invisible onclick={() => toggleOp(s)}>
+            {s}
+        </Button>
+    {/snippet}
+
     <div class="mr">
-        <div class="label"></div>
-        {#each OPS as op, i (i)}
-            <div
-                    role="button"
-                    tabindex="0"
-                    class="cell pointer"
-                    onclick={toggleOp.bind(this, i)}
-                    onkeypress={toggleOp.bind(this, i)}
-            >
-                {OPS[i]}
-            </div>
-        {/each}
+        <div class="label">
+            {@render accessRight('create')}
+            {@render accessRight('read')}
+            {@render accessRight('update')}
+            {@render accessRight('delete')}
+        </div>
     </div>
 
+    {#snippet accessGroup(g: AccessGroup)}
+        <Button invisible onclick={() => toggleGroup(g)}>
+            {g}
+        </Button>
+        <InputCheckbox ariaLabel="create" bind:checked={accessMatrix[i]['create']}></InputCheckbox>
+        <InputCheckbox ariaLabel="read" bind:checked={accessMatrix[i]['read']}></InputCheckbox>
+        <InputCheckbox ariaLabel="update" bind:checked={accessMatrix[i]['update']}></InputCheckbox>
+        <InputCheckbox ariaLabel="delete" bind:checked={accessMatrix[i]['delete']}></InputCheckbox>
+    {/snippet}
+
     {#if accessMatrix}
-        {#each GROUPS as group, i (i)}
+        {#each GROUPS as group}
             <div class="mr">
-                <div
-                        role="button"
-                        tabindex="0"
-                        class="label pointer"
-                        onclick={toggleGroup.bind(this, i)}
-                        onkeypress={toggleGroup.bind(this, i)}
-                >
-                    {GROUPS[i]}
-                </div>
-                {#each OPS as op, j (j)}
-                    <div class="cell">
-                        <input
-                                class="pointer"
-                                type="checkbox"
-                                bind:checked={accessMatrix[i][op]}
-                        >
-                    </div>
-                {/each}
+                {@render accessGroup(group)}
             </div>
         {/each}
     {/if}

@@ -1,6 +1,11 @@
 import type {I18nAdmin} from "./interface.ts";
 
 export let I18nAdminEn: I18nAdmin = {
+    api_key: {
+        expires: "Expiry",
+        keyName: "Key Name",
+        limitedValidity: "Limited Validity",
+    },
     common: {
         account: "Account",
         addNew: "Add New",
@@ -192,5 +197,9 @@ export let I18nAdminEn: I18nAdmin = {
         orderBy: "Order by ...",
         orderChangeToAsc: "Change sort to ascending",
         orderChangeToDesc: "Change sort to descending",
-    }
+    },
+    tabs: {
+        config: "Config",
+        delete: "Delete",
+    },
 };

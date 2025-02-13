@@ -1,3 +1,5 @@
+import {PATTERN_API_KEY} from "$utils/patterns.ts";
+
 export type AccessGroup = 'Blacklist'
     | 'Clients'
     | 'Events'
@@ -9,11 +11,19 @@ export type AccessGroup = 'Blacklist'
     | 'Scopes'
     | 'UserAttributes'
     | 'Users';
-export type AccessRights = 'read' | 'create' | 'update' | 'delete';
+export type AccessRight = 'read' | 'create' | 'update' | 'delete';
 
 export interface ApiKeyAccess {
     group: AccessGroup,
-    access_rights: AccessRights[],
+    access_rights: AccessRight[],
+}
+
+export interface ApiKeyRequest {
+    /// Validation: PATTERN_API_KEY
+    name: string,
+    /// Unix timestamp in seconds
+    exp?: number,
+    access: ApiKeyAccess[],
 }
 
 export interface ApiKeyResponse {
