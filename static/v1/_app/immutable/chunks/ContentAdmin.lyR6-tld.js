@@ -1,1 +1,0 @@
-import"./disclose-version.BDr9Qe-U.js";import{p as o,a as i,c as m,r as p}from"./index-client.CzvcfCLI.js";import{a as e,t as n}from"./template.CQASMEo4.js";import{s as v}from"./snippet.Cu-MpcXt.js";var c=n('<div class="content svelte-1j8ittt"><!></div>');function d(a,s){o(s,!0);var t=c(),r=m(t);v(r,()=>s.children),p(t),e(a,t),i()}export{d as C};
