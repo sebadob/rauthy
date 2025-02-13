@@ -54,11 +54,13 @@
 
 <style>
     .container {
+        margin: .5rem .25rem 0 .25rem;
         min-width: 20rem;
         max-width: 40rem;
         display: flex;
         align-items: center;
-        gap: .5rem;
+        column-gap: .5rem;
+        row-gap: .25rem;
         flex-wrap: wrap;
     }
 </style>

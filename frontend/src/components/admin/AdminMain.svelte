@@ -28,7 +28,7 @@
     import IconStop from "$lib/icons/IconStop.svelte";
     import Blacklist from "./blacklist/Blacklist.svelte";
     import IconKey from "$lib/icons/IconKey.svelte";
-    import ApiKeys from "./api_keys/ApiKeys.svelte";
+    import ApiKeys from "$lib5/admin/api_keys/ApiKeys.svelte";
     import EventsArchive from "$lib5/admin/events/EventsArchive.svelte";
     import IconBellAlert from "$lib/icons/IconBellAlert.svelte";
     import IconCloud from "$lib/icons/IconCloud.svelte";

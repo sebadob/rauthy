@@ -29,9 +29,6 @@
         timeMin,
         timeMax,
 
-        timeDisabled,
-        timeRequired,
-
         withDelete,
         withTime,
     }: PropsInputDateCombo = $props()
@@ -70,8 +67,8 @@
                     errMsg={timeErrMsg}
                     min={timeMin}
                     max={timeMax}
-                    disabled={timeDisabled}
-                    required={timeRequired}
+                    {disabled}
+                    {required}
             />
         {/if}
     </div>

@@ -1,12 +1,25 @@
 import type {I18nAdmin} from "./interface.ts";
 
 export let I18nAdminEn: I18nAdmin = {
+    api_key: {
+        delete1: "Are you sure, that you want to delete this API Key?",
+        expires: "Expiry",
+        generate1: "Here you can generate a new secret for this API Key.",
+        generate2: `You will only see this secret once after the generation.
+            When a new one has been generated, the old secret will be overridden permanently.
+            This operation cannot be reverted!`,
+        generate3: `An API Key must be provided in the HTTP <code>Authorization</code>
+            header in the following format:`,
+        generate4: "You can use the following <code>curl</code> request to test your new Key:",
+        generate5: "If you don't have <code>jq</code> installed and the above fails:",
+        keyName: "Key Name",
+        limitedValidity: "Limited Validity",
+    },
     common: {
         account: "Account",
         addNew: "Add New",
         back: "Back",
         copiedToClip: "Value has been copied to clipboard",
-        copyToClip: "Copy value to clipboard",
         details: "Details",
         enabled: "Enabled",
         filter: "Filter",
@@ -192,5 +205,9 @@ export let I18nAdminEn: I18nAdmin = {
         orderBy: "Order by ...",
         orderChangeToAsc: "Change sort to ascending",
         orderChangeToDesc: "Change sort to descending",
-    }
+    },
+    tabs: {
+        config: "Config",
+        delete: "Delete",
+    },
 };

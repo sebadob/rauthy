@@ -12,12 +12,14 @@
 - `t.common.changeTheme`
 - `t.common.details`
 - `t.common.expandContent`
+- `t.common.hide`
 - `t.common.hours`
 - `t.common.legend`
 - `t.common.minutes`
 - `t.common.month`
 - `t.common.months`
 - `t.common.selectI18n`
+- `t.common.show`
 - `t.common.summary`
 - `t.common.weekDaysShort`
 - `t.common.year`

@@ -4,12 +4,25 @@
  * which does exist for the end user facing pages, the admin translation will fall back to EN.
  */
 export interface I18nAdmin {
+    api_key: {
+        delete1: string,
+        expires: string,
+        generate1: string,
+        generate2: string,
+        // inserted as html
+        generate3: string,
+        // inserted as html
+        generate4: string,
+        // inserted as html
+        generate5: string,
+        keyName: string,
+        limitedValidity: string,
+    },
     common: {
         account: string,
         addNew: string,
         back: string,
         copiedToClip: string,
-        copyToClip: string,
         details: string,
         enabled: string,
         filter: string,
@@ -165,5 +178,9 @@ export interface I18nAdmin {
         orderBy: string,
         orderChangeToAsc: string,
         orderChangeToDesc: string,
+    }
+    tabs: {
+        config: string,
+        delete: string,
     }
 }

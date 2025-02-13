@@ -23,9 +23,6 @@ export interface PropsInputDateCombo extends PropsInputDate {
     timeMin?: string,
     timeMax?: string,
 
-    timeDisabled?: boolean,
-    timeRequired?: boolean,
-
     withDelete?: boolean,
     withTime?: boolean,
 }

@@ -5,6 +5,7 @@
     import IconEye from "$icons/IconEye.svelte";
     import {slide} from "svelte/transition";
     import {useI18n} from "$state/i18n.svelte.ts";
+    import Button from "$lib5/button/Button.svelte";
 
     let {
         ref = $bindable(),
@@ -143,28 +144,36 @@
 
         <div class="rel">
             {#if showCopy}
-                <div
-                        role="button"
-                        tabindex="0"
-                        class="btn clip"
-                        onclick={copy}
-                        onkeydown={copy}
-                >
-                    <IconClipboard/>
+                <div class="btn clip">
+                    <Button ariaLabel={t.common.copyToClip} invisible onclick={copy}>
+                        <div title={t.common.copyToClip}>
+                            <IconClipboard/>
+                        </div>
+                    </Button>
                 </div>
             {/if}
 
-            <div
-                    role="button"
-                    tabindex="0"
-                    class="btn show"
-                    onclick={toggleView}
-                    onkeydown={toggleView}
-            >
-                {#if type === 'password'}
-                    <IconEyeSlash/>
+            <div class="btn show">
+                {#if type === 'password' }
+                    <Button
+                            ariaLabel={t.common.show}
+                            invisible
+                            onclick={toggleView}
+                    >
+                        <div title={t.common.show}>
+                            <IconEyeSlash/>
+                        </div>
+                    </Button>
                 {:else}
-                    <IconEye/>
+                    <Button
+                            ariaLabel={t.common.hide}
+                            invisible
+                            onclick={toggleView}
+                    >
+                        <div title={t.common.hide}>
+                            <IconEye/>
+                        </div>
+                    </Button>
                 {/if}
             </div>
         </div>

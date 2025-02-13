@@ -28,7 +28,23 @@
         onDown,
     }: PropsInputDate = $props();
 
-    const today = parseDate(fmtDateInput(new Date()));
+    $inspect(value).with(() => {
+        if (value.includes('T')) {
+            console.warn('invalid date format for InputDate, expected dateStr only', value);
+        }
+    });
+    $inspect(min).with(() => {
+        if (min.includes('T')) {
+            console.warn('invalid min format for InputDate, expected dateStr only', min);
+        }
+    });
+    $inspect(max).with(() => {
+        if (max.includes('T')) {
+            console.warn('invalid max format for InputDate, expected dateStr only', value);
+        }
+    });
+
+    const today = parseDate(fmtDateInput());
     const todayStr = today.toString();
 
     let t = useI18n();
