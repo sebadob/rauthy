@@ -5,11 +5,13 @@
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
 
     let {
+        alignRight,
         level = 2,
         closeModal = $bindable(),
         onClose,
         children,
     }: {
+        alignRight?: boolean,
         level?: number,
         closeModal?: undefined | (() => void),
         onClose?: () => void,
@@ -20,9 +22,21 @@
     let showModal = $state(false);
 </script>
 
-<Button {level} onclick={() => showModal = true}>
-    {ta.common.addNew}
-</Button>
-<Modal bind:showModal bind:closeModal {onClose}>
-    {@render children()}
-</Modal>
+<div class:alignRight>
+    <Button {level} onclick={() => showModal = true}>
+        {ta.common.addNew}
+    </Button>
+    <Modal bind:showModal bind:closeModal {onClose}>
+        {@render children()}
+    </Modal>
+</div>
+
+<style>
+    div {
+        margin: 0 .25rem;
+    }
+
+    .alignRight {
+        text-align: right;
+    }
+</style>
