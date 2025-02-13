@@ -2,6 +2,7 @@ import type {I18nAdmin} from "./interface.ts";
 
 export let I18nAdminDe: I18nAdmin = {
     api_key: {
+        delete1: "Soll dieser API Key wirklich gelöscht werden?",
         expires: "Erlischt",
         generate1: "Hier kann ein neues Secret für diesen API Key generiert werden.",
         generate2: `Das Secret wird nur einmalig direkt nach dem Generieren angezeigt.

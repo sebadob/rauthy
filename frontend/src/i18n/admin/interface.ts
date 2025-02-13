@@ -5,6 +5,7 @@
  */
 export interface I18nAdmin {
     api_key: {
+        delete1: string,
         expires: string,
         generate1: string,
         generate2: string,

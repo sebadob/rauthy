@@ -7,7 +7,7 @@
         key,
         finalize = $bindable(),
     }: {
-        key: ApiKeyResponse,
+        key?: ApiKeyResponse,
         finalize: undefined | (() => ApiKeyAccess[]),
     } = $props();
 
@@ -31,58 +31,60 @@
     $effect(() => {
         reset();
 
-        for (let access of key.access) {
-            let idx: number;
-            switch (access.group) {
-                case 'Blacklist':
-                    idx = 0;
-                    break;
-                case 'Clients':
-                    idx = 1;
-                    break;
-                case 'Events':
-                    idx = 2;
-                    break;
-                case 'Generic':
-                    idx = 3;
-                    break;
-                case 'Groups':
-                    idx = 4;
-                    break;
-                case 'Roles':
-                    idx = 5;
-                    break;
-                case 'Secrets':
-                    idx = 6;
-                    break;
-                case 'Sessions':
-                    idx = 7;
-                    break;
-                case 'Scopes':
-                    idx = 8;
-                    break;
-                case 'UserAttributes':
-                    idx = 9;
-                    break;
-                case 'Users':
-                    idx = 10;
-                    break;
-            }
-            if (idx === undefined) {
-                console.error('invalid idx during access key buildup');
-                return;
-            }
-            if (access.access_rights.includes('create')) {
-                matrix[idx][1] = true;
-            }
-            if (access.access_rights.includes('read')) {
-                matrix[idx][2] = true;
-            }
-            if (access.access_rights.includes('update')) {
-                matrix[idx][3] = true;
-            }
-            if (access.access_rights.includes('delete')) {
-                matrix[idx][4] = true;
+        if (key) {
+            for (let access of key.access) {
+                let idx: number;
+                switch (access.group) {
+                    case 'Blacklist':
+                        idx = 0;
+                        break;
+                    case 'Clients':
+                        idx = 1;
+                        break;
+                    case 'Events':
+                        idx = 2;
+                        break;
+                    case 'Generic':
+                        idx = 3;
+                        break;
+                    case 'Groups':
+                        idx = 4;
+                        break;
+                    case 'Roles':
+                        idx = 5;
+                        break;
+                    case 'Secrets':
+                        idx = 6;
+                        break;
+                    case 'Sessions':
+                        idx = 7;
+                        break;
+                    case 'Scopes':
+                        idx = 8;
+                        break;
+                    case 'UserAttributes':
+                        idx = 9;
+                        break;
+                    case 'Users':
+                        idx = 10;
+                        break;
+                }
+                if (idx === undefined) {
+                    console.error('invalid idx during access key buildup');
+                    return;
+                }
+                if (access.access_rights.includes('create')) {
+                    matrix[idx][1] = true;
+                }
+                if (access.access_rights.includes('read')) {
+                    matrix[idx][2] = true;
+                }
+                if (access.access_rights.includes('update')) {
+                    matrix[idx][3] = true;
+                }
+                if (access.access_rights.includes('delete')) {
+                    matrix[idx][4] = true;
+                }
             }
         }
     });

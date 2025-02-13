@@ -19,7 +19,7 @@ export interface ApiKeyAccess {
 }
 
 export interface ApiKeyRequest {
-    /// Validation: PATTERN_API_KEY
+    /// Validation: PATTERN_API_KEY, min 2, max 24
     name: string,
     /// Unix timestamp in seconds
     exp?: number,

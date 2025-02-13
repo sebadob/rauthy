@@ -2,6 +2,7 @@ import type {I18nAdmin} from "./interface.ts";
 
 export let I18nAdminEn: I18nAdmin = {
     api_key: {
+        delete1: "Are you sure, that you want to delete this API Key?",
         expires: "Expiry",
         generate1: "Here you can generate a new secret for this API Key.",
         generate2: `You will only see this secret once after the generation.

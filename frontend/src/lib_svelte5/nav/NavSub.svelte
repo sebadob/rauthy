@@ -7,7 +7,6 @@
     let {
         width = 'min(25rem, 100dvw)',
         paddingTop = '4.5rem',
-        collapse = $bindable(),
         collapseButtonThreshold = 800,
         thresholdNavSub = 500,
         children,
@@ -16,7 +15,6 @@
     }: {
         width?: string;
         paddingTop?: string;
-        collapse?: () => void;
         collapseButtonThreshold?: number;
         thresholdNavSub?: number;
         children: Snippet,
@@ -42,18 +40,10 @@
     let showIcon = $state(false);
 
     $effect(() => {
-        collapse = () => collapsed = shouldCollapse;
-    });
-
-    $effect(() => {
         if (innerWidth) {
             collapsed = shouldCollapse;
         }
     });
-
-    // $effect(() => {
-    //     collapsed = shouldCollapse;
-    // })
 
     function toggle() {
         collapsed = !collapsed;

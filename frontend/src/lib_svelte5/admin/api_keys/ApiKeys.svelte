@@ -10,6 +10,7 @@
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
     import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
     import ApiKeyDetails from "$lib5/admin/api_keys/ApiKeyDetails.svelte";
+    import ApiKeyAddNew from "$lib5/admin/api_keys/ApiKeyAddNew.svelte";
 
     let ta = useI18nAdmin();
 
@@ -60,13 +61,23 @@
         }
     }
 
+    function onNewKey() {
+        closeModal?.();
+        fetchApiKeys();
+    }
+
 </script>
 
 {err}
 
-<NavSub paddingTop="2.1rem" buttonTilesAriaControls="keys">
+<NavSub
+        paddingTop="2.1rem"
+        buttonTilesAriaControls="keys"
+        width="min(20rem, 100dvw)"
+        thresholdNavSub={700}
+>
     <ButtonAddModal level={keys.length === 0 ? 1 : 2} bind:closeModal alignRight>
-        TODOw
+        <ApiKeyAddNew {keys} onSave={onNewKey}/>
     </ButtonAddModal>
     <OrderSearchBar
             {searchOptions}
@@ -74,6 +85,7 @@
             bind:value={searchValue}
             {orderOptions}
             {onChangeOrder}
+            searchWidth="min(19.5rem, 100dvw - .5rem)"
     />
 
     {#snippet buttonTiles()}
