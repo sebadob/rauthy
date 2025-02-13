@@ -3,6 +3,14 @@ import type {I18nAdmin} from "./interface.ts";
 export let I18nAdminDe: I18nAdmin = {
     api_key: {
         expires: "Erlischt",
+        generate1: "Hier kann ein neues Secret für diesen API Key generiert werden.",
+        generate2: `Das Secret wird nur einmalig direkt nach dem Generieren angezeigt.
+            Wenn ein Neues generiert wurde, wird das Alte unmittelbar, permanent überschrieben.
+            Diese Operation kann nicht rückgängig gemacht werden!`,
+        generate3: `Der API Key muss im HTTP <code>Authorization</code> Header im folgenden
+            Format mitgegeben werden:`,
+        generate4: "Der folgende <code>curl</code> request kann zum Testen des Keys verwendet werden:",
+        generate5: "Sollte <code>jq</code> nicht installiert sein, hier eine Version ohne:",
         keyName: "Key Name",
         limitedValidity: "Begrenzte Gültigkeit",
     },
@@ -11,7 +19,6 @@ export let I18nAdminDe: I18nAdmin = {
         addNew: "Neu Hinzufügen",
         back: "Zurück",
         copiedToClip: "Wert wurde in die Zwischenablage kopiert",
-        copyToClip: "Wert in Zwischenablage kopieren",
         details: "Details",
         enabled: "Aktiviert",
         filter: "Filter",

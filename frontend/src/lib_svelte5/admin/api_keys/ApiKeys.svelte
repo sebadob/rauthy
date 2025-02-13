@@ -64,7 +64,7 @@
 
 {err}
 
-<NavSub paddingTop="2rem" buttonTilesAriaControls="keys">
+<NavSub paddingTop="2.1rem" buttonTilesAriaControls="keys">
     <ButtonAddModal level={keys.length === 0 ? 1 : 2} bind:closeModal alignRight>
         TODOw
     </ButtonAddModal>

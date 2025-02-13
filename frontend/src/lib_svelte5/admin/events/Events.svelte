@@ -29,11 +29,7 @@
 
     $effect(() => {
         if (innerWidth) {
-            if (innerWidth > 1440) {
-                wide = true;
-            } else {
-                wide = false;
-            }
+            wide = innerWidth > 1680;
         }
     });
 
@@ -166,10 +162,12 @@
 
     .narrow {
         width: 15rem;
+        min-width: 15rem;
     }
 
     .wide {
         width: 25rem;
+        min-width: 25rem;
     }
 
     .wide .data {

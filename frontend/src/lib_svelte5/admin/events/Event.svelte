@@ -6,6 +6,7 @@
     import A from "$lib5/A.svelte";
     import Button from "$lib5/button/Button.svelte";
     import Tooltip from "$lib5/Tooltip.svelte";
+    import {useI18n} from "$state/i18n.svelte.ts";
 
     // populated fields for different events:
     // - invalid_login: failed logins count as data, ip
@@ -32,10 +33,11 @@
         inline?: boolean,
     } = $props();
 
+    let t = useI18n();
     let ta = useI18nAdmin();
 
     let highlight = $state(false);
-    let tooltip = $state(ta.common.copyToClip);
+    let tooltip = $state(t.common.copyToClip);
 
     onMount(() => {
         let now = new Date().getTime();
@@ -54,7 +56,7 @@
         navigator.clipboard.writeText(v);
         tooltip = ta.common.copiedToClip;
         setTimeout(() => {
-            tooltip = ta.common.copyToClip;
+            tooltip = t.common.copyToClip;
         }, 3000);
     }
 

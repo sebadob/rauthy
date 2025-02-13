@@ -6,6 +6,14 @@
 export interface I18nAdmin {
     api_key: {
         expires: string,
+        generate1: string,
+        generate2: string,
+        // inserted as html
+        generate3: string,
+        // inserted as html
+        generate4: string,
+        // inserted as html
+        generate5: string,
         keyName: string,
         limitedValidity: string,
     },
@@ -14,7 +22,6 @@ export interface I18nAdmin {
         addNew: string,
         back: string,
         copiedToClip: string,
-        copyToClip: string,
         details: string,
         enabled: string,
         filter: string,

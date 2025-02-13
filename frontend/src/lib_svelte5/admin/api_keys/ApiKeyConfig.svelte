@@ -117,7 +117,7 @@
 
 <ApiKeyMatrix {key} bind:finalize={finalizeMatrix}/>
 
-<div class="flex gap-05">
+<div class="btn">
     <Button onclick={onSubmit}>
         {t.common.save}
     </Button>
@@ -134,4 +134,10 @@
 </div>
 
 <style>
+    .btn {
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
 </style>
