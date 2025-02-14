@@ -29,6 +29,7 @@ export interface I18nAdmin {
         from: string,
         loading: string,
         note: string,
+        noEntries: string,
         reset: string,
         search: string,
         searchOptions: string,

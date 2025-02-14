@@ -166,6 +166,15 @@ export interface I18n {
         testError: string,
         testSuccess: string,
     },
+    pagination: {
+        entries: string,
+        gotoPage: string,
+        gotoPageNext: string,
+        gotoPagePrev: string,
+        pagination: string,
+        showCount: string,
+        total: string,
+    },
     passwordPolicy: {
         passwordPolicy: string,
         lengthMin: string,

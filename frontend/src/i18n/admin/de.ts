@@ -26,6 +26,7 @@ export let I18nAdminDe: I18nAdmin = {
         from: "Von",
         loading: "Lade",
         note: "Notiz",
+        noEntries: "Keine Einträge",
         reset: "Zurücksetzen",
         search: "Suchen",
         searchOptions: "Suchoptionen",
