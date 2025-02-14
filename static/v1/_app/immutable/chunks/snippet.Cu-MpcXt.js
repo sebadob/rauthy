@@ -1,1 +1,0 @@
-import{j as i,I as l,m,F as p,w as t,k as c,n as u}from"./index-client.CzvcfCLI.js";function d(o,r,...f){var n=o,s=p,a;i(()=>{s!==(s=r())&&(a&&(t(a),a=null),a=m(()=>s(n,...f)))},l),c&&(n=u)}export{d as s};
