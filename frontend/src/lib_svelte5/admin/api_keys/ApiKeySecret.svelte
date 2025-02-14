@@ -35,7 +35,7 @@
 
         if (res.text) {
             secret = res.text;
-            curl = `curl -s -H 'Authorization: API-Key ${res.body}' ${window.location.origin}/auth/v1/api_keys/${key.name}/test`;
+            curl = `curl -s -H 'Authorization: API-Key ${res.text}' ${window.location.origin}/auth/v1/api_keys/${key.name}/test`;
             curlPretty = `${curl} | jq`;
         } else {
             err = res.error?.message || 'Error';
@@ -75,7 +75,7 @@
         {#key curlPretty}
             <HiddenValueArea
                     ariaLabel="curl text command with jq"
-                    rows={3}
+                    rows={5}
                     value={curlPretty}
             />
         {/key}
@@ -86,7 +86,7 @@
         {#key curlPretty}
             <HiddenValueArea
                     ariaLabel="curl text command simple"
-                    rows={3}
+                    rows={5}
                     value={curl}
             />
         {/key}
