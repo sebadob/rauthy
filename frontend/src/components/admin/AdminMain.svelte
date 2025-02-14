@@ -26,7 +26,7 @@
     import {onMount} from "svelte";
     import Events from "$lib5/admin/events/Events.svelte";
     import IconStop from "$lib/icons/IconStop.svelte";
-    import Blacklist from "./blacklist/Blacklist.svelte";
+    import Blacklist from "$lib5/admin/blacklist/Blacklist.svelte";
     import IconKey from "$lib/icons/IconKey.svelte";
     import ApiKeys from "$lib5/admin/api_keys/ApiKeys.svelte";
     import EventsArchive from "$lib5/admin/events/EventsArchive.svelte";

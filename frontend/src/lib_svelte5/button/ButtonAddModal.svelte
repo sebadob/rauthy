@@ -19,11 +19,13 @@
     } = $props();
 
     let ta = useI18nAdmin();
+
+    const levelModal = level === 1 ? 2 : 3;
     let showModal = $state(false);
 </script>
 
 <div class:alignRight>
-    <Button {level} onclick={() => showModal = true}>
+    <Button level={showModal ? levelModal : level} onclick={() => showModal = true}>
         {ta.common.addNew}
     </Button>
     <Modal bind:showModal bind:closeModal {onClose}>
