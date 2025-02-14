@@ -1,0 +1,1 @@
+import{g as s,h as e,i as o}from"./index-client.ijM6xFk7.js";import{p as a}from"./proxy.DmesnD8z.js";const u="false";let t=o(u==="true");function n(){return{get(){return s(t)},set(r){e(t,a(r))}}}export{n as u};

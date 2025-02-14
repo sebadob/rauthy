@@ -21,7 +21,7 @@
     import Groups from "../../components/admin/groups/Groups.svelte";
     import Clients from "../../components/admin/clients/Clients.svelte";
     import EventsArchive from "./events/EventsArchive.svelte";
-    import Blacklist from "../../components/admin/blacklist/Blacklist.svelte";
+    import Blacklist from "./blacklist/Blacklist.svelte";
 
     let {
         selected = $bindable('Users'),

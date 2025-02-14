@@ -8,7 +8,7 @@
         datalist,
         pattern,
         value = $bindable(),
-        searchWidth = 'min(25rem, calc(100dvw - .5rem))',
+        searchWidth = 'min(25rem, calc(100dvw - 1rem))',
         onSearch = $bindable(),
 
         orderOptions,
@@ -54,7 +54,7 @@
 
 <style>
     .container {
-        margin: .5rem .25rem 0 .25rem;
+        margin: 0 .25rem;
         min-width: 20rem;
         max-width: 40rem;
         display: flex;
