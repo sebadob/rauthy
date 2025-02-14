@@ -16,9 +16,12 @@
     import {PATTERN_IPV4} from "$utils/patterns.ts";
     import Form from "$lib5/form/Form.svelte";
     import Tooltip from "$lib5/Tooltip.svelte";
+    import Pagination from "$lib5/Pagination.svelte";
 
     let t = useI18n();
     let ta = useI18nAdmin();
+
+    const blacklistThreshold = 30;
 
     let refIp: undefined | HTMLInputElement = $state();
     let closeModal: undefined | (() => void) = $state();
@@ -27,6 +30,7 @@
     let errSave = $state('');
     let blacklist: BlacklistedIp[] = $state([]);
     let blacklistFiltered: BlacklistedIp[] = $state([]);
+    let blacklistPaginated: BlacklistedIp[] = $state([]);
 
     let ip = $state('');
     let expDate = $state(fmtDateInput());
@@ -149,10 +153,10 @@
     <div id="blacklist">
         {#if blacklist.length === 0}
             <div>
-                No blacklisted IPs
+                {ta.common.noEntries}
             </div>
         {:else}
-            {#each blacklistFiltered as entry (entry.ip)}
+            {#snippet row(entry: BlacklistedIp)}
                 <div class="blacklisted">
                     <Button invisible onclick={() => navigator.clipboard.writeText(entry.ip)}>
                         <div class="ip">
@@ -172,24 +176,30 @@
                         </Tooltip>
                     </Button>
                 </div>
-            {/each}
+            {/snippet}
+
+            {#if blacklist.length > blacklistThreshold}
+                {#each blacklistPaginated as entry (entry.ip)}
+                    {@render row(entry)}
+                {/each}
+            {:else}
+                {#each blacklistFiltered as entry (entry.ip)}
+                    {@render row(entry)}
+                {/each}
+            {/if}
         {/if}
     </div>
 
-    <!--{#if blacklist.length > 0}-->
-    <!--    <Pagination-->
-    <!--            bind:items={resBlacklist}-->
-    <!--            bind:resItems={resBlacklistPaginated}-->
-    <!--    />-->
-    <!--{/if}-->
+    {#if blacklist.length > blacklistThreshold}
+        <Pagination
+                bind:items={blacklistFiltered}
+                bind:itemsPaginated={blacklistPaginated}
+                pageSize={30}
+        />
+    {/if}
 </ContentAdmin>
 
 <style>
-    /*#blacklist .blacklisted:nth-of-type(2n + 1) {*/
-    /*    background: hsla(var(--bg-high));*/
-    /*    !*background: linear-gradient(90deg, hsla(var(--bg-high) / .5) 15rem, hsl(var(--bg)) 20rem);*!*/
-    /*}*/
-
     .addNew {
         min-height: 12rem;
     }
@@ -197,8 +207,6 @@
     .blacklisted {
         padding-left: .5rem;
         max-width: 22.5rem;
-        /*display: flex;*/
-        /*flex-direction: row;*/
         margin: .25rem 0;
         display: grid;
         grid-template-columns: 10rem 10rem 1.5rem;
@@ -231,14 +239,6 @@
         text-align: left;
         cursor: copy;
     }
-
-    /*.exp {*/
-    /*    width: 10rem;*/
-    /*}*/
-
-    /*.ip {*/
-    /*    width: 9rem;*/
-    /*}*/
 
     .top {
         margin-bottom: 1rem;
