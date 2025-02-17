@@ -186,6 +186,15 @@ export const I18nDe: I18n = {
         testError: "Fehler beim Starten des Tests",
         testSuccess: "Test erfolgreich"
     },
+    pagination: {
+        entries: "Einträge",
+        gotoPage: "Gehe zu Seite",
+        gotoPagePrev: "Gehe zu vorheriger Seite",
+        gotoPageNext: "Gehe zu nächster Seite",
+        pagination: "Seitennummerierung",
+        showCount: "Anzahl anzeigen",
+        total: "Gesamt",
+    },
     passwordPolicy: {
         passwordPolicy: "Passwort Regeln",
         lengthMin: "Länge min",

@@ -29,6 +29,7 @@ export interface I18nAdmin {
         from: string,
         loading: string,
         note: string,
+        noEntries: string,
         reset: string,
         search: string,
         searchOptions: string,
@@ -125,6 +126,11 @@ export interface I18nAdmin {
         sessions: string,
         users: string,
     }
+    options: {
+        expires: string,
+        lastSeen: string,
+        state: string,
+    },
     passwordPolicy: {
         configDesc: string,
         resetSet0: string,
@@ -178,6 +184,9 @@ export interface I18nAdmin {
         orderBy: string,
         orderChangeToAsc: string,
         orderChangeToDesc: string,
+    }
+    sessions: {
+        invalidateAll: string,
     }
     tabs: {
         config: string,

@@ -26,7 +26,6 @@
     legend {
         font-size: .9rem;
         color: hsla(var(--text) / .5);
-        margin-left: calc(2px + .5rem);
     }
 
     ul {
@@ -37,6 +36,7 @@
     }
 
     li {
+        margin: 0;
         padding-left: .5rem;
         list-style: none;
         border-left: 2px solid transparent;

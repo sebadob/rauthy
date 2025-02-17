@@ -41,7 +41,7 @@
     }
 
     .container {
-        margin: .5rem 0;
+        margin: .35rem 0;
     }
 
     .label {

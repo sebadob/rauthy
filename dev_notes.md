@@ -23,6 +23,7 @@
 - `t.common.summary`
 - `t.common.weekDaysShort`
 - `t.common.year`
+- `t.pagination.*`
 - `t.register.alreadyRegistered`
 
 ## Stage 1 - essentials
@@ -31,6 +32,7 @@
 
 ## Stage 2 - features - do before v1.0.0
 
+- Migrate `src/models/src/events/ip_blacklist_handler.rs` persistence from thread local HashMap to distributed Hiqlite
 - `amr` is not correctly set to `mfa` using the `device_code` flow, even when the user has used a passkey
 - check if `REFRESH_TOKEN_GRACE_TIME` can be dropped with Hiqlite
 - randomize default admin user id on prod init + set email to `BOOTSTRAP_ADMIN_EMAIL` before password info logging

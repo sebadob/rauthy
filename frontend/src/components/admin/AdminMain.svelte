@@ -9,7 +9,7 @@
     import Groups from "./groups/Groups.svelte";
     import Scopes from "./scopes/Scopes.svelte";
     import Clients from "./clients/Clients.svelte";
-    import Sessions from "./sessions/Sessions.svelte";
+    import Sessions from "$lib5/admin/sessions/Sessions.svelte";
     import Attr from "./userAttr/Attr.svelte";
     import Config from "$lib5/admin/config/Config.svelte";
     import IconWrenchScrew from "$lib/icons/IconWrenchScrew.svelte";

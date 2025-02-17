@@ -186,6 +186,15 @@ export const I18nZh: I18n = {
         testError: "开始测试时出现错误",
         testSuccess: "测试成功！"
     },
+    pagination: {
+        entries: "Entries",
+        gotoPage: "Go to page",
+        gotoPagePrev: "Go to previous page",
+        gotoPageNext: "Go to next page",
+        pagination: "Pagination",
+        showCount: "Show count",
+        total: "Total",
+    },
     passwordPolicy: {
         passwordPolicy: "密码要求",
         lengthMin: "最小长度",

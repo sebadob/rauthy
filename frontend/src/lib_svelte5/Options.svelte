@@ -40,9 +40,7 @@
 
     $inspect(options).with(() => {
         if (options.length > 0 && typeof options[0] !== typeof value) {
-            console.warn("type of 'options' does not match the one of 'value'");
-            console.log(options);
-            console.log(value);
+            console.warn("type of 'options' does not match the one of 'value'", options, value);
         }
     });
 

@@ -26,6 +26,7 @@ export let I18nAdminEn: I18nAdmin = {
         from: "From",
         loading: "Loading",
         note: "Note",
+        noEntries: "No Entries",
         reset: "Reset",
         search: "Search",
         searchOptions: "Search Options",
@@ -150,6 +151,11 @@ export let I18nAdminEn: I18nAdmin = {
         sessions: "Sessions",
         users: "Users",
     },
+    options: {
+        expires: "Expires",
+        lastSeen: "Last Seen",
+        state: "State",
+    },
     passwordPolicy: {
         configDesc: "Policy for new passwords.",
         resetSet0: "The value 0 deactivates the requirement.",
@@ -205,6 +211,9 @@ export let I18nAdminEn: I18nAdmin = {
         orderBy: "Order by ...",
         orderChangeToAsc: "Change sort to ascending",
         orderChangeToDesc: "Change sort to descending",
+    },
+    sessions: {
+        invalidateAll: "Invalidate All Sessions",
     },
     tabs: {
         config: "Config",

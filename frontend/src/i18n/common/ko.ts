@@ -186,6 +186,15 @@ export const I18nKo: I18n = {
         testError: "테스트 시작 중에 오류가 발생했습니다.",
         testSuccess: "테스트 성공"
     },
+    pagination: {
+        entries: "Entries",
+        gotoPage: "Go to page",
+        gotoPagePrev: "Go to previous page",
+        gotoPageNext: "Go to next page",
+        pagination: "Pagination",
+        showCount: "Show count",
+        total: "Total",
+    },
     passwordPolicy: {
         passwordPolicy: "비밀번호 정책",
         lengthMin: "최소 자수",
