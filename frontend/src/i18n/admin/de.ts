@@ -157,6 +157,11 @@ export let I18nAdminDe: I18nAdmin = {
         sessions: "Sessions",
         users: "Benutzer",
     },
+    options: {
+        expires: "Erlischt",
+        lastSeen: "Zuletzt Gesehen",
+        state: "Status",
+    },
     passwordPolicy: {
         configDesc: "Regeln für neue Passwörter.",
         resetSet0: "Der Wert 0 deaktiviert die Bedingung.",
@@ -209,6 +214,9 @@ export let I18nAdminDe: I18nAdmin = {
                 Passkey werden jedoch nicht mehr in der Lage sein, sich einzuloggen.`,
             linkedUsers: "Verbundene Nutzer",
         },
+    },
+    sessions: {
+        invalidateAll: "Alle Sessions Invalidieren",
     },
     search: {
         orderBy: "Sortieren nach ...",

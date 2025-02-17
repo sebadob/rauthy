@@ -11,7 +11,7 @@
         items = $bindable(),
         itemsPaginated = $bindable(),
         page = $bindable(1),
-        pageSize = $bindable(options[0]),
+        pageSize = $bindable(options[2]),
         compact = false,
     }: {
         items: any[];

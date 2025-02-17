@@ -1,5 +1,5 @@
 <script>
-    import Sessions from "../../../components/admin/sessions/Sessions.svelte";
+    import Sessions from "$lib5/admin/sessions/Sessions.svelte";
 </script>
 
 <Sessions/>
