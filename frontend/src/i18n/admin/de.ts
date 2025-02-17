@@ -21,11 +21,13 @@ export let I18nAdminDe: I18nAdmin = {
         back: "Zurück",
         copiedToClip: "Wert wurde in die Zwischenablage kopiert",
         details: "Details",
+        edit: "Bearbeiten",
         enabled: "Aktiviert",
         filter: "Filter",
         from: "Von",
         loading: "Lade",
         name: "Name",
+        nameExistsAlready: "Name existiert bereits",
         note: "Notiz",
         noEntries: "Keine Einträge",
         reset: "Zurücksetzen",
@@ -218,6 +220,8 @@ export let I18nAdminDe: I18nAdmin = {
     },
     scopes: {
         defaultNoMod: "Dies ist ein Default OIDC Scope. Diese sind unveränderbar.",
+        delete1: "Are you sure, you want to delete this scope?",
+        deleteDefault: "OIDC default scopes cannot be deleted",
         mapping1: "Benutzer Attribute können auf eigene Scopes gemapped werden.",
         mapping2: `Jedes existierende Attribut hat einen eigenständigen Wert pro User. Diese Attribute können
             auf einen Scope gemapped werden und werden in diesem Fall im Access bzw. ID Token enthalten sein.`,
