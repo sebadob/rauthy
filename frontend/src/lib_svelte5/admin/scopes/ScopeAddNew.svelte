@@ -9,8 +9,10 @@
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
 
     let {
+        scopes,
         onSave,
     }: {
+        scopes: ScopeResponse[],
         onSave: (id: string) => void,
     } = $props();
 
@@ -29,6 +31,10 @@
     });
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
+        if (scopes.find(s => s.name === name)) {
+            err = ta.common.nameExistsAlready;
+            return;
+        }
         err = '';
 
         let payload: ScopeRequest = {

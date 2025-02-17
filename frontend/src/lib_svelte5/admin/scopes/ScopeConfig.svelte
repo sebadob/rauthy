@@ -1,7 +1,6 @@
 <script lang="ts">
     import {isDefaultScope} from "$utils/helpers.ts";
     import Button from "$lib5/button/Button.svelte";
-    import ItemTiles from "$lib/itemTiles/ItemTiles.svelte";
     import Input from "$lib5/form/Input.svelte";
     import type {UserAttrConfigValueResponse} from "$api/types/user_attrs.ts";
     import type {ScopeRequest, ScopeResponse} from "$api/types/scopes.ts";
@@ -11,14 +10,18 @@
     import {fetchPut} from "$api/fetch.ts";
     import Form from "$lib5/form/Form.svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
+    import type {SelectItem} from "$lib5/select_list/props.ts";
+    import SelectList from "$lib5/select_list/SelectList.svelte";
 
     let {
         attrs,
         scope,
+        scopes,
         onSave,
     }: {
         attrs: UserAttrConfigValueResponse[],
         scope: ScopeResponse,
+        scopes: ScopeResponse[],
         onSave: () => void,
     } = $props();
 
@@ -28,9 +31,10 @@
     let err = $state('');
     let success = $state(false);
     let isDefault = $derived(isDefaultScope(scope.name));
-    let allAttrs: string[] = $state([]);
 
     let name = $state(scope.name);
+    let itemsAccess: undefined | SelectItem[] = $state();
+    let itemsId: undefined | SelectItem[] = $state();
 
     $effect(() => {
         if (scope.id) {
@@ -39,22 +43,53 @@
     });
 
     $effect(() => {
-        if (attrs) {
-            allAttrs = attrs.map(a => a.name);
+        if (isDefaultScope(scope.name)) {
+            itemsAccess = undefined;
+            itemsId = undefined;
+        } else {
+            itemsAccess = attrs
+                .map(a => {
+                    let i: SelectItem = {
+                        name: a.name,
+                        selected: scope.attr_include_access?.includes(a.name) || false,
+                    };
+                    return i;
+                })
+                .toSorted((a, b) => a.name.localeCompare(b.name));
+            itemsId = attrs
+                .map(a => {
+                    let i: SelectItem = {
+                        name: a.name,
+                        selected: scope.attr_include_id?.includes(a.name) || false,
+                    };
+                    return i;
+                })
+                .toSorted((a, b) => a.name.localeCompare(b.name));
         }
     });
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         err = '';
 
+        if (isDefaultScope(name) || scopes.find(s => s.name === name)) {
+            err = ta.common.nameExistsAlready;
+            return;
+        }
+
         let payload: ScopeRequest = {
             scope: name,
         }
-        if (scope.attr_include_access && scope.attr_include_access.length > 0) {
-            payload.attr_include_access = scope.attr_include_access;
+        if (itemsAccess) {
+            let filtered = itemsAccess.filter(i => i.selected).map(i => i.name);
+            if (filtered.length > 0) {
+                payload.attr_include_access = filtered;
+            }
         }
-        if (scope.attr_include_id && scope.attr_include_id.length > 0) {
-            payload.attr_include_id = scope.attr_include_id;
+        if (itemsId) {
+            let filtered = itemsId.filter(i => i.selected).map(i => i.name);
+            if (filtered.length > 0) {
+                payload.attr_include_id = filtered;
+            }
         }
 
         let res = await fetchPut(form.action, payload);
@@ -90,29 +125,17 @@
         <p>{ta.scopes.mapping1}</p>
         <p>{ta.scopes.mapping2}</p>
 
-        <!-- TODO Access Mappings -->
-        <div>
-            <div class="label">
+        {#if itemsAccess}
+            <SelectList bind:items={itemsAccess}>
                 Access Token Mappings
-            </div>
-            <ItemTiles
-                    options={allAttrs}
-                    bind:items={scope.attr_include_access}
-                    searchThreshold={4}
-            />
-        </div>
+            </SelectList>
+        {/if}
 
-        <!-- TODO ID Mappings -->
-        <div>
-            <div class="label">
-                ID Token Mappings
-            </div>
-            <ItemTiles
-                    options={allAttrs}
-                    bind:items={scope.attr_include_id}
-                    searchThreshold={4}
-            />
-        </div>
+        {#if itemsId}
+            <SelectList bind:items={itemsId}>
+                Id Token Mappings
+            </SelectList>
+        {/if}
     {/if}
 
     {#if !isDefault}

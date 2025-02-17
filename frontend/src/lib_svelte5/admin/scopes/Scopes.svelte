@@ -97,7 +97,7 @@
         thresholdNavSub={700}
 >
     <ButtonAddModal level={scopes.length === 0 ? 1 : 2} bind:closeModal alignRight>
-        <ScopeAddNew onSave={onAddNew}/>
+        <ScopeAddNew onSave={onAddNew} {scopes}/>
     </ButtonAddModal>
     <OrderSearchBar
             {searchOptions}
@@ -132,7 +132,7 @@
 
     <div id="scopes">
         {#if scope}
-            <ScopeDetails {attrs} {scope} {onSave}/>
+            <ScopeDetails {attrs} {scope} {scopes} {onSave}/>
         {/if}
     </div>
 </ContentAdmin>
