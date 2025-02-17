@@ -1,4 +1,4 @@
-import type {Language} from "$api/response/common/language.ts";
+import type {Language} from "./language";
 
 export type UserAccountTypeResponse =
     'new'

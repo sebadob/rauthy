@@ -24,10 +24,13 @@ export interface I18nAdmin {
         back: string,
         copiedToClip: string,
         details: string,
+        edit: string,
         enabled: string,
         filter: string,
         from: string,
         loading: string,
+        name: string,
+        nameExistsAlready: string,
         note: string,
         noEntries: string,
         reset: string,
@@ -180,6 +183,14 @@ export interface I18nAdmin {
             linkedUsers: string,
         }
     }
+    scopes: {
+        defaultNoMod: string,
+        delete1: string,
+        deleteDefault: string,
+        mapping1: string,
+        mapping2: string,
+        name: string,
+    },
     search: {
         orderBy: string,
         orderChangeToAsc: string,

@@ -164,7 +164,7 @@ pub async fn post_users(
     path = "/users/attr",
     tag = "users",
     responses(
-        (status = 200, description = "Ok", body = [UserAttrConfigResponse]),
+        (status = 200, description = "Ok", body = UserAttrConfigResponse),
         (status = 403, description = "Forbidden"),
     ),
 )]

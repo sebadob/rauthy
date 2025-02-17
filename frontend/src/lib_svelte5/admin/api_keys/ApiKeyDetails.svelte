@@ -22,12 +22,19 @@
         ta.tabs.delete,
     ];
     let selected = $state(tabs[0]);
+    let focusFirst: undefined | (() => void) = $state();
+
+    $effect(() => {
+        if (key.name) {
+            focusFirst?.();
+        }
+    });
 
 </script>
 
 <div>
     <div class="flex">
-        <Tabs {tabs} bind:selected/>
+        <Tabs {tabs} bind:selected bind:focusFirst/>
     </div>
 
     {#if selected === ta.tabs.config}
