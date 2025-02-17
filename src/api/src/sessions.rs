@@ -147,3 +147,36 @@ pub async fn delete_sessions_for_user(
 
     Ok(HttpResponse::Ok().finish())
 }
+
+/// Delete a single session by ID
+///
+///**Important:** Since JWT Tokens are stateless, it cannot invalidate already existing tokens.
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    delete,
+    path = "/sessions/id/{session_id}",
+    tag = "sessions",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+    ),
+)]
+#[delete("/sessions/id/{session_id}")]
+pub async fn delete_session_by_id(
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
+
+    let sid = path.into_inner();
+    let session = Session::find(sid).await?;
+    if let Some(uid) = &session.user_id {
+        RefreshToken::invalidate_for_user(uid).await?;
+    }
+    session.delete().await?;
+
+    Ok(HttpResponse::Ok().finish())
+}

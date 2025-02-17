@@ -481,6 +481,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(generic::post_password_hash_times)
                             .service(sessions::get_sessions)
                             .service(sessions::delete_sessions)
+                            .service(sessions::delete_session_by_id)
                             .service(sessions::delete_sessions_for_user)
                             .service(users::get_user_password_reset)
                             .service(users::put_user_password_reset)
