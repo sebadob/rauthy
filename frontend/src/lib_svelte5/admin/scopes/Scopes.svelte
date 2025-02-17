@@ -11,7 +11,7 @@
     import NavSub from "$lib5/nav/NavSub.svelte";
     import {useParam} from "$state/param.svelte.ts";
     import ScopeDetails from "$lib5/admin/scopes/ScopeDetails.svelte";
-    import ScopeAddNew from "../../../components/admin/scopes/ScopeAddNew.svelte";
+    import ScopeAddNew from "./ScopeAddNew.svelte";
 
     let ta = useI18nAdmin();
 

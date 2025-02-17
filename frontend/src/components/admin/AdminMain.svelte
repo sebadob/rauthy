@@ -7,7 +7,7 @@
     import ContentWrapper from "./ContentWrapper.svelte";
     import Roles from "./roles/Roles.svelte";
     import Groups from "./groups/Groups.svelte";
-    import Scopes from "./scopes/Scopes.svelte";
+    import Scopes from "$lib5/admin/scopes/Scopes.svelte";
     import Clients from "./clients/Clients.svelte";
     import Sessions from "$lib5/admin/sessions/Sessions.svelte";
     import Attr from "./userAttr/Attr.svelte";
