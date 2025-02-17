@@ -12,6 +12,7 @@
     import {useParam} from "$state/param.svelte.ts";
     import ScopeDetails from "$lib5/admin/scopes/ScopeDetails.svelte";
     import ScopeAddNew from "./ScopeAddNew.svelte";
+    import {isDefaultScope} from "$utils/helpers.ts";
 
     let ta = useI18nAdmin();
 
@@ -112,6 +113,11 @@
         {#each scopesFiltered as scope (scope.id)}
             <NavButtonTile onclick={() => sid.set(scope.id)} selected={sid.get() === scope.id}>
                 {scope.name}
+                {#if isDefaultScope(scope.name)}
+                    <span class="default">
+                        <i>default</i>
+                    </span>
+                {/if}
             </NavButtonTile>
         {/each}
     {/snippet}
@@ -132,4 +138,8 @@
 </ContentAdmin>
 
 <style>
+    .default {
+        font-size: .8rem;
+        color: hsla(var(--text) / .5);
+    }
 </style>
