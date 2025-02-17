@@ -25,6 +25,7 @@ export let I18nAdminDe: I18nAdmin = {
         filter: "Filter",
         from: "Von",
         loading: "Lade",
+        name: "Name",
         note: "Notiz",
         noEntries: "Keine Einträge",
         reset: "Zurücksetzen",
@@ -214,6 +215,13 @@ export let I18nAdminDe: I18nAdmin = {
                 Passkey werden jedoch nicht mehr in der Lage sein, sich einzuloggen.`,
             linkedUsers: "Verbundene Nutzer",
         },
+    },
+    scopes: {
+        defaultNoMod: "Dies ist ein Default OIDC Scope. Diese sind unveränderbar.",
+        mapping1: "Benutzer Attribute können auf eigene Scopes gemapped werden.",
+        mapping2: `Jedes existierende Attribut hat einen eigenständigen Wert pro User. Diese Attribute können
+            auf einen Scope gemapped werden und werden in diesem Fall im Access bzw. ID Token enthalten sein.`,
+        name: "Scope Name",
     },
     sessions: {
         invalidateAll: "Alle Sessions Invalidieren",

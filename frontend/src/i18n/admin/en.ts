@@ -25,6 +25,7 @@ export let I18nAdminEn: I18nAdmin = {
         filter: "Filter",
         from: "From",
         loading: "Loading",
+        name: "Name",
         note: "Note",
         noEntries: "No Entries",
         reset: "Reset",
@@ -206,6 +207,13 @@ export let I18nAdminEn: I18nAdmin = {
                 will not be able to log in anymore.`,
             linkedUsers: "Linked Users",
         },
+    },
+    scopes: {
+        defaultNoMod: "This is a default OIDC Scope. These are immutable.",
+        mapping1: "You can map custom scopes to attributes.",
+        mapping2: `All additional attributes, that were configured, can have a custom value for each user.
+            When they are mapped to a scope, they can be included in the Access and / or ID Tokens.`,
+        name: "Scope Name",
     },
     search: {
         orderBy: "Order by ...",

@@ -28,6 +28,7 @@ export interface I18nAdmin {
         filter: string,
         from: string,
         loading: string,
+        name: string,
         note: string,
         noEntries: string,
         reset: string,
@@ -180,6 +181,12 @@ export interface I18nAdmin {
             linkedUsers: string,
         }
     }
+    scopes: {
+        defaultNoMod: string,
+        mapping1: string,
+        mapping2: string,
+        name: string,
+    },
     search: {
         orderBy: string,
         orderChangeToAsc: string,
