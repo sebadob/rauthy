@@ -14,7 +14,7 @@
     import Config from "./config/Config.svelte";
     import Documentation from "./documentation/Documentation.svelte";
     import Users from "../../components/admin/users/Users.svelte";
-    import Scopes from "../../components/admin/scopes/Scopes.svelte";
+    import Scopes from "./scopes/Scopes.svelte";
     import ApiKeys from "./api_keys/ApiKeys.svelte";
     import Roles from "../../components/admin/roles/Roles.svelte";
     import Attr from "../../components/admin/userAttr/Attr.svelte";

@@ -1,5 +1,5 @@
 <script>
-    import Scopes from "../../../components/admin/scopes/Scopes.svelte";
+    import Scopes from "$lib5/admin/scopes/Scopes.svelte";
 </script>
 
 <Scopes/>
