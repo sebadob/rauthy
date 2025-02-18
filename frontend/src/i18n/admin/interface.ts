@@ -18,6 +18,11 @@ export interface I18nAdmin {
         keyName: string,
         limitedValidity: string,
     },
+    attrs: {
+        delete1: string,
+        desc: string,
+        name: string,
+    },
     common: {
         account: string,
         addNew: string,

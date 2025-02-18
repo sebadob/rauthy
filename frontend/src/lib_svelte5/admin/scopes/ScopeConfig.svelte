@@ -12,6 +12,7 @@
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import type {SelectItem} from "$lib5/select_list/props.ts";
     import SelectList from "$lib5/select_list/SelectList.svelte";
+    import {PATTERN_GROUP} from "$utils/patterns.ts";
 
     let {
         attrs,
@@ -117,6 +118,8 @@
             placeholder={ta.scopes.name}
             disabled={isDefault}
             width="14.5rem"
+            required
+            pattern={PATTERN_GROUP}
     />
 
     {#if isDefault}

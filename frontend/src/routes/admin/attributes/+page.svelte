@@ -1,5 +1,5 @@
 <script>
-    import Attr from "../../../components/admin/userAttr/Attr.svelte";
+    import Attributes from "$lib5/admin/attrs/Attributes.svelte";
 </script>
 
-<Attr/>
+<Attributes/>
