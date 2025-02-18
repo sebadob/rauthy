@@ -1,1 +1,0 @@
-const n=r=>{let o="";const e=r||8;for(let a=0;a<e;a+=1){let t=60;for(;t>57&&t<65||t>90&&t<97;)t=Math.floor(Math.random()*74)+48;o=o.concat(String.fromCharCode(t))}return o},s=async r=>await new Promise(o=>setTimeout(o,r));export{n as g,s};
