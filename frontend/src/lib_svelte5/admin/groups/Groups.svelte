@@ -10,6 +10,7 @@
     import {useParam} from "$state/param.svelte.ts";
     import type {GroupResponse} from "$api/types/groups.ts";
     import GroupAddNew from "$lib5/admin/groups/GroupAddNew.svelte";
+    import GroupDetails from "$lib5/admin/groups/GroupDetails.svelte";
 
     let ta = useI18nAdmin();
 
@@ -112,8 +113,7 @@
 
     <div id="groups">
         {#if group}
-            TODO
-            <!--            <ScopeDetails {attrs} {scope} {scopes} {onSave}/>-->
+            <GroupDetails {group} {groups} {onSave}/>
         {/if}
     </div>
 </ContentAdmin>
