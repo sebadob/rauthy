@@ -134,6 +134,10 @@ export let I18nAdminDe: I18nAdmin = {
         eventLevel: "Event Level",
         eventType: "Event Typ",
     },
+    groups: {
+        delete1: "TODO DELETE",
+        name: "Group Name",
+    },
     jwks: {
         alg: "Algorithmus",
         p1: "Dies sind die Json Web Keys (JWKs) die für das Signieren der Tokens genutzt werden.",

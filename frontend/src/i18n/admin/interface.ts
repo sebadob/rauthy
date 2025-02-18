@@ -106,6 +106,10 @@ export interface I18nAdmin {
         eventLevel: string,
         eventType: string,
     },
+    groups: {
+        delete1: string,
+        name: string,
+    },
     jwks: {
         alg: string,
         p1: string,

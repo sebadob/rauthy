@@ -8,42 +8,23 @@
     import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
     import {fetchGet} from "$api/fetch.ts";
     import {useParam} from "$state/param.svelte.ts";
-    import type {Group} from "$api/types/groups.ts";
+    import type {GroupResponse} from "$api/types/groups.ts";
+    import GroupAddNew from "$lib5/admin/groups/GroupAddNew.svelte";
 
     let ta = useI18nAdmin();
 
     let closeModal: undefined | (() => void) = $state();
 
     let err = $state('');
-    let groups: Group[] = $state([]);
-    let groupsFiltered: Group[] = $state([]);
-    let group: undefined | Group = $state();
+    let groups: GroupResponse[] = $state([]);
+    let groupsFiltered: GroupResponse[] = $state([]);
+    let group: undefined | GroupResponse = $state();
     let gid = useParam('gid');
 
     const searchOptions = [ta.common.name, 'ID'];
     let searchOption = $state(searchOptions[0]);
     let searchValue = $state('');
     const orderOptions = [ta.common.name, 'ID'];
-    // let searchOptions = [
-    //     {
-    //         label: 'Name',
-    //         callback: (item, search) => item.name.toLowerCase().includes(search.toLowerCase()),
-    //     },
-    //     {
-    //         label: 'ID',
-    //         callback: (item, search) => item.id.toLowerCase().includes(search.toLowerCase()),
-    //     },
-    // ];
-    // let orderOptions = [
-    //     {
-    //         label: 'Name',
-    //         callback: (a, b) => a.name.localeCompare(b.name),
-    //     },
-    //     {
-    //         label: 'ID',
-    //         callback: (a, b) => a.id.localeCompare(b.id),
-    //     },
-    // ];
 
     onMount(() => {
         fetchGroups();
@@ -65,7 +46,7 @@
     });
 
     async function fetchGroups() {
-        let res = await fetchGet<Group[]>('/auth/v1/groups');
+        let res = await fetchGet<GroupResponse[]>('/auth/v1/groups');
         if (res.body) {
             groups = res.body;
         } else {
@@ -101,8 +82,7 @@
         thresholdNavSub={700}
 >
     <ButtonAddModal level={groups.length === 0 ? 1 : 2} bind:closeModal alignRight>
-        TODO
-        <!--        <ScopeAddNew onSave={onAddNew} {scopes}/>-->
+        <GroupAddNew onSave={onAddNew} {groups}/>
     </ButtonAddModal>
     <OrderSearchBar
             {searchOptions}

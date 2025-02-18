@@ -127,6 +127,10 @@ export let I18nAdminEn: I18nAdmin = {
         eventLevel: "Event Level",
         eventType: "Event Type",
     },
+    groups: {
+        delete1: "TODO DELETE",
+        name: "Group Name",
+    },
     jwks: {
         alg: "Algorithm",
         p1: "These are the Json Web Keys (JWKs) used for token singing.",
