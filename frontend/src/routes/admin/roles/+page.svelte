@@ -1,5 +1,5 @@
 <script>
-    import Roles from "../../../components/admin/roles/Roles.svelte";
+    import Roles from "$lib5/admin/roles/Roles.svelte";
 </script>
 
 <Roles/>

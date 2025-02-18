@@ -7,15 +7,15 @@
     import {fetchPut} from "$api/fetch.ts";
     import Form from "$lib5/form/Form.svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
-    import type {GroupResponse, GroupRequest} from "$api/types/groups.ts";
+    import type {RoleRequest, RoleResponse} from "$api/types/roles.ts";
 
     let {
-        group,
-        groups,
+        role,
+        roles,
         onSave,
     }: {
-        group: GroupResponse,
-        groups: GroupResponse[],
+        role: RoleResponse,
+        roles: RoleResponse[],
         onSave: () => void,
     } = $props();
 
@@ -24,24 +24,26 @@
 
     let err = $state('');
     let success = $state(false);
-    let name = $state(group.name);
+    let isRauthyAdmin = $derived(role.name === 'rauthy_admin');
+
+    let name = $state(role.name);
 
     $effect(() => {
-        if (group.id) {
-            name = group.name;
+        if (role.id) {
+            name = role.name;
         }
     });
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         err = '';
 
-        if (groups.find(g => g.name === name)) {
+        if (roles.find(r => r.name === name)) {
             err = ta.common.nameExistsAlready;
             return;
         }
 
-        let payload: GroupRequest = {
-            group: name,
+        let payload: RoleRequest = {
+            role: name,
         }
 
         let res = await fetchPut(form.action, payload);
@@ -57,28 +59,33 @@
     }
 </script>
 
-<Form action={`/auth/v1/groups/${group.id}`} {onSubmit}>
+<Form action={`/auth/v1/roles/${role.id}`} {onSubmit}>
     <LabeledValue label="ID" mono>
-        {group.id}
+        {role.id}
     </LabeledValue>
 
     <Input
             bind:value={name}
             autocomplete="off"
-            label={ta.groups.name}
-            placeholder={ta.groups.name}
+            label={ta.scopes.name}
+            placeholder={ta.scopes.name}
+            disabled={isRauthyAdmin}
             width="14.5rem"
     />
 
-    <div class="flex gap-05">
-        <Button type="submit">
-            {t.common.save}
-        </Button>
+    {#if isRauthyAdmin}
+        <p>{@html ta.roles.adminNoMod}</p>
+    {:else}
+        <div class="flex gap-05">
+            <Button type="submit">
+                {t.common.save}
+            </Button>
 
-        {#if success}
-            <IconCheck/>
-        {/if}
-    </div>
+            {#if success}
+                <IconCheck/>
+            {/if}
+        </div>
+    {/if}
 
     {#if err}
         <div class="err">

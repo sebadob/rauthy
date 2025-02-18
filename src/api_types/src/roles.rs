@@ -4,7 +4,7 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 #[derive(Serialize, Deserialize, Validate, ToSchema)]
-pub struct NewRoleRequest {
+pub struct RoleRequest {
     /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
     #[validate(regex(path = "*RE_GROUPS", code = "^[a-z0-9-_/,:*]{2,64}$"))]
     pub role: String,

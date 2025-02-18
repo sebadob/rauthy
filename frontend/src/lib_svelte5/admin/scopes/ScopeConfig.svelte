@@ -97,9 +97,9 @@
             err = res.error.message;
         } else {
             success = true;
+            onSave();
             setTimeout(() => {
                 success = false;
-                onSave();
             }, 2000);
         }
     }
@@ -139,13 +139,15 @@
     {/if}
 
     {#if !isDefault}
-        <Button type="submit">
-            {t.common.save}
-        </Button>
+        <div class="flex gap-05">
+            <Button type="submit">
+                {t.common.save}
+            </Button>
 
-        {#if success}
-            <IconCheck/>
-        {/if}
+            {#if success}
+                <IconCheck/>
+            {/if}
+        </div>
 
         {#if err}
             <div class="err">

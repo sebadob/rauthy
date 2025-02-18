@@ -222,6 +222,11 @@ export let I18nAdminDe: I18nAdmin = {
             linkedUsers: "Verbundene Nutzer",
         },
     },
+    roles: {
+        adminNoMod: "Die <code>rauthy_admin</code> kann nicht verändert werden.",
+        delete1: "Soll diese Rolle wirklich gelöscht werden?",
+        name: "Rollenname",
+    },
     scopes: {
         defaultNoMod: "Dies ist ein Default OIDC Scope. Diese sind unveränderbar.",
         delete1: "Soll dieser Scope wirklich gelöscht werden?",
