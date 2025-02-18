@@ -136,7 +136,7 @@ export let I18nAdminDe: I18nAdmin = {
     },
     groups: {
         delete1: "Soll diese Gruppe wirklich gelöscht werden?",
-        name: "Group Name",
+        name: "Gruppenname",
     },
     jwks: {
         alg: "Algorithmus",
