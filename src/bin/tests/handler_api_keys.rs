@@ -2,7 +2,7 @@ use crate::common::{get_auth_headers, get_backend_url};
 use chrono::Utc;
 use pretty_assertions::assert_eq;
 use rauthy_api_types::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyRequest};
-use rauthy_api_types::groups::NewGroupRequest;
+use rauthy_api_types::groups::GroupRequest;
 use rauthy_models::entity::groups::Group;
 use reqwest::header::AUTHORIZATION;
 use reqwest::StatusCode;
@@ -63,7 +63,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
     assert!(!body.is_empty());
 
     // we should NOT be able to create a new group
-    let new_group = NewGroupRequest {
+    let new_group = GroupRequest {
         group: "api_key_test_group".to_string(),
     };
     let res = client

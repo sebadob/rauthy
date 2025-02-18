@@ -3,6 +3,7 @@
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
     import Tabs from "$lib5/tabs/Tabs.svelte";
     import type {GroupResponse} from "$api/types/groups.ts";
+    import GroupConfig from "$lib5/admin/groups/GroupConfig.svelte";
 
     let {
         group,
@@ -40,8 +41,7 @@
 </div>
 
 {#if selected === ta.nav.config}
-    TODO
-    <!--    <ScopeConfig {attrs} {scope} {scopes} {onSave}/>-->
+    <GroupConfig {group} {groups} {onSave}/>
 {:else if selected === t.common.delete}
     TODO
     <!--    <ScopeDelete {scope} {onSave}/>-->

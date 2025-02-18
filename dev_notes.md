@@ -26,6 +26,8 @@
 - `t.pagination.*`
 - `t.register.alreadyRegistered`
 
+### Changelog TODO
+
 ## Stage 1 - essentials
 
 [x] finished

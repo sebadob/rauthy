@@ -1,4 +1,4 @@
-export interface NewGroupRequest {
+export interface GroupRequest {
     /// Validation: PATTERN_GROUP
     group: string,
 }

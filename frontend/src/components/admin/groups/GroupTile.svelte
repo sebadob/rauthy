@@ -3,7 +3,7 @@
     import Tooltip from "$lib/Tooltip.svelte";
     import TabBar from "$lib/TabBar.svelte";
     import {slide} from 'svelte/transition';
-    import GroupConfig from "./GroupConfig.svelte";
+    import GroupConfig from "$lib5/admin/groups/GroupConfig.svelte";
     import GroupDelete from "./GroupDelete.svelte";
 
     let {group = $bindable({}), onSave = $bindable()} = $props();

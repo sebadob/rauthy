@@ -1,7 +1,7 @@
 use crate::database::{Cache, DB};
 use crate::entity::users::User;
 use hiqlite::{params, Param, Params};
-use rauthy_api_types::groups::NewGroupRequest;
+use rauthy_api_types::groups::GroupRequest;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_GROUPS};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::new_store_id;
@@ -19,7 +19,7 @@ pub struct Group {
 // CRUD
 impl Group {
     // Inserts a new group into the database
-    pub async fn create(group_req: NewGroupRequest) -> Result<Self, ErrorResponse> {
+    pub async fn create(group_req: GroupRequest) -> Result<Self, ErrorResponse> {
         let mut groups = Group::find_all().await?;
         for g in &groups {
             if g.name == group_req.group {

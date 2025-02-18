@@ -6,7 +6,7 @@
     import {fetchPost} from "$api/fetch.ts";
     import {useI18n} from "$state/i18n.svelte.ts";
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
-    import type {GroupResponse, NewGroupRequest} from "$api/types/groups.ts";
+    import type {GroupResponse, GroupRequest} from "$api/types/groups.ts";
 
     let {
         groups,
@@ -37,7 +37,7 @@
         }
         err = '';
 
-        let payload: NewGroupRequest = {
+        let payload: GroupRequest = {
             group: name,
         };
         let res = await fetchPost<GroupResponse>(form.action, payload);

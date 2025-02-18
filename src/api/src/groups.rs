@@ -1,7 +1,7 @@
 use crate::ReqPrincipal;
 use actix_web::web::Json;
 use actix_web::{delete, get, post, put, web, HttpResponse};
-use rauthy_api_types::groups::NewGroupRequest;
+use rauthy_api_types::groups::GroupRequest;
 use rauthy_error::ErrorResponse;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::groups::Group;
@@ -38,7 +38,7 @@ pub async fn get_groups(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRe
     post,
     path = "/groups",
     tag = "groups",
-    request_body = NewGroupRequest,
+    request_body = GroupRequest,
     responses(
         (status = 200, description = "Ok", body = Group),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
@@ -47,7 +47,7 @@ pub async fn get_groups(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRe
 )]
 #[post("/groups")]
 pub async fn post_group(
-    Json(payload): Json<NewGroupRequest>,
+    Json(payload): Json<GroupRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Create)?;
@@ -66,7 +66,7 @@ pub async fn post_group(
     put,
     path = "/groups/{id}",
     tag = "groups",
-    request_body = NewGroupRequest,
+    request_body = GroupRequest,
     responses(
         (status = 200, description = "Ok", body = Group),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
@@ -76,7 +76,7 @@ pub async fn post_group(
 #[put("/groups/{id}")]
 pub async fn put_group(
     id: web::Path<String>,
-    Json(payload): Json<NewGroupRequest>,
+    Json(payload): Json<GroupRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Update)?;
