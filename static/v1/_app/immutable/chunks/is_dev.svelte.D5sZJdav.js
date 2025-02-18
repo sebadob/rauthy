@@ -1,1 +1,0 @@
-import{u as s,v as e,w as o}from"./index-client.ChFmlJin.js";import{p as a}from"./proxy.DVTQVrWW.js";const u="false";let t=o(u==="true");function f(){return{get(){return s(t)},set(r){e(t,a(r))}}}export{f as u};

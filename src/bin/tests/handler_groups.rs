@@ -1,6 +1,6 @@
 use crate::common::{get_auth_headers, get_backend_url};
 use pretty_assertions::assert_eq;
-use rauthy_api_types::groups::NewGroupRequest;
+use rauthy_api_types::groups::GroupRequest;
 use rauthy_models::entity::groups::Group;
 use std::error::Error;
 
@@ -22,7 +22,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
     assert_eq!(groups.len(), 3);
 
     // add a group
-    let new_group = NewGroupRequest {
+    let new_group = GroupRequest {
         group: "group123".to_string(),
     };
     let res = reqwest::Client::new()
@@ -36,7 +36,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
     assert_eq!(group.name, "group123");
 
     // modify the group
-    let upd_group = NewGroupRequest {
+    let upd_group = GroupRequest {
         group: "group456".to_string(),
     };
     let url_name = format!("{}/{}", url, group.id);

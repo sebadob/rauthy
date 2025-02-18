@@ -18,7 +18,7 @@
     import ApiKeys from "./api_keys/ApiKeys.svelte";
     import Roles from "../../components/admin/roles/Roles.svelte";
     import Attr from "../../components/admin/userAttr/Attr.svelte";
-    import Groups from "../../components/admin/groups/Groups.svelte";
+    import Groups from "./groups/Groups.svelte";
     import Clients from "../../components/admin/clients/Clients.svelte";
     import EventsArchive from "./events/EventsArchive.svelte";
     import Blacklist from "./blacklist/Blacklist.svelte";
