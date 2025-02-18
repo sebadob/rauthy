@@ -11,6 +11,7 @@ use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity;
+use rauthy_models::entity::user_attr::UserAttrConfigEntity;
 use rauthy_models::ListenScheme;
 use rauthy_service::token_set;
 use utoipa::openapi::{ExternalDocs, Server};
@@ -267,6 +268,7 @@ use utoipa::{openapi, OpenApi};
             ThemeCss,
             ThemeRequestResponse,
             TokenInfo,
+            UserAttrConfigEntity,
             UserAttrConfigResponse,
             UserAttrConfigValueResponse,
             UserAttrValueResponse,

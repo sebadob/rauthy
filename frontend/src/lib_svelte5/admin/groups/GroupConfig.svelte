@@ -8,6 +8,7 @@
     import Form from "$lib5/form/Form.svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import type {GroupResponse, GroupRequest} from "$api/types/groups.ts";
+    import {PATTERN_GROUP} from "$utils/patterns.ts";
 
     let {
         group,
@@ -35,7 +36,7 @@
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         err = '';
 
-        if (groups.find(g => g.name === name)) {
+        if (name !== group.name && groups.find(g => g.name === name)) {
             err = ta.common.nameExistsAlready;
             return;
         }
@@ -68,6 +69,8 @@
             label={ta.groups.name}
             placeholder={ta.groups.name}
             width="14.5rem"
+            required
+            pattern={PATTERN_GROUP}
     />
 
     <div class="flex gap-05">

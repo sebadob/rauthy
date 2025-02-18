@@ -8,6 +8,7 @@
     import Form from "$lib5/form/Form.svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import type {RoleRequest, RoleResponse} from "$api/types/roles.ts";
+    import {PATTERN_GROUP} from "$utils/patterns.ts";
 
     let {
         role,
@@ -37,7 +38,7 @@
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         err = '';
 
-        if (roles.find(r => r.name === name)) {
+        if (name !== role.name && roles.find(r => r.name === name)) {
             err = ta.common.nameExistsAlready;
             return;
         }
@@ -71,6 +72,8 @@
             placeholder={ta.scopes.name}
             disabled={isRauthyAdmin}
             width="14.5rem"
+            required
+            pattern={PATTERN_GROUP}
     />
 
     {#if isRauthyAdmin}

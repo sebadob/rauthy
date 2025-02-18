@@ -14,10 +14,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{FromRow, Row};
 use std::collections::HashSet;
+use utoipa::ToSchema;
 
 // Additional custom attributes for users. These can be set for every user and then mapped to a
 // scope, to include them in JWT tokens.
-#[derive(Clone, Debug, FromRow, Serialize, Deserialize)]
+#[derive(Clone, Debug, FromRow, Serialize, Deserialize, ToSchema)]
 pub struct UserAttrConfigEntity {
     pub name: String,
     pub desc: Option<String>,

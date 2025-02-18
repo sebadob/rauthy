@@ -186,7 +186,7 @@ pub async fn get_cust_attr(principal: ReqPrincipal) -> Result<HttpResponse, Erro
     tag = "users",
     request_body = UserAttrConfigRequest,
     responses(
-        (status = 200, description = "Ok"),
+        (status = 200, description = "Ok", body = UserAttrConfigEntity),
         (status = 403, description = "Forbidden"),
     ),
 )]

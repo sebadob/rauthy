@@ -15,6 +15,11 @@ export let I18nAdminDe: I18nAdmin = {
         keyName: "Key Name",
         limitedValidity: "Begrenzte Gültigkeit",
     },
+    attrs: {
+        delete1: "Soll dieses Attribut wirklich gelöscht werden?",
+        desc: "Beschreibung",
+        name: "Attribut Name",
+    },
     common: {
         account: "Account",
         addNew: "Neu Hinzufügen",

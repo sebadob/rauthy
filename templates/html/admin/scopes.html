@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="{{lang}}">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Rauthy</title>
+    <link rel="icon" href="../assets/favicon.svg"/>
+    <link rel="stylesheet" href="/auth/v1/theme/{{client_id}}"/>
+    <style>
+        :root {
+            --col-act1: {{ col_act1 }};
+            --col-act1a: {{ col_act1a }};
+            --col-act2: {{ col_act2 }};
+            --col-act2a: {{ col_act2a }};
+            --col-acnt: {{ col_acnt }};
+            --col-acnta: {{ col_acnta }};
+            --col-ok: {{ col_ok }};
+            --col-err: {{ col_err }};
+            --col-glow: {{ col_glow }};
+            --col-gmid: {{ col_gmid }};
+            --col-ghigh: {{ col_ghigh }};
+            --col-text: {{ col_text }};
+            --col-bg: {{ col_bg }};
+
+            --width-events: 12.5rem;
+            --width-events-collapsed: 2.5rem;
+            --width-events-wide: 30rem;
+        }
+    </style>
+    <meta http-equiv="content-security-policy" content="default-src 'none'; connect-src 'self'; img-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-5WDtDJ3w2Os47dGzCzB8N6Kjgz1NupPowrf84n619x8='; style-src 'self' 'unsafe-inline'">
+		<link href="../_app/immutable/assets/0.H1elnlHm.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/2.CnpEsUb8.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/Main.Dm-IaPgT.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/Button.D8d1DpHB.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/LangSelector.BXzK1hzt.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/Options.DhTNlbAJ.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/A.Dh1ywWRo.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/Event.jSO7nsEo.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/Tooltip.C_ZIhQMX.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/20.C9RJIU6E.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/OrderSearchBar.CA5kVv7H.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/ContentAdmin.BLfkWbjo.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/NavButtonTile.Cng_QrXH.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/ButtonAddModal.seo_jBEw.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/Modal.BtIM9gKT.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/NavSub.DoCLemSo.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/Input.CVii6IAo.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/LabeledValue.DgYB9jCX.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/InputCheckbox.zb6hqT3_.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/Tabs.CEW0mXQK.css" rel="stylesheet">
+		<link rel="modulepreload" href="../_app/immutable/entry/start.dHewxCFX.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/entry.Bl3R6UD9.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/index-client.CVQra9Cu.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/index.1drVna_C.js">
+		<link rel="modulepreload" href="../_app/immutable/entry/app.CiiC8J9G.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/preload-helper.CmsKOCeN.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/legacy-client.nffOF2oE.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/render.CkKFmY3E.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/svelte-head.Cv719s3a.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/template.4ZWi6dE6.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/disclose-version.BDr9Qe-U.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/if._4yhN2kP.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/proxy.Dc6q2r8X.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/this.7gdxe_X2.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/props.BVYR8gU-.js">
+		<link rel="modulepreload" href="../_app/immutable/nodes/0.6LGold8l.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/snippet.BBxd9sB6.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/language.svelte.BJN-o6ZV.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/i18n.svelte.DVZudxvm.js">
+		<link rel="modulepreload" href="../_app/immutable/nodes/2.DB1MAF-q.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/html.DBwFzVLh.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/window.jqEf7WoA.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/Main.Caps8oUu.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/Button.B6DffihK.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/class.BnbJV1WX.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/index.CkVfMYgG.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/LangSelector.Dpy0n1ms.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/helpers.B0e_YzoL.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/Options.CJvP4CKt.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/each.D7w_Y1pv.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/input.DW316tIw.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/i18n_admin.svelte.CtFnAESg.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/fetch.B_P4c8fm.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/index.D_qo29lI.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/dataFetching.DIr6exGg.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/legacy.Dmu0D13_.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/A.BxAeTR7E.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/IconStop.DlqoW6sr.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/session.svelte.DKWvbSSq.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/Event.DmLmgLUh.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/Tooltip.Q92keWA_.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/spring.BWr7gqAc.js">
+		<link rel="modulepreload" href="../_app/immutable/nodes/20.BNaAO5jT.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/OrderSearchBar.BAXBsyAw.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/IconBarsArrowUp.BOgTYmxC.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/ContentAdmin.p5jUo2m-.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/NavButtonTile.B87bIUim.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/ButtonAddModal.W1tXC5iJ.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/Modal.BoPoPiDZ.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/NavSub.BqNuX9Je.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/param.svelte.CY-AzddN.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/Input.kE1yFgI6.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/IconCheck.jhQYM7vu.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/Form.9PZRDz5w.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/pow.BTMhaSUh.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/form.DekAF1-C.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/LabeledValue.DfaotEKr.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/InputCheckbox.DJbEwO1k.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/patterns.DpOwmcHv.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/Tabs.BGGYqHwk.js"><!--[--><!--]--><title>Rauthy Admin</title>
+</head>
+<body>
+<div class="hidden" aria-hidden="true">
+    {%- for tpl in templates -%}
+    <template id="{{ tpl.id() }}">{{ tpl.inner()|safe }}</template>
+    {%- endfor %}
+</div>
+<div style="display: contents"><!--[--><!--[--><!----><noscript><h2>You need to enable JavaScript</h2></noscript> <!--[--><!--[--><!----><!--[!--><!--[!--><!--[!--><!--]--><!--]--><!--]--><!----><!--]--><!----><!--]--><!----><!--]--> <!--[!--><!--]--><!--]-->
+			
+			<script>
+				{
+					__sveltekit_1an4x04 = {
+						base: new URL("..", location).pathname.slice(0, -1),
+						assets: "/auth/v1"
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("../_app/immutable/entry/start.dHewxCFX.js"),
+						import("../_app/immutable/entry/app.CiiC8J9G.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 2, 20],
+							data: [null,null,null],
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
+</body>
+</html>
