@@ -187,6 +187,12 @@ export interface I18nAdmin {
             linkedUsers: string,
         }
     }
+    roles: {
+        // inserted as html
+        adminNoMod: string,
+        delete1: string,
+        name: string,
+    },
     scopes: {
         defaultNoMod: string,
         delete1: string,

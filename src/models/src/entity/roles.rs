@@ -1,7 +1,7 @@
 use crate::database::{Cache, DB};
 use crate::entity::users::User;
 use hiqlite::{params, Param, Params};
-use rauthy_api_types::roles::NewRoleRequest;
+use rauthy_api_types::roles::RoleRequest;
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_ROLES};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::new_store_id;
@@ -19,7 +19,7 @@ pub struct Role {
 // CRUD
 impl Role {
     // Inserts a new role into the database
-    pub async fn create(role_req: NewRoleRequest) -> Result<Self, ErrorResponse> {
+    pub async fn create(role_req: RoleRequest) -> Result<Self, ErrorResponse> {
         let mut roles = Role::find_all().await?;
         for s in &roles {
             if s.name == role_req.role {

@@ -1,6 +1,6 @@
 use crate::common::{get_auth_headers, get_backend_url};
 use pretty_assertions::assert_eq;
-use rauthy_api_types::roles::NewRoleRequest;
+use rauthy_api_types::roles::RoleRequest;
 use rauthy_models::entity::roles::Role;
 use std::error::Error;
 
@@ -22,7 +22,7 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
     assert_eq!(roles.len(), 3);
 
     // add a role
-    let new_role = NewRoleRequest {
+    let new_role = RoleRequest {
         role: "role123".to_string(),
     };
     let res = reqwest::Client::new()
@@ -36,7 +36,7 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
     assert_eq!(role.name, "role123");
 
     // modify the role
-    let upd_role = NewRoleRequest {
+    let upd_role = RoleRequest {
         role: "role456".to_string(),
     };
     let url_name = format!("{}/{}", url, role.id);

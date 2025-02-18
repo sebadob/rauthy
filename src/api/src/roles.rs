@@ -1,7 +1,7 @@
 use crate::ReqPrincipal;
 use actix_web::web::Json;
 use actix_web::{delete, get, post, put, web, HttpResponse};
-use rauthy_api_types::roles::NewRoleRequest;
+use rauthy_api_types::roles::RoleRequest;
 use rauthy_error::ErrorResponse;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::roles::Role;
@@ -38,7 +38,7 @@ pub async fn get_roles(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRes
     post,
     path = "/roles",
     tag = "roles",
-    request_body = NewRoleRequest,
+    request_body = RoleRequest,
     responses(
         (status = 200, description = "Ok", body = Role),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
@@ -47,7 +47,7 @@ pub async fn get_roles(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRes
 )]
 #[post("/roles")]
 pub async fn post_role(
-    Json(payload): Json<NewRoleRequest>,
+    Json(payload): Json<RoleRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Roles, AccessRights::Create)?;
@@ -66,7 +66,7 @@ pub async fn post_role(
     put,
     path = "/roles/{id}",
     tag = "roles",
-    request_body = NewRoleRequest,
+    request_body = RoleRequest,
     responses(
         (status = 200, description = "Ok", body = Role),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
@@ -76,7 +76,7 @@ pub async fn post_role(
 #[put("/roles/{id}")]
 pub async fn put_role(
     id: web::Path<String>,
-    Json(payload): Json<NewRoleRequest>,
+    Json(payload): Json<RoleRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Roles, AccessRights::Update)?;

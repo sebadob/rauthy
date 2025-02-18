@@ -212,7 +212,7 @@ use utoipa::{openapi, OpenApi};
             GroupRequest,
             NewUserRequest,
             NewUserRegistrationRequest,
-            NewRoleRequest,
+            RoleRequest,
             PaginationParams,
             PasswordHashTimesRequest,
             PasswordPolicyRequest,

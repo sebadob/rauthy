@@ -214,6 +214,11 @@ export let I18nAdminEn: I18nAdmin = {
             linkedUsers: "Linked Users",
         },
     },
+    roles: {
+        adminNoMod: "The <code>rauthy_admin</code> is immutable.",
+        delete1: "Are you sure you want to delete this role?",
+        name: "Role Name",
+    },
     scopes: {
         defaultNoMod: "This is a default OIDC Scope. These are immutable.",
         delete1: "Are you sure you want to delete this scope?",
