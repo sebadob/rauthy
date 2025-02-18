@@ -4,6 +4,7 @@
     import Tabs from "$lib5/tabs/Tabs.svelte";
     import type {GroupResponse} from "$api/types/groups.ts";
     import GroupConfig from "$lib5/admin/groups/GroupConfig.svelte";
+    import GroupDelete from "$lib5/admin/groups/GroupDelete.svelte";
 
     let {
         group,
@@ -43,6 +44,5 @@
 {#if selected === ta.nav.config}
     <GroupConfig {group} {groups} {onSave}/>
 {:else if selected === t.common.delete}
-    TODO
-    <!--    <ScopeDelete {scope} {onSave}/>-->
+    <GroupDelete {group} {onSave}/>
 {/if}

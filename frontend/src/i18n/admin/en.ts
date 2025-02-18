@@ -128,7 +128,7 @@ export let I18nAdminEn: I18nAdmin = {
         eventType: "Event Type",
     },
     groups: {
-        delete1: "TODO DELETE",
+        delete1: "Are you sure you want to delete this group?",
         name: "Group Name",
     },
     jwks: {
@@ -216,7 +216,7 @@ export let I18nAdminEn: I18nAdmin = {
     },
     scopes: {
         defaultNoMod: "This is a default OIDC Scope. These are immutable.",
-        delete1: "Soll dieser Scope wirklich gelöscht werden?",
+        delete1: "Are you sure you want to delete this scope?",
         deleteDefault: "OIDC Default Scopes können nicht gelöscht werden.",
         mapping1: "You can map custom scopes to attributes.",
         mapping2: `All additional attributes, that were configured, can have a custom value for each user.
