@@ -10,6 +10,7 @@
     import {useParam} from "$state/param.svelte.ts";
     import type {ScopeResponse} from "$api/types/scopes.ts";
     import type {ClientResponse} from "$api/types/clients.ts";
+    import ClientAddNew from "$lib5/admin/clients/ClientAddNew.svelte";
 
     let ta = useI18nAdmin();
 
@@ -89,8 +90,7 @@
         thresholdNavSub={700}
 >
     <ButtonAddModal level={clients.length === 0 ? 1 : 2} bind:closeModal alignRight>
-        TODO
-        <!--        <GroupAddNew onSave={onAddNew} {groups}/>-->
+        <ClientAddNew onSave={onAddNew} {clients}/>
     </ButtonAddModal>
     <OrderSearchBar
             {searchOptions}

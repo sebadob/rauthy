@@ -23,6 +23,12 @@ export interface I18nAdmin {
         desc: string,
         name: string,
     },
+    clients: {
+        confidential: string,
+        name: string,
+        // inserted as html
+        uriDesc: string,
+    }
     common: {
         account: string,
         addNew: string,
@@ -210,12 +216,15 @@ export interface I18nAdmin {
         orderBy: string,
         orderChangeToAsc: string,
         orderChangeToDesc: string,
-    }
+    },
     sessions: {
         invalidateAll: string,
-    }
+    },
     tabs: {
         config: string,
         delete: string,
+    },
+    validation: {
+        validUri: string,
     }
 }

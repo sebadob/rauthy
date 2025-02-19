@@ -20,6 +20,12 @@ export let I18nAdminEn: I18nAdmin = {
         desc: "Description",
         name: "Attribute Name",
     },
+    clients: {
+        confidential: "Confidential",
+        name: "Client Name",
+        uriDesc: `You can provide as many redirect URIs as you like. At the end of each, you can use 
+            <code>*</code> as a Wildcard.`,
+    },
     common: {
         account: "Account",
         addNew: "Add New",
@@ -244,5 +250,8 @@ export let I18nAdminEn: I18nAdmin = {
     tabs: {
         config: "Config",
         delete: "Delete",
+    },
+    validation: {
+        validUri: "Valid URI",
     },
 };
