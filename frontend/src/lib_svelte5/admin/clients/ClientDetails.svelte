@@ -3,14 +3,17 @@
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
     import Tabs from "$lib5/tabs/Tabs.svelte";
     import type {ClientResponse} from "$api/types/clients.ts";
+    import ClientConfig from "$lib5/admin/clients/ClientConfig.svelte";
 
     let {
         client,
         clients,
+        scopesAll,
         onSave,
     }: {
         client: ClientResponse,
         clients: ClientResponse[],
+        scopesAll: string[],
         onSave: () => void,
     } = $props();
 
@@ -41,14 +44,22 @@
     <Tabs {tabs} bind:selected bind:focusFirst/>
 </div>
 
-{#if selected === ta.nav.config}
-    TODO
-    <!--    <GroupConfig {group} {groups} {onSave}/>-->
-{:else if selected === 'Secret'}
-    TODO
-{:else if selected === 'Branding'}
-    TODO
-{:else if selected === t.common.delete}
-    TODO
-    <!--    <GroupDelete {group} {onSave}/>-->
-{/if}
+<div class="details">
+    {#if selected === ta.nav.config}
+        <ClientConfig {client} {clients} {scopesAll} {onSave}/>
+    {:else if selected === 'Secret'}
+        TODO
+    {:else if selected === 'Branding'}
+        TODO
+    {:else if selected === t.common.delete}
+        TODO
+        <!--    <GroupDelete {group} {onSave}/>-->
+    {/if}
+</div>
+
+<style>
+    .details {
+        /* matches <p> max width */
+        max-width: 467pt;
+    }
+</style>

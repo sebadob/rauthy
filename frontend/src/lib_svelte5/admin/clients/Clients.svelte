@@ -11,7 +11,6 @@
     import type {ScopeResponse} from "$api/types/scopes.ts";
     import type {ClientResponse} from "$api/types/clients.ts";
     import ClientAddNew from "$lib5/admin/clients/ClientAddNew.svelte";
-    import ClientDelete from "../../../components/admin/clients/ClientDelete.svelte";
     import ClientDetails from "$lib5/admin/clients/ClientDetails.svelte";
 
     let ta = useI18nAdmin();
@@ -23,7 +22,7 @@
     let clientsFiltered: ClientResponse[] = $state([]);
     let client: undefined | ClientResponse = $state();
     let cid = useParam('cid');
-    let scopes: ScopeResponse[] = $state([]);
+    let scopesAll: string[] = $state([]);
 
     const searchOptions = ['ID'];
     let searchOption = $state(searchOptions[0]);
@@ -60,7 +59,7 @@
     async function fetchScopes() {
         let res = await fetchGet<ScopeResponse[]>('/auth/v1/scopes');
         if (res.body) {
-            scopes = res.body;
+            scopesAll = res.body.map(s => s.name);
         } else {
             err = res.error?.message || 'Error';
         }
@@ -122,7 +121,7 @@
 
     <div id="groups">
         {#if client}
-            <ClientDetails {client} {clients} {onSave}/>
+            <ClientDetails {client} {clients} {scopesAll} {onSave}/>
         {/if}
     </div>
 </ContentAdmin>

@@ -230,7 +230,7 @@
     }
 
     .btnClose {
-        margin-top: .25rem;
+        margin-top: .12rem;
         margin-bottom: -.5rem;
     }
 

@@ -83,19 +83,18 @@
             {ta.clients.confidential}
         </InputCheckbox>
 
-        <p>{@html ta.clients.uriDesc}</p>
+        <p>{@html ta.clients.descUri}</p>
         <InputTags
                 typ="url"
                 bind:values={redirectURIs}
                 label="Redirect URIs"
-                errMsg={ta.validation.validUri}
-                required
+                errMsg={ta.validation.uri}
         />
         <InputTags
                 typ="url"
                 bind:values={postLogoutRedirectURIs}
                 label="Post Logout Redirect URIs"
-                errMsg={ta.validation.validUri}
+                errMsg={ta.validation.uri}
         />
 
         <Button type="submit">

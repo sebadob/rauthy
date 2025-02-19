@@ -22,20 +22,54 @@ export let I18nAdminEn: I18nAdmin = {
     },
     clients: {
         confidential: "Confidential",
-        name: "Client Name",
-        uriDesc: `You can provide as many redirect URIs as you like. At the end of each, you can use 
+        config: "Client Configuration",
+        descAuthCode: `The validity for auth codes can be adjusted for increased security. Auth codes
+            can be used only once and are valid for 60 seconds by default. The shorter the validity, the
+            better, as long as the client can perform the login procedure fast enough.`,
+        descClientUri: `Information about this clients URI and contacts to be shown on
+            the login page.`,
+        descName: `The client name can be changed without any impact on the client configuration.
+            It only exists to be shown on the login page.`,
+        descOrigin: `External, additionally allowed origins - usually only necessary, if this client
+            needs to make requests to Rauthy directly from the browser, typically SPAs.`,
+        descPKCE: `If the client supports it, you should always activate S256 PKCE for additional 
+            security. If a non-confidential client (e.g. a SPA) is being used, you must at least 
+            activate one of the PKCE challenges to have enough security.`,
+        descPKCEEnforce: `If any PKCE is activated, Rauthy will enforce the usage during Logins, and
+            rejects login request that do not contain a valida challenge.`,
+        descUri: `You can provide as many redirect URIs as you like. At the end of each, you can use 
             <code>*</code> as a Wildcard.`,
+        errConfidentialPKCE: `The client must either be confidential or have at least one PKCE
+            challenge activated.`,
+        forceMfa: "Force MFA",
+        name: "Client Name",
+        scopes: {
+            allowed: "Allowed Scopes",
+            default: "Default Scopes",
+            desc: `Allowed Scopes are the ones the client is allowed to request dynamically during
+            a redirect to the login when using the <code>authorization_code</code> flow. The default
+            scopes will always be added to the tokens to solve some issues when using the 
+            <code>password</code> for instance.`,
+        },
+        tokenLifetime: {
+            p1: `The token lifetime applies to Access and ID tokens and is given in seconds.`,
+            p2: `If the client supports EdDSA / ed25519 alrotihms, it should always be the preferred
+                choice. RSA algorithms exist for compatibility only.`,
+            p3: `The algorithm for refresh tokens cannot be changed, since these are used by Rauthy only.`,
+        },
     },
     common: {
         account: "Account",
         addNew: "Add New",
         back: "Back",
+        contact: "Contact",
         copiedToClip: "Value has been copied to clipboard",
         details: "Details",
         edit: "Edit",
         enabled: "Enabled",
         filter: "Filter",
         from: "From",
+        information: "Information",
         loading: "Loading",
         name: "Name",
         nameExistsAlready: "Name exists already",
@@ -252,6 +286,7 @@ export let I18nAdminEn: I18nAdmin = {
         delete: "Delete",
     },
     validation: {
-        validUri: "Valid URI",
+        origin: "Valid Origin",
+        uri: "Valid URI",
     },
 };
