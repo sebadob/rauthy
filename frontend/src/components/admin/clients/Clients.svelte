@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import {onMount} from "svelte";
     import {getClients, getScopes} from "../../../utils/dataFetchingAdmin.js";
     import {globalScopes, globalScopesNames} from "../../../stores/admin.js";
