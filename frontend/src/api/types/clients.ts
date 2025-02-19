@@ -5,7 +5,6 @@ export interface NewClientRequest {
     id: string,
     /// Validation: PATTERN_CLIENT_NAME
     name?: string,
-    /// Validation: bool
     confidential: boolean,
     /// Validation: PATTERN_URI
     redirect_uris: string[],

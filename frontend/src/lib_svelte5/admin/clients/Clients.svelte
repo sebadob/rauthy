@@ -11,6 +11,8 @@
     import type {ScopeResponse} from "$api/types/scopes.ts";
     import type {ClientResponse} from "$api/types/clients.ts";
     import ClientAddNew from "$lib5/admin/clients/ClientAddNew.svelte";
+    import ClientDelete from "../../../components/admin/clients/ClientDelete.svelte";
+    import ClientDetails from "$lib5/admin/clients/ClientDetails.svelte";
 
     let ta = useI18nAdmin();
 
@@ -120,8 +122,7 @@
 
     <div id="groups">
         {#if client}
-            TODO
-            <!--            <GroupDetails {group} {groups} {onSave}/>-->
+            <ClientDetails {client} {clients} {onSave}/>
         {/if}
     </div>
 </ContentAdmin>

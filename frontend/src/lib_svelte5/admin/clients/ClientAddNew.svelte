@@ -65,8 +65,8 @@
                 bind:ref
                 bind:value={id}
                 autocomplete="off"
-                label="ID"
-                placeholder="ID"
+                label="Client ID"
+                placeholder="Client ID"
                 required
                 pattern={PATTERN_LOWERCASE}
         />
