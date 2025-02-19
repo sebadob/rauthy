@@ -62,7 +62,7 @@ pub fn validate_vec_grant_types(value: &[String]) -> Result<(), ValidationError>
     } else {
         value.iter().for_each(|v| {
             if !RE_GRANT_TYPES.is_match(v) {
-                err = Some("^(authorization_code|client_credentials|password|refresh_token)$");
+                err = Some("^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$");
             }
         });
     }

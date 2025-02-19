@@ -162,7 +162,7 @@ struct EphemeralClientRequest {
     redirect_uris: Vec<String>,
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
     post_logout_redirect_uris: Option<Vec<String>>,
-    /// Validation: `Vec<^(authorization_code|client_credentials|password|refresh_token)$>`
+    /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$>`
     grant_types: Option<Vec<String>>,
     /// Validation: `60 <= access_token_lifetime <= 86400`
     default_max_age: Option<i32>,

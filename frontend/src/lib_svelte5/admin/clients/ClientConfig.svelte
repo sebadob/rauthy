@@ -8,7 +8,7 @@
     import Form from "$lib5/form/Form.svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
     import {PATTERN_CLIENT_NAME, PATTERN_CONTACT, PATTERN_ORIGIN, PATTERN_URI} from "$utils/patterns.ts";
-    import type {ClientResponse, UpdateClientRequest} from "$api/types/clients.ts";
+    import {AuthFlowDeviceCode, type ClientResponse, type UpdateClientRequest} from "$api/types/clients.ts";
     import type {JwkKeyPairAlg} from "$api/types/oidc.ts";
     import InputTags from "$lib5/form/InputTags.svelte";
     import InputCheckbox from "$lib5/form/InputCheckbox.svelte";
@@ -52,6 +52,7 @@
         clientCredentials: client.flows_enabled.includes('client_credentials'),
         password: client.flows_enabled.includes('password'),
         refreshToken: client.flows_enabled.includes('refresh_token'),
+        deviceCode: client.flows_enabled.includes(AuthFlowDeviceCode),
     });
 
     const optionsAlgs: JwkKeyPairAlg[] = ['RS256', 'RS384', 'RS512', 'EdDSA'];
@@ -98,6 +99,7 @@
             flows.clientCredentials = client.flows_enabled.includes('client_credentials');
             flows.password = client.flows_enabled.includes('password');
             flows.refreshToken = client.flows_enabled.includes('refresh_token');
+            flows.deviceCode = client.flows_enabled.includes(AuthFlowDeviceCode);
 
             accessTokenAlg = client.access_token_alg;
             idTokenAlg = client.id_token_alg;
@@ -161,6 +163,9 @@
         }
         if (flows.refreshToken) {
             payload.flows_enabled.push('refresh_token');
+        }
+        if (flows.deviceCode) {
+            payload.flows_enabled.push(AuthFlowDeviceCode);
         }
 
         if (challenges.plain) {
@@ -237,6 +242,9 @@
     <p class="mb-0">Authentication Flows</p>
     <InputCheckbox ariaLabel="authorization_code" bind:checked={flows.authorizationCode}>
         authorization_code
+    </InputCheckbox>
+    <InputCheckbox ariaLabel="urn:ietf:params:oauth:grant-type:device_code" bind:checked={flows.deviceCode}>
+        device_code
     </InputCheckbox>
     <InputCheckbox ariaLabel="client_credentials" bind:checked={flows.clientCredentials}>
         client_credentials

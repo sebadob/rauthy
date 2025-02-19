@@ -1,7 +1,11 @@
 import type {JwkKeyPairAlg} from "./oidc";
-import {PATTERN_CONTACT, PATTERN_GROUP} from "$utils/patterns.ts";
 
-export type AuthFlow = 'authorization_code' | 'client_credentials' | 'password' | 'refresh_token';
+export const AuthFlowDeviceCode = 'urn:ietf:params:oauth:grant-type:device_code';
+export type AuthFlow = 'authorization_code'
+    | 'client_credentials'
+    | 'password'
+    | 'refresh_token'
+    | 'urn:ietf:params:oauth:grant-type:device_code';
 export type CodeChallengeMethod = 'plain' | 'S256';
 
 export interface NewClientRequest {
