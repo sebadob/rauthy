@@ -32,17 +32,29 @@
     const id = genKey();
 
     let styleBg = $derived.by(() => {
-        if (bgMode === 'hue') {
-            return 'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, ' +
-                '#ff00ff 83%, #ff0000 100%)';
-        }
+        // if (bgMode === 'hue') {
+        //     return 'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, ' +
+        //         '#ff00ff 83%, #ff0000 100%)';
+        // }
 
         if (hue && sat && lum) {
+            if (bgMode === 'hue') {
+                return `linear-gradient(
+                    to right,
+                    hsl(0 ${sat} ${lum}) 0%,
+                    hsl(60 ${sat} ${lum}) 17%,
+                    hsl(120 ${sat} ${lum}) 33%,
+                    hsl(180 ${sat} ${lum}) 50%,
+                    hsl(240 ${sat} ${lum}) 67%,
+                    hsl(300 ${sat} ${lum}) 83%,
+                    hsl(3600 ${sat} ${lum}) 100%
+                )`;
+            }
             if (bgMode === 'sat') {
-                return `linear-gradient(to right, hsl(${hue} 0 ${lum}), hsl(${hue} 100 ${lum}))`
+                return `linear-gradient(to right, hsl(${hue} 0 ${lum}), hsl(${hue} 100 ${lum}))`;
             }
             if (bgMode === 'lum') {
-                return `linear-gradient(to right, hsl(${hue} ${sat} 0), hsl(${hue} ${sat} 100))`
+                return `linear-gradient(to right, hsl(${hue} ${sat} 0), hsl(${hue} ${sat} 100))`;
             }
         }
 

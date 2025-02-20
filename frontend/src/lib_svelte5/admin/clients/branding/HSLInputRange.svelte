@@ -36,6 +36,9 @@
                         max={359}
                         {widthRange}
                         bgMode="hue"
+                        hue={h}
+                        sat={s}
+                        lum={l}
                 />
                 <InputRange
                         label="Sat"
