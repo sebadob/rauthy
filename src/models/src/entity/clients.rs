@@ -764,6 +764,7 @@ impl Client {
         JwkKeyPairAlg::from_str(self.access_token_alg.as_str())
     }
 
+    #[inline]
     pub fn get_allowed_origins(&self) -> Option<Vec<String>> {
         self.allowed_origins.as_ref()?;
         let mut origins = Vec::new();
@@ -775,6 +776,7 @@ impl Client {
         Some(origins)
     }
 
+    #[inline]
     pub fn get_challenges(&self) -> Option<Vec<String>> {
         self.challenge.as_ref()?;
 
@@ -787,6 +789,7 @@ impl Client {
         Some(res)
     }
 
+    #[inline]
     pub fn get_contacts(&self) -> Option<Vec<String>> {
         if let Some(contacts) = &self.contacts {
             let mut res = Vec::new();
@@ -810,6 +813,7 @@ impl Client {
         }
     }
 
+    #[inline]
     pub fn get_default_scopes(&self) -> Vec<String> {
         let mut res = Vec::new();
         self.default_scopes
@@ -818,10 +822,12 @@ impl Client {
         res
     }
 
+    #[inline]
     pub fn get_id_token_alg(&self) -> Result<JwkKeyPairAlg, ErrorResponse> {
         JwkKeyPairAlg::from_str(self.id_token_alg.as_str())
     }
 
+    #[inline]
     pub fn get_flows(&self) -> Vec<String> {
         let mut res = Vec::new();
         self.flows_enabled
@@ -831,6 +837,7 @@ impl Client {
         res
     }
 
+    #[inline]
     pub fn get_post_logout_uris(&self) -> Option<Vec<String>> {
         self.post_logout_redirect_uris.as_ref()?;
         Some(
@@ -843,13 +850,19 @@ impl Client {
         )
     }
 
+    #[inline]
     pub fn get_redirect_uris(&self) -> Vec<String> {
-        self.redirect_uris
-            .split(',')
-            .map(|i| i.trim().to_string())
-            .collect()
+        if self.redirect_uris.is_empty() {
+            Vec::default()
+        } else {
+            self.redirect_uris
+                .split(',')
+                .map(|i| i.trim().to_string())
+                .collect()
+        }
     }
 
+    #[inline]
     pub fn get_scopes(&self) -> Vec<String> {
         let mut res = Vec::new();
         self.scopes
@@ -858,14 +871,17 @@ impl Client {
         res
     }
 
+    #[inline]
     pub fn get_scope_as_str(&self) -> String {
         self.scopes.replace(',', " ")
     }
 
+    #[inline]
     pub fn is_dynamic(&self) -> bool {
         self.id.starts_with("dyn$")
     }
 
+    #[inline]
     pub fn is_ephemeral(&self) -> bool {
         Url::from_str(&self.id).is_ok()
     }

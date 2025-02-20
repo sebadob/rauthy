@@ -27,6 +27,7 @@ export interface I18nAdmin {
         confidential: string,
         confidentialNoSecret: string,
         config: string,
+        delete1: string,
         descAuthCode: string,
         descClientUri: string,
         descName: string,

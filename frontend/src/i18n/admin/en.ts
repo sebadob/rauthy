@@ -24,6 +24,7 @@ export let I18nAdminEn: I18nAdmin = {
         confidential: "Confidential",
         confidentialNoSecret: "This is a non-confidential client and therefore has not secret.",
         config: "Client Configuration",
+        delete1: "Are you sure you want to delete this client?",
         descAuthCode: `The validity for auth codes can be adjusted for increased security. Auth codes
             can be used only once and are valid for 60 seconds by default. The shorter the validity, the
             better, as long as the client can perform the login procedure fast enough.`,

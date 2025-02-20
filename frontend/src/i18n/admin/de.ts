@@ -24,6 +24,7 @@ export let I18nAdminDe: I18nAdmin = {
         confidential: "Vertraulich",
         confidentialNoSecret: "Dies is kein vertraulier Client und hat somit kein Secret.",
         config: "Client Konfiguration",
+        delete1: "Soll dieser Client wirklich gelöscht werden?",
         descAuthCode: `Die Gültigkeit der Auth Codes kann angepasst werden um zusätzliche Sicherheit
             zu gewinnen. Auth Codes können nur einmalig verwendet werden und sind normalerweise für 60
             Sekunden gültig. Je kürzer, desto besser, so lange der Client den Code schnell genug nutzen kann.`,

@@ -5,6 +5,7 @@
     import type {ClientResponse} from "$api/types/clients.ts";
     import ClientConfig from "$lib5/admin/clients/ClientConfig.svelte";
     import ClientSecret from "$lib5/admin/clients/ClientSecret.svelte";
+    import ClientDelete from "$lib5/admin/clients/ClientDelete.svelte";
 
     let {
         client,
@@ -53,8 +54,7 @@
     {:else if selected === 'Branding'}
         TODO
     {:else if selected === t.common.delete}
-        TODO
-        <!--    <GroupDelete {group} {onSave}/>-->
+        <ClientDelete {client} {onSave}/>
     {/if}
 </div>
 

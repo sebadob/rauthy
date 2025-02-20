@@ -71,7 +71,6 @@
                 pattern={PATTERN_LOWERCASE}
         />
         <Input
-                bind:ref
                 bind:value={name}
                 autocomplete="off"
                 label={ta.clients.name}
