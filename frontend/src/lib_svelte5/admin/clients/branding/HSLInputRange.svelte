@@ -25,7 +25,7 @@
 <div class="outer">
     <div class="container" style:border-color={hsl}>
         <div>
-            <label for={id} class="font-label noselect">
+            <label for={id} class="font-label">
                 {label}
             </label>
             <div {id} class="values">

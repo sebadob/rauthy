@@ -17,13 +17,6 @@
 
 </script>
 
-<!--<HSLInput-->
-<!--        label="text"-->
-<!--        bind:h={values.text[0]}-->
-<!--        bind:s={values.text[1]}-->
-<!--        bind:l={values.text[2]}-->
-<!--/>-->
-
 <div class="container">
     <div>
         <p>HSL Values</p>
