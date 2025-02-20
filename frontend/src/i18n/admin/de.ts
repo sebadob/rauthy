@@ -22,6 +22,7 @@ export let I18nAdminDe: I18nAdmin = {
     },
     clients: {
         confidential: "Vertraulich",
+        confidentialNoSecret: "Dies is kein vertraulier Client und hat somit kein Secret.",
         config: "Client Konfiguration",
         descAuthCode: `Die Gültigkeit der Auth Codes kann angepasst werden um zusätzliche Sicherheit
             zu gewinnen. Auth Codes können nur einmalig verwendet werden und sind normalerweise für 60
@@ -42,6 +43,7 @@ export let I18nAdminDe: I18nAdmin = {
         errConfidentialPKCE: `Der Client muss entweder vertraulich sein oder mindestens eine PKCE
             Challenge aktiviert haben.`,
         forceMfa: "MFA Erzwingen",
+        generateSecret: "Neues Secret Generieren",
         name: "Client Name",
         scopes: {
             allowed: "Erlaubte Scopes",

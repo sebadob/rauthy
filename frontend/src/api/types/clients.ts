@@ -73,3 +73,9 @@ export interface ClientResponse {
     client_uri?: string,
     contacts?: string[],
 }
+
+export interface ClientSecretResponse {
+    id: string,
+    confidential: boolean,
+    secret?: string,
+}

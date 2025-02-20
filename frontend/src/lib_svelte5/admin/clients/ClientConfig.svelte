@@ -227,6 +227,8 @@
             pattern={PATTERN_CONTACT}
     />
 
+    <div style:height=".5rem"></div>
+
     <h5>{ta.clients.config}</h5>
 
     <InputCheckbox ariaLabel={ta.common.enabled} bind:checked={enabled}>
@@ -256,6 +258,7 @@
         refresh_token
     </InputCheckbox>
 
+    <div style:height=".5rem"></div>
     <p class="desc">{ta.clients.descPKCE}</p>
     <p class="desc"><strong>{ta.clients.descPKCEEnforce}</strong></p>
     <InputCheckbox ariaLabel="PKCE plain" bind:checked={challenges.plain}>
@@ -271,6 +274,7 @@
         </div>
     {/if}
 
+    <div style:height=".5rem"></div>
     <p class="desc">{ta.clients.descOrigin}</p>
     <InputTags
             typ="url"
@@ -297,6 +301,7 @@
             pattern={PATTERN_URI}
     />
 
+    <div style:height=".5rem"></div>
     <p class="desc">{@html ta.clients.scopes.desc}</p>
     <SelectList bind:items={scopes}>
         {ta.clients.scopes.allowed}
@@ -305,6 +310,7 @@
         {ta.clients.scopes.default}
     </SelectList>
 
+    <div style:height=".75rem"></div>
     <p>{ta.clients.tokenLifetime.p1}</p>
     <Input
             typ="number"
@@ -318,6 +324,7 @@
             errMsg="10 <= Token Lifetime <= 86400"
     />
 
+    <div style:height=".5rem"></div>
     <p>{ta.clients.tokenLifetime.p2}</p>
     <p>{ta.clients.tokenLifetime.p3}</p>
     <LabeledValue label="Access Token Algorithm">
@@ -337,6 +344,7 @@
         />
     </LabeledValue>
 
+    <div style:height=".5rem"></div>
     <p>{ta.clients.descAuthCode}</p>
     <Input
             typ="number"
@@ -365,6 +373,8 @@
             {err}
         </div>
     {/if}
+
+    <div style:height="1rem"></div>
 </Form>
 
 <style>

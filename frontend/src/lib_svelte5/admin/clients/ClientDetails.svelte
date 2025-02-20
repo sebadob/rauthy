@@ -4,6 +4,7 @@
     import Tabs from "$lib5/tabs/Tabs.svelte";
     import type {ClientResponse} from "$api/types/clients.ts";
     import ClientConfig from "$lib5/admin/clients/ClientConfig.svelte";
+    import ClientSecret from "$lib5/admin/clients/ClientSecret.svelte";
 
     let {
         client,
@@ -48,7 +49,7 @@
     {#if selected === ta.nav.config}
         <ClientConfig {client} {clients} {scopesAll} {onSave}/>
     {:else if selected === 'Secret'}
-        TODO
+        <ClientSecret {client}/>
     {:else if selected === 'Branding'}
         TODO
     {:else if selected === t.common.delete}

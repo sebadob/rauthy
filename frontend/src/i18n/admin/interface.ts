@@ -25,6 +25,7 @@ export interface I18nAdmin {
     },
     clients: {
         confidential: string,
+        confidentialNoSecret: string,
         config: string,
         descAuthCode: string,
         descClientUri: string,
@@ -36,6 +37,7 @@ export interface I18nAdmin {
         descUri: string,
         errConfidentialPKCE: string,
         forceMfa: string,
+        generateSecret: string,
         name: string,
         scopes: {
             allowed: string,
