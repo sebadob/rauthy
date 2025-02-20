@@ -71,5 +71,7 @@
 <style>
     .container {
         margin: .5rem 0;
+        /* matches <p> max width */
+        max-width: 467pt;
     }
 </style>

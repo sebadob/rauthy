@@ -250,6 +250,7 @@ export interface I18nAdmin {
         delete: string,
     },
     validation: {
+        css: string,
         origin: string,
         uri: string,
     }

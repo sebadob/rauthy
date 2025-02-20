@@ -34,8 +34,8 @@ function buildHeaders(
     return headers;
 }
 
-export async function fetchGet<T>(uri: string, typ: 'json' | 'form' = 'json'): Promise<IResponse<T>> {
-    return fetchWithoutBody('GET', uri, typ);
+export async function fetchGet<T>(uri: string, typ: 'json' | 'form' = 'json', cache: RequestCache = 'default'): Promise<IResponse<T>> {
+    return fetchWithoutBody('GET', uri, typ, cache);
 }
 
 export async function fetchPost<T>(
@@ -96,11 +96,13 @@ async function fetchWithoutBody<T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     uri: string,
     typ: 'json' | 'form',
+    cache?: RequestCache,
 ): Promise<IResponse<T>> {
     let res = await fetch(uri, {
         method,
         headers: buildHeaders(method, typ),
         redirect: 'manual',
+        cache,
     });
     return await handleResponse(res, true);
 }

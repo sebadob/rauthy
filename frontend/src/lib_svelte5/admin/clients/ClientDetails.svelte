@@ -6,6 +6,7 @@
     import ClientConfig from "$lib5/admin/clients/ClientConfig.svelte";
     import ClientSecret from "$lib5/admin/clients/ClientSecret.svelte";
     import ClientDelete from "$lib5/admin/clients/ClientDelete.svelte";
+    import ClientBranding from "$lib5/admin/clients/branding/ClientBranding.svelte";
 
     let {
         client,
@@ -52,15 +53,8 @@
     {:else if selected === 'Secret'}
         <ClientSecret {client}/>
     {:else if selected === 'Branding'}
-        TODO
+        <ClientBranding {client}/>
     {:else if selected === t.common.delete}
         <ClientDelete {client} {onSave}/>
     {/if}
 </div>
-
-<style>
-    .details {
-        /* matches <p> max width */
-        max-width: 467pt;
-    }
-</style>

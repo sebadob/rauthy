@@ -194,192 +194,199 @@
     }
 </script>
 
-<Form action={`/auth/v1/clients/${client.id}`} {onSubmit}>
-    <h5>{ta.common.information}</h5>
+<div class="container">
+    <Form action={`/auth/v1/clients/${client.id}`} {onSubmit}>
+        <h5>{ta.common.information}</h5>
 
-    <LabeledValue label="ID" mono>
-        {client.id}
-    </LabeledValue>
+        <LabeledValue label="ID" mono>
+            {client.id}
+        </LabeledValue>
 
-    <p class="desc">{ta.clients.descName}</p>
-    <Input
-            bind:value={name}
-            autocomplete="off"
-            label={ta.clients.name}
-            placeholder={ta.clients.name}
-            width={inputWidth}
-            pattern={PATTERN_CLIENT_NAME}
-    />
-
-    <p class="desc">{ta.clients.descClientUri}</p>
-    <Input
-            typ="url"
-            bind:value={uri}
-            autocomplete="off"
-            label="URI"
-            placeholder="URI"
-            width={inputWidth}
-            pattern={PATTERN_URI}
-    />
-    <InputTags
-            bind:values={contacts}
-            label={ta.common.contact}
-            pattern={PATTERN_CONTACT}
-    />
-
-    <div style:height=".5rem"></div>
-
-    <h5>{ta.clients.config}</h5>
-
-    <InputCheckbox ariaLabel={ta.common.enabled} bind:checked={enabled}>
-        {ta.common.enabled}
-    </InputCheckbox>
-    <InputCheckbox ariaLabel={ta.clients.confidential} bind:checked={confidential}>
-        {ta.clients.confidential}
-    </InputCheckbox>
-    <InputCheckbox ariaLabel={ta.clients.forceMfa} bind:checked={forceMfa}>
-        {ta.clients.forceMfa}
-    </InputCheckbox>
-
-    <p class="mb-0">Authentication Flows</p>
-    <InputCheckbox ariaLabel="authorization_code" bind:checked={flows.authorizationCode}>
-        authorization_code
-    </InputCheckbox>
-    <InputCheckbox ariaLabel="urn:ietf:params:oauth:grant-type:device_code" bind:checked={flows.deviceCode}>
-        device_code
-    </InputCheckbox>
-    <InputCheckbox ariaLabel="client_credentials" bind:checked={flows.clientCredentials}>
-        client_credentials
-    </InputCheckbox>
-    <InputCheckbox ariaLabel="password" bind:checked={flows.password}>
-        password
-    </InputCheckbox>
-    <InputCheckbox ariaLabel="refresh_token" bind:checked={flows.refreshToken}>
-        refresh_token
-    </InputCheckbox>
-
-    <div style:height=".5rem"></div>
-    <p class="desc">{ta.clients.descPKCE}</p>
-    <p class="desc"><strong>{ta.clients.descPKCEEnforce}</strong></p>
-    <InputCheckbox ariaLabel="PKCE plain" bind:checked={challenges.plain}>
-        plain
-    </InputCheckbox>
-    <InputCheckbox ariaLabel="PKCE S256" bind:checked={challenges.s256}>
-        S256
-    </InputCheckbox>
-
-    {#if !confidential && !challenges.plain && !challenges.s256}
-        <div class="err" transition:slide={{duration: 150}}>
-            {ta.clients.errConfidentialPKCE}
-        </div>
-    {/if}
-
-    <div style:height=".5rem"></div>
-    <p class="desc">{ta.clients.descOrigin}</p>
-    <InputTags
-            typ="url"
-            bind:values={origins}
-            label="Allowed Origins"
-            errMsg={ta.validation.origin}
-            pattern={PATTERN_ORIGIN}
-    />
-
-    <p class="desc">{@html ta.clients.descUri}</p>
-    <InputTags
-            typ="url"
-            bind:values={redirectURIs}
-            label="Redirect URIs"
-            errMsg={ta.validation.uri}
-            required={flows.authorizationCode}
-            pattern={PATTERN_URI}
-    />
-    <InputTags
-            typ="url"
-            bind:values={postLogoutRedirectURIs}
-            label="Post Logout Redirect URIs"
-            errMsg={ta.validation.uri}
-            pattern={PATTERN_URI}
-    />
-
-    <div style:height=".5rem"></div>
-    <p class="desc">{@html ta.clients.scopes.desc}</p>
-    <SelectList bind:items={scopes}>
-        {ta.clients.scopes.allowed}
-    </SelectList>
-    <SelectList bind:items={defaultScopes}>
-        {ta.clients.scopes.default}
-    </SelectList>
-
-    <div style:height=".75rem"></div>
-    <p>{ta.clients.tokenLifetime.p1}</p>
-    <Input
-            typ="number"
-            bind:value={tokenLifetime}
-            autocomplete="off"
-            label="Token Lifetime"
-            placeholder="Token Lifetime"
-            width={inputWidth}
-            min="10"
-            max="86400"
-            errMsg="10 <= Token Lifetime <= 86400"
-    />
-
-    <div style:height=".5rem"></div>
-    <p>{ta.clients.tokenLifetime.p2}</p>
-    <p>{ta.clients.tokenLifetime.p3}</p>
-    <LabeledValue label="Access Token Algorithm">
-        <Options
-                ariaLabel="Access Token Algorithm"
-                options={optionsAlgs}
-                bind:value={accessTokenAlg}
-                borderless
+        <p class="desc">{ta.clients.descName}</p>
+        <Input
+                bind:value={name}
+                autocomplete="off"
+                label={ta.clients.name}
+                placeholder={ta.clients.name}
+                width={inputWidth}
+                pattern={PATTERN_CLIENT_NAME}
         />
-    </LabeledValue>
-    <LabeledValue label="ID Token Algorithm">
-        <Options
-                ariaLabel="ID Token Algorithm"
-                options={optionsAlgs}
-                bind:value={idTokenAlg}
-                borderless
+
+        <p class="desc">{ta.clients.descClientUri}</p>
+        <Input
+                typ="url"
+                bind:value={uri}
+                autocomplete="off"
+                label="URI"
+                placeholder="URI"
+                width={inputWidth}
+                pattern={PATTERN_URI}
         />
-    </LabeledValue>
+        <InputTags
+                bind:values={contacts}
+                label={ta.common.contact}
+                pattern={PATTERN_CONTACT}
+        />
 
-    <div style:height=".5rem"></div>
-    <p>{ta.clients.descAuthCode}</p>
-    <Input
-            typ="number"
-            bind:value={authCodeLifetime}
-            autocomplete="off"
-            label="Auth Code Lifetime"
-            placeholder="Auth Code Lifetime"
-            width={inputWidth}
-            min="10"
-            max="300"
-            errMsg="10 <= Auth Code Lifetime <= 300"
-    />
+        <div style:height=".5rem"></div>
 
-    <div class="flex gap-05" style:margin-top="1rem">
-        <Button type="submit">
-            {t.common.save}
-        </Button>
+        <h5>{ta.clients.config}</h5>
 
-        {#if success}
-            <IconCheck/>
+        <InputCheckbox ariaLabel={ta.common.enabled} bind:checked={enabled}>
+            {ta.common.enabled}
+        </InputCheckbox>
+        <InputCheckbox ariaLabel={ta.clients.confidential} bind:checked={confidential}>
+            {ta.clients.confidential}
+        </InputCheckbox>
+        <InputCheckbox ariaLabel={ta.clients.forceMfa} bind:checked={forceMfa}>
+            {ta.clients.forceMfa}
+        </InputCheckbox>
+
+        <p class="mb-0">Authentication Flows</p>
+        <InputCheckbox ariaLabel="authorization_code" bind:checked={flows.authorizationCode}>
+            authorization_code
+        </InputCheckbox>
+        <InputCheckbox ariaLabel="urn:ietf:params:oauth:grant-type:device_code" bind:checked={flows.deviceCode}>
+            device_code
+        </InputCheckbox>
+        <InputCheckbox ariaLabel="client_credentials" bind:checked={flows.clientCredentials}>
+            client_credentials
+        </InputCheckbox>
+        <InputCheckbox ariaLabel="password" bind:checked={flows.password}>
+            password
+        </InputCheckbox>
+        <InputCheckbox ariaLabel="refresh_token" bind:checked={flows.refreshToken}>
+            refresh_token
+        </InputCheckbox>
+
+        <div style:height=".5rem"></div>
+        <p class="desc">{ta.clients.descPKCE}</p>
+        <p class="desc"><strong>{ta.clients.descPKCEEnforce}</strong></p>
+        <InputCheckbox ariaLabel="PKCE plain" bind:checked={challenges.plain}>
+            plain
+        </InputCheckbox>
+        <InputCheckbox ariaLabel="PKCE S256" bind:checked={challenges.s256}>
+            S256
+        </InputCheckbox>
+
+        {#if !confidential && !challenges.plain && !challenges.s256}
+            <div class="err" transition:slide={{duration: 150}}>
+                {ta.clients.errConfidentialPKCE}
+            </div>
         {/if}
-    </div>
 
-    {#if err}
-        <div class="err">
-            {err}
+        <div style:height=".5rem"></div>
+        <p class="desc">{ta.clients.descOrigin}</p>
+        <InputTags
+                typ="url"
+                bind:values={origins}
+                label="Allowed Origins"
+                errMsg={ta.validation.origin}
+                pattern={PATTERN_ORIGIN}
+        />
+
+        <p class="desc">{@html ta.clients.descUri}</p>
+        <InputTags
+                typ="url"
+                bind:values={redirectURIs}
+                label="Redirect URIs"
+                errMsg={ta.validation.uri}
+                required={flows.authorizationCode}
+                pattern={PATTERN_URI}
+        />
+        <InputTags
+                typ="url"
+                bind:values={postLogoutRedirectURIs}
+                label="Post Logout Redirect URIs"
+                errMsg={ta.validation.uri}
+                pattern={PATTERN_URI}
+        />
+
+        <div style:height=".5rem"></div>
+        <p class="desc">{@html ta.clients.scopes.desc}</p>
+        <SelectList bind:items={scopes}>
+            {ta.clients.scopes.allowed}
+        </SelectList>
+        <SelectList bind:items={defaultScopes}>
+            {ta.clients.scopes.default}
+        </SelectList>
+
+        <div style:height=".75rem"></div>
+        <p>{ta.clients.tokenLifetime.p1}</p>
+        <Input
+                typ="number"
+                bind:value={tokenLifetime}
+                autocomplete="off"
+                label="Token Lifetime"
+                placeholder="Token Lifetime"
+                width={inputWidth}
+                min="10"
+                max="86400"
+                errMsg="10 <= Token Lifetime <= 86400"
+        />
+
+        <div style:height=".5rem"></div>
+        <p>{ta.clients.tokenLifetime.p2}</p>
+        <p>{ta.clients.tokenLifetime.p3}</p>
+        <LabeledValue label="Access Token Algorithm">
+            <Options
+                    ariaLabel="Access Token Algorithm"
+                    options={optionsAlgs}
+                    bind:value={accessTokenAlg}
+                    borderless
+            />
+        </LabeledValue>
+        <LabeledValue label="ID Token Algorithm">
+            <Options
+                    ariaLabel="ID Token Algorithm"
+                    options={optionsAlgs}
+                    bind:value={idTokenAlg}
+                    borderless
+            />
+        </LabeledValue>
+
+        <div style:height=".5rem"></div>
+        <p>{ta.clients.descAuthCode}</p>
+        <Input
+                typ="number"
+                bind:value={authCodeLifetime}
+                autocomplete="off"
+                label="Auth Code Lifetime"
+                placeholder="Auth Code Lifetime"
+                width={inputWidth}
+                min="10"
+                max="300"
+                errMsg="10 <= Auth Code Lifetime <= 300"
+        />
+
+        <div class="flex gap-05" style:margin-top="1rem">
+            <Button type="submit">
+                {t.common.save}
+            </Button>
+
+            {#if success}
+                <IconCheck/>
+            {/if}
         </div>
-    {/if}
 
-    <div style:height="1rem"></div>
-</Form>
+        {#if err}
+            <div class="err">
+                {err}
+            </div>
+        {/if}
+
+        <div style:height="1rem"></div>
+    </Form>
+</div>
 
 <style>
     .desc {
         margin-bottom: -.25rem;
+    }
+
+    .container {
+        /* matches <p> max width */
+        max-width: 467pt;
     }
 
     .mb-0 {

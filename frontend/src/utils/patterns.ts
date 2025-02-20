@@ -9,6 +9,7 @@ export const PATTERN_CLIENT_NAME = '^[a-zA-Z0-9À-ſ\\-\\s\\u3041-\\u3096\\u30A0
 // export const PATTERN_DATE_STR = '[0-9]{4}\\-[0-9]{2}-[0-9]{2}$';
 export const PATTERN_CODE_CHALLENGE = '^[a-zA-Z0-9\\-._~]{43,128}$';
 export const PATTERN_CONTACT = '^[a-zA-Z0-9\\+.@\\/:]{0,48}$';
+export const PATTERN_CSS_VALUE_LOOSE = '^[a-z0-9\\-,.\\(\\)%\\/\s]+$';
 // export const PATTERN_FLOW = '^(authorization_code|client_credentials|password|refresh_token)$';
 export const PATTERN_GROUP = '^[a-z0-9\\-_\\/,:*]{2,64}$';
 export const PATTERN_IPV4 = '^(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)){3}$';

@@ -1,19 +1,30 @@
 export interface ThemeCss {
+    /// Validation: 3 HSL values: deg, sat, lum
     text: number[],
-    textHigh: number[],
+    /// Validation: 3 HSL values: deg, sat, lum
+    text_high: number[],
+    /// Validation: 3 HSL values: deg, sat, lum
     bg: number[],
-    bgHigh: number[],
+    /// Validation: 3 HSL values: deg, sat, lum
+    bg_high: number[],
+    /// Validation: 3 HSL values: deg, sat, lum
     action: number[],
+    /// Validation: 3 HSL values: deg, sat, lum
     accent: number[],
+    /// Validation: 3 HSL values: deg, sat, lum
     error: number[],
-    btnText: string,
-    themeSun: string,
-    themeMoon: string,
+    /// Validation: PATTERN_CSS_VALUE_LOOSE
+    btn_text: string,
+    /// Validation: PATTERN_CSS_VALUE_LOOSE
+    theme_sun: string,
+    /// Validation: PATTERN_CSS_VALUE_LOOSE
+    theme_moon: string,
 }
 
 export interface ThemeRequestResponse {
-    clientId: string,
+    client_id: string,
     light: ThemeCss,
     dark: ThemeCss,
-    borderRadius: string,
+    /// Validation: PATTERN_CSS_VALUE_LOOSE
+    border_radius: string,
 }

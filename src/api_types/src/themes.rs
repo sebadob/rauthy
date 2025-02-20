@@ -5,18 +5,26 @@ use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct ThemeCss {
-    // HSL values without prefix
+    /// Validation: 3 HSL values: deg, sat, lum
     pub text: [u16; 3],
+    /// Validation: 3 HSL values: deg, sat, lum
     pub text_high: [u16; 3],
+    /// Validation: 3 HSL values: deg, sat, lum
     pub bg: [u16; 3],
+    /// Validation: 3 HSL values: deg, sat, lum
     pub bg_high: [u16; 3],
+    /// Validation: 3 HSL values: deg, sat, lum
     pub action: [u16; 3],
+    /// Validation: 3 HSL values: deg, sat, lum
     pub accent: [u16; 3],
+    /// Validation: 3 HSL values: deg, sat, lum
     pub error: [u16; 3],
 
-    // fully valid values
+    /// Validation: PATTERN_CSS_VALUE_LOOSE - valid CSS value
     pub btn_text: String,
+    /// Validation: PATTERN_CSS_VALUE_LOOSE - valid CSS value
     pub theme_sun: String,
+    /// Validation: PATTERN_CSS_VALUE_LOOSE - valid CSS value
     pub theme_moon: String,
 }
 
@@ -63,6 +71,7 @@ pub struct ThemeRequestResponse {
     pub client_id: String,
     pub light: ThemeCss,
     pub dark: ThemeCss,
+    /// Validation: PATTERN_CSS_VALUE_LOOSE - valid CSS value
     pub border_radius: String,
 }
 
@@ -88,7 +97,7 @@ impl ThemeRequestResponse {
         if !RE_CSS_VALUE_LOOSE.is_match(value) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "css value must match: ^[a-z0-9-,.()%]+$",
+                "css value must match: ^[a-z0-9-,.()%/\\s]+$",
             ));
         }
 

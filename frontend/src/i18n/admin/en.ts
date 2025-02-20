@@ -289,6 +289,7 @@ export let I18nAdminEn: I18nAdmin = {
         delete: "Delete",
     },
     validation: {
+        css: "Valid CSS Value",
         origin: "Valid Origin",
         uri: "Valid URI",
     },
