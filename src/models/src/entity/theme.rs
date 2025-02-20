@@ -1,6 +1,7 @@
 use crate::database::{Cache, DB};
 use chrono::Utc;
 use hiqlite::{params, Param};
+use rauthy_api_types::themes::ThemeRequestResponse;
 use rauthy_common::compression::{compress_br, compress_gzip};
 use rauthy_common::constants::BUILD_TIME;
 use rauthy_common::is_hiqlite;
@@ -90,6 +91,17 @@ impl Default for ThemeCssFull {
             light: ThemeCss::default_light(),
             dark: ThemeCss::default_dark(),
             border_radius: "5px".to_string(),
+        }
+    }
+}
+
+impl From<ThemeCssFull> for ThemeRequestResponse {
+    fn from(t: ThemeCssFull) -> Self {
+        Self {
+            client_id: t.client_id,
+            light: rauthy_api_types::themes::ThemeCss::from(t.light),
+            dark: rauthy_api_types::themes::ThemeCss::from(t.dark),
+            border_radius: t.border_radius,
         }
     }
 }
@@ -391,6 +403,23 @@ impl From<rauthy_api_types::themes::ThemeCss> for ThemeCss {
             btn_text: value.btn_text,
             theme_sun: value.theme_sun,
             theme_moon: value.theme_moon,
+        }
+    }
+}
+
+impl From<ThemeCss> for rauthy_api_types::themes::ThemeCss {
+    fn from(t: ThemeCss) -> Self {
+        Self {
+            text: t.text,
+            text_high: t.text_high,
+            bg: t.bg,
+            bg_high: t.bg_high,
+            action: t.action,
+            accent: t.accent,
+            error: t.error,
+            btn_text: t.btn_text,
+            theme_sun: t.theme_sun,
+            theme_moon: t.theme_moon,
         }
     }
 }

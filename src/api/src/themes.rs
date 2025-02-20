@@ -54,6 +54,23 @@ pub async fn get_theme(
         .body(body))
 }
 
+/// Get the theme as a JSON opbject for the Admin UI for the given `client_id`.
+///
+/// Returns the Rauthy default, if no custom theme exists.
+#[utoipa::path(
+    post,
+    path = "/theme/{client_id}",
+    tag = "clients",
+    responses(
+        (status = 200, description = "Ok", body = ThemeRequestResponse),
+    ),
+)]
+#[get("/theme/{client_id}")]
+pub async fn post_theme(path: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
+    let theme = ThemeCssFull::find(path.into_inner()).await?;
+    Ok(HttpResponse::Ok().json(ThemeRequestResponse::from(theme)))
+}
+
 /// Update the theme for a client
 #[utoipa::path(
     get,

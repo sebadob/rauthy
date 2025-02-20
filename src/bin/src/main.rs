@@ -522,6 +522,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(generic::post_migrate_enc_key)
                             .service(generic::ping)
                             .service(themes::get_theme)
+                            .service(themes::post_theme)
                             .service(themes::put_theme)
                             .service(themes::delete_theme)
                             .service(oidc::post_validate_token)
