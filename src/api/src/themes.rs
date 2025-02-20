@@ -3,7 +3,7 @@ use actix_web::body::BoxBody;
 use actix_web::http::header::{CACHE_CONTROL, CONTENT_ENCODING, CONTENT_TYPE, ETAG};
 use actix_web::http::StatusCode;
 use actix_web::web::Json;
-use actix_web::{delete, get, put, web, HttpRequest, HttpResponse};
+use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use rauthy_api_types::themes::ThemeRequestResponse;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
@@ -63,10 +63,16 @@ pub async fn get_theme(
     tag = "clients",
     responses(
         (status = 200, description = "Ok", body = ThemeRequestResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
     ),
 )]
-#[get("/theme/{client_id}")]
-pub async fn post_theme(path: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
+#[post("/theme/{client_id}")]
+pub async fn post_theme(
+    principal: ReqPrincipal,
+    path: web::Path<String>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Read)?;
+
     let theme = ThemeCssFull::find(path.into_inner()).await?;
     Ok(HttpResponse::Ok().json(ThemeRequestResponse::from(theme)))
 }
