@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct ThemeCss {
     // HSL values without prefix
     pub text: [u16; 3],
@@ -60,7 +59,6 @@ impl ThemeCss {
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct ThemeRequestResponse {
     pub client_id: String,
     pub light: ThemeCss,
