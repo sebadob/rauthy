@@ -1,0 +1,1 @@
+import{e as i,N as l,j as n,K as p,x as t,h as c,k as m}from"./index-client.Di99sPv0.js";function u(r,e,...f){var o=r,s=p,a;i(()=>{s!==(s=e())&&(a&&(t(a),a=null),a=n(()=>s(o,...f)))},l),c&&(o=m)}export{u as s};
