@@ -33,9 +33,7 @@ export async function handle({event, resolve}) {
                     .replace('%lang%', locale || langDefault)
                     .replace('{{theme_ts}}', new Date().getTime());
             } else {
-                return html
-                    .replace('%lang%', '{{lang}}')
-                    .replace('{{theme_ts}}', new Date().getTime());
+                return html.replace('%lang%', '{{lang}}');
             }
         }
     });
