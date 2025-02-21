@@ -62,12 +62,15 @@
         let payload = theme;
         // this could be `rauthy` the default has been used before
         payload.client_id = client.id;
-        console.log('payload', payload);
+
         let res = await fetchPut(url, payload);
         if (res.error) {
             err = res.error.message;
         } else {
-            await onSuccess();
+            success = true;
+            setTimeout(() => {
+                success = false;
+            }, 2000);
         }
     }
 
@@ -77,38 +80,11 @@
             err = res.error.message;
         } else {
             await fetchTheme();
-            await onSuccess();
+            success = true;
+            setTimeout(() => {
+                success = false;
+            }, 2000);
         }
-    }
-
-    async function onSuccess() {
-        success = true;
-
-        let now = new Date().getTime();
-        let link = document.createElement('link');
-        link.rel = 'stylesheet';
-
-        let head = document.getElementsByTagName('head')[0];
-
-        if (isDev) {
-            // await fetchGet(`/auth/v1/theme/{{client_id}}?${now}`, 'json', 'reload');
-            link.href = `/auth/v1/theme/{{client_id}}/${now}`;
-            head.appendChild(link);
-        }
-
-        // we use meta tags for proper cache busting in all browsers
-
-        link.href = `/auth/v1/theme/${client.id}/${now}`;
-        head.appendChild(link);
-
-        if (client.id !== 'rauthy') {
-            link.href = `/auth/v1/theme/rauthy`;
-            head.appendChild(link);
-        }
-
-        setTimeout(() => {
-            success = false;
-        }, 2000);
     }
 
     async function onUploadSuccess() {
