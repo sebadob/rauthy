@@ -10,6 +10,7 @@ use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
+use crate::entity::theme::ThemeCssFull;
 use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
 use crate::events::event::Event;
@@ -1409,6 +1410,7 @@ impl User {
         let html = UserEmailChangeConfirmHtml::build(
             &colors,
             &lang,
+            ThemeCssFull::find_theme_ts_rauthy().await?,
             &[
                 HtmlTemplate::EmailOld(old_email),
                 HtmlTemplate::EmailNew(user.email),

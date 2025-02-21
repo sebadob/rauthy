@@ -13,6 +13,7 @@ use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::magic_links::{MagicLink, MagicLinkUsage};
 use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::sessions::Session;
+use rauthy_models::entity::theme::ThemeCssFull;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn;
 use rauthy_models::entity::webauthn::WebauthnServiceReq;
@@ -47,7 +48,12 @@ pub async fn handle_get_pwd_reset<'a>(
             password_policy: PasswordPolicyResponse::from(password_policy),
             user_id,
         };
-        PwdResetHtml::build(&colors, &lang, tpl)
+        PwdResetHtml::build(
+            &colors,
+            &lang,
+            ThemeCssFull::find_theme_ts_rauthy().await?,
+            tpl,
+        )
     };
 
     // generate a cookie value and save it to the magic link

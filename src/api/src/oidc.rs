@@ -37,6 +37,7 @@ use rauthy_models::entity::ip_rate_limit::DeviceIpRateLimit;
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JWKS};
 use rauthy_models::entity::pow::PowEntity;
 use rauthy_models::entity::sessions::Session;
+use rauthy_models::entity::theme::ThemeCssFull;
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::webauthn::WebauthnCookie;
 use rauthy_models::entity::well_known::WellKnown;
@@ -97,10 +98,17 @@ pub async fn get_authorize(
         Ok(res) => res,
         Err(err) => {
             let status = err.status_code();
-            let body = Error1Html::build(&colors, &lang, status, err.message);
+            let body = Error1Html::build(
+                &colors,
+                &lang,
+                ThemeCssFull::find_theme_ts_rauthy().await?,
+                status,
+                err.message,
+            );
             return Ok(ErrorHtml::response(body, status));
         }
     };
+    let theme_ts = ThemeCssFull::find_theme_ts(client.id.clone()).await?;
 
     // check prompt and max_age to possibly force a new session
     let mut force_new_session = if params
@@ -146,7 +154,7 @@ pub async fn get_authorize(
             .unwrap_or(false)
     {
         let status = StatusCode::UNAUTHORIZED;
-        let body = Error1Html::build(&colors, &lang, status, "login_required");
+        let body = Error1Html::build(&colors, &lang, theme_ts, status, "login_required");
         return Ok(ErrorHtml::response(body, status));
     }
 
@@ -159,6 +167,7 @@ pub async fn get_authorize(
             &colors,
             &lang,
             &client.id,
+            theme_ts,
             &[
                 HtmlTemplate::AuthProviders(auth_providers_json),
                 HtmlTemplate::ClientName(client.name.unwrap_or_default()),
@@ -189,7 +198,7 @@ pub async fn get_authorize(
 
     if let Err(err) = session.save().await {
         let status = err.status_code();
-        let body = Error1Html::build(&colors, &lang, status, err.message);
+        let body = Error1Html::build(&colors, &lang, theme_ts, status, err.message);
         return Ok(ErrorHtml::response(body, status));
     }
 
@@ -197,6 +206,7 @@ pub async fn get_authorize(
         &colors,
         &lang,
         &client.id,
+        theme_ts,
         &[
             HtmlTemplate::AuthProviders(auth_providers_json),
             HtmlTemplate::ClientName(client.name.unwrap_or_default()),
@@ -376,11 +386,16 @@ pub async fn post_authorize_refresh(
 }
 
 #[get("/oidc/callback")]
-pub async fn get_callback_html(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_callback_html(
+    principal: ReqPrincipal,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
     // TODO can we even be more strict and request session auth here?
     principal.validate_session_auth_or_init()?;
+
+    let lang = Language::try_from(&req).unwrap_or_default();
     let colors = ColorEntity::find_rauthy().await?;
-    let body = CallbackHtml::build(&colors);
+    let body = CallbackHtml::build(&colors, &lang, ThemeCssFull::find_theme_ts_rauthy().await?);
     Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 

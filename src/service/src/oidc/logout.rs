@@ -5,6 +5,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::sessions::Session;
+use rauthy_models::entity::theme::ThemeCssFull;
 use rauthy_models::html::HtmlCached;
 use rauthy_models::{JwtIdClaims, JwtTokenType};
 
@@ -15,9 +16,10 @@ pub async fn get_logout_html(
     session: Session,
     data: &web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    let theme_ts = ThemeCssFull::find_theme_ts_rauthy().await?;
     if logout_request.id_token_hint.is_none() {
         return HtmlCached::Logout(session.csrf_token)
-            .handle(req, false)
+            .handle(req, theme_ts, false)
             .await;
     }
 
@@ -66,6 +68,6 @@ pub async fn get_logout_html(
     }
 
     HtmlCached::Logout(session.csrf_token)
-        .handle(req, false)
+        .handle(req, theme_ts, false)
         .await
 }

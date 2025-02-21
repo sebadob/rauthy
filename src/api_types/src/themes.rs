@@ -97,7 +97,7 @@ impl ThemeRequestResponse {
         if !RE_CSS_VALUE_LOOSE.is_match(value) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "css value must match: ^[a-z0-9-,.()%/\\s]+$",
+                "css value must match: ^[a-z0-9-,.#()%/\\s]+$",
             ));
         }
 
