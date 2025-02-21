@@ -23,16 +23,53 @@ export interface I18nAdmin {
         desc: string,
         name: string,
     },
+    clients: {
+        branding: {
+            descHsl: string,
+            // inserted as html
+            descFullCss: string,
+            descVariables: string,
+        },
+        confidential: string,
+        confidentialNoSecret: string,
+        config: string,
+        delete1: string,
+        descAuthCode: string,
+        descClientUri: string,
+        descName: string,
+        descOrigin: string,
+        descPKCE: string,
+        descPKCEEnforce: string,
+        // inserted as html
+        descUri: string,
+        errConfidentialPKCE: string,
+        forceMfa: string,
+        generateSecret: string,
+        name: string,
+        scopes: {
+            allowed: string,
+            default: string,
+            // inserted as html
+            desc: string,
+        },
+        tokenLifetime: {
+            p1: string,
+            p2: string,
+            p3: string,
+        },
+    }
     common: {
         account: string,
         addNew: string,
         back: string,
+        contact: string,
         copiedToClip: string,
         details: string,
         edit: string,
         enabled: string,
         filter: string,
         from: string,
+        information: string,
         loading: string,
         name: string,
         nameExistsAlready: string,
@@ -210,12 +247,17 @@ export interface I18nAdmin {
         orderBy: string,
         orderChangeToAsc: string,
         orderChangeToDesc: string,
-    }
+    },
     sessions: {
         invalidateAll: string,
-    }
+    },
     tabs: {
         config: string,
         delete: string,
+    },
+    validation: {
+        css: string,
+        origin: string,
+        uri: string,
     }
 }

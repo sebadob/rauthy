@@ -1,9 +1,9 @@
 use crate::{AcceptEncoding, ReqPrincipal};
 use actix_web::body::BoxBody;
-use actix_web::http::header::{CACHE_CONTROL, CONTENT_ENCODING, CONTENT_TYPE, ETAG};
+use actix_web::http::header::{CACHE_CONTROL, CONTENT_ENCODING, CONTENT_TYPE};
 use actix_web::http::StatusCode;
 use actix_web::web::Json;
-use actix_web::{delete, get, put, web, HttpRequest, HttpResponse};
+use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use rauthy_api_types::themes::ThemeRequestResponse;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
@@ -15,26 +15,37 @@ use rauthy_models::entity::theme::ThemeCssFull;
 /// Returns the Rauthy default, if no custom theme exists.
 #[utoipa::path(
     get,
-    path = "/theme/{client_id}",
+    path = "/theme/{client_id}/{timestamp}",
     tag = "clients",
     responses(
         (status = 200, description = "Ok", body = String),
     ),
 )]
-#[get("/theme/{client_id}")]
+#[get("/theme/{client_id}/{timestamp}")]
 pub async fn get_theme(
-    path: web::Path<String>,
+    path: web::Path<(String, i64)>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let client_id = path.into_inner();
-    let etag = ThemeCssFull::etag(&client_id).await?;
-
-    if let Some(etag_remote) = req.headers().get("if-none-match") {
-        let etag_remote = etag_remote.to_str().unwrap_or_default();
-        if etag_remote == etag {
-            return Ok(HttpResponse::new(StatusCode::from_u16(304).unwrap()));
+    let client_id = {
+        let (mut id, _) = path.into_inner();
+        #[cfg(debug_assertions)]
+        if &id == "{{client_id}}" {
+            id = "rauthy".to_string();
         }
-    }
+        id
+    };
+    #[cfg(not(debug_assertions))]
+    let (client_id, _) = path.into_inner();
+    // let etag = ThemeCssFull::etag(&client_id).await?;
+
+    // if let Some(etag_remote) = req.headers().get("if-none-match") {
+    //     let etag_remote = etag_remote.to_str().unwrap_or_default();
+    //     if etag_remote == etag {
+    //         return Ok(HttpResponse::new(StatusCode::from_u16(304).unwrap()));
+    //     }
+    // }
+
+    tracing::debug!("Building theme for client {}", client_id);
 
     let enc = AcceptEncoding::from(req.headers());
     let body = match enc {
@@ -46,12 +57,32 @@ pub async fn get_theme(
     Ok(HttpResponse::build(StatusCode::OK)
         .insert_header((CONTENT_TYPE, "text/css"))
         .insert_header((CONTENT_ENCODING, enc.value()))
-        .insert_header((
-            CACHE_CONTROL,
-            "max-age=43200, stale-while-revalidate=2592000, public",
-        ))
-        .insert_header((ETAG, etag))
+        .insert_header((CACHE_CONTROL, "max-age=31104000, public"))
+        // .insert_header((ETAG, etag))
         .body(body))
+}
+
+/// Get the theme as a JSON opbject for the Admin UI for the given `client_id`.
+///
+/// Returns the Rauthy default, if no custom theme exists.
+#[utoipa::path(
+    post,
+    path = "/theme/{client_id}",
+    tag = "clients",
+    responses(
+        (status = 200, description = "Ok", body = ThemeRequestResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+    ),
+)]
+#[post("/theme/{client_id}")]
+pub async fn post_theme(
+    principal: ReqPrincipal,
+    path: web::Path<String>,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Read)?;
+
+    let theme = ThemeCssFull::find(path.into_inner()).await?;
+    Ok(HttpResponse::Ok().json(ThemeRequestResponse::from(theme)))
 }
 
 /// Update the theme for a client
@@ -93,7 +124,9 @@ pub async fn put_theme(
     )
     .await?;
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok()
+        .insert_header(("Clear-Site-Data", "cache"))
+        .finish())
 }
 
 /// Delete the theme for a client
@@ -114,5 +147,7 @@ pub async fn delete_theme(
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Delete)?;
 
     ThemeCssFull::delete(path.into_inner()).await?;
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok()
+        .insert_header(("Clear-Site-Data", "cache"))
+        .finish())
 }

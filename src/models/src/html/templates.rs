@@ -211,6 +211,7 @@ impl HtmlTemplate {
 pub struct IndexHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -228,10 +229,11 @@ pub struct IndexHtml<'a> {
 }
 
 impl IndexHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = IndexHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -257,6 +259,7 @@ impl IndexHtml<'_> {
 pub struct AccountHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -274,10 +277,16 @@ pub struct AccountHtml<'a> {
 }
 
 impl AccountHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, templates: &[HtmlTemplate]) -> String {
+    pub fn build(
+        colors: &Colors,
+        lang: &Language,
+        theme_ts: i64,
+        templates: &[HtmlTemplate],
+    ) -> String {
         let res = AccountHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -302,6 +311,7 @@ impl AccountHtml<'_> {
 pub struct AdminHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -319,10 +329,11 @@ pub struct AdminHtml<'a> {
 }
 
 impl AdminHtml<'_> {
-    pub fn build(colors: &Colors) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = AdminHtml {
-            lang: "en",
+            lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -348,6 +359,7 @@ impl AdminHtml<'_> {
 pub struct DeviceHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -365,10 +377,11 @@ pub struct DeviceHtml<'a> {
 }
 
 impl DeviceHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = DeviceHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -396,6 +409,7 @@ impl DeviceHtml<'_> {
 pub struct FedCMHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -413,10 +427,11 @@ pub struct FedCMHtml<'a> {
 }
 
 impl FedCMHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = FedCMHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -442,6 +457,7 @@ impl FedCMHtml<'_> {
 pub struct ErrorHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -462,6 +478,7 @@ impl ErrorHtml<'_> {
     pub fn build<C>(
         colors: &Colors,
         lang: &Language,
+        theme_ts: i64,
         status_code: StatusCode,
         details_text: C,
     ) -> String
@@ -471,6 +488,7 @@ impl ErrorHtml<'_> {
         let res = ErrorHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -511,6 +529,7 @@ impl ErrorHtml<'_> {
 pub struct Error1Html<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -531,6 +550,7 @@ impl Error1Html<'_> {
     pub fn build<C>(
         colors: &Colors,
         lang: &Language,
+        theme_ts: i64,
         status_code: StatusCode,
         details_text: C,
     ) -> String
@@ -540,6 +560,7 @@ impl Error1Html<'_> {
         let res = Error1Html {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -568,6 +589,7 @@ impl Error1Html<'_> {
 pub struct Error2Html<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -588,6 +610,7 @@ impl Error2Html<'_> {
     pub fn build<C>(
         colors: &Colors,
         lang: &Language,
+        theme_ts: i64,
         status_code: StatusCode,
         details_text: C,
     ) -> String
@@ -597,6 +620,7 @@ impl Error2Html<'_> {
         let res = Error2Html {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -625,6 +649,7 @@ impl Error2Html<'_> {
 pub struct Error3Html<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -645,6 +670,7 @@ impl Error3Html<'_> {
     pub fn build<C>(
         colors: &Colors,
         lang: &Language,
+        theme_ts: i64,
         status_code: StatusCode,
         details_text: C,
     ) -> String
@@ -654,6 +680,7 @@ impl Error3Html<'_> {
         let res = Error3Html {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -682,6 +709,7 @@ impl Error3Html<'_> {
 pub struct AdminApiKeysHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -699,10 +727,11 @@ pub struct AdminApiKeysHtml<'a> {
 }
 
 impl AdminApiKeysHtml<'_> {
-    pub fn build(colors: &Colors) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = AdminApiKeysHtml {
-            lang: "en",
+            lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -728,6 +757,7 @@ impl AdminApiKeysHtml<'_> {
 pub struct AdminAttributesHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -745,10 +775,11 @@ pub struct AdminAttributesHtml<'a> {
 }
 
 impl AdminAttributesHtml<'_> {
-    pub fn build(colors: &Colors) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = AdminAttributesHtml {
-            lang: "en",
+            lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -774,6 +805,7 @@ impl AdminAttributesHtml<'_> {
 pub struct AdminBlacklistHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -791,10 +823,11 @@ pub struct AdminBlacklistHtml<'a> {
 }
 
 impl AdminBlacklistHtml<'_> {
-    pub fn build(colors: &Colors) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = AdminBlacklistHtml {
-            lang: "en",
+            lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -820,6 +853,7 @@ impl AdminBlacklistHtml<'_> {
 pub struct AdminClientsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -837,10 +871,11 @@ pub struct AdminClientsHtml<'a> {
 }
 
 impl AdminClientsHtml<'_> {
-    pub fn build(colors: &Colors) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = AdminClientsHtml {
-            lang: "en",
+            lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -866,6 +901,7 @@ impl AdminClientsHtml<'_> {
 pub struct AdminConfigArgon2Html<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -883,10 +919,11 @@ pub struct AdminConfigArgon2Html<'a> {
 }
 
 impl AdminConfigArgon2Html<'_> {
-    pub fn build(colors: &Colors, lang: &Language) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = AdminConfigArgon2Html {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -912,6 +949,7 @@ impl AdminConfigArgon2Html<'_> {
 pub struct AdminConfigEncryptionHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -929,10 +967,11 @@ pub struct AdminConfigEncryptionHtml<'a> {
 }
 
 impl AdminConfigEncryptionHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = AdminConfigEncryptionHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -958,6 +997,7 @@ impl AdminConfigEncryptionHtml<'_> {
 pub struct AdminConfigJwksHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -975,10 +1015,11 @@ pub struct AdminConfigJwksHtml<'a> {
 }
 
 impl AdminConfigJwksHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = AdminConfigJwksHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1004,6 +1045,7 @@ impl AdminConfigJwksHtml<'_> {
 pub struct AdminConfigPolicyHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1021,10 +1063,11 @@ pub struct AdminConfigPolicyHtml<'a> {
 }
 
 impl AdminConfigPolicyHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = AdminConfigPolicyHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1050,6 +1093,7 @@ impl AdminConfigPolicyHtml<'_> {
 pub struct AdminDocsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1067,10 +1111,11 @@ pub struct AdminDocsHtml<'a> {
 }
 
 impl AdminDocsHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = AdminDocsHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1096,6 +1141,7 @@ impl AdminDocsHtml<'_> {
 pub struct AdminEventsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1113,10 +1159,11 @@ pub struct AdminEventsHtml<'a> {
 }
 
 impl AdminEventsHtml<'_> {
-    pub fn build(colors: &Colors) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = AdminEventsHtml {
-            lang: "en",
+            lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1142,6 +1189,7 @@ impl AdminEventsHtml<'_> {
 pub struct AdminGroupsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1159,10 +1207,11 @@ pub struct AdminGroupsHtml<'a> {
 }
 
 impl AdminGroupsHtml<'_> {
-    pub fn build(colors: &Colors) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = AdminGroupsHtml {
-            lang: "en",
+            lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1188,6 +1237,7 @@ impl AdminGroupsHtml<'_> {
 pub struct AdminRolesHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1205,10 +1255,11 @@ pub struct AdminRolesHtml<'a> {
 }
 
 impl AdminRolesHtml<'_> {
-    pub fn build(colors: &Colors) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = AdminRolesHtml {
-            lang: "en",
+            lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1234,6 +1285,7 @@ impl AdminRolesHtml<'_> {
 pub struct AdminScopesHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1251,10 +1303,11 @@ pub struct AdminScopesHtml<'a> {
 }
 
 impl AdminScopesHtml<'_> {
-    pub fn build(colors: &Colors) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = AdminScopesHtml {
-            lang: "en",
+            lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1280,6 +1333,7 @@ impl AdminScopesHtml<'_> {
 pub struct AdminSessionsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1297,10 +1351,11 @@ pub struct AdminSessionsHtml<'a> {
 }
 
 impl AdminSessionsHtml<'_> {
-    pub fn build(colors: &Colors) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = AdminSessionsHtml {
-            lang: "en",
+            lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1326,6 +1381,7 @@ impl AdminSessionsHtml<'_> {
 pub struct AdminUsersHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1343,10 +1399,11 @@ pub struct AdminUsersHtml<'a> {
 }
 
 impl AdminUsersHtml<'_> {
-    pub fn build(colors: &Colors) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = AdminUsersHtml {
-            lang: "en",
+            lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1372,6 +1429,7 @@ impl AdminUsersHtml<'_> {
 pub struct AuthorizeHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1393,11 +1451,13 @@ impl AuthorizeHtml<'_> {
         colors: &Colors,
         lang: &Language,
         client_id: &str,
+        theme_ts: i64,
         templates: &[HtmlTemplate],
     ) -> String {
         let res = AuthorizeHtml {
             lang: lang.as_str(),
             client_id,
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1423,6 +1483,7 @@ impl AuthorizeHtml<'_> {
 pub struct CallbackHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1440,10 +1501,11 @@ pub struct CallbackHtml<'a> {
 }
 
 impl CallbackHtml<'_> {
-    pub fn build(colors: &Colors) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = CallbackHtml {
-            lang: "en",
+            lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1469,6 +1531,7 @@ impl CallbackHtml<'_> {
 pub struct ProvidersHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1486,10 +1549,11 @@ pub struct ProvidersHtml<'a> {
 }
 
 impl ProvidersHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = ProvidersHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1515,6 +1579,7 @@ impl ProvidersHtml<'_> {
 pub struct ProviderCallbackHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1532,10 +1597,11 @@ pub struct ProviderCallbackHtml<'a> {
 }
 
 impl ProviderCallbackHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = ProviderCallbackHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1561,6 +1627,7 @@ impl ProviderCallbackHtml<'_> {
 pub struct LogoutHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1578,10 +1645,11 @@ pub struct LogoutHtml<'a> {
 }
 
 impl LogoutHtml<'_> {
-    pub fn build(csrf_token: String, colors: &Colors, lang: &Language) -> String {
+    pub fn build(csrf_token: String, colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         let res = LogoutHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1607,6 +1675,7 @@ impl LogoutHtml<'_> {
 pub struct PwdResetHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1626,10 +1695,16 @@ pub struct PwdResetHtml<'a> {
 impl PwdResetHtml<'_> {
     // If the email is Some(_), this means that the user has webauthn enabled and does not need
     // to provide the email manually
-    pub fn build(colors: &Colors, lang: &Language, template: TplPasswordReset) -> String {
+    pub fn build(
+        colors: &Colors,
+        lang: &Language,
+        theme_ts: i64,
+        template: TplPasswordReset,
+    ) -> String {
         let res = PwdResetHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1668,6 +1743,7 @@ impl TooManyRequestsHtml {
 pub struct UserEmailChangeConfirmHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1685,10 +1761,16 @@ pub struct UserEmailChangeConfirmHtml<'a> {
 }
 
 impl UserEmailChangeConfirmHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, templates: &[HtmlTemplate]) -> String {
+    pub fn build(
+        colors: &Colors,
+        lang: &Language,
+        theme_ts: i64,
+        templates: &[HtmlTemplate],
+    ) -> String {
         UserEmailChangeConfirmHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,
@@ -1714,6 +1796,7 @@ impl UserEmailChangeConfirmHtml<'_> {
 pub struct UserRegisterHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
+    theme_ts: i64,
     col_act1: &'a str,
     col_act1a: &'a str,
     col_act2: &'a str,
@@ -1731,10 +1814,11 @@ pub struct UserRegisterHtml<'a> {
 }
 
 impl UserRegisterHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language) -> String {
+    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
         UserRegisterHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
+            theme_ts,
             col_act1: &colors.act1,
             col_act1a: &colors.act1a,
             col_act2: &colors.act2,

@@ -401,7 +401,10 @@ pub async fn get_client_logo(id: web::Path<String>) -> Result<HttpResponse, Erro
         // clients should cache the logos for 12 hours
         // this means if a logo has been updated, they receive the new one 12 hours
         // later in the worst case
-        .insert_header((CACHE_CONTROL, "max-age=43200"))
+        .insert_header((
+            CACHE_CONTROL,
+            "max-age=43200, stale-while-revalidate=2592000, public",
+        ))
         .body(logo.data))
 }
 
@@ -461,7 +464,10 @@ pub async fn put_client_logo(
         LogoType::Client,
     )
     .await?;
-    Ok(HttpResponse::Ok().finish())
+
+    Ok(HttpResponse::Ok()
+        .insert_header(("Clear-Site-Data", "cache"))
+        .finish())
 }
 
 /// Deletes a custom logo for this client

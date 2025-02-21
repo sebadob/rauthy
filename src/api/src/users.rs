@@ -3,6 +3,7 @@ use actix_web::http::header::{ACCEPT, LOCATION};
 use actix_web::http::StatusCode;
 use actix_web::web::{Json, Query};
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
+use chrono::Utc;
 use rauthy_api_types::generic::{PaginationParams, PasswordPolicyResponse};
 use rauthy_api_types::oidc::PasswordResetResponse;
 use rauthy_api_types::users::{
@@ -29,6 +30,7 @@ use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::devices::DeviceEntity;
 use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::pow::PowEntity;
+use rauthy_models::entity::theme::ThemeCssFull;
 use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use rauthy_models::entity::users::User;
 use rauthy_models::entity::users_values::UserValues;
@@ -271,7 +273,9 @@ pub async fn get_users_register(req: HttpRequest) -> Result<HttpResponse, ErrorR
     if !*OPEN_USER_REG {
         return Ok(HttpResponse::NotFound().finish());
     }
-    HtmlCached::UserRegistration.handle(req, true).await
+    HtmlCached::UserRegistration
+        .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
+        .await
 }
 
 /// Creates a new user with almost all values set to default
@@ -578,7 +582,15 @@ pub async fn get_user_email_confirm(
         Err(err) => {
             let colors = ColorEntity::find_rauthy().await.unwrap_or_default();
             let status = err.status_code();
-            let body = Error3Html::build(&colors, &lang, status, err.message);
+            let body = Error3Html::build(
+                &colors,
+                &lang,
+                ThemeCssFull::find_theme_ts_rauthy()
+                    .await
+                    .unwrap_or_else(|_| Utc::now().timestamp()),
+                status,
+                err.message,
+            );
             ErrorHtml::response(body, status)
         }
     }
@@ -620,7 +632,15 @@ pub async fn get_user_password_reset(
                     Err(err) => {
                         let colors = ColorEntity::find_rauthy().await.unwrap_or_default();
                         let status = err.status_code();
-                        let body = Error3Html::build(&colors, &lang, status, err.message);
+                        let body = Error3Html::build(
+                            &colors,
+                            &lang,
+                            ThemeCssFull::find_theme_ts_rauthy()
+                                .await
+                                .unwrap_or_else(|_| Utc::now().timestamp()),
+                            status,
+                            err.message,
+                        );
                         return ErrorHtml::response(body, status);
                     }
                 };
@@ -642,7 +662,15 @@ pub async fn get_user_password_reset(
         Err(err) => {
             let colors = ColorEntity::find_rauthy().await.unwrap_or_default();
             let status = err.status_code();
-            let body = Error3Html::build(&colors, &lang, status, err.message);
+            let body = Error3Html::build(
+                &colors,
+                &lang,
+                ThemeCssFull::find_theme_ts_rauthy()
+                    .await
+                    .unwrap_or_else(|_| Utc::now().timestamp()),
+                status,
+                err.message,
+            );
             ErrorHtml::response(body, status)
         }
     }

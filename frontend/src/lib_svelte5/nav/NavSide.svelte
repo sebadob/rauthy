@@ -22,6 +22,9 @@
     import IconBookOpen from "$icons/IconBookOpen.svelte";
     import IconCheckBadge from "$icons/IconCheckBadge.svelte";
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import IconLogout from "$lib/icons/IconLogout.svelte";
+    import {redirectToLogout} from "$utils/helpers.ts";
+    import Tooltip from "$lib5/Tooltip.svelte";
 
     let ta = useI18nAdmin();
 
@@ -218,7 +221,18 @@
 
         {#if !collapsed}
             <div class="bottom">
+                {#snippet toLogout()}
+                    <div class="logout">
+                        <Button invisible onclick={() => redirectToLogout()}>
+                            <Tooltip text="Logout">
+                                <IconLogout/>
+                            </Tooltip>
+                        </Button>
+                    </div>
+                {/snippet}
+
                 {#if compact}
+                    {@render toLogout()}
                     <div class="theme">
                         <ThemeSwitch/>
                     </div>
@@ -227,6 +241,7 @@
                     <div class="flex gap-05">
                         <ThemeSwitch/>
                         <LangSelector openTop/>
+                        {@render toLogout()}
                     </div>
                     <div class="version">
                         <AppVersion/>
@@ -301,6 +316,10 @@
         margin-bottom: 1rem;
         border-radius: var(--border-radius);
         overflow: clip;
+    }
+
+    .logout {
+        margin-bottom: -.25rem;
     }
 
     .menu {

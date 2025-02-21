@@ -124,7 +124,7 @@ p {
 
 hr {
     border: none;
-    border-top: 1px solid hsla(var(--bg-high), .66);
+    border-top: 1px solid hsl(var(--bg-high));
     margin: .5rem 0;
 }
 

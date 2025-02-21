@@ -1,5 +1,5 @@
 <script>
-    import Clients from "../../../components/admin/clients/Clients.svelte";
+    import Clients from "$lib5/admin/clients/Clients.svelte";
 </script>
 
 <Clients/>

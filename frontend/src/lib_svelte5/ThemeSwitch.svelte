@@ -2,7 +2,7 @@
     import {useI18n} from "$state/i18n.svelte.ts";
     import Button from "$lib5/button/Button.svelte";
 
-    let {absolute}: { absolute?: boolean } = $props();
+    let {absolute, preview}: { absolute?: boolean, preview?: boolean } = $props();
 
     const storageIdx = 'darkMode';
 

@@ -1,6 +1,7 @@
 use crate::database::{Cache, DB};
 use chrono::Utc;
 use hiqlite::{params, Param};
+use rauthy_api_types::themes::ThemeRequestResponse;
 use rauthy_common::compression::{compress_br, compress_gzip};
 use rauthy_common::constants::BUILD_TIME;
 use rauthy_common::is_hiqlite;
@@ -13,7 +14,7 @@ use tracing::error;
 // used for possible future struct updates to be able to deserialize old themes properly
 static LATEST_CSS_VERSION: i32 = 1;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ThemeCssFull {
     pub client_id: String,
     // used for the etag
@@ -94,10 +95,25 @@ impl Default for ThemeCssFull {
     }
 }
 
+impl From<ThemeCssFull> for ThemeRequestResponse {
+    fn from(t: ThemeCssFull) -> Self {
+        Self {
+            client_id: t.client_id,
+            light: rauthy_api_types::themes::ThemeCss::from(t.light),
+            dark: rauthy_api_types::themes::ThemeCss::from(t.dark),
+            border_radius: t.border_radius,
+        }
+    }
+}
+
 // CRUD
 impl ThemeCssFull {
     pub async fn find(client_id: String) -> Result<Self, ErrorResponse> {
-        let opt: Option<Self> = if is_hiqlite() {
+        // if let Some(slf) = DB::client().get(Cache::Theme, client_id.clone()).await? {
+        //     return Ok(slf);
+        // }
+
+        let slf: Self = if is_hiqlite() {
             DB::client()
                 .query_map_optional(
                     "SELECT * FROM themes WHERE client_id = $1",
@@ -110,9 +126,26 @@ impl ThemeCssFull {
                 .fetch_optional(DB::conn())
                 .await?
                 .map(|row| Self::from_row(&row).unwrap())
-        };
+        }
+        .unwrap_or_default();
 
-        Ok(opt.unwrap_or_default())
+        // DB::client()
+        //     .put(Cache::Theme, client_id, &slf, None)
+        //     .await?;
+
+        Ok(slf)
+    }
+
+    /// Returns `last_update` for the given `client_id`s Theme CSS. If no custom theme exists,
+    /// the latest TS for the `Rauthy` theme is returned.
+    #[inline(always)]
+    pub async fn find_theme_ts(client_id: String) -> Result<i64, ErrorResponse> {
+        Ok(Self::find(client_id).await?.last_update)
+    }
+
+    #[inline(always)]
+    pub async fn find_theme_ts_rauthy() -> Result<i64, ErrorResponse> {
+        Ok(Self::find("rauthy".to_string()).await?.last_update)
     }
 
     pub async fn delete(client_id: String) -> Result<(), ErrorResponse> {
@@ -128,7 +161,15 @@ impl ThemeCssFull {
                 .await?;
         }
 
-        Self::invalidate_caches(&client_id).await?;
+        if client_id == "rauthy" {
+            // To make sure that all admin HTML will be pre-built with the new timestamp,
+            // we need to clear all caches to have a more efficient way of caching.
+            //
+            // No need to rebuild any other HTML, because the theme for clients is fetched
+            // only during `/authorize, which is dynamically built each time and not cached.
+            DB::client().clear_cache(Cache::Html).await?;
+        }
+        Self::invalidate_caches(client_id).await?;
 
         Ok(())
     }
@@ -176,7 +217,7 @@ SET last_update = $2, version = $3, light = $4, dark = $5, border_radius = $6
         }
 
         // TODO if we have the prebuild fn at some point, favor this instead of invalidation
-        Self::invalidate_caches(&client_id).await?;
+        Self::invalidate_caches(client_id).await?;
 
         Ok(())
     }
@@ -185,21 +226,21 @@ SET last_update = $2, version = $3, light = $4, dark = $5, border_radius = $6
 impl ThemeCssFull {
     // TODO fn to pre-build and compress themes for all existing clients at app startup
 
-    pub async fn etag(client_id: &str) -> Result<String, ErrorResponse> {
-        if let Some(etag) = DB::client()
-            .get_bytes(Cache::Etag, Self::cache_key_etag(client_id))
-            .await?
-        {
-            Ok(String::from_utf8(etag)?)
-        } else {
-            Self::etag_update(client_id).await
-        }
-    }
+    // pub async fn etag(client_id: &str) -> Result<String, ErrorResponse> {
+    //     if let Some(etag) = DB::client()
+    //         .get_bytes(Cache::Etag, Self::cache_key_etag(client_id))
+    //         .await?
+    //     {
+    //         Ok(String::from_utf8(etag)?)
+    //     } else {
+    //         Self::etag_update(client_id).await
+    //     }
+    // }
 
-    #[inline]
-    fn cache_key_etag(client_id: &str) -> String {
-        format!("{}_theme_etag", client_id)
-    }
+    // #[inline]
+    // fn cache_key_etag(client_id: &str) -> String {
+    //     format!("{}_theme_etag", client_id)
+    // }
 
     #[inline]
     fn cache_key_plain(client_id: &str) -> String {
@@ -216,36 +257,33 @@ impl ThemeCssFull {
         format!("{}_theme_gzip", client_id)
     }
 
-    pub async fn etag_update(client_id: &str) -> Result<String, ErrorResponse> {
-        // TODO get "real" etag from DB in that case to avoid re-fetches between restarts.
-        // timestamp is just a placeholder for now
-        let etag = BUILD_TIME.timestamp().to_string();
-        DB::client()
-            .put_bytes(
-                Cache::Etag,
-                Self::cache_key_etag(client_id),
-                etag.as_bytes().to_vec(),
-                None,
-            )
-            .await?;
-        Ok(etag)
-    }
+    // pub async fn etag_update(client_id: &str) -> Result<String, ErrorResponse> {
+    //     let slf = Self::find(client_id.to_string()).await?;
+    //     let etag = slf.last_update.to_string();
+    //     DB::client()
+    //         .put_bytes(
+    //             Cache::Etag,
+    //             Self::cache_key_etag(client_id),
+    //             etag.as_bytes().to_vec(),
+    //             None,
+    //         )
+    //         .await?;
+    //     Ok(etag)
+    // }
 
-    async fn invalidate_caches(client_id: &str) -> Result<(), ErrorResponse> {
+    async fn invalidate_caches(client_id: String) -> Result<(), ErrorResponse> {
         let client = DB::client();
 
         client
-            .delete(Cache::Etag, Self::cache_key_etag(client_id))
+            .delete(Cache::Html, Self::cache_key_plain(&client_id))
             .await?;
         client
-            .delete(Cache::Html, Self::cache_key_plain(client_id))
+            .delete(Cache::Html, Self::cache_key_br(&client_id))
             .await?;
         client
-            .delete(Cache::Html, Self::cache_key_br(client_id))
+            .delete(Cache::Html, Self::cache_key_gzip(&client_id))
             .await?;
-        client
-            .delete(Cache::Html, Self::cache_key_gzip(client_id))
-            .await?;
+        client.delete(Cache::ThemeTs, client_id.to_string()).await?;
 
         Ok(())
     }
@@ -395,6 +433,23 @@ impl From<rauthy_api_types::themes::ThemeCss> for ThemeCss {
     }
 }
 
+impl From<ThemeCss> for rauthy_api_types::themes::ThemeCss {
+    fn from(t: ThemeCss) -> Self {
+        Self {
+            text: t.text,
+            text_high: t.text_high,
+            bg: t.bg,
+            bg_high: t.bg_high,
+            action: t.action,
+            accent: t.accent,
+            error: t.error,
+            btn_text: t.btn_text,
+            theme_sun: t.theme_sun,
+            theme_moon: t.theme_moon,
+        }
+    }
+}
+
 impl From<&[u8]> for ThemeCss {
     fn from(value: &[u8]) -> Self {
         bincode::deserialize(value).unwrap()
@@ -453,7 +508,7 @@ impl ThemeCss {
             bg: [208, 90, 4],
             bg_high: [208, 30, 19],
             action: [34, 100, 59],
-            accent: [246, 60, 53],
+            accent: [265, 100, 53],
             error: [15, 100, 37],
             btn_text: "hsl(var(--bg))".to_string(),
             theme_sun: "hsla(var(--action) / .7)".to_string(),
@@ -468,7 +523,7 @@ impl ThemeCss {
             bg: [228, 2, 98],
             bg_high: [228, 8, 84],
             action: [34, 100, 59],
-            accent: [246, 60, 53],
+            accent: [265, 100, 53],
             error: [15, 100, 37],
             btn_text: "white".to_string(),
             theme_sun: "hsla(var(--action) / .7)".to_string(),

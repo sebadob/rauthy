@@ -66,7 +66,7 @@ pub struct DynamicClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub redirect_uris: Vec<String>,
-    /// Validation: `Vec<^(authorization_code|client_credentials|password|refresh_token)$>`
+    /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$>`
     #[validate(custom(function = "validate_vec_grant_types"))]
     pub grant_types: Vec<String>,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
@@ -147,7 +147,7 @@ pub struct EphemeralClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub post_logout_redirect_uris: Option<Vec<String>>,
-    /// Validation: `Vec<^(authorization_code|client_credentials|password|refresh_token)$>`
+    /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$>`
     #[validate(custom(function = "validate_vec_grant_type"))]
     pub grant_types: Option<Vec<String>>,
     /// Validation: `60 <= access_token_lifetime <= 86400`
@@ -207,7 +207,7 @@ pub struct UpdateClientRequest {
     #[validate(custom(function = "validate_vec_origin"))]
     pub allowed_origins: Option<Vec<String>>,
     pub enabled: bool,
-    /// Validation: `Vec<^(authorization_code|client_credentials|password|refresh_token)$>`
+    /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$>`
     #[validate(custom(function = "validate_vec_grant_types"))]
     pub flows_enabled: Vec<String>,
     /// Validation: `^(RS256|RS384|RS512|EdDSA)$`

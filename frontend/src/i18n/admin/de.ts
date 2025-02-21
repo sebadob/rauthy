@@ -20,16 +20,70 @@ export let I18nAdminDe: I18nAdmin = {
         desc: "Beschreibung",
         name: "Attribut Name",
     },
+    clients: {
+        branding: {
+            descHsl: `Die folgenden Werte müssen als HSL angegeben werden. Hier wird nur die Basis-Farbe
+                definiert. Alpha Kanäle und andere Werte werden vom Theme dynamisch angepasst.`,
+            descFullCss: `Die folgenden Werte müssen vollständig gültige Angaben für CSS <code>color</code> sein.
+                Es können auch komplexe Kalkulationen oder die oben definierten CSS Variables 
+                genutzt werden.`,
+            descVariables: `Jede nachfolgende Beschriftung ist gleichzeitig der Name der CSS Variable. Das heisst,
+                dass z.B. die freien Eingaben wiederum die Variablen referenzieren können, z.B. mit
+                <code>hsla(var(--action) / .7)</code>.`,
+        },
+        confidential: "Vertraulich",
+        confidentialNoSecret: "Dies is kein vertraulier Client und hat somit kein Secret.",
+        config: "Client Konfiguration",
+        delete1: "Soll dieser Client wirklich gelöscht werden?",
+        descAuthCode: `Die Gültigkeit der Auth Codes kann angepasst werden um zusätzliche Sicherheit
+            zu gewinnen. Auth Codes können nur einmalig verwendet werden und sind normalerweise für 60
+            Sekunden gültig. Je kürzer, desto besser, so lange der Client den Code schnell genug nutzen kann.`,
+        descClientUri: `Informationen über URI und Kontakte dieses Clients zur Anzeige
+            auf der Login Seite.`,
+        descName: `Der Client Name kann geändert werden ohne Einfluss auf die Konfiguration.
+            Er dient lediglich der Anzeige auf der Login Seite.`,
+        descOrigin: `Externe, zusätzlich erlaubte Origins - normalerweise nur notwendig, wenn dieser 
+            Client direkt aus dem Browser heraus Requests zu Rauthy machen muss, typischerweise SPAs.`,
+        descPKCE: `Wenn der Client Support für PKCE hat, sollte zur zusätzlichen Sicherheit immer S256 
+            PKCE aktiviert werden. Wenn ein nicht-vertraulicher Client (z.B. eine SPA) genutzt wird, muss
+            mindestens eine PKCE Challenge aktiviert sein, um ausreichend Sicherheit bieten zu können.`,
+        descPKCEEnforce: `Wenn PKCE aktiviert ist, erzwingt Rauthy die Nutzung and verweigert Logins,
+            die keine korrekte Challenge bereit stellen.`,
+        descUri: `Es können beliebig viele Redirect URIs angegeben werden. Am Ende einer Jeden wird 
+            optional <code>*</code> als Wildcard akzeptiert.`,
+        errConfidentialPKCE: `Der Client muss entweder vertraulich sein oder mindestens eine PKCE
+            Challenge aktiviert haben.`,
+        forceMfa: "MFA Erzwingen",
+        generateSecret: "Neues Secret Generieren",
+        name: "Client Name",
+        scopes: {
+            allowed: "Erlaubte Scopes",
+            default: "Standard Scopes",
+            desc: `Erlaubte Scopes sind diejenigen, die der Client dynamisch beim Redirect zum Login
+            im <code>authorization_code</code> flow anfordern kann. Die standard Scopes werden hingegen immer
+            hinzugefügt und können Probleme lösen, wenn z.B. der <code>password</code> Flow verwendet
+            wird.`,
+        },
+        tokenLifetime: {
+            p1: `Die Token Lifetime wird auf Access und ID Tokens angewandt und wird in Sekunden angegeben.`,
+            p2: `Sollte der Client EdDSA / ed25519 Algorithmen unterstützen, sollte dies die bevorzugte Wahl
+                sein. RSA Algorithmen existieren lediglich aus Kompatibilitätsgründen.`,
+            p3: `Der Algorithmus für Refresh Tokens kann nicht geändert werden, da diese nur von Rauthy
+                genutzt werden sollten.`,
+        },
+    },
     common: {
         account: "Account",
         addNew: "Neu Hinzufügen",
         back: "Zurück",
+        contact: "Kontakt",
         copiedToClip: "Wert wurde in die Zwischenablage kopiert",
         details: "Details",
         edit: "Bearbeiten",
         enabled: "Aktiviert",
         filter: "Filter",
         from: "Von",
+        information: "Informationen",
         loading: "Lade",
         name: "Name",
         nameExistsAlready: "Name existiert bereits",
@@ -252,5 +306,10 @@ export let I18nAdminDe: I18nAdmin = {
     tabs: {
         config: "Konfiguration",
         delete: "Löschen",
+    },
+    validation: {
+        css: "Gültiger CSS Wert",
+        origin: "Gültige Origin",
+        uri: "Gültige URI",
     },
 };

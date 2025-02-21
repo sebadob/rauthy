@@ -16,6 +16,7 @@ use rauthy_models::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderLinkCookie, AuthProviderTemplate,
 };
 use rauthy_models::entity::logos::{Logo, LogoType};
+use rauthy_models::entity::theme::ThemeCssFull;
 use rauthy_models::entity::users::User;
 use rauthy_models::html::HtmlCached;
 use tracing::debug;
@@ -149,7 +150,9 @@ pub async fn post_provider_login(
 
 #[get("/providers/callback")]
 pub async fn get_provider_callback_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
-    HtmlCached::Device.handle(req, true).await
+    HtmlCached::Device
+        .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
+        .await
 }
 
 /// Callback for an upstream auth provider login
@@ -369,7 +372,10 @@ pub async fn get_provider_img(id: web::Path<String>) -> Result<HttpResponse, Err
         // clients should cache the logos for 12 hours
         // this means if a logo has been updated, they receive the new one 12 hours
         // later in the worst case
-        .insert_header((CACHE_CONTROL, "max-age=43200"))
+        .insert_header((
+            CACHE_CONTROL,
+            "max-age=43200, stale-while-revalidate=2592000, public",
+        ))
         .body(logo.data))
 }
 
