@@ -21,6 +21,16 @@ export let I18nAdminDe: I18nAdmin = {
         name: "Attribut Name",
     },
     clients: {
+        branding: {
+            descHsl: `Die folgenden Werte müssen als HSL angegeben werden. Hier wird nur die Basis-Farbe
+                definiert. Alpha Kanäle und andere Werte werden vom Theme dynamisch angepasst.`,
+            descFullCss: `Die folgenden Werte müssen vollständig gültige Angaben für CSS <code>color</code> sein.
+                Es können auch komplexe Kalkulationen oder die oben definierten CSS Variables 
+                genutzt werden.`,
+            descVariables: `Jede nachfolgende Beschriftung ist gleichzeitig der Name der CSS Variable. Das heisst,
+                dass z.B. die freien Eingaben wiederum die Variablen referenzieren können, z.B. mit
+                <code>hsla(var(--action) / .7)</code>.`,
+        },
         confidential: "Vertraulich",
         confidentialNoSecret: "Dies is kein vertraulier Client und hat somit kein Secret.",
         config: "Client Konfiguration",

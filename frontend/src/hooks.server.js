@@ -15,9 +15,11 @@ const themeDefault = 'body{--text:208 10 40;--text-high:208 20 20;--bg:228 2 98;
 export async function handle({event, resolve}) {
     let path = event.url.pathname;
 
-    if (path === '/auth/v1/theme/%7B%7Bclient_id%7D%7D') {
-        return new Response(themeDefault);
-    } else if (path === '/auth/v1/i18n_email/%7B%7Blang%7D%7D') {
+    if (path.startsWith('/auth/v1/theme/%7B%7Bclient_id%7D%7D')) {
+        return new Response('{}');
+    }
+
+    if (path === '/auth/v1/i18n_email/%7B%7Blang%7D%7D') {
         // TODO insert EN template here if the whole setup works
         // This, for now, only fixes UI compilation.
         return new Response('{}');
@@ -27,9 +29,13 @@ export async function handle({event, resolve}) {
         transformPageChunk: ({html}) => {
             if (isDev) {
                 let locale = event.cookies.get('locale');
-                return html.replace('%lang%', locale || langDefault);
+                return html
+                    .replace('%lang%', locale || langDefault)
+                    .replace('{{theme_ts}}', new Date().getTime());
             } else {
-                return html.replace('%lang%', '{{lang}}');
+                return html
+                    .replace('%lang%', '{{lang}}')
+                    .replace('{{theme_ts}}', new Date().getTime());
             }
         }
     });

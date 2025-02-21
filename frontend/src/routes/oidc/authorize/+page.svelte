@@ -41,6 +41,7 @@
     import ButtonAuthProvider from "../../../components/ButtonAuthProvider.svelte";
     import {onMount} from "svelte";
     import type {SessionInfoResponse} from "$api/types/session.ts";
+    import ClientLogo from "$lib5/ClientLogo.svelte";
 
     const inputWidth = "18rem";
 
@@ -378,11 +379,9 @@
     <ContentCenter>
         <div class="container">
             <div class="head">
-                <div class="logo">
-                    {#if clientId}
-                        <img src="{`/auth/v1/clients/${clientId}/logo`}" alt="No Logo Available"/>
-                    {/if}
-                </div>
+                {#if clientId}
+                    <ClientLogo {clientId}/>
+                {/if}
                 {#if clientUri}
                     <a class="home" href={clientUri}>
                         <IconHome color="hsla(var(--text) / .4)"/>
@@ -592,15 +591,6 @@
     .separator {
         height: 1px;
         background: hsla(var(--bg-high) / .8);
-    }
-
-    .logo {
-        margin: 0 .25rem;
-        width: 84px;
-        height: 84px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
     }
 
     .providers {

@@ -1,6 +1,6 @@
 <script lang="ts">
     import type {ClientResponse} from "$api/types/clients.ts";
-    import {fetchDelete, fetchPost} from "$api/fetch.ts";
+    import {fetchDelete, fetchPost, fetchPut} from "$api/fetch.ts";
     import type {ThemeRequestResponse} from "$api/types/themes.ts";
     import Form from "$lib5/form/Form.svelte";
     import {useI18n} from "$state/i18n.svelte.ts";
@@ -9,6 +9,11 @@
     import Input from "$lib5/form/Input.svelte";
     import {PATTERN_CSS_VALUE_LOOSE} from "$utils/patterns.ts";
     import BrandingMode from "$lib5/admin/clients/branding/BrandingMode.svelte";
+    import BrandingPreviewWrapper from "$lib5/admin/clients/branding/BrandingPreviewWrapper.svelte";
+    import {genKey} from "$utils/helpers.ts";
+    import InputFile from "$lib5/form/InputFile.svelte";
+    import IconCheck from "$icons/IconCheck.svelte";
+    import {useIsDev} from "$state/is_dev.svelte.ts";
 
     let {
         client,
@@ -21,12 +26,14 @@
     let t = useI18n();
     let ta = useI18nAdmin();
 
+    let success = $state(false);
     let err = $state('');
     let theme: ThemeRequestResponse | undefined = $state();
-    const tabs = ['light', 'dark'];
-    let editTheme = $state(tabs[0]);
 
+    let logoKey = $state(genKey());
+    let logoUrl = $derived(`/auth/v1/clients/${client.id}/logo?${logoKey}`);
     let url = $derived(`/auth/v1/theme/${client.id}`);
+    let isDev = $derived(useIsDev().get());
 
     $effect(() => {
         fetchTheme();
@@ -56,6 +63,12 @@
         // this could be `rauthy` the default has been used before
         payload.client_id = client.id;
         console.log('payload', payload);
+        let res = await fetchPut(url, payload);
+        if (res.error) {
+            err = res.error.message;
+        } else {
+            await onSuccess();
+        }
     }
 
     async function reset() {
@@ -64,62 +77,135 @@
             err = res.error.message;
         } else {
             await fetchTheme();
+            await onSuccess();
         }
+    }
+
+    async function onSuccess() {
+        success = true;
+
+        let now = new Date().getTime();
+        let link = document.createElement('link');
+        link.rel = 'stylesheet';
+
+        let head = document.getElementsByTagName('head')[0];
+
+        if (isDev) {
+            // await fetchGet(`/auth/v1/theme/{{client_id}}?${now}`, 'json', 'reload');
+            link.href = `/auth/v1/theme/{{client_id}}/${now}`;
+            head.appendChild(link);
+        }
+
+        // we use meta tags for proper cache busting in all browsers
+
+        link.href = `/auth/v1/theme/${client.id}/${now}`;
+        head.appendChild(link);
+
+        if (client.id !== 'rauthy') {
+            link.href = `/auth/v1/theme/rauthy`;
+            head.appendChild(link);
+        }
+
+        setTimeout(() => {
+            success = false;
+        }, 2000);
+    }
+
+    async function onUploadSuccess() {
+        logoKey = genKey();
     }
 </script>
 
-<div class="container">
-    {#if theme}
-        <Form action={url} {onSubmit}>
-            <Input
-                    label="border-radius"
-                    placeholder="border-radius"
-                    errMsg={ta.validation.css}
-                    width={inputWidth}
-                    bind:value={theme.border_radius}
-                    required
-                    pattern={PATTERN_CSS_VALUE_LOOSE}
-            />
+<Form action={url} {onSubmit}>
+    <div class="container">
+        {#if theme}
+            <div class="values">
+                <p>{@html ta.clients.branding.descVariables}</p>
 
-            <h2>Light</h2>
-            <BrandingMode bind:values={theme.light} {inputWidth}/>
+                <Input
+                        label="--border-radius"
+                        placeholder="--border-radius"
+                        errMsg={ta.validation.css}
+                        width={inputWidth}
+                        bind:value={theme.border_radius}
+                        required
+                        pattern={PATTERN_CSS_VALUE_LOOSE}
+                />
 
-            <h2>Dark</h2>
-            <BrandingMode bind:values={theme.dark} {inputWidth}/>
+                <h1>Light Theme</h1>
+                <BrandingMode bind:values={theme.light} {inputWidth}/>
 
-            <!-- TODO: switchable preview in compact mode only -->
-            <!--        <div class="flex">-->
-            <!--            <Tabs {tabs} bind:selected={editTheme}/>-->
-            <!--        </div>-->
-
-            <div class="buttons">
-                <Button type="submit">
-                    {t.common.save}
-                </Button>
-                <Button level={-2} onclick={reset}>
-                    {ta.common.reset}
-                </Button>
+                <br>
+                <h1>Dark Theme</h1>
+                <BrandingMode bind:values={theme.dark} {inputWidth}/>
             </div>
+            <div class="preview">
+                {#key logoKey}
+                    <BrandingPreviewWrapper {logoUrl} {theme}/>
+                {/key}
 
-            {#if err}
-                <div class="err">
-                    {err}
+                <hr>
+
+                <p>Logo Upload</p>
+                <InputFile
+                        method="PUT"
+                        url={`/auth/v1/clients/${client.id}/logo`}
+                        fileName="logo"
+                        onSuccess={onUploadSuccess}
+                />
+
+                <div class="buttons">
+                    <Button type="submit">
+                        {t.common.save}
+                    </Button>
+                    <Button level={-2} onclick={reset}>
+                        {ta.common.reset}
+                    </Button>
+
+                    {#if success}
+                        <IconCheck/>
+                    {/if}
                 </div>
-            {/if}
-        </Form>
-    {/if}
-</div>
+
+                {#if err}
+                    <div class="err">
+                        {err}
+                    </div>
+                {/if}
+            </div>
+        {/if}
+    </div>
+</Form>
 
 <style>
-    h2 {
-        font-size: 1rem;
-    }
-
     .buttons {
         margin: 1rem 0;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
     }
 
-    /*.container {*/
-    /*    border: 1px solid yellow;*/
-    /*}*/
+    .container {
+        max-height: calc(100dvh - 4.5rem);
+        display: grid;
+        grid-template-columns: 1fr 17rem;
+        gap: .5rem;
+    }
+
+    .values {
+        max-height: calc(100dvh - 5.5rem);
+        margin-top: 1rem;
+        padding-right: .5rem;
+        overflow: auto;
+    }
+
+    @media (max-width: 88rem) {
+        .container {
+            grid-template-columns: 1fr;
+        }
+
+        .values {
+            max-height: inherit;
+        }
+    }
 </style>

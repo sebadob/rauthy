@@ -32,7 +32,7 @@
     const id = genKey();
 
     let styleBg = $derived.by(() => {
-        if (hue && sat && lum) {
+        if (hue !== undefined && sat !== undefined && lum !== undefined) {
             if (bgMode === 'hue') {
                 return `linear-gradient(
                     to right,

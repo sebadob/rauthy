@@ -18,7 +18,6 @@
     const id = genKey();
     const widthRange = "15rem";
 
-    let t = useI18n();
     let hsl = $derived(`hsl(${h} ${s} ${l})`);
 </script>
 
@@ -64,9 +63,7 @@
                 />
             </div>
         </div>
-        <div class="relative">
-            <div class="color" style:background={hsl}></div>
-        </div>
+        <div class="color" style:background={hsl}></div>
     </div>
 </div>
 
@@ -77,7 +74,6 @@
     }
 
     .color {
-        position: relative;
         height: 8.5rem;
         width: 3rem;
         border-radius: 0 var(--border-radius) var(--border-radius) 0;

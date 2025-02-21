@@ -24,6 +24,12 @@ export interface I18nAdmin {
         name: string,
     },
     clients: {
+        branding: {
+            descHsl: string,
+            // inserted as html
+            descFullCss: string,
+            descVariables: string,
+        },
         confidential: string,
         confidentialNoSecret: string,
         config: string,
