@@ -10,9 +10,9 @@ use rauthy_api_types::users::{
     DeviceRequest, DeviceResponse, MfaPurpose, NewUserRegistrationRequest, NewUserRequest,
     PasskeyResponse, PasswordResetRequest, RequestResetRequest, UpdateUserRequest,
     UpdateUserSelfRequest, UserAttrConfigRequest, UserAttrConfigResponse, UserAttrValueResponse,
-    UserAttrValuesResponse, UserAttrValuesUpdateRequest, UserResponse, WebIdRequest, WebIdResponse,
-    WebauthnAuthFinishRequest, WebauthnAuthStartRequest, WebauthnAuthStartResponse,
-    WebauthnRegFinishRequest, WebauthnRegStartRequest,
+    UserAttrValuesResponse, UserAttrValuesUpdateRequest, UserResponse, UserResponseSimple,
+    WebIdRequest, WebIdResponse, WebauthnAuthFinishRequest, WebauthnAuthStartRequest,
+    WebauthnAuthStartResponse, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_common::constants::{
     COOKIE_MFA, ENABLE_WEB_ID, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, OPEN_USER_REG,
@@ -61,7 +61,7 @@ use validator::Validate;
     tag = "users",
     params(PaginationParams),
     responses(
-        (status = 200, description = "Ok", body = [UserResponse]),
+        (status = 200, description = "Ok", body = [UserResponseSimple]),
         (status = 206, description = "PartialContent", body = [UserResponse]),
         (status = 401, description = "Unauthorized"),
         (status = 403, description = "Forbidden"),
