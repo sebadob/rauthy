@@ -81,6 +81,7 @@ export let I18nAdminEn: I18nAdmin = {
         filter: "Filter",
         from: "From",
         information: "Information",
+        language: "Language",
         loading: "Loading",
         name: "Name",
         nameExistsAlready: "Name exists already",
@@ -295,6 +296,10 @@ export let I18nAdminEn: I18nAdmin = {
     tabs: {
         config: "Config",
         delete: "Delete",
+    },
+    users: {
+        attributes: "Attributes",
+        lastLogin: "Last Login",
     },
     validation: {
         css: "Valid CSS Value",

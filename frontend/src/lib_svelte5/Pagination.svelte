@@ -143,19 +143,21 @@
 {/snippet}
 
 <div class="container">
-    <Button onclick={goLeft} invisible isDisabled={page === 1}>
-        <div class="iconLeft" aria-label={t.pagination.gotoPagePrev} data-disabled={page === 1}>
-            <IconChevronRight width={iconSize}/>
-        </div>
-    </Button>
+    <div class="flex">
+        <Button onclick={goLeft} invisible isDisabled={page === 1}>
+            <div class="iconLeft" aria-label={t.pagination.gotoPagePrev} data-disabled={page === 1}>
+                <IconChevronRight width={iconSize}/>
+            </div>
+        </Button>
 
-    {@render links()}
+        {@render links()}
 
-    <Button onclick={goRight} invisible isDisabled={page === itemsArr.length}>
-        <div class="iconRight" aria-label={t.pagination.gotoPageNext} data-disabled={page === itemsArr.length}>
-            <IconChevronRight width={iconSize}/>
-        </div>
-    </Button>
+        <Button onclick={goRight} invisible isDisabled={page === itemsArr.length}>
+            <div class="iconRight" aria-label={t.pagination.gotoPageNext} data-disabled={page === itemsArr.length}>
+                <IconChevronRight width={iconSize}/>
+            </div>
+        </Button>
+    </div>
 
     {#if !compact}
         {@render chunkSizeTotal()}
@@ -192,7 +194,8 @@
     .container {
         display: flex;
         align-items: center;
-        padding: .25rem .5rem;
+        flex-wrap: wrap;
+        padding: .25rem 0;
     }
 
     .iconLeft[data-disabled="true"],

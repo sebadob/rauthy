@@ -49,15 +49,17 @@
             email,
             family_name: familyName,
             given_name: givenName,
-            user_values: {
+        };
+        if (birthdate || phone || street || zip || city || country) {
+            payload.user_values = {
                 birthdate,
                 phone,
                 street,
                 zip,
                 city,
                 country
-            }
-        };
+            };
+        }
 
         let res = await fetchPut<UserResponse>(`/auth/v1/users/${user.id}/self`, payload);
         if (res.body) {

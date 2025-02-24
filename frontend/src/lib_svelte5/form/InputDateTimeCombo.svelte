@@ -62,7 +62,7 @@
         {#if withTime}
             <InputTime
                     name={timeName}
-                    {label}
+                    ariaLabel={label}
                     bind:value={timeValue}
                     errMsg={timeErrMsg}
                     min={timeMin}

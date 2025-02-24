@@ -3,7 +3,7 @@
     import {redirectToLogout} from "$utils/helpers";
     import Nav from "$lib/nav/Nav.svelte";
     import NavEntry from "$lib/nav/NavEntry.svelte";
-    import Users from "./users/Users.svelte";
+    import Users from "$lib5/admin/users/Users.svelte";
     import ContentWrapper from "./ContentWrapper.svelte";
     import Roles from "./roles/Roles.svelte";
     import Groups from "$lib5/admin/groups/Groups.svelte";
