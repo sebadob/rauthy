@@ -1,147 +1,164 @@
-<script>
+<script lang="ts">
     import {onMount} from "svelte";
-    import {getGroups, getRoles, getUsers, getUsersSsp} from "../../../utils/dataFetchingAdmin.js";
     import UserTile from "./UserTile.svelte";
-    import {globalGroups, globalGroupsNames, globalRoles, globalRolesNames,} from "../../../stores/admin.js";
-    import UserTileAddNew from "./UserTileAddNew.svelte";
-    import OrderSearchBar from "$lib/search/OrderSearchBar.svelte";
-    import Pagination from "$lib/Pagination.svelte";
+    import {fetchGet} from "$api/fetch.ts";
+    import type {UserResponse} from "$api/types/user.ts";
+    import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
+    import type {GroupResponse} from "$api/types/groups.ts";
+    import type {RoleResponse} from "$api/types/roles.ts";
     import PaginationServer from "$lib/PaginationServer.svelte";
+    import Pagination from "$lib5/Pagination.svelte";
+    import NavSub from "$lib5/nav/NavSub.svelte";
+    import ButtonAddModal from "$lib5/button/ButtonAddModal.svelte";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useParam} from "$state/param.svelte.ts";
+    import NavButtonTile from "$lib5/nav/NavButtonTile.svelte";
+    import ContentAdmin from "$lib5/ContentAdmin.svelte";
 
-    let msg = $state('');
+    let ta = useI18nAdmin();
 
-    let users = $state([]);
-    let resUsers = $state([]);
-    let resUsersPaginated = $state([]);
+    let closeModal: undefined | (() => void) = $state();
+    let err = $state('');
+
+    let users: UserResponse[] = $state([]);
+    let usersFiltered: UserResponse[] = $state([]);
+    let usersPaginated: UserResponse[] = $state([]);
+    let usersCountTotal = $state(0);
+    let uid = useParam('uid');
+    let user: undefined | UserResponse = $state();
+
+    let groups: GroupResponse[] = $state([]);
+    let roles: RoleResponse[] = $state([]);
+
     let useServerSideIdx = $state('');
     let isSearchFiltered = $state(false);
-    let search = $state('');
 
-    let usersCountTotal = $state(0);
     let sspPageSize = $state(15);
     let sspContinuationToken = $state('');
     let sspPage = $state(1);
 
-    let searchOptions = $state([
-        {
-            label: 'E-Mail',
-            callback: (item, search) => item.email.toLowerCase().includes(search.toLowerCase()),
-        },
-        {
-            label: 'ID',
-            callback: (item, search) => item.id.toLowerCase().includes(search.toLowerCase()),
-        },
-    ]);
-    let orderOptions = $state([
-        {
-            label: 'E-Mail',
-            callback: (a, b) => a.email.localeCompare(b.email),
-        },
-        {
-            label: 'ID',
-            callback: (a, b) => a.id.localeCompare(b.id),
-        },
-        {
-            label: 'Created',
-            callback: (a, b) => a.created_at < b.created_at,
-        },
-        {
-            label: 'Last Login',
-            callback: (a, b) => {
-                // 9999999999 as default to make ordering correct with a unix timestamp
-                // otherwise undefined values will screw ordering up
-                let al = a.last_login || 9999999999;
-                let bl = b.last_login || 9999999999;
-                return al < bl;
-            }
-        },
-    ]);
+    let searchOptions = $state(['E-Mail', 'ID']);
+    let searchOption = $state(searchOptions[0]);
+    let searchValue = $state('');
+    let orderOptions = $state(['E-Mail', 'ID', 'Created', 'Last Login']);
 
-    onMount(async () => {
+    onMount(() => {
         fetchUsers();
         fetchRoles();
         fetchGroups();
     })
 
-    async function fetchUsers(useSsp, offset, backwards, pageSize) {
-        let res;
-        if (useSsp === true) {
-            if (backwards && sspPage === 2) {
-                // In this case, just do a normal fetch of the very first entry to have a clean start again
-                res = await getUsersSsp(pageSize || sspPageSize, offset, undefined, false);
-            } else {
-                res = await getUsersSsp(pageSize || sspPageSize, offset, sspContinuationToken, backwards);
-            }
-        } else {
-            res = await getUsers();
+    $effect(() => {
+        user = users.find(u => u.id === uid.get());
+    });
+
+    $effect(() => {
+        let search = searchValue.toLowerCase();
+        if (!search) {
+            usersFiltered = users;
+        } else if (searchOption === searchOptions[0]) {
+            usersFiltered = users.filter(u => u.email?.toLowerCase().includes(search));
+        } else if (searchOption === searchOptions[1]) {
+            usersFiltered = users.filter(u => u.id.toLowerCase().includes(search));
         }
-        if (!res.ok) {
-            msg = 'Error fetching users: ' + res.body.message;
-        } else {
-            const isSsp = res.status === 206;
-            if (isSsp) {
-                // we get a few headers during SSP we can use for the navigation
-                sspPageSize = Number.parseInt(res.headers.get('x-page-size'), 10);
-                // sspPageCount = res.headers.get('x-page-count');
-                useServerSideIdx = 'user';
+    });
 
-                const token = res.headers.get('x-continuation-token');
-                if (!token && !backwards) {
-                    // In this case, we went 1 page too far. Because of the dynamic pagination,
-                    // we can't know beforehand which page will be the last existing.
-                    // If we went too far, we will not save the continuation token and just go back.
+    async function fetchUsers(useSsp?: boolean, offset?: number, backwards?: boolean, pageSize?: number) {
+        let url = '/auth/v1/users';
+        if (useSsp === true) {
+            url += `page_size=${pageSize || sspPageSize}`;
+            if (offset) {
+                url += `&offset=${offset}`;
+            }
+            if (backwards) {
+                url += `&backwards=${backwards}`;
+                if (sspPage !== 2 && sspContinuationToken) {
+                    url += `&continuation_token=${sspContinuationToken}`;
                 }
-
-                sspContinuationToken = res.headers.get('x-continuation-token');
+            }
+        }
+        let res = await fetchGet<UserResponse[]>(url);
+        if (res.error) {
+            err = 'Error fetching users: ' + res.error.message;
+        } else if (res.body) {
+            // HTTP 206 --> Backend is using SSP
+            if (res.status === 206) {
+                // we get a few headers during SSP we can use for the navigation
+                let xPageSize = res.headers.get('x-page-size');
+                if (!xPageSize) {
+                    console.error('Did not receive x-page-size with SSP');
+                    return;
+                }
+                sspPageSize = Number.parseInt(xPageSize);
+                sspContinuationToken = res.headers.get('x-continuation-token') || '';
+                // sspPageCount = res.headers.get('x-page-count');
+                useServerSideIdx = 'session';
             } else {
                 useServerSideIdx = '';
             }
 
-            usersCountTotal = res.headers.get('x-user-count');
-
-            let u = await res.json();
-            users = [...u];
-            resUsers = [...u];
+            users = res.body;
         }
     }
 
-    // Callback function for <PaginationServer>
-    // Fetches the next page during server side pagination with the given offset and direction.
-    async function fetchUsersSsp(offset, backwards) {
-        await fetchUsers(true, offset, backwards);
-        if (backwards) {
-            sspPage -= 1;
-        } else {
-            sspPage += 1;
-        }
-    }
+    // // Callback function for <PaginationServer>
+    // // Fetches the next page during server side pagination with the given offset and direction.
+    // async function fetchUsersSsp(offset, backwards) {
+    //     await fetchUsers(true, offset, backwards);
+    //     if (backwards) {
+    //         sspPage -= 1;
+    //     } else {
+    //         sspPage += 1;
+    //     }
+    // }
 
     // Callback function for <PaginationServer> to make page size switches work
-    async function sspPageSizeChange(pageSize) {
+    async function sspPageSizeChange(pageSize: number) {
         sspContinuationToken = '';
         await fetchUsers(true, 0, false, pageSize);
         sspPage = 1;
     }
 
     async function fetchRoles() {
-        let res = await getRoles();
-        if (!res.ok) {
-            msg = 'Error fetching roles: ' + res.body.message;
+        let res = await fetchGet<RoleResponse[]>('/auth/v1/roles');
+        if (res.body) {
+            roles = res.body;
         } else {
-            let roles = await res.json();
-            globalRoles.set(roles);
-            globalRolesNames.set(roles.map(r => r.name));
+            err = res.error?.message || 'Error';
         }
     }
 
     async function fetchGroups() {
-        let res = await getGroups();
-        if (!res.ok) {
-            msg = 'Error fetching groups: ' + res.body.message;
+        let res = await fetchGet<GroupResponse[]>('/auth/v1/groups');
+        if (res.body) {
+            groups = res.body;
         } else {
-            let groups = await res.json();
-            globalGroups.set(groups);
-            globalGroupsNames.set(groups.map(g => g.name));
+            err = res.error?.message || 'Error';
+        }
+    }
+
+    function onChangeOrder(option: string, direction: 'up' | 'down') {
+        let up = direction === 'up';
+
+        // ['E-Mail', 'ID', 'Created', 'Last Login']
+        if (option === orderOptions[0]) {
+            users.sort((a, b) => up ? a.email.localeCompare(b.email) : b.email.localeCompare(a.email));
+        } else if (option === orderOptions[1]) {
+            users.sort((a, b) => up ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id));
+        } else if (option === orderOptions[2]) {
+            users.sort((a, b) => up ? a.created_at - b.created_at : b.created_at - a.created_at);
+        } else if (option === orderOptions[3]) {
+            users.sort((a, b) => {
+                // 9999999999 as default to make ordering correct with a unix timestamp (seconds)
+                // otherwise undefined values will screw ordering up
+                let al = a.last_login || 9999999999;
+                let bl = a.last_login || 9999999999;
+                if (up) {
+                    return al - bl;
+                } else {
+                    return bl - al;
+                }
+            });
         }
     }
 
@@ -149,63 +166,81 @@
         fetchUsers();
         fetchRoles();
         fetchGroups();
-        search = '';
+        searchValue = '';
     }
 </script>
 
-{msg}
+{#snippet navTile(id: string, email: string)}
+    <NavButtonTile onclick={() => uid.set(id)} selected={uid.get() === id}>
+        {email}
+    </NavButtonTile>
+{/snippet}
 
-<div class="content">
+<NavSub
+        paddingTop="2.1rem"
+        buttonTilesAriaControls="users"
+        width="min(22rem, 100dvw)"
+        thresholdNavSub={700}
+>
+    <ButtonAddModal level={roles.length === 0 ? 1 : 2} bind:closeModal alignRight>
+        TODO
+    </ButtonAddModal>
     <OrderSearchBar
-            items={users}
-            bind:resItems={resUsers}
-            bind:searchOptions
-            bind:orderOptions
-            bind:useServerSideIdx
-            bind:isSearchFiltered
-            bind:search
+            bind:value={searchValue}
+            {searchOptions}
+            bind:searchOption
+            {orderOptions}
+            {onChangeOrder}
+            searchWidth="min(22rem, calc(100dvw - .5rem))"
     />
 
-    <UserTileAddNew onSave={onSave}/>
-
-    <div id="users">
-        {#if useServerSideIdx && !isSearchFiltered}
-            {#each resUsers as user (user.id)}
-                <div>
-                    <UserTile userId={user.id} userEmail={user.email} onSave={onSave}/>
-                </div>
+    {#snippet buttonTiles()}
+        <div style:height=".5rem"></div>
+        {#if useServerSideIdx}
+            {#each usersFiltered as user (user.id)}
+                {@render navTile(user.id, user.email)}
             {/each}
         {:else}
-            {#each resUsersPaginated as user (user.id)}
-                <div>
-                    <UserTile userId={user.id} userEmail={user.email} onSave={onSave}/>
-                </div>
+            {#each usersPaginated as user (user.id)}
+                {@render navTile(user.id, user.email)}
             {/each}
         {/if}
-    </div>
 
-    <!--
-    Even with server side pagination, we must use it client side if we
-    have a filtered search result. Otherwise, switching pages would
-    overwrite the filtered data.
-    -->
-    {#if useServerSideIdx && !isSearchFiltered}
-        <PaginationServer
-                itemsTotal={usersCountTotal}
-                bind:sspPage
-                bind:sspPageSize
-                bind:sspContinuationToken
-                fetchPageCallback={fetchUsersSsp}
-                sspPageSizeChange={sspPageSizeChange}
-        />
-    {:else}
-        <Pagination bind:items={resUsers} bind:resItems={resUsersPaginated}/>
+        <!--
+        Even with server side pagination, we must use it client side if we
+        have a filtered search result. Otherwise, switching pages would
+        overwrite the filtered data.
+        -->
+        {#if useServerSideIdx}
+            <PaginationServer
+                    itemsTotal={usersCountTotal}
+                    bind:sspPage
+                    bind:sspPageSize
+                    bind:sspContinuationToken
+                    sspPageSizeChange={sspPageSizeChange}
+            />
+        {:else}
+            <Pagination
+                    bind:items={usersFiltered}
+                    bind:itemsPaginated={usersPaginated}
+            />
+        {/if}
+    {/snippet}
+</NavSub>
+
+<ContentAdmin>
+    {#if err}
+        <div class="err">
+            {err}
+        </div>
     {/if}
-</div>
+
+    <div id="users">
+        {#if user}
+            {user.email} TODO
+        {/if}
+    </div>
+</ContentAdmin>
 
 <style>
-    #users div:nth-of-type(2n + 1) {
-        /*background: linear-gradient(90deg, hsla(var(--bg-high) / .25) 10rem, hsl(var(--bg)) 50rem);*/
-        background: linear-gradient(90deg, hsla(var(--bg-high) / .25) 10rem, hsl(var(--bg)) 50rem);
-    }
 </style>
