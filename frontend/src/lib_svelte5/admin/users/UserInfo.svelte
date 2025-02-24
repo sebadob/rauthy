@@ -209,14 +209,17 @@
                         bind:value={birthdate}
                         withDelete
                 />
-                <LabeledValue label={ta.common.language}>
-                    <Options
-                            ariaLabel={t.common.selectI18n}
-                            options={LANGUAGES}
-                            bind:value={language}
-                            borderless
-                    />
-                </LabeledValue>
+
+                <div style:padding=".25rem">
+                    <LabeledValue label={ta.common.language}>
+                        <Options
+                                ariaLabel={t.common.selectI18n}
+                                options={LANGUAGES}
+                                bind:value={language}
+                                borderless
+                        />
+                    </LabeledValue>
+                </div>
             </div>
 
             <div>
