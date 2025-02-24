@@ -1,9 +1,9 @@
 <script>
-    import { run } from 'svelte/legacy';
+    import {run} from 'svelte/legacy';
 
     import ExpandContainer from "$lib/ExpandContainer.svelte";
     import Tooltip from "$lib/Tooltip.svelte";
-    import UserInfo from "./UserInfo.svelte";
+    import UserInfo from "$lib5/admin/users/UserInfo.svelte";
     import TabBar from "$lib/TabBar.svelte";
     import UserPassword from "./UserPassword.svelte";
     import {slide} from 'svelte/transition';
@@ -24,7 +24,7 @@
      */
 
     /** @type {Props} */
-    let { userEmail = '', userId = '', onSave = $bindable() } = $props();
+    let {userEmail = '', userId = '', onSave = $bindable()} = $props();
 
     let user = $state();
     let isLoading = $state(true);
@@ -70,7 +70,7 @@
 
 <ExpandContainer bind:show={expandContainer}>
     {#snippet header()}
-        <div class="header" >
+        <div class="header">
             <Tooltip text="User ID">
                 <div class="data font-mono">
                     {userId}
@@ -86,7 +86,7 @@
     {/snippet}
 
     {#snippet body()}
-        <div >
+        <div>
             {#if isLoading}
                 <Loading/>
             {:else}

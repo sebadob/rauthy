@@ -2,19 +2,19 @@
     import {useI18n} from "$state/i18n.svelte.ts";
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
     import Tabs from "$lib5/tabs/Tabs.svelte";
-    import type {UserResponse} from "$api/types/user.ts";
     import type {RoleResponse} from "$api/types/roles.ts";
     import type {GroupResponse} from "$api/types/groups.ts";
+    import UserInfo from "$lib5/admin/users/UserInfo.svelte";
+    import {fetchGet} from "$api/fetch.ts";
+    import type {UserResponse} from "$api/types/user.ts";
 
     let {
-        user,
-        users,
+        userId,
         roles,
         groups,
         onSave,
     }: {
-        user: UserResponse,
-        users: UserResponse[],
+        userId: string,
         roles: RoleResponse[],
         groups: GroupResponse[],
         onSave: () => void,
@@ -36,32 +36,51 @@
 
     let focusFirst: undefined | (() => void) = $state();
 
+    let err = $state('');
+    let user: undefined | UserResponse = $state();
+
     $effect(() => {
-        if (user.id) {
+        fetchUser();
+    });
+
+    async function fetchUser() {
+        let res = await fetchGet<UserResponse>(`/auth/v1/users/${userId}`);
+        if (res.body) {
+            user = res.body;
             requestAnimationFrame(() => {
                 focusFirst?.();
             });
+        } else {
+            err = res.error?.message || 'Error fetching user';
         }
-    });
+    }
 
 </script>
+
+{#if err}
+    <div class="err">
+        {err}
+    </div>
+{/if}
 
 <div class="flex">
     <Tabs {tabs} bind:selected bind:focusFirst/>
 </div>
 
-{#if selected === tabs[0]}
-    TODO info
-{:else if selected === tabs[1]}
-    TODO attributes
-{:else if selected === tabs[2]}
-    TODO password
-{:else if selected === tabs[3]}
-    TODO mfa
-{:else if selected === tabs[4]}
-    TODO devices
-{:else if selected === tabs[5]}
-    TODO logout
-{:else if selected === tabs[6]}
-    TODO delete
+{#if user}
+    {#if selected === tabs[0]}
+        <UserInfo bind:user {roles} {groups} {onSave}/>
+    {:else if selected === tabs[1]}
+        TODO attributes
+    {:else if selected === tabs[2]}
+        TODO password
+    {:else if selected === tabs[3]}
+        TODO mfa
+    {:else if selected === tabs[4]}
+        TODO devices
+    {:else if selected === tabs[5]}
+        TODO logout
+    {:else if selected === tabs[6]}
+        TODO delete
+    {/if}
 {/if}

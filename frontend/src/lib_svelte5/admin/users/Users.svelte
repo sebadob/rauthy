@@ -1,7 +1,7 @@
 <script lang="ts">
     import {onMount} from "svelte";
     import {fetchGet} from "$api/fetch.ts";
-    import type {UserResponse} from "$api/types/user.ts";
+    import type {UserResponse, UserResponseSimple} from "$api/types/user.ts";
     import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
     import type {GroupResponse} from "$api/types/groups.ts";
     import type {RoleResponse} from "$api/types/roles.ts";
@@ -21,12 +21,12 @@
     let closeModal: undefined | (() => void) = $state();
     let err = $state('');
 
-    let users: UserResponse[] = $state([]);
-    let usersFiltered: UserResponse[] = $state([]);
-    let usersPaginated: UserResponse[] = $state([]);
+    let users: UserResponseSimple[] = $state([]);
+    let usersFiltered: UserResponseSimple[] = $state([]);
+    let usersPaginated: UserResponseSimple[] = $state([]);
     let usersCountTotal = $state(0);
     let uid = useParam('uid');
-    let user: undefined | UserResponse = $state();
+    let userId: undefined | string = $state();
 
     let groups: GroupResponse[] = $state([]);
     let roles: RoleResponse[] = $state([]);
@@ -50,7 +50,7 @@
     })
 
     $effect(() => {
-        user = users.find(u => u.id === uid.get());
+        userId = users.find(u => u.id === uid.get())?.id;
     });
 
     $effect(() => {
@@ -123,7 +123,7 @@
     async function fetchRoles() {
         let res = await fetchGet<RoleResponse[]>('/auth/v1/roles');
         if (res.body) {
-            roles = res.body;
+            roles = res.body.toSorted((a, b) => a.name.localeCompare(b.name));
         } else {
             err = res.error?.message || 'Error';
         }
@@ -132,7 +132,7 @@
     async function fetchGroups() {
         let res = await fetchGet<GroupResponse[]>('/auth/v1/groups');
         if (res.body) {
-            groups = res.body;
+            groups = res.body.toSorted((a, b) => a.name.localeCompare(b.name));
         } else {
             err = res.error?.message || 'Error';
         }
@@ -243,8 +243,8 @@
     {/if}
 
     <div id="users">
-        {#if user}
-            <UserDetails {user} {users} {roles} {groups} {onSave}/>
+        {#if userId}
+            <UserDetails {userId} {roles} {groups} {onSave}/>
         {/if}
     </div>
 </ContentAdmin>

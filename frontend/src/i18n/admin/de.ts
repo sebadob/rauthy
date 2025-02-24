@@ -310,6 +310,7 @@ export let I18nAdminDe: I18nAdmin = {
     },
     users: {
         attributes: "Attribute",
+        lastLogin: "Letzter Login",
     },
     validation: {
         css: "Gültiger CSS Wert",

@@ -130,7 +130,7 @@
     }
 
     .items {
-        min-height: 1rem;
+        min-height: 1.2rem;
         display: flex;
         align-items: center;
         gap: .5rem;

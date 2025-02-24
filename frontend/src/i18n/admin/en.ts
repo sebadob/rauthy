@@ -299,6 +299,7 @@ export let I18nAdminEn: I18nAdmin = {
     },
     users: {
         attributes: "Attributes",
+        lastLogin: "Last Login",
     },
     validation: {
         css: "Valid CSS Value",

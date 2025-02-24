@@ -19,6 +19,7 @@
     import SelectList from "$lib5/select_list/SelectList.svelte";
     import type {SelectItem} from "$lib5/select_list/props.ts";
     import {untrack} from "svelte";
+    import LabeledValue from "$lib5/LabeledValue.svelte";
 
     let {
         onSave,
@@ -117,17 +118,14 @@
                 pattern={PATTERN_USER_NAME}
         />
 
-        <div class="flex gap-05">
-            <div>
-                {ta.common.language}:
-            </div>
+        <LabeledValue label={ta.common.language}>
             <Options
                     ariaLabel={t.common.selectI18n}
                     options={LANGUAGES}
                     bind:value={language}
                     borderless
             />
-        </div>
+        </LabeledValue>
 
         <SelectList bind:items={rolesItems}>
             {t.account.roles}

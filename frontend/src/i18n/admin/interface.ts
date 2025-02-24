@@ -258,6 +258,7 @@ export interface I18nAdmin {
     },
     users: {
         attributes: string,
+        lastLogin: string,
     },
     validation: {
         css: string,
