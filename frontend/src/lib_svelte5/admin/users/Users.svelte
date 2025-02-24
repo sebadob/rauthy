@@ -1,6 +1,5 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import UserTile from "./UserTile.svelte";
     import {fetchGet} from "$api/fetch.ts";
     import type {UserResponse} from "$api/types/user.ts";
     import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
@@ -14,6 +13,7 @@
     import {useParam} from "$state/param.svelte.ts";
     import NavButtonTile from "$lib5/nav/NavButtonTile.svelte";
     import ContentAdmin from "$lib5/ContentAdmin.svelte";
+    import UserAddNew from "$lib5/admin/users/UserAddNew.svelte";
 
     let ta = useI18nAdmin();
 
@@ -162,6 +162,12 @@
         }
     }
 
+    async function onAddNew(id: string) {
+        closeModal?.();
+        await fetchUsers();
+        uid.set(id);
+    }
+
     function onSave() {
         fetchUsers();
         fetchRoles();
@@ -179,11 +185,11 @@
 <NavSub
         paddingTop="2.1rem"
         buttonTilesAriaControls="users"
-        width="min(22rem, 100dvw)"
+        width="min(23rem, 100dvw)"
         thresholdNavSub={700}
 >
     <ButtonAddModal level={roles.length === 0 ? 1 : 2} bind:closeModal alignRight>
-        TODO
+        <UserAddNew onSave={onAddNew} {roles} {groups}/>
     </ButtonAddModal>
     <OrderSearchBar
             bind:value={searchValue}
@@ -191,7 +197,7 @@
             bind:searchOption
             {orderOptions}
             {onChangeOrder}
-            searchWidth="min(22rem, calc(100dvw - .5rem))"
+            searchWidth="min(23rem, calc(100dvw - .5rem))"
     />
 
     {#snippet buttonTiles()}

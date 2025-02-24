@@ -29,21 +29,24 @@
 
     let compact = $derived(innerWidth && innerWidth < 800);
     let joined = $derived(items.filter(i => i.selected).map(i => i.name).join(', '));
+    let anySelected = $derived(items.find(i => i.selected));
 </script>
 
 <svelte:window bind:innerWidth/>
 
 <div class="container" style:max-width={maxWidth}>
     <div class="items">
-        <div class="joined">
-            {joined}
-        </div>
+        {#if anySelected}
+            <div class="joined">
+                {joined}
+            </div>
+        {/if}
 
         <div class="edit">
             <Button invisible onclick={()=> showModal = true}>
-                <Tooltip text={ta.common.edit}>
+                <div title={ta.common.edit}>
                     <IconEdit width="1.2rem"/>
-                </Tooltip>
+                </div>
             </Button>
         </div>
         <Modal bind:showModal bind:closeModal>
@@ -127,6 +130,7 @@
     }
 
     .items {
+        min-height: 1rem;
         display: flex;
         align-items: center;
         gap: .5rem;

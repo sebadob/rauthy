@@ -1,5 +1,21 @@
 import type {Language} from "./language";
 
+export interface NewUserRequest {
+    /// Validation: `email`
+    email: string,
+    /// Validation: PATTERN_USER_NAME
+    given_name: string,
+    /// Validation: PATTERN_USER_NAME
+    family_name?: string,
+    language: Language,
+    /// Validation: PATTERN_GROUP
+    groups?: string[],
+    /// Validation: PATTERN_GROUP
+    roles: string[],
+    /// Unix timestamp in seconds
+    user_expires?: number,
+}
+
 export type UserAccountTypeResponse =
     'new'
     | 'password'

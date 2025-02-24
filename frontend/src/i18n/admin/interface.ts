@@ -70,6 +70,7 @@ export interface I18nAdmin {
         filter: string,
         from: string,
         information: string,
+        language: string,
         loading: string,
         name: string,
         nameExistsAlready: string,

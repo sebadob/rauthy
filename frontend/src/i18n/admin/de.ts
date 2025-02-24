@@ -32,7 +32,7 @@ export let I18nAdminDe: I18nAdmin = {
                 <code>hsla(var(--action) / .7)</code>.`,
         },
         confidential: "Vertraulich",
-        confidentialNoSecret: "Dies is kein vertraulier Client und hat somit kein Secret.",
+        confidentialNoSecret: "Dies is kein vertraulicher Client und hat somit kein Secret.",
         config: "Client Konfiguration",
         delete1: "Soll dieser Client wirklich gelöscht werden?",
         descAuthCode: `Die Gültigkeit der Auth Codes kann angepasst werden um zusätzliche Sicherheit
@@ -84,6 +84,7 @@ export let I18nAdminDe: I18nAdmin = {
         filter: "Filter",
         from: "Von",
         information: "Informationen",
+        language: "Sprache",
         loading: "Lade",
         name: "Name",
         nameExistsAlready: "Name existiert bereits",

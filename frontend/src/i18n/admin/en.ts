@@ -81,6 +81,7 @@ export let I18nAdminEn: I18nAdmin = {
         filter: "Filter",
         from: "From",
         information: "Information",
+        language: "Language",
         loading: "Loading",
         name: "Name",
         nameExistsAlready: "Name exists already",
