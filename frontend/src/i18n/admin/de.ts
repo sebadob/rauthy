@@ -308,6 +308,9 @@ export let I18nAdminDe: I18nAdmin = {
         config: "Konfiguration",
         delete: "Löschen",
     },
+    users: {
+        attributes: "Attribute",
+    },
     validation: {
         css: "Gültiger CSS Wert",
         origin: "Gültige Origin",

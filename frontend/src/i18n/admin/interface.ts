@@ -256,6 +256,9 @@ export interface I18nAdmin {
         config: string,
         delete: string,
     },
+    users: {
+        attributes: string,
+    },
     validation: {
         css: string,
         origin: string,

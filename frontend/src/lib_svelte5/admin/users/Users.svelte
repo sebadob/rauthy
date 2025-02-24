@@ -14,6 +14,7 @@
     import NavButtonTile from "$lib5/nav/NavButtonTile.svelte";
     import ContentAdmin from "$lib5/ContentAdmin.svelte";
     import UserAddNew from "$lib5/admin/users/UserAddNew.svelte";
+    import UserDetails from "$lib5/admin/users/UserDetails.svelte";
 
     let ta = useI18nAdmin();
 
@@ -243,7 +244,7 @@
 
     <div id="users">
         {#if user}
-            {user.email} TODO
+            <UserDetails {user} {users} {roles} {groups} {onSave}/>
         {/if}
     </div>
 </ContentAdmin>
