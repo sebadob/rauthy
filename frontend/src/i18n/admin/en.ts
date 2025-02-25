@@ -299,6 +299,7 @@ export let I18nAdminEn: I18nAdmin = {
     },
     users: {
         attributes: "Attributes",
+        descAttr: `Set custom user attributes. All key / value pairs will be handles as String / JSON Value.`,
         lastLogin: "Last Login",
     },
     validation: {

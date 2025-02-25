@@ -7,6 +7,7 @@
     import UserInfo from "$lib5/admin/users/UserInfo.svelte";
     import {fetchGet} from "$api/fetch.ts";
     import type {UserResponse} from "$api/types/user.ts";
+    import UserAttr from "$lib5/admin/users/UserAttr.svelte";
 
     let {
         userId,
@@ -71,7 +72,7 @@
     {#if selected === tabs[0]}
         <UserInfo bind:user {roles} {groups} {onSave}/>
     {:else if selected === tabs[1]}
-        TODO attributes
+        <UserAttr {user} {onSave}/>
     {:else if selected === tabs[2]}
         TODO password
     {:else if selected === tabs[3]}

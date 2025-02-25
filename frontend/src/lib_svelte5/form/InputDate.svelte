@@ -385,6 +385,7 @@
     }
 
     label {
+        color: hsla(var(--text) / .8);
         flex-wrap: wrap;
     }
 

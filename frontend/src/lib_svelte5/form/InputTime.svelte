@@ -305,6 +305,7 @@
         width: 100%;
         margin-top: -1.1rem;
         padding: .5rem;
+        color: hsla(var(--text) / .8);
     }
 
     .colon {

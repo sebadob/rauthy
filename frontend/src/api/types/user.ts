@@ -53,6 +53,30 @@ export interface UpdateUserRequest {
     user_values?: UserValuesRequest,
 }
 
+export interface UpdateUserSelfRequest {
+    // Validation: email
+    email?: string | null,
+    // Validation: PATTERN_USER_NAME / 32
+    given_name?: string | null,
+    // Validation: PATTERN_USER_NAME / 32
+    family_name?: string | null,
+    language?: Language,
+    password_current?: string | null,
+    mfa_code?: string | null,
+    password_new?: string | null,
+    user_values?: UserValuesRequest,
+}
+
+export interface UserAttrValueRequest {
+    /// Validation: PATTERN_ATTR
+    key: string,
+    value: string,
+}
+
+export interface UserAttrValuesUpdateRequest {
+    values: UserAttrValueRequest[],
+}
+
 export type UserAccountTypeResponse =
     'new'
     | 'password'
@@ -98,18 +122,4 @@ export interface UserValuesResponse {
     zip?: number,
     city?: string,
     country?: string,
-}
-
-export interface UpdateUserSelfRequest {
-    // Validation: email
-    email?: string | null,
-    // Validation: PATTERN_USER_NAME / 32
-    given_name?: string | null,
-    // Validation: PATTERN_USER_NAME / 32
-    family_name?: string | null,
-    language?: Language,
-    password_current?: string | null,
-    mfa_code?: string | null,
-    password_new?: string | null,
-    user_values?: UserValuesRequest,
 }
