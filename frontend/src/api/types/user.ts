@@ -1,5 +1,5 @@
 import type {Language} from "./language";
-import {PATTERN_CITY, PATTERN_PHONE, PATTERN_STREET} from "$utils/patterns.ts";
+import {PATTERN_CITY, PATTERN_PHONE, PATTERN_STREET, PATTERN_URI} from "$utils/patterns.ts";
 
 export interface NewUserRequest {
     /// Validation: `email`

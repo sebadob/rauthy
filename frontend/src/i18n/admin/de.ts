@@ -313,6 +313,17 @@ export let I18nAdminDe: I18nAdmin = {
         descAttr: `Setze individuelle Benutzer Attribute. Alle Key / Value Paare 
             werden als String / JSON Wert gehandhabt.`,
         lastLogin: "Letzter Login",
+        pkOnly1: "Dies ist ein Passkey-Only Account.",
+        pkOnly2: "Das bedeutet, dass dieser Benutzer den passwortlosen Login nutzt und kein Passwort gesetzt hat.",
+        pkOnly3: `Sollte dieser Benutzer alle Passkeys verloren haben, kann der Account vollständig resettet und eine
+            Password Reset E-Mail versendet werden. Um dies zu tun, müssen vorher unter dem Reiter 'MFA' sämtliche
+            Passkeys gelöscht werden.`,
+        pwdNoInit: "Der Benutzer hat noch nicht den initialien Passwort Reset durchgeführt.",
+        pwdSendEmailBtn: "Reset E-Mail Senden",
+        pwdSendEmailDesc: "Es kann eine neue Reset E-Mail gesendet werden, sollte der Benutzer keine erhalten haben.",
+        savePassword: "Passwort Speichern",
+        selfServiceDesc: "Es kann entweder ein neues Passwort gesetzt, order eine Reset E-Mail versendet werden.",
+        sendResetEmail: "Reset E-Mail Senden",
     },
     validation: {
         css: "Gültiger CSS Wert",

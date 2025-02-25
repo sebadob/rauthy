@@ -8,6 +8,7 @@
     import {fetchGet} from "$api/fetch.ts";
     import type {UserResponse} from "$api/types/user.ts";
     import UserAttr from "$lib5/admin/users/UserAttr.svelte";
+    import UserPassword from "./UserPassword.svelte";
 
     let {
         userId,
@@ -74,7 +75,7 @@
     {:else if selected === tabs[1]}
         <UserAttr {user} {onSave}/>
     {:else if selected === tabs[2]}
-        TODO password
+        <UserPassword {user} {onSave}/>
     {:else if selected === tabs[3]}
         TODO mfa
     {:else if selected === tabs[4]}

@@ -78,19 +78,16 @@
     }
 
     function onblur(event: FocusEvent & { currentTarget: EventTarget & HTMLInputElement }) {
-        console.log('on blur', label);
         isValid();
         onBlur?.()
     }
 
     function oninput(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
-        console.log('on input', label);
         isValid();
         onInput?.();
     }
 
     function oninvalid(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
-        console.log('on invalid', label);
         event.preventDefault();
         isError = true;
     }

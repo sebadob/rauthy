@@ -44,8 +44,7 @@
 
     export function isPwdValid(): boolean {
         err = '';
-
-
+        
         if (!hideCurrentPassword && !passwords.current) {
             err = t.account.passwordCurrReq;
             return false;

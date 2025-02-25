@@ -5,7 +5,7 @@
     import Tooltip from "$lib/Tooltip.svelte";
     import UserInfo from "$lib5/admin/users/UserInfo.svelte";
     import TabBar from "$lib/TabBar.svelte";
-    import UserPassword from "./UserPassword.svelte";
+    import UserPassword from "$lib5/admin/users/UserPassword.svelte";
     import {slide} from 'svelte/transition';
     import UserDelete from "./UserDelete.svelte";
     import UserForceLogout from "./UserForceLogout.svelte";
