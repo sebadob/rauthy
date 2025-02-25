@@ -9,6 +9,7 @@
     import type {UserResponse} from "$api/types/user.ts";
     import UserAttr from "$lib5/admin/users/UserAttr.svelte";
     import UserPassword from "./UserPassword.svelte";
+    import UserMfa from "../../../components/admin/users/UserMfa.svelte";
 
     let {
         userId,
@@ -77,7 +78,7 @@
     {:else if selected === tabs[2]}
         <UserPassword {user} {onSave}/>
     {:else if selected === tabs[3]}
-        TODO mfa
+        <UserMfa {user} {onSave}/>
     {:else if selected === tabs[4]}
         TODO devices
     {:else if selected === tabs[5]}

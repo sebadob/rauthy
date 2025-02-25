@@ -260,6 +260,10 @@ export interface I18nAdmin {
         attributes: string,
         descAttr: string,
         lastLogin: string,
+        mfaDelete1: string,
+        // inserted as html
+        mfaDelete2: string,
+        noMfaKeys: string,
         pkOnly1: string,
         pkOnly2: string,
         pkOnly3: string,

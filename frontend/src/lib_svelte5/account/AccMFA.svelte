@@ -1,20 +1,17 @@
 <script lang="ts">
-    import {formatDateFromTs} from "$utils/helpers.ts";
     import Button from "$lib5/button/Button.svelte";
-    import {webauthnDelete} from "$utils/dataFetching.js";
     import {onMount} from "svelte";
     import Input from "$lib5/form/Input.svelte";
-    import IconFingerprint from "$lib/icons/IconFingerprint.svelte";
     import {useI18n} from "$state/i18n.svelte.js";
     import {useSession} from "$state/session.svelte.js";
-    import {fetchGet} from "$api/fetch.ts";
+    import {fetchDelete, fetchGet} from "$api/fetch.ts";
     import type {PasskeyResponse} from "$api/types/webauthn.ts";
     import type {UserResponse} from "$api/types/user.ts";
     import {PATTERN_USER_NAME} from "$utils/patterns.ts";
     import {webauthnReg} from "$webauthn/registration.ts";
     import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
-    import Tooltip from "$lib5/Tooltip.svelte";
+    import UserPasskey from "$lib5/UserPasskey.svelte";
 
     let {user}: { user: UserResponse } = $props();
 
@@ -89,13 +86,11 @@
     }
 
     async function handleDelete(name: string) {
-        let res = await webauthnDelete(user.id, name);
+        let res = await fetchDelete(`/auth/v1/users/${user.id}/webauthn/delete/${name}`);
         if (res.status === 200) {
             await fetchPasskeys();
         } else {
-            let body = await res.json();
-            err = true;
-            msg = body.message;
+            msg = res.error?.message || 'Error';
         }
     }
 
@@ -175,52 +170,7 @@
         {/if}
         <div class="keysContainer">
             {#each passkeys as passkey (passkey.name)}
-                <div class="keyContainer">
-                    <div class="row">
-                    <span class="label">
-                        {t.mfa.passkeyName}
-                    </span>
-
-                        <div class="nameUv">
-                            <b>{passkey.name}</b>
-                            {#if passkey.user_verified}
-                                <Tooltip text={t.account.userVerifiedTooltip}>
-                                    <div style:margin-bottom="-.25rem">
-                                        <IconFingerprint width={18} color="var(--col-acnt)"/>
-                                    </div>
-                                </Tooltip>
-                            {/if}
-                        </div>
-                    </div>
-                    <div class="row">
-                    <span class="label">
-                        {t.mfa.registerd}
-                    </span>
-
-                        <span class="font-mono">{formatDateFromTs(passkey.registered)}</span>
-                    </div>
-                    <div class="row">
-                    <span class="label">
-                        {t.mfa.lastUsed}
-                    </span>
-
-                        <span class="font-mono">{formatDateFromTs(passkey.last_used)}</span>
-                    </div>
-
-                    {#if showDelete}
-                        <div class="row">
-                            <div></div>
-                            <div class="deleteBtn">
-                                <Button
-                                        level={-3}
-                                        onclick={() => handleDelete(passkey.name)}
-                                >
-                                    {t.common.delete}
-                                </Button>
-                            </div>
-                        </div>
-                    {/if}
-                </div>
+                <UserPasskey {passkey} {showDelete} onDelete={handleDelete}/>
             {/each}
         </div>
 
@@ -252,27 +202,14 @@
         margin-top: .33rem;
     }
 
-    .deleteBtn {
-        margin-right: -.35rem;
-    }
-
     .keysContainer {
         max-height: 20rem;
         overflow-y: auto;
     }
 
-    .keyContainer {
-        margin: .33rem 0;
-        overflow: clip;
-    }
-
     .keysHeader {
         margin-top: .5rem;
         font-weight: bold;
-    }
-
-    .label {
-        color: hsla(var(--text) / .7);
     }
 
     .success, .err {
@@ -285,12 +222,6 @@
         color: hsl(var(--action));
     }
 
-    .nameUv {
-        display: inline-flex;
-        align-items: center;
-        gap: .25rem;
-    }
-
     .regBtns {
         margin: .25rem 0;
         display: flex;
@@ -300,13 +231,5 @@
 
     .regNewBtn {
         margin: .5rem 0;
-    }
-
-    .row {
-        width: min(95dvw, 21rem);
-        display: flex;
-        gap: .5rem;
-        justify-content: space-between;
-        align-items: center;
     }
 </style>

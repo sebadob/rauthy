@@ -313,6 +313,10 @@ export let I18nAdminDe: I18nAdmin = {
         descAttr: `Setze individuelle Benutzer Attribute. Alle Key / Value Paare 
             werden als String / JSON Wert gehandhabt.`,
         lastLogin: "Letzter Login",
+        mfaDelete1: "Die Passkeys dieses Nutzers können gelöscht werden.",
+        mfaDelete2: `Vorsicht! Das Löschen eines Keys <b>kann nicht rückgängig gemacht werden</b>, ohne
+            dass der Benutzer die Registrierung erneut durchführt.`,
+        noMfaKeys: "Dieser Benutzer hat keine registrierten Passkeys.",
         pkOnly1: "Dies ist ein Passkey-Only Account.",
         pkOnly2: "Das bedeutet, dass dieser Benutzer den passwortlosen Login nutzt und kein Passwort gesetzt hat.",
         pkOnly3: `Sollte dieser Benutzer alle Passkeys verloren haben, kann der Account vollständig resettet und eine

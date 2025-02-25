@@ -1,35 +1,43 @@
-<script>
-    import {onMount} from "svelte";
-    import {getUserPasskeys, webauthnDelete} from "../../../utils/dataFetching.js";
-    import Button from "$lib/Button.svelte";
-    import {formatDateFromTs} from "../../../utils/helpers";
+<script lang="ts">
+    import type {UserResponse} from "$api/types/user.ts";
+    import {fetchDelete, fetchGet} from "$api/fetch.ts";
+    import type {PasskeyResponse} from "$api/types/webauthn.ts";
+    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
+    import {useI18n} from "$state/i18n.svelte.ts";
+    import UserPasskey from "$lib5/UserPasskey.svelte";
 
-    let {user = $bindable({}), onSave = $bindable()} = $props();
+    let {
+        user,
+        onSave,
+    }: {
+        user: UserResponse,
+        onSave: () => void,
+    } = $props();
+
+    let t = useI18n();
+    let ta = useI18nAdmin();
 
     let err = $state('');
-    let passkeys = $state([]);
+    let passkeys: PasskeyResponse[] = $state([]);
 
-    const btnWidth = "inherit";
-
-    onMount(async () => {
-        await fetchPasskeys();
+    $effect(() => {
+        fetchPasskeys();
     });
 
     async function fetchPasskeys() {
-        let res = await getUserPasskeys(user.id);
-        let body = await res.json();
-        if (res.ok) {
-            passkeys = body;
+        let res = await fetchGet<PasskeyResponse[]>(`/auth/v1/users/${user.id}/webauthn`);
+        if (res.body) {
+            passkeys = res.body;
         } else {
-            console.error('error fetching passkeys: ' + body.message);
+            err = res.error?.message || 'Error';
 
         }
     }
 
-    async function handleDeleteKey(name) {
+    async function onDelete(name: string) {
         let isLastKey = passkeys.length === 1;
 
-        let res = await webauthnDelete(user.id, name);
+        let res = await fetchDelete(`/auth/v1/users/${user.id}/webauthn/delete/${name}`);
         if (res.status === 200) {
             await fetchPasskeys();
 
@@ -38,106 +46,36 @@
             if (isLastKey) {
                 onSave();
             }
-
-            return true;
         } else {
-            let body = await res.json();
-            err = body.message;
-            return false;
+            err = res.error?.message || 'Error';
         }
     }
 
 </script>
 
-<div class="container">
-    {#if passkeys.length < 1}
-        <div class="desc">
-            This user does not have any active MFA keys.
-        </div>
-    {:else}
-        <div class="desc">
-            You can delete the users MFA / Security Keys.<br>
-            Be careful though, since this <b>cannot be reverted</b> without user interaction.<br>
-            This is useful, if a user lost his keys and he is not able to log in any more.
-        </div>
+{#if passkeys.length === 0}
+    <p>{ta.users.noMfaKeys}</p>
+{:else}
+    <p>{ta.users.mfaDelete1}</p>
+    <p>{@html ta.users.mfaDelete2}</p>
 
-        <div class="keysContainer">
-            {#each passkeys as passkey (passkey.name)}
-                <div class="keyContainer">
-                    <div class="row">
-                        <div class="label">
-                            Passkey Name:
-                        </div>
-                        <b>{passkey.name}</b>
-                    </div>
-                    <div class="row">
-                        <div class="label">
-                            Key Registered:
-                        </div>
-                        <span class="font-mono">{formatDateFromTs(passkey.registered)}</span>
-                    </div>
-                    <div class="row">
-                        <div class="label">
-                            Last Usage:
-                        </div>
-                        <span class="font-mono">{formatDateFromTs(passkey.last_used)}</span>
-                    </div>
-                    <div class="row">
-                        <div class="label"></div>
-                        <div class="deleteBtn">
-                            <Button on:click={() => handleDeleteKey(passkey.name)} level={4}>
-                                DELETE
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            {/each}
-        </div>
-    {/if}
+    <div class="keysContainer">
+        {#each passkeys as passkey (passkey.name)}
+            <UserPasskey {passkey} showDelete {onDelete}/>
+        {/each}
+    </div>
+{/if}
 
-    {#if err}
-        <div class="err">
-            {err}
-        </div>
-    {/if}
-</div>
+{#if err}
+    <div class="err">
+        {err}
+    </div>
+{/if}
 
 <style>
-    .container {
-        margin: 0 10px 10px 10px;
-    }
-
-    .deleteBtn {
-        text-align: right;
-        margin: -.33rem 0 0 -.8rem;
-    }
-
-    .desc {
-        margin: 7px;
-    }
-
-    .err {
-        margin: .5rem;
-        color: var(--col-err);
-    }
-
-    .keyContainer {
-        margin: .33rem 0;
-    }
-
     .keysContainer {
-        margin: .5rem;
-        gap: .5rem;
-        padding-right: 2rem;
+        margin-top: 1rem;
+        max-height: 30rem;
         overflow-y: auto;
-    }
-
-    .label {
-        width: 7rem;
-    }
-
-    .row {
-        display: flex;
-        gap: .5rem;
     }
 </style>
