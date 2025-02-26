@@ -8,7 +8,7 @@
     import UserPassword from "$lib5/admin/users/UserPassword.svelte";
     import {slide} from 'svelte/transition';
     import UserDelete from "./UserDelete.svelte";
-    import UserForceLogout from "./UserForceLogout.svelte";
+    import UserForceLogout from "$lib5/admin/users/UserForceLogout.svelte";
     import UserAttr from "./UserAttr.svelte";
     import UserMfa from "./UserMfa.svelte";
     import {onMount} from "svelte";

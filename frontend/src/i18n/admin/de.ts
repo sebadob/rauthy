@@ -312,6 +312,8 @@ export let I18nAdminDe: I18nAdmin = {
         attributes: "Attribute",
         descAttr: `Setze individuelle Benutzer Attribute. Alle Key / Value Paare 
             werden als String / JSON Wert gehandhabt.`,
+        forceLogout: `Sollen sämtliche, für diesen Benutzer existierenden Sessions invalidiert und 
+            Refresh Tokens gelöscht werden?`,
         lastLogin: "Letzter Login",
         mfaDelete1: "Die Passkeys dieses Nutzers können gelöscht werden.",
         mfaDelete2: `Vorsicht! Das Löschen eines Keys <b>kann nicht rückgängig gemacht werden</b>, ohne
