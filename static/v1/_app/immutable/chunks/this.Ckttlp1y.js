@@ -1,1 +1,0 @@
-import{m as o,l as e,a0 as m,a1 as b,S as c}from"./index-client.Di99sPv0.js";function l(a,t){return a===t||(a==null?void 0:a[c])===t}function p(a={},t,s,S){return o(()=>{var u,n;return e(()=>{u=n,n=[],m(()=>{a!==s(...n)&&(t(a,...n),u&&l(s(...u),a)&&t(null,...u))})}),()=>{b(()=>{n&&l(s(...n),a)&&t(null,...n)})}}),a}export{p as b};

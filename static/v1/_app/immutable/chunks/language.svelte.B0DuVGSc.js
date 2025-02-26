@@ -1,0 +1,1 @@
+import{m as e,o as t,l as n}from"./index-client.Ds4XgiuL.js";import{p as m}from"./proxy.CB6KOiNf.js";let o=t("");function a(){typeof document<"u"?e(o,m(document.documentElement.lang.slice(0,2).toLowerCase())):e(o,"en")}function r(){return n(o)}export{a as i,r as u};
