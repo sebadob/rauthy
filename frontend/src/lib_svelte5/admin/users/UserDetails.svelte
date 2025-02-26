@@ -9,7 +9,7 @@
     import type {UserResponse} from "$api/types/user.ts";
     import UserAttr from "$lib5/admin/users/UserAttr.svelte";
     import UserPassword from "./UserPassword.svelte";
-    import UserMfa from "../../../components/admin/users/UserMfa.svelte";
+    import UserMfa from "./UserMfa.svelte";
     import Devices from "$lib5/devices/Devices.svelte";
     import UserForceLogout from "./UserForceLogout.svelte";
     import UserDelete from "$lib5/admin/users/UserDelete.svelte";

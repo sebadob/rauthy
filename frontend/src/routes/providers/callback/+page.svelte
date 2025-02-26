@@ -5,7 +5,6 @@
     } from "$utils/helpers";
     import {onMount} from "svelte";
     import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
-    import BrowserCheck from "../../../components/BrowserCheck.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import Button from "$lib5/button/Button.svelte";
     import {useI18n} from "$state/i18n.svelte";
@@ -105,29 +104,27 @@
     <title>Callback</title>
 </svelte:head>
 
-<BrowserCheck>
-    {#if mfaPurpose && userId}
-        <WebauthnRequest
-                {userId}
-                purpose={mfaPurpose}
-                onSuccess={onWebauthnSuccess}
-                onError={onWebauthnError}
-        />
-    {:else if clientMfaForce}
-        <div class="btn flex-col">
-            <Button onclick={() => window.location.href = '/auth/v1/account'}>
-                Account
-            </Button>
-        </div>
-    {:else if error}
-        <div class="err">
-            {error}
-        </div>
-    {/if}
+{#if mfaPurpose && userId}
+    <WebauthnRequest
+            {userId}
+            purpose={mfaPurpose}
+            onSuccess={onWebauthnSuccess}
+            onError={onWebauthnError}
+    />
+{:else if clientMfaForce}
+    <div class="btn flex-col">
+        <Button onclick={() => window.location.href = '/auth/v1/account'}>
+            Account
+        </Button>
+    </div>
+{:else if error}
+    <div class="err">
+        {error}
+    </div>
+{/if}
 
-    <ThemeSwitch absolute/>
-    <LangSelector absolute/>
-</BrowserCheck>
+<ThemeSwitch absolute/>
+<LangSelector absolute/>
 
 <style>
     .btn {
