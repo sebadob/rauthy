@@ -258,6 +258,7 @@ export interface I18nAdmin {
     },
     users: {
         attributes: string,
+        deleteUser: string,
         descAttr: string,
         forceLogout: string,
         lastLogin: string,

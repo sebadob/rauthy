@@ -12,6 +12,7 @@
     import UserMfa from "../../../components/admin/users/UserMfa.svelte";
     import Devices from "$lib5/devices/Devices.svelte";
     import UserForceLogout from "./UserForceLogout.svelte";
+    import UserDelete from "$lib5/admin/users/UserDelete.svelte";
 
     let {
         userId,
@@ -86,6 +87,6 @@
     {:else if selected === tabs[5]}
         <UserForceLogout {userId}/>
     {:else if selected === tabs[6]}
-        TODO delete
+        <UserDelete {userId} {onSave}/>
     {/if}
 {/if}

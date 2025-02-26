@@ -7,7 +7,7 @@
     import TabBar from "$lib/TabBar.svelte";
     import UserPassword from "$lib5/admin/users/UserPassword.svelte";
     import {slide} from 'svelte/transition';
-    import UserDelete from "./UserDelete.svelte";
+    import UserDelete from "$lib5/admin/users/UserDelete.svelte";
     import UserForceLogout from "$lib5/admin/users/UserForceLogout.svelte";
     import UserAttr from "./UserAttr.svelte";
     import UserMfa from "./UserMfa.svelte";

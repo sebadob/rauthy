@@ -299,6 +299,7 @@ export let I18nAdminEn: I18nAdmin = {
     },
     users: {
         attributes: "Attributes",
+        deleteUser: "Are you sure you want to delete this user?",
         descAttr: `Set custom user attributes. All key / value pairs will be handles as String / JSON Value.`,
         forceLogout: `Are you sure you want to invalidate all existing sessions and delete all refresh tokens
             for this user?`,

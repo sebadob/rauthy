@@ -310,6 +310,7 @@ export let I18nAdminDe: I18nAdmin = {
     },
     users: {
         attributes: "Attribute",
+        deleteUser: "Soll dieser Benutzer wirklich gelöscht werden?",
         descAttr: `Setze individuelle Benutzer Attribute. Alle Key / Value Paare 
             werden als String / JSON Wert gehandhabt.`,
         forceLogout: `Sollen sämtliche, für diesen Benutzer existierenden Sessions invalidiert und 
