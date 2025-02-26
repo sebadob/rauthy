@@ -10,6 +10,7 @@
     import UserAttr from "$lib5/admin/users/UserAttr.svelte";
     import UserPassword from "./UserPassword.svelte";
     import UserMfa from "../../../components/admin/users/UserMfa.svelte";
+    import Devices from "$lib5/devices/Devices.svelte";
 
     let {
         userId,
@@ -80,7 +81,7 @@
     {:else if selected === tabs[3]}
         <UserMfa {user} {onSave}/>
     {:else if selected === tabs[4]}
-        TODO devices
+        <Devices viewMode="admin"/>
     {:else if selected === tabs[5]}
         TODO logout
     {:else if selected === tabs[6]}

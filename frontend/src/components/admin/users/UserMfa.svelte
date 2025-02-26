@@ -3,7 +3,6 @@
     import {fetchDelete, fetchGet} from "$api/fetch.ts";
     import type {PasskeyResponse} from "$api/types/webauthn.ts";
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
-    import {useI18n} from "$state/i18n.svelte.ts";
     import UserPasskey from "$lib5/UserPasskey.svelte";
 
     let {
@@ -14,7 +13,6 @@
         onSave: () => void,
     } = $props();
 
-    let t = useI18n();
     let ta = useI18nAdmin();
 
     let err = $state('');

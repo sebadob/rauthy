@@ -12,6 +12,7 @@
         UserAttrConfigValueResponse,
         UserAttrValueResponse, UserAttrValuesResponse,
     } from "$api/types/user_attrs.ts";
+    import {compile} from "svelte/compiler";
 
     let {
         user,
@@ -107,26 +108,30 @@
 </script>
 
 <div class="container">
-    <p>{ta.users.descAttr}</p>
+    {#if attrsCombined.length === 0}
+        <p>{ta.common.noEntries}</p>
+    {:else}
+        <p>{ta.users.descAttr}</p>
 
-    {#each attrsCombined as a}
-        <Input
-                bind:value={a.value}
-                autocomplete="off"
-                label={a.name}
-                placeholder={a.desc || 'JSON Value'}
-        />
-    {/each}
+        {#each attrsCombined as a}
+            <Input
+                    bind:value={a.value}
+                    autocomplete="off"
+                    label={a.name}
+                    placeholder={a.desc || 'JSON Value'}
+            />
+        {/each}
 
-    <div class="flex gap-05">
-        <Button onclick={onSubmit}>
-            {t.common.save}
-        </Button>
+        <div class="flex gap-05">
+            <Button onclick={onSubmit}>
+                {t.common.save}
+            </Button>
 
-        {#if success}
-            <IconCheck/>
-        {/if}
-    </div>
+            {#if success}
+                <IconCheck/>
+            {/if}
+        </div>
+    {/if}
 </div>
 
 {#if err}
