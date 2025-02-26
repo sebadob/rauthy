@@ -1,1 +1,0 @@
-import{l as r,m as s,o as m}from"./index-client.Ds4XgiuL.js";import{p as a}from"./proxy.CB6KOiNf.js";import{f as e}from"./fetch.DFmyLr06.js";import{i as f,r as n}from"./helpers.BTvs6bnN.js";let t=m(void 0);function p(i){return!r(t)&&f()&&e("/auth/v1/oidc/sessioninfo").then(o=>{o.status===401&&n(i),s(t,a(o.body))}),{get(){return r(t)},set(o){s(t,a(o))}}}export{p as u};
