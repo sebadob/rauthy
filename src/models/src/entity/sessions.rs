@@ -233,7 +233,6 @@ impl Session {
 
         if let Some(token) = continuation_token {
             if backwards {
-                offset += page_size;
                 let mut rows: Vec<Self> = if is_hiqlite() {
                     DB::client()
                         .query_as(

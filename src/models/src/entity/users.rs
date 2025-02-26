@@ -458,6 +458,7 @@ impl User {
         Ok(slf)
     }
 
+    #[tracing::instrument]
     pub async fn find_paginated(
         continuation_token: Option<ContinuationToken>,
         page_size: i64,
@@ -466,8 +467,6 @@ impl User {
     ) -> Result<(Vec<UserResponseSimple>, Option<ContinuationToken>), ErrorResponse> {
         let res = if let Some(token) = continuation_token {
             if backwards {
-                offset += page_size;
-
                 if is_hiqlite() {
                     let mut res = DB::client()
                         .query_as(
@@ -513,8 +512,8 @@ OFFSET $4"#,
                             r#"
 SELECT id, email, created_at, last_login
 FROM users
-WHERE created_at <= $1 AND id != $2
-ORDER BY created_at DESC
+WHERE created_at >= $1 AND id != $2
+ORDER BY created_at ASC
 LIMIT $3
 OFFSET $4"#,
                             params!(token.ts, token.id, page_size, offset),
