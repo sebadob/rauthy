@@ -4,8 +4,9 @@
     import {untrack} from "svelte";
     import Button from "$lib5/button/Button.svelte";
     import Options from "$lib5/Options.svelte";
+    import type {PageSize} from "$lib5/pagination/props.ts";
 
-    const options = [10, 15, 20, 30, 50, 100];
+    const options: PageSize[] = [5, 10, 20, 30, 50, 100];
 
     let {
         items = $bindable(),
@@ -17,7 +18,7 @@
         items: any[];
         itemsPaginated: any[];
         page?: number;
-        pageSize?: number;
+        pageSize?: PageSize;
         compact?: boolean;
     } = $props();
 

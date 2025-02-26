@@ -16,7 +16,7 @@
     import {PATTERN_IPV4} from "$utils/patterns.ts";
     import Form from "$lib5/form/Form.svelte";
     import Tooltip from "$lib5/Tooltip.svelte";
-    import Pagination from "$lib5/Pagination.svelte";
+    import Pagination from "$lib5/pagination/Pagination.svelte";
 
     let t = useI18n();
     let ta = useI18nAdmin();

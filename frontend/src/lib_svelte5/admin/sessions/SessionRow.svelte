@@ -51,7 +51,7 @@
         {#snippet summary()}
             <div class="header">
                 <Tooltip text="User ID">
-                    <div class="uid font-mono">
+                    <div class="uid font-mono" style:margin-left={session.user_id ? '' : '.5rem'}>
                         {session.user_id}
                     </div>
                 </Tooltip>
