@@ -28,6 +28,8 @@
 
 ### Changelog TODO
 
+- breaking change for GET users / sessions paginated -> offset + backwards
+
 ## Stage 1 - essentials
 
 [x] finished

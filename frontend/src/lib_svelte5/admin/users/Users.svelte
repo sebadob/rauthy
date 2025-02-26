@@ -5,18 +5,16 @@
     import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
     import type {GroupResponse} from "$api/types/groups.ts";
     import type {RoleResponse} from "$api/types/roles.ts";
-    import PaginationServer from "$lib/PaginationServer.svelte";
-    import Pagination from "$lib5/Pagination.svelte";
+    import Pagination from "$lib5/pagination/Pagination.svelte";
     import NavSub from "$lib5/nav/NavSub.svelte";
     import ButtonAddModal from "$lib5/button/ButtonAddModal.svelte";
-    import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
     import {useParam} from "$state/param.svelte.ts";
     import NavButtonTile from "$lib5/nav/NavButtonTile.svelte";
     import ContentAdmin from "$lib5/ContentAdmin.svelte";
     import UserAddNew from "$lib5/admin/users/UserAddNew.svelte";
     import UserDetails from "$lib5/admin/users/UserDetails.svelte";
-
-    let ta = useI18nAdmin();
+    import PaginationServerSide from "$lib5/pagination/PaginationServerSide.svelte";
+    import {PAGE_SIZE_DEFAULT} from "$lib5/pagination/props.ts";
 
     let closeModal: undefined | (() => void) = $state();
     let err = $state('');
@@ -24,19 +22,13 @@
     let users: UserResponseSimple[] = $state([]);
     let usersFiltered: UserResponseSimple[] = $state([]);
     let usersPaginated: UserResponseSimple[] = $state([]);
-    let usersCountTotal = $state(0);
     let uid = useParam('uid');
     let userId: undefined | string = $state();
 
     let groups: GroupResponse[] = $state([]);
     let roles: RoleResponse[] = $state([]);
 
-    let useServerSideIdx = $state('');
-    let isSearchFiltered = $state(false);
-
-    let sspPageSize = $state(15);
-    let sspContinuationToken = $state('');
-    let sspPage = $state(1);
+    let firstFetchHeaders: undefined | Headers = $state();
 
     let searchOptions = $state(['E-Mail', 'ID']);
     let searchOption = $state(searchOptions[0]);
@@ -44,7 +36,7 @@
     let orderOptions = $state(['E-Mail', 'ID', 'Created', 'Last Login']);
 
     onMount(() => {
-        fetchUsers();
+        fetchUsers('page_size=' + PAGE_SIZE_DEFAULT);
         fetchRoles();
         fetchGroups();
     })
@@ -64,60 +56,25 @@
         }
     });
 
-    async function fetchUsers(useSsp?: boolean, offset?: number, backwards?: boolean, pageSize?: number) {
-        let url = '/auth/v1/users';
-        if (useSsp === true) {
-            url += `page_size=${pageSize || sspPageSize}`;
-            if (offset) {
-                url += `&offset=${offset}`;
-            }
-            if (backwards) {
-                url += `&backwards=${backwards}`;
-                if (sspPage !== 2 && sspContinuationToken) {
-                    url += `&continuation_token=${sspContinuationToken}`;
-                }
-            }
+    async function fetchUsers(urlParams?: string): Promise<[number, Headers]> {
+        let url = `/auth/v1/users`;
+        if (urlParams) {
+            url += `?${urlParams}`
         }
+
         let res = await fetchGet<UserResponse[]>(url);
         if (res.error) {
             err = 'Error fetching users: ' + res.error.message;
         } else if (res.body) {
-            // HTTP 206 --> Backend is using SSP
             if (res.status === 206) {
-                // we get a few headers during SSP we can use for the navigation
-                let xPageSize = res.headers.get('x-page-size');
-                if (!xPageSize) {
-                    console.error('Did not receive x-page-size with SSP');
-                    return;
-                }
-                sspPageSize = Number.parseInt(xPageSize);
-                sspContinuationToken = res.headers.get('x-continuation-token') || '';
-                // sspPageCount = res.headers.get('x-page-count');
-                useServerSideIdx = 'session';
+                firstFetchHeaders = res.headers;
             } else {
-                useServerSideIdx = '';
+                firstFetchHeaders = undefined;
             }
-
             users = res.body;
         }
-    }
 
-    // // Callback function for <PaginationServer>
-    // // Fetches the next page during server side pagination with the given offset and direction.
-    // async function fetchUsersSsp(offset, backwards) {
-    //     await fetchUsers(true, offset, backwards);
-    //     if (backwards) {
-    //         sspPage -= 1;
-    //     } else {
-    //         sspPage += 1;
-    //     }
-    // }
-
-    // Callback function for <PaginationServer> to make page size switches work
-    async function sspPageSizeChange(pageSize: number) {
-        sspContinuationToken = '';
-        await fetchUsers(true, 0, false, pageSize);
-        sspPage = 1;
+        return [res.status, res.headers];
     }
 
     async function fetchRoles() {
@@ -203,7 +160,7 @@
 
     {#snippet buttonTiles()}
         <div style:height=".5rem"></div>
-        {#if useServerSideIdx}
+        {#if firstFetchHeaders}
             {#each usersFiltered as user (user.id)}
                 {@render navTile(user.id, user.email)}
             {/each}
@@ -213,18 +170,12 @@
             {/each}
         {/if}
 
-        <!--
-        Even with server side pagination, we must use it client side if we
-        have a filtered search result. Otherwise, switching pages would
-        overwrite the filtered data.
-        -->
-        {#if useServerSideIdx}
-            <PaginationServer
-                    itemsTotal={usersCountTotal}
-                    bind:sspPage
-                    bind:sspPageSize
-                    bind:sspContinuationToken
-                    sspPageSizeChange={sspPageSizeChange}
+        {#if firstFetchHeaders}
+            <PaginationServerSide
+                    sspFetch={fetchUsers}
+                    idxTotalCount="x-user-count"
+                    itemsLength={users.length}
+                    {firstFetchHeaders}
             />
         {:else}
             <Pagination
