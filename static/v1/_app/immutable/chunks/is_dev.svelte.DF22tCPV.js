@@ -1,1 +1,0 @@
-import{y as s,z as e,A as o}from"./index-client.Di99sPv0.js";import{p as a}from"./proxy.BQ2dmY0t.js";const u="false";let t=o(u==="true");function f(){return{get(){return s(t)},set(r){e(t,a(r))}}}export{f as u};

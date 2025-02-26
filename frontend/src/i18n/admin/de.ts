@@ -32,7 +32,7 @@ export let I18nAdminDe: I18nAdmin = {
                 <code>hsla(var(--action) / .7)</code>.`,
         },
         confidential: "Vertraulich",
-        confidentialNoSecret: "Dies is kein vertraulier Client und hat somit kein Secret.",
+        confidentialNoSecret: "Dies is kein vertraulicher Client und hat somit kein Secret.",
         config: "Client Konfiguration",
         delete1: "Soll dieser Client wirklich gelöscht werden?",
         descAuthCode: `Die Gültigkeit der Auth Codes kann angepasst werden um zusätzliche Sicherheit
@@ -84,6 +84,7 @@ export let I18nAdminDe: I18nAdmin = {
         filter: "Filter",
         from: "Von",
         information: "Informationen",
+        language: "Sprache",
         loading: "Lade",
         name: "Name",
         nameExistsAlready: "Name existiert bereits",
@@ -306,6 +307,30 @@ export let I18nAdminDe: I18nAdmin = {
     tabs: {
         config: "Konfiguration",
         delete: "Löschen",
+    },
+    users: {
+        attributes: "Attribute",
+        deleteUser: "Soll dieser Benutzer wirklich gelöscht werden?",
+        descAttr: `Setze individuelle Benutzer Attribute. Alle Key / Value Paare 
+            werden als String / JSON Wert gehandhabt.`,
+        forceLogout: `Sollen sämtliche, für diesen Benutzer existierenden Sessions invalidiert und 
+            Refresh Tokens gelöscht werden?`,
+        lastLogin: "Letzter Login",
+        mfaDelete1: "Die Passkeys dieses Nutzers können gelöscht werden.",
+        mfaDelete2: `Vorsicht! Das Löschen eines Keys <b>kann nicht rückgängig gemacht werden</b>, ohne
+            dass der Benutzer die Registrierung erneut durchführt.`,
+        noMfaKeys: "Dieser Benutzer hat keine registrierten Passkeys.",
+        pkOnly1: "Dies ist ein Passkey-Only Account.",
+        pkOnly2: "Das bedeutet, dass dieser Benutzer den passwortlosen Login nutzt und kein Passwort gesetzt hat.",
+        pkOnly3: `Sollte dieser Benutzer alle Passkeys verloren haben, kann der Account vollständig resettet und eine
+            Password Reset E-Mail versendet werden. Um dies zu tun, müssen vorher unter dem Reiter 'MFA' sämtliche
+            Passkeys gelöscht werden.`,
+        pwdNoInit: "Der Benutzer hat noch nicht den initialien Passwort Reset durchgeführt.",
+        pwdSendEmailBtn: "Reset E-Mail Senden",
+        pwdSendEmailDesc: "Es kann eine neue Reset E-Mail gesendet werden, sollte der Benutzer keine erhalten haben.",
+        savePassword: "Passwort Speichern",
+        selfServiceDesc: "Es kann entweder ein neues Passwort gesetzt, order eine Reset E-Mail versendet werden.",
+        sendResetEmail: "Reset E-Mail Senden",
     },
     validation: {
         css: "Gültiger CSS Wert",

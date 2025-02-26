@@ -12,6 +12,7 @@
         name = 'time',
         value = $bindable(fmtTimeInput()),
         label = '',
+        ariaLabel = '',
         errMsg = '',
         disabled,
         min = '00:00',
@@ -29,6 +30,7 @@
         name?: string,
         value?: string,
         label?: string,
+        ariaLabel?: string,
         errMsg?: string,
         disabled?: boolean,
         min?: string,
@@ -205,7 +207,7 @@
                 {id}
                 {name}
                 title={errMsg}
-                aria-label={label}
+                aria-label={ariaLabel || label}
                 bind:value
 
                 {disabled}
@@ -303,6 +305,7 @@
         width: 100%;
         margin-top: -1.1rem;
         padding: .5rem;
+        color: hsla(var(--text) / .8);
     }
 
     .colon {

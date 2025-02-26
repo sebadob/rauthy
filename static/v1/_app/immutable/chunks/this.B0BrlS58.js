@@ -1,0 +1,1 @@
+import{z as e,y as f,$ as l,a0 as b,S as c}from"./index-client.Ds4XgiuL.js";function o(n,u){return n===u||(n==null?void 0:n[c])===u}function m(n={},u,a,p){return e(()=>{var s,t;return f(()=>{s=t,t=[],l(()=>{n!==a(...t)&&(u(n,...t),s&&o(a(...s),n)&&u(null,...s))})}),()=>{b(()=>{t&&o(a(...t),n)&&u(null,...t)})}}),n}export{m as b};

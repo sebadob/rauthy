@@ -1038,6 +1038,7 @@ LIMIT $2"#,
         let user_values = if let Some(values) = upd_user.user_values {
             UserValues::upsert(user.id.clone(), values).await?
         } else {
+            UserValues::delete(user.id.clone()).await?;
             None
         };
 

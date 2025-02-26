@@ -174,7 +174,7 @@
 >
     {#snippet button()}
         <div class="btn" data-border={!borderless}>
-            <div class="btnText">
+            <div class="btnText" title={ariaLabel}>
                 {value}
             </div>
             <IconChevronDown width=".8rem"/>

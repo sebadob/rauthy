@@ -109,6 +109,24 @@ SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7"#
 
         Ok(slf)
     }
+
+    pub async fn delete(user_id: String) -> Result<(), ErrorResponse> {
+        let cache_idx = Self::cache_idx(&user_id);
+
+        if is_hiqlite() {
+            DB::client()
+                .execute("DELETE FROM users_values WHERE id = $1", params!(user_id))
+                .await?;
+        } else {
+            sqlx::query!("DELETE FROM users_values WHERE id = $1", user_id)
+                .execute(DB::conn())
+                .await?;
+        }
+
+        DB::client().delete(Cache::User, cache_idx).await?;
+
+        Ok(())
+    }
 }
 
 impl From<UserValues> for UserValuesResponse {

@@ -81,6 +81,7 @@ export let I18nAdminEn: I18nAdmin = {
         filter: "Filter",
         from: "From",
         information: "Information",
+        language: "Language",
         loading: "Loading",
         name: "Name",
         nameExistsAlready: "Name exists already",
@@ -295,6 +296,28 @@ export let I18nAdminEn: I18nAdmin = {
     tabs: {
         config: "Config",
         delete: "Delete",
+    },
+    users: {
+        attributes: "Attributes",
+        deleteUser: "Are you sure you want to delete this user?",
+        descAttr: `Set custom user attributes. All key / value pairs will be handles as String / JSON Value.`,
+        forceLogout: `Are you sure you want to invalidate all existing sessions and delete all refresh tokens
+            for this user?`,
+        lastLogin: "Last Login",
+        mfaDelete1: "You can delete Passkeys for this users.",
+        mfaDelete2: `Caution! The deletion of a Passkey <b>cannot be reverted</b> without the user
+            doing a fully new registration.`,
+        noMfaKeys: "This user has no registered Passkeys.",
+        pkOnly1: "This is a passkey-only account.",
+        pkOnly2: "This means that this user uses the passwordless login and has no password set at all.",
+        pkOnly3: `If this user has lost all Passkeys, the account can be fully reset and a new password reset E-Mail
+            can be sent. To achieve this, navigate to the 'MFA' tab an delete all existing passkeys.`,
+        pwdNoInit: "The user has not performed the initial password reset yet.",
+        pwdSendEmailBtn: "Send Reset E-Mail",
+        pwdSendEmailDesc: "You may send out a new reset E-Mail, if the user has not received one.",
+        savePassword: "Save Password",
+        selfServiceDesc: "You can either set a new password, or send out a reset E-Mail.",
+        sendResetEmail: "Send Reset E-Mail",
     },
     validation: {
         css: "Valid CSS Value",

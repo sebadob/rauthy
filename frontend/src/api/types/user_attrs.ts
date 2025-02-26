@@ -18,3 +18,12 @@ export interface UserAttrConfigValueResponse {
 export interface UserAttrConfigResponse {
     values: UserAttrConfigValueResponse[],
 }
+
+export interface UserAttrValueResponse {
+    key: string,
+    value: string,
+}
+
+export interface UserAttrValuesResponse {
+    values: UserAttrValueResponse[],
+}

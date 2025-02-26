@@ -1,20 +1,11 @@
 <script lang="ts">
     import Devices from "$lib5/devices/Devices.svelte";
+    import {useSession} from "$state/session.svelte.ts";
+
+    let session = useSession('account');
+    let userId = $derived(session.get()?.user_id);
 </script>
 
-<!--<div class="container">-->
-<!--
-This is component is only a wrapper because the same Devices
-is reused in the admin ui
--->
-<Devices viewMode="account"/>
-<!--</div>-->
-
-<!--<style>-->
-<!--    .container {-->
-<!--        display: flex;-->
-<!--        flex-direction: column;-->
-<!--        justify-content: flex-start;-->
-<!--        align-items: flex-start;-->
-<!--    }-->
-<!--</style>-->
+{#if userId}
+    <Devices viewMode="account" {userId}/>
+{/if}
