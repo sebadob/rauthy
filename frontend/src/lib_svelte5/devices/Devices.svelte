@@ -7,18 +7,18 @@
     import Device from "./Device.svelte";
 
     let {
+        userId,
         viewMode,
     }: {
+        userId: string,
         viewMode: 'admin' | 'account',
     } = $props();
 
     let t = useI18n();
-    let session = useSession(viewMode);
-    let userId = $derived(session.get()?.user_id);
 
     let devices: DeviceResponse[] = $state([]);
 
-    onMount(() => {
+    $effect(() => {
         fetchDevices();
     })
 

@@ -81,7 +81,7 @@
     {:else if selected === tabs[3]}
         <UserMfa {user} {onSave}/>
     {:else if selected === tabs[4]}
-        <Devices viewMode="admin"/>
+        <Devices viewMode="admin" {userId}/>
     {:else if selected === tabs[5]}
         TODO logout
     {:else if selected === tabs[6]}
