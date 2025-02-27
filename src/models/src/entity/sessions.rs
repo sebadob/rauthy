@@ -222,7 +222,7 @@ impl Session {
     pub async fn find_paginated(
         continuation_token: Option<ContinuationToken>,
         page_size: i64,
-        mut offset: i64,
+        offset: i64,
         backwards: bool,
     ) -> Result<(Vec<Self>, Option<ContinuationToken>), ErrorResponse> {
         // Allowing this unused assignment here makes the type conflicts
