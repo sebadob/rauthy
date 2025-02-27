@@ -25,6 +25,7 @@
     let useServerSide = $state(false);
     let firstFetchHeaders: undefined | Headers = $state();
     let sspPageSize: PageSize = $state(PAGE_SIZE_DEFAULT);
+    let isSearchedServer = $state(false);
 
     let searchOptions = ['User ID', 'Session ID', 'IP'];
     let searchOption = $state(searchOptions[0]);
@@ -37,15 +38,12 @@
 
     $effect(() => {
         let search = searchValue.toLowerCase();
-        console.log('search effect', search);
         if (useServerSide) {
             if (search.length < 3) {
-                // TODO probably bind page size to do a proper fetch after changes
-                let filtered = untrack(() => sessionsFiltered.length > 0);
-                if (filtered) {
+                if (isSearchedServer) {
                     fetchSessions('page_size=' + sspPageSize);
+                    isSearchedServer = false;
                 }
-                sessionsFiltered = [];
             } else {
                 searchServer(search);
             }
@@ -65,6 +63,7 @@
 
     async function searchServer(q: string) {
         firstFetchHeaders = undefined;
+        isSearchedServer = true;
 
         let idx: SearchParamsIdxSession;
         if (searchOption === searchOptions[0]) {
@@ -77,7 +76,7 @@
 
         let res = await fetchSearchServer<SessionResponse[]>({ty: 'session', idx, q});
         if (res.body) {
-            sessionsFiltered = res.body;
+            sessions = res.body;
         } else {
             console.error(res.error);
         }
@@ -209,6 +208,11 @@
                 sspFetch={fetchSessions}
                 itemsLength={sessions.length}
                 {firstFetchHeaders}
+        />
+    {:else if useServerSide}
+        <Pagination
+                bind:items={sessions}
+                bind:itemsPaginated={sessionsPaginated}
         />
     {:else}
         <Pagination

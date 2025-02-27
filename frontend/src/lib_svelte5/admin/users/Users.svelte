@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {onMount} from "svelte";
+    import {onMount, untrack} from "svelte";
     import {fetchGet} from "$api/fetch.ts";
     import type {UserResponse, UserResponseSimple} from "$api/types/user.ts";
     import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";
@@ -14,7 +14,8 @@
     import UserAddNew from "$lib5/admin/users/UserAddNew.svelte";
     import UserDetails from "$lib5/admin/users/UserDetails.svelte";
     import PaginationServerSide from "$lib5/pagination/PaginationServerSide.svelte";
-    import {PAGE_SIZE_DEFAULT} from "$lib5/pagination/props.ts";
+    import {PAGE_SIZE_DEFAULT, type PageSize} from "$lib5/pagination/props.ts";
+    import {fetchSearchServer, type SearchParamsIdxUser} from "$utils/search.ts";
 
     let closeModal: undefined | (() => void) = $state();
     let err = $state('');
@@ -28,7 +29,10 @@
     let groups: GroupResponse[] = $state([]);
     let roles: RoleResponse[] = $state([]);
 
+    let useServerSide = $state(false);
     let firstFetchHeaders: undefined | Headers = $state();
+    let sspPageSize: PageSize = $state(PAGE_SIZE_DEFAULT);
+    let isSearchedServer = $state(false);
 
     let searchOptions = $state(['E-Mail', 'ID']);
     let searchOption = $state(searchOptions[0]);
@@ -36,7 +40,7 @@
     let orderOptions = $state(['E-Mail', 'ID', 'Created', 'Last Login']);
 
     onMount(() => {
-        fetchUsers('page_size=' + PAGE_SIZE_DEFAULT);
+        fetchUsers('page_size=' + sspPageSize);
         fetchRoles();
         fetchGroups();
     })
@@ -47,14 +51,45 @@
 
     $effect(() => {
         let search = searchValue.toLowerCase();
-        if (!search) {
-            usersFiltered = users;
-        } else if (searchOption === searchOptions[0]) {
-            usersFiltered = users.filter(u => u.email?.toLowerCase().includes(search));
-        } else if (searchOption === searchOptions[1]) {
-            usersFiltered = users.filter(u => u.id.toLowerCase().includes(search));
+
+        if (useServerSide) {
+            if (search.length < 3) {
+                if (isSearchedServer) {
+                    fetchUsers('page_size=' + sspPageSize);
+                    isSearchedServer = false;
+                }
+            } else {
+                searchServer(search);
+            }
+        } else {
+            if (!search) {
+                usersFiltered = users;
+            } else if (searchOption === searchOptions[0]) {
+                usersFiltered = users.filter(u => u.email?.toLowerCase().includes(search));
+            } else if (searchOption === searchOptions[1]) {
+                usersFiltered = users.filter(u => u.id.toLowerCase().includes(search));
+            }
         }
     });
+
+    async function searchServer(q: string) {
+        firstFetchHeaders = undefined;
+        isSearchedServer = true;
+
+        let idx: SearchParamsIdxUser;
+        if (searchOption === searchOptions[0]) {
+            idx = 'email';
+        } else {
+            idx = 'id';
+        }
+
+        let res = await fetchSearchServer<UserResponse[]>({ty: 'user', idx, q});
+        if (res.body) {
+            users = res.body;
+        } else {
+            console.error(res.error);
+        }
+    }
 
     async function fetchUsers(urlParams?: string): Promise<[number, Headers]> {
         let url = `/auth/v1/users`;
@@ -67,8 +102,10 @@
             err = 'Error fetching users: ' + res.error.message;
         } else if (res.body) {
             if (res.status === 206) {
+                useServerSide = true;
                 firstFetchHeaders = res.headers;
             } else {
+                useServerSide = false;
                 firstFetchHeaders = undefined;
             }
             users = res.body;
@@ -161,7 +198,7 @@
     {#snippet buttonTiles()}
         <div style:height=".5rem"></div>
         {#if firstFetchHeaders}
-            {#each usersFiltered as user (user.id)}
+            {#each users as user (user.id)}
                 {@render navTile(user.id, user.email)}
             {/each}
         {:else}
@@ -172,10 +209,16 @@
 
         {#if firstFetchHeaders}
             <PaginationServerSide
+                    bind:pageSize={sspPageSize}
                     sspFetch={fetchUsers}
                     idxTotalCount="x-user-count"
                     itemsLength={users.length}
                     {firstFetchHeaders}
+            />
+        {:else if useServerSide}
+            <Pagination
+                    bind:items={users}
+                    bind:itemsPaginated={usersPaginated}
             />
         {:else}
             <Pagination
