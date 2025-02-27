@@ -462,7 +462,7 @@ impl User {
     pub async fn find_paginated(
         continuation_token: Option<ContinuationToken>,
         page_size: i64,
-        mut offset: i64,
+        offset: i64,
         backwards: bool,
     ) -> Result<(Vec<UserResponseSimple>, Option<ContinuationToken>), ErrorResponse> {
         let res = if let Some(token) = continuation_token {
