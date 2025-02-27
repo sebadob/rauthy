@@ -13,7 +13,7 @@
     import type {MfaPurpose, WebauthnAdditionalData} from "$webauthn/types.ts";
     import type {PasskeyResponse} from "$api/types/webauthn.ts";
     import {onMount} from "svelte";
-    import {RequestResetRequest} from "$api/types/authorize.ts";
+    import type {RequestResetRequest} from "$api/types/authorize.ts";
 
     let {
         user = $bindable(),
