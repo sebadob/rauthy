@@ -455,7 +455,7 @@ pub async fn redirect_v1() -> HttpResponse {
     path = "/version",
     tag = "generic",
     responses(
-        (status = 200, description = "Ok"),
+        (status = 200, description = "Ok", body = AppVersionResponse),
     ),
 )]
 #[get("/version")]

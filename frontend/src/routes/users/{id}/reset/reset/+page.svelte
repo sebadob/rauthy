@@ -6,7 +6,7 @@
     import WebauthnRequest from "$lib5/WebauthnRequest.svelte";
     import {slide} from "svelte/transition";
     import LangSelector from "$lib5/LangSelector.svelte";
-    import {TPL_PASSWORD_RESET} from "$utils/constants";
+    import {TPL_PASSWORD_RESET} from "$utils/constants.ts";
     import {useI18n} from "$state/i18n.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";

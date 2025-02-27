@@ -7,28 +7,7 @@
     <title>Rauthy</title>
     <link rel="icon" href="../assets/favicon.svg"/>
     <link rel="stylesheet" href="/auth/v1/theme/{{client_id}}/{{theme_ts}}"/>
-    <style>
-        :root {
-            --col-act1: {{ col_act1 }};
-            --col-act1a: {{ col_act1a }};
-            --col-act2: {{ col_act2 }};
-            --col-act2a: {{ col_act2a }};
-            --col-acnt: {{ col_acnt }};
-            --col-acnta: {{ col_acnta }};
-            --col-ok: {{ col_ok }};
-            --col-err: {{ col_err }};
-            --col-glow: {{ col_glow }};
-            --col-gmid: {{ col_gmid }};
-            --col-ghigh: {{ col_ghigh }};
-            --col-text: {{ col_text }};
-            --col-bg: {{ col_bg }};
-
-            --width-events: 12.5rem;
-            --width-events-collapsed: 2.5rem;
-            --width-events-wide: 30rem;
-        }
-    </style>
-    <meta http-equiv="content-security-policy" content="default-src 'none'; connect-src 'self'; img-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-MOAd3iRvJp5PVpvmTWHQa/u4+TIdmzBf2w0jlvric5o='; style-src 'self' 'unsafe-inline'">
+    <meta http-equiv="content-security-policy" content="default-src 'none'; connect-src 'self'; img-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-DCo59g3XcGJR/qOPH7BfbrxNFeQk6fWjKQBCTdpevM8='; style-src 'self' 'unsafe-inline'">
 		<link href="../_app/immutable/assets/0.YYg5DEfW.css" rel="stylesheet">
 		<link href="../_app/immutable/assets/2.Cmyyzwvb.css" rel="stylesheet">
 		<link href="../_app/immutable/assets/Main.Dm-IaPgT.css" rel="stylesheet">
@@ -43,52 +22,45 @@
 		<link href="../_app/immutable/assets/InputDateTimeCombo.CconkAst.css" rel="stylesheet">
 		<link href="../_app/immutable/assets/OrderSearchBar.CA5kVv7H.css" rel="stylesheet">
 		<link href="../_app/immutable/assets/ContentAdmin.BLfkWbjo.css" rel="stylesheet">
-		<link rel="modulepreload" href="../_app/immutable/entry/start.JnceS19V.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/entry.BnN9tDt-.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/index-client.Ds4XgiuL.js">
-		<link rel="modulepreload" href="../_app/immutable/entry/app.CUono4pN.js">
+		<link rel="modulepreload" href="../_app/immutable/entry/start.BgNaAj8a.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/entry.Dx9T2rCu.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/index-client.hxMyB_b4.js">
+		<link rel="modulepreload" href="../_app/immutable/entry/app.BvGA0RVv.js">
 		<link rel="modulepreload" href="../_app/immutable/chunks/preload-helper.CmsKOCeN.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/legacy-client.xQMZq8C3.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/render.Bq2-eTRf.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/svelte-head.DUes13UE.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/template.DXIK6jcH.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/disclose-version.BDr9Qe-U.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/if.Du7BDhAX.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/proxy.Bsf9UJbk.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/this.B0BrlS58.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/props.CpDInb2-.js">
-		<link rel="modulepreload" href="../_app/immutable/nodes/0.BcsU37dM.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/snippet.CcKvRcoi.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/language.svelte.Dp2Movam.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/i18n.svelte.CB3BpIrt.js">
-		<link rel="modulepreload" href="../_app/immutable/nodes/2.DKknqdll.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/html.CbFxqVHf.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/window.De7Y7RqT.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/Main.DW0MpFpK.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/Button.C_IpvWJY.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/class.Ik0ma2JO.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/index.L0FyJ7Re.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/ThemeSwitch.DayTFcBZ.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/LangSelector.DqwHrYnS.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/helpers.BTvs6bnN.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/Options.DccTdWl1.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/each.MnMr4iw5.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/input.CyORuAkT.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/i18n_admin.svelte.B_OuiPaR.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/fetch.DFmyLr06.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/index.phtGlt5I.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/dataFetching.CfdKJRPX.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/legacy.DvmPJwhI.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/A.BvRiXhEc.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/IconStop.BmVwxLbP.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/Tooltip.Dz7xpDMg.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/session.svelte.QNLyPX7s.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/Event.Ciq6JEKq.js">
-		<link rel="modulepreload" href="../_app/immutable/nodes/16.Vzlre41I.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/InputDateTimeCombo.ChsxchP0.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/render.yNX9q8-B.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/disclose-version.BP4T4xdV.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/if.BeBa1Kxb.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/proxy.DaVNR9vk.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/this.uWYFW-L9.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/props.DNAkfByl.js">
+		<link rel="modulepreload" href="../_app/immutable/nodes/0.B8hauvwO.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/language.svelte.DowwhO9_.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/i18n.svelte.Ci9wvqOq.js">
+		<link rel="modulepreload" href="../_app/immutable/nodes/2.CpSrfpBm.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/html.704f8A94.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/window.VkMEdvit.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/Main.Rc9oYaw1.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/Button.BR1gOfNn.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/class.CF2J4YCf.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/ThemeSwitch.DTJa252X.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/LangSelector.Bl8L6Wq4.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/helpers.CchIKxjM.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/Options.CjsqRicG.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/each.BUp7aLCc.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/input.BqbgywMu.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/i18n_admin.svelte.lt3dD7TQ.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/fetch.Bq59EV_b.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/index.Bpmy_Q3z.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/A.Dq2NLtXl.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/IconStop.DLLup3H7.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/Tooltip.ChiKoAQF.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/session.svelte.DPKHoBg2.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/Event.CWEK7Lx9.js">
+		<link rel="modulepreload" href="../_app/immutable/nodes/16.KL9hmtow.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/InputDateTimeCombo.VZN-6SG8.js">
 		<link rel="modulepreload" href="../_app/immutable/chunks/form.DekAF1-C.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/OrderSearchBar.B8p4xeqT.js">
-		<link rel="modulepreload" href="../_app/immutable/chunks/ContentAdmin.COLOikfe.js"><!--[--><!--]--><title>Rauthy Admin</title>
+		<link rel="modulepreload" href="../_app/immutable/chunks/OrderSearchBar.wIdu7A5l.js">
+		<link rel="modulepreload" href="../_app/immutable/chunks/ContentAdmin.YSUtpxca.js"><!--[--><!--]--><title>Rauthy Admin</title>
 </head>
 <body>
 <div class="hidden" aria-hidden="true">
@@ -100,7 +72,7 @@
 			
 			<script>
 				{
-					__sveltekit_1hnphw3 = {
+					__sveltekit_1k69s7r = {
 						base: new URL("..", location).pathname.slice(0, -1),
 						assets: "/auth/v1"
 					};
@@ -108,8 +80,8 @@
 					const element = document.currentScript.parentElement;
 
 					Promise.all([
-						import("../_app/immutable/entry/start.JnceS19V.js"),
-						import("../_app/immutable/entry/app.CUono4pN.js")
+						import("../_app/immutable/entry/start.BgNaAj8a.js"),
+						import("../_app/immutable/entry/app.BvGA0RVv.js")
 					]).then(([kit, app]) => {
 						kit.start(app, element, {
 							node_ids: [0, 2, 16],

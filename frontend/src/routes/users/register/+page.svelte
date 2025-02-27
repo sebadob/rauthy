@@ -1,6 +1,6 @@
 <script lang="ts">
     import Button from "$lib5/button/Button.svelte";
-    import {TPL_RESTRICTED_EMAIL_DOMAIN} from "$utils/constants";
+    import {TPL_RESTRICTED_EMAIL_DOMAIN} from "$utils/constants.ts";
     import Input from "$lib5/form/Input.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
     import Main from "$lib5/Main.svelte";

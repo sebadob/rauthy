@@ -9,7 +9,6 @@ use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
-use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::magic_links::{MagicLink, MagicLinkUsage};
 use rauthy_models::entity::password::PasswordPolicy;
 use rauthy_models::entity::sessions::Session;
@@ -34,7 +33,6 @@ pub async fn handle_get_pwd_reset<'a>(
 
     let user = User::find(ml.user_id.clone()).await?;
 
-    let colors = ColorEntity::find_rauthy().await?;
     let lang = Language::try_from(&req).unwrap_or_default();
 
     let content = if no_html {
@@ -48,12 +46,7 @@ pub async fn handle_get_pwd_reset<'a>(
             password_policy: PasswordPolicyResponse::from(password_policy),
             user_id,
         };
-        PwdResetHtml::build(
-            &colors,
-            &lang,
-            ThemeCssFull::find_theme_ts_rauthy().await?,
-            tpl,
-        )
+        PwdResetHtml::build(&lang, ThemeCssFull::find_theme_ts_rauthy().await?, tpl)
     };
 
     // generate a cookie value and save it to the magic link

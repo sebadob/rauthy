@@ -30,7 +30,6 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::auth_providers::AuthProviderTemplate;
 use rauthy_models::entity::clients::Client;
-use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::devices::DeviceAuthCode;
 use rauthy_models::entity::fed_cm::FedCMLoginStatus;
 use rauthy_models::entity::ip_rate_limit::DeviceIpRateLimit;
@@ -80,9 +79,6 @@ pub async fn get_authorize(
 ) -> Result<HttpResponse, ErrorResponse> {
     params.validate()?;
 
-    let colors = ColorEntity::find(&params.client_id)
-        .await
-        .unwrap_or_default();
     let lang = Language::try_from(&req).unwrap_or_default();
 
     let (client, origin_header) = match validation::validate_auth_req_param(
@@ -99,7 +95,6 @@ pub async fn get_authorize(
         Err(err) => {
             let status = err.status_code();
             let body = Error1Html::build(
-                &colors,
                 &lang,
                 ThemeCssFull::find_theme_ts_rauthy().await?,
                 status,
@@ -154,7 +149,7 @@ pub async fn get_authorize(
             .unwrap_or(false)
     {
         let status = StatusCode::UNAUTHORIZED;
-        let body = Error1Html::build(&colors, &lang, theme_ts, status, "login_required");
+        let body = Error1Html::build(&lang, theme_ts, status, "login_required");
         return Ok(ErrorHtml::response(body, status));
     }
 
@@ -164,7 +159,6 @@ pub async fn get_authorize(
     if !force_new_session && principal.validate_session_auth().is_ok() {
         let csrf = principal.get_session_csrf_token()?;
         let body = AuthorizeHtml::build(
-            &colors,
             &lang,
             &client.id,
             theme_ts,
@@ -198,12 +192,11 @@ pub async fn get_authorize(
 
     if let Err(err) = session.save().await {
         let status = err.status_code();
-        let body = Error1Html::build(&colors, &lang, theme_ts, status, err.message);
+        let body = Error1Html::build(&lang, theme_ts, status, err.message);
         return Ok(ErrorHtml::response(body, status));
     }
 
     let body = AuthorizeHtml::build(
-        &colors,
         &lang,
         &client.id,
         theme_ts,
@@ -394,8 +387,7 @@ pub async fn get_callback_html(
     principal.validate_session_auth_or_init()?;
 
     let lang = Language::try_from(&req).unwrap_or_default();
-    let colors = ColorEntity::find_rauthy().await?;
-    let body = CallbackHtml::build(&colors, &lang, ThemeCssFull::find_theme_ts_rauthy().await?);
+    let body = CallbackHtml::build(&lang, ThemeCssFull::find_theme_ts_rauthy().await?);
     Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 

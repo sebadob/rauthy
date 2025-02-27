@@ -1,0 +1,1 @@
+import{x as e,w as f,O as l,P as x,S as b}from"./index-client.hxMyB_b4.js";function o(n,u){return n===u||(n==null?void 0:n[b])===u}function c(n={},u,a,m){return e(()=>{var s,t;return f(()=>{s=t,t=[],l(()=>{n!==a(...t)&&(u(n,...t),s&&o(a(...s),n)&&u(null,...s))})}),()=>{x(()=>{t&&o(a(...t),n)&&u(null,...t)})}}),n}export{c as b};

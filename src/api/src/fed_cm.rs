@@ -128,10 +128,14 @@ pub async fn get_fed_cm_config(
     req: HttpRequest,
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    debug!("1");
     is_fed_cm_enabled()?;
+    debug!("2");
     is_web_identity_fetch(&req)?;
 
+    debug!("3");
     let config = FedCMIdPConfig::get(&data).await?;
+    debug!("4 {:?}", config);
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_JSON)
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
@@ -341,6 +345,7 @@ fn is_fed_cm_enabled() -> Result<(), ErrorResponse> {
     if *EXPERIMENTAL_FED_CM_ENABLE {
         Ok(())
     } else {
+        error!("EXPERIMENTAL_FED_CM_ENABLE is not set");
         Err(ErrorResponse::new(
             ErrorResponseType::Internal,
             "The FedCM API is disabled on this instance".to_string(),

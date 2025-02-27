@@ -1,0 +1,1 @@
+import{a as t,t as i}from"./disclose-version.BP4T4xdV.js";import{a as v,p as m,c as p,r as c}from"./index-client.hxMyB_b4.js";import{s as d}from"./language.svelte.DowwhO9_.js";var e=i('<div class="svelte-vtwvgl"><!></div>');function f(r,a){v(a,!0);var s=e(),o=p(s);d(o,()=>a.children),c(s),t(r,s),m()}export{f as C};

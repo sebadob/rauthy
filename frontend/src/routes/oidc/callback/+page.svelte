@@ -12,14 +12,14 @@
         REDIRECT_URI_SUCCESS,
         REDIRECT_URI_SUCCESS_ACC,
     } from "$utils/constants.js";
-    import {getSessionInfoXsrf, getToken} from "$utils/dataFetching.js";
     import {useParam} from "$state/param.svelte";
+
+    let err = $state('');
 
     let pCode = useParam('code');
     let pState = useParam('state');
 
     onMount(async () => {
-        const data = new URLSearchParams();
         let redirectUri = REDIRECT_URI_SUCCESS;
 
         let state = pState.get();
@@ -37,6 +37,7 @@
             return;
         }
 
+        const data = new URLSearchParams();
         data.append('grant_type', 'authorization_code');
         data.append('code', code);
         data.append('redirect_uri', redirectUri);
@@ -44,24 +45,56 @@
         data.append('code_verifier', getVerifierFromStorage());
 
         // get and save the tokens
-        let res = await getToken(data);
-        let body = await res.json();
-        // Save the access token in case we need to fetch a fresh CSRF token
-        saveAccessToken(body.access_token);
-        // ID Token is saved for the automatic logout with 'token_hint'
-        saveIdToken(body.id_token);
+        let resToken = await fetch('/auth/v1/oidc/token', {
+            method: 'POST',
+            headers: {
+                'Content-type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json',
+            },
+            body: data,
+        });
+        let body = await resToken.json();
+        if (body.error) {
+            err = body.error.toString();
+        } else if (body.access_token) {
+            // Save the access token in case we need to fetch a fresh CSRF token
+            saveAccessToken(body.access_token);
+            // ID Token is saved for the automatic logout with 'token_hint'
+            if (body.id_token) {
+                saveIdToken(body.id_token);
+            }
 
-        res = await getSessionInfoXsrf(body.access_token);
-        body = await res.json();
-        saveCsrfToken(body.csrf_token);
+            let resXsrf = await fetch('/auth/v1/oidc/sessioninfo/xsrf', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${body.access_token}`,
+                },
+            });
+            let info = await resXsrf.json();
+            if (info.csrf_token) {
+                saveCsrfToken(info.csrf_token);
+            } else {
+                err = info.toString();
+                return;
+            }
 
-        // clean up
-        deleteVerifierFromStorage();
+            deleteVerifierFromStorage();
 
-        window.location.replace(redirectUri);
+            window.location.replace(redirectUri);
+        } else {
+            err = '';
+        }
     });
 </script>
 
 <svelte:head>
     <title>Callback</title>
 </svelte:head>
+
+{#if err}
+    <div class="err">
+        {err}
+    </div>
+{/if}

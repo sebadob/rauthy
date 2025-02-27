@@ -1127,7 +1127,7 @@ impl AuthProviderCallback {
 }
 
 /// Auth Provider as template value for SSR of the Login page
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AuthProviderTemplate {
     pub id: String,
     pub name: String,
