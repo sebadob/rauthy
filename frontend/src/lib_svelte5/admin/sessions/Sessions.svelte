@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {onMount} from "svelte";
+    import {onMount, untrack} from "svelte";
     import {redirectToLogin} from "$utils/helpers.ts";
     import Button from "$lib5/button/Button.svelte";
     import Pagination from "$lib5/pagination/Pagination.svelte";
@@ -11,7 +11,8 @@
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
     import {useSession} from "$state/session.svelte.ts";
     import PaginationServerSide from "$lib5/pagination/PaginationServerSide.svelte";
-    import {PAGE_SIZE_DEFAULT} from "$lib5/pagination/props.ts";
+    import {PAGE_SIZE_DEFAULT, type PageSize} from "$lib5/pagination/props.ts";
+    import {fetchSearchServer, type SearchParamsIdxSession} from "$utils/search.ts";
 
     let ta = useI18nAdmin();
 
@@ -21,7 +22,9 @@
     let sessionsPaginated: SessionResponse[] = $state([]);
     let now = $state(Date.now() / 1000);
 
+    let useServerSide = $state(false);
     let firstFetchHeaders: undefined | Headers = $state();
+    let sspPageSize: PageSize = $state(PAGE_SIZE_DEFAULT);
 
     let searchOptions = ['User ID', 'Session ID', 'IP'];
     let searchOption = $state(searchOptions[0]);
@@ -29,21 +32,56 @@
     let orderOptions = [ta.options.expires, ta.options.lastSeen, 'Session ID', 'User ID', ta.options.state, 'IP'];
 
     onMount(() => {
-        fetchSessions('page_size=' + PAGE_SIZE_DEFAULT);
+        fetchSessions('page_size=' + sspPageSize);
     });
 
     $effect(() => {
         let search = searchValue.toLowerCase();
-        if (!search) {
-            sessionsFiltered = sessions;
-        } else if (searchOption === searchOptions[0]) {
-            sessionsFiltered = sessions.filter(s => s.user_id?.toLowerCase().includes(search));
-        } else if (searchOption === searchOptions[1]) {
-            sessionsFiltered = sessions.filter(s => s.id.toLowerCase().includes(search));
-        } else if (searchOption === searchOptions[2]) {
-            sessionsFiltered = sessions.filter(s => s.remote_ip?.toLowerCase().includes(search));
+        console.log('search effect', search);
+        if (useServerSide) {
+            if (search.length < 3) {
+                // TODO probably bind page size to do a proper fetch after changes
+                let filtered = untrack(() => sessionsFiltered.length > 0);
+                if (filtered) {
+                    fetchSessions('page_size=' + sspPageSize);
+                }
+                sessionsFiltered = [];
+            } else {
+                searchServer(search);
+            }
+        } else {
+            if (!search) {
+                sessionsFiltered = sessions;
+            } else if (searchOption === searchOptions[0]) {
+                sessionsFiltered = sessions.filter(s => s.user_id?.toLowerCase().includes(search));
+            } else if (searchOption === searchOptions[1]) {
+                sessionsFiltered = sessions.filter(s => s.id.toLowerCase().includes(search));
+            } else if (searchOption === searchOptions[2]) {
+                sessionsFiltered = sessions.filter(s => s.remote_ip?.toLowerCase().includes(search));
+            }
         }
+
     });
+
+    async function searchServer(q: string) {
+        firstFetchHeaders = undefined;
+
+        let idx: SearchParamsIdxSession;
+        if (searchOption === searchOptions[0]) {
+            idx = 'userid';
+        } else if (searchOption === searchOptions[1]) {
+            idx = 'sessionid';
+        } else {
+            idx = 'ip';
+        }
+
+        let res = await fetchSearchServer<SessionResponse[]>({ty: 'session', idx, q});
+        if (res.body) {
+            sessionsFiltered = res.body;
+        } else {
+            console.error(res.error);
+        }
+    }
 
     async function fetchSessions(urlParams?: string): Promise<[number, Headers]> {
         let url = '/auth/v1/sessions';
@@ -57,8 +95,10 @@
         } else if (res.body) {
             // HTTP 206 --> Backend is using SSP
             if (res.status === 206) {
+                useServerSide = true;
                 firstFetchHeaders = res.headers;
             } else {
+                useServerSide = false;
                 firstFetchHeaders = undefined;
             }
 
@@ -165,6 +205,7 @@
 
     {#if firstFetchHeaders}
         <PaginationServerSide
+                bind:pageSize={sspPageSize}
                 sspFetch={fetchSessions}
                 itemsLength={sessions.length}
                 {firstFetchHeaders}
