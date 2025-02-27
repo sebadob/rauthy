@@ -1,1 +1,0 @@
-import{h as r,b as t,d as c,e as d,g as h,i as k,U as m,n as p}from"./index-client.hxMyB_b4.js";function v(i,e,f){r&&t();var s=i,o=m,a,n=p;c(()=>{n(o,o=e())&&(a&&d(a),a=h(()=>f(s)))}),r&&(s=k)}export{v as k};

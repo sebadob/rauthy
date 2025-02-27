@@ -1,1 +1,0 @@
-export const env={"DEV_MODE":"false","DEV_HOST":"localhost"}
