@@ -9,11 +9,13 @@
     const options: PageSize[] = [5, 10, 20, 30, 50, 100];
 
     let {
+        pageSize = $bindable(PAGE_SIZE_DEFAULT),
         sspFetch,
         idxTotalCount,
         itemsLength,
         firstFetchHeaders,
     }: {
+        pageSize: PageSize,
         sspFetch: (urlParams: string) => Promise<[number, Headers]>;
         idxTotalCount?: string,
         itemsLength: number,
@@ -24,8 +26,11 @@
 
     const iconSize = "1rem";
 
+    // We want to keep that logic inside this component instead of expecting
+    // the parent to extract the information from the headers.
+    pageSize = Number.parseInt(firstFetchHeaders.get('x-page-size') || PAGE_SIZE_DEFAULT.toString()) as PageSize;
+
     let itemsTotal: undefined | null | number = $state();
-    let pageSize: PageSize = $state(Number.parseInt(firstFetchHeaders.get('x-page-size') || PAGE_SIZE_DEFAULT.toString()) as PageSize);
     let pageSizeBefore = untrack(() => pageSize);
     let pageCount = $state(Number.parseInt(firstFetchHeaders.get('x-page-count') || '1'));
     let continuationToken: string | undefined | null = $state(firstFetchHeaders.get('x-continuation-token'));
