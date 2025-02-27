@@ -310,40 +310,40 @@ build-ui:
     {{ npm }} run build
     cd ..
 
-    # set correct values in html outputs for pre-rendering
-    PAGES=(
-    "templates/html/*.html"
-    "templates/html/admin/*.html"
-    "templates/html/admin/config/*.html"
-    "templates/html/error/*.html"
-    "templates/html/error/error/*.html"
-    "templates/html/error/error/error/*.html"
-    "templates/html/oidc/*.html"
-    "templates/html/providers/*.html"
-    "templates/html/users/*.html"
-    "templates/html/users/{id}/reset/*.html"
-    "templates/html/users/{id}/email_confirm/*.html"
-    )
-    for folder in "${PAGES[@]}"; do
-        for html in $folder; do
-          # set correct document language
-          #sd 'lang="en"' 'lang="{{{{ lang }}"' $html
-          # for pre-rendering colors
-          sd '#6b3d99;' '{{{{ col_act1 }};' $html
-          sd '#714d99;' '{{{{ col_act1a }};' "$html"
-          sd '#388c51;' '{{{{ col_act2 }};' "$html"
-          sd '#4d8c62;' '{{{{ col_act2a }};' "$html"
-          sd '#3d5d99;' '{{{{ col_acnt }};' "$html"
-          sd '#36486b;' '{{{{ col_acnta }};' "$html"
-          sd '#43993d;' '{{{{ col_ok }};' "$html"
-          sd '#993d49;' '{{{{ col_err }};' "$html"
-          sd '#545454;' '{{{{ col_glow }};' "$html"
-          sd '#b2b2b2;' '{{{{ col_gmid }};' "$html"
-          sd '#f2f2f2;' '{{{{ col_ghigh }};' "$html"
-          sd '#383838;' '{{{{ col_text }};' "$html"
-          sd '#f7f7f7;' '{{{{ col_bg }};' "$html"
-        done;
-    done
+    ## set correct values in html outputs for pre-rendering
+    #PAGES=(
+    #"templates/html/*.html"
+    #"templates/html/admin/*.html"
+    #"templates/html/admin/config/*.html"
+    #"templates/html/error/*.html"
+    #"templates/html/error/error/*.html"
+    #"templates/html/error/error/error/*.html"
+    #"templates/html/oidc/*.html"
+    #"templates/html/providers/*.html"
+    #"templates/html/users/*.html"
+    #"templates/html/users/{id}/reset/*.html"
+    #"templates/html/users/{id}/email_confirm/*.html"
+    #)
+    #for folder in "${PAGES[@]}"; do
+    #    for html in $folder; do
+    #      # set correct document language
+    #      #sd 'lang="en"' 'lang="{{{{ lang }}"' $html
+    #      # for pre-rendering colors
+    #      sd '#6b3d99;' '{{{{ col_act1 }};' $html
+    #      sd '#714d99;' '{{{{ col_act1a }};' "$html"
+    #      sd '#388c51;' '{{{{ col_act2 }};' "$html"
+    #      sd '#4d8c62;' '{{{{ col_act2a }};' "$html"
+    #      sd '#3d5d99;' '{{{{ col_acnt }};' "$html"
+    #      sd '#36486b;' '{{{{ col_acnta }};' "$html"
+    #      sd '#43993d;' '{{{{ col_ok }};' "$html"
+    #      sd '#993d49;' '{{{{ col_err }};' "$html"
+    #      sd '#545454;' '{{{{ col_glow }};' "$html"
+    #      sd '#b2b2b2;' '{{{{ col_gmid }};' "$html"
+    #      sd '#f2f2f2;' '{{{{ col_ghigh }};' "$html"
+    #      sd '#383838;' '{{{{ col_text }};' "$html"
+    #      sd '#f7f7f7;' '{{{{ col_bg }};' "$html"
+    #    done;
+    #done
 
     git add static/v1/*
     git add templates/html/*

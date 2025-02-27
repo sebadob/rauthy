@@ -25,7 +25,6 @@ use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::clients::Client;
-use rauthy_models::entity::colors::ColorEntity;
 use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::devices::DeviceEntity;
 use rauthy_models::entity::password::PasswordPolicy;
@@ -580,10 +579,8 @@ pub async fn get_user_email_confirm(
     match User::confirm_email_address(&data, req, user_id, confirm_id).await {
         Ok(html) => HttpResponse::Ok().insert_header(HEADER_HTML).body(html),
         Err(err) => {
-            let colors = ColorEntity::find_rauthy().await.unwrap_or_default();
             let status = err.status_code();
             let body = Error3Html::build(
-                &colors,
                 &lang,
                 ThemeCssFull::find_theme_ts_rauthy()
                     .await
@@ -630,10 +627,8 @@ pub async fn get_user_password_reset(
                 let password_policy = match PasswordPolicy::find().await {
                     Ok(policy) => PasswordPolicyResponse::from(policy),
                     Err(err) => {
-                        let colors = ColorEntity::find_rauthy().await.unwrap_or_default();
                         let status = err.status_code();
                         let body = Error3Html::build(
-                            &colors,
                             &lang,
                             ThemeCssFull::find_theme_ts_rauthy()
                                 .await
@@ -660,10 +655,8 @@ pub async fn get_user_password_reset(
             }
         }
         Err(err) => {
-            let colors = ColorEntity::find_rauthy().await.unwrap_or_default();
             let status = err.status_code();
             let body = Error3Html::build(
-                &colors,
                 &lang,
                 ThemeCssFull::find_theme_ts_rauthy()
                     .await

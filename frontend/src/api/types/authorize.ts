@@ -1,4 +1,5 @@
 export type CodeChallengeMethod = 'plain' | 'S256';
+export type JwtTokenType = 'Bearer' | 'DPoP' | 'Id' | 'Refresh';
 
 export interface LoginRequest {
     /// Validation: `email`
@@ -42,6 +43,14 @@ export interface RequestResetRequest {
     email: string,
     /// Validation: PATTERN_URI
     redirect_uri?: string,
+}
+
+export interface TokenSet {
+    access_token: string,
+    token_type: JwtTokenType,
+    id_token?: string,
+    expires_in: number,
+    refresh_token?: string,
 }
 
 export interface WebauthnLoginResponse {

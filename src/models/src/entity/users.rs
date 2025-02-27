@@ -1,7 +1,6 @@
 use crate::app_state::{AppState, DbTxn};
 use crate::database::{Cache, DB};
 use crate::email::{send_email_change_info_new, send_email_confirm_change, send_pwd_reset};
-use crate::entity::colors::ColorEntity;
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::groups::Group;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
@@ -1405,10 +1404,8 @@ impl User {
             .unwrap();
 
         // build response HTML
-        let colors = ColorEntity::find_rauthy().await?;
         let lang = Language::try_from(&req).unwrap_or_default();
         let html = UserEmailChangeConfirmHtml::build(
-            &colors,
             &lang,
             ThemeCssFull::find_theme_ts_rauthy().await?,
             &[

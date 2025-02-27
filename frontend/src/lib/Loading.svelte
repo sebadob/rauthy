@@ -1,20 +1,16 @@
-<script>
+<script lang="ts">
     import {fade} from 'svelte/transition';
 
-    /**
-     * @typedef {Object} Props
-     * @property {number} [offset]
-     * @property {boolean} [background]
-     * @property {boolean} [global]
-     * @property {string} [color]
-     */
-
-    /** @type {Props} */
     let {
-        offset = 0,
         background = false,
+        color = 'hsl(var(--text))',
         global = false,
-        color = 'var(--col-acnt)'
+        offset = 0,
+    }: {
+        background?: boolean;
+        color?: string;
+        global?: boolean;
+        offset?: number;
     } = $props();
 
 </script>
@@ -42,8 +38,23 @@
         z-index: 1;
     }
 
-    @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+    @keyframes fade-in {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes fade-out {
+        from {
+            opacity: 1;
+        }
+        to {
+            opacity: 0;
+        }
+    }
 
     .loading {
         width: 3.3rem;

@@ -4,7 +4,7 @@
     import LangSelector from "$lib5/LangSelector.svelte";
     import Input from "$lib5/form/Input.svelte";
     import Button from "$lib5/button/Button.svelte";
-    import {TPL_DEVICE_USER_CODE_LENGTH} from "$utils/constants";
+    import {TPL_DEVICE_USER_CODE_LENGTH} from "$utils/constants.ts";
     import {fetchSolvePow} from "$utils/pow";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";

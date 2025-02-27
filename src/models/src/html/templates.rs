@@ -1,7 +1,6 @@
 use crate::api_cookie::ApiCookie;
 use crate::app_state::AppState;
 use crate::entity::auth_providers::AuthProviderTemplate;
-use crate::entity::colors::Colors;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::sessions::Session;
@@ -57,7 +56,7 @@ pub struct TplPasswordReset {
 
 // If you add new values to this template, make sure to also create a
 // matching constant in the UI and make proper use of it:
-// -> frontend/src/utils/constants.js -> TPL_* values
+// -> frontend/src/utils/constants.ts -> TPL_* values
 #[derive(Debug)]
 pub enum HtmlTemplate {
     /// Auth providers as pre-built, cached JSON value
@@ -212,41 +211,15 @@ pub struct IndexHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl IndexHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = IndexHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             templates: &[HtmlTemplate::IsRegOpen(*OPEN_USER_REG)],
         };
 
@@ -260,46 +233,15 @@ pub struct AccountHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AccountHtml<'_> {
-    pub fn build(
-        colors: &Colors,
-        lang: &Language,
-        theme_ts: i64,
-        templates: &[HtmlTemplate],
-    ) -> String {
+    pub fn build(lang: &Language, theme_ts: i64, templates: &[HtmlTemplate]) -> String {
         let res = AccountHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             templates,
         };
         res.render().unwrap()
@@ -312,41 +254,15 @@ pub struct AdminHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AdminHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -360,41 +276,15 @@ pub struct DeviceHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl DeviceHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = DeviceHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             templates: &[HtmlTemplate::DeviceUserCodeLength(
                 *DEVICE_GRANT_USER_CODE_LENGTH,
             )],
@@ -410,41 +300,15 @@ pub struct FedCMHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl FedCMHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = FedCMHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -458,25 +322,11 @@ pub struct ErrorHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl ErrorHtml<'_> {
     pub fn build<C>(
-        colors: &Colors,
         lang: &Language,
         theme_ts: i64,
         status_code: StatusCode,
@@ -489,19 +339,6 @@ impl ErrorHtml<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             templates: &[
                 HtmlTemplate::StatusCode(status_code),
                 HtmlTemplate::ErrorText(details_text.into()),
@@ -530,25 +367,11 @@ pub struct Error1Html<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl Error1Html<'_> {
     pub fn build<C>(
-        colors: &Colors,
         lang: &Language,
         theme_ts: i64,
         status_code: StatusCode,
@@ -561,19 +384,6 @@ impl Error1Html<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             templates: &[
                 HtmlTemplate::StatusCode(status_code),
                 HtmlTemplate::ErrorText(details_text.into()),
@@ -590,25 +400,11 @@ pub struct Error2Html<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl Error2Html<'_> {
     pub fn build<C>(
-        colors: &Colors,
         lang: &Language,
         theme_ts: i64,
         status_code: StatusCode,
@@ -621,19 +417,6 @@ impl Error2Html<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             templates: &[
                 HtmlTemplate::StatusCode(status_code),
                 HtmlTemplate::ErrorText(details_text.into()),
@@ -650,25 +433,11 @@ pub struct Error3Html<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl Error3Html<'_> {
     pub fn build<C>(
-        colors: &Colors,
         lang: &Language,
         theme_ts: i64,
         status_code: StatusCode,
@@ -681,19 +450,6 @@ impl Error3Html<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             templates: &[
                 HtmlTemplate::StatusCode(status_code),
                 HtmlTemplate::ErrorText(details_text.into()),
@@ -710,41 +466,15 @@ pub struct AdminApiKeysHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AdminApiKeysHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminApiKeysHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -758,41 +488,15 @@ pub struct AdminAttributesHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AdminAttributesHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminAttributesHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -806,41 +510,15 @@ pub struct AdminBlacklistHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AdminBlacklistHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminBlacklistHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -854,41 +532,15 @@ pub struct AdminClientsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AdminClientsHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminClientsHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -902,41 +554,15 @@ pub struct AdminConfigArgon2Html<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AdminConfigArgon2Html<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminConfigArgon2Html {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -950,41 +576,15 @@ pub struct AdminConfigEncryptionHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AdminConfigEncryptionHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminConfigEncryptionHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -998,41 +598,15 @@ pub struct AdminConfigJwksHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AdminConfigJwksHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminConfigJwksHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -1046,41 +620,15 @@ pub struct AdminConfigPolicyHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AdminConfigPolicyHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminConfigPolicyHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -1094,41 +642,15 @@ pub struct AdminDocsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AdminDocsHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminDocsHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -1142,41 +664,15 @@ pub struct AdminEventsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AdminEventsHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminEventsHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -1190,41 +686,15 @@ pub struct AdminGroupsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AdminGroupsHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminGroupsHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -1238,41 +708,15 @@ pub struct AdminRolesHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AdminRolesHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminRolesHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -1286,41 +730,15 @@ pub struct AdminScopesHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AdminScopesHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminScopesHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -1334,41 +752,15 @@ pub struct AdminSessionsHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AdminSessionsHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminSessionsHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -1382,41 +774,15 @@ pub struct AdminUsersHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AdminUsersHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminUsersHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -1430,25 +796,11 @@ pub struct AuthorizeHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl AuthorizeHtml<'_> {
     pub fn build(
-        colors: &Colors,
         lang: &Language,
         client_id: &str,
         theme_ts: i64,
@@ -1458,19 +810,6 @@ impl AuthorizeHtml<'_> {
             lang: lang.as_str(),
             client_id,
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             templates,
         };
 
@@ -1484,41 +823,15 @@ pub struct CallbackHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl CallbackHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = CallbackHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -1532,41 +845,15 @@ pub struct ProvidersHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl ProvidersHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = ProvidersHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -1580,41 +867,15 @@ pub struct ProviderCallbackHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl ProviderCallbackHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = ProviderCallbackHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             ..Default::default()
         };
 
@@ -1628,41 +889,15 @@ pub struct LogoutHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl LogoutHtml<'_> {
-    pub fn build(csrf_token: String, colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(csrf_token: String, lang: &Language, theme_ts: i64) -> String {
         let res = LogoutHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             templates: &[HtmlTemplate::CsrfToken(csrf_token)],
         };
 
@@ -1676,48 +911,17 @@ pub struct PwdResetHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl PwdResetHtml<'_> {
     // If the email is Some(_), this means that the user has webauthn enabled and does not need
     // to provide the email manually
-    pub fn build(
-        colors: &Colors,
-        lang: &Language,
-        theme_ts: i64,
-        template: TplPasswordReset,
-    ) -> String {
+    pub fn build(lang: &Language, theme_ts: i64, template: TplPasswordReset) -> String {
         let res = PwdResetHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             templates: &[HtmlTemplate::PasswordReset(template)],
         };
 
@@ -1744,46 +948,15 @@ pub struct UserEmailChangeConfirmHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl UserEmailChangeConfirmHtml<'_> {
-    pub fn build(
-        colors: &Colors,
-        lang: &Language,
-        theme_ts: i64,
-        templates: &[HtmlTemplate],
-    ) -> String {
+    pub fn build(lang: &Language, theme_ts: i64, templates: &[HtmlTemplate]) -> String {
         UserEmailChangeConfirmHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             templates,
         }
         .render()
@@ -1797,41 +970,15 @@ pub struct UserRegisterHtml<'a> {
     lang: &'a str,
     client_id: &'a str,
     theme_ts: i64,
-    col_act1: &'a str,
-    col_act1a: &'a str,
-    col_act2: &'a str,
-    col_act2a: &'a str,
-    col_acnt: &'a str,
-    col_acnta: &'a str,
-    col_ok: &'a str,
-    col_err: &'a str,
-    col_glow: &'a str,
-    col_gmid: &'a str,
-    col_ghigh: &'a str,
-    col_text: &'a str,
-    col_bg: &'a str,
     templates: &'a [HtmlTemplate],
 }
 
 impl UserRegisterHtml<'_> {
-    pub fn build(colors: &Colors, lang: &Language, theme_ts: i64) -> String {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
         UserRegisterHtml {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            col_act1: &colors.act1,
-            col_act1a: &colors.act1a,
-            col_act2: &colors.act2,
-            col_act2a: &colors.act2a,
-            col_acnt: &colors.acnt,
-            col_acnta: &colors.acnta,
-            col_ok: &colors.ok,
-            col_err: &colors.err,
-            col_glow: &colors.glow,
-            col_gmid: &colors.gmid,
-            col_ghigh: &colors.ghigh,
-            col_text: &colors.text,
-            col_bg: &colors.bg,
             templates: &[HtmlTemplate::RestrictedEmailDomain(
                 USER_REG_DOMAIN_RESTRICTION.clone().unwrap_or_default(),
             )],

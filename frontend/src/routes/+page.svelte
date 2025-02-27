@@ -4,7 +4,7 @@
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
     import Template from "$lib5/Template.svelte";
-    import {TPL_IS_REG_OPEN} from "$utils/constants";
+    import {TPL_IS_REG_OPEN} from "$utils/constants.ts";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
     import LangSelector from "$lib5/LangSelector.svelte";
 

@@ -1,6 +1,5 @@
 use crate::database::{Cache, DB};
 use crate::entity::auth_providers::AuthProviderTemplate;
-use crate::entity::colors::ColorEntity;
 use crate::html::templates::{
     AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
     AdminConfigArgon2Html, AdminConfigEncryptionHtml, AdminConfigJwksHtml, AdminConfigPolicyHtml,
@@ -119,42 +118,34 @@ impl HtmlCached {
             String::default()
         };
 
-        // TODO remove the colors after svelte 5 migration is finished
-        let colors = ColorEntity::find_rauthy().await?;
-
         let body = match self {
             Self::Account => {
                 let providers = AuthProviderTemplate::get_all_json_template().await?;
-                AccountHtml::build(
-                    &colors,
-                    &lang,
-                    theme_ts,
-                    &[HtmlTemplate::AuthProviders(providers)],
-                )
+                AccountHtml::build(&lang, theme_ts, &[HtmlTemplate::AuthProviders(providers)])
             }
-            Self::Admin => AdminHtml::build(&colors, &lang, theme_ts),
-            Self::AdminApiKeys => AdminApiKeysHtml::build(&colors, &lang, theme_ts),
-            Self::AdminAttributes => AdminAttributesHtml::build(&colors, &lang, theme_ts),
-            Self::AdminBlacklist => AdminBlacklistHtml::build(&colors, &lang, theme_ts),
-            Self::AdminClients => AdminClientsHtml::build(&colors, &lang, theme_ts),
-            Self::AdminEvents => AdminEventsHtml::build(&colors, &lang, theme_ts),
-            Self::AdminGroups => AdminGroupsHtml::build(&colors, &lang, theme_ts),
-            Self::AdminProviders => ProvidersHtml::build(&colors, &lang, theme_ts),
-            Self::AdminRoles => AdminRolesHtml::build(&colors, &lang, theme_ts),
-            Self::AdminScopes => AdminScopesHtml::build(&colors, &lang, theme_ts),
-            Self::AdminSessions => AdminSessionsHtml::build(&colors, &lang, theme_ts),
-            Self::AdminUsers => AdminUsersHtml::build(&colors, &lang, theme_ts),
-            Self::AuthProviderCallback => ProviderCallbackHtml::build(&colors, &lang, theme_ts),
-            Self::ConfigArgon2 => AdminConfigArgon2Html::build(&colors, &lang, theme_ts),
-            Self::ConfigEncryption => AdminConfigEncryptionHtml::build(&colors, &lang, theme_ts),
-            Self::ConfigJwks => AdminConfigJwksHtml::build(&colors, &lang, theme_ts),
-            Self::ConfigPolicy => AdminConfigPolicyHtml::build(&colors, &lang, theme_ts),
-            Self::Device => DeviceHtml::build(&colors, &lang, theme_ts),
-            Self::Docs => AdminDocsHtml::build(&colors, &lang, theme_ts),
-            Self::FedCM => FedCMHtml::build(&colors, &lang, theme_ts),
-            Self::Index => IndexHtml::build(&colors, &lang, theme_ts),
-            Self::Logout(csrf_token) => LogoutHtml::build(csrf_token, &colors, &lang, theme_ts),
-            Self::UserRegistration => UserRegisterHtml::build(&colors, &lang, theme_ts),
+            Self::Admin => AdminHtml::build(&lang, theme_ts),
+            Self::AdminApiKeys => AdminApiKeysHtml::build(&lang, theme_ts),
+            Self::AdminAttributes => AdminAttributesHtml::build(&lang, theme_ts),
+            Self::AdminBlacklist => AdminBlacklistHtml::build(&lang, theme_ts),
+            Self::AdminClients => AdminClientsHtml::build(&lang, theme_ts),
+            Self::AdminEvents => AdminEventsHtml::build(&lang, theme_ts),
+            Self::AdminGroups => AdminGroupsHtml::build(&lang, theme_ts),
+            Self::AdminProviders => ProvidersHtml::build(&lang, theme_ts),
+            Self::AdminRoles => AdminRolesHtml::build(&lang, theme_ts),
+            Self::AdminScopes => AdminScopesHtml::build(&lang, theme_ts),
+            Self::AdminSessions => AdminSessionsHtml::build(&lang, theme_ts),
+            Self::AdminUsers => AdminUsersHtml::build(&lang, theme_ts),
+            Self::AuthProviderCallback => ProviderCallbackHtml::build(&lang, theme_ts),
+            Self::ConfigArgon2 => AdminConfigArgon2Html::build(&lang, theme_ts),
+            Self::ConfigEncryption => AdminConfigEncryptionHtml::build(&lang, theme_ts),
+            Self::ConfigJwks => AdminConfigJwksHtml::build(&lang, theme_ts),
+            Self::ConfigPolicy => AdminConfigPolicyHtml::build(&lang, theme_ts),
+            Self::Device => DeviceHtml::build(&lang, theme_ts),
+            Self::Docs => AdminDocsHtml::build(&lang, theme_ts),
+            Self::FedCM => FedCMHtml::build(&lang, theme_ts),
+            Self::Index => IndexHtml::build(&lang, theme_ts),
+            Self::Logout(csrf_token) => LogoutHtml::build(csrf_token, &lang, theme_ts),
+            Self::UserRegistration => UserRegisterHtml::build(&lang, theme_ts),
         };
         let body_bytes = match encoding {
             "br" => {

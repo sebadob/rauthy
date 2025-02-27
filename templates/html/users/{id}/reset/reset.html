@@ -7,29 +7,8 @@
     <title>Rauthy</title>
     <link rel="icon" href="../../../assets/favicon.svg"/>
     <link rel="stylesheet" href="/auth/v1/theme/{{client_id}}/{{theme_ts}}"/>
-    <style>
-        :root {
-            --col-act1: {{ col_act1 }};
-            --col-act1a: {{ col_act1a }};
-            --col-act2: {{ col_act2 }};
-            --col-act2a: {{ col_act2a }};
-            --col-acnt: {{ col_acnt }};
-            --col-acnta: {{ col_acnta }};
-            --col-ok: {{ col_ok }};
-            --col-err: {{ col_err }};
-            --col-glow: {{ col_glow }};
-            --col-gmid: {{ col_gmid }};
-            --col-ghigh: {{ col_ghigh }};
-            --col-text: {{ col_text }};
-            --col-bg: {{ col_bg }};
-
-            --width-events: 12.5rem;
-            --width-events-collapsed: 2.5rem;
-            --width-events-wide: 30rem;
-        }
-    </style>
-    <meta http-equiv="content-security-policy" content="default-src 'none'; connect-src 'self'; img-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-97Csex6l46rsr/b6Meb05UlFH1tyfuLAxBXXHTlB76U='; style-src 'self' 'unsafe-inline'">
-		<link href="../../../_app/immutable/assets/0.YYg5DEfW.css" rel="stylesheet">
+    <meta http-equiv="content-security-policy" content="default-src 'none'; connect-src 'self'; img-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-PyTvTWKa8muTBIiurpJHSBD3s3AvJ/mGrr7Udfn0Omk='; style-src 'self' 'unsafe-inline'">
+		<link href="../../../_app/immutable/assets/0.BgTF6zX-.css" rel="stylesheet">
 		<link href="../../../_app/immutable/assets/35.zU3i1GBi.css" rel="stylesheet">
 		<link href="../../../_app/immutable/assets/Button.D8d1DpHB.css" rel="stylesheet">
 		<link href="../../../_app/immutable/assets/PasswordPolicy.CUa-s_dl.css" rel="stylesheet">
@@ -42,52 +21,46 @@
 		<link href="../../../_app/immutable/assets/ThemeSwitch.DqWmA1Kg.css" rel="stylesheet">
 		<link href="../../../_app/immutable/assets/InputPassword.C2KOSbcl.css" rel="stylesheet">
 		<link href="../../../_app/immutable/assets/A.Dh1ywWRo.css" rel="stylesheet">
-		<link rel="modulepreload" href="../../../_app/immutable/entry/start.JnceS19V.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/entry.BnN9tDt-.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/index-client.Ds4XgiuL.js">
-		<link rel="modulepreload" href="../../../_app/immutable/entry/app.CUono4pN.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/preload-helper.CmsKOCeN.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/legacy-client.xQMZq8C3.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/render.Bq2-eTRf.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/svelte-head.DUes13UE.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/template.DXIK6jcH.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/disclose-version.BDr9Qe-U.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/if.Du7BDhAX.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/proxy.Bsf9UJbk.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/this.B0BrlS58.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/props.CpDInb2-.js">
-		<link rel="modulepreload" href="../../../_app/immutable/nodes/0.BcsU37dM.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/snippet.CcKvRcoi.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/language.svelte.Dp2Movam.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/i18n.svelte.CB3BpIrt.js">
-		<link rel="modulepreload" href="../../../_app/immutable/nodes/35.6rldZEz1.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/index.L0FyJ7Re.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/helpers.BTvs6bnN.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/Button.C_IpvWJY.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/class.Ik0ma2JO.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/PasswordPolicy.B73w38nD.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/pow.CCs-o8yN.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/input.CyORuAkT.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/dataFetching.CfdKJRPX.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/WebauthnRequest.BD3icQGv.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/fetch.DFmyLr06.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/LangSelector.DqwHrYnS.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/Options.DccTdWl1.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/each.MnMr4iw5.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/i18n_admin.svelte.B_OuiPaR.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/index.phtGlt5I.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/Main.DW0MpFpK.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/ContentCenter.CKh5VTcB.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/Template.BtoWOpFu.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/is_dev.svelte.DiPpuOUn.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/param.svelte.BqOd5dUe.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/ThemeSwitch.DayTFcBZ.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/InputPassword.DAD-j3Oi.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/A.BvRiXhEc.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/registration.9Qmd5hya.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/Form.t2_rDZ40.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/form.DekAF1-C.js">
-		<link rel="modulepreload" href="../../../_app/immutable/chunks/patterns.D9HtGhEC.js"><!--[--><!--[--><!--[!--><!--[--><!--]--><!--]--><!--]--><!--]--><title>Password Reset</title>
+		<link rel="modulepreload" href="../../../_app/immutable/entry/start.CafMj_Fj.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/CXJ-3avl.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/D-nwkJyM.js">
+		<link rel="modulepreload" href="../../../_app/immutable/entry/app.D6GwHIdm.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/CmsKOCeN.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/DmLjbmU6.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/D8nUqfqE.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/C3XMhfdI.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/BiI21XkS.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/CwQ5lQAV.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/2rFDT0Lm.js">
+		<link rel="modulepreload" href="../../../_app/immutable/nodes/0.gC3Wa8kz.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/ivlJJTAR.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/CMjKUQkH.js">
+		<link rel="modulepreload" href="../../../_app/immutable/nodes/35.C6b8GPM1.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/BUAPoI3e.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/D_HYGYLR.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/DppGgfa0.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/Drrpav8g.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/BE8gxf21.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/DAX5MQt8.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/emZtalxW.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/BMTjKwwr.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/DJrws3yD.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/Fz9KQU3M.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/6MDunRKZ.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/DMJUG0wm.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/BsLhmaxX.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/C-ghU9Ac.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/BQuV3eOZ.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/Bzn2dU6j.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/BO-Hjil0.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/C6Ehfmfa.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/DmGHSNVM.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/Bw4crv1X.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/Ch0F_Zoj.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/CipIJy_t.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/BgEKkuL8.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/DswDW5U8.js">
+		<link rel="modulepreload" href="../../../_app/immutable/chunks/BRCxk8by.js"><!--[--><!--[--><!--[!--><!--[--><!--]--><!--]--><!--]--><!--]--><title>Password Reset</title>
 </head>
 <body>
 <div class="hidden" aria-hidden="true">
@@ -95,13 +68,13 @@
     <template id="{{ tpl.id() }}">{{ tpl.inner()|safe }}</template>
     {%- endfor %}
 </div>
-<div style="display: contents"><!--[--><!--[--><!----><noscript><h2>You need to enable JavaScript</h2></noscript> <!--[--><!--[!--><!----><!----> <!--[!--><!--]--> <main class="svelte-1w3gfbz"><div class="svelte-vtwvgl"><!--[!--><!--]--> <!--[!--><!--[!--><!--]--><!--]--> <div class="container svelte-m6xenu absolute"><button role="button" type="button" aria-label="Change Theme" class="invisible svelte-148xxdi svelte-148xxdi" data-isloading="false" aria-disabled="false" style=""><!--[!--><!--[--><div class="font-label svelte-148xxdi"><!--[!--><div class="icon sun svelte-m6xenu"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12
+<div style="display: contents"><!--[--><!--[--><!----><noscript><h2>You need to enable JavaScript</h2></noscript> <!--[--><!--[!--><!----><!----> <!--[!--><!--]--> <main class="svelte-1w3gfbz"><div class="svelte-vtwvgl"><!--[!--><!--]--> <!--[!--><!--[!--><!--]--><!--]--> <div class="container svelte-m6xenu absolute"><button role="button" type="button" aria-label="Change Theme" class="invisible svelte-148xxdi" data-isloading="false" aria-disabled="false" style=""><!--[!--><!--[--><div class="font-label svelte-148xxdi"><!--[!--><div class="icon sun svelte-m6xenu"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12
                         18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75
-                        3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"></path></svg></div><!--]--><!----></div><!--]--><!--]--></button><!----></div><!----><!----></div><!----></main><!----> <div class="svelte-10y6iii absolute"><div><button role="combobox" type="button" id="xgkVFZYr" aria-controls="QfBLyOhW" class="invisible svelte-148xxdi svelte-148xxdi" data-isloading="false" aria-disabled="false" popovertarget="QfBLyOhW" style=""><!--[!--><!--[--><div class="font-label svelte-148xxdi"><div class="btn svelte-5ktp6l" data-border="false"><div class="btnText svelte-5ktp6l" title="Select Language">en</div> <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width=".8rem" color="currentColor" opacity="0.9"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"></path></svg><!----></div><!----><!----></div><!--]--><!--]--></button><!----> <div id="QfBLyOhW" aria-label="Select Language" aria-labelledby="xgkVFZYr" class="popover svelte-15eoy2j" popover="auto"><div class="inner fade-in svelte-15eoy2j"><!--[!--><div role="listbox" tabindex="0" class="popover svelte-5ktp6l"><!--[!--><!--]--> <div class="popoverOptions svelte-5ktp6l"><!--[--><button role="button" type="button" class="invisible svelte-148xxdi svelte-148xxdi invisibleOutline" data-isloading="false" aria-disabled="false" style=""><!--[!--><!--[--><div class="font-label svelte-148xxdi"><div class="optPopover svelte-5ktp6l" aria-selected="false" data-focus="true">de</div><!----></div><!--]--><!--]--></button><button role="button" type="button" class="invisible svelte-148xxdi svelte-148xxdi invisibleOutline" data-isloading="false" aria-disabled="false" style=""><!--[!--><!--[--><div class="font-label svelte-148xxdi"><div class="optPopover svelte-5ktp6l" aria-selected="true" data-focus="false">en</div><!----></div><!--]--><!--]--></button><button role="button" type="button" class="invisible svelte-148xxdi svelte-148xxdi invisibleOutline" data-isloading="false" aria-disabled="false" style=""><!--[!--><!--[--><div class="font-label svelte-148xxdi"><div class="optPopover svelte-5ktp6l" aria-selected="false" data-focus="false">zh</div><!----></div><!--]--><!--]--></button><button role="button" type="button" class="invisible svelte-148xxdi svelte-148xxdi invisibleOutline" data-isloading="false" aria-disabled="false" style=""><!--[!--><!--[--><div class="font-label svelte-148xxdi"><div class="optPopover svelte-5ktp6l" aria-selected="false" data-focus="false">ko</div><!----></div><!--]--><!--]--></button><!--]--></div></div> <input type="hidden" aria-hidden="true" value="en"><!----><!--]--></div></div></div><!----></div><!----><!----><!--]--><!----><!--]--><!----><!--]--> <!--[!--><!--]--><!--]-->
+                        3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"></path></svg></div><!--]--><!----></div><!--]--><!--]--></button><!----></div><!----><!----></div><!----></main><!----> <div class="svelte-10y6iii absolute"><div><button role="combobox" type="button" id="wFFTIoJK" aria-controls="GpISjwHK" class="invisible svelte-148xxdi" data-isloading="false" aria-disabled="false" popovertarget="GpISjwHK" style=""><!--[!--><!--[--><div class="font-label svelte-148xxdi"><div class="btn svelte-5ktp6l" data-border="false"><div class="btnText svelte-5ktp6l" title="Select Language">en</div> <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width=".8rem" color="currentColor" opacity="0.9"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"></path></svg><!----></div><!----><!----></div><!--]--><!--]--></button><!----> <div id="GpISjwHK" aria-label="Select Language" aria-labelledby="wFFTIoJK" class="popover svelte-15eoy2j" popover="auto"><div class="inner fade-in svelte-15eoy2j"><!--[!--><div role="listbox" tabindex="0" class="popover svelte-5ktp6l"><!--[!--><!--]--> <div class="popoverOptions svelte-5ktp6l"><!--[--><button role="button" type="button" class="invisible svelte-148xxdi invisibleOutline" data-isloading="false" aria-disabled="false" style=""><!--[!--><!--[--><div class="font-label svelte-148xxdi"><div class="optPopover svelte-5ktp6l" aria-selected="false" data-focus="true">de</div><!----></div><!--]--><!--]--></button><button role="button" type="button" class="invisible svelte-148xxdi invisibleOutline" data-isloading="false" aria-disabled="false" style=""><!--[!--><!--[--><div class="font-label svelte-148xxdi"><div class="optPopover svelte-5ktp6l" aria-selected="true" data-focus="false">en</div><!----></div><!--]--><!--]--></button><button role="button" type="button" class="invisible svelte-148xxdi invisibleOutline" data-isloading="false" aria-disabled="false" style=""><!--[!--><!--[--><div class="font-label svelte-148xxdi"><div class="optPopover svelte-5ktp6l" aria-selected="false" data-focus="false">zh</div><!----></div><!--]--><!--]--></button><button role="button" type="button" class="invisible svelte-148xxdi invisibleOutline" data-isloading="false" aria-disabled="false" style=""><!--[!--><!--[--><div class="font-label svelte-148xxdi"><div class="optPopover svelte-5ktp6l" aria-selected="false" data-focus="false">ko</div><!----></div><!--]--><!--]--></button><!--]--></div></div> <input type="hidden" aria-hidden="true" value="en"><!----><!--]--></div></div></div><!----></div><!----><!----><!--]--><!----><!--]--><!----><!--]--> <!--[!--><!--]--><!--]-->
 			
 			<script>
 				{
-					__sveltekit_1hnphw3 = {
+					__sveltekit_5laooq = {
 						base: new URL("../../..", location).pathname.slice(0, -1),
 						assets: "/auth/v1"
 					};
@@ -109,8 +82,8 @@
 					const element = document.currentScript.parentElement;
 
 					Promise.all([
-						import("../../../_app/immutable/entry/start.JnceS19V.js"),
-						import("../../../_app/immutable/entry/app.CUono4pN.js")
+						import("../../../_app/immutable/entry/start.CafMj_Fj.js"),
+						import("../../../_app/immutable/entry/app.D6GwHIdm.js")
 					]).then(([kit, app]) => {
 						kit.start(app, element, {
 							node_ids: [0, 35],

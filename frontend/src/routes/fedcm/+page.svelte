@@ -1,80 +1,68 @@
-<script>
+<script lang="ts">
     import {onMount} from "svelte";
-    import {getKey} from "$lib/utils/helpers";
-    import Button from "$lib/Button.svelte";
-    import Input from "$lib/inputs/Input.svelte";
-    import * as yup from "yup";
-    import {REGEX_URI} from "../../utils/constants.js";
-    import {extractFormErrors} from "../../utils/helpers";
-    import CheckIcon from "$lib/CheckIcon.svelte";
-    import {getFedCMStatus} from "../../utils/dataFetching.js";
+    import Button from "$lib5/button/Button.svelte";
+    import Input from "$lib5/form/Input.svelte";
+    import CheckIcon from "$lib5/CheckIcon.svelte";
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
+    import {PATTERN_URI} from "$utils/patterns";
+    import Form from "$lib5/form/Form.svelte";
+    import {genKey} from "$utils/helpers.ts";
 
-    let configUrl = $state('');
     let isSupported = $state(false);
     let isLoggedIn = $state(false);
     let credentials = $state('');
     let credentialType = $state('');
 
-    let formValues = $state({
-        clientId: 'fedcm',
-        configUrl: 'any',
-    })
-    let formErrors = $state({});
-    const schema = yup.object().shape({
-        clientId: yup.string().required('Client ID is required').trim().matches(REGEX_URI, "Must be URL safe"),
-        configUrl: yup.string().nullable().trim().matches(REGEX_URI, "Must be URL safe"),
-    });
+    let clientId = $state('fedcm');
+    let configUrl = $state('any');
 
     onMount(async () => {
         configUrl = `${window.location.origin}/auth/v1/fed_cm/config`;
-        formValues.clientId = `${window.location.origin}/auth/v1/fed_cm/client_config`;
+        clientId = `${window.location.origin}/auth/v1/fed_cm/client_config`;
 
-        let res = await getFedCMStatus();
-        if (res.ok) {
+        let res = await fetch('/auth/v1/fed_cm/status');
+        if (res.status === 200) {
             console.log('FedCM status is: logged-in');
             isLoggedIn = true;
         } else {
             console.log('FedCM status is: logged-out');
         }
 
+        // @ts-ignore
         if (window["IdentityProvider"] && // Is FedCM available?
+            // @ts-ignore
             IdentityProvider.register != undefined  // Is the IdP Registration API available?
         ) {
             console.log('FedCM is supported');
             isSupported = true;
         } else {
             console.error('FedCM is not supported');
-            return;
         }
     });
 
     async function login() {
-        let isValid = await validateForm();
-        if (!isValid) {
-            return;
-        }
-
-        let configUrl = formValues.configUrl || undefined;
-        let clientId = formValues.clientId;
         console.log('using credentials get values: configUrl: ' + configUrl + ' / clientId: ' + clientId);
 
         try {
             let creds = await navigator.credentials.get({
+                // @ts-ignore
                 identity: {
-                    // context: "signin",
+                    // context: "sign-in",
                     mode: "button", // button mode will actually open the `login_url` if `logged-out`
                     providers: [{
                         configURL: configUrl,
                         clientId: clientId,
-                        nonce: getKey(48),
+                        // CAUTION: the genKey is not crypto safe - just for testing!
+                        nonce: genKey(48),
                     }]
                 }
             });
 
             console.log(creds);
+            // @ts-ignore
             credentialType = creds.type;
+            // @ts-ignore
             credentials = creds.token;
             isLoggedIn = true;
         } catch (err) {
@@ -83,18 +71,8 @@
     }
 
     function register() {
+        // @ts-ignore
         IdentityProvider.register(configUrl);
-    }
-
-    async function validateForm() {
-        try {
-            await schema.validate(formValues, {abortEarly: false});
-            formErrors = {};
-            return true;
-        } catch (err) {
-            formErrors = extractFormErrors(err);
-            return false;
-        }
     }
 </script>
 
@@ -115,30 +93,30 @@
 
             {#if isSupported}
                 <p>
-                    <Button on:click={register} level={3}>Register IdP</Button>
+                    <Button onclick={register} level={2}>Register IdP</Button>
                 </p>
 
-                <p>
-                    <Input
-                            bind:value={formValues.clientId}
-                            bind:error={formErrors.clientId}
-                            autocomplete="off"
-                            placeholder="Client Id"
-                            on:input={validateForm}
-                    >
-                        CLIENT ID
-                    </Input>
-                    <Input
-                            bind:value={formValues.configUrl}
-                            bind:error={formErrors.configUrl}
-                            autocomplete="off"
-                            placeholder="Config URL"
-                            on:input={validateForm}
-                    >
-                        CONFIG URL
-                    </Input>
-                    <Button on:click={login}>Login</Button>
-                </p>
+                <Form action="" onSubmit={login}>
+                    <p>
+                        <Input
+                                bind:value={clientId}
+                                autocomplete="off"
+                                label="Client ID"
+                                placeholder="Client ID"
+                                required
+                                pattern={PATTERN_URI}
+                        />
+                        <Input
+                                bind:value={configUrl}
+                                autocomplete="off"
+                                label="Config URL"
+                                placeholder="Config URL"
+                                pattern={PATTERN_URI}
+                        />
+                        <Button type="submit">Login</Button>
+                    </p>
+                </Form>
+
                 <div class="row">
                     <b>Logged In:</b>
                     <div class="check">

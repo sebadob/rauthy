@@ -1,111 +1,154 @@
-<script>
-    import {run, self, createBubbler, stopPropagation} from 'svelte/legacy';
+<script lang="ts">
+    import type {Snippet} from "svelte";
+    import {useI18n} from "$state/i18n.svelte.ts";
+    import Button from "$lib5/button/Button.svelte";
+    import IconStop from "$icons/IconStop.svelte";
 
-    const bubble = createBubbler();
-    import IconStop from "$lib/icons/IconStop.svelte";
+    let {
+        showModal = $bindable(),
+        closeModal = $bindable(),
+        onClose,
+        strict = false,
+        prerender = false,
+        children,
+    }: {
+        showModal?: boolean,
+        closeModal?: () => void,
+        onClose?: () => void,
+        strict?: boolean,
+        prerender?: boolean,
+        children: Snippet,
+    } = $props();
 
+    let t = useI18n();
+    let refDialog: undefined | HTMLDialogElement;
 
-    /**
-     * @typedef {Object} Props
-     * @property {boolean} showModal
-     * @property {import('svelte').Snippet} [children]
-     */
-
-    /** @type {Props} */
-    let {showModal = $bindable(), children} = $props();
-
-    /** @type {HTMLDialogElement} */
-    let dialog = $state();
-
-    run(() => {
-        if (dialog && showModal) dialog.showModal();
+    $effect(() => {
+        closeModal = close;
     });
+
+    $effect(() => {
+        if (showModal) {
+            refDialog?.showModal();
+        }
+    })
+
+    function close(ev?: Event) {
+        ev?.preventDefault();
+        refDialog?.close();
+        showModal = false;
+    }
+
+    function outsideClick() {
+        if (!strict) {
+            close();
+        }
+    }
+
+    function stopPropagation(ev: Event) {
+        ev.stopPropagation();
+    }
 </script>
 
-<!-- According to MDN docs, a dialog element must not have a tabindex -->
+<!--
+According to MDN docs, a dialog element must not have a tabindex.
+We need the onclick listener here to make easy click-outside work.
+-->
+<!--svelte-ignore a11y_click_events_have_key_events-->
+<!--svelte-ignore a11y_no_noninteractive_element_interactions-->
 <dialog
-        role="none"
-        bind:this={dialog}
-        onclose={() => (showModal = false)}
-        onclick={self(() => dialog.close())}
+        bind:this={refDialog}
+        aria-modal="true"
+        data-strict={strict}
+        onclose={() => {
+            showModal = false;
+            onClose?.();
+        }}
+        onclick={outsideClick}
 >
-    <div role="none" onclick={ev => ev.stopPropagation()}>
-        <!--    <div onclick={stopPropagation(bubble('click'))}>-->
-        <div
-                role="button"
-                tabindex="0"
-                class="close"
-                onclick={() => dialog.close()}
-                onkeydown={() => dialog.close()}
-        >
-            <IconStop color="var(--col-err)" width={24}/>
-        </div>
-        <div class="inner">
-            <!--
-            Just make sure that whatever we have in here will be loaded / fetched lazy.
-            There is no need to load resources like images if the dialog is closed anyway.
-            -->
-            {#if showModal}
-                {@render children?.()}
-            {/if}
-        </div>
+    <div role="none" onclick={stopPropagation}>
+        {#if !strict}
+            <div class="relative">
+                <div class="absolute close">
+                    <Button ariaLabel={t.common.close} invisible onclick={close}>
+                        <span class="closeIcon">
+                            <IconStop color="currentColor" width="1.2rem"/>
+                        </span>
+                    </Button>
+                </div>
+            </div>
+        {/if}
+        <!--
+        Just make sure that whatever we have in here will be loaded / fetched lazy.
+        There is no need to load resources like images if the dialog is closed anyway.
+        If `renderUpfront === true`, this will render and possibly fetch data upfront,
+        even when the dialog is still hidden. May make sense in some cases.
+        -->
+        {#if prerender || showModal}
+            {@render children()}
+        {/if}
     </div>
 </dialog>
 
 <style>
     dialog {
-        border-radius: 3px;
-        border: none;
+        margin: auto;
         padding: 0;
-        /*background: transparent;*/
+        border: 1px solid hsl(var(--bg-high));
+        border-radius: var(--border-radius);
+        color: hsl(var(--text));
+        background: hsl(var(--bg));
     }
 
-    dialog::backdrop {
-        background: rgba(0, 0, 0, 0.3);
+    dialog[data-strict="true"]::backdrop {
+        background: hsla(var(--bg) / 0.8);
+    }
+
+    dialog[data-strict="false"]::backdrop {
+        background: hsla(var(--bg) / 0.2);
     }
 
     dialog > div {
-        margin: auto;
+        max-width: 100dvw;
+        max-height: 100dvh;
         padding: 1rem;
-    }
-
-    dialog > div > div {
-        position: relative;
+        box-shadow: 0 15px 15px black;
+        overflow: auto;
     }
 
     dialog[open] {
-        animation: zoom 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-
-    @keyframes zoom {
-        from {
-            transform: scale(0.95);
-        }
-        to {
-            transform: scale(1);
-        }
-    }
-
-    dialog[open]::backdrop {
-        animation: fade 0.2s ease-out;
-    }
-
-    @keyframes fade {
-        from {
-            opacity: 0;
-        }
-        to {
-            opacity: 1;
-        }
+        animation: var(--animate-zoom);
     }
 
     .close {
-        margin: -1rem -1rem 0 0;
+        top: -1.1rem;
+        right: -1rem;
         cursor: pointer;
-        text-align: right;
     }
 
-    .inner {
-        margin-top: -.5rem;
+    .closeIcon {
+        color: hsla(var(--text) / .5);
+        transition: color 150ms;
+    }
+
+    .closeIcon:hover {
+        color: hsl(var(--error));
+    }
+
+    @media (max-width: 600px) {
+        dialog {
+            max-height: calc(100dvh - .5rem);
+            max-width: calc(100dvw - .5rem);
+        }
+
+        dialog > div {
+            padding: .5rem;
+        }
+
+        .close {
+            top: -.5rem;
+            right: -.4rem;
+            cursor: pointer;
+        }
     }
 </style>

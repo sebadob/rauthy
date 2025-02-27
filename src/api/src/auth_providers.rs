@@ -126,6 +126,7 @@ pub async fn post_provider_lookup(
     post,
     path = "/providers/login",
     tag = "providers",
+    request_body = ProviderLoginRequest,
     responses(
         (status = 202, description = "Accepted"),
         (status = 400, description = "BadRequest", body = ErrorResponse),
@@ -243,7 +244,7 @@ pub async fn delete_provider_link(principal: ReqPrincipal) -> Result<HttpRespons
     path = "/providers/minimal",
     tag = "providers",
     responses(
-        (status = 200, description = "OK"),
+        (status = 200, description = "OK", body = [AuthProviderTemplate]),
     ),
 )]
 #[get("/providers/minimal")]

@@ -13,18 +13,11 @@ import {
     REDIRECT_URI
 } from "./constants.js";
 import {decode, encode} from "base64-arraybuffer";
-import {getProvidersTemplate} from "./dataFetching.js";
 import type {PasswordPolicyResponse} from "$api/types/password_policy.ts";
 import type {EventLevel} from "$api/types/events.ts";
 
 export function buildWebIdUri(userId: string) {
     return `${window.location.origin}/auth/${userId}/profile#me`
-}
-
-export function extractFormErrors(err: any): any {
-    return err.inner.reduce((acc: any, err: any) => {
-        return {...acc, [err.path]: err.message};
-    }, {});
 }
 
 export function isBrowser() {
@@ -34,27 +27,6 @@ export function isBrowser() {
 export function isDefaultScope(name: string) {
     return name === 'openid' || name === 'profile' || name === 'email' || name === 'groups'
         || name === 'address' || name === 'phone';
-}
-
-/*
- Returns the auth providers minimal template.
- When in dev mode, fetches the providers via additional GET,
- when in prod mode, extracts the value from the SSR template element.
- */
-export async function getAuthProvidersTemplate() {
-    if ('production' === import.meta.env.MODE) {
-        const providerTpl = document?.getElementsByTagName('template')?.namedItem('auth_providers')?.innerHTML;
-        if (providerTpl) {
-            return JSON.parse(providerTpl);
-        }
-        return undefined;
-    } else {
-        const res = await getProvidersTemplate();
-        if (res.ok) {
-            return await res.json();
-        }
-        return undefined;
-    }
 }
 
 export const redirectToLogin = (state?: string) => {
@@ -98,9 +70,9 @@ export const saveProviderToken = (token: string) => {
 export const getProviderToken = () => {
     return localStorage.getItem(PROVIDER_TOKEN) || '';
 }
-export const deleteProviderToken = () => {
-    localStorage.removeItem(PROVIDER_TOKEN);
-}
+// export const deleteProviderToken = () => {
+//     localStorage.removeItem(PROVIDER_TOKEN);
+// }
 
 export const getVerifierFromStorage = () => {
     return localStorage.getItem(PKCE_VERIFIER) || '';
@@ -154,11 +126,6 @@ export function eventColor(level: EventLevel) {
         case 'critical':
             return 'rgba(255,46,46,0.7)';
     }
-}
-
-export const formatDateToDateInput = (date: Date) => {
-    return date.toISOString().slice(0, 16);
-    // return date.toISOString().split('.')[0];
 }
 
 export const formatUtcTsFromDateInput = (date: string, time?: string) => {

@@ -1,5 +1,4 @@
 <script lang="ts">
-    import {postProviderLogin} from "$utils/dataFetching.js";
     import {
         formatDateFromTs,
         saveCsrfToken,
@@ -32,16 +31,18 @@
     import {fetchPost, type IResponse} from "$api/fetch.ts";
     import {useIsDev} from "$state/is_dev.svelte.ts";
     import type {
+        CodeChallengeMethod,
         LoginRefreshRequest,
         LoginRequest,
         RequestResetRequest,
         WebauthnLoginResponse
     } from "$api/types/authorize.ts";
     import Form from "$lib5/form/Form.svelte";
-    import ButtonAuthProvider from "../../../components/ButtonAuthProvider.svelte";
+    import ButtonAuthProvider from "$lib5/ButtonAuthProvider.svelte";
     import {onMount} from "svelte";
     import type {SessionInfoResponse} from "$api/types/session.ts";
     import ClientLogo from "$lib5/ClientLogo.svelte";
+    import type {ProviderLoginRequest} from "$api/types/auth_provider.ts";
 
     const inputWidth = "18rem";
 
@@ -62,7 +63,7 @@
 
     let stateParam = useParam('state').get();
     let challenge = useParam('code_challenge').get();
-    let challengeMethod = useParam('code_challenge_method').get();
+    let challengeMethod: CodeChallengeMethod = useParam('code_challenge_method').get() as CodeChallengeMethod;
     let refresh = false;
     let existingMfaUser: undefined | string = $state();
     let providers: AuthProviderTemplate[] = $state([]);
@@ -302,8 +303,17 @@
     }
 
     async function providerLoginPkce(id: string, pkce_challenge: string) {
-        let data = {
-            email: email || null,
+        if (!clientId) {
+            console.error('clientId is undefined');
+            return;
+        }
+        if (!redirectUri) {
+            console.error('redirectUri is undefined');
+            return;
+        }
+
+        let payload: ProviderLoginRequest = {
+            email: email || undefined,
             client_id: clientId,
             redirect_uri: redirectUri,
             scopes: scopes,
@@ -314,10 +324,10 @@
             provider_id: id,
             pkce_challenge,
         };
-        let res = await postProviderLogin(data);
-        if (res.ok) {
-            const xsrfToken = await res.text();
-            saveProviderToken(xsrfToken);
+
+        let res = await fetchPost<string>('/auth/v1/providers/login', payload);
+        if (res.text) {
+            saveProviderToken(res.text);
 
             let loc = res.headers.get('location');
             if (!loc) {
@@ -326,8 +336,7 @@
             }
             window.location.href = loc;
         } else {
-            let body = await res.json();
-            err = body.message;
+            err = res.error?.message || 'Error';
         }
     }
 
