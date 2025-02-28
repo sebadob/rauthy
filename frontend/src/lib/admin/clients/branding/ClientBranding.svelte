@@ -41,7 +41,6 @@
 
     async function fetchTheme() {
         let res = await fetchPost<ThemeRequestResponse>(url);
-        // let res = await fetchGet(`/auth/v1/theme/${client.id}`, 'json', 'reload');
         if (res.body) {
             if (res.body.client_id === 'rauthy') {
                 console.log('using Rauthy default scheme');

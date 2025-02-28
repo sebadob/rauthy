@@ -133,7 +133,8 @@ export const I18nZh: I18n = {
         passwordRequired: "密码必填。",
         requestExpires: "请求过期",
         requestExpired: "Request has expired",
-        signUp: "用户注册"
+        signUp: "用户注册",
+        validEmail: "Valid E-Mail Address",
     },
     device: {
         accept: "接受",

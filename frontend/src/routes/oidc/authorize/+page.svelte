@@ -221,7 +221,7 @@
             url = '/auth/v1/dev/authorize';
         }
 
-        let res = await fetchPost<undefined | WebauthnLoginResponse>(url, payload);
+        let res = await fetchPost<undefined | WebauthnLoginResponse>(url, payload, 'json', 'noRedirect');
         await handleAuthRes(res);
     }
 
@@ -419,19 +419,22 @@
 
             {#if !clientMfaForce}
                 <Form action={authorizeUrl} {onSubmit}>
-                    <Input
-                            bind:ref={refEmail}
-                            typ="email"
-                            name="email"
-                            bind:value={email}
-                            autocomplete="email"
-                            label={t.common.email}
-                            placeholder={t.common.email}
-                            disabled={tooManyRequests || clientMfaForce}
-                            onInput={onEmailInput}
-                            width={inputWidth}
-                            required
-                    />
+                    <div class="email">
+                        <Input
+                                bind:ref={refEmail}
+                                typ="email"
+                                name="email"
+                                bind:value={email}
+                                autocomplete="email"
+                                label={t.common.email}
+                                placeholder={t.common.email}
+                                errMsg={t.authorize.validEmail}
+                                disabled={tooManyRequests || clientMfaForce}
+                                onInput={onEmailInput}
+                                width={inputWidth}
+                                required
+                        />
+                    </div>
 
                     {#if needsPassword && existingMfaUser !== email && !showReset}
                         <InputPassword
@@ -506,7 +509,7 @@
                 </div>
             {/if}
 
-            {#if !clientMfaForce && providers}
+            {#if !clientMfaForce && providers.length > 0}
                 <div class="providers flex-col">
                     <div class="providersSeparator">
                         <div class="separator"></div>
@@ -549,6 +552,10 @@
         box-shadow: .1rem .1rem .1rem rgba(128, 128, 128, .1);
     }
 
+    .email {
+        min-height: 4.7rem;
+    }
+
     .errMsg {
         margin: .5rem 0;
         max-width: 18rem;
@@ -575,10 +582,6 @@
         cursor: pointer;
     }
 
-    .name {
-        margin: -10px 5px 0 5px;
-    }
-
     .loginWith {
         display: flex;
         justify-content: center;
@@ -590,6 +593,10 @@
         font-size: .8rem;
         color: hsla(var(--text) / .6);
         background: hsl(var(--bg));
+    }
+
+    .name {
+        margin: -10px 5px 0 5px;
     }
 
     .providersSeparator {

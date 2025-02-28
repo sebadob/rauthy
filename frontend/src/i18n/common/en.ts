@@ -133,7 +133,8 @@ export const I18nEn: I18n = {
         passwordRequired: "Password is required",
         requestExpires: "Request expires",
         requestExpired: "Request has expired",
-        signUp: "User Registration"
+        signUp: "User Registration",
+        validEmail: "Valid E-Mail Address",
     },
     device: {
         accept: "Accept",

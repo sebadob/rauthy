@@ -34,19 +34,24 @@ function buildHeaders(
     return headers;
 }
 
-export async function fetchGet<T>(uri: string, typ: 'json' | 'form' = 'json', cache: RequestCache = 'default'): Promise<IResponse<T>> {
-    return fetchWithoutBody('GET', uri, typ, cache);
+export async function fetchGet<T>(
+    uri: string,
+    typ: 'json' | 'form' = 'json',
+    redirect: 'handle401' | 'noRedirect' = 'handle401',
+): Promise<IResponse<T>> {
+    return fetchWithoutBody('GET', uri, typ, redirect);
 }
 
 export async function fetchPost<T>(
     uri: string,
     payload?: Object,
     typ: 'json' | 'form' = 'json',
+    redirect: 'handle401' | 'noRedirect' = 'handle401',
 ): Promise<IResponse<T>> {
     if (payload) {
-        return fetchWithBody('POST', uri, typ, payload);
+        return fetchWithBody('POST', uri, typ, redirect, payload);
     } else {
-        return fetchWithoutBody('POST', uri, typ);
+        return fetchWithoutBody('POST', uri, typ, redirect);
     }
 }
 
@@ -72,11 +77,12 @@ export async function fetchPut<T>(
     uri: string,
     payload?: Object,
     typ: 'json' | 'form' = 'json',
+    redirect: 'handle401' | 'noRedirect' = 'handle401',
 ): Promise<IResponse<T>> {
     if (payload) {
-        return fetchWithBody('PUT', uri, typ, payload);
+        return fetchWithBody('PUT', uri, typ, redirect, payload);
     } else {
-        return fetchWithoutBody('PUT', uri, typ);
+        return fetchWithoutBody('PUT', uri, typ, redirect);
     }
 }
 
@@ -84,11 +90,12 @@ export async function fetchDelete<T>(
     uri: string,
     body?: Object,
     typ: 'json' | 'form' = 'json',
+    redirect: 'handle401' | 'noRedirect' = 'handle401',
 ): Promise<IResponse<T>> {
     if (body) {
-        return await fetchWithBody('DELETE', uri, typ, body);
+        return await fetchWithBody('DELETE', uri, typ, redirect, body);
     } else {
-        return await fetchWithoutBody('DELETE', uri, typ);
+        return await fetchWithoutBody('DELETE', uri, typ, redirect);
     }
 }
 
@@ -96,21 +103,21 @@ async function fetchWithoutBody<T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     uri: string,
     typ: 'json' | 'form',
-    cache?: RequestCache,
+    redirect: 'handle401' | 'noRedirect',
 ): Promise<IResponse<T>> {
     let res = await fetch(uri, {
         method,
         headers: buildHeaders(method, typ),
         redirect: 'manual',
-        cache,
     });
-    return await handleResponse(res, true);
+    return await handleResponse(res, redirect);
 }
 
 async function fetchWithBody<T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     uri: string,
     typ: 'json' | 'form',
+    redirect: 'handle401' | 'noRedirect',
     payload: Object | FormData,
 ): Promise<IResponse<T>> {
     let body;
@@ -126,7 +133,7 @@ async function fetchWithBody<T>(
         redirect: 'manual',
         body,
     });
-    return handleResponse(res, true);
+    return handleResponse(res, redirect);
 }
 
 export function formDataFromObj(obj: Object) {
@@ -144,8 +151,8 @@ export function formDataFromObj(obj: Object) {
     return fd;
 }
 
-export async function handleResponse<T>(res: Response, redirect401: boolean): Promise<IResponse<T>> {
-    if (redirect401 && res.status === 401) {
+export async function handleResponse<T>(res: Response, redirect: 'handle401' | 'noRedirect',): Promise<IResponse<T>> {
+    if (redirect === 'handle401' && res.status === 401) {
         window.location.reload();
     }
 
@@ -192,5 +199,5 @@ export async function uploadFile<T>(method: 'POST' | 'PUT', url: string, file: F
         },
         body: formData,
     });
-    return handleResponse(res, true);
+    return handleResponse(res, 'handle401');
 }

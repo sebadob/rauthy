@@ -115,6 +115,7 @@ export interface I18n {
         requestExpires: string,
         requestExpired: string,
         signUp: string,
+        validEmail: string,
     },
     device: {
         accept: string,
