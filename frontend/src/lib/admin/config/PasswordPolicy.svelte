@@ -220,8 +220,4 @@
     .row {
         display: flex;
     }
-
-    .success {
-        color: hsl(var(--action));
-    }
 </style>
