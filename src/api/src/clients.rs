@@ -6,8 +6,8 @@ use actix_web::web::Json;
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use rauthy_api_types::clients::{
-    ClientResponse, ClientSecretResponse, ColorsRequest, DynamicClientRequest,
-    DynamicClientResponse, NewClientRequest, UpdateClientRequest,
+    ClientResponse, ClientSecretResponse, DynamicClientRequest, DynamicClientResponse,
+    NewClientRequest, UpdateClientRequest,
 };
 use rauthy_common::constants::{DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG};
 use rauthy_common::utils::real_ip_from_req;
@@ -16,7 +16,6 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::clients_dyn::ClientDyn;
-use rauthy_models::entity::colors::{ColorEntity, Colors};
 use rauthy_models::entity::logos::{Logo, LogoType};
 use rauthy_service::client;
 use rauthy_service::oidc::helpers;
@@ -285,89 +284,6 @@ pub async fn put_clients(
     client::update_client(path.into_inner(), payload)
         .await
         .map(|r| HttpResponse::Ok().json(ClientResponse::from(r)))
-}
-
-/// Returns the color scheme for the login page for this client
-///
-/// **Permissions**
-/// - rauthy_admin
-#[utoipa::path(
-    get,
-    path = "/clients/{id}/colors",
-    tag = "clients",
-    responses(
-        (status = 200, description = "Ok", body = Colors),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-        (status = 403, description = "Forbidden", body = ErrorResponse),
-    ),
-)]
-#[get("/clients/{id}/colors")]
-pub async fn get_client_colors(
-    id: web::Path<String>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Read)?;
-
-    ColorEntity::find(id.as_str())
-        .await
-        .map(|c| HttpResponse::Ok().json(c))
-}
-
-/// Set the color scheme for the login page for this client
-///
-/// **Permissions**
-/// - rauthy_admin
-#[utoipa::path(
-    put,
-    path = "/clients/{id}/colors",
-    tag = "clients",
-    request_body = ColorsRequest,
-    responses(
-        (status = 200, description = "Ok"),
-        (status = 400, description = "BadRequest", body = ErrorResponse),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-        (status = 403, description = "Forbidden", body = ErrorResponse),
-    ),
-)]
-#[put("/clients/{id}/colors")]
-pub async fn put_client_colors(
-    id: web::Path<String>,
-    principal: ReqPrincipal,
-    Json(payload): Json<ColorsRequest>,
-) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Update)?;
-    payload.validate()?;
-
-    payload.validate_css()?;
-    ColorEntity::update(id.as_str(), payload).await?;
-
-    Ok(HttpResponse::Ok().finish())
-}
-
-/// Reset the color scheme for the login page for this client to default
-///
-/// **Permissions**
-/// - rauthy_admin
-#[utoipa::path(
-    delete,
-    path = "/clients/{id}/colors",
-    tag = "clients",
-    responses(
-        (status = 200, description = "Ok"),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-        (status = 403, description = "Forbidden", body = ErrorResponse),
-    ),
-)]
-#[delete("/clients/{id}/colors")]
-pub async fn delete_client_colors(
-    id: web::Path<String>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Delete)?;
-
-    ColorEntity::delete(id.as_str()).await?;
-
-    Ok(HttpResponse::Ok().finish())
 }
 
 /// Retrieve a custom logo for the login page for this client

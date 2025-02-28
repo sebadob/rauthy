@@ -48,9 +48,6 @@ use utoipa::{openapi, OpenApi};
 
         clients::get_clients,
         clients::get_client_by_id,
-        clients::get_client_colors,
-        clients::put_client_colors,
-        clients::delete_client_colors,
         clients::get_client_logo,
         clients::put_client_logo,
         clients::delete_client_logo,
@@ -157,7 +154,6 @@ use utoipa::{openapi, OpenApi};
     ),
     components(
         schemas(
-            entity::colors::Colors,
             entity::fed_cm::FedCMAccount,
             entity::fed_cm::FedCMAccounts,
             entity::fed_cm::FedCMIdPBranding,
@@ -197,7 +193,6 @@ use utoipa::{openapi, OpenApi};
             AuthCodeRequest,
             AuthRequest,
             IpBlacklistRequest,
-            ColorsRequest,
             DeviceGrantRequest,
             EncKeyMigrateRequest,
             FedCMAssertionRequest,

@@ -2,7 +2,6 @@ use crate::entity::api_keys::ApiKeyEntity;
 use crate::entity::auth_providers::AuthProvider;
 use crate::entity::clients::Client;
 use crate::entity::clients_dyn::ClientDyn;
-use crate::entity::colors::ColorEntity;
 use crate::entity::config::ConfigEntity;
 use crate::entity::devices::DeviceEntity;
 use crate::entity::groups::Group;
@@ -99,13 +98,6 @@ pub async fn migrate_from_sqlite(db_from: sqlx::SqlitePool) -> Result<(), ErrorR
     .fetch_all(&db_from)
     .await?;
     inserts::client_logos(before).await?;
-
-    // COLORS
-    debug!("Migrating table: colors");
-    let before = sqlx::query_as::<_, ColorEntity>("SELECT * FROM colors")
-        .fetch_all(&db_from)
-        .await?;
-    inserts::colors(before).await?;
 
     // GROUPS
     debug!("Migrating table: groups");
@@ -295,13 +287,6 @@ pub async fn migrate_from_postgres(db_from: sqlx::PgPool) -> Result<(), ErrorRes
     .fetch_all(&db_from)
     .await?;
     inserts::client_logos(before).await?;
-
-    // COLORS
-    debug!("Migrating table: colors");
-    let before = sqlx::query_as::<_, ColorEntity>("SELECT * FROM colors")
-        .fetch_all(&db_from)
-        .await?;
-    inserts::colors(before).await?;
 
     // GROUPS
     debug!("Migrating table: groups");

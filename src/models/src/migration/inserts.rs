@@ -3,7 +3,6 @@ use crate::entity::api_keys::ApiKeyEntity;
 use crate::entity::auth_providers::AuthProvider;
 use crate::entity::clients::Client;
 use crate::entity::clients_dyn::ClientDyn;
-use crate::entity::colors::ColorEntity;
 use crate::entity::config::ConfigEntity;
 use crate::entity::devices::DeviceEntity;
 use crate::entity::groups::Group;
@@ -340,36 +339,6 @@ VALUES ($1, $2, $3, $4, $5)"#,
                 b.last_used,
                 b.registration_token,
                 b.token_endpoint_auth_method
-            )
-            .execute(DB::conn())
-            .await?;
-        }
-    }
-    Ok(())
-}
-
-pub async fn colors(data_before: Vec<ColorEntity>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM colors", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    "INSERT INTO colors (client_id, data) VALUES ($1, $2)",
-                    params!(b.client_id, b.data),
-                )
-                .await?;
-        }
-    } else {
-        sqlx::query("DELETE FROM colors")
-            .execute(DB::conn())
-            .await?;
-        for b in data_before {
-            sqlx::query!(
-                "INSERT INTO colors (client_id, data) VALUES ($1, $2)",
-                b.client_id,
-                b.data,
             )
             .execute(DB::conn())
             .await?;
@@ -915,6 +884,36 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
     }
     Ok(())
 }
+
+// pub async fn themes(data_before: Vec<ColorEntity>) -> Result<(), ErrorResponse> {
+//     if is_hiqlite() {
+//         DB::client()
+//             .execute("DELETE FROM colors", params!())
+//             .await?;
+//         for b in data_before {
+//             DB::client()
+//                 .execute(
+//                     "INSERT INTO colors (client_id, data) VALUES ($1, $2)",
+//                     params!(b.client_id, b.data),
+//                 )
+//                 .await?;
+//         }
+//     } else {
+//         sqlx::query("DELETE FROM colors")
+//             .execute(DB::conn())
+//             .await?;
+//         for b in data_before {
+//             sqlx::query!(
+//                 "INSERT INTO colors (client_id, data) VALUES ($1, $2)",
+//                 b.client_id,
+//                 b.data,
+//             )
+//             .execute(DB::conn())
+//             .await?;
+//         }
+//     }
+//     Ok(())
+// }
 
 pub async fn user_attr_config(data_before: Vec<UserAttrConfigEntity>) -> Result<(), ErrorResponse> {
     if is_hiqlite() {
