@@ -111,6 +111,8 @@
             passkeyName,
             t.authorize.invalidKeyUsed,
             t.authorize.requestExpired,
+            tplData.magic_link_id,
+            tplData.csrf_token,
         );
         if (res.error) {
             err = `${t.mfa.errorReg} - ${res.error}`;

@@ -2,6 +2,8 @@
 
 ## CURRENT WORK
 
+- change `csrf-token` header to `x-csrf-token` -> breaking change into changelog!
+
 ### Missing / Updated i18n (zh/ko) for Svelte 5 Migration:
 
 - `t.account.accessRenew`
@@ -30,6 +32,7 @@
 ### Changelog TODO
 
 - breaking change for GET users / sessions paginated -> offset + backwards
+- breaking: changed header name for csrf token + pwd csrf token
 
 ## Stage 1 - essentials
 

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}E-Mail Change Request{% endblock %}
+
+{% block content %}
+<h1>{{ header }} {{ email_sub_prefix }}</h1>
+<p>{{ click_link }}</p>
+<p>{{ validity }}</p>
+<p><span class="font-label">{{ expires }}</span> <b>{{ exp }}</b></p>
+<a href="{{ link }}">{{ button_text }}</a>
+{% endblock %}
