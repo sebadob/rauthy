@@ -59,7 +59,6 @@
         isUploading = true;
 
         for (let file of list) {
-            console.log('uploading file', file);
             if (accept && !accept.includes(file.type)) {
                 filesFinished += 1;
                 continue;

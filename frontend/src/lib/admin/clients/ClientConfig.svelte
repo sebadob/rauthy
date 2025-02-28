@@ -179,8 +179,6 @@
             }
         }
 
-        console.log('payload', payload);
-
         let res = await fetchPut(form.action, payload);
         if (res.error) {
             err = res.error.message;

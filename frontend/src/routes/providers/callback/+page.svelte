@@ -92,7 +92,6 @@
     }
 
     function onWebauthnSuccess(data?: WebauthnAdditionalData) {
-        console.log('onWebauthnSuccess', data);
         if (data && 'loc' in data) {
             window.location.replace(data.loc as string);
         }

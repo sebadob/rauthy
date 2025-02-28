@@ -95,8 +95,6 @@
 
     function parseHeaders(status: number, headers: Headers) {
         if (status === 206) {
-            // console.log('ssp headers', headers);
-
             // we get a few headers during SSP we can use for the navigation
             let xPageSize = headers.get('x-page-size');
             if (!xPageSize) {

@@ -77,11 +77,9 @@
             es?.close();
         }
 
-        console.log('opening SSE stream');
         es = new EventSource(`/auth/v1/events/stream?latest=${latest}&level=${level.toLowerCase()}`);
 
         es.onopen = () => {
-            // console.log('SSE Events Stream opened');
             events = [];
         };
 

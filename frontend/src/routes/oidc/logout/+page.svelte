@@ -52,7 +52,6 @@
         let res = await fetchPost(url, logoutData, 'form');
         purgeStorage();
         let loc = res.headers.get('location');
-        console.log('loc', loc);
         if (loc) {
             window.location.replace(loc);
         } else {

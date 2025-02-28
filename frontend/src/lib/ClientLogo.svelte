@@ -4,8 +4,6 @@
     }: {
         clientId: string,
     } = $props();
-
-    console.log('rendering clientLogo');
 </script>
 
 <div class="logo">

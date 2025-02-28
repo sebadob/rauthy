@@ -135,7 +135,6 @@
 
     async function createSessionDev() {
         let res = await fetchPost<SessionInfoResponse>('/auth/v1/oidc/session');
-        console.log('manual session', res.body);
         if (res.body?.csrf_token) {
             saveCsrfToken(res.body.csrf_token)
         } else {
@@ -347,7 +346,6 @@
     }
 
     function onWebauthnSuccess(data?: WebauthnAdditionalData) {
-        console.log('onWebauthnSuccess', data);
         if (data && 'loc' in data) {
             window.location.replace(data.loc as string);
         }

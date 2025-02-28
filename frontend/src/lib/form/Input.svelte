@@ -76,8 +76,6 @@
     function oninput(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
         isValid();
         onInput?.();
-        // console.log('in onInput');
-        // console.log(event);
     }
 
     function oninvalid(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {

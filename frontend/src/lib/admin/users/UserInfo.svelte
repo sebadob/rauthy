@@ -134,7 +134,6 @@
             user_expires: expires ? unixTsFromLocalDateTime(expDate, expTime) : undefined,
         };
         if (birthdate || phone || street || zip || city || country) {
-            console.log(birthdate);
             payload.user_values = {
                 birthdate: birthdate || undefined,
                 phone: phone?.replaceAll(' ', '') || undefined,
