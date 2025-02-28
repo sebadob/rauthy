@@ -83,7 +83,7 @@
     {:else if selected === tabs[3]}
         <UserMfa {user} {onSave}/>
     {:else if selected === tabs[4]}
-        <Devices viewMode="admin" {userId}/>
+        <Devices {userId}/>
     {:else if selected === tabs[5]}
         <UserForceLogout {userId}/>
     {:else if selected === tabs[6]}
