@@ -14,6 +14,7 @@ use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use crate::entity::roles::Role;
 use crate::entity::scopes::Scope;
 use crate::entity::sessions::Session;
+use crate::entity::theme::ThemeCssFull;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
@@ -204,6 +205,13 @@ pub async fn migrate_from_sqlite(db_from: sqlx::SqlitePool) -> Result<(), ErrorR
         .fetch_all(&db_from)
         .await?;
     inserts::recent_passwords(before).await?;
+
+    // THEMES
+    debug!("Migrating table: themes");
+    let before = sqlx::query_as::<_, ThemeCssFull>("SELECT * FROM themes")
+        .fetch_all(&db_from)
+        .await?;
+    inserts::themes(before).await?;
 
     // WEBIDS
     debug!("Migrating table: webids");
@@ -396,6 +404,13 @@ pub async fn migrate_from_postgres(db_from: sqlx::PgPool) -> Result<(), ErrorRes
         .fetch_all(&db_from)
         .await?;
     inserts::recent_passwords(before).await?;
+
+    // THEMES
+    debug!("Migrating table: themes");
+    let before = sqlx::query_as::<_, ThemeCssFull>("SELECT * FROM themes")
+        .fetch_all(&db_from)
+        .await?;
+    inserts::themes(before).await?;
 
     // WEBIDS
     debug!("Migrating table: webids");
