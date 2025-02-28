@@ -1,7 +1,8 @@
 import {fetchPost} from "$api/fetch.ts";
 import {arrBufToBase64UrlSafe, base64UrlSafeToArrBuf} from "./utils";
-import type {CreationChallengeResponse, WebauthnRegFinishRequest, WebauthnRegStartRequest} from "$webauthn/types.ts";
+import type {WebauthnRegFinishRequest, WebauthnRegStartRequest} from "$webauthn/types.ts";
 import {promiseTimeout} from "$utils/helpers.ts";
+import {CSRF_TOKEN} from "$utils/constants.ts";
 
 export interface WebauthnRegResult {
     error?: string,
@@ -12,27 +13,42 @@ export async function webauthnReg(
     passkeyName: string,
     errorI18nInvalidKey: string,
     errorI18nTimeout: string,
+    magicLinkId?: string,
+    pwdCsrfToken?: string,
 ): Promise<WebauthnRegResult> {
     let payloadStart: WebauthnRegStartRequest = {
         passkey_name: passkeyName,
+        magic_link_id: magicLinkId,
     };
-    let resStart = await fetchPost<CreationChallengeResponse>(
-        `/auth/v1/users/${userId}/webauthn/register/start`,
-        payloadStart
-    );
-    if (!resStart.body) {
+    let headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+    };
+    if (pwdCsrfToken) {
+        headers['pwd-csrf-token'] = pwdCsrfToken;
+    } else {
+        headers['csrf-token'] = localStorage.getItem(CSRF_TOKEN) || '';
+    }
+
+    let resStart = await fetch(`/auth/v1/users/${userId}/webauthn/register/start`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payloadStart),
+    });
+    let body = await resStart.json();
+    if ('error' in body) {
         return {
-            error: resStart.error?.message || 'did not receive any registration data',
+            error: body.error.message || 'did not receive any registration data',
         };
     }
 
     // We need to apply a small hack to make TS happy.
     // The browser expects ArrayBuffers in some places, but the backend sends them as base64 encoded data,
     // which we will decode properly in the following lines.
-    let options = resStart.body as unknown as CredentialCreationOptions;
+    let options = body as unknown as CredentialCreationOptions;
     if (!options.publicKey) {
         let error = 'no publicKey in options from the backend';
-        console.error(error);
+        console.error(error, options);
         return {error};
     }
 
@@ -83,17 +99,20 @@ export async function webauthnReg(
             extensions: credential.getClientExtensionResults(),
             type: credential.type,
         },
+        magic_link_id: magicLinkId,
     }
 
-    let resFinish = await fetchPost(
-        `/auth/v1/users/${userId}/webauthn/register/finish`,
-        payloadFinish,
-    );
+    let resFinish = await fetch(`/auth/v1/users/${userId}/webauthn/register/finish`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payloadFinish),
+    });
     if (resFinish.status === 201) {
         return {};
     } else {
+        let body = await resFinish.json();
         return {
-            error: resFinish.error?.message || 'Registration failed',
+            error: body.error?.message || 'Registration failed',
         };
     }
 }

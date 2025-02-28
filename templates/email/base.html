@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{% block title %}{% endblock %}</title>
+</head>
+<style>
+    *, *::before, *::after {
+        box-sizing: border-box;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+    }
+
+    ::selection {
+        color: hsl(var(--bg));
+        background: hsl(var(--action));
+    }
+
+    input, button, textarea, select {
+        font: inherit;
+    }
+
+    body {
+        padding: 1rem;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', 'Segoe UI', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        line-height: 1.5rem;
+        color: hsl(var(--text));
+        background-color: hsl(var(--bg));
+        scroll-behavior: smooth;
+        scrollbar-gutter: stable;
+        overflow: auto;
+    {{ theme_vars }}
+    }
+
+    a, a:link, a:visited {
+        padding: .25rem .5rem;
+        color: hsl(var(--text));
+        transition: all 150ms ease-in-out;
+        background: hsl(var(--action));
+        border-radius: var(--border-radius);
+        font-weight: bold;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    a:hover, a:active {
+        color: hsl(var(--text-high));
+        box-shadow: 1px 1px 2px hsl(var(--bg-high));
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        color: hsl(var(--text-high));
+        overflow-wrap: break-word;
+    }
+
+    h1 {
+        font-size: 1.25rem;
+    }
+
+    h2 {
+        font-size: 1.15rem;
+    }
+
+    p {
+        margin: .5rem 0;
+        max-width: 467pt;
+    }
+
+    .err {
+        color: hsl(var(--error));
+    }
+
+    .font-label {
+        font-family: ui-rounded, 'Hiragino Maru Gothic ProN', Quicksand, Comfortaa, Manjari, 'Arial Rounded MT',
+        'Arial Rounded MT Bold', Calibri, source-sans-pro, sans-serif;
+    }
+
+    .font-mono {
+        font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas,
+        'DejaVu Sans Mono', monospace;
+    }
+</style>
+<body>
+{% block content %}<p>Placeholder content</p>{% endblock %}
+</body>
+</html>

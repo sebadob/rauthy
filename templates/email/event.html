@@ -1,45 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>E-Mail Reset</title>
-</head>
-<style>
-    * {
-        box-sizing: border-box;
-    }
+{% extends "base.html" %}
 
-    html, body {
-        padding: 0;
-        margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
-        Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
-        font-size: 16px;
-    }
+{% block title %}Rauthy Event{% endblock %}
 
-    .wrapper {
-        display: flex;
-        align-items: center;
-        color: rgba(34, 30, 34, .8);
-    }
-
-    .container {
-        flex-direction: column;
-        padding: 2rem;
-    }
-
-    .header {
-        margin: 0 0 1.5em 0;
-    }
-</style>
-<body class="wrapper">
-<div class="container">
-    <h3 class="header">{{ head }}</h3>
-    <div style="text-align: left">
-        <div>{{ row_1 }}</div>
-        <div>{{ row_2 }}</div>
-    </div>
-</div>
-</body>
-</html>
+{% block content %}
+<h1>{{ head }}</h1>
+<p>{{ row_1 }}</p>
+<p>{{ row_2 }}</p>
+{% endblock %}

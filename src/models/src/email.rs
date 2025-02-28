@@ -1,5 +1,6 @@
 use crate::app_state::AppState;
 use crate::entity::magic_links::MagicLink;
+use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
 use crate::i18n_email::change_info_new::I18nEmailChangeInfoNew;
 use crate::i18n_email::confirm_change::I18nEmailConfirmChange;
@@ -35,6 +36,8 @@ pub struct EMail {
 #[derive(Default, Template)]
 #[template(path = "email/event.html")]
 pub struct EMailEventHtml<'a> {
+    pub lang: &'a str,
+    pub theme_vars: String,
     pub head: &'a str,
     pub row_1: &'a str,
     pub row_2: &'a str,
@@ -49,8 +52,10 @@ pub struct EMailEventTxt<'a> {
 }
 
 #[derive(Default, Template)]
-#[template(path = "email/change_info_new.html")]
+#[template(path = "email/change_info.html")]
 pub struct EMailChangeInfoNewHtml<'a> {
+    pub lang: &'a str,
+    pub theme_vars: String,
     pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
@@ -63,7 +68,7 @@ pub struct EMailChangeInfoNewHtml<'a> {
 }
 
 #[derive(Default, Template)]
-#[template(path = "email/change_info_new.txt")]
+#[template(path = "email/change_info.txt")]
 pub struct EMailChangeInfoNewTxt<'a> {
     pub email_sub_prefix: &'a str,
     pub link: &'a str,
@@ -78,6 +83,8 @@ pub struct EMailChangeInfoNewTxt<'a> {
 #[derive(Default, Template)]
 #[template(path = "email/confirm_change.html")]
 pub struct EMailConfirmChangeHtml<'a> {
+    pub lang: &'a str,
+    pub theme_vars: String,
     pub email_sub_prefix: &'a str,
     pub header: &'a str,
     pub msg: &'a str,
@@ -98,6 +105,8 @@ pub struct EMailConfirmChangeTxt<'a> {
 #[derive(Default, Template)]
 #[template(path = "email/reset.html")]
 pub struct EMailResetHtml<'a> {
+    pub lang: &'a str,
+    pub theme_vars: String,
     pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
@@ -129,6 +138,8 @@ pub struct EmailResetTxt<'a> {
 #[derive(Default, Template)]
 #[template(path = "email/reset_info.html")]
 pub struct EMailResetInfoHtml<'a> {
+    pub lang: &'a str,
+    pub theme_vars: String,
     pub email_sub_prefix: &'a str,
     pub link: &'a str,
     pub exp: &'a str,
@@ -163,7 +174,12 @@ pub async fn send_email_notification(
         row_2: notification.row_2.as_deref().unwrap_or_default(),
     };
 
+    let theme_vars = ThemeCssFull::find_theme_variables_email()
+        .await
+        .unwrap_or_default();
     let html = EMailEventHtml {
+        lang: "en",
+        theme_vars,
         head: text.head,
         row_1: text.row_1,
         row_2: text.row_2,
@@ -197,6 +213,9 @@ pub async fn send_email_change_info_new(
         data.issuer, magic_link.user_id, &magic_link.id,
     );
     let exp = email_ts_prettify(magic_link.exp);
+    let theme_vars = ThemeCssFull::find_theme_variables_email()
+        .await
+        .unwrap_or_default();
 
     let i18n = I18nEmailChangeInfoNew::build(&user.language);
     let text = EMailChangeInfoNewTxt {
@@ -210,6 +229,8 @@ pub async fn send_email_change_info_new(
     };
 
     let html = EMailChangeInfoNewHtml {
+        lang: user.language.as_str(),
+        theme_vars,
         email_sub_prefix: &EMAIL_SUB_PREFIX,
         link: &link,
         exp: &exp,
@@ -266,7 +287,12 @@ pub async fn send_email_confirm_change(
         },
     };
 
+    let theme_vars = ThemeCssFull::find_theme_variables_email()
+        .await
+        .unwrap_or_default();
     let html = EMailConfirmChangeHtml {
+        lang: user.language.as_str(),
+        theme_vars,
         email_sub_prefix: &EMAIL_SUB_PREFIX,
         header: i18n.subject,
         msg: i18n.msg,
@@ -306,6 +332,9 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
         data.issuer, magic_link.user_id, &magic_link.id, magic_link.usage,
     );
     let exp = email_ts_prettify(magic_link.exp);
+    let theme_vars = ThemeCssFull::find_theme_variables_email()
+        .await
+        .unwrap_or_default();
 
     let (subject, text, html) = if user.password.is_none() {
         let i18n = I18nEmailPasswordNew::build(&user.language);
@@ -322,6 +351,8 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
         };
 
         let html = EMailResetHtml {
+            lang: user.language.as_str(),
+            theme_vars,
             email_sub_prefix: &EMAIL_SUB_PREFIX,
             link: &link,
             exp: &exp,
@@ -350,6 +381,8 @@ pub async fn send_pwd_reset(data: &web::Data<AppState>, magic_link: &MagicLink, 
         };
 
         let html = EMailResetHtml {
+            lang: user.language.as_str(),
+            theme_vars,
             email_sub_prefix: &EMAIL_SUB_PREFIX,
             link: &link,
             exp: &exp,
@@ -400,7 +433,12 @@ pub async fn send_pwd_reset_info(data: &web::Data<AppState>, user: &User) {
         update: i18n.update,
     };
 
+    let theme_vars = ThemeCssFull::find_theme_variables_email()
+        .await
+        .unwrap_or_default();
     let html = EMailResetInfoHtml {
+        lang: user.language.as_str(),
+        theme_vars,
         email_sub_prefix: &EMAIL_SUB_PREFIX,
         link: &link,
         exp: &exp.to_string(),

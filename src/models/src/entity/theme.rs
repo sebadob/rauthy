@@ -13,6 +13,7 @@ use tracing::error;
 
 // used for possible future struct updates to be able to deserialize old themes properly
 static LATEST_CSS_VERSION: i32 = 1;
+static CACHE_KEY_EMAIL_CSS: &str = "css_rauthy_light_email";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ThemeCssFull {
@@ -138,10 +139,6 @@ impl From<ThemeCssFull> for ThemeRequestResponse {
 // CRUD
 impl ThemeCssFull {
     pub async fn find(client_id: String) -> Result<Self, ErrorResponse> {
-        // if let Some(slf) = DB::client().get(Cache::Theme, client_id.clone()).await? {
-        //     return Ok(slf);
-        // }
-
         let slf: Self = if is_hiqlite() {
             DB::client()
                 .query_map_optional(
@@ -158,11 +155,35 @@ impl ThemeCssFull {
         }
         .unwrap_or_default();
 
-        // DB::client()
-        //     .put(Cache::Theme, client_id, &slf, None)
-        //     .await?;
-
         Ok(slf)
+    }
+
+    /// Returns the CSS variables for the light theme to be inserted directly into
+    /// an E-Mail `body { }` CSS.
+    pub async fn find_theme_variables_email() -> Result<String, ErrorResponse> {
+        if let Some(bytes) = DB::client()
+            .get_bytes(Cache::Html, CACHE_KEY_EMAIL_CSS)
+            .await?
+        {
+            let vars = String::from_utf8_lossy(&bytes);
+            return Ok(vars.to_string());
+        }
+
+        let full = Self::find("rauthy".to_string()).await?;
+        let mut vars = String::with_capacity(128);
+        full.light.append_css(&mut vars)?;
+        write!(vars, "--border-radius:{};", full.border_radius)?;
+
+        DB::client()
+            .put_bytes(
+                Cache::Html,
+                CACHE_KEY_EMAIL_CSS,
+                vars.as_bytes().to_vec(),
+                None,
+            )
+            .await?;
+
+        Ok(vars)
     }
 
     /// Returns `last_update` for the given `client_id`s Theme CSS. If no custom theme exists,
@@ -245,6 +266,11 @@ SET last_update = $2, version = $3, light = $4, dark = $5, border_radius = $6
             .await?;
         }
 
+        if client_id == "rauthy" {
+            DB::client()
+                .delete(Cache::Html, CACHE_KEY_EMAIL_CSS)
+                .await?;
+        }
         // TODO if we have the prebuild fn at some point, favor this instead of invalidation
         Self::invalidate_caches(client_id).await?;
 
