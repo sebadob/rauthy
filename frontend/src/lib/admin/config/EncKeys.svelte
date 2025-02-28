@@ -83,20 +83,20 @@
         bind:value={migrateKey}
 />
 
-<div class="btn">
+<div class="btn flex gap-05">
     <Button onclick={migrate} {isLoading}>
         {ta.docs.encKeys.migrate}
     </Button>
+
+    {#if success}
+        <IconCheck/>
+    {/if}
 </div>
 
 {#if err}
     <div class="err">
         {err}
     </div>
-{/if}
-
-{#if success}
-    <IconCheck/>
 {/if}
 
 <style>

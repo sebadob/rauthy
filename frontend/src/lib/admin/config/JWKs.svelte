@@ -99,15 +99,15 @@
     </Expandable>
 {/each}
 
-<div class="btn">
+<div class="btn flex gap-05">
     <Button onclick={onSubmit} {isLoading}>
         {ta.jwks.rotateKeys}
     </Button>
-</div>
 
-{#if success}
-    <IconCheck/>
-{/if}
+    {#if success}
+        <IconCheck/>
+    {/if}
+</div>
 
 {#if err}
     <div class="err">

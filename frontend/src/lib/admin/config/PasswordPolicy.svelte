@@ -7,6 +7,7 @@
     import Form from "$lib5/form/Form.svelte";
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
     import {useI18n} from "$state/i18n.svelte.ts";
+    import IconCheck from "$icons/IconCheck.svelte";
 
     const inputWidth = '160px';
 
@@ -197,15 +198,15 @@
             />
         </div>
 
-        <Button type="submit">
-            {t.common.save}
-        </Button>
+        <div class="flex gap-05">
+            <Button type="submit">
+                {t.common.save}
+            </Button>
 
-        {#if success}
-            <div class="success">
-                Success
-            </div>
-        {/if}
+            {#if success}
+                <IconCheck/>
+            {/if}
+        </div>
 
         {#if err}
             <div class="err">
