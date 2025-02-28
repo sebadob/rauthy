@@ -1,5 +1,5 @@
 use crate::app_state::AppState;
-use crate::entity::colors::ColorEntity;
+use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
 use actix_web::web;
 use rauthy_common::constants::{EMAIL_SUB_PREFIX, PUB_URL};
@@ -112,14 +112,24 @@ pub struct FedCMIdPBranding {
 
 impl FedCMIdPBranding {
     async fn new(data: &web::Data<AppState>) -> Result<Self, ErrorResponse> {
-        let colors = ColorEntity::find_rauthy().await?;
         let rauthy_icon = FedCMIdPIcon::rauthy_logo(&data.issuer);
+
+        // this is pretty inefficient, but FedCM is in experimental testing only anyway
+        let css = ThemeCssFull::find("rauthy".to_string()).await?;
+        let background_color = format!(
+            "hsl({} {} {})",
+            css.light.bg[0], css.light.bg[1], css.light.bg[2]
+        );
+        let color = format!(
+            "hsl({} {} {})",
+            css.light.text[0], css.light.text[1], css.light.text[2]
+        );
 
         Ok(Self {
             // Background color for IDP-branded widgets such as buttons.
-            background_color: Some(colors.bg),
+            background_color: Some(background_color),
             // color for text on IDP branded widgets.
-            color: Some(colors.text),
+            color: Some(color),
             icons: vec![rauthy_icon],
             name: Some(&*EMAIL_SUB_PREFIX),
         })

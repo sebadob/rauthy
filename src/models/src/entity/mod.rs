@@ -10,7 +10,6 @@ mod auth_provider_cust_impl;
 pub mod auth_providers;
 pub mod clients;
 pub mod clients_dyn;
-pub mod colors;
 pub mod config;
 pub mod continuation_token;
 pub mod db_version;

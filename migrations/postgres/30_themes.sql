@@ -12,3 +12,5 @@ CREATE TABLE themes
     dark          BYTEA   NOT NULL,
     border_radius VARCHAR NOT NULL
 );
+
+DROP TABLE colors;

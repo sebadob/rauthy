@@ -53,6 +53,35 @@ impl From<hiqlite::Row<'_>> for ThemeCssFull {
     }
 }
 
+impl FromRow<'_, sqlx::sqlite::SqliteRow> for ThemeCssFull {
+    fn from_row(row: &sqlx::sqlite::SqliteRow) -> Result<Self, Error> {
+        let version: i64 = row.get("version");
+        let (light, dark) = if version == 1 {
+            let bytes: Vec<u8> = row.get("light");
+            let light = ThemeCss::from(bytes.as_slice());
+            let bytes: Vec<u8> = row.get("dark");
+            let dark = ThemeCss::from(bytes.as_slice());
+
+            (light, dark)
+        } else {
+            error!(
+                "Invalid CSS version {} returned from database, using defaults",
+                version
+            );
+            (ThemeCss::default_light(), ThemeCss::default_dark())
+        };
+
+        Ok(Self {
+            client_id: row.get("client_id"),
+            last_update: row.get("last_update"),
+            version,
+            light,
+            dark,
+            border_radius: row.get("border_radius"),
+        })
+    }
+}
+
 impl FromRow<'_, sqlx::postgres::PgRow> for ThemeCssFull {
     fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, Error> {
         let version: i64 = row.get("version");
@@ -497,7 +526,7 @@ impl ThemeCss {
         Ok(())
     }
 
-    fn as_bytes(&self) -> Vec<u8> {
+    pub fn as_bytes(&self) -> Vec<u8> {
         bincode::serialize(self).unwrap()
     }
 

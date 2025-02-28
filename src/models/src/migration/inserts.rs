@@ -3,7 +3,6 @@ use crate::entity::api_keys::ApiKeyEntity;
 use crate::entity::auth_providers::AuthProvider;
 use crate::entity::clients::Client;
 use crate::entity::clients_dyn::ClientDyn;
-use crate::entity::colors::ColorEntity;
 use crate::entity::config::ConfigEntity;
 use crate::entity::devices::DeviceEntity;
 use crate::entity::groups::Group;
@@ -16,6 +15,7 @@ use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use crate::entity::roles::Role;
 use crate::entity::scopes::Scope;
 use crate::entity::sessions::Session;
+use crate::entity::theme::ThemeCssFull;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
@@ -340,36 +340,6 @@ VALUES ($1, $2, $3, $4, $5)"#,
                 b.last_used,
                 b.registration_token,
                 b.token_endpoint_auth_method
-            )
-            .execute(DB::conn())
-            .await?;
-        }
-    }
-    Ok(())
-}
-
-pub async fn colors(data_before: Vec<ColorEntity>) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        DB::client()
-            .execute("DELETE FROM colors", params!())
-            .await?;
-        for b in data_before {
-            DB::client()
-                .execute(
-                    "INSERT INTO colors (client_id, data) VALUES ($1, $2)",
-                    params!(b.client_id, b.data),
-                )
-                .await?;
-        }
-    } else {
-        sqlx::query("DELETE FROM colors")
-            .execute(DB::conn())
-            .await?;
-        for b in data_before {
-            sqlx::query!(
-                "INSERT INTO colors (client_id, data) VALUES ($1, $2)",
-                b.client_id,
-                b.data,
             )
             .execute(DB::conn())
             .await?;
@@ -908,6 +878,51 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
                 b.state,
                 b.exp,
                 b.last_seen
+            )
+            .execute(DB::conn())
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn themes(data_before: Vec<ThemeCssFull>) -> Result<(), ErrorResponse> {
+    if is_hiqlite() {
+        DB::client()
+            .execute("DELETE FROM themes", params!())
+            .await?;
+        for b in data_before {
+            DB::client()
+                .execute(
+                    r#"
+INSERT INTO themes (client_id, last_update, version, light, dark, border_radius)
+VALUES ($1, $2, $3, $4, $5, $6)"#,
+                    params!(
+                        b.client_id,
+                        b.last_update,
+                        b.version,
+                        b.light.as_bytes(),
+                        b.dark.as_bytes(),
+                        b.border_radius
+                    ),
+                )
+                .await?;
+        }
+    } else {
+        sqlx::query("DELETE FROM themes")
+            .execute(DB::conn())
+            .await?;
+        for b in data_before {
+            sqlx::query!(
+                r#"
+INSERT INTO themes (client_id, last_update, version, light, dark, border_radius)
+VALUES ($1, $2, $3, $4, $5, $6)"#,
+                b.client_id,
+                b.last_update,
+                b.version as i32,
+                b.light.as_bytes(),
+                b.dark.as_bytes(),
+                b.border_radius
             )
             .execute(DB::conn())
             .await?;

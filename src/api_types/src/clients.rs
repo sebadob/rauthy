@@ -1,64 +1,12 @@
 use crate::cust_validation::*;
 use crate::oidc::JwkKeyPairAlg;
-use css_color::Srgb;
 use rauthy_common::constants::{
     RE_CLIENT_ID_EPHEMERAL, RE_CLIENT_NAME, RE_LOWERCASE, RE_SCOPE_SPACE,
     RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
 };
-use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 use utoipa::ToSchema;
 use validator::Validate;
-
-#[derive(Debug, Deserialize, Validate, ToSchema)]
-pub struct ColorsRequest {
-    #[validate(length(min = 2, max = 32))]
-    pub act1: String,
-    #[validate(length(min = 2, max = 32))]
-    pub act1a: String,
-    #[validate(length(min = 2, max = 32))]
-    pub act2: String,
-    #[validate(length(min = 2, max = 32))]
-    pub act2a: String,
-    #[validate(length(min = 2, max = 32))]
-    pub acnt: String,
-    #[validate(length(min = 2, max = 32))]
-    pub acnta: String,
-    #[validate(length(min = 2, max = 32))]
-    pub ok: String,
-    #[validate(length(min = 2, max = 32))]
-    pub err: String,
-    #[validate(length(min = 2, max = 32))]
-    pub glow: String,
-    #[validate(length(min = 2, max = 32))]
-    pub gmid: String,
-    #[validate(length(min = 2, max = 32))]
-    pub ghigh: String,
-    #[validate(length(min = 2, max = 32))]
-    pub text: String,
-    #[validate(length(min = 2, max = 32))]
-    pub bg: String,
-}
-
-impl ColorsRequest {
-    pub fn validate_css(&self) -> Result<(), ErrorResponse> {
-        Srgb::from_str(&self.act1)?;
-        Srgb::from_str(&self.act1a)?;
-        Srgb::from_str(&self.act2)?;
-        Srgb::from_str(&self.act2a)?;
-        Srgb::from_str(&self.acnt)?;
-        Srgb::from_str(&self.acnta)?;
-        Srgb::from_str(&self.ok)?;
-        Srgb::from_str(&self.err)?;
-        Srgb::from_str(&self.glow)?;
-        Srgb::from_str(&self.gmid)?;
-        Srgb::from_str(&self.ghigh)?;
-        Srgb::from_str(&self.text)?;
-        Srgb::from_str(&self.bg)?;
-        Ok(())
-    }
-}
 
 // https://openid.net/specs/openid-connect-registration-1_0.html#ClientMetadata
 #[derive(Debug, Validate, Serialize, Deserialize, ToSchema)]
@@ -305,36 +253,4 @@ pub struct DynamicClientResponse {
     pub id_token_signed_response_alg: String,
     pub token_endpoint_auth_method: String,
     pub token_endpoint_auth_signing_alg: String,
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::clients::ColorsRequest;
-    use css_color::Srgb;
-    use std::str::FromStr;
-
-    #[test]
-    pub fn test_css_color_validation() {
-        let req = ColorsRequest {
-            act1: "#000".to_string(),
-            act1a: "#123456".to_string(),
-            act2: "rgb(1,2,3)".to_string(),
-            act2a: "rgba(123, 223, 121, .3)".to_string(),
-            acnt: "hsl(360 100% 50%)".to_string(),
-            acnta: "hsl(123 13% 23%)".to_string(),
-            ok: "red".to_string(),
-            err: "blue".to_string(),
-            glow: "green".to_string(),
-            gmid: "aliceblue".to_string(),
-            ghigh: "antiquewhite".to_string(),
-            text: "hsla(30,20%,60%,0.9)".to_string(),
-            bg: "rgb(127  ,    211 , 200    )".to_string(),
-        };
-        assert!(req.validate_css().is_ok());
-
-        assert!(Srgb::from_str("#00").is_err());
-        assert!(Srgb::from_str("#12345").is_err());
-        assert!(Srgb::from_str("hsl(360 100%)").is_err());
-        assert!(Srgb::from_str(" ").is_err());
-    }
 }

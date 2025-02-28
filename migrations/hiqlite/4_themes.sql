@@ -12,3 +12,5 @@ CREATE TABLE themes
     dark          BLOB    NOT NULL,
     border_radius TEXT    NOT NULL
 ) STRICT;
+
+DROP TABLE colors;

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "DELETE FROM colors WHERE client_id = $1",
+  "query": "DELETE FROM users_values WHERE id = $1",
   "describe": {
     "columns": [],
     "parameters": {
@@ -10,5 +10,5 @@
     },
     "nullable": []
   },
-  "hash": "156fe9f4e74a741cf85e5e05df8b34a8d9d054cd9aca91d0fa818b8dc8c20733"
+  "hash": "5ede629eff548494e6c565a9707cf38e6498b6ee16d130ca842736dab2380b50"
 }
