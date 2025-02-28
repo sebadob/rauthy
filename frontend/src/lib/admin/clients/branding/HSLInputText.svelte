@@ -6,11 +6,9 @@
     let {
         label,
         value = $bindable(),
-        inputWidth,
     }: {
         label: string,
         value: string,
-        inputWidth: string,
     } = $props();
 
     let ta = useI18nAdmin();
@@ -24,7 +22,7 @@
             {label}
             placeholder={label}
             errMsg={ta.validation.css}
-            width={inputWidth}
+            width="17.5rem"
             bind:value
             required
             pattern={PATTERN_CSS_VALUE_LOOSE}
@@ -47,7 +45,7 @@
     }
 
     .container {
-        width: 16rem;
+        width: 20.5rem;
         margin: .5rem 0;
         display: flex;
         border: 1px solid var(--color);
