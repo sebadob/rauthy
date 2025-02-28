@@ -198,6 +198,7 @@ delete-hiqlite:
 migrate-postgres:
     cargo sqlx migrate run --source migrations/postgres
     cargo sqlx prepare --workspace
+    git add .sqlx/*
 
 # runs any of: none (hiqlite), postgres, ui
 run ty="hiqlite":
