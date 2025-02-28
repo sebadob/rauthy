@@ -9,7 +9,7 @@ export const AUTH_ENDPOINT = '/auth/v1/oidc/authorize';
 export const CLIENT_ID = 'rauthy';
 export const LOGOUT_URL = '/auth/v1/oidc/logout';
 export const REDIRECT_URI = '/auth/v1/oidc/callback';
-export const REDIRECT_URI_SUCCESS = '/auth/v1/admin';
+export const REDIRECT_URI_SUCCESS = '/auth/v1/admin/users';
 export const REDIRECT_URI_SUCCESS_ACC = '/auth/v1/account';
 export const POST_LOGOUT_REDIRECT_URI = '/auth/v1/';
 

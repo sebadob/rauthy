@@ -8,6 +8,7 @@
 - `t.authorize.expectingPasskey`
 - `t.authorize.orLoginWith`
 - `t.authorize.requestExpired`
+- `t.authorize.validEmail`
 - `t.common.close`
 - `t.common.changeTheme`
 - `t.common.details`
