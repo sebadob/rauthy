@@ -15,6 +15,7 @@ use rauthy_common::constants::HEADER_HTML;
 use rauthy_error::ErrorResponse;
 use serde::Deserialize;
 use templates::AdminDocsHtml;
+use tracing::debug;
 
 pub mod templates;
 
@@ -83,6 +84,7 @@ impl HtmlCached {
     }
 
     /// Handles the request and builds a full `HttpResponse` with compression and caching.
+    #[tracing::instrument(level = "debug", skip(req, theme_ts, with_cache))]
     pub async fn handle(
         self,
         req: HttpRequest,
@@ -101,8 +103,10 @@ impl HtmlCached {
         } else {
             "none"
         };
+        debug!("encoding: {}", encoding);
 
         let lang = Language::try_from(&req).unwrap_or_default();
+        debug!("lang: {}", lang);
         let cache_key = if with_cache {
             if let Some(bytes) = DB::client()
                 .get_bytes(Cache::Html, self.cache_key(&lang, encoding))
@@ -151,8 +155,10 @@ impl HtmlCached {
             "br" => {
                 if with_cache {
                     // it's only worth the extra compute if we actually cache this response
+                    debug!("compress_br_9");
                     compress_br_9(body.as_bytes())?
                 } else {
+                    debug!("compress_br_dyn");
                     compress_br_dyn(body.as_bytes())?
                 }
             }
@@ -168,8 +174,8 @@ impl HtmlCached {
         }
 
         Ok(HttpResponse::Ok()
-            .insert_header(HEADER_HTML)
             .insert_header(("content-encoding", encoding))
-            .body(body))
+            .insert_header(HEADER_HTML)
+            .body(body_bytes))
     }
 }

@@ -1,17 +1,13 @@
 <script lang="ts">
-    import {onMount} from "svelte";
     import {useI18n} from "$state/i18n.svelte.js";
-    import {useSession} from "$state/session.svelte.js";
     import {fetchGet} from "$api/fetch.ts";
     import type {DeviceResponse} from "$api/types/device.ts";
     import Device from "./Device.svelte";
 
     let {
         userId,
-        viewMode,
     }: {
         userId: string,
-        viewMode: 'admin' | 'account',
     } = $props();
 
     let t = useI18n();

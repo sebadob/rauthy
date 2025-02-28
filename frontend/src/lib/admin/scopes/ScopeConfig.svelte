@@ -72,7 +72,7 @@
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         err = '';
 
-        if (isDefaultScope(name) || scopes.find(s => s.name === name)) {
+        if (isDefaultScope(name) || (scope.name !== name && scopes.find(s => s.name === name))) {
             err = ta.common.nameExistsAlready;
             return;
         }

@@ -6,10 +6,8 @@
 
     let {
         values = $bindable(),
-        inputWidth,
     }: {
         values: ThemeCss,
-        inputWidth: string,
     } = $props();
 
     let ta = useI18nAdmin();
@@ -73,17 +71,14 @@
         <HSLInputText
                 label="--btn-text"
                 bind:value={values.btn_text}
-                {inputWidth}
         />
         <HSLInputText
                 label="--theme-sun"
                 bind:value={values.theme_sun}
-                {inputWidth}
         />
         <HSLInputText
                 label="--theme-moon"
                 bind:value={values.theme_moon}
-                {inputWidth}
         />
     </div>
 </div>

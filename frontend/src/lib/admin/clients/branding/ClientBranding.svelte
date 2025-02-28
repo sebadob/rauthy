@@ -33,7 +33,6 @@
     let logoKey = $state(genKey());
     let logoUrl = $derived(`/auth/v1/clients/${client.id}/logo?${logoKey}`);
     let url = $derived(`/auth/v1/theme/${client.id}`);
-    let isDev = $derived(useIsDev().get());
 
     $effect(() => {
         fetchTheme();
@@ -41,7 +40,6 @@
 
     async function fetchTheme() {
         let res = await fetchPost<ThemeRequestResponse>(url);
-        // let res = await fetchGet(`/auth/v1/theme/${client.id}`, 'json', 'reload');
         if (res.body) {
             if (res.body.client_id === 'rauthy') {
                 console.log('using Rauthy default scheme');
@@ -109,11 +107,11 @@
                 />
 
                 <h1>Light Theme</h1>
-                <BrandingMode bind:values={theme.light} {inputWidth}/>
+                <BrandingMode bind:values={theme.light}/>
 
                 <br>
                 <h1>Dark Theme</h1>
-                <BrandingMode bind:values={theme.dark} {inputWidth}/>
+                <BrandingMode bind:values={theme.dark}/>
             </div>
             <div class="preview">
                 {#key logoKey}

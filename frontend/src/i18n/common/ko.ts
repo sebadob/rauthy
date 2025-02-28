@@ -133,7 +133,8 @@ export const I18nKo: I18n = {
         passwordRequired: "비밀번호는 필요합니다.",
         requestExpires: "요청 만료일",
         requestExpired: "Request has expired",
-        signUp: "사용자 가입"
+        signUp: "사용자 가입",
+        validEmail: "Valid E-Mail Address",
     },
     device: {
         accept: "수락",
