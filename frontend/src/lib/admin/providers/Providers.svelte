@@ -46,7 +46,7 @@
 
 </script>
 
-<NavSub width="11rem" buttonTilesAriaControls="federation">
+<NavSub width="11rem" buttonTilesAriaControls="federation" paddingTop="6.65rem">
     <ButtonAddModal level={providers.length === 0 ? 1 : 2} bind:closeModal>
         <ProviderAddNew {onSave}/>
     </ButtonAddModal>

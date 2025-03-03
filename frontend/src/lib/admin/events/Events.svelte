@@ -139,7 +139,7 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        background: hsla(var(--bg-high) / .2);
+        background: hsla(var(--bg-high) / .1);
         border-radius: var(--border-radius) 0 0 var(--border-radius);
         overflow-y: clip;
         transition: all 150ms ease-in-out;

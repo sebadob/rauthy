@@ -1,13 +1,27 @@
 <script lang="ts">
+    import RauthyLogo from "$lib/RauthyLogo.svelte";
+
     let {
         clientId,
     }: {
         clientId: string,
     } = $props();
+
+    let showDefault = $state(false);
 </script>
 
 <div class="logo">
-    <img src="{`/auth/v1/clients/${clientId}/logo`}" alt="No Logo Available"/>
+    {#if showDefault}
+        <RauthyLogo width="100%"/>
+    {:else}
+        <img
+                src="{`/auth/v1/clients/${clientId}/logo`}"
+                alt="Client Logo"
+                width="100%"
+                height="100%"
+                onerror={() => showDefault = true}
+        />
+    {/if}
 </div>
 
 <style>

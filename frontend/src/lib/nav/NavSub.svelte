@@ -116,6 +116,7 @@
 <style>
     nav {
         background: hsl(var(--bg));
+        border-left: 1px solid hsla(var(--bg-high) / .35);
         border-right: 1px solid hsla(var(--bg-high) / .23);
         border-radius: 0 var(--border-radius) var(--border-radius) 0;
         overflow: clip;
