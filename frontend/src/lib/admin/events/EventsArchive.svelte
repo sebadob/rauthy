@@ -82,61 +82,67 @@
 </script>
 
 <ContentAdmin>
-    <OrderSearchBar
-            {searchOptions}
-            bind:searchOption
-            bind:value={searchValue}
+    <div id="archive">
+        <OrderSearchBar
+                {searchOptions}
+                bind:searchOption
+                bind:value={searchValue}
 
-            {orderOptions}
-            {onChangeOrder}
-            firstDirReverse
-    />
-    <div class="row">
-        <InputDateTimeCombo
-                label={ta.common.from}
-                bind:value={fromDate}
-                bind:timeValue={fromTime}
-                withTime
+                {orderOptions}
+                {onChangeOrder}
+                firstDirReverse
         />
-        <InputDateTimeCombo
-                label={ta.common.until}
-                bind:value={untilDate}
-                bind:timeValue={untilTime}
-                withTime
-                withDelete
-        />
-    </div>
-    <div class="filters">
-        <div class="level">
-            <Options
-                    ariaLabel={ta.events.eventLevel}
-                    options={EVENT_LEVELS}
-                    bind:value={level}
-                    borderless
-            />
-        </div>
-        <div class="typ">
-            <Options
-                    ariaLabel={ta.events.eventType}
-                    options={EVENT_TYPES}
-                    bind:value={typ}
-                    borderless
-            />
-        </div>
-    </div>
-
-    {#if eventsFiltered.length === 0}
         <div class="row">
-            No events found
+            <InputDateTimeCombo
+                    label={ta.common.from}
+                    bind:value={fromDate}
+                    bind:timeValue={fromTime}
+                    withTime
+            />
+            <InputDateTimeCombo
+                    label={ta.common.until}
+                    bind:value={untilDate}
+                    bind:timeValue={untilTime}
+                    withTime
+                    withDelete
+            />
         </div>
-    {:else}
-        {#each eventsFiltered as event (event.id)}
-            <Event {event} inline/>
-        {/each}
-    {/if}
+        <div class="filters">
+            <div class="level">
+                <Options
+                        ariaLabel={ta.events.eventLevel}
+                        options={EVENT_LEVELS}
+                        bind:value={level}
+                        borderless
+                />
+            </div>
+            <div class="typ">
+                <Options
+                        ariaLabel={ta.events.eventType}
+                        options={EVENT_TYPES}
+                        bind:value={typ}
+                        borderless
+                />
+            </div>
+        </div>
+
+        {#if eventsFiltered.length === 0}
+            <div class="row">
+                No events found
+            </div>
+        {:else}
+            {#each eventsFiltered as event (event.id)}
+                <Event {event} inline/>
+            {/each}
+        {/if}
+    </div>
 </ContentAdmin>
 
 <style>
+    #archive {
+        margin-top: .25rem;
+    }
+
     .filters {
         display: flex;
         align-items: center;

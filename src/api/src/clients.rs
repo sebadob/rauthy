@@ -302,26 +302,29 @@ pub async fn put_clients(
 pub async fn get_client_logo(id: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
     let id = id.into_inner();
     debug!("Looking up client logo for id {}", id);
-    let logo = match Logo::find_cached(&id, &LogoType::Client).await {
-        Ok(logo) => logo,
-        Err(_) => {
-            debug!("no specific logo for id {} - using Rauthy default", id);
-            // If this client does not have a custom logo, we will always serve
-            // Rauthy's logo as default
-            Logo::find_cached("rauthy", &LogoType::Client).await?
-        }
-    };
 
-    Ok(HttpResponse::Ok()
-        .insert_header((CONTENT_TYPE, logo.content_type))
-        // clients should cache the logos for 12 hours
-        // this means if a logo has been updated, they receive the new one 12 hours
-        // later in the worst case
-        .insert_header((
-            CACHE_CONTROL,
-            "max-age=43200, stale-while-revalidate=2592000, public",
-        ))
-        .body(logo.data))
+    match Logo::find_cached(&id, &LogoType::Client).await {
+        Ok(logo) => {
+            Ok(HttpResponse::Ok()
+                .insert_header((CONTENT_TYPE, logo.content_type))
+                // clients should cache the logos for 12 hours
+                // this means if a logo has been updated, they receive the new one 12 hours
+                // later in the worst case
+                .insert_header((
+                    CACHE_CONTROL,
+                    "max-age=43200, stale-while-revalidate=2592000, public",
+                ))
+                .body(logo.data))
+        }
+        Err(_) => {
+            debug!("no specific logo for id {}", id);
+            // The UI will use the infinitely cached Rauthy default logo from static assets on error
+            Err(ErrorResponse::new(
+                ErrorResponseType::NotFound,
+                "no custom logo exists",
+            ))
+        }
+    }
 }
 
 /// Upload a custom logo for the login page for this client
@@ -407,11 +410,7 @@ pub async fn delete_client_logo(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Delete)?;
 
-    if id.as_str() == "rauthy" {
-        Logo::upsert_rauthy_default().await?;
-    } else {
-        Logo::delete(id.as_str(), &LogoType::Client).await?;
-    }
+    Logo::delete(id.as_str(), &LogoType::Client).await?;
 
     Ok(HttpResponse::Ok().finish())
 }

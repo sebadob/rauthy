@@ -4,18 +4,29 @@
     import Input from "$lib5/form/Input.svelte";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
     import {preventDefault} from "svelte/legacy";
+    import ClientLogo from "$lib/ClientLogo.svelte";
+    import RauthyLogo from "$lib/RauthyLogo.svelte";
 
     let {
         logoUrl,
         borderRadius,
         theme,
+        typ,
     }: {
         logoUrl: string,
         borderRadius: string,
         theme: ThemeCss,
+        typ: 'light' | 'dark',
     } = $props();
 
     let isLoading = $state(false);
+    let showDefault = $state(false);
+
+    $effect(() => {
+        if (logoUrl) {
+            showDefault = false;
+        }
+    });
 
     $effect(() => {
         if (isLoading) {
@@ -44,7 +55,17 @@
     <div class="inner">
         <div class="container">
             <div class="logo">
-                <img src={logoUrl} alt="Client Logo"/>
+                {#if showDefault}
+                    <RauthyLogo width="100%" show={typ}/>
+                {:else}
+                    <img
+                            src={logoUrl}
+                            alt="Client Logo"
+                            width="100%"
+                            height="100%"
+                            onerror={() => showDefault = true}
+                    />
+                {/if}
             </div>
 
             <h3>Header</h3>

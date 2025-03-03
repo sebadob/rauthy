@@ -22,9 +22,9 @@
 
     <div class="preview">
         {#if selected === tabs[0]}
-            <BrandingPreview {logoUrl} borderRadius={theme.border_radius} theme={theme.light}/>
+            <BrandingPreview {logoUrl} borderRadius={theme.border_radius} theme={theme.light} typ="light"/>
         {:else}
-            <BrandingPreview {logoUrl} borderRadius={theme.border_radius} theme={theme.dark}/>
+            <BrandingPreview {logoUrl} borderRadius={theme.border_radius} theme={theme.dark} typ="dark"/>
         {/if}
     </div>
 </div>

@@ -1,30 +1,33 @@
 <script lang="ts">
     import {useI18n} from "$state/i18n.svelte.ts";
     import Button from "$lib5/button/Button.svelte";
+    import {useTheme} from "$state/theme.svelte.ts";
 
-    let {absolute, preview}: { absolute?: boolean, preview?: boolean } = $props();
+    let {absolute}: { absolute?: boolean } = $props();
 
     const storageIdx = 'darkMode';
 
     let t = useI18n();
 
-    let darkMode: undefined | boolean = $state();
+    let theme = useTheme();
 
     $effect(() => {
         const mediaPref = window?.matchMedia?.('(prefers-color-scheme:dark)')?.matches ?? false;
 
-        if (darkMode === undefined) {
+        if (theme.isDark() === undefined) {
             const darkModeSaved = window?.localStorage?.getItem(storageIdx);
             if (darkModeSaved) {
                 let newValue = "true" === darkModeSaved;
-                if (darkMode === mediaPref) {
+                if (theme.isDark() === mediaPref) {
                     localStorage.removeItem(storageIdx);
                 }
-                darkMode = newValue;
+                theme.setIsDark(newValue);
+                // darkMode = newValue;
             } else {
-                darkMode = mediaPref;
+                theme.setIsDark(mediaPref);
+                // darkMode = mediaPref;
             }
-        } else if (darkMode) {
+        } else if (theme.isDark()) {
             document.body.classList.remove("theme-light");
             document.body.classList.add("theme-dark");
         } else {
@@ -32,21 +35,21 @@
             document.body.classList.add("theme-light");
         }
 
-        if (mediaPref === darkMode) {
+        if (mediaPref === theme.isDark()) {
             localStorage.removeItem(storageIdx);
         } else {
-            localStorage.setItem(storageIdx, darkMode.toString());
+            localStorage.setItem(storageIdx, 'true');
         }
     });
 
     function toggle() {
-        darkMode = !darkMode
+        theme.toggle();
     }
 </script>
 
 <div class="container" class:absolute>
     <Button ariaLabel={t.common.changeTheme} invisible onclick={toggle}>
-        {#if darkMode === true}
+        {#if theme.isDark() === true}
             <div class="icon moon">
                 <svg
                         xmlns="http://www.w3.org/2000/svg"

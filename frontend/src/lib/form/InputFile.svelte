@@ -8,7 +8,7 @@
     let {
         // typ,
         method = 'PUT',
-        accept = ['.image/jpg', 'image/jpeg', 'image/png', 'image/svg'],
+        accept = ['.image/jpg', 'image/jpeg', 'image/png', 'image/svg+xml'],
         url,
         disabled,
         buttonOnly = false,

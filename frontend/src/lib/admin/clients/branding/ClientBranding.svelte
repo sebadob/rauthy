@@ -77,6 +77,8 @@
         if (res.error) {
             err = res.error.message;
         } else {
+            await fetchDelete(`/auth/v1/clients/${client.id}/logo`);
+
             await fetchTheme();
             success = true;
             setTimeout(() => {

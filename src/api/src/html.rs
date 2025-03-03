@@ -15,13 +15,16 @@ pub async fn get_static_assets(
     let accept_encoding = accept_encoding.into_inner();
 
     let mime = mime_guess::from_path(&path);
-    let (p, encoding) = if accept_encoding.contains(&"br".parse().unwrap()) {
-        (Cow::from(format!("{}.br", path)), "br")
-    } else if accept_encoding.contains(&"gzip".parse().unwrap()) {
-        (Cow::from(format!("{}.gz", path)), "gzip")
-    } else {
-        (Cow::from(path), "none")
-    };
+    let (p, encoding) =
+        if path.ends_with(".png") || path.ends_with(".webp") || path.ends_with(".jpg") {
+            (Cow::from(path), "none")
+        } else if accept_encoding.contains(&"br".parse().unwrap()) {
+            (Cow::from(format!("{}.br", path)), "br")
+        } else if accept_encoding.contains(&"gzip".parse().unwrap()) {
+            (Cow::from(format!("{}.gz", path)), "gzip")
+        } else {
+            (Cow::from(path), "none")
+        };
 
     match Assets::get(p.as_ref()) {
         Some(content) => HttpResponse::Ok()

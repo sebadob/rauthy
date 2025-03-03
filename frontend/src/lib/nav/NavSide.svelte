@@ -117,14 +117,10 @@
 
             {#if !collapsed}
                 <div class="logo">
-                    <!-- TODO
-                    should we maybe fetch it from the background
-                    or always keep the Rauthy branding here?
-                     -->
-                    <RauthyLogo/>
+                    <RauthyLogo width={compact ? '3rem' : '7rem'}/>
                 </div>
 
-                <div class="menu">
+                <div class="menu" style:margin-top={compact ? '.5rem' : '1.5rem'}>
                     <NavLink {compact} {params} route="/users">
                         {#snippet icon(width: string)}
                             <IconUser {width}/>
@@ -313,7 +309,6 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 1rem;
         border-radius: var(--border-radius);
         overflow: clip;
     }
