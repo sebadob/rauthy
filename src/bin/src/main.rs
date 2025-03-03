@@ -199,7 +199,9 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
         }
     };
 
-    version_migration::manual_version_migrations().await?;
+    version_migration::manual_version_migrations()
+        .await
+        .expect("Error during Rauthy version migration");
 
     // actix web
     let state = app_state.clone();
