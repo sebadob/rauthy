@@ -86,6 +86,7 @@
     let email = $state(useParam('login_hint').get() || '');
     let password = $state('');
     let userId = $state('');
+    let showPasswordInput = $derived(needsPassword && existingMfaUser !== email && !showReset);
 
     onMount(() => {
         if (!needsPassword) {
@@ -417,7 +418,7 @@
 
             {#if !clientMfaForce}
                 <Form action={authorizeUrl} {onSubmit}>
-                    <div class="email">
+                    <div class:emailMinHeight={!showPasswordInput}>
                         <Input
                                 bind:ref={refEmail}
                                 typ="email"
@@ -434,7 +435,7 @@
                         />
                     </div>
 
-                    {#if needsPassword && existingMfaUser !== email && !showReset}
+                    {#if showPasswordInput}
                         <InputPassword
                                 bind:ref={refPassword}
                                 name="password"
@@ -550,7 +551,7 @@
         box-shadow: .1rem .1rem .1rem rgba(128, 128, 128, .1);
     }
 
-    .email {
+    .emailMinHeight {
         min-height: 4.7rem;
     }
 
@@ -594,7 +595,7 @@
     }
 
     .name {
-        margin: -10px 5px 0 5px;
+        margin: 0 .5rem;
     }
 
     .providersSeparator {

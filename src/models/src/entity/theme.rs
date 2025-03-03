@@ -556,12 +556,27 @@ impl ThemeCss {
         bincode::serialize(self).unwrap()
     }
 
+    // fn default_dark() -> Self {
+    //     Self {
+    //         text: [228, 2, 70],
+    //         text_high: [228, 8, 90],
+    //         bg: [208, 90, 4],
+    //         bg_high: [208, 30, 19],
+    //         action: [34, 100, 59],
+    //         accent: [265, 100, 53],
+    //         error: [15, 100, 37],
+    //         btn_text: "hsl(var(--bg))".to_string(),
+    //         theme_sun: "hsla(var(--action) / .7)".to_string(),
+    //         theme_moon: "hsla(var(--accent) / .85)".to_string(),
+    //     }
+    // }
+
     fn default_dark() -> Self {
         Self {
-            text: [228, 2, 70],
-            text_high: [228, 8, 90],
-            bg: [208, 90, 4],
-            bg_high: [208, 30, 19],
+            text: [34, 5, 75],
+            text_high: [34, 7, 90],
+            bg: [200, 40, 6],
+            bg_high: [200, 20, 17],
             action: [34, 100, 59],
             accent: [265, 100, 53],
             error: [15, 100, 37],
@@ -571,12 +586,27 @@ impl ThemeCss {
         }
     }
 
+    // fn default_light() -> Self {
+    //     Self {
+    //         text: [208, 10, 40],
+    //         text_high: [208, 20, 20],
+    //         bg: [228, 2, 98],
+    //         bg_high: [228, 8, 84],
+    //         action: [34, 100, 59],
+    //         accent: [265, 100, 53],
+    //         error: [15, 100, 37],
+    //         btn_text: "white".to_string(),
+    //         theme_sun: "hsla(var(--action) / .7)".to_string(),
+    //         theme_moon: "hsla(var(--accent) / .85)".to_string(),
+    //     }
+    // }
+
     fn default_light() -> Self {
         Self {
-            text: [208, 10, 40],
-            text_high: [208, 20, 20],
-            bg: [228, 2, 98],
-            bg_high: [228, 8, 84],
+            text: [200, 5, 37],
+            text_high: [200, 15, 25],
+            bg: [34, 25, 97],
+            bg_high: [34, 20, 90],
             action: [34, 100, 59],
             accent: [265, 100, 53],
             error: [15, 100, 37],

@@ -13,7 +13,7 @@
 
 </script>
 
-<NavSub width="11rem">
+<NavSub width="11rem" paddingTop="9.5rem">
     <NavLinkSub href="/auth/v1/admin/config/policy">
         {t.passwordPolicy.passwordPolicy}
     </NavLinkSub>
