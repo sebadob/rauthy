@@ -1131,6 +1131,7 @@ impl AuthProviderCallback {
 pub struct AuthProviderTemplate {
     pub id: String,
     pub name: String,
+    pub updated: i64,
 }
 
 impl AuthProviderTemplate {
@@ -1140,17 +1141,28 @@ impl AuthProviderTemplate {
             return Ok(slf);
         }
 
-        let providers = AuthProvider::find_all()
+        let slf = if is_hiqlite() {
+            DB::client()
+                .query_as(
+                    r#"
+SELECT id, name, updated FROM auth_providers p
+JOIN auth_provider_logos l ON p.id = l.auth_provider_id
+WHERE res = 'small'"#,
+                    params!(),
+                )
+                .await?
+        } else {
+            sqlx::query_as!(
+                Self,
+                r#"
+SELECT id, name, updated FROM auth_providers p
+JOIN auth_provider_logos l ON p.id = l.auth_provider_id
+WHERE res = 'small'"#
+            )
+            .fetch_all(DB::conn())
             .await?
-            .into_iter()
-            // We don't want to even show disabled providers
-            .filter(|p| p.enabled)
-            .map(|p| Self {
-                id: p.id,
-                name: p.name,
-            })
-            .collect::<Vec<Self>>();
-        let json = serde_json::to_string(&providers)?;
+        };
+        let json = serde_json::to_string(&slf)?;
 
         client
             .put(Cache::App, IDX_AUTH_PROVIDER_TEMPLATE, &json, CACHE_TTL_APP)
@@ -1167,7 +1179,7 @@ impl AuthProviderTemplate {
         Ok(())
     }
 
-    async fn update_cache() -> Result<(), ErrorResponse> {
+    pub async fn update_cache() -> Result<(), ErrorResponse> {
         Self::invalidate_cache().await?;
         Self::get_all_json_template().await?;
         Ok(())
