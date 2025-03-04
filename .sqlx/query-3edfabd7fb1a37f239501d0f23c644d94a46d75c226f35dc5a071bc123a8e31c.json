@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT auth_provider_id AS id, res, content_type, data\nFROM auth_provider_logos\nWHERE auth_provider_id = $1 AND (res = $2 OR res = $3)",
+  "query": "\nSELECT auth_provider_id AS id, res, content_type, data, updated\nFROM auth_provider_logos\nWHERE auth_provider_id = $1 AND (res = $2 OR res = $3)",
   "describe": {
     "columns": [
       {
@@ -22,6 +22,11 @@
         "ordinal": 3,
         "name": "data",
         "type_info": "Bytea"
+      },
+      {
+        "ordinal": 4,
+        "name": "updated",
+        "type_info": "Int8"
       }
     ],
     "parameters": {
@@ -35,8 +40,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "037a3eb8f28070ca848446024b04e30f4bd150bbe92e85a9cb1cdc482aad4d30"
+  "hash": "3edfabd7fb1a37f239501d0f23c644d94a46d75c226f35dc5a071bc123a8e31c"
 }

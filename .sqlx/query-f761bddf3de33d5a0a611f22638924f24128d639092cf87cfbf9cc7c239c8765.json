@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT client_id AS id, res, content_type, data\nFROM client_logos\nWHERE client_id = $1 AND (res = $2 OR res = $3)",
+  "query": "\nSELECT client_id AS id, res, content_type, data, updated\nFROM client_logos\nWHERE client_id = $1 AND (res = $2 OR res = $3)",
   "describe": {
     "columns": [
       {
@@ -22,6 +22,11 @@
         "ordinal": 3,
         "name": "data",
         "type_info": "Bytea"
+      },
+      {
+        "ordinal": 4,
+        "name": "updated",
+        "type_info": "Int8"
       }
     ],
     "parameters": {
@@ -35,8 +40,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "887631a171b771d677355932a9626f563e31fab88bf3b8fb2095585cfd5f9d3a"
+  "hash": "f761bddf3de33d5a0a611f22638924f24128d639092cf87cfbf9cc7c239c8765"
 }
