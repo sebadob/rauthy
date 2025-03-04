@@ -1,6 +1,5 @@
 <script lang="ts">
     import Button from "$lib5/button/Button.svelte";
-    import {useI18n} from "$state/i18n.svelte.ts";
     import type {AuthProviderTemplate} from "$api/templates/AuthProvider.ts";
 
     let {
@@ -13,22 +12,20 @@
         onclick: (providerId: string) => void,
     } = $props();
 
-    let t = useI18n();
-
     let showIcon = $state(false);
+
 </script>
 
 <Button {ariaLabel} level={2} onclick={() => onclick(provider.id)}>
     <div class="inline">
-        {#if showIcon}
-            <img
-                    src="{`/auth/v1/providers/${provider.id}/img`}"
-                    alt=""
-                    width="20"
-                    height="20"
-                    onload={() => showIcon = true}
-            />
-        {/if}
+        <img
+                src="{`/auth/v1/providers/${provider.id}/img?updated=${provider.updated}`}"
+                alt="Provider Logo"
+                width="20"
+                height="20"
+                aria-hidden={!showIcon}
+                onload={() => showIcon = true}
+        />
         <span class="name">
             {provider.name}
         </span>
@@ -36,6 +33,14 @@
 </Button>
 
 <style>
+    img {
+        transform: translateY(.15rem);
+    }
+
+    img[aria-hidden="true"] {
+        display: none;
+    }
+
     .inline {
         display: flex;
         justify-content: center;

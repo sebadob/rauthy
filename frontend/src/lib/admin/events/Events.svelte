@@ -41,28 +41,26 @@
     });
 
     $effect(() => {
-        if (events) {
-            switch (level) {
-                case 'info':
-                    eventsFiltered = events;
-                    break;
-                case 'notice':
-                    eventsFiltered = events.filter(
-                        evt => evt.typ === 'Test'
-                            || evt.level === 'notice'
-                            || evt.level === 'warning'
-                            || evt.level === 'critical'
-                    );
-                    break;
-                case 'warning':
-                    eventsFiltered = events.filter(
-                        evt => evt.typ === 'Test' || evt.level === 'warning' || evt.level === 'critical'
-                    );
-                    break;
-                case 'critical':
-                    eventsFiltered = events.filter(evt => evt.typ === 'Test' || evt.level === 'critical');
-                    break;
-            }
+        switch (level) {
+            case 'info':
+                eventsFiltered = events;
+                break;
+            case 'notice':
+                eventsFiltered = events.filter(
+                    evt => evt.typ === 'Test'
+                        || evt.level === 'notice'
+                        || evt.level === 'warning'
+                        || evt.level === 'critical'
+                );
+                break;
+            case 'warning':
+                eventsFiltered = events.filter(
+                    evt => evt.typ === 'Test' || evt.level === 'warning' || evt.level === 'critical'
+                );
+                break;
+            case 'critical':
+                eventsFiltered = events.filter(evt => evt.typ === 'Test' || evt.level === 'critical');
+                break;
         }
     });
 
@@ -89,7 +87,8 @@
 
         es.onmessage = ev => {
             if (ev.data) {
-                let event = JSON.parse(ev.data);
+                let event: EventResponse = JSON.parse(ev.data);
+                console.log('event', event.id);
                 // keep max 500 events in the UI to not consume endless amounts of memory
                 events = [event, ...events.slice(-499)];
             }

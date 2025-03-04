@@ -34,6 +34,8 @@
             value = s === 'true';
         } else if (typeof value === 'string') {
             value = s;
+        } else if (typeof value === 'number') {
+            value = Number.parseInt(s);
         } else {
             value = JSON.parse(s);
         }

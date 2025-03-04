@@ -11,7 +11,7 @@
     import getPkce from "oauth-pkce";
     import {
         PKCE_VERIFIER_UPSTREAM,
-        TPL_AUTH_PROVIDERS,
+        TPL_AUTH_PROVIDERS, TPL_CLIENT_LOGO_UPDATED,
         TPL_CLIENT_NAME,
         TPL_CLIENT_URL,
         TPL_CSRF_TOKEN,
@@ -53,6 +53,8 @@
 
     let clientId = useParam('client_id').get();
     let clientName = $state('');
+    // we can't use undefined to avoid a JSON error in the Template component
+    let clientLogoUpdated = $state(-1);
     let clientUri = $state(isDev ? '/auth/v1' : '');
     let redirectUri = useParam('redirect_uri').get();
     let nonce = useParam('nonce').get();
@@ -379,6 +381,7 @@
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers}/>
 <Template id={TPL_CLIENT_NAME} bind:value={clientName}/>
 <Template id={TPL_CLIENT_URL} bind:value={clientUri}/>
+<Template id={TPL_CLIENT_LOGO_UPDATED} bind:value={clientLogoUpdated}/>
 <Template id={TPL_CSRF_TOKEN} bind:value={csrfToken}/>
 <Template id={TPL_LOGIN_ACTION} bind:value={loginAction}/>
 <Template id={TPL_IS_REG_OPEN} bind:value={isRegOpen}/>
@@ -388,7 +391,7 @@
         <div class="container">
             <div class="head">
                 {#if clientId}
-                    <ClientLogo {clientId}/>
+                    <ClientLogo {clientId} updated={clientLogoUpdated > -1 ? clientLogoUpdated : undefined}/>
                 {/if}
                 {#if clientUri}
                     <a class="home" href={clientUri}>
@@ -584,7 +587,7 @@
     .loginWith {
         display: flex;
         justify-content: center;
-        margin-top: -.8rem;
+        margin-top: -.9rem;
     }
 
     .loginWith > div {
@@ -620,5 +623,12 @@
     .success {
         margin: 0 5px;
         color: hsl(var(--action));
+    }
+
+    @media (max-width: 30rem) {
+        .container {
+            border: none;
+            box-shadow: none;
+        }
     }
 </style>

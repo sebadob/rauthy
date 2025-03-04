@@ -3,19 +3,24 @@
 
     let {
         clientId,
+        updated,
     }: {
         clientId: string,
+        updated: undefined | number,
     } = $props();
 
     let showDefault = $state(false);
+    let src = $derived(updated
+        ? `/auth/v1/clients/${clientId}/logo?updated=${updated}`
+        : `/auth/v1/clients/${clientId}/logo`);
 </script>
 
 <div class="logo">
-    {#if showDefault}
+    {#if showDefault || updated === undefined}
         <RauthyLogo width="100%"/>
     {:else}
         <img
-                src="{`/auth/v1/clients/${clientId}/logo`}"
+                {src}
                 alt="Client Logo"
                 width="100%"
                 height="100%"

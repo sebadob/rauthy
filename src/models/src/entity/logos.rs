@@ -1,5 +1,7 @@
 use crate::database::{Cache, DB};
+use crate::entity::auth_providers::AuthProviderTemplate;
 use actix_web::web;
+use chrono::Utc;
 use hiqlite::{params, Param, Row};
 use image::imageops::FilterType;
 use image::{EncodableLayout, ImageFormat};
@@ -69,6 +71,7 @@ pub struct Logo {
     pub res: LogoRes,
     pub content_type: String,
     pub data: Vec<u8>,
+    pub updated: i64,
 }
 
 impl<'r> From<hiqlite::Row<'r>> for Logo {
@@ -78,6 +81,7 @@ impl<'r> From<hiqlite::Row<'r>> for Logo {
             res: LogoRes::from(row.get::<String>("res")),
             content_type: row.get("content_type"),
             data: row.get("data"),
+            updated: row.get("updated"),
         }
     }
 }
@@ -117,6 +121,9 @@ impl Logo {
 
         DB::client()
             .delete(Cache::App, Self::cache_idx(typ, id))
+            .await?;
+        DB::client()
+            .delete(Cache::App, Self::cache_idx_updated(typ, id))
             .await?;
 
         Ok(())
@@ -161,6 +168,7 @@ impl Logo {
             res: LogoRes::Svg,
             content_type,
             data: Self::sanitize_svg(logo.as_mut_slice())?,
+            updated: Utc::now().timestamp_millis(),
         };
         slf.upsert_self(typ, true).await
     }
@@ -209,6 +217,7 @@ impl Logo {
                 res: logo_res, // will not always be `Medium`, if the given size is smaller than that
                 content_type: CONTENT_TYPE_WEBP.to_string(),
                 data: buf.into_inner(),
+                updated: Utc::now().timestamp_millis(),
             };
             slf_medium.upsert_self(&typ, false).await?;
 
@@ -221,6 +230,7 @@ impl Logo {
                 res: LogoRes::Small,
                 content_type: slf_medium.content_type,
                 data: buf.into_inner(),
+                updated: Utc::now().timestamp_millis(),
             }
             .upsert_self(&typ, true)
             .await?;
@@ -240,15 +250,17 @@ impl Logo {
             let sql = match typ {
                 LogoType::Client => {
                     r#"
-INSERT INTO client_logos (client_id, res, content_type, data)
-VALUES ($1, $2, $3, $4)
-ON CONFLICT(client_id, res) DO UPDATE SET content_type = $3, data = $4"#
+INSERT INTO client_logos (client_id, res, content_type, data, updated)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT(client_id, res) DO UPDATE
+SET content_type = $3, data = $4, updated = $5"#
                 }
                 LogoType::AuthProvider => {
                     r#"
-INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data)
-VALUES ($1, $2, $3, $4)
-ON CONFLICT(auth_provider_id, res) DO UPDATE SET content_type = $3, data = $4"#
+INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data, updated)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT(auth_provider_id, res) DO UPDATE
+SET content_type = $3, data = $4, updated = $5"#
                 }
             };
 
@@ -259,7 +271,8 @@ ON CONFLICT(auth_provider_id, res) DO UPDATE SET content_type = $3, data = $4"#
                         self.id.clone(),
                         res,
                         self.content_type.clone(),
-                        self.data.clone()
+                        self.data.clone(),
+                        self.updated
                     ),
                 )
                 .await?;
@@ -268,27 +281,29 @@ ON CONFLICT(auth_provider_id, res) DO UPDATE SET content_type = $3, data = $4"#
                 LogoType::Client => {
                     query!(
                         r#"
-INSERT INTO client_logos (client_id, res, content_type, data)
-VALUES ($1, $2, $3, $4)
+INSERT INTO client_logos (client_id, res, content_type, data, updated)
+VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT(client_id, res) DO UPDATE
-SET content_type = $3, data = $4"#,
+SET content_type = $3, data = $4, updated = $5"#,
                         self.id,
                         res,
                         self.content_type,
                         self.data,
+                        self.updated
                     )
                 }
                 LogoType::AuthProvider => {
                     query!(
                         r#"
-INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data)
-VALUES ($1, $2, $3, $4)
+INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data, updated)
+VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT(auth_provider_id, res) DO UPDATE
-SET content_type = $3, data = $4"#,
+SET content_type = $3, data = $4, updated = $5"#,
                         self.id,
                         res,
                         self.content_type,
                         self.data,
+                        self.updated
                     )
                 }
             }
@@ -305,6 +320,18 @@ SET content_type = $3, data = $4"#,
                     CACHE_TTL_APP,
                 )
                 .await?;
+            DB::client()
+                .put(
+                    Cache::App,
+                    Self::cache_idx_updated(typ, &self.id),
+                    &Some(self.updated),
+                    CACHE_TTL_APP,
+                )
+                .await?;
+
+            if typ == &LogoType::AuthProvider {
+                AuthProviderTemplate::update_cache().await?;
+            }
         }
 
         Ok(())
@@ -318,13 +345,13 @@ SET content_type = $3, data = $4"#,
             let sql = match typ {
                 LogoType::Client => {
                     r#"
-SELECT client_id AS id, res, content_type, data
+SELECT client_id AS id, res, content_type, data, updated
 FROM client_logos
 WHERE client_id = $1 AND (res = $2 OR res = $3)"#
                 }
                 LogoType::AuthProvider => {
                     r#"
-SELECT auth_provider_id AS id, res, content_type, data
+SELECT auth_provider_id AS id, res, content_type, data, updated
 FROM auth_provider_logos
 WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#
                 }
@@ -338,7 +365,7 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#
                     query_as!(
                         Self,
                         r#"
-SELECT client_id AS id, res, content_type, data
+SELECT client_id AS id, res, content_type, data, updated
 FROM client_logos
 WHERE client_id = $1 AND (res = $2 OR res = $3)"#,
                         id,
@@ -352,7 +379,7 @@ WHERE client_id = $1 AND (res = $2 OR res = $3)"#,
                     query_as!(
                         Self,
                         r#"
-SELECT auth_provider_id AS id, res, content_type, data
+SELECT auth_provider_id AS id, res, content_type, data, updated
 FROM auth_provider_logos
 WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
                         id,
@@ -368,7 +395,7 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
         Ok(slf)
     }
 
-    // special fn because we would only cache the small logos
+    // special fn because we only want to cache the small logos
     pub async fn find_cached(id: &str, typ: &LogoType) -> Result<Self, ErrorResponse> {
         let client = DB::client();
         if let Some(slf) = client.get(Cache::App, Self::cache_idx(typ, id)).await? {
@@ -383,6 +410,61 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#,
 
         Ok(slf)
     }
+
+    pub async fn find_updated(id: &str, typ: &LogoType) -> Result<Option<i64>, ErrorResponse> {
+        let client = DB::client();
+        if let Some(updated) = client
+            .get(Cache::App, Self::cache_idx_updated(typ, id))
+            .await?
+        {
+            return Ok(updated);
+        }
+
+        let updated = if is_hiqlite() {
+            let sql = match typ {
+                LogoType::Client => "SELECT updated FROM client_logos WHERE client_id = $1 LIMIT 1",
+                LogoType::AuthProvider => {
+                    "SELECT updated FROM auth_provider_logos WHERE auth_provider_id = $1 LIMIT 1"
+                }
+            };
+            DB::client()
+                .query_raw(sql, params!(id))
+                .await?
+                .first_mut()
+                .map(|r| r.get::<i64>("updated"))
+        } else {
+            match typ {
+                LogoType::Client => query!(
+                    "SELECT updated FROM client_logos WHERE client_id = $1 LIMIT 1",
+                    id,
+                )
+                .fetch_all(DB::conn())
+                .await?
+                .first()
+                .map(|r| r.updated),
+
+                LogoType::AuthProvider => query!(
+                    "SELECT updated FROM auth_provider_logos WHERE auth_provider_id = $1 LIMIT 1",
+                    id,
+                )
+                .fetch_all(DB::conn())
+                .await?
+                .first()
+                .map(|r| r.updated),
+            }
+        };
+
+        client
+            .put(
+                Cache::App,
+                Self::cache_idx_updated(typ, id),
+                &updated,
+                CACHE_TTL_APP,
+            )
+            .await?;
+
+        Ok(updated)
+    }
 }
 
 impl Logo {
@@ -391,6 +473,14 @@ impl Logo {
         match typ {
             LogoType::Client => format!("{}_{}", IDX_CLIENT_LOGO, id),
             LogoType::AuthProvider => format!("{}_{}", IDX_AUTH_PROVIDER_LOGO, id),
+        }
+    }
+
+    #[inline]
+    fn cache_idx_updated(typ: &LogoType, id: &str) -> String {
+        match typ {
+            LogoType::Client => format!("{}_{}_updated", IDX_CLIENT_LOGO, id),
+            LogoType::AuthProvider => format!("{}_{}_updated", IDX_AUTH_PROVIDER_LOGO, id),
         }
     }
 

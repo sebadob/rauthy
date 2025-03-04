@@ -10,7 +10,7 @@
     %sveltekit.head%
 </head>
 <body>
-<div class="hidden" aria-hidden="true" style="display: none">
+<div class="hidden" aria-hidden="true">
     {%- for tpl in templates -%}
     <template id="{{ tpl.id() }}">{{ tpl.inner()|safe }}</template>
     {%- endfor %}

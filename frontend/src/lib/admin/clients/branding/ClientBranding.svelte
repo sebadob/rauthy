@@ -80,6 +80,7 @@
             await fetchDelete(`/auth/v1/clients/${client.id}/logo`);
 
             await fetchTheme();
+            logoKey = genKey();
             success = true;
             setTimeout(() => {
                 success = false;

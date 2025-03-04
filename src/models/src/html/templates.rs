@@ -63,6 +63,7 @@ pub enum HtmlTemplate {
     AuthProviders(String),
     ClientName(String),
     ClientUrl(String),
+    ClientLogoUpdated(Option<i64>),
     CsrfToken(String),
     EmailOld(String),
     EmailNew(String),
@@ -91,6 +92,10 @@ impl HtmlTemplate {
                 let json = AuthProviderTemplate::get_all_json_template().await?;
                 Ok((Self::AuthProviders(json), None))
             }
+            "tpl_client_logo_updated" => Ok((
+                Self::ClientLogoUpdated(Some(Utc::now().timestamp_millis())),
+                None,
+            )),
             "tpl_csrf_token" => {
                 if let Some(s) = session {
                     Ok((Self::CsrfToken(s.csrf_token), None))
@@ -169,6 +174,7 @@ impl HtmlTemplate {
             Self::AuthProviders(_) => "tpl_auth_providers",
             Self::ClientName(_) => "tpl_client_name",
             Self::ClientUrl(_) => "tpl_client_url",
+            Self::ClientLogoUpdated(_) => "tpl_client_logo_updated",
             Self::CsrfToken(_) => "tpl_csrf_token",
             Self::EmailOld(_) => "tpl_email_old",
             Self::EmailNew(_) => "tpl_email_new",
@@ -190,6 +196,7 @@ impl HtmlTemplate {
             Self::AuthProviders(i) => i.to_string(),
             Self::ClientName(i) => i.to_string(),
             Self::ClientUrl(i) => i.to_string(),
+            Self::ClientLogoUpdated(i) => i.map(|i| i.to_string()).unwrap_or_default(),
             Self::CsrfToken(i) => i.to_string(),
             Self::EmailOld(i) => i.to_string(),
             Self::EmailNew(i) => i.to_string(),

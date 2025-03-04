@@ -34,6 +34,7 @@ use rauthy_models::entity::devices::DeviceAuthCode;
 use rauthy_models::entity::fed_cm::FedCMLoginStatus;
 use rauthy_models::entity::ip_rate_limit::DeviceIpRateLimit;
 use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPair, JWKS};
+use rauthy_models::entity::logos::{Logo, LogoType};
 use rauthy_models::entity::pow::PowEntity;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::theme::ThemeCssFull;
@@ -154,6 +155,7 @@ pub async fn get_authorize(
     }
 
     let auth_providers_json = AuthProviderTemplate::get_all_json_template().await?;
+    let logo_updated = Logo::find_updated(&client.id, &LogoType::Client).await?;
 
     // if the user is still authenticated and everything is valid -> immediate refresh
     if !force_new_session && principal.validate_session_auth().is_ok() {
@@ -166,6 +168,7 @@ pub async fn get_authorize(
                 HtmlTemplate::AuthProviders(auth_providers_json),
                 HtmlTemplate::ClientName(client.name.unwrap_or_default()),
                 HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
+                HtmlTemplate::ClientLogoUpdated(logo_updated),
                 HtmlTemplate::CsrfToken(csrf.to_string()),
                 HtmlTemplate::IsRegOpen(*OPEN_USER_REG),
                 HtmlTemplate::LoginAction(FrontendAction::Refresh),
@@ -204,6 +207,7 @@ pub async fn get_authorize(
             HtmlTemplate::AuthProviders(auth_providers_json),
             HtmlTemplate::ClientName(client.name.unwrap_or_default()),
             HtmlTemplate::ClientUrl(client.client_uri.unwrap_or_default()),
+            HtmlTemplate::ClientLogoUpdated(logo_updated),
             HtmlTemplate::CsrfToken(session.csrf_token.clone()),
             HtmlTemplate::IsRegOpen(*OPEN_USER_REG),
             HtmlTemplate::LoginAction(action),
