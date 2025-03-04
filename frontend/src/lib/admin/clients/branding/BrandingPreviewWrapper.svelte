@@ -18,7 +18,9 @@
 <div>
     <h2>Preview</h2>
 
-    <Tabs {tabs} bind:selected center/>
+    <div class="tabs">
+        <Tabs {tabs} bind:selected center/>
+    </div>
 
     <div class="preview">
         {#if selected === tabs[0]}
@@ -32,5 +34,9 @@
 <style>
     .preview {
         margin-top: .5rem;
+    }
+
+    .tabs {
+        width: 17rem;
     }
 </style>

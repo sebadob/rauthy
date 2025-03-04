@@ -126,7 +126,7 @@ export const I18nDe: I18n = {
         invalidKeyUsed: "Ungültiger Sicherheitsschlüssel",
         login: "Login",
         mfaAck: "Bestätigt",
-        orLoginWith: "or einloggen mit",
+        orLoginWith: "oder einloggen mit",
         password: "Password",
         passwordForgotten: "Password vergessen?",
         passwordRequest: "Anfordern",
