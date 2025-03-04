@@ -4,7 +4,7 @@ use rauthy_error::ErrorResponse;
 use rauthy_models::database::DB;
 use rauthy_models::entity::logos::{Logo, LogoRes, LogoType};
 use rauthy_models::entity::password::PasswordPolicy;
-use tracing::{info, warn};
+use tracing::warn;
 
 // TODO remove with v0.29.0
 const RAUTHY_DEFAULT_SVG: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="no"?>

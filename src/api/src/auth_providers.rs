@@ -1,6 +1,6 @@
 use crate::{map_auth_step, ReqPrincipal};
 use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE, LOCATION};
-use actix_web::web::Json;
+use actix_web::web::{Json, Query};
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use rauthy_api_types::auth_providers::{
@@ -8,6 +8,7 @@ use rauthy_api_types::auth_providers::{
     ProviderLookupRequest, ProviderRequest,
 };
 use rauthy_api_types::auth_providers::{ProviderLookupResponse, ProviderResponse};
+use rauthy_api_types::generic::LogoParams;
 use rauthy_api_types::users::{UserResponse, WebauthnLoginResponse};
 use rauthy_common::constants::HEADER_JSON;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -359,25 +360,35 @@ pub async fn get_provider_delete_safe(
     get,
     path = "/providers/{id}/img",
     tag = "providers",
+    params(LogoParams),
     responses(
+        (status = 200, description = "Ok"),
         (status = 404, description = "NotFound", body = ErrorResponse),
     ),
 )]
 #[get("/providers/{id}/img")]
-pub async fn get_provider_img(id: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_provider_img(
+    id: web::Path<String>,
+    params: Query<LogoParams>,
+) -> Result<HttpResponse, ErrorResponse> {
     let id = id.into_inner();
     let logo = Logo::find_cached(&id, &LogoType::AuthProvider).await?;
 
-    Ok(HttpResponse::Ok()
-        .insert_header((CONTENT_TYPE, logo.content_type))
-        // clients should cache the logos for 12 hours
-        // this means if a logo has been updated, they receive the new one 12 hours
-        // later in the worst case
-        .insert_header((
-            CACHE_CONTROL,
-            "max-age=43200, stale-while-revalidate=2592000, public",
-        ))
-        .body(logo.data))
+    // we only cache the response if the client properly used the updated param
+    // to never run into issues otherwise
+    if params.updated.is_some() {
+        Ok(HttpResponse::Ok()
+            .insert_header((CONTENT_TYPE, logo.content_type))
+            .insert_header((
+                CACHE_CONTROL,
+                "max-age=31104000, stale-while-revalidate=2592000, public",
+            ))
+            .body(logo.data))
+    } else {
+        Ok(HttpResponse::Ok()
+            .insert_header((CONTENT_TYPE, logo.content_type))
+            .body(logo.data))
+    }
 }
 
 /// PUT upload an image / icon for an auth provider

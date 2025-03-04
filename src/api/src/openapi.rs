@@ -198,6 +198,7 @@ use utoipa::{openapi, OpenApi};
             FedCMAssertionRequest,
             FedCMClientMetadataRequest,
             LoginRequest,
+            LogoParams,
             LogoutRequest,
             MfaAwaitRequest,
             MfaPurpose,

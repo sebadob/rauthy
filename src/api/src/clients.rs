@@ -2,13 +2,14 @@ use crate::ReqPrincipal;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE, WWW_AUTHENTICATE,
 };
-use actix_web::web::Json;
+use actix_web::web::{Json, Query};
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use rauthy_api_types::clients::{
     ClientResponse, ClientSecretResponse, DynamicClientRequest, DynamicClientResponse,
     NewClientRequest, UpdateClientRequest,
 };
+use rauthy_api_types::generic::LogoParams;
 use rauthy_common::constants::{DYN_CLIENT_REG_TOKEN, ENABLE_DYN_CLIENT_REG};
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -291,6 +292,7 @@ pub async fn put_clients(
     get,
     path = "/clients/{id}/logo",
     tag = "clients",
+    params(LogoParams),
     responses(
         (status = 200, description = "Ok"),
         (status = 400, description = "BadRequest", body = ErrorResponse),
@@ -299,31 +301,30 @@ pub async fn put_clients(
     ),
 )]
 #[get("/clients/{id}/logo")]
-pub async fn get_client_logo(id: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_client_logo(
+    id: web::Path<String>,
+    params: Query<LogoParams>,
+) -> Result<HttpResponse, ErrorResponse> {
     let id = id.into_inner();
     debug!("Looking up client logo for id {}", id);
 
-    match Logo::find_cached(&id, &LogoType::Client).await {
-        Ok(logo) => {
-            Ok(HttpResponse::Ok()
-                .insert_header((CONTENT_TYPE, logo.content_type))
-                // clients should cache the logos for 12 hours
-                // this means if a logo has been updated, they receive the new one 12 hours
-                // later in the worst case
-                .insert_header((
-                    CACHE_CONTROL,
-                    "max-age=43200, stale-while-revalidate=2592000, public",
-                ))
-                .body(logo.data))
-        }
-        Err(_) => {
-            debug!("no specific logo for id {}", id);
-            // The UI will use the infinitely cached Rauthy default logo from static assets on error
-            Err(ErrorResponse::new(
-                ErrorResponseType::NotFound,
-                "no custom logo exists",
+    let logo = Logo::find_cached(&id, &LogoType::Client).await?;
+    debug!("Found logo in cache: {:?}", logo.id);
+
+    // we only cache the response if the client properly used the updated param
+    // to never run into issues otherwise
+    if params.updated.is_some() {
+        Ok(HttpResponse::Ok()
+            .insert_header((CONTENT_TYPE, logo.content_type))
+            .insert_header((
+                CACHE_CONTROL,
+                "max-age=31104000, stale-while-revalidate=2592000, public",
             ))
-        }
+            .body(logo.data))
+    } else {
+        Ok(HttpResponse::Ok()
+            .insert_header((CONTENT_TYPE, logo.content_type))
+            .body(logo.data))
     }
 }
 

@@ -39,6 +39,11 @@ pub enum Language {
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
+pub struct LogoParams {
+    pub updated: Option<i64>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
 pub struct PaginationParams {
     pub page_size: Option<u16>,
     pub offset: Option<u16>,
