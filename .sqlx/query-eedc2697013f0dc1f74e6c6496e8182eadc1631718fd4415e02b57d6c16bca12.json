@@ -97,6 +97,11 @@
         "ordinal": 18,
         "name": "federation_uid",
         "type_info": "Varchar"
+      },
+      {
+        "ordinal": 19,
+        "name": "avatar_id",
+        "type_info": "Varchar"
       }
     ],
     "parameters": {
@@ -120,6 +125,7 @@
       true,
       true,
       false,
+      true,
       true,
       true,
       true,

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nINSERT INTO USERS\n(id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,\nlast_login, language, user_expires, auth_provider_id, federation_uid)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
+  "query": "\nINSERT INTO USERS\n(id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,\nlast_login, language, user_expires, auth_provider_id, federation_uid, avatar_id)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)",
   "describe": {
     "columns": [],
     "parameters": {
@@ -18,10 +18,11 @@
         "Varchar",
         "Int8",
         "Varchar",
+        "Varchar",
         "Varchar"
       ]
     },
     "nullable": []
   },
-  "hash": "ceb8ea9d2130d195a25f95f60356167c5520e4988464ee34e82b8625ec6e0b66"
+  "hash": "ebaf0bbc26e39724cf738c5a29add900016b286395721e17b4139cbe9609af43"
 }
