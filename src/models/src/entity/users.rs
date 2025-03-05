@@ -86,6 +86,7 @@ pub struct User {
     pub user_expires: Option<i64>,
     pub auth_provider_id: Option<String>,
     pub federation_uid: Option<String>,
+    pub avatar_id: Option<String>,
 }
 
 impl Debug for User {
@@ -96,7 +97,7 @@ impl Debug for User {
         roles: {}, groups: {:?}, enabled: {}, email_verified: {}, password_expires: {:?}, \
         created_at: {}, last_login: {:?}, last_failed_login: {:?}, failed_login_attempts: {:?}, \
         language: {}, webauthn_user_id: {:?}, user_expires: {:?}, auth_provider_id: {:?}, \
-        federation_uid: {:?}",
+        federation_uid: {:?}, avatar_id: {:?}",
             self.id,
             self.email,
             self.given_name,
@@ -114,7 +115,8 @@ impl Debug for User {
             self.webauthn_user_id,
             self.user_expires,
             self.auth_provider_id,
-            self.federation_uid
+            self.federation_uid,
+            self.avatar_id,
         )
     }
 }
@@ -164,7 +166,7 @@ impl User {
     async fn count_inc() -> Result<(), ErrorResponse> {
         let mut count = Self::count().await?;
         // theoretically, we could have overlaps here, but we don't really care
-        // -> used for dynamic pagination only and SQLite has limited query features
+        // -> used for dynamic pagination only
         count += 1;
         DB::client()
             .put(Cache::App, IDX_USER_COUNT, &count, CACHE_TTL_APP)
@@ -175,7 +177,7 @@ impl User {
     async fn count_dec() -> Result<(), ErrorResponse> {
         let mut count = Self::count().await?;
         // theoretically, we could have overlaps here, but we don't really care
-        // -> used for dynamic pagination only and SQLite has limited query features
+        // -> used for dynamic pagination only
         count -= 1;
         DB::client()
             .put(Cache::App, IDX_USER_COUNT, &count, CACHE_TTL_APP)
@@ -233,6 +235,8 @@ impl User {
 
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
         Session::delete_by_user(&self.id).await?;
+
+        todo!("User::delete -> RETURNING avatar_id and clean up avatar or pre-query and clean in advance");
 
         let client = DB::client();
         if is_hiqlite() {
@@ -621,8 +625,8 @@ OFFSET $2"#,
                     r#"
 INSERT INTO USERS
 (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-last_login, language, user_expires, auth_provider_id, federation_uid)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
+last_login, language, user_expires, auth_provider_id, federation_uid, avatar_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
                     params!(
                         &new_user.id,
                         &new_user.email,
@@ -637,7 +641,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
                         lang,
                         new_user.user_expires,
                         &new_user.auth_provider_id,
-                        &new_user.federation_uid
+                        &new_user.federation_uid,
+                        &new_user.avatar_id
                     ),
                 )
                 .await?;
@@ -646,8 +651,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
                 r#"
 INSERT INTO USERS
 (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-last_login, language, user_expires, auth_provider_id, federation_uid)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
+last_login, language, user_expires, auth_provider_id, federation_uid, avatar_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
                 new_user.id,
                 new_user.email,
                 new_user.given_name,
@@ -662,6 +667,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
                 new_user.user_expires,
                 new_user.auth_provider_id,
                 new_user.federation_uid,
+                new_user.avatar_id,
             )
             .execute(DB::conn())
             .await?;
@@ -706,8 +712,8 @@ UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17
-WHERE id = $18"#,
+auth_provider_id = $16, federation_uid = $17, avatar_id = $18
+WHERE id = $19"#,
             params!(
                 self.email,
                 self.given_name,
@@ -726,6 +732,7 @@ WHERE id = $18"#,
                 self.user_expires,
                 self.auth_provider_id,
                 self.federation_uid,
+                self.avatar_id,
                 self.id
             ),
         ));
@@ -746,8 +753,8 @@ UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17
-WHERE id = $18"#,
+auth_provider_id = $16, federation_uid = $17, avatar_id = $18
+WHERE id = $19"#,
         )
         .bind(&self.email)
         .bind(&self.given_name)
@@ -766,6 +773,7 @@ WHERE id = $18"#,
         .bind(self.user_expires)
         .bind(&self.auth_provider_id)
         .bind(&self.federation_uid)
+        .bind(&self.avatar_id)
         .bind(&self.id)
         .execute(&mut **txn)
         .await?;
@@ -789,8 +797,8 @@ UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17
-WHERE id = $18"#,
+auth_provider_id = $16, federation_uid = $17, avatar_id = $18
+WHERE id = $19"#,
                     params!(
                         &self.email,
                         &self.given_name,
@@ -809,6 +817,7 @@ WHERE id = $18"#,
                         self.user_expires,
                         &self.auth_provider_id,
                         &self.federation_uid,
+                        &self.avatar_id,
                         &self.id
                     ),
                 )
@@ -820,8 +829,8 @@ UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17
-WHERE id = $18"#,
+auth_provider_id = $16, federation_uid = $17, avatar_id = $18
+WHERE id = $19"#,
             )
             .bind(&self.email)
             .bind(&self.given_name)
@@ -840,6 +849,7 @@ WHERE id = $18"#,
             .bind(self.user_expires)
             .bind(&self.auth_provider_id)
             .bind(&self.federation_uid)
+            .bind(&self.avatar_id)
             .bind(&self.id)
             .execute(DB::conn())
             .await?;
@@ -1559,6 +1569,7 @@ impl User {
                 .unwrap_or_default(),
             auth_provider_id: self.auth_provider_id,
             federation_uid: self.federation_uid,
+            avatar_id: self.avatar_id,
         }
     }
 
@@ -1734,6 +1745,7 @@ impl Default for User {
             user_expires: None,
             auth_provider_id: None,
             federation_uid: None,
+            avatar_id: None,
         }
     }
 }
@@ -1782,6 +1794,7 @@ mod tests {
             ),
             auth_provider_id: None,
             federation_uid: None,
+            avatar_id: None,
         };
         let session = Session::try_new(&user, 1, None);
         assert!(session.is_err());
@@ -1840,6 +1853,7 @@ mod tests {
             user_expires: None,
             auth_provider_id: None,
             federation_uid: None,
+            avatar_id: None,
         };
 
         // enabled

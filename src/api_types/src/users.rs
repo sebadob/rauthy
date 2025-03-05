@@ -386,6 +386,7 @@ pub struct UserResponse {
     pub user_values: UserValuesResponse,
     pub auth_provider_id: Option<String>,
     pub federation_uid: Option<String>,
+    pub avatar_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
