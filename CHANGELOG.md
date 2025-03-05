@@ -45,10 +45,10 @@ dependencies.
 #### Svelte 5 Migration
 
 The whole UI has been migrated to Svelte 5 + Typescript. Many parts and components have been re-written from the ground
-up to provide a better DX and maintainability.
+up to provide a better DX and maintainability in the future.
 
 This whole migration comes with a lot of changes, most of them under the hood regarding performance and efficiency.
-There are so many changes, that it does not make much sense to list them all here, but the TL/DR is:
+There are so many changes, that it does not make much sense to list them all here, but the TL;DR is:
 
 - The whole UI is now based on Svelte 5 + TS with improved performance.
 - The DX and UX has been improved a lot.
