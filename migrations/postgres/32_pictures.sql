@@ -1,7 +1,7 @@
-CREATE TABLE avatars
+CREATE TABLE pictures
 (
     id           VARCHAR NOT NULL
-        CONSTRAINT avatars_pk
+        CONSTRAINT pictures_pk
             PRIMARY KEY,
     updated      BIGINT  NOT NULL,
     content_type VARCHAR NOT NULL,
@@ -10,4 +10,4 @@ CREATE TABLE avatars
 );
 
 ALTER TABLE users
-    ADD avatar_id VARCHAR;
+    ADD picture_id VARCHAR;

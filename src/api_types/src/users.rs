@@ -386,7 +386,7 @@ pub struct UserResponse {
     pub user_values: UserValuesResponse,
     pub auth_provider_id: Option<String>,
     pub federation_uid: Option<String>,
-    pub avatar_id: Option<String>,
+    pub picture_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
@@ -395,7 +395,7 @@ pub struct UserResponseSimple {
     pub email: String,
     pub created_at: i64,
     pub last_login: Option<i64>,
-    pub avatar_id: Option<String>,
+    pub picture_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]

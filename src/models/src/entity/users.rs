@@ -86,7 +86,7 @@ pub struct User {
     pub user_expires: Option<i64>,
     pub auth_provider_id: Option<String>,
     pub federation_uid: Option<String>,
-    pub avatar_id: Option<String>,
+    pub picture_id: Option<String>,
 }
 
 impl Debug for User {
@@ -97,7 +97,7 @@ impl Debug for User {
         roles: {}, groups: {:?}, enabled: {}, email_verified: {}, password_expires: {:?}, \
         created_at: {}, last_login: {:?}, last_failed_login: {:?}, failed_login_attempts: {:?}, \
         language: {}, webauthn_user_id: {:?}, user_expires: {:?}, auth_provider_id: {:?}, \
-        federation_uid: {:?}, avatar_id: {:?}",
+        federation_uid: {:?}, picture_id: {:?}",
             self.id,
             self.email,
             self.given_name,
@@ -116,7 +116,7 @@ impl Debug for User {
             self.user_expires,
             self.auth_provider_id,
             self.federation_uid,
-            self.avatar_id,
+            self.picture_id,
         )
     }
 }
@@ -236,7 +236,7 @@ impl User {
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
         Session::delete_by_user(&self.id).await?;
 
-        todo!("User::delete -> RETURNING avatar_id and clean up avatar or pre-query and clean in advance");
+        todo!("User::delete -> RETURNING picture_id and clean up avatar or pre-query and clean in advance");
 
         let client = DB::client();
         if is_hiqlite() {
@@ -372,7 +372,7 @@ impl User {
             DB::client()
                 .query_as(
                     r#"
-SELECT id, email, created_at, last_login, avatar_id
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at ASC"#,
                     params!(),
@@ -382,7 +382,7 @@ ORDER BY created_at ASC"#,
             sqlx::query_as!(
                 UserResponseSimple,
                 r#"
-SELECT id, email, created_at, last_login, avatar_id
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at ASC"#
             )
@@ -480,7 +480,7 @@ ORDER BY created_at ASC"#
                     let mut res = DB::client()
                         .query_as(
                             r#"
-SELECT id, email, created_at, last_login, avatar_id
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 WHERE created_at <= $1 AND id != $2
 ORDER BY created_at DESC
@@ -496,7 +496,7 @@ OFFSET $4"#,
                     let mut res = sqlx::query_as!(
                         UserResponseSimple,
                         r#"
-SELECT id, email, created_at, last_login, avatar_id
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 WHERE created_at <= $1 AND id != $2
 ORDER BY created_at DESC
@@ -519,7 +519,7 @@ OFFSET $4"#,
                     DB::client()
                         .query_as(
                             r#"
-SELECT id, email, created_at, last_login, avatar_id
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 WHERE created_at >= $1 AND id != $2
 ORDER BY created_at ASC
@@ -532,7 +532,7 @@ OFFSET $4"#,
                     sqlx::query_as!(
                         UserResponseSimple,
                         r#"
-SELECT id, email, created_at, last_login, avatar_id
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 WHERE created_at >= $1 AND id != $2
 ORDER BY created_at ASC
@@ -555,7 +555,7 @@ OFFSET $4"#,
                 let mut res = DB::client()
                     .query_as(
                         r#"
-SELECT id, email, created_at, last_login, avatar_id
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at DESC
 LIMIT $1
@@ -570,7 +570,7 @@ OFFSET $2"#,
                 let mut res = sqlx::query_as!(
                     UserResponseSimple,
                     r#"
-SELECT id, email, created_at, last_login, avatar_id
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at DESC
 LIMIT $1
@@ -590,7 +590,7 @@ OFFSET $2"#,
                 DB::client()
                     .query_as(
                         r#"
-SELECT id, email, created_at, last_login, avatar_id
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at ASC
 LIMIT $1
@@ -602,7 +602,7 @@ OFFSET $2"#,
                 sqlx::query_as!(
                     UserResponseSimple,
                     r#"
-SELECT id, email, created_at, last_login, avatar_id
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at ASC
 LIMIT $1
@@ -631,7 +631,7 @@ OFFSET $2"#,
                     r#"
 INSERT INTO USERS
 (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-last_login, language, user_expires, auth_provider_id, federation_uid, avatar_id)
+last_login, language, user_expires, auth_provider_id, federation_uid, picture_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
                     params!(
                         &new_user.id,
@@ -648,7 +648,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
                         new_user.user_expires,
                         &new_user.auth_provider_id,
                         &new_user.federation_uid,
-                        &new_user.avatar_id
+                        &new_user.picture_id
                     ),
                 )
                 .await?;
@@ -657,7 +657,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
                 r#"
 INSERT INTO USERS
 (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-last_login, language, user_expires, auth_provider_id, federation_uid, avatar_id)
+last_login, language, user_expires, auth_provider_id, federation_uid, picture_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
                 new_user.id,
                 new_user.email,
@@ -673,7 +673,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
                 new_user.user_expires,
                 new_user.auth_provider_id,
                 new_user.federation_uid,
-                new_user.avatar_id,
+                new_user.picture_id,
             )
             .execute(DB::conn())
             .await?;
@@ -718,7 +718,7 @@ UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17, avatar_id = $18
+auth_provider_id = $16, federation_uid = $17, picture_id = $18
 WHERE id = $19"#,
             params!(
                 self.email,
@@ -738,7 +738,7 @@ WHERE id = $19"#,
                 self.user_expires,
                 self.auth_provider_id,
                 self.federation_uid,
-                self.avatar_id,
+                self.picture_id,
                 self.id
             ),
         ));
@@ -759,7 +759,7 @@ UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17, avatar_id = $18
+auth_provider_id = $16, federation_uid = $17, picture_id = $18
 WHERE id = $19"#,
         )
         .bind(&self.email)
@@ -779,7 +779,7 @@ WHERE id = $19"#,
         .bind(self.user_expires)
         .bind(&self.auth_provider_id)
         .bind(&self.federation_uid)
-        .bind(&self.avatar_id)
+        .bind(&self.picture_id)
         .bind(&self.id)
         .execute(&mut **txn)
         .await?;
@@ -803,7 +803,7 @@ UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17, avatar_id = $18
+auth_provider_id = $16, federation_uid = $17, picture_id = $18
 WHERE id = $19"#,
                     params!(
                         &self.email,
@@ -823,7 +823,7 @@ WHERE id = $19"#,
                         self.user_expires,
                         &self.auth_provider_id,
                         &self.federation_uid,
-                        &self.avatar_id,
+                        &self.picture_id,
                         &self.id
                     ),
                 )
@@ -835,7 +835,7 @@ UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17, avatar_id = $18
+auth_provider_id = $16, federation_uid = $17, picture_id = $18
 WHERE id = $19"#,
             )
             .bind(&self.email)
@@ -855,7 +855,7 @@ WHERE id = $19"#,
             .bind(self.user_expires)
             .bind(&self.auth_provider_id)
             .bind(&self.federation_uid)
-            .bind(&self.avatar_id)
+            .bind(&self.picture_id)
             .bind(&self.id)
             .execute(DB::conn())
             .await?;
@@ -894,7 +894,7 @@ WHERE id = $19"#,
                     DB::client()
                         .query_as(
                             r#"
-SELECT id, email, created_at, last_login, avatar_id
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 WHERE id LIKE $1
 ORDER BY created_at ASC
@@ -906,7 +906,7 @@ LIMIT $2"#,
                     query_as!(
                         UserResponseSimple,
                         r#"
-SELECT id, email, created_at, last_login, avatar_id
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 WHERE id LIKE $1
 ORDER BY created_at ASC
@@ -923,7 +923,7 @@ LIMIT $2"#,
                     DB::client()
                         .query_as(
                             r#"
-SELECT id, email, created_at, last_login, avatar_id
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 WHERE email LIKE $1
 ORDER BY created_at ASC
@@ -935,7 +935,7 @@ LIMIT $2"#,
                     query_as!(
                         UserResponseSimple,
                         r#"
-SELECT id, email, created_at, last_login, avatar_id
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 WHERE email LIKE $1
 ORDER BY created_at ASC
@@ -1575,7 +1575,7 @@ impl User {
                 .unwrap_or_default(),
             auth_provider_id: self.auth_provider_id,
             federation_uid: self.federation_uid,
-            avatar_id: self.avatar_id,
+            picture_id: self.picture_id,
         }
     }
 
@@ -1751,7 +1751,7 @@ impl Default for User {
             user_expires: None,
             auth_provider_id: None,
             federation_uid: None,
-            avatar_id: None,
+            picture_id: None,
         }
     }
 }
@@ -1763,7 +1763,7 @@ impl From<User> for UserResponseSimple {
             email: u.email,
             created_at: u.created_at,
             last_login: u.last_login,
-            avatar_id: u.avatar_id,
+            picture_id: u.picture_id,
         }
     }
 }
@@ -1801,7 +1801,7 @@ mod tests {
             ),
             auth_provider_id: None,
             federation_uid: None,
-            avatar_id: None,
+            picture_id: None,
         };
         let session = Session::try_new(&user, 1, None);
         assert!(session.is_err());
@@ -1860,7 +1860,7 @@ mod tests {
             user_expires: None,
             auth_provider_id: None,
             federation_uid: None,
-            avatar_id: None,
+            picture_id: None,
         };
 
         // enabled

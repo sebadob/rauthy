@@ -100,7 +100,7 @@
       },
       {
         "ordinal": 19,
-        "name": "avatar_id",
+        "name": "picture_id",
         "type_info": "Varchar"
       }
     ],

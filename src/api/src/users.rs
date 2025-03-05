@@ -461,6 +461,38 @@ pub async fn put_user_attr(
     Ok(HttpResponse::Ok().json(UserAttrValuesResponse { values }))
 }
 
+/// Returns the additional custom attributes for the given user id
+#[utoipa::path(
+    get,
+    path = "/users/{user_id}/picture/{picture_id}",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[get("/users/{user_id}/picture/{picture_id}")]
+pub async fn get_user_picture(
+    path: web::Path<(String, String)>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    let (user_id, picture_id) = path.into_inner();
+
+    // TODO config var for all public avatars
+
+    if let Err(err) = principal.validate_user_or_admin(&user_id) {
+        if principal
+            .validate_api_key(AccessGroup::Users, AccessRights::Read)
+            .is_err()
+        {
+            return Err(err);
+        }
+    }
+
+    todo!()
+}
+
 /// GET all devices for this user linked via the `device_code` flow
 #[utoipa::path(
     get,
