@@ -2,12 +2,103 @@
 
 ## UNRELEASED
 
+### Breaking
+
+#### Custom Client Branding
+
+With the migration to Svelte 5 (mentioned below), the way theming is done has been changed from the ground up in such
+a way, that it is not possible to migrate possibly existing custom client brandings. This means that you will lose and
+need to re-create a possibly existing custom branding with this version.
+
+#### Changed header names for session CSRF and password reset tokens
+
+TODO
+
+#### Paginated Users / Sessions
+
+This may only concern you if you are doing direct API calls to `GET` users or sessions on a very big Rauthy instance
+in combination with server side pagination. When you added `backwards=true` before, the offset of a single page has
+been added automatically in the backend. This is not the case anymore to provide more flexibility with this API. You
+need to add the `offset` yourself now while going `backwards`.
+
+[#732](https://github.com/sebadob/rauthy/pull/732)
+
+### Security
+
+#### CVE-2025-24898
+
+Even though the vulnerable code blocks have not been used, the `openssl` and `openssl-sys` dependencies have been bumped
+to fix [CVE-2025-24898](https://nvd.nist.gov/vuln/detail/CVE-2025-24898).
+
+[#717](https://github.com/sebadob/rauthy/pull/717)
+
+#### GHSA-67mh-4wv8-2f99
+
+This could have only been affecting dev environments, not any production build,
+but [GHSA-67mh-4wv8-2f99](https://github.com/advisories/GHSA-67mh-4wv8-2f99) has been fixed by bumping frontend
+dependencies.
+
+[#735](https://github.com/sebadob/rauthy/pull/735)
+
 ### Changes
+
+#### Svelte 5 Migration
+
+The whole UI has been migrated to Svelte 5 + Typescript. Many parts and components have been re-written from the ground
+up to provide a better DX and maintainability.
+
+This whole migration comes with a lot of changes, most of them under the hood regarding performance and efficiency.
+There are so many changes, that it does not make much sense to list them all here, but the TL/DR is:
+
+- The whole UI is now based on Svelte 5 + TS with improved performance.
+- The DX and UX has been improved a lot.
+- Accessibility has been improved by a huge margin.
+- Rauthy now comes with a light and dark mode, even for the custom client branding login site.
+- We have a new logo, which makes it a lot easier to identify Rauthy in a tab overview and so on.
+- The whole UI is now fully responsive and usable even down to mobile devices.
+- The whole design of the UI has been changed in a way that most components and payloads can now be cache infinitely.
+- The engine for server side rendering of the static HTML content has been migrated
+  from [askama](https://github.com/rinja-rs/askama) to [rinja](https://github.com/rinja-rs/rinja) (based on askama with
+  lots of improvements).
+- The backend now comes with caching and dynamic pre-compression of all dynamic SSR HTML content.
+- The way i18n is done has been changed a lot and moved from the backend into a type-checked frontend file to make
+  it a bit easier to get into and provide caching again.
+- The admin UI can now be translated as well. The i18n for common user sites and the admin UI are split for reduced
+  payloads for most users. Currently, only `en` and `de` exist for the Admin UI, but these can be extended easily in
+  the future as soon as someone provides a PR. They are also independent with the only requirement that a common i18n
+  must exist before an admin i18n. (Translations for E-Mails are still in the backend of course)
+- Part of the state for the Admin UI has been moved into the URL, which makes it possible to copy & paste most links
+  and actually end up where you were before.
+
+NOTICE: Since the whole UI has basically been re-written, or at least almost every single line has been touched, the
+new UI can be seen as in beta state. If you have any problems with it, please open an issue.
+
+[#642](https://github.com/sebadob/rauthy/issues/642)
+
+#### Static HTML + prepared queries added to version control
+
+To make it possible to build Rauthy from source in environments like e.g. FreeBSD, all pre-built static HTML files have
+been added to version control, even though they are built dynamically each time in release pipelines. In additional, all
+DB queries used by `sqlx` are added to version control as well.
+
+The reason is that the UI cannot be built in certain environments. With these files checked-in, you can build from
+source with just `cargo build --release` by having Rust available. You don't need to build the UI or have a Postgres
+running anymore, if you only care about building from source.
 
 #### I18n - Korean
 
 Korean has been added to the translations for all user-facing UI parts.
 [#670](https://github.com/sebadob/rauthy/pull/670)
+
+#### Manual `Debug` impls
+
+For types in the background, that hold sensitive data like passwords or client secrets, manual impls for `Debug` have
+been added to make sure that no sensitive information can leak into logs with `LOG_LEVEL=debug`.
+
+CAUTION: If you enable `HQL_LOG_STATEMENTS=true` for DB statement logging, it is guaranteed that you will see sensitive
+information in logs sooner or later, so be very careful when using this in production.
+
+[#708](https://github.com/sebadob/rauthy/pull/708)
 
 ### Bugfix
 
@@ -21,6 +112,11 @@ Korean has been added to the translations for all user-facing UI parts.
 - Fixed a bug in the UI - Custom User Attributed: When only a single existing attributed has been deleted, the
   list would not properly update and remove it.
   [#695](https://github.com/sebadob/rauthy/pull/695)
+- Type information has been missing for a few endpoints in the OpenAPI definition, which have been fixed in various
+  PRs.
+- A bug has been fixed where the `/logout` endpoint did not correctly forward the optional `state`, if it has been
+  initiated by a downstream client.
+  [#690](https://github.com/sebadob/rauthy/pull/690)
 
 ## v0.27.3
 

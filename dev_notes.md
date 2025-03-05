@@ -31,7 +31,6 @@
 
 ### Changelog TODO
 
-- breaking change for GET users / sessions paginated -> offset + backwards
 - breaking: changed header name for csrf token + pwd csrf token
 
 ## Stage 1 - essentials
