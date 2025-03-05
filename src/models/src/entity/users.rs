@@ -371,14 +371,20 @@ impl User {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as(
-                    "SELECT id, email, created_at, last_login FROM users ORDER BY created_at ASC",
+                    r#"
+SELECT id, email, created_at, last_login, avatar_id
+FROM users
+ORDER BY created_at ASC"#,
                     params!(),
                 )
                 .await?
         } else {
             sqlx::query_as!(
                 UserResponseSimple,
-                "SELECT id, email, created_at, last_login FROM users ORDER BY created_at ASC"
+                r#"
+SELECT id, email, created_at, last_login, avatar_id
+FROM users
+ORDER BY created_at ASC"#
             )
             .fetch_all(DB::conn())
             .await?
@@ -474,7 +480,7 @@ impl User {
                     let mut res = DB::client()
                         .query_as(
                             r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, avatar_id
 FROM users
 WHERE created_at <= $1 AND id != $2
 ORDER BY created_at DESC
@@ -490,7 +496,7 @@ OFFSET $4"#,
                     let mut res = sqlx::query_as!(
                         UserResponseSimple,
                         r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, avatar_id
 FROM users
 WHERE created_at <= $1 AND id != $2
 ORDER BY created_at DESC
@@ -513,7 +519,7 @@ OFFSET $4"#,
                     DB::client()
                         .query_as(
                             r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, avatar_id
 FROM users
 WHERE created_at >= $1 AND id != $2
 ORDER BY created_at ASC
@@ -526,7 +532,7 @@ OFFSET $4"#,
                     sqlx::query_as!(
                         UserResponseSimple,
                         r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, avatar_id
 FROM users
 WHERE created_at >= $1 AND id != $2
 ORDER BY created_at ASC
@@ -549,7 +555,7 @@ OFFSET $4"#,
                 let mut res = DB::client()
                     .query_as(
                         r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, avatar_id
 FROM users
 ORDER BY created_at DESC
 LIMIT $1
@@ -564,7 +570,7 @@ OFFSET $2"#,
                 let mut res = sqlx::query_as!(
                     UserResponseSimple,
                     r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, avatar_id
 FROM users
 ORDER BY created_at DESC
 LIMIT $1
@@ -584,7 +590,7 @@ OFFSET $2"#,
                 DB::client()
                     .query_as(
                         r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, avatar_id
 FROM users
 ORDER BY created_at ASC
 LIMIT $1
@@ -596,7 +602,7 @@ OFFSET $2"#,
                 sqlx::query_as!(
                     UserResponseSimple,
                     r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, avatar_id
 FROM users
 ORDER BY created_at ASC
 LIMIT $1
@@ -888,7 +894,7 @@ WHERE id = $19"#,
                     DB::client()
                         .query_as(
                             r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, avatar_id
 FROM users
 WHERE id LIKE $1
 ORDER BY created_at ASC
@@ -900,7 +906,7 @@ LIMIT $2"#,
                     query_as!(
                         UserResponseSimple,
                         r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, avatar_id
 FROM users
 WHERE id LIKE $1
 ORDER BY created_at ASC
@@ -917,7 +923,7 @@ LIMIT $2"#,
                     DB::client()
                         .query_as(
                             r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, avatar_id
 FROM users
 WHERE email LIKE $1
 ORDER BY created_at ASC
@@ -929,7 +935,7 @@ LIMIT $2"#,
                     query_as!(
                         UserResponseSimple,
                         r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, avatar_id
 FROM users
 WHERE email LIKE $1
 ORDER BY created_at ASC
@@ -1751,12 +1757,13 @@ impl Default for User {
 }
 
 impl From<User> for UserResponseSimple {
-    fn from(value: User) -> Self {
+    fn from(u: User) -> Self {
         Self {
-            id: value.id,
-            email: value.email,
-            created_at: value.created_at,
-            last_login: value.last_login,
+            id: u.id,
+            email: u.email,
+            created_at: u.created_at,
+            last_login: u.last_login,
+            avatar_id: u.avatar_id,
         }
     }
 }

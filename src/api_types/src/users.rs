@@ -395,6 +395,7 @@ pub struct UserResponseSimple {
     pub email: String,
     pub created_at: i64,
     pub last_login: Option<i64>,
+    pub avatar_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]

@@ -90,6 +90,7 @@ export interface UserResponseSimple {
     email: string,
     created_at: number,
     last_login?: number,
+    avatar_id?: number,
 }
 
 export interface UserResponse {
@@ -113,6 +114,7 @@ export interface UserResponse {
     user_values: UserValuesResponse,
     auth_provider_id?: string,
     federation_uid?: string,
+    avatar_id?: string,
 }
 
 export interface UserValuesResponse {
