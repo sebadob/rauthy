@@ -78,6 +78,7 @@ pub fn base64_url_no_pad_decode(b64: &str) -> Result<Vec<u8>, ErrorResponse> {
         .map_err(|_| ErrorResponse::new(ErrorResponseType::BadRequest, "B64 decoding error"))
 }
 
+#[inline(always)]
 pub fn new_store_id() -> String {
     get_rand(24)
 }

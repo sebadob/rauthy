@@ -1,11 +1,10 @@
 CREATE TABLE pictures
 (
-    id           TEXT    NOT NULL
+    id           TEXT NOT NULL
         CONSTRAINT pictures_pk
             PRIMARY KEY,
-    updated      INTEGER NOT NULL,
-    content_type TEXT    NOT NULL,
-    storage      TEXT    NOT NULL,
+    content_type TEXT NOT NULL,
+    storage      TEXT NOT NULL,
     data         BLOB
 ) STRICT;
 
