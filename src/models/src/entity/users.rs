@@ -6,6 +6,7 @@ use crate::entity::groups::Group;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::password::RecentPasswordsEntity;
+use crate::entity::pictures::UserPicture;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
@@ -236,7 +237,9 @@ impl User {
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
         Session::delete_by_user(&self.id).await?;
 
-        todo!("User::delete -> RETURNING picture_id and clean up avatar or pre-query and clean in advance");
+        if let Some(picture_id) = &self.picture_id {
+            UserPicture::remove(picture_id.clone(), self.id.clone()).await?;
+        }
 
         let client = DB::client();
         if is_hiqlite() {

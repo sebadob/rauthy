@@ -28,6 +28,7 @@ use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::devices::DeviceEntity;
 use rauthy_models::entity::password::PasswordPolicy;
+use rauthy_models::entity::pictures::UserPicture;
 use rauthy_models::entity::pow::PowEntity;
 use rauthy_models::entity::theme::ThemeCssFull;
 use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
@@ -461,13 +462,47 @@ pub async fn put_user_attr(
     Ok(HttpResponse::Ok().json(UserAttrValuesResponse { values }))
 }
 
-/// Returns the additional custom attributes for the given user id
+/// Upload a user picture
+///
+/// Returns the new `picture_id` as the text body.
+#[utoipa::path(
+    get,
+    path = "/users/{user_id}/picture",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok", body = String),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+    ),
+)]
+#[put("/users/{user_id}/picture/{picture_id}")]
+pub async fn put_user_picture(
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+    payload: actix_multipart::Multipart,
+) -> Result<HttpResponse, ErrorResponse> {
+    let user_id = path.into_inner();
+
+    if let Err(err) = principal.validate_user_or_admin(&user_id) {
+        if principal
+            .validate_api_key(AccessGroup::Users, AccessRights::Update)
+            .is_err()
+        {
+            return Err(err);
+        }
+    }
+
+    UserPicture::upload(user_id, payload).await
+}
+
+/// GET / download the user picture
 #[utoipa::path(
     get,
     path = "/users/{user_id}/picture/{picture_id}",
     tag = "users",
     responses(
         (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 404, description = "NotFound", body = ErrorResponse),
     ),
@@ -490,7 +525,50 @@ pub async fn get_user_picture(
         }
     }
 
-    todo!()
+    {
+        let user = User::find(user_id).await?;
+        if user.picture_id.as_deref() != Some(&picture_id) {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "invalid picture_id for user",
+            ));
+        }
+    }
+
+    UserPicture::download(picture_id).await
+}
+
+/// DELETE the user picture
+#[utoipa::path(
+    get,
+    path = "/users/{user_id}/picture/{picture_id}",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[delete("/users/{user_id}/picture/{picture_id}")]
+pub async fn delete_user_picture(
+    path: web::Path<(String, String)>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    let (user_id, picture_id) = path.into_inner();
+
+    if let Err(err) = principal.validate_user_or_admin(&user_id) {
+        if principal
+            .validate_api_key(AccessGroup::Users, AccessRights::Delete)
+            .is_err()
+        {
+            return Err(err);
+        }
+    }
+
+    UserPicture::remove(picture_id, user_id).await?;
+
+    Ok(HttpResponse::Ok().finish())
 }
 
 /// GET all devices for this user linked via the `device_code` flow

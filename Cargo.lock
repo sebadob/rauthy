@@ -4483,6 +4483,7 @@ dependencies = [
  "rsa",
  "rstest",
  "rust-embed",
+ "s3-simple",
  "semver",
  "serde",
  "serde_json",
