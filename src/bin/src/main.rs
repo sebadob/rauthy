@@ -25,6 +25,7 @@ use rauthy_middlewares::principal::RauthyPrincipalMiddleware;
 use rauthy_models::app_state::AppState;
 use rauthy_models::database::DB;
 use rauthy_models::email::EMail;
+use rauthy_models::entity::pictures::UserPicture;
 use rauthy_models::events::event::Event;
 use rauthy_models::events::health_watch::watch_health;
 use rauthy_models::events::listener::EventListener;
@@ -202,6 +203,8 @@ https://github.com/sebadob/rauthy/releases/tag/v0.27.0
     version_migration::manual_version_migrations()
         .await
         .expect("Error during Rauthy version migration");
+
+    UserPicture::test_config().await.unwrap();
 
     // actix web
     let state = app_state.clone();
@@ -470,6 +473,9 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(users::get_user_by_id)
                             .service(users::get_user_attr)
                             .service(users::put_user_attr)
+                            .service(users::put_user_picture)
+                            .service(users::get_user_picture)
+                            .service(users::delete_user_picture)
                             .service(users::get_user_devices)
                             .service(users::put_user_device_name)
                             .service(users::delete_user_device)

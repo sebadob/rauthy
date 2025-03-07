@@ -10,7 +10,7 @@ export interface IResponse<T> {
     headers: Headers,
 }
 
-function buildHeaders(
+export function buildHeaders(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     payload: 'json' | 'form',
 ): HeadersInit {

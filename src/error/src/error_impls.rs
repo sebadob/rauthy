@@ -11,6 +11,7 @@ use cryptr::CryptrError;
 use css_color::ParseColorError;
 use image::ImageError;
 use rio_turtle::TurtleError;
+use s3_simple::S3Error;
 use serde_json::Error;
 use serde_json_path::ParseError;
 use spow::pow::PowError;
@@ -519,6 +520,16 @@ impl From<svg_hush::FError> for ErrorResponse {
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("svg sanitization error: {:?}", value),
+        )
+    }
+}
+
+impl From<s3_simple::S3Error> for ErrorResponse {
+    fn from(value: S3Error) -> Self {
+        trace!("{:?}", value);
+        ErrorResponse::new(
+            ErrorResponseType::Connection,
+            format!("S3 error: {:?}", value),
         )
     }
 }

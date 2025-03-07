@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, email, created_at, last_login FROM users ORDER BY created_at ASC",
+  "query": "\nSELECT id, name, updated FROM auth_providers p\nJOIN auth_provider_logos l ON p.id = l.auth_provider_id\nWHERE res = 'small'",
   "describe": {
     "columns": [
       {
@@ -10,17 +10,12 @@
       },
       {
         "ordinal": 1,
-        "name": "email",
+        "name": "name",
         "type_info": "Varchar"
       },
       {
         "ordinal": 2,
-        "name": "created_at",
-        "type_info": "Int8"
-      },
-      {
-        "ordinal": 3,
-        "name": "last_login",
+        "name": "updated",
         "type_info": "Int8"
       }
     ],
@@ -30,9 +25,8 @@
     "nullable": [
       false,
       false,
-      false,
-      true
+      false
     ]
   },
-  "hash": "bfbfde98b7d5745eccecbf06133b3ad4cb7cdf544b8e619bee36d821bd886738"
+  "hash": "ad8bdfa9f27ce8629cad68dd5a0d51a4069af93596e2d739cebf10e7f8404af9"
 }

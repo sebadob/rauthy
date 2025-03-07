@@ -22,6 +22,7 @@ image = { workspace = true }
 reqwest = { workspace = true }
 rio_turtle = { workspace = true }
 ruma = { workspace = true }
+s3-simple = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_json_path = { workspace = true }

@@ -306,10 +306,7 @@ pub async fn get_client_logo(
     params: Query<LogoParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let id = id.into_inner();
-    debug!("Looking up client logo for id {}", id);
-
     let logo = Logo::find_cached(&id, &LogoType::Client).await?;
-    debug!("Found logo in cache: {:?}", logo.id);
 
     // we only cache the response if the client properly used the updated param
     // to never run into issues otherwise
@@ -365,7 +362,7 @@ pub async fn put_client_logo(
             None => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "content_type is missing".to_string(),
+                    "content_type is missing",
                 ));
             }
         }
