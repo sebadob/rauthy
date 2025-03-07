@@ -1,21 +1,30 @@
 use crate::database::DB;
 use crate::entity::users::User;
 use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE};
-use actix_web::HttpResponse;
+use actix_web::{web, HttpResponse};
+use futures_util::io::BufReader;
+use futures_util::stream::BoxStream;
 use futures_util::StreamExt;
 use hiqlite::{params, Param};
+use image::imageops::FilterType;
+use image::ImageFormat;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
+use serde_with::NoneAsEmptyString;
 use std::env;
+use std::io::Cursor;
 use std::string::ToString;
 use std::sync::LazyLock;
 use tokio::fs;
+use tokio::io::AsyncReadExt;
 use tracing::{debug, error, info};
 
 const CACHE_CTRL_PICTURE: &str = "max-age=31104000, stale-while-revalidate=2592000";
+const PICTURE_SIZE_PX: u32 = 128;
+
 pub static PICTURE_STORAGE_TYPE: LazyLock<PictureStorage> = LazyLock::new(|| {
     let s = env::var("PICTURE_STORAGE_TYPE").unwrap_or_else(|_| "db".to_string());
     PictureStorage::from(s.as_str())
@@ -152,6 +161,11 @@ VALUES ($1, $2, $3, $4)"#,
 }
 
 impl UserPicture {
+    #[inline]
+    fn local_file_path(picture_id: &str) -> String {
+        format!("{}/{}", PICTURE_PATH.as_str(), picture_id)
+    }
+
     pub async fn upload(
         user_id: String,
         mut payload: actix_multipart::Multipart,
@@ -205,23 +219,39 @@ impl UserPicture {
             }
         }
 
-        if is_img {
+        let bytes = if is_img {
             // if we have a "real" image: parse, reduce size, convert to webp
-            todo!()
-        }
+            let mut img = image::load_from_memory(&buf)?;
+            web::block(move || async move {
+                if img.width() > PICTURE_SIZE_PX || img.height() > PICTURE_SIZE_PX {
+                    img =
+                        img.resize_to_fill(PICTURE_SIZE_PX, PICTURE_SIZE_PX, FilterType::Lanczos3);
+                }
+                // most of these pictures end up at ~10kB
+                let mut buf = Cursor::new(Vec::with_capacity(10 * 1024));
+                img.write_to(&mut buf, ImageFormat::WebP)?;
+                Ok::<_, ErrorResponse>(buf.into_inner())
+            })
+            .await?
+            .await?
+        } else {
+            buf
+        };
 
         let new_id = match *PICTURE_STORAGE_TYPE {
             PictureStorage::DB => {
                 Self::insert(
-                    // cannot be None at this point - checked in field receive already
                     content_type.unwrap(),
                     PICTURE_STORAGE_TYPE.clone(),
-                    Some(buf),
+                    Some(bytes),
                 )
                 .await?
             }
             PictureStorage::File => {
-                todo!()
+                let id =
+                    Self::insert(content_type.unwrap(), PICTURE_STORAGE_TYPE.clone(), None).await?;
+                fs::write(Self::local_file_path(&id), bytes).await?;
+                id
             }
             PictureStorage::S3 => {
                 todo!()
@@ -250,7 +280,10 @@ impl UserPicture {
                     // no additional data exists
                 }
                 PictureStorage::File => {
-                    todo!("delete PictureStorage::File")
+                    let path = Self::local_file_path(&picture_id);
+                    if let Err(err) = fs::remove_file(&path).await {
+                        error!("Error cleaning up local picture {}: {}", path, err)
+                    }
                 }
                 PictureStorage::S3 => {
                     todo!("delete PictureStorage::S3")
@@ -282,7 +315,12 @@ impl UserPicture {
                 }
             }
             PictureStorage::File => {
-                todo!("download PictureStorage::File")
+                // these pictures are typically ~10kB - no issue with reading fully into memory
+                let bytes = fs::read(Self::local_file_path(&slf.id)).await?;
+                Ok(HttpResponse::Ok()
+                    .insert_header((CONTENT_TYPE, slf.content_type))
+                    .insert_header((CACHE_CONTROL, CACHE_CTRL_PICTURE))
+                    .body(bytes))
             }
             PictureStorage::S3 => {
                 todo!("download PictureStorage::S3")
@@ -294,10 +332,25 @@ impl UserPicture {
     pub async fn test_config() -> Result<(), ErrorResponse> {
         match *PICTURE_STORAGE_TYPE {
             PictureStorage::DB => {
-                // no need to test anything
                 info!("Using Database as User Picture Storage");
             }
             PictureStorage::File => {
+                let nodes = env::var("HQL_NODES")
+                    .unwrap()
+                    .lines()
+                    .filter_map(|l| {
+                        let trim = l.trim();
+                        if trim.is_empty() {
+                            None
+                        } else {
+                            Some(trim)
+                        }
+                    })
+                    .count();
+                if nodes != 1 {
+                    panic!("You can only use local file storage for User Pictures for a single instance");
+                }
+
                 // make sure the path exists and is available
                 fs::create_dir_all(PICTURE_PATH.as_str()).await?;
                 info!(
