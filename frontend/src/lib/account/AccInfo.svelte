@@ -12,6 +12,7 @@
     import type {ProviderLoginRequest} from "$api/types/auth_provider.ts";
     import {fetchDelete, fetchPost} from "$api/fetch.ts";
     import ButtonAuthProvider from "../ButtonAuthProvider.svelte";
+    import UserPicture from "$lib/UserPicture.svelte";
 
     let {
         user = $bindable(),
@@ -38,7 +39,13 @@
     let classRow: 'rowPhone' | 'row' = $derived(viewModePhone ? 'rowPhone' : 'row');
     let classLabel: 'labelPhone' | 'label' = $derived(viewModePhone ? 'labelPhone' : 'label');
 
-    let showProviderButtons: any = {};
+    let fallbackCharacters = $derived.by(() => {
+        let chars = user.given_name[0];
+        if (user.family_name && user.family_name.length > 0) {
+            chars += user.family_name[0];
+        }
+        return chars;
+    });
 
     function linkProvider(id: string) {
         getPkce(64, (error, {challenge, verifier}) => {
@@ -83,6 +90,8 @@
 </script>
 
 <div>
+    <UserPicture {fallbackCharacters} userId={user.id} bind:pictureId={user.picture_id}/>
+
     <div class={classRow}>
         <div class={classLabel}>{t.common.email}</div>
         <span class="value">{user.email}</span>

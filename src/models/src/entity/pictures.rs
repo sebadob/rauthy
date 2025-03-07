@@ -19,7 +19,7 @@ use tokio::fs;
 use tracing::{debug, error, info};
 
 const CACHE_CTRL_PICTURE: &str = "max-age=31104000, stale-while-revalidate=2592000";
-const PICTURE_SIZE_PX: u32 = 128;
+const PICTURE_SIZE_PX: u32 = 256;
 
 pub static PICTURE_STORAGE_TYPE: LazyLock<PictureStorage> = LazyLock::new(|| {
     let s = env::var("PICTURE_STORAGE_TYPE").unwrap_or_else(|_| "db".to_string());
@@ -92,7 +92,7 @@ pub struct UserPicture {
 
 // CRUD
 impl UserPicture {
-    /// Inserts a new Avatar for a user and returns the generated `id`.
+    /// Inserts a new UserPicture for a user and returns the generated `id`.
     async fn insert(
         content_type: String,
         storage: PictureStorage,
@@ -126,7 +126,7 @@ VALUES ($1, $2, $3, $4)"#,
         Ok(id)
     }
 
-    /// Deletes the Avatar in the DB - does NOT delete the file on the storage.
+    /// Deletes the UserPicture in the DB - does NOT delete the file on the storage.
     async fn delete(id: String) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::client()
