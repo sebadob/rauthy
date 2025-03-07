@@ -2,8 +2,6 @@ use crate::database::DB;
 use crate::entity::users::User;
 use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE};
 use actix_web::{web, HttpResponse};
-use futures_util::io::BufReader;
-use futures_util::stream::BoxStream;
 use futures_util::StreamExt;
 use hiqlite::{params, Param};
 use image::imageops::FilterType;
@@ -13,13 +11,11 @@ use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use serde_with::NoneAsEmptyString;
 use std::env;
 use std::io::Cursor;
 use std::string::ToString;
 use std::sync::LazyLock;
 use tokio::fs;
-use tokio::io::AsyncReadExt;
 use tracing::{debug, error, info};
 
 const CACHE_CTRL_PICTURE: &str = "max-age=31104000, stale-while-revalidate=2592000";
@@ -170,18 +166,13 @@ impl UserPicture {
         user_id: String,
         mut payload: actix_multipart::Multipart,
     ) -> Result<HttpResponse, ErrorResponse> {
-        // TODO
-        // - delete possibly existing picture
-        // - create a new DB entry with a new ID for proper caching
-        // - insert into DB
-        // - push to storage
-        // - update user.picture_id
-
+        // make sure to always create a new picture with a new id for more efficient caching
         let mut user = User::find(user_id).await?;
         if let Some(picture_id) = user.picture_id {
             Self::remove(picture_id, user.id.clone()).await?;
         }
 
+        // read image data into memory (actix web limits max body size)
         let mut content_type = None;
         let mut is_img = false;
         let mut buf: Vec<u8> = Vec::with_capacity(16 * 1024);
@@ -219,6 +210,7 @@ impl UserPicture {
             }
         }
 
+        // make sure to parse, reduce in size, and convert image
         let bytes = if is_img {
             // if we have a "real" image: parse, reduce size, convert to webp
             let mut img = image::load_from_memory(&buf)?;
@@ -238,6 +230,7 @@ impl UserPicture {
             buf
         };
 
+        // save img to db + storage
         let new_id = match *PICTURE_STORAGE_TYPE {
             PictureStorage::DB => {
                 Self::insert(
@@ -254,7 +247,10 @@ impl UserPicture {
                 id
             }
             PictureStorage::S3 => {
-                todo!()
+                let id =
+                    Self::insert(content_type.unwrap(), PICTURE_STORAGE_TYPE.clone(), None).await?;
+                PICTURE_S3_BUCKET.put(&id, &bytes).await?;
+                id
             }
         };
 
@@ -286,7 +282,9 @@ impl UserPicture {
                     }
                 }
                 PictureStorage::S3 => {
-                    todo!("delete PictureStorage::S3")
+                    if let Err(err) = PICTURE_S3_BUCKET.delete(&picture_id).await {
+                        error!("Error cleaning up s3 picture {}: {}", picture_id, err)
+                    }
                 }
             }
 
@@ -323,7 +321,11 @@ impl UserPicture {
                     .body(bytes))
             }
             PictureStorage::S3 => {
-                todo!("download PictureStorage::S3")
+                let res = PICTURE_S3_BUCKET.get(&slf.id).await?;
+                Ok(HttpResponse::Ok()
+                    .insert_header((CONTENT_TYPE, slf.content_type))
+                    .insert_header((CACHE_CONTROL, CACHE_CTRL_PICTURE))
+                    .streaming(res.bytes_stream()))
             }
         }
     }
