@@ -4361,6 +4361,7 @@ dependencies = [
  "reqwest",
  "rio_turtle",
  "ruma",
+ "rusqlite",
  "s3-simple",
  "serde",
  "serde_json",
@@ -4483,12 +4484,14 @@ dependencies = [
  "rio_turtle",
  "rsa",
  "rstest",
+ "rusqlite",
  "rust-embed",
  "s3-simple",
  "semver",
  "serde",
  "serde_json",
  "serde_json_path",
+ "serde_rusqlite",
  "serde_with",
  "spow",
  "sqlx",
@@ -5816,7 +5819,6 @@ dependencies = [
  "tokio-stream",
  "tracing",
  "url",
- "uuid",
  "webpki-roots",
 ]
 
@@ -5898,7 +5900,6 @@ dependencies = [
  "stringprep",
  "thiserror 2.0.9",
  "tracing",
- "uuid",
  "whoami",
 ]
 
@@ -5936,7 +5937,6 @@ dependencies = [
  "stringprep",
  "thiserror 2.0.9",
  "tracing",
- "uuid",
  "whoami",
 ]
 
@@ -5961,7 +5961,6 @@ dependencies = [
  "sqlx-core",
  "tracing",
  "url",
- "uuid",
 ]
 
 [[package]]
