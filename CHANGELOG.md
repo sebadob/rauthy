@@ -184,6 +184,33 @@ running anymore, if you only care about building from source.
 Korean has been added to the translations for all user-facing UI parts.
 [#670](https://github.com/sebadob/rauthy/pull/670)
 
+#### Filter I18n UI Languages
+
+Since it is likely that the available translations will expand in the future and you may not need or
+want to show all options to the users, because you maybe only have a local / regional deployment, you
+can now apply a filter to the Languages that are shown in the UI selector.
+
+```
+#####################################
+############### I18n ################
+#####################################
+
+# Can be set to filter the languages to show in the UI.
+# If not set, all available i18n translations will be
+# show in the language selector.
+# To show only specific ones, provide them here as a
+# space-separated value.
+#
+# Languages for all user-facing pages.
+# Available Options: en de zhhans ko
+#FILTER_LANG_COMMON="en de zhhans ko"
+# Languages for the Admin UI.
+# Available Options: en de
+#FILTER_LANG_ADMIN="en de"
+```
+
+[]()
+
 #### Manual `Debug` impls
 
 For types in the background, that hold sensitive data like passwords or client secrets, manual impls for `Debug` have
