@@ -252,6 +252,7 @@ use utoipa::{openapi, OpenApi};
             ClientSecretResponse,
             EncKeysResponse,
             HealthResponse,
+            I18nConfigResponse,
             JWKSCerts,
             JWKSPublicKeyCerts,
             Argon2ParamsResponse,
