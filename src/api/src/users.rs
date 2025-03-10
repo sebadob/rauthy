@@ -49,7 +49,7 @@ use rauthy_service::password_reset;
 use spow::pow::Pow;
 use std::env;
 use std::sync::LazyLock;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 use validator::Validate;
 
 pub static PICTURE_PUBLIC: LazyLock<bool> = LazyLock::new(|| {
@@ -276,6 +276,35 @@ pub async fn delete_cust_attr(
     Ok(HttpResponse::Ok().finish())
 }
 
+/// GET backend config for user picture uploads
+#[utoipa::path(
+    get,
+    path = "/users/picture_config",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok", body = UserPictureConfig),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+    ),
+)]
+#[get("/users/picture_config")]
+pub async fn get_user_picture_config(
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    if let Err(err) = principal.validate_session_auth() {
+        if principal
+            .validate_api_key(AccessGroup::Users, AccessRights::Read)
+            .is_err()
+        {
+            return Err(err);
+        }
+    }
+
+    Ok(HttpResponse::Ok().json(UserPictureConfig {
+        upload_allowed: *PICTURE_STORAGE_TYPE != PictureStorage::Disabled,
+        content_len_limit: *PICTURE_UPLOAD_LIMIT_MB as u32 * 1024 * 1024,
+    }))
+}
+
 /// Get the HTML Page for the User Registration
 #[utoipa::path(
     get,
@@ -479,37 +508,6 @@ pub async fn put_user_attr(
         .map(UserAttrValueResponse::from)
         .collect::<Vec<UserAttrValueResponse>>();
     Ok(HttpResponse::Ok().json(UserAttrValuesResponse { values }))
-}
-
-/// HEAD before uploading a user picture to fetch the content length limit
-#[utoipa::path(
-    get,
-    path = "/users/{user_id}/picture/config",
-    tag = "users",
-    responses(
-        (status = 200, description = "Ok"),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-    ),
-)]
-#[get("/users/picture_config")]
-pub async fn get_user_picture_config(
-    path: web::Path<String>,
-    principal: ReqPrincipal,
-) -> Result<HttpResponse, ErrorResponse> {
-    let user_id = path.into_inner();
-    if let Err(err) = principal.validate_user_or_admin(&user_id) {
-        if principal
-            .validate_api_key(AccessGroup::Users, AccessRights::Read)
-            .is_err()
-        {
-            return Err(err);
-        }
-    }
-
-    Ok(HttpResponse::Ok().json(UserPictureConfig {
-        upload_allowed: *PICTURE_STORAGE_TYPE != PictureStorage::Disabled,
-        content_len_limit: *PICTURE_UPLOAD_LIMIT_MB as u32 * 1024 * 1024,
-    }))
 }
 
 /// Upload a user picture

@@ -1314,7 +1314,7 @@ RP_NAME='Rauthy Webauthn'
 #
 # Available options: db file s3 disabled
 # Default: db
-#PICTURE_STORAGE_TYPE="db"
+#PICTURE_STORAGE_TYPE=db
 
 # If `PICTURE_STORAGE_TYPE=file`, the path where pictures will be
 # saved can be changed with this value.
