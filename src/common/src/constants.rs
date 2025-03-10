@@ -43,8 +43,8 @@ pub const COOKIE_UPSTREAM_CALLBACK: &str = "UpstreamAuthCallback";
 pub const PROVIDER_LINK_COOKIE: &str = "rauthy-provider-link";
 pub const PWD_RESET_COOKIE: &str = "rauthy-pwd-reset";
 pub const APP_ID_HEADER: &str = "mfa-app-id";
-pub const CSRF_HEADER: &str = "csrf-token";
-pub const PWD_CSRF_HEADER: &str = "pwd-csrf-token";
+pub const CSRF_HEADER: &str = "x-csrf-token";
+pub const PWD_CSRF_HEADER: &str = "x-pwd-csrf-token";
 
 pub const ARGON2ID_M_COST_MIN: u32 = 32768;
 pub const ARGON2ID_T_COST_MIN: u32 = 1;

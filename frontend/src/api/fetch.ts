@@ -28,7 +28,7 @@ function buildHeaders(
     }
 
     if (method !== 'GET') {
-        headers['csrf-token'] = localStorage.getItem(CSRF_TOKEN);
+        headers['x-csrf-token'] = localStorage.getItem(CSRF_TOKEN);
     }
 
     return headers;
@@ -195,7 +195,7 @@ export async function uploadFile<T>(method: 'POST' | 'PUT', url: string, file: F
     const res = await fetch(url, {
         method: method,
         headers: {
-            'csrf-token': localStorage.getItem(CSRF_TOKEN) || '',
+            'x-csrf-token': localStorage.getItem(CSRF_TOKEN) || '',
         },
         body: formData,
     });
