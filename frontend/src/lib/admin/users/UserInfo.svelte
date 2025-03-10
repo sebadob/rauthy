@@ -1,7 +1,6 @@
 <script lang="ts">
     import {formatDateFromTs} from "$utils/helpers.js";
     import Button from "$lib5/button/Button.svelte";
-    import {LANGUAGES} from "$utils/constants.js";
     import {untrack} from "svelte";
     import CheckIcon from "$lib5/CheckIcon.svelte";
     import Input from "$lib5/form/Input.svelte";
@@ -22,7 +21,8 @@
     import SelectList from "$lib5/select_list/SelectList.svelte";
     import InputDateTimeCombo from "$lib5/form/InputDateTimeCombo.svelte";
     import {slide} from "svelte/transition";
-    import type {Language} from "$api/types/language.ts";
+    import type {Language} from "$api/types/i18n.ts";
+    import {useI18nConfig} from "$state/i18n_config.svelte.ts";
 
     let {
         user = $bindable(),
@@ -36,6 +36,7 @@
         onSave: () => void,
     } = $props();
 
+
     let t = useI18n();
     let ta = useI18nAdmin();
 
@@ -45,6 +46,7 @@
     let email = $state('');
     let givenName = $state('');
     let familyName = $state('');
+    let languages = $derived(useI18nConfig().common()?.map(l => l as string));
     let language: Language = $state('en');
 
     let birthdate = $state('');
@@ -209,16 +211,18 @@
                         withDelete
                 />
 
-                <div style:padding=".25rem">
-                    <LabeledValue label={ta.common.language}>
-                        <Options
-                                ariaLabel={t.common.selectI18n}
-                                options={LANGUAGES}
-                                bind:value={language}
-                                borderless
-                        />
-                    </LabeledValue>
-                </div>
+                {#if languages}
+                    <div style:padding=".25rem">
+                        <LabeledValue label={ta.common.language}>
+                            <Options
+                                    ariaLabel={t.common.selectI18n}
+                                    options={languages}
+                                    bind:value={language}
+                                    borderless
+                            />
+                        </LabeledValue>
+                    </div>
+                {/if}
             </div>
 
             <div>

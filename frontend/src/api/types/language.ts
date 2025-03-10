@@ -1,1 +1,0 @@
-export type Language = 'en' | 'de' | 'zhhans' | 'ko';

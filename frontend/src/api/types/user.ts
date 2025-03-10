@@ -1,4 +1,4 @@
-import type {Language} from "./language";
+import type {Language} from "./i18n";
 
 export interface UserPictureConfig {
     upload_allowed: boolean,
