@@ -2,8 +2,8 @@
     import IconUpload from "$icons/IconUpload.svelte";
     import {useI18n} from "$state/i18n.svelte.ts";
     import {genKey} from "$utils/helpers.ts";
-    import {buildHeaders} from "$api/fetch.ts";
     import type {ErrorResponse} from "$api/types/error.ts";
+    import {CSRF_TOKEN} from "$utils/constants.ts";
 
     let {
         userId,
@@ -12,22 +12,21 @@
         // its existence will be checked in the upload response
         pictureId = $bindable(),
         size = 'medium',
-        uploadUri,
     }: {
         userId: string;
         fallbackCharacters: string;
         pictureId: undefined | string;
         size?: 'small' | 'medium' | 'large';
-        uploadUri?: string;
     } = $props();
 
     const id = genKey();
-    // const accept = 'image/png, image/jpeg, image/webp';
-    const accept = 'image/png, image/jpeg';
+    const accept = 'image/png, image/jpeg, image/webp';
 
     let t = useI18n();
 
     let err = $state('');
+    let errFileSize = $state('');
+    let timer: undefined | number;
 
     let showUpload = $state(false);
     let isUploading = $state(false);
@@ -41,13 +40,25 @@
             case 'medium':
                 return '3rem';
             default:
-                return '12rem';
+                // max size of the picture saved in the background
+                return '192px';
         }
     });
 
     $effect(() => {
         if (err) {
             console.error(err);
+        }
+    });
+
+    $effect(() => {
+        if (errFileSize) {
+            if (timer) {
+                clearTimeout(timer);
+            }
+            timer = setTimeout(() => {
+                errFileSize = '';
+            }, 5000);
         }
     });
 
@@ -100,30 +111,51 @@
 
     async function upload(list: FileList) {
         isUploading = true;
+        let url = `/auth/v1/users/${userId}/picture`;
+
+        let head = await fetch(url, {
+            method: 'HEAD',
+        });
+        if (!head.ok) {
+            err = 'Cannot do HEAD request to picture upload';
+            return;
+        }
+        let header = head.headers.get('X-Content-Length-Limit');
+        if (!header) {
+            err = 'No X-Content-Length-Limit in HEAD request headers';
+            return;
+        }
+        let limit = Number.parseInt(header);
+        console.log('content length limit: ', limit);
 
         for (let file of list) {
             if (!accept.includes(file.type)) {
                 err = 'Invalid File Format, allowed: ' + accept;
                 break;
             }
-            if (file.size > 2 * 1024 * 1024) {
-                err = 'max size 2MB';
+            if (file.size > limit) {
+                errFileSize = `${t.common.maxFileSize}: ${limit / 1024 / 1024} MB`;
                 break;
             }
 
             let fd = new FormData();
             fd.append(file.name, file)
-            let res = await fetch(`/auth/v1/users/${userId}/picture`, {
+            let res = await fetch(url, {
                 method: 'PUT',
-                headers: buildHeaders('PUT', 'form'),
+                headers: {
+                    'csrf-token': localStorage.getItem(CSRF_TOKEN) || '',
+                },
                 body: fd,
             });
 
-            if (res) {
-                if (res.ok) {
-                    pictureId = await res.text();
+            if (res.ok) {
+                pictureId = await res.text();
+            } else {
+                let error: ErrorResponse = await res.json();
+                if (res.status === 406) {
+                    // TODO
+                    alert('max size' + error.message);
                 } else {
-                    let error: ErrorResponse = await res.json();
                     err = error.message || 'Upload Error';
                 }
             }
@@ -132,7 +164,6 @@
         files = undefined;
         isUploading = false;
     }
-
 </script>
 
 {#snippet avatar()}
@@ -142,7 +173,7 @@
         </span>
     {:else}
         <img
-                src={`/auth/v1/users/${userId}/pictures/${pictureId}`}
+                src={`/auth/v1/users/${userId}/picture/${pictureId}`}
                 loading="lazy"
                 class="absolute"
                 aria-label="Avatar"
@@ -153,47 +184,42 @@
     {/if}
 {/snippet}
 
-{#if uploadUri}
-    <form
-            class="avatar"
-            aria-dropeffect="move"
-            aria-label="Upload"
-            style:background-color={color}
+<form
+        class="avatar"
+        aria-dropeffect="move"
+        aria-label="Upload"
+        style:background-color={color}
+        style:width
+        {onmouseenter}
+        {onmouseleave}
+>
+    <label
+            for={id}
+            aria-controls={id}
+            aria-disabled={isUploading}
             style:width
-            {onmouseenter}
-            {onmouseleave}
+            data-show={!isUploading && showUpload}
     >
-        <label
-                for={id}
-                aria-controls={id}
-                aria-disabled={isUploading}
-                style:width
-                data-show={!isUploading && showUpload}
-        >
-            <IconUpload {width}/>
-        </label>
-        <input
-                {id}
-                type="file"
-                disabled={isUploading}
-                aria-disabled={isUploading}
-                aria-hidden="true"
-                {accept}
-                bind:files
-        />
+        <IconUpload {width}/>
+    </label>
+    <input
+            {id}
+            type="file"
+            disabled={isUploading}
+            aria-disabled={isUploading}
+            aria-hidden="true"
+            {accept}
+            bind:files
+    />
 
-        {@render avatar()}
-    </form>
-{:else}
-    <span
-            class="avatar"
-            style:background-color={color}
-            style:width
-            style:height={width}
-    >
-        {@render avatar()}
-    </span>
-{/if}
+    {#if errFileSize}
+        <div class="errLimit" style:width>
+            {errFileSize}
+        </div>
+    {/if}
+
+    {@render avatar()}
+</form>
 
 <style>
     input[type="file"]::file-selector-button {
@@ -210,7 +236,7 @@
         aspect-ratio: 1;
         background: hsla(var(--bg) / .8);
         cursor: pointer;
-        z-index: 1;
+        z-index: 2;
         transition: all 150ms;
     }
 
@@ -232,9 +258,18 @@
         justify-content: center;
         align-items: center;
         aspect-ratio: 1;
-        border-radius: 33%;
+        border-radius: 30%;
         overflow: clip;
         cursor: default;
+    }
+
+    .errLimit {
+        padding: 0 .25rem;
+        background: hsl(var(--error));
+        border-radius: var(--border-radius);
+        font-weight: bold;
+        text-wrap: wrap;
+        z-index: 1;
     }
 
     .font-small, .font-medium, .font-large {

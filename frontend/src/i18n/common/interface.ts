@@ -19,6 +19,7 @@ export interface I18n {
         hours: string,
         invalidInput: string,
         legend: string,
+        maxFileSize: string,
         minutes: string,
         month: string,
         months: string[],

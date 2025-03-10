@@ -90,7 +90,15 @@
 </script>
 
 <div>
-    <UserPicture {fallbackCharacters} userId={user.id} bind:pictureId={user.picture_id}/>
+    <div class={classRow} style:margin=".5rem 0">
+        <div class={classLabel}></div>
+        <UserPicture
+                {fallbackCharacters}
+                userId={user.id}
+                bind:pictureId={user.picture_id}
+                size="large"
+        />
+    </div>
 
     <div class={classRow}>
         <div class={classLabel}>{t.common.email}</div>

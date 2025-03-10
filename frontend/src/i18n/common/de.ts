@@ -17,6 +17,7 @@ export const I18nDe: I18n = {
         hours: "Stunden",
         invalidInput: "Ungültige Eingabe",
         legend: "Legende",
+        maxFileSize: "Maximale Dateigröße",
         minutes: "Minuten",
         month: "Monat",
         months: [

@@ -17,6 +17,7 @@ export const I18nKo: I18n = {
         hours: "Hours",
         invalidInput: "유효하지 않은 입력입니다.",
         legend: "Legend",
+        maxFileSize: "Max File Size",
         minutes: "Minutes",
         month: "Month",
         months: [
