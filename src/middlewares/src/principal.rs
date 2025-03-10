@@ -146,16 +146,14 @@ async fn get_session_from_cookie(
                     session.save().await?;
                 }
 
-                if req.method() == http::Method::GET || req.method() == http::Method::HEAD {
-                    Ok(Some(session))
-                } else if is_path_csrf_exception(req.path()) {
+                if req.method() == http::Method::GET
+                    || req.method() == http::Method::HEAD
+                    || is_path_csrf_exception(req.path())
+                    || session.validate_csrf(req.request()).is_ok()
+                {
                     Ok(Some(session))
                 } else {
-                    if session.validate_csrf(req.request()).is_ok() {
-                        Ok(Some(session))
-                    } else {
-                        Ok(None)
-                    }
+                    Ok(None)
                 }
             } else {
                 debug!("Access to {} with invalid Session Peer IP", req.path());
