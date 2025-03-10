@@ -19,7 +19,7 @@ use tokio::fs;
 use tracing::{debug, error, info};
 
 const CACHE_CTRL_PICTURE: &str = "max-age=31104000, stale-while-revalidate=2592000";
-const PICTURE_SIZE_PX: u32 = 256;
+const PICTURE_SIZE_PX: u32 = 192;
 
 pub static PICTURE_STORAGE_TYPE: LazyLock<PictureStorage> = LazyLock::new(|| {
     let s = env::var("PICTURE_STORAGE_TYPE").unwrap_or_else(|_| "db".to_string());
@@ -175,7 +175,7 @@ impl UserPicture {
         // read image data into memory (actix web limits max body size)
         let mut content_type = None;
         let mut is_img = false;
-        let mut buf: Vec<u8> = Vec::with_capacity(16 * 1024);
+        let mut buf: Vec<u8> = Vec::with_capacity(32 * 1024);
         if let Some(part) = payload.next().await {
             let mut field = part?;
 
@@ -219,8 +219,8 @@ impl UserPicture {
                     img =
                         img.resize_to_fill(PICTURE_SIZE_PX, PICTURE_SIZE_PX, FilterType::Lanczos3);
                 }
-                // most of these pictures end up at ~10kB
-                let mut buf = Cursor::new(Vec::with_capacity(10 * 1024));
+                // most of these pictures end up somewhere between 25 and 35kB
+                let mut buf = Cursor::new(Vec::with_capacity(32 * 1024));
                 img.write_to(&mut buf, ImageFormat::WebP)?;
                 Ok::<_, ErrorResponse>(buf.into_inner())
             })
@@ -313,7 +313,7 @@ impl UserPicture {
                 }
             }
             PictureStorage::File => {
-                // these pictures are typically ~10kB - no issue with reading fully into memory
+                // TODO stream from file instead of loading into memory upfront
                 let bytes = fs::read(Self::local_file_path(&slf.id)).await?;
                 Ok(HttpResponse::Ok()
                     .insert_header((CONTENT_TYPE, slf.content_type))

@@ -340,11 +340,10 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
     // one for any new request
     let server = HttpServer::new(move || {
         let mut app = App::new()
-            // .data shares application state for all workers
+            .wrap(RauthyLoggingMiddleware)
             .app_data(app_state.clone())
             .wrap(RauthyPrincipalMiddleware)
             .wrap(CsrfProtectionMiddleware)
-            .wrap(RauthyLoggingMiddleware)
             .wrap(
                 middleware::DefaultHeaders::new()
                     .add(("x-frame-options", "SAMEORIGIN"))
