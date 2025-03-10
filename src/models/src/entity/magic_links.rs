@@ -324,7 +324,7 @@ impl MagicLink {
         if self.user_id != user_id {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "The user id is invalid",
+                "Invalid User ID",
             ));
         }
 

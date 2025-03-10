@@ -49,7 +49,7 @@ use rauthy_service::password_reset;
 use spow::pow::Pow;
 use std::env;
 use std::sync::LazyLock;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 use validator::Validate;
 
 pub static PICTURE_PUBLIC: LazyLock<bool> = LazyLock::new(|| {
@@ -853,6 +853,7 @@ pub async fn get_user_password_reset(
             }
         }
         Err(err) => {
+            debug!("Error during get_user_password_reset: {:?}", err);
             let status = err.status_code();
             let body = Error3Html::build(
                 &lang,

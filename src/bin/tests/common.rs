@@ -180,9 +180,10 @@ pub async fn cookie_csrf_headers_from_res(res: Response) -> Result<HeaderMap, Bo
     headers.append(header::COOKIE, HeaderValue::from_str(&session_cookie)?);
 
     let content = res.text().await?;
-    let csrf_find = "name=\"rauthy-csrf-token\" id=\"";
-    let (_, content_split) = content.split_once(csrf_find).unwrap();
-    let (csrf_token, _) = content_split.split_once('"').unwrap();
+    let (_, content_split) = content
+        .split_once("<template id=\"tpl_csrf_token\">")
+        .unwrap();
+    let (csrf_token, _) = content_split.split_once("</template>").unwrap();
     println!("Extracted CSRF Token: {}", csrf_token);
     headers.append(CSRF_HEADER, HeaderValue::from_str(csrf_token)?);
 
