@@ -220,6 +220,8 @@ pub struct JwtIdClaims {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub birthdate: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub picture: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub locale: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub phone: Option<String>,

@@ -6,7 +6,7 @@ use jwt_simple::prelude::{coarsetime, UnixTimeStamp};
 use rauthy_api_types::oidc::JktClaim;
 use rauthy_common::constants::{
     DEVICE_GRANT_REFRESH_TOKEN_LIFETIME, DISABLE_REFRESH_TOKEN_NBF, ENABLE_SOLID_AUD,
-    ENABLE_WEB_ID, REFRESH_TOKEN_LIFETIME,
+    ENABLE_WEB_ID, PUB_URL, REFRESH_TOKEN_LIFETIME,
 };
 use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -246,6 +246,7 @@ impl TokenSet {
             family_name: None,
             address: None,
             birthdate: None,
+            picture: None,
             locale: None,
             phone: None,
             roles: user.get_roles(),
@@ -275,6 +276,13 @@ impl TokenSet {
                 if let Some(birthdate) = &values.birthdate {
                     custom_claims.birthdate = Some(birthdate.clone());
                 }
+            }
+
+            if let Some(picture_id) = &user.picture_id {
+                custom_claims.picture = Some(format!(
+                    "{}/auth/v1/users/{}/picture/{}",
+                    *PUB_URL, user.id, picture_id
+                ));
             }
         }
 
