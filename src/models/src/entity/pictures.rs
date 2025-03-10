@@ -1,4 +1,5 @@
 use crate::database::DB;
+use crate::entity::logos::Logo;
 use crate::entity::users::User;
 use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE};
 use actix_web::{web, HttpResponse};
@@ -158,8 +159,27 @@ VALUES ($1, $2, $3, $4)"#,
 
 impl UserPicture {
     #[inline]
-    fn local_file_path(picture_id: &str) -> String {
-        format!("{}/{}", PICTURE_PATH.as_str(), picture_id)
+    fn local_file_path(picture_id: &str, content_type: &str) -> String {
+        format!(
+            "{}/{}.{}",
+            PICTURE_PATH.as_str(),
+            picture_id,
+            Self::file_ending(content_type)
+        )
+    }
+
+    #[inline]
+    fn file_name(picture_id: &str, content_type: &str) -> String {
+        format!("{}.{}", picture_id, Self::file_ending(content_type))
+    }
+
+    #[inline]
+    fn file_ending(content_type: &str) -> &str {
+        if content_type.contains("svg") {
+            "svg"
+        } else {
+            "webp"
+        }
     }
 
     pub async fn upload(
@@ -232,6 +252,7 @@ impl UserPicture {
             .await?
             .await?
         } else {
+            Logo::sanitize_svg(&mut buf)?;
             buf
         };
 
@@ -248,13 +269,15 @@ impl UserPicture {
             PictureStorage::File => {
                 let id = Self::insert(content_type.to_string(), PICTURE_STORAGE_TYPE.clone(), None)
                     .await?;
-                fs::write(Self::local_file_path(&id), bytes).await?;
+                fs::write(Self::local_file_path(&id, content_type), bytes).await?;
                 id
             }
             PictureStorage::S3 => {
                 let id = Self::insert(content_type.to_string(), PICTURE_STORAGE_TYPE.clone(), None)
                     .await?;
-                PICTURE_S3_BUCKET.put(&id, &bytes).await?;
+                PICTURE_S3_BUCKET
+                    .put(&Self::file_name(&id, content_type), &bytes)
+                    .await?;
                 id
             }
         };
@@ -266,7 +289,7 @@ impl UserPicture {
     }
 
     pub async fn remove(id: String, user_id: String) -> Result<(), ErrorResponse> {
-        let user = User::find(user_id).await?;
+        let mut user = User::find(user_id).await?;
         if let Some(picture_id) = user.picture_id {
             if id != picture_id {
                 return Err(ErrorResponse::new(
@@ -281,19 +304,25 @@ impl UserPicture {
                     // no additional data exists
                 }
                 PictureStorage::File => {
-                    let path = Self::local_file_path(&picture_id);
+                    let path = Self::local_file_path(&slf.id, &slf.content_type);
                     if let Err(err) = fs::remove_file(&path).await {
                         error!("Error cleaning up local picture {}: {}", path, err)
                     }
                 }
                 PictureStorage::S3 => {
-                    if let Err(err) = PICTURE_S3_BUCKET.delete(&picture_id).await {
-                        error!("Error cleaning up s3 picture {}: {}", picture_id, err)
+                    if let Err(err) = PICTURE_S3_BUCKET
+                        .delete(&Self::file_name(&slf.id, &slf.content_type))
+                        .await
+                    {
+                        error!("Error cleaning up s3 picture {}: {}", slf.id, err)
                     }
                 }
             }
 
             Self::delete(slf.id).await?;
+
+            user.picture_id = None;
+            user.save(None).await?;
         }
 
         Ok(())
@@ -319,14 +348,16 @@ impl UserPicture {
             }
             PictureStorage::File => {
                 // TODO stream from file instead of loading into memory upfront
-                let bytes = fs::read(Self::local_file_path(&slf.id)).await?;
+                let bytes = fs::read(Self::local_file_path(&slf.id, &slf.content_type)).await?;
                 Ok(HttpResponse::Ok()
                     .insert_header((CONTENT_TYPE, slf.content_type))
                     .insert_header((CACHE_CONTROL, CACHE_CTRL_PICTURE))
                     .body(bytes))
             }
             PictureStorage::S3 => {
-                let res = PICTURE_S3_BUCKET.get(&slf.id).await?;
+                let res = PICTURE_S3_BUCKET
+                    .get(&Self::file_name(&slf.id, &slf.content_type))
+                    .await?;
                 Ok(HttpResponse::Ok()
                     .insert_header((CONTENT_TYPE, slf.content_type))
                     .insert_header((CACHE_CONTROL, CACHE_CTRL_PICTURE))
