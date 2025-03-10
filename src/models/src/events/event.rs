@@ -17,7 +17,6 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_notify::{Notification, NotificationLevel};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
-use sqlx::sqlite::SqliteRow;
 use sqlx::{query, query_as, Error, FromRow, Row as SqlxRow};
 use std::fmt::{Display, Formatter};
 use std::net::IpAddr;
@@ -367,20 +366,6 @@ impl<'r> FromRow<'r, PgRow> for Event {
             timestamp: row.get("timestamp"),
             level: EventLevel::from(row.get::<i16, _>("level")),
             typ: EventType::from(row.get::<i16, _>("typ")),
-            ip: row.get("ip"),
-            data: row.get("data"),
-            text: row.get("text"),
-        })
-    }
-}
-
-impl<'r> FromRow<'r, SqliteRow> for Event {
-    fn from_row(row: &'r SqliteRow) -> Result<Self, Error> {
-        Ok(Self {
-            id: row.get("id"),
-            timestamp: row.get("timestamp"),
-            level: EventLevel::from(row.get::<i64, _>("level")),
-            typ: EventType::from(row.get::<i64, _>("typ")),
             ip: row.get("ip"),
             data: row.get("data"),
             text: row.get("text"),

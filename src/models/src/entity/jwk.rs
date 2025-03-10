@@ -16,7 +16,6 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rsa::BigUint;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
-use sqlx::sqlite::SqliteRow;
 use sqlx::{Error, FromRow, Row};
 use std::default::Default;
 use std::fmt::{Debug, Display, Formatter};
@@ -801,14 +800,6 @@ impl From<String> for JwkKeyPairAlg {
             "EdDSA" => JwkKeyPairAlg::EdDSA,
             _ => unreachable!(),
         }
-    }
-}
-
-impl FromRow<'_, SqliteRow> for JwkKeyPairAlg {
-    fn from_row(row: &'_ SqliteRow) -> Result<Self, Error> {
-        let sig = row.try_get("signature")?;
-        let slf = JwkKeyPairAlg::from_str(sig).expect("corrupted signature in database");
-        Ok(slf)
     }
 }
 

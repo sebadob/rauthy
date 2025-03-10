@@ -60,6 +60,7 @@ rinja = { workspace = true }
 rinja_actix = { workspace = true }
 rio_api = { workspace = true }
 rio_turtle = { workspace = true }
+rusqlite = { workspace = true }
 rust-embed = { workspace = true }
 rsa = { workspace = true }
 s3-simple = { workspace = true }
@@ -67,6 +68,7 @@ semver = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_json_path = { workspace = true }
+serde_rusqlite = { workspace = true }
 serde_with = { workspace = true }
 spow = { workspace = true }
 sqlx = { workspace = true }

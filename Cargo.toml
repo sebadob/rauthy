@@ -86,6 +86,7 @@ rio_api = "0.8.4"
 rio_turtle = "0.8.4"
 rsa = { version = "0.9.3", features = ["serde", "sha2"] }
 ruma = { version = "0.12.0", features = ["client-api-c", "client-ext-client-api", "client-reqwest", "markdown", "rand"] }
+rusqlite = "0.32.0"
 rust-embed = "8.5.0"
 rustls = { version = "0.23", default-features = false, features = ["logging", "std", "tls12", "ring"] }
 rustls-pki-types = "1.4.1"
@@ -95,10 +96,11 @@ semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_json_path = "0.7.1"
+serde_rusqlite = "0.36.0"
 serde_urlencoded = "0.7.1"
 serde_with = { version = "3.8.1", features = ["macros"] }
 spow = { version = "0.4", features = ["server"] }
-sqlx = { version = "0.8.2", features = ["macros", "migrate", "postgres", "runtime-tokio", "sqlite", "tls-rustls", "uuid"] }
+sqlx = { version = "0.8.2", features = ["macros", "migrate", "postgres", "runtime-tokio", "tls-rustls"] }
 strum = { version = "0.26.3", features = ["derive"] }
 svg-hush = "0.9.4"
 time = { version = "0.3", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }

@@ -9,7 +9,7 @@ use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use sqlx::pool::PoolOptions;
-use sqlx::{ConnectOptions, PgPool, Postgres, SqlitePool};
+use sqlx::{ConnectOptions, PgPool, Postgres};
 use std::env;
 use std::str::FromStr;
 use std::sync::OnceLock;
@@ -112,24 +112,6 @@ impl DB {
         Ok(pool)
     }
 
-    pub async fn connect_sqlite(addr: &str) -> Result<SqlitePool, ErrorResponse> {
-        let opts = sqlx::sqlite::SqliteConnectOptions::from_str(addr)?
-            .create_if_missing(false)
-            .foreign_keys(true)
-            .auto_vacuum(sqlx::sqlite::SqliteAutoVacuum::Incremental)
-            .synchronous(sqlx::sqlite::SqliteSynchronous::Normal)
-            .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal);
-
-        let pool = PoolOptions::new()
-            .min_connections(1)
-            .max_connections(1)
-            .acquire_timeout(Duration::from_secs(10))
-            .connect_with(opts)
-            .await?;
-
-        Ok(pool)
-    }
-
     async fn init_connect_postgres() -> Result<(), ErrorResponse> {
         let db_max_conn = env::var("DATABASE_MAX_CONN")
             .unwrap_or_else(|_| "20".to_string())
@@ -205,8 +187,7 @@ impl DB {
                 sleep(Duration::from_secs(10)).await;
 
                 if from.starts_with("sqlite:") {
-                    let pool = Self::connect_sqlite(&from).await?;
-                    if let Err(err) = db_migrate::migrate_from_sqlite(pool).await {
+                    if let Err(err) = db_migrate::migrate_from_sqlite(&from).await {
                         panic!("Error during db migration: {:?}", err);
                     }
                 } else if from.starts_with("postgresql://") {
