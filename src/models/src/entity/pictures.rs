@@ -58,6 +58,7 @@ pub enum PictureStorage {
     DB,
     File,
     S3,
+    Disabled,
 }
 
 impl From<&str> for PictureStorage {
@@ -66,8 +67,10 @@ impl From<&str> for PictureStorage {
             "db" => Self::DB,
             "file" => Self::File,
             "s3" => Self::S3,
+            "disabled" => Self::Disabled,
             x => {
-                panic!("Invalid picture storage: {}", x)
+                error!("Invalid picture storage: {} - upload disabled", x);
+                Self::Disabled
             }
         }
     }
@@ -79,6 +82,7 @@ impl PictureStorage {
             Self::DB => "db",
             Self::File => "file",
             Self::S3 => "s3",
+            Self::Disabled => "disabled",
         }
     }
 }
@@ -280,6 +284,12 @@ impl UserPicture {
                     .await?;
                 id
             }
+            PictureStorage::Disabled => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "user picture upload is disabled",
+                ));
+            }
         };
 
         user.picture_id = Some(new_id);
@@ -317,6 +327,7 @@ impl UserPicture {
                         error!("Error cleaning up s3 picture {}: {}", slf.id, err)
                     }
                 }
+                PictureStorage::Disabled => unreachable!(),
             }
 
             Self::delete(slf.id).await?;
@@ -363,6 +374,7 @@ impl UserPicture {
                     .insert_header((CACHE_CONTROL, CACHE_CTRL_PICTURE))
                     .streaming(res.bytes_stream()))
             }
+            PictureStorage::Disabled => unreachable!(),
         }
     }
 
@@ -406,6 +418,9 @@ impl UserPicture {
                     "Using S3 bucket {} as User Picture Storage - connection test successful",
                     PICTURE_S3_BUCKET.name
                 );
+            }
+            PictureStorage::Disabled => {
+                info!("User Picture upload disabled");
             }
         }
 

@@ -92,6 +92,8 @@ will end up somewhere in the range of ~25 - 40kB each.
 For single instance deployments, you can use local `file` storage, while for HA deployments, you should probably use
 an S3 bucket to do so.
 
+Uploading user pictures can be disabled completely by setting PICTURE_STORAGE_TYPE=disabled
+
 The following new config variables are available:
 
 ```
@@ -109,9 +111,9 @@ The following new config variables are available:
 # Images will ba reduced in size to max 192px on the longest side.
 # They most often end up between 25 - 40kB in size.
 #
-# Available options: db file s3
+# Available options: db file s3 disabled
 # Default: db
-#PICTURE_STORAGE_TYPE="db"
+#PICTURE_STORAGE_TYPE=db
 
 # If `PICTURE_STORAGE_TYPE=file`, the path where pictures will be
 # saved can be changed with this value.
@@ -165,7 +167,7 @@ The following new config variables are available:
 #PICTURE_PUBLIC=false
 ```
 
-[]()
+[#743](https://github.com/sebadob/rauthy/pull/743)
 
 #### Static HTML + prepared queries added to version control
 

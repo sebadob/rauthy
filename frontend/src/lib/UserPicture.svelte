@@ -6,7 +6,8 @@
     import {CSRF_TOKEN} from "$utils/constants.ts";
     import IconStop from "$icons/IconStop.svelte";
     import Button from "$lib/button/Button.svelte";
-    import {fetchDelete} from "$api/fetch.ts";
+    import {fetchDelete, fetchGet} from "$api/fetch.ts";
+    import {usePictureConfig} from "$state/picture_config.svelte.ts";
 
     let {
         userId,
@@ -26,6 +27,8 @@
     const accept = 'image/png, image/jpeg, image/webp';
 
     let t = useI18n();
+
+    let config = $derived(usePictureConfig().get());
 
     let err = $state('');
     let errFileSize = $state('');
@@ -131,32 +134,22 @@
     async function upload(list: FileList) {
         err = '';
         errFileSize = '';
+
+        if (!config) {
+            return;
+        }
+
         isUploading = true;
 
         let url = `/auth/v1/users/${userId}/picture`;
-
-        let head = await fetch(url, {
-            method: 'HEAD',
-        });
-        if (!head.ok) {
-            err = 'Cannot do HEAD request to picture upload';
-            return;
-        }
-        let header = head.headers.get('X-Content-Length-Limit');
-        if (!header) {
-            err = 'No X-Content-Length-Limit in HEAD request headers';
-            return;
-        }
-        let limit = Number.parseInt(header);
-        console.log('content length limit: ', limit);
 
         for (let file of list) {
             if (!accept.includes(file.type)) {
                 err = 'Invalid File Format, allowed: ' + accept;
                 break;
             }
-            if (file.size > limit) {
-                errFileSize = `${t.common.maxFileSize}: ${limit / 1024 / 1024} MB`;
+            if (file.size > config.content_len_limit) {
+                errFileSize = `${t.common.maxFileSize}: ${config.content_len_limit / 1024 / 1024} MB`;
                 break;
             }
 
@@ -207,53 +200,64 @@
 {/snippet}
 
 <div class="container">
-    <form
-            class="avatar"
-            aria-dropeffect="move"
-            aria-label="Upload"
-            style:background-color={color}
-            style:width
-            {onmouseenter}
-            {onmouseleave}
-    >
-        <label
-                for={id}
-                aria-controls={id}
-                aria-disabled={isUploading}
+    {#if config?.upload_allowed}
+        <form
+                class="avatar"
+                aria-dropeffect="move"
+                aria-label="Upload"
+                style:background-color={color}
                 style:width
-                data-show={!isUploading && showUpload}
+                {onmouseenter}
+                {onmouseleave}
         >
-            <IconUpload {width}/>
-        </label>
-        <input
-                {id}
-                type="file"
-                disabled={isUploading}
-                aria-disabled={isUploading}
-                aria-hidden="true"
-                {accept}
-                bind:files
-        />
+            <label
+                    for={id}
+                    aria-controls={id}
+                    aria-disabled={isUploading}
+                    style:width
+                    data-show={!isUploading && showUpload}
+            >
+                <IconUpload {width}/>
+            </label>
+            <input
+                    {id}
+                    type="file"
+                    disabled={isUploading}
+                    aria-disabled={isUploading}
+                    aria-hidden="true"
+                    {accept}
+                    bind:files
+            />
 
-        {#if errFileSize}
-            <div class="errLimit" style:width>
-                {errFileSize}
+            {#if errFileSize}
+                <div class="errLimit" style:width>
+                    {errFileSize}
+                </div>
+            {/if}
+
+            {@render avatar()}
+        </form>
+
+        {#if size === 'large' && pictureId}
+            <div class="relative">
+                <div class="delete">
+                    <Button invisible onclick={deletePicture}>
+                        <div title={t.common.delete}>
+                            <IconStop/>
+                        </div>
+                    </Button>
+                </div>
             </div>
         {/if}
-
+    {:else}
+        <span
+                class="avatar"
+                style:background-color={color}
+                style:width
+                style:height={width}
+        >
         {@render avatar()}
-    </form>
-
-    {#if size === 'large' && pictureId}
-        <div class="relative">
-            <div class="delete">
-                <Button invisible onclick={deletePicture}>
-                    <div title={t.common.delete}>
-                        <IconStop/>
-                    </div>
-                </Button>
-            </div>
-        </div>
+    </span>
     {/if}
 </div>
 

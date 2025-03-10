@@ -147,7 +147,7 @@ async fn get_session_from_cookie(
                 }
 
                 if req.method() == http::Method::GET
-                    || req.method() == http::Method::HEAD
+                    // || req.method() == http::Method::HEAD
                     || is_path_csrf_exception(req.path())
                     || session.validate_csrf(req.request()).is_ok()
                 {
