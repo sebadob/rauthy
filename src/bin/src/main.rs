@@ -472,7 +472,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(users::get_user_by_id)
                             .service(users::get_user_attr)
                             .service(users::put_user_attr)
-                            .service(users::head_user_picture)
+                            .service(users::get_user_picture_config)
                             .service(users::put_user_picture)
                             .service(users::get_user_picture)
                             .service(users::delete_user_picture)

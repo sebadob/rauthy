@@ -109,7 +109,7 @@ The following new config variables are available:
 # Images will ba reduced in size to max 192px on the longest side.
 # They most often end up between 25 - 40kB in size.
 #
-# Available options: db file s3
+# Available options: db file s3 disabled
 # Default: db
 #PICTURE_STORAGE_TYPE="db"
 
@@ -165,7 +165,7 @@ The following new config variables are available:
 #PICTURE_PUBLIC=false
 ```
 
-[]()
+[#743](https://github.com/sebadob/rauthy/pull/743)
 
 #### Static HTML + prepared queries added to version control
 

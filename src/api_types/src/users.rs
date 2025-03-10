@@ -9,6 +9,12 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
 
+#[derive(Debug, Serialize, ToSchema)]
+pub struct UserPictureConfig {
+    pub upload_allowed: bool,
+    pub content_len_limit: u32,
+}
+
 #[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
 pub struct DeviceRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$`

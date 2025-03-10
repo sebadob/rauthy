@@ -2,7 +2,7 @@ use crate::{content_len_limit, ReqPrincipal};
 use actix_web::http::header::{ACCEPT, LOCATION};
 use actix_web::http::StatusCode;
 use actix_web::web::{Json, Query};
-use actix_web::{delete, get, head, post, put, web, HttpRequest, HttpResponse, ResponseError};
+use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
 use chrono::Utc;
 use rauthy_api_types::generic::{PaginationParams, PasswordPolicyResponse};
 use rauthy_api_types::oidc::PasswordResetResponse;
@@ -10,9 +10,10 @@ use rauthy_api_types::users::{
     DeviceRequest, DeviceResponse, MfaPurpose, NewUserRegistrationRequest, NewUserRequest,
     PasskeyResponse, PasswordResetRequest, RequestResetRequest, UpdateUserRequest,
     UpdateUserSelfRequest, UserAttrConfigRequest, UserAttrConfigResponse, UserAttrValueResponse,
-    UserAttrValuesResponse, UserAttrValuesUpdateRequest, UserResponse, UserResponseSimple,
-    WebIdRequest, WebIdResponse, WebauthnAuthFinishRequest, WebauthnAuthStartRequest,
-    WebauthnAuthStartResponse, WebauthnRegFinishRequest, WebauthnRegStartRequest,
+    UserAttrValuesResponse, UserAttrValuesUpdateRequest, UserPictureConfig, UserResponse,
+    UserResponseSimple, WebIdRequest, WebIdResponse, WebauthnAuthFinishRequest,
+    WebauthnAuthStartRequest, WebauthnAuthStartResponse, WebauthnRegFinishRequest,
+    WebauthnRegStartRequest,
 };
 use rauthy_common::constants::{
     COOKIE_MFA, ENABLE_WEB_ID, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, OPEN_USER_REG,
@@ -28,7 +29,7 @@ use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::devices::DeviceEntity;
 use rauthy_models::entity::password::PasswordPolicy;
-use rauthy_models::entity::pictures::UserPicture;
+use rauthy_models::entity::pictures::{PictureStorage, UserPicture, PICTURE_STORAGE_TYPE};
 use rauthy_models::entity::pow::PowEntity;
 use rauthy_models::entity::theme::ThemeCssFull;
 use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
@@ -48,7 +49,7 @@ use rauthy_service::password_reset;
 use spow::pow::Pow;
 use std::env;
 use std::sync::LazyLock;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 use validator::Validate;
 
 pub static PICTURE_PUBLIC: LazyLock<bool> = LazyLock::new(|| {
@@ -482,21 +483,20 @@ pub async fn put_user_attr(
 
 /// HEAD before uploading a user picture to fetch the content length limit
 #[utoipa::path(
-    head,
-    path = "/users/{user_id}/picture",
+    get,
+    path = "/users/{user_id}/picture/config",
     tag = "users",
     responses(
         (status = 200, description = "Ok"),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
     ),
 )]
-#[head("/users/{user_id}/picture")]
-pub async fn head_user_picture(
+#[get("/users/picture_config")]
+pub async fn get_user_picture_config(
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
     let user_id = path.into_inner();
-    debug!("principal in head: {:?}", principal);
     if let Err(err) = principal.validate_user_or_admin(&user_id) {
         if principal
             .validate_api_key(AccessGroup::Users, AccessRights::Read)
@@ -506,12 +506,10 @@ pub async fn head_user_picture(
         }
     }
 
-    Ok(HttpResponse::Ok()
-        .insert_header((
-            "X-Content-Length-Limit",
-            *PICTURE_UPLOAD_LIMIT_MB as u32 * 1024 * 1024,
-        ))
-        .finish())
+    Ok(HttpResponse::Ok().json(UserPictureConfig {
+        upload_allowed: *PICTURE_STORAGE_TYPE != PictureStorage::Disabled,
+        content_len_limit: *PICTURE_UPLOAD_LIMIT_MB as u32 * 1024 * 1024,
+    }))
 }
 
 /// Upload a user picture
@@ -534,6 +532,13 @@ pub async fn put_user_picture(
     principal: ReqPrincipal,
     payload: actix_multipart::Multipart,
 ) -> Result<HttpResponse, ErrorResponse> {
+    if *PICTURE_STORAGE_TYPE == PictureStorage::Disabled {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "user picture upload is disabled",
+        ));
+    }
+
     let user_id = path.into_inner();
     if let Err(err) = principal.validate_user_or_admin(&user_id) {
         if principal

@@ -1,5 +1,9 @@
 import type {Language} from "./language";
-import {PATTERN_CITY, PATTERN_PHONE, PATTERN_STREET, PATTERN_URI} from "$utils/patterns.ts";
+
+export interface UserPictureConfig {
+    upload_allowed: boolean,
+    content_len_limit: number,
+}
 
 export interface NewUserRequest {
     /// Validation: `email`
