@@ -1,5 +1,5 @@
 use crate::{content_len_limit, ReqPrincipal};
-use actix_web::http::header::{HeaderValue, ACCEPT, LOCATION};
+use actix_web::http::header::{ACCEPT, LOCATION};
 use actix_web::http::StatusCode;
 use actix_web::web::{Json, Query};
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
@@ -43,9 +43,17 @@ use rauthy_models::html::HtmlCached;
 use rauthy_models::language::Language;
 use rauthy_service::password_reset;
 use spow::pow::Pow;
-use std::num::ParseIntError;
+use std::env;
+use std::sync::LazyLock;
 use tracing::{error, info, warn};
 use validator::Validate;
+
+pub static PICTURE_UPLOAD_LIMIT_MB: LazyLock<u16> = LazyLock::new(|| {
+    env::var("PICTURE_UPLOAD_LIMIT_MB")
+        .unwrap_or_else(|_| "10".to_string())
+        .parse::<u16>()
+        .expect("Cannot parse PICTURE_UPLOAD_LIMIT_MB as u16")
+});
 
 /// Returns all existing users
 ///
@@ -493,8 +501,7 @@ pub async fn put_user_picture(
         }
     }
 
-    // TODO make configurable
-    content_len_limit(&req, 10)?;
+    content_len_limit(&req, *PICTURE_UPLOAD_LIMIT_MB)?;
 
     UserPicture::upload(user_id, payload).await
 }

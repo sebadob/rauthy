@@ -172,7 +172,7 @@ fn content_len_limit(req: &HttpRequest, limit_mb: u16) -> Result<(), ErrorRespon
                 }
             }
             Err(err) => {
-                error!("Error decoding Content-Length header {}: {}", value, err);
+                error!("Error decoding Content-Length header {:?}: {}", value, err);
                 Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "invalid Content-Length header",
