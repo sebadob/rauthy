@@ -533,6 +533,7 @@ async fn actix_main(app_state: web::Data<AppState>) -> std::io::Result<()> {
                             .service(oidc::post_validate_token)
                             .service(oidc::get_well_known)
                             .service(generic::get_health)
+                            .service(generic::get_i18n_config)
                             .service(generic::get_ready)
                             .service(html::get_static_assets),
                     ),

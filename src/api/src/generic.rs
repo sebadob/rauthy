@@ -1,18 +1,18 @@
 use crate::ReqPrincipal;
 use actix_web::http::header;
-use actix_web::http::header::HeaderValue;
+use actix_web::http::header::{HeaderValue, CACHE_CONTROL, CONTENT_TYPE};
 use actix_web::web::{Json, Query};
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
 use chrono::Utc;
 use cryptr::EncKeys;
 use rauthy_api_types::generic::{
     AppVersionResponse, Argon2ParamsResponse, EncKeyMigrateRequest, EncKeysResponse,
-    HealthResponse, LoginTimeResponse, PasswordHashTimesRequest, PasswordPolicyRequest,
-    PasswordPolicyResponse, SearchParams, SearchParamsType,
+    HealthResponse, I18nConfigResponse, LoginTimeResponse, PasswordHashTimesRequest,
+    PasswordPolicyRequest, PasswordPolicyResponse, SearchParams, SearchParamsType,
 };
 use rauthy_common::constants::{
-    APP_START, HEADER_ALLOW_ALL_ORIGINS, HEALTH_CHECK_DELAY_SECS, IDX_LOGIN_TIME, RAUTHY_VERSION,
-    SUSPICIOUS_REQUESTS_BLACKLIST, SUSPICIOUS_REQUESTS_LOG,
+    APPLICATION_JSON, APP_START, HEADER_ALLOW_ALL_ORIGINS, HEALTH_CHECK_DELAY_SECS, IDX_LOGIN_TIME,
+    RAUTHY_VERSION, SUSPICIOUS_REQUESTS_BLACKLIST, SUSPICIOUS_REQUESTS_LOG,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::ErrorResponse;
@@ -30,10 +30,43 @@ use rauthy_models::events::ip_blacklist_handler::{IpBlacklist, IpBlacklistReq};
 use rauthy_models::language::Language;
 use rauthy_service::{encryption, suspicious_request_block};
 use semver::Version;
+use std::env;
 use std::ops::{Add, Sub};
 use std::str::FromStr;
+use std::sync::LazyLock;
 use tracing::{error, info, warn};
 use validator::Validate;
+
+static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
+    let common = env::var("FILTER_LANG_COMMON")
+        .unwrap_or_else(|_| "en de zhhans ko".to_string())
+        .trim()
+        .split(" ")
+        .filter_map(|v| {
+            let tr = v.trim();
+            if tr.is_empty() {
+                None
+            } else {
+                Some(Language::from(tr).into())
+            }
+        })
+        .collect::<Vec<_>>();
+    let admin = env::var("FILTER_LANG_ADMIN")
+        .unwrap_or_else(|_| "en de".to_string())
+        .trim()
+        .split(" ")
+        .filter_map(|v| {
+            let tr = v.trim();
+            if tr.is_empty() {
+                None
+            } else {
+                Some(Language::from(tr).into())
+            }
+        })
+        .collect::<Vec<_>>();
+
+    serde_json::to_string(&I18nConfigResponse { common, admin }).unwrap()
+});
 
 /// Check if the current session is valid
 #[utoipa::path(
@@ -137,6 +170,23 @@ pub async fn post_migrate_enc_key(
     Ok(HttpResponse::Ok().finish())
 }
 
+/// Returns the languages to show in the UI
+#[utoipa::path(
+    get,
+    path = "/i18n_config",
+    tag = "generic",
+    responses(
+        (status = 200, description = "Ok", body = I18nConfigResponse),
+    ),
+)]
+#[get("/i18n_config")]
+pub async fn get_i18n_config() -> Result<HttpResponse, ErrorResponse> {
+    Ok(HttpResponse::Ok()
+        .insert_header((CONTENT_TYPE, APPLICATION_JSON))
+        .insert_header((CACHE_CONTROL, "max-age=300, stale-while-revalidate=2592000"))
+        .body(&**I18N_CONFIG))
+}
+
 /// Returns the current Argon2ID parameters and the login time
 ///
 /// The `login time` is the time it takes to complete a full login workflow incl password hashing.
@@ -148,9 +198,9 @@ pub async fn post_migrate_enc_key(
     path = "/login_time",
     tag = "generic",
     responses(
-        (status = 200, description = "LoginTimeResponse"),
-        (status = 401, description = "Unauthorized"),
-        (status = 403, description = "Forbidden"),
+        (status = 200, description = "Ok", body = LoginTimeResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
 )]
 #[get("/login_time")]

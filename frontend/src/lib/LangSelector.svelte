@@ -2,10 +2,11 @@
     import {useI18n} from "$state/i18n.svelte.ts";
     import {untrack} from "svelte";
     import {getCookie} from "$utils/helpers.ts";
-    import {LANGUAGES, LANGUAGES_ADMIN} from "$utils/constants.ts";
     import Options from "$lib5/Options.svelte";
     import {fetchPost} from "$api/fetch.ts";
     import {page} from "$app/state";
+    import type {Language} from "$api/types/i18n.ts";
+    import {useI18nConfig} from "$state/i18n_config.svelte.ts";
 
     let {
         absolute,
@@ -23,9 +24,9 @@
     let initial = untrack(() => t.lang);
     let selected = $state(initial);
 
-    let languages = $derived(page.route.id?.includes('/admin') ? LANGUAGES_ADMIN : LANGUAGES);
+    let languages: undefined | Language[] = $derived(page.route.id?.includes('/admin') ? useI18nConfig().admin() : useI18nConfig().common());
 
-    let offsetTop = $derived(openTop ? `-${languages.length * 2 + 2}rem` : undefined);
+    let offsetTop = $derived(openTop ? `-${(languages?.length || 0) * 2 + 2}rem` : undefined);
     let offsetLeft = $derived(openTop ? '.2rem' : undefined);
 
     // TODO make it possible in the backend to show only configured languages
@@ -61,16 +62,18 @@
     }
 </script>
 
-<div class:absolute>
-    <Options
-            ariaLabel={t.common.selectI18n}
-            options={languages}
-            borderless
-            bind:value={selected}
-            {offsetTop}
-            {offsetLeft}
-    />
-</div>
+{#if languages}
+    <div class:absolute>
+        <Options
+                ariaLabel={t.common.selectI18n}
+                options={languages}
+                borderless
+                bind:value={selected}
+                {offsetTop}
+                {offsetLeft}
+        />
+    </div>
+{/if}
 
 <style>
     .absolute {

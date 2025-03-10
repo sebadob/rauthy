@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {onMount, untrack} from "svelte";
+    import {onMount} from "svelte";
     import {fetchGet} from "$api/fetch.ts";
     import type {UserResponse, UserResponseSimple} from "$api/types/user.ts";
     import OrderSearchBar from "$lib5/search_bar/OrderSearchBar.svelte";

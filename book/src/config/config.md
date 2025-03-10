@@ -955,6 +955,23 @@ EVENT_LEVEL_FAILED_LOGIN=info
 #SESSION_TIMEOUT_FED_CM=259200
 
 #####################################
+############### I18n ################
+#####################################
+
+# Can be set to filter the languages to show in the UI.
+# If not set, all available i18n translations will be
+# show in the language selector.
+# To show only specific ones, provide them here as a
+# space-separated value.
+#
+# Languages for all user-facing pages.
+# Available Options: en de zhhans ko
+#FILTER_LANG_COMMON="en de zhhans ko"
+# Languages for the Admin UI.
+# Available Options: en de
+#FILTER_LANG_ADMIN="en de"
+
+#####################################
 ####### LIFETIMES / TIMEOUTS ########
 #####################################
 

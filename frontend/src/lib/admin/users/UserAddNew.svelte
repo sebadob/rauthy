@@ -6,10 +6,9 @@
     import {fetchPost} from "$api/fetch.ts";
     import {useI18n} from "$state/i18n.svelte.ts";
     import {useI18nAdmin} from "$state/i18n_admin.svelte.ts";
-    import type {Language} from "$api/types/language.ts";
+    import type {Language} from "$api/types/i18n.ts";
     import type {NewUserRequest, UserResponse} from "$api/types/user.ts";
     import Options from "$lib5/Options.svelte";
-    import {LANGUAGES} from "$utils/constants.ts";
     import InputCheckbox from "$lib5/form/InputCheckbox.svelte";
     import InputDateTimeCombo from "$lib5/form/InputDateTimeCombo.svelte";
     import {fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime} from "$utils/form.ts";
@@ -20,6 +19,7 @@
     import type {SelectItem} from "$lib5/select_list/props.ts";
     import {untrack} from "svelte";
     import LabeledValue from "$lib5/LabeledValue.svelte";
+    import {useI18nConfig} from "$state/i18n_config.svelte.ts";
 
     let {
         onSave,
@@ -31,6 +31,7 @@
         groups: GroupResponse[],
     } = $props();
 
+
     let t = useI18n();
     let ta = useI18nAdmin();
 
@@ -40,6 +41,7 @@
     let email = $state('');
     let givenName = $state('');
     let familyName = $state('');
+    let languages = $derived(useI18nConfig().common()?.map(l => l as string));
     let language: Language = $state('en');
 
     let rolesItems: SelectItem[] = $state(untrack(() => roles.map(r => {
@@ -118,14 +120,16 @@
                 pattern={PATTERN_USER_NAME}
         />
 
-        <LabeledValue label={ta.common.language}>
-            <Options
-                    ariaLabel={t.common.selectI18n}
-                    options={LANGUAGES}
-                    bind:value={language}
-                    borderless
-            />
-        </LabeledValue>
+        {#if languages}
+            <LabeledValue label={ta.common.language}>
+                <Options
+                        ariaLabel={t.common.selectI18n}
+                        options={languages}
+                        bind:value={language}
+                        borderless
+                />
+            </LabeledValue>
+        {/if}
 
         <SelectList bind:items={rolesItems}>
             {t.account.roles}

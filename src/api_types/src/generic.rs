@@ -150,6 +150,12 @@ pub struct HealthResponse {
     pub cache_healthy: bool,
 }
 
+#[derive(Debug, Serialize, ToSchema)]
+pub struct I18nConfigResponse {
+    pub common: Vec<Language>,
+    pub admin: Vec<Language>,
+}
+
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct LoginTimeResponse {
     pub argon2_params: Argon2ParamsResponse,

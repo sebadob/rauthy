@@ -37,8 +37,6 @@ export const EVENT_TYPES = [
     'UserPasswordReset',
     'Test',
 ]
-export const LANGUAGES = ['de', 'en', 'zh', 'ko'];
-export const LANGUAGES_ADMIN = ['de', 'en'];
 
 // All TPL_* values match a possibly existing `<template>` id
 // -> src/models/src/html/templates.rs -> HtmlTemplate
