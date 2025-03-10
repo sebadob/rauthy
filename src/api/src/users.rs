@@ -41,6 +41,9 @@ use rauthy_models::events::event::Event;
 use rauthy_models::html::templates::{Error3Html, ErrorHtml};
 use rauthy_models::html::HtmlCached;
 use rauthy_models::language::Language;
+use rauthy_models::{JwtCommonClaims, JwtTokenType};
+use rauthy_service::oidc::helpers::get_bearer_token_from_header;
+use rauthy_service::oidc::validation;
 use rauthy_service::password_reset;
 use spow::pow::Pow;
 use std::env;
@@ -48,6 +51,12 @@ use std::sync::LazyLock;
 use tracing::{debug, error, info, warn};
 use validator::Validate;
 
+pub static PICTURE_PUBLIC: LazyLock<bool> = LazyLock::new(|| {
+    env::var("PICTURE_PUBLIC")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .expect("Cannot parse PICTURE_PUBLIC as bool")
+});
 pub static PICTURE_UPLOAD_LIMIT_MB: LazyLock<u16> = LazyLock::new(|| {
     env::var("PICTURE_UPLOAD_LIMIT_MB")
         .unwrap_or_else(|_| "10".to_string())
@@ -555,19 +564,14 @@ pub async fn put_user_picture(
 #[get("/users/{user_id}/picture/{picture_id}")]
 pub async fn get_user_picture(
     path: web::Path<(String, String)>,
-    principal: ReqPrincipal,
+    req: HttpRequest,
+    principal: Option<ReqPrincipal>,
+    data: web::Data<AppState>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let (user_id, picture_id) = path.into_inner();
 
-    // TODO config var for all public avatars
-
-    if let Err(err) = principal.validate_user_or_admin(&user_id) {
-        if principal
-            .validate_api_key(AccessGroup::Users, AccessRights::Read)
-            .is_err()
-        {
-            return Err(err);
-        }
+    if !*PICTURE_PUBLIC {
+        validate_user_picture_access(&req, &data, principal, &user_id).await?;
     }
 
     {
@@ -581,6 +585,42 @@ pub async fn get_user_picture(
     }
 
     UserPicture::download(picture_id).await
+}
+
+#[inline]
+async fn validate_user_picture_access(
+    req: &HttpRequest,
+    data: &web::Data<AppState>,
+    principal: Option<ReqPrincipal>,
+    user_id: &str,
+) -> Result<(), ErrorResponse> {
+    if let Some(principal) = principal {
+        if principal.validate_user_or_admin(user_id).is_ok() {
+            return Ok(());
+        }
+
+        if principal
+            .validate_api_key(AccessGroup::Users, AccessRights::Read)
+            .is_ok()
+        {
+            return Ok(());
+        }
+    }
+
+    if let Ok(bearer) = get_bearer_token_from_header(req.headers()) {
+        if let Ok(claims) = validation::validate_token::<JwtCommonClaims>(data, &bearer).await {
+            if (claims.custom.typ == JwtTokenType::Bearer || claims.custom.typ == JwtTokenType::Id)
+                && claims.subject.as_deref() == Some(user_id)
+            {
+                return Ok(());
+            }
+        }
+    }
+
+    Err(ErrorResponse::new(
+        ErrorResponseType::Unauthorized,
+        "you don't have access to this user picture",
+    ))
 }
 
 /// DELETE the user picture
