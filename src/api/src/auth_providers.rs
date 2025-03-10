@@ -1,4 +1,4 @@
-use crate::{map_auth_step, ReqPrincipal};
+use crate::{content_len_limit, map_auth_step, ReqPrincipal};
 use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE, LOCATION};
 use actix_web::web::{Json, Query};
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
@@ -409,10 +409,12 @@ pub async fn get_provider_img(
 #[put("/providers/{id}/img")]
 pub async fn put_provider_img(
     id: web::Path<String>,
+    req: HttpRequest,
     principal: ReqPrincipal,
     mut payload: actix_multipart::Multipart,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_admin_session()?;
+    content_len_limit(&req, 10)?;
 
     // we only accept a single field from the Multipart upload -> no looping here
     let mut buf: Vec<u8> = Vec::with_capacity(128 * 1024);

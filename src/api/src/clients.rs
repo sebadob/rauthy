@@ -1,4 +1,4 @@
-use crate::ReqPrincipal;
+use crate::{content_len_limit, ReqPrincipal};
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE, WWW_AUTHENTICATE,
 };
@@ -343,10 +343,12 @@ pub async fn get_client_logo(
 #[put("/clients/{id}/logo")]
 pub async fn put_client_logo(
     id: web::Path<String>,
+    req: HttpRequest,
     principal: ReqPrincipal,
     mut payload: actix_multipart::Multipart,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Update)?;
+    content_len_limit(&req, 10)?;
 
     // we only accept a single field from the Multipart upload -> no looping here
     let mut buf: Vec<u8> = Vec::with_capacity(128 * 1024);

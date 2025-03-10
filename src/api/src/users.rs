@@ -1,5 +1,5 @@
-use crate::ReqPrincipal;
-use actix_web::http::header::{ACCEPT, LOCATION};
+use crate::{content_len_limit, ReqPrincipal};
+use actix_web::http::header::{HeaderValue, ACCEPT, LOCATION};
 use actix_web::http::StatusCode;
 use actix_web::web::{Json, Query};
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
@@ -43,6 +43,7 @@ use rauthy_models::html::HtmlCached;
 use rauthy_models::language::Language;
 use rauthy_service::password_reset;
 use spow::pow::Pow;
+use std::num::ParseIntError;
 use tracing::{error, info, warn};
 use validator::Validate;
 
@@ -475,14 +476,14 @@ pub async fn put_user_attr(
         (status = 401, description = "Unauthorized", body = ErrorResponse),
     ),
 )]
-#[put("/users/{user_id}/picture/{picture_id}")]
+#[put("/users/{user_id}/picture")]
 pub async fn put_user_picture(
     path: web::Path<String>,
+    req: HttpRequest,
     principal: ReqPrincipal,
     payload: actix_multipart::Multipart,
 ) -> Result<HttpResponse, ErrorResponse> {
     let user_id = path.into_inner();
-
     if let Err(err) = principal.validate_user_or_admin(&user_id) {
         if principal
             .validate_api_key(AccessGroup::Users, AccessRights::Update)
@@ -491,6 +492,9 @@ pub async fn put_user_picture(
             return Err(err);
         }
     }
+
+    // TODO make configurable
+    content_len_limit(&req, 10)?;
 
     UserPicture::upload(user_id, payload).await
 }
