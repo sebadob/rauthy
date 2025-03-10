@@ -4,15 +4,23 @@
 
 ### Breaking
 
+#### Changed header names for session CSRF and password reset tokens
+
+This may concern you, if you have built custom UI parts in front of Rauthy.
+
+The Headers names for the session and password reset CSRF tokens have been changed and now contain a leading `x-`.
+This make the API more clean, since custom headers should be marked with a leading `x-`.
+
+- `csrf-token` -> `x-csrf-token`
+- `pwd-csrf-token` -> `x-pwd-csrf-token`
+
+[#749](https://github.com/sebadob/rauthy/pull/749)
+
 #### Custom Client Branding
 
 With the migration to Svelte 5 (mentioned below), the way theming is done has been changed from the ground up in such
 a way, that it is not possible to migrate possibly existing custom client brandings. This means that you will lose and
 need to re-create a possibly existing custom branding with this version.
-
-#### Changed header names for session CSRF and password reset tokens
-
-TODO
 
 #### Paginated Users / Sessions
 

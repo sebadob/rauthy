@@ -2,37 +2,6 @@
 
 ## CURRENT WORK
 
-- change `csrf-token` header to `x-csrf-token` -> breaking change into changelog!
-
-### Missing / Updated i18n (zh/ko) for Svelte 5 Migration:
-
-- `t.account.accessRenew`
-- `t.authorize.expectingPasskey`
-- `t.authorize.orLoginWith`
-- `t.authorize.requestExpired`
-- `t.authorize.validEmail`
-- `t.common.close`
-- `t.common.changeTheme`
-- `t.common.details`
-- `t.common.expandContent`
-- `t.common.hide`
-- `t.common.hours`
-- `t.common.legend`
-- `t.common.minutes`
-- `t.common.month`
-- `t.common.months`
-- `t.common.selectI18n`
-- `t.common.show`
-- `t.common.summary`
-- `t.common.weekDaysShort`
-- `t.common.year`
-- `t.pagination.*`
-- `t.register.alreadyRegistered`
-
-### Changelog TODO
-
-- breaking: changed header name for csrf token + pwd csrf token
-
 ## Stage 1 - essentials
 
 [x] finished
