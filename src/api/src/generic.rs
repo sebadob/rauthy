@@ -1,6 +1,6 @@
 use crate::ReqPrincipal;
 use actix_web::http::header;
-use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
+use actix_web::http::header::{HeaderValue, CACHE_CONTROL, CONTENT_TYPE};
 use actix_web::web::{Json, Query};
 use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
 use chrono::Utc;
@@ -183,6 +183,7 @@ pub async fn post_migrate_enc_key(
 pub async fn get_i18n_config() -> Result<HttpResponse, ErrorResponse> {
     Ok(HttpResponse::Ok()
         .insert_header((CONTENT_TYPE, APPLICATION_JSON))
+        .insert_header((CACHE_CONTROL, "max-age=300, stale-while-revalidate=2592000"))
         .body(&**I18N_CONFIG))
 }
 
