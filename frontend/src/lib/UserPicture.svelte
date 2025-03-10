@@ -158,7 +158,7 @@
             let res = await fetch(url, {
                 method: 'PUT',
                 headers: {
-                    'csrf-token': localStorage.getItem(CSRF_TOKEN) || '',
+                    'x-csrf-token': localStorage.getItem(CSRF_TOKEN) || '',
                 },
                 body: fd,
             });

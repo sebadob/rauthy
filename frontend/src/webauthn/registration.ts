@@ -25,9 +25,9 @@ export async function webauthnReg(
         'Accept': 'application/json',
     };
     if (pwdCsrfToken) {
-        headers['pwd-csrf-token'] = pwdCsrfToken;
+        headers['x-pwd-csrf-token'] = pwdCsrfToken;
     } else {
-        headers['csrf-token'] = localStorage.getItem(CSRF_TOKEN) || '';
+        headers['x-csrf-token'] = localStorage.getItem(CSRF_TOKEN) || '';
     }
 
     let resStart = await fetch(`/auth/v1/users/${userId}/webauthn/register/start`, {
