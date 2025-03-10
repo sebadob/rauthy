@@ -173,7 +173,7 @@ impl UserPicture {
         }
 
         // read image data into memory (actix web limits max body size)
-        let mut content_type = None;
+        let mut content_type = "";
         let mut is_img = false;
         let mut buf: Vec<u8> = Vec::with_capacity(32 * 1024);
         if let Some(part) = payload.next().await {
@@ -184,8 +184,14 @@ impl UserPicture {
                     debug!("content_type: {:?}", mime);
                     let s = mime.as_ref();
                     match s {
-                        "image/svg+xml" => {}
-                        "image/jpeg" | "image/png" => is_img = true,
+                        "image/svg+xml" => {
+                            content_type = "image/svg+xml";
+                        }
+                        "image/jpeg" | "image/png" | "image/webp" => {
+                            is_img = true;
+                            // all non-webp images will be converted to webp in the following lines
+                            content_type = "image/webp";
+                        }
                         _ => {
                             return Err(ErrorResponse::new(
                                 ErrorResponseType::BadRequest,
@@ -194,7 +200,6 @@ impl UserPicture {
                             ));
                         }
                     }
-                    content_type = Some(s.to_string());
                 }
                 None => {
                     return Err(ErrorResponse::new(
@@ -234,21 +239,21 @@ impl UserPicture {
         let new_id = match *PICTURE_STORAGE_TYPE {
             PictureStorage::DB => {
                 Self::insert(
-                    content_type.unwrap(),
+                    content_type.to_string(),
                     PICTURE_STORAGE_TYPE.clone(),
                     Some(bytes),
                 )
                 .await?
             }
             PictureStorage::File => {
-                let id =
-                    Self::insert(content_type.unwrap(), PICTURE_STORAGE_TYPE.clone(), None).await?;
+                let id = Self::insert(content_type.to_string(), PICTURE_STORAGE_TYPE.clone(), None)
+                    .await?;
                 fs::write(Self::local_file_path(&id), bytes).await?;
                 id
             }
             PictureStorage::S3 => {
-                let id =
-                    Self::insert(content_type.unwrap(), PICTURE_STORAGE_TYPE.clone(), None).await?;
+                let id = Self::insert(content_type.to_string(), PICTURE_STORAGE_TYPE.clone(), None)
+                    .await?;
                 PICTURE_S3_BUCKET.put(&id, &bytes).await?;
                 id
             }
