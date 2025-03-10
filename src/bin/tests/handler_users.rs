@@ -1,10 +1,13 @@
 use crate::common::{get_auth_headers, get_backend_url, get_token_set};
 use pretty_assertions::assert_eq;
+use rauthy_api_types::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyRequest};
 use rauthy_api_types::generic::Language;
 use rauthy_api_types::users::{
     NewUserRequest, RequestResetRequest, UserResponse, UserResponseSimple,
 };
+use rauthy_common::utils::new_store_id;
 use reqwest::header::AUTHORIZATION;
+use reqwest::StatusCode;
 use std::error::Error;
 
 mod common;
@@ -166,6 +169,157 @@ async fn test_userinfo() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     assert_eq!(res.status(), 200);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_user_picture() -> Result<(), Box<dyn Error>> {
+    let auth_headers = get_auth_headers().await?;
+    let client = reqwest::Client::new();
+
+    // find our test user
+    let res = client
+        .get(&format!("{}/users", get_backend_url()))
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    let users = res.json::<Vec<UserResponseSimple>>().await?;
+    let user_id_admin = users
+        .iter()
+        .find(|u| u.email == "admin@localhost.de")
+        .unwrap()
+        .id
+        .clone();
+    let user_id = users
+        .into_iter()
+        .find(|u| u.email == "init_admin@localhost.de")
+        .unwrap()
+        .id;
+    eprintln!("user id for picture tests: {}", user_id);
+
+    // upload a picture
+    let url_picture = format!("{}/users/{}/picture", get_backend_url(), user_id);
+
+    let path = "../../logo/rauthy_dark_small.png";
+    let part = reqwest::multipart::Part::file(path).await.unwrap();
+    let form = reqwest::multipart::Form::new();
+    let form = form.part("image.png", part);
+
+    let res = client
+        .put(&url_picture)
+        .headers(auth_headers.clone())
+        .multipart(form)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let picture_id = res.text().await?;
+    assert!(!picture_id.is_empty());
+
+    let url = format!("{}/{}", url_picture, picture_id);
+
+    // make sure we get 401 without authn
+    let res = client.get(&url).send().await?;
+    assert_eq!(res.status(), 401);
+
+    // success with valid session
+    let res = client
+        .get(&url)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(
+        res.headers().get("content-type").unwrap().to_str().unwrap(),
+        "image/webp"
+    );
+    let body = res.bytes().await?;
+    assert!(!body.is_empty());
+
+    // success with proper API key
+    let payload = ApiKeyRequest {
+        name: new_store_id(),
+        exp: None,
+        access: vec![ApiKeyAccess {
+            group: AccessGroup::Users,
+            access_rights: vec![AccessRights::Read],
+        }],
+    };
+    let res = client
+        .post(&format!("{}/api_keys", get_backend_url()))
+        .headers(auth_headers.clone())
+        .json(&payload)
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::OK);
+    let secret = res.text().await.unwrap();
+    // the header needs to be in format: 'API-Key my_apy_key'
+    let key_header = format!("API-Key {}", secret);
+    let res = client
+        .get(&url)
+        .header(AUTHORIZATION, key_header)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // success with access token
+    let ts = get_token_set().await;
+    let res = client
+        .get(&url)
+        .header(AUTHORIZATION, format!("Bearer {}", ts.access_token))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // success with id token
+    let res = client
+        .get(&url)
+        .header(
+            AUTHORIZATION,
+            format!("Bearer {}", ts.id_token.clone().unwrap()),
+        )
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // make sure access with token for another user fails
+    let url_picture = format!("{}/users/{}/picture", get_backend_url(), user_id_admin);
+
+    let path = "../../logo/rauthy_dark_small.png";
+    let part = reqwest::multipart::Part::file(path).await.unwrap();
+    let form = reqwest::multipart::Form::new();
+    let form = form.part("image.png", part);
+
+    let res = client
+        .put(&url_picture)
+        .headers(auth_headers.clone())
+        .multipart(form)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let picture_id = res.text().await?;
+    assert!(!picture_id.is_empty());
+
+    let url_admin = format!(
+        "{}/users/{}/picture/{}",
+        get_backend_url(),
+        user_id_admin,
+        picture_id
+    );
+    let res = client
+        .get(&url_admin)
+        .header(AUTHORIZATION, format!("Bearer {}", ts.access_token))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 401);
+    let res = client
+        .get(&url_admin)
+        .header(AUTHORIZATION, format!("Bearer {}", ts.id_token.unwrap()))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 401);
 
     Ok(())
 }

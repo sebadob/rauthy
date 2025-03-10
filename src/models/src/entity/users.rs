@@ -6,6 +6,7 @@ use crate::entity::groups::Group;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::password::RecentPasswordsEntity;
+use crate::entity::pictures::UserPicture;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
@@ -86,6 +87,7 @@ pub struct User {
     pub user_expires: Option<i64>,
     pub auth_provider_id: Option<String>,
     pub federation_uid: Option<String>,
+    pub picture_id: Option<String>,
 }
 
 impl Debug for User {
@@ -96,7 +98,7 @@ impl Debug for User {
         roles: {}, groups: {:?}, enabled: {}, email_verified: {}, password_expires: {:?}, \
         created_at: {}, last_login: {:?}, last_failed_login: {:?}, failed_login_attempts: {:?}, \
         language: {}, webauthn_user_id: {:?}, user_expires: {:?}, auth_provider_id: {:?}, \
-        federation_uid: {:?}",
+        federation_uid: {:?}, picture_id: {:?}",
             self.id,
             self.email,
             self.given_name,
@@ -114,7 +116,8 @@ impl Debug for User {
             self.webauthn_user_id,
             self.user_expires,
             self.auth_provider_id,
-            self.federation_uid
+            self.federation_uid,
+            self.picture_id,
         )
     }
 }
@@ -164,7 +167,7 @@ impl User {
     async fn count_inc() -> Result<(), ErrorResponse> {
         let mut count = Self::count().await?;
         // theoretically, we could have overlaps here, but we don't really care
-        // -> used for dynamic pagination only and SQLite has limited query features
+        // -> used for dynamic pagination only
         count += 1;
         DB::client()
             .put(Cache::App, IDX_USER_COUNT, &count, CACHE_TTL_APP)
@@ -175,7 +178,7 @@ impl User {
     async fn count_dec() -> Result<(), ErrorResponse> {
         let mut count = Self::count().await?;
         // theoretically, we could have overlaps here, but we don't really care
-        // -> used for dynamic pagination only and SQLite has limited query features
+        // -> used for dynamic pagination only
         count -= 1;
         DB::client()
             .put(Cache::App, IDX_USER_COUNT, &count, CACHE_TTL_APP)
@@ -233,6 +236,10 @@ impl User {
 
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
         Session::delete_by_user(&self.id).await?;
+
+        if let Some(picture_id) = &self.picture_id {
+            UserPicture::remove(picture_id.clone(), self.id.clone()).await?;
+        }
 
         let client = DB::client();
         if is_hiqlite() {
@@ -367,14 +374,20 @@ impl User {
         let res = if is_hiqlite() {
             DB::client()
                 .query_as(
-                    "SELECT id, email, created_at, last_login FROM users ORDER BY created_at ASC",
+                    r#"
+SELECT id, email, created_at, last_login, picture_id
+FROM users
+ORDER BY created_at ASC"#,
                     params!(),
                 )
                 .await?
         } else {
             sqlx::query_as!(
                 UserResponseSimple,
-                "SELECT id, email, created_at, last_login FROM users ORDER BY created_at ASC"
+                r#"
+SELECT id, email, created_at, last_login, picture_id
+FROM users
+ORDER BY created_at ASC"#
             )
             .fetch_all(DB::conn())
             .await?
@@ -470,7 +483,7 @@ impl User {
                     let mut res = DB::client()
                         .query_as(
                             r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 WHERE created_at <= $1 AND id != $2
 ORDER BY created_at DESC
@@ -486,7 +499,7 @@ OFFSET $4"#,
                     let mut res = sqlx::query_as!(
                         UserResponseSimple,
                         r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 WHERE created_at <= $1 AND id != $2
 ORDER BY created_at DESC
@@ -509,7 +522,7 @@ OFFSET $4"#,
                     DB::client()
                         .query_as(
                             r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 WHERE created_at >= $1 AND id != $2
 ORDER BY created_at ASC
@@ -522,7 +535,7 @@ OFFSET $4"#,
                     sqlx::query_as!(
                         UserResponseSimple,
                         r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 WHERE created_at >= $1 AND id != $2
 ORDER BY created_at ASC
@@ -545,7 +558,7 @@ OFFSET $4"#,
                 let mut res = DB::client()
                     .query_as(
                         r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at DESC
 LIMIT $1
@@ -560,7 +573,7 @@ OFFSET $2"#,
                 let mut res = sqlx::query_as!(
                     UserResponseSimple,
                     r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at DESC
 LIMIT $1
@@ -580,7 +593,7 @@ OFFSET $2"#,
                 DB::client()
                     .query_as(
                         r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at ASC
 LIMIT $1
@@ -592,7 +605,7 @@ OFFSET $2"#,
                 sqlx::query_as!(
                     UserResponseSimple,
                     r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at ASC
 LIMIT $1
@@ -621,8 +634,8 @@ OFFSET $2"#,
                     r#"
 INSERT INTO USERS
 (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-last_login, language, user_expires, auth_provider_id, federation_uid)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
+last_login, language, user_expires, auth_provider_id, federation_uid, picture_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
                     params!(
                         &new_user.id,
                         &new_user.email,
@@ -637,7 +650,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
                         lang,
                         new_user.user_expires,
                         &new_user.auth_provider_id,
-                        &new_user.federation_uid
+                        &new_user.federation_uid,
+                        &new_user.picture_id
                     ),
                 )
                 .await?;
@@ -646,8 +660,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
                 r#"
 INSERT INTO USERS
 (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-last_login, language, user_expires, auth_provider_id, federation_uid)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
+last_login, language, user_expires, auth_provider_id, federation_uid, picture_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
                 new_user.id,
                 new_user.email,
                 new_user.given_name,
@@ -662,6 +676,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
                 new_user.user_expires,
                 new_user.auth_provider_id,
                 new_user.federation_uid,
+                new_user.picture_id,
             )
             .execute(DB::conn())
             .await?;
@@ -706,8 +721,8 @@ UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17
-WHERE id = $18"#,
+auth_provider_id = $16, federation_uid = $17, picture_id = $18
+WHERE id = $19"#,
             params!(
                 self.email,
                 self.given_name,
@@ -726,6 +741,7 @@ WHERE id = $18"#,
                 self.user_expires,
                 self.auth_provider_id,
                 self.federation_uid,
+                self.picture_id,
                 self.id
             ),
         ));
@@ -746,8 +762,8 @@ UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17
-WHERE id = $18"#,
+auth_provider_id = $16, federation_uid = $17, picture_id = $18
+WHERE id = $19"#,
         )
         .bind(&self.email)
         .bind(&self.given_name)
@@ -766,6 +782,7 @@ WHERE id = $18"#,
         .bind(self.user_expires)
         .bind(&self.auth_provider_id)
         .bind(&self.federation_uid)
+        .bind(&self.picture_id)
         .bind(&self.id)
         .execute(&mut **txn)
         .await?;
@@ -789,8 +806,8 @@ UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17
-WHERE id = $18"#,
+auth_provider_id = $16, federation_uid = $17, picture_id = $18
+WHERE id = $19"#,
                     params!(
                         &self.email,
                         &self.given_name,
@@ -809,6 +826,7 @@ WHERE id = $18"#,
                         self.user_expires,
                         &self.auth_provider_id,
                         &self.federation_uid,
+                        &self.picture_id,
                         &self.id
                     ),
                 )
@@ -820,8 +838,8 @@ UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17
-WHERE id = $18"#,
+auth_provider_id = $16, federation_uid = $17, picture_id = $18
+WHERE id = $19"#,
             )
             .bind(&self.email)
             .bind(&self.given_name)
@@ -840,6 +858,7 @@ WHERE id = $18"#,
             .bind(self.user_expires)
             .bind(&self.auth_provider_id)
             .bind(&self.federation_uid)
+            .bind(&self.picture_id)
             .bind(&self.id)
             .execute(DB::conn())
             .await?;
@@ -878,7 +897,7 @@ WHERE id = $18"#,
                     DB::client()
                         .query_as(
                             r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 WHERE id LIKE $1
 ORDER BY created_at ASC
@@ -890,7 +909,7 @@ LIMIT $2"#,
                     query_as!(
                         UserResponseSimple,
                         r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 WHERE id LIKE $1
 ORDER BY created_at ASC
@@ -907,7 +926,7 @@ LIMIT $2"#,
                     DB::client()
                         .query_as(
                             r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 WHERE email LIKE $1
 ORDER BY created_at ASC
@@ -919,7 +938,7 @@ LIMIT $2"#,
                     query_as!(
                         UserResponseSimple,
                         r#"
-SELECT id, email, created_at, last_login
+SELECT id, email, created_at, last_login, picture_id
 FROM users
 WHERE email LIKE $1
 ORDER BY created_at ASC
@@ -1559,6 +1578,7 @@ impl User {
                 .unwrap_or_default(),
             auth_provider_id: self.auth_provider_id,
             federation_uid: self.federation_uid,
+            picture_id: self.picture_id,
         }
     }
 
@@ -1734,17 +1754,19 @@ impl Default for User {
             user_expires: None,
             auth_provider_id: None,
             federation_uid: None,
+            picture_id: None,
         }
     }
 }
 
 impl From<User> for UserResponseSimple {
-    fn from(value: User) -> Self {
+    fn from(u: User) -> Self {
         Self {
-            id: value.id,
-            email: value.email,
-            created_at: value.created_at,
-            last_login: value.last_login,
+            id: u.id,
+            email: u.email,
+            created_at: u.created_at,
+            last_login: u.last_login,
+            picture_id: u.picture_id,
         }
     }
 }
@@ -1782,6 +1804,7 @@ mod tests {
             ),
             auth_provider_id: None,
             federation_uid: None,
+            picture_id: None,
         };
         let session = Session::try_new(&user, 1, None);
         assert!(session.is_err());
@@ -1840,6 +1863,7 @@ mod tests {
             user_expires: None,
             auth_provider_id: None,
             federation_uid: None,
+            picture_id: None,
         };
 
         // enabled

@@ -1,8 +1,8 @@
-use crate::ReqPrincipal;
+use crate::{content_len_limit, ReqPrincipal};
 use actix_web::http::header::{ACCEPT, LOCATION};
 use actix_web::http::StatusCode;
 use actix_web::web::{Json, Query};
-use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, ResponseError};
+use actix_web::{delete, get, head, post, put, web, HttpRequest, HttpResponse, ResponseError};
 use chrono::Utc;
 use rauthy_api_types::generic::{PaginationParams, PasswordPolicyResponse};
 use rauthy_api_types::oidc::PasswordResetResponse;
@@ -28,6 +28,7 @@ use rauthy_models::entity::clients::Client;
 use rauthy_models::entity::continuation_token::ContinuationToken;
 use rauthy_models::entity::devices::DeviceEntity;
 use rauthy_models::entity::password::PasswordPolicy;
+use rauthy_models::entity::pictures::UserPicture;
 use rauthy_models::entity::pow::PowEntity;
 use rauthy_models::entity::theme::ThemeCssFull;
 use rauthy_models::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
@@ -40,10 +41,28 @@ use rauthy_models::events::event::Event;
 use rauthy_models::html::templates::{Error3Html, ErrorHtml};
 use rauthy_models::html::HtmlCached;
 use rauthy_models::language::Language;
+use rauthy_models::{JwtCommonClaims, JwtTokenType};
+use rauthy_service::oidc::helpers::get_bearer_token_from_header;
+use rauthy_service::oidc::validation;
 use rauthy_service::password_reset;
 use spow::pow::Pow;
-use tracing::{error, info, warn};
+use std::env;
+use std::sync::LazyLock;
+use tracing::{debug, error, info, warn};
 use validator::Validate;
+
+pub static PICTURE_PUBLIC: LazyLock<bool> = LazyLock::new(|| {
+    env::var("PICTURE_PUBLIC")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .expect("Cannot parse PICTURE_PUBLIC as bool")
+});
+pub static PICTURE_UPLOAD_LIMIT_MB: LazyLock<u16> = LazyLock::new(|| {
+    env::var("PICTURE_UPLOAD_LIMIT_MB")
+        .unwrap_or_else(|_| "10".to_string())
+        .parse::<u16>()
+        .expect("Cannot parse PICTURE_UPLOAD_LIMIT_MB as u16")
+});
 
 /// Returns all existing users
 ///
@@ -459,6 +478,182 @@ pub async fn put_user_attr(
         .map(UserAttrValueResponse::from)
         .collect::<Vec<UserAttrValueResponse>>();
     Ok(HttpResponse::Ok().json(UserAttrValuesResponse { values }))
+}
+
+/// HEAD before uploading a user picture to fetch the content length limit
+#[utoipa::path(
+    head,
+    path = "/users/{user_id}/picture",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+    ),
+)]
+#[head("/users/{user_id}/picture")]
+pub async fn head_user_picture(
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    let user_id = path.into_inner();
+    debug!("principal in head: {:?}", principal);
+    if let Err(err) = principal.validate_user_or_admin(&user_id) {
+        if principal
+            .validate_api_key(AccessGroup::Users, AccessRights::Read)
+            .is_err()
+        {
+            return Err(err);
+        }
+    }
+
+    Ok(HttpResponse::Ok()
+        .insert_header((
+            "X-Content-Length-Limit",
+            *PICTURE_UPLOAD_LIMIT_MB as u32 * 1024 * 1024,
+        ))
+        .finish())
+}
+
+/// Upload a user picture
+///
+/// Returns the new `picture_id` as the text body.
+#[utoipa::path(
+    get,
+    path = "/users/{user_id}/picture",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok", body = String),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+    ),
+)]
+#[put("/users/{user_id}/picture")]
+pub async fn put_user_picture(
+    path: web::Path<String>,
+    req: HttpRequest,
+    principal: ReqPrincipal,
+    payload: actix_multipart::Multipart,
+) -> Result<HttpResponse, ErrorResponse> {
+    let user_id = path.into_inner();
+    if let Err(err) = principal.validate_user_or_admin(&user_id) {
+        if principal
+            .validate_api_key(AccessGroup::Users, AccessRights::Update)
+            .is_err()
+        {
+            return Err(err);
+        }
+    }
+
+    content_len_limit(&req, *PICTURE_UPLOAD_LIMIT_MB)?;
+
+    UserPicture::upload(user_id, payload).await
+}
+
+/// GET / download the user picture
+#[utoipa::path(
+    get,
+    path = "/users/{user_id}/picture/{picture_id}",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[get("/users/{user_id}/picture/{picture_id}")]
+pub async fn get_user_picture(
+    path: web::Path<(String, String)>,
+    req: HttpRequest,
+    principal: Option<ReqPrincipal>,
+    data: web::Data<AppState>,
+) -> Result<HttpResponse, ErrorResponse> {
+    let (user_id, picture_id) = path.into_inner();
+
+    if !*PICTURE_PUBLIC {
+        validate_user_picture_access(&req, &data, principal, &user_id).await?;
+    }
+
+    {
+        let user = User::find(user_id).await?;
+        if user.picture_id.as_deref() != Some(&picture_id) {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "invalid picture_id for user",
+            ));
+        }
+    }
+
+    UserPicture::download(picture_id).await
+}
+
+#[inline]
+async fn validate_user_picture_access(
+    req: &HttpRequest,
+    data: &web::Data<AppState>,
+    principal: Option<ReqPrincipal>,
+    user_id: &str,
+) -> Result<(), ErrorResponse> {
+    if let Some(principal) = principal {
+        if principal.validate_user_or_admin(user_id).is_ok() {
+            return Ok(());
+        }
+
+        if principal
+            .validate_api_key(AccessGroup::Users, AccessRights::Read)
+            .is_ok()
+        {
+            return Ok(());
+        }
+    }
+
+    if let Ok(bearer) = get_bearer_token_from_header(req.headers()) {
+        if let Ok(claims) = validation::validate_token::<JwtCommonClaims>(data, &bearer).await {
+            if (claims.custom.typ == JwtTokenType::Bearer || claims.custom.typ == JwtTokenType::Id)
+                && claims.subject.as_deref() == Some(user_id)
+            {
+                return Ok(());
+            }
+        }
+    }
+
+    Err(ErrorResponse::new(
+        ErrorResponseType::Unauthorized,
+        "you don't have access to this user picture",
+    ))
+}
+
+/// DELETE the user picture
+#[utoipa::path(
+    get,
+    path = "/users/{user_id}/picture/{picture_id}",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[delete("/users/{user_id}/picture/{picture_id}")]
+pub async fn delete_user_picture(
+    path: web::Path<(String, String)>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    let (user_id, picture_id) = path.into_inner();
+
+    if let Err(err) = principal.validate_user_or_admin(&user_id) {
+        if principal
+            .validate_api_key(AccessGroup::Users, AccessRights::Delete)
+            .is_err()
+        {
+            return Err(err);
+        }
+    }
+
+    UserPicture::remove(picture_id, user_id).await?;
+
+    Ok(HttpResponse::Ok().finish())
 }
 
 /// GET all devices for this user linked via the `device_code` flow

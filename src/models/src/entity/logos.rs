@@ -484,7 +484,7 @@ impl Logo {
         }
     }
 
-    fn sanitize_svg(source: &mut [u8]) -> Result<Vec<u8>, ErrorResponse> {
+    pub fn sanitize_svg(source: &mut [u8]) -> Result<Vec<u8>, ErrorResponse> {
         let mut filter = svg_hush::Filter::new();
         filter.set_data_url_filter(data_url_filter::allow_standard_images);
 

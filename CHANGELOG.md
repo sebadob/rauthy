@@ -75,6 +75,98 @@ new UI can be seen as in beta state. If you have any problems with it, please op
 
 [#642](https://github.com/sebadob/rauthy/issues/642)
 
+#### User Pictures / Avatars
+
+It is now possible to upload an avatar / picture for each user. This can be done via the account dashboard.
+
+Rauthy uses the term `picture` to match the OIDC RFC spec. If the `scope` during login includes `profile` and the user
+has a picture, the `picture` claim will be included in the `id_token` and will contain the URL where the user picture
+can be found.
+User Picture URLs are "safe" to be used publicly, and they contain 2 cryptographically random secure IDs. This makes it
+possible to even make them available without authentication for ease of use. By default, a session / API Key / token
+is required to fetch them, but you can opt-out of that.
+
+For storage options, the default is database. This is not ideal and should only be done for small instances with maybe
+a few hundred users. They can fill up the database pretty quickly, even though images are optimized after upload, they
+will end up somewhere in the range of ~25 - 40kB each.
+For single instance deployments, you can use local `file` storage, while for HA deployments, you should probably use
+an S3 bucket to do so.
+
+The following new config variables are available:
+
+```
+#####################################
+######### User Pictures #############
+#####################################
+
+# The storage type for user pictures.
+# By default, they are saved inside the Database, which is not ideal.
+# If you only have a couple hundred users, this will be fine, but
+# anything larger should use an S3 bucket if available. For single
+# instance deployments, file storage to local disk is available
+# as well, but this must not be used with multi replica / HA
+# deployments.
+# Images will ba reduced in size to max 192px on the longest side.
+# They most often end up between 25 - 40kB in size.
+#
+# Available options: db file s3
+# Default: db
+#PICTURE_STORAGE_TYPE="db"
+
+# If `PICTURE_STORAGE_TYPE=file`, the path where pictures will be
+# saved can be changed with this value.
+# default: ./pictures
+#PICTURE_PATH="./pictures"
+
+# Access values for the S3 bucket if `PICTURE_STORAGE_TYPE=s3`.
+# Not needed otherwise.
+#PIC_S3_URL=https://s3.example.com
+#PIC_S3_BUCKET=my_bucket
+#PIC_S3_REGION=example
+#PIC_S3_KEY=s3_key
+#PIC_S3_SECRET=s3_secret
+# default: true
+#PIC_S3_PATH_STYLE=true
+
+# Set the upload limit for user picture uploads in MB.
+# default: 10
+#PICTURE_UPLOAD_LIMIT_MB=10
+
+# By default, user pictures can only be fetched with a valid
+# session, an API Key with access to Users + Read, or with a
+# valid token for this user. However, depending on where and
+# how you are using Rauthy for your user management, you may
+# want to make user pictures available publicly without any
+# authentication.
+#
+# User Picture URLs are "safe" in a way that you cannot guess
+# a valid URL. You will need to know the User ID + the Picture
+# ID. Both values are generated cryptographically secure in the
+# backend during creation. The Picture ID will also change
+# with every new upload.
+#
+# default: false
+#PICTURE_PUBLIC=false
+
+# By default, user pictures can only be fetched with a valid
+# session, an API Key with access to Users + Read, or with a
+# valid token for this user. However, depending on where and
+# how you are using Rauthy for your user management, you may
+# want to make user pictures available publicly without any
+# authentication.
+#
+# User Picture URLs are "safe" in a way that you cannot guess
+# a valid URL. You will need to know the User ID + the Picture
+# ID. Both values are generated cryptographically secure in the
+# backend during creation. The Picture ID will also change
+# with every new upload.
+#
+# default: false
+#PICTURE_PUBLIC=false
+```
+
+[]()
+
 #### Static HTML + prepared queries added to version control
 
 To make it possible to build Rauthy from source in environments like e.g. FreeBSD, all pre-built static HTML files have

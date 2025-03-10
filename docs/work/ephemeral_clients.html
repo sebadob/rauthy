@@ -316,7 +316,7 @@ If you want to configure some more things, keep reading.</p>
     redirect_uris: Vec&lt;String&gt;,
     /// Validation: `Vec&lt;^[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+$&gt;`
     post_logout_redirect_uris: Option&lt;Vec&lt;String&gt;&gt;,
-    /// Validation: `Vec&lt;^(authorization_code|client_credentials|password|refresh_token)$&gt;`
+    /// Validation: `Vec&lt;^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$&gt;`
     grant_types: Option&lt;Vec&lt;String&gt;&gt;,
     /// Validation: `60 &lt;= access_token_lifetime &lt;= 86400`
     default_max_age: Option&lt;i32&gt;,

@@ -246,6 +246,7 @@ impl TokenSet {
             family_name: None,
             address: None,
             birthdate: None,
+            picture: None,
             locale: None,
             phone: None,
             roles: user.get_roles(),
@@ -275,6 +276,13 @@ impl TokenSet {
                 if let Some(birthdate) = &values.birthdate {
                     custom_claims.birthdate = Some(birthdate.clone());
                 }
+            }
+
+            if let Some(picture_id) = &user.picture_id {
+                custom_claims.picture = Some(format!(
+                    "{}/users/{}/picture/{}",
+                    data.issuer, user.id, picture_id
+                ));
             }
         }
 

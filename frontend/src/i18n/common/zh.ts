@@ -17,6 +17,7 @@ export const I18nZh: I18n = {
         hours: "Hours",
         invalidInput: "无效输入",
         legend: "Legend",
+        maxFileSize: "Max File Size",
         minutes: "Minutes",
         month: "Month",
         months: [

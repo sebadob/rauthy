@@ -23,6 +23,7 @@ pub mod jwk_token_validation;
 pub mod logos;
 pub mod magic_links;
 pub mod password;
+pub mod pictures;
 pub mod pow;
 pub mod principal;
 pub mod refresh_tokens;

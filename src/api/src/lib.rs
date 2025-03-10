@@ -6,7 +6,7 @@ use actix_web::http::header::{HeaderMap, HeaderValue};
 use actix_web::{web, HttpRequest, HttpResponse};
 use rauthy_api_types::users::WebauthnLoginResponse;
 use rauthy_common::constants::COOKIE_MFA;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::entity::api_keys::ApiKey;
 use rauthy_models::entity::fed_cm::FedCMLoginStatus;
@@ -151,4 +151,33 @@ fn add_req_mfa_cookie(resp: &mut HttpResponse, email: String) -> Result<(), Erro
     }
 
     Ok(())
+}
+
+/// Throws an error if the `content-length` exceeds the given size in MB.
+fn content_len_limit(req: &HttpRequest, limit_mb: u16) -> Result<(), ErrorResponse> {
+    match req.headers().get("Content-Length") {
+        None => Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Content-Length header missing",
+        )),
+        Some(value) => match value.to_str().unwrap_or("0").parse::<u32>() {
+            Ok(len) => {
+                if len > limit_mb as u32 * 1024 * 1024 {
+                    Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        format!("Max size {limit_mb}MB"),
+                    ))
+                } else {
+                    Ok(())
+                }
+            }
+            Err(err) => {
+                error!("Error decoding Content-Length header {:?}: {}", value, err);
+                Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "invalid Content-Length header",
+                ))
+            }
+        },
+    }
 }
