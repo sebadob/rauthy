@@ -209,7 +209,7 @@ can now apply a filter to the Languages that are shown in the UI selector.
 #FILTER_LANG_ADMIN="en de"
 ```
 
-[]()
+[#748](https://github.com/sebadob/rauthy/pull/748)
 
 #### Manual `Debug` impls
 
