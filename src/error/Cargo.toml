@@ -21,6 +21,7 @@ hiqlite = { workspace = true }
 image = { workspace = true }
 reqwest = { workspace = true }
 rio_turtle = { workspace = true }
+rusqlite = { workspace = true }
 ruma = { workspace = true }
 s3-simple = { workspace = true }
 serde = { workspace = true }

@@ -533,3 +533,13 @@ impl From<s3_simple::S3Error> for ErrorResponse {
         )
     }
 }
+
+impl From<rusqlite::Error> for ErrorResponse {
+    fn from(value: rusqlite::Error) -> Self {
+        trace!("{:?}", value);
+        ErrorResponse::new(
+            ErrorResponseType::Database,
+            format!("rusqlite error: {:?}", value),
+        )
+    }
+}
