@@ -33,7 +33,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     let res = client.get(&bad_url_get).send().await?;
     assert_eq!(res.status(), 400);
     let err_html = res.text().await?;
-    assert!(err_html.contains("request is malformed or incorrect"));
+    assert!(err_html.contains("Invalid User ID"));
 
     // correct GET
     println!("test_get_pwd_reset_form correct GET");
@@ -65,8 +65,8 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     assert!(html.starts_with("<!DOCTYPE html>"));
 
     // extract the csrf token from the html
-    let (_, right) = html.split_once("name=\"rauthy-csrf-token\" id=\"").unwrap();
-    let (csrf_token, _) = right.split_once("\"").unwrap();
+    let (_, content_split) = html.split_once("\"csrf_token\":\"").unwrap();
+    let (csrf_token, _) = content_split.split_once("\"").unwrap();
     println!("Extracted csrf token: {csrf_token}");
     correct_headers.append(PWD_CSRF_HEADER, HeaderValue::from_str(csrf_token)?);
     println!("Headers with cookie + csrf: {:?}", correct_headers);
