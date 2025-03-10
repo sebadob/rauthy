@@ -4,6 +4,9 @@
     import {genKey} from "$utils/helpers.ts";
     import type {ErrorResponse} from "$api/types/error.ts";
     import {CSRF_TOKEN} from "$utils/constants.ts";
+    import IconStop from "$icons/IconStop.svelte";
+    import Button from "$lib/button/Button.svelte";
+    import {fetchDelete} from "$api/fetch.ts";
 
     let {
         userId,
@@ -109,8 +112,27 @@
         return ((hues[0] * (64 + hues[1]) + 4 * hues[0]) + (hues[2] * hues[3] - hues[4])) % 360;
     }
 
+    async function deletePicture() {
+        err = '';
+        errFileSize = '';
+
+        if (!pictureId) {
+            return;
+        }
+
+        let res = await fetchDelete(`/auth/v1/users/${userId}/picture/${pictureId}`);
+        if (res.error) {
+            err = res.error.message;
+        } else {
+            pictureId = undefined;
+        }
+    }
+
     async function upload(list: FileList) {
+        err = '';
+        errFileSize = '';
         isUploading = true;
+
         let url = `/auth/v1/users/${userId}/picture`;
 
         let head = await fetch(url, {
@@ -184,44 +206,62 @@
     {/if}
 {/snippet}
 
-<form
-        class="avatar"
-        aria-dropeffect="move"
-        aria-label="Upload"
-        style:background-color={color}
-        style:width
-        {onmouseenter}
-        {onmouseleave}
->
-    <label
-            for={id}
-            aria-controls={id}
-            aria-disabled={isUploading}
+<div class="container">
+    <form
+            class="avatar"
+            aria-dropeffect="move"
+            aria-label="Upload"
+            style:background-color={color}
             style:width
-            data-show={!isUploading && showUpload}
+            {onmouseenter}
+            {onmouseleave}
     >
-        <IconUpload {width}/>
-    </label>
-    <input
-            {id}
-            type="file"
-            disabled={isUploading}
-            aria-disabled={isUploading}
-            aria-hidden="true"
-            {accept}
-            bind:files
-    />
+        <label
+                for={id}
+                aria-controls={id}
+                aria-disabled={isUploading}
+                style:width
+                data-show={!isUploading && showUpload}
+        >
+            <IconUpload {width}/>
+        </label>
+        <input
+                {id}
+                type="file"
+                disabled={isUploading}
+                aria-disabled={isUploading}
+                aria-hidden="true"
+                {accept}
+                bind:files
+        />
 
-    {#if errFileSize}
-        <div class="errLimit" style:width>
-            {errFileSize}
+        {#if errFileSize}
+            <div class="errLimit" style:width>
+                {errFileSize}
+            </div>
+        {/if}
+
+        {@render avatar()}
+    </form>
+
+    {#if size === 'large' && pictureId}
+        <div class="relative">
+            <div class="delete">
+                <Button invisible onclick={deletePicture}>
+                    <div title={t.common.delete}>
+                        <IconStop/>
+                    </div>
+                </Button>
+            </div>
         </div>
     {/if}
-
-    {@render avatar()}
-</form>
+</div>
 
 <style>
+    img {
+        background: hsl(var(--bg));
+    }
+
     input[type="file"]::file-selector-button {
         display: none;
     }
@@ -261,6 +301,16 @@
         border-radius: 30%;
         overflow: clip;
         cursor: default;
+    }
+
+    .container {
+        display: flex;
+    }
+
+    .delete {
+        position: absolute;
+        top: -.1rem;
+        left: -1.25rem;
     }
 
     .errLimit {
