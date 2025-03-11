@@ -12,26 +12,12 @@ rauthy-error = { path = "../error" }
 rauthy-models = { path = "../models" }
 
 actix-web = { workspace = true }
-argon2 = { workspace = true }
-chacha20poly1305 = { workspace = true }
 chrono = { workspace = true }
 cryptr = { workspace = true }
-derive_more = { workspace = true }
 jwt-simple = { workspace = true }
-rand = { workspace = true }
-rand_core = { workspace = true }
 ring = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-sqlx = { workspace = true }
 tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
 utoipa = { workspace = true }
-utoipa-swagger-ui = { workspace = true }
-validator = { workspace = true }
-webauthn-rs = { workspace = true }
-
-[dev-dependencies]
-pretty_assertions = "1"
-tokio-test = "*"

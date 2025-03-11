@@ -12,7 +12,6 @@ actix-web = { workspace = true }
 argon2 = { workspace = true }
 base64 = { workspace = true }
 brotli = { workspace = true }
-chacha20poly1305 = { workspace = true }
 chrono = { workspace = true }
 cidr = { workspace = true }
 flume = { workspace = true }
@@ -23,8 +22,6 @@ once_cell = { workspace = true }
 rand = { workspace = true }
 rand_core = { workspace = true }
 regex = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 
@@ -33,4 +30,3 @@ chrono = { version = "0.4", default-features = false, features = ["now"] }
 
 [dev-dependencies]
 pretty_assertions = "1"
-tokio-test = "*"

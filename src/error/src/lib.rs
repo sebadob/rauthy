@@ -1,7 +1,6 @@
-use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
-use std::fmt::Formatter;
+use std::fmt::{Display, Formatter};
 use utoipa::ToSchema;
 
 pub mod error_impls;
@@ -44,10 +43,19 @@ impl Display for ErrorResponseType {
 // case something is wrong.<br>
 // Except for input validations, every error will have this format and every possible error in the
 // backend will be converted to this.
-#[derive(Debug, Clone, Display, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
-#[display("error: {} message: {}", error, message)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct ErrorResponse {
     pub timestamp: i64,
     pub error: ErrorResponseType,
     pub message: Cow<'static, str>,
+}
+
+impl Display for ErrorResponse {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "error: {}, timestamp: {}, message: {}",
+            self.error, self.timestamp, self.message
+        )
+    }
 }

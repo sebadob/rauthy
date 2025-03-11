@@ -16,7 +16,6 @@ rauthy-service = { path = "../service" }
 
 actix-web = { workspace = true }
 actix-web-prom = { workspace = true }
-actix-service = { workspace = true }
 chrono = { workspace = true }
 cryptr = { workspace = true }
 dotenvy = { workspace = true }
@@ -34,11 +33,6 @@ tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
 utoipa = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
-
-[build-dependencies]
-rauthy-models = { path = "../models" }
-serde_json = { workspace = true }
-strum = { workspace = true }
 
 [dev-dependencies]
 rauthy-api-types = { path = "../api_types" }
