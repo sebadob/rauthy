@@ -16,7 +16,7 @@
 
 use crate::provider::OidcProvider;
 use base64::{engine, engine::general_purpose, Engine as _};
-use rand::{distributions, Rng};
+use rand::{distr, Rng};
 use ring::digest;
 use tracing::{error, warn};
 
@@ -197,8 +197,8 @@ pub async fn init_with(
 /// Generates a secure random alphanumeric value with the given length.
 #[inline]
 pub fn secure_random(count: usize) -> String {
-    rand::thread_rng()
-        .sample_iter(&distributions::Alphanumeric)
+    rand::rng()
+        .sample_iter(&distr::Alphanumeric)
         .take(count)
         .map(char::from)
         .collect::<String>()

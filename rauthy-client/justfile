@@ -61,7 +61,7 @@ msrv-verify:
 
 # find's the new MSRV, if it needs a bump
 msrv-find:
-    cargo msrv find --min 1.70.0
+    cargo msrv find --min 1.84.1
 
 # makes sure everything is fine
 verify: check test build msrv-verify
