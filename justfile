@@ -413,7 +413,7 @@ build-builder image="ghcr.io/sebadob/rauthy-builder" push="push":
     {{ docker }} build \
           -t {{ image }}:$TODAY \
           -f Dockerfile_builder \
-          --build-arg="IMAGE=rust:1.82-bookworm" \
+          --build-arg="IMAGE=rust:1.85-bookworm" \
           .
     {{ docker }} push {{ image }}:$TODAY
 
