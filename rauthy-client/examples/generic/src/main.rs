@@ -46,7 +46,7 @@ async fn main() -> anyhow::Result<()> {
         // If set to 'false', tokens with a non-verified email address will be rejected.
         email_verified: true,
         // The issuer URL from your Rauthy deployment
-        iss: "https://rauthy.local/auth/v1".to_string(),
+        iss: "https://iam.sebadob.dev/auth/v1".to_string(),
         // The scopes you want to request. The only mandatory which always needs to exist is
         // `openid`, the rest is optional and depending on your needs.
         scope: vec![
@@ -58,7 +58,6 @@ async fn main() -> anyhow::Result<()> {
         // If set to None, the client will be treated as a public client and not provide any
         // secret to the /token endpoint after the callback. Set a secret for confidential clients.
         secret: None,
-        // secret: Some("secretCopiedFromTheRauthyUiIfIsConfidentialClient".to_string(),),
     };
     // The redirect_uri here must match the URI of this application, where we accept and handle
     // the callback after a successful login.

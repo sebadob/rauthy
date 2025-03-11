@@ -6,7 +6,7 @@ authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
 
 [dependencies]
-actix-web = { version = "4.4", features = ["rustls-0_21"] }
+actix-web = { version = "4.10" }
 anyhow = "1.0.75"
 dotenvy = "0.15.7"
 tracing = "0.1.40"
