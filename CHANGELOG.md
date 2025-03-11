@@ -19,7 +19,7 @@ This make the API more clean, since custom headers should be marked with a leadi
 #### Custom Client Branding
 
 With the migration to Svelte 5 (mentioned below), the way theming is done has been changed from the ground up in such
-a way, that it is not possible to migrate possibly existing custom client brandings. This means that you will lose and
+a way, that it is not possible to migrate possibly existing custom client branding. This means that you will lose and
 need to re-create a possibly existing custom branding with this version.
 
 #### Paginated Users / Sessions

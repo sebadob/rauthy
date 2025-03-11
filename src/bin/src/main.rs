@@ -1,6 +1,4 @@
-// Copyright 2024 Sebastian Dobe <sebastiandobe@mailbox.org>
-
-#![forbid(unsafe_code)]
+// Copyright 2025 Sebastian Dobe <sebastiandobe@mailbox.org>
 
 use crate::logging::setup_logging;
 use actix_web::rt::System;
