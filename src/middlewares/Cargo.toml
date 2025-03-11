@@ -9,7 +9,6 @@ license.workspace = true
 rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
 rauthy-models = { path = "../models" }
-rauthy-service = { path = "../service" }
 
 actix-web = { workspace = true }
 chrono = { workspace = true }
@@ -18,7 +17,3 @@ lazy_static = { workspace = true }
 time = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
-
-[dev-dependencies]
-pretty_assertions = "1"
-tokio-test = "*"

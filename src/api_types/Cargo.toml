@@ -10,17 +10,9 @@ rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
 
 actix-web = { workspace = true }
-chrono = { workspace = true }
-css-color = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-serde_with = { workspace = true }
 time = { workspace = true }
 utoipa = { workspace = true }
 validator = { workspace = true }
 webauthn-rs = { workspace = true }
-
-[dev-dependencies]
-pretty_assertions = "1"
-rstest = "0.18.2"
-tokio-test = "*"

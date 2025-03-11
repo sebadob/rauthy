@@ -9,14 +9,11 @@ license.workspace = true
 actix-multipart = { workspace = true }
 actix-web = { workspace = true }
 argon2 = { workspace = true }
-base64 = { workspace = true }
 bincode = { workspace = true }
 chacha20poly1305 = { workspace = true }
 chrono = { workspace = true }
 css-color = { workspace = true }
 cryptr = { workspace = true }
-derive_more = { workspace = true }
-flume = { workspace = true }
 hiqlite = { workspace = true }
 image = { workspace = true }
 reqwest = { workspace = true }
@@ -33,11 +30,6 @@ sqlx = { workspace = true }
 svg-hush = { workspace = true }
 time = { workspace = true }
 tracing = { workspace = true }
-tokio = { workspace = true }
 utoipa = { workspace = true }
 validator = { workspace = true }
 oxiri = { workspace = true }
-
-[dev-dependencies]
-pretty_assertions = "1"
-tokio-test = "*"

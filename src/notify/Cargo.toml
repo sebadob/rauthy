@@ -10,16 +10,8 @@ rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
 
 async-trait = { workspace = true }
-chrono = { workspace = true }
-flume = { workspace = true }
-futures-util = { workspace = true }
 reqwest = { workspace = true }
 ruma = { workspace = true }
 serde = { workspace = true }
-serde_json = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
-
-[dev-dependencies]
-pretty_assertions = "1"
-tokio-test = "*"
