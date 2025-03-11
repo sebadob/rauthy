@@ -77,7 +77,7 @@ rand = "0.8"
 rand_core = { version = "0.6", features = ["std"] }
 regex = "1"
 reqwest = { version = "0.12.3", default-features = false, features = ["json", "rustls-tls"] }
-ring = "0.17"
+ring = "0.17.13"
 rinja = { version = "0.3.5", features = ["with-actix-web"] }
 rinja_actix = "0.3.5"
 rio_api = "0.8.4"
