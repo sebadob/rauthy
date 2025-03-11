@@ -1,11 +1,11 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
 version = "0.28.0-20250311"
-edition = "2021"
+edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
 
