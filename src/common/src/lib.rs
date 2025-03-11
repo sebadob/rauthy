@@ -1,5 +1,5 @@
 // Copyright 2025 Sebastian Dobe <sebastiandobe@mailbox.org>
-#![forbid(unsafe_code)]
+
 // needed because the lazy_static! initialization of constants grew quite a bit
 #![recursion_limit = "512"]
 

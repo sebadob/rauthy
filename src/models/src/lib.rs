@@ -1,7 +1,5 @@
 // Copyright 2025 Sebastian Dobe <sebastiandobe@mailbox.org>
 
-#![forbid(unsafe_code)]
-
 use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;

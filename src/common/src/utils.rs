@@ -228,14 +228,16 @@ mod tests {
 
     #[test]
     fn test_trusted_proxy_check() {
-        env::set_var(
-            "TRUSTED_PROXIES",
-            r#"
+        unsafe {
+            env::set_var(
+                "TRUSTED_PROXIES",
+                r#"
             192.168.100.0/24
             192.168.0.96/28
             172.16.0.1/32
             10.10.10.10/31"#,
-        );
+            )
+        };
 
         println!("{:?}", build_trusted_proxies());
 

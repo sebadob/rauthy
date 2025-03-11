@@ -299,7 +299,7 @@ mod tests {
 "#
     ))]
     fn test_custom_triple_validation(#[case] custom_data_turtle: Option<&str>) {
-        env::set_var("PUB_URL", "localhost:8081".to_string());
+        unsafe { env::set_var("PUB_URL", "localhost:8081".to_string()) };
         let user_id = "SomeId123".to_owned();
         let expose_email = false;
 
@@ -317,7 +317,7 @@ mod tests {
     )]
     #[ignore] // this is currently ignored, because setting the PUB_URL here interferes with other tests in CI
     fn test_web_id_response(#[case] custom_triples: Option<&str>, #[case] expected_resp: &str) {
-        env::set_var("PUB_URL", "localhost:8081".to_string());
+        unsafe { env::set_var("PUB_URL", "localhost:8081".to_string()) };
 
         let resp = WebIdResponse {
             webid: WebId::try_new("SomeId123".to_string(), custom_triples, true)
