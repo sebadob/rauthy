@@ -187,10 +187,6 @@
         color: hsla(var(--action) / .93);
     }
 
-    .invisible:hover {
-        color: hsl(var(--action));
-    }
-
     .invisible > div {
         color: hsl(var(--text));
         transition: color 150ms;

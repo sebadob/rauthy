@@ -4,13 +4,13 @@
     import Main from "$lib5/Main.svelte";
     import ContentCenter from "$lib5/ContentCenter.svelte";
     import {useI18n} from "$state/i18n.svelte";
-    import {type SessionResponse} from "$api/types/session.ts";
     import {type UserResponse} from "$api/types/user.ts";
     import ThemeSwitch from "$lib5/ThemeSwitch.svelte";
     import {fetchGet} from "$api/fetch.ts";
     import type {WebIdResponse} from "$api/types/web_id.ts";
     import LangSelector from "$lib5/LangSelector.svelte";
     import {useSession} from "$state/session.svelte.ts";
+    import type {SessionInfoResponse} from "$api/types/session.ts";
 
     let t = useI18n();
     let session = useSession('account');
@@ -26,7 +26,7 @@
         }
     });
 
-    async function fetchInfo(s: SessionResponse) {
+    async function fetchInfo(s: SessionInfoResponse) {
         const userId = s.user_id;
         if (userId) {
             let res = await Promise.all([

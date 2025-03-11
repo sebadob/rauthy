@@ -16,13 +16,15 @@
     import Tabs from "$lib5/tabs/Tabs.svelte";
     import Devices from "$lib5/devices/Devices.svelte";
     import type {WebIdResponse} from "$api/types/web_id.ts";
+    import IconLogout from "$icons/IconLogout.svelte";
+    import Button from "$lib/button/Button.svelte";
 
     let {
         user = $bindable(),
         webIdData = $bindable()
     }: {
         user: UserResponse,
-        webIdData: WebIdResponse,
+        webIdData: undefined | WebIdResponse,
     } = $props();
 
     let t = useI18n();
@@ -35,30 +37,54 @@
         }
     });
 
-    let viewModePhone = $derived(innerWidth && innerWidth < 500);
+    let viewModePhone = $derived(innerWidth && innerWidth < 560);
+    let viewModeWideCompact = $derived(innerWidth && innerWidth < 1000);
 
     let selected = $state(t.account.navInfo);
-    let tabs = $state(!!webIdData ?
+    let tabsCompact = $derived(!!webIdData ?
         [
             t.account.navInfo,
+            t.account.navMfa,
+            t.account.devices,
             t.account.navEdit,
             t.common.password,
-            t.account.navMfa, 'WebID',
-            t.account.devices,
+            'WebID',
             t.account.navLogout,
         ]
         : [
             t.account.navInfo,
-            t.account.navEdit,
-            t.common.password,
             t.account.navMfa,
             t.account.devices,
+            t.account.navEdit,
+            t.common.password,
             t.account.navLogout,
+        ]);
+    let tabsWide = $derived(!!webIdData ?
+        [
+            t.account.navMfa,
+            t.account.devices,
+            t.account.navEdit,
+            t.common.password,
+            'WebID',
+        ]
+        : [
+            t.account.navMfa,
+            t.account.devices,
+            t.account.navEdit,
+            t.common.password,
         ]);
 
     onMount(() => {
         if (useParam('v').get() === 'devices') {
             selected = t.account.devices;
+        }
+    });
+
+    $effect(() => {
+        if (viewModePhone || viewModeWideCompact) {
+            selected = t.account.navInfo;
+        } else {
+            selected = t.account.navMfa;
         }
     });
 
@@ -84,7 +110,7 @@
         </div>
 
         <div class="container">
-            <Tabs {tabs} bind:selected/>
+            <Tabs tabs={tabsCompact} bind:selected/>
 
             <div class="innerPhone">
                 {#if selected === t.account.navInfo}
@@ -96,34 +122,55 @@
                 {:else if selected === t.account.navMfa}
                     <AccMFA {user}/>
                 {:else if selected === 'WebID'}
-                    <AccWebId bind:webIdData/>
+                    {#if webIdData}
+                        <AccWebId bind:webIdData/>
+                    {/if}
                 {:else if selected === t.account.devices}
                     <Devices userId={user.id}/>
                 {/if}
             </div>
         </div>
     {:else}
-        <div class="header">
-            {@render header()}
-        </div>
-
-        <div class="container">
-            <Tabs {tabs} bind:selected center/>
-
-            <div class="inner">
-                {#if selected === t.account.navInfo}
+        <div class="wide">
+            {#if !viewModeWideCompact}
+                <div clasS="info">
                     <AccInfo bind:user {webIdData} {providers} {authProvider}/>
-                {:else if selected === t.account.navEdit}
-                    <AccEdit bind:user/>
-                {:else if selected === t.common.password}
-                    <AccPassword {user} {authProvider}/>
-                {:else if selected === t.account.navMfa}
-                    <AccMFA {user}/>
-                {:else if selected === 'WebID'}
-                    <AccWebId bind:webIdData/>
-                {:else if selected === t.account.devices}
-                    <AccDevices/>
-                {/if}
+                </div>
+            {/if}
+
+            <div class="container">
+                <Tabs
+                        tabs={viewModeWideCompact ? tabsCompact : tabsWide}
+                        bind:selected
+                        center
+                />
+
+                <div class="inner">
+                    {#if selected === t.account.navInfo}
+                        <AccInfo bind:user {webIdData} {providers} {authProvider}/>
+                    {:else if selected === t.account.navEdit}
+                        <AccEdit bind:user/>
+                    {:else if selected === t.common.password}
+                        <AccPassword {user} {authProvider}/>
+                    {:else if selected === t.account.navMfa}
+                        <AccMFA {user}/>
+                    {:else if selected === 'WebID'}
+                        {#if webIdData}
+                            <AccWebId bind:webIdData/>
+                        {/if}
+                    {:else if selected === t.account.devices}
+                        <AccDevices/>
+                    {/if}
+                </div>
+            </div>
+
+            <div class="logout">
+                <Button level={-3} onclick={redirectToLogout}>
+                    <div title={t.account.navLogout} class="flex gap-05">
+                        <IconLogout/>
+                        {t.account.navLogout}
+                    </div>
+                </Button>
             </div>
         </div>
     {/if}
@@ -136,13 +183,12 @@
         flex-direction: column;
     }
 
-    .header {
-        /*width: 100%;*/
-        margin-left: .25rem;
-    }
-
     .headerPhone {
         margin-left: .5rem;
+    }
+
+    .info {
+        border-right: 1px solid hsl(var(--bg-high));
     }
 
     .inner, .innerPhone {
@@ -162,8 +208,39 @@
         overflow-y: auto;
     }
 
+    .logout {
+        position: absolute;
+        top: .25rem;
+        right: .5rem;
+    }
+
+    .wide {
+        height: min(max(50rem, 66dvh), 90dvh);
+        padding: 1rem;
+        display: flex;
+        gap: 1rem;
+        border-radius: var(--border-radius);
+        background: hsla(var(--bg-high) / .25);
+    }
+
+    .wide:has(.info) {
+        border-radius: 4.5rem var(--border-radius) var(--border-radius) var(--border-radius);
+    }
+
+    .wide .inner {
+        max-height: 100%;
+        overflow-y: auto;
+    }
+
     .wrapper {
         height: 100dvh;
         max-width: 100dvw;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .wrapper:has(.wide) {
+        flex-direction: row;
+        align-items: center;
     }
 </style>

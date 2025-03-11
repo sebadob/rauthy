@@ -92,9 +92,11 @@ export type UserAccountTypeResponse =
 export interface UserResponseSimple {
     id: string,
     email: string,
+    given_name: string,
+    family_name?: string,
     created_at: number,
     last_login?: number,
-    picture_id?: number,
+    picture_id?: string,
 }
 
 export interface UserResponse {

@@ -106,7 +106,12 @@
         <div style:height=".5rem"></div>
         {#each clientsFiltered as client (client.id)}
             <NavButtonTile onclick={() => cid.set(client.id)} selected={cid.get() === client.id}>
-                {client.id}
+                <div class="tile">
+                    {client.id}
+                    <div class="muted">
+                        {client.name}
+                    </div>
+                </div>
             </NavButtonTile>
         {/each}
     {/snippet}
@@ -125,3 +130,17 @@
         {/if}
     </div>
 </ContentAdmin>
+
+<style>
+    .muted {
+        height: .8rem;
+        opacity: .5;
+        font-size: .8rem;
+    }
+
+    .tile {
+        line-height: 1rem;
+        text-align: left;
+        transform: translateY(.2rem);
+    }
+</style>

@@ -25,7 +25,7 @@
         providers: AuthProvidersTemplate,
         authProvider: undefined | AuthProviderTemplate,
         viewModePhone?: boolean,
-        webIdData: WebIdResponse,
+        webIdData: undefined | WebIdResponse,
     } = $props();
 
     let t = useI18n();

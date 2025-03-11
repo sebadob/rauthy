@@ -128,13 +128,6 @@
                         {ta.nav.users}
                     </NavLink>
 
-                    <NavLink {compact} {params} route="/attributes">
-                        {#snippet icon(width: string)}
-                            <IconDocText {width}/>
-                        {/snippet}
-                        {ta.nav.attributes}
-                    </NavLink>
-
                     <NavLink {compact} {params} route="/clients">
                         {#snippet icon(width: string)}
                             <IconOffice {width}/>
@@ -154,6 +147,13 @@
                             <IconUserGroup {width}/>
                         {/snippet}
                         {ta.nav.groups}
+                    </NavLink>
+
+                    <NavLink {compact} {params} route="/attributes">
+                        {#snippet icon(width: string)}
+                            <IconDocText {width}/>
+                        {/snippet}
+                        {ta.nav.attributes}
                     </NavLink>
 
                     <NavLink {compact} {params} route="/scopes">

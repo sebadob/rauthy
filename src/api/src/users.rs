@@ -95,9 +95,8 @@ pub async fn get_users(
     params.validate()?;
 
     let user_count = User::count().await?;
-
-    if user_count >= *SSP_THRESHOLD as i64 || params.page_size.is_some() {
-        let page_size = params.page_size.unwrap_or(15) as i64;
+    if user_count >= *SSP_THRESHOLD as i64 {
+        let page_size = params.page_size.unwrap_or(20) as i64;
         let offset = params.offset.unwrap_or(0) as i64;
         let backwards = params.backwards.unwrap_or(false);
         let continuation_token = if let Some(token) = &params.continuation_token {

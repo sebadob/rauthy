@@ -232,10 +232,10 @@ information in logs sooner or later, so be very careful when using this in produ
 ### Bugfix
 
 - When using the `MIGRATE_DB_FROM` in combination with a Sqlite DB as base that has been created with
-  Rauthy < v.0.20.0, the migration might fail for you in v0.27.0 because of an old value in the `config`
+  Rauthy < `v0.20.0`, the migration might fail for you in `v0.27.0` because of an old value in the `config`
   table that might not have been cleaned up properly in some cases.
   [#669](https://github.com/sebadob/rauthy/pull/685)
-- Fixed a regression from v0.27.0 which made it impossible to use `zh-Hans` as a users language. The deserialization
+- Fixed a regression from v0.27.0 which made it impossible to use `zh-Hans` as a users' language. The deserialization
   of the database value would fail when using Hiqlite.
   [#693](https://github.com/sebadob/rauthy/pull/693)
 - Fixed a bug in the UI - Custom User Attributed: When only a single existing attributed has been deleted, the

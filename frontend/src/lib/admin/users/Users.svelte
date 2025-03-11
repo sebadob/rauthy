@@ -16,6 +16,7 @@
     import PaginationServerSide from "$lib5/pagination/PaginationServerSide.svelte";
     import {PAGE_SIZE_DEFAULT, type PageSize} from "$lib5/pagination/props.ts";
     import {fetchSearchServer, type SearchParamsIdxUser} from "$utils/search.ts";
+    import UserPicture from "$lib/UserPicture.svelte";
 
     let closeModal: undefined | (() => void) = $state();
     let err = $state('');
@@ -132,6 +133,14 @@
         }
     }
 
+    function fallbackCharacters(user: UserResponseSimple) {
+        let chars = user.given_name[0];
+        if (user.family_name) {
+            chars += user.family_name[0];
+        }
+        return chars;
+    }
+
     function onChangeOrder(option: string, direction: 'up' | 'down') {
         let up = direction === 'up';
 
@@ -171,9 +180,28 @@
     }
 </script>
 
-{#snippet navTile(id: string, email: string)}
-    <NavButtonTile onclick={() => uid.set(id)} selected={uid.get() === id}>
-        {email}
+{#snippet navTile(user: UserResponseSimple)}
+    <NavButtonTile onclick={() => uid.set(user.id)} selected={uid.get() === user.id} pictureLeft>
+        <div class="navBtn">
+            <div class="picture">
+                <UserPicture
+                        fallbackCharacters={fallbackCharacters(user)}
+                        userId={user.id}
+                        pictureId={user.picture_id}
+                        size="small"
+                        disableUpload
+                />
+            </div>
+            <div class="tile">
+                <div>
+                    {user.email}
+                </div>
+                <div class="muted">
+                    {user.given_name}
+                    {user.family_name}
+                </div>
+            </div>
+        </div>
     </NavButtonTile>
 {/snippet}
 
@@ -198,12 +226,12 @@
     {#snippet buttonTiles()}
         <div style:height=".5rem"></div>
         {#if firstFetchHeaders}
-            {#each users as user (user.id)}
-                {@render navTile(user.id, user.email)}
+            {#each users as user}
+                {@render navTile(user)}
             {/each}
         {:else}
             {#each usersPaginated as user (user.id)}
-                {@render navTile(user.id, user.email)}
+                {@render navTile(user)}
             {/each}
         {/if}
 
@@ -244,4 +272,23 @@
 </ContentAdmin>
 
 <style>
+    .muted {
+        margin-bottom: -.2rem;
+        opacity: .65;
+        font-size: .8rem;
+    }
+
+    .navBtn {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .tile {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        line-height: 1rem;
+        overflow-x: clip;
+    }
 </style>
