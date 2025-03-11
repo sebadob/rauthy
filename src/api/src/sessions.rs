@@ -39,10 +39,10 @@ pub async fn get_sessions(
 
     // sessions will be dynamically paginated based on the same setting as users
     let user_count = User::count().await?;
-    if user_count >= *SSP_THRESHOLD as i64 || params.page_size.is_some() {
+    if user_count >= *SSP_THRESHOLD as i64 {
         // TODO outsource the setup stuff here or keep it duplicated for better readability?
         // currently used here and in GET /users
-        let page_size = params.page_size.unwrap_or(15) as i64;
+        let page_size = params.page_size.unwrap_or(20) as i64;
         let offset = params.offset.unwrap_or(0) as i64;
         let backwards = params.backwards.unwrap_or(false);
         let continuation_token = if let Some(token) = &params.continuation_token {

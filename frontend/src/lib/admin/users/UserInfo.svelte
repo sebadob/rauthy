@@ -4,7 +4,7 @@
     import {untrack} from "svelte";
     import CheckIcon from "$lib5/CheckIcon.svelte";
     import Input from "$lib5/form/Input.svelte";
-    import type {UpdateUserRequest, UserResponse} from "$api/types/user.ts";
+    import type {UpdateUserRequest, UserResponse, UserResponseSimple} from "$api/types/user.ts";
     import type {RoleResponse} from "$api/types/roles.ts";
     import type {GroupResponse} from "$api/types/groups.ts";
     import type {SelectItem} from "$lib5/select_list/props.ts";
@@ -23,6 +23,7 @@
     import {slide} from "svelte/transition";
     import type {Language} from "$api/types/i18n.ts";
     import {useI18nConfig} from "$state/i18n_config.svelte.ts";
+    import UserPicture from "$lib/UserPicture.svelte";
 
     let {
         user = $bindable(),
@@ -121,6 +122,14 @@
         }
     });
 
+    function fallbackCharacters(user: UserResponseSimple) {
+        let chars = user.given_name[0];
+        if (user.family_name) {
+            chars += user.family_name[0];
+        }
+        return chars;
+    }
+
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         err = '';
 
@@ -150,6 +159,8 @@
         if (res.body) {
             success = true;
             user = res.body;
+            onSave();
+            
             setTimeout(() => {
                 success = false;
             }, 3000);
@@ -160,6 +171,15 @@
 </script>
 
 {#if user}
+    <div class="picture">
+        <UserPicture
+                fallbackCharacters={fallbackCharacters(user)}
+                userId={user.id}
+                pictureId={user.picture_id}
+                size="large"
+        />
+    </div>
+
     <Form action={`/auth/v1/users/${user.id}`} {onSubmit}>
         <LabeledValue label="ID" mono>
             {user.id}
@@ -317,7 +337,7 @@
                     {/if}
                 </LabeledValue>
                 <LabeledValue label={t.account.mfaActivated}>
-                    <CheckIcon check={!!user.webauthn_user_id}/>
+                    <CheckIcon checked={!!user.webauthn_user_id}/>
                 </LabeledValue>
             </div>
         </div>
@@ -341,6 +361,10 @@
 {/if}
 
 <style>
+    .picture {
+        margin: 1rem 0;
+    }
+
     .values {
         display: flex;
         gap: 1rem;

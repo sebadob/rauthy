@@ -4,21 +4,27 @@
 
     let {
         selected,
+        pictureLeft,
         onclick,
         children,
     }: {
         selected: boolean,
+        pictureLeft?: boolean,
         onclick: () => void,
         children: Snippet,
     } = $props();
+
+    let ref: undefined | HTMLButtonElement = $state();
 </script>
 
-<li aria-current={selected ? 'page' : 'false'}>
-    <Button invisible {onclick}>
-        <div>
-            {@render children()}
-        </div>
-    </Button>
+<li class:pictureLeft aria-current={selected ? 'page' : 'false'}>
+    <div>
+        <Button bind:ref invisible {onclick}>
+            <div>
+                {@render children()}
+            </div>
+        </Button>
+    </div>
 </li>
 
 <style>
@@ -32,7 +38,9 @@
     }
 
     li div {
+        color: hsl(var(--text));
         text-wrap: wrap;
+        transition: all 150ms;
     }
 
     li:nth-of-type(2n + 1) {
@@ -40,7 +48,8 @@
     }
 
     li[aria-current="page"] {
-        border-color: hsl(var(--accent));
+        border-right: 1px solid hsl(var(--accent));
+        background: hsla(var(--bg-high) / .8);
     }
 
     li[aria-current="page"] div {
@@ -48,6 +57,23 @@
     }
 
     li:hover {
-        border-color: hsl(var(--action));
+        background: hsl(var(--bg-high));
+        border-right: 1px solid hsl(var(--action));
+    }
+
+    li:hover div {
+        color: hsl(var(--action));
+    }
+
+    .pictureLeft {
+        margin: .1rem .25rem;
+        padding: 0;
+        border-radius: .65rem var(--border-radius) var(--border-radius) .65rem;
+    }
+
+    .pictureLeft > div {
+        height: 2.25rem;
+        overflow: clip;
+        margin-left: -.1rem;
     }
 </style>

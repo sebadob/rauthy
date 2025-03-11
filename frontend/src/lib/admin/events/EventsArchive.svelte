@@ -139,10 +139,6 @@
 </ContentAdmin>
 
 <style>
-    #archive {
-        margin-top: .25rem;
-    }
-
     .filters {
         display: flex;
         align-items: center;

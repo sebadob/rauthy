@@ -399,6 +399,8 @@ pub struct UserResponse {
 pub struct UserResponseSimple {
     pub id: String,
     pub email: String,
+    pub given_name: String,
+    pub family_name: Option<String>,
     pub created_at: i64,
     pub last_login: Option<i64>,
     pub picture_id: Option<String>,

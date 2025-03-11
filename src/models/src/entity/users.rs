@@ -375,7 +375,7 @@ impl User {
             DB::client()
                 .query_as(
                     r#"
-SELECT id, email, created_at, last_login, picture_id
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at ASC"#,
                     params!(),
@@ -385,7 +385,7 @@ ORDER BY created_at ASC"#,
             sqlx::query_as!(
                 UserResponseSimple,
                 r#"
-SELECT id, email, created_at, last_login, picture_id
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at ASC"#
             )
@@ -483,7 +483,7 @@ ORDER BY created_at ASC"#
                     let mut res = DB::client()
                         .query_as(
                             r#"
-SELECT id, email, created_at, last_login, picture_id
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE created_at <= $1 AND id != $2
 ORDER BY created_at DESC
@@ -499,7 +499,7 @@ OFFSET $4"#,
                     let mut res = sqlx::query_as!(
                         UserResponseSimple,
                         r#"
-SELECT id, email, created_at, last_login, picture_id
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE created_at <= $1 AND id != $2
 ORDER BY created_at DESC
@@ -522,7 +522,7 @@ OFFSET $4"#,
                     DB::client()
                         .query_as(
                             r#"
-SELECT id, email, created_at, last_login, picture_id
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE created_at >= $1 AND id != $2
 ORDER BY created_at ASC
@@ -535,7 +535,7 @@ OFFSET $4"#,
                     sqlx::query_as!(
                         UserResponseSimple,
                         r#"
-SELECT id, email, created_at, last_login, picture_id
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE created_at >= $1 AND id != $2
 ORDER BY created_at ASC
@@ -558,7 +558,7 @@ OFFSET $4"#,
                 let mut res = DB::client()
                     .query_as(
                         r#"
-SELECT id, email, created_at, last_login, picture_id
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at DESC
 LIMIT $1
@@ -573,7 +573,7 @@ OFFSET $2"#,
                 let mut res = sqlx::query_as!(
                     UserResponseSimple,
                     r#"
-SELECT id, email, created_at, last_login, picture_id
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at DESC
 LIMIT $1
@@ -593,7 +593,7 @@ OFFSET $2"#,
                 DB::client()
                     .query_as(
                         r#"
-SELECT id, email, created_at, last_login, picture_id
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at ASC
 LIMIT $1
@@ -605,7 +605,7 @@ OFFSET $2"#,
                 sqlx::query_as!(
                     UserResponseSimple,
                     r#"
-SELECT id, email, created_at, last_login, picture_id
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at ASC
 LIMIT $1
@@ -897,7 +897,7 @@ WHERE id = $19"#,
                     DB::client()
                         .query_as(
                             r#"
-SELECT id, email, created_at, last_login, picture_id
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE id LIKE $1
 ORDER BY created_at ASC
@@ -909,7 +909,7 @@ LIMIT $2"#,
                     query_as!(
                         UserResponseSimple,
                         r#"
-SELECT id, email, created_at, last_login, picture_id
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE id LIKE $1
 ORDER BY created_at ASC
@@ -926,7 +926,7 @@ LIMIT $2"#,
                     DB::client()
                         .query_as(
                             r#"
-SELECT id, email, created_at, last_login, picture_id
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE email LIKE $1
 ORDER BY created_at ASC
@@ -938,7 +938,7 @@ LIMIT $2"#,
                     query_as!(
                         UserResponseSimple,
                         r#"
-SELECT id, email, created_at, last_login, picture_id
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE email LIKE $1
 ORDER BY created_at ASC
@@ -1764,6 +1764,8 @@ impl From<User> for UserResponseSimple {
         Self {
             id: u.id,
             email: u.email,
+            given_name: u.given_name,
+            family_name: u.family_name,
             created_at: u.created_at,
             last_login: u.last_login,
             picture_id: u.picture_id,

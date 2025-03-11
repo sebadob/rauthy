@@ -6,7 +6,7 @@
     import {CSRF_TOKEN} from "$utils/constants.ts";
     import IconStop from "$icons/IconStop.svelte";
     import Button from "$lib/button/Button.svelte";
-    import {fetchDelete, fetchGet} from "$api/fetch.ts";
+    import {fetchDelete} from "$api/fetch.ts";
     import {usePictureConfig} from "$state/picture_config.svelte.ts";
 
     let {
@@ -16,11 +16,13 @@
         // its existence will be checked in the upload response
         pictureId = $bindable(),
         size = 'medium',
+        disableUpload,
     }: {
         userId: string;
         fallbackCharacters: string;
         pictureId: undefined | string;
         size?: 'small' | 'medium' | 'large';
+        disableUpload?: boolean,
     } = $props();
 
     const id = genKey();
@@ -42,7 +44,7 @@
     let width = $derived.by(() => {
         switch (size) {
             case 'small':
-                return '1.5rem';
+                return '2.25rem';
             case 'medium':
                 return '3rem';
             default:
@@ -200,7 +202,7 @@
 {/snippet}
 
 <div class="container">
-    {#if config?.upload_allowed}
+    {#if config?.upload_allowed && !disableUpload}
         <form
                 class="avatar"
                 aria-dropeffect="move"
@@ -334,7 +336,8 @@
     }
 
     .font-small {
-        font-size: 1.15rem;
+        top: -.05rem;
+        font-size: 1.5rem;
     }
 
     .font-medium {
