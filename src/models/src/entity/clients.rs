@@ -1672,7 +1672,7 @@ mod tests {
     #[test]
     fn test_is_origin_external() {
         let pub_url = "localhost:8443";
-        env::set_var("PROXY_MODE", "false");
+        unsafe { env::set_var("PROXY_MODE", "false") };
 
         // err without ORIGIN header
         let req = TestRequest::default().to_http_request();

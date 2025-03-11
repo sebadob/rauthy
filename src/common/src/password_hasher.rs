@@ -204,11 +204,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_limiter() {
-        env::set_var("ARGON2_M_COST", "32768");
-        env::set_var("ARGON2_T_COST", "3");
-        env::set_var("ARGON2_P_COST", "2");
-        env::set_var("MAX_HASH_THREADS", "1");
-        env::set_var("HASH_AWAIT_WARN_TIME", "100");
+        unsafe { env::set_var("ARGON2_M_COST", "32768") };
+        unsafe { env::set_var("ARGON2_T_COST", "3") };
+        unsafe { env::set_var("ARGON2_P_COST", "2") };
+        unsafe { env::set_var("MAX_HASH_THREADS", "1") };
+        unsafe { env::set_var("HASH_AWAIT_WARN_TIME", "100") };
 
         let handle = tokio::spawn(run());
         time::sleep(Duration::from_secs(1)).await;
