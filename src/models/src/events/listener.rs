@@ -1,8 +1,8 @@
 use crate::database::DB;
+use crate::events::EVENT_PERSIST_LEVEL;
 use crate::events::event::{Event, EventLevel, EventType};
 use crate::events::ip_blacklist_handler::{IpBlacklist, IpBlacklistReq, IpLoginFailedSet};
 use crate::events::notifier::EventNotifier;
-use crate::events::EVENT_PERSIST_LEVEL;
 use actix_web_lab::sse;
 use chrono::DateTime;
 use rauthy_common::constants::EVENTS_LATEST_LIMIT;
@@ -289,18 +289,18 @@ impl EventListener {
                                 Ok(tx_res) => {
                                     if let Err(err) = tx_res {
                                         error!(
-                                        "sending latest event to client {} after ClientReg - removing client\n{:?}",
-                                        ip, err
-                                    );
+                                            "sending latest event to client {} after ClientReg - removing client\n{:?}",
+                                            ip, err
+                                        );
                                         is_err = true;
                                         break;
                                     }
                                 }
                                 Err(_) => {
                                     error!(
-                                    "Timeout reached sending latest events to client {} - removing client",
-                                    ip
-                                );
+                                        "Timeout reached sending latest events to client {} - removing client",
+                                        ip
+                                    );
                                     is_err = true;
                                     break;
                                 }

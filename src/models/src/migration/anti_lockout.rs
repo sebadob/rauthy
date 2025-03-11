@@ -1,6 +1,6 @@
 use crate::database::DB;
 use crate::entity::clients::Client;
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use rauthy_common::constants::{
     ADMIN_FORCE_MFA, DEV_MODE, PUB_URL, PUB_URL_WITH_SCHEME, RAUTHY_ADMIN_EMAIL,
 };

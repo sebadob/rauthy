@@ -11,7 +11,7 @@ use actix_web::web;
 use chrono::DateTime;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication;
-use lettre::{message, AsyncSmtpTransport, AsyncTransport};
+use lettre::{AsyncSmtpTransport, AsyncTransport, message};
 use rauthy_common::constants::{
     EMAIL_SUB_PREFIX, SMTP_FROM, SMTP_PASSWORD, SMTP_URL, SMTP_USERNAME,
 };

@@ -38,8 +38,7 @@ impl I18nEmailChangeInfoNew<'_> {
         Self {
             subject: "E-Mail Wechsel Anfrage",
             header: "E-Mail Wechsel angefordert für",
-            click_link:
-                "Klicken Sie auf den unten stehenden Link die E-Mail Adresse zu bestätigen.",
+            click_link: "Klicken Sie auf den unten stehenden Link die E-Mail Adresse zu bestätigen.",
             validity: "Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig.",
             expires: "Link gültig bis:",
             button_text: "E-Mail Bestätigen",

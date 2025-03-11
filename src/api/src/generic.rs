@@ -1,8 +1,8 @@
 use crate::ReqPrincipal;
 use actix_web::http::header;
-use actix_web::http::header::{HeaderValue, CACHE_CONTROL, CONTENT_TYPE};
+use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE, HeaderValue};
 use actix_web::web::{Json, Query};
-use actix_web::{get, post, put, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{HttpRequest, HttpResponse, Responder, get, post, put, web};
 use chrono::Utc;
 use cryptr::EncKeys;
 use rauthy_api_types::generic::{
@@ -11,7 +11,7 @@ use rauthy_api_types::generic::{
     PasswordPolicyRequest, PasswordPolicyResponse, SearchParams, SearchParamsType,
 };
 use rauthy_common::constants::{
-    APPLICATION_JSON, APP_START, HEADER_ALLOW_ALL_ORIGINS, HEALTH_CHECK_DELAY_SECS, IDX_LOGIN_TIME,
+    APP_START, APPLICATION_JSON, HEADER_ALLOW_ALL_ORIGINS, HEALTH_CHECK_DELAY_SECS, IDX_LOGIN_TIME,
     RAUTHY_VERSION, SUSPICIOUS_REQUESTS_BLACKLIST, SUSPICIOUS_REQUESTS_LOG,
 };
 use rauthy_common::utils::real_ip_from_req;

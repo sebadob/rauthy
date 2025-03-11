@@ -1,5 +1,5 @@
 use crate::database::{Cache, DB};
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use rauthy_api_types::users::WebIdResponse;
 use rauthy_common::constants::{CACHE_TTL_USER, PUB_URL_WITH_SCHEME};
 use rauthy_common::is_hiqlite;
@@ -308,12 +308,14 @@ mod tests {
 
     #[rstest]
     #[case(
-        Some(r#"
+        Some(
+            r#"
 <http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me>
 <http://www.w3.org/ns/solid/terms#oidcIssuer>
 <http://localhost:8080/auth/v1> .
-"#),
-    "<http://localhost:8081/auth/SomeId123/profile> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/PersonalProfileDocument> ;\n\t<http://xmlns.com/foaf/0.1/primaryTopic> <http://localhost:8081/auth/SomeId123/profile#me> .\n<http://localhost:8081/auth/SomeId123/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> ;\n\t<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> ;\n\t<http://xmlns.com/foaf/0.1/givenname> \"Given\" ;\n\t<http://xmlns.com/foaf/0.1/family_name> \"Family\" ;\n\t<http://xmlns.com/foaf/0.1/mbox> <mailto:mail@example.com> .\n<http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> .\n"
+"#
+        ),
+        "<http://localhost:8081/auth/SomeId123/profile> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/PersonalProfileDocument> ;\n\t<http://xmlns.com/foaf/0.1/primaryTopic> <http://localhost:8081/auth/SomeId123/profile#me> .\n<http://localhost:8081/auth/SomeId123/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> ;\n\t<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> ;\n\t<http://xmlns.com/foaf/0.1/givenname> \"Given\" ;\n\t<http://xmlns.com/foaf/0.1/family_name> \"Family\" ;\n\t<http://xmlns.com/foaf/0.1/mbox> <mailto:mail@example.com> .\n<http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> .\n"
     )]
     #[ignore] // this is currently ignored, because setting the PUB_URL here interferes with other tests in CI
     fn test_web_id_response(#[case] custom_triples: Option<&str>, #[case] expected_resp: &str) {

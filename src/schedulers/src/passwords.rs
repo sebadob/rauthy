@@ -1,7 +1,7 @@
 use crate::sleep_schedule_next;
 use actix_web::web;
 use chrono::Utc;
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;
@@ -24,7 +24,9 @@ pub async fn password_expiry_checker(data: web::Data<AppState>) {
         sleep_schedule_next(&schedule).await;
 
         if !DB::client().is_leader_cache().await {
-            debug!("Running HA mode without being the leader - skipping password_expiry_checker scheduler");
+            debug!(
+                "Running HA mode without being the leader - skipping password_expiry_checker scheduler"
+            );
             continue;
         }
 

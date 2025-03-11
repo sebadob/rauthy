@@ -10,6 +10,8 @@ rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
 
 async-trait = { workspace = true }
+openssl = { workspace = true }
+openssl-sys = { workspace = true }
 reqwest = { workspace = true }
 ruma = { workspace = true }
 serde = { workspace = true }

@@ -13,10 +13,10 @@ use crate::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn};
 use actix_web::cookie::Cookie;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
-use actix_web::{web, HttpRequest};
-use cryptr::utils::secure_random_alnum;
+use actix_web::{HttpRequest, web};
 use cryptr::EncValue;
-use hiqlite::{params, Param, Row};
+use cryptr::utils::secure_random_alnum;
+use hiqlite::{Param, Row, params};
 use image::EncodableLayout;
 use itertools::Itertools;
 use rauthy_api_types::auth_providers::{
@@ -44,7 +44,7 @@ use ring::digest;
 use serde::{Deserialize, Serialize};
 use serde_json::value;
 use serde_json_path::JsonPath;
-use sqlx::{query, query_as, FromRow};
+use sqlx::{FromRow, query, query_as};
 use std::borrow::Cow;
 use std::fmt::Write;
 use std::str::FromStr;
@@ -88,7 +88,7 @@ impl TryFrom<&str> for AuthProviderType {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "Invalid AuthProviderType",
-                ))
+                ));
             }
         };
         Ok(slf)
@@ -1326,7 +1326,9 @@ impl AuthProviderIdClaims<'_> {
                 Some(user)
             }
             Err(_) => {
-                debug!("did not find already existing user by federation lookup - making sure email does not exist");
+                debug!(
+                    "did not find already existing user by federation lookup - making sure email does not exist"
+                );
                 // If a federated user with this information does not exist, we will create
                 // a new one in the following code, but we should make sure, that the email,
                 // which is a key value for Rauthy, does not yet exist for another user.
@@ -1369,10 +1371,13 @@ impl AuthProviderIdClaims<'_> {
 
                         Some(user)
                     } else {
-                        return Err(ErrorResponse::new(ErrorResponseType::Forbidden, format!(
-                            "User with email '{}' already exists but is not linked to this provider.",
-                            user.email
-                        )));
+                        return Err(ErrorResponse::new(
+                            ErrorResponseType::Forbidden,
+                            format!(
+                                "User with email '{}' already exists but is not linked to this provider.",
+                                user.email
+                            ),
+                        ));
                     }
                 } else {
                     None

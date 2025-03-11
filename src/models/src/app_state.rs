@@ -1,15 +1,15 @@
+use crate::ListenScheme;
 use crate::email::EMail;
 use crate::events::event::Event;
 use crate::events::ip_blacklist_handler::IpBlacklistReq;
 use crate::events::listener::EventRouterMsg;
-use crate::ListenScheme;
 use rauthy_common::constants::PROXY_MODE;
 use std::env;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{debug, info};
-use webauthn_rs::prelude::Url;
 use webauthn_rs::Webauthn;
+use webauthn_rs::prelude::Url;
 
 pub type DbPool = sqlx::PgPool;
 pub type DbTxn<'a> = sqlx::Transaction<'a, sqlx::Postgres>;
@@ -132,7 +132,7 @@ impl AppState {
         } else {
             "http"
         };
-        
+
         let issuer = format!("{}://{}/auth/v1", issuer_scheme, public_url);
         debug!("Issuer: {}", issuer);
 

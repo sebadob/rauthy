@@ -1,6 +1,6 @@
 use crate::ReqPrincipal;
 use actix_web::web::Json;
-use actix_web::{delete, get, post, web, HttpResponse};
+use actix_web::{HttpResponse, delete, get, post, web};
 use chrono::DateTime;
 use rauthy_api_types::blacklist::{BlacklistResponse, BlacklistedIp, IpBlacklistRequest};
 use rauthy_error::ErrorResponse;

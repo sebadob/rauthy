@@ -6,8 +6,8 @@ use rauthy_api_types::users::{
     NewUserRequest, RequestResetRequest, UserResponse, UserResponseSimple,
 };
 use rauthy_common::utils::new_store_id;
-use reqwest::header::AUTHORIZATION;
 use reqwest::StatusCode;
+use reqwest::header::AUTHORIZATION;
 use std::error::Error;
 
 mod common;
@@ -63,16 +63,20 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
     assert!(alfred.roles.contains(&"admin".to_string()));
     assert!(alfred.roles.contains(&"user".to_string()));
     assert!(alfred.groups.is_some());
-    assert!(alfred
-        .groups
-        .as_ref()
-        .unwrap()
-        .contains(&"admin".to_string()));
-    assert!(alfred
-        .groups
-        .as_ref()
-        .unwrap()
-        .contains(&"user".to_string()));
+    assert!(
+        alfred
+            .groups
+            .as_ref()
+            .unwrap()
+            .contains(&"admin".to_string())
+    );
+    assert!(
+        alfred
+            .groups
+            .as_ref()
+            .unwrap()
+            .contains(&"user".to_string())
+    );
     assert_eq!(alfred.enabled, true);
     assert_eq!(alfred.email_verified, false);
 

@@ -1,7 +1,7 @@
 use crate::database::{Cache, DB};
 use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg};
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::{http, HttpRequest};
+use actix_web::{HttpRequest, http};
 use chrono::{DateTime, Utc};
 use rauthy_common::constants::{
     CACHE_TTL_DPOP_NONCE, DPOP_FORCE_NONCE, DPOP_NONCE_EXP, DPOP_TOKEN_ENDPOINT, RE_TOKEN_68,

@@ -1,9 +1,9 @@
 use crate::{AcceptEncoding, ReqPrincipal};
 use actix_web::body::BoxBody;
-use actix_web::http::header::{CACHE_CONTROL, CONTENT_ENCODING, CONTENT_TYPE};
 use actix_web::http::StatusCode;
+use actix_web::http::header::{CACHE_CONTROL, CONTENT_ENCODING, CONTENT_TYPE};
 use actix_web::web::Json;
-use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
+use actix_web::{HttpRequest, HttpResponse, delete, get, post, put, web};
 use rauthy_api_types::themes::ThemeRequestResponse;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
@@ -26,9 +26,9 @@ pub async fn get_theme(
     path: web::Path<(String, i64)>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
+    #[cfg(debug_assertions)]
     let client_id = {
         let (mut id, _) = path.into_inner();
-        #[cfg(debug_assertions)]
         if &id == "{{client_id}}" {
             id = "rauthy".to_string();
         }
@@ -36,14 +36,6 @@ pub async fn get_theme(
     };
     #[cfg(not(debug_assertions))]
     let (client_id, _) = path.into_inner();
-    // let etag = ThemeCssFull::etag(&client_id).await?;
-
-    // if let Some(etag_remote) = req.headers().get("if-none-match") {
-    //     let etag_remote = etag_remote.to_str().unwrap_or_default();
-    //     if etag_remote == etag {
-    //         return Ok(HttpResponse::new(StatusCode::from_u16(304).unwrap()));
-    //     }
-    // }
 
     tracing::debug!("Building theme for client {}", client_id);
 

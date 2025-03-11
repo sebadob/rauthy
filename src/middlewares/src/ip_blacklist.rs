@@ -1,6 +1,7 @@
 use actix_web::{
-    dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    web, Error,
+    Error,
+    dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
+    web,
 };
 use chrono::Utc;
 use futures::future::LocalBoxFuture;
@@ -9,7 +10,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::events::ip_blacklist_handler::{IpBlacklistCheck, IpBlacklistReq};
 use rauthy_models::html::templates::TooManyRequestsHtml;
-use std::future::{ready, Ready};
+use std::future::{Ready, ready};
 use std::rc::Rc;
 use tokio::sync::oneshot;
 use tracing::error;
@@ -85,7 +86,10 @@ where
                     }
                 }
                 Err(err) => {
-                    error!("Checking IP Blacklist status in middleware - this should never happen: {:?}", err);
+                    error!(
+                        "Checking IP Blacklist status in middleware - this should never happen: {:?}",
+                        err
+                    );
                 }
             }
 

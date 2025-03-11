@@ -1,4 +1,4 @@
-use actix_web::{web, HttpResponse};
+use actix_web::{HttpResponse, web};
 use chrono::Utc;
 use rauthy_common::constants::IDX_LOGIN_TIME;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -78,7 +78,10 @@ pub async fn handle_login_delay(
                     }
                 }
                 Err(err) => {
-                    error!("oneshot recv error in login delay handler - this should never happen: {:?}", err);
+                    error!(
+                        "oneshot recv error in login delay handler - this should never happen: {:?}",
+                        err
+                    );
                 }
             }
 

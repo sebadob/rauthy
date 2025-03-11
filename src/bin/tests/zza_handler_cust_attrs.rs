@@ -8,8 +8,8 @@ use rauthy_api_types::users::{
     UserAttrConfigRequest, UserAttrConfigResponse, UserAttrValueRequest, UserAttrValuesResponse,
     UserAttrValuesUpdateRequest,
 };
-use rauthy_models::entity::user_attr::UserAttrConfigEntity;
 use rauthy_models::JwtAccessClaims;
+use rauthy_models::entity::user_attr::UserAttrConfigEntity;
 use serde_json::Value;
 use std::error::Error;
 

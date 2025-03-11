@@ -1,8 +1,8 @@
 use crate::common::{
-    check_status, code_state_from_headers, cookie_csrf_headers_from_res, get_auth_headers,
-    get_backend_url, CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME,
+    CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, check_status, code_state_from_headers,
+    cookie_csrf_headers_from_res, get_auth_headers, get_backend_url,
 };
-use actix_web::{http, web, App, HttpResponse, HttpServer};
+use actix_web::{App, HttpResponse, HttpServer, http, web};
 use chrono::Utc;
 use ed25519_compact::Noise;
 use josekit::jwk;
@@ -18,9 +18,9 @@ use rauthy_common::utils::{
     base64_encode, base64_url_encode, base64_url_no_pad_decode, base64_url_no_pad_encode, get_rand,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_models::entity::dpop_proof::{DPoPClaims, DPoPHeader};
-use rauthy_models::entity::jwk::{JWKSPublicKey, JwkKeyPairType, JWKS};
 use rauthy_models::JwtTokenType;
+use rauthy_models::entity::dpop_proof::{DPoPClaims, DPoPHeader};
+use rauthy_models::entity::jwk::{JWKS, JWKSPublicKey, JwkKeyPairType};
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::AUTHORIZATION;
 use ring::digest;

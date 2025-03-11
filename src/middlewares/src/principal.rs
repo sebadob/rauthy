@@ -1,6 +1,7 @@
 use actix_web::{
-    dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    http, web, Error, HttpMessage,
+    Error, HttpMessage,
+    dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
+    http, web,
 };
 use futures::future::LocalBoxFuture;
 use rauthy_common::constants::{COOKIE_SESSION, SESSION_VALIDATE_IP, TOKEN_API_KEY};
@@ -11,7 +12,7 @@ use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{ApiKey, ApiKeyEntity};
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::Session;
-use std::future::{ready, Ready};
+use std::future::{Ready, ready};
 use std::rc::Rc;
 use time::OffsetDateTime;
 use tracing::debug;

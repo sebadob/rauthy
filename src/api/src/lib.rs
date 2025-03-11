@@ -3,17 +3,17 @@
 #![forbid(unsafe_code)]
 
 use actix_web::http::header::{HeaderMap, HeaderValue};
-use actix_web::{web, HttpRequest, HttpResponse};
+use actix_web::{HttpRequest, HttpResponse, web};
 use rauthy_api_types::users::WebauthnLoginResponse;
 use rauthy_common::constants::COOKIE_MFA;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_models::AuthStep;
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::entity::api_keys::ApiKey;
 use rauthy_models::entity::fed_cm::FedCMLoginStatus;
 use rauthy_models::entity::principal::Principal;
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::webauthn::WebauthnCookie;
-use rauthy_models::AuthStep;
 use rust_embed::RustEmbed;
 use tracing::error;
 

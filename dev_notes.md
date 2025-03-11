@@ -2,6 +2,18 @@
 
 ## CURRENT WORK
 
+Fix findings from beta release:
+
+- if an events state is changed, convert it to lowercase before applying
+- `contacts`, `allowed_origins` and `post_logout_redirect_uri`s for a client may contain an empty entry from older
+  versions -> cleanup, most probably in the backend
+- `de` translation for `rauthy_admin` role has typos
+- Some console errors: `Uncaught TypeError: O is undefined`
+- remove `console.log` for:
+    - event IDs
+    - `using Rauthy default scheme`
+- don't show `migrate secrets button` if only a single key exists in the backend, or simply disable it
+
 ## Stage 1 - essentials
 
 [x] finished

@@ -1,7 +1,7 @@
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::web::{Form, Query};
-use actix_web::{get, post, web, HttpRequest, HttpResponse};
+use actix_web::{HttpRequest, HttpResponse, get, post, web};
 use chrono::Utc;
 use rauthy_api_types::clients::EphemeralClientRequest;
 use rauthy_api_types::fed_cm::{FedCMAssertionRequest, FedCMClientMetadataRequest};
@@ -11,6 +11,7 @@ use rauthy_common::constants::{
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_models::ListenScheme;
 use rauthy_models::api_cookie::ApiCookie;
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::clients::Client;
@@ -20,7 +21,6 @@ use rauthy_models::entity::fed_cm::{
 };
 use rauthy_models::entity::sessions::Session;
 use rauthy_models::entity::users::User;
-use rauthy_models::ListenScheme;
 use rauthy_service::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenNonce, TokenSet};
 use tracing::{debug, error, warn};
 use validator::Validate;

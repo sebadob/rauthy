@@ -2,7 +2,7 @@ use crate::database::DB;
 use crate::entity::jwk::Jwk;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use chrono::Utc;
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use std::ops::Add;

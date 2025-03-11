@@ -284,7 +284,7 @@ impl FromStr for JwtAmrValue {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "Unknown value for 'amr' claim",
-                ))
+                ));
             }
         };
         Ok(slf)

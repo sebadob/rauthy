@@ -3543,6 +3543,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d05e27ee213611ffe7d6348b942e8f942b37114c00cc03cec254295a4a17852e"
 
 [[package]]
+name = "openssl-src"
+version = "300.4.2+3.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "168ce4e058f975fe43e89d9ccf78ca668601887ae736090aacc23ae353c298e2"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "openssl-sys"
 version = "0.9.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3550,6 +3559,7 @@ checksum = "8bb61ea9811cc39e3c2069f40b8b8e2e70d8569b361f879786cc7ed48b777cdd"
 dependencies = [
  "cc",
  "libc",
+ "openssl-src",
  "pkg-config",
  "vcpkg",
 ]
@@ -4064,6 +4074,8 @@ dependencies = [
  "hiqlite",
  "josekit",
  "num_cpus",
+ "openssl",
+ "openssl-sys",
  "pretty_assertions",
  "prometheus",
  "rauthy-api-types",
@@ -4095,6 +4107,8 @@ name = "rauthy-api-types"
 version = "0.28.0-20250311"
 dependencies = [
  "actix-web",
+ "openssl",
+ "openssl-sys",
  "rauthy-common",
  "rauthy-error",
  "serde",
@@ -4120,6 +4134,8 @@ dependencies = [
  "lazy_static",
  "libflate",
  "once_cell",
+ "openssl",
+ "openssl-sys",
  "pretty_assertions",
  "rand 0.8.5",
  "rand_core 0.6.4",
@@ -4143,6 +4159,8 @@ dependencies = [
  "css-color",
  "hiqlite",
  "image",
+ "openssl",
+ "openssl-sys",
  "oxiri",
  "reqwest",
  "rio_turtle",
@@ -4174,6 +4192,8 @@ dependencies = [
  "futures",
  "mime_guess",
  "num_cpus",
+ "openssl",
+ "openssl-sys",
  "rauthy-api-types",
  "rauthy-common",
  "rauthy-error",
@@ -4200,6 +4220,8 @@ dependencies = [
  "chrono",
  "futures",
  "lazy_static",
+ "openssl",
+ "openssl-sys",
  "rauthy-common",
  "rauthy-error",
  "rauthy-models",
@@ -4239,6 +4261,8 @@ dependencies = [
  "num-traits",
  "num_cpus",
  "once_cell",
+ "openssl",
+ "openssl-sys",
  "pretty_assertions",
  "rand 0.8.5",
  "rand_core 0.6.4",
@@ -4281,6 +4305,8 @@ name = "rauthy-notify"
 version = "0.28.0-20250311"
 dependencies = [
  "async-trait",
+ "openssl",
+ "openssl-sys",
  "rauthy-common",
  "rauthy-error",
  "reqwest",
@@ -4298,6 +4324,8 @@ dependencies = [
  "chrono",
  "cron 0.15.0",
  "hiqlite",
+ "openssl",
+ "openssl-sys",
  "rauthy-common",
  "rauthy-error",
  "rauthy-models",
@@ -4315,6 +4343,8 @@ dependencies = [
  "chrono",
  "cryptr",
  "jwt-simple",
+ "openssl",
+ "openssl-sys",
  "rauthy-api-types",
  "rauthy-common",
  "rauthy-error",

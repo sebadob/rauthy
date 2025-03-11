@@ -8,7 +8,7 @@ use crate::entity::users::User;
 use crate::language::Language;
 use actix_web::cookie::Cookie;
 use actix_web::http::StatusCode;
-use actix_web::{web, HttpResponse, HttpResponseBuilder};
+use actix_web::{HttpResponse, HttpResponseBuilder, web};
 use chrono::Utc;
 use rauthy_api_types::generic::PasswordPolicyResponse;
 use rauthy_common::constants::{

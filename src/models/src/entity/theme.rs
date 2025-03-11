@@ -1,6 +1,6 @@
 use crate::database::{Cache, DB};
 use chrono::Utc;
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use rauthy_api_types::themes::ThemeRequestResponse;
 use rauthy_common::compression::{compress_br, compress_gzip};
 use rauthy_common::constants::BUILD_TIME;

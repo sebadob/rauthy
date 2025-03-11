@@ -3,12 +3,12 @@ use crate::database::{Cache, DB};
 use actix_web::web;
 use chrono::Utc;
 use cryptr::EncValue;
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use rauthy_common::constants::{CACHE_TTL_DYN_CLIENT, CACHE_TTL_IP_RATE_LIMIT};
 use rauthy_common::is_hiqlite;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::{query, query_as, FromRow};
+use sqlx::{FromRow, query, query_as};
 use std::net::IpAddr;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]

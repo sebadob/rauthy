@@ -1,5 +1,5 @@
 use crate::database::{Cache, DB};
-use hiqlite::{params, Param};
+use hiqlite::{Param, params};
 use jwt_simple::prelude::{Deserialize, Serialize};
 use rauthy_api_types::users::{UserValuesRequest, UserValuesResponse};
 use rauthy_common::constants::{CACHE_TTL_USER, IDX_USERS_VALUES};

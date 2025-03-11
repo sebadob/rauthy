@@ -11,7 +11,7 @@ map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
 npm := `echo ${NPM:-npm}`
 cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
 builder_image := "ghcr.io/sebadob/rauthy-builder"
-builder_tag_date := "20241118"
+builder_tag_date := "20250311"
 container_network := "rauthy-dev"
 container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
@@ -310,41 +310,6 @@ build-ui:
     cd frontend
     {{ npm }} run build
     cd ..
-
-    ## set correct values in html outputs for pre-rendering
-    #PAGES=(
-    #"templates/html/*.html"
-    #"templates/html/admin/*.html"
-    #"templates/html/admin/config/*.html"
-    #"templates/html/error/*.html"
-    #"templates/html/error/error/*.html"
-    #"templates/html/error/error/error/*.html"
-    #"templates/html/oidc/*.html"
-    #"templates/html/providers/*.html"
-    #"templates/html/users/*.html"
-    #"templates/html/users/{id}/reset/*.html"
-    #"templates/html/users/{id}/email_confirm/*.html"
-    #)
-    #for folder in "${PAGES[@]}"; do
-    #    for html in $folder; do
-    #      # set correct document language
-    #      #sd 'lang="en"' 'lang="{{{{ lang }}"' $html
-    #      # for pre-rendering colors
-    #      sd '#6b3d99;' '{{{{ col_act1 }};' $html
-    #      sd '#714d99;' '{{{{ col_act1a }};' "$html"
-    #      sd '#388c51;' '{{{{ col_act2 }};' "$html"
-    #      sd '#4d8c62;' '{{{{ col_act2a }};' "$html"
-    #      sd '#3d5d99;' '{{{{ col_acnt }};' "$html"
-    #      sd '#36486b;' '{{{{ col_acnta }};' "$html"
-    #      sd '#43993d;' '{{{{ col_ok }};' "$html"
-    #      sd '#993d49;' '{{{{ col_err }};' "$html"
-    #      sd '#545454;' '{{{{ col_glow }};' "$html"
-    #      sd '#b2b2b2;' '{{{{ col_gmid }};' "$html"
-    #      sd '#f2f2f2;' '{{{{ col_ghigh }};' "$html"
-    #      sd '#383838;' '{{{{ col_text }};' "$html"
-    #      sd '#f7f7f7;' '{{{{ col_bg }};' "$html"
-    #    done;
-    #done
 
     git add static/v1/*
     git add templates/html/*

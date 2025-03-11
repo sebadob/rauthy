@@ -16,17 +16,17 @@ use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
 use crate::events::event::Event;
 use crate::html::templates::{HtmlTemplate, UserEmailChangeConfirmHtml};
 use crate::language::Language;
-use actix_web::{web, HttpRequest};
+use actix_web::{HttpRequest, web};
 use argon2::PasswordHash;
 use chrono::Utc;
-use hiqlite::{params, Param, Params};
+use hiqlite::{Param, Params, params};
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_api_types::users::{
     NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
     UserAccountTypeResponse, UserResponse, UserResponseSimple, UserValuesResponse,
 };
 use rauthy_common::constants::{
-    CACHE_TTL_APP, CACHE_TTL_USER, IDX_USERS, IDX_USER_COUNT, RAUTHY_ADMIN_ROLE,
+    CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, RAUTHY_ADMIN_ROLE,
     WEBAUTHN_NO_PASSWORD_EXPIRY,
 };
 use rauthy_common::is_hiqlite;
@@ -34,7 +34,7 @@ use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
 use rauthy_common::utils::{new_store_id, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use sqlx::{query_as, FromRow};
+use sqlx::{FromRow, query_as};
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use time::OffsetDateTime;
@@ -954,7 +954,7 @@ LIMIT $2"#,
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "supported search idx for users: id / user_id, email",
-                ))
+                ));
             }
         };
 

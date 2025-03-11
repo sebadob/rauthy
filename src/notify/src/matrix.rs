@@ -265,7 +265,10 @@ impl Notify for NotifierMatrix {
                                 ));
                             }
 
-                            error!("Error logging in to Matrix on {}. attempt: {:?}\nRetrying in 3 seconds", i, err);
+                            error!(
+                                "Error logging in to Matrix on {}. attempt: {:?}\nRetrying in 3 seconds",
+                                i, err
+                            );
                             time::sleep(Duration::from_secs(3)).await;
                             continue;
                         }

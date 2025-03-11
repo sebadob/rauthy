@@ -1,17 +1,16 @@
 use crate::ReqPrincipal;
 use actix_web::web::{Json, Query};
-use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{HttpRequest, HttpResponse, Responder, get, post, web};
 use actix_web_lab::sse;
 use chrono::Utc;
 use rauthy_api_types::events::{EventResponse, EventsListenParams, EventsRequest};
-use rauthy_common::constants::{DEV_MODE, SSE_KEEP_ALIVE};
+use rauthy_common::constants::SSE_KEEP_ALIVE;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_models::app_state::AppState;
 use rauthy_models::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_models::events::event::Event;
 use rauthy_models::events::listener::EventRouterMsg;
-use std::net::IpAddr;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use validator::Validate;
@@ -125,7 +124,9 @@ pub async fn post_event_test(
         .await?;
 
     #[cfg(debug_assertions)]
-    if *DEV_MODE {
+    if *rauthy_common::constants::DEV_MODE {
+        use std::net::IpAddr;
+
         // in debug + dev mode, we want to generate one event of each type
         // as a helper for UI development
         let ip = "0.0.0.0".parse::<IpAddr>().unwrap();

@@ -2,11 +2,11 @@ use crate::database::DB;
 use crate::entity::logos::Logo;
 use crate::entity::users::User;
 use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE};
-use actix_web::{web, HttpResponse};
+use actix_web::{HttpResponse, web};
 use futures_util::StreamExt;
-use hiqlite::{params, Param};
-use image::imageops::FilterType;
+use hiqlite::{Param, params};
 use image::ImageFormat;
+use image::imageops::FilterType;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -390,15 +390,13 @@ impl UserPicture {
                     .lines()
                     .filter_map(|l| {
                         let trim = l.trim();
-                        if trim.is_empty() {
-                            None
-                        } else {
-                            Some(trim)
-                        }
+                        if trim.is_empty() { None } else { Some(trim) }
                     })
                     .count();
                 if nodes != 1 {
-                    panic!("You can only use local file storage for User Pictures for a single instance");
+                    panic!(
+                        "You can only use local file storage for User Pictures for a single instance"
+                    );
                 }
 
                 // make sure the path exists and is available

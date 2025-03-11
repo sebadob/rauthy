@@ -6,10 +6,10 @@ use crate::entity::users::{AccountType, User};
 use actix_web::cookie::Cookie;
 use actix_web::http::header;
 use actix_web::http::header::HeaderValue;
-use actix_web::{web, HttpResponse};
+use actix_web::{HttpResponse, web};
 use chrono::Utc;
 use cryptr::EncValue;
-use hiqlite::{params, Param, Params};
+use hiqlite::{Param, Params, params};
 use rauthy_api_types::users::{
     MfaPurpose, PasskeyResponse, WebauthnAuthFinishRequest, WebauthnAuthStartResponse,
     WebauthnLoginFinishResponse, WebauthnRegFinishRequest, WebauthnRegStartRequest,

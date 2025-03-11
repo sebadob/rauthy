@@ -5,7 +5,7 @@ use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::{HeaderMap, HeaderValue, SET_COOKIE};
-use reqwest::{header, Response};
+use reqwest::{Response, header};
 use ring::digest;
 use std::env;
 use std::error::Error;

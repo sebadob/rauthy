@@ -1,6 +1,6 @@
 use crate::ReqPrincipal;
 use actix_web::web::Json;
-use actix_web::{delete, get, post, put, web, HttpResponse};
+use actix_web::{HttpResponse, delete, get, post, put, web};
 use rauthy_api_types::scopes::{ScopeRequest, ScopeResponse};
 use rauthy_error::ErrorResponse;
 use rauthy_models::app_state::AppState;

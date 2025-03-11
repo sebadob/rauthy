@@ -1,16 +1,16 @@
+use crate::ListenScheme;
 use crate::app_state::{AppState, DbTxn};
 use crate::database::{Cache, DB};
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::jwk::JwkKeyPairAlg;
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
-use crate::ListenScheme;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::{web, HttpRequest};
+use actix_web::{HttpRequest, web};
 use chrono::Utc;
-use cryptr::{utils, EncKeys, EncValue};
-use hiqlite::{params, Param, Params};
+use cryptr::{EncKeys, EncValue, utils};
+use hiqlite::{Param, Params, params};
 use rauthy_api_types::clients::{
     ClientResponse, DynamicClientRequest, DynamicClientResponse, EphemeralClientRequest,
     NewClientRequest,
@@ -25,7 +25,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::CONTENT_TYPE;
-use reqwest::{tls, Url};
+use reqwest::{Url, tls};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
 use std::fmt::{Debug, Formatter};

@@ -1,7 +1,7 @@
-use crate::{content_len_limit, map_auth_step, ReqPrincipal};
+use crate::{ReqPrincipal, content_len_limit, map_auth_step};
 use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE, LOCATION};
 use actix_web::web::{Json, Query};
-use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
+use actix_web::{HttpRequest, HttpResponse, delete, get, post, put, web};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use rauthy_api_types::auth_providers::{
     ProviderCallbackRequest, ProviderLinkedUserResponse, ProviderLoginRequest,

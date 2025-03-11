@@ -1,6 +1,6 @@
 use crate::entity::api_keys::{AccessGroup, AccessRights, ApiKey};
 use crate::entity::sessions::{Session, SessionState};
-use actix_web::{web, HttpRequest};
+use actix_web::{HttpRequest, web};
 use rauthy_common::constants::{ADMIN_FORCE_MFA, RAUTHY_ADMIN_ROLE};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::trace;

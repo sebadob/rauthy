@@ -1,5 +1,5 @@
 use crate::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenScopes, TokenSet};
-use actix_web::{web, HttpResponse};
+use actix_web::{HttpResponse, web};
 use chrono::Utc;
 use rauthy_api_types::oidc::{OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenRequest};
 use rauthy_common::constants::DEVICE_GRANT_POLL_INTERVAL;

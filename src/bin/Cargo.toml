@@ -22,6 +22,8 @@ dotenvy = { workspace = true }
 flume = { workspace = true }
 hiqlite = { workspace = true }
 num_cpus = { workspace = true }
+openssl = { workspace = true }
+openssl-sys = { workspace = true }
 prometheus = { workspace = true }
 rustls = { workspace = true }
 rustls-pki-types = { workspace = true }

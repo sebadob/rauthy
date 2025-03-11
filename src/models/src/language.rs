@@ -1,5 +1,5 @@
-use actix_web::http::header::{HeaderValue, ACCEPT_LANGUAGE};
 use actix_web::HttpRequest;
+use actix_web::http::header::{ACCEPT_LANGUAGE, HeaderValue};
 use rauthy_common::constants::COOKIE_LOCALE;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};

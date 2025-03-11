@@ -6,7 +6,7 @@ use rauthy_common::constants::IDX_JWK_KID;
 use rauthy_common::is_hiqlite;
 use rauthy_models::app_state::AppState;
 use rauthy_models::database::{Cache, DB};
-use rauthy_models::entity::jwk::{Jwk, JWKS};
+use rauthy_models::entity::jwk::{JWKS, Jwk};
 use std::collections::HashSet;
 use std::ops::Sub;
 use std::str::FromStr;

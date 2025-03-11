@@ -2,7 +2,7 @@ use crate::database::{Cache, DB};
 use crate::entity::auth_providers::AuthProviderTemplate;
 use actix_web::web;
 use chrono::Utc;
-use hiqlite::{params, Param, Row};
+use hiqlite::{Param, Row, params};
 use image::imageops::FilterType;
 use image::{EncodableLayout, ImageFormat};
 use jwt_simple::prelude::{Deserialize, Serialize};
